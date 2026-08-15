@@ -1,0 +1,12 @@
+{
+  "filesExclude": [
+    "node_modules/",
+    ".git/",
+    "*.log",
+    "ico.png",
+    "public/",
+    ".github/",
+    "scripts/",
+    "temp/"
+  ]
+}

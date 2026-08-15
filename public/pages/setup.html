@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>初始化设置 - CrewRouter</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/themes.css">
+  <link rel="stylesheet" href="/css/main.css">
+  <script>
+    (function() {
+      var theme = localStorage.getItem('theme') || 'system';
+      var resolved = theme;
+      if (theme === 'system') {
+        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.classList.add(resolved);
+    })();
+  </script>
+  <style>
+    .setup-container {
+      max-width: 520px;
+      margin: 60px auto;
+      padding: 0 20px;
+    }
+    .setup-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .setup-header h1 {
+      font-size: 28px;
+      margin: 0 0 8px;
+    }
+    .setup-header p {
+      color: var(--muted-foreground);
+      margin: 0;
+    }
+    .setup-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+    }
+    .setup-card h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+    }
+    .setup-card .step-desc {
+      color: var(--muted-foreground);
+      font-size: 14px;
+      margin: 0 0 24px;
+    }
+    .setup-form {
+      display: grid;
+      gap: 16px;
+    }
+    .setup-form .form-group {
+      display: grid;
+      gap: 6px;
+    }
+    .setup-form label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .setup-form input {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--background);
+      color: var(--foreground);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .setup-form input:focus {
+      border-color: var(--primary);
+    }
+    .setup-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 24px;
+      gap: 8px;
+    }
+    .setup-error {
+      color: #ef4444;
+      font-size: 13px;
+      margin-top: 8px;
+      display: none;
+    }
+    .setup-success {
+      text-align: center;
+      padding: 40px 0;
+    }
+    .setup-success h2 {
+      color: #22c55e;
+      margin: 0 0 12px;
+    }
+    .setup-success p {
+      color: var(--muted-foreground);
+      margin: 0 0 24px;
+    }
+    .setup-loading {
+      text-align: center;
+      padding: 48px 16px;
+      color: var(--muted-foreground);
+    }
+  </style>
+</head>
+<body>
+  <div class="setup-container">
+    <div class="setup-header">
+      <h1>🚀 CrewRouter</h1>
+      <p>首次使用，请创建管理员账号</p>
+    </div>
+
+    <div class="setup-card" id="stepLoading">
+      <div class="setup-loading"><div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中"></div><div class="page-loading-text">正在检查系统状态…</div></div></div>
+    </div>
+
+    <div class="setup-card" id="step1" style="display:none;">
+      <h2>创建管理员账号</h2>
+      <p class="step-desc">数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。</p>
+      <div class="setup-form">
+        <div class="form-group">
+          <label for="adminUsername">用户名</label>
+          <input type="text" id="adminUsername" placeholder="admin" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="adminEmail">邮箱（可选）</label>
+          <input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="adminPassword">密码</label>
+          <input type="password" id="adminPassword" placeholder="至少 6 位" autocomplete="new-password">
+        </div>
+      </div>
+      <div class="setup-error" id="step1Error"></div>
+      <div class="setup-actions">
+        <button class="btn btn-primary" id="submitBtn" onclick="setup.submit()">完成初始化</button>
+      </div>
+    </div>
+
+    <div class="setup-card" id="stepDone" style="display:none;">
+      <div class="setup-success">
+        <h2>✅ 设置完成！</h2>
+        <p>管理员账号已创建，请登录开始使用</p>
+        <button class="btn btn-primary" onclick="window.location.href='/'">前往登录</button>
+      </div>
+    </div>
+
+    <div class="setup-card" id="stepReady" style="display:none;">
+      <div class="setup-success">
+        <h2>系统已初始化</h2>
+        <p>无需重复配置，可直接登录</p>
+        <button class="btn btn-primary" onclick="window.location.href='/'">前往登录</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const setup = {
+      async init() {
+        try {
+          console.log('[OOBE] 检查 setup 状态…');
+          const res = await fetch('/api/setup/status');
+          if (!res.ok) {
+            throw new Error('状态接口返回 ' + res.status);
+          }
+          const data = await res.json();
+          console.log('[OOBE] status:', data);
+          document.getElementById('stepLoading').style.display = 'none';
+          if (data.needsSetup) {
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('adminUsername').focus();
+          } else {
+            document.getElementById('stepReady').style.display = 'block';
+          }
+        } catch (e) {
+          console.error('[OOBE] 状态检查失败:', e);
+          const el = document.getElementById('stepLoading');
+          el.innerHTML = '<div class="setup-error" style="display:block;text-align:left;">无法连接服务器或数据库尚未就绪，请确认服务已启动并完成数据库初始化后刷新本页。<br><small>' +
+            (e && e.message ? e.message : '') + '</small></div>';
+        }
+      },
+
+      showError(msg) {
+        const el = document.getElementById('step1Error');
+        el.textContent = msg;
+        el.style.display = 'block';
+      },
+
+      async submit() {
+        const errEl = document.getElementById('step1Error');
+        errEl.style.display = 'none';
+        const btn = document.getElementById('submitBtn');
+        const username = document.getElementById('adminUsername').value.trim();
+        const email = document.getElementById('adminEmail').value.trim();
+        const password = document.getElementById('adminPassword').value;
+
+        if (!username) { this.showError('请输入用户名'); return; }
+        if (!password || password.length < 6) { this.showError('密码至少 6 位'); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = `<span class="inline-loading"><div class="loading-spinner sm" role="status" aria-label="加载中"></div><span class="inline-loading-text">创建中…</span></span>`;
+        console.log('[OOBE] 提交管理员创建:', username);
+
+        try {
+          const res = await fetch('/api/setup/admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, email: email || undefined, password })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            console.error('[OOBE] 创建失败:', res.status, data);
+            this.showError(data.error || ('创建失败 (' + res.status + ')'));
+            btn.disabled = false;
+            btn.textContent = '完成初始化';
+            return;
+          }
+          console.log('[OOBE] 创建成功:', data);
+          document.getElementById('step1').style.display = 'none';
+          document.getElementById('stepDone').style.display = 'block';
+        } catch (error) {
+          console.error('[OOBE] 请求异常:', error);
+          this.showError('请求失败，请重试');
+          btn.disabled = false;
+          btn.textContent = '完成初始化';
+        }
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => setup.init());
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && document.getElementById('step1').style.display !== 'none') {
+        setup.submit();
+      }
+    });
+  </script>
+</body>
+</html>

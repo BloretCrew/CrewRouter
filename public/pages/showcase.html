@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrewRouter — 团队级 AI 模型统一网关</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/themes.css">
+  <script>
+    (function() {
+      var theme = localStorage.getItem('theme') || 'system';
+      var resolved = theme;
+      if (theme === 'system') {
+        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.classList.add(resolved);
+    })();
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: var(--brand-blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ===== Scroll Animation ===== */
+    .reveal {
+      opacity: 0; transform: translateY(24px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ===== Theme Toggle ===== */
+    .theme-toggle { display: flex; }
+    .theme-toggle button {
+      width: 34px; height: 34px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      background: color-mix(in srgb, var(--secondary) 80%, transparent);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border); color: var(--foreground);
+      cursor: pointer; transition: background 0.2s, transform 0.15s;
+    }
+    .theme-toggle button:hover { background: var(--accent); transform: scale(1.05); }
+    .theme-toggle .icon-moon { display: none; }
+    .dark .theme-toggle .icon-sun { display: none; }
+    .dark .theme-toggle .icon-moon { display: block; }
+
+    /* ===== Navigation ===== */
+    .showcase-nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 0 40px; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: color-mix(in srgb, var(--background) 75%, transparent);
+      backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+      transition: box-shadow 0.3s;
+    }
+    .showcase-nav.scrolled { box-shadow: 0 1px 24px rgba(0,0,0,0.12); }
+    .nav-brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; color: var(--foreground); }
+    .nav-brand img { width: 26px; height: 26px; border-radius: 7px; }
+    .nav-links { display: flex; align-items: center; gap: 28px; }
+    .nav-links a { font-size: 13px; color: var(--muted-foreground); transition: color 0.2s; font-weight: 500; }
+    .nav-links a:hover { color: var(--foreground); text-decoration: none; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 18px; border-radius: 8px;
+      background: var(--brand-blue); color: #fff;
+      font-size: 13px; font-weight: 500; border: none; cursor: pointer;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .nav-cta:hover { opacity: 0.9; transform: translateY(-1px); text-decoration: none; }
+
+    /* ===== Hero ===== */
+    .hero {
+      position: relative;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 160px 24px 80px; text-align: center;
+    }
+    .hero-bg { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
+    .hero-bg .grid {
+      position: absolute; inset: -50%;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 64px 64px;
+      animation: gridMove 25s linear infinite;
+      opacity: 0.5;
+    }
+    @keyframes gridMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(64px, 64px); }
+    }
+    .hero-bg .glow {
+      position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+      width: 1000px; height: 700px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(59,130,246,0.12) 0%, rgba(139,92,246,0.06) 35%, transparent 65%);
+      filter: blur(80px);
+    }
+    .hero-bg .glow-2 {
+      position: absolute; top: 40%; left: 30%;
+      width: 600px; height: 400px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(16,185,129,0.06) 0%, transparent 60%);
+      filter: blur(60px);
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 780px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 14px; border-radius: 20px;
+      background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15);
+      font-size: 12px; font-weight: 500; color: var(--brand-blue); margin-bottom: 28px;
+      letter-spacing: 0.02em;
+    }
+    .hero h1 {
+      font-size: clamp(40px, 7vw, 68px); font-weight: 700;
+      letter-spacing: -0.04em; line-height: 1.05; margin-bottom: 20px;
+      background: linear-gradient(135deg, var(--foreground) 0%, var(--muted-foreground) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero p {
+      font-size: clamp(16px, 2vw, 19px); color: var(--muted-foreground);
+      max-width: 520px; margin: 0 auto 36px; line-height: 1.6;
+    }
+    .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px; border-radius: 10px;
+      background: var(--brand-blue); color: #fff;
+      font-size: 15px; font-weight: 500; border: none; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.25);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(59,130,246,0.35); text-decoration: none; color: #fff; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 28px; border-radius: 10px;
+      background: transparent; color: var(--foreground);
+      font-size: 15px; font-weight: 500;
+      border: 1px solid var(--border); cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-secondary:hover { background: var(--secondary); border-color: color-mix(in srgb, var(--border) 50%, var(--foreground)); text-decoration: none; color: var(--foreground); }
+
+    /* ===== Console Preview ===== */
+    .console-preview {
+      position: relative; z-index: 1;
+      max-width: 960px; width: 100%; margin: 56px auto 0;
+      border-radius: 14px; overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 32px 80px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02);
+    }
+    .console-titlebar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 16px;
+      background: var(--secondary);
+      border-bottom: 1px solid var(--border);
+    }
+    .console-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .console-dot.red { background: #ff5f57; }
+    .console-dot.yellow { background: #febc2e; }
+    .console-dot.green { background: #28c840; }
+    .console-titlebar span { margin-left: 8px; font-size: 12px; color: var(--muted-foreground); font-family: 'SF Mono', 'Fira Code', monospace; }
+    .console-iframe-wrap { width: 100%; height: 520px; background: var(--background); position: relative; }
+    .console-iframe-wrap iframe { width: 100%; height: 100%; border: none; }
+    .console-iframe-wrap .skeleton {
+      position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; padding: 20px;
+      background: var(--background);
+    }
+    .skeleton-bar {
+      height: 12px; border-radius: 6px;
+      background: linear-gradient(90deg, var(--secondary) 25%, color-mix(in srgb, var(--secondary) 50%, var(--background)) 50%, var(--secondary) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ===== Metrics Bar ===== */
+    .metrics-bar {
+      display: flex; justify-content: center; gap: 64px; flex-wrap: wrap;
+      padding: 80px 24px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .metric-item { text-align: center; }
+    .metric-value {
+      font-size: 36px; font-weight: 700; color: var(--brand-blue);
+      letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+    }
+    .metric-label { font-size: 13px; color: var(--muted-foreground); margin-top: 6px; font-weight: 500; }
+
+    /* ===== Section Common ===== */
+    .section { max-width: 1100px; margin: 0 auto; padding: 120px 24px; }
+    .section-header { text-align: center; margin-bottom: 56px; }
+    .section-header h2 {
+      font-size: clamp(28px, 4vw, 40px); font-weight: 700;
+      letter-spacing: -0.03em; margin-bottom: 14px;
+    }
+    .section-header p {
+      font-size: 16px; color: var(--muted-foreground); max-width: 480px; margin: 0 auto;
+    }
+
+    /* ===== Feature Cards (Glass) ===== */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    }
+    .feature-card {
+      position: relative; padding: 32px 28px; border-radius: 14px;
+      background: color-mix(in srgb, var(--background) 50%, transparent);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+    }
+    .feature-card:hover {
+      border-color: rgba(59,130,246,0.35);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px -8px rgba(59,130,246,0.12);
+    }
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(139,92,246,0.08) 100%);
+      margin-bottom: 18px;
+    }
+    .feature-icon svg { width: 20px; height: 20px; color: var(--brand-blue); }
+    .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .feature-card p { font-size: 14px; color: var(--muted-foreground); line-height: 1.55; }
+
+    /* ===== Architecture (Code Block Style) ===== */
+    .arch-code {
+      max-width: 680px; margin: 0 auto 40px;
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--background) 60%, var(--secondary));
+    }
+    .arch-code-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .arch-code-header span { font-size: 12px; color: var(--muted-foreground); font-family: 'SF Mono', 'Fira Code', monospace; }
+    .arch-code pre {
+      padding: 20px; margin: 0; overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 13px; line-height: 1.7; color: var(--foreground);
+    }
+    .arch-code .kw { color: #c084fc; }
+    .arch-code .str { color: #34d399; }
+    .arch-code .comment { color: var(--muted-foreground); opacity: 0.6; }
+    .arch-flow {
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+      flex-wrap: wrap; margin-top: 32px;
+    }
+    .arch-source {
+      padding: 12px 20px; border-radius: 10px;
+      background: var(--secondary); border: 1px solid var(--border);
+      font-size: 13px; font-weight: 500;
+    }
+    .arch-arrow-icon { color: var(--muted-foreground); }
+    .arch-gateway {
+      padding: 12px 24px; border-radius: 10px;
+      background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+      font-size: 14px; font-weight: 600; color: var(--brand-blue);
+    }
+    .arch-targets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .arch-pill {
+      padding: 8px 16px; border-radius: 20px;
+      background: var(--secondary); border: 1px solid var(--border);
+      font-size: 12px; font-weight: 500; color: var(--muted-foreground);
+      white-space: nowrap;
+    }
+    .arch-tagline {
+      text-align: center; font-size: 14px; color: var(--muted-foreground);
+      margin-top: 24px; font-weight: 500;
+    }
+
+    /* ===== Technical Highlights (Mock UI) ===== */
+    .highlights-list { display: flex; flex-direction: column; gap: 64px; }
+    .highlight-item { display: flex; align-items: center; gap: 48px; }
+    .highlight-item:nth-child(even) { flex-direction: row-reverse; }
+    .highlight-visual {
+      flex: 0 0 380px; min-height: 220px; border-radius: 14px;
+      background: color-mix(in srgb, var(--background) 50%, transparent);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .highlight-visual-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 14px;
+      background: var(--secondary); border-bottom: 1px solid var(--border);
+    }
+    .highlight-visual-content { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+
+    /* Mock code lines */
+    .mock-code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; line-height: 1.8; }
+    .mock-code .line { display: flex; gap: 8px; }
+    .mock-code .ln { color: var(--muted-foreground); opacity: 0.4; min-width: 20px; text-align: right; user-select: none; }
+    .mock-code .kc { color: #c084fc; }
+    .mock-code .fn { color: #60a5fa; }
+    .mock-code .str { color: #34d399; }
+    .mock-code .cm { color: var(--muted-foreground); opacity: 0.5; }
+
+    /* Mock table rows */
+    .mock-table { width: 100%; border-collapse: collapse; }
+    .mock-table th { font-size: 11px; font-weight: 600; text-align: left; color: var(--muted-foreground); padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    .mock-table td { font-size: 12px; padding: 7px 8px; border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); }
+    .mock-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+    .mock-badge.green { background: rgba(16,185,129,0.12); color: #10b981; }
+    .mock-badge.blue { background: rgba(59,130,246,0.12); color: #3b82f6; }
+    .mock-badge.amber { background: rgba(245,158,11,0.12); color: #f59e0b; }
+
+    /* Mock chart bars */
+    .mock-bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; padding: 8px 0; }
+    .mock-bar { flex: 1; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--brand-blue) 0%, rgba(59,130,246,0.4) 100%); min-width: 8px; }
+    .mock-stat-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent); }
+    .mock-stat-label { font-size: 12px; color: var(--muted-foreground); }
+    .mock-stat-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    .highlight-text { flex: 1; }
+    .highlight-text h3 { font-size: 22px; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.02em; }
+    .highlight-text p { font-size: 15px; color: var(--muted-foreground); line-height: 1.65; }
+
+    /* ===== CTA Section ===== */
+    .cta-section {
+      text-align: center; padding: 120px 24px;
+      background: linear-gradient(180deg, transparent 0%, rgba(59,130,246,0.04) 40%, rgba(59,130,246,0.06) 60%, transparent 100%);
+    }
+    .cta-section h2 {
+      font-size: clamp(28px, 4vw, 40px); font-weight: 700;
+      letter-spacing: -0.03em; margin-bottom: 16px;
+    }
+    .cta-section p { font-size: 16px; color: var(--muted-foreground); margin-bottom: 32px; }
+
+    /* ===== Footer ===== */
+    .showcase-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 28px 40px;
+      border-top: 1px solid var(--border);
+      font-size: 13px; color: var(--muted-foreground);
+    }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { color: var(--muted-foreground); font-size: 13px; font-weight: 500; }
+    .footer-links a:hover { color: var(--foreground); }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 1023px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .highlight-visual { flex: 0 0 300px; min-height: 180px; }
+    }
+    @media (max-width: 767px) {
+      .showcase-nav { padding: 0 16px; }
+      .nav-links { display: none; }
+      .hero { padding: 120px 16px 48px; }
+      .hero-buttons { flex-direction: column; align-items: center; }
+      .metrics-bar { gap: 28px; padding: 48px 16px; }
+      .metric-value { font-size: 28px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .highlight-item, .highlight-item:nth-child(even) { flex-direction: column; }
+      .highlight-visual { flex: none; width: 100%; min-height: 160px; }
+      .console-iframe-wrap { height: 360px; }
+      .arch-flow { flex-direction: column; }
+      .showcase-footer { flex-direction: column; gap: 12px; text-align: center; }
+      .section { padding: 80px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="showcase-nav" id="showcaseNav">
+    <div class="nav-brand">
+      <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">
+      <span>CrewRouter</span>
+    </div>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#architecture">架构</a>
+      <a href="#highlights">亮点</a>
+      <a href="/console#docs">文档</a>
+    </div>
+    <div class="nav-right">
+      <a href="/console" class="nav-cta">进入演示</a>
+      <div class="theme-toggle">
+        <button id="themeToggle" title="切换主题">
+          <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="grid"></div>
+      <div class="glow"></div>
+      <div class="glow-2"></div>
+    </div>
+    <div class="hero-content reveal">
+      <div class="hero-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        团队级 AI 模型网关
+      </div>
+      <h1>CrewRouter</h1>
+      <p>一个 API 端点，接入所有 AI 模型。智能路由、精细管控、实时洞察，为团队而生。</p>
+      <div class="hero-buttons">
+        <a href="/console" class="btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          进入演示控制台
+        </a>
+        <a href="/console#docs" class="btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          查看文档
+        </a>
+      </div>
+    </div>
+
+    <!-- Console Preview -->
+    <div class="console-preview reveal">
+      <div class="console-titlebar">
+        <div class="console-dot red"></div>
+        <div class="console-dot yellow"></div>
+        <div class="console-dot green"></div>
+        <span>CrewRouter</span>
+      </div>
+      <div class="console-iframe-wrap">
+        <div class="skeleton" id="consoleSkeleton">
+          <div class="skeleton-bar" style="width:60%"></div>
+          <div class="skeleton-bar" style="width:80%"></div>
+          <div class="skeleton-bar" style="width:45%"></div>
+          <div class="skeleton-bar" style="width:90%"></div>
+          <div class="skeleton-bar" style="width:70%"></div>
+        </div>
+        <iframe src="/console" loading="lazy" title="CrewRouter Console" onload="document.getElementById('consoleSkeleton').style.display='none'"></iframe>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="section-header reveal">
+      <h2>核心功能</h2>
+      <p>为团队 AI 应用提供全方位的模型管理和路由能力</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+        <h3>多供应商聚合</h3>
+        <p>OpenAI、Anthropic、DeepSeek 等主流供应商，一个 API 端点全部接入。</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </div>
+        <h3>协议自动转换</h3>
+        <p>系统自动在 OpenAI 与 Anthropic 协议间双向转换。用 OpenAI SDK 调用 Claude，或用 Anthropic SDK 调用 GPT，无需关心协议差异。</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h3>智能路由</h3>
+        <p>按团队分配模型，支持别名、上游映射和自定义路由规则，精准控制每个团队的模型访问范围。</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Fusion 模式</h3>
+        <p>同一请求并发多个模型，由裁判模型评估并综合最优回答，大幅提升输出质量和可靠性。</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+        </div>
+        <h3>实时统计</h3>
+        <p>请求量、Token 用量、延迟、成本多维度分析。按模型、Key、时间粒度下钻，缓存命中率一目了然。</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>API Key 管理</h3>
+        <p>时间调度启停、模型绑定、自定义签名、Fusion 配置。每个 Key 独立权限，精细化管控。</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>多因素认证</h3>
+        <p>支持 TOTP 双因素认证、WebAuthn PassKey 无密码登录、飞书 OAuth 企业级接入，全方位保障账户安全。</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </div>
+        <h3>动态密钥刷新</h3>
+        <p>供应商 API Key 支持脚本模式自动轮换，定时刷新密钥并缓存，保障高可用不间断服务。</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        </div>
+        <h3>代理池管理</h3>
+        <p>每个供应商独立配置代理池，支持订阅链接批量导入和手动添加，保障跨境访问稳定性。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section class="section" id="architecture">
+    <div class="section-header reveal">
+      <h2>一个端点，所有模型</h2>
+      <p>完美兼容 OpenAI 和 Anthropic SDK，零改动迁移现有应用</p>
+    </div>
+    <div class="arch-code reveal">
+      <div class="arch-code-header">
+        <div class="console-dot red"></div>
+        <div class="console-dot yellow"></div>
+        <div class="console-dot green"></div>
+        <span>terminal</span>
+      </div>
+      <pre><span class="comment"># 只需更换 base_url，即可接入所有模型</span>
+<span class="kw">curl</span> https://api.crewrouter.io<span class="str">/v1/chat/completions</span> \
+  -H <span class="str">"Authorization: Bearer sk-your-key"</span> \
+  -d <span class="str">'{
+    "model": "gpt-4.1",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'</span></pre>
+    </div>
+    <div class="arch-flow reveal">
+      <div class="arch-source">你的应用</div>
+      <svg class="arch-arrow-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      <div class="arch-gateway">CrewRouter</div>
+      <svg class="arch-arrow-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      <div class="arch-targets">
+        <span class="arch-pill">OpenAI</span>
+        <span class="arch-pill">Anthropic</span>
+        <span class="arch-pill">DeepSeek</span>
+        <span class="arch-pill">更多…</span>
+      </div>
+    </div>
+    <div class="arch-tagline" style="margin-top:40px;">
+      <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:14px;font-weight:500;">兼容所有支持 OpenAI / Anthropic 格式的编程工具</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Claude Code</span>
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Claude Desktop</span>
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1781951439833/5dd31c41da3d9ba8d8c63c41ba899d52" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Codex</span>
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1781951398735/6d800bec66c4599b4f8e8e42bb9331d6" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> OpenCode</span>
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1783300468566/b085d548a9a6683cc47d4dc104e93d7a" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> OpenClaw</span>
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1783300640677/085bcecf994f63347ce29dcdadffdb9f" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Hermes Agent</span>
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1783300788647/04d0fff21a58cd9fb7ba1014006b091c" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Kilo Code</span>
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1783300468670/68f428e7c52292259740eb48e59ccf39" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Cline</span>
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1783300468753/f405f79ebe9b85ef76e7bebb33fa2b27" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Cherry Studio</span>
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1783300468869/0e65783456053817af53fe8e72836b5d" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Qwen Code</span>
+        <span class="arch-pill"><img src="https://img.bloret.net/img/1783300700031/a402b70a5fd3b654873aca86429a02b4" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Cursor</span>
+        <span class="arch-pill">更多…</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Technical Highlights -->
+  <section class="section" id="highlights">
+    <div class="section-header reveal">
+      <h2>技术亮点</h2>
+      <p>为生产环境设计的每一个细节</p>
+    </div>
+    <div class="highlights-list">
+      <!-- OpenAI Compatible -->
+      <div class="highlight-item reveal">
+        <div class="highlight-visual">
+          <div class="highlight-visual-bar">
+            <div class="console-dot red"></div><div class="console-dot yellow"></div><div class="console-dot green"></div>
+            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;">api_call.py</span>
+          </div>
+          <div class="highlight-visual-content">
+            <div class="mock-code">
+              <div class="line"><span class="ln">1</span><span class="kc">import</span> openai</div>
+              <div class="line"><span class="ln">2</span></div>
+              <div class="line"><span class="ln">3</span>client = openai.<span class="fn">OpenAI</span>(</div>
+              <div class="line"><span class="ln">4</span>  base_url=<span class="str">"https://api.crewrouter.io/v1"</span></div>
+              <div class="line"><span class="ln">5</span>)</div>
+              <div class="line"><span class="ln">6</span></div>
+              <div class="line"><span class="ln">7</span>resp = client.chat.completions.<span class="fn">create</span>(</div>
+              <div class="line"><span class="ln">8</span>  model=<span class="str">"gpt-4.1"</span>,</div>
+              <div class="line"><span class="ln">9</span>  messages=[...]</div>
+              <div class="line"><span class="ln">10</span>)</div>
+            </div>
+          </div>
+        </div>
+        <div class="highlight-text">
+          <h3>双格式兼容 API</h3>
+          <p>完美兼容 OpenAI Chat Completions 和 Messages 格式。只需更换 <code>base_url</code>，无需修改任何代码。同时支持 Anthropic 原生格式，满足不同场景。</p>
+        </div>
+      </div>
+
+      <!-- Teams -->
+      <div class="highlight-item reveal">
+        <div class="highlight-visual">
+          <div class="highlight-visual-bar">
+            <div class="console-dot red"></div><div class="console-dot yellow"></div><div class="console-dot green"></div>
+            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;">Teams</span>
+          </div>
+          <div class="highlight-visual-content">
+            <table class="mock-table">
+              <thead><tr><th>团队</th><th>模型</th><th>状态</th></tr></thead>
+              <tbody>
+                <tr><td>工程团队</td><td>GPT-4o, Claude</td><td><span class="mock-badge green">启用</span></td></tr>
+                <tr><td>产品团队</td><td>GPT-4o Mini</td><td><span class="mock-badge green">启用</span></td></tr>
+                <tr><td>前沿团队</td><td>DeepSeek R1</td><td><span class="mock-badge blue">Beta</span></td></tr>
+                <tr><td>默认团队</td><td>全部模型</td><td><span class="mock-badge amber">受限</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="highlight-text">
+          <h3>团队与权限</h3>
+          <p>团队级别的模型访问控制，支持个人、默认和前沿团队分层管理。管理员精确控制每个团队可用的模型范围，配合用户组限额规则实现精细化资源管控。</p>
+        </div>
+      </div>
+
+      <!-- Billing -->
+      <div class="highlight-item reveal">
+        <div class="highlight-visual">
+          <div class="highlight-visual-bar">
+            <div class="console-dot red"></div><div class="console-dot yellow"></div><div class="console-dot green"></div>
+            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;">统计概览</span>
+          </div>
+          <div class="highlight-visual-content">
+            <div class="mock-bars">
+              <div class="mock-bar" style="height:45%"></div>
+              <div class="mock-bar" style="height:72%"></div>
+              <div class="mock-bar" style="height:58%"></div>
+              <div class="mock-bar" style="height:85%"></div>
+              <div class="mock-bar" style="height:63%"></div>
+              <div class="mock-bar" style="height:90%"></div>
+              <div class="mock-bar" style="height:78%"></div>
+              <div class="mock-bar" style="height:42%"></div>
+              <div class="mock-bar" style="height:67%"></div>
+              <div class="mock-bar" style="height:95%"></div>
+            </div>
+            <div class="mock-stat-row"><span class="mock-stat-label">本月请求</span><span class="mock-stat-value">12,847</span></div>
+            <div class="mock-stat-row"><span class="mock-stat-label">Token 用量</span><span class="mock-stat-value">8.2M</span></div>
+            <div class="mock-stat-row"><span class="mock-stat-label">缓存命中</span><span class="mock-stat-value" style="color:#10b981;">34.2%</span></div>
+            <div class="mock-stat-row"><span class="mock-stat-label">本月成本</span><span class="mock-stat-value">¥28.50</span></div>
+          </div>
+        </div>
+        <div class="highlight-text">
+          <h3>灵活计费</h3>
+          <p>按 Token 计费，支持模型倍率和完成倍率自定义。兑换码系统、余额告警、可退款余额，满足团队内部结算和对外运营需求。</p>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div class="highlight-item reveal">
+        <div class="highlight-visual">
+          <div class="highlight-visual-bar">
+            <div class="console-dot red"></div><div class="console-dot yellow"></div><div class="console-dot green"></div>
+            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;">密钥隔离</span>
+          </div>
+          <div class="highlight-visual-content">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--secondary);border:1px solid var(--border);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span style="font-size:12px;font-weight:500;">你的团队成员</span>
+                <span style="font-size:11px;color:var(--muted-foreground);margin-left:auto;">仅获使用权</span>
+              </div>
+              <div style="display:flex;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span style="font-size:12px;font-weight:500;">CrewRouter 网关</span>
+                <span style="font-size:11px;color:var(--muted-foreground);margin-left:auto;">密钥在此隔离</span>
+              </div>
+              <div style="display:flex;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--secondary);border:1px solid var(--border);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--destructive)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                <span style="font-size:12px;font-weight:500;">供应商 API Key</span>
+                <span style="font-size:11px;color:var(--destructive);margin-left:auto;">不可见</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="highlight-text">
+          <h3>密钥隔离与安全</h3>
+          <p>供应商的 API Key、地址等敏感信息完全隔离在网关层，本地编程工具（如 Claude Code）和团队成员均无法获取。团队成员仅有模型使用权，没有密钥所有权——可以按规定畅快使用，但无法导出或查看密钥。管理员随时可以撤销使用权，一切掌控在您手中。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <h2 class="reveal">立即体验 CrewRouter</h2>
+    <p class="reveal">无需注册，直接进入演示控制台感受完整功能</p>
+    <div class="reveal">
+      <a href="/console" class="btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        进入演示控制台
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="showcase-footer">
+    <span>© 2025 CrewRouter. All rights reserved.</span>
+    <div class="footer-links">
+      <a href="/console#docs">文档</a>
+      <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </footer>
+
+  <!-- Theme Toggle + Scroll Animations -->
+  <script>
+    (function() {
+      // Theme toggle
+      var themes = ['system', 'light', 'dark'];
+      function getResolved(theme) {
+        if (theme === 'system') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        return theme;
+      }
+      function applyTheme(theme) {
+        var resolved = getResolved(theme);
+        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.add(resolved);
+        localStorage.setItem('theme', theme);
+      }
+      document.getElementById('themeToggle').addEventListener('click', function() {
+        var current = localStorage.getItem('theme') || 'system';
+        applyTheme(themes[(themes.indexOf(current) + 1) % themes.length]);
+      });
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+        if ((localStorage.getItem('theme') || 'system') === 'system') applyTheme('system');
+      });
+
+      // Nav shadow on scroll
+      var nav = document.getElementById('showcaseNav');
+      window.addEventListener('scroll', function() {
+        nav.classList.toggle('scrolled', window.scrollY > 40);
+      }, { passive: true });
+
+      // Scroll reveal
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+      document.querySelectorAll('.reveal').forEach(function(el, i) {
+        el.style.transitionDelay = (i % 6) * 80 + 'ms';
+        observer.observe(el);
+      });
+
+      // Fetch real provider/model counts
+      try {
+        fetch('/api/user/models').then(function(r) { return r.json(); }).then(function(models) {
+          if (Array.isArray(models) && models.length) {
+            document.getElementById('metricModels').textContent = models.length + '+';
+            var providers = new Set(models.map(function(m) { return m.provider || m.provider_name; }).filter(Boolean));
+            document.getElementById('metricProviders').textContent = providers.size + '+';
+          }
+        }).catch(function() {});
+      } catch(e) {}
+    })();
+  </script>
+</body>
+</html>

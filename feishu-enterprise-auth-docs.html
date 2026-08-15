@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>飞书企业内注册系统 - 开发文档</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #3370ff;
+            --primary-dark: #245bdb;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --danger: #f87171;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --code-bg: #1e1e2e;
+            --code-text: #cdd6f4;
+            --sidebar-width: 260px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            z-index: 100;
+            padding: 24px 0;
+        }
+
+        .sidebar-header {
+            padding: 0 24px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header h1 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar-header .subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .nav-section {
+            padding: 16px 0;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0 24px 8px;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 8px 24px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: rgba(51, 112, 255, 0.05);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: rgba(51, 112, 255, 0.08);
+            color: var(--primary);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 主内容区 */
+        .main {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+        }
+
+        .content {
+            max-width: 900px;
+            padding: 48px 40px;
+            margin: 0 auto;
+        }
+
+        /* 标题 */
+        h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        h3 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 40px 0 16px;
+            color: var(--text);
+        }
+
+        h4 {
+            font-size: 17px;
+            font-weight: 600;
+            margin: 28px 0 12px;
+            color: var(--primary-dark);
+        }
+
+        p {
+            margin-bottom: 14px;
+            color: var(--text);
+        }
+
+        /* 信息卡片 */
+        .info-box {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .info-box::before {
+            content: "💡";
+            position: absolute;
+            top: 20px;
+            left: 24px;
+            font-size: 20px;
+        }
+
+        .info-box p {
+            margin: 0;
+            padding-left: 32px;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 1px solid #fcd34d;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin: 20px 0;
+        }
+
+        .warning-box::before {
+            content: "⚠️";
+            margin-right: 8px;
+        }
+
+        .success-box {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 1px solid #6ee7b7;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin: 20px 0;
+        }
+
+        .success-box::before {
+            content: "✅";
+            margin-right: 8px;
+        }
+
+        /* 表格 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        th {
+            background: #f8fafc;
+            padding: 14px 18px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 14px 18px;
+            border-top: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        tr:hover td {
+            background: #f8fafc;
+        }
+
+        /* 代码块 */
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 20px 24px;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            position: relative;
+        }
+
+        pre::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 8px;
+            right: 16px;
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+        }
+
+        code.inline {
+            background: #f1f5f9;
+            color: var(--primary-dark);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        /* 步骤列表 */
+        .steps {
+            counter-reset: step;
+            list-style: none;
+            padding: 0;
+        }
+
+        .steps li {
+            position: relative;
+            padding-left: 48px;
+            margin-bottom: 24px;
+        }
+
+        .steps li::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        /* 检查清单 */
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 10px 0 10px 36px;
+            position: relative;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .checklist li::before {
+            content: "☐";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .checklist li.checked::before {
+            content: "☑";
+        }
+
+        /* 流程图 */
+        .flowchart {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 24px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .flow-step {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .flow-arrow {
+            color: var(--primary);
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* 标签 */
+        .tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+
+        .tag-primary {
+            background: #dbeafe;
+            color: var(--primary-dark);
+        }
+
+        .tag-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .tag-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .tag-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* 锚点偏移 */
+        section {
+            scroll-margin-top: 40px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main {
+                margin-left: 0;
+            }
+            .content {
+                padding: 24px;
+            }
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏导航 -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h1>📘 开发文档</h1>
+            <div class="subtitle">飞书企业内注册系统</div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">概览</div>
+            <a href="#overview" class="nav-item active">核心原理</a>
+            <a href="#flow" class="nav-item">登录流程</a>
+            <a href="#security" class="nav-item">安全要点</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">配置</div>
+            <a href="#feishu-config" class="nav-item">飞书应用配置</a>
+            <a href="#env" class="nav-item">环境变量</a>
+            <a href="#tenant" class="nav-item">获取 Tenant Key</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">后端实现</div>
+            <a href="#backend" class="nav-item">Node.js 完整代码</a>
+            <a href="#api-routes" class="nav-item">API 路由说明</a>
+            <a href="#auth-middleware" class="nav-item">认证中间件</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">前端实现</div>
+            <a href="#frontend" class="nav-item">React 登录页</a>
+            <a href="#protected" class="nav-item">受保护路由</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">部署</div>
+            <a href="#deploy" class="nav-item">部署检查清单</a>
+            <a href="#troubleshoot" class="nav-item">常见问题</a>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <main class="main">
+        <div class="content">
+
+            <section id="overview">
+                <h2>核心原理</h2>
+                <p>通过 <strong>飞书 OAuth 2.0 登录</strong> 实现企业内用户隔离注册。系统核心逻辑如下：</p>
+
+                <div class="flowchart">
+                    <div class="flow-step">用户点击<br>飞书登录</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">跳转飞书<br>授权页面</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">用户扫码<br>确认授权</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">返回站点<br>获取 code</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">校验 tenant_key<br>& 邮箱域名</div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">发放 JWT<br>完成注册</div>
+                </div>
+
+                <div class="info-box">
+                    <p><strong>Tenant Key</strong> 是飞书企业的唯一标识，相当于企业的「身份证号」。校验此字段即可确保只有特定企业员工能注册。</p>
+                </div>
+            </section>
+
+            <section id="flow">
+                <h3>OAuth 授权流程详解</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>步骤</th>
+                            <th>动作</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="tag tag-primary">1</span></td>
+                            <td>生成授权链接</td>
+                            <td>后端拼接 <code class="inline">app_id</code>、<code class="inline">redirect_uri</code>、<code class="inline">state</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag tag-primary">2</span></td>
+                            <td>用户授权</td>
+                            <td>用户在飞书端扫码或点击确认授权</td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag tag-primary">3</span></td>
+                            <td>获取 Code</td>
+                            <td>飞书重定向到 <code class="inline">redirect_uri?code=xxx&state=xxx</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag tag-primary">4</span></td>
+                            <td>换取 Token</td>
+                            <td>用 code 调用飞书接口换取 <code class="inline">access_token</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag tag-primary">5</span></td>
+                            <td>获取用户信息</td>
+                            <td>用 access_token 获取用户 <code class="inline">open_id</code>、<code class="inline">tenant_key</code>、邮箱等</td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag tag-primary">6</span></td>
+                            <td>企业校验</td>
+                            <td>比对 <code class="inline">tenant_key</code> 和邮箱域名白名单</td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag tag-primary">7</span></td>
+                            <td>发放凭证</td>
+                            <td>生成 JWT，重定向回前端完成登录</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="security">
+                <h3>安全要点</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>安全措施</th>
+                            <th>作用</th>
+                            <th>优先级</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Tenant Key 校验</strong></td>
+                            <td>核心隔离手段，确保只有目标企业员工能登录</td>
+                            <td><span class="tag tag-danger">必须</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>邮箱域名白名单</strong></td>
+                            <td>双重保险，防止 tenant_key 异常时的兜底</td>
+                            <td><span class="tag tag-warning">强烈建议</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>State 参数校验</strong></td>
+                            <td>防止 CSRF 攻击</td>
+                            <td><span class="tag tag-danger">必须</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>JWT 过期时间</strong></td>
+                            <td>Token 设置合理过期时间（建议 7 天）</td>
+                            <td><span class="tag tag-warning">强烈建议</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>HTTPS 传输</strong></td>
+                            <td>生产环境必须启用，防止中间人攻击</td>
+                            <td><span class="tag tag-danger">必须</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>App Secret 保护</strong></td>
+                            <td>绝不暴露在前端，使用环境变量管理</td>
+                            <td><span class="tag tag-danger">必须</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="feishu-config">
+                <h2>飞书应用配置</h2>
+                <p>在 <a href="https://open.feishu.cn/" target="_blank">飞书开放平台</a> 创建企业自建应用：</p>
+
+                <ol class="steps">
+                    <li>
+                        <strong>创建应用</strong><br>
+                        进入「开发者后台」→「创建企业自建应用」→ 选择「企业自建应用」类型<br>
+                        <span class="tag tag-primary">内部使用</span> <span class="tag tag-success">无需上架审核</span>
+                    </li>
+                    <li>
+                        <strong>配置权限</strong><br>
+                        进入「权限管理」，添加以下权限：
+                        <ul style="margin-top:8px; margin-left:20px; color:var(--text-secondary);">
+                            <li><code class="inline">contact:user.employee_id:readonly</code> — 获取用户员工 ID</li>
+                            <li><code class="inline">contact:user.base:readonly</code> — 获取用户基础信息</li>
+                            <li><code class="inline">auth:user.id:readonly</code> — 获取用户 ID 信息</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>配置登录设置</strong><br>
+                        进入「登录与分享」→ 添加 Web 应用安全域名（你的站点域名，如 <code class="inline">https://your-site.com</code>）
+                    </li>
+                    <li>
+                        <strong>配置重定向 URL</strong><br>
+                        添加回调地址：<code class="inline">https://your-site.com/api/auth/feishu/callback</code><br>
+                        <span style="color:var(--danger);">⚠️ 必须与后端配置的 redirect_uri 完全一致，包括协议和路径</span>
+                    </li>
+                    <li>
+                        <strong>发布应用</strong><br>
+                        进入「版本管理与发布」→ 创建版本 → 申请发布 → 管理员审批通过
+                    </li>
+                </ol>
+
+                <div class="warning-box">
+                    <strong>注意：</strong>应用未发布时，只有应用创建者能测试。如需多人测试，在「成员管理」中添加测试人员。
+                </div>
+            </section>
+
+            <section id="env">
+                <h3>环境变量配置</h3>
+                <p>在项目根目录创建 <code class="inline">.env</code> 文件：</p>
+
+                <pre data-lang="env"># ========================================
+# 飞书应用凭证（从飞书开放平台获取）
+# ========================================
+FEISHU_APP_ID=cli_xxxxxxxxxxxxxxxx
+FEISHU_APP_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# ========================================
+# 企业唯一标识（只允许该企业员工注册）
+# 获取方式见下文「获取 Tenant Key」
+# ========================================
+ALLOWED_TENANT_KEY=xxxxxxxxxxxxxxxx
+
+# ========================================
+# JWT 密钥（随机生成，用于签名 Token）
+# 可用命令：openssl rand -base64 32
+# ========================================
+JWT_SECRET=your-super-secret-jwt-key-change-this
+
+# ========================================
+# 前端地址（用于登录成功/失败后的跳转）
+# ========================================
+FRONTEND_URL=https://your-site.com
+
+# ========================================
+# 数据库配置（根据你的数据库调整）
+# ========================================
+DATABASE_URL=postgresql://user:pass@localhost:5432/dbname
+
+# ========================================
+# 服务端口号
+# ========================================
+PORT=3001</pre>
+            </section>
+
+            <section id="tenant">
+                <h3>如何获取 Tenant Key</h3>
+                <p>Tenant Key 是你的企业在飞书中的唯一标识，有以下几种获取方式：</p>
+
+                <h4>方式一：通过飞书管理后台查看</h4>
+                <ol>
+                    <li>登录飞书管理后台（<code class="inline">https://www.feishu.cn/admin</code>）</li>
+                    <li>进入「企业设置」→「企业信息」</li>
+                    <li>查看「企业编号」，即为 Tenant Key</li>
+                </ol>
+
+                <h4>方式二：通过 API 获取</h4>
+                <p>调用飞书接口，在返回的用户信息中会包含 <code class="inline">tenant_key</code>：</p>
+                <pre data-lang="bash">curl -X GET 'https://open.feishu.cn/open-apis/authen/v1/user_info'   -H 'Authorization: Bearer {access_token}'</pre>
+
+                <h4>方式三：临时打印调试</h4>
+                <p>在开发阶段，可以临时关闭 tenant_key 校验，先打印出登录用户的 tenant_key，确认后再配置到环境变量中。</p>
+            </section>
+
+            <section id="backend">
+                <h2>后端实现（Node.js + Express）</h2>
+                <p>以下是完整的后端代码，包含飞书 OAuth 授权、企业校验、JWT 签发等核心逻辑。</p>
+
+                <h4>项目依赖</h4>
+                <pre data-lang="bash">npm install express axios jsonwebtoken express-session dotenv</pre>
+
+                <h4>主入口文件 server.js</h4>
+                <pre data-lang="javascript">const express = require('express');
+const axios = require('axios');
+const jwt = require('jsonwebtoken');
+const session = require('express-session');
+require('dotenv').config();
+
+const app = express();
+
+// ========================================
+// 配置区域
+// ========================================
+const CONFIG = {
+  FEISHU_APP_ID: process.env.FEISHU_APP_ID,
+  FEISHU_APP_SECRET: process.env.FEISHU_APP_SECRET,
+  ALLOWED_TENANT_KEY: process.env.ALLOWED_TENANT_KEY,
+  JWT_SECRET: process.env.JWT_SECRET,
+  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
+  ALLOWED_DOMAINS: ['yourcompany.com', 'yourcompany.cn'] // 邮箱域名白名单
+};
+
+// ========================================
+// 中间件
+// ========================================
+app.use(express.json());
+app.use(session({
+  secret: CONFIG.JWT_SECRET,
+  resave: false,
+  saveUninitialized: true,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 10 * 60 * 1000 // 10分钟
+  }
+}));
+
+// 允许跨域（根据实际部署调整）
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', CONFIG.FRONTEND_URL);
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+
+// ========================================
+// 飞书应用级 Access Token 缓存
+// ========================================
+let appAccessToken = null;
+let tokenExpireTime = 0;
+
+async function getAppAccessToken() {
+  // 如果 token 未过期，直接返回缓存
+  if (appAccessToken && Date.now() < tokenExpireTime) {
+    return appAccessToken;
+  }
+
+  try {
+    const res = await axios.post(
+      'https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal',
+      {
+        app_id: CONFIG.FEISHU_APP_ID,
+        app_secret: CONFIG.FEISHU_APP_SECRET
+      }
+    );
+
+    if (res.data.code !== 0) {
+      throw new Error(`获取 App Access Token 失败: ${res.data.msg}`);
+    }
+
+    appAccessToken = res.data.app_access_token;
+    // 提前 5 分钟刷新
+    tokenExpireTime = Date.now() + (res.data.expire - 300) * 1000;
+
+    return appAccessToken;
+  } catch (error) {
+    console.error('获取 App Access Token 失败:', error.message);
+    throw error;
+  }
+}
+
+// ========================================
+// 步骤 1：生成飞书授权链接
+// ========================================
+app.get('/api/auth/feishu', (req, res) => {
+  const redirectUri = encodeURIComponent(
+    `${req.protocol}://${req.get('host')}/api/auth/feishu/callback`
+  );
+
+  // 生成随机 state，防止 CSRF
+  const state = Math.random().toString(36).substring(2, 15) + 
+                Math.random().toString(36).substring(2, 15);
+
+  req.session.oauthState = state;
+  req.session.save();
+
+  const authUrl = `https://open.feishu.cn/open-apis/authen/v1/authorize?` +
+    `app_id=${CONFIG.FEISHU_APP_ID}` +
+    `&redirect_uri=${redirectUri}` +
+    `&state=${state}`;
+
+  res.json({ 
+    success: true,
+    authUrl 
+  });
+});
+
+// ========================================
+// 步骤 2：处理飞书回调
+// ========================================
+app.get('/api/auth/feishu/callback', async (req, res) => {
+  const { code, state } = req.query;
+
+  // 校验 state 防止 CSRF 攻击
+  if (!state || state !== req.session.oauthState) {
+    console.warn('State 校验失败，可能存在 CSRF 攻击');
+    return res.redirect(`${CONFIG.FRONTEND_URL}/login?error=invalid_state`);
+  }
+
+  // 清除 session 中的 state
+  req.session.oauthState = null;
+
+  if (!code) {
+    return res.redirect(`${CONFIG.FRONTEND_URL}/login?error=no_code`);
+  }
+
+  try {
+    // -------- 2.1 用 code 换取 access_token --------
+    const tokenRes = await axios.post(
+      'https://open.feishu.cn/open-apis/authen/v1/oidc/access_token',
+      {
+        grant_type: 'authorization_code',
+        code: code
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${await getAppAccessToken()}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (tokenRes.data.code !== 0) {
+      throw new Error(tokenRes.data.msg);
+    }
+
+    const accessToken = tokenRes.data.data.access_token;
+
+    // -------- 2.2 获取用户信息 --------
+    const userRes = await axios.get(
+      'https://open.feishu.cn/open-apis/authen/v1/user_info',
+      {
+        headers: { 
+          'Authorization': `Bearer ${accessToken}` 
+        }
+      }
+    );
+
+    if (userRes.data.code !== 0) {
+      throw new Error(userRes.data.msg);
+    }
+
+    const userInfo = userRes.data.data;
+
+    console.log('飞书用户登录:', {
+      name: userInfo.name,
+      email: userInfo.email,
+      tenant_key: userInfo.tenant_key,
+      employee_id: userInfo.employee_id
+    });
+
+    // ========================================
+    // 关键校验 1：Tenant Key 企业隔离
+    // ========================================
+    if (userInfo.tenant_key !== CONFIG.ALLOWED_TENANT_KEY) {
+      console.warn(
+        `拒绝非企业员工登录: ${userInfo.email}, ` +
+        `tenant: ${userInfo.tenant_key}, ` +
+        `期望: ${CONFIG.ALLOWED_TENANT_KEY}`
+      );
+      return res.redirect(
+        `${CONFIG.FRONTEND_URL}/login?error=not_enterprise_user`
+      );
+    }
+
+    // ========================================
+    // 关键校验 2：邮箱域名白名单（双重保险）
+    // ========================================
+    const emailDomain = userInfo.email?.split('@')[1];
+    if (!emailDomain || !CONFIG.ALLOWED_DOMAINS.includes(emailDomain)) {
+      console.warn(
+        `拒绝非企业邮箱: ${userInfo.email}, ` +
+        `域名: ${emailDomain}`
+      );
+      return res.redirect(
+        `${CONFIG.FRONTEND_URL}/login?error=invalid_domain`
+      );
+    }
+
+    // ========================================
+    // 2.3 查找或创建用户
+    // ========================================
+    const user = await findOrCreateUser({
+      feishuOpenId: userInfo.open_id,
+      feishuUnionId: userInfo.union_id,
+      employeeId: userInfo.employee_id,
+      tenantKey: userInfo.tenant_key,
+      name: userInfo.name,
+      email: userInfo.email,
+      avatar: userInfo.avatar_url,
+      department: userInfo.department
+    });
+
+    // ========================================
+    // 2.4 生成 JWT Token
+    // ========================================
+    const token = jwt.sign(
+      { 
+        userId: user.id,
+        email: user.email,
+        tenantKey: user.tenantKey,
+        employeeId: user.employeeId
+      },
+      CONFIG.JWT_SECRET,
+      { expiresIn: '7d' } // Token 7 天有效
+    );
+
+    // 重定向到前端，通过 URL 参数传递 token
+    // 生产环境建议使用 httpOnly cookie 更安全
+    res.redirect(`${CONFIG.FRONTEND_URL}/auth/callback?token=${token}`);
+
+  } catch (error) {
+    console.error('飞书登录失败:', error.response?.data || error.message);
+    res.redirect(`${CONFIG.FRONTEND_URL}/login?error=auth_failed`);
+  }
+});
+
+// ========================================
+// 模拟数据库操作（替换为你的真实数据库）
+// ========================================
+async function findOrCreateUser(feishuData) {
+  // TODO: 替换为真实数据库操作
+  // 
+  // 示例（使用 Prisma + PostgreSQL）：
+  // const existing = await prisma.user.findUnique({
+  //   where: { feishuOpenId: feishuData.feishuOpenId }
+  // });
+  // 
+  // if (existing) {
+  //   return await prisma.user.update({
+  //     where: { id: existing.id },
+  //     data: {
+  //       name: feishuData.name,
+  //       avatar: feishuData.avatar,
+  //       department: feishuData.department,
+  //       lastLoginAt: new Date()
+  //     }
+  //   });
+  // }
+  // 
+  // return await prisma.user.create({ data: feishuData });
+
+  // 模拟返回
+  return {
+    id: 'user_' + Math.random().toString(36).substr(2, 9),
+    ...feishuData,
+    createdAt: new Date()
+  };
+}
+
+// ========================================
+// 启动服务
+// ========================================
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`📎 飞书回调地址: http://localhost:${PORT}/api/auth/feishu/callback`);
+});
+
+module.exports = app;</pre>
+            </section>
+
+            <section id="api-routes">
+                <h3>API 路由说明</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>方法</th>
+                            <th>路径</th>
+                            <th>说明</th>
+                            <th>认证</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="tag tag-primary">GET</span></td>
+                            <td><code class="inline">/api/auth/feishu</code></td>
+                            <td>获取飞书授权链接</td>
+                            <td>否</td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag tag-primary">GET</span></td>
+                            <td><code class="inline">/api/auth/feishu/callback</code></td>
+                            <td>飞书 OAuth 回调处理</td>
+                            <td>否</td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag tag-primary">GET</span></td>
+                            <td><code class="inline">/api/me</code></td>
+                            <td>获取当前登录用户信息</td>
+                            <td><span class="tag tag-success">JWT</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag tag-primary">POST</span></td>
+                            <td><code class="inline">/api/auth/logout</code></td>
+                            <td>退出登录（清除 Token）</td>
+                            <td><span class="tag tag-success">JWT</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="auth-middleware">
+                <h3>认证中间件</h3>
+                <pre data-lang="javascript">/**
+ * JWT 认证中间件
+ * 验证请求头中的 Authorization: Bearer <token>
+ */
+const authenticate = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      success: false, 
+      error: '未提供认证令牌' 
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, CONFIG.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false, 
+        error: '登录已过期，请重新登录' 
+      });
+    }
+    return res.status(401).json({ 
+      success: false, 
+      error: '无效的认证令牌' 
+    });
+  }
+};
+
+/**
+ * 企业成员校验中间件
+ * 确保用户属于允许的企业
+ */
+const requireEnterpriseMember = (req, res, next) => {
+  if (req.user.tenantKey !== CONFIG.ALLOWED_TENANT_KEY) {
+    return res.status(403).json({
+      success: false,
+      error: '无权访问，仅限企业内部成员'
+    });
+  }
+  next();
+};
+
+// 使用示例
+app.get('/api/me', authenticate, async (req, res) => {
+  // req.user 包含 { userId, email, tenantKey, employeeId }
+  const user = await db.users.findById(req.user.userId);
+  res.json({ success: true, user });
+});
+
+app.get('/api/admin/data', authenticate, requireEnterpriseMember, async (req, res) => {
+  // 只有企业员工能访问的管理接口
+  res.json({ success: true, data: [] });
+});</pre>
+            </section>
+
+            <section id="frontend">
+                <h2>前端实现（React）</h2>
+
+                <h4>登录页面 LoginPage.jsx</h4>
+                <pre data-lang="jsx">import React from 'react';
+import { useSearchParams } from 'react-router-dom';
+import './LoginPage.css';
+
+function LoginPage() {
+  const [searchParams] = useSearchParams();
+  const error = searchParams.get('error');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleFeishuLogin = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/feishu');
+      const data = await res.json();
+
+      if (data.success && data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error('获取授权链接失败');
+      }
+    } catch (err) {
+      console.error('登录失败:', err);
+      setLoading(false);
+    }
+  };
+
+  const getErrorMessage = () => {
+    const messages = {
+      not_enterprise_user: '❌ 仅限企业内部员工访问',
+      invalid_domain: '❌ 请使用企业邮箱登录',
+      invalid_state: '❌ 安全校验失败，请重试',
+      auth_failed: '❌ 登录失败，请稍后重试',
+      no_code: '❌ 授权码获取失败',
+      default: '❌ 登录过程中发生错误'
+    };
+    return messages[error] || messages.default;
+  };
+
+  return (
+    <div className="login-container">
+      <div className="login-card">
+        <div className="login-header">
+          <div className="logo">🏢</div>
+          <h1>企业内部系统</h1>
+          <p>仅限企业飞书账号登录</p>
+        </div>
+
+        {error && (
+          <div className="error-banner">
+            {getErrorMessage()}
+          </div>
+        )}
+
+        <button 
+          onClick={handleFeishuLogin}
+          disabled={loading}
+          className="feishu-login-btn"
+        >
+          {loading ? (
+            <span className="spinner">⟳</span>
+          ) : (
+            <>
+              <img 
+                src="https://lf3-static.bytednsdoc.com/obj/eden-cn/ylaelkeh7nuhbfeuhog/flag.png" 
+                alt="飞书" 
+                className="feishu-icon"
+              />
+              飞书扫码登录
+            </>
+          )}
+        </button>
+
+        <div className="security-note">
+          <span className="lock-icon">🔒</span>
+          <small>
+            仅允许 @yourcompany.com 邮箱注册<br/>
+            企业数据安全隔离
+          </small>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default LoginPage;</pre>
+
+                <h4>登录页面样式 LoginPage.css</h4>
+                <pre data-lang="css">.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.login-card {
+  background: white;
+  border-radius: 20px;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+
+.login-header {
+  margin-bottom: 32px;
+}
+
+.logo {
+  font-size: 56px;
+  margin-bottom: 16px;
+}
+
+.login-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.login-header p {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.error-banner {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.feishu-login-btn {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #3370ff, #245bdb);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+  margin-bottom: 24px;
+}
+
+.feishu-login-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(51, 112, 255, 0.4);
+}
+
+.feishu-login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.feishu-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.security-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #9ca3af;
+}
+
+.lock-icon {
+  font-size: 16px;
+}</pre>
+            </section>
+
+            <section id="protected">
+                <h3>受保护路由与回调处理</h3>
+
+                <h4>AuthCallback.jsx — 处理登录回调</h4>
+                <pre data-lang="jsx">import React from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+
+function AuthCallback() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [status, setStatus] = React.useState('processing');
+
+  React.useEffect(() => {
+    const token = searchParams.get('token');
+    const error = searchParams.get('error');
+
+    if (error) {
+      setStatus('error');
+      setTimeout(() => navigate(`/login?error=${error}`), 1500);
+      return;
+    }
+
+    if (token) {
+      // 存储 Token（生产环境建议使用 httpOnly cookie）
+      localStorage.setItem('token', token);
+
+      // 可选：解析 JWT 获取基本信息
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        localStorage.setItem('userInfo', JSON.stringify({
+          userId: payload.userId,
+          email: payload.email
+        }));
+      } catch (e) {
+        console.error('解析 Token 失败:', e);
+      }
+
+      setStatus('success');
+      setTimeout(() => navigate('/dashboard'), 1000);
+    } else {
+      setStatus('error');
+      setTimeout(() => navigate('/login?error=auth_failed'), 1500);
+    }
+  }, [searchParams, navigate]);
+
+  const statusConfig = {
+    processing: { icon: '⟳', text: '登录处理中...', color: '#3370ff' },
+    success: { icon: '✅', text: '登录成功，正在跳转...', color: '#10b981' },
+    error: { icon: '❌', text: '登录失败，正在返回...', color: '#ef4444' }
+  };
+
+  const current = statusConfig[status];
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'column',
+      gap: '16px'
+    }}>
+      <div style={{ fontSize: '48px' }}>{current.icon}</div>
+      <p style={{ 
+        fontSize: '18px', 
+        color: current.color,
+        fontWeight: 600 
+      }}>
+        {current.text}
+      </p>
+    </div>
+  );
+}
+
+export default AuthCallback;</pre>
+
+                <h4>ProtectedRoute.jsx — 受保护路由</h4>
+                <pre data-lang="jsx">import React from 'react';
+import { Navigate } from 'react-router-dom';
+
+/**
+ * 受保护路由组件
+ * 检查本地存储的 JWT 是否有效
+ */
+function ProtectedRoute({ children }) {
+  const [isAuthenticated, setIsAuthenticated] = React.useState(null);
+  const [user, setUser] = React.useState(null);
+
+  React.useEffect(() => {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    // 验证 Token 有效性
+    fetch('/api/me', {
+      headers: { 
+        'Authorization': `Bearer ${token}` 
+      }
+    })
+    .then(res => {
+      if (!res.ok) {
+        // Token 无效或过期，清除存储
+        localStorage.removeItem('token');
+        localStorage.removeItem('userInfo');
+        setIsAuthenticated(false);
+        return null;
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (data && data.success) {
+        setUser(data.user);
+        setIsAuthenticated(true);
+      }
+    })
+    .catch(() => {
+      localStorage.removeItem('token');
+      setIsAuthenticated(false);
+    });
+  }, []);
+
+  if (isAuthenticated === null) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div className="loading-spinner">加载中...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // 将用户信息传递给子组件
+  return React.cloneElement(children, { user });
+}
+
+export default ProtectedRoute;</pre>
+
+                <h4>App.jsx 路由配置</h4>
+                <pre data-lang="jsx">import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import LoginPage from './pages/LoginPage';
+import AuthCallback from './pages/AuthCallback';
+import Dashboard from './pages/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* 公开路由 */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+
+        {/* 受保护路由 */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+
+        {/* 默认重定向 */}
+        <Route path="*" element={<Navigate to="/dashboard" />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;</pre>
+            </section>
+
+            <section id="deploy">
+                <h2>部署检查清单</h2>
+                <ul class="checklist">
+                    <li>飞书应用已创建并配置正确的权限</li>
+                    <li>Web 应用安全域名已添加（生产环境域名）</li>
+                    <li>重定向 URL 配置正确（包含 https 协议）</li>
+                    <li>应用已发布或已添加测试人员</li>
+                    <li>环境变量已正确配置（特别是 ALLOWED_TENANT_KEY）</li>
+                    <li>服务器已启用 HTTPS</li>
+                    <li>数据库用户表已创建（包含 feishu_open_id 索引）</li>
+                    <li>JWT_SECRET 已设置为强随机字符串</li>
+                    <li>邮箱域名白名单已配置正确</li>
+                    <li>跨域配置已根据实际部署调整</li>
+                    <li>日志记录已启用（便于排查问题）</li>
+                    <li>错误处理页面已配置（友好提示非企业员工）</li>
+                </ul>
+            </section>
+
+            <section id="troubleshoot">
+                <h3>常见问题</h3>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>问题</th>
+                            <th>可能原因</th>
+                            <th>解决方案</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>redirect_uri 不匹配</td>
+                            <td>飞书后台配置的重定向地址与代码中不一致</td>
+                            <td>检查飞书后台「登录与分享」中的重定向 URL，确保协议、域名、路径完全一致</td>
+                        </tr>
+                        <tr>
+                            <td>获取不到用户信息</td>
+                            <td>权限未正确配置</td>
+                            <td>确认已申请 <code class="inline">contact:user.base:readonly</code> 权限并发布生效</td>
+                        </tr>
+                        <tr>
+                            <td>所有用户都被拒绝</td>
+                            <td>ALLOWED_TENANT_KEY 配置错误</td>
+                            <td>临时打印 userInfo.tenant_key 确认正确值，或先关闭校验调试</td>
+                        </tr>
+                        <tr>
+                            <td>Token 频繁过期</td>
+                            <td>App Access Token 缓存逻辑问题</td>
+                            <td>检查 tokenExpireTime 计算逻辑，确保提前刷新</td>
+                        </tr>
+                        <tr>
+                            <td>跨域错误</td>
+                            <td>CORS 配置不正确</td>
+                            <td>确认 Access-Control-Allow-Origin 与前端域名匹配，且允许 Credentials</td>
+                        </tr>
+                        <tr>
+                            <td>State 校验失败</td>
+                            <td>Session 未正确保存或跨域导致 Cookie 丢失</td>
+                            <td>检查 session 配置，确保 sameSite 和 secure 设置正确</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="success-box" style="margin-top: 30px;">
+                    <strong>完成！</strong> 按照以上步骤，你已经可以构建一个安全的企业内飞书注册系统。如有其他问题，欢迎查阅 <a href="https://open.feishu.cn/document/" target="_blank">飞书开放平台官方文档</a>。
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script>
+        // 平滑滚动 + 导航高亮
+        document.querySelectorAll('.nav-item').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                    // 更新高亮
+                    document.querySelectorAll('.nav-item').forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // 滚动时自动高亮对应导航
+        const sections = document.querySelectorAll('section[id]');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === '#' + current) {
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

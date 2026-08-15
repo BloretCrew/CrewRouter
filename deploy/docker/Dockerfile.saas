@@ -1,0 +1,50 @@
+# ==========================================================
+# CrewRouter SaaS 模式 Docker 构建
+#
+# 无需混淆，直接运行源码（源码在你自己的服务器上）
+# 使用压缩版本减小镜像体积
+# ==========================================================
+
+# ---- Stage 1: Build ----
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# 复制构建脚本
+COPY deploy/build/ ./deploy/build/
+
+# 复制源代码
+COPY server/ ./server/
+COPY public/ ./public/
+COPY config.example.json ./
+
+# SaaS 模式：仅打包压缩，不混淆
+RUN node deploy/build/build-release.js saas
+
+# ---- Stage 2: Release ----
+FROM node:22-alpine AS release
+
+RUN addgroup -S crewrouter && adduser -S crewrouter -G crewrouter
+
+WORKDIR /app
+
+COPY --from=build /app/dist/ ./
+RUN npm install --omit=dev --ignore-scripts && \
+    npm cache clean --force
+
+RUN mkdir -p /app/log && chown -R crewrouter:crewrouter /app
+
+USER crewrouter
+
+EXPOSE 20003
+
+ENV CR_APP_PORT=20003 \
+    NODE_ENV=production
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:20003/ || exit 1
+
+CMD ["node", "server.js"]

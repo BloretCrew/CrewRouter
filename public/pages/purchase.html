@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>购买商品 - CrewRouter</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/themes.css">
+  <link rel="stylesheet" href="/css/main.css">
+  <script>
+    (function() {
+      var theme = localStorage.getItem('theme') || 'system';
+      var resolved = theme;
+      if (theme === 'system') {
+        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.classList.add(resolved);
+    })();
+  </script>
+  <style>
+    .purchase-container {
+      max-width: 480px;
+      margin: 60px auto;
+      padding: 0 20px;
+    }
+    .purchase-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .purchase-image {
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+      background: var(--muted);
+    }
+    .purchase-image-placeholder {
+      width: 100%;
+      height: 240px;
+      background: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted-foreground);
+      font-size: 48px;
+    }
+    .purchase-info {
+      padding: 24px;
+    }
+    .purchase-name {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .purchase-desc {
+      font-size: 14px;
+      color: var(--muted-foreground);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    .purchase-btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      background: var(--brand-blue);
+      color: white;
+      transition: opacity 0.2s;
+    }
+    .purchase-btn:hover {
+      opacity: 0.9;
+    }
+    .purchase-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: var(--muted-foreground);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .back-link:hover {
+      color: var(--foreground);
+    }
+    .purchase-status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      text-align: center;
+    }
+    .loading-text {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted-foreground);
+    }
+    .error-text {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--destructive);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo" style="width:28px;height:28px;border-radius:6px;">
+          <h2>CrewRouter</h2>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-item" onclick="window.location.href='/console'">
+            <img src="https://img.bloret.net/SF/arrow.backward?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.backward">
+            <span>返回控制台</span>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <div class="content-header">
+        <h1>购买商品</h1>
+      </div>
+
+      <div class="purchase-container" id="purchaseContent">
+        <div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中"></div><div class="page-loading-text">加载中...</div></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/theme.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get('id');
+
+    async function loadProduct() {
+      const container = document.getElementById('purchaseContent');
+
+      if (!productId) {
+        container.innerHTML = '<div class="error-text">商品ID不存在</div>';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/user/products');
+        if (!res.ok) throw new Error('加载失败');
+        const products = await res.json();
+        const product = products.find(p => p.id === parseInt(productId));
+
+        if (!product) {
+          container.innerHTML = '<div class="error-text">商品不存在或已下架</div>';
+          return;
+        }
+
+        container.innerHTML = `
+          <a href="/console" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            返回余额
+          </a>
+          <div class="purchase-card">
+            ${product.image_url
+              ? `<img class="purchase-image" src="${product.image_url}" alt="${product.name}">`
+              : `<div class="purchase-image-placeholder">📦</div>`
+            }
+            <div class="purchase-info">
+              <div class="purchase-name">${product.name}</div>
+              ${product.description ? `<div class="purchase-desc">${product.description}</div>` : ''}
+              <button class="purchase-btn" onclick="handlePurchase()">立即购买</button>
+              <div id="purchaseStatus" class="purchase-status" style="display:none;"></div>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        container.innerHTML = '<div class="error-text">加载商品信息失败</div>';
+      }
+    }
+
+    function handlePurchase() {
+      const statusEl = document.getElementById('purchaseStatus');
+      statusEl.style.display = 'block';
+      statusEl.style.background = 'rgba(59,130,246,0.1)';
+      statusEl.style.color = 'var(--brand-blue)';
+      statusEl.textContent = '购买功能暂未开放，敬请期待';
+    }
+
+    loadProduct();
+  </script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+{
+  "app": {
+    "name": "CrewRouter",
+    "port": 20003,
+    "host": "localhost",
+    "sessionSecret": "your-session-secret-here",
+    "demo": false
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "crewrouter",
+    "user": "crewrouter",
+    "password": "your-database-password"
+  },
+  "feishu": {
+    "appId": "your-feishu-app-id",
+    "appSecret": "your-feishu-app-secret",
+    "tenantKey": "your-feishu-tenant-key"
+  },
+  "initialProviders": [
+    {
+      "id": "test",
+      "name": "Test Provider",
+      "baseUrl": "http://localhost:0",
+      "apiKey": "",
+      "format": "openai"
+    }
+  ],
+  "initialModels": [
+    {
+      "id": "test-model",
+      "name": "TestModel",
+      "provider": "test",
+      "description": "?????????????????????????????????",
+      "enabled": true,
+      "price_per_1k_tokens": 0,
+      "model_multiplier": 1.0,
+      "completion_multiplier": 1.0
+    }
+  ],
+  "email": {
+    "address": "your-email@domain.com",
+    "password": "your-email-password",
+    "SMTP": {
+      "host": "smtp.feishu.cn",
+      "port": 465,
+      "SSL": true
+    },
+    "IMAP": {
+      "host": "imap.feishu.cn",
+      "port": 993,
+      "SSL": true
+    }
+  },
+  "demo": false
+}

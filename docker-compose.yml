@@ -1,0 +1,75 @@
+# CrewRouter 自部署模式 (self-hosted)
+#
+# 使用方法：
+#   1. 复制 .env.example 为 .env 并填写配置
+#   2. docker-compose up -d
+#   3. 访问 http://your-server:20003
+
+services:
+  crewrouter:
+    image: detritalw/crewrouter:latest
+    container_name: crewrouter
+    restart: unless-stopped
+    ports:
+      - "${CR_APP_PORT:-20003}:20003"
+    environment:
+      # 应用配置
+      CR_APP_PORT: "20003"
+      CR_APP_HOST: "${CR_APP_HOST:-localhost}"
+      CR_SESSION_SECRET: "${CR_SESSION_SECRET}"
+      # 数据库
+      CR_DB_HOST: postgres
+      CR_DB_PORT: "5432"
+      CR_DB_NAME: "${CR_DB_NAME:-crewrouter}"
+      CR_DB_USER: "${CR_DB_USER:-crewrouter}"
+      CR_DB_PASSWORD: "${CR_DB_PASSWORD}"
+      # 邮件（可选）
+      CR_EMAIL_ADDRESS: "${CR_EMAIL_ADDRESS:-}"
+      CR_EMAIL_PASSWORD: "${CR_EMAIL_PASSWORD:-}"
+      CR_SMTP_HOST: "${CR_SMTP_HOST:-}"
+      CR_SMTP_PORT: "${CR_SMTP_PORT:-465}"
+      CR_SMTP_SSL: "${CR_SMTP_SSL:-true}"
+      # 飞书（可选）
+      CR_FEISHU_APP_ID: "${CR_FEISHU_APP_ID:-}"
+      CR_FEISHU_APP_SECRET: "${CR_FEISHU_APP_SECRET:-}"
+      CR_FEISHU_TENANT_KEY: "${CR_FEISHU_TENANT_KEY:-}"
+      # GitHub OAuth（可选）
+      CR_GITHUB_CLIENT_ID: "${CR_GITHUB_CLIENT_ID:-}"
+      CR_GITHUB_CLIENT_SECRET: "${CR_GITHUB_CLIENT_SECRET:-}"
+      CR_GITHUB_REDIRECT_URI: "${CR_GITHUB_REDIRECT_URI:-}"
+    volumes:
+      - crewrouter-logs:/app/log
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crewrouter-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: crewrouter-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${CR_DB_NAME:-crewrouter}"
+      POSTGRES_USER: "${CR_DB_USER:-crewrouter}"
+      POSTGRES_PASSWORD: "${CR_DB_PASSWORD}"
+    volumes:
+      - crewrouter-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CR_DB_USER:-crewrouter}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - crewrouter-net
+
+volumes:
+  crewrouter-data:
+    driver: local
+  crewrouter-logs:
+    driver: local
+
+networks:
+  crewrouter-net:
+    driver: bridge

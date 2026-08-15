@@ -1,0 +1,46 @@
+{
+  "name": "crewrouter",
+  "version": "1.0.0",
+  "description": "CrewRouter - AI API 网关平台",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
+    "init-db": "node server/scripts/init-db.js",
+    "test:usage-accuracy": "node server/scripts/test-usage-accuracy.js",
+    "test:quota-usage": "node server/scripts/test-quota-usage.js",
+    "build": "node deploy/build/build-release.js release",
+    "build:saas": "node deploy/build/build-release.js saas",
+    "docker:build": "docker build -f deploy/docker/Dockerfile -t crewrouter/crewrouter:latest .",
+    "docker:build:saas": "docker build -f deploy/docker/Dockerfile.saas -t crewrouter/crewrouter-saas:latest .",
+    "docker:up": "docker-compose -f docker-compose.yml up -d",
+    "docker:up:saas": "docker-compose -f docker-compose.saas.yml up -d"
+  },
+  "dependencies": {
+    "@fluentui/web-components": "^2.6.1",
+    "@simplewebauthn/server": "^13.3.0",
+    "axios": "^1.16.0",
+    "bcryptjs": "^2.4.3",
+    "connect-pg-simple": "^9.0.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "formidable": "^3.5.4",
+    "http-proxy-middleware": "^3.0.5",
+    "https-proxy-agent": "^9.0.0",
+    "nodemailer": "^9.0.1",
+    "pg": "^8.11.3",
+    "qrcode": "^1.5.4",
+    "socks-proxy-agent": "^10.1.0",
+    "speakeasy": "^2.0.0",
+    "uuid": "^14.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "javascript-obfuscator": "^4.1.1",
+    "nodemon": "^3.1.14"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

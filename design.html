@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrewRouter 前端设计文档</title>
+  <script>
+    (function(){
+      var theme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.classList.add(theme);
+    })();
+  </script>
+  <style>
+    /* ================= 项目设计令牌（精简内联版） ================= */
+    :root {
+      --background: #ffffff;
+      --foreground: #222222;
+      --card: #ffffff;
+      --card-foreground: #222222;
+      --popover: #ffffff;
+      --popover-foreground: #222222;
+      --primary: #181e25;
+      --primary-foreground: #ffffff;
+      --secondary: #f5f5f5;
+      --secondary-foreground: #333333;
+      --muted: #f5f5f5;
+      --muted-foreground: #45515e;
+      --accent: #f5f5f5;
+      --accent-foreground: #18181b;
+      --destructive: #ef4444;
+      --border: #e5e5e5;
+      --input: #e5e5e5;
+      --ring: #3b82f6;
+      --radius: 0.8125rem;
+      --brand-blue: #1456f0;
+      --brand-blue-bg: #edf4ff;
+      --shadow-card: 0 8px 24px rgba(24,40,72,0.07);
+      --shadow-button: 0 4px 10px rgba(24,30,37,0.12);
+      --shadow-button-outline: 0 4px 6px rgba(0,0,0,0.04);
+      --shadow-input: 0 2px 4px rgba(0,0,0,0.03);
+      --shadow-dialog: 0 32px 110px -38px rgba(15,23,42,0.45);
+      --shadow-nav: 0 0 22.576px rgba(44,74,116,0.09);
+      --shadow-dropdown: 0 20px 60px -30px rgba(15,23,42,0.35);
+      --shadow-login: 0 28px 80px rgba(15,23,42,0.12), 0 10px 28px rgba(44,30,116,0.08);
+      --bg-base: #fff9fb;
+      --bg-gradient-start: #fff8fa;
+      --bg-gradient-end: #f4f8ff;
+      --dot-color: rgba(20,86,240,0.12);
+    }
+    .dark {
+      --background: #111111;
+      --foreground: #e5e5e5;
+      --card: #1a1a1a;
+      --card-foreground: #e5e5e5;
+      --popover: #1a1a1a;
+      --popover-foreground: #e5e5e5;
+      --primary: #e5e5e5;
+      --primary-foreground: #111111;
+      --secondary: #262626;
+      --secondary-foreground: #e5e5e5;
+      --muted: #262626;
+      --muted-foreground: #a3a3a3;
+      --accent: #262626;
+      --accent-foreground: #e5e5e5;
+      --destructive: #ef4444;
+      --border: rgba(255,255,255,0.08);
+      --input: rgba(255,255,255,0.1);
+      --ring: #6b7280;
+      --shadow-card: 0 8px 24px rgba(0,0,0,0.3);
+      --shadow-button: 0 4px 10px rgba(0,0,0,0.4);
+      --shadow-button-outline: 0 4px 6px rgba(0,0,0,0.2);
+      --shadow-input: 0 2px 4px rgba(0,0,0,0.2);
+      --shadow-dialog: 0 32px 110px -38px rgba(0,0,0,0.6);
+      --shadow-nav: 0 0 22.576px rgba(0,0,0,0.3);
+      --shadow-dropdown: 0 20px 60px -30px rgba(0,0,0,0.5);
+      --shadow-login: 0 30px 90px rgba(2,6,23,0.58), 0 12px 32px rgba(2,6,23,0.32);
+      --bg-base: #111111;
+      --bg-gradient-start: #0f0f0f;
+      --bg-gradient-end: #141414;
+      --dot-color: rgba(255,255,255,0.05);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--foreground);
+      background-color: var(--bg-base);
+      background-image:
+        radial-gradient(var(--dot-color) 1px, transparent 1px),
+        linear-gradient(145deg, var(--bg-gradient-start) 0%, var(--background) 48%, var(--bg-gradient-end) 100%);
+      background-position: 0 0, center;
+      background-size: 12px 12px, cover;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--brand-blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code {
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      background: var(--muted);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    pre {
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      background: var(--muted);
+      padding: 16px;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.6;
+      border: 1px solid var(--border);
+    }
+
+    /* 文档专用布局 */
+    .doc-layout { display: flex; min-height: 100vh; }
+    .doc-sidebar {
+      width: 260px;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      z-index: 50;
+    }
+    .doc-sidebar-header { padding: 0 24px 16px; font-size: 18px; font-weight: 600; }
+    .doc-nav a {
+      display: block;
+      padding: 8px 24px;
+      color: var(--muted-foreground);
+      font-size: 13px;
+      transition: all .15s;
+    }
+    .doc-nav a:hover { background: var(--accent); color: var(--accent-foreground); text-decoration: none; }
+    .doc-nav .nav-section { padding: 16px 24px 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted-foreground); }
+    .doc-main { margin-left: 260px; flex: 1; padding: 40px 48px; max-width: 1000px; }
+    .doc-section { margin-bottom: 64px; }
+    .doc-section h1 { font-size: 32px; margin-bottom: 16px; letter-spacing: -0.025em; }
+    .doc-section h2 { font-size: 24px; margin: 48px 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .doc-section h3 { font-size: 18px; margin: 32px 0 12px; }
+    .doc-section p { margin: 0 0 16px; color: var(--muted-foreground); }
+    .doc-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 16px 0; }
+    .doc-table th, .doc-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+    .doc-table th { font-weight: 600; color: var(--muted-foreground); background: var(--muted); }
+    .preview-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin: 16px 0;
+      box-shadow: var(--shadow-card);
+    }
+    .preview-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .theme-toggle-fixed {
+      position: fixed; top: 20px; right: 24px;
+      width: 36px; height: 36px; border-radius: 9999px;
+      border: 1px solid var(--border); background: var(--card);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 100; box-shadow: var(--shadow-button-outline);
+    }
+    .theme-toggle-fixed:hover { background: var(--accent); }
+
+    /* ================= 项目控件样式（复刻） ================= */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      white-space: nowrap; border-radius: 13px; font-size: 14px; font-weight: 600;
+      transition: all .15s ease; cursor: pointer; border: none; outline: none;
+      text-decoration: none; flex-shrink: 0; padding: 8px 16px; height: 36px;
+    }
+    .btn:disabled { pointer-events: none; opacity: .5; }
+    .btn-primary { background: var(--primary); color: var(--primary-foreground); box-shadow: var(--shadow-button); }
+    .btn-primary:hover { background: #2a323d; }
+    .dark .btn-primary:hover { background: #2a2a2a; }
+    .btn-secondary { background: var(--secondary); color: var(--secondary-foreground); box-shadow: none; }
+    .btn-secondary:hover { background: #e8e8e8; }
+    .dark .btn-secondary:hover { background: #333333; }
+    .btn-outline { background: var(--background); color: var(--foreground); border: 1px solid var(--border); box-shadow: var(--shadow-button-outline); }
+    .btn-outline:hover { background: var(--accent); color: var(--accent-foreground); }
+    .btn-ghost { background: transparent; color: var(--muted-foreground); }
+    .btn-ghost:hover { background: var(--accent); color: var(--accent-foreground); }
+    .btn-danger { background: var(--destructive); color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-link { background: transparent; color: var(--primary); text-decoration: underline; text-underline-offset: 4px; }
+    .btn-icon { background: transparent; color: var(--muted-foreground); padding: 8px; width: 36px; height: 36px; border-radius: 9999px; }
+    .btn-icon:hover { background: var(--accent); color: var(--accent-foreground); }
+    .btn-sm { height: 32px; padding: 6px 12px; font-size: 13px; border-radius: 11px; }
+    .btn-lg { height: 40px; padding: 10px 24px; font-size: 15px; }
+
+    .input {
+      display: flex; height: 40px; width: 100%; min-width: 0; border-radius: 13px;
+      border: 1px solid var(--input); background: var(--background); padding: 8px 12px;
+      font-size: 14px; color: var(--foreground); box-shadow: var(--shadow-input); outline: none;
+      transition: color .15s, box-shadow .15s;
+    }
+    .input::placeholder { color: var(--muted-foreground); }
+    .input:focus { border-color: var(--ring); box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+    .textarea {
+      display: flex; min-height: 120px; width: 100%; border-radius: 13px; border: 1px solid var(--input);
+      background: var(--background); padding: 12px; font-size: 14px; color: var(--foreground);
+      box-shadow: var(--shadow-input); outline: none; resize: vertical; font-family: inherit;
+    }
+    .textarea:focus { border-color: var(--ring); box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+    .select {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 40px;
+      width: 100%; border-radius: 13px; border: 1px solid var(--input); background: var(--background);
+      padding: 8px 36px 8px 12px; font-size: 14px; color: var(--foreground); box-shadow: var(--shadow-input);
+      outline: none; cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2345515e' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+    }
+    .select:focus { border-color: var(--ring); box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+    .checkbox {
+      width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--input);
+      background: var(--background); cursor: pointer; accent-color: var(--brand-blue);
+    }
+    .range-input { width: 100%; height: 6px; border-radius: 9999px; background: var(--muted); accent-color: var(--brand-blue); }
+
+    .card { background: var(--card); color: var(--card-foreground); border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-card); }
+    .card-header { display: flex; flex-direction: column; gap: 6px; padding: 24px; }
+    .card-title { font-weight: 600; font-size: 16px; line-height: 1; }
+    .card-description { font-size: 14px; color: var(--muted-foreground); }
+    .card-content { padding: 24px; padding-top: 0; }
+
+    .badge {
+      display: inline-flex; align-items: center; border-radius: 9999px; padding: 2px 10px;
+      font-size: 12px; font-weight: 600; border: 1px solid transparent;
+    }
+    .badge-default { background: var(--brand-blue-bg); color: var(--brand-blue); }
+    .dark .badge-default { background: rgba(20,86,240,0.2); color: #60a5fa; }
+    .badge-secondary { background: var(--secondary); color: var(--secondary-foreground); }
+    .badge-outline { background: transparent; color: var(--foreground); border: 1px solid var(--border); }
+    .badge-success { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .dark .badge-success { background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: rgba(16,185,129,0.3); }
+    .badge-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .dark .badge-warning { background: rgba(245,158,11,0.15); color: #fcd34d; border-color: rgba(245,158,11,0.3); }
+    .badge-danger { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+    .dark .badge-danger { background: rgba(244,63,94,0.15); color: #fda4af; border-color: rgba(244,63,94,0.3); }
+    .badge-info { background: #f0f9ff; color: var(--brand-blue); border: 1px solid #bae6fd; }
+    .dark .badge-info { background: rgba(14,165,233,0.15); color: #7dd3fc; border-color: rgba(14,165,233,0.3); }
+    .badge-violet { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .dark .badge-violet { background: rgba(139,92,246,0.15); color: #c4b5fd; border-color: rgba(139,92,246,0.3); }
+
+    .table-wrapper { overflow-x: auto; border-radius: 16px; border: 1px solid var(--border); }
+    .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table th { height: 40px; padding: 0 16px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground); background: rgba(245,245,245,0.55); border-bottom: 1px solid var(--border); }
+    .dark .table th { background: rgba(38,38,38,0.55); }
+    .table td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    .table tr:last-child td { border-bottom: none; }
+    .table tr:hover td { background: rgba(245,245,245,0.5); }
+    .dark .table tr:hover td { background: rgba(38,38,38,0.5); }
+
+    .alert { padding: 12px 16px; border-radius: 12px; font-size: 14px; margin-bottom: 16px; }
+    .alert-warning { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #b45309; }
+    .error-message { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: var(--destructive); padding: 12px 16px; border-radius: 12px; font-size: 14px; }
+
+    .topnav { position: sticky; top: 12px; z-index: 40; border-radius: 24px; border: 1px solid var(--border); background: rgba(255,255,255,0.9); box-shadow: var(--shadow-nav); backdrop-filter: blur(12px); padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .dark .topnav { background: rgba(26,26,26,0.9); }
+    .topnav-brand { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--foreground); }
+    .topnav-link { border-radius: 9999px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: var(--muted-foreground); text-decoration: none; transition: all .15s; }
+    .topnav-link:hover { background: var(--accent); color: var(--accent-foreground); text-decoration: none; }
+    .topnav-link.active { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    .modal { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); }
+    .modal.active { display: flex; }
+    .modal-content { position: relative; width: min(92vw, 560px); max-height: 90vh; overflow-y: auto; border-radius: 24px; border: 1px solid var(--border); background: var(--background); padding: 24px; box-shadow: var(--shadow-dialog); display: flex; flex-direction: column; gap: 16px; }
+    .modal-close { position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 9999px; background: transparent; border: none; color: var(--muted-foreground); cursor: pointer; opacity: .7; }
+    .modal-close:hover { opacity: 1; background: var(--accent); }
+
+    .api-key-card { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px 24px; box-shadow: var(--shadow-card); }
+    .api-key-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--brand-blue); border-radius: 16px 0 0 16px; }
+    .api-key-card:hover { border-color: var(--brand-blue); }
+    .api-key-icon { width: 32px; height: 32px; border-radius: 10px; background: var(--brand-blue); display: flex; align-items: center; justify-content: center; color: white; }
+    .api-key-prefix { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--muted); border-radius: 10px; border: 1px solid var(--border); }
+    .api-key-stat { text-align: center; padding: 10px 8px; background: var(--muted); border-radius: 10px; border: 1px solid var(--border); }
+
+    .model-card { background: var(--card); border-radius: 16px; padding: 20px; border: 1px solid var(--border); box-shadow: var(--shadow-card); transition: all .15s; }
+    .model-card:hover { border-color: var(--brand-blue); }
+    .series-badge { font-size: 11px; padding: 2px 8px; background: var(--brand-blue-bg); color: var(--brand-blue); border-radius: 6px; font-weight: 500; }
+
+    .model-library-item { display: flex; flex-direction: column; padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all .15s; background: var(--background); }
+    .model-library-item:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .model-library-item.selected { background: rgba(59,130,246,0.1); border-color: var(--primary); }
+
+    .stat-card { background: var(--card); border-radius: 16px; padding: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-card); }
+    .stat-card .stat-label { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
+    .stat-card .stat-value { font-size: 28px; font-weight: 600; letter-spacing: -0.025em; }
+
+    .content-section { background: var(--card); border-radius: 16px; padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-card); }
+
+    .toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 22px; transition: background .2s; }
+    .toggle-slider::before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: transform .2s; }
+    .toggle-switch input:checked + .toggle-slider { background: var(--brand-blue); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+    .pg-toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .pg-toggle input { opacity: 0; width: 0; height: 0; }
+    .pg-toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--muted); border-radius: 24px; transition: .3s; }
+    .pg-toggle-slider::before { content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px; background: var(--foreground); border-radius: 50%; transition: .3s; }
+    .pg-toggle input:checked + .pg-toggle-slider { background: var(--brand-blue); }
+    .pg-toggle input:checked + .pg-toggle-slider::before { transform: translateX(20px); }
+
+    .ccs-segment { display: flex; background: var(--muted); border-radius: 12px; padding: 3px; gap: 2px; }
+    .ccs-segment-item { flex: 1; text-align: center; padding: 8px 12px; font-size: 13px; font-weight: 500; color: var(--muted-foreground); border-radius: 10px; cursor: pointer; transition: all .15s ease; border: none; background: transparent; }
+    .ccs-segment-item.active { background: var(--card); color: var(--foreground); box-shadow: var(--shadow-input); }
+    .ccs-slider { -webkit-appearance: none; flex: 1; height: 6px; border-radius: 3px; background: var(--muted); outline: none; }
+    .ccs-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--primary); cursor: pointer; }
+
+    /* Playground 控件 */
+    .pg-msg { max-width: min(94%, 760px); border-radius: 24px; border: 1px solid var(--border); background: var(--card); padding: 16px 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.08); }
+    .pg-msg.user { margin-left: auto; }
+    .pg-msg.assistant { margin-right: auto; }
+    .pg-thinking { border-radius: 12px; border: 1px solid var(--border); background: var(--muted); padding: 12px 16px; font-size: 13px; color: var(--muted-foreground); }
+    .pg-send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--primary); color: var(--primary-foreground); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+    @media (max-width: 640px) {
+      .doc-sidebar { transform: translateX(-100%); transition: transform .25s; }
+      .doc-sidebar.open { transform: translateX(0); }
+      .doc-main { margin-left: 0; padding: 24px; padding-top: 72px; }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle-fixed" id="themeToggle" title="切换主题" aria-label="切换主题">
+    <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+
+  <div class="doc-layout">
+    <aside class="doc-sidebar" id="docSidebar">
+      <div class="doc-sidebar-header">CrewRouter 设计文档</div>
+      <nav class="doc-nav">
+        <div class="nav-section">概览</div>
+        <a href="#overview">设计系统概览</a>
+        <a href="#tokens">设计令牌</a>
+        <a href="#theme">主题切换</a>
+
+        <div class="nav-section">基础控件</div>
+        <a href="#button">Button 按钮</a>
+        <a href="#input">Input 输入框</a>
+        <a href="#textarea">Textarea 文本域</a>
+        <a href="#select">Select 下拉选择</a>
+        <a href="#checkbox">Checkbox / Radio</a>
+        <a href="#toggle">Toggle Switch</a>
+        <a href="#range">Range Slider</a>
+        <a href="#form">Form / Field</a>
+
+        <div class="nav-section">展示组件</div>
+        <a href="#card">Card 卡片</a>
+        <a href="#badge">Badge 徽章</a>
+        <a href="#table">Table 表格</a>
+        <a href="#alert">Alert / Error</a>
+        <a href="#empty">Empty State</a>
+        <a href="#progress">Progress Bar</a>
+
+        <div class="nav-section">导航与布局</div>
+        <a href="#topnav">TopNav 顶部导航</a>
+        <a href="#sidebar">Sidebar 侧边栏</a>
+        <a href="#layout">页面布局</a>
+        <a href="#stats">Stats Grid</a>
+
+        <div class="nav-section">反馈与浮层</div>
+        <a href="#modal">Modal 模态框</a>
+        <a href="#dropdown">Dropdown 下拉菜单</a>
+        <a href="#toast">Toast 通知</a>
+        <a href="#dialog">确认对话框</a>
+
+        <div class="nav-section">业务组件</div>
+        <a href="#login">Login Card</a>
+        <a href="#apikey">API Key Card</a>
+        <a href="#modelcard">Model Card</a>
+        <a href="#modellibrary">Model Library</a>
+        <a href="#provider">Provider List</a>
+        <a href="#usage">Usage Overview</a>
+        <a href="#wizard">Wizard 向导</a>
+        <a href="#ccs">CC-Switch 控件</a>
+
+        <div class="nav-section">Playground</div>
+        <a href="#playground">Playground 控件</a>
+
+        <div class="nav-section">附录</div>
+        <a href="#pages">页面清单</a>
+        <a href="#jsmap">JS 交互映射</a>
+        <a href="#icons">图标说明</a>
+      </nav>
+    </aside>
+
+    <main class="doc-main">
+      <section class="doc-section" id="overview">
+        <h1>CrewRouter 前端设计文档</h1>
+        <p>本文档基于 <code>/data/CrewRouter</code> 项目源码逆向整理，按控件维度系统描述前端设计系统。项目采用 Express.js + PostgreSQL 后端，前端为纯 HTML/CSS/JS，设计风格介于 Linear 的克制与 Raycast 的精致之间：大圆角、多层阴影、玻璃拟态、胶囊导航、点阵背景。</p>
+
+        <h2>技术栈</h2>
+        <table class="doc-table">
+          <tr><th>类别</th><th>选型</th></tr>
+          <tr><td>后端框架</td><td>Express.js</td></tr>
+          <tr><td>数据库</td><td>PostgreSQL</td></tr>
+          <tr><td>前端</td><td>纯 HTML / CSS / JavaScript（无框架）</td></tr>
+          <tr><td>样式</td><td>CSS 变量 + 原子化布局类</td></tr>
+          <tr><td>认证</td><td>OAuth 2.0 / 密码 / 2FA / Passkey</td></tr>
+          <tr><td>图表</td><td>Chart.js</td></tr>
+          <tr><td>图标</td><td>SF Symbols CDN + 内联 SVG</td></tr>
+        </table>
+
+        <h2>响应式断点</h2>
+        <table class="doc-table">
+          <tr><th>断点</th><th>行为</th></tr>
+          <tr><td>1068px</td><td>页面标题字号缩小</td></tr>
+          <tr><td>834px</td><td>侧边栏收���为 70px 图标栏；统计网格变为 2 列</td></tr>
+          <tr><td>768px</td><td>模型筛选栏堆叠；模型卡片单列</td></tr>
+          <tr><td>640px</td><td>显示移动端顶栏；侧边栏变为抽屉；主内容单列</td></tr>
+          <tr><td>480px</td><td>登录卡片内边距缩小；兑换码输入框缩小</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section" id="tokens">
+        <h1>设计令牌</h1>
+        <p>所有颜色、圆角、阴影通过 CSS 变量定义，浅色模式在 <code>:root</code>，深色模式通过 <code>.dark</code> 类覆盖。</p>
+
+        <h2>颜色变量</h2>
+        <table class="doc-table">
+          <tr><th>变量</th><th>浅色值</th><th>深色值</th><th>用途</th></tr>
+          <tr><td><code>--background</code></td><td>#ffffff</td><td>#111111</td><td>页面背景</td></tr>
+          <tr><td><code>--foreground</code></td><td>#222222</td><td>#e5e5e5</td><td>主文字</td></tr>
+          <tr><td><code>--card</code></td><td>#ffffff</td><td>#1a1a1a</td><td>卡片背景</td></tr>
+          <tr><td><code>--primary</code></td><td>#181e25</td><td>#e5e5e5</td><td>主按钮背景</td></tr>
+          <tr><td><code>--primary-foreground</code></td><td>#ffffff</td><td>#111111</td><td>主按钮文字</td></tr>
+          <tr><td><code>--secondary</code></td><td>#f5f5f5</td><td>#262626</td><td>次级按钮背景</td></tr>
+          <tr><td><code>--muted</code></td><td>#f5f5f5</td><td>#262626</td><td>静默区域</td></tr>
+          <tr><td><code>--muted-foreground</code></td><td>#45515e</td><td>#a3a3a3</td><td>次要文字</td></tr>
+          <tr><td><code>--border</code></td><td>#e5e5e5</td><td>rgba(255,255,255,0.08)</td><td>边框</td></tr>
+          <tr><td><code>--ring</code></td><td>#3b82f6</td><td>#6b7280</td><td>聚焦环</td></tr>
+          <tr><td><code>--brand-blue</code></td><td>#1456f0</td><td>#1456f0</td><td>品牌蓝</td></tr>
+          <tr><td><code>--destructive</code></td><td>#ef4444</td><td>#ef4444</td><td>危险色</td></tr>
+        </table>
+
+        <h2>圆角与阴影</h2>
+        <table class="doc-table">
+          <tr><th>变量/类</th><th>值</th><th>用途</th></tr>
+          <tr><td><code>--radius</code></td><td>0.8125rem (13px)</td><td>基础圆角</td></tr>
+          <tr><td><code>--shadow-card</code></td><td>0 8px 24px rgba(24,40,72,0.07)</td><td>卡片阴影</td></tr>
+          <tr><td><code>--shadow-button</code></td><td>0 4px 10px rgba(24,30,37,0.12)</td><td>主按钮阴影</td></tr>
+          <tr><td><code>--shadow-dialog</code></td><td>0 32px 110px -38px rgba(15,23,42,0.45)</td><td>模态框阴影</td></tr>
+          <tr><td><code>--shadow-dropdown</code></td><td>0 20px 60px -30px rgba(15,23,42,0.35)</td><td>下拉菜单阴影</td></tr>
+          <tr><td><code>--shadow-nav</code></td><td>0 0 22.576px rgba(44,74,116,0.09)</td><td>顶部导航阴影</td></tr>
+          <tr><td><code>--shadow-login</code></td><td>0 28px 80px rgba(15,23,42,0.12), 0 10px 28px rgba(44,30,116,0.08)</td><td>登录卡片阴影</td></tr>
+        </table>
+
+        <h2>背景图案</h2>
+        <p><code>body</code> 使用双层背景：12px 间距的点阵（<code>radial-gradient</code>）覆盖在对角线渐变（<code>145deg</code>）之上。浅色为粉白底蓝点，深色为深灰底白点。</p>
+      </section>
+
+      <section class="doc-section" id="theme">
+        <h1>主题切换</h1>
+        <p>主题状态保存在 <code>localStorage.getItem('theme')</code>，默认 <code>'dark'</code>。每个页面 <code>&lt;head&gt;</code> 中有内联脚本同步读取主题并添加 <code>.light</code> 或 <code>.dark</code> 类到 <code>&lt;html&gt;</code>，防止 FOUC。ThemeManager 在 <code>theme.js</code> 中管理切换，并同步更新 SF Symbol 图标颜色。</p>
+        <pre>&lt;script&gt;
+  var theme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.classList.add(theme);
+&lt;/script&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="button">
+        <h1>Button 按钮</h1>
+        <p>基础类 <code>.btn</code>，高度 36px，圆角 13px，字号 14px，字重 600。通过变体类组合不同风格，通过 <code>.btn-sm</code> / <code>.btn-lg</code> 调整尺寸。</p>
+
+        <h2>变体</h2>
+        <table class="doc-table">
+          <tr><th>类名</th><th>背景</th><th>文字</th><th>边框</th><th>阴影</th><th>Hover</th></tr>
+          <tr><td><code>.btn-primary</code></td><td>var(--primary)</td><td>var(--primary-foreground)</td><td>无</td><td>var(--shadow-button)</td><td>#2a323d / #2a2a2a</td></tr>
+          <tr><td><code>.btn-secondary</code></td><td>var(--secondary)</td><td>var(--secondary-foreground)</td><td>无</td><td>无</td><td>#e8e8e8 / #333333</td></tr>
+          <tr><td><code>.btn-outline</code></td><td>var(--background)</td><td>var(--foreground)</td><td>1px solid var(--border)</td><td>var(--shadow-button-outline)</td><td>var(--accent)</td></tr>
+          <tr><td><code>.btn-ghost</code></td><td>透明</td><td>var(--muted-foreground)</td><td>无</td><td>无</td><td>var(--accent)</td></tr>
+          <tr><td><code>.btn-danger</code></td><td>var(--destructive)</td><td>白色</td><td>无</td><td>无</td><td>#dc2626</td></tr>
+          <tr><td><code>.btn-link</code></td><td>透明</td><td>var(--primary)</td><td>无</td><td>无</td><td>下划线</td></tr>
+          <tr><td><code>.btn-icon</code></td><td>透明</td><td>var(--muted-foreground)</td><td>无</td><td>无</td><td>var(--accent)</td></tr>
+        </table>
+
+        <h2>示例</h2>
+        <div class="preview-box">
+          <div class="preview-row">
+            <button class="btn btn-primary">Primary</button>
+            <button class="btn btn-secondary">Secondary</button>
+            <button class="btn btn-outline">Outline</button>
+            <button class="btn btn-ghost">Ghost</button>
+            <button class="btn btn-danger">Danger</button>
+            <button class="btn btn-link">Link</button>
+            <button class="btn btn-icon">★</button>
+          </div>
+          <div class="preview-row">
+            <button class="btn btn-sm btn-primary">Small</button>
+            <button class="btn btn-lg btn-primary">Large</button>
+            <button class="btn btn-primary" disabled>Disabled</button>
+          </div>
+        </div>
+        <pre>&lt;button class="btn btn-primary"&gt;Primary&lt;/button&gt;
+&lt;button class="btn btn-outline btn-sm"&gt;Small Outline&lt;/button&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="input">
+        <h1>Input 输入框</h1>
+        <p>标准输入框类 <code>.input</code>，高度 40px，圆角 13px，聚焦时显示蓝色环。</p>
+        <div class="preview-box">
+          <div class="preview-row" style="max-width:400px">
+            <input class="input" placeholder="请输入内容..." />
+          </div>
+          <div class="preview-row" style="max-width:400px">
+            <input class="input" value="禁用状态" disabled />
+          </div>
+        </div>
+        <pre>&lt;input class="input" placeholder="请输入内容..." /&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="textarea">
+        <h1>Textarea 文本域</h1>
+        <p>类 <code>.textarea</code>，最小高度 120px，支持垂直缩放。</p>
+        <div class="preview-box">
+          <textarea class="textarea" placeholder="输入多行文本..."></textarea>
+        </div>
+        <pre>&lt;textarea class="textarea" placeholder="..."&gt;&lt;/textarea&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="select">
+        <h1>Select 下拉选择</h1>
+        <p>类 <code>.select</code>，隐藏原生箭头，使用内联 SVG 自定义。</p>
+        <div class="preview-box" style="max-width:400px">
+          <select class="select">
+            <option>选项一</option>
+            <option>选项二</option>
+            <option>选项三</option>
+          </select>
+        </div>
+        <pre>&lt;select class="select"&gt;...&lt;/select&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="checkbox">
+        <h1>Checkbox / Radio</h1>
+        <p>复选框使用 <code>.checkbox</code> 类，自定义勾选图标。单选按钮使用原生 <code>&lt;input type="radio"&gt;</code>。</p>
+        <div class="preview-box">
+          <div class="preview-row">
+            <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" class="checkbox" checked /> 已选中</label>
+            <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" class="checkbox" /> 未选中</label>
+            <label style="display:flex;align-items:center;gap:8px"><input type="radio" name="r" checked /> 单选 A</label>
+            <label style="display:flex;align-items:center;gap:8px"><input type="radio" name="r" /> 单选 B</label>
+          </div>
+        </div>
+        <pre>&lt;input type="checkbox" class="checkbox" /&gt;
+&lt;input type="radio" name="group" /&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="toggle">
+        <h1>Toggle Switch 开关</h1>
+        <p>项目中有两种开关实现：</p>
+        <ul>
+          <li><code>.toggle-switch</code>：40×22px，用于一般设置。</li>
+          <li><code>.pg-toggle</code>：44×24px，用于 Playground 和设置页。</li>
+        </ul>
+        <div class="preview-box">
+          <div class="preview-row">
+            <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            <label class="pg-toggle"><input type="checkbox" checked><span class="pg-toggle-slider"></span></label>
+          </div>
+        </div>
+        <pre>&lt;label class="toggle-switch"&gt;
+  &lt;input type="checkbox"&gt;
+  &lt;span class="toggle-slider"&gt;&lt;/span&gt;
+&lt;/label&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="range">
+        <h1>Range Slider 滑块</h1>
+        <p>类 <code>.range-input</code>，高度 6px，圆角胶囊，滑块使用 <code>accent-color</code> 与自定义 thumb。</p>
+        <div class="preview-box" style="max-width:400px">
+          <input type="range" class="range-input" min="0" max="100" value="45">
+        </div>
+        <pre>&lt;input type="range" class="range-input" min="0" max="100" /&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="form">
+        <h1>Form / Field 表单</h1>
+        <p>表单布局使用 <code>.field</code>（单个字段 grid 8px 间距）和 <code>.field-group</code>（字段组 16px 间距）。标签使用 <code>.field-label</code>，帮助文字使用 <code>.field-description</code>。</p>
+        <div class="preview-box" style="max-width:400px">
+          <div class="field-group">
+            <div class="field">
+              <label class="field-label">用户名</label>
+              <input class="input" placeholder="输入用户名" />
+              <span class="field-description">用于登录和显示。</span>
+            </div>
+            <div class="field">
+              <label class="field-label">邮箱</label>
+              <input class="input" placeholder="输入邮箱" />
+            </div>
+          </div>
+        </div>
+        <pre>&lt;div class="field-group"&gt;
+  &lt;div class="field"&gt;
+    &lt;label class="field-label"&gt;用户名&lt;/label&gt;
+    &lt;input class="input" /&gt;
+    &lt;span class="field-description"&gt;...&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="card">
+        <h1>Card 卡片</h1>
+        <p>类 <code>.card</code>，圆角 16px，白色/深色背景，带阴影和边框。子元素包括 <code>.card-header</code>、<code>.card-title</code>、<code>.card-description</code>、<code>.card-content</code>。</p>
+        <div class="preview-box" style="max-width:420px">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">卡片标题</div>
+              <div class="card-description">这是卡片的描述文字。</div>
+            </div>
+            <div class="card-content">
+              <p style="margin:0;color:var(--muted-foreground)">卡片内容区域。</p>
+            </div>
+          </div>
+        </div>
+        <pre>&lt;div class="card"&gt;
+  &lt;div class="card-header"&gt;...&lt;/div&gt;
+  &lt;div class="card-content"&gt;...&lt;/div&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="badge">
+        <h1>Badge 徽章</h1>
+        <p>类 <code>.badge</code>，圆角 9999px，用于状态、标签、分类。</p>
+        <div class="preview-box">
+          <div class="preview-row">
+            <span class="badge badge-default">Default</span>
+            <span class="badge badge-secondary">Secondary</span>
+            <span class="badge badge-outline">Outline</span>
+            <span class="badge badge-success">Success</span>
+            <span class="badge badge-warning">Warning</span>
+            <span class="badge badge-danger">Danger</span>
+            <span class="badge badge-info">Info</span>
+            <span class="badge badge-violet">Violet</span>
+          </div>
+        </div>
+        <pre>&lt;span class="badge badge-success"&gt;Success&lt;/span&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="table">
+        <h1>Table 表格</h1>
+        <p>表格外层使用 <code>.table-wrapper</code> 控制溢出和圆角，内部使用 <code>.table</code>。表头为大写、字间距 0.14em、11px 字号、灰色背景。行 hover 有淡色背景。</p>
+        <div class="preview-box">
+          <div class="table-wrapper">
+            <table class="table">
+              <thead><tr><th>模型</th><th>供应商</th><th>价格</th></tr></thead>
+              <tbody>
+                <tr><td>gpt-4o</td><td>OpenAI</td><td>¥0.0050</td></tr>
+                <tr><td>claude-fable-5</td><td>Anthropic</td><td>¥0.0080</td></tr>
+                <tr><td>deepseek-v4</td><td>DeepSeek</td><td>¥0.0010</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <pre>&lt;div class="table-wrapper"&gt;
+  &lt;table class="table"&gt;...&lt;/table&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="alert">
+        <h1>Alert / Error Message</h1>
+        <p>警告提示使用 <code>.alert .alert-warning</code>，错误消息使用 <code>.error-message</code>（默认隐藏，<code>.show</code> 显示）。</p>
+        <div class="preview-box">
+          <div class="alert alert-warning">⚠️ 这是一个警告提示。</div>
+          <div class="error-message">这是一个错误消息。</div>
+        </div>
+        <pre>&lt;div class="alert alert-warning"&gt;...&lt;/div&gt;
+&lt;div class="error-message show"&gt;...&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="empty">
+        <h1>Empty State 空状态</h1>
+        <p>类 <code>.empty-state</code>，flex 居中，60px 内边距，包含图标/标题/描述。</p>
+        <div class="preview-box">
+          <div class="empty-state">
+            <div style="font-size:32px">📭</div>
+            <p style="margin:16px 0 4px">暂无数据</p>
+            <span>点击上方按钮创建第一条记录</span>
+          </div>
+        </div>
+        <pre>&lt;div class="empty-state"&gt;...&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="progress">
+        <h1>Progress Bar 进度条</h1>
+        <p>项目中有多种进度条：缓存命中率（<code>.cache-hit-bar</code>）、供应商额度（<code>.model-quota-bar</code>）、用户组规则（<code>.rule-bar</code>）。结构均为外层容器 + 内层填充。</p>
+        <div class="preview-box" style="max-width:400px">
+          <div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden;margin-bottom:12px">
+            <div style="height:100%;width:65%;background:linear-gradient(90deg,#10b981,#059669);border-radius:5px"></div>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:42%;background:var(--brand-blue);border-radius:3px"></div>
+          </div>
+        </div>
+        <pre>&lt;div class="rule-bar-bg"&gt;
+  &lt;div class="rule-bar-fill" style="width:42%"&gt;&lt;/div&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="topnav">
+        <h1>TopNav 顶部导航</h1>
+        <p>类 <code>.topnav</code>，粘性定位，圆角 24px，半透明背景 + backdrop-blur，多层阴影。包含品牌区、导航链接（胶囊形）、右侧操作区。</p>
+        <div class="preview-box">
+          <div class="topnav">
+            <div class="topnav-brand">🚀 CrewRouter</div>
+            <div style="display:flex;gap:6px">
+              <a href="#" class="topnav-link active">模型库</a>
+              <a href="#" class="topnav-link">API Key</a>
+              <a href="#" class="topnav-link">统计</a>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="badge badge-secondary">Pro</span>
+              <button class="btn btn-sm btn-ghost">退出</button>
+            </div>
+          </div>
+        </div>
+        <pre>&lt;header class="topnav"&gt;
+  &lt;div class="topnav-brand"&gt;...&lt;/div&gt;
+  &lt;nav&gt;&lt;a class="topnav-link active"&gt;...&lt;/a&gt;&lt;/nav&gt;
+  &lt;div class="topnav-actions"&gt;...&lt;/div&gt;
+&lt;/header&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="sidebar">
+        <h1>Sidebar 侧边栏</h1>
+        <p>类 <code>.sidebar</code>，宽度 260px，固定定位，包含 header、导航项（<code>.nav-item</code>）、footer。在 834px 下收缩为 70px 图标栏；在 640px 下变为左侧抽屉，通过 <code>.open</code> 类滑出。</p>
+        <div class="preview-box" style="display:flex;gap:16px;overflow:hidden">
+          <div style="width:200px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 0">
+            <div style="padding:0 16px 12px;font-weight:600">CrewRouter</div>
+            <a href="#" class="nav-item" style="display:flex;align-items:center;padding:8px 16px;color:var(--muted-foreground);text-decoration:none">🏠 控制台</a>
+            <a href="#" class="nav-item" style="display:flex;align-items:center;padding:8px 16px;color:var(--brand-blue);background:rgba(20,86,240,0.1);text-decoration:none">📦 模型库</a>
+            <a href="#" class="nav-item" style="display:flex;align-items:center;padding:8px 16px;color:var(--muted-foreground);text-decoration:none">⚙️ 设置</a>
+          </div>
+        </div>
+        <pre>&lt;aside class="sidebar"&gt;
+  &lt;div class="sidebar-header"&gt;...&lt;/div&gt;
+  &lt;nav class="sidebar-nav"&gt;
+    &lt;a class="nav-item active"&gt;...&lt;/a&gt;
+  &lt;/nav&gt;
+  &lt;div class="sidebar-footer"&gt;...&lt;/div&gt;
+&lt;/aside&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="layout">
+        <h1>页面布局</h1>
+        <p>典型页面使用 <code>.app-container</code>（flex，min-height:100vh），左侧 <code>.sidebar</code>，右侧 <code>.main-content</code>（margin-left:260px）。内容区顶部为 <code>.content-header</code>，下方按 <code>.content-section</code> 分块。页面视图使用 <code>.page</code> + <code>.page.active</code> 切换。</p>
+        <pre>&lt;div class="app-container"&gt;
+  &lt;aside class="sidebar"&gt;...&lt;/aside&gt;
+  &lt;main class="main-content"&gt;
+    &lt;header class="content-header"&gt;...&lt;/header&gt;
+    &lt;div id="pageId" class="page active"&gt;...&lt;/div&gt;
+  &lt;/main&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="stats">
+        <h1>Stats Grid 统计卡片</h1>
+        <p>类 <code>.stats-grid</code> 使用 auto-fit 网格，<code>.stat-card</code> 展示指标。标题 12px 灰色，数值 28px 大字号。</p>
+        <div class="preview-box">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+            <div class="stat-card">
+              <div class="stat-label">总请求数</div>
+              <div class="stat-value">12,847</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">总 Token</div>
+              <div class="stat-value">8.2M</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">总费用</div>
+              <div class="stat-value">¥128.50</div>
+            </div>
+          </div>
+        </div>
+        <pre>&lt;div class="stats-grid"&gt;
+  &lt;div class="stat-card"&gt;
+    &lt;div class="stat-label"&gt;...&lt;/div&gt;
+    &lt;div class="stat-value"&gt;...&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="modal">
+        <h1>Modal 模态框</h1>
+        <p>类 <code>.modal</code> 默认隐藏，<code>.active</code> 显示。内容区 <code>.modal-content</code>，圆角 24px，最大宽度 560px，右上角关闭按钮 <code>.modal-close</code>。管理后台还有 <code>.modal-wide</code>（800px）。</p>
+        <div class="preview-box">
+          <button class="btn btn-primary" onclick="document.getElementById('demoModal').classList.add('active')">打开模态框</button>
+        </div>
+        <div class="modal" id="demoModal" onclick="if(event.target===this)this.classList.remove('active')">
+          <div class="modal-content">
+            <button class="modal-close" onclick="document.getElementById('demoModal').classList.remove('active')">×</button>
+            <h3 style="margin:0">模态框标题</h3>
+            <p style="color:var(--muted-foreground);margin:0">这里是模态框内容。</p>
+            <div style="display:flex;justify-content:flex-end;gap:8px">
+              <button class="btn btn-secondary" onclick="document.getElementById('demoModal').classList.remove('active')">取消</button>
+              <button class="btn btn-primary">确认</button>
+            </div>
+          </div>
+        </div>
+        <pre>&lt;div class="modal" id="modalId"&gt;
+  &lt;div class="modal-content"&gt;...&lt;/div&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="dropdown">
+        <h1>Dropdown 下拉菜单</h1>
+        <p>类 <code>.dropdown</code> 包裹触发器和 <code>.dropdown-menu</code>，通过 <code>.active</code> 显示。菜单圆角 12px，阴影 <code>--shadow-dropdown</code>。</p>
+        <div class="preview-box">
+          <div class="dropdown" style="position:relative;display:inline-block">
+            <button class="btn btn-outline" onclick="this.nextElementSibling.classList.toggle('active')">打开菜单</button>
+            <div class="dropdown-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:180px;background:var(--popover);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-dropdown);padding:4px;z-index:10">
+              <button class="dropdown-item" style="display:flex;align-items:center;width:100%;padding:8px 12px;border:none;background:none;color:var(--foreground);border-radius:8px;cursor:pointer">👤 个人资料</button>
+              <button class="dropdown-item" style="display:flex;align-items:center;width:100%;padding:8px 12px;border:none;background:none;color:var(--foreground);border-radius:8px;cursor:pointer">⚙️ 设置</button>
+              <button class="dropdown-item" style="display:flex;align-items:center;width:100%;padding:8px 12px;border:none;background:none;color:var(--destructive);border-radius:8px;cursor:pointer">🚪 退出</button>
+            </div>
+          </div>
+        </div>
+        <script>
+          document.querySelectorAll('.dropdown-item').forEach(item => item.addEventListener('click', function(){ this.closest('.dropdown-menu').classList.remove('active'); }));
+        </script>
+        <pre>&lt;div class="dropdown"&gt;
+  &lt;button&gt;触发&lt;/button&gt;
+  &lt;div class="dropdown-menu"&gt;
+    &lt;button class="dropdown-item"&gt;...&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="toast">
+        <h1>Toast 通知</h1>
+        <p>Toast 通过 JS 动态创建临时 div，固定右上角，2.5 秒后自动消失。支持 success / error / info 类型。</p>
+        <div class="preview-box">
+          <button class="btn btn-primary" onclick="showDemoToast('保存成功', 'success')">Success Toast</button>
+          <button class="btn btn-danger" onclick="showDemoToast('操作失败', 'error')">Error Toast</button>
+        </div>
+        <script>
+          function showDemoToast(message, type) {
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;padding:12px 20px;border-radius:8px;font-size:14px;color:white;box-shadow:0 4px 12px rgba(0,0,0,0.15);transition:opacity .3s;opacity:0;';
+            toast.style.background = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => toast.style.opacity = '1');
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2500);
+          }
+        </script>
+        <pre>app.showToast('保存成功', 'success');</pre>
+      </section>
+
+      <section class="doc-section" id="dialog">
+        <h1>确认对话框</h1>
+        <p>项目使用自定义对话框（<code>.dialog-overlay</code> + <code>.dialog-panel</code>）替代原生 <code>alert/confirm</code>。面板宽度 420px，圆角 20px，打开时有缩放动画。</p>
+        <div class="preview-box">
+          <button class="btn btn-outline" onclick="document.getElementById('demoDialog').classList.add('dialog-open')">显示确认框</button>
+        </div>
+        <div class="dialog-overlay" id="demoDialog" onclick="if(event.target===this)this.classList.remove('dialog-open')" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(2px);opacity:0;transition:opacity .2s;pointer-events:none">
+          <div class="dialog-panel" style="width:min(92vw,420px);border-radius:20px;border:1px solid var(--border);background:var(--background);padding:28px 28px 24px;box-shadow:var(--shadow-dialog);display:flex;flex-direction:column;gap:12px;transform:scale(0.95) translateY(8px);opacity:0;transition:all .2s">
+            <div style="font-size:16px;font-weight:600">确认删除？</div>
+            <div style="font-size:14px;color:var(--muted-foreground)">此操作不可撤销。</div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+              <button class="btn btn-secondary" onclick="document.getElementById('demoDialog').classList.remove('dialog-open')">取消</button>
+              <button class="btn btn-danger" onclick="document.getElementById('demoDialog').classList.remove('dialog-open')">确认删除</button>
+            </div>
+          </div>
+        </div>
+        <style>
+          .dialog-overlay.dialog-open { opacity: 1; pointer-events: auto; }
+          .dialog-overlay.dialog-open .dialog-panel { transform: scale(1) translateY(0); opacity: 1; }
+        </style>
+        <pre>&lt;div class="dialog-overlay"&gt;
+  &lt;div class="dialog-panel"&gt;...&lt;/div&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="login">
+        <h1>Login Card 登录卡片</h1>
+        <p>登录页使用 <code>.login-container</code> + <code>.login-bg</code>（径向渐变动画 + 网格）+ <code>.login-card</code>（圆角 32px，阴影 <code>--shadow-login</code>）。登录按钮 <code>.login-btn</code> 为全宽胶囊形。</p>
+        <div class="preview-box" style="display:flex;justify-content:center;background:linear-gradient(145deg,#fff8fa,#f4f8ff)">
+          <div style="width:100%;max-width:360px;background:var(--card);border:1px solid var(--border);border-radius:32px;padding:40px;box-shadow:var(--shadow-login);text-align:center">
+            <div style="width:64px;height:64px;margin:0 auto 20px;background:var(--primary);border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--primary-foreground);font-size:28px">🚀</div>
+            <h2 style="margin:0 0 8px">CrewRouter</h2>
+            <p style="color:var(--muted-foreground);margin:0 0 24px">统一 AI 模型接入平台</p>
+            <input class="input" placeholder="用户名 / 邮箱" style="margin-bottom:12px" />
+            <input class="input" type="password" placeholder="密码" style="margin-bottom:16px" />
+            <button style="width:100%;padding:14px 24px;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--primary);color:var(--primary-foreground);border:none;border-radius:9999px;cursor:pointer;box-shadow:var(--shadow-button)">登录</button>
+          </div>
+        </div>
+        <pre>&lt;div class="login-card"&gt;...&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="apikey">
+        <h1>API Key Card</h1>
+        <p>类 <code>.api-key-card</code>，左侧有 3px 蓝色标记条，包含图标、名称、状态徽章、密钥前缀区、统计网格、操作按钮。</p>
+        <div class="preview-box">
+          <div class="api-key-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="api-key-icon">🔑</div>
+                <span style="font-weight:600">生产环境 Key</span>
+                <span class="badge badge-success">有效</span>
+              </div>
+            </div>
+            <div class="api-key-prefix">
+              <code style="flex:1;color:var(--brand-blue)">sk-abc123••••••</code>
+              <button class="btn btn-sm btn-ghost">复制</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0">
+              <div class="api-key-stat"><div style="font-size:18px;font-weight:600">1,248</div><div style="font-size:11px;color:var(--muted-foreground)">调用次数</div></div>
+              <div class="api-key-stat"><div style="font-size:18px;font-weight:600">823K</div><div style="font-size:11px;color:var(--muted-foreground)">Token</div></div>
+              <div class="api-key-stat"><div style="font-size:18px;font-weight:600">¥12.50</div><div style="font-size:11px;color:var(--muted-foreground)">费用</div></div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn btn-sm btn-primary">配置</button>
+              <button class="btn btn-sm btn-secondary">额度</button>
+              <button class="btn btn-sm btn-secondary">模型</button>
+              <button class="btn btn-sm btn-danger">删除</button>
+            </div>
+          </div>
+        </div>
+        <pre>&lt;div class="api-key-card"&gt;...&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="modelcard">
+        <h1>Model Card 模型卡片</h1>
+        <p>类 <code>.model-card</code>，hover 时边框变蓝，包含系列徽章、模型名、描述、价格、参考价。</p>
+        <div class="preview-box" style="max-width:360px">
+          <div class="model-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+              <h3 style="margin:0">GPT-4o</h3>
+              <span class="series-badge">OpenAI</span>
+            </div>
+            <p style="color:var(--muted-foreground);margin:0 0 12px">多模态旗舰模型，支持文本、图像输入。</p>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:12px;color:var(--brand-blue);font-weight:600">¥0.0050 / 1K tokens</div>
+                <div style="font-size:11px;color:var(--muted-foreground);text-decoration:line-through">¥0.0100</div>
+              </div>
+              <button class="btn btn-sm btn-primary">选择</button>
+            </div>
+          </div>
+        </div>
+        <pre>&lt;div class="model-card"&gt;...&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="modellibrary">
+        <h1>Model Library 模型库</h1>
+        <p>模型库按 Team → Provider → Model 三级嵌套。Team 和 Provider 可折叠（<code>.collapsed</code>）。模型项使用 <code>.model-library-item</code>，选中态有蓝色背景和边框。</p>
+        <div class="preview-box">
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+            <div style="padding:14px 20px;background:var(--muted);border-bottom:1px solid var(--border);font-weight:600;display:flex;align-items:center;gap:8px">
+              <span>▼</span> 默认 Team <span class="badge badge-default" style="margin-left:auto">默认</span>
+            </div>
+            <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+              <div class="model-library-item selected">
+                <div style="font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px">GPT-4o <span class="badge badge-default" style="font-size:10px">owner</span></div>
+                <div style="font-size:12px;color:var(--muted-foreground);margin:6px 0">多模态旗舰模型</div>
+                <div style="font-size:12px;color:var(--muted-foreground);display:flex;gap:10px;margin-top:auto;padding-top:8px;border-top:1px solid var(--border)"><span>输入 ¥5</span><span>输出 ¥15</span></div>
+              </div>
+              <div class="model-library-item">
+                <div style="font-weight:600;font-size:14px">Claude Fable 5</div>
+                <div style="font-size:12px;color:var(--muted-foreground);margin:6px 0">最新 Claude 模型</div>
+                <div style="font-size:12px;color:var(--muted-foreground);display:flex;gap:10px;margin-top:auto;padding-top:8px;border-top:1px solid var(--border)"><span>输入 ¥8</span><span>输出 ¥24</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <pre>&lt;div class="model-library-team"&gt;
+  &lt;div class="model-library-team-header"&gt;...&lt;/div&gt;
+  &lt;div class="model-library-list"&gt;
+    &lt;div class="model-library-item"&gt;...&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="provider">
+        <h1>Provider List 供应商列表</h1>
+        <p>类 <code>.provider-list-container</code> 包裹 <code>.provider-list-item</code>，每项可点击，hover 背景变化，自定义供应商有单独样式。</p>
+        <div class="preview-box" style="max-width:420px">
+          <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--muted)'" onmouseout="this.style.background=''">
+              <div style="font-weight:500">OpenAI</div>
+              <div style="font-size:12px;color:var(--muted-foreground)">https://api.openai.com</div>
+            </div>
+            <div style="padding:12px 16px;background:var(--muted);font-weight:500;cursor:pointer">
+              <div>自定义供应商</div>
+              <div style="font-size:12px;color:var(--muted-foreground)">https://custom.example.com</div>
+            </div>
+          </div>
+        </div>
+        <pre>&lt;div class="provider-list-container"&gt;
+  &lt;div class="provider-list-item"&gt;...&lt;/div&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="usage">
+        <h1>Usage Overview 用量概览</h1>
+        <p>类 <code>.usage-overview</code>，flex 布局，每个子项 flex:1 居中显示，常用于 API Key 页面顶部。</p>
+        <div class="preview-box">
+          <div class="usage-overview" style="display:flex;gap:16px;padding:20px;background:var(--muted);border-radius:16px;border:1px solid var(--border)">
+            <div style="flex:1;text-align:center"><div style="font-size:12px;color:var(--muted-foreground)">总调用次数</div><div style="font-size:20px;font-weight:600">12,847</div></div>
+            <div style="flex:1;text-align:center"><div style="font-size:12px;color:var(--muted-foreground)">总 Token</div><div style="font-size:20px;font-weight:600">8.2M</div></div>
+            <div style="flex:1;text-align:center"><div style="font-size:12px;color:var(--muted-foreground)">总费用</div><div style="font-size:20px;font-weight:600">¥128.50</div></div>
+          </div>
+        </div>
+        <pre>&lt;div class="usage-overview"&gt;...&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="wizard">
+        <h1>Wizard 向导</h1>
+        <p>供应商添加向导分两步：Step 1 搜索/选择供应商（<code>.wizard-provider-list</code>），Step 2 输入 API Key（<code>.wizard-apikey-input</code>）。</p>
+        <div class="preview-box" style="max-width:420px">
+          <input class="input" placeholder="搜索供应商..." style="margin-bottom:12px" />
+          <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer" onmouseover="this.style.background='var(--accent)'" onmouseout="this.style.background=''">
+              <div style="width:32px;height:32px;border-radius:8px;background:var(--secondary);display:flex;align-items:center;justify-content:center;font-weight:600">O</div>
+              <div style="flex:1"><div style="font-weight:500">OpenAI</div><div style="font-size:12px;color:var(--muted-foreground)">openai</div></div>
+              <span class="badge badge-secondary">官方</span>
+            </div>
+            <div style="padding:10px 14px;display:flex;align-items:center;gap:12px;cursor:pointer" onmouseover="this.style.background='var(--accent)'" onmouseout="this.style.background=''">
+              <div style="width:32px;height:32px;border-radius:8px;background:var(--secondary);display:flex;align-items:center;justify-content:center;font-weight:600">A</div>
+              <div style="flex:1"><div style="font-weight:500">Anthropic</div><div style="font-size:12px;color:var(--muted-foreground)">anthropic</div></div>
+            </div>
+          </div>
+        </div>
+        <pre>&lt;div class="wizard-provider-list"&gt;
+  &lt;div class="wizard-provider-item"&gt;...&lt;/div&gt;
+&lt;/div&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="ccs">
+        <h1>CC-Switch 控件区</h1>
+        <p>cc-switch 用量脚本生成弹窗中使用的控件：开关行（<code>.ccs-toggle-row</code>）、分段控制器（<code>.ccs-segment</code>）、滑块（<code>.ccs-slider</code>）。</p>
+        <div class="preview-box" style="max-width:420px">
+          <div class="ccs-toggle-row" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:12px;margin-bottom:12px;background:var(--muted)">
+            <span style="font-size:13px;font-weight:500">显示余额</span>
+            <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="ccs-segment" style="margin-bottom:16px">
+            <button class="ccs-segment-item active">紧凑</button>
+            <button class="ccs-segment-item">进度条</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <input type="range" class="ccs-slider" min="8" max="24" value="12" />
+            <span style="font-size:13px;font-weight:600">12</span>
+          </div>
+        </div>
+        <pre>&lt;div class="ccs-toggle-row"&gt;...&lt;/div&gt;
+&lt;div class="ccs-segment"&gt;...&lt;/div&gt;
+&lt;input type="range" class="ccs-slider" /&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="playground">
+        <h1>Playground 控件</h1>
+        <p>Playground 页面（<code>playground.html</code> + <code>playground.css</code>）使用独立的控件命名空间 <code>.pg-*</code>。</p>
+
+        <h2>消息气泡</h2>
+        <div class="preview-box">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="pg-msg user">用户的问题会显示在这里。</div>
+            <div class="pg-msg assistant">AI 的回复会显示在这里，支持 Markdown 渲染。</div>
+            <div class="pg-thinking">💭 这是思考过程块，可折叠。</div>
+          </div>
+        </div>
+
+        <h2>发送按钮</h2>
+        <div class="preview-box">
+          <div style="display:flex;gap:8px">
+            <button class="pg-send-btn">▲</button>
+            <button class="pg-send-btn" style="background:var(--destructive)">■</button>
+          </div>
+        </div>
+
+        <h2>设置面板</h2>
+        <div class="preview-box" style="max-width:280px">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <label style="font-size:13px;color:var(--muted-foreground)">模型</label>
+            <select class="select"><option>claude-fable-5</option></select>
+            <label style="font-size:13px;color:var(--muted-foreground)">Temperature</label>
+            <input type="range" class="range-input" />
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:13px">思考模式</span>
+              <label class="pg-toggle"><input type="checkbox" checked><span class="pg-toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+        <pre>&lt;div class="pg-msg user"&gt;...&lt;/div&gt;
+&lt;button class="pg-send-btn"&gt;...&lt;/button&gt;</pre>
+      </section>
+
+      <section class="doc-section" id="pages">
+        <h1>页面清单</h1>
+        <table class="doc-table">
+          <tr><th>页面</th><th>文件</th><th>主要功能</th></tr>
+          <tr><td>登录页</td><td>public/pages/index.html</td><td>账号密码登录、2FA、飞书登录</td></tr>
+          <tr><td>用户控制台</td><td>public/pages/console.html</td><td>模型库、API Key、统计、设置等 SPA</td></tr>
+          <tr><td>管理后台</td><td>public/pages/admin.html</td><td>用户/模型/供应商/Team/系统设置</td></tr>
+          <tr><td>Playground</td><td>public/pages/playground.html</td><td>AI 对话演示界面</td></tr>
+          <tr><td>安装向导</td><td>public/pages/setup.html</td><td>首次初始化仅创建管理员（1 步）</td></tr>
+          <tr><td>购买页</td><td>public/pages/purchase.html</td><td>商品展示（暂未开放）</td></tr>
+          <tr><td>飞书绑定</td><td>public/pages/feishu-bind.html</td><td>飞书账号绑定</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section" id="jsmap">
+        <h1>JS 交互映射</h1>
+        <table class="doc-table">
+          <tr><th>功能</th><th>类/函数</th><th>文件</th></tr>
+          <tr><td>控制台初始化</td><td>ConsoleApp</td><td>public/js/app.js</td></tr>
+          <tr><td>管理后台初始化</td><td>AdminApp</td><td>public/js/admin.js</td></tr>
+          <tr><td>主题切换</td><td>ThemeManager</td><td>public/js/theme.js</td></tr>
+          <tr><td>页面导航</td><td>navigateTo(page)</td><td>app.js / admin.js</td></tr>
+          <tr><td>加载模型库</td><td>loadModelLibrary()</td><td>app.js</td></tr>
+          <tr><td>API Key 管理</td><td>loadApiKeys()</td><td>app.js</td></tr>
+          <tr><td>统计图表</td><td>_renderDailyCharts() 等</td><td>app.js / admin.js</td></tr>
+          <tr><td>模态框</td><td>showModal(id) / closeModals()</td><td>app.js</td></tr>
+          <tr><td>Toast</td><td>showToast(message, type)</td><td>app.js</td></tr>
+        </table>
+      </section>
+
+      <section class="doc-section" id="icons">
+        <h1>图标说明</h1>
+        <p>项目混用两类图标：</p>
+        <ul>
+          <li><strong>SF Symbols</strong>：通过 <code>https://img.bloret.net/SF/{name}?color={white|black}</code> 加载 SVG，类名 <code>.sf-icon</code>，随主题自动切换颜色。</li>
+          <li><strong>内联 SVG</strong>：登录页、主题切换按钮、部分操作按钮使用内联 SVG。</li>
+        </ul>
+        <pre>function sfIcon(name, size) {
+  const color = theme === 'dark' ? 'white' : 'black';
+  return `&lt;img src="https://img.bloret.net/SF/${name}?color=${color}" class="sf-icon" /&gt;`;
+}</pre>
+      </section>
+
+      <footer style="margin-top:80px;padding-top:24px;border-top:1px solid var(--border);color:var(--muted-foreground);font-size:13px;text-align:center">
+        CrewRouter 前端设计文档 · 基于项目源码整理
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    // 主题切换
+    (function(){
+      const btn = document.getElementById('themeToggle');
+      const sun = btn.querySelector('.icon-sun');
+      const moon = btn.querySelector('.icon-moon');
+      function apply() {
+        const theme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.add(theme);
+        document.documentElement.style.colorScheme = theme;
+        sun.style.display = theme === 'light' ? 'block' : 'none';
+        moon.style.display = theme === 'dark' ? 'block' : 'none';
+      }
+      btn.addEventListener('click', function(){
+        const current = localStorage.getItem('theme') || 'dark';
+        localStorage.setItem('theme', current === 'dark' ? 'light' : 'dark');
+        apply();
+      });
+      apply();
+    })();
+
+    // 移动端侧边栏（简单处理）
+    (function(){
+      const sidebar = document.getElementById('docSidebar');
+      // 点击导航链接后在小屏关闭侧边栏
+      document.querySelectorAll('.doc-nav a').forEach(a => {
+        a.addEventListener('click', () => {
+          if (window.innerWidth <= 640) sidebar.classList.remove('open');
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

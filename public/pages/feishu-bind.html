@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>绑定账号 - CrewRouter</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/themes.css">
+  <link rel="stylesheet" href="/css/main.css">
+  <script>
+    (function() {
+      var theme = localStorage.getItem('theme') || 'system';
+      var resolved = theme;
+      if (theme === 'system') {
+        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.classList.add(resolved);
+    })();
+  </script>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-bg">
+      <div class="grid"></div>
+    </div>
+
+    <div class="login-card">
+      <div class="logo">
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
+          <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo" style="width:40px;height:40px;border-radius:10px;">
+          <h1>CrewRouter</h1>
+        </div>
+        <p>绑定已有账号</p>
+      </div>
+
+      <div class="login-form">
+        <div id="errorMessage" class="error-message"></div>
+
+        <div style="text-align:center;padding:16px 0;">
+          <div style="width:64px;height:64px;background:var(--brand-blue,#3370ff);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+          </div>
+          <p style="font-size:14px;color:var(--text-secondary,#6b7280);margin:0;">
+            飞书账号 <strong id="feishuName">-</strong>
+          </p>
+          <p style="font-size:14px;color:var(--text-secondary,#6b7280);margin:8px 0 0;">
+            系统中已存在同名账号 <strong id="existingName">-</strong>，请输入密码验证后绑定
+          </p>
+        </div>
+
+        <form id="bindForm" onsubmit="handleBind(event)">
+          <div class="form-group">
+            <input type="password" id="password" placeholder="请输入该账号的密码" class="input" minlength="6" required>
+          </div>
+          <button type="submit" class="login-btn" id="submitBtn">
+            <span id="submitText">验证并绑定</span>
+          </button>
+        </form>
+      </div>
+
+      <div class="login-footer">
+        <p>绑定后将使用飞书账号快速登录</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/theme.js"></script>
+  <script>
+    async function init() {
+      try {
+        const res = await fetch('/auth/feishu/pending');
+        if (!res.ok) {
+          window.location.replace('/');
+          return;
+        }
+        const data = await res.json();
+        document.getElementById('feishuName').textContent = data.feishuName;
+        document.getElementById('existingName').textContent = data.existingUsername;
+      } catch (e) {
+        window.location.replace('/');
+      }
+    }
+
+    async function handleBind(e) {
+      e.preventDefault();
+      const password = document.getElementById('password').value;
+      const btn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('submitText');
+      const errorEl = document.getElementById('errorMessage');
+
+      btn.disabled = true;
+      btnText.innerHTML = `<span class="inline-loading"><div class="loading-spinner sm" role="status" aria-label="加载中"></div><span class="inline-loading-text">验证中...</span></span>`;
+      errorEl.classList.remove('show');
+
+      try {
+        const res = await fetch('/auth/feishu/bind', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          window.location.href = data.redirect || (data.needsPasswordSetup ? '/set-password' : '/console');
+        } else {
+          errorEl.textContent = data.error || '绑定失败';
+          errorEl.classList.add('show');
+          btn.disabled = false;
+          btnText.textContent = '验证并绑定';
+        }
+      } catch (err) {
+        errorEl.textContent = '网络错误，请稍后重试';
+        errorEl.classList.add('show');
+        btn.disabled = false;
+        btnText.textContent = '验证并绑定';
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

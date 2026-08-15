@@ -1,0 +1,43 @@
+/* 面向普通用户的项目工作统计 */
+.project-work-section { margin: 8px 0 24px; padding: 28px; border: 1px solid color-mix(in srgb, var(--border) 72%, transparent); border-radius: 24px; background: linear-gradient(135deg, color-mix(in srgb, var(--card) 94%, #0f766e 6%), var(--card)); box-shadow: 0 18px 55px rgba(15, 118, 110, .08); }
+.project-work-heading { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; margin-bottom:24px; }
+.project-work-kicker { color:#0f766e; font-size:11px; letter-spacing:.16em; font-weight:800; }
+.project-work-heading h3 { margin:5px 0 6px; font-size:25px; letter-spacing:-.03em; }
+.project-work-heading p { margin:0; color:var(--muted-foreground); font-size:13px; }
+.project-work-status { color:var(--muted-foreground); font-size:12px; padding:7px 11px; border-radius:999px; background:var(--muted); white-space:nowrap; }
+.project-work-summary { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:10px; margin-bottom:18px; }
+.project-work-stat { padding:16px; border-radius:16px; background:var(--muted); }
+.project-work-stat span,.project-work-stat small { display:block; color:var(--muted-foreground); font-size:12px; }
+.project-work-stat strong { display:block; margin:6px 0 3px; font-size:24px; letter-spacing:-.03em; }
+.project-work-grid { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr); gap:16px; margin-bottom:16px; }
+.project-work-chart-card,.project-work-focus-card,.project-work-list-card { padding:20px; border-radius:18px; background:var(--background); border:1px solid var(--border); }
+.project-work-card-title { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.project-work-card-title strong { font-size:15px; }
+.project-work-card-title span { color:var(--muted-foreground); font-size:12px; }
+.project-work-chart { height:230px; }
+.project-work-recent { display:flex; flex-direction:column; gap:4px; }
+.project-work-recent-item { display:flex; align-items:center; gap:11px; padding:11px 4px; border:0; border-bottom:1px solid var(--border); color:var(--foreground); background:transparent; text-align:left; cursor:pointer; }
+.project-work-recent-item:last-child { border-bottom:0; }
+.project-work-rank { color:#0f766e; font-size:11px; font-weight:800; }
+.project-work-recent-main { min-width:0; flex:1; }
+.project-work-recent-main strong,.project-work-recent-main small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.project-work-recent-main small { margin-top:3px; color:var(--muted-foreground); font-size:11px; }
+.project-work-arrow { color:var(--muted-foreground); }
+.project-work-projects { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.project-work-project-card { padding:17px; border:1px solid var(--border); border-radius:16px; background:var(--muted); transition:transform .18s ease, box-shadow .18s ease; }
+.project-work-project-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.08); }
+.project-work-project-top { display:flex; align-items:flex-start; gap:11px; }
+.project-work-project-icon { width:36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:11px; background:#0f766e; color:#fff; font-size:11px; font-weight:800; flex:none; }
+.project-work-project-title { min-width:0; }
+.project-work-project-title h4 { margin:0 0 4px; font-size:15px; }
+.project-work-project-title button { max-width:100%; padding:0; overflow:hidden; border:0; background:none; color:var(--muted-foreground); font:inherit; font-size:11px; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+.project-work-project-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:18px 0 13px; }
+.project-work-project-metrics span,.project-work-project-metrics strong { display:block; font-size:11px; }
+.project-work-project-metrics span { color:var(--muted-foreground); margin-bottom:4px; }
+.project-work-project-metrics strong { font-size:14px; }
+.project-work-project-footer { display:flex; justify-content:space-between; gap:8px; color:var(--muted-foreground); font-size:11px; }
+.project-work-loading,.project-work-empty { min-height:80px; display:flex; justify-content:center; align-items:center; flex-direction:column; gap:5px; color:var(--muted-foreground); font-size:13px; }
+.project-work-empty strong { color:var(--foreground); }
+.project-work-error strong { color:var(--destructive); }
+.project-work-advanced-toggle { display:flex; justify-content:center; align-items:center; gap:10px; margin:14px 0 4px; color:var(--muted-foreground); font-size:12px; }
+@media (max-width: 800px) { .project-work-section { padding:20px 16px; } .project-work-heading { display:block; } .project-work-status { display:inline-block; margin-top:12px; } .project-work-summary { grid-template-columns:repeat(2,1fr); } .project-work-grid,.project-work-projects { grid-template-columns:1fr; } .project-work-project-metrics { grid-template-columns:repeat(2,1fr); } }

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrewRouter (Crant AI Studio) — 客户交付清单</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --border: #e9ecef;
+    --text: #212529;
+    --text-secondary: #6c757d;
+    --primary: #4361ee;
+    --primary-light: #eef0ff;
+    --success: #2ec4b6;
+    --warning: #ff9f1c;
+    --danger: #e63946;
+    --accent: #7b2ff7;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    border-radius: 16px;
+    padding: 2.5rem 3rem;
+    margin-bottom: 2rem;
+  }
+  .header h1 { font-size: 2rem; font-weight: 700; margin-bottom: .5rem; }
+  .header p { font-size: 1.05rem; opacity: .9; }
+  .header .meta { margin-top: 1rem; font-size: .9rem; opacity: .75; }
+
+  /* Summary cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .summary-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .summary-card .number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .summary-card .label {
+    font-size: .9rem;
+    color: var(--text-secondary);
+    margin-top: .25rem;
+  }
+
+  /* Sections */
+  section { margin-bottom: 2rem; }
+  .section-title {
+    font-size: 1.35rem;
+    font-weight: 600;
+    padding-bottom: .75rem;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .section-title .badge {
+    font-size: .7rem;
+    font-weight: 600;
+    background: var(--primary-light);
+    color: var(--primary);
+    padding: .15rem .65rem;
+    border-radius: 999px;
+    margin-left: .5rem;
+  }
+
+  /* Deliverable card */
+  .deliverable {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: .75rem;
+    transition: box-shadow .15s;
+  }
+  .deliverable:hover { box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  .deliverable .head {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+  }
+  .deliverable .icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.1rem;
+  }
+  .deliverable .icon.primary { background: #eef0ff; color: #4361ee; }
+  .deliverable .icon.success { background: #e0faf6; color: #2ec4b6; }
+  .deliverable .icon.warning { background: #fff3e0; color: #ff9f1c; }
+  .deliverable .icon.danger { background: #fde8ea; color: #e63946; }
+  .deliverable .icon.accent { background: #f0e6ff; color: #7b2ff7; }
+  .deliverable .icon.neutral { background: #f1f3f5; color: #495057; }
+  .deliverable .body { flex: 1; min-width: 0; }
+  .deliverable .body h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: .2rem;
+  }
+  .deliverable .body .desc {
+    font-size: .9rem;
+    color: var(--text-secondary);
+  }
+  .deliverable .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+    margin-top: .5rem;
+  }
+  .deliverable .tag {
+    font-size: .75rem;
+    padding: .15rem .55rem;
+    border-radius: 4px;
+    background: #f1f3f5;
+    color: #495057;
+  }
+  .deliverable .tag.required { background: #fee8f0; color: #c2255c; }
+  .deliverable .tag.optional { background: #e7f5ff; color: #1971c2; }
+  .deliverable .tag.recommended { background: #e0faf6; color: #0c8599; }
+  .deliverable .file-path {
+    font-size: .8rem;
+    font-family: "SF Mono", "Fira Code", monospace;
+    color: var(--text-secondary);
+    margin-top: .35rem;
+    word-break: break-all;
+  }
+
+  /* Two-column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+  }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* Table */
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+  }
+  .spec-table th, .spec-table td {
+    padding: .6rem .8rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .spec-table th {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+
+  /* Note box */
+  .note {
+    background: #fff9db;
+    border: 1px solid #ffe066;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-size: .9rem;
+    margin: 1rem 0 1.5rem;
+  }
+  .note strong { color: #e67700; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 2rem 0 1rem;
+    font-size: .85rem;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>📦 CrewRouter 客户交付清单</h1>
+    <p>Crant AI Studio — 多模型 LLM API 网关平台 · 完整交付物一览</p>
+    <div class="meta">
+      版本 1.0.0 &nbsp;·&nbsp; 更新于 2026-07-11 &nbsp;·&nbsp;
+      <span style="display:inline-flex;align-items:center;gap:4px">🔒 商业专有软件</span>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-grid">
+    <div class="summary-card"><div class="number">4</div><div class="label">交付类别</div></div>
+    <div class="summary-card"><div class="number">13+</div><div class="label">交付物项目</div></div>
+    <div class="summary-card"><div class="number">2</div><div class="label">部署方式</div></div>
+  </div>
+
+  <!-- ==================== 1 ==================== -->
+  <section>
+    <h2 class="section-title">📀 1. 软件安装包 <span class="badge">核心交付</span></h2>
+
+    <div class="two-col">
+
+      <div class="deliverable">
+        <div class="head">
+          <div class="icon primary">📁</div>
+          <div class="body">
+            <h3>直接运行包</h3>
+            <div class="desc">解压即用的 Node.js 直接运行交付物</div>
+            <div class="file-path">release/crewrouter-direct-v{version}.tar.gz</div>
+            <div class="tags">
+              <span class="tag required">必需</span>
+              <span class="tag">500 MB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="deliverable">
+        <div class="head">
+          <div class="icon primary">🐳</div>
+          <div class="body">
+            <h3>Docker 部署包</h3>
+            <div class="desc">Docker Compose 编排 + 内置 PostgreSQL</div>
+            <div class="file-path">release/crewrouter-docker-v{version}.tar.gz</div>
+            <div class="tags">
+              <span class="tag required">必需</span>
+              <span class="tag">推荐生产环境</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="deliverable">
+      <div class="head">
+        <div class="icon neutral">📋</div>
+        <div class="body">
+          <h3>直接运行包内容说明</h3>
+          <div class="desc">解压后包含以下目录结构</div>
+        </div>
+      </div>
+      <div style="margin-top:.75rem;padding-left:3rem;font-size:.9rem;font-family:monospace;white-space:pre;color:var(--text-secondary);overflow-x:auto;">
+crewrouter-direct/
+├── dist/
+│   ├── server.js                 ← 主程序（esbuild 打包 + 混淆）
+│   ├── package.json              ← 生产依赖声明
+│   ├── config.example.json       ← 配置模板
+│   └── public/                   ← 前端静态页面（8 个页面）
+├── start.sh                      ← 一键启动脚本
+└── LICENSE                       ← GNU GPL v3 开源许可证
+      </div>
+    </div>
+
+    <div class="deliverable">
+      <div class="head">
+        <div class="icon neutral">📋</div>
+        <div class="body">
+          <h3>Docker 包内容说明</h3>
+          <div class="desc">解压后包含以下文件</div>
+        </div>
+      </div>
+      <div style="margin-top:.75rem;padding-left:3rem;font-size:.9rem;font-family:monospace;white-space:pre;color:var(--text-secondary);overflow-x:auto;">
+crewrouter-docker/
+├── docker-compose.yml            ← 服务编排文件
+├── .env.example                  ← 环境变量模板
+├── README.txt                    ← 快速上手说明
+└── LICENSE                       ← GNU GPL v3 开源许可证
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 2 ==================== -->
+  <section>
+    <h2 class="section-title">🔑 2. 许可证文件 <span class="badge">必需交付</span></h2>
+
+    <div class="deliverable">
+      <div class="head">
+        <div class="icon danger">⚖️</div>
+        <div class="body">
+          <h3>GNU GPL v3 开源许可证</h3>
+          <div class="desc">项目采用 GNU General Public License v3.0 开源许可证。<br>
+            允许自由使用、修改和分发；衍生作品必须同样以 GPL-3.0 发布。</div>
+          <div class="file-path">LICENSE</div>
+          <div class="tags"><span class="tag required">必需</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 3 ==================== -->
+  <section>
+    <h2 class="section-title">🛠️ 3. 工具与配置文件</h2>
+
+    <div class="two-col">
+      <div class="deliverable">
+        <div class="head">
+          <div class="icon neutral">⚡</div>
+          <div class="body">
+            <h3>一键部署脚本</h3>
+            <div class="desc">交互式部署向导：环境检查、配置生成（随机密码）、
+              Docker 镜像构建、数据库安装引导、服务启动。支持 Ubuntu/Debian/CentOS。</div>
+            <div class="file-path">deploy.sh</div>
+            <div class="tags"><span class="tag recommended">推荐</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="deliverable">
+        <div class="head">
+          <div class="icon neutral">🗂️</div>
+          <div class="body">
+            <h3>Docker Compose 编排</h3>
+            <div class="desc">Docker 部署的服务编排定义（PostgreSQL + Node.js 应用）</div>
+            <div class="file-path">docker-compose.yml</div>
+            <div class="tags"><span class="tag required">Docker 必需</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="deliverable">
+        <div class="head">
+          <div class="icon neutral">🔧</div>
+          <div class="body">
+            <h3>配置模板（直接运行）</h3>
+            <div class="desc">JSON 格式配置模板：数据库连接、OAuth、Session 等</div>
+            <div class="file-path">config.example.json</div>
+            <div class="tags"><span class="tag required">直接运行必需</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="deliverable">
+        <div class="head">
+          <div class="icon neutral">🔧</div>
+          <div class="body">
+            <h3>配置模板（Docker）</h3>
+            <div class="desc">环境变量模板：数据库密码、Session Secret 等</div>
+            <div class="file-path">.env.example</div>
+            <div class="tags"><span class="tag required">Docker 必需</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="deliverable">
+        <div class="head">
+          <div class="icon neutral">🏁</div>
+          <div class="body">
+            <h3>启动脚本（直接运行）</h3>
+            <div class="desc">交互式一键启动脚本，含环境检查、安装依赖引导等</div>
+            <div class="file-path">start.sh</div>
+            <div class="tags"><span class="tag recommended">推荐</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="deliverable">
+        <div class="head">
+          <div class="icon neutral">🖼️</div>
+          <div class="body">
+            <h3>应用图标</h3>
+            <div class="desc">品牌图标资源</div>
+            <div class="file-path">ico.png</div>
+            <div class="tags"><span class="tag optional">品牌</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="deliverable">
+      <div class="head">
+        <div class="icon neutral">📜</div>
+        <div class="body">
+          <h3>交付物打包脚本</h3>
+          <div class="desc">自动化构建与交付包生成脚本（内部使用或提供给客户做二次打包）</div>
+          <div class="file-path">deploy/pack-delivery.sh</div>
+          <div class="tags"><span class="tag optional">内部工具</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 4 ==================== -->
+  <section>
+    <h2 class="section-title">🎯 4. 客户须知 &amp; 支持信息</h2>
+
+    <div class="note">
+      <strong>⚠️ 重要须知：</strong> 以下内容是交付完成后客户需要了解的运营要点，建议在交付时一并提供。
+    </div>
+
+    <table class="spec-table">
+      <thead>
+        <tr><th style="width:25%">项目</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>系统要求</strong></td>
+          <td>Node.js ≥ 16（推荐 20 LTS）、PostgreSQL ≥ 14、内存 ≥ 2 GB、磁盘 ≥ 1 GB</td>
+        </tr>
+        <tr>
+          <td><strong>首次部署流程</strong></td>
+          <td>① 安装 Node.js + PostgreSQL → ② 上传程序 → ③ 安装依赖 → ④ 配置数据库 → ⑤ 启动 → ⑥ 浏览器访问初始化向导 → ⑦ 创建管理员账户 → ⑧ 配置 AI 供应商</td>
+        </tr>
+        <tr>
+          <td><strong>运维管理</strong></td>
+          <td>systemd 开机自启（直接运行） / Docker 自动重启策略。日志位于 <code>log/</code> 目录，无自动轮转需自行配置 logrotate</td>
+        </tr>
+        <tr>
+          <td><strong>备份策略</strong></td>
+          <td>核心数据在 PostgreSQL 数据库中。备份命令：<code>pg_dump -U crewrouter crewrouter &gt; backup.sql</code></td>
+        </tr>
+        <tr>
+          <td><strong>更新升级</strong></td>
+          <td>直接运行：替换 dist/ 文件 → <code>npm install --omit=dev</code> → 重启服务。Docker：<code>docker compose pull &amp;&amp; docker compose up -d</code></td>
+        </tr>
+        <tr>
+          <td><strong>数据安全</strong></td>
+          <td>建议使用 Nginx 反向代理 + Let's Encrypt（certbot）配置 HTTPS。数据库端口（5432）不应暴露公网</td>
+        </tr>
+        <tr>
+          <td><strong>技术支持</strong></td>
+          <td>提供技术支持联系方式（邮件等），处理部署问题和故障排除</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ==================== Footer ==================== -->
+  <div class="footer">
+    <p>CrewRouter (Crant AI Studio) v1.0.0 &nbsp;·&nbsp; GNU GPL v3 开源许可证</p>
+    <p style="margin-top:.25rem">本文档由系统自动生成，基于项目源码 v1.0.0 版本</p>
+  </div>
+
+</div>
+</body>
+</html>

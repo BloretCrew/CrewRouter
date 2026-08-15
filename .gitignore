@@ -1,0 +1,33 @@
+node_modules/
+.env
+*.log
+.DS_Store
+dist/
+/build/
+coverage/
+.cache/
+suppliers/ds2api/
+suppliers/ds2api_windows.zip
+suppliers/ds2api_linux.tar.gz
+start-ds2api.sh
+start-ds2api.bat
+deploy-ds2api-linux.sh
+frontend/
+temp/
+log/
+config.json.save
+*.save
+.claude/scheduled_tasks.json
+config.json
+release/
+# 更新包二进制（保留 updates/ 目录与说明文件）
+updates/*.zip
+
+# 本地 harness 源码（仅供学习请求指纹，勿提交）
+/claude-code-source-code/
+/codex/
+/grok-build/
+/opencode/
+/qwen-code/
+/hermes-agent/
+/openclaw/

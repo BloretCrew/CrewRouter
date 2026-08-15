@@ -1,0 +1,2465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 - CrewRouter</title>
+  <link rel="stylesheet" href="/css/themes.css">
+  <link rel="stylesheet" href="/css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    (function() {
+      var theme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.classList.add(theme);
+    })();
+  </script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo" style="width:28px;height:28px;border-radius:6px;">
+          <h2>CrewRouter</h2>
+        </div>
+        <span class="badge">管理员</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-item active" data-page="adminDashboard">
+            <img src="https://img.bloret.net/SF/square.grid.2x2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="square.grid.2x2" style="display:inline-block;vertical-align:middle;">
+            <span>仪表盘</span>
+          </div>
+          <div class="nav-item" data-page="adminUsers">
+            <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.2" style="display:inline-block;vertical-align:middle;">
+            <span>用户管理</span>
+          </div>
+          <div class="nav-item" data-page="adminTeams">
+            <img src="https://img.bloret.net/SF/person.3?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.3" style="display:inline-block;vertical-align:middle;">
+            <span>Team 管理</span>
+          </div>
+          <div class="nav-item" data-page="adminModels">
+            <img src="https://img.bloret.net/SF/cpu?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="cpu" style="display:inline-block;vertical-align:middle;">
+            <span>模型管理</span>
+          </div>
+          <div class="nav-item" data-page="adminProviders">
+            <img src="https://img.bloret.net/SF/antenna.radiowaves.left.and.right?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="antenna.radiowaves.left.and.right" style="display:inline-block;vertical-align:middle;">
+            <span>供应商管理</span>
+          </div>
+          <div class="nav-item" data-page="adminStats">
+            <img src="https://img.bloret.net/SF/chart.bar?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="chart.bar" style="display:inline-block;vertical-align:middle;">
+            <span>用量监控</span>
+          </div>
+          <div class="nav-item" data-page="adminRedemptionCodes">
+            <img src="https://img.bloret.net/SF/creditcard?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="creditcard" style="display:inline-block;vertical-align:middle;">
+            <span>兑换码管理</span>
+          </div>
+          <div class="nav-item" data-page="adminProducts">
+            <img src="https://img.bloret.net/SF/cart?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="cart" style="display:inline-block;vertical-align:middle;">
+            <span>商品管理</span>
+          </div>
+        </div>
+
+
+        <div class="nav-section">
+          <div class="nav-section-title">系统</div>
+          <div class="nav-item" data-page="adminSettings">
+            <img src="https://img.bloret.net/SF/gearshape?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="gearshape" style="display:inline-block;vertical-align:middle;">
+            <span>系统设置</span>
+          </div>
+        </div>
+
+        <div class="nav-section">
+          <div class="nav-item" onclick="window.location.href='/console'">
+            <img src="https://img.bloret.net/SF/arrow.backward?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.backward" style="display:inline-block;vertical-align:middle;">
+            <span>返回用户控制台</span>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <img id="userAvatar" src="" alt="头像" class="avatar">
+          <span id="username"></span>
+        </div>
+        <button id="logoutBtn" class="btn btn-icon" title="登出">
+          <img src="https://img.bloret.net/SF/arrow.right.square?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.right.square" style="display:inline-block;vertical-align:middle;">
+        </button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <div class="content-header">
+        <h1 id="pageTitle">仪表盘</h1>
+        <div class="theme-toggle">
+          <button id="themeToggle" class="btn btn-icon" title="切换主题">
+            <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"/>
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+            <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 仪表盘页面 -->
+      <div id="adminDashboardPage" class="page active">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="person.2" style="display:inline-block;vertical-align:middle;">
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">总用户数</span>
+              <span class="stat-value" id="totalUsers">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <img src="https://img.bloret.net/SF/cpu?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="cpu" style="display:inline-block;vertical-align:middle;">
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">总模型数</span>
+              <span class="stat-value" id="totalModels">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <img src="https://img.bloret.net/SF/key?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="key" style="display:inline-block;vertical-align:middle;">
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">总API密钥</span>
+              <span class="stat-value" id="totalApiKeys">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <img src="https://img.bloret.net/SF/chart.line.uptrend.xyaxis?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="chart.line.uptrend.xyaxis" style="display:inline-block;vertical-align:middle;">
+            </div>
+            <div class="stat-info">
+              <span class="stat-label">今日调用</span>
+              <span class="stat-value" id="todayRequests">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-section">
+          <h2>最近活动</h2>
+          <div id="recentActivity" class="activity-list">
+            <!-- 活动记录将通过JS动态加载 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 用户管理页面 -->
+      <div id="adminUsersPage" class="page">
+        <div class="content-section">
+          <h2>用户管理</h2>
+          <div id="usersList" class="users-table">
+            <!-- 用户列表将通过JS动态加载 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Team 管理页面 -->
+      <div id="adminTeamsPage" class="page">
+        <div class="content-section">
+          <div class="section-header">
+            <h2>Team 管理</h2>
+            <button id="createTeamBtn" class="btn btn-primary">创建 Team</button>
+          </div>
+          <div id="teamsList" class="teams-grid">
+            <!-- Team 列表将通过JS动态加载 -->
+          </div>
+        </div>
+
+        <!-- Team 详情面板 -->
+        <div id="teamDetailPanel" class="content-section" style="display:none;">
+          <div class="section-header">
+            <h2 id="teamDetailTitle">Team 详情</h2>
+            <div class="section-actions">
+              <button id="editTeamBtn" class="btn btn-secondary">编辑</button>
+              <button id="deleteTeamBtn" class="btn btn-danger">删除</button>
+            </div>
+          </div>
+
+          <!-- Team 成员管理 -->
+          <div class="content-section">
+            <div class="section-header">
+              <h3>成员管理</h3>
+              <button id="addTeamMemberBtn" class="btn btn-primary btn-sm">添加成员</button>
+            </div>
+            <div id="teamMembersList" class="users-table">
+              <!-- 成员列表将通过JS动态加载 -->
+            </div>
+          </div>
+
+          <!-- Team 模型配置 -->
+          <div class="content-section">
+            <div class="section-header">
+              <h3>可用模型</h3>
+              <button id="addTeamModelBtn" class="btn btn-primary btn-sm">添加模型</button>
+            </div>
+            <div id="teamModelsList" class="models-grid">
+              <!-- 模型列表将通过JS动态加载 -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模型管理页面 -->
+      <div id="adminModelsPage" class="page">
+        <div class="content-section">
+          <div class="section-header">
+            <h2>模型管理</h2>
+            <div class="section-actions">
+              <button id="batchDeleteModelsBtn" class="btn btn-danger" style="display:none;">批量删除</button>
+              <button id="batchEnableModelsBtn" class="btn btn-secondary" style="display:none;">批量启用</button>
+              <button id="batchDisableModelsBtn" class="btn btn-secondary" style="display:none;">批量禁用</button>
+              <button id="batchSetPricesBtn" class="btn btn-secondary" style="display:none;" onclick="adminApp.showBatchSetPricesModal()">设置价格</button>
+              <button id="batchAdjustPricesBtn" class="btn btn-secondary" style="display:none;" onclick="adminApp.showBatchAdjustPricesModal()">调整价格</button>
+              <button id="batchSetRateLimitBtn" class="btn btn-secondary" style="display:none;" onclick="adminApp.showBatchSetRateLimitModal()">设置速率限制</button>
+              <button id="batchEditDescBtn" class="btn btn-secondary" style="display:none;" onclick="adminApp.showBatchEditDescModal()">修改说明</button>
+              <button id="batchSetSeriesBtn" class="btn btn-secondary" style="display:none;" onclick="adminApp.showBatchSetSeriesModal()">设置系列</button>
+
+              <button id="batchAdjustByRefBtn" class="btn btn-secondary" style="display:none;" onclick="adminApp.showBatchAdjustByRefModal()">按参考价设置</button>
+              <button id="batchJsonPricesBtn" class="btn btn-secondary" onclick="adminApp.showBatchJsonPricesModal()">
+                <img src="https://img.bloret.net/SF/text.document?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="text.document" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                JSON 批量定价
+              </button>
+              <button id="batchJsonRefPricesBtn" class="btn btn-secondary" onclick="adminApp.showBatchJsonRefPricesModal()">
+                <img src="https://img.bloret.net/SF/text.document?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="text.document" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                JSON 批量定参考价
+              </button>
+              <button class="btn btn-secondary" onclick="adminApp.exportModelsCsv()">
+                <img src="https://img.bloret.net/SF/arrow.down.document?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="arrow.down.document" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                导出 CSV
+              </button>
+              <button class="btn btn-secondary" onclick="adminApp.showSeriesIconsModal()">
+                <img src="https://img.bloret.net/SF/photo?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="photo" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                系列图标
+              </button>
+              <button id="addModelBtn" class="btn btn-primary">添加模型</button>
+            </div>
+          </div>
+          <!-- 筛选器 -->
+          <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+            <div style="flex: 1; min-width: 200px;">
+              <input type="text" id="modelSearchInput" class="input" placeholder="搜索模型 ID 或名称..." oninput="adminApp.filterModels()">
+            </div>
+            <select id="modelProviderFilter" class="select" onchange="adminApp.filterModels()" style="min-width: 150px;">
+              <option value="">所有供应商</option>
+            </select>
+            <select id="modelStatusFilter" class="select" onchange="adminApp.filterModels()" style="min-width: 120px;">
+              <option value="">所有状态</option>
+              <option value="enabled">已启用</option>
+              <option value="disabled">已禁用</option>
+            </select>
+            <button class="btn btn-secondary" onclick="adminApp.clearModelFilters()" style="padding: 8px 12px;">
+              <img src="https://img.bloret.net/SF/xmark?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="xmark" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+              清除筛选
+            </button>
+            <span id="modelCount" style="color: var(--muted-foreground); font-size: 13px;"></span>
+          </div>
+          <div id="adminModelsList" class="models-table">
+            <!-- 模型列表将通过JS动态加载 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 供应商管理页面 -->
+      <div id="adminProvidersPage" class="page">
+        <!-- Kimi2API 配置 -->
+        <div class="content-section" style="margin-top: 24px;">
+          <div class="section-header">
+            <h2>Kimi2API 配置</h2>
+            <div class="section-actions">
+              <button id="testKimi2apiBtn" class="btn btn-secondary" onclick="adminApp.testKimi2apiConnection()">
+                <img src="https://img.bloret.net/SF/checkmark?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="checkmark" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                测试连接
+              </button>
+              <button id="saveKimi2apiConfigBtn" class="btn btn-primary" onclick="adminApp.saveKimi2apiConfig()">
+                保存配置
+              </button>
+            </div>
+          </div>
+          <div id="kimi2apiConfigStatus" style="display:none; margin-bottom: 16px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label for="kimi2apiBaseUrl">Base URL</label>
+              <input type="text" id="kimi2apiBaseUrl" class="input" placeholder="http://127.0.0.1:8000">
+              <small style="color:var(--muted-foreground);margin-top:4px;display:block;">kimi2api 服务地址</small>
+            </div>
+            <div class="form-group">
+              <label for="kimi2apiToken">Token</label>
+              <input type="password" id="kimi2apiToken" class="input" placeholder="kimi2api">
+              <small style="color:var(--muted-foreground);margin-top:4px;display:block;">kimi2api 访问令牌</small>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top: 8px;">
+            <label for="kimi2apiEnabled">
+              <input type="checkbox" id="kimi2apiEnabled" class="checkbox" style="margin-right: 8px;">
+              启用 Kimi2API 代理
+            </label>
+            <small style="color:var(--muted-foreground);margin-top:4px;display:block;">启用后，Kimi 请求将通过 kimi2api 转发</small>
+          </div>
+        </div>
+
+        <!-- OpenAI Codex 配置 -->
+        <div class="content-section" style="margin-top: 24px;">
+          <div class="section-header">
+            <h2>OpenAI Codex 配置</h2>
+            <div class="section-actions">
+              <button id="importCodexBtn" class="btn btn-secondary" onclick="adminApp.showImportCodexModal()">
+                <img src="https://img.bloret.net/SF/arrow.up.circle?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="arrow.up.circle" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                导入 Codex 配置
+              </button>
+              <button id="refreshCodexTokenBtn" class="btn btn-secondary" onclick="adminApp.refreshCodexToken()">
+                <img src="https://img.bloret.net/SF/arrow.trianglehead.counterclockwise?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="arrow.trianglehead.counterclockwise" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                刷新令牌
+              </button>
+              <button id="checkCodexStatusBtn" class="btn btn-primary" onclick="adminApp.checkCodexStatus()">
+                <img src="https://img.bloret.net/SF/checkmark?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="checkmark" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                检查状态
+              </button>
+            </div>
+          </div>
+          <div id="codexConfigStatus" style="display:none; margin-bottom: 16px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+          <div id="codexStatusInfo" style="display:none; margin-bottom: 16px; padding: 16px; border-radius: 8px; background: var(--card); border: 1px solid var(--border);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+              <div>
+                <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">登录状态</div>
+                <div id="codexLoginStatus" style="font-weight: 500;">-</div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">账号 ID</div>
+                <div id="codexAccountId" style="font-weight: 500; word-break: break-all;">-</div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">令牌过期时间</div>
+                <div id="codexExpiresAt" style="font-weight: 500;">-</div>
+              </div>
+            </div>
+            <div style="margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div>
+                <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">Access Token</div>
+                <div id="codexAccessToken" style="font-weight: 500; word-break: break-all; font-family: monospace; font-size: 12px;">-</div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">Refresh Token</div>
+                <div id="codexRefreshToken" style="font-weight: 500; word-break: break-all; font-family: monospace; font-size: 12px;">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-section" style="margin-top: 24px;">
+          <div class="section-header">
+            <h2>供应商管理</h2>
+            <div class="section-actions">
+              <button id="importOpenCodeBtn" class="btn btn-secondary">导入 OpenCode 配置</button>
+              <div class="dropdown" id="addProviderDropdown">
+                <button id="addProviderBtn" class="btn btn-primary">
+                  添加供应商
+                  <img src="https://img.bloret.net/SF/chevron.down?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="chevron.down" style="display:inline-block;vertical-align:middle;margin-left:6px;">
+                </button>
+                <div class="dropdown-menu" id="addProviderMenu">
+                  <button class="dropdown-item" id="addOpenaiLoginBtn">
+<img src="https://img.bloret.net/SF/arrow.right.square?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="arrow.right.square" style="display:inline-block;vertical-align:middle;">
+                    OpenAI 账号登录
+                  </button>
+                  <button class="dropdown-item" id="addDeepseekLoginBtn">
+                    <img src="https://img.bloret.net/SF/person?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="person" style="display:inline-block;vertical-align:middle;">
+                    DeepSeek 账号登录
+                  </button>
+                  <button class="dropdown-item" id="addCustomProviderBtn">
+                    <img src="https://img.bloret.net/SF/plus.circle?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="plus.circle" style="display:inline-block;vertical-align:middle;">
+                    添加自定义供应商
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="adminProvidersList" class="models-table">
+            <!-- 供应商列表将通过JS动态加载 -->
+          </div>
+        </div>
+
+        <!-- DeepSeek 账号管理 -->
+        <div class="content-section" style="margin-top: 24px;">
+          <div class="section-header">
+            <h2>DeepSeek 账号管理</h2>
+            <div class="section-actions">
+              <button id="syncDeepseekBtn" class="btn btn-secondary" onclick="adminApp.syncDeepseekAccounts()">
+                <img src="https://img.bloret.net/SF/arrow.trianglehead.counterclockwise?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="arrow.trianglehead.counterclockwise" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                同步到 ds2api
+              </button>
+              <button id="addDeepseekBtn" class="btn btn-primary" onclick="adminApp.openDeepseekLogin()">
+                <img src="https://img.bloret.net/SF/plus?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="plus" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                添加账号
+              </button>
+            </div>
+          </div>
+          <div id="deepseekAccountsList" class="models-table">
+            <!-- DeepSeek 账号列表将通过JS动态加载 -->
+          </div>
+        </div>
+
+        <!-- DS2API Key 管理 -->
+        <div class="content-section" style="margin-top: 24px;">
+          <div class="section-header">
+            <h2>DS2API Key 管理</h2>
+            <div class="section-actions">
+              <button id="syncDs2apiKeysBtn" class="btn btn-secondary" onclick="adminApp.syncDs2apiKeys()">
+                <img src="https://img.bloret.net/SF/arrow.trianglehead.counterclockwise?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="arrow.trianglehead.counterclockwise" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                同步到 ds2api
+              </button>
+              <button id="addDs2apiKeyBtn" class="btn btn-primary" onclick="adminApp.openAddDs2apiKeyModal()">
+                <img src="https://img.bloret.net/SF/plus?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="plus" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                添加 Key
+              </button>
+            </div>
+          </div>
+          <div id="ds2apiKeysList" class="models-table">
+            <!-- DS2API Key 列表将通过JS动态加载 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- DS2API 独立页面 -->
+      <div id="adminDs2apiPage" class="page">
+        <div class="content-section">
+          <details open>
+            <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:0 0 12px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+              <div class="section-header" style="margin:0;">
+                <h2 style="margin:0;">DS2API 配置</h2>
+              </div>
+              <div class="section-actions" style="display:flex;gap:8px;" onclick="event.stopPropagation()">
+                <button id="testDs2apiBtn" class="btn btn-secondary" onclick="adminApp.testDs2apiConnection()">
+                  <img src="https://img.bloret.net/SF/checkmark?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="checkmark" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  测试连接
+                </button>
+                <button id="saveDs2apiConfigBtn" class="btn btn-primary" onclick="adminApp.saveDs2apiConfig()">
+                  保存配置
+                </button>
+              </div>
+            </summary>
+            <div id="ds2apiConfigStatus" style="display:none; margin-bottom: 16px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="ds2apiBaseUrl">Base URL</label>
+                <input type="text" id="ds2apiBaseUrl" class="input" placeholder="http://127.0.0.1:5001">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">ds2api 服务地址</small>
+              </div>
+              <div class="form-group">
+                <label for="ds2apiAdminKey">Admin Key</label>
+                <input type="password" id="ds2apiAdminKey" class="input" placeholder="ds2api">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">ds2api 管理密钥</small>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+              <label for="ds2apiEnabled">
+                <input type="checkbox" id="ds2apiEnabled" class="checkbox" style="margin-right: 8px;">
+                启用 DS2API 代理
+              </label>
+              <small style="color:var(--muted-foreground);margin-top:4px;display:block;">启用后，DeepSeek 请求将通过 ds2api 转发</small>
+            </div>
+          </details>
+        </div>
+        <div class="content-section" style="margin-top: 24px;">
+          <div class="section-header">
+            <h2>管理控制台</h2>
+          </div>
+          <div id="ds2apiConsoleLoadCard" class="card" style="display:none;cursor:pointer;transition:all 0.2s;" onclick="adminApp.loadDs2apiConsole()" onmouseover="this.style.borderColor='var(--brand-blue)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div class="card-content" style="padding:40px 24px;text-align:center;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="1.5" style="margin-bottom:12px;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <div class="card-title" style="font-size:18px;margin-bottom:8px;">加载管理控制台</div>
+              <div class="card-description">点击此处加载 DS2API 管理控制台</div>
+            </div>
+          </div>
+          <div id="ds2apiConsoleWrap" style="display:none;">
+            <iframe id="ds2apiConsoleFrame" src="" style="width:100%;height:70vh;border:1px solid var(--border);border-radius:12px;background:var(--background);"></iframe>
+          </div>
+          <div id="ds2apiConsolePlaceholder" style="text-align:center;padding:60px 20px;color:var(--muted-foreground);">
+            <p>请先配置并启用 DS2API 服务，然后保存配置以加载管理控制台。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Qwen2API 独立页面 -->
+      <div id="adminQwen2apiPage" class="page">
+        <div class="content-section">
+          <details open>
+            <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:0 0 12px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+              <div class="section-header" style="margin:0;">
+                <h2 style="margin:0;">Qwen2API 配置</h2>
+              </div>
+              <div class="section-actions" style="display:flex;gap:8px;" onclick="event.stopPropagation()">
+                <button id="testQwen2apiBtn" class="btn btn-secondary" onclick="adminApp.testQwen2apiConnection()">
+                  <img src="https://img.bloret.net/SF/checkmark?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="checkmark" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  测试连接
+                </button>
+                <button id="saveQwen2apiConfigBtn" class="btn btn-primary" onclick="adminApp.saveQwen2apiConfig()">
+                  保存配置
+                </button>
+              </div>
+            </summary>
+            <div id="qwen2apiConfigStatus" style="display:none; margin-bottom: 16px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="qwen2apiBaseUrl">Base URL</label>
+                <input type="text" id="qwen2apiBaseUrl" class="input" placeholder="http://127.0.0.1:7860">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">qwen2api 服务地址</small>
+              </div>
+              <div class="form-group">
+                <label for="qwen2apiAdminKey">Admin Key</label>
+                <input type="password" id="qwen2apiAdminKey" class="input" placeholder="qwen2api">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">qwen2api 管理密钥</small>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+              <label for="qwen2apiEnabled">
+                <input type="checkbox" id="qwen2apiEnabled" class="checkbox" style="margin-right: 8px;">
+                启用 Qwen2API 代理
+              </label>
+              <small style="color:var(--muted-foreground);margin-top:4px;display:block;">启用后，Qwen 请求将通过 qwen2api 转发</small>
+            </div>
+          </details>
+        </div>
+        <div class="content-section" style="margin-top: 24px;">
+          <div class="section-header">
+            <h2>管理控制台</h2>
+          </div>
+          <div id="qwen2apiConsoleLoadCard" class="card" style="display:none;cursor:pointer;transition:all 0.2s;" onclick="adminApp.loadQwen2apiConsole()" onmouseover="this.style.borderColor='var(--brand-blue)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div class="card-content" style="padding:40px 24px;text-align:center;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="1.5" style="margin-bottom:12px;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <div class="card-title" style="font-size:18px;margin-bottom:8px;">加载管理控制台</div>
+              <div class="card-description">点击此处加载 Qwen2API 管理控制台</div>
+            </div>
+          </div>
+          <div id="qwen2apiConsoleWrap" style="display:none;">
+            <iframe id="qwen2apiConsoleFrame" src="" style="width:100%;height:70vh;border:1px solid var(--border);border-radius:12px;background:var(--background);"></iframe>
+          </div>
+          <div id="qwen2apiConsolePlaceholder" style="text-align:center;padding:60px 20px;color:var(--muted-foreground);">
+            <p>请先配置并启用 Qwen2API 服务，然后保存配置以加载管理控制台。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Z.ai2API 独立页面 -->
+      <div id="adminZai2apiPage" class="page">
+        <div class="content-section">
+          <details open>
+            <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:0 0 12px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+              <div class="section-header" style="margin:0;">
+                <h2 style="margin:0;">Z.ai2API 配置</h2>
+              </div>
+              <div class="section-actions" style="display:flex;gap:8px;" onclick="event.stopPropagation()">
+                <button id="testZai2apiBtn" class="btn btn-secondary" onclick="adminApp.testZai2apiConnection()">
+                  <img src="https://img.bloret.net/SF/checkmark?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="checkmark" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  测试连接
+                </button>
+                <button id="saveZai2apiConfigBtn" class="btn btn-primary" onclick="adminApp.saveZai2apiConfig()">
+                  保存配置
+                </button>
+              </div>
+            </summary>
+            <div id="zai2apiConfigStatus" style="display:none; margin-bottom: 16px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="zai2apiBaseUrl">Base URL</label>
+                <input type="text" id="zai2apiBaseUrl" class="input" placeholder="http://127.0.0.1:8080">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">zai2api 服务地址</small>
+              </div>
+              <div class="form-group">
+                <label for="zai2apiToken">Token</label>
+                <input type="password" id="zai2apiToken" class="input" placeholder="zai2api">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">zai2api 访问令牌</small>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+              <label for="zai2apiEnabled">
+                <input type="checkbox" id="zai2apiEnabled" class="checkbox" style="margin-right: 8px;">
+                启用 Z.ai2API 代理
+              </label>
+              <small style="color:var(--muted-foreground);margin-top:4px;display:block;">启用后，Z.ai 请求将通过 zai2api 转发</small>
+            </div>
+          </details>
+        </div>
+        <div class="content-section" style="margin-top: 24px;">
+          <div class="section-header">
+            <h2>管理控制台</h2>
+          </div>
+          <div id="zai2apiConsoleWrap" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+              <div class="form-group">
+                <label>默认模型</label>
+                <input type="text" id="zaiModelDefault" class="input" placeholder="glm-4.6">
+              </div>
+              <div class="form-group">
+                <label>思考链模式</label>
+                <select id="zaiApiThink" class="select">
+                  <option value="reasoning">reasoning</option>
+                  <option value="think">think</option>
+                  <option value="strip">strip</option>
+                  <option value="details">details</option>
+                  <option value="none">none</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>API 端口</label>
+                <input type="number" id="zaiApiPort" class="input" placeholder="8080" min="1" max="65535">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">修改后需重启服务</small>
+              </div>
+              <div class="form-group">
+                <label>请求频率限制 (每分钟, 0=不限)</label>
+                <input type="number" id="zaiSecurityRateLimit" class="input" placeholder="0" min="0">
+              </div>
+              <div class="form-group">
+                <label>最大输出 Token (0=不限)</label>
+                <input type="number" id="zaiSecurityMaxTokens" class="input" placeholder="0" min="0">
+              </div>
+              <div class="form-group">
+                <label>日志级别</label>
+                <select id="zaiLoggingLevel" class="select">
+                  <option value="DEBUG">DEBUG</option>
+                  <option value="INFO">INFO</option>
+                  <option value="WARNING">WARNING</option>
+                  <option value="ERROR">ERROR</option>
+                  <option value="CRITICAL">CRITICAL</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:16px;">
+              <button class="btn btn-primary" onclick="adminApp.saveZai2apiSettings()">保存设置</button>
+              <button class="btn btn-secondary" onclick="adminApp.resetZai2apiSettings()">重置为默认</button>
+              <button class="btn btn-secondary" onclick="adminApp.reloadZai2apiSettings()">从环境变量重载</button>
+            </div>
+            <div id="zai2apiSettingsStatus" style="display:none;margin-bottom:16px;padding:12px;border-radius:8px;font-size:13px;"></div>
+            <details>
+              <summary style="cursor:pointer;font-size:13px;color:var(--muted-foreground);margin-bottom:12px;">模型映射表 (JSON)</summary>
+              <textarea id="zaiModelMapping" class="textarea textarea-mono" rows="6" placeholder='{"gpt-4": "glm-4", "gpt-3.5-turbo": "glm-4-flash"}'></textarea>
+            </details>
+            <details style="margin-top:8px;">
+              <summary style="cursor:pointer;font-size:13px;color:var(--muted-foreground);margin-bottom:12px;">安全设置</summary>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div class="form-group">
+                  <label>API 密钥 (为空=无需认证)</label>
+                  <input type="password" id="zaiSecurityApiKey" class="input" placeholder="">
+                </div>
+                <div class="form-group">
+                  <label>允许的 CORS 来源</label>
+                  <input type="text" id="zaiSecurityAllowedOrigins" class="input" placeholder='["*"]'>
+                </div>
+              </div>
+            </details>
+          </div>
+          <div id="zai2apiConsolePlaceholder" style="text-align:center;padding:60px 20px;color:var(--muted-foreground);">
+            <p>请先配置并启用 Z.ai2API 服务，然后保存配置以加载管理控制台。</p>
+          </div>
+        </div>
+
+        <!-- 账号管理 Tab 导航 -->
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin:24px 0 20px 0;">
+          <button class="zai2api-tab active" onclick="adminApp.switchZai2apiTab('accounts')" style="padding:10px 20px;border:none;background:none;color:var(--foreground);cursor:pointer;border-bottom:2px solid #3b82f6;font-weight:500;">账号管理</button>
+          <button class="zai2api-tab" onclick="adminApp.switchZai2apiTab('stats')" style="padding:10px 20px;border:none;background:none;color:var(--muted-foreground);cursor:pointer;border-bottom:2px solid transparent;">统计信息</button>
+          <button class="zai2api-tab" onclick="adminApp.switchZai2apiTab('config')" style="padding:10px 20px;border:none;background:none;color:var(--muted-foreground);cursor:pointer;border-bottom:2px solid transparent;">系统配置</button>
+        </div>
+
+        <!-- 账号管理 Tab -->
+        <div id="zai2apiTabAccounts" class="zai2api-tab-content">
+          <div class="content-section">
+            <div class="section-header">
+              <h2>账号列表</h2>
+              <div class="section-actions">
+                <button class="btn btn-secondary" onclick="adminApp.healthCheckZai2apiAccounts()">
+                  <img src="https://img.bloret.net/SF/heart?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="heart" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  健康检查
+                </button>
+                <button class="btn btn-secondary" onclick="adminApp.showBatchImportZai2apiModal()">
+                  <img src="https://img.bloret.net/SF/arrow.up.circle?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="arrow.up.circle" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  批量导入
+                </button>
+                <button class="btn btn-secondary" onclick="adminApp.exportZai2apiAccounts()">
+                  <img src="https://img.bloret.net/SF/arrow.down.document?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="arrow.down.document" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  导出
+                </button>
+                <button class="btn btn-primary" onclick="adminApp.showAddZai2apiAccountModal()">
+                  <img src="https://img.bloret.net/SF/plus?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="plus" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  添加账号
+                </button>
+              </div>
+            </div>
+            <!-- 筛选器 -->
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+              <input type="text" id="zai2apiAccountSearch" class="input" placeholder="搜索用户名/标签..." oninput="adminApp.filterZai2apiAccounts()" style="width:200px;">
+              <select id="zai2apiAccountStatusFilter" class="select" onchange="adminApp.filterZai2apiAccounts()">
+                <option value="">所有状态</option>
+                <option value="healthy">健康</option>
+                <option value="unhealthy">不健康</option>
+                <option value="disabled">已禁用</option>
+              </select>
+              <select id="zai2apiAccountActiveFilter" class="select" onchange="adminApp.filterZai2apiAccounts()">
+                <option value="">所有启用状态</option>
+                <option value="true">已启用</option>
+                <option value="false">已禁用</option>
+              </select>
+              <span id="zai2apiAccountCount" style="color:var(--muted-foreground);font-size:13px;"></span>
+            </div>
+            <div id="zai2apiAccountsList" class="models-table">
+              <!-- 账号列表将通过JS动态加载 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 统计信息 Tab -->
+        <div id="zai2apiTabStats" class="zai2api-tab-content" style="display:none;">
+          <div class="content-section">
+            <div class="section-header">
+              <h2>统计信息</h2>
+              <div class="section-actions">
+                <button class="btn btn-secondary" onclick="adminApp.loadZai2apiStats()">
+                  <img src="https://img.bloret.net/SF/arrow.trianglehead.counterclockwise?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="arrow.trianglehead.counterclockwise" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  刷新
+                </button>
+                <button class="btn btn-danger" onclick="adminApp.resetZai2apiStats()">重置统计</button>
+              </div>
+            </div>
+            <div id="zai2apiStatsOverview" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+              <div style="background:linear-gradient(135deg,#3b82f6,#2563eb);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">总账号数</div>
+                <div id="zai2apiStatsTotalAccounts" style="font-size:32px;font-weight:700;">-</div>
+              </div>
+              <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">活跃账号</div>
+                <div id="zai2apiStatsActiveAccounts" style="font-size:32px;font-weight:700;">-</div>
+              </div>
+              <div style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">总请求数</div>
+                <div id="zai2apiStatsTotalRequests" style="font-size:32px;font-weight:700;">-</div>
+              </div>
+              <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">错误率</div>
+                <div id="zai2apiStatsErrorRate" style="font-size:32px;font-weight:700;">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 系统配置 Tab -->
+        <div id="zai2apiTabConfig" class="zai2api-tab-content" style="display:none;">
+          <div class="content-section">
+            <div class="section-header">
+              <h2>系统配置</h2>
+              <div class="section-actions">
+                <button class="btn btn-secondary" onclick="adminApp.loadZai2apiConfigSettings()">
+                  <img src="https://img.bloret.net/SF/arrow.trianglehead.counterclockwise?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="arrow.trianglehead.counterclockwise" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  刷新
+                </button>
+                <button class="btn btn-primary" onclick="adminApp.saveZai2apiConfigSettings()">保存配置</button>
+              </div>
+            </div>
+            <div id="zai2apiConfigSettingsStatus" style="display:none; margin-bottom: 16px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="zai2apiConfigMode">轮询模式</label>
+                <select id="zai2apiConfigMode" class="select">
+                  <option value="round-robin">轮询 (round-robin)</option>
+                  <option value="random">随机 (random)</option>
+                  <option value="least-used">最少使用 (least-used)</option>
+                  <option value="health-based">健康优先 (health-based)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="zai2apiConfigMaxRetries">最大重试次数</label>
+                <input type="number" id="zai2apiConfigMaxRetries" class="input" min="0" value="3">
+              </div>
+              <div class="form-group">
+                <label for="zai2apiConfigHealthCheckInterval">健康检查间隔（秒）</label>
+                <input type="number" id="zai2apiConfigHealthCheckInterval" class="input" min="0" value="300">
+              </div>
+              <div class="form-group">
+                <label for="zai2apiConfigAutoDisableThreshold">自动禁用阈值</label>
+                <input type="number" id="zai2apiConfigAutoDisableThreshold" class="input" min="0" value="5">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">连续失败次数达到此值自动禁用</small>
+              </div>
+              <div class="form-group">
+                <label for="zai2apiConfigCooldownPeriod">冷却时间（秒）</label>
+                <input type="number" id="zai2apiConfigCooldownPeriod" class="input" min="0" value="60">
+              </div>
+              <div class="form-group">
+                <label for="zai2apiConfigMaxConcurrent">最大并发数（0=不限）</label>
+                <input type="number" id="zai2apiConfigMaxConcurrent" class="input" min="0" value="0">
+              </div>
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+              <label>
+                <input type="checkbox" id="zai2apiConfigRetryFailed" class="checkbox" style="margin-right: 8px;" checked>
+                失败时自动重试其他账号
+              </label>
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+              <label>
+                <input type="checkbox" id="zai2apiConfigTokenRefresh" class="checkbox" style="margin-right: 8px;" checked>
+                自动刷新 Token
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kimi2API 独立页面 -->
+      <div id="adminKimi2apiPage" class="page">
+        <!-- 基础配置 -->
+        <div class="content-section">
+          <details open>
+            <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:0 0 12px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">
+              <div class="section-header" style="margin:0;">
+                <h2 style="margin:0;">Kimi2API 配置</h2>
+              </div>
+              <div class="section-actions" style="display:flex;gap:8px;" onclick="event.stopPropagation()">
+                <button id="testKimi2apiBtn2" class="btn btn-secondary" onclick="adminApp.testKimi2apiConnection()">
+                  <img src="https://img.bloret.net/SF/checkmark?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="checkmark" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  测试连接
+                </button>
+                <button id="saveKimi2apiConfigBtn2" class="btn btn-primary" onclick="adminApp.saveKimi2apiConfig()">
+                  保存配置
+                </button>
+              </div>
+            </summary>
+            <div id="kimi2apiConfigStatus2" style="display:none; margin-bottom: 16px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="kimi2apiBaseUrl2">Base URL</label>
+                <input type="text" id="kimi2apiBaseUrl2" class="input" placeholder="http://127.0.0.1:8000">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">kimi2api 服务地址</small>
+              </div>
+              <div class="form-group">
+                <label for="kimi2apiToken2">Admin Token</label>
+                <input type="password" id="kimi2apiToken2" class="input" placeholder="admin-secret-token">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">kimi2api 管理令牌</small>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+              <label for="kimi2apiEnabled2">
+                <input type="checkbox" id="kimi2apiEnabled2" class="checkbox" style="margin-right: 8px;">
+                启用 Kimi2API 代理
+              </label>
+              <small style="color:var(--muted-foreground);margin-top:4px;display:block;">启用后，Kimi 请求将通过 kimi2api 转发</small>
+            </div>
+          </details>
+        </div>
+
+        <!-- 系统状态 -->
+        <div class="content-section" style="margin-top: 24px;">
+          <div class="section-header">
+            <h2>系统状态</h2>
+            <div class="section-actions">
+              <button class="btn btn-secondary" onclick="adminApp.loadKimi2apiHealth()">
+                <img src="https://img.bloret.net/SF/arrow.trianglehead.counterclockwise?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="arrow.trianglehead.counterclockwise" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                刷新
+              </button>
+            </div>
+          </div>
+          <div id="kimi2apiHealthStatus" style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;">
+            <div style="background:var(--muted);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:4px;">服务状态</div>
+              <div id="kimi2apiHealthStatusValue" style="font-size:20px;font-weight:600;">-</div>
+            </div>
+            <div style="background:var(--muted);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:4px;">数据库</div>
+              <div id="kimi2apiHealthDb" style="font-size:20px;font-weight:600;">-</div>
+            </div>
+            <div style="background:var(--muted);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:4px;">账号数量</div>
+              <div id="kimi2apiHealthAccounts" style="font-size:20px;font-weight:600;">-</div>
+            </div>
+            <div style="background:var(--muted);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:4px;">用户数量</div>
+              <div id="kimi2apiHealthUsers" style="font-size:20px;font-weight:600;">-</div>
+            </div>
+            <div style="background:var(--muted);border-radius:12px;padding:16px;text-align:center;">
+              <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:4px;">版本</div>
+              <div id="kimi2apiHealthVersion" style="font-size:20px;font-weight:600;">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 导航 -->
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin:24px 0 20px 0;">
+          <button class="kimi2api-tab active" onclick="adminApp.switchKimi2apiTab('accounts')" style="padding:10px 20px;border:none;background:none;color:var(--foreground);cursor:pointer;border-bottom:2px solid #3b82f6;font-weight:500;">账号管理</button>
+          <button class="kimi2api-tab" onclick="adminApp.switchKimi2apiTab('users')" style="padding:10px 20px;border:none;background:none;color:var(--muted-foreground);cursor:pointer;border-bottom:2px solid transparent;">用户管理</button>
+          <button class="kimi2api-tab" onclick="adminApp.switchKimi2apiTab('stats')" style="padding:10px 20px;border:none;background:none;color:var(--muted-foreground);cursor:pointer;border-bottom:2px solid transparent;">统计监控</button>
+          <button class="kimi2api-tab" onclick="adminApp.switchKimi2apiTab('config')" style="padding:10px 20px;border:none;background:none;color:var(--muted-foreground);cursor:pointer;border-bottom:2px solid transparent;">系统配置</button>
+        </div>
+
+        <!-- 账号管理 Tab -->
+        <div id="kimi2apiTabAccounts" class="kimi2api-tab-content">
+          <div class="content-section">
+            <div class="section-header">
+              <h2>账号列表</h2>
+              <div class="section-actions">
+                <button class="btn btn-primary" onclick="adminApp.showAddKimi2apiAccountModal()">
+                  <img src="https://img.bloret.net/SF/plus?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="plus" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  添加账号
+                </button>
+              </div>
+            </div>
+            <div id="kimi2apiAccountsList" class="models-table">
+              <!-- 账号列表将通过JS动态加载 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 用户管理 Tab -->
+        <div id="kimi2apiTabUsers" class="kimi2api-tab-content" style="display:none;">
+          <div class="content-section">
+            <div class="section-header">
+              <h2>用户列表</h2>
+              <div class="section-actions">
+                <button class="btn btn-primary" onclick="adminApp.showAddKimi2apiUserModal()">
+                  <img src="https://img.bloret.net/SF/plus?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="plus" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  添加用户
+                </button>
+              </div>
+            </div>
+            <div id="kimi2apiUsersList" class="models-table">
+              <!-- 用户列表将通过JS动态加载 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 统计监控 Tab -->
+        <div id="kimi2apiTabStats" class="kimi2api-tab-content" style="display:none;">
+          <div class="content-section">
+            <div class="section-header">
+              <h2>系统概览</h2>
+              <div class="section-actions">
+                <button class="btn btn-secondary" onclick="adminApp.loadKimi2apiStats()">
+                  <img src="https://img.bloret.net/SF/arrow.trianglehead.counterclockwise?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="arrow.trianglehead.counterclockwise" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  刷新
+                </button>
+              </div>
+            </div>
+            <div id="kimi2apiStatsOverview" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+              <div style="background:linear-gradient(135deg,#3b82f6,#2563eb);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">总请求数</div>
+                <div id="kimi2apiStatsTotalRequests" style="font-size:32px;font-weight:700;">-</div>
+              </div>
+              <div style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">总Token消耗</div>
+                <div id="kimi2apiStatsTotalTokens" style="font-size:32px;font-weight:700;">-</div>
+              </div>
+              <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">总错误数</div>
+                <div id="kimi2apiStatsTotalErrors" style="font-size:32px;font-weight:700;">-</div>
+              </div>
+              <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">今日请求</div>
+                <div id="kimi2apiStatsTodayRequests" style="font-size:32px;font-weight:700;">-</div>
+              </div>
+            </div>
+          </div>
+          <div class="content-section" style="margin-top:16px;">
+            <div class="section-header">
+              <h2>请求日志</h2>
+            </div>
+            <div id="kimi2apiRequestLogs" class="models-table">
+              <!-- 请求日志将通过JS动态加载 -->
+            </div>
+          </div>
+          <div class="content-section" style="margin-top:16px;">
+            <div class="section-header">
+              <h2>模型使用统计</h2>
+            </div>
+            <div id="kimi2apiModelStats" class="models-table">
+              <!-- 模型统计将通过JS动态加载 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 系统配置 Tab -->
+        <div id="kimi2apiTabConfig" class="kimi2api-tab-content" style="display:none;">
+          <div class="content-section">
+            <div class="section-header">
+              <h2>系统配置</h2>
+              <div class="section-actions">
+                <button class="btn btn-secondary" onclick="adminApp.loadKimi2apiConfigSettings()">
+                  <img src="https://img.bloret.net/SF/arrow.trianglehead.counterclockwise?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="arrow.trianglehead.counterclockwise" style="display:inline-block;vertical-align:middle;margin-right:4px;">
+                  刷新
+                </button>
+                <button class="btn btn-primary" onclick="adminApp.saveKimi2apiConfigSettings()">
+                  保存配置
+                </button>
+              </div>
+            </div>
+            <div id="kimi2apiConfigStatus" style="display:none; margin-bottom: 16px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="kimi2apiConfigRateLimit">速率限制 (每分钟)</label>
+                <input type="number" id="kimi2apiConfigRateLimit" class="input" min="0" value="60">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">0=不限制</small>
+              </div>
+              <div class="form-group">
+                <label for="kimi2apiConfigMaxTokens">最大Token数/请求</label>
+                <input type="number" id="kimi2apiConfigMaxTokens" class="input" min="0" value="4096">
+                <small style="color:var(--muted-foreground);margin-top:4px;display:block;">0=不限制</small>
+              </div>
+            </div>
+            <div class="form-group" style="margin-top: 8px;">
+              <label for="kimi2apiConfigEnableLogging">
+                <input type="checkbox" id="kimi2apiConfigEnableLogging" class="checkbox" style="margin-right: 8px;" checked>
+                启用日志记录
+              </label>
+            </div>
+            <div class="form-group" style="margin-top: 16px;">
+              <label for="kimi2apiConfigAllowedModels">允许的模型列表</label>
+              <textarea id="kimi2apiConfigAllowedModels" class="textarea textarea-mono" rows="4" placeholder='["k2", "k1.5"]'></textarea>
+              <small style="color:var(--muted-foreground);margin-top:4px;display:block;">JSON 数组格式，留空表示允许所有模型</small>
+            </div>
+          </div>
+          <div class="content-section" style="margin-top:16px;">
+            <div class="section-header">
+              <h2>重置配置</h2>
+            </div>
+            <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;">将系统配置重置为默认值，此操作不可撤销。</p>
+            <button class="btn btn-danger" onclick="adminApp.resetKimi2apiConfig()">重置为默认配置</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 用量监控页面 -->
+      <div id="adminStatsPage" class="page">
+        <div class="content-section">
+          <h2>用量监控</h2>
+          
+          <!-- Tab 导航 -->
+          <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;">
+            <button class="stats-tab active" onclick="adminApp.switchStatsTab('overview')" style="padding:10px 20px;border:none;background:none;color:var(--foreground);cursor:pointer;border-bottom:2px solid #3b82f6;font-weight:500;">总览</button>
+            <button class="stats-tab" onclick="adminApp.switchStatsTab('daily')" style="padding:10px 20px;border:none;background:none;color:var(--muted-foreground);cursor:pointer;border-bottom:2px solid transparent;">每日统计</button>
+            <button class="stats-tab" onclick="adminApp.switchStatsTab('models')" style="padding:10px 20px;border:none;background:none;color:var(--muted-foreground);cursor:pointer;border-bottom:2px solid transparent;">模型分析</button>
+            <button class="stats-tab" onclick="adminApp.switchStatsTab('providers')" style="padding:10px 20px;border:none;background:none;color:var(--muted-foreground);cursor:pointer;border-bottom:2px solid transparent;">供应商分析</button>
+            <button class="stats-tab" onclick="adminApp.switchStatsTab('logs')" style="padding:10px 20px;border:none;background:none;color:var(--muted-foreground);cursor:pointer;border-bottom:2px solid transparent;">调用记录</button>
+          </div>
+
+          <!-- Tab 1: 总览 -->
+          <div id="statsTabOverview" class="stats-tab-content">
+            <!-- 统计概要卡片 -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+              <div style="background:linear-gradient(135deg,#3b82f6,#2563eb);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">总请求数</div>
+                <div id="statsTotalRequests" style="font-size:32px;font-weight:700;">-</div>
+                <div id="statsAvgDailyRequests" style="font-size:12px;opacity:0.8;margin-top:4px;">日均 -</div>
+              </div>
+              <div style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">总Token消耗</div>
+                <div id="statsTotalTokens" style="font-size:32px;font-weight:700;">-</div>
+                <div id="statsAvgDailyTokens" style="font-size:12px;opacity:0.8;margin-top:4px;">日均 -</div>
+              </div>
+              <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">总费用</div>
+                <div id="statsTotalCost" style="font-size:32px;font-weight:700;">-</div>
+                <div id="statsAvgDailyCost" style="font-size:12px;opacity:0.8;margin-top:4px;">日均 -</div>
+              </div>
+              <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:20px;color:white;">
+                <div style="font-size:13px;opacity:0.9;margin-bottom:8px;">活跃模型</div>
+                <div id="statsActiveModels" style="font-size:32px;font-weight:700;">-</div>
+                <div id="statsTotalProviders" style="font-size:12px;opacity:0.8;margin-top:4px;">供应商 -</div>
+              </div>
+            </div>
+
+            <!-- 今日 vs 昨日对比 -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;color:var(--muted-foreground);">今日概览</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                  <div>
+                    <div style="font-size:12px;color:var(--muted-foreground);">请求</div>
+                    <div id="todayRequests" style="font-size:24px;font-weight:600;">-</div>
+                  </div>
+                  <div>
+                    <div style="font-size:12px;color:var(--muted-foreground);">Token</div>
+                    <div id="todayTokens" style="font-size:24px;font-weight:600;">-</div>
+                  </div>
+                  <div>
+                    <div style="font-size:12px;color:var(--muted-foreground);">费用</div>
+                    <div id="todayCost" style="font-size:24px;font-weight:600;">-</div>
+                  </div>
+                </div>
+              </div>
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;color:var(--muted-foreground);">昨日概览</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                  <div>
+                    <div style="font-size:12px;color:var(--muted-foreground);">请求</div>
+                    <div id="yesterdayRequests" style="font-size:24px;font-weight:600;">-</div>
+                  </div>
+                  <div>
+                    <div style="font-size:12px;color:var(--muted-foreground);">Token</div>
+                    <div id="yesterdayTokens" style="font-size:24px;font-weight:600;">-</div>
+                  </div>
+                  <div>
+                    <div style="font-size:12px;color:var(--muted-foreground);">费用</div>
+                    <div id="yesterdayCost" style="font-size:24px;font-weight:600;">-</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 图表区域 -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">每日请求量趋势</h3>
+                <div style="height:280px;"><canvas id="dailyRequestsChart"></canvas></div>
+              </div>
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">每日Token消耗趋势</h3>
+                <div style="height:280px;"><canvas id="dailyTokensChart"></canvas></div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">每日费用趋势</h3>
+                <div style="height:280px;"><canvas id="dailyCostChart"></canvas></div>
+              </div>
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">每日平均Token/请求</h3>
+                <div style="height:280px;"><canvas id="dailyAvgTokensChart"></canvas></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: 每日统计 -->
+          <div id="statsTabDaily" class="stats-tab-content" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">请求量柱状图</h3>
+                <div style="height:300px;"><canvas id="dailyBarRequestsChart"></canvas></div>
+              </div>
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">费用柱状图</h3>
+                <div style="height:300px;"><canvas id="dailyBarCostChart"></canvas></div>
+              </div>
+            </div>
+            <div id="detailedStats">
+              <!-- 详细统计将通过JS动态加载 -->
+            </div>
+          </div>
+
+          <!-- Tab 3: 模型分析 -->
+          <div id="statsTabModels" class="stats-tab-content" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">模型调用量分布</h3>
+                <div style="height:320px;"><canvas id="modelRequestsChart"></canvas></div>
+              </div>
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">模型Token消耗分布</h3>
+                <div style="height:320px;"><canvas id="modelTokensChart"></canvas></div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">模型费用分布</h3>
+                <div style="height:320px;"><canvas id="modelCostChart"></canvas></div>
+              </div>
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">模型平均Token/请求</h3>
+                <div style="height:320px;"><canvas id="modelAvgTokensChart"></canvas></div>
+              </div>
+            </div>
+            <div style="background:var(--muted);border-radius:12px;padding:20px;">
+              <h3 style="margin:0 0 16px 0;font-size:14px;">模型详细统计</h3>
+              <div id="modelStatsTable">
+                <!-- 模型统计表格将通过JS动态加载 -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 4: 供应商分析 -->
+          <div id="statsTabProviders" class="stats-tab-content" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">供应商调用量分布</h3>
+                <div style="height:320px;"><canvas id="providerRequestsChart"></canvas></div>
+              </div>
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">供应商Token消耗分布</h3>
+                <div style="height:320px;"><canvas id="providerTokensChart"></canvas></div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">供应商费用分布</h3>
+                <div style="height:320px;"><canvas id="providerCostChart"></canvas></div>
+              </div>
+              <div style="background:var(--muted);border-radius:12px;padding:20px;">
+                <h3 style="margin:0 0 16px 0;font-size:14px;">供应商平均Token/请求</h3>
+                <div style="height:320px;"><canvas id="providerAvgTokensChart"></canvas></div>
+              </div>
+            </div>
+            <div style="background:var(--muted);border-radius:12px;padding:20px;">
+              <h3 style="margin:0 0 16px 0;font-size:14px;">供应商详细统计</h3>
+              <div id="providerStatsTable">
+                <!-- 供应商统计表格将通过JS动态加载 -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 5: 调用记录 -->
+          <div id="statsTabLogs" class="stats-tab-content" style="display:none;">
+            <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+              <input type="text" id="usageLogUserFilter" class="input" placeholder="用户ID" style="width: 100px;">
+              <input type="text" id="usageLogModelFilter" class="input" placeholder="模型ID" style="width: 150px;">
+              <input type="date" id="usageLogStartDate" class="input">
+              <input type="date" id="usageLogEndDate" class="input">
+              <button class="btn btn-primary" onclick="adminApp.loadUsageLogs()">查询</button>
+              <button class="btn btn-secondary" onclick="adminApp.clearUsageLogFilters()">清除</button>
+              <span id="usageLogCount" style="color: var(--muted-foreground); font-size: 13px;"></span>
+            </div>
+            <div id="usageLogsList" class="models-table">
+              <!-- API 调用记录将通过JS动态加载 -->
+            </div>
+            <div style="display: flex; justify-content: center; gap: 8px; margin-top: 16px;">
+              <button id="usageLogPrevBtn" class="btn btn-secondary" onclick="adminApp.loadUsageLogs(adminApp.usageLogPage - 1)" disabled>上一页</button>
+              <span id="usageLogPageInfo" style="padding: 8px 12px; color: var(--muted-foreground);"></span>
+              <button id="usageLogNextBtn" class="btn btn-secondary" onclick="adminApp.loadUsageLogs(adminApp.usageLogPage + 1)">下一页</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 系统设置页面 -->
+      <div id="adminSettingsPage" class="page">
+        <div class="content-section">
+          <h2>系统设置</h2>
+          <form id="adminSettingsForm" class="settings-form">
+            <div class="form-group">
+              <label for="systemName">系统名称</label>
+              <input type="text" id="systemName" class="input" value="Crant AI Studio">
+            </div>
+            <div class="form-group">
+              <label for="defaultBalance">默认用户余额</label>
+              <input type="number" id="defaultBalance" class="input" value="10" step="0.01">
+            </div>
+            <div class="form-group">
+              <label for="apiKeyExpiry">默认API密钥有效期（天）</label>
+              <input type="number" id="apiKeyExpiry" class="input" value="30">
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">保存设置</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 兑换码管理页面 -->
+      <div id="adminRedemptionCodesPage" class="page">
+        <div class="content-section">
+          <div class="section-header">
+            <h2>兑换码管理</h2>
+            <div class="section-actions">
+              <button id="batchDeleteCodesBtn" class="btn btn-danger" style="display:none;" onclick="adminApp.batchDeleteRedemptionCodes()">批量删除</button>
+              <button id="batchSetRefundableBtn" class="btn btn-secondary" style="display:none;" onclick="adminApp.showBatchSetRefundableModal()">批量设置可退款</button>
+              <button id="batchDisplayCodesBtn" class="btn btn-secondary" style="display:none;" onclick="adminApp.showBatchDisplayCodesModal()">批量展示</button>
+              <button id="generateCodesBtn" class="btn btn-primary" onclick="adminApp.showGenerateCodesModal()">生成兑换码</button>
+            </div>
+          </div>
+          <div class="code-filters" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+            <input type="text" id="codeFilterSearch" class="input input-mono" placeholder="搜索兑换码..." oninput="adminApp.filterCodes()" style="width:200px;">
+            <select id="codeFilterType" class="select" onchange="adminApp.filterCodes()">
+              <option value="all">全部类型</option>
+              <option value="normal">普通</option>
+              <option value="refundable">可退款</option>
+            </select>
+            <select id="codeFilterStatus" class="select" onchange="adminApp.filterCodes()">
+              <option value="all">全部状态</option>
+              <option value="active">有效</option>
+              <option value="expired">已过期</option>
+              <option value="used_up">已用完</option>
+            </select>
+            <select id="codeFilterBatch" class="select" onchange="adminApp.filterCodes()">
+              <option value="all">全部批次</option>
+            </select>
+            <select id="codeFilterCreator" class="select" onchange="adminApp.filterCodes()">
+              <option value="all">全部创建者</option>
+            </select>
+            <input type="number" id="codeFilterMinAmount" class="input" placeholder="最小金额" oninput="adminApp.filterCodes()" style="width:100px;">
+            <input type="number" id="codeFilterMaxAmount" class="input" placeholder="最大金额" oninput="adminApp.filterCodes()" style="width:100px;">
+            <input type="date" id="codeFilterStartDate" class="input" onchange="adminApp.filterCodes()">
+            <input type="date" id="codeFilterEndDate" class="input" onchange="adminApp.filterCodes()">
+            <span id="codeFilterCount" style="font-size:12px;color:var(--muted-foreground);"></span>
+          </div>
+          <div id="redemptionCodesList" class="models-table">
+            <!-- 兑换码列表将通过JS动态加载 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 商品管理页面 -->
+      <div id="adminProductsPage" class="page">
+        <div class="content-section">
+          <div class="section-header">
+            <h2>商品管理</h2>
+            <div class="section-actions">
+              <button id="batchDeleteProductsBtn" class="btn btn-danger" style="display:none;" onclick="adminApp.batchDeleteProducts()">批量删除</button>
+              <button class="btn btn-primary" onclick="adminApp.showProductModal()">添加商品</button>
+            </div>
+          </div>
+          <div id="productsList" class="models-table">
+            <!-- 商品列表将通过JS动态加载 -->
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 商品编辑模态框 -->
+  <div id="productModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="productModalTitle">添加商品</h3>
+        <button class="modal-close" onclick="adminApp.closeProductModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editProductId">
+        <div class="form-group">
+          <label for="editProductName">商品名称</label>
+          <input type="text" id="editProductName" class="input" placeholder="例如: 50元充值卡" required>
+        </div>
+        <div class="form-group">
+          <label for="editProductDescription">描述</label>
+          <textarea id="editProductDescription" class="textarea" rows="3" placeholder="商品描述（可选）"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="editProductImageUrl">图片URL（可选）</label>
+          <input type="text" id="editProductImageUrl" class="input" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label for="editProductLink">商品链接（可选，点击商品时跳转）</label>
+          <input type="text" id="editProductLink" class="input" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label for="editProductSortOrder">排序（数字越小越靠前）</label>
+          <input type="number" id="editProductSortOrder" class="input" value="0" min="0">
+        </div>
+        <div class="form-group">
+          <label for="editProductActive">
+            <input type="checkbox" id="editProductActive" class="checkbox" checked> 上架
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" onclick="adminApp.closeProductModal()">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.saveProduct()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑用户模态框 -->
+  <div id="editUserModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>编辑用户</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editUserId">
+        <div class="form-group">
+          <label for="editUserEmail">邮箱</label>
+          <input type="email" id="editUserEmail" class="input" placeholder="user@example.com">
+        </div>
+        <div class="form-group">
+          <label for="editUserEmailVerified">邮箱验证状态</label>
+          <select id="editUserEmailVerified" class="select">
+            <option value="true">已验证</option>
+            <option value="false">未验证</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editUserAdmin">管理员权限</label>
+          <select id="editUserAdmin" class="select">
+            <option value="false">普通用户</option>
+            <option value="true">管理员</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editUserBalance">余额</label>
+          <input type="number" id="editUserBalance" class="input" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>可退款余额明细</label>
+          <div id="editUserCodeBalances" style="background:var(--muted);border-radius:8px;padding:10px;font-size:13px;max-height:200px;overflow-y:auto;">
+            <span style="color:var(--muted-foreground)">加载中...</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="editUserRefundAmount">退款金额（用户实际收到）</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="number" id="editUserRefundAmount" class="input" step="0.01" min="0" placeholder="输入退款金额" style="flex:1;">
+            <button id="refundBtn" class="btn btn-secondary" onclick="adminApp.refundUser()" style="white-space:nowrap;">退款</button>
+          </div>
+          <div id="refundPreview" style="font-size:11px;color:var(--muted-foreground);margin-top:4px;"></div>
+        </div>
+        <div class="form-group">
+          <label for="editUserTags">标签（逗号分隔）</label>
+          <input type="text" id="editUserTags" class="input" placeholder="标签1, 标签2">
+        </div>
+        <div class="form-group">
+          <label for="editUserRateLimitRpm">速率限制 - 每分钟请求数（0=不限制）</label>
+          <input type="number" id="editUserRateLimitRpm" class="input" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label for="editUserRateLimitTpm">速率限制 - 每分钟Token数（0=不限制）</label>
+          <input type="number" id="editUserRateLimitTpm" class="input" min="0" value="0">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button id="saveUserBtn" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加模型模态框 -->
+  <div id="addModelModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>添加模型</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="modelId">模型ID</label>
+          <input type="text" id="modelId" class="input" placeholder="例如：gpt-4">
+        </div>
+        <div class="form-group">
+          <label for="modelAlias">别名（可选）</label>
+          <input type="text" id="modelAlias" class="input" placeholder="例如：my-gpt4">
+          <small style="color:var(--muted-foreground);margin-top:4px;display:block;">设置别名后，用户将通过别名请求模型，供应商仍使用原始模型ID</small>
+        </div>
+        <div class="form-group">
+          <label for="modelProvider">提供商</label>
+          <select id="modelProvider" class="select">
+            <!-- 供应商列表将通过JS动态加载 -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="modelSeries">系列</label>
+          <input type="text" id="modelSeries" class="input" placeholder="例如：GPT-4系列（可选）">
+          <small style="color:var(--muted-foreground);margin-top:4px;display:block;">系列名称将显示在用户控制台，用于分类筛选模型</small>
+        </div>
+        <div class="form-group">
+          <label for="modelDescription">描述</label>
+          <textarea id="modelDescription" class="textarea" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="modelInputPrice">输入价格（人民币/百万Token）</label>
+          <input type="number" id="modelInputPrice" class="input" step="0.000001" value="0.01">
+        </div>
+        <div class="form-group">
+          <label for="modelOutputPrice">输出价格（人民币/百万Token）</label>
+          <input type="number" id="modelOutputPrice" class="input" step="0.000001" value="0.01">
+        </div>
+        <div class="form-group">
+          <label for="modelCachedOutputPrice">缓存输出价格（人民币/百万Token）</label>
+          <input type="number" id="modelCachedOutputPrice" class="input" step="0.000001" value="0">
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;">
+          <div style="font-weight:600;margin-bottom:12px;color:var(--foreground);">参考价（官方参考价，用于用户端展示对比）</div>
+          <div class="form-group">
+            <label for="modelRefInputPrice">参考输入价格（人民币/百万Token）</label>
+            <input type="number" id="modelRefInputPrice" class="input" step="0.000001" value="0">
+          </div>
+          <div class="form-group">
+            <label for="modelRefOutputPrice">参考输出价格（人民币/百万Token）</label>
+            <input type="number" id="modelRefOutputPrice" class="input" step="0.000001" value="0">
+          </div>
+
+        </div>
+        <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;">
+          <div style="font-weight:600;margin-bottom:12px;color:var(--foreground);">模型路由（可选，用于根据思考模式自动切换模型）</div>
+          <div class="form-group">
+            <label for="modelThinkingModel">思考模式模型</label>
+            <select id="modelThinkingModel" class="select">
+              <option value="">不设置（使用自身）</option>
+            </select>
+            <small style="color:var(--muted-foreground);margin-top:4px;display:block;">开启思考模式时实际使用的模型</small>
+          </div>
+          <div class="form-group">
+            <label for="modelNonThinkingModel">非思考模式模型</label>
+            <select id="modelNonThinkingModel" class="select">
+              <option value="">不设置（使用自身）</option>
+            </select>
+            <small style="color:var(--muted-foreground);margin-top:4px;display:block;">关闭思考模式时实际使用的模型</small>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="modelRateLimitRpm">速率限制 - 每分钟请求数（0=不限制）</label>
+          <input type="number" id="modelRateLimitRpm" class="input" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label for="modelRateLimitTpm">速率限制 - 每分钟Token数（0=不限制）</label>
+          <input type="number" id="modelRateLimitTpm" class="input" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label for="modelEnabled">启用状态</label>
+          <select id="modelEnabled" class="select">
+            <option value="true">启用</option>
+            <option value="false">禁用</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button id="saveModelBtn" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加/编辑供应商模态框 -->
+  <div id="addProviderModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="providerModalTitle">添加供应商</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="providerId">供应商ID</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="providerId" class="input" placeholder="例如：openai" style="flex:1;">
+            <button type="button" id="lookupProviderBtn" class="btn btn-secondary">查询</button>
+          </div>
+          <small style="color:var(--muted-foreground);margin-top:4px;display:block;">输入 ID 后点击查询，自动从 models.dev 获取配置</small>
+        </div>
+        <div class="form-group">
+          <label for="providerName">供应商名称</label>
+          <input type="text" id="providerName" class="input" placeholder="例如：OpenAI">
+        </div>
+        <div class="form-group">
+          <label for="providerBaseUrl">Base URL</label>
+          <input type="text" id="providerBaseUrl" class="input" placeholder="例如：https://api.openai.com/v1">
+        </div>
+        <div class="form-group">
+          <label for="providerApiKey">API Key</label>
+          <input type="password" id="providerApiKey" class="input" placeholder="留空则不更新">
+        </div>
+        <div class="form-group">
+          <label for="providerFormat">API 格式</label>
+          <select id="providerFormat" class="select">
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="providerEnabled">启用状态</label>
+          <select id="providerEnabled" class="select">
+            <option value="true">启用</option>
+            <option value="false">禁用</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button id="saveProviderBtn" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导入 OpenCode 配置模态框 -->
+  <div id="importOpenCodeModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>导入配置</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--muted-foreground); margin-bottom: 16px; font-size: 14px;">
+          支持 OpenCode auth.json 和 Claude Code 配置两种格式，自动识别并导入供应商 API Key 和 Base URL。
+        </p>
+        <div class="form-group">
+          <label for="openCodeConfigText">配置内容 (JSON)</label>
+          <textarea id="openCodeConfigText" class="textarea textarea-mono" rows="12" placeholder='格式一: OpenCode auth.json
+{
+  "openai": { "type": "api", "key": "sk-xxx" },
+  "anthropic": { "type": "api", "key": "sk-ant-xxx" }
+}
+
+格式二: Claude Code 配置
+{
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "sk-ant-xxx",
+    "ANTHROPIC_BASE_URL": "https://api.anthropic.com"
+  },
+  "model": "opus[1m]"
+}'></textarea>
+        </div>
+        <div class="form-group">
+          <label>或上传文件</label>
+          <input type="file" id="openCodeConfigFile" class="input" accept=".json,.jsonc" style="color: var(--muted-foreground);">
+        </div>
+        <div id="importPreview" style="display: none;">
+          <h4 style="margin: 16px 0 8px; color: var(--foreground);">预览导入内容</h4>
+          <div id="importPreviewContent" style="background: var(--muted); padding: 12px; border-radius: 8px; font-size: 13px; max-height: 200px; overflow-y: auto; color: var(--muted-foreground);"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button id="confirmImportOpenCodeBtn" class="btn btn-primary">导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导入 Codex 配置模态框 -->
+  <div id="importCodexModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>导入 Codex 配置</h3>
+        <button class="modal-close" onclick="adminApp.closeImportCodexModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--muted-foreground); margin-bottom: 16px; font-size: 14px;">
+          粘贴 Codex 配置 JSON（从 <code style="background:var(--muted);padding:2px 6px;border-radius:4px;">~/.codex/auth.json</code> 或 CC Switch 导出）
+        </p>
+        <div class="form-group">
+          <label for="codexConfigJson">Codex 配置 JSON</label>
+          <textarea id="codexConfigJson" class="textarea textarea-mono" rows="12" placeholder='{
+  "auth_mode": "chatgpt",
+  "tokens": {
+    "id_token": "...",
+    "access_token": "...",
+    "refresh_token": "...",
+    "account_id": "..."
+  }
+}'></textarea>
+        </div>
+        <div id="importCodexStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" onclick="adminApp.closeImportCodexModal()">取消</button>
+        <button id="confirmImportCodexBtn" class="btn btn-primary" onclick="adminApp.importCodexConfig()">导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OpenAI OAuth 登录模态框 -->
+  <div id="openaiLoginModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3>OpenAI 账号登录</h3>
+        <button class="modal-close" onclick="adminApp.closeOpenaiLoginModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--muted-foreground); margin-bottom: 12px; font-size: 14px;">
+          第一步：复制下方脚本，保存为 <code style="background:var(--muted);padding:2px 6px;border-radius:4px;">openai_login.py</code>
+        </p>
+        <div style="position: relative; margin-bottom: 16px;">
+          <textarea id="openaiLoginScript" class="textarea textarea-mono" readonly rows="16"></textarea>
+          <button id="copyScriptBtn" style="position: absolute; top: 8px; right: 8px; background: var(--secondary); border: 1px solid var(--border); color: var(--muted-foreground); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">复制脚本</button>
+        </div>
+        <p style="color: var(--muted-foreground); margin-bottom: 8px; font-size: 14px;">
+          第二步：在终端运行以下命令（需要 Python 3.6+）：
+        </p>
+        <div style="background: var(--muted); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; color: var(--foreground); word-break: break-all; position: relative;">
+          <code id="openaiLoginCmd"></code>
+          <button id="copyCmdBtn" style="position: absolute; top: 8px; right: 8px; background: var(--secondary); border: 1px solid var(--border); color: var(--muted-foreground); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">复制</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="adminApp.closeOpenaiLoginModal()">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DeepSeek 账号登录模态框 -->
+  <div id="deepseekLoginModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>DeepSeek 账号登录</h3>
+        <button class="modal-close" onclick="adminApp.closeDeepseekLoginModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--muted-foreground); margin-bottom: 16px; font-size: 14px;">
+          输入 DeepSeek 账号信息，将通过 ds2api 添加到账号池中。
+        </p>
+        <div class="form-group">
+          <label for="deepseekEmail">邮箱或手机号</label>
+          <input type="text" id="deepseekEmail" class="input" placeholder="user@example.com 或 13800138000">
+        </div>
+        <div class="form-group">
+          <label for="deepseekPassword">密码</label>
+          <input type="password" id="deepseekPassword" class="input" placeholder="DeepSeek 账号密码">
+        </div>
+        <div class="form-group">
+          <label for="deepseekAccountName">备注名称（可选）</label>
+          <input type="text" id="deepseekAccountName" class="input" placeholder="例如：主账号">
+        </div>
+        <div id="deepseekLoginStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" onclick="adminApp.closeDeepseekLoginModal()">取消</button>
+        <button id="deepseekLoginSubmitBtn" class="btn btn-primary" onclick="adminApp.submitDeepseekLogin()">添加账号</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加/编辑 DS2API Key 模态框 -->
+  <div id="addDs2apiKeyModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 id="ds2apiKeyModalTitle">添加 DS2API Key</h3>
+        <button class="modal-close" onclick="adminApp.closeAddDs2apiKeyModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--muted-foreground); margin-bottom: 16px; font-size: 14px;">
+          添加用于调用 ds2api 的 API Key，添加后需手动同步到 ds2api 生效。
+        </p>
+        <input type="hidden" id="ds2apiKeyEditId">
+        <div class="form-group">
+          <label for="ds2apiKeyValue">API Key</label>
+          <input type="text" id="ds2apiKeyValue" class="input" placeholder="例如：BAI-xxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label for="ds2apiKeyName">名称（可选）</label>
+              <input type="text" id="ds2apiKeyName" class="input" placeholder="例如：Crant AI Studio">
+        </div>
+        <div class="form-group">
+          <label for="ds2apiKeyRemark">备注（可选）</label>
+          <input type="text" id="ds2apiKeyRemark" class="input" placeholder="例如：主平台调用">
+        </div>
+        <div id="ds2apiKeyStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" onclick="adminApp.closeAddDs2apiKeyModal()">取消</button>
+        <button id="ds2apiKeySubmitBtn" class="btn btn-primary" onclick="adminApp.submitDs2apiKey()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 选择模型对话框 -->
+  <div id="fetchModelsModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="fetchModelsTitle">获取模型列表</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="fetchModelsLoading" style="text-align:center;padding:20px;color:var(--muted-foreground);">
+          <p>正在获取模型列表...</p>
+        </div>
+        <div id="fetchModelsError" style="display:none;text-align:center;padding:20px;color:var(--destructive);"></div>
+        <div id="fetchModelsContent" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="selectAllFetchedModels" class="checkbox" onchange="adminApp.toggleSelectAllFetchedModels(this.checked)">
+              <span style="font-weight:500;">全选</span>
+            </label>
+            <span id="fetchedModelsCount" style="color:var(--muted-foreground);font-size:13px;"></span>
+          </div>
+          <div id="fetchedModelsList" style="max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button id="addSelectedModelsBtn" class="btn btn-primary" style="display:none;" onclick="adminApp.addSelectedModels()">添加选中模型</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量设置固定价格模态框 -->
+  <div id="batchSetPricesModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>批量设置固定价格</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;">将为选中的 <strong id="batchSetPricesCount">0</strong> 个模型设置以下价格：</p>
+        <div class="form-group">
+          <label for="batchSetInputPrice">输入价格（人民币/百万Token）</label>
+          <input type="number" id="batchSetInputPrice" class="input" step="0.000001" value="0.01">
+        </div>
+        <div class="form-group">
+          <label for="batchSetOutputPrice">输出价格（人民币/百万Token）</label>
+          <input type="number" id="batchSetOutputPrice" class="input" step="0.000001" value="0.01">
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchSetPrices()">确认设置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON 批量定价模态框 -->
+  <div id="batchJsonPricesModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 560px;">
+      <div class="modal-header">
+        <h3>JSON 批量定价</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;">使用 JSON 格式为不同模型设置不同价格，单位：<strong>¥/百万Token</strong></p>
+        <div style="background:var(--muted);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted-foreground);">
+          <div style="font-weight:600;margin-bottom:6px;color:var(--foreground);">格式说明</div>
+          <code style="display:block;white-space:pre-wrap;line-height:1.6;">{
+  "gpt-4o": {"in": 2.0, "out": 4.0},
+  "claude-sonnet": {"in": 3.0, "out": 15.0},
+  "deepseek-chat": {"in": 0.5, "out": 1.0}
+}</code>
+        </div>
+        <textarea id="batchJsonPricesInput" class="textarea textarea-mono" style="height:200px;" placeholder='{\n  "model-id": {"in": 2.0, "out": 4.0}\n}'></textarea>
+        <div id="batchJsonPricesResult" style="margin-top:8px;font-size:12px;display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchJsonPrices()">应用价格</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON 批量定参考价模态框 -->
+  <div id="batchJsonRefPricesModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 560px;">
+      <div class="modal-header">
+        <h3>JSON 批量定参考价</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;">使用 JSON 格式为不同模型设置参考价格，单位：<strong>¥/百万Token</strong></p>
+        <div style="background:var(--muted);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted-foreground);">
+          <div style="font-weight:600;margin-bottom:6px;color:var(--foreground);">格式说明</div>
+          <code style="display:block;white-space:pre-wrap;line-height:1.6;">{
+  "gpt-4o": {"in": 2.0, "out": 4.0},
+  "claude-sonnet": {"in": 3.0, "out": 15.0},
+  "deepseek-chat": {"in": 0.5, "out": 1.0}
+}</code>
+        </div>
+        <textarea id="batchJsonRefPricesInput" class="textarea textarea-mono" style="height:200px;" placeholder='{\n  "model-id": {"in": 2.0, "out": 4.0}\n}'></textarea>
+        <div id="batchJsonRefPricesResult" style="margin-top:8px;font-size:12px;display:none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchJsonRefPrices()">应用参考价</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量调整价格（按比例）模态框 -->
+  <div id="batchAdjustPricesModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>批量按比例调整价格</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;">将对选中的 <strong id="batchAdjustPricesCount">0</strong> 个模型的价格按比例调整：</p>
+        <div class="form-group">
+          <label for="batchAdjustPercentage">调整百分比（正数为涨价，负数为降价）</label>
+          <input type="number" id="batchAdjustPercentage" class="input" step="1" value="10" placeholder="例如: 10 表示涨价10%，-20 表示降价20%">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchAdjustPrices()">确认调整</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量设置速率限制模态框 -->
+  <div id="batchSetRateLimitModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>批量设置速率限制</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;">将为选中的 <strong id="batchSetRateLimitCount">0</strong> 个模型设置以下速率限制：</p>
+        <div class="form-group">
+          <label for="batchRateLimitRpm">每分钟请求数（0=不限制）</label>
+          <input type="number" id="batchRateLimitRpm" class="input" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label for="batchRateLimitTpm">每分钟Token数（0=不限制）</label>
+          <input type="number" id="batchRateLimitTpm" class="input" min="0" value="0">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchSetRateLimit()">确认设置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量修改说明模态框 -->
+  <div id="batchEditDescModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>批量修改模型说明</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;">将为选中的 <strong id="batchEditDescCount">0</strong> 个模型修改说明：</p>
+        <div id="batchEditDescModelsList" style="margin-bottom: 16px; max-height: 200px; overflow-y: auto; padding: 12px; background: var(--muted); border-radius: 8px; font-size: 13px;">
+        </div>
+        <div class="form-group">
+          <label for="batchDescMode">修改模式</label>
+          <select id="batchDescMode" class="select" onchange="adminApp.toggleBatchDescMode()">
+            <option value="replace">替换为新说明</option>
+            <option value="append">追加到现有说明</option>
+            <option value="prepend">前置到现有说明</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="batchDescValue">说明内容</label>
+          <textarea id="batchDescValue" class="textarea" rows="4" placeholder="输入新的模型说明..."></textarea>
+        </div>
+        <div id="batchEditDescStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchEditDesc()">确认修改</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量设置系列模态框 -->
+  <div id="batchSetSeriesModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>批量设置系列</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;">将为选中的 <strong id="batchSetSeriesCount">0</strong> 个模型设置系列：</p>
+        <div id="batchSetSeriesModelsList" style="margin-bottom: 16px; max-height: 200px; overflow-y: auto; padding: 12px; background: var(--muted); border-radius: 8px; font-size: 13px;">
+        </div>
+        <div class="form-group">
+          <label for="batchSeriesValue">系列名称</label>
+          <input type="text" id="batchSeriesValue" class="input" placeholder="输入系列名称（留空则清除系列）">
+          <small style="color:var(--muted-foreground);margin-top:4px;display:block;">系列名称将显示在用户控制台，用于分类筛选模型</small>
+        </div>
+        <div id="batchSetSeriesStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchSetSeries()">确认设置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 系列图标管理模态框 -->
+  <div id="seriesIconsModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>系列图标管理</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;">为每个系列设置图标，图标将显示在用户控制台的模型卡片上。</p>
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <select id="newSeriesName" class="select" style="flex:1;">
+            <option value="">选择系列...</option>
+          </select>
+          <input type="text" id="newSeriesIconUrl" class="input" placeholder="图标 URL" style="flex:2;">
+          <button class="btn btn-primary" onclick="adminApp.addSeriesIcon()">添加</button>
+        </div>
+        <div id="seriesIconsList" style="max-height:400px;overflow-y:auto;"></div>
+        <div id="seriesIconsStatus" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 按参考价百分比批量设置价格模态框 -->
+  <div id="batchAdjustByRefModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h3>按参考价百分比设置价格</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;">将选中的 <strong id="batchAdjustByRefCount">0</strong> 个模型的实际价格设置为参考价的指定百分比：</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="batchRefInputPct">输入价百分比（%）</label>
+            <input type="number" id="batchRefInputPct" class="input" step="1" value="100" placeholder="如 80">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="batchRefOutputPct">输出价百分比（%）</label>
+            <input type="number" id="batchRefOutputPct" class="input" step="1" value="100" placeholder="如 80">
+          </div>
+
+        </div>
+        <div id="batchAdjustByRefPreview" style="display:none;">
+          <h4 style="margin:0 0 8px;color:var(--foreground);font-size:14px;">预览（价格单位：¥/百万Token）</h4>
+          <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="background:var(--muted);">
+                  <th style="padding:8px;text-align:left;border-bottom:1px solid var(--border);">模型</th>
+                  <th style="padding:8px;text-align:right;border-bottom:1px solid var(--border);">当前输入价</th>
+                  <th style="padding:8px;text-align:right;border-bottom:1px solid var(--border);">参考输入价</th>
+                  <th style="padding:8px;text-align:right;border-bottom:1px solid var(--border);">新输入价</th>
+                  <th style="padding:8px;text-align:right;border-bottom:1px solid var(--border);">当前输出价</th>
+                  <th style="padding:8px;text-align:right;border-bottom:1px solid var(--border);">参考输出价</th>
+                  <th style="padding:8px;text-align:right;border-bottom:1px solid var(--border);">新输出价</th>
+                </tr>
+              </thead>
+              <tbody id="batchAdjustByRefPreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="batchAdjustByRefStatus" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button class="btn btn-secondary" onclick="adminApp.previewBatchAdjustByRef()">预览</button>
+        <button id="batchAdjustByRefConfirmBtn" class="btn btn-primary" style="display:none;" onclick="adminApp.executeBatchAdjustByRef()">确认执行</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 生成兑换码模态框 -->
+  <div id="generateCodesModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>生成兑换码</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="codeAmount">兑换金额（人民币）</label>
+          <input type="number" id="codeAmount" class="input" step="0.01" min="0.01" value="1">
+        </div>
+        <div class="form-group">
+          <label for="codeCount">生成数量（1-1000）</label>
+          <input type="number" id="codeCount" class="input" min="1" max="1000" value="1">
+        </div>
+        <div class="form-group">
+          <label for="codeMaxUses">使用次数（0=无限，默认1）</label>
+          <input type="number" id="codeMaxUses" class="input" min="0" value="1">
+        </div>
+        <div class="form-group">
+          <label for="codeExpiresAt">过期时间（可选，留空永不过期）</label>
+          <input type="datetime-local" id="codeExpiresAt" class="input">
+        </div>
+        <div class="form-group">
+          <label for="codeBatchName">批次名称（可选）</label>
+          <input type="text" id="codeBatchName" class="input" placeholder="例如：推广活动A">
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="codeRefundable" class="checkbox">
+            可退款（余额可退还，优先扣除不可退款余额）
+          </label>
+        </div>
+        <div class="form-group" id="codeFeeRateGroup" style="display:none;">
+          <label for="codeFeeRate">手续费率（0-1，如 0.2 表示 20%）</label>
+          <input type="number" id="codeFeeRate" class="input" step="0.01" min="0" max="1" value="0">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button id="confirmGenerateCodesBtn" class="btn btn-primary" onclick="adminApp.generateRedemptionCodes()">生成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 兑换码结果模态框 -->
+  <div id="codesResultModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>兑换码已生成</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);margin-bottom:12px;">已成功生成 <strong id="generatedCodesCount">0</strong> 个兑换码</p>
+        <div style="position:relative;">
+          <textarea id="generatedCodesList" class="textarea textarea-mono" readonly rows="12"></textarea>
+          <button id="copyGeneratedCodesBtn" style="position:absolute;top:8px;right:8px;background:var(--secondary);border:1px solid var(--border);color:var(--muted-foreground);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;">复制全部</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary modal-close">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑兑换码模态框 -->
+  <div id="editCodeModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>编辑兑换码</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editCodeId">
+        <div class="form-group">
+          <label>兑换码</label>
+          <input type="text" id="editCodeValue" class="input" readonly style="opacity:0.6;">
+        </div>
+        <div class="form-group">
+          <label for="editCodeAmount">面额</label>
+          <input type="number" id="editCodeAmount" class="input" step="0.01" min="0.01">
+        </div>
+        <div class="form-group">
+          <label for="editCodeMaxUses">使用次数（0=无限）</label>
+          <input type="number" id="editCodeMaxUses" class="input" min="0">
+        </div>
+        <div class="form-group">
+          <label for="editCodeExpiresAt">过期时间</label>
+          <input type="datetime-local" id="editCodeExpiresAt" class="input">
+        </div>
+        <div class="form-group">
+          <label for="editCodeBatchName">批次名称</label>
+          <input type="text" id="editCodeBatchName" class="input">
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="editCodeRefundable" class="checkbox">
+            可退款
+          </label>
+        </div>
+        <div class="form-group" id="editCodeFeeRateGroup" style="display:none;">
+          <label for="editCodeFeeRate">手续费率（0-1）</label>
+          <input type="number" id="editCodeFeeRate" class="input" step="0.01" min="0" max="1">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button id="confirmEditCodeBtn" class="btn btn-primary" onclick="adminApp.saveEditCode()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量设置可退款模态框 -->
+  <div id="batchSetRefundableModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>批量设置可退款</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);margin-bottom:12px;">将对选中的 <strong id="batchSetCount">0</strong> 个兑换码执行以下操作：</p>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="batchSetRefundable" class="checkbox">
+            设为可退款
+          </label>
+        </div>
+        <div class="form-group" id="batchSetFeeRateGroup" style="display:none;">
+          <label for="batchSetFeeRate">手续费率（0-1，如 0.2 = 20%）</label>
+          <input type="number" id="batchSetFeeRate" class="input" step="0.01" min="0" max="1" value="0">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close">取消</button>
+        <button id="confirmBatchSetBtn" class="btn btn-primary" onclick="adminApp.batchSetRefundable()">确认设置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量展示兑换码模态框 -->
+  <div id="batchDisplayCodesModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>批量展示兑换码</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);margin-bottom:12px;">共选中 <strong id="batchDisplayCodesCount">0</strong> 个兑换码</p>
+        <div style="position:relative;">
+          <textarea id="batchDisplayCodesList" class="textarea textarea-mono" readonly rows="12"></textarea>
+          <button id="copyBatchDisplayCodesBtn" style="position:absolute;top:8px;right:8px;background:var(--secondary);border:1px solid var(--border);color:var(--muted-foreground);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px;">复制全部</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary modal-close">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Z.ai2API 添加/编辑账号模态框 -->
+  <div id="zai2apiAccountModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="zai2apiAccountModalTitle">添加账号</h3>
+        <button class="modal-close" onclick="adminApp.closeZai2apiAccountModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="zai2apiAccountId">
+        <div class="form-group">
+          <label for="zai2apiAccountCookie">Cookie</label>
+          <textarea id="zai2apiAccountCookie" class="textarea textarea-mono" rows="3" placeholder="acw_tc=abc123..."></textarea>
+          <small style="color:var(--muted-foreground);margin-top:4px;display:block;">Z.ai Cookie，可从浏览器开发者工具获取</small>
+        </div>
+        <div class="form-group">
+          <label for="zai2apiAccountLabel">标签</label>
+          <input type="text" id="zai2apiAccountLabel" class="input" placeholder="例如：主账号">
+        </div>
+        <div class="form-group">
+          <label for="zai2apiAccountAutoEnable">
+            <input type="checkbox" id="zai2apiAccountAutoEnable" class="checkbox" style="margin-right: 8px;" checked>
+            自动启用
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" onclick="adminApp.closeZai2apiAccountModal()">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.saveZai2apiAccount()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Z.ai2API 编辑账号模态框 -->
+  <div id="zai2apiEditAccountModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>编辑账号</h3>
+        <button class="modal-close" onclick="adminApp.closeZai2apiEditAccountModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="zai2apiEditAccountId">
+        <div class="form-group">
+          <label for="zai2apiEditAccountLabel">标签</label>
+          <input type="text" id="zai2apiEditAccountLabel" class="input" placeholder="例如：主账号">
+        </div>
+        <div class="form-group">
+          <label for="zai2apiEditAccountCookie">Cookie（留空则不更新）</label>
+          <textarea id="zai2apiEditAccountCookie" class="textarea textarea-mono" rows="3" placeholder="留空则保持原有 Cookie"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="zai2apiEditAccountPriority">优先级</label>
+          <input type="number" id="zai2apiEditAccountPriority" class="input" min="0" value="10">
+        </div>
+        <div class="form-group">
+          <label for="zai2apiEditAccountExpiresAt">有效期（留空则永不过期）</label>
+          <input type="datetime-local" id="zai2apiEditAccountExpiresAt" class="input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" onclick="adminApp.closeZai2apiEditAccountModal()">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.updateZai2apiAccount()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Z.ai2API 批量导入模态框 -->
+  <div id="zai2apiBatchImportModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>批量导入账号</h3>
+        <button class="modal-close" onclick="adminApp.closeZai2apiBatchImportModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted-foreground);margin-bottom:12px;">每行一个 Cookie，或使用 JSON 格式。</p>
+        <div class="form-group">
+          <label for="zai2apiBatchImportCookies">Cookie 列表</label>
+          <textarea id="zai2apiBatchImportCookies" class="textarea textarea-mono" rows="8" placeholder="acw_tc=cookie1...
+acw_tc=cookie2...
+acw_tc=cookie3..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="zai2apiBatchImportLabel">标签（可选）</label>
+          <input type="text" id="zai2apiBatchImportLabel" class="input" placeholder="批量导入">
+        </div>
+        <div id="zai2apiBatchImportStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" onclick="adminApp.closeZai2apiBatchImportModal()">取消</button>
+        <button id="zai2apiBatchImportBtn" class="btn btn-primary" onclick="adminApp.executeZai2apiBatchImport()">导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Z.ai2API 账号详情模态框 -->
+  <div id="zai2apiAccountDetailModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>账号详情</h3>
+        <button class="modal-close" onclick="adminApp.closeZai2apiAccountDetailModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="zai2apiAccountDetailContent" style="display:grid;gap:12px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary modal-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 调用详情弹窗 -->
+  <div id="usageDetailModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>调用详情</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="usageDetailContent" style="display:grid;gap:12px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary modal-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kimi2API 添加/编辑账号模态框 -->
+  <div id="kimi2apiAccountModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="kimi2apiAccountModalTitle">添加账号</h3>
+        <button class="modal-close" onclick="adminApp.closeKimi2apiAccountModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="kimi2apiAccountId">
+        <div class="form-group">
+          <label for="kimi2apiAccountName">账号名称</label>
+          <input type="text" id="kimi2apiAccountName" class="input" placeholder="例如：主账号">
+        </div>
+        <div class="form-group">
+          <label for="kimi2apiAccountToken">Token</label>
+          <input type="password" id="kimi2apiAccountToken" class="input" placeholder="sk-xxx">
+          <small style="color:var(--muted-foreground);margin-top:4px;display:block;">Kimi API Token</small>
+        </div>
+        <div class="form-group">
+          <label for="kimi2apiAccountDesc">描述</label>
+          <textarea id="kimi2apiAccountDesc" class="textarea" rows="2" placeholder="账号描述（可选）"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label for="kimi2apiAccountPriority">优先级</label>
+            <input type="number" id="kimi2apiAccountPriority" class="input" min="1" value="1">
+            <small style="color:var(--muted-foreground);margin-top:4px;display:block;">数字越小优先级越高</small>
+          </div>
+          <div class="form-group">
+            <label for="kimi2apiAccountEnabled">状态</label>
+            <select id="kimi2apiAccountEnabled" class="select">
+              <option value="true">启用</option>
+              <option value="false">禁用</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" onclick="adminApp.closeKimi2apiAccountModal()">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.saveKimi2apiAccount()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kimi2API 添加/编辑用户模态框 -->
+  <div id="kimi2apiUserModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="kimi2apiUserModalTitle">添加用户</h3>
+        <button class="modal-close" onclick="adminApp.closeKimi2apiUserModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="kimi2apiUserId">
+        <div class="form-group">
+          <label for="kimi2apiUsername">用户名</label>
+          <input type="text" id="kimi2apiUsername" class="input" placeholder="user1">
+        </div>
+        <div class="form-group">
+          <label for="kimi2apiKey">API Key</label>
+          <input type="text" id="kimi2apiKey" class="input" placeholder="留空则自动生成">
+          <small style="color:var(--muted-foreground);margin-top:4px;display:block;">自定义 API Key，留空则系统自动生成</small>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label for="kimi2apiUserQuota">请求配额</label>
+            <input type="number" id="kimi2apiUserQuota" class="input" min="0" value="1000">
+          </div>
+          <div class="form-group">
+            <label for="kimi2apiUserEnabled">状态</label>
+            <select id="kimi2apiUserEnabled" class="select">
+              <option value="true">启用</option>
+              <option value="false">禁用</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close" onclick="adminApp.closeKimi2apiUserModal()">取消</button>
+        <button class="btn btn-primary" onclick="adminApp.saveKimi2apiUser()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kimi2API 账号统计模态框 -->
+  <div id="kimi2apiAccountStatsModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>账号统计</h3>
+        <button class="modal-close" onclick="adminApp.closeKimi2apiAccountStatsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="kimi2apiAccountStatsContent" style="display:grid;gap:12px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary modal-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kimi2API 用户统计模态框 -->
+  <div id="kimi2apiUserStatsModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>用户统计</h3>
+        <button class="modal-close" onclick="adminApp.closeKimi2apiUserStatsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="kimi2apiUserStatsContent" style="display:grid;gap:12px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary modal-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/theme.js"></script>
+  <script src="/js/dialog.js"></script>
+  <script src="/js/admin.js"></script>
+  <style>
+    .kimi2api-tab {
+      transition: all 0.2s;
+    }
+    .kimi2api-tab:hover {
+      color: var(--foreground) !important;
+    }
+    .kimi2api-tab.active {
+      font-weight: 500;
+    }
+    .kimi2api-tab-content {
+      animation: fadeIn 0.2s ease;
+    }
+    .zai2api-tab {
+      transition: all 0.2s;
+    }
+    .zai2api-tab:hover {
+      color: var(--foreground) !important;
+    }
+    .zai2api-tab.active {
+      font-weight: 500;
+    }
+    .zai2api-tab-content {
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</body>
+</html>
