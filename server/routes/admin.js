@@ -31,6 +31,7 @@ const {
 const { fetchCodexUsage } = require('../utils/codex-usage');
 const { fetchGrokUsage, parseGrokAuthConfig } = require('../utils/grok-usage');
 const { fetchArkUsage } = require('../utils/volcengine-ark-usage');
+const { normalizeTestUserAgent } = require('../utils/model-test');
 
 /**
  * 将新模型自动挂载到所有「前沿 Team」，默认 enabled=TRUE。
@@ -301,6 +302,7 @@ router.get('/models', requireAuth, requireAdmin, async (req, res) => {
       LEFT JOIN model_test_results mtr ON mtr.model_id = m.id`;
     const selectCols = `
       SELECT m.*, p.name AS provider_name,
+             COALESCE(p.test_user_agent, '') AS provider_test_user_agent,
              mtr.ok AS test_ok, mtr.latency_ms AS test_latency_ms,
              mtr.tokens_per_second AS test_tokens_per_second,
              mtr.total_tokens AS test_total_tokens, mtr.error AS test_error,
@@ -516,6 +518,20 @@ router.post('/models', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_
         await addModelsToFrontierTeams(modelId);
       } catch (e) {
         Logger.warn('[创建模型] 自动添加到前沿Team失败:', e.message);
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'test_user_agent') && provider) {
+      try {
+        await pool.query(
+          `ALTER TABLE providers ADD COLUMN IF NOT EXISTS test_user_agent TEXT DEFAULT ''`
+        );
+        await pool.query(
+          `UPDATE providers SET test_user_agent = $1 WHERE id = $2`,
+          [normalizeTestUserAgent(req.body.test_user_agent), provider]
+        );
+      } catch (e) {
+        Logger.warn(`[创建/更新模型] 保存供应商测试 UA 失败: ${e.message}`);
       }
     }
 
@@ -1926,7 +1942,7 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
 }), async (req, res) => {
   const { id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
           key_mode, key_script, key_refresh_interval, proxy_enabled, proxy_mode, proxy_url, proxy_use_system,
-          content_type_mode, forward_headers, ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params } = req.body;
+          content_type_mode, forward_headers, test_user_agent, ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params } = req.body;
   if (!name || !base_url) {
     return res.status(400).json({ error: '供应商名称和URL不能为空' });
   }
@@ -1946,6 +1962,7 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_service VARCHAR(64) DEFAULT 'ark'`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_usage_action VARCHAR(64) DEFAULT 'GetInferenceUsage'`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_usage_params JSONB DEFAULT '{}'::jsonb`);
+      await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS test_user_agent TEXT DEFAULT ''`);
     } catch (_) { /* 迁移可能已完成 */ }
 
     // 有 id → 更新已有供应商；无 id → 生成随机 id 创建新供应商
@@ -1959,6 +1976,8 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
     const finalProxyUseSystem = proxy_use_system === true || proxy_use_system === 'true';
     const normalizedQuotaMode = String(quota_mode || 'script').toLowerCase();
     const finalQuotaMode = ['opencode_go', 'codex_wham', 'grok_billing', 'ark_inference', 'ark_afp'].includes(normalizedQuotaMode) ? normalizedQuotaMode : 'script';
+    const testUaProvided = Object.prototype.hasOwnProperty.call(req.body, 'test_user_agent');
+    const finalTestUserAgent = normalizeTestUserAgent(test_user_agent);
 
     // 多 Key：优先 api_keys 数组；否则单个 api_key
     const keyEntries = normalizeKeysInput(api_keys, api_key);
@@ -1980,8 +1999,8 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
     await pool.query(`
       INSERT INTO providers (id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
                              key_mode, key_script, key_refresh_interval, proxy_enabled, proxy_mode, proxy_url, proxy_use_system,
-                             content_type_mode, forward_headers, ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params)
-      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+                             content_type_mode, forward_headers, test_user_agent, ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         base_url = EXCLUDED.base_url,
@@ -2010,6 +2029,7 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
         proxy_use_system = EXCLUDED.proxy_use_system,
         content_type_mode = EXCLUDED.content_type_mode,
         forward_headers = EXCLUDED.forward_headers,
+        test_user_agent = CASE WHEN $30 THEN EXCLUDED.test_user_agent ELSE providers.test_user_agent END,
         ark_access_key = COALESCE(NULLIF(EXCLUDED.ark_access_key, ''), providers.ark_access_key),
         ark_secret_key = CASE WHEN EXCLUDED.ark_secret_key <> '' THEN EXCLUDED.ark_secret_key ELSE providers.ark_secret_key END,
         ark_region = EXCLUDED.ark_region,
@@ -2019,9 +2039,10 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
     `, [providerId, name, base_url, finalApiKey || '', finalApiKeys, selectMode, format || 'openai', enabled !== false, grp || '',
         models_url || '', quota_enabled === true, finalQuotaMode, notes || '', keyMode, keyScript, keyRefreshInterval,
         proxy_enabled === true, finalProxyMode, finalProxyUrl, finalProxyUseSystem,
-        content_type_mode || 'hardcoded', forward_headers !== false,
+        content_type_mode || 'hardcoded', forward_headers !== false, finalTestUserAgent,
         ark_access_key || '', ark_secret_key || '', ark_region || 'cn-north-1', ark_service || 'ark',
-        ark_usage_action || (finalQuotaMode === 'ark_afp' ? 'GetAFPUsage' : 'GetInferenceUsage'), ark_usage_params || '{}']);
+        ark_usage_action || (finalQuotaMode === 'ark_afp' ? 'GetAFPUsage' : 'GetInferenceUsage'), ark_usage_params || '{}',
+        testUaProvided]);
 
     // 注册/更新密钥刷新计划
     keyRefresher.registerProvider({ id: providerId, key_mode: keyMode, key_refresh_interval: keyRefreshInterval });

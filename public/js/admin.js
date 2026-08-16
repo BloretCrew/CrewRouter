@@ -27,6 +27,7 @@ class AdminApp {
     this._adminProviderLoading = new Set();
     this._adminProviderPageSize = 50; // 每个供应商内部分页大小
     this._adminModelsQueryKey = '';
+    this._providerOptionsCache = [];
     // 用户列表（服务端分页，page 从 0 起）
     this._usersData = [];
     this.userPage = 0;
@@ -2319,9 +2320,12 @@ class AdminApp {
     document.getElementById('modelEnabled').value = 'true';
     const freEl = document.getElementById('modelForwardReasoningEffort');
     if (freEl) freEl.value = 'false';
+    const testUaEl = document.getElementById('modelTestUserAgent');
+    if (testUaEl) testUaEl.value = '';
     
     this.loadProviderOptions().then(() => {
       document.getElementById('modelProvider').value = '';
+      this.onModelProviderChange();
       document.getElementById('addModelModal').style.display = 'flex';
       document.getElementById('addModelModal').classList.add('active');
     });
@@ -2340,9 +2344,13 @@ class AdminApp {
     document.getElementById('modelEnabled').value = model.enabled.toString();
     const freEl = document.getElementById('modelForwardReasoningEffort');
     if (freEl) freEl.value = (model.forward_reasoning_effort === true).toString();
+    const testUaEl = document.getElementById('modelTestUserAgent');
+    if (testUaEl) testUaEl.value = model.provider_test_user_agent || '';
     
     this.loadProviderOptions().then(() => {
       document.getElementById('modelProvider').value = model.provider;
+      const cachedUa = this._getProviderTestUserAgent(model.provider);
+      if (testUaEl && (cachedUa || !testUaEl.value)) testUaEl.value = cachedUa;
       this.loadModelOptions().then(() => {
         document.getElementById('modelThinkingModel').value = model.thinking_model_id || '';
         document.getElementById('modelNonThinkingModel').value = model.non_thinking_model_id || '';
@@ -2374,12 +2382,33 @@ class AdminApp {
       const response = await fetch('/api/admin/providers');
       if (!response.ok) return;
       const providers = await response.json();
+      this._providerOptionsCache = Array.isArray(providers) ? providers : [];
       const select = document.getElementById('modelProvider');
-      setHTML(select, providers.map(p =>
-        `<option value="${p.id}">${p.name}</option>`
+      setHTML(select, this._providerOptionsCache.map(p =>
+        `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`
       ).join(''));
     } catch (error) {
       console.error('加载供应商选项失败:', error);
+    }
+  }
+
+  _getProviderTestUserAgent(providerId) {
+    if (!providerId) return '';
+    const p = (this._providerOptionsCache || []).find(x => String(x.id) === String(providerId));
+    return (p && p.test_user_agent) || '';
+  }
+
+  onModelProviderChange() {
+    const providerId = document.getElementById('modelProvider')?.value || '';
+    const el = document.getElementById('modelTestUserAgent');
+    if (el) el.value = this._getProviderTestUserAgent(providerId);
+  }
+
+  applyTestUserAgentPreset(inputId, value) {
+    const el = document.getElementById(inputId);
+    if (el) {
+      el.value = value || '';
+      el.focus();
     }
   }
 
@@ -2397,6 +2426,7 @@ class AdminApp {
     const thinking_model_id = document.getElementById('modelThinkingModel').value;
     const non_thinking_model_id = document.getElementById('modelNonThinkingModel').value;
     const forward_reasoning_effort = document.getElementById('modelForwardReasoningEffort')?.value === 'true';
+    const test_user_agent = document.getElementById('modelTestUserAgent')?.value || '';
 
     if (!upstream_model_id || !provider) {
       alert('请填写上游模型ID和提供商');
@@ -2407,10 +2437,12 @@ class AdminApp {
       const response = await fetch('/api/admin/models', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, upstream_model_id, alias, provider, series, description, input_price_per_1k_tokens: 1.0, output_price_per_1k_tokens: 1.0, rate_limit_rpm, rate_limit_tpm, enabled, model_multiplier, thinking_model_id, non_thinking_model_id, forward_reasoning_effort })
+        body: JSON.stringify({ id, upstream_model_id, alias, provider, series, description, input_price_per_1k_tokens: 1.0, output_price_per_1k_tokens: 1.0, rate_limit_rpm, rate_limit_tpm, enabled, model_multiplier, thinking_model_id, non_thinking_model_id, forward_reasoning_effort, test_user_agent })
       });
 
       if (response.ok) {
+        const cached = (this._providerOptionsCache || []).find(p => String(p.id) === String(provider));
+        if (cached) cached.test_user_agent = test_user_agent;
         this.closeModals();
         this._invalidateAdminProviderModelsCache();
         this._notifyModelsCatalogChanged();
@@ -3951,13 +3983,14 @@ class AdminApp {
     });
   }
 
-  _setProviderFormSectionsOpen({ keyMode = false, modelsQuota = false, proxy = false, headers = false, tags = false } = {}) {
+  _setProviderFormSectionsOpen({ keyMode = false, modelsQuota = false, proxy = false, headers = false, tags = false, test = false } = {}) {
     const map = {
       providerSectionKeyMode: keyMode,
       providerSectionModelsQuota: modelsQuota,
       providerSectionProxy: proxy,
       providerSectionHeaders: headers,
-      providerSectionTags: tags
+      providerSectionTags: tags,
+      providerSectionTest: test
     };
     Object.entries(map).forEach(([id, open]) => {
       const el = document.getElementById(id);
@@ -4022,6 +4055,8 @@ class AdminApp {
     if (ctModeEl) ctModeEl.value = 'hardcoded';
     const fwdHeadersEl = document.getElementById('providerForwardHeaders');
     if (fwdHeadersEl) fwdHeadersEl.value = 'true';
+    const testUaEl = document.getElementById('providerTestUserAgent');
+    if (testUaEl) testUaEl.value = '';
 
     // 新建时初始化标签分配，避免脏状态
     this.renderProviderTagAssignment([]);
@@ -4114,6 +4149,8 @@ class AdminApp {
     if (ctModeEl) ctModeEl.value = provider.content_type_mode || 'hardcoded';
     const fwdHeadersEl = document.getElementById('providerForwardHeaders');
     if (fwdHeadersEl) fwdHeadersEl.value = (provider.forward_headers !== false).toString();
+    const testUaEl = document.getElementById('providerTestUserAgent');
+    if (testUaEl) testUaEl.value = provider.test_user_agent || '';
 
     this.renderProviderTagAssignment(provider.tags || []);
 
@@ -4121,12 +4158,14 @@ class AdminApp {
     const hasTags = (provider.tags || []).length > 0;
     const hasModelsUrl = !!(provider.models_url || '').trim();
     const hasNotes = !!(provider.notes || '').trim();
+    const hasTestUa = !!(provider.test_user_agent || '').trim();
     this._setProviderFormSectionsOpen({
       keyMode: isScript,
       modelsQuota: hasModelsUrl || provider.quota_enabled || hasNotes,
       proxy: !!provider.proxy_enabled,
       headers: provider.content_type_mode === 'passthrough' || provider.forward_headers === false,
-      tags: hasTags
+      tags: hasTags,
+      test: hasTestUa
     });
 
     document.getElementById('addProviderModal').style.display = 'flex';
@@ -4150,6 +4189,7 @@ class AdminApp {
     const proxyFields = this._collectProviderProxyFromForm();
     const content_type_mode = document.getElementById('providerContentTypeMode')?.value || 'hardcoded';
     const forward_headers = document.getElementById('providerForwardHeaders')?.value !== 'false';
+    const test_user_agent = document.getElementById('providerTestUserAgent')?.value || '';
     const api_key_select_mode = this._getProviderKeySelectMode();
     const collectedKeys = this._collectProviderApiKeysFromForm();
     const isCreate = !id;
@@ -4175,7 +4215,7 @@ class AdminApp {
     try {
       const body = {
         name, base_url, format, enabled, quota_enabled, quota_mode, notes, key_mode, key_script,
-        key_refresh_interval, content_type_mode, forward_headers,
+        key_refresh_interval, content_type_mode, forward_headers, test_user_agent,
         api_key_select_mode,
         ark_access_key: document.getElementById('providerArkAccessKey')?.value.trim() || '',
         ark_secret_key: document.getElementById('providerArkSecretKey')?.value || '',
@@ -4207,6 +4247,8 @@ class AdminApp {
           const tagIds = this._getSelectedProviderTagIds();
           try { await fetch(`/api/admin/providers/${providerId}/tags`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tagIds }) }); } catch (_) {}
         }
+        const cached = (this._providerOptionsCache || []).find(p => String(p.id) === String(providerId));
+        if (cached) cached.test_user_agent = test_user_agent;
         this.closeModals();
         await this.loadProviders();
         if (isCreate) {

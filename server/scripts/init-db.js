@@ -334,7 +334,8 @@ async function initDatabase() {
       { name: 'notes', type: 'TEXT' },
       { name: 'created_by', type: 'INTEGER REFERENCES users(id)' },
       { name: 'api_keys', type: 'JSONB DEFAULT NULL' },
-      { name: 'api_key_select_mode', type: "VARCHAR(20) DEFAULT 'order'" }
+      { name: 'api_key_select_mode', type: "VARCHAR(20) DEFAULT 'order'" },
+      { name: 'test_user_agent', type: "TEXT DEFAULT ''" }
     ];
     for (const col of oauthCols) {
       const colCheck = await client.query(`

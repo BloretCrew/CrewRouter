@@ -5,6 +5,12 @@ const { recordQuotaData } = require('./quota-data');
 const Logger = require('../logger');
 const { buildKeyAttemptOrder, getPrimaryApiKey } = require('./provider-keys');
 
+/** 模型测试用 UA：去换行、截断，避免请求头注入 */
+function normalizeTestUserAgent(value) {
+  if (value == null) return '';
+  return String(value).replace(/[\r\n\0]/g, ' ').trim().slice(0, 500);
+}
+
 async function saveTestResult(modelId, result) {
   try {
     await pool.query(`
@@ -68,7 +74,8 @@ async function testModel(modelId, userId) {
   const metaResult = await pool.query(
     `SELECT m.id, m.name, m.enabled AS model_enabled, m.model_multiplier,
             p.id AS provider_id, p.name AS provider_name, p.enabled AS provider_enabled,
-            p.base_url, p.api_key, p.api_keys, p.api_key_select_mode, p.format
+            p.base_url, p.api_key, p.api_keys, p.api_key_select_mode, p.format,
+            p.test_user_agent
      FROM models m
      LEFT JOIN providers p ON m.provider = p.id
      WHERE m.id = $1`,
@@ -107,8 +114,9 @@ async function testModel(modelId, userId) {
     return r;
   }
 
+  const testUserAgent = normalizeTestUserAgent(model.test_user_agent);
   const upstreamUrl = baseUrl ? `${baseUrl}/v1/chat/completions` : '';
-  Logger.info(`[模型测试] modelId=${modelId} name=${model.name} provider=${model.provider_name}(${model.provider_id}) url=${upstreamUrl} userId=${userId}`);
+  Logger.info(`[模型测试] modelId=${modelId} name=${model.name} provider=${model.provider_name}(${model.provider_id}) url=${upstreamUrl} ua=${testUserAgent ? 'custom' : 'default'} userId=${userId}`);
 
   if (!baseUrl) {
     const r = failResult(modelMeta, '供应商未配置 Base URL');
@@ -135,6 +143,7 @@ async function testModel(modelId, userId) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${keys[ki]}`
     };
+    if (testUserAgent) headers['User-Agent'] = testUserAgent;
     try {
       response = await fetch(url, {
         method: 'POST',
@@ -264,4 +273,4 @@ async function testModelsBatch(modelIds, userId) {
   return results;
 }
 
-module.exports = { testModel, testModelsBatch, saveTestResult, recordLiveCallTest };
+module.exports = { testModel, testModelsBatch, saveTestResult, recordLiveCallTest, normalizeTestUserAgent };

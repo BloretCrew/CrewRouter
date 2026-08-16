@@ -1397,7 +1397,7 @@
         </div>
         <div class="form-group">
           <label for="modelProvider">提供商</label>
-          <select id="modelProvider" class="select">
+          <select id="modelProvider" class="select" onchange="adminApp.onModelProviderChange()">
             <!-- 供应商列表将通过JS动态加载 -->
           </select>
         </div>
@@ -1462,6 +1462,27 @@
             <option value="true">开启</option>
           </select>
           <small style="color:var(--muted-foreground);margin-top:4px;display:block;">开启后，客户端请求中的 reasoning_effort（及 Responses API 的 reasoning.effort）会转发给上游；关闭则丢弃该字段</small>
+        </div>
+        <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;">
+          <div style="font-weight:600;margin-bottom:8px;color:var(--foreground);">测试配置</div>
+          <small style="display:block;margin-bottom:12px;color:var(--muted-foreground);">
+            针对当前所选供应商：测试该供应商下任意模型时使用此 User-Agent。留空则不发送自定义 UA。
+          </small>
+          <div class="form-group">
+            <label for="modelTestUserAgent">测试 User-Agent</label>
+            <input type="text" id="modelTestUserAgent" class="input" maxlength="500" placeholder="例如：claude-cli/2.0.0 (external, cli)" autocomplete="off">
+            <div class="test-ua-presets" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','claude-cli/2.0.0 (external, cli)')">Claude Code</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','codex_cli_rs/0.42.0 (Mac OS; arm64) terminal')">Codex</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','grok-shell/1.2.3 (linux; x86_64)')">Grok</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','opencode/1.2.3')">OpenCode</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','QwenCode/1.0.0 (linux; x64)')">Qwen Code</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','hermes-cli/0.9.0')">Hermes</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','openclaw/2026.3.22')">OpenClaw</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','deepseek-harness/0.1.0 (+https://github.com/deepseek-ai/deepseek-harness)')">DeepSeek</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','')">清空</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -1705,6 +1726,31 @@
               <div id="providerProxyPoolHint" style="display:none;">
                 <p style="color:var(--muted-foreground);font-size:12px;margin:0;">将使用「系统设置 → 代理池设置」中的全局列表/订阅。限速（429）时会自动切换代理。</p>
               </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- 高级：测试配置 -->
+        <details class="provider-form-section" id="providerSectionTest">
+          <summary>测试配置 <span class="provider-form-section-hint">模型测试 UA</span></summary>
+          <div class="provider-form-section-body">
+            <div class="form-group">
+              <label for="providerTestUserAgent">测试 User-Agent</label>
+              <input type="text" id="providerTestUserAgent" class="input" maxlength="500" placeholder="例如：claude-cli/2.0.0 (external, cli)" autocomplete="off">
+              <div class="test-ua-presets" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','claude-cli/2.0.0 (external, cli)')">Claude Code</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','codex_cli_rs/0.42.0 (Mac OS; arm64) terminal')">Codex</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','grok-shell/1.2.3 (linux; x86_64)')">Grok</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','opencode/1.2.3')">OpenCode</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','QwenCode/1.0.0 (linux; x64)')">Qwen Code</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','hermes-cli/0.9.0')">Hermes</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','openclaw/2026.3.22')">OpenClaw</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','deepseek-harness/0.1.0 (+https://github.com/deepseek-ai/deepseek-harness)')">DeepSeek</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','')">清空</button>
+              </div>
+              <small style="color:var(--muted-foreground);margin-top:6px;display:block;">
+                测试该供应商下任意模型时，将使用此 User-Agent 请求上游。留空则不发送自定义 UA。不影响正式业务转发。
+              </small>
             </div>
           </div>
         </details>

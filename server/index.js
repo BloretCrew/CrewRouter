@@ -1410,6 +1410,16 @@ async function ensureProviderNotes() {
   }
 }
 
+// 为 providers 添加测试配置：模型测试时使用的 User-Agent
+async function ensureProviderTestUserAgent() {
+  try {
+    await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS test_user_agent TEXT DEFAULT ''`);
+    Logger.info('[迁移] providers.test_user_agent 字段已就绪');
+  } catch (err) {
+    Logger.warn(`[迁移] providers.test_user_agent 字段迁移跳过: ${err.message}`);
+  }
+}
+
 // 为 models 添加 created_by 字段（标记用户自建模型）
 async function ensureModelCreatedBy() {
   try {
@@ -2277,6 +2287,7 @@ async function runPendingMigrations() {
     ensureProviderQuotaEnabled,
     ensureProviderArkUsageColumns,
     ensureProviderNotes,
+    ensureProviderTestUserAgent,
     ensureModelCreatedBy,
     ensureProviderApiKeyLength,
     ensureProviderKeyScript,
