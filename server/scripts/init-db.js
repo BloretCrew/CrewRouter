@@ -335,7 +335,13 @@ async function initDatabase() {
       { name: 'created_by', type: 'INTEGER REFERENCES users(id)' },
       { name: 'api_keys', type: 'JSONB DEFAULT NULL' },
       { name: 'api_key_select_mode', type: "VARCHAR(20) DEFAULT 'order'" },
-      { name: 'test_user_agent', type: "TEXT DEFAULT ''" }
+      { name: 'test_user_agent', type: "TEXT DEFAULT ''" },
+      { name: 'quota_schedule_enabled', type: 'BOOLEAN DEFAULT FALSE' },
+      { name: 'quota_schedule_interval', type: 'INTEGER DEFAULT 3600' },
+      { name: 'quota_last_checked_at', type: 'TIMESTAMPTZ' },
+      { name: 'quota_last_ok', type: 'BOOLEAN' },
+      { name: 'quota_last_result', type: 'JSONB' },
+      { name: 'quota_last_error', type: 'TEXT' }
     ];
     for (const col of oauthCols) {
       const colCheck = await client.query(`

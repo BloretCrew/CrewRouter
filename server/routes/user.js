@@ -3255,7 +3255,8 @@ router.get('/providers/quota', requireAuth, async (req, res) => {
     const providersResult = await pool.query(`
       SELECT DISTINCT p.id, p.name, p.base_url, p.format, p.quota_script, p.quota_mode, p.api_key,
              p.ark_access_key, p.ark_secret_key, p.ark_region, p.ark_service, p.ark_usage_action, p.ark_usage_params,
-             p.oauth_access_token, p.oauth_refresh_token, p.oauth_expires_at, p.oauth_account_id
+             p.oauth_access_token, p.oauth_refresh_token, p.oauth_expires_at, p.oauth_account_id,
+             p.quota_schedule_enabled, p.quota_last_ok, p.quota_last_result, p.quota_last_error, p.quota_last_checked_at
       FROM providers p
       JOIN models m ON m.provider = p.id
       JOIN team_models tm ON tm.model_id = m.id
@@ -3271,6 +3272,16 @@ router.get('/providers/quota', requireAuth, async (req, res) => {
     // 执行每个供应商的额度查询脚本
     const results = [];
     for (const provider of providersResult.rows) {
+      if (provider.quota_schedule_enabled && provider.quota_last_result && provider.quota_last_ok) {
+        results.push({
+          id: provider.id,
+          name: provider.name,
+          quota: provider.quota_last_result,
+          cached: true,
+          checked_at: provider.quota_last_checked_at
+        });
+        continue;
+      }
       try {
         const quota = provider.quota_mode === 'ark_inference' || provider.quota_mode === 'ark_afp'
           ? await fetchArkUsage(provider)

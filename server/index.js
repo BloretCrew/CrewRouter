@@ -1420,6 +1420,21 @@ async function ensureProviderTestUserAgent() {
   }
 }
 
+// 为 providers 添加额度定时查询字段
+async function ensureProviderQuotaSchedule() {
+  try {
+    await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_schedule_enabled BOOLEAN DEFAULT FALSE`);
+    await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_schedule_interval INTEGER DEFAULT 3600`);
+    await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_last_checked_at TIMESTAMPTZ`);
+    await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_last_ok BOOLEAN`);
+    await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_last_result JSONB`);
+    await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_last_error TEXT`);
+    Logger.info('[迁移] providers 额度定时查询字段已就绪');
+  } catch (err) {
+    Logger.warn(`[迁移] providers 额度定时查询字段迁移跳过: ${err.message}`);
+  }
+}
+
 // 为 models 添加 created_by 字段（标记用户自建模型）
 async function ensureModelCreatedBy() {
   try {
@@ -2288,6 +2303,7 @@ async function runPendingMigrations() {
     ensureProviderArkUsageColumns,
     ensureProviderNotes,
     ensureProviderTestUserAgent,
+    ensureProviderQuotaSchedule,
     ensureModelCreatedBy,
     ensureProviderApiKeyLength,
     ensureProviderKeyScript,
@@ -2362,6 +2378,12 @@ async function startServer() {
     }
     setInterval(runApiKeyScheduler, 60000);
     setTimeout(runApiKeyScheduler, 5000);
+    try {
+      const { startQuotaScheduler } = require('./utils/provider-quota');
+      startQuotaScheduler();
+    } catch (err) {
+      Logger.warn(`[额度定时查询] 调度器启动失败: ${err.message}`);
+    }
     try {
       const { startMessageAnalysisWorker } = require('./utils/message-analysis-store');
       startMessageAnalysisWorker({ intervalMs: 5000, batchSize: 50 });

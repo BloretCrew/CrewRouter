@@ -4013,6 +4013,12 @@ class AdminApp {
     if (quotaEl) quotaEl.value = 'false';
     const quotaModeEl = document.getElementById('providerQuotaMode');
     if (quotaModeEl) quotaModeEl.value = 'script';
+    const scheduleEl = document.getElementById('providerQuotaScheduleEnabled');
+    if (scheduleEl) scheduleEl.value = 'false';
+    const scheduleIntervalEl = document.getElementById('providerQuotaScheduleInterval');
+    if (scheduleIntervalEl) scheduleIntervalEl.value = '3600';
+    this._setProviderQuotaScheduleMeta(null);
+    this.toggleQuotaScheduleFields();
     this.toggleArkQuotaConfig();
     const arkAccessEl = document.getElementById('providerArkAccessKey');
     if (arkAccessEl) arkAccessEl.value = '';
@@ -4103,6 +4109,12 @@ class AdminApp {
     if (quotaEl) quotaEl.value = (provider.quota_enabled || false).toString();
     const quotaModeEl = document.getElementById('providerQuotaMode');
     if (quotaModeEl) quotaModeEl.value = provider.quota_mode || 'script';
+    const scheduleEl = document.getElementById('providerQuotaScheduleEnabled');
+    if (scheduleEl) scheduleEl.value = (provider.quota_schedule_enabled || false).toString();
+    const scheduleIntervalEl = document.getElementById('providerQuotaScheduleInterval');
+    if (scheduleIntervalEl) scheduleIntervalEl.value = String(provider.quota_schedule_interval || 3600);
+    this._setProviderQuotaScheduleMeta(provider);
+    this.toggleQuotaScheduleFields();
     const arkAccessEl = document.getElementById('providerArkAccessKey');
     if (arkAccessEl) arkAccessEl.value = provider.ark_access_key || '';
     const arkSecretEl = document.getElementById('providerArkSecretKey');
@@ -4153,20 +4165,7 @@ class AdminApp {
     if (testUaEl) testUaEl.value = provider.test_user_agent || '';
 
     this.renderProviderTagAssignment(provider.tags || []);
-
-    const isScript = (provider.key_mode || 'fixed') === 'script';
-    const hasTags = (provider.tags || []).length > 0;
-    const hasModelsUrl = !!(provider.models_url || '').trim();
-    const hasNotes = !!(provider.notes || '').trim();
-    const hasTestUa = !!(provider.test_user_agent || '').trim();
-    this._setProviderFormSectionsOpen({
-      keyMode: isScript,
-      modelsQuota: hasModelsUrl || provider.quota_enabled || hasNotes,
-      proxy: !!provider.proxy_enabled,
-      headers: provider.content_type_mode === 'passthrough' || provider.forward_headers === false,
-      tags: hasTags,
-      test: hasTestUa
-    });
+    this._setProviderFormSectionsOpen({});
 
     document.getElementById('addProviderModal').style.display = 'flex';
     document.getElementById('addProviderModal').classList.add('active');
@@ -4182,6 +4181,8 @@ class AdminApp {
     const enabled = document.getElementById('providerEnabled').value === 'true';
     const quota_enabled = document.getElementById('providerQuotaEnabled')?.value === 'true';
     const quota_mode = document.getElementById('providerQuotaMode')?.value || 'script';
+    const quota_schedule_enabled = document.getElementById('providerQuotaScheduleEnabled')?.value === 'true';
+    const quota_schedule_interval = parseInt(document.getElementById('providerQuotaScheduleInterval')?.value, 10) || 3600;
     const notes = document.getElementById('providerNotes')?.value || '';
     const key_mode = document.getElementById('providerKeyMode')?.value || 'fixed';
     const key_script = document.getElementById('providerKeyScript')?.value || '';
@@ -4216,6 +4217,7 @@ class AdminApp {
       const body = {
         name, base_url, format, enabled, quota_enabled, quota_mode, notes, key_mode, key_script,
         key_refresh_interval, content_type_mode, forward_headers, test_user_agent,
+        quota_schedule_enabled, quota_schedule_interval,
         api_key_select_mode,
         ark_access_key: document.getElementById('providerArkAccessKey')?.value.trim() || '',
         ark_secret_key: document.getElementById('providerArkSecretKey')?.value || '',
@@ -6123,6 +6125,41 @@ async function(ctx) {
       ? '文件通常位于 <code>~/.grok/auth.json</code>，即 Linux/macOS 下的 <code>/home/你的用户名/.grok/auth.json</code>。Token 会保存到当前供应商，请勿上传给第三方。'
       : '文件通常位于 <code>~/.codex/auth.json</code>，即 Linux/macOS 下的 <code>/home/你的用户名/.codex/auth.json</code>。Token 会保存到当前供应商，请勿上传给第三方。';
     if (textarea) textarea.placeholder = isGrok ? '{"access_token":"...","user_id":"..."}' : '{"tokens":{"access_token":"...","refresh_token":"..."}}';
+  }
+
+  toggleQuotaScheduleFields() {
+    const quotaOn = document.getElementById('providerQuotaEnabled')?.value === 'true';
+    const scheduleOn = document.getElementById('providerQuotaScheduleEnabled')?.value === 'true';
+    const scheduleGroup = document.getElementById('providerQuotaScheduleGroup');
+    const intervalGroup = document.getElementById('providerQuotaScheduleIntervalGroup');
+    const meta = document.getElementById('providerQuotaScheduleMeta');
+    if (scheduleGroup) scheduleGroup.style.display = quotaOn ? 'block' : 'none';
+    if (intervalGroup) intervalGroup.style.display = quotaOn && scheduleOn ? 'block' : 'none';
+    if (meta) meta.style.display = quotaOn && meta.dataset.hasMeta === '1' ? 'block' : 'none';
+  }
+
+  _setProviderQuotaScheduleMeta(provider) {
+    const meta = document.getElementById('providerQuotaScheduleMeta');
+    if (!meta) return;
+    if (!provider || !provider.quota_last_checked_at) {
+      meta.textContent = '';
+      meta.dataset.hasMeta = '';
+      meta.style.display = 'none';
+      return;
+    }
+    const checkedAt = new Date(provider.quota_last_checked_at);
+    const timeText = Number.isNaN(checkedAt.getTime())
+      ? String(provider.quota_last_checked_at)
+      : checkedAt.toLocaleString('zh-CN');
+    if (provider.quota_last_ok) {
+      const remaining = provider.quota_last_result?.remaining;
+      meta.textContent = remaining != null
+        ? `上次定时查询：${timeText}，剩余 ${remaining}`
+        : `上次定时查询：${timeText}，成功`;
+    } else {
+      meta.textContent = `上次定时查询：${timeText}，失败${provider.quota_last_error ? ' — ' + provider.quota_last_error : ''}`;
+    }
+    meta.dataset.hasMeta = '1';
   }
 
   handleProviderCodexConfigFileUpload(event) {

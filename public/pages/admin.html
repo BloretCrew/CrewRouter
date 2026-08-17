@@ -1638,12 +1638,33 @@
             </div>
             <div class="form-group">
               <label for="providerQuotaEnabled">额度查询</label>
-              <select id="providerQuotaEnabled" class="select">
+              <select id="providerQuotaEnabled" class="select" onchange="adminApp.toggleQuotaScheduleFields()">
                 <option value="true">启用（用户可查看此供应商额度）</option>
                 <option value="false">关闭</option>
               </select>
               <small style="color:var(--muted-foreground);margin-top:4px;display:block;">启用后，有权限的用户可在模型库页面查看该供应商的剩余额度</small>
             </div>
+            <div class="form-group" id="providerQuotaScheduleGroup">
+              <label for="providerQuotaScheduleEnabled">定时查询</label>
+              <select id="providerQuotaScheduleEnabled" class="select" onchange="adminApp.toggleQuotaScheduleFields()">
+                <option value="false">关闭</option>
+                <option value="true">开启</option>
+              </select>
+              <small style="color:var(--muted-foreground);margin-top:4px;display:block;">开启后按下方间隔自动查询并缓存额度。用户查看额度时优先使用缓存，无需每次打上游。</small>
+            </div>
+            <div class="form-group" id="providerQuotaScheduleIntervalGroup">
+              <label for="providerQuotaScheduleInterval">查询间隔</label>
+              <select id="providerQuotaScheduleInterval" class="select">
+                <option value="600">每 10 分钟</option>
+                <option value="1800">每 30 分钟</option>
+                <option value="3600">每 1 小时</option>
+                <option value="7200">每 2 小时</option>
+                <option value="21600">每 6 小时</option>
+                <option value="43200">每 12 小时</option>
+                <option value="86400">每 24 小时</option>
+              </select>
+            </div>
+            <div id="providerQuotaScheduleMeta" style="display:none;font-size:12px;color:var(--muted-foreground);margin:-4px 0 12px;"></div>
             <div class="form-group">
               <label for="providerQuotaMode">额度查询方式</label>
               <select id="providerQuotaMode" class="select" onchange="adminApp.toggleCodexQuotaImport();adminApp.toggleArkQuotaConfig()">

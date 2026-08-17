@@ -28,10 +28,14 @@ const {
   toStorageFields,
   countProviderApiKeys
 } = require('../utils/provider-keys');
-const { fetchCodexUsage } = require('../utils/codex-usage');
-const { fetchGrokUsage, parseGrokAuthConfig } = require('../utils/grok-usage');
-const { fetchArkUsage } = require('../utils/volcengine-ark-usage');
+const { parseGrokAuthConfig } = require('../utils/grok-usage');
 const { normalizeTestUserAgent } = require('../utils/model-test');
+const {
+  generateDefaultQuotaScript,
+  queryProviderQuota,
+  saveQuotaSnapshot,
+  normalizeQuotaScheduleInterval
+} = require('../utils/provider-quota');
 
 /**
  * 将新模型自动挂载到所有「前沿 Team」，默认 enabled=TRUE。
@@ -1942,7 +1946,8 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
 }), async (req, res) => {
   const { id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
           key_mode, key_script, key_refresh_interval, proxy_enabled, proxy_mode, proxy_url, proxy_use_system,
-          content_type_mode, forward_headers, test_user_agent, ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params } = req.body;
+          content_type_mode, forward_headers, test_user_agent, quota_schedule_enabled, quota_schedule_interval,
+          ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params } = req.body;
   if (!name || !base_url) {
     return res.status(400).json({ error: '供应商名称和URL不能为空' });
   }
@@ -1963,6 +1968,12 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_usage_action VARCHAR(64) DEFAULT 'GetInferenceUsage'`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_usage_params JSONB DEFAULT '{}'::jsonb`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS test_user_agent TEXT DEFAULT ''`);
+      await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_schedule_enabled BOOLEAN DEFAULT FALSE`);
+      await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_schedule_interval INTEGER DEFAULT 3600`);
+      await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_last_checked_at TIMESTAMPTZ`);
+      await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_last_ok BOOLEAN`);
+      await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_last_result JSONB`);
+      await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_last_error TEXT`);
     } catch (_) { /* 迁移可能已完成 */ }
 
     // 有 id → 更新已有供应商；无 id → 生成随机 id 创建新供应商
@@ -1978,6 +1989,10 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
     const finalQuotaMode = ['opencode_go', 'codex_wham', 'grok_billing', 'ark_inference', 'ark_afp'].includes(normalizedQuotaMode) ? normalizedQuotaMode : 'script';
     const testUaProvided = Object.prototype.hasOwnProperty.call(req.body, 'test_user_agent');
     const finalTestUserAgent = normalizeTestUserAgent(test_user_agent);
+    const scheduleProvided = Object.prototype.hasOwnProperty.call(req.body, 'quota_schedule_enabled')
+      || Object.prototype.hasOwnProperty.call(req.body, 'quota_schedule_interval');
+    const finalScheduleEnabled = quota_schedule_enabled === true || quota_schedule_enabled === 'true';
+    const finalScheduleInterval = normalizeQuotaScheduleInterval(quota_schedule_interval);
 
     // 多 Key：优先 api_keys 数组；否则单个 api_key
     const keyEntries = normalizeKeysInput(api_keys, api_key);
@@ -1999,8 +2014,9 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
     await pool.query(`
       INSERT INTO providers (id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
                              key_mode, key_script, key_refresh_interval, proxy_enabled, proxy_mode, proxy_url, proxy_use_system,
-                             content_type_mode, forward_headers, test_user_agent, ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params)
-      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+                             content_type_mode, forward_headers, test_user_agent, ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params,
+                             quota_schedule_enabled, quota_schedule_interval)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $31, $32)
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         base_url = EXCLUDED.base_url,
@@ -2035,14 +2051,16 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
         ark_region = EXCLUDED.ark_region,
         ark_service = EXCLUDED.ark_service,
         ark_usage_action = EXCLUDED.ark_usage_action,
-        ark_usage_params = EXCLUDED.ark_usage_params
+        ark_usage_params = EXCLUDED.ark_usage_params,
+        quota_schedule_enabled = CASE WHEN $33 THEN EXCLUDED.quota_schedule_enabled ELSE providers.quota_schedule_enabled END,
+        quota_schedule_interval = CASE WHEN $33 THEN EXCLUDED.quota_schedule_interval ELSE providers.quota_schedule_interval END
     `, [providerId, name, base_url, finalApiKey || '', finalApiKeys, selectMode, format || 'openai', enabled !== false, grp || '',
         models_url || '', quota_enabled === true, finalQuotaMode, notes || '', keyMode, keyScript, keyRefreshInterval,
         proxy_enabled === true, finalProxyMode, finalProxyUrl, finalProxyUseSystem,
         content_type_mode || 'hardcoded', forward_headers !== false, finalTestUserAgent,
         ark_access_key || '', ark_secret_key || '', ark_region || 'cn-north-1', ark_service || 'ark',
         ark_usage_action || (finalQuotaMode === 'ark_afp' ? 'GetAFPUsage' : 'GetInferenceUsage'), ark_usage_params || '{}',
-        testUaProvided]);
+        testUaProvided, finalScheduleEnabled, finalScheduleInterval, scheduleProvided]);
 
     // 注册/更新密钥刷新计划
     keyRefresher.registerProvider({ id: providerId, key_mode: keyMode, key_refresh_interval: keyRefreshInterval });
@@ -2861,175 +2879,19 @@ router.get('/providers/:id/check-quota', requireAuth, requireAdmin, async (req, 
       return res.status(404).json({ error: '供应商不存在' });
     }
     const provider = providerResult.rows[0];
-
-    if (provider.quota_mode === 'ark_inference' || provider.quota_mode === 'ark_afp') {
-      if (!(provider.ark_secret_key && (provider.ark_access_key || provider.api_key))) {
-        return res.status(400).json({ error: '未配置火山方舟 Access Key / Secret Key' });
-      }
-      try {
-        const quota = await fetchArkUsage(provider);
-        return res.json({ success: true, provider: { id: provider.id, name: provider.name }, quota });
-      } catch (error) {
-        Logger.warn(`[查询火山方舟额度] ${provider.id} 失败: ${error.message}`);
-        return res.status(502).json({ error: error.message, provider: { id: provider.id, name: provider.name } });
-      }
-    }
-
-    if (provider.quota_mode === 'codex_wham' || provider.quota_mode === 'grok_billing') {
-      if (!provider.oauth_access_token) {
-        return res.status(400).json({ error: provider.quota_mode === 'grok_billing' ? '未配置 SuperGrok access_token，请导入 auth.json' : '未配置 Codex OAuth Token，请导入 auth.json' });
-      }
-      try {
-        const quota = provider.quota_mode === 'grok_billing'
-          ? await fetchGrokUsage(provider, {
-              saveTokens: async ({ accessToken, refreshToken, expiresAt }) => {
-                await pool.query(
-                  'UPDATE providers SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_at = $3 WHERE id = $4',
-                  [accessToken, refreshToken, expiresAt, provider.id]
-                );
-              }
-            })
-          : await fetchCodexUsage(provider, {
-          saveTokens: async ({ accessToken, refreshToken, expiresAt }) => {
-            await pool.query(
-              'UPDATE providers SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_at = $3 WHERE id = $4',
-              [accessToken, refreshToken, expiresAt, provider.id]
-            );
-          }
-        });
-        const normalizedQuota = provider.quota_mode === 'grok_billing'
-          ? { ...quota, providerType: 'grok', currentPercent: quota.currentPercent ?? quota.periods?.[0]?.percent ?? 0 }
-          : quota;
-        return res.json({ success: true, provider: { id: provider.id, name: provider.name, ...(provider.quota_mode === 'grok_billing' ? { type: 'grok' } : {}) }, quota: normalizedQuota });
-      } catch (error) {
-        Logger.warn(`[查询 OAuth 额度] ${provider.id} 失败: ${error.message}`);
-        return res.status(502).json({ error: error.message, provider: { id: provider.id, name: provider.name } });
-      }
-    }
-
-    const baseUrl = provider.base_url?.replace(/\/+$/, '');
-    const apiKey = getPrimaryApiKey(provider);
-
-    if (!baseUrl) {
-      return res.status(400).json({ error: '供应商未配置 Base URL' });
-    }
-    if (!apiKey) {
-      return res.status(400).json({ error: '供应商未配置 API Key' });
-    }
-
-    // 获取脚本：自定义脚本 > 默认脚本
-    let scriptText = provider.quota_script?.trim();
-    if (!scriptText) {
-      scriptText = generateDefaultQuotaScript(provider);
-    }
-
-    // 替换脚本中的变量
-    const cleanBaseUrl = baseUrl
-      .replace(/\/(chat\/completions|completions|messages|responses|embeddings|models)\/?$/, '')
-      .replace(/\/+$/, '');
-    const apiRoot = /\/v1\/?$/.test(cleanBaseUrl) ? cleanBaseUrl : `${cleanBaseUrl}/v1`;
-
-    scriptText = scriptText
-      .replace(/\{baseUrl\}/g, baseUrl)
-      .replace(/\{apiRoot\}/g, apiRoot)
-      .replace(/\{apiKey\}/g, apiKey)
-      .replace(/\{providerId\}/g, provider.id)
-      .replace(/\{providerName\}/g, provider.name);
-
-    // 解析脚本
-    let script;
-    try {
-      script = JSON.parse(scriptText);
-    } catch (e) {
-      return res.status(400).json({ error: '脚本 JSON 解析失败: ' + e.message });
-    }
-
-    if (!script.request || !script.extractor) {
-      return res.status(400).json({ error: '脚本必须包含 request 和 extractor 字段' });
-    }
-
-    // 执行 HTTP 请求
-    const reqConfig = script.request;
-    const fetchOptions = {
-      method: reqConfig.method || 'GET',
-      headers: reqConfig.headers || {},
-      signal: AbortSignal.timeout(15000)
-    };
-
-    Logger.info(`[查询供应商额度] ${provider.id}: ${fetchOptions.method} ${reqConfig.url}`);
-
-    // SSRF 防护：校验请求 URL
-    const urlCheck = await validateUrl(reqConfig.url);
-    if (!urlCheck.ok) {
-      return res.status(400).json({ error: `URL 校验失败: ${urlCheck.error}` });
-    }
-
-    let responseData;
-    try {
-      const response = await fetch(reqConfig.url, fetchOptions);
-      const text = await response.text();
-
-      if (!response.ok) {
-        // 尝试解析错误响应
-        try { responseData = JSON.parse(text); } catch { responseData = { _status: response.status, _body: text.substring(0, 500) }; }
-        // 如果 extractor 存在，仍然尝试执行（有些 API 在非 200 时也返回有用信息）
-        if (!script.extractor) {
-          return res.status(502).json({
-            error: `HTTP ${response.status}`,
-            provider: { id: provider.id, name: provider.name },
-            body: text.substring(0, 500)
-          });
-        }
-      } else {
-        try { responseData = JSON.parse(text); } catch {
-          return res.status(502).json({ error: '响应非 JSON 格式', body: text.substring(0, 500) });
-        }
-      }
-    } catch (fetchError) {
-      return res.status(502).json({
-        error: '请求失败: ' + fetchError.message,
-        provider: { id: provider.id, name: provider.name }
+    const result = await queryProviderQuota(provider);
+    await saveQuotaSnapshot(provider.id, result);
+    if (!result.ok) {
+      return res.status(result.status || 502).json({
+        error: result.error || '查询失败',
+        provider: result.provider || { id: provider.id, name: provider.name }
       });
     }
-
-    // 执行 extractor
-    try {
-      const { safeEval } = require('../utils/sandbox');
-      const extractSandbox = { response: responseData };
-      const result = await safeEval(`(${script.extractor})(response)`, extractSandbox, {
-        timeout: 5000,
-        filename: `extractor-${provider.id}.js`
-      });
-
-      if (!result || typeof result !== 'object') {
-        return res.status(502).json({ error: 'extractor 返回无效结果' });
-      }
-
-      if (result.isValid === false) {
-        return res.status(502).json({
-          error: result.invalidMessage || '查询失败',
-          provider: { id: provider.id, name: provider.name }
-        });
-      }
-
-      Logger.info(`[查询供应商额度] 成功: ${provider.id}`);
-      res.json({
-        success: true,
-        provider: { id: provider.id, name: provider.name },
-        quota: {
-          planName: result.planName || provider.name,
-          unit: result.unit || 'balance',
-          total: result.total ?? 0,
-          used: result.used ?? 0,
-          remaining: result.remaining ?? 0,
-          periods: Array.isArray(result.periods) ? result.periods : [],
-          extra: result.extra || ''
-        }
-      });
-    } catch (execError) {
-      Logger.error(`[查询供应商额度] extractor 执行失败: ${execError.message}`);
-      res.status(500).json({ error: 'extractor 执行失败: ' + execError.message });
-    }
+    res.json({
+      success: true,
+      provider: result.provider,
+      quota: result.quota
+    });
   } catch (error) {
     Logger.error('[查询供应商额度] 错误:', error);
     res.status(500).json({ error: '查询额度失败: ' + error.message });
@@ -3229,105 +3091,6 @@ router.post('/fetch-proxies-url', requireAuth, requireAdmin, async (req, res) =>
     res.status(500).json({ error: '获取失败: ' + error.message });
   }
 });
-
-// 生成默认额度查询脚本
-function generateDefaultQuotaScript(provider) {
-  const baseUrl = (provider.base_url || '').replace(/\/+$/, '');
-  const cleanBaseUrl = baseUrl
-    .replace(/\/(chat\/completions|completions|messages|responses|embeddings|models)\/?$/, '')
-    .replace(/\/+$/, '');
-  const apiRoot = /\/v1\/?$/.test(cleanBaseUrl) ? cleanBaseUrl : `${cleanBaseUrl}/v1`;
-  const format = provider.format || 'openai';
-
-  if (provider.quota_mode === 'opencode_go') {
-    return JSON.stringify({
-      request: {
-        url: 'https://opencode.ai/zen/go/v1/usage',
-        method: 'GET',
-        headers: {
-          Authorization: 'Bearer {apiKey}'
-        }
-      },
-      extractor: `function(response) {
-  if (!response || response.error) return { isValid: false, invalidMessage: (response && response.error && (response.error.message || response.error)) || 'OpenCode Go 额度查询失败' };
-  var usage = response.usage || {};
-  var periods = ['rolling', 'weekly', 'monthly'];
-  var available = periods.filter(function(name) { return usage[name] && typeof usage[name].percent === 'number'; });
-  if (!available.length) return { isValid: false, invalidMessage: 'OpenCode Go 响应中没有可用的 usage 数据' };
-  var latest = available[0];
-  var labels = { rolling: 'Rolling', weekly: 'Weekly', monthly: 'Monthly' };
-  var periods = available.map(function(name) {
-    var item = usage[name];
-    return {
-      key: name,
-      label: labels[name] || name,
-      percent: item.percent,
-      resetsAt: item.resetsAt || ''
-    };
-  });
-  return {
-    isValid: true,
-    planName: 'OpenCode Go',
-    unit: 'percent',
-    total: 100,
-    used: usage[latest].percent,
-    remaining: Math.max(0, 100 - usage[latest].percent),
-    periods: periods,
-    extra: ''
-  };
-}`
-    }, null, 2);
-  }
-
-  if (format === 'anthropic') {
-    return JSON.stringify({
-      request: {
-        url: "{apiRoot}/organizations/usage",
-        method: "GET",
-        headers: {
-          "Authorization": "Bearer {apiKey}",
-          "anthropic-version": "2023-06-01"
-        }
-      },
-      extractor: `function(response) {
-  // Anthropic 格式 - 请根据实际响应格式修改
-  if (response.error) return { isValid: false, invalidMessage: response.error.message || JSON.stringify(response.error) };
-  return {
-    isValid: true,
-    planName: "Anthropic",
-    unit: "balance",
-    total: 0, used: 0, remaining: 0,
-    extra: "请根据实际响应格式修改 extractor"
-  };
-}`
-    }, null, 2);
-  }
-
-  // OpenAI 兼容格式
-  return JSON.stringify({
-    request: {
-      url: "{apiRoot}/dashboard/billing/subscription",
-      method: "GET",
-      headers: {
-        "Authorization": "Bearer {apiKey}"
-      }
-    },
-    extractor: `function(response) {
-  if (response.error) return { isValid: false, invalidMessage: response.error.message || JSON.stringify(response.error) };
-  var total = response.hard_limit_usd || response.system_hard_limit_usd || 0;
-  var remaining = response.has_soft_limit === false ? total : (response.soft_limit_usd || total);
-  return {
-    isValid: true,
-    planName: (response.plan && response.plan.id) || "{providerName}",
-    unit: "balance",
-    total: total,
-    used: total - remaining,
-    remaining: remaining,
-    extra: "USD"
-  };
-}`
-  }, null, 2);
-}
 
 // 获取系统设置
 router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
