@@ -2,14 +2,10 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const { pool } = require('../models/database');
-const { fetchCodexUsage } = require('../utils/codex-usage');
-const { fetchGrokUsage } = require('../utils/grok-usage');
-const { fetchArkUsage } = require('../utils/volcengine-ark-usage');
 const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
 const config = require('../config-loader');
 const { fetchProvidersIndex, lookupProvider } = require('../provider-lookup');
-const { validateUrl } = require('../utils/url-validator');
 const { invalidateApiKeyCacheByKeyId } = require('./api');
 const { shanghaiDateRange, formatShanghaiDateTime } = require('../utils/timezone');
 const { buildUserUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs-filter');
@@ -3247,16 +3243,13 @@ router.get('/models/:id/info', requireAuth, async (req, res) => {
 });
 
 // 获取用户可访问的供应商额度（按 Team 关联过滤，仅返回 quota_enabled 的供应商）
+// 只读上次刷新（定时自动刷新 / 手动刷新）保存的缓存，不实时调用上游。
 router.get('/providers/quota', requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
 
-    // 获取用户所在 Team 关联的供应商（去重，且 quota_enabled=true）
     const providersResult = await pool.query(`
-      SELECT DISTINCT p.id, p.name, p.base_url, p.format, p.quota_script, p.quota_mode, p.api_key,
-             p.ark_access_key, p.ark_secret_key, p.ark_region, p.ark_service, p.ark_usage_action, p.ark_usage_params,
-             p.oauth_access_token, p.oauth_refresh_token, p.oauth_expires_at, p.oauth_account_id,
-             p.quota_schedule_enabled, p.quota_last_ok, p.quota_last_result, p.quota_last_error, p.quota_last_checked_at
+      SELECT DISTINCT p.id, p.name, p.quota_last_ok, p.quota_last_result, p.quota_last_error, p.quota_last_checked_at
       FROM providers p
       JOIN models m ON m.provider = p.id
       JOIN team_models tm ON tm.model_id = m.id
@@ -3265,14 +3258,9 @@ router.get('/providers/quota', requireAuth, async (req, res) => {
       ORDER BY p.name
     `, [userId]);
 
-    if (providersResult.rows.length === 0) {
-      return res.json({ providers: [] });
-    }
-
-    // 执行每个供应商的额度查询脚本
     const results = [];
     for (const provider of providersResult.rows) {
-      if (provider.quota_schedule_enabled && provider.quota_last_result && provider.quota_last_ok) {
+      if (provider.quota_last_ok && provider.quota_last_result) {
         results.push({
           id: provider.id,
           name: provider.name,
@@ -3280,43 +3268,13 @@ router.get('/providers/quota', requireAuth, async (req, res) => {
           cached: true,
           checked_at: provider.quota_last_checked_at
         });
-        continue;
-      }
-      try {
-        const quota = provider.quota_mode === 'ark_inference' || provider.quota_mode === 'ark_afp'
-          ? await fetchArkUsage(provider)
-          : provider.quota_mode === 'grok_billing'
-          ? await fetchGrokUsage(provider, {
-              saveTokens: async ({ accessToken, refreshToken, expiresAt }) => {
-                await pool.query(
-                  'UPDATE providers SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_at = $3 WHERE id = $4',
-                  [accessToken, refreshToken, expiresAt, provider.id]
-                );
-              }
-            })
-          : provider.quota_mode === 'codex_wham'
-          ? await fetchCodexUsage(provider, {
-              saveTokens: async ({ accessToken, refreshToken, expiresAt }) => {
-                await pool.query(
-                  'UPDATE providers SET oauth_access_token = $1, oauth_refresh_token = $2, oauth_expires_at = $3 WHERE id = $4',
-                  [accessToken, refreshToken, expiresAt, provider.id]
-                );
-              }
-            })
-          : await executeProviderQuotaScript(provider);
-        if (quota) {
-          results.push({
-            id: provider.id,
-            name: provider.name,
-            quota
-          });
-        }
-      } catch (e) {
-        Logger.warn(`[用户额度查询] ${provider.id} 失败: ${e.message}`);
+      } else {
         results.push({
           id: provider.id,
           name: provider.name,
-          error: e.message
+          error: provider.quota_last_error || '尚未刷新额度',
+          cached: true,
+          checked_at: provider.quota_last_checked_at
         });
       }
     }
@@ -3328,126 +3286,62 @@ router.get('/providers/quota', requireAuth, async (req, res) => {
   }
 });
 
-// 执行供应商额度查询脚本（复用逻辑）
-async function executeProviderQuotaScript(provider) {
-  const baseUrl = (provider.base_url || '').replace(/\/+$/, '');
-  const cleanBaseUrl = baseUrl
-    .replace(/\/(chat\/completions|completions|messages|responses|embeddings|models)\/?$/, '')
-    .replace(/\/+$/, '');
-  const apiRoot = /\/v1\/?$/.test(cleanBaseUrl) ? cleanBaseUrl : `${cleanBaseUrl}/v1`;
+// 手动刷新供应商额度：实时调用上游，保存快照并返回最新结果
+router.post('/providers/quota/refresh', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.user.id;
 
-  // 获取脚本
-  let scriptText = provider.quota_script?.trim();
-  if (!scriptText) {
-    scriptText = generateDefaultQuotaScriptForUser(provider);
-  }
+    const providersResult = await pool.query(`
+      SELECT DISTINCT p.*
+      FROM providers p
+      JOIN models m ON m.provider = p.id
+      JOIN team_models tm ON tm.model_id = m.id
+      JOIN user_teams ut ON ut.team_id = tm.team_id
+      WHERE ut.user_id = $1 AND p.quota_enabled = TRUE AND p.enabled = TRUE
+      ORDER BY p.name
+    `, [userId]);
 
-  // 替换变量
-  scriptText = scriptText
-    .replace(/\{baseUrl\}/g, baseUrl)
-    .replace(/\{apiRoot\}/g, apiRoot)
-    .replace(/\{providerId\}/g, provider.id)
-    .replace(/\{providerName\}/g, provider.name);
-
-  const script = JSON.parse(scriptText);
-  if (!script.request) return null;
-
-  const reqConfig = script.request;
-  // 用户端查询使用供应商的系统 Key
-  const apiKey = provider.api_key || '';
-  if (reqConfig.headers) {
-    for (const [key, val] of Object.entries(reqConfig.headers)) {
-      reqConfig.headers[key] = val.replace(/\{apiKey\}/g, apiKey);
+    const results = [];
+    for (const provider of providersResult.rows) {
+      try {
+        const result = await queryProviderQuota(provider);
+        await saveQuotaSnapshot(provider.id, result);
+        if (result.ok) {
+          results.push({
+            id: provider.id,
+            name: provider.name,
+            quota: result.quota,
+            cached: false,
+            checked_at: new Date()
+          });
+        } else {
+          results.push({
+            id: provider.id,
+            name: provider.name,
+            error: result.error || '查询失败',
+            cached: false,
+            checked_at: new Date()
+          });
+        }
+      } catch (e) {
+        Logger.warn(`[用户额度刷新] ${provider.id} 失败: ${e.message}`);
+        results.push({
+          id: provider.id,
+          name: provider.name,
+          error: e.message,
+          cached: false
+        });
+      }
     }
+
+    res.json({ providers: results });
+  } catch (error) {
+    Logger.error('[刷新供应商额度] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
   }
+});
 
-  // SSRF 防护：校验请求 URL
-  const urlCheck = await validateUrl(reqConfig.url);
-  if (!urlCheck.ok) {
-    Logger.warn(`[获取供应商额度] SSRF 拦截: ${provider.id} - ${urlCheck.error}`);
-    return null;
-  }
-
-  const response = await fetch(reqConfig.url, {
-    method: reqConfig.method || 'GET',
-    headers: reqConfig.headers || {},
-    signal: AbortSignal.timeout(10000)
-  });
-
-  if (!response.ok) return null;
-  const data = await response.json();
-
-  if (script.extractor) {
-    const { safeEval } = require('../utils/sandbox');
-    const extractSandbox = { response: data };
-    const result = await safeEval(`(${script.extractor})(response)`, extractSandbox, {
-      timeout: 5000,
-      filename: `user-extractor-${provider.id}.js`
-    });
-    if (result && result.isValid !== false) {
-      return {
-        planName: result.planName || provider.name,
-        total: result.total ?? 0,
-        used: result.used ?? 0,
-        remaining: result.remaining ?? 0,
-        periods: Array.isArray(result.periods) ? result.periods : [],
-        extra: result.extra || ''
-      };
-    }
-  }
-
-  return null;
-}
-
-function generateDefaultQuotaScriptForUser(provider) {
-  const format = provider.format || 'openai';
-  if (provider.quota_mode === 'opencode_go') {
-    return JSON.stringify({
-      request: {
-        url: 'https://opencode.ai/zen/go/v1/usage',
-        method: 'GET',
-        headers: { Authorization: 'Bearer {apiKey}' }
-      },
-      extractor: `function(r) {
-  if (!r || r.error) return { isValid: false };
-  var u = r.usage || {};
-  var periods = ['rolling', 'weekly', 'monthly'];
-  var available = periods.filter(function(name) { return u[name] && typeof u[name].percent === 'number'; });
-  if (!available.length) return { isValid: false };
-  var latest = available[0];
-  var labels = { rolling: 'Rolling', weekly: 'Weekly', monthly: 'Monthly' };
-  var periods = available.map(function(name) {
-    var item = u[name];
-    return {
-      key: name,
-      label: labels[name] || name,
-      percent: item.percent,
-      resetsAt: item.resetsAt || ''
-    };
-  });
-  return {
-    isValid: true,
-    planName: 'OpenCode Go',
-    total: 100,
-    used: u[latest].percent,
-    remaining: Math.max(0, 100 - u[latest].percent),
-    periods: periods,
-    extra: ''
-  };
-}`
-    }, null, 2);
-  }
-  if (format === 'anthropic') {
-    return JSON.stringify({
-      request: { url: "{apiRoot}/organizations/usage", method: "GET", headers: { "Authorization": "Bearer {apiKey}", "anthropic-version": "2023-06-01" } },
-      extractor: "function(r) { return { isValid: false }; }"
-    });
-  }
-  return JSON.stringify({
-    request: { url: "{apiRoot}/dashboard/billing/subscription", method: "GET", headers: { "Authorization": "Bearer {apiKey}" } },
-    extractor: `function(r) { if (r.error) return { isValid: false }; var t = r.hard_limit_usd || r.system_hard_limit_usd || 0; var rem = r.has_soft_limit === false ? t : (r.soft_limit_usd || t); return { isValid: true, planName: "{providerName}", total: t, used: t - rem, remaining: rem, extra: "USD" }; }`
-  });
-}
+const { queryProviderQuota, saveQuotaSnapshot } = require('../utils/provider-quota');
 
 // 获取当前选择的模型
 router.get('/current-model', requireAuth, async (req, res) => {

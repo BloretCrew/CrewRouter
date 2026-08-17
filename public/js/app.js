@@ -8560,14 +8560,9 @@ ${extractorBody}
   }
 
   async loadProviderQuota() {
-    const refreshButton = document.getElementById('providerQuotaRefreshBtn');
-    if (refreshButton) {
-      refreshButton.classList.add('is-loading');
-      refreshButton.disabled = true;
-    }
     const grid = document.getElementById('providerQuotaGrid');
     if (grid && !(this._providerQuotaLoadedOnce)) {
-      setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>正在查询供应商额度，请稍候...</span></div>');
+      setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>正在加载供应商额度缓存...</span></div>');
     }
     const section = document.getElementById('providerQuotaSection');
     if (section && !(this._providerQuotaLoadedOnce)) section.style.display = 'block';
@@ -8579,6 +8574,29 @@ ${extractorBody}
       this.renderProviderQuota(quotaData.providers || []);
     } catch (e) {
       console.warn('加载供应商额度失败:', e);
+    }
+  }
+
+  async refreshProviderQuota() {
+    const refreshButton = document.getElementById('providerQuotaRefreshBtn');
+    if (refreshButton) {
+      refreshButton.classList.add('is-loading');
+      refreshButton.disabled = true;
+    }
+    const grid = document.getElementById('providerQuotaGrid');
+    if (grid) {
+      setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>正在刷新供应商额度，请稍候...</span></div>');
+    }
+    const section = document.getElementById('providerQuotaSection');
+    if (section) section.style.display = 'block';
+    try {
+      const quotaRes = await fetch('/api/user/providers/quota/refresh', { method: 'POST' });
+      if (!quotaRes.ok) throw new Error(`额度接口异常 (${quotaRes.status})`);
+      const quotaData = await quotaRes.json();
+      this._providerQuotaLoadedOnce = true;
+      this.renderProviderQuota(quotaData.providers || []);
+    } catch (e) {
+      console.warn('刷新供应商额度失败:', e);
     } finally {
       if (refreshButton) {
         refreshButton.classList.remove('is-loading');
@@ -8686,8 +8704,16 @@ ${extractorBody}
           </div>
           ${periodHtml}`}
           ${creditsHtml}
+          ${p.checked_at ? `<div class="model-quota-updated">更新于 ${escapeHtml(this._formatQuotaCheckedAt(p.checked_at))}</div>` : ''}
         </div>`;
     }).join(''));
+  }
+
+  _formatQuotaCheckedAt(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleString('zh-CN', { hour12: false });
   }
 
   renderModelLibrary(libraryData, currentModel) {

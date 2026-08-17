@@ -1765,6 +1765,13 @@
   color: var(--muted-foreground);
 }
 
+.model-quota-updated {
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+  opacity: 0.75;
+}
+
 .model-quota-period-header {
   display: flex;
   justify-content: space-between;
