@@ -158,9 +158,26 @@ async function buildSafeUrl(baseUrl, path = '', options = {}) {
   return validateUrl(fullUrl, options);
 }
 
+/**
+ * 去掉尾部已知端点路径，避免再拼 /v1/chat/completions 时出现 /v1/v1。
+ * 与 server/routes/api.js 的 cleanBaseUrl 保持一致。
+ */
+function cleanBaseUrl(base) {
+  return String(base || '')
+    .replace(/\/$/, '')
+    .replace(/\/v1\/chat\/completions$/i, '')
+    .replace(/\/v1\/messages$/i, '')
+    .replace(/\/v1\/responses$/i, '')
+    .replace(/\/chat\/completions$/i, '')
+    .replace(/\/messages$/i, '')
+    .replace(/\/v1$/i, '')
+    .replace(/\/api$/i, '');
+}
+
 module.exports = {
   validateUrl,
   buildSafeUrl,
+  cleanBaseUrl,
   isBlockedHost,
   isPrivateIPv4,
   PRIVATE_RANGES,
