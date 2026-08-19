@@ -63,6 +63,7 @@ const {
   buildKeyAttemptOrder,
   normalizeProviderKeyEntries
 } = require('../utils/provider-keys');
+const ResponsesUpstream = require('../utils/responses-upstream');
 
 // 非流式：上游整段响应（headers+body）超时。30s 对免费/慢模型过短，易误杀。
 const UPSTREAM_TIMEOUT = 180000; // 3 分钟
@@ -1467,6 +1468,113 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   }
 }
 
+/**
+ * 转发到上游 Responses 格式（Chat 客户端 → /v1/responses → Chat 响应）
+ * 当供应商 format=responses（原生只支持 OpenAI Responses API）时，
+ * 将 OpenAI Chat 请求转换为 Responses 请求打给上游 /v1/responses，
+ * 再把上游的 Responses 响应转换回 chat.completion。
+ */
+async function proxyChatToResponses(provider, model, body, stream, res, req, options = {}) {
+  const suppressErrorResponse = !!options.suppressErrorResponse;
+  const baseUrl = cleanBaseUrl(provider.base_url);
+  const url = baseUrl + '/v1/responses';
+  const startTime = Date.now();
+  const headers = buildUpstreamHeaders(provider, req, {
+    'Content-Type': 'application/json'
+  });
+  if (provider.api_key) {
+    headers['Authorization'] = `Bearer ${provider.api_key}`;
+  }
+
+  const proxyInfo = await proxyPool.getProxyAgent(provider);
+  const proxyList = await proxyPool.getProxies(provider);
+  const maxRetries = Math.min(proxyList.length || 1, 3);
+  let currentProxyInfo = proxyInfo;
+
+  const upstreamBody = ResponsesUpstream.chatToResponsesBody({ ...body, stream: !!stream }, model);
+  const msgCount = body.messages?.length || 0;
+  Logger.info(`[proxyChatToResponses] 请求: provider=${provider.id}(${provider.name}), url=${url}, model=${model}, stream=${!!stream}, messages=${msgCount}, proxy=${currentProxyInfo?.proxyUrl || 'none'}`);
+
+  const { response, currentProxyInfo: finalProxyInfo } = await fetchWithProxyRetry(
+    (proxyInfo) => ({
+      url,
+      method: 'POST',
+      headers,
+      body: JSON.stringify(upstreamBody),
+      signal: AbortSignal.timeout(stream ? UPSTREAM_STREAM_TIMEOUT : UPSTREAM_TIMEOUT),
+      agent: proxyInfo?.agent
+    }),
+    provider,
+    currentProxyInfo,
+    maxRetries,
+    'proxyChatToResponses'
+  );
+  currentProxyInfo = finalProxyInfo;
+
+  if (!response) {
+    Logger.error(`[proxyChatToResponses] 上游无响应: provider=${provider.id}(${provider.name}), url=${url}`);
+    return respondProxyError(res, 502, {
+      error: { message: 'Upstream request failed: no response', type: 'server_error', code: 'upstream_error' }
+    }, { suppressErrorResponse, retryable: true });
+  }
+
+  if (!response.ok) {
+    const errText = await response.text();
+    Logger.error(`[proxyChatToResponses] 上游响应错误: provider=${provider.id}(${provider.name}), url=${url}, status=${response.status}, body=${errText.substring(0, 500)}`);
+    let errBody = null;
+    try { errBody = JSON.parse(errText); } catch { errBody = null; }
+    const bodyOut = errBody?.error ? errBody : {
+      error: {
+        message: typeof errText === 'string' && errText ? errText.slice(0, 2000) : 'Upstream request failed',
+        type: 'server_error',
+        code: 'upstream_error'
+      }
+    };
+    return respondProxyError(res, response.status, bodyOut, { suppressErrorResponse });
+  }
+
+  if (currentProxyInfo?.proxyId) {
+    proxyPool.markProxySuccess(provider.id, currentProxyInfo.proxyId, Date.now() - startTime);
+  }
+
+  // 流式：Responses SSE → chat.completion.chunk SSE
+  if (stream) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-store');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+    Logger.stream(`[proxyChatToResponses] SSE 头已发送, 开始流式传输: provider=${provider.id}(${provider.name}), model=${model}, url=${url}`);
+
+    const { content, usage } = await ResponsesUpstream.streamResponsesAsChatCompletion(response.body, res, {
+      model, logPrefix: 'proxyChatToResponses'
+    });
+
+    const streamUsage = usage || {};
+    const promptTokens = streamUsage.input_tokens || 0;
+    const completionTokens = streamUsage.output_tokens || 0;
+    const cachedTokens = streamUsage.cached_tokens
+      || streamUsage.input_tokens_details?.cached_tokens
+      || streamUsage.prompt_tokens_details?.cached_tokens
+      || 0;
+    return { promptTokens, completionTokens, cachedTokens, content };
+  }
+
+  // 非流式：Responses → chat.completion
+  const data = await response.json();
+  const latency = Date.now() - startTime;
+  const completion = ResponsesUpstream.responsesToChatCompletion(data, { model });
+  const usage = data?.usage || {};
+  const normalized = {
+    promptTokens: usage.input_tokens || 0,
+    completionTokens: usage.output_tokens || 0,
+    cachedTokens: usage.cached_tokens || 0
+  };
+  res.json(completion);
+  Logger.info(`[proxyChatToResponses] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens}, completion_tokens=${normalized.completionTokens}`);
+  return { ...normalized, content: ResponsesUpstream.extractResponsesText(data) };
+}
+
 // 转发到上游 Anthropic 格式
 async function proxyAnthropic(provider, model, body, stream, res, req, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
@@ -2261,6 +2369,9 @@ async function handleChatCompletion(req, res) {
       result = await runWithProviderKeyFallback(provider, res, suppressErrorResponse, async (pwk, keyOpts) => {
         providerWithKey = pwk;
         const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
+        if (provider.format === 'responses') {
+          return proxyChatToResponses(pwk, model, body, !!stream, res, req, proxyOpts);
+        }
         if (provider.format === 'anthropic') {
           return proxyAnthropic(pwk, model, body, !!stream, res, req, proxyOpts);
         }
