@@ -4825,7 +4825,8 @@ async function handleResponses(req, res) {
         const url = baseUrl + '/v1/responses';
         const headers = buildUpstreamHeaders(providerWithKey, req, { 'Content-Type': 'application/json' });
         if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
-        const upstreamBody = { ...body, model: upstreamModel, max_output_tokens: max_output_tokens || 4096 };
+        // 原样透传客户端请求，仅覆盖 model；不强制注入 max_output_tokens，交由上游/客户端决定。
+        const upstreamBody = { ...body, model: upstreamModel };
         if (!modelConfig.forward_reasoning_effort) {
           delete upstreamBody.reasoning;
           delete upstreamBody.reasoning_effort;
@@ -5046,7 +5047,6 @@ async function handleResponses(req, res) {
     const upstreamBody = {
       ...body,
       model: upstreamModel,
-      max_output_tokens: max_output_tokens || 4096,
     };
     // 未开启透传时去掉 reasoning / reasoning_effort，避免误传给上游
     if (!modelConfig.forward_reasoning_effort) {

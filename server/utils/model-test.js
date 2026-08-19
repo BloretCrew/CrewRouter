@@ -34,7 +34,8 @@ function buildTestBody(upstreamModel, format) {
     return {
       model: upstreamModel,
       input: 'Hi',
-      max_output_tokens: 5,
+      // 部分上游（如 opencode Console Go）要求 max_output_tokens 不小于 16，取 64 作安全的小测试值
+      max_output_tokens: 64,
       stream: false
     };
   }
