@@ -111,9 +111,12 @@ function chatToolsToResponsesTools(tools) {
   for (const t of tools) {
     if (!t || typeof t !== 'object') continue;
     if (t.type === 'function') {
+      const name = String(t.function?.name || '').trim();
+      // 过滤掉空 name 的工具，避免上游报 name 非空
+      if (!name) continue;
       out.push({
         type: 'function',
-        name: t.function?.name || '',
+        name,
         description: t.function?.description || '',
         parameters: t.function?.parameters || { type: 'object', properties: {} },
         strict: !!t.function?.strict
@@ -123,24 +126,6 @@ function chatToolsToResponsesTools(tools) {
     }
   }
   return out.length ? out : undefined;
-}
-
-/**
- * 将 Chat tool_choice 转换为 Responses tool_choice。
- * @param {*} toolChoice
- * @returns {object|undefined}
- */
-function chatToolChoiceToResponses(toolChoice) {
-  if (toolChoice == null) return undefined;
-  if (typeof toolChoice === 'string') {
-    if (toolChoice === 'none') return { type: 'none' };
-    if (toolChoice === 'required') return { type: 'auto' };
-    return { type: 'auto' };
-  }
-  if (toolChoice && typeof toolChoice === 'object' && toolChoice.type === 'function') {
-    return { type: 'function', name: toolChoice.function?.name || '' };
-  }
-  return undefined;
 }
 
 /**
@@ -169,8 +154,8 @@ function chatToResponsesBody(chatBody, model) {
 
   const tools = chatToolsToResponsesTools(chatBody.tools);
   if (tools) body.tools = tools;
-  const toolChoice = chatToolChoiceToResponses(chatBody.tool_choice);
-  if (toolChoice) body.tool_choice = toolChoice;
+  // 上游（如 opencode Console Go）仅支持 tool_choice: "auto"（默认值），
+  // none/required/指定函数名均不被接受；不传 tool_choice 即使用默认 auto，故省略。
 
   if (chatBody.response_format) {
     const rf = chatBody.response_format;
@@ -426,7 +411,6 @@ module.exports = {
   messagesToResponsesInput,
   contentToResponsesContent,
   chatToolsToResponsesTools,
-  chatToolChoiceToResponses,
   chatToResponsesBody,
   extractResponsesText,
   responsesToChatCompletion,
