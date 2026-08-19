@@ -21,6 +21,10 @@ function messagesToResponsesInput(messages) {
   if (!Array.isArray(messages) || messages.length === 0) return [];
 
   const items = [];
+  // 已发射的 function_call 的 call_id 集合；用于配对 function_call_output，
+  // 避免"孤儿输出"（无对应 function_call）导致上游报 No function call found
+  const emittedCallIds = new Set();
+
   for (const msg of messages) {
     if (!msg || typeof msg !== 'object') continue;
     const role = msg.role;
@@ -28,9 +32,12 @@ function messagesToResponsesInput(messages) {
 
     // 工具调用结果
     if (role === 'tool') {
+      const callId = String(msg.tool_call_id || '').trim();
+      // 仅发射与已发射 function_call 配对的输出；孤儿输出跳过
+      if (!callId || !emittedCallIds.has(callId)) continue;
       items.push({
         type: 'function_call_output',
-        call_id: msg.tool_call_id || `call_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+        call_id: callId,
         output: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '')
       });
       continue;
@@ -50,9 +57,11 @@ function messagesToResponsesInput(messages) {
         // 无 name 的 tool_call 对上游无意义，跳过以免上游报 name 非空
         const fnName = String(tc?.function?.name || '').trim();
         if (!fnName) continue;
+        const callId = tc.id || `call_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+        emittedCallIds.add(callId);
         items.push({
           type: 'function_call',
-          call_id: tc.id || `call_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+          call_id: callId,
           name: fnName,
           arguments: tc.function?.arguments || '{}'
         });
