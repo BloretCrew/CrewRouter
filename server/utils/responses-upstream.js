@@ -30,7 +30,7 @@ function messagesToResponsesInput(messages) {
     if (role === 'tool') {
       items.push({
         type: 'function_call_output',
-        call_id: msg.tool_call_id || '',
+        call_id: msg.tool_call_id || `call_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
         output: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '')
       });
       continue;
@@ -47,10 +47,13 @@ function messagesToResponsesInput(messages) {
         });
       }
       for (const tc of msg.tool_calls) {
+        // 无 name 的 tool_call 对上游无意义，跳过以免上游报 name 非空
+        const fnName = String(tc?.function?.name || '').trim();
+        if (!fnName) continue;
         items.push({
           type: 'function_call',
           call_id: tc.id || `call_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-          name: tc.function?.name || '',
+          name: fnName,
           arguments: tc.function?.arguments || '{}'
         });
       }
@@ -122,6 +125,8 @@ function chatToolsToResponsesTools(tools) {
         strict: !!t.function?.strict
       });
     } else {
+      // 非 function 工具：若显式带有空 name 字段则跳过，避免上游报 name 非空
+      if (t.name !== undefined && String(t.name || '').trim() === '') continue;
       out.push(t);
     }
   }
