@@ -47,12 +47,12 @@ function normalizeProviderKeyEntries(provider) {
       .map((item) => {
         if (typeof item === 'string') {
           const key = String(item || '').trim();
-          return key ? { key, weight: 1 } : null;
+          return key ? { key, weight: 1, enabled: true } : null;
         }
         if (item && typeof item === 'object') {
           const key = String(item.key || item.api_key || '').trim();
           if (!key) return null;
-          return { key, weight: normalizeWeight(item.weight) };
+          return { key, weight: normalizeWeight(item.weight), enabled: item.enabled !== false };
         }
         return null;
       })
@@ -60,7 +60,7 @@ function normalizeProviderKeyEntries(provider) {
     if (entries.length > 0) return entries;
   }
   const single = String(provider.api_key || '').trim();
-  return single ? [{ key: single, weight: 1 }] : [];
+  return single ? [{ key: single, weight: 1, enabled: true }] : [];
 }
 
 /**
@@ -70,7 +70,8 @@ function normalizeProviderKeyEntries(provider) {
  */
 function getPrimaryApiKey(provider) {
   const entries = normalizeProviderKeyEntries(provider);
-  if (entries.length > 0) return entries[0].key;
+  const primary = entries.find((e) => e.enabled !== false);
+  if (primary) return primary.key;
   return String(provider?.api_key || '').trim();
 }
 
@@ -109,7 +110,7 @@ function pickWeightedEntry(entries) {
  * @returns {string[]}
  */
 function buildKeyAttemptOrder(provider) {
-  const entries = normalizeProviderKeyEntries(provider);
+  const entries = normalizeProviderKeyEntries(provider).filter((e) => e.enabled !== false);
   if (entries.length === 0) return [];
   if (entries.length === 1) return [entries[0].key];
 
@@ -147,12 +148,12 @@ function normalizeKeysInput(apiKeys, fallbackApiKey) {
       .map((item) => {
         if (typeof item === 'string') {
           const key = String(item || '').trim();
-          return key ? { key, weight: 1 } : null;
+          return key ? { key, weight: 1, enabled: true } : null;
         }
         if (item && typeof item === 'object') {
           const key = String(item.key || item.api_key || '').trim();
           if (!key) return null;
-          return { key, weight: normalizeWeight(item.weight) };
+          return { key, weight: normalizeWeight(item.weight), enabled: item.enabled !== false };
         }
         return null;
       })
@@ -162,18 +163,19 @@ function normalizeKeysInput(apiKeys, fallbackApiKey) {
     return null;
   }
   const single = String(fallbackApiKey || '').trim();
-  if (single) return [{ key: single, weight: 1 }];
+  if (single) return [{ key: single, weight: 1, enabled: true }];
   return null;
 }
 
 /**
  * 写入 DB 时：主 Key + JSON 列表
- * @param {{ key: string, weight: number }[]} entries
+ * @param {{ key: string, weight: number, enabled?: boolean }[]} entries
  */
 function toStorageFields(entries) {
   const list = Array.isArray(entries) ? entries.filter((e) => e && e.key) : [];
+  const primary = list.find((e) => e.enabled !== false);
   return {
-    api_key: list[0]?.key || '',
+    api_key: primary?.key || list[0]?.key || '',
     api_keys: list.length > 0 ? list : null
   };
 }
@@ -183,7 +185,7 @@ function toStorageFields(entries) {
  * @param {object} provider
  */
 function countProviderApiKeys(provider) {
-  return normalizeProviderKeyEntries(provider).length;
+  return normalizeProviderKeyEntries(provider).filter((e) => e.enabled !== false).length;
 }
 
 module.exports = {

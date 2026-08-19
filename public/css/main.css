@@ -3624,15 +3624,20 @@
   cursor: grabbing;
 }
 
-/* 固定宽度占位：主 Key 在输入框右侧，非主 Key 行也占位以保持输入框等宽 */
-.provider-api-key-main-badge {
-  flex: 0 0 52px;
-  width: 52px;
+.provider-api-key-main-badge-wrap {
+  flex: 0 0 60px;
+  width: 60px;
   box-sizing: border-box;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.provider-api-key-main-badge {
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 999px;
   background: rgba(20, 86, 240, 0.12);
   color: var(--brand-blue, #1456f0);
@@ -3643,6 +3648,62 @@
 .provider-api-key-main-badge.is-placeholder {
   visibility: hidden;
   pointer-events: none;
+}
+
+.provider-api-key-make-primary {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  border: 1px dashed var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.4;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.provider-api-key-make-primary:hover {
+  color: var(--brand-blue, #1456f0);
+  border-color: var(--brand-blue, #1456f0);
+  background: rgba(20, 86, 240, 0.06);
+}
+
+/* 禁用键开关按钮 */
+.provider-api-key-disable {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color .15s, background .15s, border-color .15s;
+}
+
+.provider-api-key-disable:hover {
+  color: var(--destructive);
+  border-color: var(--destructive);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.provider-api-key-disable.is-on {
+  color: var(--destructive);
+  border-color: var(--destructive);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* 已禁用的 Key 行：灰显 */
+.provider-api-key-row.is-disabled {
+  opacity: 0.55;
+  background: var(--muted);
+}
+
+.provider-api-key-row.is-disabled .provider-api-key-input {
+  text-decoration: line-through;
 }
 
 .provider-api-key-input-wrap {

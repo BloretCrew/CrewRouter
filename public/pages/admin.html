@@ -1534,7 +1534,8 @@
               + 添加 Key
             </button>
             <small style="color:var(--muted-foreground);margin-top:6px;display:block;line-height:1.5;">
-              最上方为<strong>主 Key</strong>（获取模型列表 / 连通性 / 额度仅用主 Key）。多个 Key 时可拖动排序。
+              <strong>主 Key</strong>（获取模型列表 / 连通性 / 额度仅用主 Key）可通过「设为主」切换，也可拖动排序调整 fallback 顺序。
+              可用 <strong>禁用</strong> 开关临时停用某个 Key（不参与调用，但保留配置）。
               顺序模式：调用时按排序依次 fallback；权重模式：按权重随机选 Key，失败后再按权重从高到低 fallback。
               编辑时修改 Key 文本即更新；留空该项在保存时会被忽略。
             </small>

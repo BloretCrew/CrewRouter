@@ -3144,16 +3144,17 @@ class AdminApp {
   }
 
   /**
-   * @param {{ key?: string, weight?: number }[]} [entries]
+   * @param {{ key?: string, weight?: number, enabled?: boolean }[]} [entries]
    */
   renderProviderApiKeysEditor(entries) {
     const list = document.getElementById('providerApiKeysList');
     if (!list) return;
     let items = Array.isArray(entries) ? entries.map(e => ({
       key: e?.key || e?.api_key || '',
-      weight: e?.weight > 0 ? e.weight : 1
+      weight: e?.weight > 0 ? e.weight : 1,
+      enabled: e?.enabled !== false
     })) : [];
-    if (items.length === 0) items = [{ key: '', weight: 1 }];
+    if (items.length === 0) items = [{ key: '', weight: 1, enabled: true }];
     this._providerApiKeyEditorItems = items;
     this._renderProviderApiKeyRows();
   }
@@ -3165,15 +3166,26 @@ class AdminApp {
     const multi = items.length > 1;
     list.classList.toggle('is-weight-mode', this._getProviderKeySelectMode() === 'weight');
 
+    const primaryIdx = items.findIndex((i) => i.enabled !== false);
+    const hasEnabled = primaryIdx >= 0;
+
     setHTML(list, items.map((item, index) => {
-      const isPrimary = index === 0;
+      const enabled = item.enabled !== false;
+      const isPrimary = hasEnabled && index === primaryIdx;
+      const mainBadge = isPrimary
+        ? `<span class="provider-api-key-main-badge" title="主 Key：获取模型列表 / 连通性 / 额度">主 Key</span>`
+        : `<button type="button" class="provider-api-key-make-primary" data-key-index="${index}"
+             onclick="adminApp.setProviderPrimaryKey(${index})" title="设为主 Key">设为主</button>`;
+      const disableBtn = `<button type="button" class="provider-api-key-disable ${enabled ? '' : 'is-on'}" data-key-index="${index}"
+             onclick="adminApp.toggleProviderApiKeyEnabled(${index})" title="${enabled ? '禁用此 Key' : '启用此 Key'}">
+             ${enabled ? '禁用' : '已禁用'}</button>`;
       return `
-        <div class="provider-api-key-row" data-key-index="${index}" draggable="${multi ? 'true' : 'false'}">
+        <div class="provider-api-key-row${enabled ? '' : ' is-disabled'}" data-key-index="${index}" draggable="${multi && enabled ? 'true' : 'false'}">
           <span class="provider-api-key-drag" title="${multi ? '拖动排序' : '仅 1 个 Key 时无需排序'}" aria-hidden="true">⋮⋮</span>
           <div class="provider-api-key-input-wrap">
             <input type="password" class="input provider-api-key-input" data-key-index="${index}"
               value="${escapeHtml(item.key || '')}"
-              placeholder="${item.key ? '已配置，可修改' : 'API Key'}"
+              placeholder="${item.key ? (enabled ? '已配置，可修改' : '已禁用') : 'API Key'}"
               autocomplete="off" spellcheck="false"
               oninput="adminApp.onProviderApiKeyInput(${index}, this.value)">
             <button type="button" class="provider-api-key-toggle" data-key-index="${index}"
@@ -3183,12 +3195,13 @@ class AdminApp {
               <svg class="provider-api-key-eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
             </button>
           </div>
-          <span class="provider-api-key-main-badge${isPrimary ? '' : ' is-placeholder'}"${isPrimary ? '' : ' aria-hidden="true"'}>主 Key</span>
+          <div class="provider-api-key-main-badge-wrap">${mainBadge}</div>
           <div class="provider-api-key-weight-wrap">
             <label>权重</label>
             <input type="number" class="input" min="1" step="1" value="${Number(item.weight) > 0 ? Number(item.weight) : 1}"
               oninput="adminApp.onProviderApiKeyWeightInput(${index}, this.value)">
           </div>
+          ${disableBtn}
           <button type="button" class="btn btn-sm btn-secondary provider-api-key-remove"
             style="${multi ? '' : 'visibility:hidden;'}"
             onclick="adminApp.removeProviderApiKeyRow(${index})" title="删除">删除</button>
@@ -3198,7 +3211,7 @@ class AdminApp {
     this._bindProviderApiKeyDrag(list);
     // 同步隐藏兼容字段
     const hidden = document.getElementById('providerApiKey');
-    if (hidden) hidden.value = items[0]?.key || '';
+    if (hidden) hidden.value = items.find((i) => i.enabled !== false)?.key || items[0]?.key || '';
   }
 
   onProviderApiKeyInput(index, value) {
@@ -3235,14 +3248,34 @@ class AdminApp {
   }
 
   addProviderApiKeyRow() {
-    if (!this._providerApiKeyEditorItems) this._providerApiKeyEditorItems = [{ key: '', weight: 1 }];
-    this._providerApiKeyEditorItems.push({ key: '', weight: 1 });
+    if (!this._providerApiKeyEditorItems) this._providerApiKeyEditorItems = [{ key: '', weight: 1, enabled: true }];
+    this._providerApiKeyEditorItems.push({ key: '', weight: 1, enabled: true });
     this._renderProviderApiKeyRows();
   }
 
   removeProviderApiKeyRow(index) {
     if (!this._providerApiKeyEditorItems || this._providerApiKeyEditorItems.length <= 1) return;
     this._providerApiKeyEditorItems.splice(index, 1);
+    this._renderProviderApiKeyRows();
+  }
+
+  /** 将指定 Key 设为主 Key（移动到列表首位） */
+  setProviderPrimaryKey(index) {
+    const items = this._providerApiKeyEditorItems;
+    if (!items || index < 0 || index >= items.length) return;
+    const [moved] = items.splice(index, 1);
+    items.unshift(moved);
+    this._providerApiKeyEditorItems = items;
+    this._renderProviderApiKeyRows();
+  }
+
+  /** 禁用 / 启用指定 Key */
+  toggleProviderApiKeyEnabled(index) {
+    const items = this._providerApiKeyEditorItems;
+    if (!items || index < 0 || index >= items.length) return;
+    const it = items[index];
+    if (!it) return;
+    it.enabled = it.enabled === false;
     this._renderProviderApiKeyRows();
   }
 
@@ -3303,14 +3336,18 @@ class AdminApp {
       const key = (keyInput?.value || '').trim();
       const weight = parseFloat(weightInput?.value);
       if (!key) return;
-      items.push({ key, weight: Number.isFinite(weight) && weight > 0 ? weight : 1 });
+      items.push({
+        key,
+        weight: Number.isFinite(weight) && weight > 0 ? weight : 1,
+        enabled: !row.classList.contains('is-disabled')
+      });
     });
     // 若 DOM 为空但内存有值
     if (items.length === 0 && Array.isArray(this._providerApiKeyEditorItems)) {
       for (const e of this._providerApiKeyEditorItems) {
         const key = String(e?.key || '').trim();
         if (!key) continue;
-        items.push({ key, weight: e.weight > 0 ? e.weight : 1 });
+        items.push({ key, weight: e.weight > 0 ? e.weight : 1, enabled: e.enabled !== false });
       }
     }
     return items;
