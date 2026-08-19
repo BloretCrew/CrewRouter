@@ -3,6 +3,15 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function formatDisplayName(format) {
+  switch (format) {
+    case 'openai': return 'Chat Completions';
+    case 'responses': return 'Responses';
+    case 'anthropic': return 'Anthropic Messages';
+    default: return format || '-';
+  }
+}
+
 // 管理员控制台应用
 class AdminApp {
   constructor() {
@@ -3064,7 +3073,7 @@ class AdminApp {
               <td>
                 <div id="ping-display-${provider.id}" style="min-width:80px;font-size:12px;color:var(--muted-foreground);">-</div>
               </td>
-              <td>${escapeHtml(provider.format || '-')}</td>
+              <td>${escapeHtml(formatDisplayName(provider.format))}</td>
               <td>${statusPill}</td>
               <td>${this._renderProviderRowActions(provider)}</td>
             </tr>`;
@@ -3370,7 +3379,7 @@ class AdminApp {
               </div>
               <div class="admin-card-row">
                 <span class="admin-card-row-label">格式</span>
-                <span class="admin-card-row-value">${escapeHtml(provider.format || '-')}</span>
+                <span class="admin-card-row-value">${escapeHtml(formatDisplayName(provider.format))}</span>
               </div>
               <div id="ping-display-card-${provider.id}" class="admin-card-ping" style="margin-top:6px;font-size:12px;color:var(--muted-foreground);">延迟: -</div>
             </div>

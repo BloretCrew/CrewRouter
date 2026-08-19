@@ -3,6 +3,15 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function formatDisplayName(format) {
+  switch (format) {
+    case 'openai': return 'Chat Completions';
+    case 'responses': return 'Responses';
+    case 'anthropic': return 'Anthropic Messages';
+    default: return format || '-';
+  }
+}
+
 // 用户控制台应用
 class ConsoleApp {
   constructor() {
@@ -6561,7 +6570,7 @@ ${extractorBody}
                 <td>
                   <div style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(p.base_url)}">${escapeHtml(p.base_url)}</div>
                 </td>
-                <td><span style="font-size:12px;">${escapeHtml(p.format)}</span></td>
+                <td><span style="font-size:12px;">${escapeHtml(formatDisplayName(p.format))}</span></td>
                 <td>
                   <div id="user-ping-page-${p.id}" style="min-width:60px;font-size:12px;color:var(--muted-foreground);">-</div>
                 </td>
