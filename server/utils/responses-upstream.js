@@ -17,6 +17,24 @@ const Logger = require('../logger');
  * @param {Array} messages - OpenAI chat messages
  * @returns {string|Array} Responses input
  */
+/**
+ * 将 assistant 消息的 reasoning_content 转换为 Responses reasoning input item。
+ * 出站时上游 reasoning 的 encrypted_content/summary 被放入 reasoning_content，
+ * 这里原样回传为 reasoning item，避免上游报 reasoning_text 必须回传。
+ * @param {string} reasoningContent
+ * @returns {object|null}
+ */
+function reasoningToResponsesItem(reasoningContent) {
+  if (!reasoningContent) return null;
+  const item = {
+    type: 'reasoning',
+    id: `rs_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+  };
+  // 兼容两种来源：encrypted_content 密文，或 summary 明文文本
+  item.encrypted_content = String(reasoningContent);
+  return item;
+}
+
 function messagesToResponsesInput(messages) {
   if (!Array.isArray(messages) || messages.length === 0) return [];
 
@@ -45,7 +63,10 @@ function messagesToResponsesInput(messages) {
 
     // assistant 带 tool_calls
     if (role === 'assistant' && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
-      // 先输出纯文本内容（如有）
+      // 先回传 reasoning（思考模型多轮要求）
+      const reasoningItem = reasoningToResponsesItem(msg.reasoning_content);
+      if (reasoningItem) items.push(reasoningItem);
+      // 再输出纯文本内容（如有）
       if (content) {
         items.push({
           type: 'message',
@@ -71,11 +92,22 @@ function messagesToResponsesInput(messages) {
 
     // 普通 user / assistant / system / developer
     const respRole = role === 'system' ? 'developer' : (role === 'user' ? 'user' : 'assistant');
-    items.push({
-      type: 'message',
-      role: respRole,
-      content: contentToResponsesContent(content, respRole)
-    });
+    if (respRole === 'assistant' && msg.reasoning_content) {
+      // assistant 历史消息：reasoning + 消息分开输出
+      const reasoningItem = reasoningToResponsesItem(msg.reasoning_content);
+      if (reasoningItem) items.push(reasoningItem);
+      items.push({
+        type: 'message',
+        role: 'assistant',
+        content: contentToResponsesContent(content, 'assistant')
+      });
+    } else {
+      items.push({
+        type: 'message',
+        role: respRole,
+        content: contentToResponsesContent(content, respRole)
+      });
+    }
   }
   return items;
 }
@@ -224,15 +256,34 @@ function responsesToChatCompletion(data, opts = {}) {
       }
     }));
 
+  // 保留 reasoning：stateless 模式为 encrypted_content，否则取 summary 文本；
+  // 放入 assistant 消息的 reasoning_content，供客户端多轮时原样回传
+  let reasoningContent = null;
+  if (Array.isArray(data?.output)) {
+    for (const item of data.output) {
+      if (item?.type === 'reasoning') {
+        if (item.encrypted_content) {
+          reasoningContent = item.encrypted_content;
+        } else if (Array.isArray(item.summary) && item.summary.length > 0) {
+          reasoningContent = item.summary.map((s) => s?.text || s?.summary_text || '').join('\n');
+        } else if (item.content && Array.isArray(item.content) && item.content.length) {
+          reasoningContent = item.content.map((c) => c?.text || c?.thinking || '').join('');
+        }
+        if (reasoningContent) break;
+      }
+    }
+  }
+
   const message = { role: 'assistant', content: toolCalls.length ? null : (text || null) };
   if (toolCalls.length) message.tool_calls = toolCalls;
+  if (reasoningContent) message.reasoning_content = reasoningContent;
 
   const completion = {
     id: opts.id || `chatcmpl-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
     object: 'chat.completion',
     created: opts.created != null ? opts.created : Math.floor(Date.now() / 1000),
     model: opts.model || data.model || 'unknown',
-    choices: [{ index: 0, message, finish_reason: (data.status === 'completed' ? 'stop' : data.status) }]
+    choices: [{ index: 0, message, finish_reason: toolCalls.length ? 'tool_calls' : (data.status === 'completed' ? 'stop' : data.status) }]
   };
 
   if (usage && (usage.input_tokens != null || usage.output_tokens != null || usage.total_tokens != null)) {
@@ -273,6 +324,7 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
   let streamUsage = null;
   let sawContentDelta = false;
   let sawReasoningDelta = false;
+  let sawToolCall = false;
   let activeItemId = null;
 
   const sendChunk = (delta, extra = {}) => {
@@ -337,27 +389,56 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
         }
         break;
       }
+      case 'response.output_item.added': {
+        const item = obj.item;
+        if (!item) break;
+        if (item.type === 'function_call') {
+          // 立即发出初始 tool_calls chunk，避免无参调用（不发 arguments delta）时漏发
+          sawToolCall = true;
+          currentToolName = item.name || currentToolName;
+          activeItemId = item.id || null;
+          const callId = item.call_id || item.id || currentToolCallId || `call_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+          currentToolCallId = callId;
+          if (!openedTools.has(callId)) {
+            const index = openedTools.size;
+            openedTools.set(callId, index);
+            sendChunk({
+              tool_calls: [{
+                index,
+                id: item.call_id || item.id || callId,
+                type: 'function',
+                function: { name: item.name || currentToolName || '', arguments: '' }
+              }]
+            });
+          }
+          if (item.arguments) {
+            const argsStr = typeof item.arguments === 'string' ? item.arguments : JSON.stringify(item.arguments ?? '');
+            currentToolArguments = argsStr;
+            sendChunk({
+              tool_calls: [{
+                index: openedTools.get(callId),
+                function: { arguments: argsStr }
+              }]
+            });
+          }
+        } else if (item.type === 'reasoning' && item.encrypted_content) {
+          // stateless 模式下 reasoning 带 encrypted_content；作为 reasoning_content 透传给客户端以便回传
+          sawReasoningDelta = true;
+          sendChunk({ reasoning_content: item.encrypted_content });
+        }
+        break;
+      }
       case 'response.output_item.done': {
         // function_call 结束或 message 结束
-        if (obj.output_item?.type === 'function_call') {
-          const fc = obj.output_item;
+        if (obj.item?.type === 'function_call') {
+          const fc = obj.item;
           const callId = fc.call_id || currentToolCallId || `call_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-          if (currentToolCallId === callId && currentToolArguments !== '') {
-            // arguments 已通过 delta 发送，无需重复
-          }
           currentToolCallId = null;
           currentToolName = null;
           currentToolArguments = '';
           activeItemId = null;
-        } else if (obj.output_item?.type === 'message') {
+        } else if (obj.item?.type === 'message') {
           activeItemId = null;
-        }
-        break;
-      }
-      case 'response.output_item.added': {
-        if (obj.output_item?.type === 'function_call') {
-          currentToolName = obj.output_item.name || currentToolName;
-          activeItemId = obj.output_item.id || null;
         }
         break;
       }
@@ -389,17 +470,23 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
         } catch { /* ignore parse errors */ }
       }
     }
-  } finally {
+  } catch (err) {
+    Logger.warn(`[${logPrefix}] 上游流读取异常: ${err.message}`);
     if (!res.writableEnded) res.end();
+    return {
+      content: sawContentDelta ? content : (sawReasoningDelta ? '' : content),
+      reasoning,
+      usage: streamUsage
+    };
   }
 
-  // 流结束：发送带 finish_reason 的收尾 chunk + usage
+  // 流结束：发送带 finish_reason 的收尾 chunk + usage（须在 res.end() 之前）
   const finishChunk = {
     id,
     object: 'chat.completion.chunk',
     created,
     model,
-    choices: [{ index: 0, delta: {}, finish_reason: 'stop' }]
+    choices: [{ index: 0, delta: {}, finish_reason: sawToolCall ? 'tool_calls' : 'stop' }]
   };
   if (streamUsage && (streamUsage.input_tokens != null || streamUsage.output_tokens != null || streamUsage.total_tokens != null)) {
     finishChunk.usage = {
@@ -412,6 +499,7 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
   if (!res.writableEnded) {
     res.write(`data: ${JSON.stringify(finishChunk)}\n\n`);
     res.write('data: [DONE]\n\n');
+    res.end();
   }
 
   return {
@@ -428,5 +516,6 @@ module.exports = {
   chatToResponsesBody,
   extractResponsesText,
   responsesToChatCompletion,
-  streamResponsesAsChatCompletion
+  streamResponsesAsChatCompletion,
+  reasoningToResponsesItem
 };
