@@ -18,6 +18,23 @@ const Logger = require('../logger');
  * @returns {string|Array} Responses input
  */
 /**
+ * 检测 reasoning 占位符：部分上游（如 opencode Console Go 的 deepseek-v4-flash）
+ * 在 reasoning 项的 encrypted_content 里放 "uuid-index" 占位符而非真实内容，
+ * 不应作为 reasoning_content 输出给客户端。
+ * @param {string} str
+ * @returns {boolean}
+ */
+function isReasoningPlaceholder(str) {
+  if (!str) return false;
+  const s = String(str).trim();
+  if (s.length > 64) return false; // 真实加密内容通常很长
+  // UUID 或 UUID-索引 格式
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-\d+)?$/i.test(s)
+    || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:.+$/.test(s)
+    || /^(rs_)?[0-9a-f]{8,}(-|:)\d+$/.test(s);
+}
+
+/**
  * 将 assistant 消息的 reasoning_content 转换为 Responses reasoning input item。
  * 出站时上游 reasoning 的 encrypted_content/summary 被放入 reasoning_content，
  * 这里原样回传为 reasoning item，避免上游报 reasoning_text 必须回传。
@@ -257,12 +274,13 @@ function responsesToChatCompletion(data, opts = {}) {
     }));
 
   // 保留 reasoning：stateless 模式为 encrypted_content，否则取 summary 文本；
-  // 放入 assistant 消息的 reasoning_content，供客户端多轮时原样回传
+  // 放入 assistant 消息的 reasoning_content，供客户端多轮时原样回传。
+  // 注意：部分上游的 encrypted_content 是 "uuid-index" 占位符（非真实内容），需跳过。
   let reasoningContent = null;
   if (Array.isArray(data?.output)) {
     for (const item of data.output) {
       if (item?.type === 'reasoning') {
-        if (item.encrypted_content) {
+        if (item.encrypted_content && !isReasoningPlaceholder(item.encrypted_content)) {
           reasoningContent = item.encrypted_content;
         } else if (Array.isArray(item.summary) && item.summary.length > 0) {
           reasoningContent = item.summary.map((s) => s?.text || s?.summary_text || '').join('\n');
@@ -421,10 +439,10 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
               }]
             });
           }
-        } else if (item.type === 'reasoning' && item.encrypted_content) {
-          // stateless 模式下 reasoning 带 encrypted_content；作为 reasoning_content 透传给客户端以便回传
+        } else if (item.type === 'reasoning') {
+          // reasoning 项出现：真正的思考文本由 response.reasoning_text.delta 事件流式发出，
+          // 此处不发送 encrypted_content（部分上游为 uuid 占位符，非真实内容）。
           sawReasoningDelta = true;
-          sendChunk({ reasoning_content: item.encrypted_content });
         }
         break;
       }
@@ -517,5 +535,6 @@ module.exports = {
   extractResponsesText,
   responsesToChatCompletion,
   streamResponsesAsChatCompletion,
-  reasoningToResponsesItem
+  reasoningToResponsesItem,
+  isReasoningPlaceholder
 };
