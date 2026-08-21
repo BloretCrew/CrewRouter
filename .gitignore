@@ -31,3 +31,7 @@ updates/*.zip
 /qwen-code/
 /hermes-agent/
 /openclaw/
+
+# 本地运行时产物（许可租约含密钥凭据，勿提交）
+/.hermes/
+/server/license/
