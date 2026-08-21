@@ -202,15 +202,14 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
 
 /**
  * 是否可对 Key 模型队列做失败回退（换下一个模型重试）
- * - 网络/5xx/429 → 可回退
- * - 其它 4xx → 不可回退（请求/鉴权问题）
+ * - 网络/5xx/429/4xx → 均可回退（不同模型/供应商对协议与鉴权的宽松度不同，
+ *   一个模型拒绝的请求换模型后可能成功，故 4xx 也参与回退）
  */
 function isRetryableUpstreamStatus(status) {
   if (status == null) return true;
   const code = Number(status);
   if (!Number.isFinite(code)) return true;
-  if (code === 429) return true;
-  if (code >= 500) return true;
+  if (code >= 400) return true;
   return false;
 }
 
