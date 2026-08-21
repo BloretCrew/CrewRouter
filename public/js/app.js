@@ -449,7 +449,7 @@ class ConsoleApp {
       }
 
       if (apiKeys.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">暂无 API 密钥，点击上方按钮一键创建</p>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无 API 密钥，点击上方按钮一键创建') + '</p>');
         return;
       }
 
@@ -475,7 +475,7 @@ class ConsoleApp {
       this._bindApiKeyTagsResizeObserver();
     } catch (error) {
       console.error('加载API密钥失败:', error);
-      if (container) setHTML(container, '<p style="text-align:center;color:var(--destructive);padding:40px;">加载失败，请刷新重试</p>');
+      if (container) setHTML(container, '<p style="text-align:center;color:var(--destructive);padding:40px;">' + t('加载失败，请刷新重试') + '</p>');
     }
   }
 
@@ -571,9 +571,9 @@ class ConsoleApp {
            ondragover="app.handleApiKeyDragOver(event);app.handleApiKeySortOver(event)" ondragleave="app.handleApiKeyDragLeave(event);app.handleApiKeySortLeave(event)" ondrop="app.handleApiKeyDrop(event, ${key.id});app.handleApiKeySortDrop(event, ${key.id})">
         <div class="api-key-header">
           <div class="api-key-title">
-            <span class="api-key-drag-handle" draggable="true" title=t('拖拽调整顺序') aria-hidden="true"
+            <span class="api-key-drag-handle" draggable="true" title="${t('拖拽调整顺序')}" aria-hidden="true"
               ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)">⠿</span>
-            <label class="pg-toggle api-key-enable-toggle" title="${isEnabled ? '点击禁用' : '点击启用'}">
+            <label class="pg-toggle api-key-enable-toggle" title="${isEnabled ? t('点击禁用') : t('点击启用')}">
               <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)">
               <span class="pg-toggle-slider"></span>
             </label>
@@ -593,7 +593,7 @@ class ConsoleApp {
               <div class="api-key-subline">
                 ${key.last_used_at
                   ? `<span>最近 ${escapeHtml(this.formatRelativeTime(key.last_used_at))}</span>`
-                  : '<span class="api-key-sub-muted">尚未使用</span>'}
+                  : '<span class="api-key-sub-muted">' + t('尚未使用') + '</span>'}
                 <span class="api-key-dot">·</span>
                 <span class="api-key-sub-muted">创建于 ${new Date(key.created_at).toLocaleDateString('zh-CN')}</span>
                 ${hasSchedule ? `<span class="api-key-dot">·</span><span class="api-key-sub-muted" title=t('定时开关')>${escapeHtml(scheduleText)}</span>` : ''}
@@ -690,7 +690,7 @@ class ConsoleApp {
           return `<li class="api-key-route-queue-tip-item${isPrimary ? ' is-primary' : ''}">
             <span class="api-key-route-queue-tip-order">${i + 1}</span>
             <span class="api-key-route-queue-tip-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
-            ${isPrimary ? '<span class="api-key-route-queue-tip-badge">首选</span>' : ''}
+            ${isPrimary ? '<span class="api-key-route-queue-tip-badge">' + t('首选') + '</span>' : ''}
           </li>`;
         }).join('')}
       </ol>
@@ -1215,12 +1215,12 @@ class ConsoleApp {
             ${isOwner ? `<button type="button" class="api-key-tags-overflow-remove" title=t('移除标签')
               onclick="event.stopPropagation();app.removeTagFromKey(${keyId},${t.id})">移除</button>` : ''}
           </div>`).join('')
-      : '<div class="api-key-tags-overflow-empty">暂无标签</div>';
+      : '<div class="api-key-tags-overflow-empty">' + t('暂无标签') + '</div>';
 
     setHTML(pop, `
       <div class="api-key-tags-overflow-title">已绑定标签（${tags.length}）</div>
       <div class="api-key-tags-overflow-list">${listHtml}</div>
-      ${isOwner ? '<button type="button" class="btn btn-sm btn-secondary api-key-tags-overflow-manage">管理全部标签</button>' : ''}
+      ${isOwner ? '<button type="button" class="btn btn-sm btn-secondary api-key-tags-overflow-manage">' + t('管理全部标签') + '</button>' : ''}
     `);
 
     pop.querySelector('.api-key-tags-overflow-manage')?.addEventListener('click', (e) => {
@@ -1278,7 +1278,7 @@ class ConsoleApp {
     dropdown.style.left = Math.max(8, rect.left) + 'px';
 
     if (this._keyTags.length === 0) {
-      setHTML(dropdown, '<div class="api-key-tag-assign-empty">暂无标签，请先在上方创建</div>');
+      setHTML(dropdown, '<div class="api-key-tag-assign-empty">' + t('暂无标签，请先在上方创建') + '</div>');
     } else {
       setHTML(dropdown, this._keyTags.map(tag => {
         const has = currentTagIds.has(Number(tag.id));
@@ -1571,7 +1571,7 @@ class ConsoleApp {
         fetch('/api/user/provider-tags').catch(() => null)
       ]);
       if (!libraryRes.ok || !assignedRes.ok) {
-        setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:32px;">加载失败</p>');
+        setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:32px;">' + t('加载失败') + '</p>');
         return;
       }
 
@@ -1610,7 +1610,7 @@ class ConsoleApp {
       this.filterAndRenderKeyModelPicker();
     } catch (error) {
       console.error('加载密钥模型列表失败:', error);
-      setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:32px;">加载失败</p>');
+      setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:32px;">' + t('加载失败') + '</p>');
     }
   }
 
@@ -1828,7 +1828,7 @@ class ConsoleApp {
     }
     const providerSelect = document.getElementById('keyModelPickerProvider');
     if (providerSelect) {
-      setHTML(providerSelect, '<option value="all">全部供应商</option>' +
+      setHTML(providerSelect, '<option value="all">' + t('全部供应商') + '</option>' +
         [...providers].sort().map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join(''));
       providerSelect.value = providers.has(ctx.providerFilter) ? ctx.providerFilter : 'all';
       ctx.providerFilter = providerSelect.value;
@@ -1837,7 +1837,7 @@ class ConsoleApp {
     const tagSelect = document.getElementById('keyModelPickerProviderTag');
     if (tagSelect) {
       const tags = ctx.providerTags || [];
-      setHTML(tagSelect, '<option value="all">全部标签</option>' +
+      setHTML(tagSelect, '<option value="all">' + t('全部标签') + '</option>' +
         tags.map(t => `<option value="tag:${t.id}">${escapeHtml(t.name)}</option>`).join(''));
       const values = ['all', ...tags.map(t => `tag:${t.id}`)];
       tagSelect.value = values.includes(ctx.providerTagFilter) ? ctx.providerTagFilter : 'all';
@@ -1863,7 +1863,7 @@ class ConsoleApp {
     const select = document.getElementById('keyModelPickerSeries');
     if (!select) return;
     const prev = ctx?.seriesFilter || 'all';
-    setHTML(select, '<option value="all">全部系列</option>' +
+    setHTML(select, '<option value="all">' + t('全部系列') + '</option>' +
       [...series].sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join(''));
     select.value = prev === 'all' || series.has(prev) ? prev : 'all';
     if (ctx) ctx.seriesFilter = select.value;
@@ -1943,7 +1943,7 @@ class ConsoleApp {
     const container = document.getElementById('keyModelPickerContent');
     const countEl = document.getElementById('keyModelPickerCount');
     if (container) {
-      setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">搜索中...</p></div>');
+      setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('搜索中...') + '</p></div>');
     }
     try {
       const params = new URLSearchParams();
@@ -1972,7 +1972,7 @@ class ConsoleApp {
       }
       if (!models.length) {
         if (container) {
-          setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">没有符合条件的模型</p></div>');
+          setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('没有符合条件的模型') + '</p></div>');
         }
         return;
       }
@@ -1998,7 +1998,7 @@ class ConsoleApp {
         <div class="model-library-team model-search-team">
           <div class="model-library-team-header" style="cursor:default;">
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="team-badge">个人</span>' : ''}
+            ${team.is_personal ? '<span class="team-badge">' + t('个人') + '</span>' : ''}
           </div>
           <div class="model-library-list model-search-list">
             ${team.models.map(model => this._renderModelLibraryItem(model, team, ctx.currentModel, model.provider_enabled === false, {
@@ -2015,7 +2015,7 @@ class ConsoleApp {
       if (seq !== ctx.globalSearchSeq) return;
       console.warn('[API Key 模型选择] 全局搜索失败:', e);
       if (container) {
-        setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--destructive);margin:0;">搜索失败，请重试</p></div>');
+        setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--destructive);margin:0;">' + t('搜索失败，请重试') + '</p></div>');
       }
     }
   }
@@ -2056,13 +2056,13 @@ class ConsoleApp {
     const container = document.getElementById('keyModelPickerContent');
     if (!container) return;
     if (!libraryData.teams || libraryData.teams.length === 0) {
-      setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p></div>');
+      setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="font-size:15px;color:var(--muted-foreground);margin:0;">' + t('暂无可用模型') + '</p></div>');
       return;
     }
 
     const hasProviders = libraryData.teams.some(team => team.providers && team.providers.length > 0);
     if (!hasProviders) {
-      setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="font-size:15px;color:var(--muted-foreground);margin:0;">请尝试调整筛选条件</p></div>');
+      setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="font-size:15px;color:var(--muted-foreground);margin:0;">' + t('请尝试调整筛选条件') + '</p></div>');
       return;
     }
 
@@ -2073,8 +2073,8 @@ class ConsoleApp {
           <div class="model-library-team-header" onclick="app.toggleKeyModelPickerTeam(${teamIndex})">
             <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="team-badge">个人</span>' : ''}
-            ${team.is_default ? '<span class="team-badge default">默认</span>' : ''}
+            ${team.is_personal ? '<span class="team-badge">' + t('个人') + '</span>' : ''}
+            ${team.is_default ? '<span class="team-badge default">' + t('默认') + '</span>' : ''}
           </div>
           <div class="model-library-team-content">
             ${team.providers.map((provider, providerIndex) => this._renderKeyPickerProvider(team, provider, teamIndex, providerIndex)).join('')}
@@ -2104,7 +2104,7 @@ class ConsoleApp {
             ${(provider.tags || []).map(t =>
               `<span class="model-item-badge" style="background:${t.color}18;color:${t.color};border:1px solid ${t.color}44;">${escapeHtml(t.name)}</span>`
             ).join('')}
-            ${isProviderDisabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">已禁用</span>' : ''}
+            ${isProviderDisabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('已禁用') + '</span>' : ''}
           </div>
           <div class="model-library-provider-actions">
             <span class="provider-model-count">${totalCount} 个模型</span>
@@ -2424,7 +2424,7 @@ class ConsoleApp {
     if (!listEl || !ctx) return;
     const queue = ctx.queue || [];
     if (!queue.length) {
-      setHTML(listEl, '<div class="key-model-queue-empty">点击下方模型加入队列；拖拽调整顺序，第一项为首选</div>');
+      setHTML(listEl, '<div class="key-model-queue-empty">' + t('点击下方模型加入队列；拖拽调整顺序，第一项为首选') + '</div>');
       return;
     }
     // 渲染前尽量把「只显示了 id」的项解析成可读名称
@@ -2441,7 +2441,7 @@ class ConsoleApp {
       <div class="key-model-queue-item" draggable="true" data-model-id="${escapeHtml(item.id)}">
         <span class="key-model-queue-handle" title=t('拖拽排序') aria-hidden="true">⠿</span>
         <span class="key-model-queue-order">${index + 1}</span>
-        <span class="key-model-queue-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}${index === 0 ? ' <em class="key-model-queue-primary">首选</em>' : ''}</span>
+        <span class="key-model-queue-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}${index === 0 ? ' <em class="key-model-queue-primary">' + t('首选') + '</em>' : ''}</span>
         <div class="key-model-queue-actions">
           <button type="button" class="btn btn-ghost btn-sm" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title=t('移除')>×</button>
         </div>
@@ -2678,7 +2678,7 @@ class ConsoleApp {
         fetch(`/api/user/api-keys/${keyId}/fusion-config`),
         fetch('/api/user/api-keys/' + keyId + '/models')
       ]);
-      if (!configRes.ok) { setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:20px;">加载失败</p>'); return; }
+      if (!configRes.ok) { setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:20px;">' + t('加载失败') + '</p>'); return; }
       const config = await configRes.json();
       const modelsPayload = modelsRes.ok ? await modelsRes.json() : [];
       const models = this._normalizeKeyModelsPayload(modelsPayload);
@@ -2808,7 +2808,7 @@ class ConsoleApp {
       };
     } catch (error) {
       console.error('加载 Fusion 配置失败:', error);
-      setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:20px;">加载失败</p>');
+      setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:20px;">' + t('加载失败') + '</p>');
     }
   }
 
@@ -3149,10 +3149,10 @@ class ConsoleApp {
 
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/usage`);
-      if (!res.ok) { setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:20px;">加载失败</p>'); return; }
+      if (!res.ok) { setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:20px;">' + t('加载失败') + '</p>'); return; }
       const usage = await res.json();
       if (!Array.isArray(usage) || usage.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">暂无使用记录</p>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('暂无使用记录') + '</p>');
         return;
       }
 
@@ -3185,7 +3185,7 @@ class ConsoleApp {
         </table>
       `);
     } catch (error) {
-      setHTML(container, '<p style="color:var(--destructive);">加载失败</p>');
+      setHTML(container, '<p style="color:var(--destructive);">' + t('加载失败') + '</p>');
     }
   }
 
@@ -3222,7 +3222,7 @@ class ConsoleApp {
     const summaryEl = document.getElementById('projectWorkSummary');
     const recentEl = document.getElementById('projectWorkRecent');
     const projectsEl = document.getElementById('projectWorkProjects');
-    [summaryEl, recentEl, projectsEl].forEach((el) => { if (el) setHTML(el, '<div class="project-work-loading">正在读取项目活动...</div>'); });
+    [summaryEl, recentEl, projectsEl].forEach((el) => { if (el) setHTML(el, '<div class="project-work-loading">' + t('正在读取项目活动...') + '</div>'); });
     try {
       const params = new URLSearchParams();
       if (range === 'custom') {
@@ -3247,7 +3247,7 @@ class ConsoleApp {
       const status = summary.analysis_status || {};
       if (statusEl) statusEl.textContent = status.pending_requests ? `后台还有 ${fmt(status.pending_requests)} 条记录待整理` : `已同步 · 最近更新 ${date(status.last_scanned_at)}`;
         if (!projects.length) {
-        const empty = '<div class="project-work-empty"><strong>还没有项目活动</strong><span>当你的 Harness 请求包含工作区信息后，这里会自动形成项目工作记录。</span></div>';
+        const empty = '<div class="project-work-empty"><strong>' + t('还没有项目活动') + '</strong><span>' + t('当你的 Harness 请求包含工作区信息后，这里会自动形成项目工作记录。') + '</span></div>';
         [summaryEl, recentEl, projectsEl].forEach((el) => { if (el) setHTML(el, empty); });
         return;
       }
@@ -3305,7 +3305,7 @@ class ConsoleApp {
       const s = data.summary || {};
       if (!data || data.error) throw new Error(data.error || t('消息统计返回数据为空'));
       if (!(data.by_workspace || []).length && !(data.daily || []).length) {
-        const empty = '<div class="empty-state" style="padding:28px;text-align:center;color:var(--muted-foreground);">所选时间范围内暂无可分析的项目消息记录</div>';
+        const empty = '<div class="empty-state" style="padding:28px;text-align:center;color:var(--muted-foreground);">' + t('所选时间范围内暂无可分析的项目消息记录') + '</div>';
         [summaryEl, blockEl, sourceEl].forEach((el) => { if (el) setHTML(el, empty); });
         return;
       }
@@ -3372,15 +3372,15 @@ class ConsoleApp {
       const teamSelect = document.getElementById('statsTeamFilter');
 
       if (modelSelect && data.models) {
-        setHTML(modelSelect, '<option value="">全部模型</option>' +
+        setHTML(modelSelect, '<option value="">' + t('全部模型') + '</option>' +
           data.models.map(m => `<option value="${escapeHtml(m.model_id)}">${escapeHtml(m.name)}</option>`).join(''));
       }
       if (providerSelect && data.providers) {
-        setHTML(providerSelect, '<option value="">全部供应商</option>' +
+        setHTML(providerSelect, '<option value="">' + t('全部供应商') + '</option>' +
           data.providers.map(p => `<option value="${escapeHtml(p.provider_id)}">${escapeHtml(p.name)}</option>`).join(''));
       }
       if (teamSelect && data.teams) {
-        setHTML(teamSelect, '<option value="">全部 Team</option>' +
+        setHTML(teamSelect, '<option value="">' + t('全部 Team') + '</option>' +
           data.teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join(''));
       }
 
@@ -3428,7 +3428,7 @@ class ConsoleApp {
       console.error('加载排行榜失败:', error);
       const container = document.getElementById('leaderboardContent');
       if (container) {
-        setHTML(container, '<div class="empty-state"><p style="color:var(--destructive);">加载失败，请稍后重试</p></div>');
+        setHTML(container, '<div class="empty-state"><p style="color:var(--destructive);">' + t('加载失败，请稍后重试') + '</p></div>');
       }
     }
   }
@@ -3438,7 +3438,7 @@ class ConsoleApp {
     if (!container) return;
 
     if (!data.leaderboard || data.leaderboard.length === 0) {
-      setHTML(container, '<div class="empty-state"><p>暂无排行数据</p></div>');
+      setHTML(container, '<div class="empty-state"><p>' + t('暂无排行数据') + '</p></div>');
       return;
     }
 
@@ -3471,7 +3471,7 @@ class ConsoleApp {
           <div class="leaderboard-user-cell">
             ${avatarHtml}
             <span class="leaderboard-username">${escapeHtml(u.username)}</span>
-            ${isCurrent ? '<span class="badge badge-info" style="margin-left:6px;font-size:11px;">我</span>' : ''}
+            ${isCurrent ? '<span class="badge badge-info" style="margin-left:6px;font-size:11px;">' + t('我') + '</span>' : ''}
           </div>
         </td>
         <td class="leaderboard-stat-cell">${u.totalRequests.toLocaleString()}</td>
@@ -4093,7 +4093,7 @@ class ConsoleApp {
     if (!element) return;
 
     if (previous === 0) {
-      setHTML(element, current > 0 ? '<span class="trend-up">新增</span>' : '');
+      setHTML(element, current > 0 ? '<span class="trend-up">' + t('新增') + '</span>' : '');
       return;
     }
 
@@ -4102,7 +4102,7 @@ class ConsoleApp {
     const isNeutral = current === previous;
 
     if (isNeutral) {
-      setHTML(element, '<span class="trend-neutral">持平</span>');
+      setHTML(element, '<span class="trend-neutral">' + t('持平') + '</span>');
     } else {
       const arrow = isUp ? '↑' : '↓';
       const colorClass = isUp ? 'trend-up' : 'trend-down';
@@ -4172,7 +4172,7 @@ class ConsoleApp {
           </div>`;
         }).join(''));
       } else {
-        setHTML(topClientsContainer, '<div class="stats-insight-empty">暂无数据</div>');
+        setHTML(topClientsContainer, '<div class="stats-insight-empty">' + t('暂无数据') + '</div>');
       }
     }
 
@@ -4558,7 +4558,7 @@ class ConsoleApp {
     const tbody = document.getElementById('statsSourceTableBody');
     if (!tbody) return;
     if (!d || !d.bySource || d.bySource.length === 0) {
-      setHTML(tbody, '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted-foreground);">暂无客户端数据</td></tr>');
+      setHTML(tbody, '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted-foreground);">' + t('暂无客户端数据') + '</td></tr>');
       return;
     }
     setHTML(tbody, d.bySource.map((s) => {
@@ -4598,7 +4598,7 @@ class ConsoleApp {
     if (!tbody) return;
     const rows = d?.bySourceModel || [];
     if (rows.length === 0) {
-      setHTML(tbody, '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted-foreground);">暂无交叉数据</td></tr>');
+      setHTML(tbody, '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted-foreground);">' + t('暂无交叉数据') + '</td></tr>');
       return;
     }
     setHTML(tbody, rows.map((r) => {
@@ -4813,7 +4813,7 @@ class ConsoleApp {
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
 
       if (!data.logs || data.logs.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">暂无调用记录</p>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无调用记录') + '</p>');
         return;
       }
 
@@ -5060,7 +5060,7 @@ class ConsoleApp {
               </div>`;
           }).join(''));
         } else {
-          setHTML(rulesContainer, '<div class="rule-item"><span class="rule-label" style="color:var(--muted-foreground)">暂无限额规则</span></div>');
+          setHTML(rulesContainer, '<div class="rule-item"><span class="rule-label" style="color:var(--muted-foreground)">' + t('暂无限额规则') + '</span></div>');
         }
         groupSection.style.display = 'block';
       } else {
@@ -5121,7 +5121,7 @@ class ConsoleApp {
       if (quota) quota.checked = data.notifyQuota !== false;
       const errors = document.getElementById('notifyErrors');
       if (errors) errors.checked = data.notifyErrors !== false;
-    } catch (error) { console.error('加载通知设置失败:', error); }
+    } catch (error) { console.error(t('加载通知设置失败:'), error); }
   }
 
   async saveNotificationSettings() {
@@ -5166,9 +5166,9 @@ class ConsoleApp {
       const res = await fetch('/api/user/notifications?limit=50');
       if (!res.ok) throw new Error(t('加载失败'));
       const items = await res.json();
-      if (!items.length) { list.innerHTML = '<div style="color:var(--muted-foreground);font-size:13px;padding:12px 0;">暂无通知</div>'; return; }
+      if (!items.length) { list.innerHTML = '<div style="color:var(--muted-foreground);font-size:13px;padding:12px 0;">' + t('暂无通知') + '</div>'; return; }
       list.innerHTML = items.map(item => `<div style="padding:14px 0;border-bottom:1px solid var(--border);${item.read_at ? '' : 'background:color-mix(in srgb, var(--primary) 5%, transparent);'}"><div style="display:flex;gap:8px;align-items:center;"><strong>${escapeHtml(item.title)}</strong><span style="font-size:12px;color:var(--muted-foreground);">${this.formatRelativeTime(item.created_at)}</span><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px;" onclick="app.deleteNotification(${item.id})">删除</button></div><div style="margin-top:6px;font-size:13px;color:var(--muted-foreground);white-space:pre-wrap;">${escapeHtml(item.body)}</div>${item.read_at ? '' : `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:12px;" onclick="app.markNotificationRead(${item.id})">标记已读</button>`}</div>`).join('');
-    } catch (error) { list.innerHTML = '<div style="color:var(--destructive);font-size:13px;">通知加载失败</div>'; }
+    } catch (error) { list.innerHTML = '<div style="color:var(--destructive);font-size:13px;">' + t('通知加载失败') + '</div>'; }
   }
 
   async markNotificationRead(id) { await fetch(`/api/user/notifications/${id}/read`, { method: 'PUT' }); await this.loadNotifications(); }
@@ -5437,7 +5437,7 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('加载失败'));
       const { items, total, limit } = data;
       if (!items.length) {
-        setHTML(listEl, '<p class="api-key-sub-muted" style="text-align:center;padding:24px;">暂无操作日志</p>');
+        setHTML(listEl, '<p class="api-key-sub-muted" style="text-align:center;padding:24px;">' + t('暂无操作日志') + '</p>');
         setHTML(paginationEl, '');
         return;
       }
@@ -6441,7 +6441,7 @@ ${extractorBody}
       if (!container) return;
 
       if (passkeys.length === 0) {
-        setHTML(container, '<li style="color:var(--muted-foreground);text-align:center;padding:20px;font-size:14px;">暂无绑定的通行密钥</li>');
+        setHTML(container, '<li style="color:var(--muted-foreground);text-align:center;padding:20px;font-size:14px;">' + t('暂无绑定的通行密钥') + '</li>');
         return;
       }
 
@@ -6602,7 +6602,7 @@ ${extractorBody}
       this._startQuotaBackgroundRefresh();
     } catch (error) {
       console.error('加载模型库失败:', error);
-      setHTML(document.getElementById('modelLibraryContent'), '<div class="empty-state"><p>加载失败，请刷新重试</p></div>');
+      setHTML(document.getElementById('modelLibraryContent'), '<div class="empty-state"><p>' + t('加载失败，请刷新重试') + '</p></div>');
       this._updateLibraryBindingBar();
       this._syncLibraryStickyVisibility(false);
     }
@@ -6649,7 +6649,7 @@ ${extractorBody}
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
             </svg>
             <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无供应商</p>
-            <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">点击上方t('添加供应商')按钮开始</p>
+            <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">点击上方t(t('添加供应商'))按钮开始</p>
           </div>
         `);
         return;
@@ -6884,7 +6884,7 @@ ${extractorBody}
       if (pageDisplay) setHTML(pageDisplay, resultHtml);
       libDisplays.forEach(el => setHTML(el, resultHtml));
     } catch (e) {
-      const errHtml = '<span style="color:var(--destructive);">错误</span>';
+      const errHtml = '<span style="color:var(--destructive);">' + t('错误') + '</span>';
       if (display) setHTML(display, errHtml);
       if (pageDisplay) setHTML(pageDisplay, errHtml);
       libDisplays.forEach(el => setHTML(el, errHtml));
@@ -6993,7 +6993,7 @@ ${extractorBody}
       setHTML(container, `
         <div style="text-align:center;padding:40px;color:var(--muted-foreground);">
           <p>暂无模型</p>
-          <p style="font-size:13px;">点击t('刷新列表')从供应商获取模型</p>
+          <p style="font-size:13px;">点击t(t('刷新列表'))从供应商获取模型</p>
         </div>
       `);
       return;
@@ -7006,7 +7006,7 @@ ${extractorBody}
           <span style="font-weight:500;">${escapeHtml(model.name || model.id)}</span>
           ${model.name && model.name !== model.id ? `<span style="font-size:12px;color:var(--muted-foreground);margin-left:8px;">${escapeHtml(model.id)}</span>` : ''}
           ${model.series ? `<span style="font-size:11px;background:var(--muted);padding:2px 6px;border-radius:4px;margin-left:8px;">${escapeHtml(model.series)}</span>` : ''}
-          ${model.enabled === false ? '<span style="font-size:11px;color:var(--destructive);margin-left:8px;">已禁用</span>' : ''}
+          ${model.enabled === false ? '<span style="font-size:11px;color:var(--destructive);margin-left:8px;">' + t('已禁用') + '</span>' : ''}
         </label>
       </div>
     `).join(''));
@@ -7220,7 +7220,7 @@ ${extractorBody}
       this._renderMyTeamModels(this._myTeamModelsFiltered);
     } catch (error) {
       console.error('加载个人Team模型失败:', error);
-      setHTML(document.getElementById('myTeamModelsTable'), '<div class="empty-state"><p>加载失败，请刷新重试</p></div>');
+      setHTML(document.getElementById('myTeamModelsTable'), '<div class="empty-state"><p>' + t('加载失败，请刷新重试') + '</p></div>');
     }
   }
 
@@ -7273,8 +7273,8 @@ ${extractorBody}
               <td>${m.series ? `<span style="font-size:11px;background:var(--muted);padding:2px 6px;border-radius:4px;">${escapeHtml(m.series)}</span>` : '<span style="color:var(--muted-foreground);font-size:12px;">-</span>'}</td>
               <td style="font-size:13px;">×${parseFloat(m.model_multiplier || 1.0).toFixed(2)}</td>
               <td>${m.enabled !== false
-                ? '<span style="font-size:11px;color:var(--success,var(--brand-green,#22c55e));">● 启用</span>'
-                : '<span style="font-size:11px;color:var(--destructive);">● 禁用</span>'
+                ? '<span style="font-size:11px;color:var(--success,var(--brand-green,#22c55e));">' + t('● 启用') + '</span>'
+                : '<span style="font-size:11px;color:var(--destructive);">' + t('● 禁用') + '</span>'
               }</td>
               <td>
                 <div style="display:flex;gap:4px;">
@@ -7537,7 +7537,7 @@ ${extractorBody}
     });
 
     // 填充供应商筛选器（主栏 + 悬浮栏）
-    const optionsHtml = '<option value="all">全部供应商</option>' +
+    const optionsHtml = '<option value="all">' + t('全部供应商') + '</option>' +
       [...providers].sort().map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
     const keepValue = [...providers].includes(this.libraryProviderFilter) || this.libraryProviderFilter === 'all'
       ? this.libraryProviderFilter
@@ -7557,7 +7557,7 @@ ${extractorBody}
   _populateProviderTagFilter() {
     const tags = this._providerTags || [];
     const prev = this.libraryProviderTagFilter;
-    const optionsHtml = '<option value="all">全部标签</option>' +
+    const optionsHtml = '<option value="all">' + t('全部标签') + '</option>' +
       tags.map(t => `<option value="tag:${t.id}">${escapeHtml(t.name)}</option>`).join('');
     const values = ['all', ...tags.map(t => `tag:${t.id}`)];
     const keepValue = values.includes(prev) ? prev : 'all';
@@ -7574,7 +7574,7 @@ ${extractorBody}
   _renderSeriesFilter(seriesSelect, seriesSet) {
     if (!seriesSelect) return;
     const prev = this.librarySeriesFilter;
-    setHTML(seriesSelect, '<option value="all">全部系列</option>' +
+    setHTML(seriesSelect, '<option value="all">' + t('全部系列') + '</option>' +
       [...seriesSet].sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join(''));
     if ([...seriesSet].includes(prev) || prev === 'all') {
       seriesSelect.value = prev;
@@ -7638,7 +7638,7 @@ ${extractorBody}
     const container = document.getElementById('modelLibraryContent');
     const countEl = document.getElementById('modelLibraryCount');
     if (container && page === 1) {
-      setHTML(container, '<div class="empty-state" style="padding:40px 20px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">搜索中...</p></div>');
+      setHTML(container, '<div class="empty-state" style="padding:40px 20px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('搜索中...') + '</p></div>');
     }
     try {
       const res = await fetch(`/api/user/model-library/search?${this._buildLibraryGlobalSearchParams(page).toString()}`);
@@ -7658,7 +7658,7 @@ ${extractorBody}
       if (seq !== this._libraryGlobalSearchSeq) return;
       console.warn('[模型库] 全局搜索失败:', e);
       if (container) {
-        setHTML(container, '<div class="empty-state" style="padding:40px 20px;text-align:center;"><p style="color:var(--destructive);margin:0;">搜索失败，请重试</p></div>');
+        setHTML(container, '<div class="empty-state" style="padding:40px 20px;text-align:center;"><p style="color:var(--destructive);margin:0;">' + t('搜索失败，请重试') + '</p></div>');
       }
     }
   }
@@ -7708,8 +7708,8 @@ ${extractorBody}
         <div class="model-library-team model-search-team">
           <div class="model-library-team-header" style="cursor:default;">
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="team-badge">个人</span>' : ''}
-            ${team.is_default ? '<span class="team-badge default">默认</span>' : ''}
+            ${team.is_personal ? '<span class="team-badge">' + t('个人') + '</span>' : ''}
+            ${team.is_default ? '<span class="team-badge default">' + t('默认') + '</span>' : ''}
             <div style="flex:1;"></div>
             <span class="provider-model-count">${team.models.length} 个结果</span>
           </div>
@@ -8680,7 +8680,7 @@ ${extractorBody}
   async loadProviderQuota() {
     const grid = document.getElementById('providerQuotaGrid');
     if (grid && !(this._providerQuotaLoadedOnce)) {
-      setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>正在加载供应商额度缓存...</span></div>');
+      setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>' + t('正在加载供应商额度缓存...') + '</span></div>');
     }
     const section = document.getElementById('providerQuotaSection');
     if (section && !(this._providerQuotaLoadedOnce)) section.style.display = 'block';
@@ -8703,7 +8703,7 @@ ${extractorBody}
     }
     const grid = document.getElementById('providerQuotaGrid');
     if (grid) {
-      setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>正在刷新供应商额度，请稍候...</span></div>');
+      setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>' + t('正在刷新供应商额度，请稍候...') + '</span></div>');
     }
     const section = document.getElementById('providerQuotaSection');
     if (section) section.style.display = 'block';
@@ -8760,7 +8760,7 @@ ${extractorBody}
         this._providerQuotaLoadedOnce = true;
         this.renderProviderQuota(data.providers || []);
       })
-      .catch((e) => { console.warn('后台刷新供应商额度失败:', e); })
+      .catch((e) => { console.warn(t('后台刷新供应商额度失败:'), e); })
       .finally(() => {
         this._clearQuotaRefreshNotice();
         if (refreshBtn) { refreshBtn.classList.remove('is-loading'); refreshBtn.disabled = false; }
@@ -8902,7 +8902,7 @@ ${extractorBody}
           <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
           <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">请联系管理员添加模型或加入 Team，也可添加自己的供应商</p>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button class="btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">创建 API Key</button>' : ''}
+            ${noKeys ? '<button class="btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
             <button class="btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
             <button class="btn btn-secondary btn-sm" onclick="app.navigateTo(\'myUpstream\')">管理我的上游</button>
           </div>
@@ -8924,7 +8924,7 @@ ${extractorBody}
           <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
           <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">可调整筛选，或添加自己的上游供应商导入模型</p>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button class="btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">创建 API Key</button>' : ''}
+            ${noKeys ? '<button class="btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
             <button class="btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
           </div>
         </div>
@@ -8944,8 +8944,8 @@ ${extractorBody}
           <div class="model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
             <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="team-badge">个人</span>' : ''}
-            ${team.is_default ? '<span class="team-badge default">默认</span>' : ''}
+            ${team.is_personal ? '<span class="team-badge">' + t('个人') + '</span>' : ''}
+            ${team.is_default ? '<span class="team-badge default">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
             <div style="flex:1;"></div>
             <button class="btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${team.team_id}')" title=t('测试此 Team 下所有模型')>
@@ -8985,8 +8985,8 @@ ${extractorBody}
                     `<span class="model-item-badge" style="background:${t.color}18;color:${t.color};border:1px solid ${t.color}44;">${escapeHtml(t.name)}</span>`
                   ).join('')}
                   ${this._renderLibraryMoveControls('provider', team.team_id, provider.provider_id)}
-                  ${isProviderDisabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">已禁用</span>' : ''}
-                  ${isProviderHidden ? '<span class="library-hidden-badge">已隐藏</span>' : ''}
+                  ${isProviderDisabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('已禁用') + '</span>' : ''}
+                  ${isProviderHidden ? '<span class="library-hidden-badge">' + t('已隐藏') + '</span>' : ''}
                 </div>
                 <div class="model-library-provider-actions">
                   <span class="lib-ping" data-provider-id="${provider.provider_id}" style="font-size:12px;color:var(--muted-foreground);"></span>
@@ -9103,9 +9103,9 @@ ${extractorBody}
           <div class="model-item-badges">
             ${subtitleHtml}
             ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
-            ${isOwner ? '<span class="model-item-badge owner">我的</span>' : ''}
-            ${isStarred ? '<span class="library-star-badge">星标</span>' : ''}
-            ${isModelHidden ? '<span class="library-hidden-badge">已隐藏</span>' : ''}
+            ${isOwner ? '<span class="model-item-badge owner">' + t('我的') + '</span>' : ''}
+            ${isStarred ? '<span class="library-star-badge">' + t('星标') + '</span>' : ''}
+            ${isModelHidden ? '<span class="library-hidden-badge">' + t('已隐藏') + '</span>' : ''}
           </div>
         </div>
         ${model.description ? `<div class="model-library-item-desc">${escapeHtml(model.description)}</div>` : ''}
@@ -9120,11 +9120,11 @@ ${extractorBody}
       <div class="model-library-item-actions">
         ${isKeyPicker ? '' : this._renderLibraryMoveControls('model', team.team_id, providerId)}
         ${isProviderDisabled
-          ? '<button class="btn btn-sm btn-secondary" disabled style="opacity:0.5;">供应商已禁用</button>'
+          ? '<button class="btn btn-sm btn-secondary" disabled style="opacity:0.5;">' + t('供应商已禁用') + '</button>'
           : isKeyPicker
             ? (queueIndex >= 0
               ? `<button class="btn btn-sm btn-secondary" title=t('再次点击可移出队列')>队列 #${queueIndex + 1}</button>`
-              : '<button class="btn btn-sm btn-primary">加入队列</button>')
+              : '<button class="btn btn-sm btn-primary">' + t('加入队列') + '</button>')
           : `
              <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title=t('测试模型连通性')>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -9133,8 +9133,8 @@ ${extractorBody}
             ${isOwner
               ? ''
               : isCurrent
-                ? '<button class="btn btn-sm btn-secondary" disabled>已绑定</button>'
-                : '<button class="btn btn-sm btn-primary">绑定</button>'}
+                ? '<button class="btn btn-sm btn-secondary" disabled>' + t('已绑定') + '</button>'
+                : '<button class="btn btn-sm btn-primary">' + t('绑定') + '</button>'}
           `}
         ${isKeyPicker ? '' : this._renderLibraryMoreMenu(modelMoreItems)}
       </div>
@@ -10971,8 +10971,8 @@ ${extractorBody}
         const extra = m.alias && m.alias !== m.upstream_model_id ? ` (${m.upstream_model_id})` : '';
         return `<option value="${escapeHtml(m.id)}">${escapeHtml(label)}${escapeHtml(extra)}</option>`;
       }).join('');
-      setHTML(document.getElementById('modelFormThinkingModel'), '<option value="">不设置（使用自身）</option>' + options);
-      setHTML(document.getElementById('modelFormNonThinkingModel'), '<option value="">不设置（使用自身）</option>' + options);
+      setHTML(document.getElementById('modelFormThinkingModel'), '<option value="">' + t('不设置（使用自身）') + '</option>' + options);
+      setHTML(document.getElementById('modelFormNonThinkingModel'), '<option value="">' + t('不设置（使用自身）') + '</option>' + options);
     } catch (error) {
       console.error('加载模型选项失败:', error);
     }
@@ -11005,7 +11005,7 @@ ${extractorBody}
       this._providersIndex = await res.json();
       this.renderProviderList(this._providersIndex);
     } catch (error) {
-      setHTML(container, '<div style="text-align:center;padding:20px;color:var(--destructive);">加载失败，请重试</div>');
+      setHTML(container, '<div style="text-align:center;padding:20px;color:var(--destructive);">' + t('加载失败，请重试') + '</div>');
     }
   }
 
@@ -11154,7 +11154,7 @@ ${extractorBody}
     // 加载供应商列表
     const providers = await this.loadProviders();
     const select = document.getElementById('modelFormProvider');
-    setHTML(select, '<option value="">请选择供应商</option>' +
+    setHTML(select, '<option value="">' + t('请选择供应商') + '</option>' +
       providers.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join(''));
 
     // 加载模型选项（用于思考模式路由）
@@ -11172,7 +11172,7 @@ ${extractorBody}
     // 加载供应商列表
     const providers = await this.loadProviders();
     const select = document.getElementById('modelFormProvider');
-    setHTML(select, '<option value="">请选择供应商</option>' +
+    setHTML(select, '<option value="">' + t('请选择供应商') + '</option>' +
       providers.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join(''));
 
     // 加载模型选项（用于思考模式路由）

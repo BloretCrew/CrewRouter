@@ -80,7 +80,7 @@ async function getCatalog(locale) {
         `${apiBase(cfg)}/api/v1/orgs/${encodeURIComponent(cfg.orgSlug)}` +
         `/projects/${encodeURIComponent(cfg.projectSlug)}` +
         `/files/${encodeURIComponent(cfg.fileId)}/translated` +
-        `?locale=${encodeURIComponent(locale)}&mode=top_voted`;
+        `?locale=${encodeURIComponent(locale)}&mode=top_voted&fallbackMt=1`;
       inflight.set(
         key,
         fetchJson(url, FETCH_TIMEOUT_MS).finally(() => inflight.delete(key))
