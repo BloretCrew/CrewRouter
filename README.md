@@ -54,7 +54,7 @@ CrewRouter 把多家上游模型供应商收成 **一个 OpenAI / Anthropic 兼�
 
 只需更换 `base_url`，无需改业务代码：
 
-Claude Code · Claude Desktop · Codex · OpenCode · OpenClaw · Hermes Agent · Kilo Code · Cline · Cherry Studio · Qwen Code · Cursor · 以及一切走 OpenAI / Anthropic 协议的工具
+Claude Code · Claude Desktop · Codex · OpenCode · OpenClaw · Hermes Agent · Grok Build · DeepSeek Harness · Kilo Code · Cline · Cherry Studio · Qwen Code · Cursor · 以及一切走 OpenAI / Anthropic 协议的工具
 
 ```bash
 # 只需更换 base_url

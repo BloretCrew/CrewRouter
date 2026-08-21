@@ -5645,9 +5645,28 @@ llm-deepseek:
 # export DEEPSEEK_API_KEY="${apiKey}"
 # export DEEPSEEK_BASE_URL="${baseUrl.replace(/\/$/, '')}/v1"
 `;
+      } else if (tool === 'qwen_code') {
+        title = 'Qwen Code 配置';
+        desc = '将以下 JSON 写入 <code>~/.qwen/settings.json</code>（或对应 OpenAI 兼容配置），然后重启 Qwen Code';
+        content = JSON.stringify({
+          general: { model: 'claude-fable-5' },
+          providers: { crewrouter: { baseUrl: baseUrl.replace(/\/$/, '') + '/v1', apiKey, model: 'claude-fable-5' } }
+        }, null, 2);
+      } else if (tool === 'hermes') {
+        title = 'Hermes 配置';
+        desc = '设置环境变量 <code>OPENAI_BASE_URL / OPENAI_API_KEY</code>，或写入 <code>~/.hermes/config.json</code> 的 OpenAI 兼容段';
+        content = `# Hermes (OpenAI 兼容) → CrewRouter\nOPENAI_BASE_URL=${baseUrl.replace(/\/$/, '')}/v1\nOPENAI_API_KEY=${apiKey}\n# model: claude-fable-5\n# 也可写入 ~/.hermes/config.json:\n# { \"providers\": { \"crewrouter\": { \"baseUrl\": \"${baseUrl.replace(/\/$/, '')}/v1\", \"apiKey\": \"${apiKey}\" } } }`;
+      } else if (tool === 'openclaw') {
+        title = 'OpenClaw 配置';
+        desc = '将以下 JSON 合并到 <code>~/.openclaw/openclaw.json</code> 的 providers 段';
+        content = JSON.stringify({ providers: { crewrouter: { baseUrl: baseUrl.replace(/\/$/, '') + '/v1', apiKey, model: 'claude-fable-5' } } }, null, 2);
       }
 
       document.getElementById('configOutputTitle').textContent = title;
+      if (!title || !content) {
+        alert('未知工具类型: ' + tool);
+        return;
+      }
       setHTML(document.getElementById('configOutputDesc'), desc);
       document.getElementById('configOutputContent').value = content;
       this.showModal('configOutputModal');
@@ -6489,8 +6508,9 @@ ${extractorBody}
       this._initLibraryStickyBar();
       this._syncLibraryStickyControlsFromState();
 
-      // 渲染供应商额度（失败不影响模型库主体）
+      // 渲染供应商额度（失败不影响模型库主体）：先展示缓存，后台刷新最新
       await this.loadProviderQuota();
+      this._startQuotaBackgroundRefresh();
     } catch (error) {
       console.error('加载模型库失败:', error);
       setHTML(document.getElementById('modelLibraryContent'), '<div class="empty-state"><p>加载失败，请刷新重试</p></div>');
@@ -8614,6 +8634,52 @@ ${extractorBody}
     }
   }
 
+  _setQuotaRefreshNotice(text) {
+    const grid = document.getElementById('providerQuotaGrid');
+    if (!grid || !text) return null;
+    const prev = document.getElementById('providerQuotaRefreshNotice');
+    if (prev) prev.remove();
+    const el = document.createElement('div');
+    el.id = 'providerQuotaRefreshNotice';
+    el.className = 'model-quota-loading';
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="loading-spinner sm"></span><span></span>';
+    el.lastElementChild.textContent = text;
+    grid.prepend(el);
+    return el;
+  }
+
+  _clearQuotaRefreshNotice() {
+    document.getElementById('providerQuotaRefreshNotice')?.remove();
+  }
+
+  _startQuotaBackgroundRefresh() {
+    if (this._quotaRefreshPromise) return this._quotaRefreshPromise;
+    const grid = document.getElementById('providerQuotaGrid');
+    if (!grid) return null;
+    const hasContent = grid.querySelector('.model-quota-card, .model-quota-loading');
+    // 已有缓存卡片时，才需要“后台刷新”提示；首屏尚无内容时由 loadProviderQuota 负责骨架
+    if (!hasContent || grid.querySelector('.model-quota-card')) {
+      this._setQuotaRefreshNotice('正在后台刷新供应商额度...');
+    }
+    const refreshBtn = document.getElementById('providerQuotaRefreshBtn');
+    if (refreshBtn) { refreshBtn.classList.add('is-loading'); refreshBtn.disabled = true; }
+    this._quotaRefreshPromise = fetch('/api/user/providers/quota/refresh', { method: 'POST' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        const data = await res.json();
+        this._providerQuotaLoadedOnce = true;
+        this.renderProviderQuota(data.providers || []);
+      })
+      .catch((e) => { console.warn('后台刷新供应商额度失败:', e); })
+      .finally(() => {
+        this._clearQuotaRefreshNotice();
+        if (refreshBtn) { refreshBtn.classList.remove('is-loading'); refreshBtn.disabled = false; }
+        this._quotaRefreshPromise = null;
+      });
+    return this._quotaRefreshPromise;
+  }
+
   formatQuotaResetTime(resetAt) {
     if (!resetAt) return '';
     const target = new Date(resetAt);
@@ -9888,7 +9954,14 @@ ${extractorBody}
 
     // 仅一个 Key 时仍展示芯片，以便二次点击打开气泡菜单
     container.style.display = 'block';
-    setHTML(chipsContainer, this._libraryKeys.map(key => {
+
+    // Key 过多时折叠：默认只显示前 5 个，第 6 个位置为「展开全部」按钮；≤7 个则全量展示
+    const KEY_COLLAPSE_THRESHOLD = 7;
+    const KEY_VISIBLE_COUNT = 5;
+    const keys = this._libraryKeys;
+    const collapsed = keys.length > KEY_COLLAPSE_THRESHOLD && !this._libraryKeysExpanded;
+
+    const renderChip = (key) => {
       const isActive = key.id === this._librarySelectedKeyId;
       const name = key.name || 'API Key';
       const modelName = key.current_model_name || '';
@@ -9908,8 +9981,44 @@ ${extractorBody}
           ${harnessCount ? `<span class="key-harness-count" title="${harnessCount} 个工具单独绑定">${harnessCount}</span>` : ''}
         </div>
       `;
-    }).join(''));
+    };
+
+    let html = '';
+    if (collapsed) {
+      // 折叠时：若选中 Key 在隐藏区，自动补显该 Key，保证当前选择始终可见
+      const visibleKeys = keys.slice(0, KEY_VISIBLE_COUNT);
+      const selectedKey = this._getSelectedLibraryKey();
+      const selectedVisible = selectedKey && visibleKeys.some(k => k.id === selectedKey.id);
+      html = visibleKeys.map(renderChip).join('');
+      if (selectedKey && !selectedVisible) {
+        html += `<div class="model-library-key-chip-ellipsis">…</div>${renderChip(selectedKey)}`;
+      }
+      const hiddenCount = keys.length - KEY_VISIBLE_COUNT - (selectedKey && !selectedVisible ? 1 : 0);
+      html += `
+        <button type="button" class="model-library-key-chip model-library-key-expand"
+                onclick="app.toggleLibraryKeysExpand()"
+                title="展开余下的${hiddenCount}个key">
+          <span class="key-name">展开余下的${hiddenCount}个key</span>
+        </button>`;
+    } else {
+      html = keys.map(renderChip).join('');
+      // 展开态：Key 数仍超阈值时，末尾提供「收起」
+      if (keys.length > KEY_COLLAPSE_THRESHOLD) {
+        html += `
+          <button type="button" class="model-library-key-chip model-library-key-expand"
+                  onclick="app.toggleLibraryKeysExpand()"
+                  title="收起">
+            <span class="key-name">收起</span>
+          </button>`;
+      }
+    }
+    setHTML(chipsContainer, html);
     this._renderLibraryStickyKeyBtn();
+  }
+
+  toggleLibraryKeysExpand() {
+    this._libraryKeysExpanded = !this._libraryKeysExpanded;
+    this._renderLibraryKeySelector();
   }
 
   selectLibraryKey(keyId, event, options = {}) {

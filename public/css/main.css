@@ -2026,6 +2026,27 @@
   padding: 0 4px;
 }
 
+/* Key 折叠：省略号 + 展开按钮（与 Key 芯片同款外观） */
+.model-library-key-chips .model-library-key-chip-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  user-select: none;
+}
+
+.model-library-key-chips .model-library-key-expand {
+  border-style: solid;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.model-library-key-chips .model-library-key-expand:hover {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.05);
+  color: inherit;
+}
+
 /* 绑定条：可点击 Key 名 */
 .model-library-binding-summary .binding-key-trigger {
   appearance: none;
