@@ -6548,7 +6548,7 @@ async function(ctx) {
                     const totalTokens = parseInt(usage.tokens || 0);
                     const cacheRate = totalTokens > 0 ? (cachedTokens / totalTokens * 100).toFixed(1) : '0.0';
                     const cacheDisplay = cachedTokens > 0
-                      ? `<span style="color:#10b981;">${cachedTokens.toLocaleString()}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
+                      ? `<span style="color:#10b981;" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
                       : '<span style="color:var(--muted-foreground);">-</span>';
                     return `
                     <tr>
@@ -6594,7 +6594,7 @@ async function(ctx) {
     document.getElementById('statsTotalTokens').textContent = this._formatBigNumber(totalTokens);
     document.getElementById('statsTotalCost').textContent = totalCost.toFixed(2) + ' 积分';
     document.getElementById('statsAvgDailyRequests').textContent = '日均 ' + Math.round(totalRequests / dayCount).toLocaleString();
-    document.getElementById('statsAvgDailyTokens').textContent = '日均 ' + Math.round(totalTokens / dayCount).toLocaleString();
+    document.getElementById('statsAvgDailyTokens').textContent = '日均 ' + this._formatBigNumber(Math.round(totalTokens / dayCount));
     document.getElementById('statsAvgDailyCost').textContent = '日均 ¥' + (totalCost / dayCount).toFixed(2);
     document.getElementById('statsActiveModels').textContent = activeModels;
     document.getElementById('statsTotalProviders').textContent = '供应商 ' + activeProviders;
@@ -6761,11 +6761,11 @@ async function(ctx) {
       const card = (label, value) => `<div class="stats-overview-card" style="background:var(--muted);color:var(--foreground);"><div class="stats-overview-content"><span class="stats-overview-label">${label}</span><span class="stats-overview-value">${value}</span></div></div>`;
       const analysisStatus = s.analysis_status || {};
       const pendingLabel = analysisStatus.pending_requests ? card('后台待分析', analysisStatus.pending_requests.toLocaleString()) : '';
-      setHTML(document.getElementById('messageStatsSummary'), [card('活跃请求', s.analyzed_requests || 0), card('活跃项目', (data.by_workspace || []).length), card('活跃天数', s.active_days || 0), card('日均请求', Number(s.avg_daily_requests || 0).toFixed(1)), card('总 Token', Number(s.total_tokens || 0).toLocaleString()), card('Git 状态率', `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
+      setHTML(document.getElementById('messageStatsSummary'), [card('活跃请求', s.analyzed_requests || 0), card('活跃项目', (data.by_workspace || []).length), card('活跃天数', s.active_days || 0), card('日均请求', Number(s.avg_daily_requests || 0).toFixed(1)), card('总 Token', this._formatBigNumber(Number(s.total_tokens || 0))), card('Git 状态率', `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
       const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--muted-foreground);">暂无数据</td></tr>'}</tbody></table></div>`;
-      setHTML(document.getElementById('messageStatsSourceTable'), table(['Harness', '请求数', '平均消息', '平均字符', 'Token', 'Git率'], (data.by_source || []).map(r => `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td>${Number(r.tokens || 0).toLocaleString()}</td><td>${(r.git_requests / Math.max(r.requests, 1) * 100).toFixed(1)}%</td></tr>`).join('')));
+      setHTML(document.getElementById('messageStatsSourceTable'), table(['Harness', '请求数', '平均消息', '平均字符', 'Token', 'Git率'], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${(r.git_requests / Math.max(r.requests, 1) * 100).toFixed(1)}%</td></tr>`; }).join('')));
       setHTML(document.getElementById('messageStatsBlockTable'), table(['区块', '请求数', '出现次数'], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
-      setHTML(document.getElementById('messageStatsWorkspaceTable'), table(['项目/工作区', '请求数', 'Token', '积分', '来源'], (data.by_workspace || []).map(r => `<tr><td><code>${escapeHtml(r.workspace_path)}</code></td><td>${r.requests}</td><td>${Number(r.tokens || 0).toLocaleString()}</td><td>${Number(r.cost || 0).toFixed(4)}</td><td>${escapeHtml(Object.entries(r.sources || {}).map(([k, v]) => `${k}: ${v}`).join(', '))}</td></tr>`).join('')));
+      setHTML(document.getElementById('messageStatsWorkspaceTable'), table(['项目/工作区', '请求数', 'Token', '积分', '来源'], (data.by_workspace || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td><code>${escapeHtml(r.workspace_path)}</code></td><td>${r.requests}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${Number(r.cost || 0).toFixed(4)}</td><td>${escapeHtml(Object.entries(r.sources || {}).map(([k, v]) => `${k}: ${v}`).join(', '))}</td></tr>`; }).join('')));
       if (typeof Chart !== 'undefined') {
         this._upsertChart('_messageStatsDailyChart', document.getElementById('messageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: '请求数', data: (data.daily || []).map(r => r.requests), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.08)', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
       }
@@ -7147,14 +7147,14 @@ async function(ctx) {
               const cachedTokens = parseInt(m.cached_tokens || 0);
               const cacheRate = m.tokens > 0 ? (cachedTokens / m.tokens * 100).toFixed(1) : '0.0';
               const cacheDisplay = cachedTokens > 0
-                ? `<span style="color:#10b981;">${cachedTokens.toLocaleString()}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
+                ? `<span style="color:#10b981;" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
                 : '-';
               return `
                 <tr>
                   <td>${escapeHtml(m.model_name || '(已删除)')}</td>
                   <td>${(m.requests || 0).toLocaleString()}</td>
                   <td>${reqPercent}%</td>
-                  <td>${(m.tokens || 0).toLocaleString()}</td>
+                  <td title="${(m.tokens || 0).toLocaleString()}">${this._formatBigNumber(m.tokens || 0)}</td>
                   <td>${cacheDisplay}</td>
                   <td>¥${parseFloat(m.cost || 0).toFixed(4)}</td>
                   <td>${costPercent}%</td>
@@ -7167,11 +7167,11 @@ async function(ctx) {
               <td>合计</td>
               <td>${totalRequests.toLocaleString()}</td>
               <td>100%</td>
-              <td>${totalTokens.toLocaleString()}</td>
-              <td>${totalCached > 0 ? '<span style="color:#10b981;">' + totalCached.toLocaleString() + '</span>' : '-'}</td>
+              <td title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</td>
+              <td>${totalCached > 0 ? '<span style="color:#10b981;" title="' + totalCached.toLocaleString() + '">' + this._formatBigNumber(totalCached) + '</span>' : '-'}</td>
               <td>¥${totalCost.toFixed(4)}</td>
               <td>100%</td>
-              <td>${totalRequests > 0 ? Math.round(totalTokens / totalRequests).toLocaleString() : '-'}</td>
+              <td>${totalRequests > 0 ? this._formatBigNumber(Math.round(totalTokens / totalRequests)) : '-'}</td>
             </tr>
           </tfoot>
         </table>
@@ -7240,14 +7240,14 @@ async function(ctx) {
               const cachedTokens = parseInt(p.cached_tokens || 0);
               const cacheRate = p.tokens > 0 ? (cachedTokens / p.tokens * 100).toFixed(1) : '0.0';
               const cacheDisplay = cachedTokens > 0
-                ? `<span style="color:#10b981;">${cachedTokens.toLocaleString()}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
+                ? `<span style="color:#10b981;" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
                 : '-';
               return `
                 <tr>
                   <td style="font-size:13px;">${escapeHtml(p.provider || '未知')}</td>
                   <td>${(p.requests || 0).toLocaleString()}</td>
                   <td>${reqPercent}%</td>
-                  <td>${(p.tokens || 0).toLocaleString()}</td>
+                  <td title="${(p.tokens || 0).toLocaleString()}">${this._formatBigNumber(p.tokens || 0)}</td>
                   <td>${cacheDisplay}</td>
                   <td>¥${parseFloat(p.cost || 0).toFixed(4)}</td>
                   <td>${costPercent}%</td>
@@ -7260,11 +7260,11 @@ async function(ctx) {
               <td>合计</td>
               <td>${totalRequests.toLocaleString()}</td>
               <td>100%</td>
-              <td>${totalTokens.toLocaleString()}</td>
-              <td>${totalCached > 0 ? '<span style="color:#10b981;">' + totalCached.toLocaleString() + '</span>' : '-'}</td>
+              <td title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</td>
+              <td>${totalCached > 0 ? '<span style="color:#10b981;" title="' + totalCached.toLocaleString() + '">' + this._formatBigNumber(totalCached) + '</span>' : '-'}</td>
               <td>¥${totalCost.toFixed(4)}</td>
               <td>100%</td>
-              <td>${totalRequests > 0 ? Math.round(totalTokens / totalRequests).toLocaleString() : '-'}</td>
+              <td>${totalRequests > 0 ? this._formatBigNumber(Math.round(totalTokens / totalRequests)) : '-'}</td>
             </tr>
           </tfoot>
         </table>
@@ -7446,10 +7446,10 @@ async function(ctx) {
                 <td>${this._usageRequestSourceBadge(r.request_source)}</td>
                 <td style="text-align:right;font-variant-numeric:tabular-nums;">${reqs.toLocaleString()}</td>
                 <td style="text-align:right;font-variant-numeric:tabular-nums;">${share}%</td>
-                <td style="text-align:right;font-variant-numeric:tabular-nums;">${tokens.toLocaleString()}</td>
-                <td style="text-align:right;font-variant-numeric:tabular-nums;">${parseInt(r.prompt_tokens || 0, 10).toLocaleString()}</td>
-                <td style="text-align:right;font-variant-numeric:tabular-nums;">${parseInt(r.completion_tokens || 0, 10).toLocaleString()}</td>
-                <td style="text-align:right;font-variant-numeric:tabular-nums;">${cached > 0 ? cached.toLocaleString() : '-'}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;" title="${tokens.toLocaleString()}">${this._formatBigNumber(tokens)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;" title="${parseInt(r.prompt_tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.prompt_tokens || 0, 10))}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;" title="${parseInt(r.completion_tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.completion_tokens || 0, 10))}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;">${cached > 0 ? `<span title="${cached.toLocaleString()}">${this._formatBigNumber(cached)}</span>` : '-'}</td>
                 <td style="text-align:right;font-variant-numeric:tabular-nums;">${cost.toFixed(4)}</td>
                 <td style="text-align:right;">${latency}</td>
               </tr>`;
@@ -7487,7 +7487,7 @@ async function(ctx) {
                 <td>${this._usageRequestSourceBadge(r.request_source)}</td>
                 <td>${escapeHtml(String(modelLabel))}</td>
                 <td style="text-align:right;font-variant-numeric:tabular-nums;">${parseInt(r.requests || 0, 10).toLocaleString()}</td>
-                <td style="text-align:right;font-variant-numeric:tabular-nums;">${parseInt(r.tokens || 0, 10).toLocaleString()}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;" title="${parseInt(r.tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.tokens || 0, 10))}</td>
                 <td style="text-align:right;font-variant-numeric:tabular-nums;">${parseFloat(r.cost || 0).toFixed(4)}</td>
               </tr>`;
             }).join('')}
@@ -7817,9 +7817,9 @@ async function(ctx) {
                 ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;"><code style="font-size:11px;">${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` ${escapeHtml(log.key_name)}` : ''}</div>`
                 : '';
               const tokenSub = [
-                `入 ${promptTokens.toLocaleString()}`,
-                `出 ${completionTokens.toLocaleString()}`,
-                cachedTokens > 0 ? `缓存 ${cachedTokens.toLocaleString()} (${cacheRate}%)` : null
+                `入 ${this._formatBigNumber(promptTokens)}`,
+                `出 ${this._formatBigNumber(completionTokens)}`,
+                cachedTokens > 0 ? `缓存 ${this._formatBigNumber(cachedTokens)} (${cacheRate}%)` : null
               ].filter(Boolean).join(' · ');
               return `
               <tr style="cursor:pointer;" data-usage-log-idx="${idx}" title="点击查看详情">
@@ -7836,7 +7836,7 @@ async function(ctx) {
                 <td>${this._usageRequestTypeBadge(log.request_type)}</td>
                 <td>${this._usageRequestSourceBadge(log.request_source)}</td>
                 <td style="white-space:nowrap;">
-                  <div style="font-variant-numeric:tabular-nums;">${totalTokens.toLocaleString()}</div>
+                  <div style="font-variant-numeric:tabular-nums;" title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</div>
                   <div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;">${tokenSub}</div>
                 </td>
                 <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${costDisplay}</td>
@@ -7963,7 +7963,7 @@ async function(ctx) {
     const cachedTokens = parseInt(log.cached_tokens || 0, 10);
     const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
     const cacheDisplay = cachedTokens > 0
-      ? `${cachedTokens.toLocaleString()} <span style="color:#10b981;font-size:12px;">(${cacheRate}% 命中)</span>`
+      ? `<span title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="color:#10b981;font-size:12px;">(${cacheRate}% 命中)</span>`
       : '0';
 
     const modelLabel = this._formatUsageModelLabel(log);
@@ -7986,9 +7986,9 @@ async function(ctx) {
       ['API Key', log.key_prefix
         ? `<code style="font-size:12px;">${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` <span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}`
         : '-'],
-      ['总 Token', tokensVal.toLocaleString()],
-      ['输入 Token', promptTokens.toLocaleString()],
-      ['输出 Token', parseInt(log.completion_tokens || 0, 10).toLocaleString()],
+      ['总 Token', this._formatBigNumber(tokensVal)],
+      ['输入 Token', this._formatBigNumber(promptTokens)],
+      ['输出 Token', this._formatBigNumber(parseInt(log.completion_tokens || 0, 10))],
       ['缓存命中 Token', cacheDisplay],
       ['积分', costDisplay],
       ['延迟', log.latency_ms != null ? `${log.latency_ms}ms` : '-'],

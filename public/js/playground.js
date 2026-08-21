@@ -721,7 +721,7 @@ class PlaygroundApp {
     let metaFooter = '';
     if (role === 'assistant' && meta) {
       const m = meta;
-      const tokenStr = m.tokens ? `${m.tokens.toLocaleString()} tokens` : '';
+      const tokenStr = m.tokens ? `${this._fmtBig(m.tokens)} tokens` : '';
       const costStr = m.cost ? `${m.cost.toFixed(4)} 积分` : '';
       const parts = [m.modelDisplayName || m.model, tokenStr, costStr].filter(Boolean);
       metaFooter = `<div class="pg-msg-meta">${this.escapeHtml(parts.join(' · '))} · AI 也可能犯错，请核实重要信息。</div>`;
@@ -1056,6 +1056,14 @@ class PlaygroundApp {
 
   escapeHtml(value) {
     return Dom.escapeHtml(value);
+  }
+
+  _fmtBig(num) {
+    if (!num && num !== 0) return '-';
+    if (num >= 1000000000) return Number((num / 1000000000).toFixed(2)) + 'B';
+    if (num >= 1000000) return Number((num / 1000000).toFixed(2)) + 'M';
+    if (num >= 1000) return Number((num / 1000).toFixed(1)) + 'K';
+    return Number(num).toLocaleString();
   }
 
   // ========== Events ==========

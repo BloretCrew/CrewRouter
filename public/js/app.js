@@ -442,7 +442,7 @@ class ConsoleApp {
       if (apiKeys.length > 0) {
         overview.style.display = 'flex';
         document.getElementById('totalRequests').textContent = totalReqs.toLocaleString();
-        document.getElementById('totalTokens').textContent = totalTokens.toLocaleString();
+        document.getElementById('totalTokens').textContent = this._formatBigNumber(totalTokens);
         document.getElementById('totalCost').textContent = `${totalCost.toFixed(4)} 积分`;
       } else {
         overview.style.display = 'none';
@@ -568,9 +568,11 @@ class ConsoleApp {
 
     return `
       <div class="api-key-card ${isEnabled ? '' : 'key-disabled'}" data-key-id="${key.id}"
-           ondragover="app.handleApiKeyDragOver(event)" ondragleave="app.handleApiKeyDragLeave(event)" ondrop="app.handleApiKeyDrop(event, ${key.id})">
+           ondragover="app.handleApiKeyDragOver(event);app.handleApiKeySortOver(event)" ondragleave="app.handleApiKeyDragLeave(event);app.handleApiKeySortLeave(event)" ondrop="app.handleApiKeyDrop(event, ${key.id});app.handleApiKeySortDrop(event, ${key.id})">
         <div class="api-key-header">
           <div class="api-key-title">
+            <span class="api-key-drag-handle" draggable="true" title="拖拽调整顺序" aria-hidden="true"
+              ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)">⠿</span>
             <label class="pg-toggle api-key-enable-toggle" title="${isEnabled ? '点击禁用' : '点击启用'}">
               <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)">
               <span class="pg-toggle-slider"></span>
@@ -1334,6 +1336,84 @@ class ConsoleApp {
     const tagId = parseInt(event.dataTransfer.getData('text/tag-id'));
     if (!tagId) return;
     this.toggleKeyTag(keyId, tagId);
+  }
+
+  // ===== API Key 卡片拖拽排序 =====
+
+  handleApiKeySortStart(event, handleEl) {
+    const card = handleEl.closest('.api-key-card');
+    if (!card) return;
+    // 与标签拖拽（text/tag-id）区分
+    try {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/key-sort', card.dataset.keyId);
+    } catch (_) { /* ignore */ }
+    this._keySortDragId = Number(card.dataset.keyId);
+    card.classList.add('api-key-sort-dragging');
+  }
+
+  handleApiKeySortEnd() {
+    this._keySortDragId = null;
+    document.querySelectorAll('.api-key-card.api-key-sort-dragging, .api-key-card.api-key-sort-over-top, .api-key-card.api-key-sort-over-bottom')
+      .forEach(el => el.classList.remove('api-key-sort-dragging', 'api-key-sort-over-top', 'api-key-sort-over-bottom'));
+  }
+
+  _isApiKeySortDrag(event) {
+    return this._keySortDragId != null || (event.dataTransfer?.types || []).includes('text/key-sort');
+  }
+
+  handleApiKeySortOver(event) {
+    if (!this._isApiKeySortDrag(event)) return;
+    const card = event.currentTarget.closest('.api-key-card');
+    if (!card || Number(card.dataset.keyId) === this._keySortDragId) return;
+    event.preventDefault();
+    try { event.dataTransfer.dropEffect = 'move'; } catch (_) { /* ignore */ }
+    const rect = card.getBoundingClientRect();
+    const before = event.clientY < rect.top + rect.height / 2;
+    this._keySortDropBefore = before;
+    card.classList.toggle('api-key-sort-over-top', before);
+    card.classList.toggle('api-key-sort-over-bottom', !before);
+  }
+
+  handleApiKeySortLeave(event) {
+    if (!this._isApiKeySortDrag(event)) return;
+    const card = event.currentTarget.closest('.api-key-card');
+    if (!card || card.contains(event.relatedTarget)) return;
+    card.classList.remove('api-key-sort-over-top', 'api-key-sort-over-bottom');
+  }
+
+  async handleApiKeySortDrop(event, targetKeyId) {
+    if (!this._isApiKeySortDrag(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const fromId = this._keySortDragId ?? Number(event.dataTransfer.getData('text/key-sort'));
+    this.handleApiKeySortEnd();
+    const toId = Number(targetKeyId);
+    if (!fromId || !toId || fromId === toId) return;
+
+    const list = document.querySelectorAll('#apiKeysList .api-key-card');
+    const idsInOrder = Array.from(list).map(el => Number(el.dataset.keyId)).filter(Boolean);
+    const fromIdx = idsInOrder.indexOf(fromId);
+    const toIdx = idsInOrder.indexOf(toId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    idsInOrder.splice(fromIdx, 1);
+    const before = this._keySortDropBefore !== false;
+    let insertIdx = idsInOrder.indexOf(toId);
+    if (!before) insertIdx += 1;
+    idsInOrder.splice(insertIdx, 0, fromId);
+
+    try {
+      const res = await fetch('/api/user/api-keys/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedIds: idsInOrder })
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || '保存失败');
+      this.showToast('顺序已保存', 'success');
+    } catch (e) {
+      this.showToast(e.message || '保存顺序失败', 'error');
+    }
+    await this.loadApiKeys();
   }
 
   async toggleKeyTag(keyId, tagId) {
@@ -3096,7 +3176,7 @@ class ConsoleApp {
               <tr>
                 <td>${new Date(date).toLocaleDateString('zh-CN')}</td>
                 <td>${d.requests}</td>
-                <td>${d.tokens.toLocaleString()}</td>
+                <td title="${d.tokens.toLocaleString()}">${this._formatBigNumber(d.tokens)}</td>
                 <td>${Number(d.cost).toFixed(4)}</td>
                 <td>${Object.entries(d.models).map(([m, c]) => `<span class="model-tag">${m} (${c})</span>`).join(' ')}</td>
               </tr>
@@ -3161,6 +3241,7 @@ class ConsoleApp {
       const summary = data.summary || {};
       const projects = Array.isArray(data.projects) ? data.projects : [];
       const fmt = (value) => Number(value || 0).toLocaleString();
+      const fmtTok = (value) => { const n = Number(value || 0); return `<span title="${n.toLocaleString()}">${this._formatBigNumber(n)}</span>`; };
       const money = (value) => Number(value || 0).toFixed(2);
       const date = (value) => value ? new Date(value).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) : '-';
       const status = summary.analysis_status || {};
@@ -3174,12 +3255,12 @@ class ConsoleApp {
         ['活跃项目', fmt(summary.projects), '个工作区'],
         ['活跃天数', fmt(summary.active_days), '天'],
         ['AI 请求', fmt(summary.requests), '次调用'],
-        ['Token', fmt(summary.tokens), '总投入'],
+        ['Token', fmtTok(summary.tokens), '总投入'],
         ['最近活动', date(summary.last_activity), '最后一次工作'],
       ];
       setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="project-work-stat"><span>${label}</span><strong>${escapeHtml(value)}</strong><small>${sub}</small></div>`).join(''));
-      setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)} 次 · ${fmt(p.tokens)} Token · 最近 ${date(p.last_activity)}</small></span><span class="project-work-arrow">→</span></button>`).join(''));
-      setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})" title="复制工作区路径">${escapeHtml(p.workspace_path)}</button></div></div><div class="project-work-project-metrics"><div><span>请求</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmt(p.tokens)}</strong></div><div><span>活跃</span><strong>${fmt(p.active_days)} 天</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || '未标记客户端'}</span><span>${money(p.cost)} 积分</span></div></article>`).join(''));
+      setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)} 次 · ${fmtTok(p.tokens)} Token · 最近 ${date(p.last_activity)}</small></span><span class="project-work-arrow">→</span></button>`).join(''));
+      setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})" title="复制工作区路径">${escapeHtml(p.workspace_path)}</button></div></div><div class="project-work-project-metrics"><div><span>请求</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmtTok(p.tokens)}</strong></div><div><span>活跃</span><strong>${fmt(p.active_days)} 天</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || '未标记客户端'}</span><span>${money(p.cost)} 积分</span></div></article>`).join(''));
       if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: 'AI 请求', data: (data.daily || []).map(r => r.requests), borderColor: '#0f766e', backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: '活跃项目', data: (data.daily || []).map(r => r.projects), borderColor: '#f59e0b', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
     } catch (error) {
       console.error(error);
@@ -3231,10 +3312,11 @@ class ConsoleApp {
       const row = (label, value) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);">${label}</span><strong>${value}</strong></div>`;
       const analysisStatus = s.analysis_status || {};
       const pendingLabel = analysisStatus.pending_requests ? row('后台待分析', analysisStatus.pending_requests.toLocaleString()) : '';
-      setHTML(document.getElementById('userMessageStatsSummary'), [row('活跃请求', s.analyzed_requests || 0), row('项目数', (data.by_workspace || []).length), row('活跃天数', s.active_days || 0), row('日均请求', Number(s.avg_daily_requests || 0).toFixed(1)), row('总 Token', Number(s.total_tokens || 0).toLocaleString()), row('Git 状态率', `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
+      const fmtTok = (v) => { const n = Number(v || 0); return `<span title="${n.toLocaleString()}">${this._formatBigNumber(n)}</span>`; };
+      setHTML(document.getElementById('userMessageStatsSummary'), [row('活跃请求', s.analyzed_requests || 0), row('项目数', (data.by_workspace || []).length), row('活跃天数', s.active_days || 0), row('日均请求', Number(s.avg_daily_requests || 0).toFixed(1)), row('总 Token', fmtTok(s.total_tokens)), row('Git 状态率', `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
       const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--muted-foreground);">暂无数据</td></tr>'}</tbody></table></div>`;
       setHTML(document.getElementById('userMessageStatsBlockTable'), table(['区块', '请求数', '出现次数'], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
-      setHTML(document.getElementById('userMessageStatsSourceTable'), table(['Harness', '请求数', '平均消息', '平均字符', 'Token'], (data.by_source || []).map(r => `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td>${Number(r.tokens || 0).toLocaleString()}</td></tr>`).join('')));
+      setHTML(document.getElementById('userMessageStatsSourceTable'), table(['Harness', '请求数', '平均消息', '平均字符', 'Token'], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td></tr>`; }).join('')));
       if (typeof Chart !== 'undefined') this._upsertChart('_userMessageStatsDailyChart', document.getElementById('userMessageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: '请求数', data: (data.daily || []).map(r => r.requests), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: '#8b5cf6', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
     } catch (error) {
       console.error(error);
@@ -3425,10 +3507,15 @@ class ConsoleApp {
   }
 
   _formatBigNumber(num) {
-    if (!num) return '0';
-    if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
+    if (!num && num !== 0) return '-';
+    const compact = (value, unit, digits) => {
+      const text = Number((value / unit).toFixed(digits)).toString();
+      return `${text}${unit === 1000000000 ? 'B' : unit === 1000000 ? 'M' : 'K'}`;
+    };
+    if (num >= 1000000000) return compact(num, 1000000000, 2);
+    if (num >= 1000000) return compact(num, 1000000, 2);
+    if (num >= 1000) return compact(num, 1000, 1);
+    return Number(num).toLocaleString();
   }
 
   // ==================== 模型测试 ====================
@@ -3879,7 +3966,7 @@ class ConsoleApp {
                 <div class="model-test-stat-label">t/s</div>
               </div>
               <div class="model-test-stat">
-                <div class="model-test-stat-value">${r.total_tokens}</div>
+                <div class="model-test-stat-value" title="${Number(r.total_tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(r.total_tokens || 0))}</div>
                 <div class="model-test-stat-label">tokens</div>
               </div>
             </div>
@@ -3948,8 +4035,8 @@ class ConsoleApp {
     document.getElementById('statsAvgDailyRequests').textContent = '日均 ' + Math.round(totalReqs / days).toLocaleString();
     document.getElementById('statsAvgDailyCost').textContent = '日均 ' + (totalCost / days).toFixed(4) + ' 积分';
 
-    document.getElementById('statsTokenBreakdown').textContent = `输入 ${totalPrompt.toLocaleString()} / 输出 ${totalCompletion.toLocaleString()}`;
-    document.getElementById('statsAvgTokensPerReq').textContent = '平均 ' + (totalReqs > 0 ? Math.round(totalTokens / totalReqs) : 0) + ' Token/请求';
+    document.getElementById('statsTokenBreakdown').textContent = `输入 ${this._formatBigNumber(totalPrompt)} / 输出 ${this._formatBigNumber(totalCompletion)}`;
+    document.getElementById('statsAvgTokensPerReq').textContent = '平均 ' + (totalReqs > 0 ? this._formatBigNumber(Math.round(totalTokens / totalReqs)) : 0) + ' Token/请求';
 
     const identifiedRate = parseFloat(s.identified_rate != null ? s.identified_rate : (d.sourceSummary?.identified_rate || 0));
     const activeSources = parseInt(s.active_sources != null ? s.active_sources : (d.sourceSummary?.active_sources || 0), 10);
@@ -3968,9 +4055,9 @@ class ConsoleApp {
       const savedTokens = totalCached; // 缓存命中的 token 本应按原价计费，命中后节省了 90%
       document.getElementById('cacheHitPercent').textContent = cacheHitRate.toFixed(1) + '%';
       document.getElementById('cacheHitBar').style.width = Math.min(cacheHitRate, 100) + '%';
-      document.getElementById('cacheHitTokens').textContent = totalCached.toLocaleString();
-      document.getElementById('cacheTotalPrompt').textContent = totalPrompt.toLocaleString();
-      document.getElementById('cacheSavedTokens').textContent = savedTokens.toLocaleString();
+      document.getElementById('cacheHitTokens').textContent = this._formatBigNumber(totalCached);
+      document.getElementById('cacheTotalPrompt').textContent = this._formatBigNumber(totalPrompt);
+      document.getElementById('cacheSavedTokens').textContent = this._formatBigNumber(savedTokens);
       cacheSection.style.display = 'block';
     } else {
       cacheSection.style.display = 'none';
@@ -4136,7 +4223,7 @@ class ConsoleApp {
         <div class="stats-insight-item">
           <span class="stats-insight-rank">🎯</span>
           <span class="stats-insight-name">平均 Token/请求</span>
-          <span class="stats-insight-value">${totalReqs > 0 ? Math.round(totalTokens / totalReqs).toLocaleString() : 0}</span>
+          <span class="stats-insight-value">${totalReqs > 0 ? this._formatBigNumber(Math.round(totalTokens / totalReqs)) : 0}</span>
         </div>
         <div class="stats-insight-item">
           <span class="stats-insight-rank">💵</span>
@@ -4323,9 +4410,9 @@ class ConsoleApp {
       return `<tr>
         <td style="padding:8px;border-bottom:1px solid var(--border);">${new Date(r.date).toLocaleDateString('zh-CN')}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(r.requests).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${promptTokens.toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(r.completion_tokens || 0).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);"><span style="color:${cacheColor};">${cachedTokens.toLocaleString()}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span></td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${promptTokens.toLocaleString()}">${this._formatBigNumber(promptTokens)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${parseInt(r.completion_tokens || 0).toLocaleString()}">${this._formatBigNumber(parseInt(r.completion_tokens || 0))}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);"><span style="color:${cacheColor};" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span></td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseFloat(r.cost).toFixed(4)}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${Math.round(parseFloat(r.avg_latency || 0))}ms</td>
       </tr>`;
@@ -4344,9 +4431,9 @@ class ConsoleApp {
       return `<tr>
         <td style="padding:8px;border-bottom:1px solid var(--border);font-size:12px;">${m.model_name || '(已删除)'}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(m.requests).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${promptTokens.toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(m.completion_tokens || 0).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);"><span style="color:${cacheColor};">${cachedTokens.toLocaleString()}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span></td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${promptTokens.toLocaleString()}">${this._formatBigNumber(promptTokens)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${parseInt(m.completion_tokens || 0).toLocaleString()}">${this._formatBigNumber(parseInt(m.completion_tokens || 0))}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);"><span style="color:${cacheColor};" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span></td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">¥${parseFloat(m.cost).toFixed(4)}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${Math.round(parseFloat(m.avg_latency || 0))}ms</td>
       </tr>`;
@@ -4359,12 +4446,13 @@ class ConsoleApp {
     if (!d || !d.byApiKey || !tbody) return;
     setHTML(tbody, d.byApiKey.map(k => {
       const cachedTokens = parseInt(k.cached_tokens || 0);
+      const kTokens = parseInt(k.tokens || 0);
       return `<tr>
       <td style="padding:8px;border-bottom:1px solid var(--border);">${k.key_name || 'API Key'}</td>
       <td style="padding:8px;border-bottom:1px solid var(--border);font-family:monospace;">${k.key_prefix || ''}****</td>
       <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(k.requests).toLocaleString()}</td>
-      <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(k.tokens).toLocaleString()}</td>
-      <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${cachedTokens > 0 ? '<span style="color:#10b981;">' + cachedTokens.toLocaleString() + '</span>' : '-'}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${kTokens.toLocaleString()}">${this._formatBigNumber(kTokens)}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${cachedTokens > 0 ? '<span style="color:#10b981;" title="' + cachedTokens.toLocaleString() + '">' + this._formatBigNumber(cachedTokens) + '</span>' : '-'}</td>
       <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">¥${parseFloat(k.cost).toFixed(4)}</td>
     </tr>`;
     }).join(''));
@@ -4489,10 +4577,11 @@ class ConsoleApp {
             </span>
           </div>
         </td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseInt(s.tokens || 0, 10).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseInt(s.prompt_tokens || 0, 10).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseInt(s.completion_tokens || 0, 10).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseInt(s.cached_tokens || 0, 10).toLocaleString()}</td>
+        ${(() => { const t = parseInt(s.tokens || 0, 10), p = parseInt(s.prompt_tokens || 0, 10), c = parseInt(s.completion_tokens || 0, 10), cc = parseInt(s.cached_tokens || 0, 10); return `
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;" title="${t.toLocaleString()}">${this._formatBigNumber(t)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;" title="${p.toLocaleString()}">${this._formatBigNumber(p)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;" title="${c.toLocaleString()}">${this._formatBigNumber(c)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;" title="${cc.toLocaleString()}">${this._formatBigNumber(cc)}</td>`; })()}
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseFloat(s.cost || 0).toFixed(4)}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${latency}</td>
         <td style="padding:8px;border-bottom:1px solid var(--border);white-space:nowrap;">
@@ -4518,7 +4607,7 @@ class ConsoleApp {
         <td style="padding:8px;border-bottom:1px solid var(--border);">${this._usageRequestSourceBadge(r.request_source)}</td>
         <td style="padding:8px;border-bottom:1px solid var(--border);">${escapeHtml(String(modelLabel))}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseInt(r.requests || 0, 10).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseInt(r.tokens || 0, 10).toLocaleString()}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;" title="${parseInt(r.tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.tokens || 0, 10))}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseFloat(r.cost || 0).toFixed(4)}</td>
       </tr>`;
     }).join(''));
@@ -4748,7 +4837,7 @@ class ConsoleApp {
               const cachedTokens = parseInt(log.cached_tokens || 0, 10);
               const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
               const cacheDisplay = cachedTokens > 0
-                ? `<span style="color:#10b981;">${cachedTokens.toLocaleString()}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
+                ? `<span style="color:#10b981;" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
                 : '<span style="color:var(--muted-foreground);">-</span>';
               const modelLabel = log.model_name
                 || (log.request_type === 'fusion' ? 'Fusion' : null)
@@ -4766,7 +4855,7 @@ class ConsoleApp {
                 <td>${escapeHtml(log.series || '-')}</td>
                 <td>${this._usageRequestSourceBadge(log.request_source)}</td>
                 <td><code style="font-size:12px;">${escapeHtml(log.key_prefix || '-')}****</code> ${log.key_name ? `<span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}</td>
-                <td>${(log.tokens_used || 0).toLocaleString()}</td>
+                <td title="${(log.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(parseInt(log.tokens_used || 0, 10))}</td>
                 <td>${cacheDisplay}</td>
                 <td>${costDisplay}</td>
               </tr>`;
@@ -4855,7 +4944,7 @@ class ConsoleApp {
     const cachedTokens = parseInt(log.cached_tokens || 0, 10);
     const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
     const cacheDisplay = cachedTokens > 0
-      ? `${cachedTokens.toLocaleString()} <span style="color:#10b981;font-size:12px;">(${cacheRate}% 命中)</span>`
+      ? `<span title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="color:#10b981;font-size:12px;">(${cacheRate}% 命中)</span>`
       : '0';
 
     const modelLabel = log.model_name
@@ -4875,9 +4964,9 @@ class ConsoleApp {
       ['请求类型', escapeHtml(log.request_type || '-')],
       ['客户端', this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
       ['API Key', `<code style="font-size:12px;">${escapeHtml(log.key_prefix || '-')}****</code>${log.key_name ? ` <span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}`],
-      ['总 Token', parseInt(log.tokens_used || 0, 10).toLocaleString()],
-      ['输入 Token', promptTokens.toLocaleString()],
-      ['输出 Token', parseInt(log.completion_tokens || 0, 10).toLocaleString()],
+      ['总 Token', this._formatBigNumber(parseInt(log.tokens_used || 0, 10))],
+      ['输入 Token', this._formatBigNumber(promptTokens)],
+      ['输出 Token', this._formatBigNumber(parseInt(log.completion_tokens || 0, 10))],
       ['缓存命中 Token', cacheDisplay],
       ['积分', costDisplay],
       ['延迟', log.latency_ms != null ? `${log.latency_ms}ms` : '-'],
@@ -4963,7 +5052,7 @@ class ConsoleApp {
               <div class="rule-item">
                 <div class="rule-top">
                   <span class="rule-label">${typeLabel} · 每 ${duration}</span>
-                  <span class="rule-value">${current.toLocaleString()} / ${limit.toLocaleString()} ${unit}</span>
+                  <span class="rule-value">${isRequests ? `${current.toLocaleString()} / ${limit.toLocaleString()}` : `${this._formatBigNumber(current)} / ${this._formatBigNumber(limit)}`} ${unit}</span>
                 </div>
                 <div class="rule-bar-bg">
                   <div class="rule-bar-fill" style="width:${pct}%;background:${barColor}"></div>
@@ -4986,7 +5075,7 @@ class ConsoleApp {
       if (rpm > 0 || tpm > 0) {
         setHTML(personalContainer, `
           ${rpm > 0 ? `<div class="limit-card"><span class="limit-label">每分钟请求数 (RPM)</span><span class="limit-value">${rpm.toLocaleString()}</span></div>` : ''}
-          ${tpm > 0 ? `<div class="limit-card"><span class="limit-label">每分钟 Token 数 (TPM)</span><span class="limit-value">${tpm.toLocaleString()}</span></div>` : ''}
+          ${tpm > 0 ? `<div class="limit-card"><span class="limit-label">每分钟 Token 数 (TPM)</span><span class="limit-value">${this._formatBigNumber(tpm)}</span></div>` : ''}
         `);
         personalSection.style.display = 'block';
       } else {
@@ -6536,10 +6625,10 @@ ${extractorBody}
     const data = await res.json();
     const session = data.session || {};
     const events = data.events || [];
-    const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? '成功' : '失败'}</td><td>${Number(e.tokens_used || 0)}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
+    const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? '成功' : '失败'}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
     const detail = document.createElement('div');
     detail.className = 'trace-report-modal';
-    detail.innerHTML = `<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>跟踪报告 ${escapeHtml(session.public_id)}</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.trace-report-modal').remove()">关闭</button></div><p>请求 ${Number(session.summary?.requests || events.length)} 项 · 成功 ${Number(session.summary?.succeeded || 0)} · 失败 ${Number(session.summary?.failed || 0)} · ${Number(session.summary?.tokens || 0)} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">下载 JSON</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="6">暂无事件</td></tr>'}</tbody></table></div></div>`;
+    detail.innerHTML = `<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>跟踪报告 ${escapeHtml(session.public_id)}</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.trace-report-modal').remove()">关闭</button></div><p>请求 ${Number(session.summary?.requests || events.length)} 项 · 成功 ${Number(session.summary?.succeeded || 0)} · 失败 ${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">下载 JSON</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="6">暂无事件</td></tr>'}</tbody></table></div></div>`;
     document.body.appendChild(detail);
     detail.addEventListener('click', e => { if (e.target === detail) detail.remove(); });
     this.loadTraceReports().catch(() => {});
@@ -9997,8 +10086,8 @@ ${extractorBody}
       html += `
         <button type="button" class="model-library-key-chip model-library-key-expand"
                 onclick="app.toggleLibraryKeysExpand()"
-                title="展开余下的${hiddenCount}个key">
-          <span class="key-name">展开余下的${hiddenCount}个key</span>
+                title="展开余下的 ${hiddenCount} 个key">
+          <span class="key-name">展开余下的 ${hiddenCount} 个key</span>
         </button>`;
     } else {
       html = keys.map(renderChip).join('');

@@ -198,6 +198,7 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         END AS co_key_role
       FROM api_keys ak
       JOIN users owner ON owner.id = ak.user_id
+      LEFT JOIN api_key_user_orders uko ON uko.api_key_id = ak.id AND uko.user_id = $1
       LEFT JOIN models m ON ak.current_model_id = m.id
       LEFT JOIN providers p ON m.provider = p.id
       LEFT JOIN model_test_results mtr ON mtr.model_id = m.id
@@ -257,12 +258,67 @@ router.get('/api-keys', requireAuth, async (req, res) => {
       ) member_agg ON member_agg.api_key_id = ak.id
       WHERE ak.user_id = $1
          OR EXISTS (SELECT 1 FROM api_key_members mine WHERE mine.api_key_id = ak.id AND mine.user_id = $1)
-      ORDER BY ak.created_at DESC
+      ORDER BY COALESCE(uko.sort_order, 2147483647) ASC, ak.created_at DESC
     `, [req.session.user.id]);
     res.json(result.rows);
   } catch (error) {
     Logger.error('[获取API密钥] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 拖拽排序：保存当前用户视角的 API Key 顺序（每用户独立，Co-Key 顺序不共享）
+router.put('/api-keys/reorder', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE, {
+  resourceType: 'api_key',
+  descriptionFrom: () => `拖拽调整 API Key 排序`,
+  detailsFrom: (req) => ({ ordered_ids: req.body?.orderedIds }),
+}), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const orderedIds = Array.isArray(req.body?.orderedIds) ? req.body.orderedIds.map(Number).filter(Number.isFinite) : [];
+    if (!orderedIds.length) {
+      return res.status(400).json({ error: '请提供 Key 顺序' });
+    }
+    const userId = req.session.user.id;
+    await client.query('BEGIN');
+    // 当前用户可见的全部 Key（自有 + Co-Key 成员）
+    const visible = await client.query(`
+      SELECT ak.id FROM api_keys ak
+      WHERE ak.user_id = $1
+         OR EXISTS (SELECT 1 FROM api_key_members m WHERE m.api_key_id = ak.id AND m.user_id = $1)
+    `, [userId]);
+    const visibleSet = new Set(visible.rows.map(r => r.id));
+    let order = 0;
+    for (const id of orderedIds) {
+      if (!visibleSet.has(id)) continue;
+      await client.query(`
+        INSERT INTO api_key_user_orders (user_id, api_key_id, sort_order, updated_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id, api_key_id)
+        DO UPDATE SET sort_order = EXCLUDED.sort_order, updated_at = CURRENT_TIMESTAMP
+      `, [userId, id, order++]);
+    }
+    // 未出现在列表中的可见 Key 追加到末尾
+    const listed = new Set(orderedIds.filter(id => visibleSet.has(id)));
+    for (const id of visibleSet) {
+      if (!listed.has(id)) {
+        await client.query(`
+          INSERT INTO api_key_user_orders (user_id, api_key_id, sort_order, updated_at)
+          VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+          ON CONFLICT (user_id, api_key_id)
+          DO UPDATE SET sort_order = EXCLUDED.sort_order, updated_at = CURRENT_TIMESTAMP
+        `, [userId, id, order++]);
+      }
+    }
+    await client.query('COMMIT');
+    Logger.info(`[API Key 排序] 用户 ${req.session.user.username} 更新了 ${order} 个 Key 的个人顺序`);
+    res.json({ success: true });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    Logger.error('[API Key 排序] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  } finally {
+    client.release();
   }
 });
 

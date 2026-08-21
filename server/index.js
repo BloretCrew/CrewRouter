@@ -1695,6 +1695,64 @@ async function ensureApiKeyCrewRouterCommands() {
   }
 }
 
+// ========== 自动迁移：API Key 每用户独立排序表（Co-Key 顺序不共享） ==========
+async function ensureApiKeyUserOrders() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS api_key_user_orders (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        api_key_id INTEGER NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, api_key_id)
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_key_user_orders_user ON api_key_user_orders(user_id, sort_order)`);
+    // 历史数据回填：把 api_keys.sort_order（原全局排序）拷贝为各归属/成员用户的个人顺序
+    await pool.query(`
+      INSERT INTO api_key_user_orders (user_id, api_key_id, sort_order)
+      SELECT ak.user_id, ak.id, COALESCE(ak.sort_order, 2147483647)
+      FROM api_keys ak
+      WHERE NOT EXISTS (
+        SELECT 1 FROM api_key_user_orders o WHERE o.user_id = ak.user_id AND o.api_key_id = ak.id
+      )
+    `);
+    await pool.query(`
+      INSERT INTO api_key_user_orders (user_id, api_key_id, sort_order)
+      SELECT m.user_id, m.api_key_id, COALESCE(ak.sort_order, 2147483647)
+      FROM api_key_members m
+      JOIN api_keys ak ON ak.id = m.api_key_id
+      WHERE NOT EXISTS (
+        SELECT 1 FROM api_key_user_orders o WHERE o.user_id = m.user_id AND o.api_key_id = m.api_key_id
+      )
+    `);
+    Logger.info('[迁移] api_key_user_orders 表已就绪');
+  } catch (err) {
+    Logger.warn(`[迁移] api_key_user_orders 迁移跳过: ${err.message}`);
+  }
+}
+
+// ========== 自动迁移：为 api_keys 添加排序字段（用户自定义顺序） ==========
+async function ensureApiKeySortOrder() {
+  try {
+    await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0`);
+    // 历史数据：按创建时间倒序初始化，保持与旧展示顺序一致
+    await pool.query(`
+      UPDATE api_keys SET sort_order = sub.rn
+      FROM (
+        SELECT id, ROW_NUMBER() OVER (ORDER BY created_at DESC) - 1 AS rn
+        FROM api_keys
+        WHERE sort_order = 0 OR sort_order IS NULL
+      ) sub
+      WHERE api_keys.id = sub.id
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_keys_user_sort ON api_keys(user_id, sort_order)`);
+    Logger.info('[迁移] api_keys 表 sort_order 字段已就绪');
+  } catch (err) {
+    Logger.warn(`[迁移] api_keys sort_order 字段迁移跳过: ${err.message}`);
+  }
+}
+
 // 用量记录保留，删除 API Key 时将 api_key_id 置空（否则有用量的密钥无法删除）
 async function ensureUsageRecordsApiKeyOnDeleteSetNull() {
   try {
@@ -2316,6 +2374,8 @@ async function runPendingMigrations() {
     ensureApiKeyEnabledColumns,
     ensureApiKeySwallowImages,
     ensureApiKeyCrewRouterCommands,
+    ensureApiKeySortOrder,
+    ensureApiKeyUserOrders,
     ensureUsageRecordsApiKeyOnDeleteSetNull,
     ensureProviderProxyPool,
     ensureWeightedTokensColumns,

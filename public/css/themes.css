@@ -1511,6 +1511,40 @@ pre {
   background: #ef4444;
 }
 
+/* API Key 拖拽排序 */
+.api-key-drag-handle {
+  flex-shrink: 0;
+  cursor: grab;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1;
+  padding: 6px 4px;
+  border-radius: 6px;
+  user-select: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.api-key-drag-handle:hover {
+  color: var(--brand-blue);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.api-key-drag-handle:active {
+  cursor: grabbing;
+}
+
+.api-key-card.api-key-sort-dragging {
+  opacity: 0.45;
+}
+
+.api-key-card.api-key-sort-over-top {
+  box-shadow: 0 -2px 0 0 var(--brand-blue);
+}
+
+.api-key-card.api-key-sort-over-bottom {
+  box-shadow: 0 2px 0 0 var(--brand-blue);
+}
+
 /* 拖拽标签时卡片收成单行（仍保持两列网格） */
 .api-keys-compact-drag.api-keys-list,
 .api-keys-compact-drag .api-keys-list {
