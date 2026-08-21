@@ -53,5 +53,16 @@
       "SSL": true
     }
   },
-  "demo": false
+  "demo": false,
+  "uiI18n": {
+    "enabled": true,
+    "baseUrl": "https://tr.bloret.net",
+    "orgSlug": "bloret",
+    "projectSlug": "crewrouter",
+    "fileId": "67875fec-f3f1-4455-9c43-9be1f29094f2",
+    "localeMap": {
+      "en": "en",
+      "ru": "ru"
+    }
+  }
 }

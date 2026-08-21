@@ -87,6 +87,15 @@ async function build() {
   copyDir(publicSrc, publicDest);
   console.log(`[build] 已复制 public/ → dist/public/`);
 
+  // Step 3.5: 复制 i18n 语言目录（服务端磁盘回退用）
+  const langSrc = path.join(ROOT, 'lang');
+  if (fs.existsSync(langSrc)) {
+    const langDest = path.join(DIST, 'lang');
+    fs.rmSync(langDest, { recursive: true, force: true });
+    copyDir(langSrc, langDest);
+    console.log(`[build] 已复制 lang/ → dist/lang/`);
+  }
+
   // Step 4: 生成精简的 package.json（仅生产依赖）
   console.log('\n=== Step 4: 生成生产 package.json ===');
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));

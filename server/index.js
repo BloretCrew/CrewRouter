@@ -2253,6 +2253,7 @@ if (isDemo) {
   });
 } else {
   app.use('/api', require('./routes/setup'));
+  app.use('/api/i18n', require('./routes/i18n'));
   app.use('/auth', require('./routes/auth'));
   app.use('/auth', require('./routes/feishu'));
   app.use('/api', require('./routes/api'));

@@ -302,10 +302,10 @@ class ConsoleApp {
     document.getElementById(`${targetPage}Page`)?.classList.add('active');
 
     const titles = {
-      'dashboard': '控制台', 'modelLibrary': '模型库', 'myUpstream': '我的上游',
-      'myProviders': '我的上游', 'myTeamModels': '我的上游',
-      'apiKeys': 'API Key 与用量', 'stats': '统计信息', 'projectWork': '项目工作', 'leaderboard': '排行榜', 'docs': '接口文档',
-      'balance': '积分', 'settings': '用户设置', 'auditLogs': '操作日志'
+      'dashboard': t('控制台'), 'modelLibrary': t('模型库'), 'myUpstream': t('我的上游'),
+      'myProviders': t('我的上游'), 'myTeamModels': t('我的上游'),
+      'apiKeys': t('API Key 与用量'), 'stats': t('统计信息'), 'projectWork': t('项目工作'), 'leaderboard': t('排行榜'), 'docs': t('接口文档'),
+      'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志')
     };
     const pageTitleEl = document.getElementById('pageTitle');
     if (pageTitleEl) pageTitleEl.textContent = titles[targetPage] || targetPage;
@@ -394,7 +394,7 @@ class ConsoleApp {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (seconds < 60) return '刚刚';
+    if (seconds < 60) return t('刚刚');
     if (minutes < 60) return `${minutes} 分钟前`;
     if (hours < 24) return `${hours} 小时前`;
     if (days < 30) return `${days} 天前`;
@@ -405,11 +405,11 @@ class ConsoleApp {
     if (key.expires_at) {
       const expireDate = new Date(key.expires_at);
       const now = new Date();
-      if (expireDate < now) return { class: 'expired', text: '已过期' };
+      if (expireDate < now) return { class: 'expired', text: t('已过期') };
       const daysLeft = Math.ceil((expireDate - now) / (1000 * 60 * 60 * 24));
       if (daysLeft <= 7) return { class: 'expiring', text: `${daysLeft}天后过期` };
     }
-    return { class: 'active', text: '有效' };
+    return { class: 'active', text: t('有效') };
   }
 
   getSFIcon(name, size) {
@@ -420,7 +420,7 @@ class ConsoleApp {
   async loadApiKeys() {
     const container = document.getElementById('apiKeysList');
     if (container && !(this._lastApiKeys || []).length) {
-      setHTML(container, pageLoadingHtml('加载 API 密钥...'));
+      setHTML(container, pageLoadingHtml(t('加载 API 密钥...')));
     }
     await this.loadKeyTags();
     try {
@@ -467,8 +467,8 @@ class ConsoleApp {
           <div class="api-keys-list">${keys.map(key => this._renderApiKeyCard(key)).join('')}</div>
         </section>`;
       setHTML(container, `<div class="api-key-groups">
-        ${renderGroup('普通 API Key', '仅自己管理的密钥', normalKeys, 'api-key-group-normal')}
-        ${renderGroup('Co-Key', '已共享给成员，或由其他用户共享给您', coKeys, 'api-key-group-cokey')}
+        ${renderGroup(t('普通 API Key'), t('仅自己管理的密钥'), normalKeys, 'api-key-group-normal')}
+        ${renderGroup('Co-Key', t('已共享给成员，或由其他用户共享给您'), coKeys, 'api-key-group-cokey')}
       </div>`);
       // 等布局完成后再计算标签溢出
       requestAnimationFrame(() => this._fitAllApiKeyTags());
@@ -483,13 +483,13 @@ class ConsoleApp {
 
   _formatKeyScheduleSummary(key) {
     if (!key?.schedule_enabled) return '';
-    const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+    const dayNames = [t('日'), t('一'), t('二'), t('三'), t('四'), t('五'), t('六')];
     const days = key.schedule_days;
-    let dayLabel = '每天';
+    let dayLabel = t('每天');
     if (days && days.length && days.length < 7) {
       const sorted = [...days].sort((a, b) => a - b);
-      if (sorted.length === 5 && sorted.join(',') === '1,2,3,4,5') dayLabel = '工作日';
-      else if (sorted.length === 2 && sorted.join(',') === '0,6') dayLabel = '周末';
+      if (sorted.length === 5 && sorted.join(',') === '1,2,3,4,5') dayLabel = t('工作日');
+      else if (sorted.length === 2 && sorted.join(',') === '0,6') dayLabel = t('周末');
       else dayLabel = sorted.map(d => dayNames[d]).join('');
     }
     const on = key.schedule_on_time ? String(key.schedule_on_time).substring(0, 5) : '?';
@@ -524,7 +524,7 @@ class ConsoleApp {
     const sigOn = sigExplicit
       ? !!key.signature_enabled
       : (this.user?.api_signature_enabled === true);
-    const sigLabel = sigExplicit ? (sigOn ? '签名开' : '签名关') : '签名继承';
+    const sigLabel = sigExplicit ? (sigOn ? t('签名开') : t('签名关')) : t('签名继承');
     const sigKind = sigExplicit ? (sigOn ? 'ok' : 'off') : 'muted';
     const swallowOn = key.swallow_images === true;
     const quotaWarningOn = key.quota_warning_enabled !== false;
@@ -533,12 +533,12 @@ class ConsoleApp {
     const chips = [
       this._renderApiKeyChip(status.text, status.class === 'active' ? 'ok' : status.class === 'expiring' ? 'warn' : status.class === 'expired' ? 'danger' : 'muted'),
       key.key_type === 'co_key' ? this._renderApiKeyChip('Co-Key', 'info') : '',
-      !isEnabled ? this._renderApiKeyChip('已禁用', 'danger') : '',
+      !isEnabled ? this._renderApiKeyChip(t('已禁用'), 'danger') : '',
       this._renderApiKeyChip(sigLabel, sigKind),
-      swallowOn ? this._renderApiKeyChip('吞图', 'warn') : '',
-      quotaWarningOn ? this._renderApiKeyChip('额度预警', 'warn') : '',
+      swallowOn ? this._renderApiKeyChip(t('吞图'), 'warn') : '',
+      quotaWarningOn ? this._renderApiKeyChip(t('额度预警'), 'warn') : '',
       crewrouterOn ? this._renderApiKeyChip('@CrewRouter', 'ok') : '',
-      hasSchedule ? this._renderApiKeyChip('定时', 'info') : ''
+      hasSchedule ? this._renderApiKeyChip(t('定时'), 'info') : ''
     ].filter(Boolean).join('');
 
     const safeName = this._jsString(key.name || 'API Key');
@@ -550,19 +550,19 @@ class ConsoleApp {
       ? `<span class="api-key-dot">·</span><span class="api-key-sub-muted">由 ${escapeHtml(ownerName)} 发起</span>`
       : (memberCount ? `<span class="api-key-dot">·</span><span class="api-key-sub-muted">Co-Key · ${memberCount} 位成员</span>` : '');
     const moreItems = [
-      { label: '客户端配置', onClick: `app.generateClaudeConfig(${key.id})` },
-      { label: '额度脚本', onClick: `app.generateUsageScript(${key.id})` },
-      { label: 'Fusion 配置', onClick: `app.showKeyFusionConfig(${key.id})` },
-      { label: '选项', onClick: `app.showKeyOptions(${key.id})` },
-      { label: '签名设置', onClick: `app.showKeySignature(${key.id})` },
-      { label: '用量详情', onClick: `app.showKeyUsage(${key.id}, '${safeName}')` },
+      { label: t('客户端配置'), onClick: `app.generateClaudeConfig(${key.id})` },
+      { label: t('额度脚本'), onClick: `app.generateUsageScript(${key.id})` },
+      { label: t('Fusion 配置'), onClick: `app.showKeyFusionConfig(${key.id})` },
+      { label: t('选项'), onClick: `app.showKeyOptions(${key.id})` },
+      { label: t('签名设置'), onClick: `app.showKeySignature(${key.id})` },
+      { label: t('用量详情'), onClick: `app.showKeyUsage(${key.id}, '${safeName}')` },
       ...(isOwner ? [
-        { label: '成员管理', onClick: `app.showKeyMembers(${key.id})` },
+        { label: t('成员管理'), onClick: `app.showKeyMembers(${key.id})` },
         { type: 'divider' },
-        { label: '删除密钥', className: 'danger', onClick: `app.deleteApiKey(${key.id})` }
+        { label: t('删除密钥'), className: 'danger', onClick: `app.deleteApiKey(${key.id})` }
       ] : (key.is_co_key ? [
         { type: 'divider' },
-        { label: '退出 Co-Key', className: 'danger', onClick: `app.leaveCoKey(${key.id})` }
+        { label: t('退出 Co-Key'), className: 'danger', onClick: `app.leaveCoKey(${key.id})` }
       ] : []))
     ];
 
@@ -571,7 +571,7 @@ class ConsoleApp {
            ondragover="app.handleApiKeyDragOver(event);app.handleApiKeySortOver(event)" ondragleave="app.handleApiKeyDragLeave(event);app.handleApiKeySortLeave(event)" ondrop="app.handleApiKeyDrop(event, ${key.id});app.handleApiKeySortDrop(event, ${key.id})">
         <div class="api-key-header">
           <div class="api-key-title">
-            <span class="api-key-drag-handle" draggable="true" title="拖拽调整顺序" aria-hidden="true"
+            <span class="api-key-drag-handle" draggable="true" title=t('拖拽调整顺序') aria-hidden="true"
               ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)">⠿</span>
             <label class="pg-toggle api-key-enable-toggle" title="${isEnabled ? '点击禁用' : '点击启用'}">
               <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)">
@@ -582,7 +582,7 @@ class ConsoleApp {
                 <span class="api-key-name api-key-name-editable"
                   role="button"
                   tabindex="0"
-                  title="点击以重命名"
+                  title=t('点击以重命名')
                   data-key-id="${key.id}"
                   onclick="event.stopPropagation();app.startApiKeyInlineRename(${key.id}, this)"
                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();app.startApiKeyInlineRename(${key.id}, this);}">${escapeHtml(displayName)}</span>
@@ -596,7 +596,7 @@ class ConsoleApp {
                   : '<span class="api-key-sub-muted">尚未使用</span>'}
                 <span class="api-key-dot">·</span>
                 <span class="api-key-sub-muted">创建于 ${new Date(key.created_at).toLocaleDateString('zh-CN')}</span>
-                ${hasSchedule ? `<span class="api-key-dot">·</span><span class="api-key-sub-muted" title="定时开关">${escapeHtml(scheduleText)}</span>` : ''}
+                ${hasSchedule ? `<span class="api-key-dot">·</span><span class="api-key-sub-muted" title=t('定时开关')>${escapeHtml(scheduleText)}</span>` : ''}
                 ${coKeyMeta}
                 <span class="api-key-dot">·</span>
                 <span class="api-key-metrics">
@@ -611,12 +611,12 @@ class ConsoleApp {
 
         <div class="api-key-prefix">
           <code class="api-key-value" data-visible="false" data-fullkey="${escapeHtml(fullKey)}"
-                onclick="app.toggleKeyVisibility(this)" title="点击显示/隐藏完整密钥">${escapeHtml(maskedKey)}</code>
+                onclick="app.toggleKeyVisibility(this)" title=t('点击显示/隐藏完整密钥')>${escapeHtml(maskedKey)}</code>
           <div class="api-key-secret-actions">
-            <button type="button" class="copy-btn" onclick="app.toggleKeyVisibility(this.closest('.api-key-prefix').querySelector('.api-key-value'))" title="显示/隐藏">
+            <button type="button" class="copy-btn" onclick="app.toggleKeyVisibility(this.closest('.api-key-prefix').querySelector('.api-key-value'))" title=t('显示/隐藏')>
               ${this.getSFIcon('eye', 14)}
             </button>
-            <button type="button" class="copy-btn" onclick="app.copyFullKey(this.closest('.api-key-prefix').querySelector('.api-key-value').dataset.fullkey, this)" title="复制密钥">
+            <button type="button" class="copy-btn" onclick="app.copyFullKey(this.closest('.api-key-prefix').querySelector('.api-key-value').dataset.fullkey, this)" title=t('复制密钥')>
               ${this.getSFIcon('document.on.document', 14)}
               <span>复制</span>
             </button>
@@ -640,13 +640,13 @@ class ConsoleApp {
   _renderApiKeyRoutePill(key, modelDisplay, queueLen) {
     const hasModel = !!modelDisplay;
     const hasQueue = queueLen > 1;
-    const label = hasModel ? modelDisplay : '未绑定模型';
+    const label = hasModel ? modelDisplay : t('未绑定模型');
     const hoverAttrs = hasQueue
       ? ` onmouseenter="app.showApiKeyRouteQueueTip(event, ${key.id})" onmouseleave="app.hideApiKeyRouteQueueTip(event)"`
       : '';
     const title = hasQueue
       ? `模型队列共 ${queueLen} 个，悬停查看 · 失败时按顺序回退`
-      : (hasModel ? modelDisplay : '尚未绑定模型，可点击「模型队列」配置');
+      : (hasModel ? modelDisplay : t('尚未绑定模型，可点击「模型队列」配置'));
 
     return `
       <div class="api-key-route-pill-wrap">
@@ -685,7 +685,7 @@ class ConsoleApp {
       <div class="api-key-route-queue-tip-title">模型队列 · 按序回退</div>
       <ol class="api-key-route-queue-tip-list">
         ${queue.map((item, i) => {
-          const name = item.name || item.model_id || item.id || '未知模型';
+          const name = item.name || item.model_id || item.id || t('未知模型');
           const isPrimary = i === 0;
           return `<li class="api-key-route-queue-tip-item${isPrimary ? ' is-primary' : ''}">
             <span class="api-key-route-queue-tip-order">${i + 1}</span>
@@ -800,13 +800,13 @@ class ConsoleApp {
            data-tag-id="${tag.id}"
            ondragstart="app.handleKeyTagDragStart(event, ${tag.id})"
            ondragend="app.handleKeyTagDragEnd(event)"
-           title="拖拽到 Key 卡片来分配 · 点击铅笔编辑">
+           title=t('拖拽到 Key 卡片来分配 · 点击铅笔编辑')>
         <span style="color:${tag.color};">●</span>
         ${escapeHtml(tag.name)}
-        <span class="edit-tag-def" onclick="event.stopPropagation();app.showEditKeyTagPopover(${tag.id}, this)" title="编辑标签">✎</span>
-        <span class="remove-tag-def" onclick="event.stopPropagation();app.deleteKeyTag(${tag.id})" title="删除此标签">&times;</span>
+        <span class="edit-tag-def" onclick="event.stopPropagation();app.showEditKeyTagPopover(${tag.id}, this)" title=t('编辑标签')>✎</span>
+        <span class="remove-tag-def" onclick="event.stopPropagation();app.deleteKeyTag(${tag.id})" title=t('删除此标签')>&times;</span>
       </div>`
-    ).join('') + `<div class="key-tag-chip key-tag-add-btn" onclick="app.showCreateKeyTagPopover(this)" title="创建标签">+</div>`;
+    ).join('') + `<div class="key-tag-chip key-tag-add-btn" onclick="app.showCreateKeyTagPopover(this)" title=t('创建标签')>+</div>`;
   }
 
   renderKeyTagBar() {
@@ -890,9 +890,9 @@ class ConsoleApp {
     if (!pop) return;
     const titleEl = document.getElementById('keyTagPopoverTitle');
     const submitBtn = document.getElementById('keyTagPopoverSubmit');
-    if (titleEl) titleEl.textContent = title || '创建标签';
+    if (titleEl) titleEl.textContent = title || t('创建标签');
     if (submitBtn) {
-      submitBtn.textContent = submitLabel || '创建';
+      submitBtn.textContent = submitLabel || t('创建');
       submitBtn.onclick = onSubmit;
     }
     document.getElementById('createKeyTagName').value = name || '';
@@ -912,10 +912,10 @@ class ConsoleApp {
   showCreateKeyTagPopover(btnEl) {
     this._editingKeyTagId = null;
     this._openKeyTagPopover(btnEl, {
-      title: '创建标签',
+      title: t('创建标签'),
       name: '',
       color: '#3b82f6',
-      submitLabel: '创建',
+      submitLabel: t('创建'),
       onSubmit: () => app.saveKeyTag()
     });
   }
@@ -925,10 +925,10 @@ class ConsoleApp {
     if (!tag) return;
     this._editingKeyTagId = Number(tagId);
     this._openKeyTagPopover(btnEl, {
-      title: '编辑标签',
+      title: t('编辑标签'),
       name: tag.name || '',
       color: tag.color || '#3b82f6',
-      submitLabel: '保存',
+      submitLabel: t('保存'),
       onSubmit: () => app.saveKeyTag()
     });
   }
@@ -946,7 +946,7 @@ class ConsoleApp {
 
   async saveKeyTag() {
     const name = document.getElementById('createKeyTagName').value.trim();
-    if (!name) { this.showToast('请输入标签名称', 'error'); return; }
+    if (!name) { this.showToast(t('请输入标签名称'), 'error'); return; }
     const colorEl = document.querySelector('#createKeyTagColors .color-dot.selected');
     const color = colorEl ? colorEl.dataset.color : '#3b82f6';
     const editingId = this._editingKeyTagId;
@@ -964,7 +964,7 @@ class ConsoleApp {
           });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        this.showToast(err.error || (editingId ? '保存失败' : '创建失败'), 'error');
+        this.showToast(err.error || (editingId ? t('保存失败') : t('创建失败')), 'error');
         return;
       }
       const data = await res.json();
@@ -977,9 +977,9 @@ class ConsoleApp {
       }
       this.renderKeyTagBar();
       this.hideCreateKeyTagPopover();
-      this.showToast(editingId ? '标签已更新' : '标签已创建', 'success');
+      this.showToast(editingId ? t('标签已更新') : t('标签已创建'), 'success');
     } catch (e) {
-      this.showToast(editingId ? '保存标签失败' : '创建标签失败', 'error');
+      this.showToast(editingId ? t('保存标签失败') : t('创建标签失败'), 'error');
     }
   }
 
@@ -989,16 +989,16 @@ class ConsoleApp {
   }
 
   async deleteKeyTag(tagId) {
-    if (!await confirm('确定删除此标签？将从所有 API Key 上移除。')) return;
+    if (!await confirm(t('确定删除此标签？将从所有 API Key 上移除。'))) return;
     try {
       const res = await fetch('/api/user/key-tags/' + tagId, { method: 'DELETE' });
-      if (!res.ok) { this.showToast('删除失败', 'error'); return; }
+      if (!res.ok) { this.showToast(t('删除失败'), 'error'); return; }
       this._keyTags = this._keyTags.filter(t => t.id !== tagId);
       this.renderKeyTagBar();
       await this.loadApiKeys();
-      this.showToast('标签已删除', 'success');
+      this.showToast(t('标签已删除'), 'success');
     } catch (e) {
-      this.showToast('删除标签失败', 'error');
+      this.showToast(t('删除标签失败'), 'error');
     }
   }
 
@@ -1010,16 +1010,16 @@ class ConsoleApp {
         ${tags.map(t => `
           <span class="key-tag-chip-sm" data-tag-id="${t.id}" style="border-color:${t.color};color:${t.color};background:${t.color}10;">
             ${escapeHtml(t.name)}
-            ${isOwner ? `<span class="remove-tag" onclick="event.stopPropagation();app.removeTagFromKey(${key.id},${t.id})" title="移除">&times;</span>` : ''}
+            ${isOwner ? `<span class="remove-tag" onclick="event.stopPropagation();app.removeTagFromKey(${key.id},${t.id})" title=t('移除')>&times;</span>` : ''}
           </span>`).join('')}
       </div>
       <button type="button" class="api-key-tags-more" style="display:none;"
         data-key-id="${key.id}"
-        title="查看更多标签"
+        title=t('查看更多标签')
         onmouseenter="app.onApiKeyTagsMoreEnter(event, ${key.id})"
         onmouseleave="app.onApiKeyTagsMoreLeave(event)"
         onclick="event.stopPropagation();app.toggleApiKeyTagsOverflow(${key.id}, this)">…</button>
-      ${isOwner ? `<span class="key-tag-chip-sm key-tag-add-tag-btn" onclick="event.stopPropagation();app.showTagAssignDropdown(${key.id}, this)" title="管理标签">+</span>` : ''}
+      ${isOwner ? `<span class="key-tag-chip-sm key-tag-add-tag-btn" onclick="event.stopPropagation();app.showTagAssignDropdown(${key.id}, this)" title=t('管理标签')>+</span>` : ''}
     </div>`;
   }
 
@@ -1212,7 +1212,7 @@ class ConsoleApp {
             <span class="key-tag-chip-sm" style="border-color:${escapeHtml(t.color)};color:${escapeHtml(t.color)};background:${escapeHtml(t.color)}10;">
               ${escapeHtml(t.name)}
             </span>
-            ${isOwner ? `<button type="button" class="api-key-tags-overflow-remove" title="移除标签"
+            ${isOwner ? `<button type="button" class="api-key-tags-overflow-remove" title=t('移除标签')
               onclick="event.stopPropagation();app.removeTagFromKey(${keyId},${t.id})">移除</button>` : ''}
           </div>`).join('')
       : '<div class="api-key-tags-overflow-empty">暂无标签</div>';
@@ -1408,10 +1408,10 @@ class ConsoleApp {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderedIds: idsInOrder })
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || '保存失败');
-      this.showToast('顺序已保存', 'success');
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || t('保存失败'));
+      this.showToast(t('顺序已保存'), 'success');
     } catch (e) {
-      this.showToast(e.message || '保存顺序失败', 'error');
+      this.showToast(e.message || t('保存顺序失败'), 'error');
     }
     await this.loadApiKeys();
   }
@@ -1428,16 +1428,16 @@ class ConsoleApp {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tagIds: newTagIds })
       });
-      if (!res.ok) { this.showToast('操作失败', 'error'); return; }
-      this.showToast(hasTag ? '标签已移除' : '标签已添加', 'success');
+      if (!res.ok) { this.showToast(t('操作失败'), 'error'); return; }
+      this.showToast(hasTag ? t('标签已移除') : t('标签已添加'), 'success');
       await this.loadApiKeys();
     } catch (e) {
-      this.showToast('操作失败', 'error');
+      this.showToast(t('操作失败'), 'error');
     }
   }
 
   async removeTagFromKey(keyId, tagId) {
-    if (!await confirm('确定移除此标签？')) return;
+    if (!await confirm(t('确定移除此标签？'))) return;
     try {
       const tid = Number(tagId);
       const newTagIds = this._getKeyTagIds(keyId).filter(id => id !== tid);
@@ -1446,11 +1446,11 @@ class ConsoleApp {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tagIds: newTagIds })
       });
-      if (!res.ok) { this.showToast('移除标签失败', 'error'); return; }
-      this.showToast('标签已移除', 'success');
+      if (!res.ok) { this.showToast(t('移除标签失败'), 'error'); return; }
+      this.showToast(t('标签已移除'), 'success');
       await this.loadApiKeys();
     } catch (e) {
-      this.showToast('移除标签失败', 'error');
+      this.showToast(t('移除标签失败'), 'error');
     }
   }
 
@@ -1481,10 +1481,10 @@ class ConsoleApp {
             setHTML(btn, `${this.getSFIcon('document.on.document', 14)} 复制`);
           }, 2000);
         }
-        this.showToast('已复制到剪贴板', 'success');
+        this.showToast(t('已复制到剪贴板'), 'success');
       }
     }).catch(() => {
-      this.showToast('复制失败，请手动复制', 'error');
+      this.showToast(t('复制失败，请手动复制'), 'error');
     });
   }
 
@@ -1542,26 +1542,26 @@ class ConsoleApp {
             origChildren.forEach(node => btn.appendChild(node.cloneNode(true)));
           }, 2000);
         }
-        this.showToast('已复制到剪贴板', 'success');
+        this.showToast(t('已复制到剪贴板'), 'success');
       }
     }).catch(() => {
-      this.showToast('复制失败，请手动复制', 'error');
+      this.showToast(t('复制失败，请手动复制'), 'error');
     });
   }
 
   async showKeyModels(keyId) {
     const container = document.getElementById('keyModelsContent');
     this._configureKeyModelsModal({
-      title: '模型队列（失败按顺序回退）',
+      title: t('模型队列（失败按顺序回退）'),
       picker: true,
       saveVisible: true,
-      saveText: '保存队列',
-      cancelText: '关闭'
+      saveText: t('保存队列'),
+      cancelText: t('关闭')
     });
     this._editingKeyModelsId = keyId;
     this._saveKeyModelsOverride = null;
     this._keyModelPicker = null;
-    setHTML(container, pageLoadingHtml('加载中...'));
+    setHTML(container, pageLoadingHtml(t('加载中...')));
     this.showModal('keyModelsModal');
 
     try {
@@ -1636,14 +1636,14 @@ class ConsoleApp {
         if (res.ok) {
           this.closeModals();
           await this.loadApiKeys();
-          this.showToast(modelIds.length ? `已保存模型队列（${modelIds.length} 个）` : '已清空模型绑定', 'success');
+          this.showToast(modelIds.length ? `已保存模型队列（${modelIds.length} 个）` : t('已清空模型绑定'), 'success');
         } else {
           const err = await res.json().catch(() => ({}));
-          this.showToast(err.error || '保存失败', 'error');
+          this.showToast(err.error || t('保存失败'), 'error');
         }
       } catch (error) {
         console.error('保存密钥模型队列失败:', error);
-        this.showToast('保存失败', 'error');
+        this.showToast(t('保存失败'), 'error');
       }
       return;
     }
@@ -1661,11 +1661,11 @@ class ConsoleApp {
         this.closeModals();
         this.loadApiKeys();
       } else {
-        alert('保存失败');
+        alert(t('保存失败'));
       }
     } catch (error) {
       console.error('保存密钥模型失败:', error);
-      alert('保存失败');
+      alert(t('保存失败'));
     }
   }
 
@@ -1710,7 +1710,7 @@ class ConsoleApp {
     });
   }
 
-  _configureKeyModelsModal({ title, picker = false, saveVisible = true, saveText = '保存', cancelText = '取消' }) {
+  _configureKeyModelsModal({ title, picker = false, saveVisible = true, saveText = t('保存'), cancelText = t('取消') }) {
     const modalContent = document.getElementById('keyModelsModalContent');
     const titleEl = document.getElementById('keyModelsTitle');
     const saveBtn = document.getElementById('keyModelsSaveBtn');
@@ -1718,7 +1718,7 @@ class ConsoleApp {
       modalContent.classList.toggle('key-model-picker-modal', picker);
       modalContent.classList.toggle('model-picker-modal', picker);
     }
-    if (titleEl) titleEl.textContent = title || '管理可用模型';
+    if (titleEl) titleEl.textContent = title || t('管理可用模型');
     if (saveBtn) {
       saveBtn.style.display = saveVisible ? '' : 'none';
       saveBtn.textContent = saveText;
@@ -1755,7 +1755,7 @@ class ConsoleApp {
         <div class="model-filter-bar">
           <div class="model-search-box">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" id="keyModelPickerSearch" placeholder="搜索模型、供应商、Team..." class="model-search-input">
+            <input type="text" id="keyModelPickerSearch" placeholder=t('搜索模型、供应商、Team...') class="model-search-input">
           </div>
           <div class="model-filter-selects">
             <select id="keyModelPickerProvider" class="select"><option value="all">全部供应商</option></select>
@@ -1958,7 +1958,7 @@ class ConsoleApp {
       if (ctx.sort && ctx.sort !== 'default') params.set('sort', ctx.sort);
 
       const res = await fetch(`/api/user/model-library/search?${params.toString()}`);
-      if (!res.ok) throw new Error('搜索失败');
+      if (!res.ok) throw new Error(t('搜索失败'));
       const data = await res.json();
       if (seq !== ctx.globalSearchSeq || this._keyModelPicker !== ctx) return;
       if (!this._shouldUseKeyPickerGlobalSearch(ctx)) return;
@@ -2113,7 +2113,7 @@ class ConsoleApp {
         <div class="model-library-list">
           ${hasModels
             ? `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}"><span class="placeholder-text">${provider.models.length} 个模型</span></div>`
-            : `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}"><span class="placeholder-text">${provider.models_loaded ? '该供应商下暂无模型' : '点击展开以加载模型'}</span></div>`}
+            : `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}"><span class="placeholder-text">${provider.models_loaded ? t('该供应商下暂无模型') : t('点击展开以加载模型')}</span></div>`}
         </div>
       </div>
     `;
@@ -2223,7 +2223,7 @@ class ConsoleApp {
     ctx.loadingPromises.set(providerKey, loadPromise);
     if (providerEl) {
       const list = providerEl.querySelector('.model-library-list');
-      if (list) setHTML(list, `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}">${inlineLoadingHtml('正在加载模型...', 'sm')}</div>`);
+      if (list) setHTML(list, `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}">${inlineLoadingHtml(t('正在加载模型...'), 'sm')}</div>`);
     }
 
     try {
@@ -2311,7 +2311,7 @@ class ConsoleApp {
     }
     if (!provider.models || provider.models.length === 0) {
       const hasActiveFilter = ctx.search || ctx.seriesFilter !== 'all' || ctx.testFilter !== 'all';
-      setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text">${hasActiveFilter ? '没有符合筛选条件的模型' : '该供应商下暂无模型'}</span></div>`);
+      setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text">${hasActiveFilter ? t('没有符合筛选条件的模型') : t('该供应商下暂无模型')}</span></div>`);
       return;
     }
 
@@ -2439,11 +2439,11 @@ class ConsoleApp {
       const displayName = item.name || item.id;
       return `
       <div class="key-model-queue-item" draggable="true" data-model-id="${escapeHtml(item.id)}">
-        <span class="key-model-queue-handle" title="拖拽排序" aria-hidden="true">⠿</span>
+        <span class="key-model-queue-handle" title=t('拖拽排序') aria-hidden="true">⠿</span>
         <span class="key-model-queue-order">${index + 1}</span>
         <span class="key-model-queue-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}${index === 0 ? ' <em class="key-model-queue-primary">首选</em>' : ''}</span>
         <div class="key-model-queue-actions">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title="移除">×</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title=t('移除')>×</button>
         </div>
       </div>`;
     }).join(''));
@@ -2595,7 +2595,7 @@ class ConsoleApp {
       return;
     }
     if ((ctx.queue || []).length >= 10) {
-      this.showToast('模型队列最多 10 个', 'error');
+      this.showToast(t('模型队列最多 10 个'), 'error');
       return;
     }
     const resolvedName = this._resolveKeyPickerModelName(modelId, modelName);
@@ -2662,14 +2662,14 @@ class ConsoleApp {
   async showKeyFusionConfig(keyId) {
     const container = document.getElementById('keyModelsContent');
     this._configureKeyModelsModal({
-      title: 'Fusion 配置',
+      title: t('Fusion 配置'),
       picker: false,
       saveVisible: true,
-      saveText: '保存',
-      cancelText: '取消'
+      saveText: t('保存'),
+      cancelText: t('取消')
     });
     this._keyModelPicker = null;
-    setHTML(container, pageLoadingHtml('加载中...', { compact: true }));
+    setHTML(container, pageLoadingHtml(t('加载中...'), { compact: true }));
     this.showModal('keyModelsModal');
 
     try {
@@ -2691,7 +2691,7 @@ class ConsoleApp {
       // 按供应商分组
       const byProvider = {};
       models.forEach(m => {
-        const p = m.provider || '其他';
+        const p = m.provider || t('其他');
         if (!byProvider[p]) byProvider[p] = [];
         byProvider[p].push(m);
       });
@@ -2714,7 +2714,7 @@ class ConsoleApp {
         <div style="margin-bottom:16px;">
           <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:8px;">Panel 模型（多选，并行调用）</div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
-            <input type="text" id="fusionPanelSearch" class="input" placeholder="搜索模型..." style="flex:1;font-size:13px;" oninput="app._filterFusionPanelModels()">
+            <input type="text" id="fusionPanelSearch" class="input" placeholder=t('搜索模型...') style="flex:1;font-size:13px;" oninput="app._filterFusionPanelModels()">
             <button class="btn btn-sm btn-secondary" onclick="app._toggleAllFusionPanels()">全选/取消</button>
           </div>
           <div id="fusionPanelList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;">
@@ -2799,11 +2799,11 @@ class ConsoleApp {
             this._saveKeyModelsOverride = null;
             this.loadApiKeys();
           } else {
-            alert('保存失败');
+            alert(t('保存失败'));
           }
         } catch (e) {
           console.error('保存 Fusion 配置失败:', e);
-          alert('保存失败');
+          alert(t('保存失败'));
         }
       };
     } catch (error) {
@@ -2835,7 +2835,7 @@ class ConsoleApp {
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/signature`);
       if (!res.ok) {
-        alert('加载签名配置失败');
+        alert(t('加载签名配置失败'));
         return;
       }
       const data = await res.json();
@@ -2866,7 +2866,7 @@ class ConsoleApp {
       this.showModal('keySignatureModal');
     } catch (error) {
       console.error('加载签名配置失败:', error);
-      alert('加载签名配置失败');
+      alert(t('加载签名配置失败'));
     }
   }
 
@@ -2883,32 +2883,32 @@ class ConsoleApp {
 
     const mode = document.getElementById('keySignatureMode').value;
     if (mode === 'inherit') {
-      preview.textContent = '预览：将使用用户默认签名设置';
+      preview.textContent = t('预览：将使用用户默认签名设置');
       return;
     }
 
     if (mode === 'disable') {
-      preview.textContent = '预览：此 API Key 的回复将不包含签名';
+      preview.textContent = t('预览：此 API Key 的回复将不包含签名');
       return;
     }
 
-    const tpl = document.getElementById('keySignatureTemplate').value || '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}';
+    const tpl = document.getElementById('keySignatureTemplate').value || t('{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}');
     const example = tpl
       .replace(/\{model\}/g, 'gpt-4o')
       .replace(/\{tokens\}/g, '12.3k tokens')
       .replace(/\{cache_hit\}/g, '78%')
       .replace(/\{cached_tokens\}/g, '8,400')
       .replace(/\{provider\}/g, 'OpenAI')
-      .replace(/\{cost\}/g, '0.0123 积分')
+      .replace(/\{cost\}/g, t('0.0123 积分'))
       .replace(/\{username\}/g, 'demo')
-      .replace(/\{key_name\}/g, '生产环境')
+      .replace(/\{key_name\}/g, t('生产环境'))
       .replace(/\{balance\}/g, '9999')
-      .replace(/\{group_name\}/g, '默认组')
-      .replace(/\{team_name\}/g, '我的团队')
-      .replace(/\{quota_info\}/g, '5小时限额 35% · 周限额 12%')
+      .replace(/\{group_name\}/g, t('默认组'))
+      .replace(/\{team_name\}/g, t('我的团队'))
+      .replace(/\{quota_info\}/g, t('5小时限额 35% · 周限额 12%'))
       .replace(/\{today_requests\}/g, '128')
       .replace(/\{today_tokens\}/g, '50.2k tokens');
-    preview.textContent = example ? `预览：${example}` : '(空模板，不显示签名)';
+    preview.textContent = example ? `预览：${example}` : t('(空模板，不显示签名)');
   }
 
   async saveKeySignature() {
@@ -2933,11 +2933,11 @@ class ConsoleApp {
         this.closeModals();
         this.loadApiKeys();  // 刷新列表显示新的签名状态
       } else {
-        alert('保存失败');
+        alert(t('保存失败'));
       }
     } catch (error) {
       console.error('保存签名配置失败:', error);
-      alert('保存失败');
+      alert(t('保存失败'));
     }
   }
 
@@ -2950,18 +2950,18 @@ class ConsoleApp {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || '操作失败');
+        throw new Error(data.error || t('操作失败'));
       }
       this.showToast(
         swallowImages
-          ? '已启用吞图：请求中的图片不会转发给上游供应商'
-          : '已关闭吞图',
+          ? t('已启用吞图：请求中的图片不会转发给上游供应商')
+          : t('已关闭吞图'),
         'success'
       );
       await this.loadApiKeys();
     } catch (err) {
       console.error('切换吞图失败:', err);
-      this.showToast(err.message || '切换吞图失败', 'error');
+      this.showToast(err.message || t('切换吞图失败'), 'error');
     }
   }
 
@@ -2993,14 +2993,14 @@ class ConsoleApp {
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || '保存失败');
+          throw new Error(data.error || t('保存失败'));
         }
       }
       this.closeModals();
-      this.showToast('API Key 选项已保存', 'success');
+      this.showToast(t('API Key 选项已保存'), 'success');
       await this.loadApiKeys();
     } catch (err) {
-      this.showToast(err.message || '保存 API Key 选项失败', 'error');
+      this.showToast(err.message || t('保存 API Key 选项失败'), 'error');
     }
   }
 
@@ -3013,13 +3013,13 @@ class ConsoleApp {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || '操作失败');
+        throw new Error(data.error || t('操作失败'));
       }
-      this.showToast(enabled ? '已启用额度预警' : '已关闭额度预警', 'success');
+      this.showToast(enabled ? t('已启用额度预警') : t('已关闭额度预警'), 'success');
       await this.loadApiKeys();
     } catch (err) {
       console.error('切换额度预警失败:', err);
-      this.showToast(err.message || '切换额度预警失败', 'error');
+      this.showToast(err.message || t('切换额度预警失败'), 'error');
     }
   }
 
@@ -3032,18 +3032,18 @@ class ConsoleApp {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || '操作失败');
+        throw new Error(data.error || t('操作失败'));
       }
       this.showToast(
         enabled
-          ? '已允许此 Key 使用 @CrewRouter 指令'
-          : '已禁止此 Key 使用 @CrewRouter 指令',
+          ? t('已允许此 Key 使用 @CrewRouter 指令')
+          : t('已禁止此 Key 使用 @CrewRouter 指令'),
         'success'
       );
       await this.loadApiKeys();
     } catch (err) {
       console.error('切换 CrewRouter 指令失败:', err);
-      this.showToast(err.message || '切换失败', 'error');
+      this.showToast(err.message || t('切换失败'), 'error');
     }
   }
 
@@ -3056,11 +3056,11 @@ class ConsoleApp {
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || '操作失败');
+        throw new Error(data.error || t('操作失败'));
       }
       await this.loadApiKeys();
     } catch (err) {
-      alert('更新失败: ' + err.message);
+      alert(t('更新失败: ') + err.message);
       await this.loadApiKeys();
     }
   }
@@ -3070,7 +3070,7 @@ class ConsoleApp {
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/schedule`);
       if (!res.ok) {
-        alert('加载定时配置失败');
+        alert(t('加载定时配置失败'));
         return;
       }
       const data = await res.json();
@@ -3090,7 +3090,7 @@ class ConsoleApp {
       this.showModal('keyScheduleModal');
     } catch (error) {
       console.error('加载定时配置失败:', error);
-      alert('加载定时配置失败');
+      alert(t('加载定时配置失败'));
     }
   }
 
@@ -3107,11 +3107,11 @@ class ConsoleApp {
     const schedule_days = Array.from(document.querySelectorAll('.schedule-day:checked')).map(cb => parseInt(cb.value));
 
     if (schedule_enabled && (!schedule_on_time || !schedule_off_time)) {
-      alert('请设置开启和关闭时间');
+      alert(t('请设置开启和关闭时间'));
       return;
     }
     if (schedule_enabled && schedule_days.length === 0) {
-      alert('请至少选择一天');
+      alert(t('请至少选择一天'));
       return;
     }
 
@@ -3133,18 +3133,18 @@ class ConsoleApp {
         this.loadApiKeys();
       } else {
         const data = await res.json();
-        alert('保存失败: ' + (data.error || '未知错误'));
+        alert(t('保存失败: ') + (data.error || t('未知错误')));
       }
     } catch (error) {
       console.error('保存定时配置失败:', error);
-      alert('保存失败');
+      alert(t('保存失败'));
     }
   }
 
   async showKeyUsage(keyId, keyName) {
     document.getElementById('keyUsageTitle').textContent = `${keyName} - 用量详情`;
     const container = document.getElementById('keyUsageContent');
-    setHTML(container, pageLoadingHtml('加载中...', { compact: true }));
+    setHTML(container, pageLoadingHtml(t('加载中...'), { compact: true }));
     this.showModal('keyUsageModal');
 
     try {
@@ -3162,7 +3162,7 @@ class ConsoleApp {
         byDate[u.date].tokens += parseInt(u.tokens) || 0;
         byDate[u.date].cost += parseFloat(u.cost) || 0;
         byDate[u.date].requests += parseInt(u.requests) || 0;
-        const modelName = u.model_name || '(已删除)';
+        const modelName = u.model_name || t('(已删除)');
         byDate[u.date].models[modelName] = (byDate[u.date].models[modelName] || 0) + parseInt(u.requests);
       });
 
@@ -3236,7 +3236,7 @@ class ConsoleApp {
       }
       if (source) params.set('request_source', source);
       const res = await fetch(`/api/user/project-stats?${params}`);
-      if (!res.ok) throw new Error('项目工作统计加载失败');
+      if (!res.ok) throw new Error(t('项目工作统计加载失败'));
       const data = await res.json();
       const summary = data.summary || {};
       const projects = Array.isArray(data.projects) ? data.projects : [];
@@ -3252,19 +3252,19 @@ class ConsoleApp {
         return;
       }
       const cards = [
-        ['活跃项目', fmt(summary.projects), '个工作区'],
-        ['活跃天数', fmt(summary.active_days), '天'],
-        ['AI 请求', fmt(summary.requests), '次调用'],
-        ['Token', fmtTok(summary.tokens), '总投入'],
-        ['最近活动', date(summary.last_activity), '最后一次工作'],
+        [t('活跃项目'), fmt(summary.projects), t('个工作区')],
+        [t('活跃天数'), fmt(summary.active_days), t('天')],
+        [t('AI 请求'), fmt(summary.requests), t('次调用')],
+        ['Token', fmtTok(summary.tokens), t('总投入')],
+        [t('最近活动'), date(summary.last_activity), t('最后一次工作')],
       ];
       setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="project-work-stat"><span>${label}</span><strong>${escapeHtml(value)}</strong><small>${sub}</small></div>`).join(''));
       setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)} 次 · ${fmtTok(p.tokens)} Token · 最近 ${date(p.last_activity)}</small></span><span class="project-work-arrow">→</span></button>`).join(''));
-      setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})" title="复制工作区路径">${escapeHtml(p.workspace_path)}</button></div></div><div class="project-work-project-metrics"><div><span>请求</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmtTok(p.tokens)}</strong></div><div><span>活跃</span><strong>${fmt(p.active_days)} 天</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || '未标记客户端'}</span><span>${money(p.cost)} 积分</span></div></article>`).join(''));
-      if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: 'AI 请求', data: (data.daily || []).map(r => r.requests), borderColor: '#0f766e', backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: '活跃项目', data: (data.daily || []).map(r => r.projects), borderColor: '#f59e0b', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
+      setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})" title=t('复制工作区路径')>${escapeHtml(p.workspace_path)}</button></div></div><div class="project-work-project-metrics"><div><span>请求</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmtTok(p.tokens)}</strong></div><div><span>活跃</span><strong>${fmt(p.active_days)} 天</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || t('未标记客户端')}</span><span>${money(p.cost)} 积分</span></div></article>`).join(''));
+      if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('AI 请求'), data: (data.daily || []).map(r => r.requests), borderColor: '#0f766e', backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: t('活跃项目'), data: (data.daily || []).map(r => r.projects), borderColor: '#f59e0b', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
     } catch (error) {
       console.error(error);
-      if (statusEl) statusEl.textContent = '同步失败';
+      if (statusEl) statusEl.textContent = t('同步失败');
       const message = `<div class="project-work-empty project-work-error"><strong>项目统计暂时不可用</strong><span>${escapeHtml(error.message)}</span></div>`;
       [summaryEl, recentEl, projectsEl].forEach((el) => { if (el) setHTML(el, message); });
     }
@@ -3272,7 +3272,7 @@ class ConsoleApp {
 
   projectDisplayName(path) {
     const value = String(path || '').replace(/[\\/]+$/, '');
-    return value.split(/[\\/]/).pop() || value || '未命名项目';
+    return value.split(/[\\/]/).pop() || value || t('未命名项目');
   }
 
   projectProjectMark(path) {
@@ -3283,9 +3283,9 @@ class ConsoleApp {
   async copyProjectPath(path) {
     try {
       await navigator.clipboard.writeText(String(path || ''));
-      this.showToast('工作区路径已复制', 'success');
+      this.showToast(t('工作区路径已复制'), 'success');
     } catch (_) {
-      this.showToast('复制失败，请手动选择路径', 'error');
+      this.showToast(t('复制失败，请手动选择路径'), 'error');
     }
   }
 
@@ -3293,17 +3293,17 @@ class ConsoleApp {
     const summaryEl = document.getElementById('userMessageStatsSummary');
     const blockEl = document.getElementById('userMessageStatsBlockTable');
     const sourceEl = document.getElementById('userMessageStatsSourceTable');
-    const loading = pageLoadingHtml('正在读取项目活动...', { compact: true });
+    const loading = pageLoadingHtml(t('正在读取项目活动...'), { compact: true });
     [summaryEl, blockEl, sourceEl].forEach((el) => { if (el) setHTML(el, loading); });
     try {
       const params = new URLSearchParams({ days: document.getElementById('statsTimeRange')?.value || '30' });
       const source = document.getElementById('statsSourceFilter')?.value || '';
       if (source) params.set('request_source', source);
       const res = await fetch(`/api/user/message-stats?${params}`);
-      if (!res.ok) throw new Error('消息统计加载失败');
+      if (!res.ok) throw new Error(t('消息统计加载失败'));
       const data = await res.json();
       const s = data.summary || {};
-      if (!data || data.error) throw new Error(data.error || '消息统计返回数据为空');
+      if (!data || data.error) throw new Error(data.error || t('消息统计返回数据为空'));
       if (!(data.by_workspace || []).length && !(data.daily || []).length) {
         const empty = '<div class="empty-state" style="padding:28px;text-align:center;color:var(--muted-foreground);">所选时间范围内暂无可分析的项目消息记录</div>';
         [summaryEl, blockEl, sourceEl].forEach((el) => { if (el) setHTML(el, empty); });
@@ -3311,13 +3311,13 @@ class ConsoleApp {
       }
       const row = (label, value) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);">${label}</span><strong>${value}</strong></div>`;
       const analysisStatus = s.analysis_status || {};
-      const pendingLabel = analysisStatus.pending_requests ? row('后台待分析', analysisStatus.pending_requests.toLocaleString()) : '';
+      const pendingLabel = analysisStatus.pending_requests ? row(t('后台待分析'), analysisStatus.pending_requests.toLocaleString()) : '';
       const fmtTok = (v) => { const n = Number(v || 0); return `<span title="${n.toLocaleString()}">${this._formatBigNumber(n)}</span>`; };
-      setHTML(document.getElementById('userMessageStatsSummary'), [row('活跃请求', s.analyzed_requests || 0), row('项目数', (data.by_workspace || []).length), row('活跃天数', s.active_days || 0), row('日均请求', Number(s.avg_daily_requests || 0).toFixed(1)), row('总 Token', fmtTok(s.total_tokens)), row('Git 状态率', `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
+      setHTML(document.getElementById('userMessageStatsSummary'), [row(t('活跃请求'), s.analyzed_requests || 0), row(t('项目数'), (data.by_workspace || []).length), row(t('活跃天数'), s.active_days || 0), row(t('日均请求'), Number(s.avg_daily_requests || 0).toFixed(1)), row(t('总 Token'), fmtTok(s.total_tokens)), row(t('Git 状态率'), `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
       const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || '<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--muted-foreground);">暂无数据</td></tr>'}</tbody></table></div>`;
-      setHTML(document.getElementById('userMessageStatsBlockTable'), table(['区块', '请求数', '出现次数'], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
-      setHTML(document.getElementById('userMessageStatsSourceTable'), table(['Harness', '请求数', '平均消息', '平均字符', 'Token'], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td></tr>`; }).join('')));
-      if (typeof Chart !== 'undefined') this._upsertChart('_userMessageStatsDailyChart', document.getElementById('userMessageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: '请求数', data: (data.daily || []).map(r => r.requests), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: '#8b5cf6', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
+      setHTML(document.getElementById('userMessageStatsBlockTable'), table([t('区块'), t('请求数'), t('出现次数')], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
+      setHTML(document.getElementById('userMessageStatsSourceTable'), table(['Harness', t('请求数'), t('平均消息'), t('平均字符'), 'Token'], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td></tr>`; }).join('')));
+      if (typeof Chart !== 'undefined') this._upsertChart('_userMessageStatsDailyChart', document.getElementById('userMessageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('请求数'), data: (data.daily || []).map(r => r.requests), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: '#8b5cf6', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
     } catch (error) {
       console.error(error);
       setHTML(document.getElementById('userMessageStatsSummary'), `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
@@ -3543,7 +3543,7 @@ class ConsoleApp {
   }
 
   async testModel(modelId, buttonEl) {
-    if (!modelId) { alert('模型 ID 为空，请刷新重试'); return; }
+    if (!modelId) { alert(t('模型 ID 为空，请刷新重试')); return; }
 
     if (!await this._confirmTest()) return;
 
@@ -3558,7 +3558,7 @@ class ConsoleApp {
       this._updateModelTestResult(modelId, data);
       this._showModelTestResult(modelId, data);
     } catch (e) {
-      this._showModelTestResult(modelId, { ok: false, error: e.message || '请求失败' });
+      this._showModelTestResult(modelId, { ok: false, error: e.message || t('请求失败') });
     } finally {
       if (buttonEl) {
         buttonEl.disabled = false;
@@ -3575,7 +3575,7 @@ class ConsoleApp {
     if (!testedAt) return '';
     const diff = Date.now() - new Date(testedAt).getTime();
     const seconds = Math.floor(diff / 1000);
-    if (seconds < 60) return '刚刚测试';
+    if (seconds < 60) return t('刚刚测试');
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `${minutes} 分钟前测试`;
     const hours = Math.floor(minutes / 60);
@@ -3670,26 +3670,26 @@ class ConsoleApp {
 
     if (tested === 0) {
       return {
-        text: '未测试',
+        text: t('未测试'),
         className: 'untested',
-        title: total > 0 ? `共 ${total} 个模型，暂无测试结果` : '暂无模型'
+        title: total > 0 ? `共 ${total} 个模型，暂无测试结果` : t('暂无模型')
       };
     }
 
     let text;
     let className = 'mixed';
     if (success > 0 && failed === 0 && untested === 0) {
-      text = '全部成功';
+      text = t('全部成功');
       className = 'pass';
     } else if (success === 0 && failed > 0 && untested === 0) {
-      text = '全部失败';
+      text = t('全部失败');
       className = 'fail';
     } else {
       const parts = [];
       if (success > 0) parts.push(`${success} 个成功`);
       if (failed > 0) parts.push(`${failed} 个失败`);
       if (untested > 0) parts.push(`${untested} 个未测试`);
-      text = parts.join('，') || '未测试';
+      text = parts.join('，') || t('未测试');
       className = success > 0 ? 'mixed' : 'fail';
     }
 
@@ -3770,7 +3770,7 @@ class ConsoleApp {
         }
       }
     }
-    if (modelIds.length === 0) { alert('暂无可测试的模型'); return; }
+    if (modelIds.length === 0) { alert(t('暂无可测试的模型')); return; }
     await this._runBatchTest(modelIds, `正在测试全部 ${modelIds.length} 个模型...`);
   }
 
@@ -3786,7 +3786,7 @@ class ConsoleApp {
         if (model.model_id) modelIds.push(model.model_id);
       }
     }
-    if (modelIds.length === 0) { alert('当前 Team 无可测试的模型'); return; }
+    if (modelIds.length === 0) { alert(t('当前 Team 无可测试的模型')); return; }
     await this._runBatchTest(modelIds, `正在测试当前 Team ${modelIds.length} 个模型...`);
   }
 
@@ -3809,7 +3809,7 @@ class ConsoleApp {
         }
       }
     }
-    if (modelIds.length === 0) { alert('当前供应商无可测试的模型'); return; }
+    if (modelIds.length === 0) { alert(t('当前供应商无可测试的模型')); return; }
     await this._runBatchTest(modelIds, `正在测试 ${modelIds.length} 个模型...`);
   }
 
@@ -3840,7 +3840,7 @@ class ConsoleApp {
         if (model.model_id) modelIds.push(model.model_id);
       }
     }
-    if (modelIds.length === 0) { alert('此 Team 下没有可测试的模型'); return; }
+    if (modelIds.length === 0) { alert(t('此 Team 下没有可测试的模型')); return; }
     await this._runBatchTest(modelIds, `正在测试 Team「${escapeHtml(team.team_name)}」${modelIds.length} 个模型...`);
   }
 
@@ -3860,7 +3860,7 @@ class ConsoleApp {
     for (const model of provider.models || []) {
       if (model.model_id) modelIds.push(model.model_id);
     }
-    if (modelIds.length === 0) { alert('此供应商下没有可测试的模型'); return; }
+    if (modelIds.length === 0) { alert(t('此供应商下没有可测试的模型')); return; }
     await this._runBatchTest(modelIds, `正在测试供应商「${escapeHtml(provider.provider_name)}」${modelIds.length} 个模型...`);
   }
 
@@ -3908,7 +3908,7 @@ class ConsoleApp {
     const modal = document.getElementById('modelTestModal');
     const body = document.getElementById('modelTestModalBody');
     const title = modal?.querySelector('.modal-header h3');
-    if (title) title.textContent = `测试结果 [${result.model || '模型测试'}]`;
+    if (title) title.textContent = `测试结果 [${result.model || t('模型测试')}]`;
     modal.style.display = 'flex';
     this._renderTestResults([{ modelId, ...result }]);
   }
@@ -3973,7 +3973,7 @@ class ConsoleApp {
           </div>
         `;
       } else {
-        const modelLabel = r.model || r.modelId || '未知模型';
+        const modelLabel = r.model || r.modelId || t('未知模型');
         const providerLabel = r.provider
           ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${escapeHtml(r.provider)}${r.provider_url ? ' (' + escapeHtml(r.provider_url) + ')' : ''}</div>`
           : '';
@@ -3981,7 +3981,7 @@ class ConsoleApp {
           <div class="model-test-row">
             <div class="model-test-row-icon model-test-result-fail">&#10007;</div>
             <div class="model-test-row-model">${escapeHtml(modelLabel)}${providerLabel}</div>
-            <div class="model-test-row-error" title="${escapeHtml(r.error || '')}">${escapeHtml(r.error || '失败')}</div>
+            <div class="model-test-row-error" title="${escapeHtml(r.error || '')}">${escapeHtml(r.error || t('失败'))}</div>
           </div>
         `;
       }
@@ -3994,7 +3994,7 @@ class ConsoleApp {
     const seq = (this._statsLoadSeq = (this._statsLoadSeq || 0) + 1);
     try {
       const res = await fetch(`/api/user/stats?${params}`);
-      if (!res.ok) throw new Error('加载失败');
+      if (!res.ok) throw new Error(t('加载失败'));
       if (seq !== this._statsLoadSeq) return; // 丢弃过期响应
       this._statsData = await res.json();
       this._renderStatsOverview();
@@ -4030,13 +4030,13 @@ class ConsoleApp {
 
     document.getElementById('statsTotalRequests').textContent = totalReqs.toLocaleString();
     document.getElementById('statsTotalTokens').textContent = this._formatBigNumber(totalTokens);
-    document.getElementById('statsTotalCost').textContent = totalCost.toFixed(4) + ' 积分';
+    document.getElementById('statsTotalCost').textContent = totalCost.toFixed(4) + t(' 积分');
     document.getElementById('statsAvgLatency').textContent = Math.round(avgLatency) + 'ms';
-    document.getElementById('statsAvgDailyRequests').textContent = '日均 ' + Math.round(totalReqs / days).toLocaleString();
-    document.getElementById('statsAvgDailyCost').textContent = '日均 ' + (totalCost / days).toFixed(4) + ' 积分';
+    document.getElementById('statsAvgDailyRequests').textContent = t('日均 ') + Math.round(totalReqs / days).toLocaleString();
+    document.getElementById('statsAvgDailyCost').textContent = t('日均 ') + (totalCost / days).toFixed(4) + t(' 积分');
 
     document.getElementById('statsTokenBreakdown').textContent = `输入 ${this._formatBigNumber(totalPrompt)} / 输出 ${this._formatBigNumber(totalCompletion)}`;
-    document.getElementById('statsAvgTokensPerReq').textContent = '平均 ' + (totalReqs > 0 ? this._formatBigNumber(Math.round(totalTokens / totalReqs)) : 0) + ' Token/请求';
+    document.getElementById('statsAvgTokensPerReq').textContent = t('平均 ') + (totalReqs > 0 ? this._formatBigNumber(Math.round(totalTokens / totalReqs)) : 0) + t(' Token/请求');
 
     const identifiedRate = parseFloat(s.identified_rate != null ? s.identified_rate : (d.sourceSummary?.identified_rate || 0));
     const activeSources = parseInt(s.active_sources != null ? s.active_sources : (d.sourceSummary?.active_sources || 0), 10);
@@ -4077,10 +4077,10 @@ class ConsoleApp {
 
     document.getElementById('todayRequests').textContent = todayData ? parseInt(todayData.requests).toLocaleString() : '0';
     document.getElementById('todayTokens').textContent = todayData ? this._formatBigNumber(parseInt(todayData.tokens)) : '0';
-    document.getElementById('todayCost').textContent = todayData ? parseFloat(todayData.cost).toFixed(4) + ' 积分' : '0 积分';
+    document.getElementById('todayCost').textContent = todayData ? parseFloat(todayData.cost).toFixed(4) + t(' 积分') : t('0 积分');
     document.getElementById('yesterdayRequests').textContent = yesterdayData ? parseInt(yesterdayData.requests).toLocaleString() : '0';
     document.getElementById('yesterdayTokens').textContent = yesterdayData ? this._formatBigNumber(parseInt(yesterdayData.tokens)) : '0';
-    document.getElementById('yesterdayCost').textContent = yesterdayData ? parseFloat(yesterdayData.cost).toFixed(4) + ' 积分' : '0 积分';
+    document.getElementById('yesterdayCost').textContent = yesterdayData ? parseFloat(yesterdayData.cost).toFixed(4) + t(' 积分') : t('0 积分');
 
     // 计算趋势
     this._renderTrend('todayRequestsTrend', todayData ? parseInt(todayData.requests) : 0, yesterdayData ? parseInt(yesterdayData.requests) : 0);
@@ -4119,7 +4119,7 @@ class ConsoleApp {
     if (topModelsContainer && d.byModel && d.byModel.length > 0) {
       const top3 = d.byModel.slice(0, 3);
       setHTML(topModelsContainer, top3.map((m, i) => {
-        const modelName = m.model_name || '(已删除)';
+        const modelName = m.model_name || t('(已删除)');
         const requests = parseInt(m.requests || 0);
         const cost = parseFloat(m.cost || 0);
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
@@ -4161,7 +4161,7 @@ class ConsoleApp {
           const pct = ((s.share_requests != null ? s.share_requests : requests / Math.max(parseInt(d.summary?.total_requests || 0, 10), 1)) * 100).toFixed(1);
           const barW = Math.max(4, Math.round((requests / maxReq) * 100));
           const sid = escapeHtml(String(s.request_source || 'unknown'));
-          return `<div class="stats-insight-item" style="flex-direction:column;align-items:stretch;gap:4px;cursor:pointer;" onclick="app.filterStatsBySource('${sid}')" title="点击筛选此客户端">
+          return `<div class="stats-insight-item" style="flex-direction:column;align-items:stretch;gap:4px;cursor:pointer;" onclick="app.filterStatsBySource('${sid}')" title=t('点击筛选此客户端')>
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
               <span class="stats-insight-name">${this._usageRequestSourceBadge(s.request_source)}</span>
               <span class="stats-insight-value">${requests.toLocaleString()} · ${pct}%</span>
@@ -4308,7 +4308,7 @@ class ConsoleApp {
     const latencies = rows.map(r => Math.round(parseFloat(r.avg_latency || 0)));
 
     this._upsertChart('_uDailyReqChart', document.getElementById('userDailyRequestsChart'), 'line', {
-      labels, datasets: [{ label: '请求数', data: requests, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
+      labels, datasets: [{ label: t('请求数'), data: requests, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
     }, this._lineChartOpts());
 
     this._upsertChart('_uDailyTokChart', document.getElementById('userDailyTokensChart'), 'line', {
@@ -4316,11 +4316,11 @@ class ConsoleApp {
     }, this._lineChartOpts());
 
     this._upsertChart('_uDailyCostChart', document.getElementById('userDailyCostChart'), 'line', {
-      labels, datasets: [{ label: '积分', data: costs, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
+      labels, datasets: [{ label: t('积分'), data: costs, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
     }, this._lineChartOpts());
 
     this._upsertChart('_uDailyLatChart', document.getElementById('userDailyLatencyChart'), 'line', {
-      labels, datasets: [{ label: '延迟(ms)', data: latencies, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
+      labels, datasets: [{ label: t('延迟(ms)'), data: latencies, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
     }, this._lineChartOpts('ms'));
   }
 
@@ -4337,7 +4337,7 @@ class ConsoleApp {
     this._upsertChart('_uHourlyChart', document.getElementById('userHourlyChart'), 'bar', {
       labels,
       datasets: [
-        { label: '请求数', data: requests, backgroundColor: 'rgba(59,130,246,0.7)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
+        { label: t('请求数'), data: requests, backgroundColor: 'rgba(59,130,246,0.7)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
         { label: 'Token', data: tokens, backgroundColor: 'rgba(139,92,246,0.5)', borderColor: '#8b5cf6', borderWidth: 1, borderRadius: 4, yAxisID: 'y1' }
       ]
     }, {
@@ -4345,7 +4345,7 @@ class ConsoleApp {
       plugins: { legend: { labels: { color: c.text, font: { size: 11 } } } },
       scales: {
         x: { ticks: { color: c.text, font: { size: 10 } }, grid: { display: false } },
-        y: { type: 'linear', position: 'left', ticks: { color: c.text, font: { size: 10 } }, grid: { color: c.border }, title: { display: true, text: '请求数', color: c.text } },
+        y: { type: 'linear', position: 'left', ticks: { color: c.text, font: { size: 10 } }, grid: { color: c.border }, title: { display: true, text: t('请求数'), color: c.text } },
         y1: { type: 'linear', position: 'right', ticks: { color: c.text, font: { size: 10 } }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Token', color: c.text } }
       }
     });
@@ -4356,7 +4356,7 @@ class ConsoleApp {
     if (!d || !d.byModel || d.byModel.length === 0 || typeof Chart === 'undefined') return;
     const top = d.byModel.slice(0, 8);
     const labels = top.map(m => {
-      return m.model_name || '(已删除)';
+      return m.model_name || t('(已删除)');
     });
     const requests = top.map(m => parseInt(m.requests || 0));
     const costs = top.map(m => parseFloat(m.cost || 0));
@@ -4387,7 +4387,7 @@ class ConsoleApp {
 
     this._upsertChart('_uApiKeyChart', document.getElementById('userApiKeyChart'), 'bar', {
       labels,
-      datasets: [{ label: '请求数', data: requests, backgroundColor: colors.map(co => co + 'cc'), borderColor: colors, borderWidth: 1, borderRadius: 4 }]
+      datasets: [{ label: t('请求数'), data: requests, backgroundColor: colors.map(co => co + 'cc'), borderColor: colors, borderWidth: 1, borderRadius: 4 }]
     }, {
       responsive: true, maintainAspectRatio: false, indexAxis: 'y',
       plugins: { legend: { display: false } },
@@ -4429,7 +4429,7 @@ class ConsoleApp {
       const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
       const cacheColor = cachedTokens > 0 ? '#10b981' : 'var(--muted-foreground)';
       return `<tr>
-        <td style="padding:8px;border-bottom:1px solid var(--border);font-size:12px;">${m.model_name || '(已删除)'}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);font-size:12px;">${m.model_name || t('(已删除)')}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(m.requests).toLocaleString()}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${promptTokens.toLocaleString()}">${this._formatBigNumber(promptTokens)}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${parseInt(m.completion_tokens || 0).toLocaleString()}">${this._formatBigNumber(parseInt(m.completion_tokens || 0))}</td>
@@ -4480,7 +4480,7 @@ class ConsoleApp {
             label: (ctx) => {
               const v = ctx.parsed || 0;
               const total = ctx.dataset.data.reduce((a, b) => a + b, 0) || 1;
-              return `${ctx.label}: ${typeof v === 'number' && ctx.dataset.label === '积分' ? v.toFixed(4) : v.toLocaleString()} (${((v / total) * 100).toFixed(1)}%)`;
+              return `${ctx.label}: ${typeof v === 'number' && ctx.dataset.label === t('积分') ? v.toFixed(4) : v.toLocaleString()} (${((v / total) * 100).toFixed(1)}%)`;
             }
           }
         }
@@ -4505,7 +4505,7 @@ class ConsoleApp {
       } else {
         this._upsertChart('_userSourceCostChart', costCanvas, 'doughnut', {
           labels,
-          datasets: [{ label: '积分', data: costs, backgroundColor: colors, borderWidth: 0 }]
+          datasets: [{ label: t('积分'), data: costs, backgroundColor: colors, borderWidth: 0 }]
         }, pieOpts);
       }
     }
@@ -4602,7 +4602,7 @@ class ConsoleApp {
       return;
     }
     setHTML(tbody, rows.map((r) => {
-      const modelLabel = r.model_name || r.model_id || '(未知)';
+      const modelLabel = r.model_name || r.model_id || t('(未知)');
       return `<tr>
         <td style="padding:8px;border-bottom:1px solid var(--border);">${this._usageRequestSourceBadge(r.request_source)}</td>
         <td style="padding:8px;border-bottom:1px solid var(--border);">${escapeHtml(String(modelLabel))}</td>
@@ -4725,7 +4725,7 @@ class ConsoleApp {
         color: '#4d6bfe',
         icon: 'https://img.bloret.net/img/1786632261665/ef60a8b9b5a3da93259ffb7b024fd80f'
       },
-      unknown: { label: '未知/其他', color: 'var(--muted-foreground)', icon: '' }
+      unknown: { label: t('未知/其他'), color: 'var(--muted-foreground)', icon: '' }
     };
     return map[s] || map.unknown;
   }
@@ -4745,7 +4745,7 @@ class ConsoleApp {
   }
 
   _harnessLabel(harnessId) {
-    if (!harnessId || harnessId === 'default') return '全部工具（默认）';
+    if (!harnessId || harnessId === 'default') return t('全部工具（默认）');
     return this._usageRequestSourceMeta(harnessId).label;
   }
 
@@ -4796,7 +4796,7 @@ class ConsoleApp {
 
     try {
       const response = await fetch(`/api/user/usage-logs?${params}`);
-      if (!response.ok) throw new Error('加载失败');
+      if (!response.ok) throw new Error(t('加载失败'));
       const data = await response.json();
 
       this.usageLogTotal = data.total;
@@ -4842,11 +4842,11 @@ class ConsoleApp {
               const modelLabel = log.model_name
                 || (log.request_type === 'fusion' ? 'Fusion' : null)
                 || (log.model_id ? String(log.model_id) : null)
-                || '(未知)';
+                || t('(未知)');
               const costVal = parseFloat(log.cost || 0);
               const tokensVal = parseInt(log.tokens_used || 0, 10);
               const costDisplay = (costVal === 0 && tokensVal > 0)
-                ? '0（配额内）'
+                ? t('0（配额内）')
                 : costVal.toFixed(6);
               return `
               <tr style="cursor:pointer;" onclick="app.showUsageDetail(${idx})">
@@ -4865,7 +4865,7 @@ class ConsoleApp {
       `);
     } catch (error) {
       console.error('加载调用记录失败:', error);
-      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || '加载失败')}</p>`);
+      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -4886,7 +4886,7 @@ class ConsoleApp {
   async exportUsageLogs() {
     const btn = document.getElementById('usageLogExportBtn');
     try {
-      if (btn) setButtonLoading(btn, '导出中...');
+      if (btn) setButtonLoading(btn, t('导出中...'));
       const params = this._buildUsageLogFilterParams();
       const res = await fetch(`/api/user/usage-logs/export?${params.toString()}`);
       if (!res.ok) {
@@ -4905,12 +4905,12 @@ class ConsoleApp {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      this.showToast('导出成功', 'success');
+      this.showToast(t('导出成功'), 'success');
     } catch (error) {
       console.error('导出调用记录失败:', error);
-      this.showToast(error.message || '导出失败', 'error');
+      this.showToast(error.message || t('导出失败'), 'error');
     } finally {
-      if (btn) clearButtonLoading(btn, '导出 CSV');
+      if (btn) clearButtonLoading(btn, t('导出 CSV'));
     }
   }
 
@@ -4924,7 +4924,7 @@ class ConsoleApp {
         const modal = document.getElementById('usageDetailModal');
         const content = document.getElementById('usageDetailContent');
         if (modal && content) {
-          setHTML(content, pageLoadingHtml('加载详情...', { compact: true }));
+          setHTML(content, pageLoadingHtml(t('加载详情...'), { compact: true }));
           modal.style.display = 'flex';
           modal.classList.add('active');
         }
@@ -4935,7 +4935,7 @@ class ConsoleApp {
       } catch (error) {
         console.error('加载用量详情失败:', error);
         const content = document.getElementById('usageDetailContent');
-        if (content) setHTML(content, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || '加载失败')}</p>`);
+        if (content) setHTML(content, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
         return;
       }
     }
@@ -4950,27 +4950,27 @@ class ConsoleApp {
     const modelLabel = log.model_name
       || (log.request_type === 'fusion' ? 'Fusion' : null)
       || (log.model_id ? String(log.model_id) : null)
-      || '(未知)';
+      || t('(未知)');
     const costVal = parseFloat(log.cost || 0);
     const tokensVal = parseInt(log.tokens_used || 0, 10);
     const costDisplay = (costVal === 0 && tokensVal > 0)
-      ? '0（配额内）'
+      ? t('0（配额内）')
       : costVal.toFixed(6);
     const rows = [
-      ['调用时间', escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))],
-      ['模型', escapeHtml(modelLabel)],
-      ['系列', escapeHtml(log.series || '-')],
-      ['供应商', escapeHtml(log.provider_name || '-')],
-      ['请求类型', escapeHtml(log.request_type || '-')],
-      ['客户端', this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
+      [t('调用时间'), escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))],
+      [t('模型'), escapeHtml(modelLabel)],
+      [t('系列'), escapeHtml(log.series || '-')],
+      [t('供应商'), escapeHtml(log.provider_name || '-')],
+      [t('请求类型'), escapeHtml(log.request_type || '-')],
+      [t('客户端'), this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
       ['API Key', `<code style="font-size:12px;">${escapeHtml(log.key_prefix || '-')}****</code>${log.key_name ? ` <span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}`],
-      ['总 Token', this._formatBigNumber(parseInt(log.tokens_used || 0, 10))],
-      ['输入 Token', this._formatBigNumber(promptTokens)],
-      ['输出 Token', this._formatBigNumber(parseInt(log.completion_tokens || 0, 10))],
-      ['缓存命中 Token', cacheDisplay],
-      ['积分', costDisplay],
-      ['延迟', log.latency_ms != null ? `${log.latency_ms}ms` : '-'],
-      ['IP 地址', escapeHtml(log.ip_address || '-')],
+      [t('总 Token'), this._formatBigNumber(parseInt(log.tokens_used || 0, 10))],
+      [t('输入 Token'), this._formatBigNumber(promptTokens)],
+      [t('输出 Token'), this._formatBigNumber(parseInt(log.completion_tokens || 0, 10))],
+      [t('缓存命中 Token'), cacheDisplay],
+      [t('积分'), costDisplay],
+      [t('延迟'), log.latency_ms != null ? `${log.latency_ms}ms` : '-'],
+      [t('IP 地址'), escapeHtml(log.ip_address || '-')],
     ];
 
     let messagesHtml = '';
@@ -5010,13 +5010,13 @@ class ConsoleApp {
   }
 
   formatRuleDuration(hours) {
-    if (!hours) return '永久';
+    if (!hours) return t('永久');
     if (hours < 24) return `${hours} 小时`;
-    if (hours === 24) return '1 天';
+    if (hours === 24) return t('1 天');
     if (hours % 24 === 0) {
       const days = hours / 24;
-      if (days === 7) return '1 周';
-      if (days === 30) return '1 月';
+      if (days === 7) return t('1 周');
+      if (days === 30) return t('1 月');
       return `${days} 天`;
     }
     return `${hours} 小时`;
@@ -5045,8 +5045,8 @@ class ConsoleApp {
             const isOver = pct >= 100;
             const barColor = isOver ? 'var(--destructive, #ef4444)' : isWarning ? '#f59e0b' : 'var(--brand-blue, #3b82f6)';
             const isRequests = rule.rule_type === 'requests';
-            const unit = isRequests ? '次' : 'tokens';
-            const typeLabel = isRequests ? '请求次数' : 'Token 用量';
+            const unit = isRequests ? t('次') : 'tokens';
+            const typeLabel = isRequests ? t('请求次数') : t('Token 用量');
             const duration = this.formatRuleDuration(rule.duration_hours);
             return `
               <div class="rule-item">
@@ -5126,7 +5126,7 @@ class ConsoleApp {
 
   async saveNotificationSettings() {
     const status = document.getElementById('notificationSettingsStatus');
-    if (status) { status.textContent = '保存中...'; status.style.color = 'var(--muted-foreground)'; }
+    if (status) { status.textContent = t('保存中...'); status.style.color = 'var(--muted-foreground)'; }
     try {
       const res = await fetch('/api/user/notification-settings', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -5139,10 +5139,10 @@ class ConsoleApp {
         })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '保存失败');
-      if (status) { status.textContent = '保存成功'; status.style.color = '#22c55e'; }
+      if (!res.ok) throw new Error(data.error || t('保存失败'));
+      if (status) { status.textContent = t('保存成功'); status.style.color = '#22c55e'; }
     } catch (error) {
-      if (status) { status.textContent = error.message || '保存失败'; status.style.color = 'var(--destructive)'; }
+      if (status) { status.textContent = error.message || t('保存失败'); status.style.color = 'var(--destructive)'; }
     }
     setTimeout(() => { if (status) status.textContent = ''; }, 3000);
   }
@@ -5152,10 +5152,10 @@ class ConsoleApp {
     try {
       const res = await fetch('/api/user/notification-settings/test', { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '发送失败');
-      if (status) { status.textContent = '测试通知已发送'; status.style.color = '#22c55e'; }
+      if (!res.ok) throw new Error(data.error || t('发送失败'));
+      if (status) { status.textContent = t('测试通知已发送'); status.style.color = '#22c55e'; }
     } catch (error) {
-      if (status) { status.textContent = error.message || '发送失败'; status.style.color = 'var(--destructive)'; }
+      if (status) { status.textContent = error.message || t('发送失败'); status.style.color = 'var(--destructive)'; }
     }
   }
 
@@ -5164,7 +5164,7 @@ class ConsoleApp {
     if (!list) return;
     try {
       const res = await fetch('/api/user/notifications?limit=50');
-      if (!res.ok) throw new Error('加载失败');
+      if (!res.ok) throw new Error(t('加载失败'));
       const items = await res.json();
       if (!items.length) { list.innerHTML = '<div style="color:var(--muted-foreground);font-size:13px;padding:12px 0;">暂无通知</div>'; return; }
       list.innerHTML = items.map(item => `<div style="padding:14px 0;border-bottom:1px solid var(--border);${item.read_at ? '' : 'background:color-mix(in srgb, var(--primary) 5%, transparent);'}"><div style="display:flex;gap:8px;align-items:center;"><strong>${escapeHtml(item.title)}</strong><span style="font-size:12px;color:var(--muted-foreground);">${this.formatRelativeTime(item.created_at)}</span><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px;" onclick="app.deleteNotification(${item.id})">删除</button></div><div style="margin-top:6px;font-size:13px;color:var(--muted-foreground);white-space:pre-wrap;">${escapeHtml(item.body)}</div>${item.read_at ? '' : `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:12px;" onclick="app.markNotificationRead(${item.id})">标记已读</button>`}</div>`).join('');
@@ -5173,7 +5173,7 @@ class ConsoleApp {
 
   async markNotificationRead(id) { await fetch(`/api/user/notifications/${id}/read`, { method: 'PUT' }); await this.loadNotifications(); }
   async deleteNotification(id) { await fetch(`/api/user/notifications/${id}`, { method: 'DELETE' }); await this.loadNotifications(); }
-  async clearNotifications() { if (!confirm('确定清空全部通知吗？')) return; await fetch('/api/user/notifications', { method: 'DELETE' }); await this.loadNotifications(); }
+  async clearNotifications() { if (!confirm(t('确定清空全部通知吗？'))) return; await fetch('/api/user/notifications', { method: 'DELETE' }); await this.loadNotifications(); }
 
   loadSignatureSettings() {
     const toggle = document.getElementById('apiSignatureToggle');
@@ -5181,7 +5181,7 @@ class ConsoleApp {
     const group = document.getElementById('signatureTemplateGroup');
     if (!toggle || !template) return;
 
-    const DEFAULT_TEMPLATE = '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}';
+    const DEFAULT_TEMPLATE = t('{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}');
     const enabled = this.user.api_signature_enabled === true;
     const tpl = this.user.api_signature_template || DEFAULT_TEMPLATE;
 
@@ -5207,16 +5207,16 @@ class ConsoleApp {
       .replace(/\{cache_hit\}/g, '78%')
       .replace(/\{cached_tokens\}/g, '8,400')
       .replace(/\{provider\}/g, 'OpenAI')
-      .replace(/\{cost\}/g, '0.0123 积分')
+      .replace(/\{cost\}/g, t('0.0123 积分'))
       .replace(/\{username\}/g, 'demo')
-      .replace(/\{key_name\}/g, '生产环境')
+      .replace(/\{key_name\}/g, t('生产环境'))
       .replace(/\{balance\}/g, '9999')
-      .replace(/\{group_name\}/g, '默认组')
-      .replace(/\{team_name\}/g, '我的团队')
-      .replace(/\{quota_info\}/g, '5小时限额 35% · 周限额 12%')
+      .replace(/\{group_name\}/g, t('默认组'))
+      .replace(/\{team_name\}/g, t('我的团队'))
+      .replace(/\{quota_info\}/g, t('5小时限额 35% · 周限额 12%'))
       .replace(/\{today_requests\}/g, '128')
       .replace(/\{today_tokens\}/g, '50.2k tokens');
-    preview.textContent = example ? `预览：${example}` : '(空模板，不显示签名)';
+    preview.textContent = example ? `预览：${example}` : t('(空模板，不显示签名)');
   }
 
   async saveSignatureSettings() {
@@ -5225,7 +5225,7 @@ class ConsoleApp {
     const status = document.getElementById('signatureSaveStatus');
     if (!toggle || !template) return;
 
-    setHTML(status, inlineLoadingHtml('保存中...', 'sm'));
+    setHTML(status, inlineLoadingHtml(t('保存中...'), 'sm'));
     status.style.color = 'var(--muted-foreground)';
 
     try {
@@ -5241,21 +5241,21 @@ class ConsoleApp {
       if (data.success) {
         this.user.api_signature_enabled = toggle.checked;
         this.user.api_signature_template = template.value;
-        status.textContent = '保存成功';
+        status.textContent = t('保存成功');
         status.style.color = '#22c55e';
       } else {
-        status.textContent = data.error || '保存失败';
+        status.textContent = data.error || t('保存失败');
         status.style.color = 'var(--destructive)';
       }
     } catch {
-      status.textContent = '保存失败，请稍后重试';
+      status.textContent = t('保存失败，请稍后重试');
       status.style.color = 'var(--destructive)';
     }
     setTimeout(() => { if (status) status.textContent = ''; }, 3000);
   }
 
   resetSignatureTemplate() {
-    const DEFAULT_TEMPLATE = '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}';
+    const DEFAULT_TEMPLATE = t('{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}');
     const template = document.getElementById('apiSignatureTemplate');
     const toggle = document.getElementById('apiSignatureToggle');
     if (template) template.value = DEFAULT_TEMPLATE;
@@ -5268,7 +5268,7 @@ class ConsoleApp {
     if (!file) return;
 
     const statusEl = document.getElementById('avatarUploadStatus');
-    setHTML(statusEl, inlineLoadingHtml('上传中...', 'sm'));
+    setHTML(statusEl, inlineLoadingHtml(t('上传中...'), 'sm'));
     statusEl.style.color = 'var(--muted-foreground)';
 
     const formData = new FormData();
@@ -5286,14 +5286,14 @@ class ConsoleApp {
         document.getElementById('settingsAvatarPreview').src = data.url;
         this.user.avatar = data.url;
         this.updateUserInfo();
-        statusEl.textContent = '上传成功';
+        statusEl.textContent = t('上传成功');
         statusEl.style.color = '#22c55e';
       } else {
-        statusEl.textContent = data.error || '上传失败';
+        statusEl.textContent = data.error || t('上传失败');
         statusEl.style.color = 'var(--destructive)';
       }
     } catch (err) {
-      statusEl.textContent = '上传失败，请稍后重试';
+      statusEl.textContent = t('上传失败，请稍后重试');
       statusEl.style.color = 'var(--destructive)';
     } finally {
       e.target.value = '';
@@ -5308,17 +5308,17 @@ class ConsoleApp {
     const statusEl = document.getElementById('changePasswordStatus');
 
     if (!newPassword || !confirmPassword) {
-      statusEl.textContent = '请填写新密码并确认';
+      statusEl.textContent = t('请填写新密码并确认');
       statusEl.style.color = 'var(--destructive)';
       return;
     }
     if (newPassword.length < 6) {
-      statusEl.textContent = '新密码长度至少6位';
+      statusEl.textContent = t('新密码长度至少6位');
       statusEl.style.color = 'var(--destructive)';
       return;
     }
     if (newPassword !== confirmPassword) {
-      statusEl.textContent = '两次输入的新密码不一致';
+      statusEl.textContent = t('两次输入的新密码不一致');
       statusEl.style.color = 'var(--destructive)';
       return;
     }
@@ -5332,17 +5332,17 @@ class ConsoleApp {
       });
       const data = await res.json();
       if (res.ok) {
-        statusEl.textContent = data.message || '密码修改成功';
+        statusEl.textContent = data.message || t('密码修改成功');
         statusEl.style.color = '#22c55e';
         document.getElementById('currentPassword').value = '';
         document.getElementById('newPassword').value = '';
         document.getElementById('confirmNewPassword').value = '';
       } else {
-        statusEl.textContent = data.error || '修改密码失败';
+        statusEl.textContent = data.error || t('修改密码失败');
         statusEl.style.color = 'var(--destructive)';
       }
     } catch (err) {
-      statusEl.textContent = '修改密码失败，请稍后重试';
+      statusEl.textContent = t('修改密码失败，请稍后重试');
       statusEl.style.color = 'var(--destructive)';
     }
   }
@@ -5361,10 +5361,10 @@ class ConsoleApp {
         this.closeModals();
         this.loadApiKeys();
       } else {
-        alert('创建失败: ' + (data.error || '未知错误'));
+        alert(t('创建失败: ') + (data.error || t('未知错误')));
       }
     } catch (error) {
-      alert('创建失败');
+      alert(t('创建失败'));
     }
   }
 
@@ -5377,11 +5377,11 @@ class ConsoleApp {
   async loadKeyMembers() {
     const list = document.getElementById('keyMembersList');
     if (!list || !this._currentMembersKeyId) return;
-    setHTML(list, pageLoadingHtml('加载成员...'));
+    setHTML(list, pageLoadingHtml(t('加载成员...')));
     try {
       const res = await fetch(`/api/user/api-keys/${this._currentMembersKeyId}/members`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '加载失败');
+      if (!res.ok) throw new Error(data.error || t('加载失败'));
       const members = Array.isArray(data.members) ? data.members : [];
       setHTML(list, members.length ? members.map(member => `
         <div class="co-key-member-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;">
@@ -5396,26 +5396,26 @@ class ConsoleApp {
   async addKeyMember() {
     const input = document.getElementById('keyMemberIdentity');
     const identity = input?.value?.trim();
-    if (!identity || !this._currentMembersKeyId) return this.showToast('请输入完整用户名或邮箱', 'error');
+    if (!identity || !this._currentMembersKeyId) return this.showToast(t('请输入完整用户名或邮箱'), 'error');
     try {
       const res = await fetch(`/api/user/api-keys/${this._currentMembersKeyId}/members`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identity })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '添加失败');
+      if (!res.ok) throw new Error(data.error || t('添加失败'));
       input.value = '';
-      this.showToast('共同成员已添加', 'success');
+      this.showToast(t('共同成员已添加'), 'success');
       await Promise.all([this.loadKeyMembers(), this.loadApiKeys()]);
     } catch (error) { this.showToast(error.message, 'error'); }
   }
 
   async removeKeyMember(userId) {
-    if (!await confirm('确定移除此共同成员？')) return;
+    if (!await confirm(t('确定移除此共同成员？'))) return;
     try {
       const res = await fetch(`/api/user/api-keys/${this._currentMembersKeyId}/members/${userId}`, { method: 'DELETE' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '移除失败');
-      this.showToast('共同成员已移除', 'success');
+      if (!res.ok) throw new Error(data.error || t('移除失败'));
+      this.showToast(t('共同成员已移除'), 'success');
       await Promise.all([this.loadKeyMembers(), this.loadApiKeys()]);
     } catch (error) { this.showToast(error.message, 'error'); }
   }
@@ -5427,14 +5427,14 @@ class ConsoleApp {
     const listEl = document.getElementById('auditLogsList');
     const paginationEl = document.getElementById('auditLogsPagination');
     if (!listEl) return;
-    setHTML(listEl, pageLoadingHtml('加载操作日志...'));
+    setHTML(listEl, pageLoadingHtml(t('加载操作日志...')));
     try {
       const resourceType = document.getElementById('auditLogActionFilter')?.value || '';
       const params = new URLSearchParams({ page: String(page), limit: '50' });
       if (resourceType) params.set('resource_type', resourceType);
       const res = await fetch(`/api/user/audit-logs?${params}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '加载失败');
+      if (!res.ok) throw new Error(data.error || t('加载失败'));
       const { items, total, limit } = data;
       if (!items.length) {
         setHTML(listEl, '<p class="api-key-sub-muted" style="text-align:center;padding:24px;">暂无操作日志</p>');
@@ -5475,39 +5475,39 @@ class ConsoleApp {
   }
 
   async leaveCoKey(keyId) {
-    const confirmed = await confirm('退出后将立即失去此 Co-Key 的查看、复制和配置权限。若要重新加入，必须由发起者再次邀请。确定退出吗？');
+    const confirmed = await confirm(t('退出后将立即失去此 Co-Key 的查看、复制和配置权限。若要重新加入，必须由发起者再次邀请。确定退出吗？'));
     if (!confirmed) return;
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/members/me`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       // owner 并发移除时，成员实际上已无权访问；刷新列表给出一致结果。
       if (res.status === 404) {
-        this.showToast('您已退出或已被移除 Co-Key', 'success');
+        this.showToast(t('您已退出或已被移除 Co-Key'), 'success');
         this.closeApiKeyMoreMenus();
         await this.loadApiKeys();
         return;
       }
-      if (!res.ok) throw new Error(data.error || '退出失败');
-      this.showToast('已退出 Co-Key', 'success');
+      if (!res.ok) throw new Error(data.error || t('退出失败'));
+      this.showToast(t('已退出 Co-Key'), 'success');
       this.closeApiKeyMoreMenus();
       this.hideModal('keyMembersModal');
       await this.loadApiKeys();
     } catch (error) {
-      this.showToast(error.message || '退出失败', 'error');
+      this.showToast(error.message || t('退出失败'), 'error');
     }
   }
 
   async deleteApiKey(id) {
-    if (!await confirm('确定要删除此 API 密钥吗？此操作不可撤销。')) return;
+    if (!await confirm(t('确定要删除此 API 密钥吗？此操作不可撤销。'))) return;
     try {
       const res = await fetch(`/api/user/api-keys/${id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || '删除失败');
-      this.showToast('密钥已删除', 'success');
+      if (!res.ok) throw new Error(data.error || t('删除失败'));
+      this.showToast(t('密钥已删除'), 'success');
       this.closeApiKeyMoreMenus?.();
       await this.loadApiKeys();
     } catch (error) {
-      this.showToast(error.message || '删除失败', 'error');
+      this.showToast(error.message || t('删除失败'), 'error');
     }
   }
 
@@ -5535,8 +5535,8 @@ class ConsoleApp {
     input.className = 'api-key-name-input';
     input.maxLength = 100;
     input.value = current;
-    input.setAttribute('aria-label', '重命名 API Key');
-    input.placeholder = '输入名称';
+    input.setAttribute('aria-label', t('重命名 API Key'));
+    input.placeholder = t('输入名称');
     // 用当前显示宽度作起点，避免布局跳动过大
     const w = Math.max(nameEl.offsetWidth || 0, 96);
     input.style.width = Math.min(Math.max(w + 16, 96), 240) + 'px';
@@ -5596,7 +5596,7 @@ class ConsoleApp {
       return;
     }
     if (!name) {
-      this.showToast('名称不能为空', 'error');
+      this.showToast(t('名称不能为空'), 'error');
       await this.loadApiKeys();
       return;
     }
@@ -5614,17 +5614,17 @@ class ConsoleApp {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        this.showToast(data.error || '重命名失败', 'error');
+        this.showToast(data.error || t('重命名失败'), 'error');
         await this.loadApiKeys();
         return;
       }
       // 同步本地缓存，避免闪一下旧名
       const key = this._lastApiKeys?.find(k => Number(k.id) === Number(keyId));
       if (key) key.name = name;
-      this.showToast('重命名成功', 'success');
+      this.showToast(t('重命名成功'), 'success');
       await this.loadApiKeys();
     } catch (e) {
-      this.showToast('重命名失败', 'error');
+      this.showToast(t('重命名失败'), 'error');
       await this.loadApiKeys();
     }
   }
@@ -5649,7 +5649,7 @@ class ConsoleApp {
       const res = await fetch(`/api/user/api-keys/${keyId}/config`);
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || '生成配置失败');
+        alert(err.error || t('生成配置失败'));
         return;
       }
       const data = await res.json();
@@ -5659,11 +5659,11 @@ class ConsoleApp {
       let title, desc, content;
 
       if (tool === 'claude') {
-        title = 'Claude Code 配置';
+        title = t('Claude Code 配置');
         desc = '将以下 JSON 写入 <code>~/.claude/settings.json</code> 即可使用 CrewRouter 作为 API 代理';
         content = JSON.stringify(data, null, 2);
       } else if (tool === 'codex') {
-        title = 'Codex 配置';
+        title = t('Codex 配置');
         desc = '将以下内容写入 <code>~/.codex/config.toml</code>，然后重启 Codex CLI';
         content = `# ~/.codex/config.toml
 model = "claude-fable-5"
@@ -5674,7 +5674,7 @@ base_url = "${baseUrl}"
 api_key = "${apiKey}"
 wire_api = "openai"`;
       } else if (tool === 'opencode') {
-        title = 'OpenCode 配置';
+        title = t('OpenCode 配置');
         desc = '将以下 JSON 写入项目根目录的 <code>opencode.json</code> 中';
         const ocConfig = {
           npm: "@ai-sdk/openai-compatible",
@@ -5690,7 +5690,7 @@ wire_api = "openai"`;
         };
         content = JSON.stringify(ocConfig, null, 2);
       } else if (tool === 'grok') {
-        title = 'Grok Build 配置';
+        title = t('Grok Build 配置');
         desc = '将以下内容写入 <code>~/.grok/config.toml</code>，然后重启 Grok Build';
         content = `[cli]
 installer = "internal"
@@ -5721,8 +5721,8 @@ description = "CrewRouter"
 default = "claude-fable-5"
 default_reasoning_effort = "high"`;
       } else if (tool === 'deepseek') {
-        title = 'DeepSeek Harness 配置';
-        desc = '将以下内容写入 <code>~/.dsh/settings.yaml</code>，并设置环境变量 <code>DEEPSEEK_API_KEY</code>，然后重启 <code>dsh</code>';
+        title = t('DeepSeek Harness 配置');
+        desc = '将以下内容写入 <code>~/.dsh/settings.yaml</code>' + t('，并设置环境变量') + '<code>DEEPSEEK_API_KEY</code>' + t('，然后重启') + '<code>dsh</code>';
         content = `# ~/.dsh/settings.yaml
 # DeepSeek Harness (dsh) → CrewRouter
 # 适配器请求 \${baseURL}/chat/completions，因此 baseURL 需指向 /v1
@@ -5735,32 +5735,32 @@ llm-deepseek:
 # export DEEPSEEK_BASE_URL="${baseUrl.replace(/\/$/, '')}/v1"
 `;
       } else if (tool === 'qwen_code') {
-        title = 'Qwen Code 配置';
+        title = t('Qwen Code 配置');
         desc = '将以下 JSON 写入 <code>~/.qwen/settings.json</code>（或对应 OpenAI 兼容配置），然后重启 Qwen Code';
         content = JSON.stringify({
           general: { model: 'claude-fable-5' },
           providers: { crewrouter: { baseUrl: baseUrl.replace(/\/$/, '') + '/v1', apiKey, model: 'claude-fable-5' } }
         }, null, 2);
       } else if (tool === 'hermes') {
-        title = 'Hermes 配置';
-        desc = '设置环境变量 <code>OPENAI_BASE_URL / OPENAI_API_KEY</code>，或写入 <code>~/.hermes/config.json</code> 的 OpenAI 兼容段';
+        title = t('Hermes 配置');
+        desc = '设置环境变量 <code>OPENAI_BASE_URL / OPENAI_API_KEY</code>' + t('，或写入') + '<code>~/.hermes/config.json</code> 的 OpenAI 兼容段';
         content = `# Hermes (OpenAI 兼容) → CrewRouter\nOPENAI_BASE_URL=${baseUrl.replace(/\/$/, '')}/v1\nOPENAI_API_KEY=${apiKey}\n# model: claude-fable-5\n# 也可写入 ~/.hermes/config.json:\n# { \"providers\": { \"crewrouter\": { \"baseUrl\": \"${baseUrl.replace(/\/$/, '')}/v1\", \"apiKey\": \"${apiKey}\" } } }`;
       } else if (tool === 'openclaw') {
-        title = 'OpenClaw 配置';
+        title = t('OpenClaw 配置');
         desc = '将以下 JSON 合并到 <code>~/.openclaw/openclaw.json</code> 的 providers 段';
         content = JSON.stringify({ providers: { crewrouter: { baseUrl: baseUrl.replace(/\/$/, '') + '/v1', apiKey, model: 'claude-fable-5' } } }, null, 2);
       }
 
       document.getElementById('configOutputTitle').textContent = title;
       if (!title || !content) {
-        alert('未知工具类型: ' + tool);
+        alert(t('未知工具类型: ') + tool);
         return;
       }
       setHTML(document.getElementById('configOutputDesc'), desc);
       document.getElementById('configOutputContent').value = content;
       this.showModal('configOutputModal');
     } catch (e) {
-      alert('生成配置失败: ' + e.message);
+      alert(t('生成配置失败: ') + e.message);
     }
   }
 
@@ -5776,7 +5776,7 @@ llm-deepseek:
 
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/config`);
-      if (!res.ok) { alert('获取配置失败'); return; }
+      if (!res.ok) { alert(t('获取配置失败')); return; }
       const data = await res.json();
       const baseUrl = data.env.ANTHROPIC_BASE_URL;
       const apiKey = data.env.ANTHROPIC_AUTH_TOKEN;
@@ -5800,9 +5800,9 @@ llm-deepseek:
 
       // 直接跳转
       window.location.href = deepLink;
-      this.showToast('正在调起 CC Switch...', 'info');
+      this.showToast(t('正在调起 CC Switch...'), 'info');
     } catch (e) {
-      alert('生成链接失败: ' + e.message);
+      alert(t('生成链接失败: ') + e.message);
     }
   }
 
@@ -5810,11 +5810,11 @@ llm-deepseek:
     const text = document.getElementById('ccSwitchResultLink').value;
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
-      this.showToast('已复制到剪贴板', 'success');
+      this.showToast(t('已复制到剪贴板'), 'success');
     }).catch(() => {
       document.getElementById('ccSwitchResultLink').select();
       document.execCommand('copy');
-      this.showToast('已复制到剪贴板', 'success');
+      this.showToast(t('已复制到剪贴板'), 'success');
     });
   }
 
@@ -5841,7 +5841,7 @@ llm-deepseek:
       if (ok) {
         const btn = event.target;
         const orig = btn.textContent;
-        btn.textContent = '已复制 ✓';
+        btn.textContent = t('已复制 ✓');
         setTimeout(() => { btn.textContent = orig; }, 2000);
       }
     }).catch(() => {});
@@ -5852,7 +5852,7 @@ llm-deepseek:
       const res = await fetch(`/api/user/api-keys/${keyId}/config`);
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || '生成脚本失败');
+        alert(err.error || t('生成脚本失败'));
         return;
       }
       const config = await res.json();
@@ -5869,7 +5869,7 @@ llm-deepseek:
       this.rebuildUsageScript();
       this.showModal('usageScriptModal');
     } catch (e) {
-      alert('生成脚本失败: ' + e.message);
+      alert(t('生成脚本失败: ') + e.message);
     }
   }
 
@@ -5996,8 +5996,8 @@ ${extractorBody}
 
     // 模拟数据
     const mockRules = [
-      { type: 'requests', limit: 9000, used: 0, remaining: 9000, window: '1天' },
-      { type: 'tokens', limit: 5000000, used: 1870000, remaining: 3130000, window: '1天' }
+      { type: 'requests', limit: 9000, used: 0, remaining: 9000, window: t('1天') },
+      { type: 'tokens', limit: 5000000, used: 1870000, remaining: 3130000, window: t('1天') }
     ];
 
     const parts = [];
@@ -6035,9 +6035,9 @@ ${extractorBody}
     // 主规则（第一个）通过 total/used/remaining 展示
     if (showGroupRules) {
       const primary = mockRules[0];
-      previewLines.push('已使用：');
+      previewLines.push(t('已使用：'));
       previewLines.push(primary.used.toFixed(2));
-      previewLines.push('剩余：');
+      previewLines.push(t('剩余：'));
       previewLines.push(primary.remaining.toFixed(2));
     }
 
@@ -6072,7 +6072,7 @@ ${extractorBody}
       if (ok) {
         const btn = event.target;
         const orig = btn.textContent;
-        btn.textContent = '已复制 ✓';
+        btn.textContent = t('已复制 ✓');
         setTimeout(() => { btn.textContent = orig; }, 2000);
       }
     }).catch(() => {});
@@ -6116,7 +6116,7 @@ ${extractorBody}
     try {
       const res = await fetch('/api/2fa/status', { credentials: 'same-origin' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '获取 2FA 状态失败');
+      if (!res.ok) throw new Error(data.error || t('获取 2FA 状态失败'));
 
       const statusBadge = document.getElementById('twoFactorStatus');
       const setupDiv = document.getElementById('twoFactorSetup');
@@ -6126,14 +6126,14 @@ ${extractorBody}
       if (!statusBadge) return;
 
       if (data.enabled) {
-        statusBadge.textContent = '已启用';
+        statusBadge.textContent = t('已启用');
         statusBadge.style.background = 'rgba(34,197,94,0.1)';
         statusBadge.style.color = '#22c55e';
         if (setupDiv) setupDiv.style.display = 'none';
         if (disableDiv) disableDiv.style.display = 'block';
         if (startBtn) startBtn.style.display = 'none';
       } else {
-        statusBadge.textContent = '未启用';
+        statusBadge.textContent = t('未启用');
         statusBadge.style.background = 'rgba(239,68,68,0.1)';
         statusBadge.style.color = 'var(--destructive)';
         // 未在引导流程中时隐藏 setup；保留用户已打开的 setup 区域
@@ -6158,7 +6158,7 @@ ${extractorBody}
     try {
       if (startBtn) {
         startBtn.disabled = true;
-        setButtonLoading(startBtn, '生成中…');
+        setButtonLoading(startBtn, t('生成中…'));
       }
       if (statusEl) {
         statusEl.textContent = '';
@@ -6168,7 +6168,7 @@ ${extractorBody}
       const data = await res.json();
 
       if (!res.ok || !data.qrcode) {
-        throw new Error(data.error || '生成二维码失败');
+        throw new Error(data.error || t('生成二维码失败'));
       }
 
       const qr = document.getElementById('twoFactorQR');
@@ -6189,10 +6189,10 @@ ${extractorBody}
     } catch (error) {
       console.error('生成 2FA 失败:', error);
       if (statusEl) {
-        statusEl.textContent = error.message || '生成 2FA 失败';
+        statusEl.textContent = error.message || t('生成 2FA 失败');
         statusEl.style.color = 'var(--destructive)';
       } else {
-        alert('生成 2FA 失败: ' + (error.message || '未知错误'));
+        alert(t('生成 2FA 失败: ') + (error.message || t('未知错误')));
       }
       // 确保 setup 区域可见以显示错误
       if (setupDiv) {
@@ -6202,7 +6202,7 @@ ${extractorBody}
     } finally {
       if (startBtn) {
         startBtn.disabled = false;
-        clearButtonLoading(startBtn, '启用 2FA');
+        clearButtonLoading(startBtn, t('启用 2FA'));
       }
     }
   }
@@ -6229,7 +6229,7 @@ ${extractorBody}
 
     if (!code || !/^\d{6}$/.test(code)) {
       if (statusEl) {
-        statusEl.textContent = '请输入6位验证码';
+        statusEl.textContent = t('请输入6位验证码');
         statusEl.style.color = 'var(--destructive)';
       }
       return;
@@ -6247,7 +6247,7 @@ ${extractorBody}
 
       if (data.success) {
         if (statusEl) {
-          statusEl.textContent = '2FA 已成功启用';
+          statusEl.textContent = t('2FA 已成功启用');
           statusEl.style.color = '#22c55e';
         }
         const setupDiv = document.getElementById('twoFactorSetup');
@@ -6255,13 +6255,13 @@ ${extractorBody}
         setTimeout(() => this.load2FAStatus(), 600);
       } else {
         if (statusEl) {
-          statusEl.textContent = data.error || '验证失败';
+          statusEl.textContent = data.error || t('验证失败');
           statusEl.style.color = 'var(--destructive)';
         }
       }
     } catch (error) {
       if (statusEl) {
-        statusEl.textContent = '请求失败';
+        statusEl.textContent = t('请求失败');
         statusEl.style.color = 'var(--destructive)';
       }
     } finally {
@@ -6275,13 +6275,13 @@ ${extractorBody}
 
     if (!password) {
       if (statusEl) {
-        statusEl.textContent = '请输入密码';
+        statusEl.textContent = t('请输入密码');
         statusEl.style.color = 'var(--destructive)';
       }
       return;
     }
 
-    if (!await confirm('确定要关闭双重认证吗？')) return;
+    if (!await confirm(t('确定要关闭双重认证吗？'))) return;
 
     try {
       const res = await fetch('/api/2fa/disable', {
@@ -6294,7 +6294,7 @@ ${extractorBody}
 
       if (data.success) {
         if (statusEl) {
-          statusEl.textContent = '2FA 已关闭';
+          statusEl.textContent = t('2FA 已关闭');
           statusEl.style.color = '#22c55e';
         }
         const pwdInput = document.getElementById('tfaDisablePassword');
@@ -6302,13 +6302,13 @@ ${extractorBody}
         setTimeout(() => this.load2FAStatus(), 600);
       } else {
         if (statusEl) {
-          statusEl.textContent = data.error || '关闭失败';
+          statusEl.textContent = data.error || t('关闭失败');
           statusEl.style.color = 'var(--destructive)';
         }
       }
     } catch (error) {
       if (statusEl) {
-        statusEl.textContent = '请求失败';
+        statusEl.textContent = t('请求失败');
         statusEl.style.color = 'var(--destructive)';
       }
     }
@@ -6447,7 +6447,7 @@ ${extractorBody}
 
       setHTML(container, passkeys.map(pk => {
         const safeId = (pk.credentialID || '').replace(/'/g, "\\'");
-        const deviceLabel = pk.deviceType === 'multiDevice' ? '同步通行密钥' : '本机通行密钥';
+        const deviceLabel = pk.deviceType === 'multiDevice' ? t('同步通行密钥') : t('本机通行密钥');
         return `
         <li style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--border);">
           <div>
@@ -6456,7 +6456,7 @@ ${extractorBody}
               ID: ${pk.credentialID ? pk.credentialID.substring(0, 12) + '...' : 'Unknown'}
             </div>
             <div style="font-size:12px;color:var(--muted-foreground);">
-              创建于: ${pk.createdAt ? new Date(pk.createdAt).toLocaleDateString('zh-CN') : '未知'}
+              创建于: ${pk.createdAt ? new Date(pk.createdAt).toLocaleDateString('zh-CN') : t('未知')}
             </div>
           </div>
           <button class="btn btn-sm btn-danger" onclick="app.deletePasskey('${safeId}')">删除</button>
@@ -6476,28 +6476,28 @@ ${extractorBody}
     };
 
     if (!window.PublicKeyCredential) {
-      setStatus('当前浏览器不支持通行密钥', false);
-      alert('当前浏览器不支持通行密钥（WebAuthn）');
+      setStatus(t('当前浏览器不支持通行密钥'), false);
+      alert(t('当前浏览器不支持通行密钥（WebAuthn）'));
       return;
     }
 
     try {
-      setStatus('正在获取注册选项…', true);
+      setStatus(t('正在获取注册选项…'), true);
       const res = await fetch('/api/passkey/register/options', { credentials: 'same-origin' });
       const options = await res.json();
       if (!res.ok) {
-        throw new Error(options.error || '获取注册选项失败');
+        throw new Error(options.error || t('获取注册选项失败'));
       }
 
       const publicKeyOptions = this.preparePublicKeyOptions(options);
-      setStatus('请在系统提示中完成验证…', true);
+      setStatus(t('请在系统提示中完成验证…'), true);
 
       const credential = await navigator.credentials.create({
         publicKey: publicKeyOptions,
       });
 
       if (!credential) {
-        throw new Error('用户取消了通行密钥创建');
+        throw new Error(t('用户取消了通行密钥创建'));
       }
 
       const serializedCredential = this.preparePublicKeyResponse(credential, 'registration');
@@ -6511,24 +6511,24 @@ ${extractorBody}
 
       const verifyData = await verifyRes.json();
       if (verifyData.success) {
-        setStatus('通行密钥注册成功', true);
-        alert('PassKey 注册成功');
+        setStatus(t('通行密钥注册成功'), true);
+        alert(t('PassKey 注册成功'));
         this.loadPasskeys();
       } else {
-        throw new Error(verifyData.error || '未知错误');
+        throw new Error(verifyData.error || t('未知错误'));
       }
     } catch (error) {
       console.error('PassKey 注册失败:', error);
       const msg = error.name === 'NotAllowedError'
-        ? '操作已取消或超时'
-        : (error.message || '注册失败');
+        ? t('操作已取消或超时')
+        : (error.message || t('注册失败'));
       setStatus(msg, false);
-      alert('PassKey 注册失败: ' + msg);
+      alert(t('PassKey 注册失败: ') + msg);
     }
   }
 
   async deletePasskey(credentialID) {
-    if (!await confirm('确定要删除此通行密钥吗？')) return;
+    if (!await confirm(t('确定要删除此通行密钥吗？'))) return;
 
     try {
       const res = await fetch(`/api/passkey/${encodeURIComponent(credentialID)}`, {
@@ -6537,14 +6537,14 @@ ${extractorBody}
       });
 
       if (res.ok) {
-        alert('PassKey 已删除');
+        alert(t('PassKey 已删除'));
         this.loadPasskeys();
       } else {
         const data = await res.json().catch(() => ({}));
-        alert('删除失败: ' + (data.error || '未知错误'));
+        alert(t('删除失败: ') + (data.error || t('未知错误')));
       }
     } catch (error) {
-      alert('删除失败');
+      alert(t('删除失败'));
     }
   }
 
@@ -6553,7 +6553,7 @@ ${extractorBody}
   async loadModelLibrary() {
     try {
       const libraryRes = await fetch('/api/user/model-library');
-      if (!libraryRes.ok) throw new Error('模型库接口异常');
+      if (!libraryRes.ok) throw new Error(t('模型库接口异常'));
       const libraryData = await libraryRes.json();
 
       let currentModel = null;
@@ -6616,7 +6616,7 @@ ${extractorBody}
     const reports = await res.json();
     if (!reports.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
     box.style.display = 'block';
-    box.innerHTML = `<div class="trace-reports-title">未查看的跟踪报告</div><div class="trace-reports-list">${reports.map(r => `<button class="trace-report-chip" onclick="app.openTraceReport('${escapeHtml(r.public_id)}')"><strong>${escapeHtml(r.public_id)}</strong><span>${escapeHtml(r.api_key_name || '已删除 Key')}</span><span>${Number(r.summary?.requests || 0)} 项请求</span></button>`).join('')}</div>`;
+    box.innerHTML = `<div class="trace-reports-title">未查看的跟踪报告</div><div class="trace-reports-list">${reports.map(r => `<button class="trace-report-chip" onclick="app.openTraceReport('${escapeHtml(r.public_id)}')"><strong>${escapeHtml(r.public_id)}</strong><span>${escapeHtml(r.api_key_name || t('已删除 Key'))}</span><span>${Number(r.summary?.requests || 0)} 项请求</span></button>`).join('')}</div>`;
   }
 
   async openTraceReport(publicId) {
@@ -6625,7 +6625,7 @@ ${extractorBody}
     const data = await res.json();
     const session = data.session || {};
     const events = data.events || [];
-    const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? '成功' : '失败'}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
+    const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? t('成功') : t('失败')}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
     const detail = document.createElement('div');
     detail.className = 'trace-report-modal';
     detail.innerHTML = `<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>跟踪报告 ${escapeHtml(session.public_id)}</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.trace-report-modal').remove()">关闭</button></div><p>请求 ${Number(session.summary?.requests || events.length)} 项 · 成功 ${Number(session.summary?.succeeded || 0)} · 失败 ${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">下载 JSON</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="6">暂无事件</td></tr>'}</tbody></table></div></div>`;
@@ -6649,7 +6649,7 @@ ${extractorBody}
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
             </svg>
             <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无供应商</p>
-            <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">点击上方"添加供应商"按钮开始</p>
+            <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">点击上方t('添加供应商')按钮开始</p>
           </div>
         `);
         return;
@@ -6684,14 +6684,14 @@ ${extractorBody}
                   <div id="user-ping-page-${p.id}" style="min-width:60px;font-size:12px;color:var(--muted-foreground);">-</div>
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-secondary" onclick="app.showManageModelsModal('${escapeHtml(p.id)}')" title="管理模型">
+                  <button class="btn btn-sm btn-secondary" onclick="app.showManageModelsModal('${escapeHtml(p.id)}')" title=t('管理模型')>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                     模型
                   </button>
                 </td>
                 <td>
                   <div style="display:flex;gap:6px;">
-                    <button class="btn btn-sm btn-secondary" onclick="app.pingUserProvider('${escapeHtml(p.id)}')" title="检测连通性">
+                    <button class="btn btn-sm btn-secondary" onclick="app.pingUserProvider('${escapeHtml(p.id)}')" title=t('检测连通性')>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     </button>
                     <button class="btn btn-sm btn-secondary" onclick="app.editMyProvider('${escapeHtml(p.id)}')">编辑</button>
@@ -6780,8 +6780,8 @@ ${extractorBody}
     if (modelActions) modelActions.style.display = next === 'models' ? 'flex' : 'none';
     if (hint) {
       hint.textContent = next === 'models'
-        ? '管理个人 Team 下的模型（启用、价格、别名等）。也可从「供应商」页签刷新导入。'
-        : '管理自有上游供应商；导入的模型会出现在「模型」页签，也可在模型库中绑定到 API Key。';
+        ? t('管理个人 Team 下的模型（启用、价格、别名等）。也可从「供应商」页签刷新导入。')
+        : t('管理自有上游供应商；导入的模型会出现在「模型」页签，也可在模型库中绑定到 API Key。');
     }
 
     // 页签切换同步到 URL hash，便于刷新/分享
@@ -6805,7 +6805,7 @@ ${extractorBody}
       const providers = await res.json();
       const provider = providers.find(p => p.id === providerId);
       if (!provider) {
-        alert('未找到供应商信息');
+        alert(t('未找到供应商信息'));
         return;
       }
 
@@ -6820,7 +6820,7 @@ ${extractorBody}
       this.showModal('editProviderModal');
     } catch (error) {
       console.error('获取供应商信息失败:', error);
-      alert('获取供应商信息失败');
+      alert(t('获取供应商信息失败'));
     }
   }
 
@@ -6834,7 +6834,7 @@ ${extractorBody}
     const format = document.getElementById('editProviderFormat').value;
 
     if (!baseUrl) {
-      errorEl.textContent = '请输入 Base URL';
+      errorEl.textContent = t('请输入 Base URL');
       errorEl.style.display = 'block';
       return;
     }
@@ -6851,16 +6851,16 @@ ${extractorBody}
 
       const data = await res.json();
       if (!res.ok) {
-        errorEl.textContent = data.error || '保存失败';
+        errorEl.textContent = data.error || t('保存失败');
         errorEl.style.display = 'block';
         return;
       }
 
       this.closeModals();
-      this.showToast('供应商已更新', 'success');
+      this.showToast(t('供应商已更新'), 'success');
       await this.loadModelLibrary();
     } catch (error) {
-      errorEl.textContent = '网络错误，请重试';
+      errorEl.textContent = t('网络错误，请重试');
       errorEl.style.display = 'block';
     }
   }
@@ -6869,7 +6869,7 @@ ${extractorBody}
     const display = document.getElementById(`user-ping-${providerId}`);
     const pageDisplay = document.getElementById(`user-ping-page-${providerId}`);
     const libDisplays = document.querySelectorAll(`.lib-ping[data-provider-id="${providerId}"]`);
-    const pingHtml = inlineLoadingHtml('检测中...', 'sm');
+    const pingHtml = inlineLoadingHtml(t('检测中...'), 'sm');
     if (display) setHTML(display, pingHtml);
     if (pageDisplay) setHTML(pageDisplay, pingHtml);
     libDisplays.forEach(el => setHTML(el, pingHtml));
@@ -6898,51 +6898,51 @@ ${extractorBody}
   async pingAllLibraryProviders() {
     const item = document.getElementById('pingAllLibProvidersBtn');
     const prevText = item?.textContent;
-    if (item) setHTML(item, inlineLoadingHtml('检测中...', 'sm'));
+    if (item) setHTML(item, inlineLoadingHtml(t('检测中...'), 'sm'));
 
     const pingBtns = document.querySelectorAll('.lib-ping[data-provider-id]');
     const providerIds = [...new Set(Array.from(pingBtns).map(el => el.dataset.providerId))];
 
     if (!providerIds.length) {
-      this.showToast('暂无可检测的供应商，请先展开列表', 'info');
+      this.showToast(t('暂无可检测的供应商，请先展开列表'), 'info');
     } else {
       await Promise.allSettled(providerIds.map(id => this.pingUserProvider(id)));
       this.showToast(`已检测 ${providerIds.length} 个供应商`, 'success');
     }
 
-    if (item) item.textContent = prevText || '一键检测连通性';
+    if (item) item.textContent = prevText || t('一键检测连通性');
   }
 
   async deleteMyProvider(providerId) {
-    if (!await confirm('确定要删除此供应商吗？关联的模型也会被删除。')) return;
+    if (!await confirm(t('确定要删除此供应商吗？关联的模型也会被删除。'))) return;
 
     try {
       const res = await fetch(`/api/user/providers/${providerId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '删除失败');
+        alert(data.error || t('删除失败'));
         return;
       }
-      this.showToast('供应商已删除', 'success');
+      this.showToast(t('供应商已删除'), 'success');
       await this.loadModelLibrary();
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
   async refreshProviderModels(providerId) {
     try {
-      this.showToast('正在获取模型列表...', 'info');
+      this.showToast(t('正在获取模型列表...'), 'info');
       const res = await fetch(`/api/user/providers/${providerId}/refresh-models`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '刷新失败');
+        alert(data.error || t('刷新失败'));
         return;
       }
       this.showToast(`已添加 ${data.added} 个新模型（共 ${data.total} 个）`, 'success');
       await this.loadModelLibrary();
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -6952,7 +6952,7 @@ ${extractorBody}
     this._currentManageModels = [];
 
     // 显示模态框
-    document.getElementById('manageModelsTitle').textContent = '管理模型';
+    document.getElementById('manageModelsTitle').textContent = t('管理模型');
     document.getElementById('manageModelsLoading').style.display = 'block';
     document.getElementById('manageModelsError').style.display = 'none';
     document.getElementById('manageModelsContent').style.display = 'none';
@@ -6961,7 +6961,7 @@ ${extractorBody}
 
     try {
       const res = await fetch(`/api/user/providers/${providerId}/models`);
-      if (!res.ok) throw new Error('获取模型列表失败');
+      if (!res.ok) throw new Error(t('获取模型列表失败'));
       const models = await res.json();
 
       this._currentManageModels = models;
@@ -6993,7 +6993,7 @@ ${extractorBody}
       setHTML(container, `
         <div style="text-align:center;padding:40px;color:var(--muted-foreground);">
           <p>暂无模型</p>
-          <p style="font-size:13px;">点击"刷新列表"从供应商获取模型</p>
+          <p style="font-size:13px;">点击t('刷新列表')从供应商获取模型</p>
         </div>
       `);
       return;
@@ -7036,18 +7036,18 @@ ${extractorBody}
     if (!providerId) return;
 
     try {
-      this.showToast('正在刷新模型列表...', 'info');
+      this.showToast(t('正在刷新模型列表...'), 'info');
       const res = await fetch(`/api/user/providers/${providerId}/refresh-models`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '刷新失败');
+        alert(data.error || t('刷新失败'));
         return;
       }
       this.showToast(`已添加 ${data.added} 个新模型`, 'success');
       // 重新加载模型列表
       await this.showManageModelsModal(providerId);
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -7072,7 +7072,7 @@ ${extractorBody}
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '删除失败');
+        alert(data.error || t('删除失败'));
         return;
       }
 
@@ -7080,7 +7080,7 @@ ${extractorBody}
       this.closeModals();
       await this.loadMyProvidersPage();
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -7105,7 +7105,7 @@ ${extractorBody}
 
     if (!modelIds.length) return;
 
-    const action = enabled ? '启用' : '禁用';
+    const action = enabled ? t('启用') : t('禁用');
     if (!await confirm(`确定要${action}选中的 ${modelIds.length} 个模型吗？`)) return;
 
     const providerId = this._currentManageProviderId;
@@ -7125,7 +7125,7 @@ ${extractorBody}
       this.showToast(`已${action} ${data.updated} 个模型`, 'success');
       await this.showManageModelsModal(providerId);
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -7146,14 +7146,14 @@ ${extractorBody}
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '删除失败');
+        alert(data.error || t('删除失败'));
         return;
       }
 
       this.showToast(`已删除 ${data.deleted} 个模型`, 'success');
       await this.showManageModelsModal(providerId);
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -7180,7 +7180,7 @@ ${extractorBody}
     if (cachedPrice !== '') updates.cached_output_price_per_1k_tokens = parseFloat(cachedPrice);
 
     if (Object.keys(updates).length === 0) {
-      alert('请至少填写一项价格');
+      alert(t('请至少填写一项价格'));
       return;
     }
 
@@ -7194,7 +7194,7 @@ ${extractorBody}
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '设置失败');
+        alert(data.error || t('设置失败'));
         return;
       }
 
@@ -7202,7 +7202,7 @@ ${extractorBody}
       this.closeModals();
       await this.showManageModelsModal(providerId);
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -7214,7 +7214,7 @@ ${extractorBody}
   async loadMyTeamModels() {
     try {
       const res = await fetch('/api/user/my-team-models');
-      if (!res.ok) throw new Error('获取模型列表失败');
+      if (!res.ok) throw new Error(t('获取模型列表失败'));
       this._myTeamModels = await res.json();
       this._myTeamModelsFiltered = [...this._myTeamModels];
       this._renderMyTeamModels(this._myTeamModelsFiltered);
@@ -7333,22 +7333,22 @@ ${extractorBody}
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '删除失败');
+        alert(data.error || t('删除失败'));
         return;
       }
       this.showToast(`已删除 ${data.deleted} 个模型`, 'success');
       await this.loadMyTeamModels();
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
   async batchEnableMyTeamModels() {
-    await this._batchUpdateMyTeamModels({ enabled: true }, '启用');
+    await this._batchUpdateMyTeamModels({ enabled: true }, t('启用'));
   }
 
   async batchDisableMyTeamModels() {
-    await this._batchUpdateMyTeamModels({ enabled: false }, '禁用');
+    await this._batchUpdateMyTeamModels({ enabled: false }, t('禁用'));
   }
 
   async _batchUpdateMyTeamModels(updates, action) {
@@ -7371,7 +7371,7 @@ ${extractorBody}
       this.showToast(`已${action} ${data.updated} 个模型`, 'success');
       await this.loadMyTeamModels();
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -7437,7 +7437,7 @@ ${extractorBody}
     }
 
     if (Object.keys(updates).length === 0) {
-      alert('请至少勾选一项进行编辑');
+      alert(t('请至少勾选一项进行编辑'));
       return;
     }
 
@@ -7449,25 +7449,25 @@ ${extractorBody}
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '更新失败');
+        alert(data.error || t('更新失败'));
         return;
       }
       this.showToast(`已更新 ${data.updated} 个模型`, 'success');
       this.closeModals();
       await this.loadMyTeamModels();
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
   async editMyTeamModel(modelId) {
     const model = this._myTeamModels.find(m => m.id === modelId);
-    if (!model) { alert('模型不存在'); return; }
+    if (!model) { alert(t('模型不存在')); return; }
 
     // 复用已有的编辑模态框
     this._editingModelId = modelId;
-    document.getElementById('addEditModelTitle').textContent = '编辑模型';
-    document.getElementById('confirmAddEditModel').textContent = '保存';
+    document.getElementById('addEditModelTitle').textContent = t('编辑模型');
+    document.getElementById('confirmAddEditModel').textContent = t('保存');
     document.getElementById('addEditModelError').style.display = 'none';
 
     // 从 _myTeamModels 数据填充表单
@@ -7499,19 +7499,19 @@ ${extractorBody}
   }
 
   async deleteMyTeamModel(modelId) {
-    if (!await confirm('确定要删除此模型吗？此操作不可撤销。')) return;
+    if (!await confirm(t('确定要删除此模型吗？此操作不可撤销。'))) return;
 
     try {
       const res = await fetch(`/api/user/models/${modelId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '删除失败');
+        alert(data.error || t('删除失败'));
         return;
       }
-      this.showToast('模型已删除', 'success');
+      this.showToast(t('模型已删除'), 'success');
       await this.loadMyTeamModels();
     } catch (error) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -7642,7 +7642,7 @@ ${extractorBody}
     }
     try {
       const res = await fetch(`/api/user/model-library/search?${this._buildLibraryGlobalSearchParams(page).toString()}`);
-      if (!res.ok) throw new Error('搜索失败');
+      if (!res.ok) throw new Error(t('搜索失败'));
       const data = await res.json();
       if (seq !== this._libraryGlobalSearchSeq) return; // 过期响应
       if (!this._shouldUseLibraryGlobalSearch()) return;
@@ -7949,7 +7949,7 @@ ${extractorBody}
     // 排序/隐藏控件已放入「更多」菜单（console.html），此处仅同步状态
     const sortSelect = document.getElementById('librarySort');
     const defaultOption = sortSelect?.querySelector('option[value="default"]');
-    if (defaultOption) defaultOption.textContent = '默认 / 自定义排序';
+    if (defaultOption) defaultOption.textContent = t('默认 / 自定义排序');
     this._updateLibraryHiddenButtons();
     this._updateLibraryReorderButtons();
   }
@@ -8001,7 +8001,7 @@ ${extractorBody}
       const btn = document.getElementById(id);
       if (!btn) continue;
       btn.classList.toggle('library-more-filters-active', shouldOpen || this._hasLibraryAdvancedFiltersActive());
-      btn.textContent = shouldOpen ? '收起筛选' : '更多筛选';
+      btn.textContent = shouldOpen ? t('收起筛选') : t('更多筛选');
       btn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     }
   }
@@ -8021,7 +8021,7 @@ ${extractorBody}
       if (!btn) continue;
       const highlight = open || this._hasLibraryAdvancedFiltersActive();
       btn.classList.toggle('library-more-filters-active', highlight);
-      if (!open) btn.textContent = '更多筛选';
+      if (!open) btn.textContent = t('更多筛选');
     }
   }
 
@@ -8043,7 +8043,7 @@ ${extractorBody}
     if (showBtn) {
       showBtn.classList.toggle('library-show-hidden-active', this.libraryShowHidden);
       const text = showBtn.querySelector('.library-show-hidden-text');
-      if (text) text.textContent = this.libraryShowHidden ? '隐藏已隐藏项' : '显示已隐藏';
+      if (text) text.textContent = this.libraryShowHidden ? t('隐藏已隐藏项') : t('显示已隐藏');
     }
     const clearBtn = document.getElementById('libraryClearHiddenBtn');
     if (clearBtn) {
@@ -8071,16 +8071,16 @@ ${extractorBody}
   }
 
   async clearLibraryHidden() {
-    if (!await confirm('确定清除全部隐藏偏好吗？已隐藏的供应商和模型将全部恢复显示。')) return;
+    if (!await confirm(t('确定清除全部隐藏偏好吗？已隐藏的供应商和模型将全部恢复显示。'))) return;
     try {
       const res = await fetch('/api/user/model-library/hidden?scope=all', { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || '清除失败');
+      if (!res.ok) throw new Error(data.error || t('清除失败'));
       this.libraryShowHidden = false;
       await this.loadModelLibrary();
-      this.showToast('已清除全部隐藏偏好', 'success');
+      this.showToast(t('已清除全部隐藏偏好'), 'success');
     } catch (e) {
-      this.showToast(e.message || '清除失败', 'error');
+      this.showToast(e.message || t('清除失败'), 'error');
     }
   }
 
@@ -8091,7 +8091,7 @@ ${extractorBody}
       body: JSON.stringify({ scope, ...payload })
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || '操作失败');
+    if (!res.ok) throw new Error(data.error || t('操作失败'));
     return data;
   }
 
@@ -8113,7 +8113,7 @@ ${extractorBody}
       provider.is_hidden = prevHidden;
       this.filterAndRenderModelLibrary();
       this._updateLibraryHiddenButtons();
-      this.showToast(e.message || '操作失败', 'error');
+      this.showToast(e.message || t('操作失败'), 'error');
     } finally {
       this._librarySavingHidden = false;
     }
@@ -8139,7 +8139,7 @@ ${extractorBody}
         this.filterAndRenderModelLibrary();
         this._updateLibraryHiddenButtons();
       } catch (e) {
-        this.showToast(e.message || '操作失败', 'error');
+        this.showToast(e.message || t('操作失败'), 'error');
       } finally {
         this._librarySavingHidden = false;
       }
@@ -8173,7 +8173,7 @@ ${extractorBody}
       provider.visible_model_count = prevVisibleCount;
       this.filterAndRenderModelLibrary();
       this._updateLibraryHiddenButtons();
-      this.showToast(e.message || '操作失败', 'error');
+      this.showToast(e.message || t('操作失败'), 'error');
     } finally {
       this._librarySavingHidden = false;
     }
@@ -8265,13 +8265,13 @@ ${extractorBody}
         body: JSON.stringify({ teamId, providerId, modelId, starred: wantStar })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || '操作失败');
+      if (!res.ok) throw new Error(data.error || t('操作失败'));
       const name = snapshot?.name || modelId;
       this.showToast(wantStar ? `已星标「${name}」` : `已取消星标「${name}」`, 'success');
     } catch (e) {
       this._applyLibraryStarState(teamId, providerId, modelId, !wantStar, snapshot);
       this.filterAndRenderModelLibrary();
-      this.showToast(e.message || '操作失败', 'error');
+      this.showToast(e.message || t('操作失败'), 'error');
     } finally {
       this._librarySavingStar = false;
     }
@@ -8310,7 +8310,7 @@ ${extractorBody}
     if (reorderBtn) {
       reorderBtn.classList.toggle('library-reorder-mode-active', this.libraryReorderMode);
       const text = reorderBtn.querySelector('.library-reorder-text');
-      if (text) text.textContent = this.libraryReorderMode ? '退出排序' : '排序模式';
+      if (text) text.textContent = this.libraryReorderMode ? t('退出排序') : t('排序模式');
     }
     const resetBtn = document.getElementById('libraryResetOrderBtn');
     if (resetBtn) resetBtn.style.display = this.libraryReorderMode ? 'block' : 'none';
@@ -8329,7 +8329,7 @@ ${extractorBody}
 
   toggleLibraryReorderMode() {
     if (!this.libraryReorderMode && !this._canUseLibraryReorderMode()) {
-      this.showToast('请先清空搜索和筛选，并选择“默认 / 自定义排序”后再调整排序', 'error');
+      this.showToast(t('请先清空搜索和筛选，并选择“默认 / 自定义排序”后再调整排序'), 'error');
       return;
     }
     this.libraryReorderMode = !this.libraryReorderMode;
@@ -8343,22 +8343,22 @@ ${extractorBody}
    */
   async applyLibraryOrderByTest(sort = 'test_latency_asc') {
     if (!this.libraryReorderMode) {
-      this.showToast('请先进入排序模式', 'error');
+      this.showToast(t('请先进入排序模式'), 'error');
       return;
     }
     if (!this._canUseLibraryReorderMode()) {
-      this.showToast('请先清空搜索和筛选，并选择“默认 / 自定义排序”', 'error');
+      this.showToast(t('请先清空搜索和筛选，并选择“默认 / 自定义排序”'), 'error');
       return;
     }
     if (this._librarySavingOrder || this._libraryApplyingTestOrder) return;
 
     const sortLabels = {
-      test_latency_asc: '测试延迟（快→慢）',
-      test_latency_desc: '测试延迟（慢→快）',
-      test_tps_desc: '测试吞吐（高→低）'
+      test_latency_asc: t('测试延迟（快→慢）'),
+      test_latency_desc: t('测试延迟（慢→快）'),
+      test_tps_desc: t('测试吞吐（高→低）')
     };
     if (!sortLabels[sort]) {
-      this.showToast('无效的排序方式', 'error');
+      this.showToast(t('无效的排序方式'), 'error');
       return;
     }
 
@@ -8380,7 +8380,7 @@ ${extractorBody}
         body: JSON.stringify({ sort })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || '按测试结果排序失败');
+      if (!res.ok) throw new Error(data.error || t('按测试结果排序失败'));
 
       const expandedState = this._captureLibraryExpandedState();
       await this.loadModelLibrary();
@@ -8394,7 +8394,7 @@ ${extractorBody}
       const providerN = data.providers ?? 0;
       this.showToast(`已按${sortLabels[sort]}排序（${providerN} 个供应商，${modelN} 个模型）`, 'success');
     } catch (e) {
-      this.showToast(e.message || '按测试结果排序失败', 'error');
+      this.showToast(e.message || t('按测试结果排序失败'), 'error');
     } finally {
       this._libraryApplyingTestOrder = false;
       this._librarySavingOrder = false;
@@ -8454,7 +8454,7 @@ ${extractorBody}
       body: JSON.stringify({ scope, ...payload })
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || '保存排序失败');
+    if (!res.ok) throw new Error(data.error || t('保存排序失败'));
     return data;
   }
 
@@ -8473,7 +8473,7 @@ ${extractorBody}
       this._moveArrayItem(teams, index + direction, -direction);
       this.filterAndRenderModelLibrary();
       this._restoreLibraryExpandedState(state);
-      this.showToast(e.message || '保存排序失败', 'error');
+      this.showToast(e.message || t('保存排序失败'), 'error');
     } finally {
       this._librarySavingOrder = false;
     }
@@ -8495,7 +8495,7 @@ ${extractorBody}
       this._moveArrayItem(providers, index + direction, -direction);
       this.filterAndRenderModelLibrary();
       this._restoreLibraryExpandedState(state);
-      this.showToast(e.message || '保存排序失败', 'error');
+      this.showToast(e.message || t('保存排序失败'), 'error');
     } finally {
       this._librarySavingOrder = false;
     }
@@ -8507,7 +8507,7 @@ ${extractorBody}
     const provider = team?.providers?.find(p => String(p.provider_id) === String(providerId));
     const models = provider?.models || [];
     if (provider?.pagination && provider.pagination.total > models.length) {
-      this.showToast('分页加载时暂不支持调整模型顺序', 'error');
+      this.showToast(t('分页加载时暂不支持调整模型顺序'), 'error');
       return;
     }
     const index = models.findIndex(m => String(m.model_id) === String(modelId));
@@ -8522,7 +8522,7 @@ ${extractorBody}
       this._moveArrayItem(models, index + direction, -direction);
       this.filterAndRenderModelLibrary();
       this._restoreLibraryExpandedState(state);
-      this.showToast(e.message || '保存排序失败', 'error');
+      this.showToast(e.message || t('保存排序失败'), 'error');
     } finally {
       this._librarySavingOrder = false;
     }
@@ -8597,7 +8597,7 @@ ${extractorBody}
         const provider = team?.providers?.find(p => String(p.provider_id) === String(providerId));
         list = provider?.models;
         if (provider?.pagination && provider.pagination.total > (provider.models || []).length) {
-          this.showToast('分页加载时暂不支持调整模型顺序', 'error');
+          this.showToast(t('分页加载时暂不支持调整模型顺序'), 'error');
           this._cleanupDragDrop();
           return;
         }
@@ -8647,7 +8647,7 @@ ${extractorBody}
           list.splice(rollbackIdx >= 0 ? rollbackIdx : fromIdx, 0, lost);
           this.filterAndRenderModelLibrary();
           this._restoreLibraryExpandedState(state);
-          this.showToast(e.message || '保存排序失败', 'error');
+          this.showToast(e.message || t('保存排序失败'), 'error');
         })
         .finally(() => { this._librarySavingOrder = false; });
     });
@@ -8663,17 +8663,17 @@ ${extractorBody}
   }
 
   async resetLibraryOrder() {
-    if (!await confirm('确定恢复模型库默认排序吗？这会清除当前账号的 Team、供应商和模型自定义排序。')) return;
+    if (!await confirm(t('确定恢复模型库默认排序吗？这会清除当前账号的 Team、供应商和模型自定义排序。'))) return;
     try {
       const res = await fetch('/api/user/model-library/order?scope=all', { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || '重置排序失败');
+      if (!res.ok) throw new Error(data.error || t('重置排序失败'));
       this.libraryReorderMode = false;
       this._updateLibraryReorderButtons();
       await this.loadModelLibrary();
-      this.showToast('已恢复默认排序', 'success');
+      this.showToast(t('已恢复默认排序'), 'success');
     } catch (e) {
-      this.showToast(e.message || '重置排序失败', 'error');
+      this.showToast(e.message || t('重置排序失败'), 'error');
     }
   }
 
@@ -8749,7 +8749,7 @@ ${extractorBody}
     const hasContent = grid.querySelector('.model-quota-card, .model-quota-loading');
     // 已有缓存卡片时，才需要“后台刷新”提示；首屏尚无内容时由 loadProviderQuota 负责骨架
     if (!hasContent || grid.querySelector('.model-quota-card')) {
-      this._setQuotaRefreshNotice('正在后台刷新供应商额度...');
+      this._setQuotaRefreshNotice(t('正在后台刷新供应商额度...'));
     }
     const refreshBtn = document.getElementById('providerQuotaRefreshBtn');
     if (refreshBtn) { refreshBtn.classList.add('is-loading'); refreshBtn.disabled = true; }
@@ -8774,7 +8774,7 @@ ${extractorBody}
     const target = new Date(resetAt);
     if (Number.isNaN(target.getTime())) return `重置于 ${resetAt}`;
     const diff = target.getTime() - Date.now();
-    if (diff <= 0) return '即将重置';
+    if (diff <= 0) return t('即将重置');
     const minutes = Math.floor(diff / 60000);
     const days = Math.floor(minutes / 1440);
     const hours = Math.floor((minutes % 1440) / 60);
@@ -8821,7 +8821,7 @@ ${extractorBody}
       const resetCredits = q.rateLimitResetCredits?.available_count;
       const creditsHtml = (credits.hasCredits || credits.unlimited || credits.balance !== undefined || resetCredits !== undefined) ? `
         <div class="model-quota-credits">
-          <span>Credits：${escapeHtml(credits.unlimited ? '无限' : String(credits.balance ?? '0'))}</span>
+          <span>Credits：${escapeHtml(credits.unlimited ? t('无限') : String(credits.balance ?? '0'))}</span>
           ${resetCredits !== undefined ? `<span>可手动重置：${escapeHtml(String(resetCredits))} 次</span>` : ''}
         </div>` : '';
 
@@ -8835,12 +8835,12 @@ ${extractorBody}
             const resetText = period.resetsAt ? this.formatQuotaResetTime(period.resetsAt) : '';
             const resetTitle = period.resetsAt ? new Date(period.resetsAt).toLocaleString('zh-CN', { hour12: false }) : '';
             const periodRange = period.startsAt || period.resetsAt
-              ? `${period.startsAt ? this.formatQuotaResetTime(period.startsAt) : ''}${period.startsAt && period.resetsAt ? ' 至 ' : ''}${period.resetsAt ? this.formatQuotaResetTime(period.resetsAt) : '未知'}`
+              ? `${period.startsAt ? this.formatQuotaResetTime(period.startsAt) : ''}${period.startsAt && period.resetsAt ? t(' 至 ') : ''}${period.resetsAt ? this.formatQuotaResetTime(period.resetsAt) : t('未知')}`
               : '';
             return `
               <div class="model-quota-period">
                 <div class="model-quota-period-header">
-                  <span>${escapeHtml(period.label || period.key || '额度')}</span>
+                  <span>${escapeHtml(period.label || period.key || t('额度'))}</span>
                   <span>已用 ${periodPct}%</span>
                 </div>
                 <div class="model-quota-bar">
@@ -8948,7 +8948,7 @@ ${extractorBody}
             ${team.is_default ? '<span class="team-badge default">默认</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
             <div style="flex:1;"></div>
-            <button class="btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${team.team_id}')" title="测试此 Team 下所有模型">
+            <button class="btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${team.team_id}')" title=t('测试此 Team 下所有模型')>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试全部
             </button>
@@ -8968,7 +8968,7 @@ ${extractorBody}
                   : (provider.models ? provider.models.length : 0)));
             const providerMoreItems = [
               {
-                label: isProviderHidden ? '取消隐藏' : '隐藏此供应商',
+                label: isProviderHidden ? t('取消隐藏') : t('隐藏此供应商'),
                 icon: isProviderHidden ? 'eye' : 'eye-off',
                 onClick: `app.hideLibraryProvider('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}', ${isProviderHidden ? 'false' : 'true'})`
               }
@@ -8990,11 +8990,11 @@ ${extractorBody}
                 </div>
                 <div class="model-library-provider-actions">
                   <span class="lib-ping" data-provider-id="${provider.provider_id}" style="font-size:12px;color:var(--muted-foreground);"></span>
-                  <button class="btn btn-sm btn-secondary model-test-btn" style="padding:4px 6px;" title="测试此供应商下所有模型" onclick="event.stopPropagation();app.testProviderModels('${team.team_id}', '${provider.provider_id}')">
+                  <button class="btn btn-sm btn-secondary model-test-btn" style="padding:4px 6px;" title=t('测试此供应商下所有模型') onclick="event.stopPropagation();app.testProviderModels('${team.team_id}', '${provider.provider_id}')">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     测试
                   </button>
-                  <button class="btn btn-sm btn-secondary" style="padding:4px 6px;" title="检测连通性" onclick="event.stopPropagation();app.pingLibraryProvider('${provider.provider_id}')">
+                  <button class="btn btn-sm btn-secondary" style="padding:4px 6px;" title=t('检测连通性') onclick="event.stopPropagation();app.pingLibraryProvider('${provider.provider_id}')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   </button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
@@ -9007,7 +9007,7 @@ ${extractorBody}
                         <span class="placeholder-text">${provider.models.length} 个模型</span>
                       </div>`
                     : `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}">
-                        <span class="placeholder-text">${provider.models_loaded ? '该供应商下暂无模型' : '点击展开以加载模型'}</span>
+                        <span class="placeholder-text">${provider.models_loaded ? t('该供应商下暂无模型') : t('点击展开以加载模型')}</span>
                       </div>`}
               </div>
             </div>
@@ -9063,27 +9063,27 @@ ${extractorBody}
 
     const modelMoreItems = isKeyPicker ? [] : [
       {
-        label: isStarred ? '取消星标' : '星标此模型',
+        label: isStarred ? t('取消星标') : t('星标此模型'),
         icon: isStarred ? 'star' : 'star-off',
         onClick: `app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})`
       },
       {
-        label: isModelHidden ? '取消隐藏' : '隐藏此模型',
+        label: isModelHidden ? t('取消隐藏') : t('隐藏此模型'),
         icon: isModelHidden ? 'eye' : 'eye-off',
         onClick: `app.hideLibraryModel('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isModelHidden ? 'false' : 'true'})`
       },
       ...(isOwner ? [
         { type: 'divider' },
         {
-          label: '编辑',
+          label: t('编辑'),
           onClick: `app.showEditModelModal('${this._jsString(modelId)}')`
         },
         {
-          label: '发布',
+          label: t('发布'),
           onClick: `app.publishModel('${this._jsString(modelId)}')`
         },
         {
-          label: '删除',
+          label: t('删除'),
           className: 'danger',
           onClick: `app.deleteUserModel('${this._jsString(modelId)}')`
         }
@@ -9123,10 +9123,10 @@ ${extractorBody}
           ? '<button class="btn btn-sm btn-secondary" disabled style="opacity:0.5;">供应商已禁用</button>'
           : isKeyPicker
             ? (queueIndex >= 0
-              ? `<button class="btn btn-sm btn-secondary" title="再次点击可移出队列">队列 #${queueIndex + 1}</button>`
+              ? `<button class="btn btn-sm btn-secondary" title=t('再次点击可移出队列')>队列 #${queueIndex + 1}</button>`
               : '<button class="btn btn-sm btn-primary">加入队列</button>')
           : `
-             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title="测试模型连通性">
+             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title=t('测试模型连通性')>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试
             </button>
@@ -9182,7 +9182,7 @@ ${extractorBody}
       return this._renderModelUptimeCompact(modelId, modelName, cached);
     }
     const n = this._uptimeSlotCount || 96;
-    return `<div class="model-uptime" data-uptime-model="${idAttr}" data-uptime-name="${nameAttr}" title="加载调用状态..." onclick="event.stopPropagation();app.showModelUptimeDetailFromEl(this)">
+    return `<div class="model-uptime" data-uptime-model="${idAttr}" data-uptime-name="${nameAttr}" title=t('加载调用状态...') onclick="event.stopPropagation();app.showModelUptimeDetailFromEl(this)">
       <div class="model-uptime-spark">${Array(n).fill('<span class="model-uptime-bar none"></span>').join('')}</div>
       <span class="model-uptime-pct">—</span>
     </div>`;
@@ -9204,7 +9204,7 @@ ${extractorBody}
     const checkSvg = label === 'No data'
       ? ''
       : `<span class="model-uptime-check ${checkClass}" title="${escapeHtml(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
-    return `<div class="model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title="近 24 小时调用可用率（每 15 分钟）· 点击查看详情" onclick="event.stopPropagation();app.showModelUptimeDetailFromEl(this)">
+    return `<div class="model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title=t('近 24 小时调用可用率（每 15 分钟）· 点击查看详情') onclick="event.stopPropagation();app.showModelUptimeDetailFromEl(this)">
       <div class="model-uptime-spark">${barHtml}</div>
       <span class="model-uptime-pct">${escapeHtml(pct)}</span>
       ${checkSvg}
@@ -9270,11 +9270,11 @@ ${extractorBody}
     const body = document.getElementById('modelUptimeModalBody');
     if (!body) return;
     if (title) title.textContent = `${modelName || modelId} · 调用状态（近 24 小时）`;
-    setHTML(body, pageLoadingHtml('加载中...', { compact: true }));
+    setHTML(body, pageLoadingHtml(t('加载中...'), { compact: true }));
     this.showModal('modelUptimeModal');
     try {
       const res = await fetch(`/api/user/models/${encodeURIComponent(modelId)}/uptime?days=${this._uptimeDays}`);
-      if (!res.ok) throw new Error('加载失败');
+      if (!res.ok) throw new Error(t('加载失败'));
       const data = await res.json();
       if (!this._uptimeCache) this._uptimeCache = {};
       this._uptimeCache[modelId] = {
@@ -9310,14 +9310,14 @@ ${extractorBody}
     const check = label === 'No data'
       ? ''
       : `<span class="model-uptime-check ${checkClass}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
-    const rangeLeft = timeMode ? '24 小时前' : '开始';
-    const rangeRight = timeMode ? '现在' : '今天';
+    const rangeLeft = timeMode ? t('24 小时前') : t('开始');
+    const rangeRight = timeMode ? t('现在') : t('今天');
     return `
       <div class="model-uptime-detail">
         <div class="model-uptime-detail-header">
           <div class="model-uptime-detail-title">
-            <span>${escapeHtml(modelName || data.model_id || '模型')}</span>
-            <span class="model-uptime-detail-help" title="基于近 24 小时真实代理调用成功/失败统计（每 15 分钟聚合）。鉴权失败、本端限流与参数错误不计入。数据约每 15 分钟刷新。">?</span>
+            <span>${escapeHtml(modelName || data.model_id || t('模型'))}</span>
+            <span class="model-uptime-detail-help" title=t('基于近 24 小时真实代理调用成功/失败统计（每 15 分钟聚合）。鉴权失败、本端限流与参数错误不计入。数据约每 15 分钟刷新。')>?</span>
           </div>
           ${check}
         </div>
@@ -9327,7 +9327,7 @@ ${extractorBody}
           <span class="uptime-center">${escapeHtml(pct)}</span>
           <span>${rangeRight}</span>
         </div>
-        <div class="model-uptime-detail-label">${escapeHtml(label === 'No data' ? '暂无调用数据' : label)}</div>
+        <div class="model-uptime-detail-label">${escapeHtml(label === 'No data' ? t('暂无调用数据') : label)}</div>
         <div class="model-uptime-detail-legend">
           <span><i class="ok"></i>正常 (&lt;1% 失败)</span>
           <span><i class="degraded"></i>降级 (1–5%)</span>
@@ -9362,7 +9362,7 @@ ${extractorBody}
 
     return `
       <div class="library-more-menu" onclick="event.stopPropagation()">
-        <button type="button" class="btn btn-sm btn-secondary library-more-btn" title="更多操作" onclick="event.stopPropagation();app.toggleLibraryMoreMenu(event, this)">
+        <button type="button" class="btn btn-sm btn-secondary library-more-btn" title=t('更多操作') onclick="event.stopPropagation();app.toggleLibraryMoreMenu(event, this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
           </svg>
@@ -9537,7 +9537,7 @@ ${extractorBody}
     const loadingEl = this._findProviderEl(team.team_id, provider.provider_id, providerEl);
     if (loadingEl) {
       const list = loadingEl.querySelector('.model-library-list');
-      if (list) setHTML(list, `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}">${inlineLoadingHtml('正在加载模型...', 'sm')}</div>`);
+      if (list) setHTML(list, `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}">${inlineLoadingHtml(t('正在加载模型...'), 'sm')}</div>`);
     }
 
     try {
@@ -9557,7 +9557,7 @@ ${extractorBody}
       try {
         data = await res.json();
       } catch (parseErr) {
-        throw new Error('响应不是合法 JSON: ' + (parseErr?.message || parseErr));
+        throw new Error(t('响应不是合法 JSON: ') + (parseErr?.message || parseErr));
       }
 
       provider.models = Array.isArray(data.models) ? data.models : [];
@@ -9670,7 +9670,7 @@ ${extractorBody}
 
     if (!provider.models || provider.models.length === 0) {
       const hasActiveFilter = this.librarySearch || this.librarySeriesFilter !== 'all' || this.libraryTestFilter !== 'all';
-      setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text">${hasActiveFilter ? '没有符合筛选条件的模型' : '该供应商下暂无模型'}</span></div>`);
+      setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text">${hasActiveFilter ? t('没有符合筛选条件的模型') : t('该供应商下暂无模型')}</span></div>`);
       return;
     }
 
@@ -9987,7 +9987,7 @@ ${extractorBody}
             <button type="button" class="binding-key-name binding-key-trigger"
               data-key-id="${key.id}"
               onclick="app.selectLibraryKey(${key.id}, event)"
-              title="再次点击打开菜单">${keyName}</button>
+              title=t('再次点击打开菜单')>${keyName}</button>
             <span class="binding-arrow">→</span>
             <span class="binding-model-unset">尚未绑定模型</span>
           </div>
@@ -10013,7 +10013,7 @@ ${extractorBody}
           <button type="button" class="binding-key-name binding-key-trigger"
             data-key-id="${key.id}"
             onclick="app.selectLibraryKey(${key.id}, event)"
-            title="再次点击打开菜单">${keyName}</button>
+            title=t('再次点击打开菜单')>${keyName}</button>
           <span class="binding-arrow">→</span>
           ${providerName ? `<span class="binding-provider-name">${escapeHtml(providerName)}</span><span class="binding-arrow">→</span>` : ''}
           <span class="binding-model-name">${escapeHtml(modelName)}</span>
@@ -10096,7 +10096,7 @@ ${extractorBody}
         html += `
           <button type="button" class="model-library-key-chip model-library-key-expand"
                   onclick="app.toggleLibraryKeysExpand()"
-                  title="收起">
+                  title=t('收起')>
             <span class="key-name">收起</span>
           </button>`;
       }
@@ -10180,10 +10180,10 @@ ${extractorBody}
     }
 
     const menu = this._ensureLibraryKeyBubbleEl();
-    const defaultModel = key.current_model_name || '未绑定';
+    const defaultModel = key.current_model_name || t('未绑定');
     const harnessItems = this._libraryHarnessList().map(h => {
       const bound = this._getKeyHarnessBinding(key, h.id);
-      const modelText = bound?.name || '跟随默认';
+      const modelText = bound?.name || t('跟随默认');
       const hasOverride = !!bound;
       return `
         <button type="button" class="library-key-bubble-item" role="menuitem"
@@ -10304,7 +10304,7 @@ ${extractorBody}
     this.closeLibraryKeyBubble();
     this._libraryBindTarget = 'default';
     this._updateLibraryBindingBar();
-    this.showToast('已切换为默认绑定：点击模型将绑定到全部工具', 'info');
+    this.showToast(t('已切换为默认绑定：点击模型将绑定到全部工具'), 'info');
   }
 
   onLibraryKeyBubbleHarness(harnessId) {
@@ -10347,7 +10347,7 @@ ${extractorBody}
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        this.showToast(err.error || '清除失败', 'error');
+        this.showToast(err.error || t('清除失败'), 'error');
         return;
       }
       const keyObj = this._libraryKeys.find(k => k.id === keyId);
@@ -10358,7 +10358,7 @@ ${extractorBody}
       this._renderLibraryKeySelector();
       this._updateLibraryBindingBar();
     } catch (e) {
-      this.showToast('清除失败', 'error');
+      this.showToast(t('清除失败'), 'error');
     }
   }
 
@@ -10533,7 +10533,7 @@ ${extractorBody}
     const bindTarget = this._libraryBindTarget || 'default';
     const harnessBinding = bindTarget !== 'default' ? this._getKeyHarnessBinding(key, bindTarget) : null;
     const modelName = bindTarget !== 'default'
-      ? (harnessBinding?.name || '跟随默认')
+      ? (harnessBinding?.name || t('跟随默认'))
       : (key.current_model_name
         || (this._libraryCurrentModel && String(this._libraryCurrentModel.id) === String(key.current_model_id)
           ? this._libraryCurrentModel.name
@@ -10680,7 +10680,7 @@ ${extractorBody}
       } catch (_) { /* ignore */ }
 
       if (!providerId) {
-        this.showToast('无法定位该 Key 绑定的模型', 'error');
+        this.showToast(t('无法定位该 Key 绑定的模型'), 'error');
         return;
       }
 
@@ -10691,7 +10691,7 @@ ${extractorBody}
         if (provider) candidates.push({ team, provider });
       }
       if (!candidates.length) {
-        this.showToast('绑定模型所在供应商当前不可见（可能已隐藏）', 'info');
+        this.showToast(t('绑定模型所在供应商当前不可见（可能已隐藏）'), 'info');
         return;
       }
       candidates.sort((a, b) => {
@@ -10780,7 +10780,7 @@ ${extractorBody}
     }
 
     if (!this._libraryKeys?.length) {
-      this.showToast('请先创建 API Key', 'error');
+      this.showToast(t('请先创建 API Key'), 'error');
       this.navigateTo('apiKeys');
       return;
     }
@@ -10832,11 +10832,11 @@ ${extractorBody}
       } else {
         const err = await res.json().catch(() => ({}));
         console.error('[模型库] 应用模型失败:', err);
-        this.showToast(err.error || '设置失败', 'error');
+        this.showToast(err.error || t('设置失败'), 'error');
       }
     } catch (error) {
       console.error('[模型库] 设置模型异常:', error);
-      this.showToast('设置失败', 'error');
+      this.showToast(t('设置失败'), 'error');
     }
   }
 
@@ -10850,7 +10850,7 @@ ${extractorBody}
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error('[模型库] Harness 绑定失败:', err);
-        this.showToast(err.error || '设置失败', 'error');
+        this.showToast(err.error || t('设置失败'), 'error');
         return;
       }
       const data = await res.json().catch(() => ({}));
@@ -10875,7 +10875,7 @@ ${extractorBody}
       this.showToast(`已为 ${this._harnessLabel(harnessId)} 绑定：${data.name || modelInfo.name || modelId}`, 'success');
     } catch (error) {
       console.error('[模型库] Harness 绑定异常:', error);
-      this.showToast('设置失败', 'error');
+      this.showToast(t('设置失败'), 'error');
     }
   }
 
@@ -10938,7 +10938,7 @@ ${extractorBody}
     console.log('[模型库] 确认选择 Key');
     const selected = document.querySelector('input[name="selectKeyRadio"]:checked');
     console.log('[模型库] 选中的 Key:', selected);
-    if (!selected) { alert('请选择一个 API Key'); return; }
+    if (!selected) { alert(t('请选择一个 API Key')); return; }
 
     const keyId = parseInt(selected.value);
     const modelId = this._selectingModelId;
@@ -10997,11 +10997,11 @@ ${extractorBody}
 
   async loadProvidersIndex() {
     const container = document.getElementById('providerListContainer');
-    setHTML(container, pageLoadingHtml('加载中...', { compact: true }));
+    setHTML(container, pageLoadingHtml(t('加载中...'), { compact: true }));
 
     try {
       const res = await fetch('/api/user/providers/lookup-index');
-      if (!res.ok) throw new Error('加载失败');
+      if (!res.ok) throw new Error(t('加载失败'));
       this._providersIndex = await res.json();
       this.renderProviderList(this._providersIndex);
     } catch (error) {
@@ -11049,7 +11049,7 @@ ${extractorBody}
     const customFields = document.getElementById('customProviderFields');
 
     if (providerId === 'custom') {
-      displayEl.textContent = '自定义供应商';
+      displayEl.textContent = t('自定义供应商');
       customFields.style.display = 'block';
       document.getElementById('providerBaseUrl').value = '';
       document.getElementById('providerFormat').value = 'openai';
@@ -11074,18 +11074,18 @@ ${extractorBody}
 
     let name, baseUrl, format;
     if (providerId === 'custom') {
-      name = '自定义供应商';
+      name = t('自定义供应商');
       baseUrl = document.getElementById('providerBaseUrl').value.trim();
       format = document.getElementById('providerFormat').value;
       if (!baseUrl) {
-        errorEl.textContent = '请输入 Base URL';
+        errorEl.textContent = t('请输入 Base URL');
         errorEl.style.display = 'block';
         return;
       }
     } else {
       const provider = this._providersIndex.find(p => p.id === providerId);
       if (!provider) {
-        errorEl.textContent = '请选择供应商';
+        errorEl.textContent = t('请选择供应商');
         errorEl.style.display = 'block';
         return;
       }
@@ -11097,7 +11097,7 @@ ${extractorBody}
 
     try {
       const saveBtn = document.querySelector('#providerStep2 .btn-primary');
-      setButtonLoading(saveBtn, '添加中...');
+      setButtonLoading(saveBtn, t('添加中...'));
 
       const body = { name, base_url: baseUrl, format };
       if (apiKey) body.api_key = apiKey;
@@ -11109,9 +11109,9 @@ ${extractorBody}
 
       const data = await res.json();
       if (!res.ok) {
-        errorEl.textContent = data.error || '保存失败';
+        errorEl.textContent = data.error || t('保存失败');
         errorEl.style.display = 'block';
-        clearButtonLoading(saveBtn, '添加');
+        clearButtonLoading(saveBtn, t('添加'));
         return;
       }
 
@@ -11119,10 +11119,10 @@ ${extractorBody}
       this.showToast(`${name} 已添加`, 'success');
       await this.loadModelLibrary();
     } catch (e) {
-      errorEl.textContent = '网络错误，请重试';
+      errorEl.textContent = t('网络错误，请重试');
       errorEl.style.display = 'block';
       const saveBtn = document.querySelector('#providerStep2 .btn-primary');
-      clearButtonLoading(saveBtn, '添加');
+      clearButtonLoading(saveBtn, t('添加'));
     }
   }
 
@@ -11132,8 +11132,8 @@ ${extractorBody}
     if (this.currentPage === 'myTeamModels') {
       this._onEditModelCallback = async () => { await this.loadMyTeamModels(); };
     }
-    document.getElementById('addEditModelTitle').textContent = '添加模型';
-    document.getElementById('confirmAddEditModel').textContent = '添加';
+    document.getElementById('addEditModelTitle').textContent = t('添加模型');
+    document.getElementById('confirmAddEditModel').textContent = t('添加');
     document.getElementById('addEditModelError').style.display = 'none';
     document.getElementById('editModelId').value = '';
     document.getElementById('modelFormId').value = '';
@@ -11165,8 +11165,8 @@ ${extractorBody}
 
   async showEditModelModal(modelId) {
     this._editingModelId = modelId;
-    document.getElementById('addEditModelTitle').textContent = '编辑模型';
-    document.getElementById('confirmAddEditModel').textContent = '保存';
+    document.getElementById('addEditModelTitle').textContent = t('编辑模型');
+    document.getElementById('confirmAddEditModel').textContent = t('保存');
     document.getElementById('addEditModelError').style.display = 'none';
 
     // 加载供应商列表
@@ -11205,7 +11205,7 @@ ${extractorBody}
     }
 
     if (!modelData) {
-      document.getElementById('addEditModelError').textContent = '未找到模型信息';
+      document.getElementById('addEditModelError').textContent = t('未找到模型信息');
       document.getElementById('addEditModelError').style.display = 'block';
       return;
     }
@@ -11254,12 +11254,12 @@ ${extractorBody}
     const enabled = document.getElementById('modelFormEnabled').value === 'true';
 
     if (!provider) {
-      errorEl.textContent = '请选择供应商';
+      errorEl.textContent = t('请选择供应商');
       errorEl.style.display = 'block';
       return;
     }
     if (!upstreamModelId) {
-      errorEl.textContent = '请填写上游模型ID';
+      errorEl.textContent = t('请填写上游模型ID');
       errorEl.style.display = 'block';
       return;
     }
@@ -11297,13 +11297,13 @@ ${extractorBody}
       });
       const data = await res.json();
       if (!res.ok) {
-        errorEl.textContent = data.error || '操作失败';
+        errorEl.textContent = data.error || t('操作失败');
         errorEl.style.display = 'block';
         return;
       }
 
       this.closeModals();
-      this.showToast(isEdit ? '模型已更新' : '模型已添加', 'success');
+      this.showToast(isEdit ? t('模型已更新') : t('模型已添加'), 'success');
       // 如果有回调（如从"我的模型"页面调用），执行回调
       if (this._onEditModelCallback) {
         await this._onEditModelCallback();
@@ -11312,42 +11312,42 @@ ${extractorBody}
         await this.loadModelLibrary();
       }
     } catch (e) {
-      errorEl.textContent = '网络错误，请重试';
+      errorEl.textContent = t('网络错误，请重试');
       errorEl.style.display = 'block';
     }
   }
 
   async deleteUserModel(modelId) {
-    if (!await confirm('确定要删除此模型吗？此操作不可撤销。')) return;
+    if (!await confirm(t('确定要删除此模型吗？此操作不可撤销。'))) return;
 
     try {
       const res = await fetch(`/api/user/models/${modelId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '删除失败');
+        alert(data.error || t('删除失败'));
         return;
       }
-      this.showToast('模型已删除', 'success');
+      this.showToast(t('模型已删除'), 'success');
       await this.loadModelLibrary();
     } catch (e) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 
   async publishModel(modelId) {
-    if (!await confirm('发布模型到默认 Team 后，您将失去对此模型的管理权限。确定要发布吗？')) return;
+    if (!await confirm(t('发布模型到默认 Team 后，您将失去对此模型的管理权限。确定要发布吗？'))) return;
 
     try {
       const res = await fetch(`/api/user/models/${modelId}/publish`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || '发布失败');
+        alert(data.error || t('发布失败'));
         return;
       }
-      this.showToast('模型已发布到默认 Team', 'success');
+      this.showToast(t('模型已发布到默认 Team'), 'success');
       await this.loadModelLibrary();
     } catch (e) {
-      alert('网络错误，请重试');
+      alert(t('网络错误，请重试'));
     }
   }
 }
