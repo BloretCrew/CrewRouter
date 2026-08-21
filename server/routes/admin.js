@@ -8,7 +8,7 @@ const Logger = require('../logger');
 const { lookupProvider, searchProviders, fetchProvidersIndex } = require('../provider-lookup');
 const keyRefresher = require('../key-refresher');
 const proxyPool = require('../proxy-pool');
-const { validateUrl } = require('../utils/url-validator');
+const { validateUrl, upstreamUrl } = require('../utils/url-validator');
 const {
   getFeishuConfig,
   saveFeishuConfig,
@@ -3555,7 +3555,8 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
 
       // 尝试获取模型列表
       try {
-        const modelsRes = await fetch(`${baseUrl}/v1/models`, {
+        const modelsUrl = /\/v1$/.test(baseUrl) ? `${baseUrl}/models` : `${baseUrl}/v1/models`;
+        const modelsRes = await fetch(modelsUrl, {
           headers: { 'Authorization': `Bearer ${apiKey}` }
         });
         if (modelsRes.ok) {
@@ -3805,7 +3806,8 @@ router.delete('/user-group-rules/:id', requireAuth, requireAdmin, async (req, re
 
 // ==================== AI 脚本分析与修复 ====================
 
-// 清理 base_url：去掉尾部已知端点路径，避免重复拼接
+// 清理 base_url：去掉尾部已知端点路径，避免重复拼接。
+// 保留 /v1、/api/v1 版本前缀，由 upstreamUrl() 智能补全
 function cleanBaseUrl(base) {
   return base
     .replace(/\/$/, '')
@@ -3814,9 +3816,7 @@ function cleanBaseUrl(base) {
     .replace(/\/chat\/completions$/i, '')
     .replace(/\/messages$/i, '')
     .replace(/\/anthropic$/i, '')
-    .replace(/\/openai$/i, '')
-    .replace(/\/v1$/i, '')
-    .replace(/\/api$/i, '');
+    .replace(/\/openai$/i, '');
 }
 
 // 查找系统中可用的模型及其供应商列表（用于内部 AI 调用，优先 OpenAI 格式）
@@ -3852,9 +3852,9 @@ async function findAvailableProviders() {
 function buildProviderApiUrl(provider) {
   const base = cleanBaseUrl(provider.base_url);
   if (provider.format === 'anthropic') {
-    return { url: base + '/v1/messages', isAnthropic: true };
+    return { url: upstreamUrl(base, '/messages'), isAnthropic: true };
   }
-  return { url: base + '/v1/chat/completions', isAnthropic: false };
+  return { url: upstreamUrl(base, '/chat/completions'), isAnthropic: false };
 }
 
 // 构建 Anthropic 格式请求体

@@ -159,8 +159,9 @@ async function buildSafeUrl(baseUrl, path = '', options = {}) {
 }
 
 /**
- * 去掉尾部已知端点路径，避免再拼 /v1/chat/completions 时出现 /v1/v1。
- * 与 server/routes/api.js 的 cleanBaseUrl 保持一致。
+ * 去掉尾部已知端点路径，避免再拼端点时出现 /v1/v1。
+ * 注意：保留 /v1、/api/v1 这类版本前缀（如 OpenRouter 的 https://openrouter.ai/api/v1），
+ * 拼接端点时由 upstreamUrl() 判断是否需要补 /v1。
  */
 function cleanBaseUrl(base) {
   return String(base || '')
@@ -170,14 +171,23 @@ function cleanBaseUrl(base) {
     .replace(/\/v1\/responses$/i, '')
     .replace(/\/chat\/completions$/i, '')
     .replace(/\/messages$/i, '')
-    .replace(/\/v1$/i, '')
-    .replace(/\/api$/i, '');
+    .replace(/\/responses$/i, '');
+}
+
+/**
+ * 拼接上游 API 端点。endpoint 不含 /v1 前缀（如 '/chat/completions'）；
+ * base_url 已以 /v1 结尾时直接拼，否则补上 /v1。
+ */
+function upstreamUrl(base, endpoint) {
+  const clean = cleanBaseUrl(base);
+  return /\/v1$/i.test(clean) ? clean + endpoint : `${clean}/v1${endpoint}`;
 }
 
 module.exports = {
   validateUrl,
   buildSafeUrl,
   cleanBaseUrl,
+  upstreamUrl,
   isBlockedHost,
   isPrivateIPv4,
   PRIVATE_RANGES,

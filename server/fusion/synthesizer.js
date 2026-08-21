@@ -8,6 +8,7 @@
  */
 
 const Logger = require('../logger');
+const { upstreamUrl } = require('../utils/url-validator');
 const {
   ensureChatCompletionChunk,
   buildChatCompletionChunk,
@@ -229,7 +230,7 @@ async function synthesizeStream(fusionConfig, originalMessages, judgeResult, pan
 
 // OpenAI 格式流式合成
 async function streamOpenAISynthesis(baseUrl, provider, model, messages, res, options = {}) {
-  const url = `${baseUrl}/v1/chat/completions`;
+  const url = `${upstreamUrl(baseUrl, '/chat/completions')}`;
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${provider.api_key || ''}`
@@ -340,7 +341,7 @@ async function streamOpenAISynthesis(baseUrl, provider, model, messages, res, op
 // 状态消息已在 processFusion 中写入 index 0 的 text block（由 sendAnthropicStreamHeader 开启），
 // 这里继续向 index 0 追加最终回答，不再新开 content block，与 OpenAI 格式行为一致。
 async function streamOpenAIToAnthropicSynthesis(baseUrl, provider, model, messages, res, options = {}) {
-  const url = `${baseUrl}/v1/chat/completions`;
+  const url = `${upstreamUrl(baseUrl, '/chat/completions')}`;
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${provider.api_key || ''}`
@@ -477,7 +478,7 @@ async function streamOpenAIToAnthropicSynthesis(baseUrl, provider, model, messag
 
 // Anthropic 格式流式合成（客户端和供应商都是 Anthropic 格式）
 async function streamAnthropicSynthesis(baseUrl, provider, model, messages, res, options = {}) {
-  const url = `${baseUrl}/v1/messages`;
+  const url = `${upstreamUrl(baseUrl, '/messages')}`;
   const headers = {
     'Content-Type': 'application/json',
     'anthropic-version': '2023-06-01',
@@ -694,7 +695,7 @@ async function streamAnthropicSynthesis(baseUrl, provider, model, messages, res,
 
 // Anthropic -> OpenAI 格式流式合成（客户端期望 OpenAI，供应商是 Anthropic）
 async function streamAnthropicToOpenAISynthesis(baseUrl, provider, model, messages, res, options = {}) {
-  const url = `${baseUrl}/v1/messages`;
+  const url = `${upstreamUrl(baseUrl, '/messages')}`;
   const headers = {
     'Content-Type': 'application/json',
     'anthropic-version': '2023-06-01',

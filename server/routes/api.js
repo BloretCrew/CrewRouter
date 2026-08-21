@@ -1040,17 +1040,8 @@ function buildUpstreamHeaders(provider, req, baseHeaders) {
   return headers;
 }
 
-// 清理 base_url：去掉尾部已知端点路径，避免重复拼接
-function cleanBaseUrl(base) {
-  return base
-    .replace(/\/$/, '')
-    .replace(/\/v1\/chat\/completions$/i, '')
-    .replace(/\/v1\/messages$/i, '')
-    .replace(/\/chat\/completions$/i, '')
-    .replace(/\/messages$/i, '')
-    .replace(/\/v1$/i, '')
-    .replace(/\/api$/i, '');
-}
+// 清理 base_url 与拼接上游端点：统一走 url-validator（保留 /v1、/api/v1 版本前缀）
+const { cleanBaseUrl, upstreamUrl } = require('../utils/url-validator');
 
 // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
 async function preloadSignatureData(userId, groupId, template) {
@@ -1105,7 +1096,7 @@ async function preloadSignatureData(userId, groupId, template) {
 async function proxyOpenAI(provider, model, body, stream, res, req, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
   const baseUrl = cleanBaseUrl(provider.base_url);
-  const url = baseUrl + '/v1/chat/completions';
+  const url = upstreamUrl(baseUrl, '/chat/completions');
   const startTime = Date.now();
   const headers = buildUpstreamHeaders(provider, req, {
     'Content-Type': 'application/json'
@@ -1476,7 +1467,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
 async function proxyChatToResponses(provider, model, body, stream, res, req, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
   const baseUrl = cleanBaseUrl(provider.base_url);
-  const url = baseUrl + '/v1/responses';
+  const url = upstreamUrl(baseUrl, '/responses');
   const startTime = Date.now();
   const headers = buildUpstreamHeaders(provider, req, {
     'Content-Type': 'application/json'
@@ -1578,7 +1569,7 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
 async function proxyAnthropic(provider, model, body, stream, res, req, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
   const baseUrl = cleanBaseUrl(provider.base_url);
-  const url = baseUrl + '/v1/messages';
+  const url = upstreamUrl(baseUrl, '/messages');
   const headers = buildUpstreamHeaders(provider, req, {
     'Content-Type': 'application/json',
     'anthropic-version': req.headers['anthropic-version'] || '2023-06-01'
@@ -3205,7 +3196,7 @@ function convertOpenAIToAnthropicResponse(openaiResp, model) {
 async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
   const baseUrl = cleanBaseUrl(provider.base_url);
-  const url = baseUrl + '/v1/messages';
+  const url = upstreamUrl(baseUrl, '/messages');
   const headers = buildUpstreamHeaders(provider, req, {
     'Content-Type': 'application/json',
     'anthropic-version': req.headers['anthropic-version'] || '2023-06-01'
@@ -3569,7 +3560,7 @@ async function proxyOpenAIToAnthropic(provider, model, body, stream, res, req, o
 async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, req, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
   const baseUrl = cleanBaseUrl(provider.base_url);
-  const url = baseUrl + '/v1/chat/completions';
+  const url = upstreamUrl(baseUrl, '/chat/completions');
   const headers = buildUpstreamHeaders(provider, req, {
     'Content-Type': 'application/json'
   });
@@ -3942,7 +3933,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
 async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res, req, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
   const baseUrl = cleanBaseUrl(provider.base_url);
-  const url = baseUrl + '/v1/chat/completions';
+  const url = upstreamUrl(baseUrl, '/chat/completions');
   const headers = buildUpstreamHeaders(provider, req, {
     'Content-Type': 'application/json'
   });
@@ -4579,7 +4570,7 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
 async function proxyOpenAIForResponses(provider, model, chatBody, res, req, respId, body, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
   const baseUrl = cleanBaseUrl(provider.base_url);
-  const url = baseUrl + '/v1/chat/completions';
+  const url = upstreamUrl(baseUrl, '/chat/completions');
   const headers = buildUpstreamHeaders(provider, req, {
     'Content-Type': 'application/json'
   });
@@ -4655,7 +4646,7 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
 async function proxyAnthropicForResponses(provider, model, chatBody, res, req, respId, body, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
   const baseUrl = cleanBaseUrl(provider.base_url);
-  const url = baseUrl + '/v1/messages';
+  const url = upstreamUrl(baseUrl, '/messages');
   const headers = buildUpstreamHeaders(provider, req, {
     'Content-Type': 'application/json',
     'anthropic-version': '2023-06-01'
@@ -4932,7 +4923,7 @@ async function handleResponses(req, res) {
       // === Responses 格式供应商直接透传（非流式）===
       if (provider.format === 'responses') {
         const baseUrl = cleanBaseUrl(provider.base_url);
-        const url = baseUrl + '/v1/responses';
+        const url = upstreamUrl(baseUrl, '/responses');
         const headers = buildUpstreamHeaders(providerWithKey, req, { 'Content-Type': 'application/json' });
         if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
         // 原样透传客户端请求，仅覆盖 model；不强制注入 max_output_tokens，交由上游/客户端决定。
@@ -5148,7 +5139,7 @@ async function handleResponses(req, res) {
   // 当上游原生支持 Responses API，直接透传请求体到 /v1/responses
   if (provider.format === 'responses') {
     const baseUrl = cleanBaseUrl(provider.base_url);
-    const url = baseUrl + '/v1/responses';
+    const url = upstreamUrl(baseUrl, '/responses');
     const headers = buildUpstreamHeaders(providerWithKey, req, {
       'Content-Type': 'application/json'
     });
@@ -5376,7 +5367,7 @@ async function handleResponses(req, res) {
       if (provider.format === 'anthropic') {
         // Anthropic 流式
         const baseUrl = cleanBaseUrl(provider.base_url);
-        const url = baseUrl + '/v1/messages';
+        const url = upstreamUrl(baseUrl, '/messages');
         const headers = buildUpstreamHeaders(providerWithKey, req, {
           'Content-Type': 'application/json',
           'anthropic-version': '2023-06-01'
@@ -5423,7 +5414,7 @@ async function handleResponses(req, res) {
       } else {
         // OpenAI 流式
         const baseUrl = cleanBaseUrl(provider.base_url);
-        const url = baseUrl + '/v1/chat/completions';
+        const url = upstreamUrl(baseUrl, '/chat/completions');
         const headers = buildUpstreamHeaders(providerWithKey, req, {
           'Content-Type': 'application/json'
         });

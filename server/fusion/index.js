@@ -12,6 +12,7 @@ const { runJudge } = require('./judge-analyzer');
 const { synthesize } = require('./synthesizer');
 const Logger = require('../logger');
 const { pool } = require('../models/database');
+const { upstreamUrl } = require('../utils/url-validator');
 const proxyPool = require('../proxy-pool');
 const {
   buildChatCompletionChunk,
@@ -137,7 +138,7 @@ async function callModel(modelId, messages, options = {}) {
 
 // 调用 OpenAI 格式模型
 async function callOpenAIModel(baseUrl, provider, body) {
-  const url = `${baseUrl}/v1/chat/completions`;
+  const url = `${upstreamUrl(baseUrl, '/chat/completions')}`;
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${provider.api_key || ''}`
@@ -178,7 +179,7 @@ async function callOpenAIModel(baseUrl, provider, body) {
 
 // 调用 Anthropic 格式模型
 async function callAnthropicModel(baseUrl, provider, body) {
-  const url = `${baseUrl}/v1/messages`;
+  const url = `${upstreamUrl(baseUrl, '/messages')}`;
   const headers = {
     'Content-Type': 'application/json',
     'anthropic-version': '2023-06-01',
@@ -256,16 +257,14 @@ async function callAnthropicModel(baseUrl, provider, body) {
   };
 }
 
-// 清理 base_url
+// 清理 base_url：保留 /v1、/api/v1 版本前缀，由 upstreamUrl() 智能补全
 function cleanBaseUrl(base) {
   return base
     .replace(/\/$/, '')
     .replace(/\/v1\/chat\/completions$/i, '')
     .replace(/\/v1\/messages$/i, '')
     .replace(/\/chat\/completions$/i, '')
-    .replace(/\/messages$/i, '')
-    .replace(/\/v1$/i, '')
-    .replace(/\/api$/i, '');
+    .replace(/\/messages$/i, '');
 }
 
 // 发送 Anthropic 流式响应头：发送 message_start 并开启 index 0 的 text block

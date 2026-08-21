@@ -5,7 +5,7 @@ const { deductPoints } = require('./balance');
 const { recordQuotaData } = require('./quota-data');
 const Logger = require('../logger');
 const { buildKeyAttemptOrder, getPrimaryApiKey } = require('./provider-keys');
-const { cleanBaseUrl, validateUrl } = require('./url-validator');
+const { cleanBaseUrl, upstreamUrl, validateUrl } = require('./url-validator');
 const proxyPool = require('../proxy-pool');
 
 /** 模型测试用 UA：去换行、截断，避免请求头注入 */
@@ -15,10 +15,9 @@ function normalizeTestUserAgent(value) {
 }
 
 function buildTestUrl(baseUrl, format) {
-  const root = cleanBaseUrl(baseUrl);
-  if (format === 'anthropic') return `${root}/v1/messages`;
-  if (format === 'responses') return `${root}/v1/responses`;
-  return `${root}/v1/chat/completions`;
+  if (format === 'anthropic') return upstreamUrl(baseUrl, '/messages');
+  if (format === 'responses') return upstreamUrl(baseUrl, '/responses');
+  return upstreamUrl(baseUrl, '/chat/completions');
 }
 
 function buildTestBody(upstreamModel, format) {
