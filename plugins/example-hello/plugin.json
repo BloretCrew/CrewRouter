@@ -1,0 +1,27 @@
+{
+  "id": "example-hello",
+  "name": "示例插件 Hello",
+  "version": "1.0.0",
+  "author": "CrewRouter",
+  "description": "演示插件系统全链路：控制台自定义页面、统计页插槽卡片、网关 beforeUpstream 钩子（记录并附加请求头）、自有 API 与 KV 存储计数。",
+  "permissions": ["pages:register", "gateway:modify", "storage", "routes:register"],
+  "hooks": {
+    "gateway:beforeUpstream": "在 main.js 中通过 ctx.on 注册"
+  },
+  "pages": [
+    {
+      "area": "console",
+      "id": "main",
+      "title": "插件示例",
+      "entry": "frontend/console.js",
+      "render": "renderPage"
+    }
+  ],
+  "slots": [
+    { "page": "stats", "position": "top", "render": "renderStatsBanner" }
+  ],
+  "routes": [
+    { "method": "get", "path": "/hello", "auth": "user" },
+    { "method": "post", "path": "/visit", "auth": "user" }
+  ]
+}

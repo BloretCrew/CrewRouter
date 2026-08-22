@@ -643,6 +643,9 @@
             </div>
           </div>
 
+          <!-- 插件插槽：管理统计页顶部 -->
+          <div data-cr-slot="admin-stats:top"></div>
+
           <!-- Tab 导航 -->
           <div class="stats-tab-bar">
             <button class="active" onclick="adminApp.switchStatsTab('overview')">
@@ -2305,6 +2308,7 @@
   <script src="/js/dom.js?v=2"></script>
   <script src="/js/dialog.js?v=2"></script>
   <script src="/js/admin.js?v=13"></script>
+  <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 移动端侧边栏切换
     document.addEventListener('DOMContentLoaded', () => {

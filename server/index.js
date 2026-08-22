@@ -2006,6 +2006,68 @@ async function ensureApiErrorRecordsTable() {
   startErrorRecordsCleanup();
 }
 
+// ========== 自动迁移：插件系统 ==========
+async function ensurePluginsTables() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS plugins (
+        id VARCHAR(100) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        version VARCHAR(32) DEFAULT '',
+        description TEXT DEFAULT '',
+        author VARCHAR(255) DEFAULT '',
+        enabled BOOLEAN DEFAULT FALSE,
+        permissions JSONB DEFAULT '[]'::jsonb,
+        config JSONB DEFAULT '{}'::jsonb,
+        error_count INTEGER DEFAULT 0,
+        last_error TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS plugin_data (
+        plugin_id VARCHAR(100) NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+        key VARCHAR(200) NOT NULL,
+        value JSONB,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (plugin_id, key)
+      )
+    `);
+    Logger.info('[迁移] 插件表（plugins / plugin_data）已就绪');
+  } catch (err) {
+    Logger.warn(`[迁移] 插件表创建跳过: ${err.message}`);
+  }
+
+  // 供应商上游转发 UA（区别于连通性测试用的 test_user_agent）
+  try {
+    const colCheck = await pool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'providers' AND column_name = 'request_user_agent'
+    `);
+    if (colCheck.rows.length === 0) {
+      await pool.query(`ALTER TABLE providers ADD COLUMN request_user_agent TEXT DEFAULT ''`);
+      Logger.info('[迁移] 已为 providers 表添加 request_user_agent 列');
+    }
+  } catch (err) {
+    Logger.warn(`[迁移] providers.request_user_agent 列添加跳过: ${err.message}`);
+  }
+
+  // 用量记录的插件附加元数据（stats:record 钩子写入）
+  try {
+    const colCheck = await pool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'usage_records' AND column_name = 'plugin_meta'
+    `);
+    if (colCheck.rows.length === 0) {
+      await pool.query(`ALTER TABLE usage_records ADD COLUMN plugin_meta JSONB`);
+      Logger.info('[迁移] 已为 usage_records 表添加 plugin_meta 列');
+    }
+  } catch (err) {
+    Logger.warn(`[迁移] usage_records.plugin_meta 列添加跳过: ${err.message}`);
+  }
+}
+
 const app = express();
 
 // 信任反向代理（Nginx/Cloudflare等）
@@ -2273,6 +2335,21 @@ if (isDemo) {
   // OpenAI 兼容路由（根路径，供 SDK 直接使用）
   const apiRoutes = require('./routes/api');
   app.use('/v1', apiRoutes);
+
+  // 插件系统：管理 API、运行时清单、插件自有 API 与静态资源
+  const { createPluginsRoutes } = require('./routes/plugins');
+  const { adminRouter, publicRouter } = createPluginsRoutes();
+  app.use('/api/admin/plugins', adminRouter);
+  app.use('/api/plugins', publicRouter);
+  app.use('/plugins', (req, res, next) => {
+    // /plugins/<pluginId>/<entry>：仅已启用插件的目录可读
+    const parts = req.path.split('/').filter(Boolean);
+    const pluginId = parts[0];
+    const registry = require('./plugins/registry');
+    if (!pluginId || !registry.isLoaded(pluginId)) return res.status(404).end();
+    req.url = '/' + parts.slice(1).join('/');
+    express.static(path.join(registry.PLUGINS_DIR, pluginId))(req, res, next);
+  });
 }
 
 // /v1 路由 404 诊断
@@ -2386,6 +2463,7 @@ async function runPendingMigrations() {
     ensureModelUptimeDailyTable,
     ensureProviderHeaderFields,
     ensureApiErrorRecordsTable,
+    ensurePluginsTables,
     // 须在 usage/fusion 表就绪后执行：UTC 墙钟 → 上海墙钟
     migrateUtcWallTimestampsToShanghai,
     // 须在 models / usage_records 就绪后：上游 model_id → 本地 models.id
@@ -2425,6 +2503,12 @@ async function startServer() {
       const { initDatabase } = require('./scripts/init-db');
       await initDatabase();
       await runPendingMigrations();
+      // 插件系统：表结构就绪后扫描并加载已启用插件
+      try {
+        await require('./plugins/registry').init();
+      } catch (err) {
+        Logger.error(`[plugins] 初始化失败: ${err.message}`);
+      }
       Logger.success('[启动] 数据库已就绪，可以接受请求');
     } catch (err) {
       Logger.error(`[启动] 数据库初始化/迁移失败: ${err.message}`);

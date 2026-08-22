@@ -51,6 +51,7 @@ const {
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const keyRefresher = require('../key-refresher');
 const proxyPool = require('../proxy-pool');
+const pluginHooks = require('../plugins/hooks');
 const { processFusion } = require('../fusion');
 const {
   genChatCompletionId,
@@ -132,16 +133,55 @@ function buildUpstreamExceptionError(error, format = 'openai') {
  * @param {object|null} currentProxyInfo - 当前代理信息
  * @param {number} maxRetries - 最大重试次数
  * @param {string} logPrefix - 日志前缀
+ * @param {object|null} [hookCtx] - 插件 beforeUpstream 钩子上下文（{ model, requestType }）
  * @returns {Promise<{response: object, currentProxyInfo: object|null}>}
  */
-async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, maxRetries, logPrefix) {
+async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, maxRetries, logPrefix, hookCtx = null) {
   let response;
   let proxyInfo = currentProxyInfo;
   let lastError = null;
   const attempts = Math.max(1, parseInt(maxRetries, 10) || 1);
 
+  // 插件 gateway:beforeUpstream 钩子：首次构造请求选项时执行一次，
+  // 得到的覆盖值（url / headers / bodyText）在后续代理重试中持续生效
+  let upstreamOverride = null;
+  if (hookCtx && pluginHooks.hasSubscribers('gateway:beforeUpstream')) {
+    try {
+      const probe = makeFetchOpts(proxyInfo);
+      const payload = {
+        url: probe.url,
+        headers: probe.headers && typeof probe.headers === 'object' ? { ...probe.headers } : {},
+        bodyText: typeof probe.body === 'string' ? probe.body : '',
+      };
+      const out = await pluginHooks.apply('gateway:beforeUpstream', payload, {
+        provider: provider ? { id: provider.id, name: provider.name, format: provider.format || 'openai' } : null,
+        model: hookCtx.model,
+        requestType: hookCtx.requestType || logPrefix,
+      });
+      if (out && typeof out === 'object') upstreamOverride = out;
+    } catch (err) {
+      Logger.warn(`[plugins] beforeUpstream 钩子失败（已忽略）: ${err.message}`);
+    }
+  }
+
+  // 把钩子产生的覆盖值合并进每次重试的 fetch 选项
+  const applyUpstreamOverride = (fetchOpts) => {
+    if (!upstreamOverride) return fetchOpts;
+    if (typeof upstreamOverride.url === 'string' && upstreamOverride.url) fetchOpts.url = upstreamOverride.url;
+    if (upstreamOverride.headers && typeof upstreamOverride.headers === 'object') {
+      const base = fetchOpts.headers && typeof fetchOpts.headers === 'object' ? fetchOpts.headers : {};
+      for (const [k, v] of Object.entries(upstreamOverride.headers)) {
+        if (v === null || v === undefined) delete base[k];
+        else base[k] = v;
+      }
+      fetchOpts.headers = base;
+    }
+    if (typeof upstreamOverride.bodyText === 'string' && upstreamOverride.bodyText) fetchOpts.body = upstreamOverride.bodyText;
+    return fetchOpts;
+  };
+
   for (let retry = 0; retry < attempts; retry++) {
-    const fetchOpts = makeFetchOpts(proxyInfo);
+    const fetchOpts = applyUpstreamOverride(makeFetchOpts(proxyInfo));
 
     try {
       response = await proxyPool.proxyFetch(fetchOpts.url, fetchOpts);
@@ -1037,6 +1077,11 @@ function buildUpstreamHeaders(provider, req, baseHeaders) {
     }
   }
 
+  // 供应商级静态 User-Agent 覆盖（插件仍可在 beforeUpstream 钩子中动态改写）
+  if (provider.request_user_agent && String(provider.request_user_agent).trim()) {
+    headers['user-agent'] = String(provider.request_user_agent).trim();
+  }
+
   return headers;
 }
 
@@ -1172,7 +1217,8 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       provider,
       currentProxyInfo,
       maxRetries,
-      'proxyOpenAI'
+      'proxyOpenAI',
+      { model, requestType: 'proxyOpenAI' }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -1262,7 +1308,14 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
     // 归一化并写出流式 chunk（补全 id/object/created/model，兼容严格 SDK）
     const writeNormalizedChunk = async (dataStr) => {
       try {
-        const parsed = JSON.parse(dataStr);
+        // 插件 gateway:responseChunk 钩子：改写/丢弃 SSE 数据帧
+        let frame = dataStr;
+        if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
+          const out = await pluginHooks.maybeRewriteChunk(dataStr, { model, requestType: 'proxyOpenAI' });
+          if (!out) return; // 空字符串视为丢弃该帧
+          frame = out;
+        }
+        const parsed = JSON.parse(frame);
         const content = parsed.choices?.[0]?.delta?.content || '';
         totalContent += content;
         if (parsed.usage) lastUsage = parsed.usage;
@@ -1397,7 +1450,8 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       provider,
       currentProxyInfo,
       maxRetries,
-      'proxyOpenAI'
+      'proxyOpenAI',
+      { model, requestType: 'proxyOpenAI' }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -1422,6 +1476,16 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
     if (!response.ok) {
       Logger.error(`[proxyOpenAI] 上游响应错误: provider=${provider.id}(${provider.name}), url=${url}, status=${response.status}, latency=${latency}ms, body=${JSON.stringify(data).substring(0, 500)}`);
       return respondProxyError(res, response.status, data, { suppressErrorResponse });
+    }
+
+    // 插件 gateway:upstreamResponse 钩子：改写上游返回的响应体
+    if (pluginHooks.hasSubscribers('gateway:upstreamResponse')) {
+      const out = await pluginHooks.apply('gateway:upstreamResponse', { status: response.status, body: data }, {
+        provider: { id: provider.id, name: provider.name },
+        model,
+        requestType: 'proxyOpenAI',
+      });
+      if (out?.body !== undefined && out.body !== null) data = out.body;
     }
 
     // 标记代理成功
@@ -1451,6 +1515,8 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       Logger.warn(`[proxyOpenAI] 非流式签名生成失败: ${e.message}`);
     }
 
+    // 插件 gateway:finalResponse 钩子：追加自定义响应头
+    await pluginHooks.applyFinalResponseHeaders(res, { provider: { id: provider.id }, model, requestType: 'proxyOpenAI' });
     res.json(data);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyOpenAI] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, id=${data.id}, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
@@ -1497,7 +1563,8 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
     provider,
     currentProxyInfo,
     maxRetries,
-    'proxyChatToResponses'
+    'proxyChatToResponses',
+    { model, requestType: 'proxyChatToResponses' }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -1709,7 +1776,8 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       provider,
       currentProxyInfo,
       maxRetries,
-      'proxyAnthropic'
+      'proxyAnthropic',
+      { model, requestType: 'proxyAnthropic' }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -1806,14 +1874,24 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 
     const emitOpenAIChunk = async (delta, finishReason = null) => {
       await ensureRoleEmitted();
-      const payload = {
+      let payload = {
         id: streamChunkId,
         object: 'chat.completion.chunk',
         created: streamCreated,
         model: model,
         choices: [{ index: 0, delta, finish_reason: finishReason }]
       };
-      const ok = writeWithDrain(`data: ${JSON.stringify(payload)}\n\n`);
+      // 插件 gateway:responseChunk 钩子：改写/丢弃输出增量
+      let payloadText = JSON.stringify(payload);
+      if (pluginHooks.hasSubscribers('gateway:responseChunk') && delta?.content) {
+        const out = await pluginHooks.maybeRewriteChunk(delta.content, { model, requestType: 'proxyAnthropic' });
+        if (out === null) return;
+        if (typeof out === 'string' && out !== delta.content) {
+          payload = { ...payload, choices: [{ index: 0, delta: { ...delta, content: out }, finish_reason: finishReason }] };
+          payloadText = JSON.stringify(payload);
+        }
+      }
+      const ok = writeWithDrain(`data: ${payloadText}\n\n`);
       if (!ok) await waitForDrain();
     };
 
@@ -2032,7 +2110,8 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       provider,
       currentProxyInfo,
       maxRetries,
-      'proxyAnthropic'
+      'proxyAnthropic',
+      { model, requestType: 'proxyAnthropic' }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -2045,6 +2124,17 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       return respondProxyError(res, response.status, toOpenAIError(data, response.status), { suppressErrorResponse });
     }
 
+    // 插件 gateway:upstreamResponse 钩子：改写上游返回的响应体（Anthropic 原始格式）
+    let hookData = data;
+    if (pluginHooks.hasSubscribers('gateway:upstreamResponse')) {
+      const out = await pluginHooks.apply('gateway:upstreamResponse', { status: response.status, body: data }, {
+        provider: { id: provider.id, name: provider.name },
+        model,
+        requestType: 'proxyAnthropic',
+      });
+      if (out?.body !== undefined && out.body !== null) hookData = out.body;
+    }
+
     // 标记代理成功
     if (currentProxyInfo?.proxyId) {
       proxyPool.markProxySuccess(provider.id, currentProxyInfo.proxyId, latency);
@@ -2052,7 +2142,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 
     // 将 Anthropic 响应转换为 OpenAI 格式返回
     // 遍历所有 content blocks，支持 text / tool_use / thinking → reasoning_content
-    const contentBlocks = data.content || [];
+    const contentBlocks = hookData.content || [];
     let textContent = '';
     let reasoningContent = '';
     const toolCalls = [];
@@ -2077,10 +2167,10 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 
     // stop_reason 映射
     let finishReason = 'stop';
-    if (data.stop_reason === 'max_tokens') finishReason = 'length';
-    else if (data.stop_reason === 'tool_use') finishReason = 'tool_calls';
-    else if (data.stop_reason === 'end_turn') finishReason = 'stop';
-    else if (data.stop_reason === 'stop_sequence') finishReason = 'stop';
+    if (hookData.stop_reason === 'max_tokens') finishReason = 'length';
+    else if (hookData.stop_reason === 'tool_use') finishReason = 'tool_calls';
+    else if (hookData.stop_reason === 'end_turn') finishReason = 'stop';
+    else if (hookData.stop_reason === 'stop_sequence') finishReason = 'stop';
 
     const message = { role: 'assistant' };
     if (toolCalls.length > 0) {
@@ -2094,9 +2184,9 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       message.reasoning_content = reasoningContent;
     }
 
-    const normalizedUsage = normalizeUsageTokens(data.usage, 'anthropic');
+    const normalizedUsage = normalizeUsageTokens(hookData.usage, 'anthropic');
     const openaiResponse = {
-      id: data.id || 'chatcmpl-' + Date.now(),
+      id: hookData.id || 'chatcmpl-' + Date.now(),
       object: 'chat.completion',
       created: Math.floor(Date.now() / 1000),
       model: model,
@@ -2126,6 +2216,8 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       Logger.warn(`[proxyAnthropic] 非流式签名生成失败: ${e.message}`);
     }
 
+    // 插件 gateway:finalResponse 钩子：追加自定义响应头
+    await pluginHooks.applyFinalResponseHeaders(res, { provider: { id: provider.id }, model, requestType: 'proxyAnthropic' });
     res.json(openaiResponse);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
@@ -2139,6 +2231,13 @@ router.post('/chat/completions', validateApiKey, handleChatCompletion);
 async function handleChatCompletion(req, res) {
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
+
+  // 插件 gateway:requestReceived 钩子：可改写请求体或短路直接响应
+  if (pluginHooks.hasSubscribers('gateway:requestReceived')) {
+    const out = await pluginHooks.apply('gateway:requestReceived', { body: req.body }, { model: req.body?.model || null, requestType: 'openai' });
+    if (out?.shortCircuit) return res.status(out.status || 200).json(out.body ?? {});
+    if (out?.body !== undefined) req.body = out.body;
+  }
 
   // 吞图：在转发前剥离客户端图片并注入提示（默认禁用）
   applySwallowImagesIfEnabled(req);
@@ -2712,7 +2811,14 @@ router.get('/models', validateApiKey, async (req, res) => {
       }
     }
 
-    res.json({ object: 'list', data: models });
+    // 插件 models:list 钩子：过滤/追加模型列表
+    let finalModels = models;
+    if (pluginHooks.hasSubscribers('models:list')) {
+      const out = await pluginHooks.apply('models:list', { models }, { requestType: 'models' });
+      if (Array.isArray(out?.models)) finalModels = out.models;
+    }
+
+    res.json({ object: 'list', data: finalModels });
   } catch (error) {
     Logger.error('[获取模型列表] 错误:', error);
     res.status(500).json({ error: { message: 'Internal server error', type: 'server_error' } });
@@ -2725,6 +2831,13 @@ router.post('/messages', validateApiKey, handleAnthropicMessage);
 async function handleAnthropicMessage(req, res) {
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
+
+  // 插件 gateway:requestReceived 钩子：可改写请求体或短路直接响应
+  if (pluginHooks.hasSubscribers('gateway:requestReceived')) {
+    const out = await pluginHooks.apply('gateway:requestReceived', { body: req.body }, { model: req.body?.model || null, requestType: 'anthropic' });
+    if (out?.shortCircuit) return res.status(out.status || 200).json(out.body ?? {});
+    if (out?.body !== undefined) req.body = out.body;
+  }
 
   // 吞图：在转发前剥离客户端图片并注入提示（默认禁用）
   applySwallowImagesIfEnabled(req);
@@ -3256,7 +3369,8 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       provider,
       currentProxyInfo,
       maxRetries,
-      'proxyAnthropicToAnthropic'
+      'proxyAnthropicToAnthropic',
+      { model, requestType: 'proxyAnthropicToAnthropic' }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -3386,7 +3500,14 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
                 // Don't forward message_stop yet; inject signature first below.
                 continue;
               }
-              const ok = writeWithDrain(`data: ${data}\n\n`);
+              // 插件 gateway:responseChunk 钩子：改写/丢弃直通帧
+              let frameOut = data;
+              if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
+                const out = await pluginHooks.maybeRewriteChunk(data, { model, requestType: 'proxyAnthropicToAnthropic' });
+                if (!out) continue;
+                frameOut = out;
+              }
+              const ok = writeWithDrain(`data: ${frameOut}\n\n`);
               if (!ok) await waitForDrain();
             } catch (e) {
               jsonParseErrors++;
@@ -3420,7 +3541,14 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
                 gotDone = true;
                 continue;
               }
-              res.write(`data: ${data}\n\n`);
+              // 插件 gateway:responseChunk 钩子（残余缓冲区路径）
+              let frameOut2 = data;
+              if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
+                const out = await pluginHooks.maybeRewriteChunk(data, { model, requestType: 'proxyAnthropicToAnthropic' });
+                if (!out) continue;
+                frameOut2 = out;
+              }
+              res.write(`data: ${frameOut2}\n\n`);
             } catch (e) {
               jsonParseErrors++;
               Logger.warn(`[proxyAnthropicToAnthropic] 残余缓冲区JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
@@ -3504,7 +3632,8 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       provider,
       currentProxyInfo,
       maxRetries,
-      'proxyAnthropicToAnthropic'
+      'proxyAnthropicToAnthropic',
+      { model, requestType: 'proxyAnthropicToAnthropic' }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -3515,17 +3644,29 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       const { toAnthropicError } = require('../utils/error-mapper');
       return respondProxyError(res, response.status, toAnthropicError(data, response.status), { suppressErrorResponse });
     }
+
+    // 插件 gateway:upstreamResponse 钩子：改写上游返回的响应体
+    let hookData = data;
+    if (pluginHooks.hasSubscribers('gateway:upstreamResponse')) {
+      const out = await pluginHooks.apply('gateway:upstreamResponse', { status: response.status, body: data }, {
+        provider: { id: provider.id, name: provider.name },
+        model,
+        requestType: 'proxyAnthropicToAnthropic',
+      });
+      if (out?.body !== undefined && out.body !== null) hookData = out.body;
+    }
+
     if (currentProxyInfo?.proxyId) {
       proxyPool.markProxySuccess(provider.id, currentProxyInfo.proxyId, latency);
     }
 
-    const normalized = normalizeUsageTokens(data.usage, 'anthropic');
+    const normalized = normalizeUsageTokens(hookData.usage, 'anthropic');
     try {
       const signature = await buildSignatureForRequest(req, {
         model, normalized, providerName: provider.name, provider, preloaded: preloadedSignatureData
       });
       if (signature) {
-        injectSignatureIntoAnthropicResponse(res, data, signature, {
+        injectSignatureIntoAnthropicResponse(res, hookData, signature, {
           mode: resolveSignatureMode(req),
           requestBody: body
         });
@@ -3534,7 +3675,9 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       Logger.warn(`[proxyAnthropicToAnthropic] 非流式签名生成失败: ${e.message}`);
     }
 
-    res.json(data);
+    // 插件 gateway:finalResponse 钩子：追加自定义响应头
+    await pluginHooks.applyFinalResponseHeaders(res, { provider: { id: provider.id }, model, requestType: 'proxyAnthropicToAnthropic' });
+    res.json(hookData);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropicToAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
     return { ...normalized, content: data.content?.map(b => b.text || '').join('') || '' };
@@ -3596,7 +3739,8 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     provider,
     currentProxyInfo,
     maxRetries,
-    'proxyOpenAIToAnthropic'
+    'proxyOpenAIToAnthropic',
+    { model, requestType: 'proxyOpenAIToAnthropic' }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -3690,6 +3834,14 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   let nextBlockIndex = 0;
 
   const emitSSE = async (obj) => {
+    // 插件 gateway:responseChunk 钩子：改写输出事件文本（仅文本类 delta）
+    if (pluginHooks.hasSubscribers('gateway:responseChunk') && obj.type === 'content_block_delta' && obj.delta?.type === 'text_delta' && obj.delta.text) {
+      const out = await pluginHooks.maybeRewriteChunk(obj.delta.text, { model, requestType: 'proxyOpenAIToAnthropic' });
+      if (out === null) return;
+      if (typeof out === 'string' && out !== obj.delta.text) {
+        obj = { ...obj, delta: { ...obj.delta, text: out } };
+      }
+    }
     const data = JSON.stringify(obj);
     const eventType = obj.type;
     const ok = writeWithDrain(`event: ${eventType}\ndata: ${data}\n\n`);
@@ -3969,7 +4121,8 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
     provider,
     currentProxyInfo,
     maxRetries,
-    'proxyOpenAIToAnthropic'
+    'proxyOpenAIToAnthropic',
+    { model, requestType: 'proxyOpenAIToAnthropic' }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -4304,7 +4457,16 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
               await writeWithDrain(`event: response.content_part.added\ndata: ${JSON.stringify({ type: 'response.content_part.added', item_id: `msg_${respId}`, output_index: 0, content_index: 0, part: { type: 'output_text', text: '', annotations: [] } })}\n\n`);
             }
             totalContent += delta.content;
-            await writeWithDrain(`event: response.output_text.delta\ndata: ${JSON.stringify({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: 0, content_index: 0, delta: delta.content })}\n\n`);
+            let deltaText = delta.content;
+            if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
+              const out = await pluginHooks.maybeRewriteChunk(deltaText, { model, requestType: 'Responses/OpenAI' });
+              if (out === null) continue;
+              if (typeof out === 'string') {
+                totalContent = totalContent.slice(0, totalContent.length - deltaText.length) + out;
+                deltaText = out;
+              }
+            }
+            await writeWithDrain(`event: response.output_text.delta\ndata: ${JSON.stringify({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: 0, content_index: 0, delta: deltaText })}\n\n`);
           }
 
           // 工具调用
@@ -4475,7 +4637,16 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
                 await writeWithDrain(`event: response.content_part.added\ndata: ${JSON.stringify({ type: 'response.content_part.added', item_id: `msg_${respId}`, output_index: 0, content_index: 0, part: { type: 'output_text', text: '', annotations: [] } })}\n\n`);
               }
               totalContent += parsed.delta.text;
-              await writeWithDrain(`event: response.output_text.delta\ndata: ${JSON.stringify({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: 0, content_index: 0, delta: parsed.delta.text })}\n\n`);
+              let deltaTextA = parsed.delta.text;
+              if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
+                const out = await pluginHooks.maybeRewriteChunk(deltaTextA, { model, requestType: 'Responses/Anthropic' });
+                if (out === null) continue;
+                if (typeof out === 'string') {
+                  totalContent = totalContent.slice(0, totalContent.length - deltaTextA.length) + out;
+                  deltaTextA = out;
+                }
+              }
+              await writeWithDrain(`event: response.output_text.delta\ndata: ${JSON.stringify({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: 0, content_index: 0, delta: deltaTextA })}\n\n`);
             } else if (currentBlockType === 'tool_use' && parsed.delta?.type === 'input_json_delta') {
               if (currentToolIndex >= 0 && toolUseBlocks[currentToolIndex]) {
                 toolUseBlocks[currentToolIndex].arguments += parsed.delta.partial_json || '';
@@ -4606,7 +4777,8 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
     provider,
     currentProxyInfo,
     maxRetries,
-    'Responses/OpenAI'
+    'Responses/OpenAI',
+    { model, requestType: 'Responses/OpenAI' }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -4730,7 +4902,8 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
     provider,
     currentProxyInfo,
     maxRetries,
-    'Responses/Anthropic'
+    'Responses/Anthropic',
+    { model, requestType: 'Responses/Anthropic' }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -4804,6 +4977,13 @@ router.post('/responses', validateApiKey, handleResponses);
 async function handleResponses(req, res) {
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
+
+  // 插件 gateway:requestReceived 钩子：可改写请求体或短路直接响应
+  if (pluginHooks.hasSubscribers('gateway:requestReceived')) {
+    const out = await pluginHooks.apply('gateway:requestReceived', { body: req.body }, { model: req.body?.model || null, requestType: 'responses' });
+    if (out?.shortCircuit) return res.status(out.status || 200).json(out.body ?? {});
+    if (out?.body !== undefined) req.body = out.body;
+  }
 
   // 吞图：剥离 input 中的图片并注入提示（默认禁用）；须在转换/透传前执行
   applySwallowImagesIfEnabled(req);

@@ -155,6 +155,8 @@
 
       <!-- 模型库页面 (CrewRouter) - 首页 -->
       <div id="modelLibraryPage" class="page active">
+        <!-- 插件插槽：模型库横幅 -->
+        <div class="content-section" style="padding-bottom:0;"><div data-cr-slot="library:banner"></div></div>
         <!-- 滚动后悬浮顶栏：筛选 + 搜索 + Key 切换（默认隐藏，由 JS 控制） -->
         <div id="modelLibraryStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
@@ -487,6 +489,8 @@
 
       <!-- API密钥页面 -->
       <div id="apiKeysPage" class="page">
+        <!-- 插件插槽：API Key 页提示区 -->
+        <div class="content-section" style="padding-bottom:0;"><div data-cr-slot="keys:notice"></div></div>
         <!-- 滚动后悬浮顶栏：创建密钥 + 可拖拽标签（默认隐藏，由 JS 控制） -->
         <div id="apiKeysStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
@@ -568,6 +572,9 @@
                <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="查看您的 API 使用情况、积分消耗和性能指标">查看您的 API 使用情况、积分消耗和性能指标</span></p>
             </div>
           </div>
+
+          <!-- 插件插槽：统计页顶部 -->
+          <div data-cr-slot="stats:top"></div>
 
           <!-- 筛选器区域 -->
           <div class="stats-filters">
@@ -2306,6 +2313,7 @@ data: [DONE]</code></pre>
   <script src="/js/dom.js?v=2"></script>
   <script src="/js/dialog.js?v=2"></script>
   <script src="/js/app.js?v=27"></script>
+  <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航
     let currentDocPage = 'overview';
