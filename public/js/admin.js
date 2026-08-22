@@ -755,7 +755,7 @@ class AdminApp {
               <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
               <td style="color:var(--muted-foreground);font-size:12px;">${new Date(user.created_at).toLocaleDateString('zh-CN')}</td>
               <td>
-                <button class="btn btn-icon" title=t('编辑') onclick="adminApp.editUserById(${user.id})">
+                <button class="btn btn-icon" title="${t('编辑')}" onclick="adminApp.editUserById(${user.id})">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -1502,7 +1502,7 @@ class AdminApp {
           ${this._renderModelUptimeSlot(modelId, displayName)}
         </div>
         <div class="model-library-item-actions" style="margin-left:0;margin-top:10px;justify-content:flex-end;">
-          <button type="button" class="btn btn-sm btn-secondary model-test-btn" title=t('测试')
+          <button type="button" class="btn btn-sm btn-secondary model-test-btn" title="${t('测试')}"
             data-admin-model-action="test" data-model-id="${idAttr}">测试</button>
           <button type="button" class="btn btn-sm btn-secondary"
             data-admin-model-action="edit" data-model-id="${idAttr}">编辑</button>
@@ -1552,7 +1552,7 @@ class AdminApp {
     const nameAttr = escapeHtml(modelName || modelId || '');
     const n = this._uptimeSlotCount || 96;
     // 名称可能含引号/中文特殊字符：只写 data-*，点击时从元素读取，避免 inline JS 语法错误
-    return `<div class="model-uptime" data-uptime-model="${idAttr}" data-uptime-name="${nameAttr}" title=t('加载调用状态...') role="button" tabindex="0">
+    return `<div class="model-uptime" data-uptime-model="${idAttr}" data-uptime-name="${nameAttr}" title="${t('加载调用状态...')}" role="button" tabindex="0">
       <div class="model-uptime-spark">${Array(n).fill('<span class="model-uptime-bar none"></span>').join('')}</div>
       <span class="model-uptime-pct">—</span>
     </div>`;
@@ -1575,7 +1575,7 @@ class AdminApp {
     const checkSvg = label === 'No data'
       ? ''
       : `<span class="model-uptime-check ${checkClass}" title="${escapeHtml(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
-    return `<div class="model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title=t('近 24 小时调用可用率（每 15 分钟）· 点击查看详情') role="button" tabindex="0">
+    return `<div class="model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title="${t('近 24 小时调用可用率（每 15 分钟）· 点击查看详情')}" role="button" tabindex="0">
       <div class="model-uptime-spark">${barHtml}</div>
       <span class="model-uptime-pct">${escapeHtml(pct)}</span>
       ${checkSvg}
@@ -1689,7 +1689,7 @@ class AdminApp {
         <div class="model-uptime-detail-header">
           <div class="model-uptime-detail-title">
             <span>${escapeHtml(modelName || data.model_id || t('模型'))}</span>
-            <span class="model-uptime-detail-help" title=t('基于近 24 小时真实代理调用成功/失败统计（每 15 分钟聚合）。鉴权失败、本端限流与参数错误不计入。数据约每 15 分钟刷新。')>?</span>
+            <span class="model-uptime-detail-help" title="${t('基于近 24 小时真实代理调用成功/失败统计（每 15 分钟聚合）。鉴权失败、本端限流与参数错误不计入。数据约每 15 分钟刷新。')}">?</span>
           </div>
           ${check}
         </div>
@@ -1790,7 +1790,7 @@ class AdminApp {
                       全选本页
                     </label>
                     <button type="button" class="btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;"
-                      title=t('测试此供应商下当前筛选模型')
+                      title="${t('测试此供应商下当前筛选模型')}"
                       data-admin-model-action="test-provider" data-provider-key="${keyAttr}">测试</button>
                     <span class="provider-model-count">${totalCount} 个模型${enabledCount != null && enabledCount !== totalCount ? ` · ${enabledCount}${t('启用')}` : ''}</span>
                   </div>
@@ -2846,7 +2846,7 @@ class AdminApp {
     const statsContainer = document.getElementById('providerStatsCards');
     if (statsContainer) {
       setHTML(statsContainer, `
-        <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'global' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('global')" title=t('筛选全局供应商')>
+        <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'global' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('global')" title="${t('筛选全局供应商')}">
           <div class="admin-stat-card-icon blue">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </div>
@@ -2855,7 +2855,7 @@ class AdminApp {
             <span class="admin-stat-card-label">全局供应商</span>
           </div>
         </div>
-        <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'user' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('user')" title=t('筛选用户供应商')>
+        <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'user' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('user')" title="${t('筛选用户供应商')}">
           <div class="admin-stat-card-icon purple">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
@@ -2864,7 +2864,7 @@ class AdminApp {
             <span class="admin-stat-card-label">用户供应商</span>
           </div>
         </div>
-        <div class="admin-stat-card admin-stat-card-clickable ${statusVal === 'enabled' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('enabled')" title=t('筛选已启用')>
+        <div class="admin-stat-card admin-stat-card-clickable ${statusVal === 'enabled' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('enabled')" title="${t('筛选已启用')}">
           <div class="admin-stat-card-icon green">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
@@ -2873,7 +2873,7 @@ class AdminApp {
             <span class="admin-stat-card-label">已启用</span>
           </div>
         </div>
-        <div class="admin-stat-card admin-stat-card-clickable ${keyModeVal === 'script' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('script')" title=t('筛选脚本模式')>
+        <div class="admin-stat-card admin-stat-card-clickable ${keyModeVal === 'script' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('script')" title="${t('筛选脚本模式')}">
           <div class="admin-stat-card-icon amber">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
           </div>
@@ -2981,10 +2981,10 @@ class AdminApp {
           <input type="checkbox" ${provider.enabled ? 'checked' : ''} onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)">
           <span class="toggle-slider"></span>
         </label>
-        <button class="btn btn-sm btn-secondary" title=t('同步模型') onclick="adminApp.fetchProviderModels('${pid}')">同步模型</button>
-        <button class="btn btn-sm btn-secondary" title=t('编辑') onclick="adminApp.editProviderById('${pid}')">编辑</button>
+        <button class="btn btn-sm btn-secondary" title="${t('同步模型')}" onclick="adminApp.fetchProviderModels('${pid}')">同步模型</button>
+        <button class="btn btn-sm btn-secondary" title="${t('编辑')}" onclick="adminApp.editProviderById('${pid}')">编辑</button>
         <div class="provider-row-more-wrap">
-          <button type="button" class="btn btn-sm btn-secondary" data-row-menu-btn="${pid}" title=t('更多操作') onclick="adminApp.toggleProviderRowMenu('${pid}', event)">更多 ▾</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-row-menu-btn="${pid}" title="${t('更多操作')}" onclick="adminApp.toggleProviderRowMenu('${pid}', event)">更多 ▾</button>
           <div class="provider-row-dropdown" id="provider-row-menu-${pid}" style="display:none;" role="menu">
             <button type="button" class="provider-more-item" id="${pingBtnId}" onclick="adminApp.pingProvider('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" role="menuitem">检测连通性</button>
             ${isScriptKey ? `<button type="button" class="provider-more-item" style="color:#f59e0b;" onclick="adminApp.refreshProviderKey('${pid}');adminApp.toggleProviderRowMenu('${pid}\', event);" role="menuitem">${t('刷新密钥')}</button>` : ''}
@@ -3175,7 +3175,7 @@ class AdminApp {
       const mainBadge = isPrimary
         ? `<span class="provider-api-key-main-badge" title="${t('主 Key：获取模型列表 / 连通性 / 额度')}">${t('主 Key')}</span>`
         : `<button type="button" class="provider-api-key-make-primary" data-key-index="${index}"
-             onclick="adminApp.setProviderPrimaryKey(${index})" title=t('设为主 Key')>设为主</button>`;
+             onclick="adminApp.setProviderPrimaryKey(${index})" title="${t('设为主 Key')}">设为主</button>`;
       const disableBtn = `<button type="button" class="provider-api-key-disable ${enabled ? '' : 'is-on'}" data-key-index="${index}"
              onclick="adminApp.toggleProviderApiKeyEnabled(${index})" title="${enabled ? t('禁用此 Key') : t('启用此 Key')}">
              ${enabled ? t('禁用') : t('已禁用')}</button>`;
@@ -3190,7 +3190,7 @@ class AdminApp {
               oninput="adminApp.onProviderApiKeyInput(${index}, this.value)">
             <button type="button" class="provider-api-key-toggle" data-key-index="${index}"
               onclick="adminApp.toggleProviderApiKeyVisibility(${index}, this)"
-              title=t('显示 Key') aria-label=t('显示 Key')>
+              title="${t('显示 Key')}" aria-label="${t('显示 Key')}">
               <svg class="provider-api-key-eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               <svg class="provider-api-key-eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
             </button>
@@ -3204,7 +3204,7 @@ class AdminApp {
           ${disableBtn}
           <button type="button" class="btn btn-sm btn-secondary provider-api-key-remove"
             style="${multi ? '' : 'visibility:hidden;'}"
-            onclick="adminApp.removeProviderApiKeyRow(${index})" title=t('删除')>删除</button>
+            onclick="adminApp.removeProviderApiKeyRow(${index})" title="${t('删除')}">删除</button>
         </div>`;
     }).join(''));
 
@@ -3378,7 +3378,7 @@ class AdminApp {
                ondragover="adminApp.handleProviderDragOver(event)"
                ondragleave="adminApp.handleProviderDragLeave(event)"
                ondrop="adminApp.handleProviderDrop(event, '${safePid}')">
-            <label class="provider-card-select" title=t('选择') onclick="event.stopPropagation()">
+            <label class="provider-card-select" title="${t('选择')}" onclick="event.stopPropagation()">
               <input type="checkbox" class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
                 ${selected ? 'checked' : ''}
                 onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)">
@@ -3390,7 +3390,7 @@ class AdminApp {
                   <span class="admin-card-badge ${provider.enabled ? 'green' : 'red'}">${provider.enabled ? t('启用') : t('禁用')}</span>
                 </div>
                 <div class="admin-card-subtitle" title="${escapeHtml(provider.base_url || '')}">${escapeHtml(provider.base_url || '-')}</div>
-                <div class="admin-card-header-tags ${hasTags ? 'has-tags' : ''}" title=t('拖拽标签到卡片可分配')>
+                <div class="admin-card-header-tags ${hasTags ? 'has-tags' : ''}" title="${t('拖拽标签到卡片可分配')}">
                   ${this._renderProviderTagChips(provider.tags, pid)}
                 </div>
               </div>
@@ -3808,9 +3808,9 @@ class AdminApp {
       title: t('添加供应商'),
       content: `
         <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 8px;">从常用列表选择，或自定义添加。完成后可立即同步模型。</p>
-        <input type="text" class="wizard-search" id="wizardSearch" placeholder=t('搜索供应商名称或 Base URL...')>
+        <input type="text" class="wizard-search" id="wizardSearch" placeholder="${t('搜索供应商名称或 Base URL...')}">
         <div class="wizard-provider-list" id="wizardProviderList">
-          <div class="wizard-empty"><div class="page-loading page-loading-compact" style="min-height:100px;padding:20px 12px;"><div class="loading-spinner md" role="status" aria-label=t('加载中')></div><div class="page-loading-text">正在加载供应商列表...</div></div></div>
+          <div class="wizard-empty"><div class="page-loading page-loading-compact" style="min-height:100px;padding:20px 12px;"><div class="loading-spinner md" role="status" aria-label="${t('加载中')}"></div><div class="page-loading-text">正在加载供应商列表...</div></div></div>
         </div>
       `,
       width: 480
@@ -3936,7 +3936,7 @@ class AdminApp {
           API 地址: ${escapeHtml(provider.base_url || '')}
         </p>
         <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">API Key <span style="font-weight:400;color:var(--muted-foreground);">（可稍后填写）</span></label>
-        <input type="password" class="wizard-apikey-input" id="wizardApiKey" placeholder=t('输入 API Key，可留空稍后编辑补全')>
+        <input type="password" class="wizard-apikey-input" id="wizardApiKey" placeholder="${t('输入 API Key，可留空稍后编辑补全')}">
       `,
       footer: `
         <button class="wizard-back-btn" id="wizardBackBtn">← 返回</button>
@@ -4535,7 +4535,7 @@ class AdminApp {
       div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;font-size:13px;';
       setHTML(div, `
         <code style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.url.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
-        <button type="button" class="btn btn-icon" title=t('删除') style="font-size:14px;color:var(--destructive);">🗑️</button>`);
+        <button type="button" class="btn btn-icon" title="${t('删除')}" style="font-size:14px;color:var(--destructive);">🗑️</button>`);
       div.querySelector('button').onclick = () => this.removeGlobalProxy(p.id);
       fragment.appendChild(div);
     }
@@ -4755,7 +4755,7 @@ class AdminApp {
     overlay.id = 'scriptAiModelPickerOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:16px;';
     overlay.innerHTML = `
-      <div role="dialog" aria-label=t('选择 AI 辅助模型') style="background:var(--card,#fff);color:var(--foreground);border:1px solid var(--border);border-radius:14px;width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.25);">
+      <div role="dialog" aria-label="${t('选择 AI 辅助模型')}" style="background:var(--card,#fff);color:var(--foreground);border:1px solid var(--border);border-radius:14px;width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.25);">
         <div style="padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);">
           <div>
             <div style="font-weight:600;font-size:15px;">选择 AI 辅助模型</div>
@@ -4764,7 +4764,7 @@ class AdminApp {
           <button type="button" id="scriptAiModelPickerClose" class="btn btn-sm btn-secondary" style="min-width:auto;">关闭</button>
         </div>
         <div style="padding:12px 18px;">
-          <input type="search" id="scriptAiModelSearch" class="input" placeholder=t('搜索模型名称 / ID / 供应商...') style="width:100%;">
+          <input type="search" id="scriptAiModelSearch" class="input" placeholder="${t('搜索模型名称 / ID / 供应商...')}" style="width:100%;">
         </div>
         <div id="scriptAiModelList" style="padding:0 10px 12px;overflow-y:auto;flex:1;min-height:200px;max-height:50vh;">
           ${pageLoadingHtml(t('加载中...'), { size: 'md', compact: true })}
@@ -6762,7 +6762,7 @@ async function(ctx) {
       const analysisStatus = s.analysis_status || {};
       const pendingLabel = analysisStatus.pending_requests ? card(t('后台待分析'), analysisStatus.pending_requests.toLocaleString()) : '';
       setHTML(document.getElementById('messageStatsSummary'), [card(t('活跃请求'), s.analyzed_requests || 0), card(t('活跃项目'), (data.by_workspace || []).length), card(t('活跃天数'), s.active_days || 0), card(t('日均请求'), Number(s.avg_daily_requests || 0).toFixed(1)), card(t('总 Token'), this._formatBigNumber(Number(s.total_tokens || 0))), card(t('Git 状态率'), `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
-      const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows ||  + '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--muted-foreground);">' + t('暂无数据') + '</td></tr>'}</tbody></table></div>`;
+      const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--muted-foreground);">' + t('暂无数据') + '</td></tr>'}</tbody></table></div>`;
       setHTML(document.getElementById('messageStatsSourceTable'), table(['Harness', t('请求数'), t('平均消息'), t('平均字符'), 'Token', t('Git率')], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${(r.git_requests / Math.max(r.requests, 1) * 100).toFixed(1)}%</td></tr>`; }).join('')));
       setHTML(document.getElementById('messageStatsBlockTable'), table([t('区块'), t('请求数'), t('出现次数')], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
       setHTML(document.getElementById('messageStatsWorkspaceTable'), table([t('项目/工作区'), t('请求数'), 'Token', t('积分'), t('来源')], (data.by_workspace || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td><code>${escapeHtml(r.workspace_path)}</code></td><td>${r.requests}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${Number(r.cost || 0).toFixed(4)}</td><td>${escapeHtml(Object.entries(r.sources || {}).map(([k, v]) => `${k}: ${v}`).join(', '))}</td></tr>`; }).join('')));
@@ -7822,7 +7822,7 @@ async function(ctx) {
                 cachedTokens > 0 ? `${t('缓存')}${this._formatBigNumber(cachedTokens)} (${cacheRate}%)` : null
               ].filter(Boolean).join(' · ');
               return `
-              <tr style="cursor:pointer;" data-usage-log-idx="${idx}" title=t('点击查看详情')>
+              <tr style="cursor:pointer;" data-usage-log-idx="${idx}" title="${t('点击查看详情')}">
                 <td style="white-space:nowrap;">${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
                 <td class="cell-clip-sm" title="${escapeHtml(log.username || String(log.user_id || ''))}">${escapeHtml(log.username || String(log.user_id || '-'))}</td>
                 <td class="cell-clip" title="${escapeHtml(modelLabel)}">
@@ -8913,13 +8913,13 @@ async function(ctx) {
             <div style="font-weight:500;">${icon.name}</div>
             <div style="font-size:12px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon.icon_url || t('未设置图标')}</div>
           </div>
-          <button class="btn btn-icon" title=t('编辑') onclick="adminApp.editSeriesIcon('${icon.name}', '${icon.icon_url || ''}')">
+          <button class="btn btn-icon" title="${t('编辑')}" onclick="adminApp.editSeriesIcon('${icon.name}', '${icon.icon_url || ''}')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
           </button>
-          <button class="btn btn-icon" title=t('删除') onclick="adminApp.deleteSeriesIcon('${icon.name}')">
+          <button class="btn btn-icon" title="${t('删除')}" onclick="adminApp.deleteSeriesIcon('${icon.name}')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -9242,11 +9242,11 @@ async function(ctx) {
       <div style="display:grid;gap:12px;">
         <div class="form-group">
           <label>用户组名称</label>
-          <input type="text" id="userGroupNameInput" class="form-input" placeholder=t('例如：VIP用户')>
+          <input type="text" id="userGroupNameInput" class="form-input" placeholder="${t('例如：VIP用户')}">
         </div>
         <div class="form-group">
           <label>描述</label>
-          <textarea id="userGroupDescInput" class="form-input" rows="3" placeholder=t('可选描述')></textarea>
+          <textarea id="userGroupDescInput" class="form-input" rows="3" placeholder="${t('可选描述')}"></textarea>
         </div>
       </div>
     `;
@@ -9357,10 +9357,10 @@ async function(ctx) {
             <option value="tokens">Token 用量</option>
           </select>
           <span class="rule-add-label">每</span>
-          <input type="number" id="ruleNewDuration" class="form-input" style="width:100px;" min="1" placeholder=t('小时数')>
+          <input type="number" id="ruleNewDuration" class="form-input" style="width:100px;" min="1" placeholder="${t('小时数')}">
           <span class="rule-add-label">小时</span>
           <span class="rule-add-label">最多</span>
-          <input type="number" id="ruleNewValue" class="form-input" style="width:120px;" min="1" placeholder=t('限额')>
+          <input type="number" id="ruleNewValue" class="form-input" style="width:120px;" min="1" placeholder="${t('限额')}">
           <span class="rule-add-label" id="ruleNewUnit">次请求</span>
           <button class="btn btn-primary btn-sm" onclick="adminApp.addGroupRule(${groupId})">添加</button>
         </div>
@@ -9506,7 +9506,7 @@ async function(ctx) {
 
       const content = available.length
         ? `<div style="display:grid;gap:10px;">
-            <input type="text" id="addGroupMemberSearch" class="form-input" placeholder=t('搜索用户名或邮箱...') style="width:100%;box-sizing:border-box;">
+            <input type="text" id="addGroupMemberSearch" class="form-input" placeholder="${t('搜索用户名或邮箱...')}" style="width:100%;box-sizing:border-box;">
             <div id="addGroupMemberList" style="max-height:360px;overflow-y:auto;"></div>
           </div>`
         : '<div class="empty-state">' + t('所有用户都已在此用户组中') + '</div>';
@@ -9530,7 +9530,7 @@ async function(ctx) {
               <input type="checkbox" value="${u.id}" class="group-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
               <span>${escapeHtml(u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
-            </label>`).join('') ||  + '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
+            </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.group-member-checkbox').forEach(cb => {
             cb.onchange = () => {
               if (cb.checked) selected.add(parseInt(cb.value));
@@ -9896,11 +9896,11 @@ async function(ctx) {
       <div style="display:grid;gap:12px;">
         <div class="form-group">
           <label>Team 名称</label>
-          <input type="text" id="teamNameInput" class="form-input" placeholder=t('例如：研发组')>
+          <input type="text" id="teamNameInput" class="form-input" placeholder="${t('例如：研发组')}">
         </div>
         <div class="form-group">
           <label>描述</label>
-          <textarea id="teamDescInput" class="form-input" rows="3" placeholder=t('可选描述')></textarea>
+          <textarea id="teamDescInput" class="form-input" rows="3" placeholder="${t('可选描述')}"></textarea>
         </div>
       </div>
     `;
@@ -10193,7 +10193,7 @@ async function(ctx) {
 
       const content = available.length
         ? `<div style="display:grid;gap:10px;">
-            <input type="text" id="addTeamMemberSearch" class="form-input" placeholder=t('搜索用户名或邮箱...') style="width:100%;box-sizing:border-box;">
+            <input type="text" id="addTeamMemberSearch" class="form-input" placeholder="${t('搜索用户名或邮箱...')}" style="width:100%;box-sizing:border-box;">
             <div id="addTeamMemberList" style="max-height:360px;overflow-y:auto;"></div>
           </div>`
         : '<div class="empty-state">' + t('所有用户都已在此 Team 中') + '</div>';
@@ -10218,7 +10218,7 @@ async function(ctx) {
               <span>${escapeHtml(u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
               ${u.team_name ? `<span class="badge">${escapeHtml(u.team_name)}</span>` : ''}
-            </label>`).join('') ||  + '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
+            </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.team-member-checkbox').forEach(cb => {
             cb.onchange = () => {
               if (cb.checked) selected.add(parseInt(cb.value));
@@ -10513,10 +10513,10 @@ async function(ctx) {
                   </div>
                   <div class="model-library-provider-actions" onclick="event.stopPropagation()">
                     <button type="button" class="btn btn-sm btn-primary" style="padding:3px 8px;font-size:11px;"
-                      title=t('一键启用该供应商下全部模型')
+                      title="${t('一键启用该供应商下全部模型')}"
                       onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', true)">全部启用</button>
                     <button type="button" class="btn btn-sm btn-secondary" style="padding:3px 8px;font-size:11px;"
-                      title=t('一键禁用该供应商下全部模型')
+                      title="${t('一键禁用该供应商下全部模型')}"
                       onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', false)">全部禁用</button>
                     <span class="provider-model-count" title="${countTitle}"
                       style="color:${countColor};font-weight:600;">${totalCount} 个模型 · ${enabledCount} 启用</span>
@@ -10678,7 +10678,7 @@ async function(ctx) {
         </p>
         <div class="form-group" style="margin:0;">
           <label>名称关键字</label>
-          <input type="text" id="teamModelBatchNameInput" class="form-input" placeholder=t('例如：claude、gpt-4、gemini') autofocus>
+          <input type="text" id="teamModelBatchNameInput" class="form-input" placeholder="${t('例如：claude、gpt-4、gemini')}" autofocus>
         </div>
         <div class="form-group" style="margin:0;">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -11078,21 +11078,21 @@ async function(ctx) {
     if (!chips && !stickyChips) return;
     if (bar) bar.style.display = 'flex';
     const activeId = this.activeProviderTagId;
-    const html = this._providerTags.map(t => {
-      const selected = Number(activeId) === Number(t.id);
-      const color = t.color || '#3b82f6';
+    const html = this._providerTags.map(tag => {
+      const selected = Number(activeId) === Number(tag.id);
+      const color = tag.color || '#3b82f6';
       return `<div class="key-tag-chip provider-tag-chip ${selected ? 'active' : ''}"
            style="border-color:${color};${selected ? `background:${color};color:#fff;` : ''}"
            draggable="true"
-           data-tag-id="${t.id}"
-           ondragstart="adminApp.handleProviderTagDragStart(event, ${t.id})"
+           data-tag-id="${tag.id}"
+           ondragstart="adminApp.handleProviderTagDragStart(event, ${tag.id})"
            ondragend="adminApp.handleProviderTagDragEnd(event)"
-           onclick="adminApp.filterProvidersByTag(${t.id})"
-           title=t('点击筛选 · 拖拽到供应商分配 · 铅笔编辑')>
+           onclick="adminApp.filterProvidersByTag(${tag.id})"
+           title="${t('点击筛选 · 拖拽到供应商分配 · 铅笔编辑')}">
         <span style="color:${selected ? '#fff' : color};">●</span>
-        ${escapeHtml(t.name)}
-        <span class="edit-tag-def" onclick="event.stopPropagation();adminApp.showEditProviderTagPopover(${t.id}, this)" title=t('编辑标签')>✎</span>
-        <span class="remove-tag-def" onclick="event.stopPropagation();adminApp.deleteProviderTag(${t.id})" title=t('删除标签')>&times;</span>
+        ${escapeHtml(tag.name)}
+        <span class="edit-tag-def" onclick="event.stopPropagation();adminApp.showEditProviderTagPopover(${tag.id}, this)" title="${t('编辑标签')}">✎</span>
+        <span class="remove-tag-def" onclick="event.stopPropagation();adminApp.deleteProviderTag(${tag.id})" title="${t('删除标签')}">&times;</span>
       </div>`;
     }).join('') + `${'<div class="key-tag-chip key-tag-add-btn" onclick="adminApp.showCreateProviderTagPopover(this)" title="' + t('添加标签') + '">' + '+'}</div>`;
     if (chips) setHTML(chips, html);
@@ -11104,19 +11104,19 @@ async function(ctx) {
   _renderProviderTagChips(tags, providerId) {
     const list = Array.isArray(tags) ? tags : [];
     const safePid = String(providerId || '').replace(/'/g, "\\'");
-    const chips = list.map(t => {
-      const color = t.color || '#3b82f6';
-      return `<span class="key-tag-chip-sm" data-tag-id="${t.id}"
+    const chips = list.map(tag => {
+      const color = tag.color || '#3b82f6';
+      return `<span class="key-tag-chip-sm" data-tag-id="${tag.id}"
         style="border-color:${color};color:${color};background:${color}18;">
-        ${escapeHtml(t.name)}
-        <span class="remove-tag" title=t('移除')
-          onclick="event.stopPropagation();adminApp.removeTagFromProvider('${safePid}',${t.id})">&times;</span>
+        ${escapeHtml(tag.name)}
+        <span class="remove-tag" title="${t('移除')}"
+          onclick="event.stopPropagation();adminApp.removeTagFromProvider('${safePid}',${tag.id})">&times;</span>
       </span>`;
     }).join('');
     const addBtn = providerId != null
       ? `<span class="key-tag-chip-sm key-tag-add-tag-btn provider-tag-add-btn"
            onclick="event.stopPropagation();adminApp.showProviderTagAssignDropdown('${safePid}', this)"
-           title=t('管理标签')>+</span>`
+           title="${t('管理标签')}">+</span>`
       : '';
     if (!list.length && !addBtn) {
       return '<span class="provider-tag-empty">-</span>';
@@ -11442,7 +11442,7 @@ async function(ctx) {
         style="--tag-color:${color};"
         onclick="this.dataset.selected=this.dataset.selected==='1'?'0':'1';this.classList.toggle('is-on',this.dataset.selected==='1')"
         data-selected="${selected ? '1' : '0'}">${escapeHtml(t.name)}</span>`;
-    }).join('') ||  + '<span style="font-size:12px;color:var(--muted-foreground);">' + t('暂无标签，请先在列表上方创建') + '</span>');
+    }).join('') || '<span style="font-size:12px;color:var(--muted-foreground);">' + t('暂无标签，请先在列表上方创建') + '</span>');
   }
 
   _getSelectedProviderTagIds() {

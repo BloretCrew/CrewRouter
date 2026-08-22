@@ -117,7 +117,7 @@ const Dialog = (() => {
     setHTML(container, `
       <div class="dialog-overlay" id="${id}-overlay">
         <div class="dialog-panel${extraClass}" id="${id}-panel" style="${widthStyle}">
-          <button type="button" class="modal-close" aria-label=t('关闭')>&times;</button>
+          <button type="button" class="modal-close" aria-label="${t('关闭')}">&times;</button>
           <div class="dialog-title">${title}</div>
           <div class="dialog-content">${content}</div>
           ${footerHtml}

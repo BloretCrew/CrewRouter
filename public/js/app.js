@@ -1007,10 +1007,10 @@ class ConsoleApp {
     const isOwner = key.is_owner !== false;
     return `<div class="api-key-inline-tags" data-key-id="${key.id}">
       <div class="api-key-inline-tags-track">
-        ${tags.map(t => `
-          <span class="key-tag-chip-sm" data-tag-id="${t.id}" style="border-color:${t.color};color:${t.color};background:${t.color}10;">
-            ${escapeHtml(t.name)}
-            ${isOwner ? `<span class="remove-tag" onclick="event.stopPropagation();app.removeTagFromKey(${key.id},${t.id})" title="${t('移除')}">&times;</span>` : ''}
+        ${tags.map(tag => `
+          <span class="key-tag-chip-sm" data-tag-id="${tag.id}" style="border-color:${tag.color};color:${tag.color};background:${tag.color}10;">
+            ${escapeHtml(tag.name)}
+            ${isOwner ? `<span class="remove-tag" onclick="event.stopPropagation();app.removeTagFromKey(${key.id},${tag.id})" title="${t('移除')}">&times;</span>` : ''}
           </span>`).join('')}
       </div>
       <button type="button" class="api-key-tags-more" style="display:none;"
@@ -1207,13 +1207,13 @@ class ConsoleApp {
     pop.className = 'api-key-tags-overflow-popover';
 
     const listHtml = tags.length
-      ? tags.map(t => `
-          <div class="api-key-tags-overflow-item" data-tag-id="${t.id}">
-            <span class="key-tag-chip-sm" style="border-color:${escapeHtml(t.color)};color:${escapeHtml(t.color)};background:${escapeHtml(t.color)}10;">
-              ${escapeHtml(t.name)}
+      ? tags.map(tag => `
+          <div class="api-key-tags-overflow-item" data-tag-id="${tag.id}">
+            <span class="key-tag-chip-sm" style="border-color:${escapeHtml(tag.color)};color:${escapeHtml(tag.color)};background:${escapeHtml(tag.color)}10;">
+              ${escapeHtml(tag.name)}
             </span>
             ${isOwner ? `<button type="button" class="api-key-tags-overflow-remove" title="${t('移除标签')}"
-              onclick="event.stopPropagation();app.removeTagFromKey(${keyId},${t.id})">${t('移除')}</button>` : ''}
+              onclick="event.stopPropagation();app.removeTagFromKey(${keyId},${tag.id})">${t('移除')}</button>` : ''}
           </div>`).join('')
       : '<div class="api-key-tags-overflow-empty">' + t('暂无标签') + '</div>';
 
