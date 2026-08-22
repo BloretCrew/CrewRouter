@@ -2251,6 +2251,8 @@ if (isDemo) {
       error: { message: '演示模式下 API 访问已禁用', type: 'demo_mode_restricted' }
     });
   });
+  // i18n 目录接口只读，演示模式下同样可用（前端语言切换依赖）
+  app.use('/api/i18n', require('./routes/i18n'));
 } else {
   app.use('/api', require('./routes/setup'));
   app.use('/api/i18n', require('./routes/i18n'));
