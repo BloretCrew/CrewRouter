@@ -6,6 +6,7 @@ const {
   unwrapGrokUsage,
   parseGrokAuthConfig,
   normalizeExpiresAt,
+  isCreditLimitError,
 } = require('../utils/grok-usage');
 const { normalizeWhamUsage, parseCodexAuthConfig } = require('../utils/codex-usage');
 const { isLikelyBlockedOfficialHost, describeNetworkError } = require('../utils/quota-http');
@@ -28,12 +29,10 @@ const grokCredits = {
     prepaidBalance: { val: 1250 },
     history: [
       {
-        period: {
-          type: 'USAGE_PERIOD_TYPE_WEEKLY',
-          start: '2026-08-08T01:09:57.847517+00:00',
-          end: '2026-08-15T01:09:57.847517+00:00',
-        },
-        creditUsagePercent: 88,
+        billingCycle: { year: 2026, month: 7 },
+        includedUsed: { val: 5200 },
+        onDemandUsed: {},
+        totalUsed: { val: 5400 },
       },
     ],
   },
@@ -60,7 +59,39 @@ assert.strictEqual(grok.periods[0].key, 'current_period');
 assert.strictEqual(grok.periods[0].percent, 3);
 assert.match(grok.periods[0].label, /每周/);
 assert.ok(grok.periods.some((p) => p.key === 'GrokBuild' && p.percent === 1));
-assert.ok(grok.periods.some((p) => p.historical && p.percent === 88));
+// 历史周期：文档结构 billingCycle + 美分金额；无 monthlyLimit 时使用率为 null
+const historyPeriod = grok.periods.find((p) => p.historical);
+assert.ok(historyPeriod, '应解析出历史周期');
+assert.strictEqual(historyPeriod.label, '2026-07');
+assert.strictEqual(historyPeriod.percent, null);
+assert.strictEqual(historyPeriod.amountCents.total, 5400);
+
+// 遗留字段回退：无 creditUsagePercent 时按 monthlyLimit/used 推导百分比
+const legacyOnly = normalizeGrokUsage({
+  monthlyLimit: { val: 10000 },
+  used: { val: 8800 },
+  billingPeriodStart: '2026-08-01T00:00:00Z',
+  billingPeriodEnd: '2026-09-01T00:00:00Z',
+});
+assert.strictEqual(legacyOnly.currentPercent, 88);
+assert.strictEqual(legacyOnly.periods[0].percent, 88);
+assert.match(legacyOnly.currentPeriod.resetsAt, /2026/);
+
+// PAYG 溢出：包含池 100% 后按按需桶计算有效用量
+const payg = normalizeGrokUsage({
+  creditUsagePercent: 100,
+  onDemandCap: { val: 2000 },
+  onDemandUsed: { val: 500 },
+});
+assert.strictEqual(payg.currentPercent, 25);
+
+// 额度耗尽判定（对应 grok-build is_credit_limit_error）
+assert.strictEqual(isCreditLimitError(402, 'anything'), true);
+assert.strictEqual(isCreditLimitError(403, 'status 403: run out of credits'), true);
+assert.strictEqual(isCreditLimitError(429, 'You ran out of credits'), true);
+assert.strictEqual(isCreditLimitError(200, 'status 402 upstream'), true);
+assert.strictEqual(isCreditLimitError(403, 'content safety blocked'), false);
+assert.strictEqual(isCreditLimitError(500, 'internal server error'), false);
 
 const auth = parseGrokAuthConfig({
   'https://auth.x.ai': {

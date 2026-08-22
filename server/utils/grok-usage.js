@@ -3,6 +3,7 @@
 const { quotaRequest } = require('./quota-http');
 
 const GROK_BILLING_URL = 'https://cli-chat-proxy.grok.com/v1/billing?format=credits';
+const GROK_USER_URL = 'https://cli-chat-proxy.grok.com/v1/user?include=subscription';
 const DEFAULT_CLIENT_VERSION = process.env.GROK_CLIENT_VERSION || '0.2.120';
 const DISCOVERY_TTL_MS = 60 * 60 * 1000;
 const discoveryCache = new Map();
@@ -88,6 +89,13 @@ function isAuthFailure(response, data) {
   return /invalid or expired credentials|no auth context|unauthenticated|invalid_token/i.test(detail);
 }
 
+// 对应 grok-build is_credit_limit_error：402 必为额度/消费阻断；403 正文含
+// "run out of credits"（遗留文案）、429 含 "You ran out of credits" 同属额度耗尽。
+function isCreditLimitError(status, bodyText = '') {
+  if (status === 402) return true;
+  return /run out of credits|ran out of credits|status 402/i.test(String(bodyText || ''));
+}
+
 function parseGrokAuthConfig(config) {
   const direct = config?.access_token || config?.tokens?.access_token || config?.token || config?.key;
   const directUserId = config?.user_id || config?.userid || config?.userId || '';
@@ -167,23 +175,45 @@ function periodTime(item, field) {
 
 function normalizeGrokUsage(data) {
   const source = unwrapGrokUsage(data);
-  const rawPercent = source.creditUsagePercent ?? source.currentPeriod?.creditUsagePercent ?? source.currentPeriod?.usagePercent ?? source.currentPeriod?.percent;
-  const percent = Math.max(0, Math.min(100, toPercent(rawPercent, 0)));
   const current = source.currentPeriod || {};
+  // 新版 credits 字段（creditUsagePercent，0–100）优先；缺失时按遗留
+  // monthlyLimit/used 推导 —— 与 grok-build credit_balance_from_config 一致。
+  const rawPercent = source.creditUsagePercent ?? source.currentPeriod?.creditUsagePercent ?? source.currentPeriod?.usagePercent ?? source.currentPeriod?.percent;
+  const hasCreditPercent = rawPercent !== undefined && rawPercent !== null;
+  const legacyLimit = toNumber(source.monthlyLimit, 0);
+  const legacyUsed = toNumber(source.used, 0);
+  const onDemandCap = toNumber(source.onDemandCap, 0);
+  const onDemandUsed = toNumber(source.onDemandUsed, 0);
+  const usagePct = hasCreditPercent
+    ? Math.max(0, Math.min(100, toPercent(rawPercent, 0)))
+    : (legacyLimit > 0 ? Math.min(100, legacyUsed / legacyLimit * 100) : 0);
+  // 包含量池用尽后若开启按需（PAYG），实际进度切换到按需桶；
+  // 未上报百分比且开启按需时按「包含 + 按需」总预算折算。
+  let effectivePct = usagePct;
+  if (onDemandCap > 0) {
+    if (usagePct >= 100) {
+      effectivePct = Math.min(100, onDemandUsed / onDemandCap * 100);
+    } else if (!hasCreditPercent && legacyLimit + onDemandCap > 0) {
+      effectivePct = Math.min(100, legacyUsed / (legacyLimit + onDemandCap) * 100);
+    }
+  }
+
+  // 遗留字段 billingPeriodStart/End 作为新式 currentPeriod.start/end 的回退。
+  const startsAtRaw = periodTime(current, 'start') || periodTime(source, 'start') || source.billingPeriodStart;
+  const endsAtRaw = periodTime(current, 'end') || periodTime(source, 'end') || source.billingPeriodEnd;
   const currentPeriod = {
     type: current.type || '',
     label: current.type === 'USAGE_PERIOD_TYPE_WEEKLY' ? '每周共享额度' : (current.type || '当前周期'),
-    startsAt: formatDate(periodTime(current, 'start') || periodTime(source, 'start') || data?.resetAt),
-    resetsAt: formatDate(periodTime(current, 'end') || periodTime(source, 'end') || data?.resetAt || data?.reset_at),
+    startsAt: formatDate(startsAtRaw),
+    resetsAt: formatDate(endsAtRaw),
   };
-  const currentEnd = periodTime(current, 'end') || periodTime(source, 'end');
   const periods = [{
     key: 'current_period',
     label: currentPeriod.label,
-    percent,
+    percent: usagePct,
     resetsAt: currentPeriod.resetsAt,
     startsAt: currentPeriod.startsAt,
-    resetAfterSeconds: Math.max(0, Math.round((toTimestamp(currentEnd) - Date.now()) / 1000)),
+    resetAfterSeconds: Math.max(0, Math.round((toTimestamp(endsAtRaw) - Date.now()) / 1000)),
   }];
 
   const productUsage = source.productUsage;
@@ -205,37 +235,40 @@ function normalizeGrokUsage(data) {
     });
   }
 
+  // history 为 BillingPeriodUsage：billingCycle {year, month} + 美分金额
+  // （includedUsed/onDemandUsed/totalUsed），不含百分比字段。
   const history = Array.isArray(source.history) ? source.history : [];
   history.forEach((item, index) => {
-    const nestedPeriod = item?.period || item?.currentPeriod || {};
-    const historicalPercent = item?.creditUsagePercent ?? item?.usagePercent ?? item?.percent ?? nestedPeriod.creditUsagePercent ?? nestedPeriod.usagePercent;
-    const normalized = normalizeGrokPeriod({
-      ...(item || {}),
-      creditUsagePercent: historicalPercent,
-      start: periodTime(item, 'start'),
-      end: periodTime(item, 'end'),
+    if (!item || typeof item !== 'object') return;
+    const cycle = item.billingCycle || item.billing_cycle || {};
+    const includedCents = toNumber(item.includedUsed ?? item.included_used, 0);
+    const onDemandCents = toNumber(item.onDemandUsed ?? item.on_demand_used, 0);
+    const totalCents = toNumber(item.totalUsed ?? item.total_used, 0) || includedCents + onDemandCents;
+    const cycleLabel = cycle.year ? `${cycle.year}-${String(cycle.month ?? 1).padStart(2, '0')}` : '';
+    periods.push({
+      key: cycleLabel ? `history_${cycleLabel}` : `history_${index + 1}`,
+      label: cycleLabel || item.type || `历史周期 ${index + 1}`,
+      percent: legacyLimit > 0 ? Math.min(100, Math.round(includedCents / legacyLimit * 1000) / 10) : null,
+      startsAt: '',
+      resetsAt: '',
+      resetAfterSeconds: 0,
       historical: true,
-    }, index, '历史周期');
-    if (normalized) periods.push(normalized);
+      amountCents: { included: includedCents, onDemand: onDemandCents, total: totalCents },
+    });
   });
 
   const prepaid = toNumber(source.prepaidBalance, 0);
-  const onDemandCap = toNumber(source.onDemandCap, 0);
-  const onDemandUsed = toNumber(source.onDemandUsed, 0);
-  const legacyLimit = toNumber(source.monthlyLimit, 0);
-  const legacyUsed = toNumber(source.used, 0);
-  const total = legacyLimit || onDemandCap || 100;
-  const used = legacyLimit ? legacyUsed : (onDemandCap ? onDemandUsed : percent);
+  const used = Math.round(effectivePct * 100) / 100;
 
   return {
     planName: source.subscriptionTier || source.subscription_tier || 'SuperGrok',
-    unit: 'credits',
-    total,
+    unit: 'percent',
+    total: 100,
     used,
-    remaining: Math.max(0, total - used),
+    remaining: Math.max(0, Math.round((100 - used) * 100) / 100),
     periods,
     extra: [
-      `当前周期 ${percent}%`,
+      `当前周期 ${effectivePct}%`,
       `Prepaid ${prepaid}`,
       onDemandCap ? `按需额度 ${onDemandUsed}/${onDemandCap}` : '',
       source.isUnifiedBillingUser ? '统一周池' : '',
@@ -246,7 +279,7 @@ function normalizeGrokUsage(data) {
     onDemandRemaining: Math.max(0, onDemandCap - onDemandUsed),
     monthlyLimit: legacyLimit,
     monthlyUsed: legacyUsed,
-    currentPercent: percent,
+    currentPercent: effectivePct,
     isUnifiedBillingUser: source.isUnifiedBillingUser === true,
     currentPeriod: currentPeriod,
     productUsage: productUsage || [],
@@ -271,6 +304,27 @@ async function requestGrokUsage(token, provider) {
     headers,
     signal: AbortSignal.timeout(15000),
   }, provider);
+  const text = await response.text();
+  let data;
+  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = {}; }
+  return { response, data, text };
+}
+
+// 订阅档位来自 GET /user?include=subscription（billing 响应本身不带 tier），
+// 与 grok-build subscription_check::fetch_user_info 的请求头一致。
+async function requestGrokUser(token) {
+  const version = process.env.GROK_CLIENT_VERSION || DEFAULT_CLIENT_VERSION;
+  const response = await quotaRequest(GROK_USER_URL, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+      'X-XAI-Token-Auth': 'xai-grok-cli',
+      'x-grok-client-version': version,
+      'x-grok-client-mode': 'interactive',
+    },
+    signal: AbortSignal.timeout(10000),
+  });
   const text = await response.text();
   let data;
   try { data = text ? JSON.parse(text) : {}; } catch (_) { data = {}; }
@@ -342,11 +396,18 @@ async function fetchGrokUsage(provider, { saveTokens } = {}) {
   }
 
   let result = await requestGrokUsage(provider.oauth_access_token, provider);
+  // 额度耗尽不是认证失败，先于 token 刷新判定，避免误报为凭证问题。
+  if (isCreditLimitError(result.response.status, result.text)) {
+    throw new Error(`SuperGrok 编码信用已用尽（HTTP ${result.response.status}），请等待用量周期重置、购买预购信用或调整按需上限`);
+  }
   if (isAuthFailure(result.response, result.data) && provider.oauth_refresh_token) {
     const refreshed = await refreshGrokToken(provider);
     if (refreshed) {
       await applyRefreshedTokens(provider, refreshed, saveTokens);
       result = await requestGrokUsage(provider.oauth_access_token, provider);
+      if (isCreditLimitError(result.response.status, result.text)) {
+        throw new Error(`SuperGrok 编码信用已用尽（HTTP ${result.response.status}），请等待用量周期重置、购买预购信用或调整按需上限`);
+      }
     }
   }
   if (!result.response.ok) {
@@ -355,6 +416,12 @@ async function fetchGrokUsage(provider, { saveTokens } = {}) {
   }
   const normalized = normalizeGrokUsage(result.data);
   const source = unwrapGrokUsage(result.data);
+  // 订阅档位尽力补齐：/user 查询失败不影响额度主结果。
+  try {
+    const user = await requestGrokUser(provider.oauth_access_token);
+    const tier = user.data?.subscriptionTier || user.data?.subscription_tier;
+    if (user.response.ok && tier) normalized.planName = tier;
+  } catch (_) { /* best-effort */ }
   normalized.rawPercent = source.creditUsagePercent ?? null;
   return normalized;
 }
@@ -366,4 +433,5 @@ module.exports = {
   normalizeGrokPeriod,
   unwrapGrokUsage,
   normalizeExpiresAt,
+  isCreditLimitError,
 };
