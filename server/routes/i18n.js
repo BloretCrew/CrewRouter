@@ -91,8 +91,12 @@ async function getCatalog(locale) {
   }
 
   if (live) {
-    cache.set(locale, { catalog: live, fetchedAt: Date.now(), source: 'live' });
-    return { catalog: live, source: 'live' };
+    // merge disk under live: new keys added locally but not yet uploaded to BTC
+    // still get their translation instead of falling back to Chinese source.
+    const disk = diskCatalog(locale);
+    const merged = disk ? Object.assign({}, disk, live) : live;
+    cache.set(locale, { catalog: merged, fetchedAt: Date.now(), source: 'live' });
+    return { catalog: merged, source: 'live' };
   }
 
   if (hit) {

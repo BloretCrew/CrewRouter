@@ -13,7 +13,7 @@ const Dialog = (() => {
     return el;
   }
 
-  function render({ title, message, confirmText = '确认', cancelText = '取消', showCancel = true, danger = false }) {
+  function render({ title, message, confirmText = t('确认'), cancelText = t('取消'), showCancel = true, danger = false }) {
     return new Promise((resolve) => {
       const container = getContainer();
       const id = 'dialog-' + Date.now();
@@ -70,9 +70,9 @@ const Dialog = (() => {
 
   function alert(title, message, options = {}) {
     return render({
-      title: '提示',
+      title: t('提示'),
       message: title && message ? `<strong>${title}</strong><br>${message}` : title,
-      confirmText: options.confirmText || '知道了',
+      confirmText: options.confirmText || t('知道了'),
       showCancel: false,
       danger: options.danger || false
     });
@@ -82,8 +82,8 @@ const Dialog = (() => {
     return render({
       title,
       message,
-      confirmText: options.confirmText || '确认',
-      cancelText: options.cancelText || '取消',
+      confirmText: options.confirmText || t('确认'),
+      cancelText: options.cancelText || t('取消'),
       showCancel: true,
       danger: options.danger || false
     });
@@ -117,7 +117,7 @@ const Dialog = (() => {
     setHTML(container, `
       <div class="dialog-overlay" id="${id}-overlay">
         <div class="dialog-panel${extraClass}" id="${id}-panel" style="${widthStyle}">
-          <button type="button" class="modal-close" aria-label="关闭">&times;</button>
+          <button type="button" class="modal-close" aria-label=t('关闭')>&times;</button>
           <div class="dialog-title">${title}</div>
           <div class="dialog-content">${content}</div>
           ${footerHtml}
@@ -166,4 +166,4 @@ const Dialog = (() => {
 
 // Override native alert and confirm globally
 window.alert = (msg) => Dialog.alert(String(msg));
-window.confirm = (msg) => Dialog.confirm('确认', String(msg));
+window.confirm = (msg) => Dialog.confirm(t('确认'), String(msg));

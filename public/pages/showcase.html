@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CrewRouter — 团队级 AI 模型统一网关</title>
+  <title><span data-i18n="CrewRouter — 团队级 AI 模型统一网关">CrewRouter — 团队级 AI 模型统一网关</span></title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
@@ -373,6 +373,7 @@
       .section { padding: 80px 16px; }
     }
   </style>
+  <script src="/js/i18n.js?v=2"></script>
 </head>
 <body>
   <!-- Navigation -->
@@ -382,15 +383,19 @@
       <span>CrewRouter</span>
     </div>
     <div class="nav-links">
-      <a href="#features">功能</a>
-      <a href="#architecture">架构</a>
-      <a href="#highlights">亮点</a>
-      <a href="/console#docs">文档</a>
+      <a href="#features"><span data-i18n="功能">功能</span></a>
+      <a href="#architecture"><span data-i18n="架构">架构</span></a>
+      <a href="#highlights"><span data-i18n="亮点">亮点</span></a>
+      <a href="/console#docs"><span data-i18n="文档">文档</span></a>
     </div>
     <div class="nav-right">
-      <a href="/console" class="nav-cta">进入演示</a>
+      <a href="/console" class="nav-cta"><span data-i18n="进入演示">进入演示</span></a>
       <div class="theme-toggle">
-        <button id="themeToggle" title="切换主题">
+        <select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
+        <option value="zh">中文</option>
+        <option value="en">EN</option>
+    </select>
+        <button id="themeToggle" title="切换主题" data-i18n-title="切换主题">
           <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
           </svg>
@@ -411,20 +416,20 @@
     </div>
     <div class="hero-content reveal">
       <div class="hero-badge">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span data-i18n="团队级 AI 模型网关">
         团队级 AI 模型网关
-      </div>
+      </span></div>
       <h1>CrewRouter</h1>
-      <p>一个 API 端点，接入所有 AI 模型。智能路由、精细管控、实时洞察，为团队而生。</p>
+      <p><span data-i18n="一个 API 端点，接入所有 AI 模型。智能路由、精细管控、实时洞察，为团队而生。">一个 API 端点，接入所有 AI 模型。智能路由、精细管控、实时洞察，为团队而生。</span></p>
       <div class="hero-buttons">
         <a href="/console" class="btn-primary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span data-i18n="进入演示控制台">
           进入演示控制台
-        </a>
+        </span></a>
         <a href="/console#docs" class="btn-secondary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span data-i18n="查看文档">
           查看文档
-        </a>
+        </span></a>
       </div>
     </div>
 
@@ -453,72 +458,72 @@
   <!-- Features -->
   <section class="section" id="features">
     <div class="section-header reveal">
-      <h2>核心功能</h2>
-      <p>为团队 AI 应用提供全方位的模型管理和路由能力</p>
+      <h2><span data-i18n="核心功能">核心功能</span></h2>
+      <p><span data-i18n="为团队 AI 应用提供全方位的模型管理和路由能力">为团队 AI 应用提供全方位的模型管理和路由能力</span></p>
     </div>
     <div class="features-grid">
       <div class="feature-card reveal">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
         </div>
-        <h3>多供应商聚合</h3>
-        <p>OpenAI、Anthropic、DeepSeek 等主流供应商，一个 API 端点全部接入。</p>
+        <h3><span data-i18n="多供应商聚合">多供应商聚合</span></h3>
+        <p><span data-i18n="OpenAI、Anthropic、DeepSeek 等主流供应商，一个 API 端点全部接入。">OpenAI、Anthropic、DeepSeek 等主流供应商，一个 API 端点全部接入。</span></p>
       </div>
       <div class="feature-card reveal">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
         </div>
-        <h3>协议自动转换</h3>
-        <p>系统自动在 OpenAI 与 Anthropic 协议间双向转换。用 OpenAI SDK 调用 Claude，或用 Anthropic SDK 调用 GPT，无需关心协议差异。</p>
+        <h3><span data-i18n="协议自动转换">协议自动转换</span></h3>
+        <p><span data-i18n="系统自动在 OpenAI 与 Anthropic 协议间双向转换。用 OpenAI SDK 调用 Claude，或用 Anthropic SDK 调用 GPT，无需关心协议差异。">系统自动在 OpenAI 与 Anthropic 协议间双向转换。用 OpenAI SDK 调用 Claude，或用 Anthropic SDK 调用 GPT，无需关心协议差异。</span></p>
       </div>
       <div class="feature-card reveal">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         </div>
-        <h3>智能路由</h3>
-        <p>按团队分配模型，支持别名、上游映射和自定义路由规则，精准控制每个团队的模型访问范围。</p>
+        <h3><span data-i18n="智能路由">智能路由</span></h3>
+        <p><span data-i18n="按团队分配模型，支持别名、上游映射和自定义路由规则，精准控制每个团队的模型访问范围。">按团队分配模型，支持别名、上游映射和自定义路由规则，精准控制每个团队的模型访问范围。</span></p>
       </div>
       <div class="feature-card reveal">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
-        <h3>Fusion 模式</h3>
-        <p>同一请求并发多个模型，由裁判模型评估并综合最优回答，大幅提升输出质量和可靠性。</p>
+        <h3><span data-i18n="Fusion 模式">Fusion 模式</span></h3>
+        <p><span data-i18n="同一请求并发多个模型，由裁判模型评估并综合最优回答，大幅提升输出质量和可靠性。">同一请求并发多个模型，由裁判模型评估并综合最优回答，大幅提升输出质量和可靠性。</span></p>
       </div>
       <div class="feature-card reveal">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
         </div>
-        <h3>实时统计</h3>
-        <p>请求量、Token 用量、延迟、成本多维度分析。按模型、Key、时间粒度下钻，缓存命中率一目了然。</p>
+        <h3><span data-i18n="实时统计">实时统计</span></h3>
+        <p><span data-i18n="请求量、Token 用量、延迟、成本多维度分析。按模型、Key、时间粒度下钻，缓存命中率一目了然。">请求量、Token 用量、延迟、成本多维度分析。按模型、Key、时间粒度下钻，缓存命中率一目了然。</span></p>
       </div>
       <div class="feature-card reveal">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
-        <h3>API Key 管理</h3>
-        <p>时间调度启停、模型绑定、自定义签名、Fusion 配置。每个 Key 独立权限，精细化管控。</p>
+        <h3><span data-i18n="API Key 管理">API Key 管理</span></h3>
+        <p><span data-i18n="时间调度启停、模型绑定、自定义签名、Fusion 配置。每个 Key 独立权限，精细化管控。">时间调度启停、模型绑定、自定义签名、Fusion 配置。每个 Key 独立权限，精细化管控。</span></p>
       </div>
       <div class="feature-card reveal">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
-        <h3>多因素认证</h3>
-        <p>支持 TOTP 双因素认证、WebAuthn PassKey 无密码登录、飞书 OAuth 企业级接入，全方位保障账户安全。</p>
+        <h3><span data-i18n="多因素认证">多因素认证</span></h3>
+        <p><span data-i18n="支持 TOTP 双因素认证、WebAuthn PassKey 无密码登录、飞书 OAuth 企业级接入，全方位保障账户安全。">支持 TOTP 双因素认证、WebAuthn PassKey 无密码登录、飞书 OAuth 企业级接入，全方位保障账户安全。</span></p>
       </div>
       <div class="feature-card reveal">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </div>
-        <h3>动态密钥刷新</h3>
-        <p>供应商 API Key 支持脚本模式自动轮换，定时刷新密钥并缓存，保障高可用不间断服务。</p>
+        <h3><span data-i18n="动态密钥刷新">动态密钥刷新</span></h3>
+        <p><span data-i18n="供应商 API Key 支持脚本模式自动轮换，定时刷新密钥并缓存，保障高可用不间断服务。">供应商 API Key 支持脚本模式自动轮换，定时刷新密钥并缓存，保障高可用不间断服务。</span></p>
       </div>
       <div class="feature-card reveal">
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
         </div>
-        <h3>代理池管理</h3>
-        <p>每个供应商独立配置代理池，支持订阅链接批量导入和手动添加，保障跨境访问稳定性。</p>
+        <h3><span data-i18n="代理池管理">代理池管理</span></h3>
+        <p><span data-i18n="每个供应商独立配置代理池，支持订阅链接批量导入和手动添加，保障跨境访问稳定性。">每个供应商独立配置代理池，支持订阅链接批量导入和手动添加，保障跨境访问稳定性。</span></p>
       </div>
     </div>
   </section>
@@ -526,8 +531,8 @@
   <!-- Architecture -->
   <section class="section" id="architecture">
     <div class="section-header reveal">
-      <h2>一个端点，所有模型</h2>
-      <p>完美兼容 OpenAI 和 Anthropic SDK，零改动迁移现有应用</p>
+      <h2><span data-i18n="一个端点，所有模型">一个端点，所有模型</span></h2>
+      <p><span data-i18n="完美兼容 OpenAI 和 Anthropic SDK，零改动迁移现有应用">完美兼容 OpenAI 和 Anthropic SDK，零改动迁移现有应用</span></p>
     </div>
     <div class="arch-code reveal">
       <div class="arch-code-header">
@@ -536,7 +541,7 @@
         <div class="console-dot green"></div>
         <span>terminal</span>
       </div>
-      <pre><span class="comment"># 只需更换 base_url，即可接入所有模型</span>
+      <pre><span class="comment"><span data-i18n="# 只需更换 base_url，即可接入所有模型"># 只需更换 base_url，即可接入所有模型</span></span>
 <span class="kw">curl</span> https://api.crewrouter.io<span class="str">/v1/chat/completions</span> \
   -H <span class="str">"Authorization: Bearer sk-your-key"</span> \
   -d <span class="str">'{
@@ -545,7 +550,7 @@
   }'</span></pre>
     </div>
     <div class="arch-flow reveal">
-      <div class="arch-source">你的应用</div>
+      <div class="arch-source"><span data-i18n="你的应用">你的应用</span></div>
       <svg class="arch-arrow-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       <div class="arch-gateway">CrewRouter</div>
       <svg class="arch-arrow-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -553,11 +558,11 @@
         <span class="arch-pill">OpenAI</span>
         <span class="arch-pill">Anthropic</span>
         <span class="arch-pill">DeepSeek</span>
-        <span class="arch-pill">更多…</span>
+        <span class="arch-pill"><span data-i18n="更多…">更多…</span></span>
       </div>
     </div>
     <div class="arch-tagline" style="margin-top:40px;">
-      <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:14px;font-weight:500;">兼容所有支持 OpenAI / Anthropic 格式的编程工具</div>
+      <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:14px;font-weight:500;"><span data-i18n="兼容所有支持 OpenAI / Anthropic 格式的编程工具">兼容所有支持 OpenAI / Anthropic 格式的编程工具</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
         <span class="arch-pill"><img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Claude Code</span>
         <span class="arch-pill"><img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Claude Desktop</span>
@@ -570,7 +575,7 @@
         <span class="arch-pill"><img src="https://img.bloret.net/img/1783300468753/f405f79ebe9b85ef76e7bebb33fa2b27" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Cherry Studio</span>
         <span class="arch-pill"><img src="https://img.bloret.net/img/1783300468869/0e65783456053817af53fe8e72836b5d" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Qwen Code</span>
         <span class="arch-pill"><img src="https://img.bloret.net/img/1783300700031/a402b70a5fd3b654873aca86429a02b4" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Cursor</span>
-        <span class="arch-pill">更多…</span>
+        <span class="arch-pill"><span data-i18n="更多…">更多…</span></span>
       </div>
     </div>
   </section>
@@ -578,8 +583,8 @@
   <!-- Technical Highlights -->
   <section class="section" id="highlights">
     <div class="section-header reveal">
-      <h2>技术亮点</h2>
-      <p>为生产环境设计的每一个细节</p>
+      <h2><span data-i18n="技术亮点">技术亮点</span></h2>
+      <p><span data-i18n="为生产环境设计的每一个细节">为生产环境设计的每一个细节</span></p>
     </div>
     <div class="highlights-list">
       <!-- OpenAI Compatible -->
@@ -605,8 +610,8 @@
           </div>
         </div>
         <div class="highlight-text">
-          <h3>双格式兼容 API</h3>
-          <p>完美兼容 OpenAI Chat Completions 和 Messages 格式。只需更换 <code>base_url</code>，无需修改任何代码。同时支持 Anthropic 原生格式，满足不同场景。</p>
+          <h3><span data-i18n="双格式兼容 API">双格式兼容 API</span></h3>
+          <p><span data-i18n="完美兼容 OpenAI Chat Completions 和 Messages 格式。只需更换">完美兼容 OpenAI Chat Completions 和 Messages 格式。只需更换 </span><code>base_url</code><span data-i18n="，无需修改任何代码。同时支持 Anthropic 原生格式，满足不同场景。">，无需修改任何代码。同时支持 Anthropic 原生格式，满足不同场景。</span></p>
         </div>
       </div>
 
@@ -619,19 +624,19 @@
           </div>
           <div class="highlight-visual-content">
             <table class="mock-table">
-              <thead><tr><th>团队</th><th>模型</th><th>状态</th></tr></thead>
+              <thead><tr><th><span data-i18n="团队">团队</span></th><th><span data-i18n="模型">模型</span></th><th><span data-i18n="状态">状态</span></th></tr></thead>
               <tbody>
-                <tr><td>工程团队</td><td>GPT-4o, Claude</td><td><span class="mock-badge green">启用</span></td></tr>
-                <tr><td>产品团队</td><td>GPT-4o Mini</td><td><span class="mock-badge green">启用</span></td></tr>
-                <tr><td>前沿团队</td><td>DeepSeek R1</td><td><span class="mock-badge blue">Beta</span></td></tr>
-                <tr><td>默认团队</td><td>全部模型</td><td><span class="mock-badge amber">受限</span></td></tr>
+                <tr><td><span data-i18n="工程团队">工程团队</span></td><td>GPT-4o, Claude</td><td><span class="mock-badge green"><span data-i18n="启用">启用</span></span></td></tr>
+                <tr><td><span data-i18n="产品团队">产品团队</span></td><td>GPT-4o Mini</td><td><span class="mock-badge green"><span data-i18n="启用">启用</span></span></td></tr>
+                <tr><td><span data-i18n="前沿团队">前沿团队</span></td><td>DeepSeek R1</td><td><span class="mock-badge blue">Beta</span></td></tr>
+                <tr><td><span data-i18n="默认团队">默认团队</span></td><td><span data-i18n="全部模型">全部模型</span></td><td><span class="mock-badge amber"><span data-i18n="受限">受限</span></span></td></tr>
               </tbody>
             </table>
           </div>
         </div>
         <div class="highlight-text">
-          <h3>团队与权限</h3>
-          <p>团队级别的模型访问控制，支持个人、默认和前沿团队分层管理。管理员精确控制每个团队可用的模型范围，配合用户组限额规则实现精细化资源管控。</p>
+          <h3><span data-i18n="团队与权限">团队与权限</span></h3>
+          <p><span data-i18n="团队级别的模型访问控制，支持个人、默认和前沿团队分层管理。管理员精确控制每个团队可用的模型范围，配合用户组限额规则实现精细化资源管控。">团队级别的模型访问控制，支持个人、默认和前沿团队分层管理。管理员精确控制每个团队可用的模型范围，配合用户组限额规则实现精细化资源管控。</span></p>
         </div>
       </div>
 
@@ -640,7 +645,7 @@
         <div class="highlight-visual">
           <div class="highlight-visual-bar">
             <div class="console-dot red"></div><div class="console-dot yellow"></div><div class="console-dot green"></div>
-            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;">统计概览</span>
+            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;"><span data-i18n="统计概览">统计概览</span></span>
           </div>
           <div class="highlight-visual-content">
             <div class="mock-bars">
@@ -655,15 +660,15 @@
               <div class="mock-bar" style="height:67%"></div>
               <div class="mock-bar" style="height:95%"></div>
             </div>
-            <div class="mock-stat-row"><span class="mock-stat-label">本月请求</span><span class="mock-stat-value">12,847</span></div>
-            <div class="mock-stat-row"><span class="mock-stat-label">Token 用量</span><span class="mock-stat-value">8.2M</span></div>
-            <div class="mock-stat-row"><span class="mock-stat-label">缓存命中</span><span class="mock-stat-value" style="color:#10b981;">34.2%</span></div>
-            <div class="mock-stat-row"><span class="mock-stat-label">本月成本</span><span class="mock-stat-value">¥28.50</span></div>
+            <div class="mock-stat-row"><span class="mock-stat-label"><span data-i18n="本月请求">本月请求</span></span><span class="mock-stat-value">12,847</span></div>
+            <div class="mock-stat-row"><span class="mock-stat-label"><span data-i18n="Token 用量">Token 用量</span></span><span class="mock-stat-value">8.2M</span></div>
+            <div class="mock-stat-row"><span class="mock-stat-label"><span data-i18n="缓存命中">缓存命中</span></span><span class="mock-stat-value" style="color:#10b981;">34.2%</span></div>
+            <div class="mock-stat-row"><span class="mock-stat-label"><span data-i18n="本月成本">本月成本</span></span><span class="mock-stat-value">¥28.50</span></div>
           </div>
         </div>
         <div class="highlight-text">
-          <h3>灵活计费</h3>
-          <p>按 Token 计费，支持模型倍率和完成倍率自定义。兑换码系统、余额告警、可退款余额，满足团队内部结算和对外运营需求。</p>
+          <h3><span data-i18n="灵活计费">灵活计费</span></h3>
+          <p><span data-i18n="按 Token 计费，支持模型倍率和完成倍率自定义。兑换码系统、余额告警、可退款余额，满足团队内部结算和对外运营需求。">按 Token 计费，支持模型倍率和完成倍率自定义。兑换码系统、余额告警、可退款余额，满足团队内部结算和对外运营需求。</span></p>
         </div>
       </div>
 
@@ -672,33 +677,33 @@
         <div class="highlight-visual">
           <div class="highlight-visual-bar">
             <div class="console-dot red"></div><div class="console-dot yellow"></div><div class="console-dot green"></div>
-            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;">密钥隔离</span>
+            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;"><span data-i18n="密钥隔离">密钥隔离</span></span>
           </div>
           <div class="highlight-visual-content">
             <div style="display:flex;flex-direction:column;gap:10px;">
               <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--secondary);border:1px solid var(--border);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                <span style="font-size:12px;font-weight:500;">你的团队成员</span>
-                <span style="font-size:11px;color:var(--muted-foreground);margin-left:auto;">仅获使用权</span>
+                <span style="font-size:12px;font-weight:500;"><span data-i18n="你的团队成员">你的团队成员</span></span>
+                <span style="font-size:11px;color:var(--muted-foreground);margin-left:auto;"><span data-i18n="仅获使用权">仅获使用权</span></span>
               </div>
               <div style="display:flex;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
               <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <span style="font-size:12px;font-weight:500;">CrewRouter 网关</span>
-                <span style="font-size:11px;color:var(--muted-foreground);margin-left:auto;">密钥在此隔离</span>
+                <span style="font-size:12px;font-weight:500;"><span data-i18n="CrewRouter 网关">CrewRouter 网关</span></span>
+                <span style="font-size:11px;color:var(--muted-foreground);margin-left:auto;"><span data-i18n="密钥在此隔离">密钥在此隔离</span></span>
               </div>
               <div style="display:flex;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
               <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--secondary);border:1px solid var(--border);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--destructive)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                <span style="font-size:12px;font-weight:500;">供应商 API Key</span>
-                <span style="font-size:11px;color:var(--destructive);margin-left:auto;">不可见</span>
+                <span style="font-size:12px;font-weight:500;"><span data-i18n="供应商 API Key">供应商 API Key</span></span>
+                <span style="font-size:11px;color:var(--destructive);margin-left:auto;"><span data-i18n="不可见">不可见</span></span>
               </div>
             </div>
           </div>
         </div>
         <div class="highlight-text">
-          <h3>密钥隔离与安全</h3>
-          <p>供应商的 API Key、地址等敏感信息完全隔离在网关层，本地编程工具（如 Claude Code）和团队成员均无法获取。团队成员仅有模型使用权，没有密钥所有权——可以按规定畅快使用，但无法导出或查看密钥。管理员随时可以撤销使用权，一切掌控在您手中。</p>
+          <h3><span data-i18n="密钥隔离与安全">密钥隔离与安全</span></h3>
+          <p><span data-i18n="供应商的 API Key、地址等敏感信息完全隔离在网关层，本地编程工具（如 Claude Code）和团队成员均无法获取。团队成员仅有模型使用权，没有密钥所有权——可以按规定畅快使用，但无法导出或查看密钥。管理员随时可以撤销使用权，一切掌控在您手中。">供应商的 API Key、地址等敏感信息完全隔离在网关层，本地编程工具（如 Claude Code）和团队成员均无法获取。团队成员仅有模型使用权，没有密钥所有权——可以按规定畅快使用，但无法导出或查看密钥。管理员随时可以撤销使用权，一切掌控在您手中。</span></p>
         </div>
       </div>
     </div>
@@ -706,13 +711,13 @@
 
   <!-- CTA -->
   <section class="cta-section">
-    <h2 class="reveal">立即体验 CrewRouter</h2>
-    <p class="reveal">无需注册，直接进入演示控制台感受完整功能</p>
+    <h2 class="reveal"><span data-i18n="立即体验 CrewRouter">立即体验 CrewRouter</span></h2>
+    <p class="reveal"><span data-i18n="无需注册，直接进入演示控制台感受完整功能">无需注册，直接进入演示控制台感受完整功能</span></p>
     <div class="reveal">
       <a href="/console" class="btn-primary">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span data-i18n="进入演示控制台">
         进入演示控制台
-      </a>
+      </span></a>
     </div>
   </section>
 
@@ -720,7 +725,7 @@
   <footer class="showcase-footer">
     <span>© 2025 CrewRouter. All rights reserved.</span>
     <div class="footer-links">
-      <a href="/console#docs">文档</a>
+      <a href="/console#docs"><span data-i18n="文档">文档</span></a>
       <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
     </div>
   </footer>
@@ -781,5 +786,20 @@
       } catch(e) {}
     })();
   </script>
+<script>
+  // Page-level i18n: apply catalog to static DOM once ready.
+  (function () {
+    function apply() { if (window.I18N) I18N.applyDom(); }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', apply);
+    } else { apply(); }
+    document.addEventListener('i18n:ready', apply);
+    var el = document.getElementById('langToggle');
+    if (el && window.I18N) {
+      el.value = I18N.current();
+      el.addEventListener('change', function () { I18N.load(el.value); });
+    }
+  })();
+</script>
 </body>
 </html>

@@ -16,7 +16,9 @@
       if (key == null || key === '') return key;
       var cat = this.catalog || Object.create(null);
       var out = cat[key];
-      if (out == null || out === '') out = key;
+      // '' (explicitly set) renders nothing — used for measure-word fragments;
+      // only a MISSING key falls back to the Chinese source.
+      if (out == null) out = key;
       if (vars && typeof out === 'string') {
         out = out.replace(/\{(\w+)\}/g, function (_, k) {
           return vars[k] != null ? String(vars[k]) : '{' + k + '}';

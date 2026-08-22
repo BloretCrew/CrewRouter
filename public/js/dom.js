@@ -49,7 +49,7 @@
     if (value instanceof SafeHTML) return value.html;
     if (Array.isArray(value)) return value.map(serializeValue).join('');
     if (value instanceof Node) {
-      console.warn('[dom] html`...` 中插入了 DOM Node，已忽略。请改用 el()/append');
+      console.warn(t('[dom] html`...` 中插入了 DOM Node，已忽略。请改用 el()/append'));
       return '';
     }
     return escapeHtml(value);
@@ -173,7 +173,7 @@
   function loadingSpinnerHtml(size) {
     const s = size === 'sm' || size === 'md' || size === 'lg' ? size : '';
     const cls = s ? `loading-spinner ${s}` : 'loading-spinner';
-    return `<div class="${cls}" role="status" aria-label="加载中"></div>`;
+    return `<div class="${cls}" role="status" aria-label="${t('加载中')}"></div>`;
   }
 
   /**
@@ -184,7 +184,7 @@
    */
   function pageLoadingHtml(text, options) {
     const opts = options || {};
-    const label = text == null || text === '' ? '加载中...' : String(text);
+    const label = text == null || text === '' ? t('加载中...') : String(text);
     const size = opts.size || '';
     const compact = !!opts.compact;
     const minHeight = opts.minHeight || (compact ? '100px' : '180px');
@@ -228,7 +228,7 @@
     }
     node.disabled = true;
     node.classList.add('is-loading');
-    setHTML(node, inlineLoadingHtml(text == null ? '处理中...' : String(text), 'sm'));
+    setHTML(node, inlineLoadingHtml(text == null ? t('处理中...') : String(text), 'sm'));
     return node;
   }
 

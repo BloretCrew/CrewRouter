@@ -162,7 +162,7 @@ class AdminApp {
     }
     // 后台静默检查更新（不打扰；有更新时顶栏提示）
     this.checkUpdateBanner().catch((err) => {
-      console.warn('[Update] 启动时检查更新失败:', err);
+      console.warn(t('[Update] 启动时检查更新失败:'), err);
     });
   }
 
@@ -239,7 +239,7 @@ class AdminApp {
         window.location.href = '/';
       }
     } catch (error) {
-      console.error('加载用户信息失败:', error);
+      console.error(t('加载用户信息失败:'), error);
       window.location.href = '/';
     }
   }
@@ -380,12 +380,12 @@ class AdminApp {
         const val = modelListInput.value.trim();
         if (!val) return;
         if (val === 'fusion') {
-          alert('fusion 是固定模型，无需添加');
+          alert(t('fusion 是固定模型，无需添加'));
           return;
         }
         if (!this._modelList) this._modelList = [];
         if (this._modelList.includes(val)) {
-          alert('该模型 ID 已存在');
+          alert(t('该模型 ID 已存在'));
           return;
         }
         this._modelList.push(val);
@@ -488,15 +488,15 @@ class AdminApp {
 
     // 更新页面标题
     const titles = {
-      'adminUsers': '用户管理',
-      'adminModels': '模型管理',
-      'adminProviders': '供应商管理',
-      'adminStats': '统计信息',
-      'adminErrorLogs': '调用错误',
-      'adminSettings': '系统设置',
-      'adminTeams': 'Team 管理',
-      'adminUserGroups': '用户组管理',
-      'adminAuditLogs': '操作日志'
+      'adminUsers': t('用户管理'),
+      'adminModels': t('模型管理'),
+      'adminProviders': t('供应商管理'),
+      'adminStats': t('统计信息'),
+      'adminErrorLogs': t('调用错误'),
+      'adminSettings': t('系统设置'),
+      'adminTeams': t('Team 管理'),
+      'adminUserGroups': t('用户组管理'),
+      'adminAuditLogs': t('操作日志')
     };
     const pageTitleEl = document.getElementById('pageTitle');
     if (pageTitleEl) pageTitleEl.textContent = titles[page] || page;
@@ -645,7 +645,7 @@ class AdminApp {
 
   async loadUsers() {
     const listEl = document.getElementById('usersList');
-    if (listEl && !(this._usersData || []).length) setHTML(listEl, pageLoadingHtml('加载用户...'));
+    if (listEl && !(this._usersData || []).length) setHTML(listEl, pageLoadingHtml(t('加载用户...')));
     try {
       const q = (document.getElementById('userSearchInput')?.value || '').trim();
       const params = new URLSearchParams({
@@ -657,7 +657,7 @@ class AdminApp {
       const response = await fetch(`/api/admin/users?${params}`);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || '加载失败');
+        throw new Error(err.error || t('加载失败'));
       }
       const raw = await response.json();
       const { items, total, stats } = this._normalizeListResponse(raw);
@@ -714,8 +714,8 @@ class AdminApp {
 
       this._renderUsersTable();
     } catch (error) {
-      console.error('加载用户列表失败:', error);
-      setHTML(document.getElementById('usersList'), `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || '加载用户列表失败')}</p>`);
+      console.error(t('加载用户列表失败:'), error);
+      setHTML(document.getElementById('usersList'), `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载用户列表失败'))}</p>`);
     }
   }
 
@@ -727,7 +727,7 @@ class AdminApp {
     if (this.userPage >= totalPages) this.userPage = Math.max(0, totalPages - 1);
 
     if (users.length === 0) {
-      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">未找到匹配的用户</p>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('未找到匹配的用户') + '</p>');
       return;
     }
     setHTML(container, `
@@ -749,13 +749,13 @@ class AdminApp {
             <tr>
               <td><strong>${escapeHtml(user.username)}</strong></td>
               <td style="color:var(--muted-foreground);font-size:12px;">${escapeHtml(user.email) || '-'}</td>
-              <td>${user.email_verified ? '<span style="color:#16a34a;font-size:12px;">✓ 已验证</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">✗ 未验证</span>'}</td>
+              <td>${user.email_verified ? '<span style="color:#16a34a;font-size:12px;">' + t('✓ 已验证') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('✗ 未验证') + '</span>'}</td>
               <td style="font-variant-numeric:tabular-nums;">${parseFloat(user.balance || 0).toFixed(0)}</td>
-              <td>${user.is_admin ? '<span style="background:rgba(139,92,246,0.1);color:#8b5cf6;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;">管理员</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">普通用户</span>'}</td>
+              <td>${user.is_admin ? '<span style="background:rgba(139,92,246,0.1);color:#8b5cf6;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;">' + t('管理员') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('普通用户') + '</span>'}</td>
               <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
               <td style="color:var(--muted-foreground);font-size:12px;">${new Date(user.created_at).toLocaleDateString('zh-CN')}</td>
               <td>
-                <button class="btn btn-icon" title="编辑" onclick="adminApp.editUserById(${user.id})">
+                <button class="btn btn-icon" title=t('编辑') onclick="adminApp.editUserById(${user.id})">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -785,7 +785,7 @@ class AdminApp {
 
   editUserById(userId) {
     const user = (this._usersData || []).find(u => u.id === userId);
-    if (!user) { alert('用户不存在，请刷新后重试'); return; }
+    if (!user) { alert(t('用户不存在，请刷新后重试')); return; }
     this.editUser(user);
   }
 
@@ -812,10 +812,10 @@ class AdminApp {
       if (!response.ok) return;
       const groups = await response.json();
       const select = document.getElementById('editUserGroup');
-      setHTML(select, '<option value="">无用户组</option>' +
+      setHTML(select, '<option value="">' + t('无用户组') + '</option>' +
         groups.map(g => `<option value="${g.id}" ${g.id === selectedGroupId ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join(''));
     } catch (error) {
-      console.error('加载用户组列表失败:', error);
+      console.error(t('加载用户组列表失败:'), error);
     }
   }
 
@@ -823,17 +823,17 @@ class AdminApp {
     const container = document.getElementById('editUserCodeBalances');
     try {
       const response = await fetch(`/api/admin/users/${userId}/code-balances`);
-      if (!response.ok) throw new Error('加载失败');
+      if (!response.ok) throw new Error(t('加载失败'));
       const balances = await response.json();
       
       if (balances.length === 0) {
-        setHTML(container, '<span style="color:var(--muted-foreground)">无可退款余额</span>');
+        setHTML(container, '<span style="color:var(--muted-foreground)">' + t('无可退款余额') + '</span>');
         return;
       }
       
       setHTML(container, balances.map(b => {
         const feePercent = (parseFloat(b.fee_rate) * 100).toFixed(0);
-        const feeLabel = parseFloat(b.fee_rate) > 0 ? ` (费率${feePercent}%)` : '';
+        const feeLabel = parseFloat(b.fee_rate) > 0 ? `${t('(费率')}${feePercent}%)` : '';
         const netAmount = parseFloat(b.net_amount || 0).toFixed(2);
         return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
           <span><code style="font-size:11px;">${b.code}</code>${feeLabel}</span>
@@ -841,7 +841,7 @@ class AdminApp {
         </div>`;
       }).join(''));
     } catch (error) {
-      setHTML(container, '<span style="color:var(--destructive)">加载失败</span>');
+      setHTML(container, '<span style="color:var(--destructive)">' + t('加载失败') + '</span>');
     }
   }
 
@@ -850,11 +850,11 @@ class AdminApp {
     const refundAmount = parseFloat(document.getElementById('editUserRefundAmount').value);
     
     if (isNaN(refundAmount) || refundAmount <= 0) {
-      alert('请输入有效的退款金额');
+      alert(t('请输入有效的退款金额'));
       return;
     }
     
-    if (!await confirm(`确认为该用户退款 ¥${refundAmount.toFixed(2)}？系统将按手续费从高到低扣除。`)) {
+    if (!await confirm(`${t('确认为该用户退款 ¥')}${refundAmount.toFixed(2)}${t('？系统将按手续费从高到低扣除。')}`)) {
       return;
     }
     
@@ -868,17 +868,17 @@ class AdminApp {
       const result = await response.json();
       
       if (response.ok && result.success) {
-        alert(`退款成功！实际扣除 ¥${result.deductions.reduce((s, d) => s + d.deducted, 0).toFixed(2)}，新可退款余额 ¥${result.newRefundBalance.toFixed(2)}`);
+        alert(`${t('退款成功！实际扣除 ¥')}${result.deductions.reduce((s, d) => s + d.deducted, 0).toFixed(2)}${t('，新可退款余额 ¥')}${result.newRefundBalance.toFixed(2)}`);
         document.getElementById('editUserRefundAmount').value = '';
         document.getElementById('refundPreview').textContent = '';
         this.loadUserCodeBalances(userId);
         this.loadUsers();
       } else {
-        alert(result.error || '退款失败');
+        alert(result.error || t('退款失败'));
       }
     } catch (error) {
-      console.error('退款失败:', error);
-      alert('退款失败');
+      console.error(t('退款失败:'), error);
+      alert(t('退款失败'));
     }
   }
 
@@ -906,11 +906,11 @@ class AdminApp {
         this.loadUsers();
       } else {
         const result = await response.json().catch(() => ({}));
-        alert(result.error || '保存失败');
+        alert(result.error || t('保存失败'));
       }
     } catch (error) {
-      console.error('保存用户失败:', error);
-      alert('保存失败');
+      console.error(t('保存用户失败:'), error);
+      alert(t('保存失败'));
     }
   }
 
@@ -1008,7 +1008,7 @@ class AdminApp {
   _adminModelProviderLabel(m) {
     return (m.provider_name && String(m.provider_name).trim())
       || (m.provider && !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(m.provider) ? m.provider : '')
-      || '未知供应商';
+      || t('未知供应商');
   }
 
   _adminModelDisplayName(m) {
@@ -1016,7 +1016,7 @@ class AdminApp {
       || (m.name && String(m.name).trim())
       || (m.alias && String(m.alias).trim())
       || m.id
-      || '未命名模型';
+      || t('未命名模型');
   }
 
   _groupAdminModelsByProvider(models) {
@@ -1101,7 +1101,7 @@ class AdminApp {
   async loadModels(options = {}) {
     try {
       const modelsListEl = document.getElementById('adminModelsList');
-      if (modelsListEl) setHTML(modelsListEl, pageLoadingHtml('加载模型...'));
+      if (modelsListEl) setHTML(modelsListEl, pageLoadingHtml(t('加载模型...')));
       const resetPage = options.resetPage === true;
       if (resetPage) this.modelPage = 0;
       if (options.clearSelection) this.selectedModels.clear();
@@ -1125,7 +1125,7 @@ class AdminApp {
       const response = await fetch(`/api/admin/models?${params}`);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || '加载失败');
+        throw new Error(err.error || t('加载失败'));
       }
       const raw = await response.json();
       const { total, stats, providers, series } = this._normalizeListResponse(raw);
@@ -1228,8 +1228,8 @@ class AdminApp {
         this.loadAdminProviderModels(key, 1, { force: true }).catch(() => {});
       }
     } catch (error) {
-      console.error('加载模型列表失败:', error);
-      setHTML(document.getElementById('adminModelsList'), `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || '加载模型列表失败')}</p>`);
+      console.error(t('加载模型列表失败:'), error);
+      setHTML(document.getElementById('adminModelsList'), `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载模型列表失败'))}</p>`);
     }
   }
 
@@ -1267,7 +1267,7 @@ class AdminApp {
     });
     const providers = Object.keys(providerMap).sort((a, b) => (providerMap[a] || '').localeCompare(providerMap[b] || '', 'zh-CN'));
     const currentValue = selects[0].value;
-    const optionsHtml = '<option value="">全部供应商</option>' + providers.map(p =>
+    const optionsHtml = '<option value="">' + t('全部供应商') + '</option>' + providers.map(p =>
       `<option value="${escapeHtml(p)}">${escapeHtml(providerMap[p])}</option>`
     ).join('');
 
@@ -1292,7 +1292,7 @@ class AdminApp {
     } else {
       series = [...series].sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
     }
-    const optionsHtml = '<option value="">全部系列</option>' + series.map(s =>
+    const optionsHtml = '<option value="">' + t('全部系列') + '</option>' + series.map(s =>
       `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`
     ).join('');
     selects.forEach(select => {
@@ -1434,7 +1434,7 @@ class AdminApp {
     );
     const open = !!this._adminModelsStickyMoreOpen;
     btn.classList.toggle('library-more-filters-active', open || hasAdvanced);
-    btn.textContent = open ? '收起筛选' : '更多筛选';
+    btn.textContent = open ? t('收起筛选') : t('更多筛选');
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
@@ -1453,7 +1453,7 @@ class AdminApp {
       const tpsText = model.test_tokens_per_second ? ` · ${model.test_tokens_per_second} t/s` : '';
       testBadgeHtml = `<span class="model-test-badge pass" title="${escapeHtml(this._formatTestTooltip(model.test_tested_at))}">${model.test_latency_ms}ms${tpsText}</span>`;
     } else if (model.test_ok === false) {
-      testBadgeHtml = `<span class="model-test-badge fail" title="${escapeHtml((model.test_error || '失败') + ' · ' + this._formatTestTooltip(model.test_tested_at))}">失败</span>`;
+      testBadgeHtml = `<span class="model-test-badge fail" title="${escapeHtml((model.test_error || t('失败')) + ' · ' + this._formatTestTooltip(model.test_tested_at))}">${t('失败')}</span>`;
     }
 
     return `
@@ -1473,9 +1473,9 @@ class AdminApp {
             <div class="model-item-badges">
               ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
               ${isDisabled
-                ? '<span class="model-item-badge" style="background:rgba(239,68,68,0.1);color:var(--destructive);">已禁用</span>'
-                : '<span class="model-item-badge" style="background:rgba(16,185,129,0.1);color:#10b981;">启用</span>'}
-              ${selected ? '<span class="model-item-badge owner">已选</span>' : ''}
+                ? '<span class="model-item-badge" style="background:rgba(239,68,68,0.1);color:var(--destructive);">' + t('已禁用') + '</span>'
+                : '<span class="model-item-badge" style="background:rgba(16,185,129,0.1);color:#10b981;">' + t('启用') + '</span>'}
+              ${selected ? '<span class="model-item-badge owner">' + t('已选') + '</span>' : ''}
             </div>
           </div>
           ${model.alias && model.alias !== displayName ? `<div class="model-library-item-desc">${escapeHtml(model.alias)}</div>` : ''}
@@ -1502,7 +1502,7 @@ class AdminApp {
           ${this._renderModelUptimeSlot(modelId, displayName)}
         </div>
         <div class="model-library-item-actions" style="margin-left:0;margin-top:10px;justify-content:flex-end;">
-          <button type="button" class="btn btn-sm btn-secondary model-test-btn" title="测试"
+          <button type="button" class="btn btn-sm btn-secondary model-test-btn" title=t('测试')
             data-admin-model-action="test" data-model-id="${idAttr}">测试</button>
           <button type="button" class="btn btn-sm btn-secondary"
             data-admin-model-action="edit" data-model-id="${idAttr}">编辑</button>
@@ -1552,7 +1552,7 @@ class AdminApp {
     const nameAttr = escapeHtml(modelName || modelId || '');
     const n = this._uptimeSlotCount || 96;
     // 名称可能含引号/中文特殊字符：只写 data-*，点击时从元素读取，避免 inline JS 语法错误
-    return `<div class="model-uptime" data-uptime-model="${idAttr}" data-uptime-name="${nameAttr}" title="加载调用状态..." role="button" tabindex="0">
+    return `<div class="model-uptime" data-uptime-model="${idAttr}" data-uptime-name="${nameAttr}" title=t('加载调用状态...') role="button" tabindex="0">
       <div class="model-uptime-spark">${Array(n).fill('<span class="model-uptime-bar none"></span>').join('')}</div>
       <span class="model-uptime-pct">—</span>
     </div>`;
@@ -1575,7 +1575,7 @@ class AdminApp {
     const checkSvg = label === 'No data'
       ? ''
       : `<span class="model-uptime-check ${checkClass}" title="${escapeHtml(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
-    return `<div class="model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title="近 24 小时调用可用率（每 15 分钟）· 点击查看详情" role="button" tabindex="0">
+    return `<div class="model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title=t('近 24 小时调用可用率（每 15 分钟）· 点击查看详情') role="button" tabindex="0">
       <div class="model-uptime-spark">${barHtml}</div>
       <span class="model-uptime-pct">${escapeHtml(pct)}</span>
       ${checkSvg}
@@ -1614,7 +1614,7 @@ class AdminApp {
         }
         this._uptimeCacheFetchedAt = Date.now();
       } catch (e) {
-        console.warn('[uptime] 批量加载失败', e);
+        console.warn(t('[uptime] 批量加载失败'), e);
       }
     }
     this._applyUptimeCacheToDom(ids);
@@ -1641,12 +1641,12 @@ class AdminApp {
     const title = document.getElementById('modelUptimeModalTitle');
     const body = document.getElementById('modelUptimeModalBody');
     if (!body || !modal) return;
-    if (title) title.textContent = `${modelName || modelId} · 调用状态（近 24 小时）`;
-    setHTML(body, pageLoadingHtml('加载中...', { compact: true }));
+    if (title) title.textContent = `${modelName || modelId}${t('· 调用状态（近 24 小时）')}`;
+    setHTML(body, pageLoadingHtml(t('加载中...'), { compact: true }));
     modal.style.display = 'flex';
     try {
       const res = await fetch(`/api/admin/models/${encodeURIComponent(modelId)}/uptime?days=${this._uptimeDays}`);
-      if (!res.ok) throw new Error('加载失败');
+      if (!res.ok) throw new Error(t('加载失败'));
       const data = await res.json();
       if (!this._uptimeCache) this._uptimeCache = {};
       this._uptimeCache[modelId] = {
@@ -1660,7 +1660,7 @@ class AdminApp {
       this._applyUptimeCacheToDom([modelId]);
       setHTML(body, this._renderModelUptimeDetailHtml(data, modelName || modelId));
     } catch (e) {
-      setHTML(body, `<div class="empty-state"><p style="color:var(--destructive);">加载失败：${escapeHtml(e.message || e)}</p></div>`);
+      setHTML(body, `${'<div class="empty-state"><p style="color:var(--destructive);">' + t('加载失败：')}${escapeHtml(e.message || e)}</p></div>`);
     }
   }
 
@@ -1670,7 +1670,7 @@ class AdminApp {
     const timeMode = this._isUptimeTimeGranularity(granularity, days.length);
     const bars = days.map(d => {
       const label = this._formatUptimeSlotLabel(d.date, granularity);
-      const tip = `${label} · 成功 ${d.success || 0} / 失败 ${d.fail || 0}`;
+      const tip = `${label}${t('· 成功')}${d.success || 0}${t('/ 失败')}${d.fail || 0}`;
       return `<span class="model-uptime-bar ${escapeHtml(d.status || 'none')}" title="${escapeHtml(tip)}"></span>`;
     }).join('');
     const pct = data.uptime_pct == null ? '—' : `${Number(data.uptime_pct).toFixed(2)}% uptime`;
@@ -1682,14 +1682,14 @@ class AdminApp {
     const check = label === 'No data'
       ? ''
       : `<span class="model-uptime-check ${checkClass}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
-    const rangeLeft = timeMode ? '24 小时前' : '开始';
-    const rangeRight = timeMode ? '现在' : '今天';
+    const rangeLeft = timeMode ? t('24 小时前') : t('开始');
+    const rangeRight = timeMode ? t('现在') : t('今天');
     return `
       <div class="model-uptime-detail">
         <div class="model-uptime-detail-header">
           <div class="model-uptime-detail-title">
-            <span>${escapeHtml(modelName || data.model_id || '模型')}</span>
-            <span class="model-uptime-detail-help" title="基于近 24 小时真实代理调用成功/失败统计（每 15 分钟聚合）。鉴权失败、本端限流与参数错误不计入。数据约每 15 分钟刷新。">?</span>
+            <span>${escapeHtml(modelName || data.model_id || t('模型'))}</span>
+            <span class="model-uptime-detail-help" title=t('基于近 24 小时真实代理调用成功/失败统计（每 15 分钟聚合）。鉴权失败、本端限流与参数错误不计入。数据约每 15 分钟刷新。')>?</span>
           </div>
           ${check}
         </div>
@@ -1699,7 +1699,7 @@ class AdminApp {
           <span class="uptime-center">${escapeHtml(pct)}</span>
           <span>${rangeRight}</span>
         </div>
-        <div class="model-uptime-detail-label">${escapeHtml(label === 'No data' ? '暂无调用数据' : label)}</div>
+        <div class="model-uptime-detail-label">${escapeHtml(label === 'No data' ? t('暂无调用数据') : label)}</div>
         <div class="model-uptime-detail-legend">
           <span><i class="ok"></i>正常 (&lt;1% 失败)</span>
           <span><i class="degraded"></i>降级 (1–5%)</span>
@@ -1720,8 +1720,8 @@ class AdminApp {
     if (countEl) {
       const providerN = shell.length;
       countEl.textContent = this.modelsTotal === 0
-        ? '共 0 个模型'
-        : `共 ${this.modelsTotal} 个模型 · ${providerN} 个供应商（展开后加载）`;
+        ? t('共 0 个模型')
+        : `${t('共')}${this.modelsTotal}${t('个模型 ·')}${providerN}${t('个供应商（展开后加载）')}`;
     }
     const stickyCount = document.getElementById('adminModelsStickyCount');
     if (stickyCount) stickyCount.textContent = countEl?.textContent || '';
@@ -1764,13 +1764,13 @@ class AdminApp {
             const loading = this._adminProviderLoading?.has(key);
             let listHtml;
             if (collapsed) {
-              listHtml = `<div class="model-library-placeholder"><span class="placeholder-text">点击展开以加载模型</span></div>`;
+              listHtml = `<div class="model-library-placeholder"><span class="placeholder-text">${t('点击展开以加载模型')}</span></div>`;
             } else if (loading && !cacheOk) {
-              listHtml = `<div class="model-library-placeholder">${inlineLoadingHtml('正在加载模型...', 'sm')}</div>`;
+              listHtml = `<div class="model-library-placeholder">${inlineLoadingHtml(t('正在加载模型...'), 'sm')}</div>`;
             } else if (cacheOk) {
               listHtml = this._renderAdminProviderModelsListHtml(key, cache);
             } else {
-              listHtml = `<div class="model-library-placeholder"><span class="placeholder-text">点击展开以加载模型</span></div>`;
+              listHtml = `<div class="model-library-placeholder"><span class="placeholder-text">${t('点击展开以加载模型')}</span></div>`;
             }
 
             return `
@@ -1780,7 +1780,7 @@ class AdminApp {
                   <div class="model-library-provider-title">
                     <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                     <span class="provider-name">${escapeHtml(p.name || key)}</span>
-                    ${selectedCount > 0 ? `<span class="model-item-badge owner">已选 ${selectedCount}</span>` : ''}
+                    ${selectedCount > 0 ? `${'<span class="model-item-badge owner">' + t('已选')}${selectedCount}</span>` : ''}
                   </div>
                   <div class="model-library-provider-actions">
                     <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400;cursor:pointer;color:var(--muted-foreground);">
@@ -1790,9 +1790,9 @@ class AdminApp {
                       全选本页
                     </label>
                     <button type="button" class="btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;"
-                      title="测试此供应商下当前筛选模型"
+                      title=t('测试此供应商下当前筛选模型')
                       data-admin-model-action="test-provider" data-provider-key="${keyAttr}">测试</button>
-                    <span class="provider-model-count">${totalCount} 个模型${enabledCount != null && enabledCount !== totalCount ? ` · ${enabledCount} 启用` : ''}</span>
+                    <span class="provider-model-count">${totalCount} 个模型${enabledCount != null && enabledCount !== totalCount ? ` · ${enabledCount}${t('启用')}` : ''}</span>
                   </div>
                 </div>
                 <div class="model-library-list" data-admin-provider-list="${keyAttr}">
@@ -1818,7 +1818,7 @@ class AdminApp {
   _renderAdminProviderModelsListHtml(providerKey, cache) {
     const models = cache?.models || [];
     if (!models.length) {
-      return `<div class="model-library-placeholder"><span class="placeholder-text">${this._hasActiveAdminModelFilters() ? '没有符合筛选条件的模型' : '该供应商下暂无模型'}</span></div>`;
+      return `<div class="model-library-placeholder"><span class="placeholder-text">${this._hasActiveAdminModelFilters() ? t('没有符合筛选条件的模型') : t('该供应商下暂无模型')}</span></div>`;
     }
     return models.map(m => this._renderAdminModelLibraryItem(m)).join('')
       + this._renderAdminProviderPagination(providerKey, cache);
@@ -1889,7 +1889,7 @@ class AdminApp {
     this._adminProviderLoading.add(key);
     const listEl = document.querySelector(`#adminModelsList [data-admin-provider-list="${CSS.escape(key)}"]`)
       || document.querySelector(`#adminModelsList .model-library-provider[data-admin-provider-key="${CSS.escape(key)}"] .model-library-list`);
-    if (listEl) setHTML(listEl, `<div class="model-library-placeholder">${inlineLoadingHtml('正在加载模型...', 'sm')}</div>`);
+    if (listEl) setHTML(listEl, `<div class="model-library-placeholder">${inlineLoadingHtml(t('正在加载模型...'), 'sm')}</div>`);
 
     try {
       const params = this._buildAdminModelsFilterParams({
@@ -1900,7 +1900,7 @@ class AdminApp {
       const res = await fetch(`/api/admin/models?${params}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `加载失败 (${res.status})`);
+        throw new Error(err.error || `${t('加载失败 (')}${res.status})`);
       }
       const data = await res.json();
       const items = data.items || data.logs || (Array.isArray(data) ? data : []);
@@ -1920,9 +1920,9 @@ class AdminApp {
       this._paintAdminProviderList(key);
       this._loadModelUptimeForIds(items.map(m => m.id));
     } catch (e) {
-      console.error('[模型管理] 加载供应商模型失败:', key, e);
+      console.error(t('[模型管理] 加载供应商模型失败:'), key, e);
       if (listEl) {
-        setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">加载失败，<a href="#" data-admin-model-action="retry-provider" data-provider-key="${escapeHtml(key)}" data-page="${pageNum}">重试</a></span></div>`);
+        setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">加载失败，<a href="#" data-admin-model-action="retry-provider" data-provider-key="${escapeHtml(key)}" data-page="${pageNum}">${t('重试')}</a></span></div>`);
       }
     } finally {
       this._adminProviderLoading.delete(key);
@@ -1939,7 +1939,7 @@ class AdminApp {
     const queryKey = this._getAdminModelsQueryKey();
     if (!listEl) return;
     if (!cache || cache.queryKey !== queryKey) {
-      setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text">点击展开以加载模型</span></div>`);
+      setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text">${t('点击展开以加载模型')}</span></div>`);
       return;
     }
     setHTML(listEl, this._renderAdminProviderModelsListHtml(key, cache));
@@ -1950,7 +1950,7 @@ class AdminApp {
       const shell = (this._adminProvidersShell || []).find(p => String(p.id) === key);
       const total = cache.total ?? shell?.model_count ?? cache.models.length;
       const enabled = shell?.enabled_count;
-      countEl.textContent = `${total} 个模型${enabled != null && enabled !== total ? ` · ${enabled} 启用` : ''}`;
+      countEl.textContent = `${total}${t('个模型')}${enabled != null && enabled !== total ? ` · ${enabled} ${t('启用')}` : ''}`;
     }
     const models = cache.models || [];
     const selectedCount = models.filter(m => this.selectedModels.has(m.id)).length;
@@ -1963,8 +1963,8 @@ class AdminApp {
     if (title) {
       let badge = title.querySelector('.model-item-badge.owner');
       if (selectedCount > 0) {
-        if (!badge) title.insertAdjacentHTML('beforeend', `<span class="model-item-badge owner">已选 ${selectedCount}</span>`);
-        else badge.textContent = `已选 ${selectedCount}`;
+        if (!badge) title.insertAdjacentHTML('beforeend', `${'<span class="model-item-badge owner">' + t('已选')}${selectedCount}</span>`);
+        else badge.textContent = `${t('已选')}${selectedCount}`;
       } else if (badge) badge.remove();
     }
   }
@@ -2015,7 +2015,7 @@ class AdminApp {
       if (badges) {
         const existing = badges.querySelector('.model-item-badge.owner');
         if (selected && !existing) {
-          badges.insertAdjacentHTML('beforeend', '<span class="model-item-badge owner">已选</span>');
+          badges.insertAdjacentHTML('beforeend', '<span class="model-item-badge owner">' + t('已选') + '</span>');
         } else if (!selected && existing) {
           existing.remove();
         }
@@ -2052,9 +2052,9 @@ class AdminApp {
     const key = String(providerKey);
     // 拉取该供应商在当前筛选下的全部模型 ID（分页遍历）
     const ids = await this._fetchAllAdminProviderModelIds(key);
-    if (!ids.length) { alert('该供应商下暂无模型'); return; }
-    if (ids.length > 100 && !await confirm(`将测试 ${ids.length} 个模型，可能较久，是否继续？`)) return;
-    await this._runBatchTest(ids, `正在测试 ${ids.length} 个模型...`);
+    if (!ids.length) { alert(t('该供应商下暂无模型')); return; }
+    if (ids.length > 100 && !await confirm(`${t('将测试')}${ids.length}${t('个模型，可能较久，是否继续？')}`)) return;
+    await this._runBatchTest(ids, `${t('正在测试')}${ids.length}${t('个模型...')}`);
   }
 
   async _fetchAllAdminProviderModelIds(providerKey) {
@@ -2118,7 +2118,7 @@ class AdminApp {
 
   editModelById(modelId) {
     const model = this._findAdminModelById(modelId);
-    if (!model) { alert('模型不存在，请先展开所属供应商后再试'); return; }
+    if (!model) { alert(t('模型不存在，请先展开所属供应商后再试')); return; }
     this.editModel(model);
   }
 
@@ -2131,7 +2131,7 @@ class AdminApp {
     }
 
     if (list.length === 0) {
-      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">暂无匹配的模型</p>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无匹配的模型') + '</p>');
       return;
     }
 
@@ -2145,8 +2145,8 @@ class AdminApp {
       const multiplier = parseFloat(model.model_multiplier || 1.0);
       const rpm = parseInt(model.rate_limit_rpm) || 0;
       const tpm = parseInt(model.rate_limit_tpm) || 0;
-      const thinkingName = model.thinking_model_id ? (modelNameMap[model.thinking_model_id] || '(未知)') : null;
-      const nonThinkingName = model.non_thinking_model_id ? (modelNameMap[model.non_thinking_model_id] || '(未知)') : null;
+      const thinkingName = model.thinking_model_id ? (modelNameMap[model.thinking_model_id] || t('(未知)')) : null;
+      const nonThinkingName = model.non_thinking_model_id ? (modelNameMap[model.non_thinking_model_id] || t('(未知)')) : null;
 
       return `
         <div class="admin-card">
@@ -2155,15 +2155,15 @@ class AdminApp {
               <div class="admin-card-title" title="${escapeHtml(model.upstream_model_id || model.name || '')}">${escapeHtml(model.upstream_model_id || model.name || model.id)}</div>
               ${model.name && model.name !== model.upstream_model_id ? `<div class="admin-card-subtitle">${escapeHtml(model.name)}</div>` : ''}
             </div>
-            <span class="admin-card-badge ${model.enabled ? 'green' : 'red'}">${model.enabled ? '启用' : '禁用'}</span>
+            <span class="admin-card-badge ${model.enabled ? 'green' : 'red'}">${model.enabled ? t('启用') : t('禁用')}</span>
           </div>
           <div class="admin-card-body">
             <div class="admin-card-row">
               <span class="admin-card-row-label">供应商</span>
               <span class="admin-card-row-value">${escapeHtml(model.provider_name || model.provider || '-')}</span>
             </div>
-            ${model.alias ? `<div class="admin-card-row"><span class="admin-card-row-label">别名</span><span class="admin-card-row-value">${escapeHtml(model.alias)}</span></div>` : ''}
-            ${model.series ? `<div class="admin-card-row"><span class="admin-card-row-label">系列</span><span class="admin-card-row-value"><span class="series-badge">${escapeHtml(model.series)}</span></span></div>` : ''}
+            ${model.alias ? `${'<div class="admin-card-row"><span class="admin-card-row-label">' + t('别名')}</span><span class="admin-card-row-value">${escapeHtml(model.alias)}</span></div>` : ''}
+            ${model.series ? `${'<div class="admin-card-row"><span class="admin-card-row-label">' + t('系列')}</span><span class="admin-card-row-value"><span class="series-badge">${escapeHtml(model.series)}</span></span></div>` : ''}
             ${model.description ? `<div style="font-size:12px;color:var(--muted-foreground);margin-top:6px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${escapeHtml(model.description)}">${escapeHtml(model.description)}</div>` : ''}
             <div style="margin-top:8px;display:flex;gap:12px;">
               <div>
@@ -2181,9 +2181,9 @@ class AdminApp {
             </div>
             ${(thinkingName || nonThinkingName) ? `
               <div style="margin-top:6px;font-size:12px;color:var(--muted-foreground);">
-                ${thinkingName ? `<span title="${model.thinking_model_id}">思考: ${escapeHtml(thinkingName)}</span>` : ''}
+                ${thinkingName ? `<span title="${model.thinking_model_id}">${t('思考:')}${escapeHtml(thinkingName)}</span>` : ''}
                 ${thinkingName && nonThinkingName ? ' / ' : ''}
-                ${nonThinkingName ? `<span title="${model.non_thinking_model_id}">非思考: ${escapeHtml(nonThinkingName)}</span>` : ''}
+                ${nonThinkingName ? `<span title="${model.non_thinking_model_id}">${t('非思考:')}${escapeHtml(nonThinkingName)}</span>` : ''}
               </div>
             ` : ''}
             ${(rpm > 0 || tpm > 0) ? `
@@ -2197,7 +2197,7 @@ class AdminApp {
               </div>
             ` : model.test_ok === false ? `
               <div style="margin-top:4px;font-size:12px;">
-                <span class="model-test-indicator fail" title="${escapeHtml((model.test_error || '失败') + ' · ' + this._formatTestTooltip(model.test_tested_at))}">失败</span>
+                <span class="model-test-indicator fail" title="${escapeHtml((model.test_error || t('失败')) + ' · ' + this._formatTestTooltip(model.test_tested_at))}">失败</span>
               </div>
             ` : ''}
           </div>
@@ -2216,7 +2216,7 @@ class AdminApp {
   formatRateLimit(rpm, tpm) {
     rpm = parseInt(rpm) || 0;
     tpm = parseInt(tpm) || 0;
-    if (rpm === 0 && tpm === 0) return '<span style="color:var(--muted-foreground)">不限制</span>';
+    if (rpm === 0 && tpm === 0) return '<span style="color:var(--muted-foreground)">' + t('不限制') + '</span>';
     const parts = [];
     if (rpm > 0) parts.push(`${rpm} RPM`);
     if (tpm > 0) parts.push(`${tpm.toLocaleString()} TPM`);
@@ -2266,7 +2266,7 @@ class AdminApp {
   async batchDeleteModels() {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-    if (!await confirm(`确定要删除选中的 ${ids.length} 个模型吗？此操作不可撤销。`)) return;
+    if (!await confirm(`${t('确定要删除选中的')}${ids.length}${t('个模型吗？此操作不可撤销。')}`)) return;
 
     try {
       const response = await fetch('/api/admin/models/batch-delete', {
@@ -2279,22 +2279,22 @@ class AdminApp {
         this._invalidateAdminProviderModelsCache();
         this._notifyModelsCatalogChanged();
         await this.loadModels({ clearSelection: true });
-        this.showToast?.('已删除选中模型', 'success');
+        this.showToast?.(t('已删除选中模型'), 'success');
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.error || '批量删除失败');
+        alert(err.error || t('批量删除失败'));
       }
     } catch (error) {
-      console.error('批量删除模型失败:', error);
-      alert('批量删除失败');
+      console.error(t('批量删除模型失败:'), error);
+      alert(t('批量删除失败'));
     }
   }
 
   async batchUpdateModels(enabled) {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-    const action = enabled ? '启用' : '禁用';
-    if (!await confirm(`确定要${action}选中的 ${ids.length} 个模型吗？`)) return;
+    const action = enabled ? t('启用') : t('禁用');
+    if (!await confirm(`${t('确定要')}${action}${t('选中的')}${ids.length}${t('个模型吗？')}`)) return;
 
     try {
       const response = await fetch('/api/admin/models/batch-update', {
@@ -2306,14 +2306,14 @@ class AdminApp {
         this._invalidateAdminProviderModelsCache();
         this._notifyModelsCatalogChanged();
         await this.loadModels();
-        this.showToast?.(`已${action}选中模型`, 'success');
+        this.showToast?.(`${t('已')}${action}${t('选中模型')}`, 'success');
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.error || `批量${action}失败`);
+        alert(err.error || `${t('批量')}${action}${t('失败')}`);
       }
     } catch (error) {
-      console.error(`批量${action}模型失败:`, error);
-      alert(`批量${action}失败`);
+      console.error(`${t('批量')}${action}${t('模型失败:')}`, error);
+      alert(`${t('批量')}${action}${t('失败')}`);
     }
   }
 
@@ -2379,10 +2379,10 @@ class AdminApp {
         const extra = m.alias && m.alias !== m.name ? ` (${m.alias})` : '';
         return `<option value="${m.id}">${label}${extra}</option>`;
       }).join('');
-      setHTML(document.getElementById('modelThinkingModel'), '<option value="">不设置（使用自身）</option>' + options);
-      setHTML(document.getElementById('modelNonThinkingModel'), '<option value="">不设置（使用自身）</option>' + options);
+      setHTML(document.getElementById('modelThinkingModel'), '<option value="">' + t('不设置（使用自身）') + '</option>' + options);
+      setHTML(document.getElementById('modelNonThinkingModel'), '<option value="">' + t('不设置（使用自身）') + '</option>' + options);
     } catch (error) {
-      console.error('加载模型选项失败:', error);
+      console.error(t('加载模型选项失败:'), error);
     }
   }
 
@@ -2397,7 +2397,7 @@ class AdminApp {
         `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`
       ).join(''));
     } catch (error) {
-      console.error('加载供应商选项失败:', error);
+      console.error(t('加载供应商选项失败:'), error);
     }
   }
 
@@ -2438,7 +2438,7 @@ class AdminApp {
     const test_user_agent = document.getElementById('modelTestUserAgent')?.value || '';
 
     if (!upstream_model_id || !provider) {
-      alert('请填写上游模型ID和提供商');
+      alert(t('请填写上游模型ID和提供商'));
       return;
     }
 
@@ -2457,16 +2457,16 @@ class AdminApp {
         this._notifyModelsCatalogChanged();
         this.loadModels();
       } else {
-        alert('保存失败');
+        alert(t('保存失败'));
       }
     } catch (error) {
-      console.error('保存模型失败:', error);
-      alert('保存失败');
+      console.error(t('保存模型失败:'), error);
+      alert(t('保存失败'));
     }
   }
 
   async deleteModel(id) {
-    if (!await confirm('确定要删除此模型吗？')) return;
+    if (!await confirm(t('确定要删除此模型吗？'))) return;
 
     try {
       const response = await fetch(`/api/admin/models/${encodeURIComponent(id)}`, {
@@ -2478,14 +2478,14 @@ class AdminApp {
         this._invalidateAdminProviderModelsCache();
         this._notifyModelsCatalogChanged();
         await this.loadModels({ clearSelection: false });
-        this.showToast?.('模型已删除', 'success');
+        this.showToast?.(t('模型已删除'), 'success');
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.error || '删除失败');
+        alert(err.error || t('删除失败'));
       }
     } catch (error) {
-      console.error('删除模型失败:', error);
-      alert('删除失败');
+      console.error(t('删除模型失败:'), error);
+      alert(t('删除失败'));
     }
   }
 
@@ -2584,14 +2584,14 @@ class AdminApp {
         this.userProviderPage = 0;
       }
       const listEl = document.getElementById('adminProvidersList');
-      if (listEl) setHTML(listEl, pageLoadingHtml('加载供应商...'));
+      if (listEl) setHTML(listEl, pageLoadingHtml(t('加载供应商...')));
       await this.loadProviderTags();
 
       const params = this._buildProviderListParams();
       const response = await fetch(`/api/admin/providers?${params}`);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || '加载失败');
+        throw new Error(err.error || t('加载失败'));
       }
       const raw = await response.json();
       const { items, total, stats, serverPaged } = this._normalizeListResponse(raw);
@@ -2611,10 +2611,10 @@ class AdminApp {
 
       this.renderProviders();
     } catch (error) {
-      console.error('加载供应商列表失败:', error);
+      console.error(t('加载供应商列表失败:'), error);
       setHTML(document.getElementById('adminProvidersList'), `
         <div class="admin-empty-state">
-          <p style="color:var(--destructive);">${escapeHtml(error.message || '加载供应商列表失败')}</p>
+          <p style="color:var(--destructive);">${escapeHtml(error.message || t('加载供应商列表失败'))}</p>
           <button class="btn btn-secondary btn-sm" style="margin-top:12px;" onclick="adminApp.loadProviders()">重试</button>
         </div>`);
     }
@@ -2746,7 +2746,7 @@ class AdminApp {
     const hasAdvanced = !!document.getElementById('providerKeyModeFilter')?.value;
     const open = !!this._adminProvidersStickyMoreOpen;
     btn.classList.toggle('library-more-filters-active', open || hasAdvanced);
-    btn.textContent = open ? '收起筛选' : '更多筛选';
+    btn.textContent = open ? t('收起筛选') : t('更多筛选');
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
@@ -2821,8 +2821,8 @@ class AdminApp {
     if (this.providerPage >= totalPages) this.providerPage = Math.max(0, totalPages - 1);
 
     const countText = !hasFilter
-      ? `共 ${total} 个`
-      : `匹配 ${total} 个 · 本页 ${providers.length}`;
+      ? `${t('共')}${total}${t('个')}`
+      : `${t('匹配')}${total}${t('个 · 本页')}${providers.length}`;
     const countEl = document.getElementById('providerCount');
     if (countEl) countEl.textContent = countText;
     const stickyCount = document.getElementById('adminProvidersStickyCount');
@@ -2846,7 +2846,7 @@ class AdminApp {
     const statsContainer = document.getElementById('providerStatsCards');
     if (statsContainer) {
       setHTML(statsContainer, `
-        <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'global' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('global')" title="筛选全局供应商">
+        <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'global' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('global')" title=t('筛选全局供应商')>
           <div class="admin-stat-card-icon blue">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </div>
@@ -2855,7 +2855,7 @@ class AdminApp {
             <span class="admin-stat-card-label">全局供应商</span>
           </div>
         </div>
-        <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'user' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('user')" title="筛选用户供应商">
+        <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'user' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('user')" title=t('筛选用户供应商')>
           <div class="admin-stat-card-icon purple">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
@@ -2864,7 +2864,7 @@ class AdminApp {
             <span class="admin-stat-card-label">用户供应商</span>
           </div>
         </div>
-        <div class="admin-stat-card admin-stat-card-clickable ${statusVal === 'enabled' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('enabled')" title="筛选已启用">
+        <div class="admin-stat-card admin-stat-card-clickable ${statusVal === 'enabled' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('enabled')" title=t('筛选已启用')>
           <div class="admin-stat-card-icon green">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
@@ -2873,7 +2873,7 @@ class AdminApp {
             <span class="admin-stat-card-label">已启用</span>
           </div>
         </div>
-        <div class="admin-stat-card admin-stat-card-clickable ${keyModeVal === 'script' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('script')" title="筛选脚本模式">
+        <div class="admin-stat-card admin-stat-card-clickable ${keyModeVal === 'script' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('script')" title=t('筛选脚本模式')>
           <div class="admin-stat-card-icon amber">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
           </div>
@@ -2941,13 +2941,13 @@ class AdminApp {
         ${selectAllBar}
         ${globalProviders.length > 0 ? `
           <div style="margin-bottom:24px;">
-            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">全局供应商 <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${globalProviders.length})</span></h3>
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${t('全局供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${globalProviders.length})</span></h3>
             ${this._renderProviderTable(globalProviders)}
           </div>
         ` : ''}
         ${userProviders.length > 0 ? `
           <div>
-            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">用户供应商 <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${userProviders.length})</span></h3>
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${t('用户供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${userProviders.length})</span></h3>
             ${this._renderProviderTable(userProviders, true)}
           </div>
         ` : ''}
@@ -2961,10 +2961,10 @@ class AdminApp {
   refreshPageQuotas() {
     const visible = (this.providersData || []).filter(p => p.quota_enabled);
     if (visible.length === 0) {
-      this.showToast('当前页没有启用额度查询的供应商', 'info');
+      this.showToast(t('当前页没有启用额度查询的供应商'), 'info');
       return;
     }
-    this.showToast(`正在查询 ${visible.length} 个供应商额度…`, 'info');
+    this.showToast(`${t('正在查询')}${visible.length}${t('个供应商额度…')}`, 'info');
     for (const p of visible) {
       this.loadProviderQuotaInline(p.id);
     }
@@ -2977,17 +2977,17 @@ class AdminApp {
     const pingBtnId = isCard ? `ping-btn-card-${pid}` : `ping-btn-${pid}`;
     return `
       <div class="provider-row-actions">
-        <label class="toggle-switch" title="${provider.enabled ? '禁用供应商' : '启用供应商'}" style="transform:scale(0.8);">
+        <label class="toggle-switch" title="${provider.enabled ? t('禁用供应商') : t('启用供应商')}" style="transform:scale(0.8);">
           <input type="checkbox" ${provider.enabled ? 'checked' : ''} onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)">
           <span class="toggle-slider"></span>
         </label>
-        <button class="btn btn-sm btn-secondary" title="同步模型" onclick="adminApp.fetchProviderModels('${pid}')">同步模型</button>
-        <button class="btn btn-sm btn-secondary" title="编辑" onclick="adminApp.editProviderById('${pid}')">编辑</button>
+        <button class="btn btn-sm btn-secondary" title=t('同步模型') onclick="adminApp.fetchProviderModels('${pid}')">同步模型</button>
+        <button class="btn btn-sm btn-secondary" title=t('编辑') onclick="adminApp.editProviderById('${pid}')">编辑</button>
         <div class="provider-row-more-wrap">
-          <button type="button" class="btn btn-sm btn-secondary" data-row-menu-btn="${pid}" title="更多操作" onclick="adminApp.toggleProviderRowMenu('${pid}', event)">更多 ▾</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-row-menu-btn="${pid}" title=t('更多操作') onclick="adminApp.toggleProviderRowMenu('${pid}', event)">更多 ▾</button>
           <div class="provider-row-dropdown" id="provider-row-menu-${pid}" style="display:none;" role="menu">
             <button type="button" class="provider-more-item" id="${pingBtnId}" onclick="adminApp.pingProvider('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" role="menuitem">检测连通性</button>
-            ${isScriptKey ? `<button type="button" class="provider-more-item" style="color:#f59e0b;" onclick="adminApp.refreshProviderKey('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" role="menuitem">刷新密钥</button>` : ''}
+            ${isScriptKey ? `<button type="button" class="provider-more-item" style="color:#f59e0b;" onclick="adminApp.refreshProviderKey('${pid}');adminApp.toggleProviderRowMenu('${pid}\', event);" role="menuitem">${t('刷新密钥')}</button>` : ''}
             <div class="provider-more-item provider-more-item-toggle" role="menuitem">
               <span>额度查询</span>
               <label class="toggle-switch" style="transform:scale(0.75);" onclick="event.stopPropagation()">
@@ -3003,7 +3003,7 @@ class AdminApp {
   }
 
   _renderProviderTable(providerList, showOwner = false) {
-    if (providerList.length === 0) return '<p style="text-align:center;color:var(--muted-foreground);padding:12px;font-size:13px;">暂无</p>';
+    if (providerList.length === 0) return '<p style="text-align:center;color:var(--muted-foreground);padding:12px;font-size:13px;">' + t('暂无') + '</p>';
 
     return `
       <table>
@@ -3011,7 +3011,7 @@ class AdminApp {
           <tr>
             <th class="provider-select-cell"></th>
             <th>名称</th>
-            ${showOwner ? '<th>创建者</th>' : ''}
+            ${showOwner ? '<th>' + t('创建者') + '</th>' : ''}
             <th>标签</th>
             <th>密钥</th>
             <th>代理</th>
@@ -3035,14 +3035,14 @@ class AdminApp {
               : '';
             const keyCount = provider.api_key_count || 0;
             const keyModeDisplay = isScriptKey
-              ? `<span style="color:#f59e0b;font-size:12px;" title="脚本刷新模式${hasError ? '\n上次错误: ' + escapeHtml(lastError) : ''}">⚡ 脚本${errorIcon}</span>`
+              ? `<span style="color:#f59e0b;font-size:12px;" title="${t('脚本刷新模式')}${hasError ? '\n上次错误: ' + escapeHtml(lastError) : ''}">⚡ ${t('脚本')}${errorIcon}</span>`
               : (keyCount > 1
-                ? `<span style="font-size:12px;" title="${provider.api_key_select_mode === 'weight' ? '权重模式' : '顺序模式'}">固定 · ${keyCount} Key${provider.api_key_select_mode === 'weight' ? ' · 权重' : ''}</span>`
-                : '<span style="color:var(--muted-foreground);font-size:12px;">固定</span>');
+                ? `<span style="font-size:12px;" title="${provider.api_key_select_mode === 'weight' ? t('权重模式') : t('顺序模式')}">${t('固定 ·')}${keyCount} Key${provider.api_key_select_mode === 'weight' ? t(' · 权重') : ''}</span>`
+                : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('固定') + '</span>');
             let proxyDisplay = this._formatProviderProxyDisplay(provider);
             const statusPill = provider.enabled
-              ? '<span class="status-pill status-pill-on">启用</span>'
-              : '<span class="status-pill status-pill-off">禁用</span>';
+              ? '<span class="status-pill status-pill-on">' + t('启用') + '</span>'
+              : '<span class="status-pill status-pill-off">' + t('禁用') + '</span>';
             const safePid = String(pid).replace(/'/g, "\\'");
             return `
             <tr class="provider-drop-target"
@@ -3059,15 +3059,15 @@ class AdminApp {
                 <div class="provider-row-name">${escapeHtml(provider.name)}</div>
                 <div class="provider-row-url" title="${escapeHtml(provider.base_url || '')}">${escapeHtml(provider.base_url || '')}</div>
               </td>
-              ${showOwner ? `<td style="font-size:12px;color:var(--muted-foreground);">${escapeHtml(provider.username || '未知')}</td>` : ''}
+              ${showOwner ? `<td style="font-size:12px;color:var(--muted-foreground);">${escapeHtml(provider.username || t('未知'))}</td>` : ''}
               <td class="provider-tags-cell">${this._renderProviderTagChips(provider.tags, pid)}</td>
               <td>${keyModeDisplay}</td>
               <td>${proxyDisplay}</td>
               <td>
                 <div id="quota-display-${provider.id}" style="min-width:100px;">
                   ${quotaEnabled
-                    ? '<span style="color:var(--muted-foreground);font-size:12px;" title="在「更多」中查询或使用顶部「刷新本页额度」">已启用</span>'
-                    : '<span style="color:var(--muted-foreground);font-size:12px;">未启用</span>'}
+                    ? '<span style="color:var(--muted-foreground);font-size:12px;" title="' + t('在「更多」中查询或使用顶部「刷新本页额度」') + '">' + t('已启用') + '</span>'
+                    : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('未启用') + '</span>'}
                 </div>
               </td>
               <td>
@@ -3106,10 +3106,10 @@ class AdminApp {
         return;
       }
     } catch (e) {
-      console.warn('加载供应商详情失败，回退列表数据', e);
+      console.warn(t('加载供应商详情失败，回退列表数据'), e);
     }
     const provider = (this.providersData || []).find(p => p.id === providerId);
-    if (!provider) { this.showToast('供应商不存在，请刷新后重试', 'error'); return; }
+    if (!provider) { this.showToast(t('供应商不存在，请刷新后重试'), 'error'); return; }
     this.editProvider(provider);
   }
 
@@ -3173,24 +3173,24 @@ class AdminApp {
       const enabled = item.enabled !== false;
       const isPrimary = hasEnabled && index === primaryIdx;
       const mainBadge = isPrimary
-        ? `<span class="provider-api-key-main-badge" title="主 Key：获取模型列表 / 连通性 / 额度">主 Key</span>`
+        ? `<span class="provider-api-key-main-badge" title="${t('主 Key：获取模型列表 / 连通性 / 额度')}">${t('主 Key')}</span>`
         : `<button type="button" class="provider-api-key-make-primary" data-key-index="${index}"
-             onclick="adminApp.setProviderPrimaryKey(${index})" title="设为主 Key">设为主</button>`;
+             onclick="adminApp.setProviderPrimaryKey(${index})" title=t('设为主 Key')>设为主</button>`;
       const disableBtn = `<button type="button" class="provider-api-key-disable ${enabled ? '' : 'is-on'}" data-key-index="${index}"
-             onclick="adminApp.toggleProviderApiKeyEnabled(${index})" title="${enabled ? '禁用此 Key' : '启用此 Key'}">
-             ${enabled ? '禁用' : '已禁用'}</button>`;
+             onclick="adminApp.toggleProviderApiKeyEnabled(${index})" title="${enabled ? t('禁用此 Key') : t('启用此 Key')}">
+             ${enabled ? t('禁用') : t('已禁用')}</button>`;
       return `
         <div class="provider-api-key-row${enabled ? '' : ' is-disabled'}" data-key-index="${index}" draggable="${multi && enabled ? 'true' : 'false'}">
-          <span class="provider-api-key-drag" title="${multi ? '拖动排序' : '仅 1 个 Key 时无需排序'}" aria-hidden="true">⋮⋮</span>
+          <span class="provider-api-key-drag" title="${multi ? t('拖动排序') : t('仅 1 个 Key 时无需排序')}" aria-hidden="true">⋮⋮</span>
           <div class="provider-api-key-input-wrap">
             <input type="password" class="input provider-api-key-input" data-key-index="${index}"
               value="${escapeHtml(item.key || '')}"
-              placeholder="${item.key ? (enabled ? '已配置，可修改' : '已禁用') : 'API Key'}"
+              placeholder="${item.key ? (enabled ? t('已配置，可修改') : t('已禁用')) : 'API Key'}"
               autocomplete="off" spellcheck="false"
               oninput="adminApp.onProviderApiKeyInput(${index}, this.value)">
             <button type="button" class="provider-api-key-toggle" data-key-index="${index}"
               onclick="adminApp.toggleProviderApiKeyVisibility(${index}, this)"
-              title="显示 Key" aria-label="显示 Key">
+              title=t('显示 Key') aria-label=t('显示 Key')>
               <svg class="provider-api-key-eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               <svg class="provider-api-key-eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
             </button>
@@ -3204,7 +3204,7 @@ class AdminApp {
           ${disableBtn}
           <button type="button" class="btn btn-sm btn-secondary provider-api-key-remove"
             style="${multi ? '' : 'visibility:hidden;'}"
-            onclick="adminApp.removeProviderApiKeyRow(${index})" title="删除">删除</button>
+            onclick="adminApp.removeProviderApiKeyRow(${index})" title=t('删除')>删除</button>
         </div>`;
     }).join(''));
 
@@ -3230,8 +3230,8 @@ class AdminApp {
     const show = input.type === 'password';
     input.type = show ? 'text' : 'password';
     if (btn) {
-      btn.title = show ? '隐藏 Key' : '显示 Key';
-      btn.setAttribute('aria-label', show ? '隐藏 Key' : '显示 Key');
+      btn.title = show ? t('隐藏 Key') : t('显示 Key');
+      btn.setAttribute('aria-label', show ? t('隐藏 Key') : t('显示 Key'));
       btn.classList.toggle('is-visible', show);
       const eyeShow = btn.querySelector('.provider-api-key-eye-show');
       const eyeHide = btn.querySelector('.provider-api-key-eye-hide');
@@ -3362,7 +3362,7 @@ class AdminApp {
 
   _renderProviderCards(container, globalPage, userPage, paginationHtml = '', selectAllBar = '') {
     const renderCardList = (providers) => {
-      if (providers.length === 0) return '<p style="text-align:center;color:var(--muted-foreground);padding:12px;font-size:13px;">暂无</p>';
+      if (providers.length === 0) return '<p style="text-align:center;color:var(--muted-foreground);padding:12px;font-size:13px;">' + t('暂无') + '</p>';
       return `<div class="admin-card-grid">${providers.map(provider => {
         const pid = provider.id;
         const selected = this.selectedProviders.has(pid);
@@ -3378,7 +3378,7 @@ class AdminApp {
                ondragover="adminApp.handleProviderDragOver(event)"
                ondragleave="adminApp.handleProviderDragLeave(event)"
                ondrop="adminApp.handleProviderDrop(event, '${safePid}')">
-            <label class="provider-card-select" title="选择" onclick="event.stopPropagation()">
+            <label class="provider-card-select" title=t('选择') onclick="event.stopPropagation()">
               <input type="checkbox" class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
                 ${selected ? 'checked' : ''}
                 onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)">
@@ -3387,10 +3387,10 @@ class AdminApp {
               <div style="flex:1;min-width:0;">
                 <div class="admin-card-title-row">
                   <div class="admin-card-title">${escapeHtml(provider.name)}</div>
-                  <span class="admin-card-badge ${provider.enabled ? 'green' : 'red'}">${provider.enabled ? '启用' : '禁用'}</span>
+                  <span class="admin-card-badge ${provider.enabled ? 'green' : 'red'}">${provider.enabled ? t('启用') : t('禁用')}</span>
                 </div>
                 <div class="admin-card-subtitle" title="${escapeHtml(provider.base_url || '')}">${escapeHtml(provider.base_url || '-')}</div>
-                <div class="admin-card-header-tags ${hasTags ? 'has-tags' : ''}" title="拖拽标签到卡片可分配">
+                <div class="admin-card-header-tags ${hasTags ? 'has-tags' : ''}" title=t('拖拽标签到卡片可分配')>
                   ${this._renderProviderTagChips(provider.tags, pid)}
                 </div>
               </div>
@@ -3400,10 +3400,10 @@ class AdminApp {
                 <span class="admin-card-row-label">密钥模式</span>
                 <span class="admin-card-row-value">
                   ${isScriptKey
-                    ? `<span style="color:#f59e0b;">⚡ 脚本${hasError ? ` <span style="color:var(--destructive);cursor:pointer;font-size:11px;" title="${escapeHtml(lastError).replace(/"/g, '&quot;')}">⚠️</span>` : ''}</span>`
+                    ? `${'<span style="color:#f59e0b;">' + t('⚡ 脚本')}${hasError ? ` <span style="color:var(--destructive);cursor:pointer;font-size:11px;" title="${escapeHtml(lastError).replace(/"/g, '&quot;')}">⚠️</span>` : ''}</span>`
                     : ((provider.api_key_count || 0) > 1
-                      ? `<span>固定 · ${provider.api_key_count} Key${provider.api_key_select_mode === 'weight' ? ' · 权重' : ''}</span>`
-                      : '<span style="color:var(--muted-foreground);">固定</span>')}
+                      ? `${'<span>' + t('固定 ·')}${provider.api_key_count} Key${provider.api_key_select_mode === 'weight' ? t(' · 权重') : ''}</span>`
+                      : '<span style="color:var(--muted-foreground);">' + t('固定') + '</span>')}
                 </span>
               </div>
               <div class="admin-card-row">
@@ -3412,7 +3412,7 @@ class AdminApp {
               </div>
               <div class="admin-card-row">
                 <span class="admin-card-row-label">额度查询</span>
-                <span class="admin-card-row-value" id="quota-display-card-${provider.id}">${provider.quota_enabled ? '<span style="color:#10b981;">已启用</span>' : '<span style="color:var(--muted-foreground);">未启用</span>'}</span>
+                <span class="admin-card-row-value" id="quota-display-card-${provider.id}">${provider.quota_enabled ? '<span style="color:#10b981;">' + t('已启用') + '</span>' : '<span style="color:var(--muted-foreground);">' + t('未启用') + '</span>'}</span>
               </div>
               <div class="admin-card-row">
                 <span class="admin-card-row-label">格式</span>
@@ -3432,13 +3432,13 @@ class AdminApp {
       ${selectAllBar || ''}
       ${globalPage.total > 0 ? `
         <div style="margin-bottom:24px;">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">全局供应商 <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${globalPage.total})</span></h3>
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${t('全局供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${globalPage.total})</span></h3>
           ${renderCardList(globalPage.items)}
         </div>
       ` : ''}
       ${userPage.total > 0 ? `
         <div>
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">用户供应商 <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${userPage.total})</span></h3>
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${t('用户供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${userPage.total})</span></h3>
           ${renderCardList(userPage.items)}
         </div>
       ` : ''}
@@ -3499,7 +3499,7 @@ class AdminApp {
     const bar = document.getElementById('providerBatchBar');
     const countEl = document.getElementById('providerSelectedCount');
     const n = this.selectedProviders.size;
-    if (countEl) countEl.textContent = `已选 ${n} 个`;
+    if (countEl) countEl.textContent = `${t('已选')}${n}${t('个')}`;
     if (bar) bar.style.display = n > 0 ? 'inline-flex' : 'none';
   }
 
@@ -3543,10 +3543,10 @@ class AdminApp {
   batchSyncPageProviders() {
     const ids = (this.providersData || []).map(p => String(p.id));
     if (!ids.length) {
-      this.showToast('当前页没有供应商', 'info');
+      this.showToast(t('当前页没有供应商'), 'info');
       return;
     }
-    this._startBatchSyncProviders(ids, '本页');
+    this._startBatchSyncProviders(ids, t('本页'));
   }
 
   batchSyncSelectedProviders() {
@@ -3556,12 +3556,12 @@ class AdminApp {
       this.batchSyncPageProviders();
       return;
     }
-    this._startBatchSyncProviders(ids, '选中');
+    this._startBatchSyncProviders(ids, t('选中'));
   }
 
-  async _startBatchSyncProviders(providerIds, scopeLabel = '选中') {
+  async _startBatchSyncProviders(providerIds, scopeLabel = t('选中')) {
     if (this._providerBatchSyncing) {
-      this.showToast('已有批量同步任务进行中', 'info');
+      this.showToast(t('已有批量同步任务进行中'), 'info');
       return;
     }
     if (!providerIds.length) return;
@@ -3609,7 +3609,7 @@ class AdminApp {
     `;
 
     const modal = Dialog.showModal({
-      title: '批量同步模型',
+      title: t('批量同步模型'),
       content,
       footer,
       width: 520
@@ -3620,7 +3620,7 @@ class AdminApp {
     cancelBtn?.addEventListener('click', () => {
       if (this._providerBatchSyncing) {
         this._providerBatchSyncAbort = true;
-        if (cancelBtn) cancelBtn.textContent = '正在停止…';
+        if (cancelBtn) cancelBtn.textContent = t('正在停止…');
       } else {
         modal?.close?.();
       }
@@ -3637,14 +3637,14 @@ class AdminApp {
       });
       if (startBtn) {
         startBtn.disabled = true;
-        setHTML(startBtn, inlineLoadingHtml('同步中...', 'sm'));
+        setHTML(startBtn, inlineLoadingHtml(t('同步中...'), 'sm'));
       }
       await this._runBatchSyncProviders(items, { enableNew, disableStale });
       if (startBtn) {
         startBtn.disabled = false;
-        startBtn.textContent = '再次同步';
+        startBtn.textContent = t('再次同步');
       }
-      if (cancelBtn) cancelBtn.textContent = '关闭';
+      if (cancelBtn) cancelBtn.textContent = t('关闭');
     });
   }
 
@@ -3668,12 +3668,12 @@ class AdminApp {
 
     for (let i = 0; i < items.length; i++) {
       if (this._providerBatchSyncAbort) {
-        if (meta) meta.textContent = `已停止 · 成功 ${ok} · 失败 ${fail} · 剩余未处理 ${items.length - i}`;
+        if (meta) meta.textContent = `${t('已停止 · 成功')}${ok}${t('· 失败')}${fail}${t('· 剩余未处理')}${items.length - i}`;
         break;
       }
       const it = items[i];
-      setRow(it.id, '同步中…', 'run');
-      if (meta) meta.textContent = `正在同步 ${i + 1}/${items.length}：${it.name}`;
+      setRow(it.id, t('同步中…'), 'run');
+      if (meta) meta.textContent = `${t('正在同步')}${i + 1}/${items.length}：${it.name}`;
       if (bar) bar.style.width = `${Math.round((i / items.length) * 100)}%`;
 
       try {
@@ -3683,14 +3683,14 @@ class AdminApp {
         totalDisabled += result.disabled || 0;
         const parts = [];
         if (result.added) parts.push(`+${result.added}`);
-        if (result.enabled) parts.push(`启${result.enabled}`);
-        if (result.disabled) parts.push(`禁${result.disabled}`);
-        if (result.upstreamCount != null) parts.push(`上游${result.upstreamCount}`);
-        setRow(it.id, parts.length ? parts.join(' · ') : '无变化', 'ok');
+        if (result.enabled) parts.push(`${t('启')}${result.enabled}`);
+        if (result.disabled) parts.push(`${t('禁')}${result.disabled}`);
+        if (result.upstreamCount != null) parts.push(`${t('上游')}${result.upstreamCount}`);
+        setRow(it.id, parts.length ? parts.join(' · ') : t('无变化'), 'ok');
         ok++;
       } catch (e) {
-        console.error('[批量同步] 失败', it.id, e);
-        setRow(it.id, e.message || '失败', 'fail');
+        console.error(t('[批量同步] 失败'), it.id, e);
+        setRow(it.id, e.message || t('失败'), 'fail');
         fail++;
       }
 
@@ -3698,7 +3698,7 @@ class AdminApp {
     }
 
     this._providerBatchSyncing = false;
-    const summary = `完成 · 成功 ${ok} · 失败 ${fail} · 新增 ${totalAdded} · 启用 ${totalEnabled} · 禁用 ${totalDisabled}`;
+    const summary = `${t('完成 · 成功')}${ok}${t('· 失败')}${fail}${t('· 新增')}${totalAdded}${t('· 启用')}${totalEnabled}${t('· 禁用')}${totalDisabled}`;
     if (meta) meta.textContent = summary;
     this.showToast(summary, fail ? 'info' : 'success');
     // 刷新模型列表缓存（若已打开过）
@@ -3714,7 +3714,7 @@ class AdminApp {
     const fetchRes = await fetch(`/api/admin/providers/${encodeURIComponent(providerId)}/fetch-models`);
     const fetchData = await fetchRes.json().catch(() => ({}));
     if (!fetchRes.ok) {
-      throw new Error(fetchData.error || `获取模型失败 (${fetchRes.status})`);
+      throw new Error(fetchData.error || `${t('获取模型失败 (')}${fetchRes.status})`);
     }
     const models = fetchData.models || [];
     if (!models.length) {
@@ -3726,7 +3726,7 @@ class AdminApp {
           body: JSON.stringify({ enabledModelIds: [] })
         });
         const syncData = await syncRes.json().catch(() => ({}));
-        if (!syncRes.ok) throw new Error(syncData.error || '同步失败');
+        if (!syncRes.ok) throw new Error(syncData.error || t('同步失败'));
         return { ...syncData, upstreamCount: 0 };
       }
       return { added: 0, enabled: 0, disabled: 0, upstreamCount: 0 };
@@ -3739,7 +3739,7 @@ class AdminApp {
       body: JSON.stringify({ enabledModelIds })
     });
     const syncData = await syncRes.json().catch(() => ({}));
-    if (!syncRes.ok) throw new Error(syncData.error || `同步失败 (${syncRes.status})`);
+    if (!syncRes.ok) throw new Error(syncData.error || `${t('同步失败 (')}${syncRes.status})`);
     return { ...syncData, upstreamCount: models.length };
   }
 
@@ -3754,7 +3754,7 @@ class AdminApp {
     const cardDisplay = document.getElementById(`ping-display-card-${providerId}`);
     const btn = document.getElementById(`ping-btn-${providerId}`);
     const cardBtn = document.getElementById(`ping-btn-card-${providerId}`);
-    const pingHtml = inlineLoadingHtml('检测中...', 'sm');
+    const pingHtml = inlineLoadingHtml(t('检测中...'), 'sm');
     if (display) setHTML(display, pingHtml);
     if (cardDisplay) setHTML(cardDisplay, pingHtml);
     if (btn) btn.disabled = true;
@@ -3765,11 +3765,11 @@ class AdminApp {
       const data = await resp.json();
       const resultHtml = data.ok
         ? `<span style="color:${data.latency_ms <= 300 ? '#10b981' : data.latency_ms <= 1000 ? '#f59e0b' : 'var(--destructive)'};font-weight:500;">${data.latency_ms}ms</span>`
-        : `<span style="color:var(--destructive);" title="${escapeHtml(data.error || '')}">失败</span>`;
+        : `<span style="color:var(--destructive);" title="${escapeHtml(data.error || '')}">${t('失败')}</span>`;
       if (display) setHTML(display, resultHtml);
       if (cardDisplay) setHTML(cardDisplay, resultHtml);
     } catch (e) {
-      const errHtml = '<span style="color:var(--destructive);">错误</span>';
+      const errHtml = '<span style="color:var(--destructive);">' + t('错误') + '</span>';
       if (display) setHTML(display, errHtml);
       if (cardDisplay) setHTML(cardDisplay, errHtml);
     } finally {
@@ -3782,7 +3782,7 @@ class AdminApp {
     const btn = document.getElementById('pingAllProvidersBtn');
     if (btn) {
       btn.disabled = true;
-      setHTML(btn, inlineLoadingHtml('检测中...', 'sm'));
+      setHTML(btn, inlineLoadingHtml(t('检测中...'), 'sm'));
     }
 
     // 收集所有供应商 ID（兼容表格和卡片视图）
@@ -3805,12 +3805,12 @@ class AdminApp {
     const self = this;
     // Step 1: 显示供应商选择列表
     const modal = Dialog.showModal({
-      title: '添加供应商',
+      title: t('添加供应商'),
       content: `
         <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 8px;">从常用列表选择，或自定义添加。完成后可立即同步模型。</p>
-        <input type="text" class="wizard-search" id="wizardSearch" placeholder="搜索供应商名称或 Base URL...">
+        <input type="text" class="wizard-search" id="wizardSearch" placeholder=t('搜索供应商名称或 Base URL...')>
         <div class="wizard-provider-list" id="wizardProviderList">
-          <div class="wizard-empty"><div class="page-loading page-loading-compact" style="min-height:100px;padding:20px 12px;"><div class="loading-spinner md" role="status" aria-label="加载中"></div><div class="page-loading-text">正在加载供应商列表...</div></div></div>
+          <div class="wizard-empty"><div class="page-loading page-loading-compact" style="min-height:100px;padding:20px 12px;"><div class="loading-spinner md" role="status" aria-label=t('加载中')></div><div class="page-loading-text">正在加载供应商列表...</div></div></div>
         </div>
       `,
       width: 480
@@ -3833,18 +3833,18 @@ class AdminApp {
 
     async function loadIndex() {
       loadError = null;
-      setHTML(listContainer, '<div class="wizard-empty">' + pageLoadingHtml('正在加载供应商列表...', { size: 'md', compact: true }) + '</div>');
+      setHTML(listContainer, '<div class="wizard-empty">' + pageLoadingHtml(t('正在加载供应商列表...'), { size: 'md', compact: true }) + '</div>');
       try {
         const resp = await fetch('/api/admin/providers/lookup-index');
         if (resp.ok) {
           const data = await resp.json();
           allProviders = data.providers || [];
         } else {
-          loadError = '加载失败';
+          loadError = t('加载失败');
         }
       } catch (e) {
-        console.error('加载供应商索引失败:', e);
-        loadError = e.message || '网络错误';
+        console.error(t('加载供应商索引失败:'), e);
+        loadError = e.message || t('网络错误');
       }
       renderList(searchInput?.value?.trim() || '');
     }
@@ -3879,7 +3879,7 @@ class AdminApp {
       `;
 
       if (filtered.length === 0 && kw) {
-        html += '<div class="wizard-empty">未找到匹配的供应商</div>';
+        html += '<div class="wizard-empty">' + t('未找到匹配的供应商') + '</div>';
       } else {
         for (const p of filtered) {
           const initial = (p.name || '?').charAt(0).toUpperCase();
@@ -3891,7 +3891,7 @@ class AdminApp {
                 <div class="wizard-provider-name">${escapeHtml(p.name)}</div>
                 <div class="wizard-provider-id">${escapeHtml(p.base_url || '')}</div>
               </div>
-              ${already ? '<span class="wizard-provider-badge">已添加</span>' : ''}
+              ${already ? '<span class="wizard-provider-badge">' + t('已添加') + '</span>' : ''}
             </div>
           `;
         }
@@ -3929,14 +3929,14 @@ class AdminApp {
   showWizardStep2(provider) {
     const self = this;
     const modal = Dialog.showModal({
-      title: `配置 ${provider.name}`,
+      title: `${t('配置')}${provider.name}`,
       content: `
         <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;">
           供应商: <strong>${escapeHtml(provider.name)}</strong><br>
           API 地址: ${escapeHtml(provider.base_url || '')}
         </p>
         <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">API Key <span style="font-weight:400;color:var(--muted-foreground);">（可稍后填写）</span></label>
-        <input type="password" class="wizard-apikey-input" id="wizardApiKey" placeholder="输入 API Key，可留空稍后编辑补全">
+        <input type="password" class="wizard-apikey-input" id="wizardApiKey" placeholder=t('输入 API Key，可留空稍后编辑补全')>
       `,
       footer: `
         <button class="wizard-back-btn" id="wizardBackBtn">← 返回</button>
@@ -3956,7 +3956,7 @@ class AdminApp {
 
     document.getElementById('wizardSaveBtn').addEventListener('click', async () => {
       const saveBtn = document.getElementById('wizardSaveBtn');
-      setButtonLoading(saveBtn, '添加中...');
+      setButtonLoading(saveBtn, t('添加中...'));
 
       try {
         const body = {
@@ -3979,18 +3979,18 @@ class AdminApp {
           const newId = data.id || data.provider?.id;
           modal.close();
           if (!apiKey) {
-            self.showToast('已添加（未填 API Key，可稍后在编辑中补全）', 'info');
+            self.showToast(t('已添加（未填 API Key，可稍后在编辑中补全）'), 'info');
           }
           await self.loadProviders();
           self.showProviderAddedSuccess(newId, provider.name);
         } else {
           const err = await resp.json().catch(() => ({}));
-          clearButtonLoading(saveBtn, '添加');
-          self.showToast(err.error || '添加失败', 'error');
+          clearButtonLoading(saveBtn, t('添加'));
+          self.showToast(err.error || t('添加失败'), 'error');
         }
       } catch (e) {
-        clearButtonLoading(saveBtn, '添加');
-        self.showToast('添加失败: ' + e.message, 'error');
+        clearButtonLoading(saveBtn, t('添加'));
+        self.showToast(t('添加失败: ') + e.message, 'error');
       }
     });
 
@@ -4003,9 +4003,9 @@ class AdminApp {
 
   showProviderAddedSuccess(providerId, providerName) {
     const self = this;
-    const name = providerName || '供应商';
+    const name = providerName || t('供应商');
     const modal = Dialog.showModal({
-      title: '供应商已添加',
+      title: t('供应商已添加'),
       content: `
         <p style="font-size:14px;margin:0 0 8px;"><strong>${escapeHtml(name)}</strong> 已创建成功。</p>
         <p style="color:var(--muted-foreground);font-size:13px;margin:0;">建议下一步同步模型列表，导入后即可在模型管理中启用。</p>
@@ -4047,7 +4047,7 @@ class AdminApp {
   }
 
   showAddProviderModal() {
-    document.getElementById('providerModalTitle').textContent = '添加供应商';
+    document.getElementById('providerModalTitle').textContent = t('添加供应商');
     document.getElementById('providerId').value = '';
     document.getElementById('providerName').value = '';
     document.getElementById('providerBaseUrl').value = '';
@@ -4121,7 +4121,7 @@ class AdminApp {
   async lookupProviderInfo() {
     const providerName = document.getElementById('providerName').value.trim();
     if (!providerName) {
-      this.showToast('请先输入供应商名称，再点击查询', 'error');
+      this.showToast(t('请先输入供应商名称，再点击查询'), 'error');
       return;
     }
 
@@ -4132,18 +4132,18 @@ class AdminApp {
         document.getElementById('providerName').value = info.name || providerName;
         if (info.base_url) document.getElementById('providerBaseUrl').value = info.base_url;
         document.getElementById('providerFormat').value = info.format || 'openai';
-        this.showToast('已填充供应商信息', 'success');
+        this.showToast(t('已填充供应商信息'), 'success');
       } else {
-        this.showToast('未在 models.dev 中找到该供应商，可手动填写', 'info');
+        this.showToast(t('未在 models.dev 中找到该供应商，可手动填写'), 'info');
       }
     } catch (error) {
-      console.error('查询供应商信息失败:', error);
-      this.showToast('查询失败', 'error');
+      console.error(t('查询供应商信息失败:'), error);
+      this.showToast(t('查询失败'), 'error');
     }
   }
 
   editProvider(provider) {
-    document.getElementById('providerModalTitle').textContent = '编辑供应商';
+    document.getElementById('providerModalTitle').textContent = t('编辑供应商');
     document.getElementById('providerId').value = provider.id;
     document.getElementById('providerName').value = provider.name;
     document.getElementById('providerBaseUrl').value = provider.base_url;
@@ -4242,19 +4242,19 @@ class AdminApp {
     const isCreate = !id;
 
     if (!name || !base_url) {
-      this.showToast('请填写供应商名称和 API 地址', 'error');
+      this.showToast(t('请填写供应商名称和 API 地址'), 'error');
       return;
     }
 
     if (key_mode === 'script' && !key_script.trim()) {
-      this.showToast('脚本模式下必须填写密钥刷新脚本', 'error');
+      this.showToast(t('脚本模式下必须填写密钥刷新脚本'), 'error');
       this._setProviderFormSectionsOpen({ keyMode: true });
       return;
     }
 
     if (proxyFields.proxy_enabled && proxyFields.proxy_mode === 'single'
         && !proxyFields.proxy_use_system && !proxyFields.proxy_url) {
-      this.showToast('代理模式下请填写自定义代理地址，或勾选使用系统代理', 'error');
+      this.showToast(t('代理模式下请填写自定义代理地址，或勾选使用系统代理'), 'error');
       this._setProviderFormSectionsOpen({ proxy: true });
       return;
     }
@@ -4302,15 +4302,15 @@ class AdminApp {
         if (isCreate) {
           this.showProviderAddedSuccess(providerId, name);
         } else {
-          this.showToast('供应商已保存', 'success');
+          this.showToast(t('供应商已保存'), 'success');
         }
       } else {
         const err = await response.json().catch(() => ({}));
-        this.showToast(err.error || '保存失败', 'error');
+        this.showToast(err.error || t('保存失败'), 'error');
       }
     } catch (error) {
-      console.error('保存供应商失败:', error);
-      this.showToast('保存失败', 'error');
+      console.error(t('保存供应商失败:'), error);
+      this.showToast(t('保存失败'), 'error');
     }
   }
 
@@ -4385,16 +4385,16 @@ class AdminApp {
   // 列表/卡片：代理状态展示
   _formatProviderProxyDisplay(provider) {
     if (!provider.proxy_enabled) {
-      return '<span style="color:var(--muted-foreground);font-size:12px;">关闭</span>';
+      return '<span style="color:var(--muted-foreground);font-size:12px;">' + t('关闭') + '</span>';
     }
     const mode = (provider.proxy_mode || 'pool').toLowerCase();
     if (mode === 'single') {
       if (provider.proxy_use_system) {
-        return '<span style="font-size:12px;color:#8b5cf6;" title="使用系统设置中的代理">🌐 系统代理</span>';
+        return '<span style="font-size:12px;color:#8b5cf6;" title="' + t('使用系统设置中的代理') + '">' + t('🌐 系统代理') + '</span>';
       }
       const url = (provider.proxy_url || '').trim();
       if (!url) {
-        return '<span style="color:var(--muted-foreground);font-size:12px;">未配置</span>';
+        return '<span style="color:var(--muted-foreground);font-size:12px;">' + t('未配置') + '</span>';
       }
       const short = url.length > 28 ? url.slice(0, 25) + '…' : url;
       return `<span style="font-size:12px;" title="${escapeHtml(url)}">🔗 ${escapeHtml(short)}</span>`;
@@ -4403,15 +4403,15 @@ class AdminApp {
     const proxyPool = this.parseProxyPool(provider.proxy_pool);
     const hasSubscription = !!(provider.proxy_subscription_url || '').trim();
     if (proxyPool.length === 0 && !hasSubscription) {
-      return '<span style="font-size:12px;color:#3b82f6;" title="使用系统全局代理池">🔄 全局池</span>';
+      return '<span style="font-size:12px;color:#3b82f6;" title="' + t('使用系统全局代理池') + '">' + t('🔄 全局池') + '</span>';
     }
     const tags = [];
     if (proxyPool.length > 0) {
       const healthyCount = proxyPool.filter(p => p.healthy !== false).length;
-      tags.push(`<span title="手动添加的代理">🔄 ${healthyCount}/${proxyPool.length}</span>`);
+      tags.push(`${'<span title="' + t('手动添加的代理') + '">' + t('🔄')}${healthyCount}/${proxyPool.length}</span>`);
     }
     if (hasSubscription) {
-      tags.push(`<span style="color:#3b82f6;" title="${escapeHtml(provider.proxy_subscription_url)}">📡 订阅</span>`);
+      tags.push(`<span style="color:#3b82f6;" title="${escapeHtml(provider.proxy_subscription_url)}">${t('📡 订阅')}</span>`);
     }
     return `<span style="font-size:12px;">${tags.join(' ')}</span>`;
   }
@@ -4434,11 +4434,11 @@ class AdminApp {
     const applyAll = document.getElementById('systemProxyEnabled')?.checked || false;
     const url = document.getElementById('systemProxyUrl')?.value?.trim() || '';
     if (applyAll && !url) {
-      alert('开启「为所有连接使用代理」时请填写代理地址');
+      alert(t('开启「为所有连接使用代理」时请填写代理地址'));
       return;
     }
     if (url && !/^(https?|socks4|socks5h?):\/\//i.test(url)) {
-      alert('代理地址需以 http://、https://、socks4://、socks5:// 或 socks5h:// 开头');
+      alert(t('代理地址需以 http://、https://、socks4://、socks5:// 或 socks5h:// 开头'));
       return;
     }
     try {
@@ -4452,13 +4452,13 @@ class AdminApp {
         })
       });
       if (res.ok) {
-        alert('代理设置已保存');
+        alert(t('代理设置已保存'));
       } else {
-        alert('保存失败');
+        alert(t('保存失败'));
       }
     } catch (err) {
-      console.error('保存系统代理失败:', err);
-      alert('保存失败');
+      console.error(t('保存系统代理失败:'), err);
+      alert(t('保存失败'));
     }
   }
 
@@ -4483,7 +4483,7 @@ class AdminApp {
       const sysUrlEl = document.getElementById('systemProxyUrl');
       if (sysUrlEl) sysUrlEl.value = settings['system_proxy_url'] || '';
     } catch (e) {
-      console.error('加载全局代理池设置失败:', e);
+      console.error(t('加载全局代理池设置失败:'), e);
     }
   }
 
@@ -4503,14 +4503,14 @@ class AdminApp {
         })
       });
       if (res.ok) {
-        alert('代理池设置已保存');
+        alert(t('代理池设置已保存'));
         this.checkGlobalProxyPoolStatus();
       } else {
-        alert('保存失败');
+        alert(t('保存失败'));
       }
     } catch (e) {
-      console.error('保存全局代理池设置失败:', e);
-      alert('保存失败');
+      console.error(t('保存全局代理池设置失败:'), e);
+      alert(t('保存失败'));
     }
   }
 
@@ -4521,7 +4521,7 @@ class AdminApp {
 
     const proxies = this._globalProxyPool || [];
     if (proxies.length === 0) {
-      setHTML(container, '<div style="color:var(--muted-foreground);font-size:13px;padding:8px 0;">暂无手动代理</div>');
+      setHTML(container, '<div style="color:var(--muted-foreground);font-size:13px;padding:8px 0;">' + t('暂无手动代理') + '</div>');
       return;
     }
 
@@ -4535,7 +4535,7 @@ class AdminApp {
       div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;font-size:13px;';
       setHTML(div, `
         <code style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.url.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
-        <button type="button" class="btn btn-icon" title="删除" style="font-size:14px;color:var(--destructive);">🗑️</button>`);
+        <button type="button" class="btn btn-icon" title=t('删除') style="font-size:14px;color:var(--destructive);">🗑️</button>`);
       div.querySelector('button').onclick = () => this.removeGlobalProxy(p.id);
       fragment.appendChild(div);
     }
@@ -4546,7 +4546,7 @@ class AdminApp {
     if (hiddenCount > 0) {
       const hint = document.createElement('div');
       hint.style.cssText = 'color:var(--muted-foreground);font-size:12px;padding:4px 0;';
-      hint.textContent = `还有 ${hiddenCount} 个代理未显示（共 ${proxies.length} 个）`;
+      hint.textContent = `${t('还有')}${hiddenCount}${t('个代理未显示（共')}${proxies.length}${t('个）')}`;
       container.appendChild(hint);
     }
   }
@@ -4555,14 +4555,14 @@ class AdminApp {
   addGlobalProxy() {
     const input = document.getElementById('globalNewProxyUrl');
     const url = input?.value?.trim();
-    if (!url) { alert('请输入代理 URL'); return; }
+    if (!url) { alert(t('请输入代理 URL')); return; }
     if (!url.match(/^(https?|socks[45]?h?):\/\//i)) {
-      alert('代理 URL 格式不正确，支持 http://, https://, socks4://, socks5://');
+      alert(t('代理 URL 格式不正确，支持 http://, https://, socks4://, socks5://'));
       return;
     }
     if (!this._globalProxyPool) this._globalProxyPool = [];
     if (this._globalProxyPool.some(p => p.url === url)) {
-      alert('该代理已存在');
+      alert(t('该代理已存在'));
       return;
     }
     this._globalProxyPool.push({ id: crypto.randomUUID(), url, enabled: true });
@@ -4574,7 +4574,7 @@ class AdminApp {
   async importGlobalProxies() {
     const urlInput = document.getElementById('globalImportProxyUrl');
     const url = urlInput?.value?.trim();
-    if (!url) { alert('请输入代理列表 URL'); return; }
+    if (!url) { alert(t('请输入代理列表 URL')); return; }
 
     try {
       const res = await fetch('/api/admin/fetch-proxies-url', {
@@ -4583,8 +4583,8 @@ class AdminApp {
         body: JSON.stringify({ url })
       });
       const data = await res.json();
-      if (!res.ok) { alert('获取失败: ' + (data.error || '未知错误')); return; }
-      if (data.count === 0) { alert('代理列表为空'); return; }
+      if (!res.ok) { alert(t('获取失败: ') + (data.error || t('未知错误'))); return; }
+      if (data.count === 0) { alert(t('代理列表为空')); return; }
 
       if (!this._globalProxyPool) this._globalProxyPool = [];
       const existingUrls = new Set(this._globalProxyPool.map(p => p.url));
@@ -4598,9 +4598,9 @@ class AdminApp {
       }
       urlInput.value = '';
       this.renderGlobalProxyPoolList();
-      alert(`✅ 成功导入 ${added} 个代理`);
+      alert(`${t('✅ 成功导入')}${added}${t('个代理')}`);
     } catch (err) {
-      alert('导入失败: ' + err.message);
+      alert(t('导入失败: ') + err.message);
     }
   }
 
@@ -4608,7 +4608,7 @@ class AdminApp {
   batchAddGlobalProxies() {
     const input = document.getElementById('globalBatchProxyInput');
     const text = input?.value?.trim();
-    if (!text) { alert('请输入代理地址'); return; }
+    if (!text) { alert(t('请输入代理地址')); return; }
 
     const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
     if (!this._globalProxyPool) this._globalProxyPool = [];
@@ -4623,7 +4623,7 @@ class AdminApp {
     }
     input.value = '';
     this.renderGlobalProxyPoolList();
-    alert(`✅ 成功添加 ${added} 个代理`);
+    alert(`${t('✅ 成功添加')}${added}${t('个代理')}`);
   }
 
   // 删除全局代理
@@ -4646,13 +4646,13 @@ class AdminApp {
     const lines = [];
 
     if (manualCount > 0) {
-      lines.push(`<span style="color:#10b981;">✓</span> 手动代理: <b>${manualCount}</b> 个`);
+      lines.push(`<span style="color:#10b981;">✓</span> ${t('手动代理:')} <b>${manualCount}${'</b>' + t('个')}`);
     } else {
-      lines.push(`<span style="color:var(--muted-foreground);">-</span> 手动代理: 0 个`);
+      lines.push(`${'<span style="color:var(--muted-foreground);">' + '-' + '</span>' + t('手动代理: 0 个')}`);
     }
 
     if (subUrl) {
-      lines.push(inlineLoadingHtml('订阅地址: 检测中...', 'sm'));
+      lines.push(inlineLoadingHtml(t('订阅地址: 检测中...'), 'sm'));
       setHTML(statusContent, lines.join('<br>'));
 
       try {
@@ -4664,18 +4664,18 @@ class AdminApp {
         const data = await res.json();
         lines.pop();
         if (res.ok && data.count > 0) {
-          lines.push(`<span style="color:#10b981;">✓</span> 订阅地址: <b>${data.count}</b> 个代理可用`);
+          lines.push(`<span style="color:#10b981;">✓</span> ${t('订阅地址:')} <b>${data.count}${'</b>' + t('个代理可用')}`);
         } else if (res.ok && data.count === 0) {
-          lines.push(`<span style="color:#f59e0b;">⚠</span> 订阅地址: 返回内容中未找到有效代理`);
+          lines.push(`${'<span style="color:#f59e0b;">' + '⚠' + '</span>' + t('订阅地址: 返回内容中未找到有效代理')}`);
         } else {
-          lines.push(`<span style="color:var(--destructive);">✗</span> 订阅地址: ${data.error || '请求失败'}`);
+          lines.push(`${'<span style="color:var(--destructive);">' + '✗' + '</span>' + t('订阅地址:')}${data.error || t('请求失败')}`);
         }
       } catch (e) {
         lines.pop();
-        lines.push(`<span style="color:var(--destructive);">✗</span> 订阅地址: ${e.message}`);
+        lines.push(`${'<span style="color:var(--destructive);">' + '✗' + '</span>' + t('订阅地址:')}${e.message}`);
       }
     } else {
-      lines.push(`<span style="color:var(--muted-foreground);">-</span> 订阅地址: 未配置`);
+      lines.push(`${'<span style="color:var(--muted-foreground);">' + '-' + '</span>' + t('订阅地址: 未配置')}`);
     }
 
     setHTML(statusContent, lines.join('<br>'));
@@ -4687,16 +4687,16 @@ class AdminApp {
       const res = await fetch(`/api/admin/providers/${providerId}/refresh-key`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        alert('✅ 密钥刷新成功' + (data.expiresAt ? '\n过期时间: ' + new Date(data.expiresAt).toLocaleString('zh-CN') : ''));
+        alert(t('✅ 密钥刷新成功') + (data.expiresAt ? '\n' + t('过期时间: ') + new Date(data.expiresAt).toLocaleString('zh-CN') : ''));
         this.loadProviders();
       } else {
-        const errMsg = data.error || '未知错误';
-        console.error('[密钥刷新失败]', providerId, errMsg);
+        const errMsg = data.error || t('未知错误');
+        console.error(t('[密钥刷新失败]'), providerId, errMsg);
         this._showScriptErrorDialog(providerId, errMsg);
       }
     } catch (error) {
-      alert('❌ 请求失败: ' + error.message);
-      console.error('[密钥刷新请求失败]', providerId, error);
+      alert(t('❌ 请求失败: ') + error.message);
+      console.error(t('[密钥刷新请求失败]'), providerId, error);
     }
   }
 
@@ -4729,7 +4729,7 @@ class AdminApp {
   }
 
   _formatScriptAiModelLabel(model) {
-    if (!model || !model.id) return '自动选择（按系统可用模型）';
+    if (!model || !model.id) return t('自动选择（按系统可用模型）');
     const name = model.name || model.id;
     return model.provider_name ? `${model.provider_name} → ${name}` : name;
   }
@@ -4755,7 +4755,7 @@ class AdminApp {
     overlay.id = 'scriptAiModelPickerOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:16px;';
     overlay.innerHTML = `
-      <div role="dialog" aria-label="选择 AI 辅助模型" style="background:var(--card,#fff);color:var(--foreground);border:1px solid var(--border);border-radius:14px;width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.25);">
+      <div role="dialog" aria-label=t('选择 AI 辅助模型') style="background:var(--card,#fff);color:var(--foreground);border:1px solid var(--border);border-radius:14px;width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.25);">
         <div style="padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);">
           <div>
             <div style="font-weight:600;font-size:15px;">选择 AI 辅助模型</div>
@@ -4764,10 +4764,10 @@ class AdminApp {
           <button type="button" id="scriptAiModelPickerClose" class="btn btn-sm btn-secondary" style="min-width:auto;">关闭</button>
         </div>
         <div style="padding:12px 18px;">
-          <input type="search" id="scriptAiModelSearch" class="input" placeholder="搜索模型名称 / ID / 供应商..." style="width:100%;">
+          <input type="search" id="scriptAiModelSearch" class="input" placeholder=t('搜索模型名称 / ID / 供应商...') style="width:100%;">
         </div>
         <div id="scriptAiModelList" style="padding:0 10px 12px;overflow-y:auto;flex:1;min-height:200px;max-height:50vh;">
-          ${pageLoadingHtml('加载中...', { size: 'md', compact: true })}
+          ${pageLoadingHtml(t('加载中...'), { size: 'md', compact: true })}
         </div>
         <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
           <button type="button" class="btn btn-secondary btn-sm" id="scriptAiModelClear">使用自动选择</button>
@@ -4797,7 +4797,7 @@ class AdminApp {
         return hay.includes(q);
       });
       if (!filtered.length) {
-        listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted-foreground);font-size:13px;">${models.length ? '无匹配模型' : '暂无可用模型（需启用且供应商已配置 API Key）'}</div>`;
+        listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted-foreground);font-size:13px;">${models.length ? t('无匹配模型') : t('暂无可用模型（需启用且供应商已配置 API Key）')}</div>`;
         return;
       }
       const selectedId = selected?.id ? String(selected.id) : '';
@@ -4808,7 +4808,7 @@ class AdminApp {
         return `
           <button type="button" class="script-ai-model-item" data-model-id="${escHtml(m.id)}"
             style="display:block;width:100%;text-align:left;padding:10px 12px;margin:4px 0;border-radius:10px;border:1px solid ${isActive ? 'var(--primary,#3b82f6)' : 'var(--border)'};background:${isActive ? 'rgba(59,130,246,0.08)' : 'transparent'};cursor:pointer;color:inherit;">
-            <div style="font-weight:600;font-size:13px;">${title}${isActive ? ' <span style="color:var(--primary,#3b82f6);font-size:11px;">当前</span>' : ''}</div>
+            <div style="font-weight:600;font-size:13px;">${title}${isActive ? ' <span style="color:var(--primary,#3b82f6);font-size:11px;">' + t('当前') + '</span>' : ''}</div>
             <div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">${sub}</div>
           </button>
         `;
@@ -4831,7 +4831,7 @@ class AdminApp {
 
     try {
       const res = await fetch('/api/admin/models');
-      if (!res.ok) throw new Error('加载模型列表失败');
+      if (!res.ok) throw new Error(t('加载模型列表失败'));
       const all = await res.json();
       // 仅展示已启用模型；供应商 Key 是否可用由后端 tryAiRequest 再校验
       models = (Array.isArray(all) ? all : [])
@@ -4850,7 +4850,7 @@ class AdminApp {
       render();
       searchEl.focus();
     } catch (e) {
-      listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--destructive);font-size:13px;">${escHtml(e.message || '加载失败')}</div>`;
+      listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--destructive);font-size:13px;">${escHtml(e.message || t('加载失败'))}</div>`;
     }
   }
 
@@ -4897,7 +4897,7 @@ class AdminApp {
     `;
 
     const modal = Dialog.showModal({
-      title: '脚本执行错误',
+      title: t('脚本执行错误'),
       content: content,
       width: 600,
       footer: `
@@ -4923,12 +4923,12 @@ class AdminApp {
     document.getElementById('aiAnalyzeBtn').onclick = async () => {
       const btn = document.getElementById('aiAnalyzeBtn');
       btn.disabled = true;
-      setButtonLoading(btn, 'AI 分析中...');
+      setButtonLoading(btn, t('AI 分析中...'));
 
       const section = document.getElementById('aiAnalysisSection');
       const contentEl = document.getElementById('aiAnalysisContent');
       section.style.display = 'block';
-      setHTML(contentEl, '<span style="color:var(--muted-foreground);">正在分析，请稍候...</span>');
+      setHTML(contentEl, '<span style="color:var(--muted-foreground);">' + t('正在分析，请稍候...') + '</span>');
 
       let fullText = '';
 
@@ -4944,9 +4944,9 @@ class AdminApp {
         });
 
         if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: '请求失败' }));
-          setHTML(contentEl, `<span style="color:var(--destructive);">${escHtml(err.error || 'AI 分析失败')}</span>`);
-          clearButtonLoading(btn, '🤖 让 AI 分析错误并给出修改建议');
+          const err = await res.json().catch(() => ({ error: t('请求失败') }));
+          setHTML(contentEl, `<span style="color:var(--destructive);">${escHtml(err.error || t('AI 分析失败'))}</span>`);
+          clearButtonLoading(btn, t('🤖 让 AI 分析错误并给出修改建议'));
           btn.disabled = false;
           return;
         }
@@ -4976,13 +4976,13 @@ class AdminApp {
           }
         }
 
-        clearButtonLoading(btn, '✅ 分析完成');
+        clearButtonLoading(btn, t('✅ 分析完成'));
         // 显示修复按钮
         const fixBtn = document.getElementById('aiFixBtn');
         if (fixBtn) fixBtn.style.display = '';
       } catch (e) {
-        setHTML(contentEl, `<span style="color:var(--destructive);">请求失败: ${escHtml(e.message)}</span>`);
-        clearButtonLoading(btn, '🤖 让 AI 分析错误并给出修改建议');
+        setHTML(contentEl, `${'<span style="color:var(--destructive);">' + t('请求失败:')}${escHtml(e.message)}</span>`);
+        clearButtonLoading(btn, t('🤖 让 AI 分析错误并给出修改建议'));
         btn.disabled = false;
       }
 
@@ -4994,14 +4994,14 @@ class AdminApp {
     document.getElementById('aiFixBtn').onclick = async () => {
       const fixBtn = document.getElementById('aiFixBtn');
       fixBtn.disabled = true;
-      setButtonLoading(fixBtn, 'AI 修复中...');
+      setButtonLoading(fixBtn, t('AI 修复中...'));
 
       // 显示修复输出区域
       const fixSection = document.getElementById('aiFixSection');
       const fixContent = document.getElementById('aiFixContent');
       if (fixSection) fixSection.style.display = 'block';
       if (fixContent) {
-        setHTML(fixContent, '<span style="color:var(--muted-foreground);">正在生成修复代码，请稍候...</span>');
+        setHTML(fixContent, '<span style="color:var(--muted-foreground);">' + t('正在生成修复代码，请稍候...') + '</span>');
       }
 
       let fullText = '';
@@ -5019,9 +5019,9 @@ class AdminApp {
         });
 
         if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: '请求失败' }));
-          if (fixContent) setHTML(fixContent, `<span style="color:var(--destructive);">${escHtml(err.error || 'AI 修复失败')}</span>`);
-          clearButtonLoading(fixBtn, '🔧 让 AI 修复错误');
+          const err = await res.json().catch(() => ({ error: t('请求失败') }));
+          if (fixContent) setHTML(fixContent, `<span style="color:var(--destructive);">${escHtml(err.error || t('AI 修复失败'))}</span>`);
+          clearButtonLoading(fixBtn, t('🔧 让 AI 修复错误'));
           fixBtn.disabled = false;
           return;
         }
@@ -5063,7 +5063,7 @@ class AdminApp {
           fixedScript = fullText.replace(/^```(?:javascript|js)?\s*\n/i, '').replace(/\n```\s*$/, '').trim();
         }
 
-        clearButtonLoading(fixBtn, '✅ 修复完成');
+        clearButtonLoading(fixBtn, t('✅ 修复完成'));
 
         if (fixedScript) {
           // 显示应用按钮
@@ -5077,17 +5077,17 @@ class AdminApp {
                 scriptTextarea.value = fixedScript;
                 scriptTextarea.dispatchEvent(new Event('input', { bubbles: true }));
               }
-              alert('✅ AI 已修复脚本，请检查后保存');
+              alert(t('✅ AI 已修复脚本，请检查后保存'));
             };
           }
         } else {
-          if (fixContent) appendHTML(fixContent, '<br><span style="color:var(--destructive);">⚠️ AI 未能生成修复代码</span>');
-          clearButtonLoading(fixBtn, '🔧 让 AI 修复错误');
+          if (fixContent) appendHTML(fixContent, '<br><span style="color:var(--destructive);">' + t('⚠️ AI 未能生成修复代码') + '</span>');
+          clearButtonLoading(fixBtn, t('🔧 让 AI 修复错误'));
           fixBtn.disabled = false;
         }
       } catch (e) {
-        if (fixContent) setHTML(fixContent, `<span style="color:var(--destructive);">请求失败: ${escHtml(e.message)}</span>`);
-        clearButtonLoading(fixBtn, '🔧 让 AI 修复错误');
+        if (fixContent) setHTML(fixContent, `${'<span style="color:var(--destructive);">' + t('请求失败:')}${escHtml(e.message)}</span>`);
+        clearButtonLoading(fixBtn, t('🔧 让 AI 修复错误'));
         fixBtn.disabled = false;
       }
     };
@@ -5110,7 +5110,7 @@ async function(ctx) {
   });
 
   if (!resp.ok) {
-    throw new Error('Token 请求失败: ' + resp.status + ' ' + await resp.text());
+    throw new Error(t('Token 请求失败: ') + resp.status + ' ' + await resp.text());
   }
 
   const data = await resp.json();
@@ -5161,7 +5161,7 @@ async function(ctx) {
   });
 
   if (!resp.ok) {
-    throw new Error('登录失败: ' + resp.status + ' ' + await resp.text());
+    throw new Error(t('登录失败: ') + resp.status + ' ' + await resp.text());
   }
 
   const data = await resp.json();
@@ -5188,7 +5188,7 @@ async function(ctx) {
   // 第 2 步：检查响应状态
   if (!resp.ok) {
     const errText = await resp.text();
-    throw new Error('密钥获取失败: HTTP ' + resp.status + ' - ' + errText);
+    throw new Error(t('密钥获取失败: HTTP ') + resp.status + ' - ' + errText);
   }
 
   // 第 3 步：解析响应并返回
@@ -5254,7 +5254,7 @@ async function(ctx) {
       scope: 'api.access'
     })
   });
-  if (!resp.ok) throw new Error('Token 请求失败: ' + resp.status);
+  if (!resp.ok) throw new Error(t('Token 请求失败: ') + resp.status);
   const data = await resp.json();
   return { key: data.access_token, expiresIn: data.expires_in };
 }
@@ -5266,7 +5266,7 @@ async function(ctx) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: 'user', password: 'pass' })
   });
-  if (!resp.ok) throw new Error('登录失败: ' + resp.status);
+  if (!resp.ok) throw new Error(t('登录失败: ') + resp.status);
   const data = await resp.json();
   return { key: data.token, expiresIn: data.expires_in || 7200 };
 }
@@ -5280,7 +5280,7 @@ async function(ctx) {
       'Authorization': 'Bearer ' + ctx.currentKey
     }
   });
-  if (!resp.ok) throw new Error('轮换失败: ' + resp.status);
+  if (!resp.ok) throw new Error(t('轮换失败: ') + resp.status);
   const data = await resp.json();
   return { key: data.api_key, expiresIn: data.ttl };
 }
@@ -5314,8 +5314,8 @@ async function(ctx) {
     };
 
     doCopy().then(ok => {
-      if (ok) alert('文档已复制到剪贴板');
-    }).catch(() => alert('复制失败'));
+      if (ok) alert(t('文档已复制到剪贴板'));
+    }).catch(() => alert(t('复制失败')));
   }
 
   // 切换供应商额度查询开关
@@ -5328,17 +5328,17 @@ async function(ctx) {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        this.showToast(err.error || '操作失败', 'error');
+        this.showToast(err.error || t('操作失败'), 'error');
         this.loadProviders();
         return;
       }
       const p = (this.providersData || []).find(x => x.id === providerId);
       if (p) p.quota_enabled = enabled;
-      this.showToast(enabled ? '已开启额度查询' : '已关闭额度查询', 'success');
+      this.showToast(enabled ? t('已开启额度查询') : t('已关闭额度查询'), 'success');
       if (enabled) {
         this.loadProviderQuotaInline(providerId);
       } else {
-        const empty = '<span style="color:var(--muted-foreground);font-size:12px;">未启用</span>';
+        const empty = '<span style="color:var(--muted-foreground);font-size:12px;">' + t('未启用') + '</span>';
         const el = document.getElementById(`quota-display-${providerId}`);
         const cardEl = document.getElementById(`quota-display-card-${providerId}`);
         if (el) setHTML(el, empty);
@@ -5346,7 +5346,7 @@ async function(ctx) {
       }
       this.loadProviders();
     } catch (e) {
-      this.showToast('操作失败: ' + e.message, 'error');
+      this.showToast(t('操作失败: ') + e.message, 'error');
     }
   }
 
@@ -5359,9 +5359,9 @@ async function(ctx) {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        this.showToast(err.error || '操作失败', 'error');
+        this.showToast(err.error || t('操作失败'), 'error');
       } else {
-        this.showToast(enabled ? '已启用' : '已禁用', 'success');
+        this.showToast(enabled ? t('已启用') : t('已禁用'), 'success');
         const p = (this.providersData || []).find(x => x.id === providerId);
         if (p) p.enabled = enabled;
         // 供应商启停影响 Team 模型权限里的「供应商禁用」标记
@@ -5369,7 +5369,7 @@ async function(ctx) {
       }
       this.loadProviders();
     } catch (e) {
-      this.showToast('操作失败: ' + e.message, 'error');
+      this.showToast(t('操作失败: ') + e.message, 'error');
     }
   }
 
@@ -5381,7 +5381,7 @@ async function(ctx) {
     ].filter(Boolean);
     if (!els.length) return;
 
-    const loading = inlineLoadingHtml('查询中...', 'sm');
+    const loading = inlineLoadingHtml(t('查询中...'), 'sm');
     els.forEach(el => setHTML(el, loading));
     const quotaButton = document.getElementById(`quota-btn-${providerId}`);
     if (quotaButton) {
@@ -5394,7 +5394,7 @@ async function(ctx) {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        const errHtml = `<span style="color:var(--destructive);font-size:12px;" title="${escapeHtml(data.error || '查询失败')}">查询失败</span>`;
+        const errHtml = `<span style="color:var(--destructive);font-size:12px;" title="${escapeHtml(data.error || '查询失败')}">${t('查询失败')}</span>`;
         els.forEach(el => setHTML(el, errHtml));
         return;
       }
@@ -5416,20 +5416,20 @@ async function(ctx) {
       `;
       els.forEach(el => setHTML(el, html));
     } catch (e) {
-      els.forEach(el => setHTML(el, `<span style="color:var(--destructive);font-size:12px;">网络错误</span>`));
+      els.forEach(el => setHTML(el, `<span style="color:var(--destructive);font-size:12px;">${t('网络错误')}</span>`));
     } finally {
       if (quotaButton) {
         quotaButton.disabled = false;
-        setHTML(quotaButton, '查询额度');
+        setHTML(quotaButton, t('查询额度'));
       }
     }
   }
 
   async deleteProvider(id) {
     const ok = await Dialog.confirm(
-      '删除供应商',
-      '确定要删除此供应商吗？<br><br><strong style="color:var(--destructive);">将同时删除该供应商下的全部模型</strong>，并清理 Team 绑定、API Key 模型绑定等关联数据。此操作不可撤销。',
-      { confirmText: '确认删除', danger: true }
+      t('删除供应商'),
+       t('确定要删除此供应商吗？') + '<br><br><strong style="color:var(--destructive);">' + t('将同时删除该供应商下的全部模型') + '</strong>' + t('，并清理 Team 绑定、API Key 模型绑定等关联数据。此操作不可撤销。'),
+      { confirmText: t('确认删除'), danger: true }
     );
     if (!ok) return;
 
@@ -5441,18 +5441,18 @@ async function(ctx) {
       if (response.ok) {
         const result = await response.json().catch(() => ({}));
         const n = result.deletedModels || 0;
-        this.showToast(n > 0 ? `供应商已删除，并清理了 ${n} 个关联模型` : '供应商已删除', 'success');
+        this.showToast(n > 0 ? `${t('供应商已删除，并清理了')}${n}${t('个关联模型')}` : t('供应商已删除'), 'success');
         this._invalidateAdminProviderModelsCache();
         this._notifyModelsCatalogChanged();
         this.loadProviders();
         if (typeof this.loadModels === 'function') this.loadModels();
       } else {
         const err = await response.json().catch(() => ({}));
-        this.showToast(err.error || '删除失败', 'error');
+        this.showToast(err.error || t('删除失败'), 'error');
       }
     } catch (error) {
-      console.error('删除供应商失败:', error);
-      this.showToast('删除失败', 'error');
+      console.error(t('删除供应商失败:'), error);
+      this.showToast(t('删除失败'), 'error');
     }
   }
 
@@ -5465,7 +5465,7 @@ async function(ctx) {
     this.fetchedExistingIds = new Set();
 
     // 显示对话框
-    document.getElementById('fetchModelsTitle').textContent = '获取模型列表';
+    document.getElementById('fetchModelsTitle').textContent = t('获取模型列表');
     document.getElementById('fetchModelsLoading').style.display = 'block';
     document.getElementById('fetchModelsError').style.display = 'none';
     document.getElementById('fetchModelsContent').style.display = 'none';
@@ -5479,39 +5479,39 @@ async function(ctx) {
 
     try {
       const url = `/api/admin/providers/${providerId}/fetch-models`;
-      console.log(`[获取模型] 请求: GET ${url}`);
+      console.log(`${t('[获取模型] 请求: GET')}${url}`);
       const response = await fetch(url);
       const data = await response.json();
-      console.log(`[获取模型] 响应: status=${response.status}`, data);
+      console.log(`${t('[获取模型] 响应: status=')}${response.status}`, data);
 
       // 输出详细的调试信息到控制台
       if (data.debug?.attempts) {
-        console.group('[获取模型] 请求尝试详情');
+        console.group(t('[获取模型] 请求尝试详情'));
         data.debug.attempts.forEach((a, i) => {
-          console.log(`尝试 ${i + 1}: ${a.url}`);
-          console.log(`  状态: ${a.status || 'N/A'}`);
+          console.log(`${t('尝试')}${i + 1}: ${a.url}`);
+          console.log(`${t('状态:')}${a.status || 'N/A'}`);
           console.log(`  Content-Type: ${a.contentType || 'N/A'}`);
-          if (a.error) console.log(`  错误: ${a.error}`);
-          if (a.bodyPreview) console.log(`  响应预览: ${a.bodyPreview}`);
-          if (a.success) console.log(`  成功! 模型数: ${a.modelCount}`);
+          if (a.error) console.log(`${t('错误:')}${a.error}`);
+          if (a.bodyPreview) console.log(`${t('响应预览:')}${a.bodyPreview}`);
+          if (a.success) console.log(`${t('成功! 模型数:')}${a.modelCount}`);
         });
-        if (data.debug.succeededUrl) console.log(`成功路径: ${data.debug.succeededUrl}`);
+        if (data.debug.succeededUrl) console.log(`${t('成功路径:')}${data.debug.succeededUrl}`);
         console.groupEnd();
       }
 
       if (!response.ok) {
         document.getElementById('fetchModelsLoading').style.display = 'none';
         document.getElementById('fetchModelsError').style.display = 'block';
-        let errorMsg = data.error || '获取失败';
+        let errorMsg = data.error || t('获取失败');
         if (data.debug?.attempts) {
-          errorMsg += '\n\n尝试过的路径:\n';
+          errorMsg += '\n\n' + t('尝试过的路径:') + '\n';
           data.debug.attempts.forEach(a => {
             errorMsg += `  ${a.url}: ${a.error || `HTTP ${a.status}`}\n`;
           });
         }
         document.getElementById('fetchModelsError').textContent = errorMsg;
         document.getElementById('fetchModelsError').style.whiteSpace = 'pre-wrap';
-        console.error(`[获取模型] 失败:`, data);
+        console.error(`${t('[获取模型] 失败:')}`, data);
         return;
       }
 
@@ -5522,7 +5522,7 @@ async function(ctx) {
         document.getElementById('fetchModelsLoading').style.display = 'none';
         document.getElementById('fetchModelsError').style.display = 'block';
         document.getElementById('fetchModelsError').style.color = 'var(--muted-foreground)';
-        document.getElementById('fetchModelsError').textContent = data.message || '未获取到模型';
+        document.getElementById('fetchModelsError').textContent = data.message || t('未获取到模型');
         return;
       }
 
@@ -5533,10 +5533,10 @@ async function(ctx) {
       this.fetchedModelsFilter = 'all';
       this.renderFetchedModels(data.provider_name, models);
     } catch (error) {
-      console.error('获取供应商模型失败:', error);
+      console.error(t('获取供应商模型失败:'), error);
       document.getElementById('fetchModelsLoading').style.display = 'none';
       document.getElementById('fetchModelsError').style.display = 'block';
-      document.getElementById('fetchModelsError').textContent = '网络错误: ' + error.message;
+      document.getElementById('fetchModelsError').textContent = t('网络错误: ') + error.message;
     }
   }
 
@@ -5561,7 +5561,7 @@ async function(ctx) {
     const upstreamIds = new Set(models.map(m => m.id));
     const staleCount = existingModels.filter(m => !upstreamIds.has(m.id)).length;
     btn.style.display = staleCount > 0 ? 'inline-flex' : 'none';
-    btn.textContent = staleCount > 0 ? `清理已下架模型 (${staleCount})` : '清理已下架模型';
+    btn.textContent = staleCount > 0 ? `${t('清理已下架模型 (')}${staleCount})` : t('清理已下架模型');
     btn.disabled = false;
   }
 
@@ -5577,25 +5577,25 @@ async function(ctx) {
     const upstreamIds = new Set(models.map(m => m.id));
     const staleModels = existingModels.filter(m => !upstreamIds.has(m.id));
     if (staleModels.length === 0) {
-      this.showToast('没有可清理的已下架模型', 'info');
+      this.showToast(t('没有可清理的已下架模型'), 'info');
       this._updateCleanupStaleModelsBtn();
       return;
     }
 
     const preview = staleModels.slice(0, 8).map(m => escapeHtml(m.name || m.id)).join('、');
-    const more = staleModels.length > 8 ? ` 等 ${staleModels.length} 个` : '';
+    const more = staleModels.length > 8 ? `${t('等')}${staleModels.length}${t('个')}` : '';
     const ok = await Dialog.confirm(
-      '清理已下架模型',
-      `将<strong style="color:var(--destructive);">永久删除</strong>本供应商下 <strong>${staleModels.length}</strong> 个上游已不存在的本地模型记录（含 Team / API Key 绑定等关联数据）。此操作不可撤销。<br><br>` +
-        `<span style="font-size:13px;color:var(--muted-foreground);">预览：${preview}${more}</span>`,
-      { confirmText: '确认清理', danger: true }
+      t('清理已下架模型'),
+      `${t('将')}<strong style="color:var(--destructive);">${t('永久删除')}</strong>${t('本供应商下')} <strong>${staleModels.length}${'</strong>' + t('个上游已不存在的本地模型记录（含 Team / API Key 绑定等关联数据）。此操作不可撤销。')}<br><br>` +
+        `${'<span style="font-size:13px;color:var(--muted-foreground);">' + t('预览：')}${preview}${more}</span>`,
+      { confirmText: t('确认清理'), danger: true }
     );
     if (!ok) return;
 
     const btn = document.getElementById('cleanupStaleModelsBtn');
     if (btn) {
       btn.disabled = true;
-      setButtonLoading(btn, '清理中...');
+      setButtonLoading(btn, t('清理中...'));
     }
 
     try {
@@ -5609,13 +5609,13 @@ async function(ctx) {
       );
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        this.showToast(result.error || '清理失败', 'error');
+        this.showToast(result.error || t('清理失败'), 'error');
         return;
       }
 
       const deleted = result.deleted || 0;
       this.showToast(
-        deleted > 0 ? `已清理 ${deleted} 个已下架模型` : (result.message || '没有可清理的已下架模型'),
+        deleted > 0 ? `${t('已清理')}${deleted}${t('个已下架模型')}` : (result.message || t('没有可清理的已下架模型')),
         deleted > 0 ? 'success' : 'info'
       );
 
@@ -5640,11 +5640,11 @@ async function(ctx) {
         this.loadModels({ resetPage: false }).catch(() => {});
       }
     } catch (error) {
-      console.error('清理已下架模型失败:', error);
-      this.showToast('清理失败: ' + error.message, 'error');
+      console.error(t('清理已下架模型失败:'), error);
+      this.showToast(t('清理失败: ') + error.message, 'error');
     } finally {
       if (btn) {
-        clearButtonLoading(btn, btn.textContent || '清理已下架模型');
+        clearButtonLoading(btn, btn.textContent || t('清理已下架模型'));
         btn.disabled = false;
         this._updateCleanupStaleModelsBtn();
       }
@@ -5656,15 +5656,15 @@ async function(ctx) {
    */
   async cleanupAllStaleModels() {
     if (this._cleanupAllStaleRunning) {
-      this.showToast('清理任务进行中，请稍候', 'info');
+      this.showToast(t('清理任务进行中，请稍候'), 'info');
       return;
     }
 
     const ok = await Dialog.confirm(
-      '清理所有已下架模型',
-      '将依次从<strong>每个供应商</strong>拉取上游模型列表，对比后<strong style="color:var(--destructive);">永久删除</strong>本地已下架的模型记录（含 Team / API Key 绑定等关联数据）。' +
-        '<br><br>拉取失败的供应商会<strong>跳过</strong>（不会误删）。此操作可能耗时较长，且不可撤销。',
-      { confirmText: '开始清理', danger: true }
+      t('清理所有已下架模型'),
+       t('将依次从') + '<strong>' + t('每个供应商') + '</strong>' + t('拉取上游模型列表，对比后') + '<strong style="color:var(--destructive);">' + t('永久删除') + '</strong>' + t('本地已下架的模型记录（含 Team / API Key 绑定等关联数据）。') +
+        '<br><br>' + t('拉取失败的供应商会') + '<strong>' + t('跳过') + '</strong>' + t('（不会误删）。此操作可能耗时较长，且不可撤销。') + ',',
+      { confirmText: t('开始清理'), danger: true }
     );
     if (!ok) return;
 
@@ -5672,7 +5672,7 @@ async function(ctx) {
     const toolbarBtn = document.getElementById('cleanupAllStaleModelsBtn');
     if (toolbarBtn) {
       toolbarBtn.disabled = true;
-      setButtonLoading(toolbarBtn, '清理中...');
+      setButtonLoading(toolbarBtn, t('清理中...'));
     }
 
     try {
@@ -5683,7 +5683,7 @@ async function(ctx) {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        this.showToast(result.error || '清理失败', 'error');
+        this.showToast(result.error || t('清理失败'), 'error');
         return;
       }
 
@@ -5691,10 +5691,10 @@ async function(ctx) {
       const skipped = result.skippedProviders || 0;
       const successN = result.successProviders || 0;
       const parts = [
-        `删除 ${deleted} 个已下架模型`,
-        `成功对比 ${successN} 个供应商`
+        `${t('删除')}${deleted}${t('个已下架模型')}`,
+        `${t('成功对比')}${successN}${t('个供应商')}`
       ];
-      if (skipped > 0) parts.push(`跳过 ${skipped} 个（拉取失败）`);
+      if (skipped > 0) parts.push(`${t('跳过')}${skipped}${t('个（拉取失败）')}`);
       this.showToast(parts.join(' · '), deleted > 0 || skipped === 0 ? 'success' : 'info');
 
       // 若同步弹窗打开且属于某一供应商，刷新该列表
@@ -5710,12 +5710,12 @@ async function(ctx) {
         this.loadProviders({ resetPage: false }).catch(() => {});
       }
     } catch (error) {
-      console.error('清理全部已下架模型失败:', error);
-      this.showToast('清理失败: ' + error.message, 'error');
+      console.error(t('清理全部已下架模型失败:'), error);
+      this.showToast(t('清理失败: ') + error.message, 'error');
     } finally {
       this._cleanupAllStaleRunning = false;
       if (toolbarBtn) {
-        clearButtonLoading(toolbarBtn, '清理所有已下架模型');
+        clearButtonLoading(toolbarBtn, t('清理所有已下架模型'));
         toolbarBtn.disabled = false;
       }
     }
@@ -5750,7 +5750,7 @@ async function(ctx) {
           <label for="fetchedModel_${index}">
             <span class="model-name">${model.name || model.id}</span>
             ${model.name && model.name !== model.id ? `<span class="model-id">${model.id}</span>` : ''}
-            ${isStale ? '<span class="status-badge stale-badge">已失效</span>' : (isInSystem ? (isEnabled ? '<span class="status-badge enabled-badge">已启用</span>' : '<span class="status-badge disabled-badge">已禁用</span>') : '<span class="status-badge new-badge">新模型</span>')}
+            ${isStale ? '<span class="status-badge stale-badge">' + t('已失效') + '</span>' : (isInSystem ? (isEnabled ? '<span class="status-badge enabled-badge">' + t('已启用') + '</span>' : '<span class="status-badge disabled-badge">' + t('已禁用') + '</span>') : '<span class="status-badge new-badge">' + t('新模型') + '</span>')}
           </label>
         </div>
       `;
@@ -5842,11 +5842,11 @@ async function(ctx) {
     const staleCount = document.querySelectorAll('#fetchedModelsList .model-check-item[data-status="stale"]').length;
     const newCount = document.querySelectorAll('#fetchedModelsList .model-check-item[data-status="new"]').length;
     let label = '';
-    if (filter === 'enabled') label = `已启用 ${enabledCount} 个`;
-    else if (filter === 'disabled') label = `未启用 ${disabledCount} 个`;
-    else if (filter === 'stale') label = `已失效 ${staleCount} 个`;
-    else label = `共 ${enabledCount + disabledCount + staleCount + newCount} 个（已启用 ${enabledCount}，未启用 ${disabledCount}，新模型 ${newCount}${staleCount > 0 ? `，已失效 ${staleCount}` : ''}）`;
-    if (keyword) label += `，匹配 ${visibleCount} 个`;
+    if (filter === 'enabled') label = `${t('已启用')}${enabledCount}${t('个')}`;
+    else if (filter === 'disabled') label = `${t('未启用')}${disabledCount}${t('个')}`;
+    else if (filter === 'stale') label = `${t('已失效')}${staleCount}${t('个')}`;
+    else label = `${t('共')}${enabledCount + disabledCount + staleCount + newCount}${t('个（已启用')}${enabledCount}${t('，未启用')}${disabledCount}${t('，新模型')}${newCount}${staleCount > 0 ? `${t('，已失效')} ${staleCount}` : ''}）`;
+    if (keyword) label += `${t('，匹配')}${visibleCount}${t('个')}`;
     document.getElementById('fetchedModelsCount').textContent = label;
   }
 
@@ -5884,9 +5884,9 @@ async function(ctx) {
 
     if (enabledModelIds.length === 0) {
       const ok = await Dialog.confirm(
-        '禁用全部模型？',
-        '当前<strong>没有任何模型被勾选</strong>。保存后将<strong style="color:var(--destructive);">禁用该供应商下所有已有模型</strong>。确定继续吗？',
-        { confirmText: '确认禁用全部', danger: true }
+        t('禁用全部模型？'),
+         t('当前') + '<strong>' + t('没有任何模型被勾选') + '</strong>' + t('。保存后将') + '<strong style="color:var(--destructive);">' + t('禁用该供应商下所有已有模型') + '</strong>' + t('。确定继续吗？') + ',',
+        { confirmText: t('确认禁用全部'), danger: true }
       );
       if (!ok) return;
     }
@@ -5894,7 +5894,7 @@ async function(ctx) {
     // 禁用按钮防止重复提交
     const saveBtn = document.getElementById('saveFetchedModelsBtn');
     if (saveBtn) {
-      setButtonLoading(saveBtn, '保存中...');
+      setButtonLoading(saveBtn, t('保存中...'));
     }
 
     try {
@@ -5907,10 +5907,10 @@ async function(ctx) {
       if (response.ok) {
         const result = await response.json();
         const parts = [];
-        if (result.added > 0) parts.push(`新增 ${result.added} 个`);
-        if (result.enabled > 0) parts.push(`启用 ${result.enabled} 个`);
-        if (result.disabled > 0) parts.push(`禁用 ${result.disabled} 个`);
-        this.showToast('保存成功：' + (parts.join('，') || '无变化'), 'success');
+        if (result.added > 0) parts.push(`${t('新增')}${result.added}${t('个')}`);
+        if (result.enabled > 0) parts.push(`${t('启用')}${result.enabled}${t('个')}`);
+        if (result.disabled > 0) parts.push(`${t('禁用')}${result.disabled}${t('个')}`);
+        this.showToast(t('保存成功：') + (parts.join('，') || t('无变化')), 'success');
         this.closeModals();
         // 模型目录变更：使 Team 模型权限等跨页缓存失效并尽量即时刷新
         this._invalidateAdminProviderModelsCache();
@@ -5921,14 +5921,14 @@ async function(ctx) {
         }
       } else {
         const err = await response.json().catch(() => ({}));
-        this.showToast(err.error || '保存失败', 'error');
+        this.showToast(err.error || t('保存失败'), 'error');
       }
     } catch (error) {
-      console.error('保存模型失败:', error);
-      this.showToast('保存失败: ' + error.message, 'error');
+      console.error(t('保存模型失败:'), error);
+      this.showToast(t('保存失败: ') + error.message, 'error');
     } finally {
       if (saveBtn) {
-        clearButtonLoading(saveBtn, '保存');
+        clearButtonLoading(saveBtn, t('保存'));
       }
     }
   }
@@ -5940,7 +5940,7 @@ async function(ctx) {
     const previousQuotaButtonHtml = quotaButton?.innerHTML;
     if (quotaButton) {
       quotaButton.disabled = true;
-      setHTML(quotaButton, inlineLoadingHtml('查询中...', 'sm'));
+      setHTML(quotaButton, inlineLoadingHtml(t('查询中...'), 'sm'));
     }
     const modal = document.getElementById('providerQuotaModal');
     const loading = document.getElementById('quotaLoading');
@@ -5949,7 +5949,7 @@ async function(ctx) {
     const editor = document.getElementById('quotaScriptEditor');
 
     loading.style.display = 'block';
-    document.getElementById('quotaLoadingText').textContent = '正在查询供应商额度，请稍候...';
+    document.getElementById('quotaLoadingText').textContent = t('正在查询供应商额度，请稍候...');
     error.style.display = 'none';
     content.style.display = 'none';
     editor.style.display = 'none';
@@ -5969,7 +5969,7 @@ async function(ctx) {
 
       if (!response.ok) {
         error.style.display = 'block';
-        error.textContent = data.error || '查询失败';
+        error.textContent = data.error || t('查询失败');
         error.style.whiteSpace = 'pre-wrap';
         return;
       }
@@ -5991,11 +5991,11 @@ async function(ctx) {
       const periods = Array.isArray(q.periods) ? q.periods : [];
       const credits = q.credits || {};
       const resetCredits = q.rateLimitResetCredits?.available_count;
-      const detailParts = periods.map(period => `${period.label || period.key}: ${period.percent}%${period.resetsAt ? `，重置于 ${period.resetsAt}` : ''}${period.resetAfterSeconds > 0 ? `（约 ${Math.ceil(period.resetAfterSeconds / 3600)} 小时后）` : ''}`);
+      const detailParts = periods.map(period => `${period.label || period.key}: ${period.percent}%${period.resetsAt ? `${t('，重置于')} ${period.resetsAt}` : ''}${period.resetAfterSeconds > 0 ? `${t('（约')} ${Math.ceil(period.resetAfterSeconds / 3600)} ${t('小时后）')}` : ''}`);
       if (credits.hasCredits || credits.unlimited || credits.balance !== undefined) {
-        detailParts.push(`Credits: ${credits.unlimited ? '无限' : credits.balance ?? '0'}`);
+        detailParts.push(`Credits: ${credits.unlimited ? t('无限') : credits.balance ?? '0'}`);
       }
-      if (resetCredits !== undefined) detailParts.push(`可手动重置: ${resetCredits} 次`);
+      if (resetCredits !== undefined) detailParts.push(`${t('可手动重置:')}${resetCredits}${t('次')}`);
       document.getElementById('quotaExtra').textContent = detailParts.length ? detailParts.join(' | ') : (q.extra || '');
 
       this.renderGrokQuotaDetails(q, isGrok);
@@ -6024,24 +6024,24 @@ async function(ctx) {
             <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;">
               <span>${escapeHtml(period.label || period.key)}</span><span>${escapeHtml(String(period.percent))}%</span>
             </div>
-            ${period.startsAt ? `<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">周期：${escapeHtml(period.startsAt)} 至 ${escapeHtml(period.resetsAt || '未知')}</div>` : (period.resetsAt ? `<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">重置于 ${escapeHtml(period.resetsAt)}</div>` : '')}
-            ${period.resetAfterSeconds > 0 ? `<div style="margin-top:2px;font-size:11px;color:var(--muted-foreground);">约 ${escapeHtml(String(Math.ceil(period.resetAfterSeconds / 3600)))} 小时后重置</div>` : ''}
+            ${period.startsAt ? `${'<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">' + t('周期：')}${escapeHtml(period.startsAt)}${t('至')}${escapeHtml(period.resetsAt || t('未知'))}</div>` : (period.resetsAt ? `${'<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">' + t('重置于')}${escapeHtml(period.resetsAt)}</div>` : '')}
+            ${period.resetAfterSeconds > 0 ? `${'<div style="margin-top:2px;font-size:11px;color:var(--muted-foreground);">' + t('约')}${escapeHtml(String(Math.ceil(period.resetAfterSeconds / 3600)))}${t('小时后重置')}</div>` : ''}
           </div>`).join(''));
       }
       const creditsDetails = document.getElementById('quotaCreditsDetails');
       if (creditsDetails) {
         const resetCount = q.rateLimitResetCredits?.available_count;
-        setHTML(creditsDetails, `<div>Credits：${escapeHtml(credits.unlimited ? '无限' : String(credits.balance ?? '0'))}</div>${resetCount !== undefined ? `<div>可手动重置：${escapeHtml(String(resetCount))} 次</div>` : ''}`);
+        setHTML(creditsDetails, `<div>Credits：${escapeHtml(credits.unlimited ? t('无限') : String(credits.balance ?? '0'))}</div>${resetCount !== undefined ? `<div>${t('可手动重置：')}${escapeHtml(String(resetCount))} ${t('次')}</div>` : ''}`);
       }
       content.style.display = 'block';
     } catch (err) {
       loading.style.display = 'none';
       error.style.display = 'block';
-      error.textContent = '网络错误: ' + err.message;
+      error.textContent = t('网络错误: ') + err.message;
     } finally {
       if (quotaButton) {
         quotaButton.disabled = false;
-        setHTML(quotaButton, previousQuotaButtonHtml || '查询额度');
+        setHTML(quotaButton, previousQuotaButtonHtml || t('查询额度'));
       }
     }
   }
@@ -6058,19 +6058,19 @@ async function(ctx) {
     const current = q.currentPeriod || {};
     if (billing) {
       billing.style.display = 'block';
-      setHTML(billing, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">SuperGrok 计费信息</div><div style="display:flex;gap:8px;flex-wrap:wrap;">${card('当前周期', current.label || current.type || '当前周期', current.startsAt && current.resetsAt ? `${current.startsAt} 至 ${current.resetsAt}` : '')}${card('按需额度上限', formatNumber(q.onDemandCap), 'onDemandCap')}${card('按需已使用', formatNumber(q.onDemandUsed), `剩余 ${formatNumber(q.onDemandRemaining)}`)}${card('Prepaid Credits', formatNumber(q.prepaidBalance), q.isUnifiedBillingUser ? '统一周池计费' : '额外购买余额')}${q.monthlyLimit ? card('旧版月额度', formatNumber(q.monthlyLimit), `已使用 ${formatNumber(q.monthlyUsed)} 美分`) : ''}</div>`);
+      setHTML(billing, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('SuperGrok 计费信息')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;">${card(t('当前周期'), current.label || current.type || t('当前周期'), current.startsAt && current.resetsAt ? `${current.startsAt} ${t('至')} ${current.resetsAt}` : '')}${card(t('按需额度上限'), formatNumber(q.onDemandCap), 'onDemandCap')}${card(t('按需已使用'), formatNumber(q.onDemandUsed), `剩余 ${formatNumber(q.onDemandRemaining)}`)}${card('Prepaid Credits', formatNumber(q.prepaidBalance), q.isUnifiedBillingUser ? t('统一周池计费') : t('额外购买余额'))}${q.monthlyLimit ? card(t('旧版月额度'), formatNumber(q.monthlyLimit), `已使用 ${formatNumber(q.monthlyUsed)} 美分`) : ''}</div>`);
     }
 
     const productPeriods = (q.periods || []).filter(period => !period.historical && period.key !== 'current_period');
     if (products && productPeriods.length) {
       products.style.display = 'block';
-      setHTML(products, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">按产品用量</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">${productPeriods.map(period => `<div style="padding:10px 12px;background:var(--muted);border-radius:8px;"><div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;"><span>${escapeHtml(period.label || period.key)}</span><span>${escapeHtml(String(period.percent))}%</span></div><div style="height:5px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:8px;"><div style="height:100%;width:${Math.min(100, Math.max(0, Number(period.percent) || 0))}%;background:var(--brand-blue);border-radius:4px;"></div></div></div>`).join('')}</div>`);
+      setHTML(products, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('按产品用量')}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">${productPeriods.map(period => `<div style="padding:10px 12px;background:var(--muted);border-radius:8px;"><div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;"><span>${escapeHtml(period.label || period.key)}</span><span>${escapeHtml(String(period.percent))}%</span></div><div style="height:5px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:8px;"><div style="height:100%;width:${Math.min(100, Math.max(0, Number(period.percent) || 0))}%;background:var(--brand-blue);border-radius:4px;"></div></div></div>`).join('')}</div>`);
     }
 
     const historyPeriods = (q.periods || []).filter(period => period.historical);
     if (history && historyPeriods.length) {
       history.style.display = 'block';
-      setHTML(history, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">历史周期</div><div style="overflow:auto;"><table style="width:100%;font-size:12px;"><thead><tr><th style="text-align:left;padding:6px 8px;">周期</th><th style="text-align:right;padding:6px 8px;">使用率</th><th style="text-align:right;padding:6px 8px;">时间</th></tr></thead><tbody>${historyPeriods.map(period => `<tr><td style="padding:6px 8px;">${escapeHtml(period.label || period.key)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml(String(period.percent))}%</td><td style="padding:6px 8px;text-align:right;color:var(--muted-foreground);">${escapeHtml([period.startsAt, period.resetsAt].filter(Boolean).join(' 至 ') || '-')}</td></tr>`).join('')}</tbody></table></div>`);
+      setHTML(history, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('历史周期')}</div><div style="overflow:auto;"><table style="width:100%;font-size:12px;"><thead><tr><th style="text-align:left;padding:6px 8px;">周期</th><th style="text-align:right;padding:6px 8px;">使用率</th><th style="text-align:right;padding:6px 8px;">时间</th></tr></thead><tbody>${historyPeriods.map(period => `<tr><td style="padding:6px 8px;">${escapeHtml(period.label || period.key)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml(String(period.percent))}%</td><td style="padding:6px 8px;text-align:right;color:var(--muted-foreground);">${escapeHtml([period.startsAt, period.resetsAt].filter(Boolean).join(t(' 至 ')) || '-')}</td></tr>`).join('')}</tbody></table></div>`);
     }
   }
 
@@ -6085,7 +6085,7 @@ async function(ctx) {
 
     content.style.display = 'none';
     editor.style.display = 'block';
-    textarea.value = '加载中...';
+    textarea.value = t('加载中...');
 
     // 切换按钮：显示编辑模式
     document.getElementById('quotaEditBtn').style.display = 'none';
@@ -6118,14 +6118,14 @@ async function(ctx) {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || '保存失败');
+        alert(data.error || t('保存失败'));
         return;
       }
 
       // 保存成功，重新查询
       this.checkProviderQuota(providerId);
     } catch (e) {
-      alert('保存失败: ' + e.message);
+      alert(t('保存失败: ') + e.message);
     }
   }
 
@@ -6143,7 +6143,7 @@ async function(ctx) {
       // 重新加载默认脚本
       this.editQuotaScript();
     } catch (e) {
-      alert('重置失败: ' + e.message);
+      alert(t('重置失败: ') + e.message);
     }
   }
 
@@ -6164,12 +6164,12 @@ async function(ctx) {
     const isGrok = mode === 'grok_billing';
     if (section) section.style.display = isCodex || isGrok ? 'block' : 'none';
     if (hint) hint.textContent = isGrok
-      ? 'SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化'
-      : 'Codex WHAM 使用导入的 OAuth Token 查询 ChatGPT Codex 的 5 小时与 7 天窗口，接口为非公开接口，字段可能变化';
+      ? t('SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化')
+      : t('Codex WHAM 使用导入的 OAuth Token 查询 ChatGPT Codex 的 5 小时与 7 天窗口，接口为非公开接口，字段可能变化');
     if (label) label.textContent = isGrok ? 'SuperGrok auth.json' : 'Codex auth.json';
     if (authHint) authHint.innerHTML = isGrok
-      ? '文件通常位于 <code>~/.grok/auth.json</code>，即 Linux/macOS 下的 <code>/home/你的用户名/.grok/auth.json</code>。Token 会保存到当前供应商，请勿上传给第三方。'
-      : '文件通常位于 <code>~/.codex/auth.json</code>，即 Linux/macOS 下的 <code>/home/你的用户名/.codex/auth.json</code>。Token 会保存到当前供应商，请勿上传给第三方。';
+      ? t('文件通常位于') + ' <code>~/.grok/auth.json</code>' + t('，即 Linux/macOS 下的') + '<code>' + t('/home/你的用户名/.grok/auth.json') + '</code>' + t('。Token 会保存到当前供应商，请勿上传给第三方。')
+      : t('文件通常位于') + ' <code>~/.codex/auth.json</code>' + t('，即 Linux/macOS 下的') + '<code>' + t('/home/你的用户名/.codex/auth.json') + '</code>' + t('。Token 会保存到当前供应商，请勿上传给第三方。');
     if (textarea) textarea.placeholder = isGrok ? '{"access_token":"...","user_id":"..."}' : '{"tokens":{"access_token":"...","refresh_token":"..."}}';
   }
 
@@ -6200,10 +6200,10 @@ async function(ctx) {
     if (provider.quota_last_ok) {
       const remaining = provider.quota_last_result?.remaining;
       meta.textContent = remaining != null
-        ? `上次定时查询：${timeText}，剩余 ${remaining}`
-        : `上次定时查询：${timeText}，成功`;
+        ? `${t('上次定时查询：')}${timeText}${t('，剩余')}${remaining}`
+        : `${t('上次定时查询：')}${timeText}${t('，成功')}`;
     } else {
-      meta.textContent = `上次定时查询：${timeText}，失败${provider.quota_last_error ? ' — ' + provider.quota_last_error : ''}`;
+      meta.textContent = `${t('上次定时查询：')}${timeText}${t('，失败')}${provider.quota_last_error ? ' — ' + provider.quota_last_error : ''}`;
     }
     meta.dataset.hasMeta = '1';
   }
@@ -6221,21 +6221,21 @@ async function(ctx) {
     const text = document.getElementById('providerCodexConfigText')?.value.trim();
     const mode = document.getElementById('providerQuotaMode')?.value;
     const isGrok = mode === 'grok_billing';
-    if (!providerId) { alert(`请先保存供应商，再绑定 ${isGrok ? 'SuperGrok' : 'Codex'} OAuth`); return; }
-    if (!text) { alert('请输入或上传 auth.json'); return; }
+    if (!providerId) { alert(`${t('请先保存供应商，再绑定')}${isGrok ? 'SuperGrok' : 'Codex'} OAuth`); return; }
+    if (!text) { alert(t('请输入或上传 auth.json')); return; }
     let config;
-    try { config = JSON.parse(text); } catch (error) { alert('JSON 格式错误: ' + error.message); return; }
+    try { config = JSON.parse(text); } catch (error) { alert(t('JSON 格式错误: ') + error.message); return; }
     try {
       const response = await fetch(isGrok ? '/api/admin/import-grok' : '/api/admin/import-codex', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ providerId, config })
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) { alert(result.error || '绑定失败'); return; }
-      alert(`${isGrok ? 'SuperGrok' : 'Codex'} OAuth 已绑定到当前供应商`);
+      if (!response.ok) { alert(result.error || t('绑定失败')); return; }
+      alert(`${isGrok ? 'SuperGrok' : 'Codex'}${t('OAuth 已绑定到当前供应商')}`);
       document.getElementById('providerCodexConfigText').value = '';
       document.getElementById('providerCodexConfigFile').value = '';
-    } catch (error) { alert('绑定失败: ' + error.message); }
+    } catch (error) { alert(t('绑定失败: ') + error.message); }
   }
 
   // OpenCode 配置导入
@@ -6276,16 +6276,16 @@ async function(ctx) {
         const key = env.ANTHROPIC_AUTH_TOKEN;
         const baseUrl = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com';
         
-        html += `<p style="color: var(--foreground); margin-bottom: 8px;"><strong>Claude Code 配置</strong></p>`;
+        html += `<p style="color: var(--foreground); margin-bottom: 8px;"><strong>${t('Claude Code 配置')}</strong></p>`;
         html += `<div style="margin-left: 12px; margin-bottom: 4px;">
           <span style="color: #10b981;">anthropic</span>
           <span style="color: var(--muted-foreground);"> — ${baseUrl}</span>
-          ${key ? `<span style="color: #10b981;"> (${key.substring(0, 8)}****)</span>` : '<span style="color: var(--destructive);"> (无 Key)</span>'}
+          ${key ? `<span style="color: #10b981;"> (${key.substring(0, 8)}****)</span>` : '<span style="color: var(--destructive);">' + t('(无 Key)') + '</span>'}
         </div>`;
         
         // 显示模型
         const modelKeys = ['ANTHROPIC_MODEL', 'ANTHROPIC_DEFAULT_HAIKU_MODEL', 'ANTHROPIC_DEFAULT_SONNET_MODEL', 'ANTHROPIC_DEFAULT_OPUS_MODEL'];
-        const modelNames = ['默认', 'Haiku', 'Sonnet', 'Opus'];
+        const modelNames = [t('默认'), 'Haiku', 'Sonnet', 'Opus'];
         for (let i = 0; i < modelKeys.length; i++) {
           const modelId = env[modelKeys[i]];
           if (modelId) {
@@ -6307,7 +6307,7 @@ async function(ctx) {
           }
         }
         if (count === 0) {
-          html += '<p style="color: var(--muted-foreground); margin-left: 12px;">未找到有效的 API Key</p>';
+          html += '<p style="color: var(--muted-foreground); margin-left: 12px;">' + t('未找到有效的 API Key') + '</p>';
         }
       }
       
@@ -6322,14 +6322,14 @@ async function(ctx) {
     const providerName = document.getElementById('importProviderName').value.trim();
     const text = document.getElementById('openCodeConfigText').value.trim();
 
-    if (!providerName) { alert('请输入供应商名称'); return; }
-    if (!text) { alert('请输入或上传配置内容'); return; }
+    if (!providerName) { alert(t('请输入供应商名称')); return; }
+    if (!text) { alert(t('请输入或上传配置内容')); return; }
 
     let config;
     try {
       config = JSON.parse(text);
     } catch (error) {
-      alert('JSON 格式错误: ' + error.message);
+      alert(t('JSON 格式错误: ') + error.message);
       return;
     }
 
@@ -6338,7 +6338,7 @@ async function(ctx) {
     const isOpenCode = Object.values(config).some(e => e && e.key);
 
     if (!isClaudeCode && !isOpenCode) {
-      alert('未识别的配置格式');
+      alert(t('未识别的配置格式'));
       return;
     }
 
@@ -6352,20 +6352,20 @@ async function(ctx) {
       if (response.ok) {
         const result = await response.json();
         const { created, updated, models } = result.imported;
-        let msg = `导入成功!`;
-        if (created > 0) msg += `\n新增: ${created} 个供应商`;
-        if (updated > 0) msg += `\n更新: ${updated} 个供应商`;
-        if (models > 0) msg += `\n模型: ${models} 个`;
+        let msg = `${t('导入成功!')}`;
+        if (created > 0) msg += `${t('\\n新增:')}${created}${t('个供应商')}`;
+        if (updated > 0) msg += `${t('\\n更新:')}${updated}${t('个供应商')}`;
+        if (models > 0) msg += `${t('\\n模型:')}${models}${t('个')}`;
         alert(msg);
         this.closeModals();
         this.loadProviders();
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.error || '导入失败');
+        alert(err.error || t('导入失败'));
       }
     } catch (error) {
-      console.error('导入 OpenCode 配置失败:', error);
-      alert('导入失败');
+      console.error(t('导入 OpenCode 配置失败:'), error);
+      alert(t('导入失败'));
     }
   }
 
@@ -6375,13 +6375,13 @@ async function(ctx) {
   async loadMultiStatsFilters() {
     if (this._multiStatsFiltersLoaded) return;
     const res = await fetch('/api/admin/stats/multi/filters');
-    if (!res.ok) throw new Error('多维统计筛选项加载失败');
+    if (!res.ok) throw new Error(t('多维统计筛选项加载失败'));
     const data = await res.json();
     const configs = [
-      ['multiStatsUser', data.users, '全部成员'], ['multiStatsTeam', data.teams, '全部 Team'],
-      ['multiStatsGroup', data.groups, '全部用户组'], ['multiStatsModel', data.models, '全部模型'],
-      ['multiStatsProvider', data.providers, '全部供应商'], ['multiStatsSource', data.sources, '全部客户端'],
-      ['multiStatsProject', data.projects, '全部项目']
+      ['multiStatsUser', data.users, t('全部成员')], ['multiStatsTeam', data.teams, t('全部 Team')],
+      ['multiStatsGroup', data.groups, t('全部用户组')], ['multiStatsModel', data.models, t('全部模型')],
+      ['multiStatsProvider', data.providers, t('全部供应商')], ['multiStatsSource', data.sources, t('全部客户端')],
+      ['multiStatsProject', data.projects, t('全部项目')]
     ];
     configs.forEach(([id, rows, placeholder]) => {
       const el = document.getElementById(id);
@@ -6405,7 +6405,7 @@ async function(ctx) {
     try {
       await this.loadMultiStatsFilters();
       const res = await fetch(`/api/admin/stats/multi?${this._multiStatsParams()}`);
-      if (!res.ok) throw new Error('多维统计加载失败');
+      if (!res.ok) throw new Error(t('多维统计加载失败'));
       const data = await res.json();
       if (seq !== this._multiStatsLoadSeq) return;
       this._multiStatsData = data;
@@ -6433,17 +6433,17 @@ async function(ctx) {
     if (!data) return;
     const s = data.summary || {};
     const cards = [
-      ['总请求', Number(s.requests || 0).toLocaleString()], ['总 Token', this._formatBigNumber(Number(s.tokens || 0))],
-      ['总积分', Number(s.cost || 0).toFixed(4)], ['活跃成员', s.active_users || 0],
-      ['活跃项目', s.active_projects || 0], ['模型 / 供应商', `${s.active_models || 0} / ${s.active_providers || 0}`],
-      ['客户端', s.active_sources || 0], ['平均延迟', s.avg_latency == null ? '-' : `${Math.round(Number(s.avg_latency))}ms`]
+      [t('总请求'), Number(s.requests || 0).toLocaleString()], [t('总 Token'), this._formatBigNumber(Number(s.tokens || 0))],
+      [t('总积分'), Number(s.cost || 0).toFixed(4)], [t('活跃成员'), s.active_users || 0],
+      [t('活跃项目'), s.active_projects || 0], [t('模型 / 供应商'), `${s.active_models || 0} / ${s.active_providers || 0}`],
+      [t('客户端'), s.active_sources || 0], [t('平均延迟'), s.avg_latency == null ? '-' : `${Math.round(Number(s.avg_latency))}ms`]
     ];
     const summaryEl = document.getElementById('adminStatsMultiSummary');
     if (summaryEl) setHTML(summaryEl, cards.map(([label, value]) => `<div class="stats-overview-card" style="background:linear-gradient(135deg,#0f766e,#115e59);"><div class="stats-overview-content"><span class="stats-overview-label">${label}</span><span class="stats-overview-value">${value}</span></div></div>`).join(''));
     this.renderMultiStatsChart(data.dimensions || {});
     const relation = data.relationships || {};
-    const relationLabel = (item) => `${escapeHtml(item.left || '未知')} → ${escapeHtml(item.right || '未知')} <strong>${Number(item.requests || 0).toLocaleString()}</strong>`;
-    const list = (items, empty = '暂无关联数据') => items?.length ? `<div class="stats-relation-items">${items.slice(0, 8).map(item => `<div class="stats-relation-item"><span>${relationLabel(item)}</span><b>${this._formatBigNumber(Number(item.tokens || 0))} Token</b></div>`).join('')}</div>` : `<p class="stats-insight-empty">${empty}</p>`;
+    const relationLabel = (item) => `${escapeHtml(item.left || t('未知'))} → ${escapeHtml(item.right || t('未知'))} <strong>${Number(item.requests || 0).toLocaleString()}</strong>`;
+    const list = (items, empty = t('暂无关联数据')) => items?.length ? `<div class="stats-relation-items">${items.slice(0, 8).map(item => `<div class="stats-relation-item"><span>${relationLabel(item)}</span><b>${this._formatBigNumber(Number(item.tokens || 0))} Token</b></div>`).join('')}</div>` : `<p class="stats-insight-empty">${empty}</p>`;
     setHTML(document.getElementById('adminStatsRelationOverview'), list(relation.user_project, {}));
     setHTML(document.getElementById('adminStatsUserModel'), list(relation.user_model));
     setHTML(document.getElementById('adminStatsOrgMember'), list(relation.team_model));
@@ -6457,13 +6457,13 @@ async function(ctx) {
   renderMultiStatsChart(dimensions) {
     if (typeof Chart === 'undefined') return;
     const rows = (dimensions.models || []).slice(0, 20);
-    const labels = rows.map(row => row.name || '未知模型');
+    const labels = rows.map(row => row.name || t('未知模型'));
     const values = rows.map(row => Number(row.requests || 0));
     const style = getComputedStyle(document.documentElement);
     const textSecondary = style.getPropertyValue('--muted-foreground').trim() || '#94a3b8';
     this._upsertChart('_multiDimensionChart', document.getElementById('multiDimensionChart'), 'bar', {
       labels,
-      datasets: [{ label: '请求数', data: values, backgroundColor: '#14b8a6', borderRadius: 6, barThickness: 16 }]
+      datasets: [{ label: t('请求数'), data: values, backgroundColor: '#14b8a6', borderRadius: 6, barThickness: 16 }]
     }, {
       responsive: true,
       maintainAspectRatio: false,
@@ -6479,9 +6479,9 @@ async function(ctx) {
   renderMultiStatsTable(rows) {
     const el = document.getElementById('adminStatsCombinationTable');
     if (!el) return;
-    if (!rows.length) { setHTML(el, '<p class="stats-insight-empty">当前筛选条件下暂无组合数据</p>'); return; }
+    if (!rows.length) { setHTML(el, '<p class="stats-insight-empty">' + t('当前筛选条件下暂无组合数据') + '</p>'); return; }
     const sourceLabel = (source) => this._usageRequestSourceMeta(source).label;
-    setHTML(el, `<div style="overflow:auto;"><table><thead><tr><th>成员</th><th>Team</th><th>用户组</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || '未知成员')}</td><td>${escapeHtml(row.team_name || '未分配 Team')}</td><td>${escapeHtml(row.group_name || '未分配用户组')}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? '未识别项目' : (row.workspace_path || '未识别项目'))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || '未知模型')}</td><td>${escapeHtml(row.provider_name || '未知供应商')}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
+    setHTML(el, `<div style="overflow:auto;"><table><thead><tr><th>${t('成员')}</th><th>Team</th><th>用户组</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.group_name || t('未分配用户组'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${escapeHtml(row.provider_name || t('未知供应商'))}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
   }
 
   async loadStats() {
@@ -6492,7 +6492,7 @@ async function(ctx) {
       const response = await fetch(`/api/admin/stats?days=${encodeURIComponent(days)}`);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || '加载失败');
+        throw new Error(err.error || t('加载失败'));
       }
       if (seq !== this._statsLoadSeq) return; // 过期响应丢弃
       this.stats = await response.json();
@@ -6509,7 +6509,7 @@ async function(ctx) {
       const container = document.getElementById('detailedStats');
       if (!container) return;
       if (!this.stats.daily || this.stats.daily.length === 0) {
-        setHTML(container, '<p style="text-align: center; color: var(--muted-foreground); padding: 20px;">暂无使用数据</p>');
+        setHTML(container, '<p style="text-align: center; color: var(--muted-foreground); padding: 20px;">' + t('暂无使用数据') + '</p>');
         this._statsDailyTableSig = '';
         this.renderModelStatsTable();
         this.renderProviderStatsTable();
@@ -6573,9 +6573,9 @@ async function(ctx) {
       this.renderSourceModelStatsTable();
     } catch (error) {
       if (seq !== this._statsLoadSeq) return;
-      console.error('加载统计数据失败:', error);
+      console.error(t('加载统计数据失败:'), error);
       const el = document.getElementById('detailedStats');
-      if (el) setHTML(el, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || '加载统计数据失败')}</p>`);
+      if (el) setHTML(el, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载统计数据失败'))}</p>`);
     }
   }
 
@@ -6592,19 +6592,19 @@ async function(ctx) {
 
     document.getElementById('statsTotalRequests').textContent = totalRequests.toLocaleString();
     document.getElementById('statsTotalTokens').textContent = this._formatBigNumber(totalTokens);
-    document.getElementById('statsTotalCost').textContent = totalCost.toFixed(2) + ' 积分';
-    document.getElementById('statsAvgDailyRequests').textContent = '日均 ' + Math.round(totalRequests / dayCount).toLocaleString();
-    document.getElementById('statsAvgDailyTokens').textContent = '日均 ' + this._formatBigNumber(Math.round(totalTokens / dayCount));
-    document.getElementById('statsAvgDailyCost').textContent = '日均 ¥' + (totalCost / dayCount).toFixed(2);
+    document.getElementById('statsTotalCost').textContent = totalCost.toFixed(2) + t(' 积分');
+    document.getElementById('statsAvgDailyRequests').textContent = t('日均 ') + Math.round(totalRequests / dayCount).toLocaleString();
+    document.getElementById('statsAvgDailyTokens').textContent = t('日均 ') + this._formatBigNumber(Math.round(totalTokens / dayCount));
+    document.getElementById('statsAvgDailyCost').textContent = t('日均 ¥') + (totalCost / dayCount).toFixed(2);
     document.getElementById('statsActiveModels').textContent = activeModels;
-    document.getElementById('statsTotalProviders').textContent = '供应商 ' + activeProviders;
+    document.getElementById('statsTotalProviders').textContent = t('供应商 ') + activeProviders;
 
     const ss = this.stats.sourceSummary || {};
     const rateEl = document.getElementById('statsIdentifiedRate');
     const srcEl = document.getElementById('statsActiveSources');
     if (rateEl) rateEl.textContent = ((ss.identified_rate || 0) * 100).toFixed(1) + '%';
     if (srcEl) {
-      srcEl.textContent = `活跃 ${ss.active_sources || 0} 种 · 未知 ${(ss.unknown_requests || 0).toLocaleString()} 次`;
+      srcEl.textContent = `${t('活跃')}${ss.active_sources || 0}${t('种 · 未知')}${(ss.unknown_requests || 0).toLocaleString()}${t('次')}`;
     }
     const sumCards = document.getElementById('adminSourceSummaryCards');
     if (sumCards) {
@@ -6652,10 +6652,10 @@ async function(ctx) {
 
     document.getElementById('todayRequests').textContent = todayReqs.toLocaleString();
     document.getElementById('todayTokens').textContent = this._formatBigNumber(todayToks);
-    document.getElementById('todayCost').textContent = todayCst.toFixed(2) + ' 积分';
+    document.getElementById('todayCost').textContent = todayCst.toFixed(2) + t(' 积分');
     document.getElementById('yesterdayRequests').textContent = yestReqs.toLocaleString();
     document.getElementById('yesterdayTokens').textContent = this._formatBigNumber(yestToks);
-    document.getElementById('yesterdayCost').textContent = yestCst.toFixed(2) + ' 积分';
+    document.getElementById('yesterdayCost').textContent = yestCst.toFixed(2) + t(' 积分');
 
     // 计算趋势
     this._renderAdminTrend('todayRequestsTrend', todayReqs, yestReqs);
@@ -6668,7 +6668,7 @@ async function(ctx) {
     if (!element) return;
 
     if (previous === 0) {
-      setHTML(element, current > 0 ? '<span class="trend-up">新增</span>' : '');
+      setHTML(element, current > 0 ? '<span class="trend-up">' + t('新增') + '</span>' : '');
       return;
     }
 
@@ -6677,7 +6677,7 @@ async function(ctx) {
     const isNeutral = current === previous;
 
     if (isNeutral) {
-      setHTML(element, '<span class="trend-neutral">持平</span>');
+      setHTML(element, '<span class="trend-neutral">' + t('持平') + '</span>');
     } else {
       const arrow = isUp ? '↑' : '↓';
       const colorClass = isUp ? 'trend-up' : 'trend-down';
@@ -6737,7 +6737,7 @@ async function(ctx) {
     const sourceEl = document.getElementById('messageStatsSourceTable');
     const blockEl = document.getElementById('messageStatsBlockTable');
     const workspaceEl = document.getElementById('messageStatsWorkspaceTable');
-    const loading = pageLoadingHtml('正在读取项目活动...', { compact: true });
+    const loading = pageLoadingHtml(t('正在读取项目活动...'), { compact: true });
     [summaryEl, sourceEl, blockEl, workspaceEl].forEach((el) => { if (el) setHTML(el, loading); });
     const days = document.getElementById('adminStatsDays')?.value || '30';
     const source = document.getElementById('messageStatsSourceFilter')?.value || '';
@@ -6749,25 +6749,25 @@ async function(ctx) {
     if (block) params.set('block', block);
     try {
       const res = await fetch(`/api/admin/message-stats?${params}`);
-      if (!res.ok) throw new Error('消息统计加载失败');
+      if (!res.ok) throw new Error(t('消息统计加载失败'));
       const data = await res.json();
       const s = data.summary || {};
-      if (!data || data.error) throw new Error(data.error || '消息统计返回数据为空');
+      if (!data || data.error) throw new Error(data.error || t('消息统计返回数据为空'));
       if (!(data.by_workspace || []).length && !(data.daily || []).length) {
-        const empty = '<div class="empty-state" style="padding:28px;text-align:center;color:var(--muted-foreground);">所选时间范围内暂无可分析的项目消息记录</div>';
+        const empty = '<div class="empty-state" style="padding:28px;text-align:center;color:var(--muted-foreground);">' + t('所选时间范围内暂无可分析的项目消息记录') + '</div>';
         [summaryEl, sourceEl, blockEl, workspaceEl].forEach((el) => { if (el) setHTML(el, empty); });
         return;
       }
       const card = (label, value) => `<div class="stats-overview-card" style="background:var(--muted);color:var(--foreground);"><div class="stats-overview-content"><span class="stats-overview-label">${label}</span><span class="stats-overview-value">${value}</span></div></div>`;
       const analysisStatus = s.analysis_status || {};
-      const pendingLabel = analysisStatus.pending_requests ? card('后台待分析', analysisStatus.pending_requests.toLocaleString()) : '';
-      setHTML(document.getElementById('messageStatsSummary'), [card('活跃请求', s.analyzed_requests || 0), card('活跃项目', (data.by_workspace || []).length), card('活跃天数', s.active_days || 0), card('日均请求', Number(s.avg_daily_requests || 0).toFixed(1)), card('总 Token', this._formatBigNumber(Number(s.total_tokens || 0))), card('Git 状态率', `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
-      const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--muted-foreground);">暂无数据</td></tr>'}</tbody></table></div>`;
-      setHTML(document.getElementById('messageStatsSourceTable'), table(['Harness', '请求数', '平均消息', '平均字符', 'Token', 'Git率'], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${(r.git_requests / Math.max(r.requests, 1) * 100).toFixed(1)}%</td></tr>`; }).join('')));
-      setHTML(document.getElementById('messageStatsBlockTable'), table(['区块', '请求数', '出现次数'], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
-      setHTML(document.getElementById('messageStatsWorkspaceTable'), table(['项目/工作区', '请求数', 'Token', '积分', '来源'], (data.by_workspace || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td><code>${escapeHtml(r.workspace_path)}</code></td><td>${r.requests}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${Number(r.cost || 0).toFixed(4)}</td><td>${escapeHtml(Object.entries(r.sources || {}).map(([k, v]) => `${k}: ${v}`).join(', '))}</td></tr>`; }).join('')));
+      const pendingLabel = analysisStatus.pending_requests ? card(t('后台待分析'), analysisStatus.pending_requests.toLocaleString()) : '';
+      setHTML(document.getElementById('messageStatsSummary'), [card(t('活跃请求'), s.analyzed_requests || 0), card(t('活跃项目'), (data.by_workspace || []).length), card(t('活跃天数'), s.active_days || 0), card(t('日均请求'), Number(s.avg_daily_requests || 0).toFixed(1)), card(t('总 Token'), this._formatBigNumber(Number(s.total_tokens || 0))), card(t('Git 状态率'), `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
+      const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows ||  + '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--muted-foreground);">' + t('暂无数据') + '</td></tr>'}</tbody></table></div>`;
+      setHTML(document.getElementById('messageStatsSourceTable'), table(['Harness', t('请求数'), t('平均消息'), t('平均字符'), 'Token', t('Git率')], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${(r.git_requests / Math.max(r.requests, 1) * 100).toFixed(1)}%</td></tr>`; }).join('')));
+      setHTML(document.getElementById('messageStatsBlockTable'), table([t('区块'), t('请求数'), t('出现次数')], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
+      setHTML(document.getElementById('messageStatsWorkspaceTable'), table([t('项目/工作区'), t('请求数'), 'Token', t('积分'), t('来源')], (data.by_workspace || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td><code>${escapeHtml(r.workspace_path)}</code></td><td>${r.requests}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${Number(r.cost || 0).toFixed(4)}</td><td>${escapeHtml(Object.entries(r.sources || {}).map(([k, v]) => `${k}: ${v}`).join(', '))}</td></tr>`; }).join('')));
       if (typeof Chart !== 'undefined') {
-        this._upsertChart('_messageStatsDailyChart', document.getElementById('messageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: '请求数', data: (data.daily || []).map(r => r.requests), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.08)', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
+        this._upsertChart('_messageStatsDailyChart', document.getElementById('messageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('请求数'), data: (data.daily || []).map(r => r.requests), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.08)', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
       }
     } catch (error) {
       console.error(error);
@@ -6811,7 +6811,7 @@ async function(ctx) {
         existing.update();
         return existing;
       } catch (e) {
-        console.warn('[Chart] update 失败，回退重建:', e);
+        console.warn(t('[Chart] update 失败，回退重建:'), e);
         try { existing.destroy(); } catch (_) {}
         this[storeKey] = null;
       }
@@ -6856,7 +6856,7 @@ async function(ctx) {
     this._upsertChart('_dailyChart', document.getElementById('dailyRequestsChart'), 'line', {
       labels,
       datasets: [{
-        label: '请求数',
+        label: t('请求数'),
         data: requests,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59,130,246,0.15)',
@@ -6884,7 +6884,7 @@ async function(ctx) {
     this._upsertChart('_dailyCostChart', document.getElementById('dailyCostChart'), 'line', {
       labels,
       datasets: [{
-        label: '积分',
+        label: t('积分'),
         data: costs,
         borderColor: '#10b981',
         backgroundColor: 'rgba(16,185,129,0.15)',
@@ -6898,7 +6898,7 @@ async function(ctx) {
     this._upsertChart('_dailyAvgChart', document.getElementById('dailyAvgTokensChart'), 'line', {
       labels,
       datasets: [{
-        label: '平均Token/请求',
+        label: t('平均Token/请求'),
         data: avgTokens,
         borderColor: '#f59e0b',
         backgroundColor: 'rgba(245,158,11,0.15)',
@@ -6936,7 +6936,7 @@ async function(ctx) {
     this._upsertChart('_barReqChart', document.getElementById('dailyBarRequestsChart'), 'bar', {
       labels,
       datasets: [{
-        label: '请求数',
+        label: t('请求数'),
         data: requests,
         backgroundColor: 'rgba(59,130,246,0.7)',
         borderColor: '#3b82f6',
@@ -6948,7 +6948,7 @@ async function(ctx) {
     this._upsertChart('_barCostChart', document.getElementById('dailyBarCostChart'), 'bar', {
       labels,
       datasets: [{
-        label: '积分',
+        label: t('积分'),
         data: costs,
         backgroundColor: 'rgba(16,185,129,0.7)',
         borderColor: '#10b981',
@@ -6967,7 +6967,7 @@ async function(ctx) {
 
     const topModels = this.stats.byModel.slice(0, 8);
     const modelLabels = topModels.map(m => {
-      return m.model_name || '(已删除)';
+      return m.model_name || t('(已删除)');
     });
     const modelRequests = topModels.map(m => parseInt(m.requests || 0, 10));
     const modelTokens = topModels.map(m => parseInt(m.tokens || 0, 10));
@@ -7034,7 +7034,7 @@ async function(ctx) {
     const textSecondary = style.getPropertyValue('--muted-foreground').trim() || '#94a3b8';
 
     const providers = this.stats.byProvider.slice(0, 8);
-    const providerLabels = providers.map(p => p.provider || '未知');
+    const providerLabels = providers.map(p => p.provider || t('未知'));
     const providerRequests = providers.map(p => parseInt(p.requests || 0, 10));
     const providerTokens = providers.map(p => parseInt(p.tokens || 0, 10));
     const providerCosts = providers.map(p => parseFloat(p.cost || 0));
@@ -7104,7 +7104,7 @@ async function(ctx) {
     if (!container || !this.stats || !this.stats.byModel) return;
 
     if (this.stats.byModel.length === 0) {
-      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">暂无模型使用数据</p>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('暂无模型使用数据') + '</p>');
       return;
     }
 
@@ -7113,7 +7113,7 @@ async function(ctx) {
       ? this.stats.byModel.filter(m => this._matchSearch(q, m.model_name, m.model_id))
       : this.stats.byModel;
     if (!rows.length) {
-      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">未找到匹配的模型</p>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('未找到匹配的模型') + '</p>');
       return;
     }
 
@@ -7151,7 +7151,7 @@ async function(ctx) {
                 : '-';
               return `
                 <tr>
-                  <td>${escapeHtml(m.model_name || '(已删除)')}</td>
+                  <td>${escapeHtml(m.model_name || t('(已删除)'))}</td>
                   <td>${(m.requests || 0).toLocaleString()}</td>
                   <td>${reqPercent}%</td>
                   <td title="${(m.tokens || 0).toLocaleString()}">${this._formatBigNumber(m.tokens || 0)}</td>
@@ -7164,7 +7164,7 @@ async function(ctx) {
           </tbody>
           <tfoot>
             <tr style="font-weight:600;background:var(--background);">
-              <td>合计</td>
+              <td>' + t('合计') + '</td>
               <td>${totalRequests.toLocaleString()}</td>
               <td>100%</td>
               <td title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</td>
@@ -7197,7 +7197,7 @@ async function(ctx) {
     if (!container || !this.stats || !this.stats.byProvider) return;
 
     if (this.stats.byProvider.length === 0) {
-      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">暂无供应商使用数据</p>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('暂无供应商使用数据') + '</p>');
       return;
     }
 
@@ -7206,7 +7206,7 @@ async function(ctx) {
       ? this.stats.byProvider.filter(p => this._matchSearch(q, p.provider, p.provider_name, p.provider_id))
       : this.stats.byProvider;
     if (!rows.length) {
-      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">未找到匹配的供应商</p>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('未找到匹配的供应商') + '</p>');
       return;
     }
 
@@ -7244,7 +7244,7 @@ async function(ctx) {
                 : '-';
               return `
                 <tr>
-                  <td style="font-size:13px;">${escapeHtml(p.provider || '未知')}</td>
+                  <td style="font-size:13px;">${escapeHtml(p.provider || t('未知'))}</td>
                   <td>${(p.requests || 0).toLocaleString()}</td>
                   <td>${reqPercent}%</td>
                   <td title="${(p.tokens || 0).toLocaleString()}">${this._formatBigNumber(p.tokens || 0)}</td>
@@ -7257,7 +7257,7 @@ async function(ctx) {
           </tbody>
           <tfoot>
             <tr style="font-weight:600;background:var(--background);">
-              <td>合计</td>
+              <td>' + t('合计') + '</td>
               <td>${totalRequests.toLocaleString()}</td>
               <td>100%</td>
               <td title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</td>
@@ -7340,9 +7340,9 @@ async function(ctx) {
   renderMemberStatsCharts() {
     if (!this.stats || typeof Chart === 'undefined') return;
     const groups = [
-      { key: 'byUser', label: '成员', requests: 'memberRequestsChart', cost: 'memberCostChart', reqStore: '_memberReqChart', costStore: '_memberCostChart', name: 'user_name' },
+      { key: 'byUser', label: t('成员'), requests: 'memberRequestsChart', cost: 'memberCostChart', reqStore: '_memberReqChart', costStore: '_memberCostChart', name: 'user_name' },
       { key: 'byTeam', label: 'Team', requests: 'teamRequestsChart', reqStore: '_teamReqChart', name: 'team_name' },
-      { key: 'byGroup', label: '用户组', requests: 'groupRequestsChart', reqStore: '_groupReqChart', name: 'group_name' }
+      { key: 'byGroup', label: t('用户组'), requests: 'groupRequestsChart', reqStore: '_groupReqChart', name: 'group_name' }
     ];
     const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#64748b'];
     const style = getComputedStyle(document.documentElement);
@@ -7359,17 +7359,17 @@ async function(ctx) {
     };
     groups.forEach((group) => {
       const rows = (this.stats[group.key] || []).slice(0, 10);
-      const labels = rows.map(row => row[group.name] || '未分配');
+      const labels = rows.map(row => row[group.name] || t('未分配'));
       const requests = rows.map(row => Number(row.requests || 0));
       const requestCanvas = document.getElementById(group.requests);
       if (requestCanvas) {
-        this._upsertChart(group.reqStore, requestCanvas, 'bar', { labels, datasets: [{ label: '请求数', data: requests, backgroundColor: colors, borderRadius: 5, borderWidth: 0 }] }, options);
+        this._upsertChart(group.reqStore, requestCanvas, 'bar', { labels, datasets: [{ label: t('请求数'), data: requests, backgroundColor: colors, borderRadius: 5, borderWidth: 0 }] }, options);
       }
       if (group.cost) {
         const costs = rows.map(row => Number(row.cost || 0));
         const costCanvas = document.getElementById(group.cost);
         if (costCanvas) {
-          this._upsertChart(group.costStore, costCanvas, 'bar', { labels, datasets: [{ label: '积分', data: costs, backgroundColor: '#10b981', borderRadius: 5, borderWidth: 0 }] }, options);
+          this._upsertChart(group.costStore, costCanvas, 'bar', { labels, datasets: [{ label: t('积分'), data: costs, backgroundColor: '#10b981', borderRadius: 5, borderWidth: 0 }] }, options);
         }
       }
     });
@@ -7386,28 +7386,28 @@ async function(ctx) {
       }
       const totalRequests = rows.reduce((sum, row) => sum + Number(row.requests || 0), 0);
       const totalCost = rows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
-      setHTML(container, `<div style="overflow-x:auto;"><table><thead><tr><th>${labelKey === 'user_name' ? '成员' : labelKey === 'team_name' ? 'Team' : '用户组'}</th><th>请求数</th><th>占比</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => {
+      setHTML(container, `<div style="overflow-x:auto;"><table><thead><tr><th>${labelKey === 'user_name' ? t('成员') : labelKey === 'team_name' ? 'Team' : t('用户组')}</th><th>请求数</th><th>占比</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => {
         const requests = Number(row.requests || 0);
         const cost = Number(row.cost || 0);
-        return `<tr><td>${escapeHtml(row[labelKey] || '未分配')}</td><td>${requests.toLocaleString()}</td><td>${totalRequests ? (requests / totalRequests * 100).toFixed(1) : '0.0'}%</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${cost.toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`;
-      }).join('')}</tbody><tfoot><tr style="font-weight:600;background:var(--background);"><td>合计</td><td>${totalRequests.toLocaleString()}</td><td>100%</td><td title="${rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0).toLocaleString()}">${this._formatBigNumber(rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0))}</td><td>${totalCost.toFixed(4)}</td><td>-</td></tr></tfoot></table></div>`);
+        return `<tr><td>${escapeHtml(row[labelKey] || t('未分配'))}</td><td>${requests.toLocaleString()}</td><td>${totalRequests ? (requests / totalRequests * 100).toFixed(1) : '0.0'}%</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${cost.toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`;
+      }).join('')}</tbody><tfoot><tr style="font-weight:600;background:var(--background);"><td>' + t('合计') + '</td><td>${totalRequests.toLocaleString()}</td><td>100%</td><td title="${rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0).toLocaleString()}">${this._formatBigNumber(rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0))}</td><td>${totalCost.toFixed(4)}</td><td>-</td></tr></tfoot></table></div>`);
     };
     const summaryRows = [
-      ['成员', this.stats.byUser || [], 'user_name'],
+      [t('成员'), this.stats.byUser || [], 'user_name'],
       ['Team', this.stats.byTeam || [], 'team_name'],
-      ['用户组', this.stats.byGroup || [], 'group_name']
+      [t('用户组'), this.stats.byGroup || [], 'group_name']
     ];
     const summary = summaryRows.map(([label, rows]) => {
       const requests = rows.reduce((sum, row) => sum + Number(row.requests || 0), 0);
       const tokens = rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0);
       const cost = rows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
-      return `<div class="stats-overview-card" style="background:linear-gradient(135deg,#334155,#1e293b);"><div class="stats-overview-content"><span class="stats-overview-label">${label}数量</span><span class="stats-overview-value">${rows.length}</span><span class="stats-overview-sub">${requests.toLocaleString()} 次 · ${this._formatBigNumber(tokens)} Token · ${cost.toFixed(2)} 积分</span></div></div>`;
+      return `<div class="stats-overview-card" style="background:linear-gradient(135deg,#334155,#1e293b);"><div class="stats-overview-content"><span class="stats-overview-label">${label}${t('数量')}</span><span class="stats-overview-value">${rows.length}</span><span class="stats-overview-sub">${requests.toLocaleString()}${t('次 ·')}${this._formatBigNumber(tokens)} Token · ${cost.toFixed(2)}${t('积分')}</span></div></div>`;
     }).join('');
     const summaryEl = document.getElementById('memberStatsSummary');
     if (summaryEl) setHTML(summaryEl, summary);
-    render('memberStatsTable', this.stats.byUser, 'user_name', '暂无成员用量数据');
-    render('teamStatsTable', this.stats.byTeam, 'team_name', '暂无 Team 用量数据');
-    render('groupStatsTable', this.stats.byGroup, 'group_name', '暂无用户组用量数据');
+    render('memberStatsTable', this.stats.byUser, 'user_name', t('暂无成员用量数据'));
+    render('teamStatsTable', this.stats.byTeam, 'team_name', t('暂无 Team 用量数据'));
+    render('groupStatsTable', this.stats.byGroup, 'group_name', t('暂无用户组用量数据'));
   }
 
   renderSourceStatsTable() {
@@ -7415,7 +7415,7 @@ async function(ctx) {
     if (!container || !this.stats) return;
     const rows = this.stats.bySource || [];
     if (rows.length === 0) {
-      setHTML(container, '<p style="color:var(--muted-foreground);font-size:13px;">暂无来源数据（历史记录在功能上线前均为「未知/其他」）</p>');
+      setHTML(container, '<p style="color:var(--muted-foreground);font-size:13px;">' + t('暂无来源数据（历史记录在功能上线前均为「未知/其他」）') + '</p>');
       return;
     }
     setHTML(container, `
@@ -7465,7 +7465,7 @@ async function(ctx) {
     if (!container || !this.stats) return;
     const rows = this.stats.bySourceModel || [];
     if (rows.length === 0) {
-      setHTML(container, '<p style="color:var(--muted-foreground);font-size:13px;">暂无交叉数据</p>');
+      setHTML(container, '<p style="color:var(--muted-foreground);font-size:13px;">' + t('暂无交叉数据') + '</p>');
       return;
     }
     setHTML(container, `
@@ -7482,7 +7482,7 @@ async function(ctx) {
           </thead>
           <tbody>
             ${rows.map((r) => {
-              const modelLabel = r.model_name || r.model_id || '(未知)';
+              const modelLabel = r.model_name || r.model_id || t('(未知)');
               return `<tr>
                 <td>${this._usageRequestSourceBadge(r.request_source)}</td>
                 <td>${escapeHtml(String(modelLabel))}</td>
@@ -7536,14 +7536,14 @@ async function(ctx) {
   async loadErrorLogs(page = 1) {
     this.errorLogPage = page;
     const errListEl = document.getElementById('errorLogsList');
-    if (errListEl) setHTML(errListEl, pageLoadingHtml('加载错误记录...', { compact: true }));
+    if (errListEl) setHTML(errListEl, pageLoadingHtml(t('加载错误记录...'), { compact: true }));
     const params = this._buildErrorLogFilterParams();
     params.set('page', String(this.errorLogPage));
     params.set('limit', String(this.errorLogLimit));
 
     try {
       const response = await fetch(`/api/admin/error-logs?${params}`);
-      if (!response.ok) throw new Error('加载失败');
+      if (!response.ok) throw new Error(t('加载失败'));
       const data = await response.json();
 
       this.errorLogTotal = data.total;
@@ -7556,17 +7556,17 @@ async function(ctx) {
       const retentionEl = document.getElementById('errorLogRetentionHint');
 
       const totalPages = Math.ceil(data.total / this.errorLogLimit) || 1;
-      if (countEl) countEl.textContent = `共 ${data.total} 条记录`;
-      if (pageInfoEl) pageInfoEl.textContent = `第 ${data.page} / ${totalPages} 页`;
+      if (countEl) countEl.textContent = `${t('共')}${data.total}${t('条记录')}`;
+      if (pageInfoEl) pageInfoEl.textContent = `${t('第')}${data.page} / ${totalPages}${t('页')}`;
       if (prevBtn) prevBtn.disabled = data.page <= 1;
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
       if (retentionEl) {
         const days = data.retention_days || 14;
-        retentionEl.textContent = `默认保留近 ${days} 天的错误记录，中间失败（队列回退）与最终返回客户端的错误均可筛选。`;
+        retentionEl.textContent = `${t('默认保留近')}${days}${t('天的错误记录，中间失败（队列回退）与最终返回客户端的错误均可筛选。')}`;
       }
 
       if (!data.logs || data.logs.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">暂无错误记录</p>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无错误记录') + '</p>');
         return;
       }
 
@@ -7600,7 +7600,7 @@ async function(ctx) {
               const shortMsg = msg.length > 80 ? msg.slice(0, 80) + '…' : msg;
               const finalTag = log.is_final
                 ? ''
-                : '<span style="margin-left:4px;font-size:10px;padding:1px 5px;border-radius:4px;background:var(--muted);color:var(--muted-foreground);">重试</span>';
+                : '<span style="margin-left:4px;font-size:10px;padding:1px 5px;border-radius:4px;background:var(--muted);color:var(--muted-foreground);">' + t('重试') + '</span>';
               return `
               <tr style="cursor:pointer;" onclick="adminApp.showErrorDetail(${idx})">
                 <td style="white-space:nowrap;">${new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</td>
@@ -7618,8 +7618,8 @@ async function(ctx) {
         </table>
       `);
     } catch (error) {
-      console.error('加载错误记录失败:', error);
-      setHTML(document.getElementById('errorLogsList'), `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || '加载失败')}</p>`);
+      console.error(t('加载错误记录失败:'), error);
+      setHTML(document.getElementById('errorLogsList'), `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -7642,18 +7642,18 @@ async function(ctx) {
     if (!log) return;
 
     const rows = [
-      ['时间', new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })],
-      ['用户', escapeHtml(log.username || (log.user_id != null ? `ID: ${log.user_id}` : '-'))],
-      ['模型', escapeHtml(log.model_name || log.model_id || '-')],
-      ['系列', escapeHtml(log.series || '-')],
-      ['上游模型 ID', escapeHtml(log.upstream_model_id || log.model_id || '-')],
-      ['供应商', escapeHtml(log.provider_name || log.provider_id || '-')],
-      ['请求类型', escapeHtml(log.request_type || '-')],
-      ['状态码', log.status_code != null ? String(log.status_code) : '-'],
-      ['错误类型', escapeHtml(log.error_type || '-')],
-      ['是否最终错误', log.is_final ? '是（返回客户端）' : '否（队列回退中间失败）'],
-      ['延迟', log.latency_ms != null ? `${log.latency_ms}ms` : '-'],
-      ['IP 地址', escapeHtml(log.ip_address || '-')],
+      [t('时间'), new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })],
+      [t('用户'), escapeHtml(log.username || (log.user_id != null ? `ID: ${log.user_id}` : '-'))],
+      [t('模型'), escapeHtml(log.model_name || log.model_id || '-')],
+      [t('系列'), escapeHtml(log.series || '-')],
+      [t('上游模型 ID'), escapeHtml(log.upstream_model_id || log.model_id || '-')],
+      [t('供应商'), escapeHtml(log.provider_name || log.provider_id || '-')],
+      [t('请求类型'), escapeHtml(log.request_type || '-')],
+      [t('状态码'), log.status_code != null ? String(log.status_code) : '-'],
+      [t('错误类型'), escapeHtml(log.error_type || '-')],
+      [t('是否最终错误'), log.is_final ? t('是（返回客户端）') : t('否（队列回退中间失败）')],
+      [t('延迟'), log.latency_ms != null ? `${log.latency_ms}ms` : '-'],
+      [t('IP 地址'), escapeHtml(log.ip_address || '-')],
       ['API Key', log.key_prefix
         ? `<code style="font-size:12px;">${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` <span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}`
         : '-'],
@@ -7661,14 +7661,14 @@ async function(ctx) {
 
     let bodyHtml = '';
     if (log.error_message) {
-      bodyHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">错误信息</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;color:var(--destructive);">${escapeHtml(log.error_message)}</pre></div>`;
+      bodyHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('错误信息')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;color:var(--destructive);">${escapeHtml(log.error_message)}</pre></div>`;
     }
     if (log.error_body) {
       let pretty = log.error_body;
       try {
         pretty = JSON.stringify(JSON.parse(log.error_body), null, 2);
       } catch { /* keep raw */ }
-      bodyHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">原始响应</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(pretty)}</pre></div>`;
+      bodyHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('原始响应')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(pretty)}</pre></div>`;
     }
 
     const content = document.getElementById('errorDetailContent');
@@ -7727,7 +7727,7 @@ async function(ctx) {
       hermes: { label: 'Hermes', color: '#ec4899' },
       openclaw: { label: 'OpenClaw', color: '#0ea5e9' },
       deepseek_harness: { label: 'DeepSeek Harness', color: '#4d6bfe' },
-      unknown: { label: '未知/其他', color: 'var(--muted-foreground)' }
+      unknown: { label: t('未知/其他'), color: 'var(--muted-foreground)' }
     };
     return map[s] || map.unknown;
   }
@@ -7741,7 +7741,7 @@ async function(ctx) {
     return log.model_name
       || (log.request_type === 'fusion' ? 'Fusion' : null)
       || (log.model_id ? String(log.model_id) : null)
-      || '(未知)';
+      || t('(未知)');
   }
 
   _formatUsageProviderLabel(log) {
@@ -7751,7 +7751,7 @@ async function(ctx) {
   async loadUsageLogs(page = 1) {
     this.usageLogPage = Math.max(1, page || 1);
     const usageListEl = document.getElementById('usageLogsList');
-    if (usageListEl) setHTML(usageListEl, pageLoadingHtml('加载调用记录...', { compact: true }));
+    if (usageListEl) setHTML(usageListEl, pageLoadingHtml(t('加载调用记录...'), { compact: true }));
 
     const params = this._buildUsageLogFilterParams();
     params.set('page', String(this.usageLogPage));
@@ -7759,7 +7759,7 @@ async function(ctx) {
 
     try {
       const response = await fetch(`/api/admin/usage-logs?${params}`);
-      if (!response.ok) throw new Error('加载失败');
+      if (!response.ok) throw new Error(t('加载失败'));
       const data = await response.json();
 
       this.usageLogTotal = data.total;
@@ -7771,13 +7771,13 @@ async function(ctx) {
       const nextBtn = document.getElementById('usageLogNextBtn');
       const totalPages = Math.ceil(data.total / this.usageLogLimit) || 1;
 
-      if (countEl) countEl.textContent = `共 ${data.total} 条记录`;
-      if (pageInfoEl) pageInfoEl.textContent = `第 ${data.page} / ${totalPages} 页`;
+      if (countEl) countEl.textContent = `${t('共')}${data.total}${t('条记录')}`;
+      if (pageInfoEl) pageInfoEl.textContent = `${t('第')}${data.page} / ${totalPages}${t('页')}`;
       if (prevBtn) prevBtn.disabled = data.page <= 1;
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
 
       if (!data.logs || data.logs.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">暂无调用记录</p>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无调用记录') + '</p>');
         return;
       }
 
@@ -7808,7 +7808,7 @@ async function(ctx) {
               const providerLabel = this._formatUsageProviderLabel(log);
               const costVal = parseFloat(log.cost || 0);
               const costDisplay = (costVal === 0 && totalTokens > 0)
-                ? '<span title="配额内免费">0</span><span style="font-size:11px;color:var(--muted-foreground);margin-left:2px;">配额内</span>'
+                ? '<span title="' + t('配额内免费') + '">0</span><span style="font-size:11px;color:var(--muted-foreground);margin-left:2px;">' + t('配额内') + '</span>'
                 : costVal.toFixed(6);
               const seriesLine = log.series
                 ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;">${escapeHtml(log.series)}</div>`
@@ -7817,12 +7817,12 @@ async function(ctx) {
                 ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;"><code style="font-size:11px;">${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` ${escapeHtml(log.key_name)}` : ''}</div>`
                 : '';
               const tokenSub = [
-                `入 ${this._formatBigNumber(promptTokens)}`,
-                `出 ${this._formatBigNumber(completionTokens)}`,
-                cachedTokens > 0 ? `缓存 ${this._formatBigNumber(cachedTokens)} (${cacheRate}%)` : null
+                `${t('入')}${this._formatBigNumber(promptTokens)}`,
+                `${t('出')}${this._formatBigNumber(completionTokens)}`,
+                cachedTokens > 0 ? `${t('缓存')}${this._formatBigNumber(cachedTokens)} (${cacheRate}%)` : null
               ].filter(Boolean).join(' · ');
               return `
-              <tr style="cursor:pointer;" data-usage-log-idx="${idx}" title="点击查看详情">
+              <tr style="cursor:pointer;" data-usage-log-idx="${idx}" title=t('点击查看详情')>
                 <td style="white-space:nowrap;">${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
                 <td class="cell-clip-sm" title="${escapeHtml(log.username || String(log.user_id || ''))}">${escapeHtml(log.username || String(log.user_id || '-'))}</td>
                 <td class="cell-clip" title="${escapeHtml(modelLabel)}">
@@ -7865,8 +7865,8 @@ async function(ctx) {
         });
       });
     } catch (error) {
-      console.error('加载调用记录失败:', error);
-      setHTML(document.getElementById('usageLogsList'), `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || '加载失败')}</p>`);
+      console.error(t('加载调用记录失败:'), error);
+      setHTML(document.getElementById('usageLogsList'), `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -7908,12 +7908,12 @@ async function(ctx) {
   async exportUsageLogs() {
     const btn = document.getElementById('usageLogExportBtn');
     try {
-      if (btn) setButtonLoading(btn, '导出中...');
+      if (btn) setButtonLoading(btn, t('导出中...'));
       const params = this._buildUsageLogFilterParams();
       const res = await fetch(`/api/admin/usage-logs/export?${params.toString()}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `导出失败 (${res.status})`);
+        throw new Error(err.error || `${t('导出失败 (')}${res.status})`);
       }
       const blob = await res.blob();
       const cd = res.headers.get('Content-Disposition') || '';
@@ -7927,12 +7927,12 @@ async function(ctx) {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      this.showToast?.('导出成功', 'success');
+      this.showToast?.(t('导出成功'), 'success');
     } catch (error) {
-      console.error('导出调用记录失败:', error);
-      alert(error.message || '导出失败');
+      console.error(t('导出调用记录失败:'), error);
+      alert(error.message || t('导出失败'));
     } finally {
-      if (btn) clearButtonLoading(btn, '导出 CSV');
+      if (btn) clearButtonLoading(btn, t('导出 CSV'));
     }
   }
 
@@ -7943,18 +7943,18 @@ async function(ctx) {
         const modal = document.getElementById('usageDetailModal');
         const content = document.getElementById('usageDetailContent');
         if (modal && content) {
-          setHTML(content, pageLoadingHtml('加载详情...', { compact: true }));
+          setHTML(content, pageLoadingHtml(t('加载详情...'), { compact: true }));
           modal.style.display = 'flex';
           modal.classList.add('active');
         }
         const res = await fetch(`/api/admin/usage-logs/${log.id}`);
-        if (!res.ok) throw new Error(`加载详情失败 (${res.status})`);
+        if (!res.ok) throw new Error(`${t('加载详情失败 (')}${res.status})`);
         const data = await res.json();
         if (data.log) log = data.log;
       } catch (error) {
-        console.error('加载用量详情失败:', error);
+        console.error(t('加载用量详情失败:'), error);
         const content = document.getElementById('usageDetailContent');
-        if (content) setHTML(content, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || '加载失败')}</p>`);
+        if (content) setHTML(content, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
         return;
       }
     }
@@ -7963,7 +7963,7 @@ async function(ctx) {
     const cachedTokens = parseInt(log.cached_tokens || 0, 10);
     const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
     const cacheDisplay = cachedTokens > 0
-      ? `<span title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="color:#10b981;font-size:12px;">(${cacheRate}% 命中)</span>`
+      ? `<span title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="color:#10b981;font-size:12px;">(${cacheRate}${t('% 命中)')}</span>`
       : '0';
 
     const modelLabel = this._formatUsageModelLabel(log);
@@ -7972,27 +7972,27 @@ async function(ctx) {
     const costVal = parseFloat(log.cost || 0);
     const tokensVal = parseInt(log.tokens_used || 0, 10);
     const costDisplay = (costVal === 0 && tokensVal > 0)
-      ? '0（配额内）'
+      ? t('0（配额内）')
       : costVal.toFixed(6);
     const rows = [
-      ['调用时间', escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))],
-      ['用户', escapeHtml(log.username || (log.user_id != null ? `ID: ${log.user_id}` : '-'))],
-      ['模型', escapeHtml(modelLabel)],
-      ['系列', escapeHtml(log.series || '-')],
-      ['上游模型 ID', escapeHtml(log.upstream_model_id || log.model_id || '-')],
-      ['供应商', escapeHtml(providerLabel)],
-      ['请求类型', this._usageRequestTypeBadge(log.request_type) + (typeMeta.label !== '-' && log.request_type ? ` <span style="color:var(--muted-foreground);font-size:12px;">(${escapeHtml(String(log.request_type))})</span>` : '')],
-      ['客户端', this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
+      [t('调用时间'), escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))],
+      [t('用户'), escapeHtml(log.username || (log.user_id != null ? `ID: ${log.user_id}` : '-'))],
+      [t('模型'), escapeHtml(modelLabel)],
+      [t('系列'), escapeHtml(log.series || '-')],
+      [t('上游模型 ID'), escapeHtml(log.upstream_model_id || log.model_id || '-')],
+      [t('供应商'), escapeHtml(providerLabel)],
+      [t('请求类型'), this._usageRequestTypeBadge(log.request_type) + (typeMeta.label !== '-' && log.request_type ? ` <span style="color:var(--muted-foreground);font-size:12px;">(${escapeHtml(String(log.request_type))})</span>` : '')],
+      [t('客户端'), this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
       ['API Key', log.key_prefix
         ? `<code style="font-size:12px;">${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` <span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}`
         : '-'],
-      ['总 Token', this._formatBigNumber(tokensVal)],
-      ['输入 Token', this._formatBigNumber(promptTokens)],
-      ['输出 Token', this._formatBigNumber(parseInt(log.completion_tokens || 0, 10))],
-      ['缓存命中 Token', cacheDisplay],
-      ['积分', costDisplay],
-      ['延迟', log.latency_ms != null ? `${log.latency_ms}ms` : '-'],
-      ['IP 地址', escapeHtml(log.ip_address || '-')],
+      [t('总 Token'), this._formatBigNumber(tokensVal)],
+      [t('输入 Token'), this._formatBigNumber(promptTokens)],
+      [t('输出 Token'), this._formatBigNumber(parseInt(log.completion_tokens || 0, 10))],
+      [t('缓存命中 Token'), cacheDisplay],
+      [t('积分'), costDisplay],
+      [t('延迟'), log.latency_ms != null ? `${log.latency_ms}ms` : '-'],
+      [t('IP 地址'), escapeHtml(log.ip_address || '-')],
     ];
 
     let messagesHtml = '';
@@ -8001,17 +8001,17 @@ async function(ctx) {
       const observed = analysis.observed_fields || {};
       const values = analysis.values || {};
       const fieldRows = [
-        ['消息数量', analysis.message_count],
-        ['元数据消息索引', (analysis.metadata_message_indexes || []).join(', ') || '-'],
-        ['工作区路径', values.workspace_path],
-        ['操作系统', values.os_version],
+        [t('消息数量'), analysis.message_count],
+        [t('元数据消息索引'), (analysis.metadata_message_indexes || []).join(', ') || '-'],
+        [t('工作区路径'), values.workspace_path],
+        [t('操作系统'), values.os_version],
         ['Shell', values.shell],
-        ['日期', values.date],
-        ['Git/JJ 状态', observed.git_status ? '已读取' : '未出现'],
-        ['项目布局', observed.project_layout ? '已读取' : '未出现'],
+        [t('日期'), values.date],
+        [t('Git/JJ 状态'), observed.git_status ? t('已读取') : t('未出现')],
+        [t('项目布局'), observed.project_layout ? t('已读取') : t('未出现')],
       ];
       const blockRows = Object.entries(analysis.block_counts || {}).map(([name, count]) => `${escapeHtml(name)} × ${count}`).join('、') || '-';
-      messagesHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">消息读取统计</span><div><div style="font-size:12px;margin-bottom:6px;">区块：${blockRows}</div>${fieldRows.map(([label, value]) => `<div style="display:flex;gap:8px;margin:3px 0;font-size:12px;"><span style="width:90px;color:var(--muted-foreground);">${escapeHtml(label)}</span><code style="white-space:pre-wrap;word-break:break-all;">${escapeHtml(value == null ? '-' : String(value))}</code></div>`).join('')}</div></div>`;
+      messagesHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('消息读取统计')}${'</span><div><div style="font-size:12px;margin-bottom:6px;">' + t('区块：')}${blockRows}</div>${fieldRows.map(([label, value]) => `<div style="display:flex;gap:8px;margin:3px 0;font-size:12px;"><span style="width:90px;color:var(--muted-foreground);">${escapeHtml(label)}</span><code style="white-space:pre-wrap;word-break:break-all;">${escapeHtml(value == null ? '-' : String(value))}</code></div>`).join('')}</div></div>`;
     }
     if (log.messages) {
       try {
@@ -8021,15 +8021,15 @@ async function(ctx) {
           const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content, null, 2);
           return `<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--muted-foreground);margin-bottom:2px;">${role}</div><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;">${escapeHtml(content)}</pre></div>`;
         }).join('');
-        messagesHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">请求消息</span><div style="max-height:400px;overflow-y:auto;">${formatted}</div></div>`;
+        messagesHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('请求消息')}</span><div style="max-height:400px;overflow-y:auto;">${formatted}</div></div>`;
       } catch {
-        messagesHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">请求消息</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(String(log.messages))}</pre></div>`;
+        messagesHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('请求消息')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(String(log.messages))}</pre></div>`;
       }
     }
 
     let responseHtml = '';
     if (log.response) {
-      responseHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">AI 回复</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(log.response)}</pre></div>`;
+      responseHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('AI 回复')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(log.response)}</pre></div>`;
     }
 
     const content = document.getElementById('usageDetailContent');
@@ -8080,13 +8080,13 @@ async function(ctx) {
         this._startStatsRefreshTimer();
         const input = document.getElementById('statsRefreshInterval');
         if (input) input.value = String(refreshSec);
-        alert('设置已保存');
+        alert(t('设置已保存'));
       } else {
-        alert('保存失败');
+        alert(t('保存失败'));
       }
     } catch (error) {
-      console.error('保存设置失败:', error);
-      alert('保存失败');
+      console.error(t('保存设置失败:'), error);
+      alert(t('保存失败'));
     }
   }
 
@@ -8141,20 +8141,20 @@ async function(ctx) {
       // 飞书登录配置
       await this.loadFeishuLoginSettings();
     } catch (error) {
-      console.error('加载设置失败:', error);
+      console.error(t('加载设置失败:'), error);
     }
   }
 
   async loadFeishuLoginSettings() {
     try {
-      console.log('[飞书配置] 正在加载…');
+      console.log(t('[飞书配置] 正在加载…'));
       const response = await fetch('/api/admin/feishu-login');
       if (!response.ok) {
-        console.warn('[飞书配置] 加载失败, status=', response.status);
+        console.warn(t('[飞书配置] 加载失败, status='), response.status);
         return;
       }
       const data = await response.json();
-      console.log('[飞书配置] 加载成功:', {
+      console.log(t('[飞书配置] 加载成功:'), {
         enabled: data.enabled,
         hasAppId: !!data.appId,
         hasAppSecret: data.hasAppSecret,
@@ -8177,12 +8177,12 @@ async function(ctx) {
       if (redirectEl) redirectEl.value = data.redirectUri || '';
       if (secretHint) secretHint.style.display = data.hasAppSecret ? 'block' : 'none';
       if (sourceEl) {
-        const sourceLabel = data.source === 'config' ? '配置文件/环境变量（尚未在后台保存）' : '数据库设置';
-        sourceEl.textContent = `当前配置来源：${sourceLabel}`;
+        const sourceLabel = data.source === 'config' ? t('配置文件/环境变量（尚未在后台保存）') : t('数据库设置');
+        sourceEl.textContent = `${t('当前配置来源：')}${sourceLabel}`;
       }
       this._feishuHasSecret = !!data.hasAppSecret;
     } catch (error) {
-      console.error('[飞书配置] 加载异常:', error);
+      console.error(t('[飞书配置] 加载异常:'), error);
     }
   }
 
@@ -8217,11 +8217,11 @@ async function(ctx) {
     const btn = document.getElementById('feishuSaveBtn');
 
     if (enabled && !appId) {
-      alert('启用飞书登录时必须填写 App ID');
+      alert(t('启用飞书登录时必须填写 App ID'));
       return;
     }
     if (enabled && !appSecret && !this._feishuHasSecret) {
-      alert('启用飞书登录时必须填写 App Secret');
+      alert(t('启用飞书登录时必须填写 App Secret'));
       return;
     }
 
@@ -8231,16 +8231,16 @@ async function(ctx) {
       appSecret: appSecret || undefined,
       tenantKey,
     };
-    console.log('[飞书配置] 正在保存…', {
+    console.log(t('[飞书配置] 正在保存…'), {
       enabled,
       appId: appId ? appId.slice(0, 8) + '…' : '',
       secretProvided: !!appSecret,
-      tenantKey: tenantKey ? '已设置' : '未设置',
+      tenantKey: tenantKey ? t('已设置') : t('未设置'),
     });
 
     if (btn) {
       btn.disabled = true;
-      setButtonLoading(btn, '保存中…');
+      setButtonLoading(btn, t('保存中…'));
     }
 
     try {
@@ -8251,20 +8251,20 @@ async function(ctx) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        console.error('[飞书配置] 保存失败:', data);
-        alert(data.error || '保存失败');
+        console.error(t('[飞书配置] 保存失败:'), data);
+        alert(data.error || t('保存失败'));
         return;
       }
-      console.log('[飞书配置] 保存成功:', data);
-      alert('飞书登录配置已保存');
+      console.log(t('[飞书配置] 保存成功:'), data);
+      alert(t('飞书登录配置已保存'));
       await this.loadFeishuLoginSettings();
     } catch (error) {
-      console.error('[飞书配置] 保存异常:', error);
-      alert('保存失败');
+      console.error(t('[飞书配置] 保存异常:'), error);
+      alert(t('保存失败'));
     } finally {
       if (btn) {
         btn.disabled = false;
-        clearButtonLoading(btn, '保存飞书配置');
+        clearButtonLoading(btn, t('保存飞书配置'));
       }
     }
   }
@@ -8273,18 +8273,18 @@ async function(ctx) {
     const el = document.getElementById('feishuRedirectUri');
     const value = el?.value || '';
     if (!value) {
-      alert('回调地址为空');
+      alert(t('回调地址为空'));
       return;
     }
     try {
       await navigator.clipboard.writeText(value);
-      console.log('[飞书配置] 已复制回调地址:', value);
-      alert('回调地址已复制');
+      console.log(t('[飞书配置] 已复制回调地址:'), value);
+      alert(t('回调地址已复制'));
     } catch (err) {
-      console.warn('[飞书配置] 剪贴板复制失败，尝试选中输入框', err);
+      console.warn(t('[飞书配置] 剪贴板复制失败，尝试选中输入框'), err);
       el.select();
       document.execCommand('copy');
-      alert('回调地址已复制');
+      alert(t('回调地址已复制'));
     }
   }
 
@@ -8308,7 +8308,7 @@ async function(ctx) {
     const output_price = parseFloat(document.getElementById('batchSetOutputPrice').value);
 
     if (isNaN(input_price) || isNaN(output_price)) {
-      alert('请输入有效的价格');
+      alert(t('请输入有效的价格'));
       return;
     }
 
@@ -8327,14 +8327,14 @@ async function(ctx) {
       if (response.ok) {
         this.closeModals();
         this.loadModels();
-        alert('价格设置成功');
+        alert(t('价格设置成功'));
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.error || '设置失败');
+        alert(err.error || t('设置失败'));
       }
     } catch (error) {
-      console.error('批量设置价格失败:', error);
-      alert('设置失败');
+      console.error(t('批量设置价格失败:'), error);
+      alert(t('设置失败'));
     }
   }
 
@@ -8364,16 +8364,16 @@ async function(ctx) {
         data = await this._fetchAllFilteredModels();
       }
     } catch (e) {
-      alert(e.message || '导出失败');
+      alert(e.message || t('导出失败'));
       return;
     }
 
     if (!data || data.length === 0) {
-      alert('暂无模型数据');
+      alert(t('暂无模型数据'));
       return;
     }
 
-    const headers = ['上游模型ID', '名称', '别名', '供应商', '系列', '描述', '输入价/百万Token', '输出价/百万Token', '速率限制RPM', '速率限制TPM', '状态'];
+    const headers = [t('上游模型ID'), t('名称'), t('别名'), t('供应商'), t('系列'), t('描述'), t('输入价/百万Token'), t('输出价/百万Token'), t('速率限制RPM'), t('速率限制TPM'), t('状态')];
     const rows = data.map(m => [
       m.upstream_model_id || '',
       m.name || '',
@@ -8385,7 +8385,7 @@ async function(ctx) {
       m.output_price_per_1k_tokens || 0,
       m.rate_limit_rpm || 0,
       m.rate_limit_tpm || 0,
-      m.enabled ? '启用' : '禁用'
+      m.enabled ? t('启用') : t('禁用')
     ]);
 
     const csvContent = '\uFEFF' + [headers, ...rows].map(row =>
@@ -8408,7 +8408,7 @@ async function(ctx) {
     // 按当前筛选条件分页拉取全量后导出（不加载到界面）
     let providers = [];
     try {
-      this.showToast('正在导出…', 'info');
+      this.showToast(t('正在导出…'), 'info');
       const pageSize = 200;
       let page = 1;
       let total = Infinity;
@@ -8417,7 +8417,7 @@ async function(ctx) {
         params.set('page', String(page));
         params.set('limit', String(pageSize));
         const res = await fetch(`/api/admin/providers?${params}`);
-        if (!res.ok) throw new Error('导出失败');
+        if (!res.ok) throw new Error(t('导出失败'));
         const raw = await res.json();
         const { items, total: t } = this._normalizeListResponse(raw);
         total = t;
@@ -8427,34 +8427,34 @@ async function(ctx) {
         if (page > 500) break;
       }
     } catch (e) {
-      this.showToast(e.message || '导出失败', 'error');
+      this.showToast(e.message || t('导出失败'), 'error');
       return;
     }
 
     if (!providers.length) {
-      this.showToast('暂无供应商数据可导出', 'info');
+      this.showToast(t('暂无供应商数据可导出'), 'info');
       return;
     }
 
-    const headers = ['名称', 'Base URL', '格式', '密钥模式', '备注', '分组',
-                     '模型同步地址', '额度查询', '代理', '状态', '创建者', '创建时间'];
+    const headers = [t('名称'), 'Base URL', t('格式'), t('密钥模式'), t('备注'), t('分组'),
+                     t('模型同步地址'), t('额度查询'), t('代理'), t('状态'), t('创建者'), t('创建时间')];
     const rows = providers.map(p => {
       const isScriptKey = (p.key_mode || 'fixed') === 'script';
-      let proxyEnabled = '关闭';
+      let proxyEnabled = t('关闭');
       if (p.proxy_enabled) {
         if ((p.proxy_mode || 'pool') === 'single') {
-          proxyEnabled = p.proxy_use_system ? '系统代理' : (p.proxy_url ? '单代理' : '未配置');
+          proxyEnabled = p.proxy_use_system ? t('系统代理') : (p.proxy_url ? t('单代理') : t('未配置'));
         } else {
-          proxyEnabled = '代理池';
+          proxyEnabled = t('代理池');
         }
       }
       // 列表接口已脱敏，仅展示是否已配置 / 多 Key 数量 / 脚本模式
       const keyCount = p.api_key_count || 0;
       const keyDisplay = isScriptKey
-        ? '脚本刷新'
+        ? t('脚本刷新')
         : (keyCount > 1
-          ? `已配置 ${keyCount} 个${p.api_key_select_mode === 'weight' ? '·权重' : '·顺序'}`
-          : (p.has_api_key || p.api_key || keyCount > 0 ? '已配置' : '未配置'));
+          ? `${t('已配置')}${keyCount}${t('个')}${p.api_key_select_mode === 'weight' ? t('·权重') : t('·顺序')}`
+          : (p.has_api_key || p.api_key || keyCount > 0 ? t('已配置') : t('未配置')));
       return [
         p.name || '',
         p.base_url || '',
@@ -8463,10 +8463,10 @@ async function(ctx) {
         (p.notes || '').replace(/"/g, '""'),
         p.grp || '',
         p.models_url || '',
-        p.quota_enabled ? '启用' : '关闭',
+        p.quota_enabled ? t('启用') : t('关闭'),
         proxyEnabled,
-        p.enabled ? '启用' : '禁用',
-        p.username || (p.created_by ? '用户' : '系统') || '',
+        p.enabled ? t('启用') : t('禁用'),
+        p.username || (p.created_by ? t('用户') : t('系统')) || '',
         p.created_at ? new Date(p.created_at).toLocaleString('zh-CN') : ''
       ];
     });
@@ -8482,7 +8482,7 @@ async function(ctx) {
     link.download = `providers_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    this.showToast(`已导出 ${providers.length} 条`, 'success');
+    this.showToast(`${t('已导出')}${providers.length}${t('条')}`, 'success');
   }
 
   async executeBatchJsonPrices() {
@@ -8492,7 +8492,7 @@ async function(ctx) {
     if (!input) {
       resultEl.style.display = 'block';
       resultEl.style.color = 'var(--destructive)';
-      resultEl.textContent = '请输入 JSON 数据';
+      resultEl.textContent = t('请输入 JSON 数据');
       return;
     }
 
@@ -8502,14 +8502,14 @@ async function(ctx) {
     } catch (e) {
       resultEl.style.display = 'block';
       resultEl.style.color = 'var(--destructive)';
-      resultEl.textContent = 'JSON 格式错误: ' + e.message;
+      resultEl.textContent = t('JSON 格式错误: ') + e.message;
       return;
     }
 
     if (typeof prices !== 'object' || Array.isArray(prices) || Object.keys(prices).length === 0) {
       resultEl.style.display = 'block';
       resultEl.style.color = 'var(--destructive)';
-      resultEl.textContent = 'JSON 格式不正确，需要是 { "model-id": {"in": 价格, "out": 价格} } 的对象';
+      resultEl.textContent = t('JSON 格式不正确，需要是 { "model-id": {"in": 价格, "out": 价格} } 的对象');
       return;
     }
 
@@ -8522,9 +8522,9 @@ async function(ctx) {
 
       const data = await response.json();
       if (response.ok) {
-        let msg = `已更新 ${data.updated} 个模型的价格`;
+        let msg = `${t('已更新')}${data.updated}${t('个模型的价格')}`;
         if (data.notFound && data.notFound.length > 0) {
-          msg += `\n未找到的模型: ${data.notFound.join(', ')}`;
+          msg += `${t('\\n未找到的模型:')}${data.notFound.join(', ')}`;
         }
         resultEl.style.display = 'block';
         resultEl.style.color = '#10b981';
@@ -8534,13 +8534,13 @@ async function(ctx) {
       } else {
         resultEl.style.display = 'block';
         resultEl.style.color = 'var(--destructive)';
-        resultEl.textContent = data.error || '设置失败';
+        resultEl.textContent = data.error || t('设置失败');
       }
     } catch (error) {
-      console.error('JSON 批量定价失败:', error);
+      console.error(t('JSON 批量定价失败:'), error);
       resultEl.style.display = 'block';
       resultEl.style.color = 'var(--destructive)';
-      resultEl.textContent = '请求失败: ' + error.message;
+      resultEl.textContent = t('请求失败: ') + error.message;
     }
   }
 
@@ -8559,7 +8559,7 @@ async function(ctx) {
     if (!input) {
       resultEl.style.display = 'block';
       resultEl.style.color = 'var(--destructive)';
-      resultEl.textContent = '请输入 JSON 数据';
+      resultEl.textContent = t('请输入 JSON 数据');
       return;
     }
 
@@ -8569,14 +8569,14 @@ async function(ctx) {
     } catch (e) {
       resultEl.style.display = 'block';
       resultEl.style.color = 'var(--destructive)';
-      resultEl.textContent = 'JSON 格式错误: ' + e.message;
+      resultEl.textContent = t('JSON 格式错误: ') + e.message;
       return;
     }
 
     if (typeof prices !== 'object' || Array.isArray(prices) || Object.keys(prices).length === 0) {
       resultEl.style.display = 'block';
       resultEl.style.color = 'var(--destructive)';
-      resultEl.textContent = 'JSON 格式不正确，需要是 { "model-id": {"in": 价格, "out": 价格} } 的对象';
+      resultEl.textContent = t('JSON 格式不正确，需要是 { "model-id": {"in": 价格, "out": 价格} } 的对象');
       return;
     }
 
@@ -8589,9 +8589,9 @@ async function(ctx) {
 
       const data = await response.json();
       if (response.ok) {
-        let msg = `已更新 ${data.updated} 个模型的参考价`;
+        let msg = `${t('已更新')}${data.updated}${t('个模型的参考价')}`;
         if (data.notFound && data.notFound.length > 0) {
-          msg += `\n未找到的模型: ${data.notFound.join(', ')}`;
+          msg += `${t('\\n未找到的模型:')}${data.notFound.join(', ')}`;
         }
         resultEl.style.display = 'block';
         resultEl.style.color = '#10b981';
@@ -8601,13 +8601,13 @@ async function(ctx) {
       } else {
         resultEl.style.display = 'block';
         resultEl.style.color = 'var(--destructive)';
-        resultEl.textContent = data.error || '设置失败';
+        resultEl.textContent = data.error || t('设置失败');
       }
     } catch (error) {
-      console.error('JSON 批量定参考价失败:', error);
+      console.error(t('JSON 批量定参考价失败:'), error);
       resultEl.style.display = 'block';
       resultEl.style.color = 'var(--destructive)';
-      resultEl.textContent = '请求失败: ' + error.message;
+      resultEl.textContent = t('请求失败: ') + error.message;
     }
   }
 
@@ -8627,11 +8627,11 @@ async function(ctx) {
 
     const percentage = parseFloat(document.getElementById('batchAdjustPercentage').value);
     if (isNaN(percentage)) {
-      alert('请输入有效的百分比');
+      alert(t('请输入有效的百分比'));
       return;
     }
 
-    if (!await confirm(`确定要将选中 ${ids.length} 个模型的价格${percentage >= 0 ? '上涨' : '下降'} ${Math.abs(percentage)}% 吗？`)) {
+    if (!await confirm(`${t('确定要将选中')}${ids.length}${t('个模型的价格')}${percentage >= 0 ? t('上涨') : t('下降')} ${Math.abs(percentage)}${t('% 吗？')}`)) {
       return;
     }
 
@@ -8649,14 +8649,14 @@ async function(ctx) {
       if (response.ok) {
         this.closeModals();
         this.loadModels();
-        alert('价格调整成功');
+        alert(t('价格调整成功'));
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.error || '调整失败');
+        alert(err.error || t('调整失败'));
       }
     } catch (error) {
-      console.error('批量调整价格失败:', error);
-      alert('调整失败');
+      console.error(t('批量调整价格失败:'), error);
+      alert(t('调整失败'));
     }
   }
 
@@ -8692,14 +8692,14 @@ async function(ctx) {
       if (response.ok) {
         this.closeModals();
         this.loadModels();
-        alert('速率限制设置成功');
+        alert(t('速率限制设置成功'));
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.error || '设置失败');
+        alert(err.error || t('设置失败'));
       }
     } catch (error) {
-      console.error('批量设置速率限制失败:', error);
-      alert('设置失败');
+      console.error(t('批量设置速率限制失败:'), error);
+      alert(t('设置失败'));
     }
   }
 
@@ -8724,7 +8724,7 @@ async function(ctx) {
     document.getElementById('batchDescMode').value = 'replace';
     document.getElementById('batchDescValue').value = '';
     document.getElementById('batchEditDescStatus').style.display = 'none';
-    document.getElementById('batchDescValue').placeholder = '输入新的模型说明...';
+    document.getElementById('batchDescValue').placeholder = t('输入新的模型说明...');
     
     document.getElementById('batchEditDescModal').style.display = 'flex';
     document.getElementById('batchEditDescModal').classList.add('active');
@@ -8736,13 +8736,13 @@ async function(ctx) {
     
     switch (mode) {
       case 'replace':
-        textarea.placeholder = '输入新的模型说明...';
+        textarea.placeholder = t('输入新的模型说明...');
         break;
       case 'append':
-        textarea.placeholder = '输入要追加的内容...';
+        textarea.placeholder = t('输入要追加的内容...');
         break;
       case 'prepend':
-        textarea.placeholder = '输入要前置的内容...';
+        textarea.placeholder = t('输入要前置的内容...');
         break;
     }
   }
@@ -8759,7 +8759,7 @@ async function(ctx) {
       statusEl.style.display = 'block';
       statusEl.style.background = 'rgba(239,68,68,0.1)';
       statusEl.style.color = 'var(--destructive)';
-      statusEl.textContent = '请输入说明内容';
+      statusEl.textContent = t('请输入说明内容');
       return;
     }
     
@@ -8789,7 +8789,7 @@ async function(ctx) {
         statusEl.style.display = 'block';
         statusEl.style.background = 'rgba(34,197,94,0.1)';
         statusEl.style.color = '#10b981';
-        statusEl.textContent = `成功更新 ${result.updated || ids.length} 个模型的说明`;
+        statusEl.textContent = `${t('成功更新')}${result.updated || ids.length}${t('个模型的说明')}`;
         setTimeout(() => {
           this.closeModals();
           this.loadModels();
@@ -8799,14 +8799,14 @@ async function(ctx) {
         statusEl.style.display = 'block';
         statusEl.style.background = 'rgba(239,68,68,0.1)';
         statusEl.style.color = 'var(--destructive)';
-        statusEl.textContent = err.error || '更新失败';
+        statusEl.textContent = err.error || t('更新失败');
       }
     } catch (error) {
-      console.error('批量修改说明失败:', error);
+      console.error(t('批量修改说明失败:'), error);
       statusEl.style.display = 'block';
       statusEl.style.background = 'rgba(239,68,68,0.1)';
       statusEl.style.color = 'var(--destructive)';
-      statusEl.textContent = '网络错误: ' + error.message;
+      statusEl.textContent = t('网络错误: ') + error.message;
     }
   }
 
@@ -8821,7 +8821,7 @@ async function(ctx) {
     setHTML(listEl, selectedModels.map(m => `
       <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
         <span>${escapeHtml(m.upstream_model_id || m.name || m.id)}</span>
-        <span style="color:var(--muted-foreground);">当前系列: ${escapeHtml(m.series || '无')}</span>
+        <span style="color:var(--muted-foreground);">当前系列: ${escapeHtml(m.series || t('无'))}</span>
       </div>
     `).join(''));
     
@@ -8851,7 +8851,7 @@ async function(ctx) {
         statusEl.style.display = 'block';
         statusEl.style.background = 'rgba(34,197,94,0.1)';
         statusEl.style.color = '#10b981';
-        statusEl.textContent = `成功设置 ${result.updated || ids.length} 个模型的系列`;
+        statusEl.textContent = `${t('成功设置')}${result.updated || ids.length}${t('个模型的系列')}`;
         setTimeout(() => {
           this.closeModals();
           this.loadModels();
@@ -8861,14 +8861,14 @@ async function(ctx) {
         statusEl.style.display = 'block';
         statusEl.style.background = 'rgba(239,68,68,0.1)';
         statusEl.style.color = 'var(--destructive)';
-        statusEl.textContent = err.error || '设置失败';
+        statusEl.textContent = err.error || t('设置失败');
       }
     } catch (error) {
-      console.error('批量设置系列失败:', error);
+      console.error(t('批量设置系列失败:'), error);
       statusEl.style.display = 'block';
       statusEl.style.background = 'rgba(239,68,68,0.1)';
       statusEl.style.color = 'var(--destructive)';
-      statusEl.textContent = '网络错误: ' + error.message;
+      statusEl.textContent = t('网络错误: ') + error.message;
     }
   }
 
@@ -8883,7 +8883,7 @@ async function(ctx) {
   async loadSeriesNames() {
     try {
       const select = document.getElementById('newSeriesName');
-      setHTML(select, '<option value="">选择系列...</option>');
+      setHTML(select, '<option value="">' + t('选择系列...') + '</option>');
       const seriesSet = new Set();
       this.modelsData.forEach(m => {
         if (m.series) seriesSet.add(m.series);
@@ -8892,7 +8892,7 @@ async function(ctx) {
         appendHTML(select, `<option value="${name}">${name}</option>`);
       });
     } catch (error) {
-      console.error('加载系列列表失败:', error);
+      console.error(t('加载系列列表失败:'), error);
     }
   }
 
@@ -8903,23 +8903,23 @@ async function(ctx) {
       const icons = await response.json();
       const listEl = document.getElementById('seriesIconsList');
       if (icons.length === 0) {
-        setHTML(listEl, '<div style="text-align:center;color:var(--muted-foreground);padding:20px;">暂无系列图标</div>');
+        setHTML(listEl, '<div style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('暂无系列图标') + '</div>');
         return;
       }
       setHTML(listEl, icons.map(icon => `
         <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
-          ${icon.icon_url ? `<img src="${icon.icon_url}" style="width:32px;height:32px;object-fit:contain;border-radius:4px;" onerror="this.style.display='none'">` : '<div style="width:32px;height:32px;background:var(--muted);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted-foreground);">无</div>'}
+          ${icon.icon_url ? `<img src="${icon.icon_url}" style="width:32px;height:32px;object-fit:contain;border-radius:4px;" onerror="this.style.display='none'">` : '<div style="width:32px;height:32px;background:var(--muted);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted-foreground);">' + t('无') + '</div>'}
           <div style="flex:1;">
             <div style="font-weight:500;">${icon.name}</div>
-            <div style="font-size:12px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon.icon_url || '未设置图标'}</div>
+            <div style="font-size:12px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon.icon_url || t('未设置图标')}</div>
           </div>
-          <button class="btn btn-icon" title="编辑" onclick="adminApp.editSeriesIcon('${icon.name}', '${icon.icon_url || ''}')">
+          <button class="btn btn-icon" title=t('编辑') onclick="adminApp.editSeriesIcon('${icon.name}', '${icon.icon_url || ''}')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
           </button>
-          <button class="btn btn-icon" title="删除" onclick="adminApp.deleteSeriesIcon('${icon.name}')">
+          <button class="btn btn-icon" title=t('删除') onclick="adminApp.deleteSeriesIcon('${icon.name}')">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -8928,7 +8928,7 @@ async function(ctx) {
         </div>
       `).join(''));
     } catch (error) {
-      console.error('加载系列图标失败:', error);
+      console.error(t('加载系列图标失败:'), error);
     }
   }
 
@@ -8936,7 +8936,7 @@ async function(ctx) {
     const name = document.getElementById('newSeriesName').value.trim();
     const icon_url = document.getElementById('newSeriesIconUrl').value.trim();
     if (!name) {
-      alert('请输入系列名称');
+      alert(t('请输入系列名称'));
       return;
     }
     try {
@@ -8950,15 +8950,15 @@ async function(ctx) {
         document.getElementById('newSeriesIconUrl').value = '';
         await this.loadSeriesIcons();
       } else {
-        alert('添加失败');
+        alert(t('添加失败'));
       }
     } catch (error) {
-      alert('网络错误: ' + error.message);
+      alert(t('网络错误: ') + error.message);
     }
   }
 
   editSeriesIcon(name, currentUrl) {
-    const newUrl = prompt(`设置 "${name}" 的图标 URL:`, currentUrl);
+    const newUrl = prompt(`${t('设置 "')}${name}${t('" 的图标 URL:')}`, currentUrl);
     if (newUrl === null) return;
     fetch('/api/admin/series-icons', {
       method: 'POST',
@@ -8968,12 +8968,12 @@ async function(ctx) {
   }
 
   async deleteSeriesIcon(name) {
-    if (!await confirm(`确定要删除系列 "${name}" 的图标配置吗？`)) return;
+    if (!await confirm(`${t('确定要删除系列 "')}${name}${t('" 的图标配置吗？')}`)) return;
     try {
       await fetch(`/api/admin/series-icons/${encodeURIComponent(name)}`, { method: 'DELETE' });
       await this.loadSeriesIcons();
     } catch (error) {
-      alert('删除失败: ' + error.message);
+      alert(t('删除失败: ') + error.message);
     }
   }
 
@@ -9000,7 +9000,7 @@ async function(ctx) {
     const outputPct = parseFloat(document.getElementById('batchRefOutputPct').value);
 
     if (isNaN(inputPct) || isNaN(outputPct)) {
-      alert('请输入有效的百分比');
+      alert(t('请输入有效的百分比'));
       return;
     }
 
@@ -9029,11 +9029,11 @@ async function(ctx) {
         document.getElementById('batchAdjustByRefConfirmBtn').style.display = 'inline-flex';
       } else {
         const err = await response.json().catch(() => ({}));
-        alert(err.error || '预览失败');
+        alert(err.error || t('预览失败'));
       }
     } catch (error) {
-      console.error('预览失败:', error);
-      alert('预览失败: ' + error.message);
+      console.error(t('预览失败:'), error);
+      alert(t('预览失败: ') + error.message);
     }
   }
 
@@ -9045,11 +9045,11 @@ async function(ctx) {
     const outputPct = parseFloat(document.getElementById('batchRefOutputPct').value);
 
     if (isNaN(inputPct) || isNaN(outputPct)) {
-      alert('请输入有效的百分比');
+      alert(t('请输入有效的百分比'));
       return;
     }
 
-    if (!await confirm(`确定要将选中的 ${ids.length} 个模型的价格设置为参考价的 ${inputPct}%/${outputPct}% 吗？`)) {
+    if (!await confirm(`${t('确定要将选中的')}${ids.length}${t('个模型的价格设置为参考价的')}${inputPct}%/${outputPct}${t('% 吗？')}`)) {
       return;
     }
 
@@ -9065,20 +9065,20 @@ async function(ctx) {
         const result = await response.json();
         statusEl.style.display = 'block';
         statusEl.style.color = '#10b981';
-        statusEl.textContent = `成功设置 ${result.updated || ids.length} 个模型的价格`;
+        statusEl.textContent = `${t('成功设置')}${result.updated || ids.length}${t('个模型的价格')}`;
         this.loadModels();
         setTimeout(() => this.closeModals(), 1500);
       } else {
         const err = await response.json().catch(() => ({}));
         statusEl.style.display = 'block';
         statusEl.style.color = 'var(--destructive)';
-        statusEl.textContent = err.error || '设置失败';
+        statusEl.textContent = err.error || t('设置失败');
       }
     } catch (error) {
-      console.error('按参考价设置价格失败:', error);
+      console.error(t('按参考价设置价格失败:'), error);
       statusEl.style.display = 'block';
       statusEl.style.color = 'var(--destructive)';
-      statusEl.textContent = '设置失败: ' + error.message;
+      statusEl.textContent = t('设置失败: ') + error.message;
     }
   }
 
@@ -9090,18 +9090,18 @@ async function(ctx) {
   }
 
   async loadUserGroups() {
-    console.log('[用户组] 开始加载用户组列表');
+    console.log(t('[用户组] 开始加载用户组列表'));
     const listEl = document.getElementById('userGroupsList') || document.getElementById('adminUserGroupsList');
-    if (listEl) setHTML(listEl, pageLoadingHtml('加载用户组...'));
+    if (listEl) setHTML(listEl, pageLoadingHtml(t('加载用户组...')));
     try {
       const response = await fetch('/api/admin/user-groups');
-      console.log('[用户组] API 响应状态:', response.status);
-      if (!response.ok) throw new Error('加载失败');
+      console.log(t('[用户组] API 响应状态:'), response.status);
+      if (!response.ok) throw new Error(t('加载失败'));
       const groups = await response.json();
-      console.log('[用户组] 获取到用户组数据:', groups);
+      console.log(t('[用户组] 获取到用户组数据:'), groups);
       this.renderUserGroupsList(groups);
     } catch (error) {
-      console.error('[用户组] 加载用户组列表失败:', error);
+      console.error(t('[用户组] 加载用户组列表失败:'), error);
     }
   }
 
@@ -9113,7 +9113,7 @@ async function(ctx) {
   }
 
   renderUserGroupsList(groups) {
-    console.log('[用户组] 渲染用户组列表, 数量:', groups.length);
+    console.log(t('[用户组] 渲染用户组列表, 数量:'), groups.length);
     this._userGroupsData = groups || [];
     const all = this._userGroupsData;
     const q = this._searchQ('userGroupSearchInput');
@@ -9170,21 +9170,21 @@ async function(ctx) {
 
     const container = document.getElementById('userGroupsList');
     if (!container) {
-      console.error('[用户组] 找不到 userGroupsList 容器');
+      console.error(t('[用户组] 找不到 userGroupsList 容器'));
       return;
     }
 
     const countEl = document.getElementById('userGroupCount');
     if (countEl) {
       countEl.textContent = filtered.length === all.length
-        ? `共 ${all.length} 个`
-        : `显示 ${filtered.length} / ${all.length}`;
+        ? `${t('共')}${all.length}${t('个')}`
+        : `${t('显示')}${filtered.length} / ${all.length}`;
     }
 
     if (!all.length) {
-      setHTML(container, '<div class="empty-state">暂无用户组，点击右上角创建</div>');
+      setHTML(container, '<div class="empty-state">' + t('暂无用户组，点击右上角创建') + '</div>');
     } else if (!filtered.length) {
-      setHTML(container, '<div class="empty-state">未找到匹配的用户组</div>');
+      setHTML(container, '<div class="empty-state">' + t('未找到匹配的用户组') + '</div>');
     } else {
       const pg = this._paginate(filtered, this.userGroupPage, this.userGroupPageSize);
       this.userGroupPage = pg.page;
@@ -9195,12 +9195,12 @@ async function(ctx) {
         <td>${escapeHtml(g.description || '-')}</td>
         <td>${g.member_count}</td>
         <td>${g.rule_count}</td>
-        <td>${g.is_default ? '<span style="background:rgba(34,197,94,0.1);color:#22c55e;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:500;">默认</span>' : '-'}</td>
+        <td>${g.is_default ? '<span style="background:rgba(34,197,94,0.1);color:#22c55e;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:500;">' + t('默认') + '</span>' : '-'}</td>
         <td>${new Date(g.created_at).toLocaleDateString()}</td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
           ${g.is_default
-            ? '<button class="btn btn-sm btn-secondary" disabled style="opacity:0.5;">✓ 默认</button>'
-            : `<button class="btn btn-sm btn-secondary" onclick="adminApp.setDefaultGroup(${g.id})">设为默认</button>`}
+            ? '<button class="btn btn-sm btn-secondary" disabled style="opacity:0.5;">' + t('✓ 默认') + '</button>'
+            : `<button class="btn btn-sm btn-secondary" onclick="adminApp.setDefaultGroup(${g.id})">${t('设为默认')}</button>`}
           <button class="btn btn-sm btn-primary" onclick="adminApp.showUserGroupDetail(${g.id})">管理</button>
         </td>
       </tr>`).join('')}</tbody></table>
@@ -9209,15 +9209,15 @@ async function(ctx) {
 
     // 绑定创建按钮事件
     const createBtn = document.getElementById('createUserGroupBtn');
-    console.log('[用户组] 创建按钮元素:', createBtn);
+    console.log(t('[用户组] 创建按钮元素:'), createBtn);
     if (createBtn) {
       createBtn.onclick = () => {
-        console.log('[用户组] 创建按钮被点击');
+        console.log(t('[用户组] 创建按钮被点击'));
         this.showCreateUserGroupModal();
       };
-      console.log('[用户组] 创建按钮事件已绑定');
+      console.log(t('[用户组] 创建按钮事件已绑定'));
     } else {
-      console.error('[用户组] 找不到 createUserGroupBtn 按钮');
+      console.error(t('[用户组] 找不到 createUserGroupBtn 按钮'));
     }
   }
 
@@ -9226,68 +9226,68 @@ async function(ctx) {
       const res = await fetch(`/api/admin/user-groups/${groupId}/set-default`, { method: 'PUT' });
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || '设置失败');
+        alert(err.error || t('设置失败'));
         return;
       }
       this.loadUserGroups();
     } catch (e) {
-      alert('设置失败: ' + e.message);
+      alert(t('设置失败: ') + e.message);
     }
   }
 
   showCreateUserGroupModal() {
-    console.log('[用户组] 打开创建用户组弹窗');
+    console.log(t('[用户组] 打开创建用户组弹窗'));
 
     const content = `
       <div style="display:grid;gap:12px;">
         <div class="form-group">
           <label>用户组名称</label>
-          <input type="text" id="userGroupNameInput" class="form-input" placeholder="例如：VIP用户">
+          <input type="text" id="userGroupNameInput" class="form-input" placeholder=t('例如：VIP用户')>
         </div>
         <div class="form-group">
           <label>描述</label>
-          <textarea id="userGroupDescInput" class="form-input" rows="3" placeholder="可选描述"></textarea>
+          <textarea id="userGroupDescInput" class="form-input" rows="3" placeholder=t('可选描述')></textarea>
         </div>
       </div>
     `;
 
     const modal = Dialog.showModal({
-      title: '创建用户组',
+      title: t('创建用户组'),
       content: content,
-      footer: `<button class="btn btn-primary" id="confirmCreateUserGroup">创建</button>`
+      footer: `<button class="btn btn-primary" id="confirmCreateUserGroup">${t('创建')}</button>`
     });
-    console.log('[用户组] 弹窗已显示:', modal);
+    console.log(t('[用户组] 弹窗已显示:'), modal);
 
     const confirmBtn = document.getElementById('confirmCreateUserGroup');
-    console.log('[用户组] 确认按钮:', confirmBtn);
+    console.log(t('[用户组] 确认按钮:'), confirmBtn);
 
     if (confirmBtn) {
       confirmBtn.onclick = async () => {
-        console.log('[用户组] 确认创建按钮被点击');
+        console.log(t('[用户组] 确认创建按钮被点击'));
         const name = document.getElementById('userGroupNameInput').value.trim();
         const description = document.getElementById('userGroupDescInput').value.trim();
-        console.log('[用户组] 输入数据:', { name, description });
-        if (!name) { alert('名称不能为空'); return; }
+        console.log(t('[用户组] 输入数据:'), { name, description });
+        if (!name) { alert(t('名称不能为空')); return; }
         try {
-          console.log('[用户组] 发送创建请求...');
+          console.log(t('[用户组] 发送创建请求...'));
           const res = await fetch('/api/admin/user-groups', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, description })
           });
-          console.log('[用户组] 创建响应状态:', res.status);
+          console.log(t('[用户组] 创建响应状态:'), res.status);
           if (!res.ok) {
             const err = await res.json();
-            console.error('[用户组] 创建失败:', err);
-            alert(err.error || '创建失败');
+            console.error(t('[用户组] 创建失败:'), err);
+            alert(err.error || t('创建失败'));
             return;
           }
-          console.log('[用户组] 创建成功');
+          console.log(t('[用户组] 创建成功'));
           modal.close();
           this.loadUserGroups();
         } catch (e) {
-          console.error('[用户组] 创建请求异常:', e);
-          alert('创建失败');
+          console.error(t('[用户组] 创建请求异常:'), e);
+          alert(t('创建失败'));
         }
       };
     }
@@ -9311,11 +9311,11 @@ async function(ctx) {
   async loadUserGroupRules(groupId) {
     try {
       const response = await fetch(`/api/admin/user-groups/${groupId}/rules`);
-      if (!response.ok) throw new Error('加载失败');
+      if (!response.ok) throw new Error(t('加载失败'));
       const rules = await response.json();
       this.renderUserGroupRules(groupId, rules);
     } catch (error) {
-      console.error('加载用户组规则失败:', error);
+      console.error(t('加载用户组规则失败:'), error);
     }
   }
 
@@ -9323,10 +9323,10 @@ async function(ctx) {
     const container = document.getElementById('userGroupRulesList');
 
     const durationPresets = [
-      { hours: 1, label: '1 小时' },
-      { hours: 5, label: '5 小时' },
-      { hours: 24, label: '1 天' },
-      { hours: 168, label: '1 周' },
+      { hours: 1, label: t('1 小时') },
+      { hours: 5, label: t('5 小时') },
+      { hours: 24, label: t('1 天') },
+      { hours: 168, label: t('1 周') },
     ];
 
     // 渲染已有规则列表
@@ -9334,12 +9334,12 @@ async function(ctx) {
     if (rules.length > 0) {
       html += '<div class="rules-list">';
       rules.forEach(r => {
-        const unit = r.rule_type === 'requests' ? '次请求' : 'tokens';
+        const unit = r.rule_type === 'requests' ? t('次请求') : 'tokens';
         const durationLabel = this.formatDuration(r.duration_hours);
         html += `
           <div class="rule-row" data-rule-id="${r.id}">
             <div class="rule-row-main">
-              <span class="rule-row-type">${r.rule_type === 'requests' ? '请求次数' : 'Token 用量'}</span>
+              <span class="rule-row-type">${r.rule_type === 'requests' ? t('请求次数') : t('Token 用量')}</span>
               <span class="rule-row-value">每 ${durationLabel} 最多 <strong>${Number(r.rule_value).toLocaleString()}</strong> ${unit}</span>
             </div>
             <button class="btn btn-danger btn-sm" onclick="adminApp.deleteUserGroupRule(${groupId}, ${r.id})">删除</button>
@@ -9357,10 +9357,10 @@ async function(ctx) {
             <option value="tokens">Token 用量</option>
           </select>
           <span class="rule-add-label">每</span>
-          <input type="number" id="ruleNewDuration" class="form-input" style="width:100px;" min="1" placeholder="小时数">
+          <input type="number" id="ruleNewDuration" class="form-input" style="width:100px;" min="1" placeholder=t('小时数')>
           <span class="rule-add-label">小时</span>
           <span class="rule-add-label">最多</span>
-          <input type="number" id="ruleNewValue" class="form-input" style="width:120px;" min="1" placeholder="限额">
+          <input type="number" id="ruleNewValue" class="form-input" style="width:120px;" min="1" placeholder=t('限额')>
           <span class="rule-add-label" id="ruleNewUnit">次请求</span>
           <button class="btn btn-primary btn-sm" onclick="adminApp.addGroupRule(${groupId})">添加</button>
         </div>
@@ -9376,29 +9376,29 @@ async function(ctx) {
     const typeSelect = document.getElementById('ruleNewType');
     const unitLabel = document.getElementById('ruleNewUnit');
     typeSelect.addEventListener('change', () => {
-      unitLabel.textContent = typeSelect.value === 'requests' ? '次请求' : 'tokens';
+      unitLabel.textContent = typeSelect.value === 'requests' ? t('次请求') : 'tokens';
     });
   }
 
   formatDuration(hours) {
-    if (!hours) return '永久';
-    if (hours < 24) return `${hours} 小时`;
-    if (hours === 24) return '1 天';
+    if (!hours) return t('永久');
+    if (hours < 24) return `${hours}${t('小时')}`;
+    if (hours === 24) return t('1 天');
     if (hours % 24 === 0) {
       const days = hours / 24;
-      if (days === 7) return '1 周';
-      if (days === 30) return '1 月';
-      return `${days} 天`;
+      if (days === 7) return t('1 周');
+      if (days === 30) return t('1 月');
+      return `${days}${t('天')}`;
     }
-    return `${hours} 小时`;
+    return `${hours}${t('小时')}`;
   }
 
   async deleteUserGroupRule(groupId, ruleId) {
-    if (!await confirm('确定删除此规则？')) return;
+    if (!await confirm(t('确定删除此规则？'))) return;
     try {
       await fetch(`/api/admin/user-group-rules/${ruleId}`, { method: 'DELETE' });
       this.loadUserGroupRules(groupId);
-    } catch (e) { alert('删除失败'); }
+    } catch (e) { alert(t('删除失败')); }
   }
 
   async addGroupRule(groupId) {
@@ -9407,12 +9407,12 @@ async function(ctx) {
     const duration_hours = parseInt(document.getElementById('ruleNewDuration').value);
 
     if (!duration_hours || duration_hours <= 0) {
-      alert('请输入有效的小时数');
+      alert(t('请输入有效的小时数'));
       document.getElementById('ruleNewDuration').focus();
       return;
     }
     if (!rule_value || rule_value <= 0) {
-      alert('请输入有效的限额');
+      alert(t('请输入有效的限额'));
       document.getElementById('ruleNewValue').focus();
       return;
     }
@@ -9425,7 +9425,7 @@ async function(ctx) {
       });
       this.loadUserGroupRules(groupId);
     } catch (e) {
-      alert('添加失败');
+      alert(t('添加失败'));
     }
   }
 
@@ -9439,7 +9439,7 @@ async function(ctx) {
       const members = users.filter(u => u.group_id === groupId);
       this.renderUserGroupMembers(groupId, members, users);
     } catch (error) {
-      console.error('加载用户组成员失败:', error);
+      console.error(t('加载用户组成员失败:'), error);
     }
   }
 
@@ -9455,7 +9455,7 @@ async function(ctx) {
     const container = document.getElementById('userGroupMembersList');
     this._userGroupMembersCache = { groupId, members, allUsers };
     if (!members.length) {
-      setHTML(container, '<div class="empty-state">暂无成员</div>');
+      setHTML(container, '<div class="empty-state">' + t('暂无成员') + '</div>');
       return;
     }
     const q = this._searchQ('userGroupMemberSearchInput');
@@ -9463,7 +9463,7 @@ async function(ctx) {
       ? members.filter(m => this._matchSearch(q, m.username, m.email))
       : members;
     if (!filtered.length) {
-      setHTML(container, '<div class="empty-state">未找到匹配的成员</div>');
+      setHTML(container, '<div class="empty-state">' + t('未找到匹配的成员') + '</div>');
       return;
     }
     const pg = this._paginate(filtered, this.userGroupMemberPage, this.memberPageSize);
@@ -9486,7 +9486,7 @@ async function(ctx) {
   }
 
   async removeUserGroupMember(groupId, userId) {
-    if (!await confirm('确定移除此成员？')) return;
+    if (!await confirm(t('确定移除此成员？'))) return;
     try {
       await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
@@ -9495,7 +9495,7 @@ async function(ctx) {
       });
       this.loadUserGroupMembers(groupId);
       this.loadUserGroups();
-    } catch (e) { alert('移除失败'); }
+    } catch (e) { alert(t('移除失败')); }
   }
 
   async showAddUserGroupMemberModal(groupId) {
@@ -9506,15 +9506,15 @@ async function(ctx) {
 
       const content = available.length
         ? `<div style="display:grid;gap:10px;">
-            <input type="text" id="addGroupMemberSearch" class="form-input" placeholder="搜索用户名或邮箱..." style="width:100%;box-sizing:border-box;">
+            <input type="text" id="addGroupMemberSearch" class="form-input" placeholder=t('搜索用户名或邮箱...') style="width:100%;box-sizing:border-box;">
             <div id="addGroupMemberList" style="max-height:360px;overflow-y:auto;"></div>
           </div>`
-        : '<div class="empty-state">所有用户都已在此用户组中</div>';
+        : '<div class="empty-state">' + t('所有用户都已在此用户组中') + '</div>';
 
       const modal = Dialog.showModal({
-        title: '添加成员',
+        title: t('添加成员'),
         content: content,
-        footer: `<button class="btn btn-primary" id="confirmAddGroupMembers">添加</button>`
+        footer: `<button class="btn btn-primary" id="confirmAddGroupMembers">${t('添加')}</button>`
       });
 
       if (available.length) {
@@ -9530,7 +9530,7 @@ async function(ctx) {
               <input type="checkbox" value="${u.id}" class="group-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
               <span>${escapeHtml(u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
-            </label>`).join('') || '<div class="empty-state" style="padding:20px;">无匹配用户</div>');
+            </label>`).join('') ||  + '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.group-member-checkbox').forEach(cb => {
             cb.onchange = () => {
               if (cb.checked) selected.add(parseInt(cb.value));
@@ -9543,7 +9543,7 @@ async function(ctx) {
 
         document.getElementById('confirmAddGroupMembers').onclick = async () => {
           const checked = Array.from(selected);
-          if (!checked.length) { alert('请选择用户'); return; }
+          if (!checked.length) { alert(t('请选择用户')); return; }
           try {
             for (const userId of checked) {
               await fetch(`/api/admin/users/${userId}`, {
@@ -9555,10 +9555,10 @@ async function(ctx) {
             modal.close();
             this.loadUserGroupMembers(groupId);
             this.loadUserGroups();
-          } catch (e) { alert('添加失败'); }
+          } catch (e) { alert(t('添加失败')); }
         };
       }
-    } catch (e) { alert('加载用户列表失败'); }
+    } catch (e) { alert(t('加载用户列表失败')); }
   }
 
   async showEditUserGroupModal(groupId) {
@@ -9566,7 +9566,7 @@ async function(ctx) {
       const res = await fetch('/api/admin/user-groups');
       const groups = await res.json();
       const group = groups.find(g => g.id === groupId);
-      if (!group) { alert('用户组不存在'); return; }
+      if (!group) { alert(t('用户组不存在')); return; }
 
       const content = `
         <div style="display:grid;gap:12px;">
@@ -9581,14 +9581,14 @@ async function(ctx) {
         </div>
       `;
       const modal = Dialog.showModal({
-        title: '编辑用户组',
+        title: t('编辑用户组'),
         content: content,
-        footer: `<button class="btn btn-primary" id="confirmEditGroup">保存</button>`
+        footer: `<button class="btn btn-primary" id="confirmEditGroup">${t('保存')}</button>`
       });
       document.getElementById('confirmEditGroup').onclick = async () => {
         const name = document.getElementById('editGroupNameInput').value.trim();
         const description = document.getElementById('editGroupDescInput').value.trim();
-        if (!name) { alert('名称不能为空'); return; }
+        if (!name) { alert(t('名称不能为空')); return; }
         try {
           await fetch(`/api/admin/user-groups/${groupId}`, {
             method: 'PUT',
@@ -9598,33 +9598,33 @@ async function(ctx) {
           modal.close();
           this.loadUserGroups();
           this.showUserGroupDetail(groupId);
-        } catch (e) { alert('保存失败'); }
+        } catch (e) { alert(t('保存失败')); }
       };
-    } catch (e) { alert('加载用户组信息失败'); }
+    } catch (e) { alert(t('加载用户组信息失败')); }
   }
 
   async deleteUserGroup(groupId) {
-    if (!await confirm('确定删除此用户组？成员将被移除但不会被删除。')) return;
+    if (!await confirm(t('确定删除此用户组？成员将被移除但不会被删除。'))) return;
     try {
       await fetch(`/api/admin/user-groups/${groupId}`, { method: 'DELETE' });
       document.getElementById('userGroupDetailPanel').style.display = 'none';
       this.loadUserGroups();
-    } catch (e) { alert('删除失败'); }
+    } catch (e) { alert(t('删除失败')); }
   }
 
   // ==================== CrewRouter Team 管理 ====================
 
   async loadTeams() {
     const listEl = document.getElementById('teamsList') || document.getElementById('adminTeamsList');
-    if (listEl) setHTML(listEl, pageLoadingHtml('加载 Team...'));
+    if (listEl) setHTML(listEl, pageLoadingHtml(t('加载 Team...')));
     try {
       const response = await fetch('/api/admin/teams');
-      if (!response.ok) throw new Error('加载失败');
+      if (!response.ok) throw new Error(t('加载失败'));
       const teams = await response.json();
       this.renderTeamsList(teams);
     } catch (error) {
-      console.error('加载 Team 列表失败:', error);
-      if (listEl) setHTML(listEl, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || '加载失败')}</p>`);
+      console.error(t('加载 Team 列表失败:'), error);
+      if (listEl) setHTML(listEl, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -9822,8 +9822,8 @@ async function(ctx) {
 
     const container = document.getElementById('teamsList');
     const countText = filtered.length === all.length
-      ? `共 ${all.length} 个`
-      : `显示 ${filtered.length} / ${all.length}`;
+      ? `${t('共')}${all.length}${t('个')}`
+      : `${t('显示')}${filtered.length} / ${all.length}`;
     const countEl = document.getElementById('teamCount');
     if (countEl) countEl.textContent = countText;
     const stickyCount = document.getElementById('adminTeamsStickyCount');
@@ -9831,11 +9831,11 @@ async function(ctx) {
     this._syncAdminTeamsStickyControlsFromMain();
 
     if (!all.length) {
-      setHTML(container, '<div class="empty-state">暂无 Team，点击右上角创建</div>');
+      setHTML(container, '<div class="empty-state">' + t('暂无 Team，点击右上角创建') + '</div>');
       return;
     }
     if (!filtered.length) {
-      setHTML(container, '<div class="empty-state">未找到匹配的 Team</div>');
+      setHTML(container, '<div class="empty-state">' + t('未找到匹配的 Team') + '</div>');
       return;
     }
     const pg = this._paginate(filtered, this.teamPage, this.teamPageSize);
@@ -9843,10 +9843,10 @@ async function(ctx) {
     const renderTeamCard = (team) => `
       <div class="team-card" data-team-id="${team.id}">
         <div class="team-card-header">
-          <h3>${escapeHtml(team.name)}${team.is_default ? ' <span class="badge badge-warning">默认</span>' : ''}${team.is_frontier ? ' <span style="background:rgba(139,92,246,0.1);color:#8b5cf6;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;">前沿</span>' : ''}${team.is_personal ? ' <span style="background:rgba(59,130,246,0.1);color:#3b82f6;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;">个人</span>' : ''}</h3>
+          <h3>${escapeHtml(team.name)}${team.is_default ? ' <span class="badge badge-warning">' + t('默认') + '</span>' : ''}${team.is_frontier ? ' <span style="background:rgba(139,92,246,0.1);color:#8b5cf6;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;">' + t('前沿') + '</span>' : ''}${team.is_personal ? ' <span style="background:rgba(59,130,246,0.1);color:#3b82f6;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;">' + t('个人') + '</span>' : ''}</h3>
           <span class="badge">${team.member_count} 成员</span>
         </div>
-        <p class="team-description">${escapeHtml(team.description || '暂无描述')}</p>
+        <p class="team-description">${escapeHtml(team.description || t('暂无描述'))}</p>
         <div class="team-card-footer">
           <span class="text-muted">${new Date(team.created_at).toLocaleDateString()}</span>
           <button class="btn btn-sm btn-primary" onclick="adminApp.showTeamDetail(${team.id})">管理</button>
@@ -9867,7 +9867,7 @@ async function(ctx) {
             个人 Team
             <span class="badge">${personalTeams.length}</span>
           </h3>
-          <span class="text-muted" style="font-size:12px;">${personalCollapsed ? '点击展开' : '点击折叠'}</span>
+          <span class="text-muted" style="font-size:12px;">${personalCollapsed ? t('点击展开') : t('点击折叠')}</span>
         </button>
         <div class="teams-grid" style="display:${personalCollapsed ? 'none' : 'grid'};padding:0 16px 16px;">
           ${personalTeams.map(renderTeamCard).join('')}
@@ -9896,23 +9896,23 @@ async function(ctx) {
       <div style="display:grid;gap:12px;">
         <div class="form-group">
           <label>Team 名称</label>
-          <input type="text" id="teamNameInput" class="form-input" placeholder="例如：研发组">
+          <input type="text" id="teamNameInput" class="form-input" placeholder=t('例如：研发组')>
         </div>
         <div class="form-group">
           <label>描述</label>
-          <textarea id="teamDescInput" class="form-input" rows="3" placeholder="可选描述"></textarea>
+          <textarea id="teamDescInput" class="form-input" rows="3" placeholder=t('可选描述')></textarea>
         </div>
       </div>
     `;
     const modal = Dialog.showModal({
-      title: '创建 Team',
+      title: t('创建 Team'),
       content: content,
-      footer: `<button class="btn btn-primary" id="confirmCreateTeam">创建</button>`
+      footer: `<button class="btn btn-primary" id="confirmCreateTeam">${t('创建')}</button>`
     });
     document.getElementById('confirmCreateTeam').onclick = async () => {
       const name = document.getElementById('teamNameInput').value.trim();
       const description = document.getElementById('teamDescInput').value.trim();
-      if (!name) { alert('名称不能为空'); return; }
+      if (!name) { alert(t('名称不能为空')); return; }
       try {
         const res = await fetch('/api/admin/teams', {
           method: 'POST',
@@ -9921,12 +9921,12 @@ async function(ctx) {
         });
         if (!res.ok) {
           const err = await res.json();
-          alert(err.error || '创建失败');
+          alert(err.error || t('创建失败'));
           return;
         }
         modal.close();
         this.loadTeams();
-      } catch (e) { alert('创建失败'); }
+      } catch (e) { alert(t('创建失败')); }
     };
   }
 
@@ -10034,14 +10034,14 @@ async function(ctx) {
       const team = teams.find(t => t.id === teamId);
       const btn = document.getElementById('setDefaultTeamBtn');
       if (team && team.is_default) {
-        btn.textContent = '取消默认';
+        btn.textContent = t('取消默认');
         btn.className = 'btn btn-sm btn-secondary';
       } else {
-        btn.textContent = '设为默认';
+        btn.textContent = t('设为默认');
         btn.className = 'btn btn-sm btn-warning';
       }
     } catch (e) {
-      console.error('更新默认按钮状态失败:', e);
+      console.error(t('更新默认按钮状态失败:'), e);
     }
   }
 
@@ -10060,7 +10060,7 @@ async function(ctx) {
       });
       this.loadTeams();
       this.updateDefaultTeamBtn(teamId);
-    } catch (e) { alert('操作失败'); }
+    } catch (e) { alert(t('操作失败')); }
   }
 
   async updateFrontierTeamBtn(teamId) {
@@ -10070,18 +10070,18 @@ async function(ctx) {
       const team = teams.find(t => t.id === teamId);
       const btn = document.getElementById('setFrontierTeamBtn');
       if (team && team.is_frontier) {
-        btn.textContent = '取消前沿';
+        btn.textContent = t('取消前沿');
         btn.style.background = '#8b5cf6';
         btn.style.color = 'white';
         btn.style.borderColor = '#8b5cf6';
       } else {
-        btn.textContent = '设为前沿';
+        btn.textContent = t('设为前沿');
         btn.style.background = '';
         btn.style.color = '#8b5cf6';
         btn.style.borderColor = '#8b5cf6';
       }
     } catch (e) {
-      console.error('更新前沿按钮状态失败:', e);
+      console.error(t('更新前沿按钮状态失败:'), e);
     }
   }
 
@@ -10103,7 +10103,7 @@ async function(ctx) {
       }
       this.loadTeams();
       this.updateFrontierTeamBtn(teamId);
-    } catch (e) { alert('操作失败'); }
+    } catch (e) { alert(t('操作失败')); }
   }
 
   async loadTeamMembers(teamId) {
@@ -10116,7 +10116,7 @@ async function(ctx) {
       const users = await usersRes.json();
       this.renderTeamMembers(teamId, members, users);
     } catch (error) {
-      console.error('加载 Team 成员失败:', error);
+      console.error(t('加载 Team 成员失败:'), error);
     }
   }
 
@@ -10132,7 +10132,7 @@ async function(ctx) {
     const container = document.getElementById('teamMembersList');
     this._teamMembersCache = { teamId, members, allUsers };
     if (!members.length) {
-      setHTML(container, '<div class="empty-state">暂无成员</div>');
+      setHTML(container, '<div class="empty-state">' + t('暂无成员') + '</div>');
       return;
     }
     const q = this._searchQ('teamMemberSearchInput');
@@ -10140,19 +10140,19 @@ async function(ctx) {
       ? members.filter(m => this._matchSearch(q, m.username, m.email))
       : members;
     if (!filtered.length) {
-      setHTML(container, '<div class="empty-state">未找到匹配的成员</div>');
+      setHTML(container, '<div class="empty-state">' + t('未找到匹配的成员') + '</div>');
       return;
     }
     const isPersonal = this.currentTeamIsPersonal;
     const pg = this._paginate(filtered, this.teamMemberPage, this.memberPageSize);
     this.teamMemberPage = pg.page;
     setHTML(container, `<table class="data-table"><thead><tr>
-      <th>用户名</th><th>邮箱</th><th>加入时间</th>${isPersonal ? '' : '<th>操作</th>'}
+      <th>用户名</th><th>邮箱</th><th>加入时间</th>${isPersonal ? '' : '<th>' + t('操作') + '</th>'}
     </tr></thead><tbody>${pg.items.map(m => `<tr>
       <td>${escapeHtml(m.username)}</td>
       <td>${escapeHtml(m.email || '-')}</td>
       <td>${new Date(m.created_at).toLocaleDateString()}</td>
-      ${isPersonal ? '' : `<td><button class="btn btn-sm btn-danger" onclick="adminApp.removeTeamMember(${teamId}, ${m.id})">移除</button></td>`}
+      ${isPersonal ? '' : `<td><button class="btn btn-sm btn-danger" onclick="adminApp.removeTeamMember(${teamId}, ${m.id})">${t('移除')}</button></td>`}
     </tr>`).join('')}</tbody></table>
     ${pg.totalPages > 1 ? this._renderPagination('teamMember', pg.page, pg.totalPages, pg.total) : ''}`);
   }
@@ -10164,12 +10164,12 @@ async function(ctx) {
   }
 
   async removeTeamMember(teamId, userId) {
-    if (!await confirm('确定移除此成员？')) return;
+    if (!await confirm(t('确定移除此成员？'))) return;
     try {
       await fetch(`/api/admin/teams/${teamId}/members/${userId}`, { method: 'DELETE' });
       this.loadTeamMembers(teamId);
       this.loadTeams(); // 刷新成员数
-    } catch (e) { alert('移除失败'); }
+    } catch (e) { alert(t('移除失败')); }
   }
 
   async showAddTeamMemberModal(teamId) {
@@ -10180,11 +10180,11 @@ async function(ctx) {
       ]);
       if (!membersRes.ok) {
         const err = await membersRes.json().catch(() => ({}));
-        throw new Error(err.error || '获取成员列表失败');
+        throw new Error(err.error || t('获取成员列表失败'));
       }
       if (!usersRes.ok) {
         const err = await usersRes.json().catch(() => ({}));
-        throw new Error(err.error || '获取用户列表失败');
+        throw new Error(err.error || t('获取用户列表失败'));
       }
       const members = await membersRes.json();
       const users = await usersRes.json();
@@ -10193,15 +10193,15 @@ async function(ctx) {
 
       const content = available.length
         ? `<div style="display:grid;gap:10px;">
-            <input type="text" id="addTeamMemberSearch" class="form-input" placeholder="搜索用户名或邮箱..." style="width:100%;box-sizing:border-box;">
+            <input type="text" id="addTeamMemberSearch" class="form-input" placeholder=t('搜索用户名或邮箱...') style="width:100%;box-sizing:border-box;">
             <div id="addTeamMemberList" style="max-height:360px;overflow-y:auto;"></div>
           </div>`
-        : '<div class="empty-state">所有用户都已在此 Team 中</div>';
+        : '<div class="empty-state">' + t('所有用户都已在此 Team 中') + '</div>';
 
       const modal = Dialog.showModal({
-        title: '添加成员',
+        title: t('添加成员'),
         content: content,
-        footer: `<button class="btn btn-primary" id="confirmAddMembers">添加</button>`
+        footer: `<button class="btn btn-primary" id="confirmAddMembers">${t('添加')}</button>`
       });
 
       if (available.length) {
@@ -10218,7 +10218,7 @@ async function(ctx) {
               <span>${escapeHtml(u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
               ${u.team_name ? `<span class="badge">${escapeHtml(u.team_name)}</span>` : ''}
-            </label>`).join('') || '<div class="empty-state" style="padding:20px;">无匹配用户</div>');
+            </label>`).join('') ||  + '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.team-member-checkbox').forEach(cb => {
             cb.onchange = () => {
               if (cb.checked) selected.add(parseInt(cb.value));
@@ -10231,7 +10231,7 @@ async function(ctx) {
 
         document.getElementById('confirmAddMembers').onclick = async () => {
           const checked = Array.from(selected);
-          if (!checked.length) { alert('请选择用户'); return; }
+          if (!checked.length) { alert(t('请选择用户')); return; }
           try {
             await fetch(`/api/admin/teams/${teamId}/members`, {
               method: 'POST',
@@ -10241,12 +10241,12 @@ async function(ctx) {
             modal.close();
             this.loadTeamMembers(teamId);
             this.loadTeams();
-          } catch (e) { alert('添加失败'); }
+          } catch (e) { alert(t('添加失败')); }
         };
       }
     } catch (e) {
-      console.error('加载用户列表失败:', e);
-      alert('加载用户列表失败: ' + e.message);
+      console.error(t('加载用户列表失败:'), e);
+      alert(t('加载用户列表失败: ') + e.message);
     }
   }
 
@@ -10255,17 +10255,17 @@ async function(ctx) {
       const teamModelsRes = await fetch(`/api/admin/teams/${teamId}/models`);
       if (!teamModelsRes.ok) {
         const err = await teamModelsRes.json().catch(() => ({}));
-        throw new Error(err.error || '加载失败');
+        throw new Error(err.error || t('加载失败'));
       }
       const teamModels = await teamModelsRes.json();
       this._teamModelProviderCollapsed = this._teamModelProviderCollapsed || {};
       this._teamModelsStale = false;
       this.renderTeamModels(teamId, teamModels);
     } catch (error) {
-      console.error('加载 Team 模型失败:', error);
+      console.error(t('加载 Team 模型失败:'), error);
       const container = document.getElementById('teamModelsList');
       if (container) {
-        setHTML(container, `<div class="empty-state"><p style="color:var(--destructive);">加载失败：${escapeHtml(error.message || '未知错误')}</p></div>`);
+        setHTML(container, `${'<div class="empty-state"><p style="color:var(--destructive);">' + t('加载失败：')}${escapeHtml(error.message || t('未知错误'))}</p></div>`);
       }
     }
   }
@@ -10301,12 +10301,12 @@ async function(ctx) {
       const id = m.provider_id || m.provider || '';
       const name = (m.provider_name && String(m.provider_name).trim())
         || (m.provider && !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(m.provider) ? m.provider : '')
-        || '未知供应商';
+        || t('未知供应商');
       const key = id || name;
       if (key && !map[key]) map[key] = name;
     });
     const keys = Object.keys(map).sort((a, b) => (map[a] || '').localeCompare(map[b] || '', 'zh-CN'));
-    const optionsHtml = '<option value="">全部供应商</option>' + keys.map(k =>
+    const optionsHtml = '<option value="">' + t('全部供应商') + '</option>' + keys.map(k =>
       `<option value="${escapeHtml(k)}">${escapeHtml(map[k])}</option>`
     ).join('');
     selects.forEach(select => {
@@ -10322,14 +10322,14 @@ async function(ctx) {
   _teamModelProviderLabel(m) {
     return (m.provider_name && String(m.provider_name).trim())
       || (m.provider && !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(m.provider) ? m.provider : '')
-      || '未知供应商';
+      || t('未知供应商');
   }
 
   _teamModelDisplayName(m) {
     return (m.upstream_model_id && String(m.upstream_model_id).trim())
       || (m.name && String(m.name).trim())
       || (m.alias && String(m.alias).trim())
-      || '未命名模型';
+      || t('未命名模型');
   }
 
   _groupTeamModelsByProvider(models) {
@@ -10368,8 +10368,8 @@ async function(ctx) {
             <span title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
                         <div class="model-item-badges">
               ${m.series ? `<span class="model-item-badge series">${escapeHtml(m.series)}</span>` : ''}
-              ${isDisabled ? '<span class="model-item-badge" style="background:rgba(148,163,184,0.15);color:var(--muted-foreground);">未启用</span>' : '<span class="model-item-badge" style="background:rgba(16,185,129,0.1);color:#10b981;">已启用</span>'}
-              ${isProviderDisabled ? '<span class="model-item-badge" style="background:rgba(239,68,68,0.1);color:var(--destructive);">供应商禁用</span>' : ''}
+              ${isDisabled ? '<span class="model-item-badge" style="background:rgba(148,163,184,0.15);color:var(--muted-foreground);">' + t('未启用') + '</span>' : '<span class="model-item-badge" style="background:rgba(16,185,129,0.1);color:#10b981;">' + t('已启用') + '</span>'}
+              ${isProviderDisabled ? '<span class="model-item-badge" style="background:rgba(239,68,68,0.1);color:var(--destructive);">' + t('供应商禁用') + '</span>' : ''}
             </div>
           </div>
           ${m.alias && m.alias !== displayName ? `<div class="model-library-item-desc">${escapeHtml(m.alias)}</div>` : ''}
@@ -10394,7 +10394,7 @@ async function(ctx) {
         <div class="model-library-item-actions" style="margin-left:0;margin-top:10px;justify-content:flex-end;">
           <button class="btn btn-sm ${m.enabled ? 'btn-secondary' : 'btn-primary'}"
             onclick="adminApp.toggleTeamModel(${teamId}, '${safeModelId}', ${!m.enabled})">
-            ${m.enabled ? '禁用' : '启用'}
+            ${m.enabled ? t('禁用') : t('启用')}
           </button>
         </div>
       </div>
@@ -10459,8 +10459,8 @@ async function(ctx) {
     const enabledTotal = all.filter(m => m.enabled).length;
     const enabledFiltered = filtered.filter(m => m.enabled).length;
     const countText = filtered.length === all.length
-      ? `共 ${all.length} 个 · 本 Team 已启用 ${enabledTotal}`
-      : `显示 ${filtered.length} / ${all.length} · 已启用 ${enabledFiltered}`;
+      ? `${t('共')}${all.length}${t('个 · 本 Team 已启用')}${enabledTotal}`
+      : `${t('显示')}${filtered.length} / ${all.length}${t('· 已启用')}${enabledFiltered}`;
     const countEl = document.getElementById('teamModelListCount');
     if (countEl) countEl.textContent = countText;
     const stickyCount = document.getElementById('adminTeamModelsStickyCount');
@@ -10468,7 +10468,7 @@ async function(ctx) {
     this._syncAdminTeamModelsStickyControlsFromMain();
 
     if (!filtered.length) {
-      setHTML(container, '<div class="empty-state" style="padding:40px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">未找到匹配的模型</p></div>');
+      setHTML(container, '<div class="empty-state" style="padding:40px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('未找到匹配的模型') + '</p></div>');
       return;
     }
 
@@ -10497,8 +10497,8 @@ async function(ctx) {
                 ? 'var(--destructive, #ef4444)'
                 : (enabledCount === totalCount ? '#10b981' : '#f59e0b'));
             const countTitle = enabledCount === 0
-              ? '本供应商模型均未启用'
-              : (enabledCount === totalCount ? '本供应商模型已全部启用' : '本供应商模型部分启用');
+              ? t('本供应商模型均未启用')
+              : (enabledCount === totalCount ? t('本供应商模型已全部启用') : t('本供应商模型部分启用'));
             const safeCollapsedKey = String(collapsedKey).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             const safeProviderKey = String(group.key).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             return `
@@ -10509,14 +10509,14 @@ async function(ctx) {
                   <div class="model-library-provider-title">
                     <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                     <span class="provider-name">${escapeHtml(group.label)}</span>
-                    ${!group.providerEnabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">供应商已禁用</span>' : ''}
+                    ${!group.providerEnabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('供应商已禁用') + '</span>' : ''}
                   </div>
                   <div class="model-library-provider-actions" onclick="event.stopPropagation()">
                     <button type="button" class="btn btn-sm btn-primary" style="padding:3px 8px;font-size:11px;"
-                      title="一键启用该供应商下全部模型"
+                      title=t('一键启用该供应商下全部模型')
                       onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', true)">全部启用</button>
                     <button type="button" class="btn btn-sm btn-secondary" style="padding:3px 8px;font-size:11px;"
-                      title="一键禁用该供应商下全部模型"
+                      title=t('一键禁用该供应商下全部模型')
                       onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', false)">全部禁用</button>
                     <span class="provider-model-count" title="${countTitle}"
                       style="color:${countColor};font-weight:600;">${totalCount} 个模型 · ${enabledCount} 启用</span>
@@ -10572,13 +10572,13 @@ async function(ctx) {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || '操作失败');
+        throw new Error(err.error || t('操作失败'));
       }
       // 本地更新状态，避免整表刷新丢失折叠状态
       const row = (this._teamModelsFlat || []).find(m => String(m.model_id) === String(modelId));
       if (row) row.enabled = enabled;
       this.renderTeamModels(teamId, this._teamModelsFlat);
-    } catch (e) { alert(e.message || '操作失败'); }
+    } catch (e) { alert(e.message || t('操作失败')); }
   }
 
   /** 当前筛选条件下的 Team 模型列表（与 render 逻辑一致） */
@@ -10611,7 +10611,7 @@ async function(ctx) {
    */
   async _batchToggleTeamModels(body, confirmMsg) {
     const teamId = this._teamModelsTeamId;
-    if (!teamId) { alert('请先选择 Team'); return; }
+    if (!teamId) { alert(t('请先选择 Team')); return; }
     if (confirmMsg && !await confirm(confirmMsg)) return;
 
     try {
@@ -10621,7 +10621,7 @@ async function(ctx) {
         body: JSON.stringify(body)
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || '批量操作失败');
+      if (!res.ok) throw new Error(data.error || t('批量操作失败'));
 
       const updatedIds = new Set((data.modelIds || []).map(String));
       const nextEnabled = !!body.enabled;
@@ -10630,12 +10630,12 @@ async function(ctx) {
       });
       this.renderTeamModels(teamId, this._teamModelsFlat);
 
-      const action = nextEnabled ? '启用' : '禁用';
-      const cleared = data.cleared_keys ? `，清理 ${data.cleared_keys} 个 Key 绑定` : '';
-      alert(`已${action} ${data.updated || 0} 个模型${cleared}`);
+      const action = nextEnabled ? t('启用') : t('禁用');
+      const cleared = data.cleared_keys ? `${t('，清理')}${data.cleared_keys}${t('个 Key 绑定')}` : '';
+      alert(`${t('已')}${action} ${data.updated || 0}${t('个模型')}${cleared}`);
       return data;
     } catch (e) {
-      alert(e.message || '批量操作失败');
+      alert(e.message || t('批量操作失败'));
     }
   }
 
@@ -10643,33 +10643,33 @@ async function(ctx) {
   async batchToggleTeamModelsByProvider(providerKey, enabled) {
     if (!providerKey) return;
     const models = (this._teamModelsFlat || []).filter(m => this._teamModelProviderKey(m) === providerKey);
-    if (!models.length) { alert('该供应商下没有可操作的模型'); return; }
+    if (!models.length) { alert(t('该供应商下没有可操作的模型')); return; }
     const label = this._teamModelProviderLabel(models[0]) || providerKey;
-    const action = enabled ? '启用' : '禁用';
+    const action = enabled ? t('启用') : t('禁用');
     // 优先用 provider 字段（服务端按 provider id / 名称匹配）
     const providerParam = models[0].provider_id || models[0].provider || providerKey;
     await this._batchToggleTeamModels(
       { enabled, provider: providerParam },
-      `确定对本 Team ${action}供应商「${label}」下的 ${models.length} 个模型？`
+      `${t('确定对本 Team')}${action}${t('供应商「')}${label}${t('」下的')}${models.length}${t('个模型？')}`
     );
   }
 
   /** 启用/禁用当前筛选结果 */
   async batchToggleFilteredTeamModels(enabled) {
     const filtered = this._getFilteredTeamModels();
-    if (!filtered.length) { alert('当前筛选结果为空'); return; }
-    const action = enabled ? '启用' : '禁用';
+    if (!filtered.length) { alert(t('当前筛选结果为空')); return; }
+    const action = enabled ? t('启用') : t('禁用');
     const modelIds = filtered.map(m => m.model_id);
     await this._batchToggleTeamModels(
       { enabled, modelIds },
-      `确定对本 Team ${action}当前筛选的 ${modelIds.length} 个模型？`
+      `${t('确定对本 Team')}${action}${t('当前筛选的')}${modelIds.length}${t('个模型？')}`
     );
   }
 
   /** 按名称关键字批量启用（弹窗输入） */
   async batchEnableTeamModelsByName() {
     const teamId = this._teamModelsTeamId;
-    if (!teamId) { alert('请先选择 Team'); return; }
+    if (!teamId) { alert(t('请先选择 Team')); return; }
 
     const content = `
       <div style="display:grid;gap:12px;">
@@ -10678,7 +10678,7 @@ async function(ctx) {
         </p>
         <div class="form-group" style="margin:0;">
           <label>名称关键字</label>
-          <input type="text" id="teamModelBatchNameInput" class="form-input" placeholder="例如：claude、gpt-4、gemini" autofocus>
+          <input type="text" id="teamModelBatchNameInput" class="form-input" placeholder=t('例如：claude、gpt-4、gemini') autofocus>
         </div>
         <div class="form-group" style="margin:0;">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -10689,9 +10689,9 @@ async function(ctx) {
       </div>
     `;
     const modal = Dialog.showModal({
-      title: '按名称批量启用/禁用',
+      title: t('按名称批量启用/禁用'),
       content,
-      footer: `<button class="btn btn-primary" id="confirmTeamModelBatchName">执行</button>`
+      footer: `<button class="btn btn-primary" id="confirmTeamModelBatchName">${t('执行')}</button>`
     });
 
     const input = document.getElementById('teamModelBatchNameInput');
@@ -10704,16 +10704,16 @@ async function(ctx) {
 
     document.getElementById('confirmTeamModelBatchName').onclick = async () => {
       const namePattern = (document.getElementById('teamModelBatchNameInput')?.value || '').trim();
-      if (!namePattern) { alert('请输入名称关键字'); return; }
+      if (!namePattern) { alert(t('请输入名称关键字')); return; }
       const enabled = !document.getElementById('teamModelBatchNameDisable')?.checked;
-      const action = enabled ? '启用' : '禁用';
+      const action = enabled ? t('启用') : t('禁用');
       // 预估匹配数（本地）
       const q = namePattern.toLowerCase();
       const preview = (this._teamModelsFlat || []).filter(m =>
         [m.upstream_model_id, m.name, m.alias, m.series].some(v => v && String(v).toLowerCase().includes(q))
       );
-      if (!preview.length) { alert('没有匹配的模型'); return; }
-      if (!await confirm(`将对本 Team ${action}约 ${preview.length} 个匹配「${namePattern}」的模型，是否继续？`)) return;
+      if (!preview.length) { alert(t('没有匹配的模型')); return; }
+      if (!await confirm(`${t('将对本 Team')}${action}${t('约')}${preview.length}${t('个匹配「')}${namePattern}${t('」的模型，是否继续？')}`)) return;
       modal.close();
       await this._batchToggleTeamModels({ enabled, namePattern });
     };
@@ -10725,7 +10725,7 @@ async function(ctx) {
       const res = await fetch('/api/admin/teams');
       const teams = await res.json();
       const team = teams.find(t => t.id === teamId);
-      if (!team) { alert('Team 不存在'); return; }
+      if (!team) { alert(t('Team 不存在')); return; }
 
       const content = `
         <div style="display:grid;gap:12px;">
@@ -10746,15 +10746,15 @@ async function(ctx) {
         </div>
       `;
       const modal = Dialog.showModal({
-        title: '编辑 Team',
+        title: t('编辑 Team'),
         content: content,
-        footer: `<button class="btn btn-primary" id="confirmEditTeam">保存</button>`
+        footer: `<button class="btn btn-primary" id="confirmEditTeam">${t('保存')}</button>`
       });
       document.getElementById('confirmEditTeam').onclick = async () => {
         const name = document.getElementById('editTeamNameInput').value.trim();
         const description = document.getElementById('editTeamDescInput').value.trim();
         const is_default = document.getElementById('editTeamDefaultInput').checked;
-        if (!name) { alert('名称不能为空'); return; }
+        if (!name) { alert(t('名称不能为空')); return; }
         try {
           await fetch(`/api/admin/teams/${teamId}`, {
             method: 'PUT',
@@ -10764,13 +10764,13 @@ async function(ctx) {
           modal.close();
           this.loadTeams();
           this.showTeamDetail(teamId);
-        } catch (e) { alert('保存失败'); }
+        } catch (e) { alert(t('保存失败')); }
       };
-    } catch (e) { alert('加载 Team 信息失败'); }
+    } catch (e) { alert(t('加载 Team 信息失败')); }
   }
 
   async deleteTeam(teamId) {
-    if (!await confirm('确定删除此 Team？成员将被移除但不会被删除。')) return;
+    if (!await confirm(t('确定删除此 Team？成员将被移除但不会被删除。'))) return;
     try {
       await fetch(`/api/admin/teams/${teamId}`, { method: 'DELETE' });
       document.getElementById('teamDetailPanel').style.display = 'none';
@@ -10778,7 +10778,7 @@ async function(ctx) {
       this._syncAdminTeamModelsStickyVisibility(false);
       await this.loadTeams();
       this._initAdminTeamsStickyBar();
-    } catch (e) { alert('删除失败'); }
+    } catch (e) { alert(t('删除失败')); }
   }
 
   // ==================== 模型测试 ====================
@@ -10806,7 +10806,7 @@ async function(ctx) {
   }
 
   async testModel(modelId, buttonEl) {
-    if (!modelId) { console.error('[模型测试] modelId 为空'); alert('模型 ID 为空'); return; }
+    if (!modelId) { console.error(t('[模型测试] modelId 为空')); alert(t('模型 ID 为空')); return; }
     if (!this._confirmTest()) return;
 
     // 查找本地数据验证
@@ -10815,9 +10815,9 @@ async function(ctx) {
       foundModel = this.modelsData.find(m => m.id === modelId);
     }
     if (foundModel) {
-      console.log(`[模型测试] 本地查找: modelId=${modelId} name=${foundModel.name || foundModel.upstream_model_id} provider=${foundModel.provider_name}`);
+      console.log(`${t('[模型测试] 本地查找: modelId=')}${modelId} name=${foundModel.name || foundModel.upstream_model_id} provider=${foundModel.provider_name}`);
     } else {
-      console.warn(`[模型测试] 本地未找到 modelId=${modelId}`);
+      console.warn(`${t('[模型测试] 本地未找到 modelId=')}${modelId}`);
     }
 
     if (buttonEl) {
@@ -10831,7 +10831,7 @@ async function(ctx) {
       this._updateModelTestResult(modelId, data);
       this._showTestResult([{ modelId, ...data }]);
     } catch (e) {
-      this._showTestResult([{ modelId, ok: false, error: e.message || '请求失败' }]);
+      this._showTestResult([{ modelId, ok: false, error: e.message || t('请求失败') }]);
     } finally {
       if (buttonEl) {
         buttonEl.disabled = false;
@@ -10839,27 +10839,27 @@ async function(ctx) {
         if (isTableBtn) {
           setHTML(buttonEl, '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>');
         } else {
-          buttonEl.textContent = '测试';
+          buttonEl.textContent = t('测试');
         }
       }
     }
   }
 
   _confirmTest() {
-    return confirm('模型测试将发送一条真实请求（"Hi"，max_tokens=5）到该模型，\n并按照正常用量扣除积分。是否继续？');
+    return confirm(t('模型测试将发送一条真实请求（"Hi"，max_tokens=5）到该模型，\n并按照正常用量扣除积分。是否继续？'));
   }
 
   _formatTestTooltip(testedAt) {
     if (!testedAt) return '';
     const diff = Date.now() - new Date(testedAt).getTime();
     const seconds = Math.floor(diff / 1000);
-    if (seconds < 60) return '刚刚测试';
+    if (seconds < 60) return t('刚刚测试');
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes} 分钟前测试`;
+    if (minutes < 60) return `${minutes}${t('分钟前测试')}`;
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} 小时前测试`;
+    if (hours < 24) return `${hours}${t('小时前测试')}`;
     const days = Math.floor(hours / 24);
-    return `${days} 天前测试`;
+    return `${days}${t('天前测试')}`;
   }
 
   _updateModelTestResult(modelId, result) {
@@ -10903,7 +10903,7 @@ async function(ctx) {
     let series = null;
     while (models.length < total) {
       const res = await fetch(`/api/admin/models?${this._currentModelFilterParams(page, 200)}`);
-      if (!res.ok) throw new Error('加载模型列表失败');
+      if (!res.ok) throw new Error(t('加载模型列表失败'));
       const raw = await res.json();
       const normalized = this._normalizeListResponse(raw);
       const { items, total: t } = normalized;
@@ -10936,19 +10936,19 @@ async function(ctx) {
     this._closeTestDropdown();
     try {
       const modelIds = await this._fetchAllFilteredModelIds();
-      if (modelIds.length === 0) { alert('当前筛选结果为空'); return; }
-      if (modelIds.length > 200 && !await confirm(`将测试 ${modelIds.length} 个模型，可能较久，是否继续？`)) return;
-      await this._runBatchTest(modelIds, `正在测试 ${modelIds.length} 个模型...`);
+      if (modelIds.length === 0) { alert(t('当前筛选结果为空')); return; }
+      if (modelIds.length > 200 && !await confirm(`${t('将测试')}${modelIds.length}${t('个模型，可能较久，是否继续？')}`)) return;
+      await this._runBatchTest(modelIds, `${t('正在测试')}${modelIds.length}${t('个模型...')}`);
     } catch (e) {
-      alert(e.message || '获取模型列表失败');
+      alert(e.message || t('获取模型列表失败'));
     }
   }
 
   async testSelectedModels() {
     this._closeTestDropdown();
     const modelIds = [...this.selectedModels];
-    if (modelIds.length === 0) { alert('请先选择要测试的模型'); return; }
-    await this._runBatchTest(modelIds, `正在测试 ${modelIds.length} 个模型...`);
+    if (modelIds.length === 0) { alert(t('请先选择要测试的模型')); return; }
+    await this._runBatchTest(modelIds, `${t('正在测试')}${modelIds.length}${t('个模型...')}`);
   }
 
   _closeTestDropdown() {
@@ -10976,7 +10976,7 @@ async function(ctx) {
       }
       this._showTestResult(results);
     } catch (e) {
-      setHTML(body, `<div class="empty-state"><p style="color:var(--destructive);">测试失败: ${escapeHtml(e.message)}</p></div>`);
+      setHTML(body, `${'<div class="empty-state"><p style="color:var(--destructive);">' + t('测试失败:')}${escapeHtml(e.message)}</p></div>`);
     }
   }
 
@@ -11035,7 +11035,7 @@ async function(ctx) {
           </div>
         `;
       } else {
-        const modelLabel = r.model || r.modelId || '未知模型';
+        const modelLabel = r.model || r.modelId || t('未知模型');
         const providerLabel = r.provider
           ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${escapeHtml(r.provider)}${r.provider_url ? ' (' + escapeHtml(r.provider_url) + ')' : ''}</div>`
           : '';
@@ -11043,7 +11043,7 @@ async function(ctx) {
           <div class="model-test-row">
             <div class="model-test-row-icon model-test-result-fail">&#10007;</div>
             <div class="model-test-row-model">${escapeHtml(modelLabel)}${providerLabel}</div>
-            <div class="model-test-row-error" title="${escapeHtml(r.error || '')}">${escapeHtml(r.error || '失败')}</div>
+            <div class="model-test-row-error" title="${escapeHtml(r.error || '')}">${escapeHtml(r.error || t('失败'))}</div>
           </div>
         `;
       }
@@ -11088,13 +11088,13 @@ async function(ctx) {
            ondragstart="adminApp.handleProviderTagDragStart(event, ${t.id})"
            ondragend="adminApp.handleProviderTagDragEnd(event)"
            onclick="adminApp.filterProvidersByTag(${t.id})"
-           title="点击筛选 · 拖拽到供应商分配 · 铅笔编辑">
+           title=t('点击筛选 · 拖拽到供应商分配 · 铅笔编辑')>
         <span style="color:${selected ? '#fff' : color};">●</span>
         ${escapeHtml(t.name)}
-        <span class="edit-tag-def" onclick="event.stopPropagation();adminApp.showEditProviderTagPopover(${t.id}, this)" title="编辑标签">✎</span>
-        <span class="remove-tag-def" onclick="event.stopPropagation();adminApp.deleteProviderTag(${t.id})" title="删除标签">&times;</span>
+        <span class="edit-tag-def" onclick="event.stopPropagation();adminApp.showEditProviderTagPopover(${t.id}, this)" title=t('编辑标签')>✎</span>
+        <span class="remove-tag-def" onclick="event.stopPropagation();adminApp.deleteProviderTag(${t.id})" title=t('删除标签')>&times;</span>
       </div>`;
-    }).join('') + `<div class="key-tag-chip key-tag-add-btn" onclick="adminApp.showCreateProviderTagPopover(this)" title="添加标签">+</div>`;
+    }).join('') + `${'<div class="key-tag-chip key-tag-add-btn" onclick="adminApp.showCreateProviderTagPopover(this)" title="' + t('添加标签') + '">' + '+'}</div>`;
     if (chips) setHTML(chips, html);
     if (stickyChips) setHTML(stickyChips, html);
     this._updateAdminProvidersStickyMoreBtn();
@@ -11109,14 +11109,14 @@ async function(ctx) {
       return `<span class="key-tag-chip-sm" data-tag-id="${t.id}"
         style="border-color:${color};color:${color};background:${color}18;">
         ${escapeHtml(t.name)}
-        <span class="remove-tag" title="移除"
+        <span class="remove-tag" title=t('移除')
           onclick="event.stopPropagation();adminApp.removeTagFromProvider('${safePid}',${t.id})">&times;</span>
       </span>`;
     }).join('');
     const addBtn = providerId != null
       ? `<span class="key-tag-chip-sm key-tag-add-tag-btn provider-tag-add-btn"
            onclick="event.stopPropagation();adminApp.showProviderTagAssignDropdown('${safePid}', this)"
-           title="管理标签">+</span>`
+           title=t('管理标签')>+</span>`
       : '';
     if (!list.length && !addBtn) {
       return '<span class="provider-tag-empty">-</span>';
@@ -11194,7 +11194,7 @@ async function(ctx) {
     this._providerTagDragActive = false;
     this._providerTagDragId = null;
     if (!tagId || !providerId) {
-      if (wasDragging) this.showToast('未能识别拖拽的标签，请重试', 'error');
+      if (wasDragging) this.showToast(t('未能识别拖拽的标签，请重试'), 'error');
       return;
     }
     this.toggleProviderTag(providerId, tagId);
@@ -11226,7 +11226,7 @@ async function(ctx) {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        this.showToast(err.error || '操作失败', 'error');
+        this.showToast(err.error || t('操作失败'), 'error');
         return;
       }
       const data = await res.json().catch(() => ({}));
@@ -11239,10 +11239,10 @@ async function(ctx) {
         if (idx >= 0) this.providersData[idx].tags = tags;
       }
       this.renderProviders();
-      this.showToast(hasTag ? '标签已移除' : '标签已添加', 'success');
+      this.showToast(hasTag ? t('标签已移除') : t('标签已添加'), 'success');
     } catch (e) {
-      console.error('[供应商标签] toggle 失败:', e);
-      this.showToast('操作失败', 'error');
+      console.error(t('[供应商标签] toggle 失败:'), e);
+      this.showToast(t('操作失败'), 'error');
     }
   }
 
@@ -11268,7 +11268,7 @@ async function(ctx) {
     dropdown.style.left = Math.max(8, rect.left) + 'px';
 
     if (!this._providerTags.length) {
-      setHTML(dropdown, '<div class="provider-tag-assign-empty">暂无标签，请先在上方创建</div>');
+      setHTML(dropdown, '<div class="provider-tag-assign-empty">' + t('暂无标签，请先在上方创建') + '</div>');
     } else {
       setHTML(dropdown, this._providerTags.map(tag => {
         const has = currentTagIds.has(Number(tag.id));
@@ -11308,8 +11308,8 @@ async function(ctx) {
     if (!popover || !btnEl) return;
     const titleEl = document.getElementById('providerTagPopoverTitle');
     const submitBtn = document.getElementById('providerTagPopoverSubmit');
-    if (titleEl) titleEl.textContent = title || '创建标签';
-    if (submitBtn) submitBtn.textContent = submitLabel || '创建';
+    if (titleEl) titleEl.textContent = title || t('创建标签');
+    if (submitBtn) submitBtn.textContent = submitLabel || t('创建');
     const rect = btnEl.getBoundingClientRect();
     popover.style.display = 'block';
     popover.style.left = Math.max(8, rect.left) + 'px';
@@ -11338,10 +11338,10 @@ async function(ctx) {
   showCreateProviderTagPopover(btnEl) {
     this._editingProviderTagId = null;
     this._openProviderTagPopover(btnEl, {
-      title: '创建标签',
+      title: t('创建标签'),
       name: '',
       color: '#3b82f6',
-      submitLabel: '创建'
+      submitLabel: t('创建')
     });
   }
 
@@ -11350,10 +11350,10 @@ async function(ctx) {
     if (!tag) return;
     this._editingProviderTagId = Number(tagId);
     this._openProviderTagPopover(btnEl, {
-      title: '编辑标签',
+      title: t('编辑标签'),
       name: tag.name || '',
       color: tag.color || '#3b82f6',
-      submitLabel: '保存'
+      submitLabel: t('保存')
     });
   }
 
@@ -11370,7 +11370,7 @@ async function(ctx) {
 
   async saveProviderTag() {
     const nameInput = document.getElementById('newProviderTagName');
-    if (!nameInput || !nameInput.value.trim()) { this.showToast('请输入标签名称', 'error'); return; }
+    if (!nameInput || !nameInput.value.trim()) { this.showToast(t('请输入标签名称'), 'error'); return; }
     const name = nameInput.value.trim();
     const color = this._providerTagColor || '#3b82f6';
     const editingId = this._editingProviderTagId;
@@ -11387,7 +11387,7 @@ async function(ctx) {
             body: JSON.stringify({ name, color })
           });
       const data = await resp.json();
-      if (!resp.ok) { this.showToast(data.error || (editingId ? '保存失败' : '创建失败'), 'error'); return; }
+      if (!resp.ok) { this.showToast(data.error || (editingId ? t('保存失败') : t('创建失败')), 'error'); return; }
       if (editingId) {
         const idx = this._providerTags.findIndex(t => Number(t.id) === Number(editingId));
         if (idx >= 0) this._providerTags[idx] = { ...this._providerTags[idx], ...data };
@@ -11402,9 +11402,9 @@ async function(ctx) {
       }
       this.renderProviderTagBar();
       this.hideCreateProviderTagPopover();
-      this.showToast(editingId ? '标签已更新' : '标签已创建', 'success');
+      this.showToast(editingId ? t('标签已更新') : t('标签已创建'), 'success');
     } catch (e) {
-      this.showToast('网络错误', 'error');
+      this.showToast(t('网络错误'), 'error');
     }
   }
 
@@ -11414,11 +11414,11 @@ async function(ctx) {
   }
 
   async deleteProviderTag(tagId) {
-    const ok = await Dialog.confirm('删除标签', '确定删除此标签？供应商上已有的该标签也会被移除。', { confirmText: '删除', danger: true });
+    const ok = await Dialog.confirm(t('删除标签'), t('确定删除此标签？供应商上已有的该标签也会被移除。'), { confirmText: t('删除'), danger: true });
     if (!ok) return;
     try {
       const res = await fetch(`/api/admin/provider-tags/${tagId}`, { method: 'DELETE' });
-      if (!res.ok) { this.showToast('删除失败', 'error'); return; }
+      if (!res.ok) { this.showToast(t('删除失败'), 'error'); return; }
       this._providerTags = this._providerTags.filter(t => t.id !== tagId);
       if (Number(this.activeProviderTagId) === Number(tagId)) this.activeProviderTagId = null;
       // 同步本地供应商数据
@@ -11427,8 +11427,8 @@ async function(ctx) {
       }
       this.renderProviderTagBar();
       this.renderProviders();
-      this.showToast('标签已删除', 'success');
-    } catch (e) { this.showToast('删除失败', 'error'); }
+      this.showToast(t('标签已删除'), 'success');
+    } catch (e) { this.showToast(t('删除失败'), 'error'); }
   }
 
   renderProviderTagAssignment(selectedTags) {
@@ -11442,7 +11442,7 @@ async function(ctx) {
         style="--tag-color:${color};"
         onclick="this.dataset.selected=this.dataset.selected==='1'?'0':'1';this.classList.toggle('is-on',this.dataset.selected==='1')"
         data-selected="${selected ? '1' : '0'}">${escapeHtml(t.name)}</span>`;
-    }).join('') || '<span style="font-size:12px;color:var(--muted-foreground);">暂无标签，请先在列表上方创建</span>');
+    }).join('') ||  + '<span style="font-size:12px;color:var(--muted-foreground);">' + t('暂无标签，请先在列表上方创建') + '</span>');
   }
 
   _getSelectedProviderTagIds() {
@@ -11461,10 +11461,10 @@ async function(ctx) {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (seconds < 60) return '刚刚';
-    if (minutes < 60) return `${minutes} 分钟前`;
-    if (hours < 24) return `${hours} 小时前`;
-    if (days < 30) return `${days} 天前`;
+    if (seconds < 60) return t('刚刚');
+    if (minutes < 60) return `${minutes}${t('分钟前')}`;
+    if (hours < 24) return `${hours}${t('小时前')}`;
+    if (days < 30) return `${days}${t('天前')}`;
     return date.toLocaleDateString('zh-CN');
   }
 
@@ -11477,7 +11477,7 @@ async function(ctx) {
     const listEl = document.getElementById('adminAuditLogsList');
     const paginationEl = document.getElementById('adminAuditLogsPagination');
     if (!listEl) return;
-    setHTML(listEl, pageLoadingHtml('加载操作日志...', { compact: true }));
+    setHTML(listEl, pageLoadingHtml(t('加载操作日志...'), { compact: true }));
     try {
       const q = (document.getElementById('adminAuditLogSearch')?.value || '').trim();
       const resourceType = document.getElementById('adminAuditLogResourceFilter')?.value || '';
@@ -11486,10 +11486,10 @@ async function(ctx) {
       if (resourceType) params.set('resource_type', resourceType);
       const res = await fetch(`/api/admin/audit-logs?${params}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '加载失败');
+      if (!res.ok) throw new Error(data.error || t('加载失败'));
       const { items, total, limit } = data;
       if (!items.length) {
-        setHTML(listEl, '<p class="api-key-sub-muted" style="text-align:center;padding:24px;">暂无操作日志</p>');
+        setHTML(listEl, '<p class="api-key-sub-muted" style="text-align:center;padding:24px;">' + t('暂无操作日志') + '</p>');
         setHTML(paginationEl, '');
         return;
       }
@@ -11498,7 +11498,7 @@ async function(ctx) {
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
               <span style="font-size:12px;padding:2px 8px;border-radius:4px;background:var(--brand-blue);color:#fff;font-weight:500;">${escapeHtml(log.action)}</span>
-              ${log.is_admin ? '<span style="font-size:11px;padding:1px 6px;border-radius:4px;background:var(--destructive);color:#fff;">管理员</span>' : ''}
+              ${log.is_admin ? '<span style="font-size:11px;padding:1px 6px;border-radius:4px;background:var(--destructive);color:#fff;">' + t('管理员') + '</span>' : ''}
               <strong style="font-size:13px;">${escapeHtml(log.username || '-')}</strong>
               <span style="font-size:13px;color:var(--foreground);">${escapeHtml(log.description || '')}</span>
             </div>
@@ -11535,19 +11535,19 @@ async function(ctx) {
    */
   async checkUpdateBanner() {
     try {
-      console.log('[Update] 静默检查官方版本…');
+      console.log(t('[Update] 静默检查官方版本…'));
       const resp = await fetch('/api/admin/update/check', { credentials: 'same-origin' });
       if (!resp.ok) {
-        console.warn('[Update] 检查失败 HTTP', resp.status);
+        console.warn(t('[Update] 检查失败 HTTP'), resp.status);
         return;
       }
       const data = await resp.json();
       this._updateInfo = data;
-      console.log('[Update] 检查结果:', data);
+      console.log(t('[Update] 检查结果:'), data);
       this.renderUpdateBanner(data);
       this.renderUpdatePanel(data);
     } catch (err) {
-      console.warn('[Update] checkUpdateBanner 异常:', err);
+      console.warn(t('[Update] checkUpdateBanner 异常:'), err);
     }
   }
 
@@ -11587,7 +11587,7 @@ async function(ctx) {
     const applyBtn = document.getElementById('bannerUpdateApplyBtn');
     if (applyBtn && data.canApply === false) {
       applyBtn.disabled = true;
-      applyBtn.title = data.reason || '当前环境不支持一键更新';
+      applyBtn.title = data.reason || t('当前环境不支持一键更新');
     }
   }
 
@@ -11619,7 +11619,7 @@ async function(ctx) {
         this.renderUpdatePanel(this._updateInfo);
       }
     } catch (err) {
-      console.error('[Update] loadUpdatePanel 失败:', err);
+      console.error(t('[Update] loadUpdatePanel 失败:'), err);
     }
   }
 
@@ -11630,19 +11630,19 @@ async function(ctx) {
     const checkBtn = document.getElementById('updateCheckBtn');
     if (checkBtn) {
       checkBtn.disabled = true;
-      setButtonLoading(checkBtn, '检查中…');
+      setButtonLoading(checkBtn, t('检查中…'));
     }
-    this.setUpdateProgress(true, '正在检查更新…', 10);
+    this.setUpdateProgress(true, t('正在检查更新…'), 10);
 
     try {
-      console.log('[Update] 请求 /api/admin/update/check');
+      console.log(t('[Update] 请求 /api/admin/update/check'));
       const resp = await fetch('/api/admin/update/check', { credentials: 'same-origin' });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
-        throw new Error(data.error || `检查失败 (${resp.status})`);
+        throw new Error(data.error || `${t('检查失败 (')}${resp.status})`);
       }
       this._updateInfo = data;
-      console.log('[Update] 结果:', data);
+      console.log(t('[Update] 结果:'), data);
       this.renderUpdateBanner(data);
       this.renderUpdatePanel(data);
       this.setUpdateProgress(false);
@@ -11651,36 +11651,36 @@ async function(ctx) {
         if (data.hasUpdate) {
           if (typeof Dialog !== 'undefined') {
             await Dialog.alert(
-              '发现新版本',
-              `最新版本 <strong>v${escapeHtml(data.latestVersion)}</strong>，当前 v${escapeHtml(data.currentVersion)}。可点击「一键更新」安装。`
+              t('发现新版本'),
+              `${t('最新版本 ')}<strong>v${escapeHtml(data.latestVersion)}${'</strong>' + t('，当前 v')}${escapeHtml(data.currentVersion)}${t('。可点击「一键更新」安装。')}`
             );
           } else {
-            alert(`发现新版本 v${data.latestVersion}（当前 v${data.currentVersion}）`);
+            alert(`${t('发现新版本 v')}${data.latestVersion}${t('（当前 v')}${data.currentVersion}）`);
           }
         } else {
           if (typeof Dialog !== 'undefined') {
-            await Dialog.alert('已是最新', `当前版本 v${escapeHtml(data.currentVersion)} 已是最新。`);
+            await Dialog.alert(t('已是最新'), `${t('当前版本 v')}${escapeHtml(data.currentVersion)}${t('已是最新。')}`);
           } else {
-            alert(`已是最新版本 v${data.currentVersion}`);
+            alert(`${t('已是最新版本 v')}${data.currentVersion}`);
           }
         }
       }
       return data;
     } catch (err) {
-      console.error('[Update] 检查更新失败:', err);
-      this.setUpdateProgress(true, err.message || '检查失败', 0);
+      console.error(t('[Update] 检查更新失败:'), err);
+      this.setUpdateProgress(true, err.message || t('检查失败'), 0);
       if (interactive) {
         if (typeof Dialog !== 'undefined') {
-          await Dialog.alert('检查失败', escapeHtml(err.message || '网络错误'));
+          await Dialog.alert(t('检查失败'), escapeHtml(err.message || t('网络错误')));
         } else {
-          alert(err.message || '检查更新失败');
+          alert(err.message || t('检查更新失败'));
         }
       }
       return null;
     } finally {
       if (checkBtn) {
         checkBtn.disabled = false;
-        clearButtonLoading(checkBtn, '检查更新');
+        clearButtonLoading(checkBtn, t('检查更新'));
       }
     }
   }
@@ -11701,16 +11701,16 @@ async function(ctx) {
     }
     if (statusEl) {
       if (data.phase === 'error') {
-        statusEl.textContent = '更新失败';
+        statusEl.textContent = t('更新失败');
         statusEl.style.color = '#ef4444';
       } else if (data.hasUpdate) {
-        statusEl.textContent = '有可用更新';
+        statusEl.textContent = t('有可用更新');
         statusEl.style.color = '#2563eb';
       } else if (data.latestVersion) {
-        statusEl.textContent = '已是最新';
+        statusEl.textContent = t('已是最新');
         statusEl.style.color = '#16a34a';
       } else {
-        statusEl.textContent = '未检查';
+        statusEl.textContent = t('未检查');
         statusEl.style.color = '';
       }
     }
@@ -11759,37 +11759,37 @@ async function(ctx) {
       const fresh = await this.checkForUpdate(false);
       if (!fresh || !fresh.hasUpdate) {
         if (typeof Dialog !== 'undefined') {
-          await Dialog.alert('无需更新', '当前已是最新版本。');
+          await Dialog.alert(t('无需更新'), t('当前已是最新版本。'));
         } else {
-          alert('当前已是最新版本');
+          alert(t('当前已是最新版本'));
         }
         return;
       }
     }
 
     if (this._updateInfo && this._updateInfo.canApply === false) {
-      const msg = this._updateInfo.reason || '当前环境不支持一键更新';
+      const msg = this._updateInfo.reason || t('当前环境不支持一键更新');
       if (typeof Dialog !== 'undefined') {
-        await Dialog.alert('无法更新', escapeHtml(msg));
+        await Dialog.alert(t('无法更新'), escapeHtml(msg));
       } else {
         alert(msg);
       }
       return;
     }
 
-    const toVer = (this._updateInfo && this._updateInfo.latestVersion) || '最新版';
+    const toVer = (this._updateInfo && this._updateInfo.latestVersion) || t('最新版');
     let confirmed = true;
     if (typeof Dialog !== 'undefined') {
       confirmed = await Dialog.confirm(
-        '确认一键更新',
-        `将下载并安装 <strong>v${escapeHtml(toVer)}</strong>，服务会短暂中断并自动重启。<br><br>配置文件 config.json 与数据库不会被覆盖。是否继续？`,
-        { confirmText: '开始更新', cancelText: '取消' }
+        t('确认一键更新'),
+        `${t('将下载并安装 ')}<strong>v${escapeHtml(toVer)}</strong>${t('，服务会短暂中断并自动重启。')}${'<br><br>' + t('配置文件 config.json 与数据库不会被覆盖。是否继续？')}`,
+        { confirmText: t('开始更新'), cancelText: t('取消') }
       );
     } else {
-      confirmed = confirm(`确认更新到 v${toVer}？服务将短暂中断并自动重启。`);
+      confirmed = confirm(`${t('确认更新到 v')}${toVer}${t('？服务将短暂中断并自动重启。')}`);
     }
     if (!confirmed) {
-      console.log('[Update] 用户取消更新');
+      console.log(t('[Update] 用户取消更新'));
       return;
     }
 
@@ -11798,12 +11798,12 @@ async function(ctx) {
     const bannerBtn = document.getElementById('bannerUpdateApplyBtn');
     if (applyBtn) {
       applyBtn.disabled = true;
-      setButtonLoading(applyBtn, '更新中…');
+      setButtonLoading(applyBtn, t('更新中…'));
     }
     if (checkBtn) checkBtn.disabled = true;
     if (bannerBtn) bannerBtn.disabled = true;
 
-    this.setUpdateProgress(true, '开始下载安装…', 5);
+    this.setUpdateProgress(true, t('开始下载安装…'), 5);
     this._startUpdateStatusPoll();
 
     try {
@@ -11814,32 +11814,32 @@ async function(ctx) {
         headers: { 'Content-Type': 'application/json' },
       });
       const data = await resp.json().catch(() => ({}));
-      console.log('[Update] apply 响应:', resp.status, data);
+      console.log(t('[Update] apply 响应:'), resp.status, data);
 
       if (!resp.ok) {
-        throw new Error(data.error || `更新失败 (${resp.status})`);
+        throw new Error(data.error || `${t('更新失败 (')}${resp.status})`);
       }
 
-      this.setUpdateProgress(true, data.message || '安装完成，正在重启…', 95);
+      this.setUpdateProgress(true, data.message || t('安装完成，正在重启…'), 95);
       await this._waitForServerRestart(data.toVersion || toVer);
     } catch (err) {
       // 重启过程中 fetch 可能被中断，当作重启中处理
       const msg = err.message || String(err);
-      console.warn('[Update] apply 请求结束:', msg);
+      console.warn(t('[Update] apply 请求结束:'), msg);
       if (/Failed to fetch|NetworkError|network|fetch|ECONNRESET|aborted/i.test(msg)) {
-        this.setUpdateProgress(true, '连接已断开，等待服务重启…', 90);
+        this.setUpdateProgress(true, t('连接已断开，等待服务重启…'), 90);
         await this._waitForServerRestart(toVer);
       } else {
         this._stopUpdateStatusPoll();
         this.setUpdateProgress(true, msg, 0);
         if (typeof Dialog !== 'undefined') {
-          await Dialog.alert('更新失败', escapeHtml(msg));
+          await Dialog.alert(t('更新失败'), escapeHtml(msg));
         } else {
           alert(msg);
         }
         if (applyBtn) {
           applyBtn.disabled = false;
-          clearButtonLoading(applyBtn, '一键更新');
+          clearButtonLoading(applyBtn, t('一键更新'));
         }
         if (checkBtn) checkBtn.disabled = false;
         if (bannerBtn) bannerBtn.disabled = false;
@@ -11854,13 +11854,13 @@ async function(ctx) {
         const resp = await fetch('/api/admin/update/status', { credentials: 'same-origin' });
         if (!resp.ok) return;
         const st = await resp.json();
-        console.log('[Update] 状态轮询:', st.phase, st.progress, st.message);
+        console.log(t('[Update] 状态轮询:'), st.phase, st.progress, st.message);
         if (st.message != null) {
           this.setUpdateProgress(true, st.message, st.progress != null ? st.progress : 50);
         }
         if (st.phase === 'error') {
           this._stopUpdateStatusPoll();
-          this.setUpdateProgress(true, st.error || st.message || '更新失败', 0);
+          this.setUpdateProgress(true, st.error || st.message || t('更新失败'), 0);
         }
       } catch (_) {
         // 重启中可能失败，忽略
@@ -11880,8 +11880,8 @@ async function(ctx) {
    */
   async _waitForServerRestart(expectedVersion) {
     this._stopUpdateStatusPoll();
-    this.setUpdateProgress(true, '服务正在重启，请稍候…', 96);
-    console.log('[Update] 等待服务恢复，期望版本:', expectedVersion);
+    this.setUpdateProgress(true, t('服务正在重启，请稍候…'), 96);
+    console.log(t('[Update] 等待服务恢复，期望版本:'), expectedVersion);
 
     const maxAttempts = 60;
     for (let i = 0; i < maxAttempts; i++) {
@@ -11890,44 +11890,44 @@ async function(ctx) {
         const resp = await fetch('/api/version', { credentials: 'same-origin', cache: 'no-store' });
         if (!resp.ok) continue;
         const data = await resp.json();
-        console.log('[Update] 重启探测 /api/version:', data);
+        console.log(t('[Update] 重启探测 /api/version:'), data);
         if (data && data.version) {
-          this.setUpdateProgress(true, `服务已恢复（v${data.version}）`, 100);
+          this.setUpdateProgress(true, `${t('服务已恢复（v')}${data.version}）`, 100);
           if (typeof Dialog !== 'undefined') {
             await Dialog.alert(
-              '更新完成',
-              `服务已重启。当前版本：<strong>v${escapeHtml(data.version)}</strong>`
+              t('更新完成'),
+              `${t('服务已重启。当前版本：')}<strong>v${escapeHtml(data.version)}</strong>`
             );
           } else {
-            alert(`更新完成，当前版本 v${data.version}`);
+            alert(`${t('更新完成，当前版本 v')}${data.version}`);
           }
           window.location.reload();
           return;
         }
       } catch (e) {
-        console.log('[Update] 等待中…', i + 1, e.message);
+        console.log(t('[Update] 等待中…'), i + 1, e.message);
       }
       this.setUpdateProgress(
         true,
-        `等待服务恢复… (${i + 1}/${maxAttempts})`,
+        `${t('等待服务恢复… (')}${i + 1}/${maxAttempts})`,
         96 + Math.min(3, Math.floor(i / 20))
       );
     }
 
-    this.setUpdateProgress(true, '等待超时：请手动刷新页面或检查服务是否已启动', 0);
+    this.setUpdateProgress(true, t('等待超时：请手动刷新页面或检查服务是否已启动'), 0);
     if (typeof Dialog !== 'undefined') {
       await Dialog.alert(
-        '请手动确认',
-        '服务可能已更新并重启，但页面未能自动连上。请刷新页面或检查进程状态。'
+        t('请手动确认'),
+        t('服务可能已更新并重启，但页面未能自动连上。请刷新页面或检查进程状态。')
       );
     } else {
-      alert('请手动刷新页面确认更新结果');
+      alert(t('请手动刷新页面确认更新结果'));
     }
     const applyBtn = document.getElementById('updateApplyBtn');
     const checkBtn = document.getElementById('updateCheckBtn');
     if (applyBtn) {
       applyBtn.disabled = false;
-      clearButtonLoading(applyBtn, '一键更新');
+      clearButtonLoading(applyBtn, t('一键更新'));
     }
     if (checkBtn) checkBtn.disabled = false;
   }

@@ -51,11 +51,11 @@ class ThemeManager {
     });
     // 更新按钮 title，便于辨识当前模式
     const titles = {
-      light: '当前：浅色 · 点击切换深色',
-      dark: '当前：深色 · 点击跟随系统',
-      system: '当前：跟随系统 · 点击切换浅色'
+      light: t('当前：浅色 · 点击切换深色'),
+      dark: t('当前：深色 · 点击跟随系统'),
+      system: t('当前：跟随系统 · 点击切换浅色')
     };
-    const title = titles[mode] || '切换主题';
+    const title = titles[mode] || t('切换主题');
     document.querySelectorAll('#themeToggle, #themeToggleMobile').forEach(btn => {
       btn.setAttribute('title', title);
       btn.setAttribute('aria-label', title);

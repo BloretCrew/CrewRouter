@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>初始化设置 - CrewRouter</title>
+  <title><span data-i18n="初始化设置 - CrewRouter">初始化设置 - CrewRouter</span></title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
@@ -108,54 +108,59 @@
       color: var(--muted-foreground);
     }
   </style>
+  <script src="/js/i18n.js?v=2"></script>
 </head>
 <body>
+<div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
+      <option value="zh">中文</option>
+      <option value="en">EN</option>
+    </select></div>
   <div class="setup-container">
     <div class="setup-header">
       <h1>🚀 CrewRouter</h1>
-      <p>首次使用，请创建管理员账号</p>
+      <p><span data-i18n="首次使用，请创建管理员账号">首次使用，请创建管理员账号</span></p>
     </div>
 
     <div class="setup-card" id="stepLoading">
-      <div class="setup-loading"><div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中"></div><div class="page-loading-text">正在检查系统状态…</div></div></div>
+      <div class="setup-loading"><div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="正在检查系统状态…">正在检查系统状态…</span></div></div></div>
     </div>
 
     <div class="setup-card" id="step1" style="display:none;">
-      <h2>创建管理员账号</h2>
-      <p class="step-desc">数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。</p>
+      <h2><span data-i18n="创建管理员账号">创建管理员账号</span></h2>
+      <p class="step-desc"><span data-i18n="数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。">数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。</span></p>
       <div class="setup-form">
         <div class="form-group">
-          <label for="adminUsername">用户名</label>
+          <label for="adminUsername"><span data-i18n="用户名">用户名</span></label>
           <input type="text" id="adminUsername" placeholder="admin" autocomplete="username">
         </div>
         <div class="form-group">
-          <label for="adminEmail">邮箱（可选）</label>
+          <label for="adminEmail"><span data-i18n="邮箱（可选）">邮箱（可选）</span></label>
           <input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email">
         </div>
         <div class="form-group">
-          <label for="adminPassword">密码</label>
-          <input type="password" id="adminPassword" placeholder="至少 6 位" autocomplete="new-password">
+          <label for="adminPassword"><span data-i18n="密码">密码</span></label>
+          <input type="password" id="adminPassword" placeholder="至少 6 位" data-i18n-placeholder="至少 6 位" autocomplete="new-password">
         </div>
       </div>
       <div class="setup-error" id="step1Error"></div>
       <div class="setup-actions">
-        <button class="btn btn-primary" id="submitBtn" onclick="setup.submit()">完成初始化</button>
+        <button class="btn btn-primary" id="submitBtn" onclick="setup.submit()"><span data-i18n="完成初始化">完成初始化</span></button>
       </div>
     </div>
 
     <div class="setup-card" id="stepDone" style="display:none;">
       <div class="setup-success">
-        <h2>✅ 设置完成！</h2>
-        <p>管理员账号已创建，请登录开始使用</p>
-        <button class="btn btn-primary" onclick="window.location.href='/'">前往登录</button>
+        <h2><span data-i18n="✅ 设置完成！">✅ 设置完成！</span></h2>
+        <p><span data-i18n="管理员账号已创建，请登录开始使用">管理员账号已创建，请登录开始使用</span></p>
+        <button class="btn btn-primary" onclick="window.location.href='/'"><span data-i18n="前往登录">前往登录</span></button>
       </div>
     </div>
 
     <div class="setup-card" id="stepReady" style="display:none;">
       <div class="setup-success">
-        <h2>系统已初始化</h2>
-        <p>无需重复配置，可直接登录</p>
-        <button class="btn btn-primary" onclick="window.location.href='/'">前往登录</button>
+        <h2><span data-i18n="系统已初始化">系统已初始化</span></h2>
+        <p><span data-i18n="无需重复配置，可直接登录">无需重复配置，可直接登录</span></p>
+        <button class="btn btn-primary" onclick="window.location.href='/'"><span data-i18n="前往登录">前往登录</span></button>
       </div>
     </div>
   </div>
@@ -240,5 +245,20 @@
       }
     });
   </script>
+<script>
+  // Page-level i18n: apply catalog to static DOM once ready.
+  (function () {
+    function apply() { if (window.I18N) I18N.applyDom(); }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', apply);
+    } else { apply(); }
+    document.addEventListener('i18n:ready', apply);
+    var el = document.getElementById('langToggle');
+    if (el && window.I18N) {
+      el.value = I18N.current();
+      el.addEventListener('change', function () { I18N.load(el.value); });
+    }
+  })();
+</script>
 </body>
 </html>

@@ -41,12 +41,12 @@ class PlaygroundApp {
   async loadModels() {
     try {
       const res = await fetch('/api/user/models');
-      if (!res.ok) throw new Error('请求失败');
+      if (!res.ok) throw new Error(t('请求失败'));
       const data = await res.json();
       this.models = Array.isArray(data) ? data : [];
       const select = document.getElementById('pgModel');
       if (this.models.length === 0) {
-        setHTML(select, '<option value="" disabled selected>暂无可用模型</option>');
+        setHTML(select, '<option value="" disabled selected>' + t('暂无可用模型') + '</option>');
         return;
       }
       const grouped = {};
@@ -84,9 +84,9 @@ class PlaygroundApp {
       select.addEventListener('change', () => this.updateThinkingControls());
       this.updateThinkingControls();
     } catch (error) {
-      console.error('加载模型失败:', error);
+      console.error(t('加载模型失败:'), error);
       const select = document.getElementById('pgModel');
-      if (select) setHTML(select, '<option value="" disabled selected>加载失败</option>');
+      if (select) setHTML(select, '<option value="" disabled selected>' + t('加载失败') + '</option>');
     }
   }
 
@@ -109,11 +109,11 @@ class PlaygroundApp {
 
     if (caps.supportsThinking) {
       thinkingToggle.disabled = false;
-      thinkingLabel.textContent = thinkingToggle.checked ? '已启用' : '已禁用';
+      thinkingLabel.textContent = thinkingToggle.checked ? t('已启用') : t('已禁用');
     } else {
       thinkingToggle.checked = true;
       thinkingToggle.disabled = true;
-      thinkingLabel.textContent = '不支持';
+      thinkingLabel.textContent = t('不支持');
     }
 
     budgetGroup.style.display = caps.supportsThinkingBudget ? '' : 'none';
@@ -125,7 +125,7 @@ class PlaygroundApp {
       const res = await fetch('/api/user/balance');
       const data = await res.json();
       const balance = Number(data.balance || 0);
-      document.getElementById('pgBalanceBadge').textContent = `${balance.toFixed(0)} 积分`;
+      document.getElementById('pgBalanceBadge').textContent = `${balance.toFixed(0)}${t('积分')}`;
     } catch {}
   }
 
@@ -135,9 +135,9 @@ class PlaygroundApp {
     const list = document.getElementById('pgHistoryList');
     if (list && !(this.conversations || []).length) {
       if (typeof pageLoadingHtml === 'function') {
-        setHTML(list, pageLoadingHtml('加载对话...', { size: 'md', compact: true, minHeight: '120px' }));
+        setHTML(list, pageLoadingHtml(t('加载对话...'), { size: 'md', compact: true, minHeight: '120px' }));
       } else {
-        setHTML(list, '<div class="page-loading page-loading-compact"><div class="loading-spinner md"></div><div class="page-loading-text">加载对话...</div></div>');
+        setHTML(list, '<div class="page-loading page-loading-compact"><div class="loading-spinner md"></div><div class="page-loading-text">' + t('加载对话...') + '</div></div>');
       }
     }
     try {
@@ -147,12 +147,12 @@ class PlaygroundApp {
         this.conversations = Array.isArray(data) ? data : [];
         this.renderHistoryList();
       } else {
-        console.error('加载对话历史失败:', res.status, await res.text());
+        console.error(t('加载对话历史失败:'), res.status, await res.text());
         this.conversations = [];
         this.renderHistoryList();
       }
     } catch (err) {
-      console.error('加载对话历史异常:', err);
+      console.error(t('加载对话历史异常:'), err);
       this.conversations = [];
       this.renderHistoryList();
     }
@@ -173,7 +173,7 @@ class PlaygroundApp {
 
     setHTML(list, this.conversations.map(conv => {
       const date = new Date(conv.updated_at);
-      const dateStr = `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+      const dateStr = `${date.getMonth() + 1}${t('月')}${date.getDate()}${t('日')}${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
       const isActive = conv.id === this.activeConvId;
       return `
         <div class="pg-history-item${isActive ? ' active' : ''}" data-id="${conv.id}">
@@ -187,12 +187,12 @@ class PlaygroundApp {
             <div class="pg-history-item-date">${dateStr}</div>
           </div>
           <div class="pg-history-item-actions">
-            <button class="rename-btn" data-id="${conv.id}" title="重命名">
+            <button class="rename-btn" data-id="${conv.id}" title=t('重命名')>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
               </svg>
             </button>
-            <button class="delete-btn" data-id="${conv.id}" title="删除">
+            <button class="delete-btn" data-id="${conv.id}" title=t('删除')>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
               </svg>
@@ -232,7 +232,7 @@ class PlaygroundApp {
     try {
       const model = document.getElementById('pgModel').value;
       const firstUserMsg = this.messages.find(m => m.role === 'user');
-      const title = firstUserMsg ? this.generateTitle(firstUserMsg.content) : '新对话';
+      const title = firstUserMsg ? this.generateTitle(firstUserMsg.content) : t('新对话');
       const res = await fetch('/api/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -250,10 +250,10 @@ class PlaygroundApp {
         await this.loadConversations();
         return data.id;
       } else {
-        console.error('创建对话失败:', res.status, await res.text());
+        console.error(t('创建对话失败:'), res.status, await res.text());
       }
     } catch (err) {
-      console.error('创建对话异常:', err);
+      console.error(t('创建对话异常:'), err);
     }
     return null;
   }
@@ -276,12 +276,12 @@ class PlaygroundApp {
         body: JSON.stringify({ messages: this.messages }),
       });
       if (!res.ok) {
-        console.error('保存消息失败:', res.status, await res.text());
+        console.error(t('保存消息失败:'), res.status, await res.text());
       } else {
         await this.loadConversations();
       }
     } catch (err) {
-      console.error('保存消息异常:', err);
+      console.error(t('保存消息异常:'), err);
     }
   }
 
@@ -302,7 +302,7 @@ class PlaygroundApp {
         this.totalCost = 0;
         this.totalTokens = 0;
         document.getElementById('pgTokens').textContent = '0';
-        document.getElementById('pgCost').textContent = '0 积分';
+        document.getElementById('pgCost').textContent = t('0 积分');
         this.replyTo = null;
         this.hideReplyBar();
         this.renderMessages();
@@ -312,7 +312,7 @@ class PlaygroundApp {
   }
 
   async deleteConversation(convId) {
-    if (!confirm('确定删除这个对话？')) return;
+    if (!confirm(t('确定删除这个对话？'))) return;
     try {
       await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
       if (this.activeConvId === convId) {
@@ -377,7 +377,7 @@ class PlaygroundApp {
     this.replyTo = null;
     this.hideReplyBar();
     document.getElementById('pgTokens').textContent = '0';
-    document.getElementById('pgCost').textContent = '0 积分';
+    document.getElementById('pgCost').textContent = t('0 积分');
     this.renderMessages();
     this.renderHistoryList();
   }
@@ -390,7 +390,7 @@ class PlaygroundApp {
     const msg = this.messages[msgIndex];
     const bar = document.getElementById('pgReplyBar');
     const preview = document.getElementById('pgReplyPreview');
-    preview.textContent = (msg.role === 'user' ? '你: ' : '助手: ') + msg.content.substring(0, 100) + (msg.content.length > 100 ? '...' : '');
+    preview.textContent = (msg.role === 'user' ? t('你: ') : t('助手: ')) + msg.content.substring(0, 100) + (msg.content.length > 100 ? '...' : '');
     bar.style.display = 'flex';
     document.getElementById('pgInput').focus();
   }
@@ -423,7 +423,7 @@ class PlaygroundApp {
     const reasoningEffort = document.getElementById('pgReasoningEffort').value;
 
     if (!model) {
-      alert('请先选择模型');
+      alert(t('请先选择模型'));
       return;
     }
 
@@ -488,7 +488,7 @@ class PlaygroundApp {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `请求失败 (${res.status})`);
+        throw new Error(err.error || `${t('请求失败 (')}${res.status})`);
       }
 
       const reader = res.body.getReader();
@@ -583,7 +583,7 @@ class PlaygroundApp {
             const weightedTokens = Math.round((estPrompt + estCompletion) * multiplier);
             const cost = weightedTokens / 1000000;
             this.totalCost += cost;
-            document.getElementById('pgCost').textContent = `${this.totalCost.toFixed(4)} 积分`;
+            document.getElementById('pgCost').textContent = `${this.totalCost.toFixed(4)}${t('积分')}`;
           }
         }
       }
@@ -596,7 +596,7 @@ class PlaygroundApp {
           const weightedTokens = Math.round((promptTokens + (cachedTokens || 0) * 0.1 + completionTokens) * multiplier);
           const cost = weightedTokens / 1000000;
           this.totalCost += cost;
-          document.getElementById('pgCost').textContent = `${this.totalCost.toFixed(4)} 积分`;
+          document.getElementById('pgCost').textContent = `${this.totalCost.toFixed(4)}${t('积分')}`;
         }
       }
 
@@ -632,7 +632,7 @@ class PlaygroundApp {
       await this.updateCost();
     } catch (error) {
       if (error.name === 'AbortError') {
-        setHTML(contentEl, this.renderMarkdown(contentEl.textContent || '') + '\n\n*[已停止]*');
+        setHTML(contentEl, this.renderMarkdown(contentEl.textContent || '') + t('\\n\\n*[已停止]*'));
       } else {
         setHTML(contentEl, `<div class="pg-msg-error">${escapeHtml(error.message || "")}</div>`);
       }
@@ -685,14 +685,14 @@ class PlaygroundApp {
     const meta = msg?.meta || extraMeta;
 
     // 用户信息
-    const userName = this.userInfo?.username || '你';
+    const userName = this.userInfo?.username || t('你');
     const userAvatar = this.userInfo?.avatar || '';
 
     // 模型信息
-    let modelName = '助手';
+    let modelName = t('助手');
     let modelIconHtml = '';
     if (role === 'assistant' && meta) {
-      modelName = meta.modelDisplayName || meta.model || '助手';
+      modelName = meta.modelDisplayName || meta.model || t('助手');
       const modelInfo = this.modelInfo?.[meta.model];
       if (modelInfo?.seriesIconUrl) {
         modelIconHtml = `<img src="${modelInfo.seriesIconUrl}" alt="" class="pg-msg-avatar-icon">`;
@@ -722,9 +722,9 @@ class PlaygroundApp {
     if (role === 'assistant' && meta) {
       const m = meta;
       const tokenStr = m.tokens ? `${this._fmtBig(m.tokens)} tokens` : '';
-      const costStr = m.cost ? `${m.cost.toFixed(4)} 积分` : '';
+      const costStr = m.cost ? `${m.cost.toFixed(4)}${t('积分')}` : '';
       const parts = [m.modelDisplayName || m.model, tokenStr, costStr].filter(Boolean);
-      metaFooter = `<div class="pg-msg-meta">${this.escapeHtml(parts.join(' · '))} · AI 也可能犯错，请核实重要信息。</div>`;
+      metaFooter = `<div class="pg-msg-meta">${this.escapeHtml(parts.join(' · '))}${t('· AI 也可能犯错，请核实重要信息。')}</div>`;
     }
 
     setHTML(el, `
@@ -766,7 +766,7 @@ class PlaygroundApp {
       const res = await fetch('/api/user/balance');
       const data = await res.json();
       const balance = Number(data.balance || 0);
-      document.getElementById('pgBalanceBadge').textContent = `${balance.toFixed(0)} 积分`;
+      document.getElementById('pgBalanceBadge').textContent = `${balance.toFixed(0)}${t('积分')}`;
     } catch {}
   }
 
@@ -876,7 +876,7 @@ class PlaygroundApp {
     if (thinkingEl) {
       const statusEl = thinkingEl.querySelector('.pg-thinking-status');
       if (statusEl && response) {
-        statusEl.textContent = '已完成';
+        statusEl.textContent = t('已完成');
         thinkingEl.classList.remove('pg-thinking-expanded');
       }
     }
@@ -993,7 +993,7 @@ class PlaygroundApp {
         if (this.activeConvId) {
           this.forkConversation(this.activeConvId);
         } else {
-          alert('请先发送消息创建对话后再 Fork');
+          alert(t('请先发送消息创建对话后再 Fork'));
         }
         break;
       case 'delete':
@@ -1016,7 +1016,7 @@ class PlaygroundApp {
       } else {
         await navigator.clipboard.writeText(text);
       }
-      this.showToast(type === 'html' ? '已复制富文本' : type === 'markdown' ? '已复制 Markdown' : '已复制纯文本');
+      this.showToast(type === 'html' ? t('已复制富文本') : type === 'markdown' ? t('已复制 Markdown') : t('已复制纯文本'));
     } catch {
       // Fallback
       const ta = document.createElement('textarea');
@@ -1025,7 +1025,7 @@ class PlaygroundApp {
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
-      this.showToast('已复制');
+      this.showToast(t('已复制'));
     }
   }
 
@@ -1104,7 +1104,7 @@ class PlaygroundApp {
 
     // Thinking toggle
     thinkingToggle.addEventListener('change', () => {
-      document.getElementById('pgThinkingLabel').textContent = thinkingToggle.checked ? '已启用' : '已禁用';
+      document.getElementById('pgThinkingLabel').textContent = thinkingToggle.checked ? t('已启用') : t('已禁用');
     });
 
     // Thinking budget slider
@@ -1167,13 +1167,13 @@ class PlaygroundApp {
   async loadHistory() {
     try {
       const res = await fetch('/api/playground/history?limit=50');
-      if (!res.ok) throw new Error('请求失败');
+      if (!res.ok) throw new Error(t('请求失败'));
       const data = await res.json();
       this.renderHistoryDetailList(data.records || []);
     } catch (error) {
-      console.error('加载历史失败:', error);
+      console.error(t('加载历史失败:'), error);
       const list = document.getElementById('pgHistoryDetailList');
-      if (list) setHTML(list, '<div class="pg-history-detail-empty"><span>加载失败</span></div>');
+      if (list) setHTML(list, '<div class="pg-history-detail-empty"><span>' + t('加载失败') + '</span></div>');
     }
   }
 
@@ -1182,7 +1182,7 @@ class PlaygroundApp {
     if (!list) return;
 
     if (records.length === 0) {
-      setHTML(list, '<div class="pg-history-detail-empty"><img src="https://img.bloret.net/SF/clock?color=white" alt="" width="32" height="32" class="sf-icon" data-sf-name="clock" style="display:inline-block;vertical-align:middle;opacity:0.3;margin-bottom:8px;"><span>暂无历史记录</span></div>');
+      setHTML(list, '<div class="pg-history-detail-empty"><img src="https://img.bloret.net/SF/clock?color=white" alt="" width="32" height="32" class="sf-icon" data-sf-name="clock" style="display:inline-block;vertical-align:middle;opacity:0.3;margin-bottom:8px;"><span>' + t('暂无历史记录') + '</span></div>');
       return;
     }
 
@@ -1192,12 +1192,12 @@ class PlaygroundApp {
       const preview = r.messages?.[0]?.content?.substring(0, 50) || '';
       return `<div class="pg-history-item" data-id="${r.id}">
         <div class="pg-history-item-header">
-          <span class="pg-history-item-model">${r.model}${hasThinking ? '<span class="pg-history-item-thinking-badge">思考</span>' : ''}</span>
+          <span class="pg-history-item-model">${r.model}${hasThinking ? '<span class="pg-history-item-thinking-badge">' + t('思考') + '</span>' : ''}</span>
           <span class="pg-history-item-time">${time}</span>
         </div>
         <div class="pg-history-item-stats">
           <span>📝 ${r.totalTokens?.toLocaleString() || 0} tokens</span>
-          <span>💰 ${r.cost?.toFixed(4) || '0.0000'} 积分</span>
+          <span>💰 ${r.cost?.toFixed(4) || '0.0000'}${t(' 积分')}</span>
         </div>
         <div class="pg-history-item-preview">${this.escapeHtml(preview)}</div>
       </div>`;
@@ -1214,11 +1214,11 @@ class PlaygroundApp {
   async showHistoryDetail(id) {
     try {
       const res = await fetch(`/api/playground/history/${id}`);
-      if (!res.ok) throw new Error('请求失败');
+      if (!res.ok) throw new Error(t('请求失败'));
       const r = await res.json();
       this.renderHistoryModal(r);
     } catch (error) {
-      console.error('加载详情失败:', error);
+      console.error(t('加载详情失败:'), error);
     }
   }
 
@@ -1235,21 +1235,21 @@ class PlaygroundApp {
 
     // Stats section
     html += '<div class="pg-detail-section">';
-    html += '<div class="pg-detail-section-title">统计信息</div>';
+    html +=  + '<div class="pg-detail-section-title">' + t('统计信息') + '</div>';
     html += '<div class="pg-detail-stats">';
-    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">输入 Tokens</div><div class="pg-detail-stat-value">${r.promptTokens?.toLocaleString() || 0}</div></div>`;
-    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">输出 Tokens</div><div class="pg-detail-stat-value">${r.completionTokens?.toLocaleString() || 0}</div></div>`;
-    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">总计 Tokens</div><div class="pg-detail-stat-value">${r.totalTokens?.toLocaleString() || 0}</div></div>`;
-    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">积分</div><div class="pg-detail-stat-value">${r.cost?.toFixed(4) || '0.0000'}</div></div>`;
+    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('输入 Tokens')}</div><div class="pg-detail-stat-value">${r.promptTokens?.toLocaleString() || 0}</div></div>`;
+    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('输出 Tokens')}</div><div class="pg-detail-stat-value">${r.completionTokens?.toLocaleString() || 0}</div></div>`;
+    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('总计 Tokens')}</div><div class="pg-detail-stat-value">${r.totalTokens?.toLocaleString() || 0}</div></div>`;
+    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('积分')}</div><div class="pg-detail-stat-value">${r.cost?.toFixed(4) || '0.0000'}</div></div>`;
     if (r.finishReason) {
-      html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">结束原因</div><div class="pg-detail-stat-value">${r.finishReason}</div></div>`;
+      html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('结束原因')}</div><div class="pg-detail-stat-value">${r.finishReason}</div></div>`;
     }
     html += '</div></div>';
 
     // Request params section
     if (r.requestParams) {
       html += '<div class="pg-detail-section">';
-      html += '<div class="pg-detail-section-title">请求参数</div>';
+      html +=  + '<div class="pg-detail-section-title">' + t('请求参数') + '</div>';
       html += '<div class="pg-detail-params">';
       const params = r.requestParams;
       if (params.temperature !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">temp:</span> ${params.temperature}</span>`;
@@ -1263,14 +1263,14 @@ class PlaygroundApp {
 
     // Messages section
     html += '<div class="pg-detail-section">';
-    html += '<div class="pg-detail-section-title">对话内容</div>';
+    html +=  + '<div class="pg-detail-section-title">' + t('对话内容') + '</div>';
     html += '<div class="pg-detail-messages">';
 
     if (r.messages && Array.isArray(r.messages)) {
       r.messages.forEach(msg => {
         if (msg.role === 'system') return;
         html += `<div class="pg-detail-msg ${msg.role}">`;
-        html += `<div class="pg-detail-msg-role">${msg.role === 'user' ? '👤 用户' : '🤖 助手'}</div>`;
+        html += `<div class="pg-detail-msg-role">${msg.role === 'user' ? t('👤 用户') : t('🤖 助手')}</div>`;
         html += `<div class="pg-detail-msg-content">${this.escapeHtml(msg.content || '')}</div>`;
         html += '</div>';
       });
@@ -1279,7 +1279,7 @@ class PlaygroundApp {
     // Reasoning content
     if (r.reasoningContent) {
       html += '<div class="pg-detail-msg reasoning">';
-      html += '<div class="pg-detail-msg-role">💭 思考过程</div>';
+      html +=  + '<div class="pg-detail-msg-role">' + t('💭 思考过程') + '</div>';
       html += `<div class="pg-detail-msg-content">${this.escapeHtml(r.reasoningContent)}</div>`;
       html += '</div>';
     }
