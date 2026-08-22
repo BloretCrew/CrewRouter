@@ -2414,7 +2414,8 @@ class ConsoleApp {
       if (!state.expandedProviders?.has(key)) return;
       el.classList.remove('collapsed');
       const { team, provider } = this._findKeyPickerTeamProvider(el.getAttribute('data-team-id'), el.getAttribute('data-provider-id'));
-      if (team && provider?.models_loaded) this._renderKeyPickerProviderModelsInto(el, provider, team);
+      // 同主库：未加载时让渲染函数触发按需加载，避免展开卡片空白
+      if (team && provider) this._renderKeyPickerProviderModelsInto(el, provider, team);
     });
   }
 
@@ -6649,7 +6650,7 @@ ${extractorBody}
               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
             </svg>
             <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无供应商</p>
-            <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">点击上方t(t('添加供应商'))按钮开始</p>
+            <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">点击上方${t('添加供应商')}按钮开始</p>
           </div>
         `);
         return;
@@ -6993,7 +6994,7 @@ ${extractorBody}
       setHTML(container, `
         <div style="text-align:center;padding:40px;color:var(--muted-foreground);">
           <p>暂无模型</p>
-          <p style="font-size:13px;">点击t(t('刷新列表'))从供应商获取模型</p>
+          <p style="font-size:13px;">点击${t('刷新列表')}从供应商获取模型</p>
         </div>
       `);
       return;
@@ -8420,7 +8421,9 @@ ${extractorBody}
       el.classList.remove('collapsed');
       const team = (this._libraryData?.teams || []).find(t => String(t.team_id) === String(el.getAttribute('data-team-id')));
       const provider = team?.providers?.find(p => String(p.provider_id) === String(el.getAttribute('data-provider-id')));
-      if (provider?.models_loaded) this._renderProviderModelsInto(el, provider, team);
+      // 未加载（或加载中/上次失败）也要走渲染函数：它会对未加载供应商触发按需加载，
+      // 否则重建后卡片停留在「点击展开以加载模型」，必须折叠再展开才能出内容
+      if (team && provider) this._renderProviderModelsInto(el, provider, team);
     });
   }
 
