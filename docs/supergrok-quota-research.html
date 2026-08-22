@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SuperGrok 额度查询研究报告</title>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --bg-elev: #161a22;
+    --bg-elev2: #1e2430;
+    --border: #2a3240;
+    --text: #e8ecf3;
+    --text-dim: #9aa7ba;
+    --accent: #4fd1c5;
+    --accent-2: #8b7cf6;
+    --warn: #f6c85f;
+    --err: #f57b7b;
+    --code-bg: #10141b;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+    background-image:
+      radial-gradient(1200px 600px at 15% -10%, rgba(139,124,246,0.08), transparent 60%),
+      radial-gradient(1000px 500px at 90% 0%, rgba(79,209,197,0.06), transparent 55%);
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.hero {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 36px 30px;
+    background: linear-gradient(160deg, var(--bg-elev) 0%, var(--bg-elev2) 100%);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  header.hero::after {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.14), transparent),
+      radial-gradient(2px 2px at 80px 70px, rgba(255,255,255,0.10), transparent);
+    background-size: 90px 90px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  header.hero .tag {
+    display: inline-block; font-size: 12px; letter-spacing: 2px;
+    color: var(--accent); border: 1px solid rgba(79,209,197,0.4);
+    border-radius: 999px; padding: 3px 12px; margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+  header.hero h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 0.5px; }
+  header.hero .sub { color: var(--text-dim); font-size: 15px; max-width: 70ch; }
+  header.hero .meta { margin-top: 16px; font-size: 12.5px; color: var(--text-dim); }
+  header.hero .meta b { color: var(--text); }
+
+  h2 {
+    margin: 44px 0 14px; font-size: 21px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  }
+  h2 .num { color: var(--accent-2); font-family: var(--mono); margin-right: 8px; }
+  h3 { margin: 26px 0 10px; font-size: 16.5px; color: var(--accent); }
+  p { margin: 10px 0; }
+  ul, ol { margin: 8px 0 14px; padding-left: 22px; }
+  li { margin: 5px 0; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted rgba(79,209,197,0.4); }
+  a:hover { color: #7df2e8; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; overflow-x: auto;
+    font-family: var(--mono); font-size: 13px; line-height: 1.55;
+  }
+  code {
+    font-family: var(--mono); font-size: 12.5px;
+    background: rgba(255,255,255,0.06); border-radius: 4px; padding: 1px 5px;
+  }
+  pre code { background: none; padding: 0; }
+  .hl { color: var(--accent); }
+  .hl2 { color: var(--accent-2); }
+  .dim { color: var(--text-dim); }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 14px 0 18px;
+    font-size: 13.5px;
+  }
+  th, td {
+    border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top;
+  }
+  th { background: var(--bg-elev2); color: var(--accent); font-weight: 600; white-space: nowrap; }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  td code { font-size: 12px; }
+
+  .callout {
+    border-left: 3px solid var(--warn); background: rgba(246,200,95,0.07);
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0;
+  }
+  .callout.err { border-left-color: var(--err); background: rgba(245,123,123,0.07); }
+  .callout.ok { border-left-color: var(--accent); background: rgba(79,209,197,0.07); }
+  .callout .ttl { font-weight: 700; display: block; margin-bottom: 4px; }
+
+  .pill {
+    display: inline-block; font-size: 11.5px; border-radius: 999px; padding: 2px 10px;
+    border: 1px solid var(--border); margin: 1px 3px 1px 0; color: var(--text-dim);
+  }
+  .pill.verify { color: var(--accent); border-color: rgba(79,209,197,0.5); }
+  .pill.unverify { color: var(--warn); border-color: rgba(246,200,95,0.5); }
+
+  .flow {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin: 12px 0; font-family: var(--mono); font-size: 12.5px;
+  }
+  .flow .step { background: var(--bg-elev2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; }
+  .flow .arr { color: var(--accent-2); }
+
+  .toc {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 22px; margin: 24px 0;
+  }
+  .toc b { color: var(--accent); }
+  .toc ol { margin: 8px 0 0; }
+  .toc a { border: none; }
+
+  .verdict {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 16px 0;
+  }
+  .vcard {
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+  }
+  .vcard .vt { font-weight: 700; color: var(--accent); margin-bottom: 6px; font-size: 14px; }
+  .vcard .vd { font-size: 13px; color: var(--text-dim); }
+
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 12.5px; }
+  @media (max-width: 640px) {
+    .wrap { padding: 20px 14px 60px; }
+    header.hero { padding: 24px 20px; }
+    header.hero h1 { font-size: 23px; }
+    h2 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="tag">Research Report · 技术研究报告</span>
+  <h1>SuperGrok 额度查询方式研究报告</h1>
+  <div class="sub">梳理 SuperGrok 订阅（消费者产品）与 Grok Build 编码信用（开发者产品）两条额度体系的查询途径：网页端内部 REST 接口、本仓库 CLI 的 billing 链路，以及 api.x.ai 开发者 API 对照。</div>
+  <div class="meta">日期：2026-08-22 · 来源：grok-build 仓库源码分析 + 公开逆向脚本 + 官方文档对照</div>
+</header>
+
+<nav class="toc">
+  <b>目录</b>
+  <ol>
+    <li><a href="#summary">结论摘要（三条路径总览）</a></li>
+    <li><a href="#web">grok.com 网页端 —— POST /rest/rate-limits</a></li>
+    <li><a href="#cli">Grok Build CLI（本仓库）—— /usage 与 billing 链路</a></li>
+    <li><a href="#api">api.x.ai 开发者 API 对照（相互独立）</a></li>
+    <li><a href="#sources">来源与验证状态</a></li>
+  </ol>
+</nav>
+
+<h2 id="summary"><span class="num">01</span>结论摘要</h2>
+
+<p>SuperGrok 额度没有一份官方公开 API 文档。实际可用的查询途径有三条，对应三套完全不同的额度模型：</p>
+
+<div class="verdict">
+  <div class="vcard"><div class="vt">网页端 · 聊天/请求额度</div><div class="vd">登录 grok.com 后调用内部接口 <code>POST /rest/rate-limits</code>，返回剩余请求数、限流等待时间。未被官方文档化，属逆向所得。</div></div>
+  <div class="vcard"><div class="vt">网页端 · 图像额度</div><div class="vd">Imagine 图像生成走 <code>/rest/media/imagine/quota_info</code>，返回剩余图像生成次数与重置信息。</div></div>
+  <div class="vcard"><div class="vt">Grok Build CLI</div><div class="vd">本仓库的 <code>/usage</code> 命令通过 <code>x.ai/billing</code> 扩展查询编码信用额度（周度/月度共享用量池），走 cli-chat-proxy 网关。</div></div>
+  <div class="vcard"><div class="vt">开发者 API</div><div class="vd">api.x.ai 控制台展示开发者账号自己的限流，与 SuperGrok 订阅相互独立，不共享额度。</div></div>
+</div>
+
+<table>
+  <tr><th>路径</th><th>额度对象</th><th>入口</th><th>认证</th><th>关键字段</th></tr>
+  <tr>
+    <td>网页端 REST</td><td>SuperGrok 订阅的聊天/请求额度</td>
+    <td><code>POST https://grok.com/rest/rate-limits</code></td>
+    <td>登录 Cookie（非公开，未文档化）</td>
+    <td><code>remainingQueries</code>、<code>waitTimeSeconds</code>、<code>modelName</code>、<code>requestKind</code></td>
+  </tr>
+  <tr>
+    <td>网页端 Imagine</td><td>图像生成额度</td>
+    <td><code>/rest/media/imagine/quota_info</code></td>
+    <td>登录 Cookie（非公开）</td>
+    <td>剩余生成次数、重置信息</td>
+  </tr>
+  <tr>
+    <td>Grok Build CLI</td><td>编码信用（周度/月度用量池）</td>
+    <td><code>GET {cli-chat-proxy}/billing?format=credits</code></td>
+    <td>OAuth Bearer + <code>X-XAI-Token-Auth</code> + <code>x-userid</code></td>
+    <td><code>creditUsagePercent</code>、<code>currentPeriod</code>、<code>prepaidBalance</code>、<code>isUnifiedBillingUser</code></td>
+  </tr>
+  <tr>
+    <td>开发者 API</td><td>API Key 的独立限流</td>
+    <td>api.x.ai console / REST</td>
+    <td>API Key（官方公开）</td>
+    <td>RPM/TPM、<code>usage</code> 对象</td>
+  </tr>
+</table>
+
+<h2 id="web"><span class="num">02</span>grok.com 网页端 —— POST /rest/rate-limits</h2>
+
+<p>xAI 没有为 SuperGrok 消费者订阅提供公开 API。但网页前端（Next.js 应用 <code>grok.com</code>）自己会调用一个内部 REST 接口来渲染「剩余额度」提示。该接口被多个社区脚本（Tampermonkey 用户脚本、浏览器扩展）通过抓包逆向并复用。以下内容主要依据两个可公开获取的逆向脚本全文：<em>Grok Rate Limit Display</em>（greasyfork 脚本 533963）与 <em>grok-userscripts</em>（GitHub nisc/grok-userscripts）。</p>
+
+<div class="callout err"><span class="ttl">⚠ 非官方接口</span>
+该接口未在官方文档中公开，随时可能变更或要求额外校验；请求需携带登录态的 Cookie，且可能被风控。任何第三方脚本/工具依赖它都存在失效风险。仅供学习与个人使用。
+</div>
+
+<h3>2.1 请求</h3>
+<pre><code>POST https://grok.com/rest/rate-limits
+Headers: Cookie: …（登录态）; Content-Type: application/json
+Body:
+{
+  "requestKind": "SUPER_GROK" | "STANDARD_GROK" | "TEMPORARY_SUPER_GROK" | …,
+  "modelName": "grok-4" | "grok-4-fast" | "grok-code" | "grok-imagine" | …
+}</code></pre>
+
+<ul>
+  <li><code>requestKind</code>：请求所属的档位/渠道。值为枚举字符串，如 <code>SUPER_GROK</code>（SuperGrok 订阅）、<code>STANDARD_GROK</code>（免费档）、<code>TEMPORARY_SUPER_GROK</code>（临时试用）等。前端从登录用户的订阅信息中取得。</li>
+  <li><code>modelName</code>：查询哪个模型的额度。不同模型（聊天主模型、Fast 模型、代码模型、图像模型）的额度相互独立，各自有独立的限流桶。</li>
+  <li>接口还支持批量/分组查询变体，一次请求可携带多个模型的额度请求。</li>
+</ul>
+
+<h3>2.2 响应</h3>
+<pre><code>{
+  "remainingQueries": 8,
+  "highEffortRateLimits": {
+    "remainingQueries": 8,
+    "limit": 15,
+    "waitTimeSeconds": 0
+  },
+  "lowEffortRateLimits": {
+    "remainingQueries": 50,
+    "limit": 60,
+    "waitTimeSeconds": 0
+  }
+}</code></pre>
+
+<table>
+  <tr><th>字段</th><th>含义</th></tr>
+  <tr><td><code>remainingQueries</code></td><td>当前模型/档位下剩余可发起的请求数</td></tr>
+  <tr><td><code>highEffortRateLimits</code></td><td>高努力（深度推理）请求的独立限流桶：<code>remainingQueries</code> 剩余数、<code>limit</code> 窗口内总数、<code>waitTimeSeconds</code> 距重置的等待秒数</td></tr>
+  <tr><td><code>lowEffortRateLimits</code></td><td>低努力（快速响应）请求的独立限流桶，字段同上</td></tr>
+  <tr><td><code>resetAt</code>/<code>waitTimeSeconds</code></td><td>部分变体携带重置时间戳或等待秒数，用于前端倒计时</td></tr>
+</table>
+
+<p>前端拿到 <code>remainingQueries</code> 后在输入框附近显示「剩余 X 次查询」，或用 <code>waitTimeSeconds</code> 显示「X 秒后可继续」。</p>
+
+<h3>2.3 已知的 modelName / requestKind 取值（来自逆向脚本）</h3>
+<table>
+  <tr><th>枚举</th><th>说明</th></tr>
+  <tr><td><code>grok-4</code> / <code>grok-4-fast</code> / <code>grok-4-mini</code></td><td>聊天主模型（慢/快/轻量）</td></tr>
+  <tr><td><code>grok-code</code></td><td>代码模型（Coding）</td></tr>
+  <tr><td><code>grok-imagine</code></td><td>图像生成（Imagine）</td></tr>
+  <tr><td><code>grok-voice</code></td><td>语音会话</td></tr>
+  <tr><td><code>SUPER_GROK</code></td><td>SuperGrok 订阅档位（含 Plus / Heavy 的请求渠道标识）</td></tr>
+  <tr><td><code>STANDARD_GROK</code></td><td>免费档</td></tr>
+  <tr><td><code>TEMPORARY_SUPER_GROK</code></td><td>临时 SuperGrok（试用/赠送）</td></tr>
+</table>
+
+<h3>2.4 图像额度（Imagine）</h3>
+<p>图像生成的额度单独查询：<code>/rest/media/imagine/quota_info</code>，返回用户剩余的图像生成次数及重置信息。与聊天 <code>remainingQueries</code> 是两套独立额度。</p>
+
+<h3>2.5 网页端「设置 → Usage」页面</h3>
+<p>登录 grok.com 后，<code>设置 → Usage</code>（<code>https://grok.com?_s=usage</code>）会展示当前周度/月度的共享用量池进度。该页面数据同样由前端调用内部接口获取（对普通用户即最终查询入口，无需自己写请求）。</p>
+
+<h2 id="cli"><span class="num">03</span>Grok Build CLI（本仓库）—— /usage 与 billing 链路</h2>
+
+<p>本仓库（grok-build）的 CLI 为开发者提供了一个 <strong>官方、带认证、有代码佐证</strong> 的额度查询路径——但它查的是 <strong>Grok Build 编码信用</strong>（一个独立的消费额度，与网页端 SuperGrok 聊天额度不是同一个池）。</p>
+
+<div class="flow">
+  <span class="step">用户输入 <code>/usage</code></span><span class="arr">→</span>
+  <span class="step">ACP 扩展 <code>x.ai/billing</code></span><span class="arr">→</span>
+  <span class="step">GET {cli-chat-proxy}<code>/billing?format=credits</code></span><span class="arr">→</span>
+  <span class="step">后端 <code>GetGrokCreditsConfig</code></span><span class="arr">→</span>
+  <span class="step">CreditBalance 展示</span>
+</div>
+
+<h3>3.1 调用链与认证</h3>
+<p>核心实现在 <code>crates/codegen/xai-grok-shell/src/extensions/billing.rs</code>：</p>
+<pre><code>GET {base}/billing?format=credits
+base = cli-chat-proxy 网关，默认 https://cli-chat-proxy.grok.com/v1
+
+Headers:
+  Authorization: Bearer {access_token}
+  X-XAI-Token-Auth: {GrokComConfig::default().token_header}
+  x-userid: {user_id}
+  x-grok-client-version: {VERSION}
+  X-Client-Mode: {process_client_mode()}</code></pre>
+<p>网关随后转发到后端 <code>GetGrokCreditsConfig</code>。另有 <code>GET {base}/auto-topup-rule</code>（对应 <code>GetAutoTopupRule</code>）查询自动充值规则。</p>
+
+<h3>3.2 响应结构（BillingConfigResponse）</h3>
+<p>源码中的反序列化结构 <code>BillingConfig</code> 同时兼容新旧两种后端返回（<code>GetGrokCreditsConfig</code> 与遗留 <code>GetGrokBuildBillingConfig</code>）：</p>
+<table>
+  <tr><th>字段</th><th>含义</th></tr>
+  <tr><td><code>creditUsagePercent</code></td><td>已用信用占额度百分比（0–100），首选字段</td></tr>
+  <tr><td><code>currentPeriod</code></td><td>当前用量周期：<code>type</code>（如 <code>USAGE_PERIOD_TYPE_WEEKLY</code>）、<code>start</code>/<code>end</code>（RFC3339 时间戳）</td></tr>
+  <tr><td><code>onDemandCap</code> / <code>onDemandUsed</code></td><td>按需（pay-as-you-go）消费上限与已用（美元分值 Cent）</td></tr>
+  <tr><td><code>prepaidBalance</code></td><td>预购（充值）信用余额，>0 表示已购买的额外额度</td></tr>
+  <tr><td><code>isUnifiedBillingUser</code></td><td>是否统一用量池（共享周度/月度池），来自远程配置 <code>unified_consumer_billing_enabled</code></td></tr>
+  <tr><td><code>productUsage</code></td><td>按产品拆分的用量百分比（如 <code>PRODUCT_GROK_BUILD</code>）——当前 CLI 展示面尚未使用</td></tr>
+  <tr><td><code>history</code></td><td>历史周期用量（<code>billingCycle</code>、<code>includedUsed</code>、<code>onDemandUsed</code>、<code>totalUsed</code>）</td></tr>
+  <tr><td><code>monthlyLimit</code> / <code>used</code> / <code>billingPeriodStart/End</code></td><td>遗留字段（旧月度模式），新字段缺失时兜底</td></tr>
+</table>
+<p>金额字段用 <code>{"val": …}</code>（美分）表示；proto3 JSON 会省略 0 值，所以解析时都有 <code>default</code> 兜底。</p>
+
+<h3>3.3 订阅档位与额度耗尽处理</h3>
+<ul>
+  <li><strong>档位检查</strong>：<code>x.ai/auth/check_subscription</code> 返回的 <code>AuthMeta</code> 里带 <code>subscription_tier</code>；<code>is_max_tier()</code> 将小写化/空格转下划线后的档位与 <code>supergrok_heavy</code> 比对，判断是否为最高档（SuperGrok Heavy）。</li>
+  <li><strong>耗尽判定</strong>：<code>is_credit_limit_error()</code> 识别 402（必为额度/消费阻断）、403 + 正文含 "run out of credits"（遗留文案）、429 里的 "You ran out of credits" 等。</li>
+  <li><strong>升级/充值弹窗</strong>：<code>open_credit_limit_upsell()</code> 依据用量池模式（统一池 → 建议买预购信用；遗留 PAYG → 建议开启/调高按需上限）弹 Q&amp;A 模态框；最高档用户推内联卡片并跳 <code>https://grok.com?_s=usage</code> 管理用量。</li>
+  <li><strong>自动轮询</strong>：用量 ≥ 99% 时开启高频轮询，并在耗尽时自动重查订阅（用户升级后自动重试暂存的 prompt）。</li>
+</ul>
+
+<h3>3.4 涉及源码文件（均可核验）</h3>
+<table>
+  <tr><th>文件</th><th>职责</th></tr>
+  <tr><td><code>crates/codegen/xai-grok-shell/src/extensions/billing.rs</code></td><td>billing / auto-topup 扩展实现，请求与解析</td></tr>
+  <tr><td><code>crates/codegen/xai-grok-pager/src/views/credit_bar.rs</code></td><td>CreditBalance 数据获取与展示（信用条）</td></tr>
+  <tr><td><code>crates/codegen/xai-grok-pager/src/app/dispatch/billing.rs</code></td><td>档位判断、升级/充值弹窗、PAYG/统一池文案</td></tr>
+  <tr><td><code>crates/codegen/xai-grok-shell/src/extensions/auth.rs</code></td><td>check_subscription 订阅档位检查</td></tr>
+  <tr><td><code>crates/codegen/xai-grok-tools/src/…/monitor/rate_limiter.rs</code></td><td>监视器工具自身请求的限流（TokenBucket），与账户额度无关</td></tr>
+  <tr><td><code>crates/common/xai-tool-runtime/src/error.rs</code></td><td>usage_pool_exhausted / usage_limit_reached / rate_limited 错误类型</td></tr>
+</table>
+
+<h2 id="api"><span class="num">04</span>api.x.ai 开发者 API 对照（相互独立）</h2>
+
+<p>如果你有 api.x.ai 开发者账号，那是另一套额度体系，与 SuperGrok 订阅互不相通：</p>
+<ul>
+  <li><strong>查询入口</strong>：api.x.ai 控制台的 Rate Limits 页面展示当前 API Key 的 RPM（每分钟请求数）/TPM（每分钟 Token 数）及用量；数据也可通过 REST 接口获取（官方公开）。</li>
+  <li><strong>响应中的用量</strong>：API 响应体带 <code>usage</code> 对象（<code>prompt_tokens</code>、<code>completion_tokens</code>、<code>total_tokens</code>），用于按请求计量，但不等同于订阅「剩余次数」。</li>
+  <li><strong>付费</strong>：开发者 API 按 token 计费，可在控制台查看余额与消费；SuperGrok 是订阅制（按周/月重置的包含用量 + 可预购信用），两者额度模型不同。</li>
+</ul>
+
+<h2 id="sources"><span class="num">05</span>来源与验证状态</h2>
+
+<div class="callout ok"><span class="ttl">✅ 已直接核验（本仓库源码）</span>
+CLI 的 billing 链路（3.1–3.4）逐字段对照了 <code>xai-grok-shell/src/extensions/billing.rs</code> 等源码，含请求头、响应结构、错误处理与档位判断，属于仓库内第一手资料。
+</div>
+
+<div class="callout ok"><span class="ttl">✅ 已核验（公开逆向脚本全文）</span>
+网页端接口（02 节）的请求/响应结构来自 GreasyFork「Grok Rate Limit Display」与 GitHub「nisc/grok-userscripts」两个脚本的完整源码，字段名与用途一致。
+</div>
+
+<div class="callout err"><span class="ttl">⚠ 未实际调用线上接口</span>
+本次未在真实登录态下调用 <code>/rest/rate-limits</code> 或 <code>/billing</code>（环境无可用浏览器/登录凭据），因此线上返回的实时字段以脚本与源码为准，未做端到端实测。接口可能随前端改版而变化。
+</div>
+
+<p><span class="pill verify">已验证：源码</span><span class="pill verify">已验证：逆向脚本全文</span><span class="pill unverify">未验证：线上实时调用</span><span class="pill">非官方接口，有失效风险</span></p>
+
+<footer>
+  本报告由 Grok Build 生成 · 资料截至 2026-08-22。网页端接口信息源自社区逆向项目，仅供技术研究。
+</footer>
+
+</div>
+</body>
+</html>
