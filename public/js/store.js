@@ -356,6 +356,16 @@
     var d = draft || {};
     var actionLabel = editId ? t('保存修改') : t('提交插件');
     return '<div class="store-form">' +
+      '<div class="store-form__upload" style="border:1px dashed var(--border,#d1d5db);border-radius:10px;padding:12px 14px;margin-bottom:14px;">' +
+        '<div style="font-size:13px;font-weight:600;margin-bottom:8px;">🧩 ' + esc(t('从 plugin.json 快速填充')) + '</div>' +
+        '<div class="form-group">' +
+          '<label>' + esc(t('选择 plugin.json 文件')) + '</label>' +
+          '<input type="file" id="manifestFile" accept=".json,application/json">' +
+          '<div class="form-help">' + esc(t('或粘贴 JSON 内容')) + '</div>' +
+          '<textarea id="manifestJson" style="min-height:70px;" placeholder="{\&quot;name\&quot;: \&quot;...\&quot;}"></textarea>' +
+        '</div>' +
+        '<button type="button" class="btn btn-sm btn-secondary" id="manifestApply">' + esc(t('解析并填充')) + '</button>' +
+      '</div>' +
       '<div class="form-group"><label>' + esc(t('插件 id（唯一，英文/数字/._-）')) + '</label><input type="text" id="f_id" value="' + esc(d.id || '') + '" ' + (editId ? 'disabled' : '') + '><div class="form-help">' + esc(t('3–128 字符，仅字母数字与 ._-')) + '</div></div>' +
       '<div class="form-group"><label>' + esc(t('插件名称')) + '</label><input type="text" id="f_name" value="' + esc(d.name || '') + '"></div>' +
       '<div class="form-group"><label>' + esc(t('版本号')) + '</label><input type="text" id="f_version" value="' + esc(d.version || '') + '"></div>' +
@@ -370,6 +380,46 @@
       '<div class="form-group"><label>' + esc(t('权限（逗号分隔，如 gateway:observe, themes:register）')) + '</label><input type="text" id="f_permissions" value="' + esc((d.permissions || []).join(',')) + '"></div>' +
       '<div class="form-actions"><button class="btn btn-primary" id="submitBtn">' + esc(actionLabel) + '</button><a class="btn btn-secondary" href="/store">' + esc(t('取消')) + '</a></div>' +
     '</div>';
+  }
+
+  // 从 plugin.json 解析出可映射字段并填充到表单；返回错误文案（null 表示成功）
+  function applyManifestToForm(text, editId) {
+    var obj = null;
+    try { obj = JSON.parse(text); } catch (e) { return t('JSON 格式无效，请检查后重试'); }
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return t('解析失败：必须是 JSON 对象');
+    function setv(id, v) {
+      var el = document.getElementById(id);
+      if (el) el.value = (v == null ? '' : String(v));
+    }
+    if (!editId) setv('f_id', obj.id);
+    setv('f_name', obj.name);
+    setv('f_version', obj.version);
+    setv('f_author', obj.author);
+    setv('f_description', obj.description);
+    if (Array.isArray(obj.permissions) || typeof obj.permissions === 'string') setv('f_permissions', Array.isArray(obj.permissions) ? obj.permissions.join(',') : obj.permissions);
+    if (Array.isArray(obj.tags) || typeof obj.tags === 'string') setv('f_tags', Array.isArray(obj.tags) ? obj.tags.join(',') : obj.tags);
+    return null;
+  }
+
+  function wireManifestUpload(editId) {
+    var fileEl = document.getElementById('manifestFile');
+    var textEl = document.getElementById('manifestJson');
+    var btn = document.getElementById('manifestApply');
+    if (!fileEl || !textEl || !btn) return;
+    fileEl.addEventListener('change', function () {
+      var f = fileEl.files && fileEl.files[0];
+      if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () { textEl.value = String(rd.result || ''); };
+      rd.readAsText(f);
+    });
+    btn.addEventListener('click', function () {
+      var text = (textEl.value || '').trim();
+      if (!text) { setBanner('warn', t('请先选择或粘贴 plugin.json')); return; }
+      var err = applyManifestToForm(text, editId);
+      if (err) { setBanner('err', err); return; }
+      setBanner('ok', t('已从 plugin.json 填充字段，请补充下载地址等商店信息'));
+    });
   }
 
   function viewSubmit(editId) {
@@ -390,6 +440,7 @@
       if (!editId) {
         viewBox.innerHTML = html + submitFormHtml();
         wireSubmitForm();
+        wireManifestUpload();
         return;
       }
       api('/plugins/' + encodeURIComponent(editId)).then(function (data) {
@@ -397,6 +448,7 @@
         var draft = p.pendingUpdate || p;
         viewBox.innerHTML = html + submitFormHtml(editId, draft);
         wireSubmitForm(editId, p);
+        wireManifestUpload(editId);
       }).catch(function (e) {
         viewBox.innerHTML = '<div class="store-error">' + esc(e.message) + '</div>';
       });
