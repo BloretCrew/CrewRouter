@@ -1,0 +1,11 @@
+{
+  "id": "example-theme",
+  "name": "示例主题 Ocean",
+  "version": "1.0.0",
+  "author": "CrewRouter",
+  "description": "演示主题插件：为 CrewRouter 提供「Ocean 海洋蓝」配色。仅覆盖界面样式变量，不改动任何功能行为。",
+  "permissions": ["themes:register"],
+  "themes": [
+    { "id": "ocean", "name": "Ocean 海洋蓝", "entry": "frontend/ocean.css" }
+  ]
+}

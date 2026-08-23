@@ -257,23 +257,38 @@ async function listAll() {
 
 /**
  * 前端运行时清单：仅已启用且声明 pages:register 权限的插件。
- * pages/slots 原样下发（带 area 字段），由前端按所在区域自行过滤。
+ * pages/slots 原样下发（带 area 字段），由前端按所在区域自行过滤；
+ * themes 仅对声明 themes:register 权限的插件下发，id 为全局唯一的 `<pluginId>/<themeId>`。
  */
 function getRuntimeManifest() {
   const out = [];
   for (const [id, p] of loaded.entries()) {
     const perms = p.manifest.permissions || [];
-    if (!perms.includes('pages:register')) continue;
+    const themes = perms.includes('themes:register')
+      ? (p.manifest.themes || []).map(th => ({
+          id: `${id}/${th.id}`,
+          name: th.name || th.id,
+          url: `/plugins/${id}/${String(th.entry).replace(/^\/+/, '')}?v=${encodeURIComponent(p.manifest.version || '')}`,
+        }))
+      : [];
     out.push({
       id,
       name: p.manifest.name,
       version: p.manifest.version || '',
       pages: (p.manifest.pages || []),
       slots: (p.manifest.slots || []),
+      themes,
       assetsBase: `/plugins/${id}`,
     });
   }
   return { plugins: out };
+}
+
+/**
+ * 当前可用主题扁平列表（跨插件汇总）
+ */
+function getAvailableThemes() {
+  return getRuntimeManifest().plugins.flatMap(p => p.themes || []);
 }
 
 /**
@@ -302,6 +317,7 @@ module.exports = {
   setConfig,
   listAll,
   getRuntimeManifest,
+  getAvailableThemes,
   resetErrors,
   exposeHandler,
   findHandler,

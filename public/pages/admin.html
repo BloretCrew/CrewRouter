@@ -1121,6 +1121,14 @@
 
       <!-- 系统设置页面 -->
       <div id="adminSettingsPage" class="page">
+        <!-- 默认主题（插件主题，plugin-runtime.js 渲染选择器） -->
+        <div class="content-section" style="margin-bottom:24px;">
+          <h2><span data-i18n="默认主题">默认主题</span></h2>
+          <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="为全体用户设置默认外观；用户可在控制台「用户设置 → 界面主题」中自行覆盖。">为全体用户设置默认外观；用户可在控制台「用户设置 → 界面主题」中自行覆盖。</span></p>
+          <div style="padding:16px;border:1px solid var(--border);border-radius:12px;">
+            <div id="pluginDefaultThemePicker"><div style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="暂无可选主题">暂无可选主题</span></div></div>
+          </div>
+        </div>
         <!-- 版本与自动更新 -->
         <div class="content-section" id="updateSection">
           <h2><span data-i18n="版本与更新">版本与更新</span></h2>

@@ -21,6 +21,10 @@
     area: null,            // 'console' | 'admin'
     pages: [],             // { pluginId, pageId, title, render }
     slots: [],             // { pluginId, page, position, render }
+    themes: [],            // [{ id, name, url, pluginId }]
+    userThemeId: '',       // 用户个人选择（'' = 跟随默认）
+    defaultThemeId: '',    // 站点默认主题
+    isAdminUser: false,
     failedScripts: new Set(),
   };
 
@@ -197,12 +201,140 @@
           renderPluginsAdmin(document.querySelector('[data-plugin-admin-manage]'));
           return;
         }
+        // 设置页渲染主题选择器
+        if (page === 'settings') renderUserThemePicker(document.getElementById('pluginThemePicker'));
+        if (page === 'adminSettings') renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
         // 常规页面激活后填充插槽
         await renderSlotsFor(page);
       } catch (e) { console.warn('[plugins] 导航后处理失败', e); }
     };
     appObj.__pluginPatched = true;
   }
+
+  // ---------- 主题 ----------
+
+  function findTheme(id) {
+    return state.themes.find(t => t.id === id) || null;
+  }
+
+  function applyThemeStyle(themeId) {
+    const el = document.getElementById('crPluginThemeStyle');
+    const theme = themeId ? findTheme(themeId) : null;
+    if (!theme) {
+      if (el) el.remove();
+      return;
+    }
+    // 仅注入样式表，不改任何行为；重复应用先移除旧节点
+    if (el && el.href === theme.url) return;
+    if (el) el.remove();
+    const link = document.createElement('link');
+    link.id = 'crPluginThemeStyle';
+    link.rel = 'stylesheet';
+    link.href = theme.url;
+    document.head.appendChild(link);
+  }
+
+  async function initThemes() {
+    try {
+      const data = await helpers.fetchJSON('/api/plugins/user-theme');
+      state.userThemeId = data.themeId || '';
+      state.defaultThemeId = data.defaultThemeId || '';
+      applyThemeStyle(data.effective || '');
+      renderThemePickers();
+    } catch { /* 未登录或后端未就绪时静默 */ }
+  }
+
+  function themeOptionsHtml(selectedId, includeFollowOption, followLabel) {
+    const opts = [];
+    if (includeFollowOption) {
+      opts.push(`<option value="" ${!selectedId ? 'selected' : ''}>${esc(t('内置默认主题'))}</option>`);
+    }
+    for (const th of state.themes) {
+      opts.push(`<option value="${esc(th.id)}" ${selectedId === th.id ? 'selected' : ''}>${esc(th.name)}</option>`);
+    }
+    return opts.join('');
+  }
+
+  function unavailableBadge(selectedId) {
+    if (!selectedId || findTheme(selectedId)) return '';
+    return `<span style="font-size:12px;color:var(--destructive);margin-left:8px;">${esc(t('该主题的插件已停用，当前显示为默认样式'))}
+      <button class="btn btn-ghost btn-sm" style="padding:2px 8px;" onclick="window.CrewThemes.resetStale()">${esc(t('重置'))}</button></span>`;
+  }
+
+  function renderUserThemePicker(container) {
+    if (!container) return;
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <select id="pluginThemeSelect" class="select" style="min-width:220px;">${themeOptionsHtml(state.userThemeId, true)}</select>
+        <span id="pluginThemeStatus" style="font-size:13px;color:var(--muted-foreground);"></span>
+      </div>
+      <div style="margin-top:6px;">${unavailableBadge(state.userThemeId)}</div>
+    `;
+    const sel = container.querySelector('#pluginThemeSelect');
+    sel.addEventListener('change', async () => {
+      const v = sel.value;
+      try {
+        await helpers.fetchJSON('/api/plugins/user-theme', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ themeId: v }),
+        });
+        state.userThemeId = v;
+        applyThemeStyle(v || state.defaultThemeId || '');
+        const st = container.querySelector('#pluginThemeStatus');
+        if (st) st.textContent = t('已保存并生效');
+      } catch (e) {
+        const st = container.querySelector('#pluginThemeStatus');
+        if (st) st.textContent = e.message;
+      }
+    });
+  }
+
+  function renderDefaultThemePicker(container) {
+    if (!container) return;
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <select id="pluginDefaultThemeSelect" class="select" style="min-width:220px;">${themeOptionsHtml(state.defaultThemeId, true)}</select>
+        <span id="pluginDefaultThemeStatus" style="font-size:13px;color:var(--muted-foreground);"></span>
+      </div>
+      <p style="margin:6px 0 0;font-size:12px;color:var(--muted-foreground);">${esc(t('对未自行选择主题的用户生效；用户可在控制台「用户设置 → 界面主题」中覆盖。'))}</p>
+    `;
+    const sel = container.querySelector('#pluginDefaultThemeSelect');
+    sel.addEventListener('change', async () => {
+      const v = sel.value;
+      try {
+        await helpers.fetchJSON('/api/admin/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ default_theme: v }),
+        });
+        state.defaultThemeId = v;
+        const st = container.querySelector('#pluginDefaultThemeStatus');
+        if (st) st.textContent = t('已保存，刷新后对所有用户生效');
+      } catch (e) {
+        const st = container.querySelector('#pluginDefaultThemeStatus');
+        if (st) st.textContent = e.message;
+      }
+    });
+  }
+
+  function renderThemePickers() {
+    renderUserThemePicker(document.getElementById('pluginThemePicker'));
+    renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
+  }
+
+  window.CrewThemes = {
+    list: () => [...state.themes],
+    effective: () => state.userThemeId || state.defaultThemeId || '',
+    apply: (id) => { state.userThemeId = id; applyThemeStyle(id || state.defaultThemeId || ''); },
+    refreshPickers: renderThemePickers,
+    resetStale(area, themeId) {
+      // 清掉指向已停用插件的无效选择
+      this.apply('');
+      fetch('/api/plugins/user-theme', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ themeId: '' }) })
+        .then(() => renderThemePickers()).catch(() => {});
+    },
+  };
 
   // ---------- 初始化 ----------
 
@@ -234,6 +366,9 @@
 
     state.area = area;
     for (const p of plugins) {
+      for (const th of p.themes || []) {
+        state.themes.push({ id: th.id, name: th.name, url: th.url, pluginId: p.id });
+      }
       for (const pg of p.pages || []) {
         if ((pg.area || 'console') !== area) continue;
         const entry = pg.entry ? `${p.assetsBase}/${String(pg.entry).replace(/^\/+/, '')}` : null;
@@ -260,12 +395,19 @@
 
     state.ready = true;
 
+    // 主题：拉取用户/默认选择并应用（含设置页选择器首渲）
+    initThemes();
+
     // 初始页面若是插件页/常规页，恢复一次渲染（hash 直达场景）
     const cur = currentPage();
     if (cur) {
       if (cur.startsWith('plugin_')) await renderPluginPageIfAny(cur);
       else if (cur === 'adminPlugins') renderPluginsAdmin(document.querySelector('[data-plugin-admin-manage]'));
-      else await renderSlotsFor(cur);
+      else {
+        if (cur === 'settings') renderUserThemePicker(document.getElementById('pluginThemePicker'));
+        if (cur === 'adminSettings') renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
+        await renderSlotsFor(cur);
+      }
     }
   }
 

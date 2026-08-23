@@ -2295,5 +2295,14 @@
   "卸载": "Uninstall",
   "插件页面加载失败": "Failed to load plugin page",
   "暂无插件。将插件目录放入 plugins/ 后重启服务即可在此看到。": "No plugins yet. Put a plugin directory under plugins/ and restart the server.",
-  "安装方法：将插件目录放入服务器 plugins/ 目录，重启服务后在此启用。": "Install: place the plugin directory under plugins/ on the server, restart, then enable it here."
+  "安装方法：将插件目录放入服务器 plugins/ 目录，重启服务后在此启用。": "Install: place the plugin directory under plugins/ on the server, restart, then enable it here.",
+  "界面主题": "Appearance Theme",
+  "默认主题": "Default Theme",
+  "内置默认主题": "Built-in default",
+  "暂无可选主题": "No themes available",
+  "该主题的插件已停用，当前显示为默认样式": "The plugin for this theme is disabled; default style is shown.",
+  "已保存并生效": "Saved and applied",
+  "已保存，刷新后对所有用户生效": "Saved. Refresh to apply to all users.",
+  "选择管理员安装的主题插件提供的外观；仅改变界面样式。": "Choose an appearance provided by admin-installed theme plugins. Styles only.",
+  "为全体用户设置默认外观；用户可在控制台「用户设置 → 界面主题」中自行覆盖。": "Set the default appearance for all users. Each user can override it in Console → User Settings → Appearance Theme."
 }

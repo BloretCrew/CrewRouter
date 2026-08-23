@@ -2066,6 +2066,20 @@ async function ensurePluginsTables() {
   } catch (err) {
     Logger.warn(`[迁移] usage_records.plugin_meta 列添加跳过: ${err.message}`);
   }
+
+  // 用户个人主题选择（'' 表示跟随站点默认）
+  try {
+    const colCheck = await pool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'users' AND column_name = 'theme_id'
+    `);
+    if (colCheck.rows.length === 0) {
+      await pool.query(`ALTER TABLE users ADD COLUMN theme_id VARCHAR(100) DEFAULT ''`);
+      Logger.info('[迁移] 已为 users 表添加 theme_id 列');
+    }
+  } catch (err) {
+    Logger.warn(`[迁移] users.theme_id 列添加跳过: ${err.message}`);
+  }
 }
 
 const app = express();

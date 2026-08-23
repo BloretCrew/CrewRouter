@@ -107,6 +107,50 @@ function createPluginsRoutes() {
     res.json(registry().getRuntimeManifest());
   });
 
+  // 用户主题：返回个人选择、站点默认与可用列表；effective 为服务端解析后的生效主题
+  publicRouter.get('/user-theme', requireAuth, async (req, res) => {
+    try {
+      const uid = req.session.user.id;
+      const [u, d] = await Promise.all([
+        pool.query('SELECT theme_id FROM users WHERE id = $1', [uid]),
+        pool.query("SELECT value FROM settings WHERE key = 'default_theme'"),
+      ]);
+      const available = registry().getAvailableThemes();
+      const validIds = new Set(available.map(t => t.id));
+      let themeId = u.rows[0]?.theme_id || '';
+      if (themeId && !validIds.has(themeId)) themeId = ''; // 所选主题插件已停用则视为未设置
+      let defaultThemeId = '';
+      try { defaultThemeId = d.rows[0]?.value || ''; } catch { defaultThemeId = ''; }
+      if (defaultThemeId && !validIds.has(defaultThemeId)) defaultThemeId = '';
+      res.json({
+        themeId,
+        defaultThemeId,
+        effective: themeId || defaultThemeId || '',
+        available,
+      });
+    } catch (err) {
+      Logger.error(`[plugins-api] 读取用户主题失败: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 保存当前用户的主题选择（'' 表示跟随站点默认）
+  publicRouter.put('/user-theme', requireAuth, async (req, res) => {
+    try {
+      const themeId = String(req.body?.themeId ?? '');
+      if (themeId !== '') {
+        const valid = registry().getAvailableThemes().some(t => t.id === themeId);
+        if (!valid) return res.status(400).json({ error: '主题不存在或对应插件未启用' });
+      }
+      await pool.query('UPDATE users SET theme_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+        [req.session.user.id, themeId]);
+      res.json({ ok: true, themeId });
+    } catch (err) {
+      Logger.error(`[plugins-api] 保存用户主题失败: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // 插件自有 API：/api/plugins/:pluginId/*
   publicRouter.all('/:pluginId/*', async (req, res) => {
     try {
