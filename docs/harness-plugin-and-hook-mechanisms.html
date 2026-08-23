@@ -169,6 +169,45 @@ hook_event_name: 'PreToolUse', tool_name, tool_input</code></pre>
 <p class="evi">要点：PreToolUse hook 的 deny/allow 是<strong>权威决策</strong>（等价于权限系统一票），不是建议——这与多数 harness 把 hook 当「通知」有本质区别。</p>
 </div>
 
+<h3>2.4 与 MCP 的关系（问题 4）：两套机制，插件可作为 MCP 的「打包外壳」</h3>
+<div class="card">
+<ul>
+  <li><strong>独立配置面：</strong>MCP server 可不经插件直接配置——项目根 <code>.mcp.json</code>（需用户逐个批准/拒绝，<code>src/utils/settings/types.ts:406</code> approvedMcpServers 字段；<code>main.tsx:3953</code> 提供 <code>mcp reset-project-choices</code> 重置审批），或 <code>claude mcp add</code> CLI（<code>main.tsx:3924-3930</code>）。</li>
+  <li><strong>插件内嵌 MCP：</strong>插件清单含 <code>PluginManifestMcpServerSchema</code>（<code>schemas.ts:893</code>），插件可直接自带 MCP server；甚至支持 <strong>MCPB/DXT 桌面扩展包</strong>格式——下载、解压、把 DXT manifest 转成 MCP 配置，并支持「需用户配置」状态机与 per-plugin 存储变量替换（<code>src/utils/plugins/mcpPluginIntegration.ts:30-70</code>、<code>pluginOptionsStorage.ts</code>）。</li>
+  <li><strong>共存命名空间：</strong><code>main.tsx:2791</code> 注释明确区分 <code>plugin:*</code> 键与手工 <code>.mcp.json</code> 条目——两来源在同一 server 注册表中以命名空间并存。</li>
+</ul>
+<p><strong>定位结论：</strong>MCP 是「工具供给协议」，Plugins 是「分发与生命周期框架」；插件把 commands/agents/skills/hooks/MCP servers 打成一个可版本化、可市场分发的单元。二者正交且可嵌套。</p>
+</div>
+
+<h3>2.5 沙箱与权限模型（问题 5）：声明式组件零代码执行，hook 全权运行，靠准入治理兜底</h3>
+<div class="card">
+<table>
+<tr><th>成分</th><th>运行方式</th><th>隔离手段</th></tr>
+<tr><td>插件本体（commands/agents/skills/output styles）</td><td>Markdown/JSON 声明文件，由主进程解析吸收，<strong>不含可执行代码</strong></td><td>天然无需沙箱；风险在提示内容而非代码</td></tr>
+<tr><td>Hooks（command 型）</td><td>spawn shell 进程，<strong>以用户完整权限运行</strong></td><td>无内置隔离（推测：官方立场是 settings 属于用户本机信任域）；治理靠企业管理 <code>managedPlugins.ts</code>/<code>pluginPolicy.ts</code>/<code>pluginBlocklist.ts</code> 准入控制</td></tr>
+<tr><td>Hooks（http 型）</td><td>主进程外发 HTTP POST</td><td>SSRF 防护（<code>src/utils/hooks/ssrfGuard.ts</code>）+ header 环境变量插值须显式 <code>allowedEnvVars</code> 白名单（<code>schemas/hooks.ts:106-119</code>）</td></tr>
+<tr><td>Bash 工具沙箱设置</td><td>OS 级沙箱（network/filesystem/excludedCommands 等键，<code>settings.ts:579-591</code>）</td><td class="evi">注意：这是约束<strong>模型的 Bash 工具</strong>的，并非约束 hooks 本身</td></tr>
+<tr><td>PreToolUse hook 决策权</td><td>可返回 allow/deny/ask 直接参与权限判定（<code>utils/hooks.ts:345</code>）</td><td>hook 即权威，因此 hook 配置本身的写入权就是最高权限</td></tr>
+</table>
+<p class="evi">小结：Claude Code 的安全模型是「配置即信任」——能写你 settings.json/hooks 的东西就能全权执行命令；它选择的防线是分发侧治理（官方市场校验、仿冒名拦截、blocklist、企业策略）而非运行时沙箱。</p>
+</div>
+
+<h3>2.6 与 CrewRouter 插件系统的对比借鉴（问题 6）</h3>
+<div class="card">
+<p>CrewRouter 现状参照：<code>server/plugins/host.js:8-17</code>（vm 沙箱 + permissions 数组：<code>storage/network/gateway:modify/pages:register/routes:register/provider:register/apikey:modify/billing:modify/cron:register</code>）、<code>server/plugins/host.js:24-29</code> 网关钩子五件套（<code>gateway:requestReceived/beforeUpstream/upstreamResponse/responseChunk/finalResponse</code>）、<code>server/plugins/hooks.js:9</code> 钩子管线（payload 原地改/返回替换、priority 排序、熔断摘除、零订阅者旁路）。</p>
+<h4>值得借鉴的设计</h4>
+<ol>
+  <li><strong>权威阻断 + 理由回灌闭环：</strong>Claude Code 的 PreToolUse deny 不是「记录一下」，而是替权限系统做决定，且阻断原因会作为 feedback 回到模型上下文让它自我修正；PostToolUse 更有 <code>preventContinuation</code> 硬终止（<code>toolHooks.ts:113-130</code>）。对照我们的 <code>gateway:requestReceived</code> 目前只能改 payload：建议引入显式 <code>{action:'block', reason}</code> 决策，reason 可选择回注为对客户端可见的错误体或对上游的替代请求。</li>
+  <li><strong>Hook 多形态（尤其 prompt/http 型）：</strong>LLM-as-judge 的 prompt hook（<code>schemas/hooks.ts:62-91</code>）意味着「策略检查」不必写代码，一段 prompt 就是一个合规审查器；http hook 则让外部审计服务零侵入接入。我们可在网关钩子旁增加 <code>{type:'prompt'}</code>/<code>{type:'http'}</code> 的轻量 hook 声明通道（跑在 host 侧、受同一权限门控）。</li>
+  <li><strong>预过滤 <code>if</code> 条件：</strong>用规则语法（<code>"Bash(git *)"</code>）在 spawn 前过滤（<code>schemas/hooks.ts:17-24</code>），与我们 <code>hasSubscribers()</code> 零开销旁路同思路但更细——可下放到 payload 维度（如仅当 provider/model 匹配才进入管线）。</li>
+  <li><strong>once/async/asyncRewake：</strong>后台化 hook + 完成后唤醒（<code>utils/hooks.ts:202-212</code>）对网关场景的映射是「响应结束后异步任务再主动推送/记账」，适合计费调整、事后审计类插件。</li>
+  <li><strong>additionalContext/systemMessage 注入：</strong>hook 可向模型上下文注入文本——对应到我们，可让 <code>beforeUpstream</code> 支持声明式追加 system prompt 片段，而不仅是改写现有字段。</li>
+  <li><strong>manifest 即文档的能力面声明：</strong>一张清单列全 commands/agents/skills/hooks/mcpServers/lspServers/settings/userConfig（<code>schemas.ts:884-898</code>），安装前即可静态审查插件能干什么。我们的 plugin.json 已有 permissions 数组，方向一致；可补「声明式组件段」（如页面插槽之外的 cron 已有），并让商店展示能力摘要。</li>
+</ol>
+<h4>我们已有、Claude Code 反而没有的</h4>
+<p><strong>运行时硬隔离</strong>：vm 沙箱 + 每钩子 2s 超时 + ctx.fetch 10s 超时 + SSRF 校验 + 连续错误熔断自动摘除（<code>host.js:41-46</code>、<code>hooks.js:11-14</code>）——Claude Code 的 shell hook 完全没有这些。我们的弱点是插件必须写成 JS 模块、门槛高于「一行命令一个 hook」；上述第 2 点的多形态声明正好补这个短板。</p>
+</div>
+
 <!-- APPEND -->
 
 </main>
