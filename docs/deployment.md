@@ -67,8 +67,8 @@ Docker 镜像会从容器仓库拉取，无需手动管理程序文件。
 
 | 项目 | 说明 |
 |------|------|
-| 版本接口 | `https://router.crantai.com/api/version` |
-| 更新包 | `https://router.crantai.com/api/updates/latest` |
+| 版本接口 | `https://crewrouter.bloret.net/api/version` |
+| 更新包 | `https://crewrouter.bloret.net/api/updates/latest` |
 | 保留文件 | `config.json`、`node_modules`（依赖变更时会自动 `npm install`）、数据库 |
 | Docker | **不支持**容器内一键替换；请拉取新镜像后 `docker compose up -d` |
 | 环境变量 | `CR_UPDATE_VERSION_URL` / `CR_UPDATE_PACKAGE_URL` 可覆盖官方地址；`CR_DISABLE_AUTO_UPDATE=1` 禁用应用更新 |

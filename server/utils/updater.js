@@ -16,9 +16,9 @@ const config = require('../config-loader');
 const execFileAsync = promisify(execFile);
 
 const UPDATE_VERSION_URL =
-  process.env.CR_UPDATE_VERSION_URL || 'https://router.crantai.com/api/version';
+  process.env.CR_UPDATE_VERSION_URL || 'https://crewrouter.bloret.net/api/version';
 const UPDATE_PACKAGE_URL =
-  process.env.CR_UPDATE_PACKAGE_URL || 'https://router.crantai.com/api/updates/latest';
+  process.env.CR_UPDATE_PACKAGE_URL || 'https://crewrouter.bloret.net/api/updates/latest';
 
 /** 安装时允许覆盖的顶层文件/目录（相对 payload 根） */
 const OVERWRITE_ENTRIES = [

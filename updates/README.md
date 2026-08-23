@@ -5,7 +5,7 @@
 - `GET /api/version` — 返回当前 `package.json` 版本
 - `GET /api/updates/latest` — 下载 `latest.zip`
 
-客户实例会从官方源（默认 `https://router.crantai.com`）检查版本并一键更新。
+客户实例会从官方源（默认 `https://crewrouter.bloret.net`）检查版本并一键更新。
 
 ## 生成 latest.zip
 
