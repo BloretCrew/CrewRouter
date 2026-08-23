@@ -1068,6 +1068,9 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
       COALESCE(NULLIF(mdl.name, ''), '未知模型') AS model_name,
       u.provider_id,
       COALESCE(NULLIF(p.name, ''), '未知供应商') AS provider_name,
+      COALESCE((
+        SELECT key FROM jsonb_object_keys(COALESCE(u.plugin_meta, '{}'::jsonb)) AS key LIMIT 1
+      ), '__none__') AS plugin_dim,
       COUNT(*)::int AS requests,
       COALESCE(SUM(u.tokens_used), 0)::bigint AS tokens,
       COALESCE(SUM(u.cost), 0)::numeric AS cost,
@@ -1077,7 +1080,10 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
       GROUP BY u.user_id, usr.username, usr.team_id, t.name, usr.group_id, ug.name,
         COALESCE(NULLIF(TRIM(uma.workspace_path), ''), '__unknown__'),
         COALESCE(NULLIF(u.request_source, ''), 'unknown'), u.model_id,
-        COALESCE(NULLIF(mdl.name, ''), '未知模型'), u.provider_id, COALESCE(NULLIF(p.name, ''), '未知供应商')
+        COALESCE(NULLIF(mdl.name, ''), '未知模型'), u.provider_id, COALESCE(NULLIF(p.name, ''), '未知供应商'),
+        COALESCE((
+          SELECT key FROM jsonb_object_keys(COALESCE(u.plugin_meta, '{}'::jsonb)) AS key LIMIT 1
+        ), '__none__')
       ORDER BY requests DESC LIMIT 500`, params);
     const summary = await pool.query(`SELECT COUNT(*)::int AS requests, COALESCE(SUM(u.tokens_used), 0)::bigint AS tokens,
       COALESCE(SUM(u.cost), 0)::numeric AS cost, AVG(u.latency_ms)::numeric AS avg_latency,
@@ -1133,7 +1139,8 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
         projects: aggregate('workspace_path'),
         models: aggregate('model_id').map(row => ({ ...row, name: row.name || '未知模型' })),
         providers: aggregate('provider_id').map(row => ({ ...row, name: row.name || '未知供应商' })),
-        sources: aggregate('request_source').map(row => ({ ...row, name: sourceLabel(row.name) || '未知客户端' }))
+        sources: aggregate('request_source').map(row => ({ ...row, name: sourceLabel(row.name) || '未知客户端' })),
+        plugins: aggregate('plugin_dim').filter(row => row.id !== '__none__').map(row => ({ ...row, name: row.name || row.id }))
       },
       relationships: {
         user_model: relation('user_id', 'model_id'),

@@ -35,7 +35,7 @@ const {
   isHarnessSource,
   normalizeRequestSource,
 } = require('../utils/request-source');
-const { checkQuotaRules, calculatePointsToDeduct } = require('../utils/points-deduct');
+const { checkQuotaRules } = require('../utils/points-deduct');
 const {
   getQuotaInfo,
   getGroupName,
@@ -522,7 +522,7 @@ async function getProviderForRequest(providerId) {
   if (!provider) return null;
 
   const group = provider.grp;
-  if (!group) return provider;
+  if (!group) return applyProviderSelect(provider);
 
   // 查找同组所有启用的供应商
   const groupResult = await pool.query(
@@ -530,13 +530,35 @@ async function getProviderForRequest(providerId) {
     [group]
   );
 
-  if (groupResult.rows.length <= 1) return provider;
+  if (groupResult.rows.length <= 1) return applyProviderSelect(provider);
 
-  // 随机选择一个（简单负载均衡）
-  const candidates = groupResult.rows;
+  // 默认随机选择；插件 provider:select 钩子可过滤/排序候选供应商
+  let candidates = groupResult.rows;
+  if (pluginHooks.hasSubscribers('provider:select')) {
+    try {
+      const out = await pluginHooks.apply('provider:select', { candidates: candidates.map(r => ({ ...r })) }, { providerId: provider.id, group });
+      if (Array.isArray(out?.candidates) && out.candidates.length > 0) {
+        candidates = out.candidates;
+      }
+    } catch (err) {
+      Logger.warn(`[provider:select] 钩子异常: ${err.message}`);
+    }
+  }
   const selected = candidates[Math.floor(Math.random() * candidates.length)];
-  Logger.info(`[负载均衡] 供应商组 "${group}": 从 ${candidates.length} 个中选择 ${selected.id}`);
-  return selected;
+  Logger.info(`[负载均衡] 供应商组 "${group}": 从 ${candidates.length} 个中选择 ${selected?.id || selected?.provider_id || '?'}`);
+  return selected || null;
+}
+
+// 单个供应商（无组）场景的 provider:select 收口：返回所选或 null
+async function applyProviderSelect(provider) {
+  if (!pluginHooks.hasSubscribers('provider:select')) return provider;
+  try {
+    const out = await pluginHooks.apply('provider:select', { candidates: [{ ...provider }] }, { providerId: provider.id, group: provider.grp || '' });
+    if (Array.isArray(out?.candidates) && out.candidates.length > 0) return out.candidates[0] || null;
+  } catch (err) {
+    Logger.warn(`[provider:select] 钩子异常: ${err.message}`);
+  }
+  return provider;
 }
 
 async function getModelConfig(modelId) {
@@ -546,6 +568,33 @@ async function getModelConfig(modelId) {
   // 再尝试别名匹配
   const byAlias = await pool.query("SELECT * FROM models WHERE alias = $1 AND alias != '' AND enabled = TRUE", [modelId]);
   return byAlias.rows[0] || null;
+}
+
+// 用量落库前的统计元数据：stats:record 钩子可附加维度（写入 usage_records.plugin_meta）
+async function pluginMetaFrom(ctxMeta) {
+  try {
+    const meta = await pluginHooks.applyStatsRecord({}, ctxMeta);
+    return (meta && Object.keys(meta).length) ? meta : null;
+  } catch (err) {
+    Logger.warn(`[stats:record] 钩子异常: ${err.message}`);
+    return null;
+  }
+}
+
+// 计费调整钩子：插件可按 倍率/固定额/重写 修改单次扣费（billing:calculate）
+async function adjustBillingCost(weightedTokens, pointsCost, meta) {
+  if (!pluginHooks.hasSubscribers('billing:calculate')) return pointsCost;
+  try {
+    const out = await pluginHooks.apply('billing:calculate', { cost: pointsCost, ratio: 1, weightedTokens }, meta);
+    let ratio = Number(out?.ratio);
+    if (!Number.isFinite(ratio) || ratio < 0) ratio = 1;
+    let cost = Number(out?.cost);
+    if (Number.isFinite(cost) && cost >= 0) return cost;
+    return Number(pointsCost) * ratio;
+  } catch (err) {
+    Logger.warn(`[billing:calculate] 钩子异常: ${err.message}`);
+    return pointsCost;
+  }
 }
 
 // 速率限制检查
@@ -910,6 +959,23 @@ async function validateApiKey(req, res, next) {
 
   if (!apiKey) {
     return sendAuthError(401, 'authentication_error', 'Missing API key');
+  }
+
+  // 插件 apikey:validate 钩子：可基于 IP/时段/自定义规则拒绝（不影响鉴权主流程）
+  if (pluginHooks.hasSubscribers('apikey:validate')) {
+    try {
+      const v = await pluginHooks.apply('apikey:validate', { allow: true, reason: '', status: 403 }, {
+        apiKey: String(apiKey),
+        ip: req.ip || '',
+        path: req.path,
+        requestType: isAnthropicApiPath(req) ? 'anthropic' : (req.path.includes('responses') ? 'responses' : 'openai'),
+      });
+      if (v && v.allow === false) {
+        return sendAuthError(v.status || 403, v.reasonType || 'invalid_request_error', v.reason || 'request blocked by plugin', { code: 'plugin_blocked' });
+      }
+    } catch (err) {
+      Logger.warn(`[API密钥验证] apikey:validate 钩子异常: ${err.message}`);
+    }
   }
 
   try {
@@ -2533,24 +2599,35 @@ async function handleChatCompletion(req, res) {
 
     if (pointsCost > 0 || totalTokens > 0) {
       try {
-        const pointsToDeduct = await calculatePointsToDeduct({
+        // billing:calculate 钩子可调整单次扣费（倍率/固定额/重写）
+        const pointsToDeduct = await adjustBillingCost(weightedTokens, pointsCost, {
           userId: req.apiUser.userId,
           groupId: req.apiUser.groupId,
-          weightedTokens,
-          pointsCost
+          model: modelConfig.id || userRequestedModel,
+          provider: provider?.id || null,
+          requestType: 'chat',
+        });
+        // stats:record 钩子可附加统计维度（写入 usage_records.plugin_meta）
+        const pluginMeta = await pluginMetaFrom({
+          userId: req.apiUser.userId,
+          model: modelConfig.id || userRequestedModel,
+          provider: provider?.id || null,
+          requestType: 'chat',
+          apiKeyId: req.apiUser.keyId,
         });
 
         const localModelId = modelConfig.id || userRequestedModel;
         const latencyMs = Date.now() - liveCallStart;
         await pool.query(
           `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
           [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
-           latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent]
+           latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
+           pluginMeta]
         );
         if (pointsToDeduct > 0) {
           const { deductPoints } = require('../utils/balance');
@@ -2707,22 +2784,31 @@ async function handleFusionRequest(req, res, format = 'openai') {
 
     if (fusionPointsCost > 0 || totalTokens > 0) {
       try {
-        const pointsToDeduct = await calculatePointsToDeduct({
+        const pointsToDeduct = await adjustBillingCost(totalWeightedTokens, fusionPointsCost, {
           userId: req.apiUser.userId,
           groupId: req.apiUser.groupId,
-          weightedTokens: totalWeightedTokens,
-          pointsCost: fusionPointsCost
+          model: 'fusion',
+          provider: null,
+          requestType: 'fusion',
+        });
+        const pluginMeta = await pluginMetaFrom({
+          userId: req.apiUser.userId,
+          model: 'fusion',
+          provider: null,
+          requestType: 'fusion',
+          apiKeyId: req.apiUser.keyId,
         });
 
         await pool.query(
           `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+           weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
           [req.apiUser.userId, req.apiUser.keyId, totalTokens,
            fusionPromptTokens, fusionCompletionTokens,
            totalWeightedTokens, null, 'fusion',
            JSON.stringify(messages), result.content || null, pointsToDeduct,
-           Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent]
+           Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
+           pluginMeta]
         );
 
         // 记录 Fusion 专用用量
@@ -3119,24 +3205,33 @@ async function handleAnthropicMessage(req, res) {
 
     if (pointsCost > 0 || totalTokens > 0) {
       try {
-        const pointsToDeduct = await calculatePointsToDeduct({
+        const pointsToDeduct = await adjustBillingCost(weightedTokens, pointsCost, {
           userId: req.apiUser.userId,
           groupId: req.apiUser.groupId,
-          weightedTokens,
-          pointsCost
+          model: modelConfig.id || queueModelId,
+          provider: provider?.id || null,
+          requestType: 'chat',
+        });
+        const pluginMeta = await pluginMetaFrom({
+          userId: req.apiUser.userId,
+          model: modelConfig.id || queueModelId,
+          provider: provider?.id || null,
+          requestType: 'chat',
+          apiKeyId: req.apiUser.keyId,
         });
 
         const localModelId = modelConfig.id || queueModelId;
         const latencyMs = Date.now() - liveCallStart;
         await pool.query(
           `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
           [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
-           latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent]
+           latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
+           pluginMeta]
         );
         if (pointsToDeduct > 0) {
           const { deductPoints } = require('../utils/balance');
@@ -5149,22 +5244,31 @@ async function handleResponses(req, res) {
           const calculated = calculateCost(modelConfig, { promptTokens, completionTokens, cachedTokens });
           if (totalTokens > 0) {
             try {
-              const pointsToDeduct = await calculatePointsToDeduct({
+              const pointsToDeduct = await adjustBillingCost(calculated.weightedTokens, calculated.pointsCost, {
                 userId: req.apiUser.userId,
                 groupId: req.apiUser.groupId,
-                weightedTokens: calculated.weightedTokens,
-                pointsCost: calculated.pointsCost
+                model: modelConfig.id || model,
+                provider: provider?.id || null,
+                requestType: 'responses',
+              });
+              const pluginMeta = await pluginMetaFrom({
+                userId: req.apiUser.userId,
+                model: modelConfig.id || model,
+                provider: provider?.id || null,
+                requestType: 'responses',
+                apiKeyId: req.apiUser.keyId,
               });
               const localModelId = modelConfig.id || model;
               await pool.query(
                 `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-                 cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+                 cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
                 [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                  promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
                  provider?.id || null, 'responses',
                  typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
-                 null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent]
+                 null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
+                 pluginMeta]
               );
               if (pointsToDeduct > 0) {
                 const { deductPoints } = require('../utils/balance');
@@ -5249,24 +5353,33 @@ async function handleResponses(req, res) {
 
         if (pointsCost > 0 || totalTokens > 0) {
           try {
-            const pointsToDeduct = await calculatePointsToDeduct({
+            const pointsToDeduct = await adjustBillingCost(weightedTokens, pointsCost, {
               userId: req.apiUser.userId,
               groupId: req.apiUser.groupId,
-              weightedTokens,
-              pointsCost
+              model: modelConfig.id || model,
+              provider: provider?.id || null,
+              requestType: 'responses',
+            });
+            const pluginMeta = await pluginMetaFrom({
+              userId: req.apiUser.userId,
+              model: modelConfig.id || model,
+              provider: provider?.id || null,
+              requestType: 'responses',
+              apiKeyId: req.apiUser.keyId,
             });
             const localModelId = modelConfig.id || model;
             const latencyMs = Date.now() - liveCallStart;
             await pool.query(
               `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-               cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+               cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
               [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                result.promptTokens || 0, result.completionTokens || 0,
                result.cachedTokens || 0, weightedTokens,
                provider?.id || null, 'responses',
                typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
-               latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent]
+               latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
+               pluginMeta]
             );
             if (pointsToDeduct > 0) {
               const { deductPoints } = require('../utils/balance');
@@ -5426,25 +5539,34 @@ async function handleResponses(req, res) {
             cachedTokens
           });
           const localModelId = modelConfig.id || model;
-          const pointsToDeduct = await calculatePointsToDeduct({
+          const pointsToDeduct = await adjustBillingCost(calculated.weightedTokens, calculated.pointsCost, {
             userId: req.apiUser.userId,
             groupId: req.apiUser.groupId,
-            weightedTokens: calculated.weightedTokens,
-            pointsCost: calculated.pointsCost
+            model: modelConfig.id || model,
+            provider: provider?.id || null,
+            requestType: 'responses',
+          });
+          const pluginMeta = await pluginMetaFrom({
+            userId: req.apiUser.userId,
+            model: modelConfig.id || model,
+            provider: provider?.id || null,
+            requestType: 'responses',
+            apiKeyId: req.apiUser.keyId,
           });
           const requestParams = usageEstimated
             ? { estimated: true, estimate_method: 'output_chars/4', prompt_tokens_policy: 'zero_when_unknown' }
             : { estimated: false };
           await pool.query(
             `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-             cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_params, request_source, user_agent)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+             cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_params, request_source, user_agent, plugin_meta)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
             [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
              promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
              provider?.id || null, 'responses',
              typeof input === 'string' ? input : JSON.stringify(input), totalContent || null, pointsToDeduct,
              Date.now() - liveCallStart, clientIp(req), JSON.stringify(requestParams),
-             clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent]
+             clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
+             pluginMeta]
           );
           if (pointsToDeduct > 0) {
             const { deductPoints } = require('../utils/balance');
@@ -5491,23 +5613,32 @@ async function handleResponses(req, res) {
 
     if (totalTokens > 0) {
       try {
-        const pointsToDeduct = await calculatePointsToDeduct({
+        const pointsToDeduct = await adjustBillingCost(weightedTokens, pointsCost, {
           userId: req.apiUser.userId,
           groupId: req.apiUser.groupId,
-          weightedTokens,
-          pointsCost
+          model: modelConfig.id || model,
+          provider: provider?.id || null,
+          requestType: 'responses',
+        });
+        const pluginMeta = await pluginMetaFrom({
+          userId: req.apiUser.userId,
+          model: modelConfig.id || model,
+          provider: provider?.id || null,
+          requestType: 'responses',
+          apiKeyId: req.apiUser.keyId,
         });
 
         const localModelId = modelConfig.id || model;
         await pool.query(
           `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
           [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            promptTokens, completionTokens, cachedTokens, weightedTokens,
            provider?.id || null, 'responses',
            typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
-           null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent]
+           null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
+           pluginMeta]
         );
         if (pointsToDeduct > 0) {
           const { deductPoints } = require('../utils/balance');
@@ -5662,25 +5793,34 @@ async function handleResponses(req, res) {
 
     if (pointsCost > 0 || totalTokens > 0) {
       try {
-        const pointsToDeduct = await calculatePointsToDeduct({
+        const pointsToDeduct = await adjustBillingCost(weightedTokens, pointsCost, {
           userId: req.apiUser.userId,
           groupId: req.apiUser.groupId,
-          weightedTokens,
-          pointsCost
+          model: modelConfig.id || model,
+          provider: provider?.id || null,
+          requestType: 'responses',
+        });
+        const pluginMeta = await pluginMetaFrom({
+          userId: req.apiUser.userId,
+          model: modelConfig.id || model,
+          provider: provider?.id || null,
+          requestType: 'responses',
+          apiKeyId: req.apiUser.keyId,
         });
 
         const localModelId = modelConfig.id || model;
         const latencyMs = typeof liveCallStart === 'number' ? Date.now() - liveCallStart : null;
         await pool.query(
           `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
           [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'responses',
            typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
-           latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent]
+           latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
+           pluginMeta]
         );
         if (pointsToDeduct > 0) {
           const { deductPoints } = require('../utils/balance');

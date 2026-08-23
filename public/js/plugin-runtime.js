@@ -437,6 +437,8 @@
             ${pl.lastError ? `<button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')">${esc(t('清除错误并重载'))}</button>` : ''}
           </div>
           <div data-plugin-cfg-msg="${esc(pl.id)}" style="font-size:12px;margin-top:4px;"></div>
+          <div style="font-size:12px;color:var(--muted-foreground);margin:12px 0 4px;">${esc(t('插件数据'))}(plugin_data)</div>
+          <div data-plugin-data="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p></div>
         </div>` : '';
       return `
         <div class="content-card" style="padding:14px 16px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;">
@@ -480,7 +482,38 @@
 
   window.__pluginRT = {
     refresh() { renderPluginsAdmin(document.getElementById('adminPluginsContent')); },
-    expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); },
+    expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); if (manageState.expanded[id]) this.loadData(id); },
+    async loadData(id) {
+      const box = document.querySelector(`[data-plugin-data="${id}"]`);
+      if (!box) return;
+      box.innerHTML = `<p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p>`;
+      try {
+        const data = await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/data`);
+        const rows = data.keys || [];
+        if (!rows.length) {
+          box.innerHTML = `<p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('暂无数据'))}</p>`;
+          return;
+        }
+        box.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse;">
+          <tr><th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);">${esc(t('键'))}</th><th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);">${esc(t('值'))}</th><th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);">${esc(t('更新时间'))}</th><th></th></tr>
+          ${rows.map(r => `<tr>
+            <td style="padding:4px 8px;border-bottom:1px solid var(--border);font-family:monospace;">${esc(r.key)}</td>
+            <td style="padding:4px 8px;border-bottom:1px solid var(--border);font-family:monospace;word-break:break-all;max-width:320px;">${esc(JSON.stringify(r.value))}</td>
+            <td style="padding:4px 8px;border-bottom:1px solid var(--border);white-space:nowrap;">${esc(String(r.updatedAt || '').slice(0, 19).replace('T', ' '))}</td>
+            <td style="padding:4px 8px;border-bottom:1px solid var(--border);"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px;" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')">${esc(t('删除'))}</button></td>
+          </tr>`).join('')}
+        </table>`;
+      } catch (e) {
+        box.innerHTML = `<p style="font-size:12px;color:var(--destructive);margin:0;">${esc(e.message)}</p>`;
+      }
+    },
+    async deleteData(id, key) {
+      if (!confirm(t('确定删除该插件数据键？'))) return;
+      try {
+        await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/data/${encodeURIComponent(key)}`, { method: 'DELETE' });
+        this.loadData(id);
+      } catch (e) { alert(e.message); }
+    },
     async toggle(id, enabled) {
       try {
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/toggle`, { method: 'POST' });

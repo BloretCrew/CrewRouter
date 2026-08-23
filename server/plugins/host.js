@@ -8,6 +8,10 @@
  *  - gateway:modify 允许注册网关钩子（beforeUpstream / upstreamResponse 等）
  *  - pages:register 清单中声明的页面/插槽才会暴露给前端
  *  - routes:register 允许挂载自有 HTTP API
+ *  - provider:register 允许注册新的客户端格式/上游适配器/协议转换器（provider:registerFormats）
+ *  - apikey:modify    允许注册 apikey:validate / apikey:created 钩子
+ *  - billing:modify   允许注册 billing:calculate 钩子（调整计费/配额）
+ *  - cron:register    允许在清单中声明 cron 定时任务（由 host 调度）
  */
 
 const fs = require('fs');
@@ -24,7 +28,17 @@ const GATEWAY_HOOKS = new Set([
   'gateway:responseChunk',
   'gateway:finalResponse',
   'models:list',
+  'stats:record',
 ]);
+
+// 各钩子所需权限
+const HOOK_PERMISSIONS = {
+  'apikey:validate': 'apikey:modify',
+  'apikey:created': 'apikey:modify',
+  'billing:calculate': 'billing:modify',
+  'provider:select': 'provider:register',
+  'provider:registerFormats': 'provider:register',
+};
 
 // 钩子执行超时（毫秒）
 const HOOK_TIMEOUT_MS = 2000;
@@ -45,6 +59,13 @@ function validateManifest(manifest) {
   if (manifest.pages && !Array.isArray(manifest.pages)) return 'pages 必须是数组';
   if (manifest.slots && !Array.isArray(manifest.slots)) return 'slots 必须是数组';
   if (manifest.routes && !Array.isArray(manifest.routes)) return 'routes 必须是数组';
+  if (manifest.cron !== undefined) {
+    if (!Array.isArray(manifest.cron)) return 'cron 必须是数组';
+    for (const c of manifest.cron) {
+      if (!c || typeof c.expr !== 'string' || !c.expr.trim()) return 'cron[].expr 缺失';
+      if (!c.handler || typeof c.handler !== 'string') return 'cron[].handler 缺失';
+    }
+  }
   if (manifest.themes !== undefined) {
     if (!Array.isArray(manifest.themes)) return 'themes 必须是数组';
     for (const th of manifest.themes) {
@@ -113,9 +134,32 @@ function buildContext(plugin, hooksBus, logPrefix) {
       if (GATEWAY_HOOKS.has(hookName) && !perms.has('gateway:modify')) {
         throw new Error(`[plugins:${id}] 注册 ${hookName} 需要 gateway:modify 权限`);
       }
+      const need = HOOK_PERMISSIONS[hookName];
+      if (need && !perms.has(need)) {
+        throw new Error(`[plugins:${id}] 注册 ${hookName} 需要 ${need} 权限`);
+      }
       hooksBus.subscribe(id, hookName, handler, priority);
     },
   };
+
+  // 供应商格式注册：声明 provider:register 权限后，插件可新增客户端格式/上游适配器/协议转换器
+  if (perms.has('provider:register')) {
+    const providerRegistry = require('../providers');
+    ctx.registerProviderFormat = (format, AdapterClass) => {
+      if (!format || typeof format !== 'string') throw new Error(`[plugins:${id}] registerProviderFormat 需要格式名`);
+      if (typeof AdapterClass !== 'function') throw new Error(`[plugins:${id}] registerProviderFormat 需要适配器类`);
+      providerRegistry.registerAdapter(format, AdapterClass);
+      Logger.info(`[plugins] ${id} 注册了上游格式 ${format}`);
+    };
+    ctx.registerTransform = (sourceFormat, targetFormat, transform) => {
+      if (!sourceFormat || !targetFormat) throw new Error(`[plugins:${id}] registerTransform 需要源/目标格式`);
+      if (!transform || typeof transform.request !== 'function' || typeof transform.response !== 'function') {
+        throw new Error(`[plugins:${id}] registerTransform 需要 { request, response } 转换函数`);
+      }
+      providerRegistry.registerTransform(sourceFormat, targetFormat, transform);
+      Logger.info(`[plugins] ${id} 注册了协议转换 ${sourceFormat}->${targetFormat}`);
+    };
+  }
 
   // 插件自有 HTTP API：声明 routes:register 权限后可登记处理器
   if (perms.has('routes:register')) {
@@ -136,6 +180,24 @@ function buildContext(plugin, hooksBus, logPrefix) {
 
   if (perms.has('storage')) ctx.storage = buildStorage(id);
   if (perms.has('network')) ctx.fetch = buildFetch(id);
+
+  // 定时任务：清单 cron 字段 + cron:register 权限时，由 registry 调度（见 registry.schedulePluginCron）
+  const registry = require('./registry');
+  if (!plugin.cronHandlers) plugin.cronHandlers = {};
+  ctx.cronHandler = (name, fn) => {
+    if (!perms.has('cron:register')) {
+      throw new Error(`[plugins:${id}] 声明 cron 定时任务需要 cron:register 权限`);
+    }
+    if (typeof fn !== 'function') throw new Error(`[plugins:${id}] cronHandler 需要回调函数`);
+    plugin.cronHandlers[name] = fn;
+  };
+  ctx.scheduleCron = (expr, handler) => {
+    if (!perms.has('cron:register')) {
+      throw new Error(`[plugins:${id}] 声明 cron 定时任务需要 cron:register 权限`);
+    }
+    if (typeof handler !== 'function') throw new Error(`[plugins:${id}] scheduleCron 需要回调函数`);
+    registry.schedulePluginCron(id, expr, handler);
+  };
 
   return ctx;
 }
@@ -170,5 +232,6 @@ module.exports = {
   buildContext,
   loadPluginMain,
   GATEWAY_HOOKS,
+  HOOK_PERMISSIONS,
   HOOK_TIMEOUT_MS,
 };

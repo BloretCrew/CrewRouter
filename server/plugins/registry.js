@@ -34,6 +34,10 @@ const loaded = new Map();
 // 已同步到 DB 的磁盘清单：id -> manifest（含未启用的）
 const knownManifests = new Map();
 
+// 插件自定义的定时任务：id -> [{ expr, handler, nextTimeout }]
+const cronJobs = new Map();
+const CRON_CHECK_MS = 60000; // 每分钟对下一触发做一次调度精度校正
+
 let initialized = false;
 
 function listPluginDirs() {
@@ -96,15 +100,159 @@ async function loadOne(id, manifest, rowConfig) {
     const logPrefix = `plugin:${id}`;
     const ctx = host.buildContext(plugin, hooksBus, logPrefix);
     await factory(ctx); // 初始化：内部调用 ctx.on(...) 注册钩子
+    // provider:registerFormats 钩子：插件可在启动时声明式注册客户端格式/上游适配器/协议转换器
+    if (hooksBus.hasSubscribers('provider:registerFormats')) {
+      await hooksBus.apply('provider:registerFormats', { pluginId: id }, { pluginId: id }).catch(err =>
+        Logger.warn(`[plugins] ${id} provider:registerFormats 钩子异常: ${err.message}`)
+      );
+    }
     Logger.info(`[plugins] 已加载插件 ${id}${perms.has('gateway:modify') ? '（网关钩子）' : ''}`);
   }
 
   loaded.set(id, plugin);
+  // 定时任务：基于清单 cron 重建（仅 cron:register 权限）
+  rebuildCron(id, manifest);
 }
 
 function unloadOne(id) {
   hooksBus.unsubscribePlugin(id);
+  clearPluginCron(id);
   loaded.delete(id);
+}
+
+// ---------- 定时任务（cron 表达式由 host 调度） ----------
+
+// 五段 cron 展开：秒固定为 0，支持 */n、固定数字、数字列表与范围
+function expandCronField(field, min, max) {
+  const out = new Set();
+  for (const part of String(field).split(',')) {
+    const p = part.trim();
+    if (!p) continue;
+    let step = 1;
+    let range = null;
+    if (p === '*') {
+      range = [min, max];
+      step = 1;
+    } else if (p.includes('/')) {
+      const [base, st] = p.split('/');
+      step = parseInt(st, 10) || 1;
+      if (base === '*' || base === '') range = [min, max];
+      else if (base.includes('-')) {
+        const [a, b] = base.split('-').map(Number);
+        range = [Math.min(a, b), Math.max(a, b)];
+      } else range = [parseInt(base, 10), parseInt(base, 10)];
+    } else if (p.includes('-')) {
+      const [a, b] = p.split('-').map(Number);
+      range = [Math.min(a, b), Math.max(a, b)];
+      step = 1;
+    } else {
+      range = [parseInt(p, 10), parseInt(p, 10)];
+      step = 1;
+    }
+    if (!Number.isFinite(range[0]) || !Number.isFinite(range[1])) continue;
+    for (let v = range[0]; v <= range[1]; v += step) {
+      if (v >= min && v <= max) out.add(v);
+    }
+  }
+  return out;
+}
+
+function matchCron(expr, date) {
+  const parts = String(expr).trim().split(/\s+/);
+  if (parts.length !== 5) return false;
+  const [minute, hour, dom, month, dow] = parts;
+  const nowMinute = date.getMinutes();
+  const nowHour = date.getHours();
+  const nowDay = date.getDate();
+  const nowMonth = date.getMonth() + 1;
+  const nowDow = date.getDay();
+  return (
+    expandCronField(minute, 0, 59).has(nowMinute) &&
+    expandCronField(hour, 0, 23).has(nowHour) &&
+    expandCronField(dom, 1, 31).has(nowDay) &&
+    expandCronField(month, 1, 12).has(nowMonth) &&
+    expandCronField(dow, 0, 6).has(nowDow)
+  );
+}
+
+function schedulePluginCron(pluginId, expr, handler) {
+  const list = cronJobs.get(pluginId) || [];
+  // 同插件同表达式幂等：替换旧 handler
+  const idx = list.findIndex(j => j.expr === expr);
+  const job = { expr, handler, nextTimeout: null };
+  if (idx >= 0) {
+    clearTimeout(list[idx].nextTimeout);
+    list[idx] = job;
+  } else {
+    list.push(job);
+  }
+  cronJobs.set(pluginId, list);
+  scheduleNextCron(pluginId, job);
+  Logger.info(`[plugins] 插件 ${pluginId} 已注册定时任务 "${expr}"`);
+}
+
+// 为单个任务安排下一次触发：精确到分钟，与精确触发之间的误差由 CRON_CHECK_MS 兜底校正
+function scheduleNextCron(pluginId, job) {
+  clearTimeout(job.nextTimeout);
+  const now = new Date();
+  const target = new Date(now);
+  target.setSeconds(0, 0);
+  target.setMinutes(target.getMinutes() + 1);
+  // 向前探测至多 60 分钟内的匹配窗口
+  let found = null;
+  for (let i = 0; i < 60; i++) {
+    if (matchCron(job.expr, target)) { found = target; break; }
+    target.setMinutes(target.getMinutes() + 1);
+  }
+  if (!found) {
+    // 60 分钟窗口内无匹配：以整点窗口检查兜底，每分钟校一次
+    job.nextTimeout = setTimeout(() => {
+      const now2 = new Date();
+      if (matchCron(job.expr, now2)) fireCron(pluginId, job);
+      scheduleNextCron(pluginId, job);
+    }, CRON_CHECK_MS);
+    return;
+  }
+  const delay = Math.max(1000, found.getTime() - Date.now());
+  job.nextTimeout = setTimeout(() => {
+    fireCron(pluginId, job);
+    scheduleNextCron(pluginId, job);
+  }, delay);
+}
+
+async function fireCron(pluginId, job) {
+  const p = loaded.get(pluginId);
+  if (!p) return;
+  try {
+    await Promise.race([
+      Promise.resolve(job.handler()),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('cron 任务执行超时')), host.HOOK_TIMEOUT_MS * 5)),
+    ]);
+  } catch (err) {
+    Logger.error(`[plugins] 插件 ${pluginId} cron "${job.expr}" 执行失败: ${err.message}`);
+  }
+}
+
+function clearPluginCron(pluginId) {
+  const list = cronJobs.get(pluginId);
+  if (list) {
+    for (const j of list) clearTimeout(j.nextTimeout);
+    cronJobs.delete(pluginId);
+  }
+}
+
+// 重建某插件的 cron：禁用/重载后以 manifest.cron 重新注册（仅 cron:register 权限）
+function rebuildCron(pluginId, manifest) {
+  clearPluginCron(pluginId);
+  const p = loaded.get(pluginId);
+  if (!p) return;
+  const perms = new Set(manifest.permissions || []);
+  if (!perms.has('cron:register')) return;
+  for (const c of manifest.cron || []) {
+    // handler 名解析到插件沙箱上下文中的函数（由 host 在 ctx.scheduleCron 中注册）
+    const fn = p.cronHandlers?.[c.handler];
+    if (typeof fn === 'function') schedulePluginCron(pluginId, c.expr, fn);
+  }
 }
 
 /**
@@ -252,6 +400,7 @@ async function listAll() {
     pages: (knownManifests.get(row.id)?.pages || []),
     slots: (knownManifests.get(row.id)?.slots || []),
     routes: (knownManifests.get(row.id)?.routes || []),
+    cron: (knownManifests.get(row.id)?.cron || []),
   }));
 }
 
@@ -321,6 +470,8 @@ module.exports = {
   resetErrors,
   exposeHandler,
   findHandler,
+  schedulePluginCron,
+  clearPluginCron,
   isLoaded: id => loaded.has(id),
   getLoadedManifest: id => loaded.get(id)?.manifest || null,
 };

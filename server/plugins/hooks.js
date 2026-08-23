@@ -124,6 +124,17 @@ function reportError(pluginId, hookName, err) {
   }
 }
 
+/**
+ * 用量落库前的统计元数据钩子（stats:record 便捷封装）
+ * 调用方把拟写入 usage_records.plugin_meta 的 meta 传入；无订阅者时同步直返（零开销）。
+ */
+async function applyStatsRecord(meta, ctxMeta = {}) {
+  if (!hasSubscribers('stats:record')) return meta;
+  const out = await apply('stats:record', { meta }, ctxMeta);
+  const m = out?.meta;
+  return (m && typeof m === 'object' && !Array.isArray(m)) ? m : meta;
+}
+
 module.exports = {
   setErrorReporter,
   hasSubscribers,
@@ -132,5 +143,6 @@ module.exports = {
   apply,
   maybeRewriteChunk,
   applyFinalResponseHeaders,
+  applyStatsRecord,
   ERROR_THRESHOLD,
 };

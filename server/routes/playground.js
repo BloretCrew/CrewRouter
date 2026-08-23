@@ -519,12 +519,38 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
       const ug = await pool.query('SELECT group_id FROM users WHERE id = $1', [userId]);
       groupId = ug.rows[0]?.group_id || null;
     } catch (_) { /* ignore */ }
+    const pluginHooks = require('../plugins/hooks');
+    // billing:calculate 钩子可调整单次扣费
+    const billCost = await (async () => {
+      if (!pluginHooks.hasSubscribers('billing:calculate')) return pointsCost;
+      try {
+        const out = await pluginHooks.apply('billing:calculate', { cost: pointsCost, ratio: 1, weightedTokens }, {
+          userId, modelId, provider: null, requestType: 'playground',
+        });
+        let ratio = Number(out?.ratio);
+        if (!Number.isFinite(ratio) || ratio < 0) ratio = 1;
+        const c = Number(out?.cost);
+        if (Number.isFinite(c) && c >= 0) return c;
+        return Number(pointsCost) * ratio;
+      } catch (e) {
+        Logger.warn(`[billing:calculate] 钩子异常: ${e.message}`);
+        return pointsCost;
+      }
+    })();
     const pointsToDeduct = await calculatePointsToDeduct({
       userId,
       groupId,
       weightedTokens,
-      pointsCost
+      pointsCost: billCost
     });
+    // stats:record 钩子可附加统计维度
+    let pluginMeta = null;
+    try {
+      const meta = await pluginHooks.applyStatsRecord({}, { userId, modelId, provider: null, requestType: 'playground' });
+      if (meta && Object.keys(meta).length) pluginMeta = meta;
+    } catch (e) {
+      Logger.warn(`[stats:record] 钩子异常: ${e.message}`);
+    }
     const clientMeta = clientMetaFromReq(req || {});
 
     Logger.info(`[Playground计费] 准备记录: userId=${userId}, modelId=${modelId}, tokens=${totalTokens}, theory=${pointsCost}, deduct=${pointsToDeduct}`);
@@ -544,11 +570,11 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
 
     await pool.query(
       `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens,
-       provider_id, request_type, messages, response, cost, reasoning_content, request_params, finish_reason, request_source, user_agent)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+       provider_id, request_type, messages, response, cost, reasoning_content, request_params, finish_reason, request_source, user_agent, plugin_meta)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
       [userId, modelId, totalTokens, weightedTokens, promptTokens, completionTokens,
        providerId, 'playground', messagesJson, responseText, pointsToDeduct, reasoningText, paramsJson, finish,
-       clientMeta.requestSource, clientMeta.userAgent]
+       clientMeta.requestSource, clientMeta.userAgent, pluginMeta]
     );
     Logger.info(`[Playground计费] 记录成功`);
     if (pointsToDeduct > 0) {

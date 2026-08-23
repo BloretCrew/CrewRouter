@@ -36,6 +36,16 @@ function registerAdapter(format, adapterClass) {
 }
 
 /**
+ * 注册新的格式转换
+ * @param {string} sourceFormat - 源格式
+ * @param {string} targetFormat - 目标格式
+ * @param {object} transform - 转换函数对象 { request, response, stream? }
+ */
+function registerTransform(sourceFormat, targetFormat, transform) {
+  transforms.registerTransform(sourceFormat, targetFormat, transform);
+}
+
+/**
  * 获取所有已注册的适配器格式
  * @returns {string[]} 格式列表
  */
@@ -81,8 +91,10 @@ const transforms = require('./transforms');
 module.exports = {
   createAdapter,
   registerAdapter,
+  registerTransform,
   getRegisteredFormats,
   hasAdapter,
+  hasTransform: (a, b) => transforms.hasTransform(a, b),
   getClientFormat,
   // 适配器类
   OpenAIAdapter,

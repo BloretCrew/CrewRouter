@@ -4177,6 +4177,31 @@ class ConsoleApp {
       }
     }
 
+    // 插件维度（stats:record 写入的 plugin_meta 维度键）
+    const topPluginsContainer = document.getElementById('topPluginsList');
+    if (topPluginsContainer) {
+      const rows = (d.byPlugin || []).filter((s) => parseInt(s.requests || 0, 10) > 0).slice(0, 5);
+      if (rows.length > 0) {
+        const maxReq = Math.max(...rows.map((s) => parseInt(s.requests || 0, 10)), 1);
+        setHTML(topPluginsContainer, rows.map((s) => {
+          const requests = parseInt(s.requests || 0, 10);
+          const barW = Math.max(4, Math.round((requests / maxReq) * 100));
+          const dim = escapeHtml(String(s.plugin_dim || 'plugin'));
+          return `<div class="stats-insight-item" style="flex-direction:column;align-items:stretch;gap:4px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <span class="stats-insight-name">🧩 ${dim}</span>
+              <span class="stats-insight-value">${requests.toLocaleString()}</span>
+            </div>
+            <div style="height:4px;background:var(--muted);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:${barW}%;background:#06b6d4;border-radius:2px;"></div>
+            </div>
+          </div>`;
+        }).join(''));
+      } else {
+        setHTML(topPluginsContainer, '<div class="stats-insight-empty">' + t('暂无数据') + '</div>');
+      }
+    }
+
     // 费用趋势（最近 7 天 vs 前 7 天）
     const costTrendContainer = document.getElementById('costTrendList');
     if (costTrendContainer && d.daily && d.daily.length >= 14) {

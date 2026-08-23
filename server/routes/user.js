@@ -348,6 +348,22 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
       [req.session.user.id, rawKey, keyHash, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
     );
 
+    // 插件 apikey:created 钩子：创建后回调（异步、错误隔离）
+    try {
+      const pluginHooks = require('../plugins/hooks');
+      if (pluginHooks.hasSubscribers('apikey:created')) {
+        await pluginHooks.apply('apikey:created', {}, {
+          keyId: result.rows[0].id,
+          keyPrefix: result.rows[0].key_prefix,
+          userId: req.session.user.id,
+          username: req.session.user.username,
+          name: name || 'API Key',
+        });
+      }
+    } catch (err) {
+      Logger.warn(`[apikey:created] 钩子异常: ${err.message}`);
+    }
+
     res.json({ ...result.rows[0], key: rawKey });
   } catch (error) {
     Logger.error('[创建API密钥] 错误:', error);
@@ -1445,8 +1461,24 @@ router.get('/stats', requireAuth, async (req, res) => {
       LIMIT 80
     `, params);
 
-    const [dailyResult, modelResult, hourlyResult, apiKeyResult, summaryResult, sourceResult, dailyBySourceResult, sourceModelResult] = await Promise.all([
-      dailyQuery, modelQuery, hourlyQuery, apiKeyQuery, summaryQuery, sourceQuery, dailyBySourceQuery, sourceModelQuery
+    // 插件维度：stats:record 写入的 plugin_meta 中，约定包含 name 的维度键按
+    // `plugin:xxx` 或 `dim:xxx` 形式聚合（扩展统计维度展示）
+    const pluginQuery = pool.query(`
+      SELECT
+        (jsonb_each_text(COALESCE(ur.plugin_meta, '{}'::jsonb))).key as plugin_dim,
+        COUNT(*) as requests,
+        SUM(ur.tokens_used) as tokens,
+        SUM(ur.cost) as cost
+      FROM usage_records ur
+      WHERE ur.user_id = $1 ${dateFilter} ${extraFilter}
+        AND ur.plugin_meta IS NOT NULL
+      GROUP BY (jsonb_each_text(COALESCE(ur.plugin_meta, '{}'::jsonb))).key
+      ORDER BY requests DESC
+      LIMIT 50
+    `, params);
+
+    const [dailyResult, modelResult, hourlyResult, apiKeyResult, summaryResult, sourceResult, dailyBySourceResult, sourceModelResult, pluginResult] = await Promise.all([
+      dailyQuery, modelQuery, hourlyQuery, apiKeyQuery, summaryQuery, sourceQuery, dailyBySourceQuery, sourceModelQuery, pluginQuery
     ]);
 
     const { buildSourceStats } = require('../utils/source-stats');
@@ -1465,6 +1497,7 @@ router.get('/stats', requireAuth, async (req, res) => {
       bySource,
       dailyBySource: dailyBySourceResult.rows,
       bySourceModel: sourceModelResult.rows,
+      byPlugin: pluginResult.rows,
       sourceSummary,
       summary
     });

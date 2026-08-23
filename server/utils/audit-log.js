@@ -86,6 +86,10 @@ const ACTIONS = {
   ADMIN_FEISHU: 'admin.feishu',
   ADMIN_FUSION_CONFIG: 'admin.fusion_config',
   ADMIN_PROVIDER_TAG: 'admin.provider_tag',
+
+  // 插件
+  PLUGIN_INSTALL: 'plugin.install',
+  PLUGIN_UNINSTALL: 'plugin.uninstall',
 };
 
 /**
