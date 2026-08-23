@@ -414,6 +414,11 @@ class ConsoleApp {
         break;
       case 'stats':
         await this.loadStats();
+        await this.loadLiveActivity();
+        if (this._liveActivityTimer) clearInterval(this._liveActivityTimer);
+        this._liveActivityTimer = setInterval(() => {
+          this.loadLiveActivity();
+        }, 30000);
         break;
       case 'projectWork':
         await this.loadProjectWorkStats();
@@ -3374,6 +3379,57 @@ class ConsoleApp {
 
   // ========== 统计信息 ==========
   _statsData = null;
+
+  /** 实时活动看板：各客户端 hook 上报的最近事件（30s 轮询） */
+  async loadLiveActivity() {
+    const wrap = document.getElementById('liveActivitySection');
+    if (!wrap) return;
+    try {
+      const res = await fetch('/api/client-events/live?window=300');
+      if (!res.ok) throw new Error('live activity failed');
+      const data = await res.json();
+      const sources = Array.isArray(data.sources) ? data.sources : [];
+      const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+      // 无任何数据（还没客户端上报过）就隐藏整块
+      const totalEvents = sources.reduce((a, s) => a + (Number(s.total_events) || 0), 0);
+      if (totalEvents === 0) {
+        wrap.style.display = 'none';
+        return;
+      }
+      wrap.style.display = '';
+      const byHarness = {};
+      sources.forEach((s) => { byHarness[s.harness] = s; });
+      const rows = this._libraryHarnessList()
+        .filter((h) => byHarness[h.id])
+        .map((h) => {
+          const s = byHarness[h.id];
+          const meta = this._usageRequestSourceMeta(h.id);
+          const last = s.last_event_at ? this.formatRelativeTime(s.last_event_at) : '-';
+          return `<div class="live-activity-row">
+            <span class="live-activity-harness">${this._harnessIconHtml(h.id, 16)} ${escapeHtml(meta.label)}</span>
+            <span class="live-activity-num" title="${Number(s.active_sessions) || 0} 个活跃会话">${this._formatBigNumber(Number(s.active_sessions) || 0)} 会话</span>
+            <span class="live-activity-num" title="${Number(s.tool_calls) || 0} 次工具调用 / 5 分钟">${this._formatBigNumber(Number(s.tool_calls) || 0)} 调用</span>
+            <span class="live-activity-last">${escapeHtml(last)}</span>
+          </div>`;
+        });
+      const sessLines = sessions.slice(0, 8).map((sess) => {
+        const meta = this._usageRequestSourceMeta(sess.harness);
+        const dir = (sess.cwd || '').split('/').filter(Boolean).pop() || sess.cwd || '-';
+        const when = sess.ts ? this.formatRelativeTime(sess.ts) : '-';
+        return `<div class="live-activity-sess">
+          <span class="live-activity-harness">${this._harnessIconHtml(sess.harness, 14)} ${escapeHtml(meta.label)}</span>
+          <span class="live-activity-cwd" title="${escapeHtml(sess.cwd || '')}">${escapeHtml(dir)}</span>
+          ${sess.tool_name ? `<span class="live-activity-tool">${escapeHtml(sess.tool_name)}</span>` : ''}
+          <span class="live-activity-last">${escapeHtml(when)}</span>
+        </div>`;
+      });
+      setHTML(document.getElementById('liveActivityRows'), rows.join(''));
+      setHTML(document.getElementById('liveActivitySessions'),
+        sessLines.join('') || `<div class="live-activity-empty">${t('最近 5 分钟没有活跃会话')}</div>`);
+    } catch (_e) {
+      // 看板加载失败不打扰主流程，静默保留旧内容
+    }
+  }
 
   async loadStats() {
     const rangeSelect = document.getElementById('statsTimeRange');

@@ -2382,6 +2382,8 @@ if (isDemo) {
   app.use('/api/user', require('./routes/user'));
   app.use('/api/user', require('./routes/balance-alert'));
   app.use('/api/user', require('./routes/notifications'));
+  // 客户端事件上报（hook → 实时活动看板）
+  app.use('/api/client-events', require('./routes/client-events'));
   app.use('/api/playground', require('./routes/playground'));
   app.use('/api/conversations', require('./routes/conversations'));
   app.use('/api/2fa', require('./routes/two-factor'));

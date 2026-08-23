@@ -5911,3 +5911,4 @@ module.exports.invalidateUserApiKeyCache = invalidateUserApiKeyCache;
 module.exports.invalidateApiKeyCacheByKeyId = invalidateApiKeyCacheByKeyId;
 module.exports.resolveModelQueue = resolveModelQueue;
 module.exports.resolveModelQueueForRequest = resolveModelQueueForRequest;
+module.exports.validateApiKey = validateApiKey;
