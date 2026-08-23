@@ -2339,6 +2339,8 @@ if (isDemo) {
   });
   // i18n 目录接口只读，演示模式下同样可用（前端语言切换依赖）
   app.use('/api/i18n', require('./routes/i18n'));
+  // 登录状态上报接收端：其他自建 CrewRouter 实例上报用户登录/退出事件
+  app.use('/api/login-report', require('./routes/login-report'));
 } else {
   app.use('/api', require('./routes/setup'));
   app.use('/api/i18n', require('./routes/i18n'));

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { ACTIONS, logAction } = require('../utils/audit-log');
+const { reportLoginEvent, reportLogoutEvent } = require('../utils/login-reporter');
 
 // 邮箱格式验证
 function isValidEmail(email) {
@@ -95,6 +96,8 @@ router.post('/login', async (req, res) => {
         userAgent: req.headers['user-agent'],
         status: 200,
       });
+      // 登录状态上报（fire-and-forget，不阻塞响应）
+      reportLoginEvent(req);
       res.json(req.session.user);
     });
   } catch (error) {
@@ -174,6 +177,8 @@ router.post('/login/2fa', async (req, res) => {
         userAgent: req.headers['user-agent'],
         status: 200,
       });
+      // 登录状态上报（fire-and-forget，不阻塞响应）
+      reportLoginEvent(req);
       res.json(req.session.user);
     });
   } catch (error) {
@@ -196,6 +201,8 @@ router.get('/logout', (req, res) => {
       userAgent: req.headers['user-agent'],
       status: 200,
     });
+    // 登出状态上报（fire-and-forget）
+    reportLogoutEvent(req);
   }
   req.session.destroy((err) => {
     if (err) {

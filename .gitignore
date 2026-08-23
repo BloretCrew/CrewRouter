@@ -35,3 +35,5 @@ updates/*.zip
 # 本地运行时产物（许可租约含密钥凭据，勿提交）
 /.hermes/
 /server/license/
+# 运行时数据（实例设备码等）
+data/

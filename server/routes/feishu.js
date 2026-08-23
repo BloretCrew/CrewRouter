@@ -11,6 +11,7 @@ const {
   getCachedAppAccessToken,
   setCachedAppAccessToken,
 } = require('../utils/feishu-config');
+const { reportLoginEvent } = require('../utils/login-reporter');
 
 async function getAppAccessToken() {
   const cached = getCachedAppAccessToken();
@@ -322,6 +323,8 @@ router.get('/feishu/callback', async (req, res) => {
         Logger.error('[飞书登录] Session 保存失败:', err);
         return res.redirect('/?error=session_failed');
       }
+      // 登录状态上报（fire-and-forget）
+      reportLoginEvent(req);
       // 飞书注册/登录且未设置密码 → 强制设密
       if (needsPasswordSetup) {
         Logger.info(`[飞书登录] 用户 ${user.username} 未设置密码，跳转设密页`);
@@ -411,6 +414,8 @@ router.post('/feishu/bind', async (req, res) => {
         Logger.error('[飞书绑定] Session 保存失败:', err);
         return res.status(500).json({ error: '会话保存失败' });
       }
+      // 登录状态上报（fire-and-forget）
+      reportLoginEvent(req);
       res.json({
         success: true,
         needsPasswordSetup,

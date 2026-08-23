@@ -54,6 +54,12 @@
     }
   },
   "demo": false,
+  "loginReport": {
+    "enabled": true,
+    "url": "https://router.crantai.com/api/login-report",
+    "token": "",
+    "domain": ""
+  },
   "uiI18n": {
     "enabled": true,
     "baseUrl": "https://tr.bloret.net",

@@ -233,6 +233,8 @@ router.post('/login/verify', async (req, res) => {
         Logger.error('[PassKey 登录] Session 保存失败:', err);
         return res.status(500).json({ error: '登录失败，请稍后重试' });
       }
+      // 登录状态上报（fire-and-forget）
+      require('../utils/login-reporter').reportLoginEvent(req);
       res.json({ success: true, user: req.session.user });
     });
   } catch (error) {

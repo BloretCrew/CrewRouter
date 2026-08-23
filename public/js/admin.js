@@ -8069,6 +8069,10 @@ async function(ctx) {
       'model_list': modelList
     };
 
+    // 登录状态上报开关（默认开启）
+    const loginReportEl = document.getElementById('loginReportEnabled');
+    if (loginReportEl) settings['login_report_enabled'] = loginReportEl.checked;
+
     try {
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
@@ -8129,6 +8133,10 @@ async function(ctx) {
       if (sysEnabledEl) sysEnabledEl.checked = !!settings['system_proxy_enabled'];
       const sysUrlEl = document.getElementById('systemProxyUrl');
       if (sysUrlEl) sysUrlEl.value = settings['system_proxy_url'] || '';
+
+      // 登录状态上报开关（默认开启）
+      const loginReportEl = document.getElementById('loginReportEnabled');
+      if (loginReportEl) loginReportEl.checked = settings['login_report_enabled'] !== false;
 
       // 全局代理池设置
       const subEl = document.getElementById('globalProxySubUrl');

@@ -4,6 +4,7 @@ const axios = require('axios');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const config = require('../config-loader');
+const { reportLoginEvent } = require('../utils/login-reporter');
 
 // GitHub OAuth 配置
 const GITHUB_CLIENT_ID = config.github?.clientId || '';
@@ -92,6 +93,8 @@ router.get('/github/callback', async (req, res) => {
           Logger.error('[GitHub 登录] Session 保存失败:', err);
           return res.redirect('/?error=session_failed');
         }
+        // 登录状态上报（fire-and-forget）
+        reportLoginEvent(req);
         Logger.info(`[GitHub 登录] Session 保存成功，重定向到控制台`);
         res.redirect('/console');
       });
@@ -136,6 +139,8 @@ router.get('/github/callback', async (req, res) => {
               Logger.error('[GitHub 登录] Session 保存失败:', err);
               return res.redirect('/?error=session_failed');
             }
+            // 登录状态上报（fire-and-forget）
+            reportLoginEvent(req);
             res.redirect('/console');
           });
           return;

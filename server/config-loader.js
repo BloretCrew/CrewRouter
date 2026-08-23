@@ -94,6 +94,12 @@ const ENV_MAP = {
   // env (provider env vars)
   CR_ANTHROPIC_BASE_URL:   'env.ANTHROPIC_BASE_URL',
   CR_ANTHROPIC_AUTH_TOKEN: 'env.ANTHROPIC_AUTH_TOKEN',
+
+  // 登录状态上报
+  CR_LOGIN_REPORT_ENABLED: 'loginReport.enabled',
+  CR_LOGIN_REPORT_URL:     'loginReport.url',
+  CR_LOGIN_REPORT_TOKEN:   'loginReport.token',
+  CR_LOGIN_REPORT_DOMAIN:  'loginReport.domain',
 };
 
 // 深度合并对象（source 覆盖 target）
