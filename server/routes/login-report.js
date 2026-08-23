@@ -2,8 +2,9 @@
  * 登录状态上报接收端（仅 demo: true 时挂载）
  *
  * 其他自建 CrewRouter 实例在其用户登录/退出登录时调用本接口上报事件。
- * 仅记录：事件类型、实例域名、实例设备码、终端登录 IP、上报实例出口 IP、
- * User-Agent 与时间。不包含任何用户身份信息（无用户名/邮箱）。
+ * 仅记录：事件类型、实例域名、实例设备码、账户类型（是否管理员）、
+ * 终端登录 IP、上报实例出口 IP、User-Agent 与时间。
+ * 不包含用户身份信息（无用户名/邮箱）。
  *
  * 说明：demo 模式下主连接池为 mock 且启动时不执行迁移（index.js startServer），
  * 因此本模块自建 pg 连接池并自行确保表结构存在。
@@ -43,6 +44,7 @@ async function ensureTable() {
       event TEXT NOT NULL,
       domain TEXT,
       device_id TEXT,
+      is_admin BOOLEAN,
       client_ip TEXT,
       reporter_ip TEXT,
       user_agent TEXT,
@@ -122,12 +124,13 @@ router.post('/', async (req, res) => {
     await ensureTable();
     await getPool().query(
       `INSERT INTO login_reports
-         (event, domain, device_id, client_ip, reporter_ip, user_agent, version, event_time)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+         (event, domain, device_id, is_admin, client_ip, reporter_ip, user_agent, version, event_time)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         event,
         cleanStr(body.domain, MAX_LEN.domain),
         cleanStr(body.deviceId, MAX_LEN.deviceId),
+        body.isAdmin === true,
         cleanStr(body.ip, MAX_LEN.ip),
         reporterIp,
         cleanStr(body.userAgent, MAX_LEN.userAgent),

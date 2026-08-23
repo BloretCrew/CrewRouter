@@ -4,9 +4,9 @@
  * 用户在本实例登录/退出登录时，向官方演示站上报一次匿名事件，
  * 用于在多 CrewRouter 之间展示活跃状态。默认开启，可在管理后台关闭。
  *
- * 隐私说明：不包含任何用户信息（无用户名/邮箱），仅记录：
+ * 隐私说明：不含用户名/邮箱等身份信息，仅记录：
  * 事件类型（login/logout）、本实例对外域名、本实例设备码、
- * 终端登录 IP、User-Agent 与时间。
+ * 账户类型（是否管理员）、终端登录 IP、User-Agent 与时间。
  *
  * 可靠性：fire-and-forget，3 秒超时，任何失败仅记录 warn，绝不阻塞登录流程。
  */
@@ -135,6 +135,7 @@ async function report(event, req) {
       event,
       domain: resolveDomain(req),
       deviceId: resolveInstanceId(),
+      isAdmin: req.session?.user?.isAdmin === true,
       ip: req.ip || (req.connection && req.connection.remoteAddress) || 'unknown',
       userAgent: String(req.headers['user-agent'] || '').slice(0, 512),
       version: VERSION,
