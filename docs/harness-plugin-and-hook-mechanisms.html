@@ -571,6 +571,159 @@ export type HookDecision = 'ask' | 'block' | 'deny' | 'approve' | 'allow';
 <p>vm 运行时沙箱与权限数组依旧独有——Qwen 的 function hook 能跑进程内任意代码但仅限会话内使用，恰恰说明「进程内代码 SDK」在没有沙箱时不敢做成分发形态，反证了我们 vm 方案的前瞻性。</p>
 </div>
 
+<!-- ================= 7. Hermes ================= -->
+<h2 id="hermes"><span class="section-label">7.</span> Hermes（Python 插件目录 + Toolset 分组，装饰器式生命周期回调）</h2>
+<p class="small">仓库内无完整源码副本 · 置信度：<span class="conf-low">低—中</span>（推测章）· 依据：<code>docs/harness-request-behavior-research.md</code> 相关章节结论 + 公开资料 + Python agent 生态惯例推断</p>
+
+<div class="warn">本章未经源码考古验证。「Hermes」在此指研究范围内那款 Python 技术栈的 agent harness；具体 API 名称均为推断表述，不应作为对接实现的依据。</div>
+
+<h3>7.1 插件形态（问题 1）</h3>
+<div class="card">
+<p><strong>推测：</strong>扩展机制是<strong>约定目录 + 进程内 import</strong> 的 Python 式做法——项目/用户目录下的 <code>plugins/</code> 文件夹，每个子目录是一个 Python 包（带 <code>__init__.py</code> 或轻量 manifest，如 <code>plugin.yaml</code> 声明名称与入口），harness 启动时扫描、动态导入并调用其注册入口。安装方式即「把目录放进 plugins/」，最多辅以 pip 安装第三方依赖；没有市场/registry 形态的分发。</p>
+<p>与之配套的是 <strong>toolset</strong> 概念：把若干相关工具聚成组（如「文件读写组」「Shell 组」「浏览器组」），插件最常见的产出就是一个自定义 toolset；会话/配置层面可以按 toolset 整体启用或禁用。</p>
+</div>
+
+<h3>7.2 插件 API 面（问题 2）</h3>
+<div class="card">
+<ul>
+  <li><strong>推测的能力面：</strong>① 注册 toolset / 工具函数（带类型签名与 docstring，直接成为模型可见的 tool schema）；② 注册 slash 命令或快捷指令；③ 订阅生命周期钩子（见 7.3）；④ 只读访问会话上下文（历史消息、工作目录、配置）。</li>
+  <li>与 Claude Code 的「声明式资源捆绑」相反，这类 Python 插件是<strong>代码级 SDK</strong>：注册时拿到的是宿主对象的<strong>内存引用</strong>，能做的事上限就是宿主内部 API 的暴露面积——灵活但危险（见 7.5）。</li>
+  <li>注入 system prompt 的能力大概率以「插件返回一段 system 片段」的形式存在（生态通例），而非独立的 prompt 注册接口。<strong>此条为弱推测。</strong></li>
+</ul>
+</div>
+
+<h3>7.3 Hook 系统（问题 3）</h3>
+<div class="card">
+<p><strong>推测：</strong>hook 以<strong>装饰器 / 回调注册</strong>表达，而非外部进程。典型点位与 Claude 同构：</p>
+<pre><code>@plugin.on_session_start      # 会话建立
+@plugin.on_prompt_submit     # 用户输入提交前，可改写 prompt
+@plugin.before_tool_call     # 可 deny / 改参数
+@plugin.after_tool_call      # 可附加观察结果 / 截断输出
+@plugin.on_stop              # 回合结束</code></pre>
+<ul>
+  <li><strong>输入/输出形态的本质差异：</strong>hook 收到的是<strong>强类型 Python 对象（引用传递）</strong>，不是序列化 JSON；返回值通过对象字段影响主流程（<code>deny=True</code> / 替换后的参数 / 附加上下文文本）。省去了跨进程序列化，但也意味着 hook 崩溃可以直接炸掉主进程。</li>
+  <li><strong>配置位置：</strong>推测为项目配置文件中的 hooks 小节 + 插件自带注册二合一，不存在 settings.json 式的集中 hook 清单。</li>
+</ul>
+</div>
+
+<h3>7.4 与 MCP 的关系（问题 4）</h3>
+<div class="card">
+<p><strong>推测：</strong>MCP 以「一种外部 toolset/provider 类型」的身份接入——配置里声明 stdio/SSE server，其工具被折叠进统一的 toolset 命名空间，与原生插件工具同场竞争。MCP 不是分发外壳（不像 Claude/Qwen 的插件包内嵌 mcpServers），两套机制平行存在。</p>
+</div>
+
+<h3>7.5 沙箱与权限模型（问题 5）</h3>
+<div class="card">
+<ul>
+  <li><strong>推测：无任何隔离。</strong><code>import</code> 即全权——插件代码与主进程同一解释器、同一用户身份、同一文件系统与网络权限。Python 生态的插件系统几乎全是这个模式（参考 pytest/Jupyter 扩展）。</li>
+  <li>信任控制至多是「目录白名单 / 首次加载确认」级别的软门槛。</li>
+</ul>
+</div>
+
+<h3>7.6 与 CrewRouter 插件系统的对比借鉴（问题 6）</h3>
+<div class="card">
+<ol>
+  <li><strong>引用传递 vs 序列化传递的取舍：</strong>Hermes 式进程内强类型上下文开发体验最好，但代价是零隔离、零语言中立。CrewRouter 的钩子走网关边界（必然序列化），正确姿势是把<strong>schema 版本化 + 强校验</strong>做好，用类型安全弥补拿不到引用的损失。</li>
+  <li><strong>before_tool_call 的 deny/modify 双语义</strong>与我们 <code>gateway:beforeUpstream</code> 的 block/rewrite 诉求完全同构，印证现有设计方向。</li>
+  <li><strong>反例价值：</strong>「import 即全权」的插件体系在单机个人工具里可容忍，放到多租户网关场景不可接受——这正是 CrewRouter 把 vm 沙箱 + 权限数组做成<strong>默认分发前提</strong>的差异化依据。</li>
+</ol>
+</div>
+
+<!-- ================= 8. OpenClaw ================= -->
+<h2 id="openclaw"><span class="section-label">8.</span> OpenClaw（npm 插件 + Plugin SDK + SKILL.md 技能层）</h2>
+<p class="small">仓库内无完整源码副本 · 置信度：<span class="conf-mid">中</span>（架构与机制基于公开文档/README 记忆复述，具体 API 名称可能有出入，均属半推测）</p>
+
+<div class="note">OpenClaw（前身 Clawdbot / Moltbot）是开源的个人 AI 助理/消息网关：常驻 <strong>Gateway 守护进程</strong>作为唯一控制面（本地 WebSocket/HTTP API），向下挂多个消息渠道（WhatsApp/Telegram/Discord 等）与 agent 运行时。它与 CrewRouter 在「网关为中心」这一点上结构最像，故单独一节。</div>
+
+<h3>8.1 插件形态（问题 1）</h3>
+<div class="card">
+<ul>
+  <li><strong>插件 = npm 包形式的 TypeScript/JS 模块，进程内加载</strong>（<code>openclaw plugins install &lt;npm 包|本地路径&gt;</code>），启用清单记录在 <code>~/.openclaw/openclaw.json</code> 的 <code>plugins.allow</code> / <code>plugins.entries</code> 字段——显式允许名单 + 条目配置两级。</li>
+  <li><strong>技能（Skills）是独立的第二层：</strong>采用 Anthropic 风格的 <code>SKILL.md</code> 目录约定（Markdown 指令包，可带附属脚本），与代码级插件解耦——「行为知识」走技能，「能力接线」走插件。</li>
+  <li>无中心化市场，分发靠 npm registry 与手工目录拷贝。<strong>（分发细节为中低置信度。）</strong></li>
+</ul>
+</div>
+
+<h3>8.2 插件 API 面（问题 2）</h3>
+<div class="card">
+<p><strong>推测（基于公开示例归纳）：</strong>Plugin SDK 的核心特征是<strong>单一插件可同时贡献多种能力类型</strong>，由宿主统一装配：</p>
+<table>
+<tr><th>能力类型</th><th>作用</th></tr>
+<tr><td>channel</td><td>新增一条消息渠道（收发消息的适配器）</td></tr>
+<tr><td>tool</td><td>向 agent 注册可调用工具</td></tr>
+<tr><td>provider</td><td>新增模型/服务提供方</td></tr>
+<tr><td>command</td><td>聊天内命令（如 <code>/status</code>）</td></tr>
+<tr><td>hook handler</td><td>订阅生命周期事件（见 8.3）</td></tr>
+<tr><td>cron/定时任务</td><td>周期性触发 agent 行为</td></tr>
+</table>
+<p>这与 Claude Code「一个清单捆七类组件」的设计殊途同归：<strong>聚合式 manifest 是成熟插件的共同形状</strong>。</p>
+</div>
+
+<h3>8.3 Hook 系统（问题 3）</h3>
+<div class="card">
+<ul>
+  <li><strong>推测：</strong>事件总线 + 命名空间化事件名（形如 <code>agent:before_tool_call</code>、<code>message:new</code>、<code>session:start</code>），插件在注册时声明感兴趣的事件并给出处理函数；<code>agent:before_tool_call</code> 类事件的处理结果可以<strong>拒绝执行</strong>该工具调用。</li>
+  <li><strong>另一族容易混淆的东西是入站 Webhook：</strong>OpenClaw 有把外部 HTTP POST 变成一次 agent 触发的特性。注意它是<strong>触发器（trigger）</strong>而非拦截器（interceptor）——只负责「发起回合」，不在主流程上设卡。</li>
+  <li>hook 的配置随插件条目写在 <code>openclaw.json</code>，无独立的全局 hooks 清单。<strong>（事件名与配置字段为记忆复述，精确拼写待核。）</strong></li>
+</ul>
+</div>
+
+<h3>8.4 与 MCP 的关系（问题 4）</h3>
+<div class="card">
+<p><strong>推测（置信度偏低）：</strong>MCP server 可作为一种工具来源接入（生态大势，各家均已跟进），但 OpenClaw 的主扩展面是自有 Plugin SDK；MCP 在这里是<strong>能力供给方之一</strong>，不承担分发/打包职能。两套机制的关系是「SDK 管接线、MCP 管供货」。</p>
+</div>
+
+<h3>8.5 沙箱与权限模型（问题 5）</h3>
+<div class="card">
+<ul>
+  <li><strong>默认信任模型是「单用户本机」：</strong>Gateway 只监听本机/内网，远程访问靠设备配对 + token + TLS（官方建议套 Tailscale）。在这个前提下，插件进程内全权运行被认为可接受。</li>
+  <li>风险集中在 <strong>exec 类工具</strong>上：提供可选的 Docker 沙箱执行模式，以及工具级 allow/deny 名单——隔离是「按工具开关」而不是「按插件强制」。</li>
+  <li>对比 CrewRouter：OpenClaw 用<strong>部署拓扑</strong>（本机 + 配对）替代了<strong>运行时隔离</strong>，这在多租户产品里不可复制。</li>
+</ul>
+</div>
+
+<h3>8.6 与 CrewRouter 插件系统的对比借鉴（问题 6）</h3>
+<div class="card">
+<ol>
+  <li><strong>聚合式插件 manifest：</strong>一个插件同时贡献 channel/tool/command/hook 的形状再次验证了我们二期能力面清单的方向；可进一步对齐的是「同一插件内各能力共享一个启用开关与配置命名空间」。</li>
+  <li><strong>事件名命名空间化（域:事件）：</strong>比裸字符串事件名可读性与可过滤性好，值得在我们的事件枚举里采纳为命名规范。</li>
+  <li><strong>触发器与拦截器分家：</strong>OpenClaw 明确区分了 inbound trigger 与 interceptor 两类入口。CrewRouter 网关除 <code>gateway:requestReceived</code> 这类拦截点外，可增设<strong>入站触发型</strong>钩子类别（定时/外部 HTTP 发起一次代理流程），二者不可混用同一配置段。</li>
+  <li><strong>Skills 与 Plugin 分层：</strong>「Markdown 技能管知识、代码插件管接线」的分工干净，且与 Claude 生态兼容——我们的商店如果同时收两种货，应沿用这个界线而不是混在一个类型里。</li>
+</ol>
+</div>
+
+<!-- ================= 9. DeepSeek Harness ================= -->
+<h2 id="deepseek"><span class="section-label">9.</span> DeepSeek Harness（无公开原生插件机制，评测型运行时）</h2>
+<p class="small">仓库内无源码副本 · 置信度：<span class="conf-low">低</span>（整章推测）· 依据：公开资料（模型卡/API 文档/评测技术报告）+ 生态惯例</p>
+
+<div class="warn">DeepSeek 公开的是模型与 API（OpenAI 兼容端点，另提供 Anthropic 兼容路径供 Claude Code 等客户端直连），并未发布过一款面向终端用户的、有插件市场的 CLI 编码产品。本章把「DeepSeek Harness」理解为<strong>其官方评测/agent 运行脚本层</strong>进行推断，全部内容仅供横向对比定位。</div>
+
+<h3>9.1–9.3 插件形态 / API 面 / Hook 系统（问题 1–3）</h3>
+<div class="card">
+<ul>
+  <li><strong>推测：三问同答——没有。</strong>评测型 harness 的典型形状是一个<strong>固定的 agent 循环</strong>（构造 system prompt → 模型输出 tool call → 本地执行 → 结果回填 → 再推理直到终止条件），扩展方式就是改源码或 fork，不存在插件清单、hook 清单或配置化拦截点。</li>
+  <li>「插件 API 面」由 API 层间接提供：OpenAI 兼容 function calling 协议本身决定了客户端可以自由编排工具集——这是<strong>协议级扩展性</strong>，不是产品级插件机制。</li>
+</ul>
+</div>
+
+<h3>9.4 与 MCP 的关系（问题 4）</h3>
+<div class="card">
+<p><strong>推测：</strong>模型侧的工具调用训练（V3.x 系列）足以支撑 MCP 客户端接入，社区实践普遍是在客户端壳里挂 MCP server 来给 DeepSeek 模型供货；官方 harness 是否内建 MCP 客户端未见公开说明，判断为「跟进中/视评测需要」。MCP 与其说是它的插件机制，不如说是外部世界给它补插件机制。</p>
+</div>
+
+<h3>9.5 沙箱与权限模型（问题 5）</h3>
+<div class="card">
+<p><strong>推测：不适用。</strong>评测场景的隔离发生在<strong>实例层</strong>（SWE-bench 类任务的 Docker 容器），而不是插件层——因为根本没有插件。这恰好提供了一个干净的对照组：当扩展面为零时，安全边界退化为「整个 harness 跑在哪个容器里」。</p>
+</div>
+
+<h3>9.6 与 CrewRouter 插件系统的对比借鉴（问题 6）</h3>
+<div class="card">
+<ol>
+  <li><strong>反面参照系：</strong>「没有插件机制的 harness」正是 CrewRouter 的价值位——在上游 harness 不可改造的前提下，传输层网关是唯一能注入策略、审计与扩展的位置。我们所有 hook 点（<code>gateway:requestReceived</code>/<code>beforeUpstream</code>）本质上都在补这一层空白。</li>
+  <li><strong>双协议兼容的启示：</strong>DeepSeek 同时供 OpenAI/Anthropic 兼容端点，让别人的 harness 成为自己的分发渠道。CrewRouter 协议适配层同理：兼容面越宽，可挂钩子的 harness 越多。</li>
+  <li><strong>置信度自省：</strong>本章三问皆空的判断可能被官方后续发布的 agent 产品证伪，落地对接前需重新核实。</li>
+</ol>
+</div>
+
 <!-- APPEND -->
 
 </main>
