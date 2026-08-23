@@ -39,6 +39,13 @@ const DEFAULTS = {
     user: 'crewrouter',
     password: '',
   },
+  // 登录状态上报（自建实例向官方上报匿名登录事件）
+  loginReport: {
+    enabled: true,
+    url: 'https://crewrouter.bloret.net/api/login-report',
+    token: '',
+    domain: '',
+  },
   demo: false,
 };
 

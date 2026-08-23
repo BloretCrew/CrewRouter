@@ -22,7 +22,7 @@ const config = require('../config-loader');
 const REPORT_URL =
   process.env.CR_LOGIN_REPORT_URL ||
   (config.loginReport && config.loginReport.url) ||
-  'https://router.crantai.com/api/login-report';
+  'https://crewrouter.bloret.net/api/login-report';
 const REPORT_TOKEN =
   process.env.CR_LOGIN_REPORT_TOKEN ||
   (config.loginReport && config.loginReport.token) ||

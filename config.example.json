@@ -56,7 +56,7 @@
   "demo": false,
   "loginReport": {
     "enabled": true,
-    "url": "https://router.crantai.com/api/login-report",
+    "url": "https://crewrouter.bloret.net/api/login-report",
     "token": "",
     "domain": ""
   },
