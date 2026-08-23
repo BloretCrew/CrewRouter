@@ -345,6 +345,34 @@ execute(args, options) {
 <p>hook 内 throw 会让 Effect 链中断 → 工具不执行（错误进入会话流）；<code>permission.ask</code> 的 deny 则是结构化三态决策。没有 exit code 之类的进程间协议——因为根本不在进程间。</p>
 </div>
 
+<h3>4.4 与 MCP 的关系（问题 4）：完全独立的两套体系，靠 <code>event</code> 总线松耦合</h3>
+<div class="card">
+<ul>
+  <li><strong>MCP 独立配置：</strong>opencode.json 的 <code>mcp</code> 字段，分 <code>type:"local"</code>（stdio 子进程）与 <code>type:"remote"</code>（HTTP/SSE）两类，带 OAuth 支持（<code>src/mcp/index.ts:238</code>/<code>:342</code>/<code>:379-380</code>、<code>oauth-provider.ts</code>）。</li>
+  <li><strong>插件不承载 MCP：</strong>插件清单里没有 mcpServers 段；插件想碰 MCP 只能通过通用 <code>event</code> hook 监听事件或在 <code>tool.execute.*</code> 中改写。反之 MCP 工具进入 <code>tool.execute.before/after</code> 管线时与内建工具一视同仁（<code>tools.ts:107</code> 对所有 item 生效）。</li>
+  <li class="evi">对比：Claude Code/Codex 是「插件可以打包 MCP」；OpenCode 是「插件与 MCP 互不嵌套、平行存在」。</li>
+</ul>
+</div>
+
+<h3>4.5 沙箱与权限模型（问题 5）：无任何隔离——进程内全权代码</h3>
+<div class="card">
+<p><strong>这是三个 harness 中权限模型最激进的</strong>：插件是动态 import 进主进程的 JS 模块，拥有完整 Node.js 能力（任意 fs/net/child_process），<strong>无沙箱、无权限声明、无审批流</strong>。loader 的防线只有两个工程性检查：<code>checkPluginCompatibility</code> 版本兼容校验与安装失败重试分类（<code>loader.ts:9-11</code>、<code>:70-73</code>）。npm 安装来源意味着供应链风险面等同于直接装 npm 包。</p>
+<p class="evi">对比结论：Claude Code「配置即信任」（hook=全权 shell），Codex 加了信任状态机，OpenCode 干脆「代码即信任」。三者都没有运行时能力收敛——CrewRouter 的 vm 沙箱 + permissions 数组在业界属少数派。</p>
+</div>
+
+<h3>4.6 与 CrewRouter 插件系统的对比借鉴（问题 6）</h3>
+<div class="card">
+<h4>值得借鉴的设计</h4>
+<ol>
+  <li><strong>统一 hook 签名 + output 原地改写：</strong>OpenCode 用一个泛型 <code>trigger(name, input, output)</code> 约束全部事件，插件心智模型极简（拿到 output 改就是了）。我们的钩子管线已是 <code>(payload, meta) => payload|undefined</code>（<code>server/plugins/hooks.js:9-10</code>），语义同源；可进一步把「原地修改 vs 返回替换 vs 返回决策对象」三种返回形态写成正式协议文档并做 schema 校验。</li>
+  <li><strong><code>chat.headers</code> / system prompt 重写位：</strong>这两个 hook 点对我们网关场景极具吸引力——<code>chat.headers</code> 对应我们转发上游时的 header 注入需求，<code>experimental.chat.system.transform</code> 对应 system prompt 改写需求。建议在 <code>gateway:beforeUpstream</code> 旁增设更细粒度的声明式点位：<code>upstream:headers</code>、<code>prompt:systemTransform</code>。</li>
+  <li><strong>npm 分发 + 兼容性检查流水线：</strong>loader 的 Plan→Resolved→Loaded 三阶段 + retryable 错误分类（<code>loader.ts:19-33</code>、<code>:70-73</code>）比我们目前本地目录加载更工程化；商店安装可复用该思路（下载→兼容检查→签名校验→落盘）。</li>
+  <li><strong>全局事件总线兜底：</strong><code>event(input)</code> 让插件能旁听一切内部事件而不必为每种事件单开 hook——适合审计类插件低成本接入。我们的钩子总线可加一个 <code>*:afterAll</code> 通配订阅位。</li>
+</ol>
+<h4>反面教材（我们要避开的）</h4>
+<p>无隔离的进程内插件 = 一个恶意/劣质 npm 包即可窃取所有 API key 与会话数据。CrewRouter 的 vm 沙箱 + 显式 permission 声明正是对这个模型的修正，应坚持而非向其看齐。</p>
+</div>
+
 <!-- APPEND -->
 
 </main>
