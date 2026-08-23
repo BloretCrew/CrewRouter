@@ -79,9 +79,21 @@ async function flushQuotaData() {
 // Periodic flush
 setInterval(flushQuotaData, FLUSH_INTERVAL);
 
-// Graceful shutdown
-process.on('SIGTERM', () => flushQuotaData());
-process.on('SIGINT', () => flushQuotaData());
+// Graceful shutdown：flush 后必须退出，否则 SIGINT/SIGTERM 处理器会吞掉默认终止行为，
+// 进程带着监听端口继续存活（MCSM 优雅重启卡 busy 的根因）
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  const forceExit = setTimeout(() => process.exit(0), 5000);
+  if (forceExit.unref) forceExit.unref();
+  try {
+    await flushQuotaData();
+  } catch (err) { /* flushQuotaData 内部已捕获 */ }
+  process.exit(0);
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 /**
  * Get buffered quota data for a specific user (performance optimization).
