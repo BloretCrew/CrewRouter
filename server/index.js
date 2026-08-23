@@ -2376,6 +2376,7 @@ if (isDemo) {
   app.use('/auth', require('./routes/feishu'));
   app.use('/api', require('./routes/api'));
   app.use('/api/admin', require('./routes/admin'));
+  app.use('/api/admin', require('./routes/admin-custom-instructions'));
   app.use('/api/admin/update', require('./routes/update'));
   app.use('/api/admin', require('./routes/teams'));
   app.use('/api/user', require('./routes/user'));
