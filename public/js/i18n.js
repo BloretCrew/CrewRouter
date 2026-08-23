@@ -33,7 +33,15 @@
       var self = this;
       root.querySelectorAll('[data-i18n]').forEach(function (el) {
         var key = el.getAttribute('data-i18n');
-        if (key != null && key !== '') el.textContent = self.t(key);
+        if (key != null && key !== '') {
+          // <title> 的内容只能为纯文本，不能包裹子标签，否则标签串会被当作字面标题；
+          // 因此对 <title> 直接设置 document.title，其余元素沿用 textContent。
+          if (el.tagName === 'TITLE') {
+            document.title = self.t(key);
+          } else {
+            el.textContent = self.t(key);
+          }
+        }
       });
       root.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
         var key = el.getAttribute('data-i18n-placeholder');
