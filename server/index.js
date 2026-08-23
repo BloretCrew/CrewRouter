@@ -2228,6 +2228,15 @@ app.get('/api/version', (req, res) => {
   res.json(payload);
 });
 
+// 应用前端所需的基础配置（无需认证）：demo 等标志
+app.get('/api/config', (req, res) => {
+  res.json({
+    demo: !!isDemo,
+    name: config.app?.name || 'CrewRouter',
+    version: APP_VERSION,
+  });
+});
+
 // 最新更新包下载（返回 updates/latest.zip；无需认证）
 app.get('/api/updates/latest', (req, res) => {
   try {

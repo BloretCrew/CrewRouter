@@ -210,6 +210,12 @@ class ConsoleApp {
   async _maybeShowStatsConsent() {
     if (!this.user?.isAdmin) return;
     try {
+      // 演示模式（demo: true）下不询问、不上报
+      const cfgRes = await fetch('/api/config', { credentials: 'same-origin' });
+      if (cfgRes.ok) {
+        const cfg = await cfgRes.json();
+        if (cfg.demo) return;
+      }
       const res = await fetch('/api/admin/settings', { credentials: 'same-origin' });
       if (!res.ok) return;
       const settings = await res.json();
