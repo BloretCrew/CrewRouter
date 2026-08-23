@@ -208,6 +208,60 @@ hook_event_name: 'PreToolUse', tool_name, tool_input</code></pre>
 <p><strong>运行时硬隔离</strong>：vm 沙箱 + 每钩子 2s 超时 + ctx.fetch 10s 超时 + SSRF 校验 + 连续错误熔断自动摘除（<code>host.js:41-46</code>、<code>hooks.js:11-14</code>）——Claude Code 的 shell hook 完全没有这些。我们的弱点是插件必须写成 JS 模块、门槛高于「一行命令一个 hook」；上述第 2 点的多形态声明正好补这个短板。</p>
 </div>
 
+<!-- ================= 3. Codex CLI ================= -->
+<h2 id="codex"><span class="section-label">3.</span> Codex CLI（新一代插件市场 + 直接兼容 Claude 语义的 Hooks 引擎）</h2>
+<p class="small">源码：<code>codex/codex-rs</code>（Rust workspace，约 90 个 crate）· 置信度：<span class="conf-high">高</span></p>
+
+<h3>3.1 插件形态（问题 1）：Marketplace 分发的声明式资源包</h3>
+<div class="card">
+<ul>
+  <li><strong>新旧两代并存：</strong>遗留机制是 <code>notify</code>——config 里指定一个外部程序 argv，在特定节点被调用（<code>hooks/src/registry.rs:40-42</code> <code>legacy_notify_argv</code>）；新机制是完整的 <strong>Plugin + Marketplace</strong> 体系。</li>
+  <li><strong>插件清单：</strong><code>PluginManifest</code> 含 name/version/description/keywords 与 <code>paths</code> 资源段——可声明 <code>skills</code>、<code>mcp_servers</code>、<code>apps</code>、<code>hooks</code> 四类组件（<code>plugin/src/manifest.rs:9-27</code>）；hooks 可内联定义也可引用外部文件（<code>manifest.rs:33-37</code> <code>PluginManifestHooks::Paths|Inline</code>）。</li>
+  <li><strong>Marketplace 分发：</strong>插件来源三种——Local 路径 / Git(url+path+ref+sha) / npm(package+version+registry)（<code>core-plugins/src/marketplace.rs:127-141</code>）。运营策略字段丰富：安装策略 <code>NOT_AVAILABLE/AVAILABLE/INSTALLED_BY_DEFAULT</code>（<code>marketplace.rs:165-177</code>）、鉴权策略 <code>ON_INSTALL/ON_USE</code>（<code>:178-186</code>）。安装动作在 <code>marketplace_add/install.rs</code> 物化到本地。</li>
+</ul>
+</div>
+
+<h3>3.2 插件 API 面（问题 2）：声明式资源 + 面向模型/UI 的 interface 元数据</h3>
+<div class="card">
+<p>与 Claude Code 同哲学：<strong>插件不含进程内代码 API</strong>，全部是宿主吸收的资源声明：</p>
+<table>
+<tr><th>组件</th><th>效果</th><th>证据</th></tr>
+<tr><td>skills</td><td>SKILL.md 技能包（独立 crate 解析/选择/@提及）</td><td><code>skills/src/parser.rs</code>、<code>selection.rs</code>、<code>mentions.rs</code></td></tr>
+<tr><td>mcp_servers</td><td>插件自带 MCP server 清单（Path 或 Object 两种形态）</td><td><code>plugin/src/manifest.rs:29-35</code></td></tr>
+<tr><td>apps</td><td>MCP App 类资源，带路由逻辑</td><td><code>manifest.rs:26</code>、<code>core-plugins/src/app_mcp_routing.rs</code></td></tr>
+<tr><td>hooks</td><td>随插件注册生命周期钩子（见 3.3）</td><td><code>manifest.rs:36-41</code>、<code>registry.rs:45</code> <code>plugin_hook_sources</code></td></tr>
+</table>
+<p>独有亮点：<code>interface</code> 元数据段——display_name/描述/capabilities/<code>default_prompt</code>/brand_color/logo/screenshots（<code>plugin/src/manifest.rs:46-62</code>），既是 UI 展示素材，也是<strong>给模型看的自我介绍</strong>（default_prompt 会影响模型如何使用该插件）。</p>
+</div>
+
+<h3>3.3 Hook 系统（问题 3）：引擎名就叫 <code>ClaudeHooksEngine</code>——公开承认对标 Claude Code</h3>
+<div class="card">
+<pre><code>// codex/codex-rs/hooks/src/events/pre_tool_use.rs:16
+use crate::engine::ClaudeHooksEngine;</code></pre>
+<h4>Hook 点位（9 个事件）</h4>
+<p><code>PreToolUse</code>、<code>PostToolUse</code>、<code>PermissionRequest</code>、<code>UserPromptSubmit</code>、<code>SessionStart</code>、<code>SessionEnd</code>、<code>Stop</code>、<code>PreCompact</code>/<code>PostCompact</code>（<code>hooks/src/engine/mod.rs:9-21</code> 的事件模块导入表；每个事件一个子目录文件 <code>hooks/src/events/*.rs</code>）。比 Claude Code 少 Notification/SubagentStart 等周边事件，核心决策面一致。</p>
+<h4>配置位置</h4>
+<p>两层收敛：专用文件 <code>~/.codex/hooks.json</code>（<code>hooks/src/engine/discovery.rs:340</code> <code>config_folder?.join("hooks.json")</code>）+ config.toml 各层级中的 hooks 段；两者「converge on the same trust identity」（<code>discovery.rs:744</code> 注释）。结构同样是 <code>{ 事件名: [{ matcher, hooks: [...] }] }</code>（<code>config/src/hooks_tests.rs:17-35</code>）。</p>
+<h4>四种 handler 形态——与 Claude Code 完全同构</h4>
+<pre><code>// codex/codex-rs/protocol/src/protocol.rs:1526-1531
+pub enum HookHandlerType {
+    Command,
+    McpTool,   // ← hook 处理器可以是一个 MCP tool！
+    Prompt,
+    Agent,
+}</code></pre>
+<h4>输入 / 输出</h4>
+<p>输入 wire shape 与 Claude Code 对齐：session_id/turn_id/subagent/cwd/transcript_path/model/<code>permission_mode</code>/tool_name/matcher_aliases/tool_use_id/tool_input（<code>events/pre_tool_use.rs:23-33</code>）。输出决策结构：</p>
+<pre><code>// codex/codex-rs/hooks/src/events/pre_tool_use.rs:39-44
+pub struct PreToolUseOutcome {
+    pub should_block: bool,
+    pub block_reason: Option&lt;String&gt;,
+    pub additional_contexts: Vec&lt;String&gt;,   // 向模型注入上下文
+    pub updated_input: Option&lt;Value&gt;,       // ★ 结构化改写工具入参
+}</code></pre>
+<p class="evi">要点：除了 block/context 注入外，<code>updated_input</code> 让 hook 能<strong>原地改写工具入参</strong>再放行——这是「中间人改写」语义的一等公民化，正是 CrewRouter 网关做的事在单机侧的缩影。每次 hook 执行都会产生 <code>HookRunSummary</code> 上报 UI（<code>protocol/src/protocol.rs</code> HookRunStatus/HookCompletedEvent）。</p>
+</div>
+
 <!-- APPEND -->
 
 </main>
