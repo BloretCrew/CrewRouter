@@ -1,4 +1,4 @@
-# client-hooks —— CrewRouter 客户端事件上报
+# CrewRouterHelper —— CrewRouter 客户端事件上报
 
 八个客户端共用一个上报器 [`cr-report.py`](./cr-report.py)（单文件 Python，零依赖）。
 
