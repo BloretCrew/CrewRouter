@@ -73,6 +73,11 @@
   },
   "store": {
     "seedDemo": true,
+    "pluginSource": ["https://crewrouter.bloret.net"],
+    "updateCheck": {
+      "enabled": true,
+      "intervalHours": 24
+    },
     "passport": {
       "appId": "your-passport-app-id",
       "appSecret": "your-passport-app-secret",

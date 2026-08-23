@@ -158,6 +158,20 @@ function createStoreRoutes() {
     });
   });
 
+  // ---------- API：可安装的目标实例 ----------
+
+  // 按访问者终端 IP 查询其登录过的 CrewRouter 实例（弱关联：IP + 设备码 + 域名）
+  router.get('/api/install-targets', requireLogin, async (req, res) => {
+    try {
+      const clientIp = req.ip || (req.connection && req.connection.remoteAddress) || '';
+      const targets = await storeStore().listInstallTargets(clientIp);
+      res.json({ success: true, targets });
+    } catch (e) {
+      Logger.error('[store-api] install-targets 失败', e.message);
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   // ---------- API：plugins ----------
 
   router.get('/api/plugins', async (req, res) => {
@@ -202,6 +216,19 @@ function createStoreRoutes() {
     } catch (e) {
       Logger.error('[store-api] manifest 失败', e.message);
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  // 公开插件包信息（实例/商店详情/确认框用）：仅上架插件，CORS 允许跨域拉取，无需登录
+  router.get('/api/plugins/:id/package-info', async (req, res) => {
+    try {
+      const info = await storeStore().getPluginPackageInfo(req.params.id);
+      if (!info) return res.status(404).json({ success: false, error: '插件不存在或未上架' });
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.json({ success: true, plugin: info });
+    } catch (e) {
+      Logger.error('[store-api] package-info 失败', e.message);
+      res.status(500).json({ success: false, error: e.message });
     }
   });
 

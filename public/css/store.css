@@ -79,3 +79,18 @@
 .store-admin-row { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; flex-wrap: wrap; }
 .store-admin-row__meta { flex: 1; min-width: 200px; }
 .store-admin-row__actions { display: flex; gap: 8px; }
+
+/* 安装到 CrewRouter —— 实例选择弹框 */
+.store-card__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.store-modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+.store-modal { background: var(--background, #fff); border: 1px solid var(--border); border-radius: 14px; max-width: 560px; width: 100%; max-height: 80vh; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.store-modal__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.store-modal__head h3 { margin: 0; font-size: 16px; }
+.store-modal__list { padding: 12px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
+.store-target { display: block; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; text-decoration: none; color: var(--foreground); }
+.store-target--ok { background: color-mix(in srgb, var(--primary) 8%, transparent); cursor: pointer; }
+.store-target--ok:hover { border-color: var(--primary); }
+.store-target--disabled { opacity: 0.5; cursor: not-allowed; background: var(--muted, #f3f4f6); }
+.store-target__domain { font-weight: 600; font-size: 14px; word-break: break-all; }
+.store-target__meta { font-size: 12px; color: var(--muted-foreground); margin-top: 2px; }
+.store-target__note { font-size: 12px; color: var(--destructive, #ef4444); margin-top: 4px; }

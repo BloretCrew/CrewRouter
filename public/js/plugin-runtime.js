@@ -462,6 +462,7 @@
       pl.onDisk ? '' : '<span class="chip warn">磁盘缺失</span>',
       pl.loaded ? '<span class="chip on">运行中</span>' : '',
       pl.errorCount > 0 || pl.lastError ? `<span class="chip warn">错误 ${esc(String(pl.errorCount))}</span>` : '',
+      pl.storeUpdateAvailable ? `<span class="chip warn">有更新 v${esc(String(pl.storeLatestVersion || ''))}</span>` : '',
     ].join('');
 
     const caps = [];
@@ -488,6 +489,7 @@
         </div>
         <div style="margin-top:10px;">${capsHtml}</div>
         <div class="mmut">
+          ${pl.storeUpdateAvailable && pl.storeSource ? `<button class="btn btn-ghost btn-sm" style="color:var(--primary);" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')">${esc(t('更新'))}</button>` : ''}
           <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
           <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
           <button class="btn btn-ghost btn-sm" style="color:var(--destructive);" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
@@ -591,6 +593,22 @@
     refresh() { renderPluginsAdmin(document.getElementById('adminPluginsContent')); },
     search(v) { manageState.search = v; this.refresh(); },
     sort(v) { manageState.sort = v; this.refresh(); },
+    async updateFromStore(id) {
+      const pl = manageState.plugins.find(p => p.id === id);
+      if (!pl || !pl.storeId || !pl.storeSource) return;
+      const next = pl.storeLatestVersion || '最新';
+      if (!window.confirm(t('确定要将插件') + '「' + pl.name + '」' + t('更新到') + ' v' + next + t('吗？'))) return;
+      try {
+        await helpers.fetchJSON('/api/admin/plugins/install-from-store', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plugin: pl.storeId, source: pl.storeSource }),
+        });
+        this.refresh();
+      } catch (e) {
+        window.alert(t('更新失败') + '：' + e.message);
+      }
+    },
     expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); if (manageState.expanded[id]) this.loadData(id); },
     async loadData(id) {
       const box = document.querySelector(`[data-plugin-data="${id}"]`);

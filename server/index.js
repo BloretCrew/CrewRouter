@@ -2034,6 +2034,16 @@ async function ensurePluginsTables() {
         PRIMARY KEY (plugin_id, key)
       )
     `);
+    // 插件商店来源与每日更新检测相关列（幂等）
+    await pool.query(`ALTER TABLE plugins
+      ADD COLUMN IF NOT EXISTS store_id TEXT,
+      ADD COLUMN IF NOT EXISTS store_source TEXT,
+      ADD COLUMN IF NOT EXISTS store_download TEXT,
+      ADD COLUMN IF NOT EXISTS store_sha256 TEXT,
+      ADD COLUMN IF NOT EXISTS store_latest_version TEXT,
+      ADD COLUMN IF NOT EXISTS store_checked_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS store_update_available BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS store_latest JSONB`);
     Logger.info('[迁移] 插件表（plugins / plugin_data）已就绪');
   } catch (err) {
     Logger.warn(`[迁移] 插件表创建跳过: ${err.message}`);
@@ -2309,6 +2319,10 @@ app.get('/setup', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'pages/setup.html'));
 });
 
+app.get('/plugin-install', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'pages/plugin-install.html'));
+});
+
 // 插件商店（第三期）：独立功能页 + OAuth + API，仅 demo: true 时启用
 if (isDemo) {
   app.get('/store', (req, res) => {
@@ -2563,6 +2577,12 @@ async function startServer() {
     }
     setInterval(runApiKeyScheduler, 60000);
     setTimeout(runApiKeyScheduler, 5000);
+    // 从商店安装的插件：每日检查是否有更新（仅实例侧；由配置控制是否开启）
+    try {
+      require('./utils/plugin-store-updater').start();
+    } catch (err) {
+      Logger.warn(`[插件商店更新检测] 启动失败: ${err.message}`);
+    }
     try {
       const { startQuotaScheduler } = require('./utils/provider-quota');
       startQuotaScheduler();

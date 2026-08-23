@@ -21,6 +21,8 @@ const os = require('os');
 const { pool } = require('../models/database');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { logAction } = require('../utils/audit-log');
+const { extractZipSafe, findZipManifest, zipPayloadDir, collectDirEntries } = require('../plugins/zip');
+const storeClient = require('../plugins/store-client');
 const Logger = require('../logger');
 
 function createPluginsRoutes() {
@@ -31,6 +33,121 @@ function createPluginsRoutes() {
 
   // ---------- 管理端 ----------
   adminRouter.use(requireAdmin);
+
+  // 从商店拉取插件包信息（供 /plugin-install 确认页渲染；仅管理员可查看）
+  adminRouter.get('/store-package', async (req, res) => {
+    try {
+      const pluginId = String(req.query.plugin || '').trim();
+      const source = String(req.query.source || '').trim();
+      if (!pluginId) return res.status(400).json({ error: '缺少插件 id' });
+      if (!storeClient.isAllowedSource(source)) return res.status(400).json({ error: '插件商店源不受信任' });
+      const plugin = await storeClient.fetchPackageInfo(source, pluginId);
+      res.json({ ok: true, plugin });
+    } catch (err) {
+      Logger.error('[plugins-api] store-package 失败', err.message);
+      res.status(err.status || 500).json({ error: err.message });
+    }
+  });
+
+  // 从商店一键安装：下载 → sha256 → 解压校验 → 放入 plugins/<id> → 自动启用
+  adminRouter.post('/install-from-store', async (req, res) => {
+    const reg = registry();
+    const pluginsDir = reg.PLUGINS_DIR;
+    try {
+      const pluginId = String((req.body && req.body.plugin) || '').trim();
+      const source = String((req.body && req.body.source) || '').trim();
+      if (!pluginId) return res.status(400).json({ error: '缺少插件 id' });
+      if (!storeClient.isAllowedSource(source)) return res.status(400).json({ error: '插件商店源不受信任' });
+
+      // 服务端向商店拉取包信息（不信任客户端提供的 download/sha256）
+      const info = await storeClient.fetchPackageInfo(source, pluginId);
+      if (!info || !info.download || !String(info.download).startsWith('https://')) {
+        return res.status(400).json({ error: '插件下载地址必须为 https:// 直链' });
+      }
+
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cr-store-install-'));
+      const zipPath = path.join(tmpDir, 'plugin.zip');
+      try {
+        await storeClient.downloadPackage(info.download, zipPath, info.sha256 || '');
+        const extractDir = path.join(tmpDir, 'extract');
+        await extractZipSafe(zipPath, extractDir);
+        const manifest = findZipManifest(extractDir);
+        if (!manifest) return res.status(400).json({ error: '插件包缺少 plugin.json 或格式不合法' });
+        const { validateManifest } = require('../plugins/host');
+        const verr = validateManifest(manifest);
+        if (verr) return res.status(400).json({ error: '插件清单校验失败: ' + verr });
+        const id = manifest.id;
+        const payloadDir = zipPayloadDir(extractDir, id);
+        if (!payloadDir) return res.status(400).json({ error: '插件包根结构不合法' });
+        const dest = path.join(pluginsDir, id);
+        // 防路径穿越：逐文件校验目标路径
+        const entries = collectDirEntries(payloadDir);
+        for (const rel of entries) {
+          const target = path.join(dest, rel);
+          if (target !== dest && !target.startsWith(dest + path.sep)) {
+            return res.status(400).json({ error: '插件包包含非法路径: ' + rel });
+          }
+        }
+        // 覆盖升级：先备份旧目录，失败再回滚
+        if (fs.existsSync(dest)) {
+          const backup = dest + '.bak-' + Date.now();
+          fs.renameSync(dest, backup);
+          try {
+            fs.mkdirSync(dest, { recursive: true });
+            fs.cpSync(payloadDir, dest, { recursive: true });
+            fs.rmSync(backup, { recursive: true, force: true });
+          } catch (err) {
+            try { fs.rmSync(dest, { recursive: true, force: true }); } catch (e) {}
+            try { if (fs.existsSync(backup)) fs.renameSync(backup, dest); } catch (e) {}
+            throw err;
+          }
+        } else {
+          fs.mkdirSync(dest, { recursive: true });
+          fs.cpSync(payloadDir, dest, { recursive: true });
+        }
+
+        await pool.query(
+          `INSERT INTO plugins (id, name, version, description, author, permissions, enabled,
+             store_id, store_source, store_download, store_sha256)
+           VALUES ($1,$2,$3,$4,$5,$6::jsonb,true,$7,$8,$9,$10)
+           ON CONFLICT (id) DO UPDATE SET
+             name=EXCLUDED.name, version=EXCLUDED.version, description=EXCLUDED.description,
+             author=EXCLUDED.author, permissions=EXCLUDED.permissions, enabled=true,
+             store_id=EXCLUDED.store_id, store_source=EXCLUDED.store_source,
+             store_download=EXCLUDED.store_download, store_sha256=EXCLUDED.store_sha256,
+             store_latest_version=NULL, store_update_available=false, store_latest=NULL,
+             updated_at=CURRENT_TIMESTAMP`,
+          [id, manifest.name || id, manifest.version || '', manifest.description || '', manifest.author || '',
+           JSON.stringify(manifest.permissions || []), info.id || id, source, info.download || '', info.sha256 || '']
+        );
+        try { await reg.reload(id); } catch (e) { Logger.warn('[plugins-api] 安装后 reload 失败', e.message); }
+
+        logAction({
+          userId: req.session.user.id,
+          username: req.session.user.username,
+          isAdmin: true,
+          action: 'plugin.install',
+          resourceType: 'plugin',
+          resourceId: id,
+          description: `从商店安装插件「${manifest.name || id}」v${manifest.version || ''}`,
+          details: { source, download: info.download || '' },
+          ip: req.ip,
+          userAgent: req.headers['user-agent'],
+        });
+        // 异步上报商店安装计数（失败不影响）
+        try {
+          await fetch(`${source.replace(/\/+$/, '')}/store/api/plugins/${encodeURIComponent(id)}/install-click`, { method: 'POST' });
+        } catch (e) { /* 忽略 */ }
+        Logger.info(`[plugins-api] 插件 ${id} 已从商店安装并启用（管理员 ${req.session.user?.username}）`);
+        res.json({ ok: true, id, name: manifest.name || id, version: manifest.version || '', reloadRequired: true });
+      } finally {
+        try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (e) {}
+      }
+    } catch (err) {
+      Logger.error('[plugins-api] 从商店安装失败', err.message);
+      res.status(err.status || 500).json({ error: '插件安装失败: ' + err.message });
+    }
+  });
 
   // zip 上传安装：解压校验清单后放入 plugins/<id> 目录（仅登记，不自动启用）
   adminRouter.post('/upload', async (req, res) => {
@@ -340,84 +457,6 @@ function findRouteAuth(registry, pluginId, method, reqPath) {
     (('/' + String(r.path || '').replace(/^\/+/g, '')).replace(/\/+$/, '') || '/') === clean
   );
   return route?.auth || 'user';
-}
-
-// ---------- zip 安装辅助 ----------
-
-// 调用系统 unzip（防 zip-slip：先校验条目名再解压到目标目录）
-function extractZipSafe(zipPath, destDir) {
-  return new Promise((resolve, reject) => {
-    const { execFile } = require('child_process');
-    // 列出 zip 内条目并校验：拒绝绝对路径、`..` 穿越、反斜杠、以及非 plugin.json/目录的顶层乱放
-    execFile('/usr/bin/unzip', ['-Z1', zipPath], { timeout: 30000 }, (err, stdout) => {
-      if (err) return reject(new Error(err.message || 'unzip 读取失败'));
-      const entries = String(stdout).split('\n').map(s => s.trim()).filter(Boolean);
-      if (entries.length === 0) return reject(new Error('zip 包为空'));
-      if (entries.length > 1000) return reject(new Error('zip 包条目过多'));
-      for (const e of entries) {
-        if (path.isAbsolute(e) || e.includes('..') || e.includes('\\')) {
-          return reject(new Error(`非法条目路径: ${e}`));
-        }
-      }
-      execFile('/usr/bin/unzip', ['-o', '-q', zipPath, '-d', destDir], { timeout: 30000 }, (err2) => {
-        if (err2) return reject(new Error(err2.message || 'unzip 解压失败'));
-        resolve(destDir);
-      });
-    });
-  });
-}
-
-// 找到解压目录中合法的 plugin.json；支持根即清单或 <id>/plugin.json 两种布局
-function findZipManifest(tmpDir) {
-  const tryRead = (dir) => {
-    const p = path.join(dir, 'plugin.json');
-    if (!fs.existsSync(p)) return null;
-    try {
-      return JSON.parse(fs.readFileSync(p, 'utf8'));
-    } catch { return null; }
-  };
-  const rootManifest = tryRead(tmpDir);
-  if (rootManifest) return rootManifest;
-  const dirs = fs.readdirSync(tmpDir).filter(name => !name.startsWith('.'));
-  for (const name of dirs) {
-    const full = path.join(tmpDir, name);
-    if (!fs.statSync(full).isDirectory()) continue;
-    const m = tryRead(full);
-    if (m) return m;
-  }
-  return null;
-}
-
-// 返回实际插件载荷目录：清单 id 匹配的目录，或根即清单时的根
-function zipPayloadDir(tmpDir, id) {
-  const rootManifest = path.join(tmpDir, 'plugin.json');
-  if (fs.existsSync(rootManifest)) return tmpDir;
-  const dirs = fs.readdirSync(tmpDir).filter(name => !name.startsWith('.'));
-  for (const name of dirs) {
-    const full = path.join(tmpDir, name);
-    if (!fs.statSync(full).isDirectory()) continue;
-    if (name === id && fs.existsSync(path.join(full, 'plugin.json'))) return full;
-  }
-  // 仅一个目录且含 plugin.json 时容错（目录名与 id 不一致时以清单 id 为准）
-  const validDirs = dirs.filter(name => fs.existsSync(path.join(tmpDir, name, 'plugin.json')) && fs.statSync(path.join(tmpDir, name)).isDirectory());
-  if (validDirs.length === 1) return path.join(tmpDir, validDirs[0]);
-  return null;
-}
-
-// 收集目录下全部相对路径（文件与目录）
-function collectDirEntries(dir) {
-  const out = [];
-  const walk = (cur, rel) => {
-    for (const name of fs.readdirSync(cur)) {
-      const full = path.join(cur, name);
-      const relPath = rel ? path.join(rel, name) : name;
-      const st = fs.statSync(full);
-      out.push(relPath);
-      if (st.isDirectory()) walk(full, relPath);
-    }
-  };
-  walk(dir, '');
-  return out;
 }
 
 module.exports = { createPluginsRoutes };

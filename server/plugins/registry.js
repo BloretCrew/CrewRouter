@@ -402,6 +402,12 @@ async function listAll() {
     routes: (knownManifests.get(row.id)?.routes || []),
     cron: (knownManifests.get(row.id)?.cron || []),
     themes: (knownManifests.get(row.id)?.themes || []),
+    storeId: row.store_id || null,
+    storeSource: row.store_source || null,
+    storeUpdateAvailable: !!row.store_update_available,
+    storeLatestVersion: row.store_latest_version || null,
+    storeLatest: row.store_latest || null,
+    storeCheckedAt: row.store_checked_at || null,
   }));
 }
 

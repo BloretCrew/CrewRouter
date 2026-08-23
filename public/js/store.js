@@ -255,7 +255,8 @@
             '<div class="store-card__body">' +
               '<div class="store-card__meta"><span>' + esc(t('标签')) + '</span></div>' +
               '<div class="store-card__tags">' + tagChips(p.tags) + '</div>' +
-              '<div class="store-card__actions"><button class="btn btn-primary" id="installBtn">' + esc(t('安装')) + '</button></div>' +
+              '<div class="store-card__actions"><button class="btn btn-primary" id="installBtn">' + esc(t('安装')) + '</button>' +
+                '<button class="btn btn-secondary" id="installToRouterBtn">' + esc(t('安装到 CrewRouter')) + '</button></div>' +
             '</div>' +
           '</div>' +
           '<div id="ratingBox"></div>' +
@@ -269,6 +270,8 @@
       viewBox.innerHTML = html;
       var installBtn = document.getElementById('installBtn');
       if (installBtn) installBtn.addEventListener('click', function () { installHandler(p.id, installBtn); });
+      var installRouterBtn = document.getElementById('installToRouterBtn');
+      if (installRouterBtn) installRouterBtn.addEventListener('click', function () { openInstallTargetsModal(p.id); });
 
       // 评分区：需要登录且已配置
       var box = document.getElementById('ratingBox');
@@ -585,6 +588,73 @@
           });
         });
       }).catch(function (e) { setBanner('err', e.message); });
+    });
+  }
+
+  function permissionLabel(p) {
+    var map = {
+      'storage': t('读写插件私有存储'),
+      'network': t('访问外部网络'),
+      'gateway:modify': t('注册网关钩子（请求/响应/转发干预）'),
+      'provider:register': t('注册上游格式/协议转换/供应商选择'),
+      'apikey:modify': t('API Key 校验与创建钩子'),
+      'billing:modify': t('调整计费/配额'),
+      'cron:register': t('声明定时任务'),
+      'pages:register': t('新增控制台页面/插槽'),
+      'routes:register': t('挂载自有 HTTP 接口'),
+      'themes:register': t('注册界面主题')
+    };
+    return map[p] || p;
+  }
+
+  function removeModal() {
+    var mask = document.getElementById('storeInstallMask');
+    if (mask) mask.remove();
+  }
+
+  function openInstallTargetsModal(pluginId) {
+    api('/install-targets').then(function (data) {
+      var targets = data.targets || [];
+      var html = '<div class="store-modal-mask" id="storeInstallMask"><div class="store-modal">';
+      html += '<div class="store-modal__head"><h3>' + esc(t('安装到 CrewRouter')) + '</h3><button class="btn btn-sm btn-secondary" id="storeModalClose">' + esc(t('关闭')) + '</button></div>';
+      if (!targets.length) {
+        html += '<div class="store-empty">' + esc(t('未检测到你登录过的 CrewRouter')) + '</div>';
+      } else {
+        html += '<div class="store-modal__list">' + targets.map(function (tg) {
+          var note = tg.isAdmin ? '' : '<div class="store-target__note">' + esc(t('没有管理员权限')) + '</div>';
+          var attrs = '';
+          if (tg.isAdmin) {
+            var url = 'https://' + tg.domain + '/plugin-install?plugin=' + encodeURIComponent(pluginId) + '&source=' + encodeURIComponent(location.origin);
+            attrs = ' href="' + esc(url) + '"';
+          }
+          var cls = 'store-target ' + (tg.isAdmin ? 'store-target--ok' : 'store-target--disabled');
+          return '<a class="' + cls + '"' + attrs + '>' +
+            '<div class="store-target__domain">' + esc(tg.domain) + '</div>' +
+            '<div class="store-target__meta">' + esc(fmtDate(tg.lastLogin)) + ' · ' + esc(String(tg.logins)) + ' ' + esc(t('次登录')) + '</div>' +
+            note +
+          '</a>';
+        }).join('') + '</div>';
+      }
+      html += '</div></div>';
+
+      var wrap = document.createElement('div');
+      wrap.innerHTML = html;
+      var mask = wrap.firstChild;
+      document.body.appendChild(mask);
+
+      var close = document.getElementById('storeModalClose');
+      if (close) close.addEventListener('click', removeModal);
+      mask.addEventListener('click', function (e) { if (e.target === mask) removeModal(); });
+      // 非管理员实例不可点：拦截默认跳转
+      mask.querySelectorAll('a.store-target--disabled').forEach(function (a) {
+        a.addEventListener('click', function (e) { e.preventDefault(); });
+      });
+    }).catch(function (e) {
+      if (e.code === 'NOT_LOGIN' || e.status === 401) {
+        setBanner('warn', t('请先登录，再安装到你的 CrewRouter'));
+        return;
+      }
+      setBanner('err', e.message);
     });
   }
 

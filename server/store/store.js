@@ -5,8 +5,14 @@
  * 逻辑隔离：不建外键、不 JOIN、不做破坏性迁移。连接复用 server/models/database 的 pool。
  */
 
-const { pool } = require('../models/database');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { getPool } = require('./db');
 const Logger = require('../logger');
+
+// 商店使用中央站点真实连接池（demo 模式下主连接池为 mock，此处直接取真实池）
+const pool = getPool();
 
 const PLUGIN_ID_RE = /^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$/;
 
@@ -952,6 +958,114 @@ async function clearAllData() {
   Logger.info('[store] 已清空 plugin_store_* 表数据（保留表结构）');
 }
 
+// ---------- 插件包信息（供实例拉取 / 商店详情「行为」展示） ----------
+const manifestCache = new Map(); // key -> { at, payload }
+const MANIFEST_CACHE_TTL_MS = 10 * 60 * 1000;
+
+// 从未解压的 zip（临时文件）中读取 plugin.json（防目录穿越，仅允许相对路径）
+function readManifestFromZip(zipPath, pluginId) {
+  const { execFile } = require('child_process');
+  return new Promise((resolve) => {
+    execFile('/usr/bin/unzip', ['-Z1', zipPath], { timeout: 15000 }, (err, stdout) => {
+      if (err) return resolve(null);
+      const entries = String(stdout).split('\n').map((s) => s.trim()).filter(Boolean);
+      let target = null;
+      if (entries.includes('plugin.json')) target = 'plugin.json';
+      else if (entries.includes(`${pluginId}/plugin.json`)) target = `${pluginId}/plugin.json`;
+      else target = entries.find((e) => /(^|\/)plugin\.json$/.test(e) && !e.includes('..') && !path.isAbsolute(e));
+      if (!target) return resolve(null);
+      execFile('/usr/bin/unzip', ['-p', zipPath, target], { timeout: 15000, maxBuffer: 8 * 1024 * 1024 }, (err2, data) => {
+        if (err2) return resolve(null);
+        try { resolve(JSON.parse(data)); } catch { resolve(null); }
+      });
+    });
+  });
+}
+
+// 下载插件 zip（临时）并解析 plugin.json，带 TTL 缓存；只读不落 store 表
+async function fetchPluginManifest(plugin) {
+  if (!plugin || !plugin.download || !String(plugin.download).startsWith('https://')) return null;
+  if (plugin.status !== 'approved') return null;
+  const key = `${plugin.id}|${plugin.version}|${plugin.download}`;
+  const hit = manifestCache.get(key);
+  if (hit && Date.now() - hit.at < MANIFEST_CACHE_TTL_MS) return hit.payload;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cr-store-mf-'));
+  const zipPath = path.join(tmpDir, 'plugin.zip');
+  try {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 10000);
+    const res = await fetch(plugin.download, { signal: ac.signal, redirect: 'follow' });
+    clearTimeout(timer);
+    if (!res || !res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > 25 * 1024 * 1024) return null;
+    fs.writeFileSync(zipPath, buf);
+    const manifest = await readManifestFromZip(zipPath, plugin.id);
+    if (manifest) manifestCache.set(key, { at: Date.now(), payload: manifest });
+    return manifest;
+  } catch {
+    return null;
+  } finally {
+    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* 忽略 */ }
+  }
+}
+
+/** 上架插件的包信息（含行为清单），供实例确认框与商店详情展示；非上架返回 null */
+async function getPluginPackageInfo(id) {
+  const plugin = await getPlugin(id);
+  if (!plugin || plugin.status !== 'approved') return null;
+  const manifest = await fetchPluginManifest(plugin);
+  const behavior = {};
+  if (manifest) {
+    behavior.pages = Array.isArray(manifest.pages) ? manifest.pages : [];
+    behavior.slots = Array.isArray(manifest.slots) ? manifest.slots : [];
+    behavior.routes = Array.isArray(manifest.routes) ? manifest.routes : [];
+    behavior.cron = Array.isArray(manifest.cron) ? manifest.cron : [];
+    behavior.themes = Array.isArray(manifest.themes) ? manifest.themes : [];
+    behavior.hooks = manifest.hooks && typeof manifest.hooks === 'object' ? manifest.hooks : {};
+  }
+  return {
+    id: plugin.id,
+    name: plugin.name,
+    version: plugin.version,
+    author: plugin.author || '',
+    authorUsername: plugin.authorUsername || '',
+    description: plugin.description || '',
+    longDescription: plugin.longDescription || '',
+    permissions: plugin.permissions || [],
+    tags: plugin.tags || [],
+    screenshots: plugin.screenshots || [],
+    download: plugin.download,
+    sha256: plugin.sha256 || '',
+    behavior,
+  };
+}
+
+/** 按访问者终端 IP 查询其登录过的实例（弱关联：IP + 设备码 + 域名） */
+async function listInstallTargets(clientIp) {
+  if (!clientIp) return [];
+  const res = await q(
+    `SELECT domain, device_id,
+            bool_or(is_admin) AS is_admin,
+            max(event_time) AS last_login,
+            count(*)::int AS logins
+     FROM login_reports
+     WHERE event = 'login' AND client_ip = $1
+       AND event_time > now() - interval '90 days'
+       AND domain IS NOT NULL AND domain <> ''
+     GROUP BY domain, device_id
+     ORDER BY last_login DESC`,
+    [clientIp]
+  );
+  return res.rows.map((r) => ({
+    domain: r.domain,
+    deviceId: r.device_id || '',
+    isAdmin: r.is_admin === true,
+    lastLogin: iso(r.last_login),
+    logins: Number(r.logins || 0),
+  }));
+}
+
 module.exports = {
   init,
   ensureSchema,
@@ -977,5 +1091,7 @@ module.exports = {
   validatePluginId,
   isHttpsUrl,
   clearAllData,
+  getPluginPackageInfo,
+  listInstallTargets,
   DEMO_PLUGINS,
 };

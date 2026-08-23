@@ -11,30 +11,14 @@
  */
 
 const express = require('express');
-const { Pool } = require('pg');
 const Logger = require('../logger');
 const config = require('../config-loader');
 
 const router = express.Router();
 
-// ---------- 数据库（自建连接池） ----------
-let pool = null;
+// ---------- 数据库（复用中央站点真实连接池） ----------
+const { getPool } = require('../store/db');
 let tableReady = false;
-
-function getPool() {
-  if (pool) return pool;
-  pool = new Pool({
-    host: config.database.host,
-    port: config.database.port,
-    database: config.database.name,
-    user: config.database.user,
-    password: config.database.password,
-  });
-  pool.on('error', (err) => {
-    Logger.error('[登录上报] 数据库连接错误:', err.message);
-  });
-  return pool;
-}
 
 async function ensureTable() {
   if (tableReady) return;
@@ -55,6 +39,10 @@ async function ensureTable() {
   `);
   await getPool().query(
     'CREATE INDEX IF NOT EXISTS idx_login_reports_created_at ON login_reports (created_at)'
+  );
+  // 供「按 IP 查询用户登录过的实例」的索引
+  await getPool().query(
+    'CREATE INDEX IF NOT EXISTS idx_login_reports_client_ip ON login_reports (client_ip, event_time DESC)'
   );
   tableReady = true;
 }
