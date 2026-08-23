@@ -472,6 +472,105 @@ pub enum HookRunResult { Success, Skipped, Blocked, Failed }         // :49+
 <p>vm 运行时沙箱、权限数组、钩子超时熔断依旧独有；Grok Build 的信任模型管的是「要不要让你跑」，我们管的是「跑了能碰什么」——两层互补。</p>
 </div>
 
+<!-- ================= 6. Qwen Code ================= -->
+<h2 id="qwen-code"><span class="section-label">6.</span> Qwen Code（声明式扩展包 + 四形态 Hook 引擎，兼容导入 Claude/Gemini 插件）</h2>
+<p class="small">源码：<code>qwen-code/packages</code>（完整 monorepo TypeScript 源码）· 关键目录：<code>core/src/extension/</code>（extensionManager 约 3200 行）与 <code>core/src/hooks/</code>（约 30 个文件）· 置信度：<span class="conf-high">高</span>（全部结论均有源码佐证）</p>
+
+<h3>6.1 插件形态（问题 1）：清单式目录包，CLI 全家桶管理 + 三家格式转换器</h3>
+<div class="card">
+<pre><code>// qwen-code/packages/cli/src/commands/extensions/examples/mcp-server/qwen-extension.json
+{
+  "name": "mcp-server-example",
+  "displayName": { "en": "MCP Server Example", "zh": "MCP 服务器示例" },
+  "description": { "en": "...", "zh": "提供 MCP 服务器的示例" },
+  "version": "1.0.0",
+  "mcpServers": { "nodeServer": { "command": "node", "args": ["${extensionPath}${/}dist${/}example.js"], ... } }
+}</code></pre>
+<ul>
+  <li><strong>形态：</strong>目录即插件，清单文件名 <code>qwen-extension.json</code>；支持多语言 <code>displayName/description</code>（i18n 内建）。</li>
+  <li><strong>安装位置：</strong>用户级 <code>~/.qwen/extensions/</code>、项目级 <code>&lt;project&gt;/.qwen/extensions/</code>（<code>packages/core/src/config/storage.ts:445,462-467</code>）。</li>
+  <li><strong>CLI 子命令全家桶：</strong><code>install / uninstall / enable / disable / link / list / new / update / settings / sources</code> 各一个文件（<code>packages/cli/src/commands/extensions/</code>），其中 <code>new</code> 用内置模板脚手架（模板五套：starter / agent / commands / context / mcp-server，<code>examples/</code> 目录）。</li>
+  <li><strong>分发渠道：</strong>GitHub 仓库（<code>extension/github.ts</code>）、npm 包（<code>extension/npm.ts</code>）、Marketplace 商店（<code>extension/marketplace.ts</code> + <code>extension-store.ts</code> HTTP 客户端）、zip 归档直装（<code>archive-safety.ts</code>，含路径穿越防护）。</li>
+  <li><strong>外来格式转换器（独有亮点）：</strong><code>claude-converter.ts</code>、<code>gemini-converter.ts</code>、<code>qoder-converter.ts</code>——把 Claude Code / Gemini CLI / Qoder 的插件布局转成 Qwen 格式。Claude 侧映射类型见 <code>claude-converter.ts:55-59</code>（commands/agents/skills/hooks/mcpServers 一一对应），agent 的 md frontmatter 连 <code>hooks/mcpServers/skills</code> 字段都原样搬（<code>:232-239</code>）。另有 <code>claudeMcpImport.ts</code>（config 目录下）专门导入 Claude 的 MCP 配置。</li>
+</ul>
+</div>
+
+<h3>6.2 插件 API 面（问题 2）：六类声明资源 + 变量插值系统</h3>
+<div class="card">
+<ul>
+  <li>扩展可捆绑六类组件：<code>commands/</code>（slash command markdown）、<code>agents/</code>（子代理 md + frontmatter）、<code>skills/</code>、上下文文件（默认 <code>QWEN.md</code>，清单 <code>contextFileName</code> 可改）、<code>mcpServers</code>、<code>hooks</code>。</li>
+  <li><strong>hooks 是扩展的一等资源：</strong>清单内可直接写 hooks 字段（类型同 Claude 的按事件分组结构，<code>claude-converter.ts:58</code>）；激活的扩展 hooks 由 <code>hookRegistry.ts:269-273</code> 统一收编进全局注册表。</li>
+  <li><strong>变量插值：</strong>清单中的路径支持 <code>${extensionPath}</code> 等占位符展开（<code>extension/variables.ts</code> + <code>variableSchema.ts</code>），示例中 <code>${extensionPath}${/}dist${/}example.js</code> 即跨平台路径拼接。</li>
+  <li>无进程内 JS 插件 SDK 分发通道——function hook 仅限会话内定义（见 6.3），不作为插件分发形态。</li>
+</ul>
+</div>
+
+<h3>6.3 Hook 系统（问题 3）：22 个事件 × 四种执行形态，决策语义最全的一套</h3>
+<div class="card">
+<h4>事件全集（22 个，<code>packages/core/src/hooks/types.ts:24-68</code>）</h4>
+<pre><code>PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch,
+Notification, UserPromptSubmit, UserPromptExpansion,
+SessionStart, Stop, MessageDisplay, SubagentStart, SubagentStop,
+PreCompact, PostCompact, SessionEnd, SessionDelete,
+PermissionRequest, PermissionDenied, StopFailure,
+TodoCreated, TodoCompleted,            ← Qwen 特有
+InstructionsLoaded                     ← 上下文文件加载时触发</code></pre>
+<p>Claude 全部事件都有对应物之外，还加了 <strong>PostToolUseFailure / PostToolBatch / MessageDisplay / StopFailure / SessionDelete / PermissionDenied / TodoCreated / TodoCompleted / InstructionsLoaded / UserPromptExpansion</strong> 十个自有点位——事件面是目前所有 harness 中最宽的。</p>
+<h4>四种执行形态（其他 harness 最多两种）</h4>
+<ul>
+  <li><strong>command：</strong>spawn 子进程，默认 60s 超时、输出截断 1MB（<code>hookRunner.ts:42-49</code>），环境经 <code>sanitizeChildEnv</code> 清洗后继承（<code>hookRunner.ts:31</code>）；支持异步注册表模式（<code>asyncHookRegistry.ts</code>，长跑 hook 不阻塞回合）。</li>
+  <li><strong>http：</strong><code>httpHookRunner.ts</code> 直发 HTTP 端点，配套 <code>ssrfGuard.ts</code> + <code>urlValidator.ts</code> 做 SSRF 防护——把「hook 打内网」当一等威胁建模，各家仅此一家。</li>
+  <li><strong>function：</strong>进程内函数 hook（<code>functionHookRunner.ts</code>），仅限 session hooks 场景使用（<code>types.ts:155</code> 注释「Session Hook specific」）。</li>
+  <li><strong>prompt：</strong><code>promptHookRunner.ts</code>——把 hook 输入 JSON 塞进 prompt 模板<strong>发给 LLM 做单轮判定</strong>，可用 <code>model</code> 字段覆盖当前会话模型（<code>types.ts:183-200</code>）。用 LLM 当策略引擎是独有的设计。</li>
+</ul>
+<h4>配置来源四级合并</h4>
+<p>hook 注册表从 session / user / project / extension 四级来源收集并合并（<code>hookRegistry.ts:58</code> 注释、<code>:269-273</code> 扫描激活扩展的 hooks 字段）。</p>
+<h4>决策语义与失败策略</h4>
+<pre><code>// types.ts:255
+export type HookDecision = 'ask' | 'block' | 'deny' | 'approve' | 'allow';
+// :489-500 兼容 Claude 的 hookSpecificOutput.permissionDecision 字段，
+// 缺失时回退读基础 decision 字段</code></pre>
+<ul>
+  <li><strong>PreToolUse 结果：</strong><code>shouldProceed / blockReason / blockType('denied'|'ask'|'stop') / additionalContext</code>（<code>core/toolHookTriggers.ts:33-39</code>）；PostToolUse 可返回 <code>shouldStop / additionalContext / artifacts</code> 结构化工件（<code>:57-62</code>）。</li>
+  <li><strong>fail-open 但显式留痕：</strong>hook 自身报错被吸收、工具照常执行，但设置 <code>hookError</code> 字段供遥测区分「放行」与「hook 挂了」（<code>toolHookTriggers.ts:41-47</code> 注释引用 #4321 review）——比纯静默 fail-open 更可观测。</li>
+  <li><strong>防循环保护：</strong><code>stopHookCap.ts</code> 给 Stop hook 设上限，防止 Stop→hook→新回合 死循环；两阶段注释明确「validation 阶段只许做检查返回决策，postWrite 阶段才许副作用」（<code>types.ts:76-78</code>）。</li>
+  <li><strong>信任门控：</strong>全局 <code>~/.qwen/trusted_hooks.json</code> 按 <code>projectPath → [name:command]</code> 键记录已信任 hook（<code>trustedHooks.ts:22-27</code>）——粒度到单条 hook 命令而非整个插件。</li>
+</ul>
+</div>
+
+<h3>6.4 与 MCP 的关系（问题 4）：mcpServers 是扩展清单的一等字段</h3>
+<div class="card">
+<ul>
+  <li>MCP server 定义直接内嵌扩展清单（starter 示例即带 <code>mcpServers.nodeServer</code>），安装扩展 = 注册其 MCP servers；server 本体仍是独立子进程（<code>command: node dist/example.js</code>），扩展只是打包分发外壳——与 Claude/Grok 的「插件包 MCP」定位一致。</li>
+  <li>反向还有 <code>claudeMcpImport.ts</code>：把用户已有的 Claude MCP 配置导入 Qwen，降低迁移成本。</li>
+  <li>hooks 与 MCP 相互独立又可组合：hook 可以是 http 形态直接打一个 MCP 化的服务端点，但协议层互不依赖。</li>
+</ul>
+</div>
+
+<h3>6.5 沙箱与权限模型（问题 5）：无 OS 隔离，靠「清洗 + 校验 + 显式信任」三层软防护</h3>
+<div class="card">
+<ul>
+  <li>command/function hook 都在主进程权限域内运行（spawn 子进程继承用户身份），无 OS 级沙箱。</li>
+  <li>软防护三件套：<strong>环境清洗</strong>（sanitizeChildEnv，<code>hookRunner.ts:31</code>）、<strong>SSRF 校验</strong>（http hook 的 ssrfGuard/urlValidator）、<strong>归档安全</strong>（zip 安装的路径穿越检查，<code>archive-safety.ts</code> / zip-extraction）。</li>
+  <li>网络侧另有 <code>extension/network-policy.ts</code> 与 <code>redaction.ts</code>（脱敏）——对「扩展能访问什么网络」有显式策略文件的尝试，同类产品少见。</li>
+  <li>信任粒度精确到单条 hook 命令键（name:command），且按项目路径隔离存储——同一 hook 在 A 项目信任不代表 B 项目信任。</li>
+</ul>
+</div>
+
+<h3>6.6 与 CrewRouter 插件系统的对比借鉴（问题 6）</h3>
+<div class="card">
+<h4>值得借鉴的设计</h4>
+<ol>
+  <li><strong>HTTP hook + SSRF 防护：</strong>若 CrewRouter 插件钩子未来开放 webhook 型执行端点，Qwen 的 <code>ssrfGuard/urlValidator</code>（私网地址黑名单类校验）应作为必选项而非可选加固——网关型产品天然更怕 SSRF。</li>
+  <li><strong>fail-open 留痕（hookError 字段）：</strong>我们钩子管线熔断摘除已是 fail-open，但可借鉴「错误吸收后在结果对象上显式标记」的做法，让 <code>gateway:beforeUpstream</code> 的调用方能在响应元数据里看到「本次未经钩子审计」。</li>
+  <li><strong>外来格式转换器冷启动生态：</strong>claude/gemini/qoder 三个 converter 证明「兼容导入头部竞品插件包」是可行的生态策略。CrewRouter 商店冷启动可做「Claude 插件包 → CrewRouter 插件」转换器（hooks+skills+agents 声明部分机械映射即可）。</li>
+  <li><strong>prompt hook（LLM 判定型钩子）：</strong>用一次廉价 LLM 单轮调用做策略判定，适合我们的内容审校场景（如 <code>gateway:requestReceived</code> 上挂「判断该请求是否越权」的 LLM 钩子）——成本可控且有 model 字段可指定便宜模型。</li>
+  <li><strong>四级配置来源合并：</strong>session/user/project/extension 同名 hook 的优先级与去重规则值得我们在多租户场景预研（租户级 vs 实例级钩子冲突时的合并语义）。</li>
+</ol>
+<h4>我们已有、Qwen 没有的</h4>
+<p>vm 运行时沙箱与权限数组依旧独有——Qwen 的 function hook 能跑进程内任意代码但仅限会话内使用，恰恰说明「进程内代码 SDK」在没有沙箱时不敢做成分发形态，反证了我们 vm 方案的前瞻性。</p>
+</div>
+
 <!-- APPEND -->
 
 </main>
