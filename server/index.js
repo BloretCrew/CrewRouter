@@ -2331,6 +2331,9 @@ if (isDemo) {
   app.get('/store/', (req, res) => {
     res.sendFile(path.join(PUBLIC_DIR, 'pages/store.html'));
   });
+  app.get('/data', (req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, 'pages/data.html'));
+  });
 }
 
 // 路由

@@ -156,4 +156,86 @@ router.post('/', async (req, res) => {
   }
 });
 
+// ---------- 数据页 overview（公开只读） ----------
+const MAX_INSTANCES = 500;
+const MAX_RECENT = 100;
+
+router.get('/overview', async (req, res) => {
+  try {
+    await ensureTable();
+
+    // 汇总
+    const summary = (await getPool().query(
+      `SELECT
+         COUNT(*)::int AS total_reports,
+         COUNT(DISTINCT device_id)::int AS total_instances,
+         COALESCE(SUM((payload->'stats'->'requests'->>'total')::bigint),0)::bigint AS total_requests,
+         COALESCE(SUM((payload->'stats'->'tokens'->>'total')::bigint),0)::bigint AS total_tokens,
+         COALESCE(SUM((payload->'stats'->>'cost')::numeric),0)::numeric AS total_cost
+       FROM stats_reports`
+    )).rows[0] || {};
+
+    // 各实例聚合（按请求量排序）
+    const instances = (await getPool().query(
+      `SELECT device_id,
+         MAX(domain) AS domain,
+         MAX(version) AS version,
+         COUNT(*)::int AS reports_count,
+         COALESCE(SUM((payload->'stats'->'requests'->>'total')::bigint),0)::bigint AS requests,
+         COALESCE(SUM((payload->'stats'->'tokens'->>'total')::bigint),0)::bigint AS tokens,
+         COALESCE(SUM((payload->'stats'->>'cost')::numeric),0)::numeric AS cost,
+         MAX(window_end) AS last_window_end,
+         MAX(generated_at) AS last_report_at
+       FROM stats_reports
+       GROUP BY device_id
+       ORDER BY requests DESC
+       LIMIT $1`,
+      [MAX_INSTANCES]
+    )).rows || [];
+
+    // 最近上报
+    const recent = (await getPool().query(
+      `SELECT device_id, domain, version, window_start, window_end, generated_at, payload
+       FROM stats_reports
+       ORDER BY created_at DESC, id DESC
+       LIMIT $1`,
+      [MAX_RECENT]
+    )).rows || [];
+
+    res.json({
+      summary: {
+        totalReports: Number(summary.total_reports || 0),
+        totalInstances: Number(summary.total_instances || 0),
+        totalRequests: Number(summary.total_requests || 0),
+        totalTokens: Number(summary.total_tokens || 0),
+        totalCost: Number(summary.total_cost || 0),
+        updatedAt: new Date().toISOString(),
+      },
+      instances: instances.map((i) => ({
+        deviceId: i.device_id || 'unknown',
+        domain: i.domain || '',
+        version: i.version || '',
+        reportsCount: Number(i.reports_count || 0),
+        requests: Number(i.requests || 0),
+        tokens: Number(i.tokens || 0),
+        cost: Number(i.cost || 0),
+        lastWindowEnd: i.last_window_end,
+        lastReportAt: i.last_report_at,
+      })),
+      recent: recent.map((r) => ({
+        deviceId: r.device_id || 'unknown',
+        domain: r.domain || '',
+        version: r.version || '',
+        windowStart: r.window_start,
+        windowEnd: r.window_end,
+        generatedAt: r.generated_at,
+        stats: (r.payload && r.payload.stats) || {},
+      })),
+    });
+  } catch (err) {
+    Logger.error('[统计上报] 读取 overview 失败:', err.message);
+    res.status(500).json({ error: 'server error' });
+  }
+});
+
 module.exports = router;

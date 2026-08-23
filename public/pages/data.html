@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title data-i18n="统计数据 - CrewRouter">统计数据 - CrewRouter</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/themes.css">
+  <script>
+    (function () {
+      var theme = localStorage.getItem('theme') || 'system';
+      var resolved = theme === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme;
+      document.documentElement.classList.add(resolved);
+    })();
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--background);
+      color: var(--foreground);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    a { color: var(--brand-blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .data-nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 14px;
+      padding: 0 24px; height: 56px;
+      background: color-mix(in srgb, var(--background) 80%, transparent);
+      backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; color: var(--foreground); }
+    .data-brand img { width: 26px; height: 26px; border-radius: 7px; }
+    .data-nav__spacer { flex: 1; }
+    .data-nav__link {
+      font-size: 13px; padding: 6px 12px; border-radius: 8px; color: var(--muted-foreground);
+    }
+    .data-nav__link:hover { background: var(--secondary); color: var(--foreground); text-decoration: none; }
+
+    .theme-toggle { display: flex; }
+    .theme-toggle button {
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      background: color-mix(in srgb, var(--secondary) 80%, transparent);
+      color: var(--foreground); cursor: pointer;
+    }
+
+    .data-main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 60px; }
+    .data-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .data-sub { font-size: 13px; color: var(--muted-foreground); margin-bottom: 20px; }
+
+    .metric-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px; margin-bottom: 26px;
+    }
+    .metric-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+    }
+    .metric-label { font-size: 12px; color: var(--muted-foreground); margin-bottom: 6px; }
+    .metric-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    .section-title { font-size: 15px; font-weight: 600; margin: 26px 0 12px; }
+    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      text-align: left; padding: 10px 14px; font-weight: 600; color: var(--muted-foreground);
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    tbody td { padding: 9px 14px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: var(--secondary); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .muted { color: var(--muted-foreground); }
+    .empty { padding: 40px; text-align: center; color: var(--muted-foreground); }
+    .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--secondary); font-size: 12px; margin-right: 4px; }
+
+    .loading { text-align: center; color: var(--muted-foreground); padding: 60px 0; }
+
+    @media (max-width: 600px) {
+      .data-nav { padding: 0 12px; }
+      .data-main { padding: 20px 14px 40px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="data-nav">
+    <a class="data-brand" href="/data">
+      <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="CrewRouter">
+      <span>CrewRouter</span>
+    </a>
+    <span class="data-nav__spacer"></span>
+    <a class="data-nav__link" href="/store"><span data-i18n="插件商店">插件商店</span></a>
+    <div class="theme-toggle">
+      <select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:8px;">
+        <option value="zh">中文</option>
+        <option value="en">EN</option>
+      </select>
+      <button id="themeToggle" title="切换主题" data-i18n-title="切换主题">
+        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <svg class="icon-system" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <main class="data-main">
+    <h1 class="data-title" data-i18n="CrewRouter 实例统计">CrewRouter 实例统计</h1>
+    <p class="data-sub"><span data-i18n="自动刷新中 · 每 30 秒刷新">自动刷新中 · 每 30 秒刷新</span> · <span data-i18n="上次更新">上次更新</span>: <span id="updatedAt">-</span></p>
+
+    <div id="metrics" class="metric-grid"></div>
+
+    <div class="section-title" data-i18n="实例明细">实例明细</div>
+    <div class="table-wrap"><div id="instancesTable"></div></div>
+
+    <div class="section-title" data-i18n="最近上报">最近上报</div>
+    <div class="table-wrap"><div id="recentTable"></div></div>
+  </main>
+
+  <script src="/js/i18n.js?v=2"></script>
+  <script src="/js/theme.js?v=2"></script>
+  <script>
+    (function () {
+      var REFRESH_MS = 30000;
+      var loading = false;
+
+      function t(key) { return window.t ? window.t(key) : key; }
+
+      function fmt(n) {
+        n = Number(n) || 0;
+        if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+        if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+        if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+        return String(n);
+      }
+      function fmtCost(n) {
+        n = Number(n) || 0;
+        return n < 0.01 ? n.toFixed(4) : n.toFixed(2);
+      }
+      function fmtTime(iso) {
+        if (!iso) return '-';
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleString();
+      }
+
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      function requestTypesHtml(stats) {
+        var rt = (stats && stats.requestTypes) || [];
+        if (!rt.length) return '<span class="muted">-</span>';
+        return rt.slice(0, 5).map(function (x) {
+          return '<span class="chip">' + esc(x.name || 'unknown') + ' · ' + fmt(x.requests) + '</span>';
+        }).join('');
+      }
+
+      function render(data) {
+        var s = data.summary || {};
+        document.getElementById('updatedAt').textContent = fmtTime(s.updatedAt);
+
+        var metrics = [
+          { label: t('累计上报次数'), value: fmt(s.totalReports) },
+          { label: t('接入实例'), value: fmt(s.totalInstances) },
+          { label: t('累计请求'), value: fmt(s.totalRequests) },
+          { label: t('累计 Token'), value: fmt(s.totalTokens) },
+          { label: t('累计成本'), value: fmtCost(s.totalCost) }
+        ];
+        document.getElementById('metrics').innerHTML = metrics.map(function (m) {
+          return '<div class="metric-card"><div class="metric-label">' + esc(m.label) + '</div><div class="metric-value">' + esc(m.value) + '</div></div>';
+        }).join('');
+
+        var instances = data.instances || [];
+        if (!instances.length) {
+          document.getElementById('instancesTable').innerHTML = '<div class="empty">' + t('暂无数据') + '</div>';
+        } else {
+          var ih = '<table><thead><tr>' +
+            '<th>' + t('设备 ID') + '</th><th>' + t('域名') + '</th><th>' + t('版本') + '</th>' +
+            '<th>' + t('上报次数') + '</th><th>' + t('请求数') + '</th><th>' + t('Token') + '</th>' +
+            '<th>' + t('成本') + '</th><th>' + t('最后上报') + '</th></tr></thead><tbody>';
+          ih += instances.map(function (i) {
+            return '<tr>' +
+              '<td class="mono">' + esc(i.deviceId) + '</td>' +
+              '<td>' + esc(i.domain) + '</td>' +
+              '<td>' + esc(i.version) + '</td>' +
+              '<td>' + fmt(i.reportsCount) + '</td>' +
+              '<td>' + fmt(i.requests) + '</td>' +
+              '<td>' + fmt(i.tokens) + '</td>' +
+              '<td>' + fmtCost(i.cost) + '</td>' +
+              '<td class="muted">' + fmtTime(i.lastReportAt) + '</td></tr>';
+          }).join('');
+          ih += '</tbody></table>';
+          document.getElementById('instancesTable').innerHTML = ih;
+        }
+
+        var recent = data.recent || [];
+        if (!recent.length) {
+          document.getElementById('recentTable').innerHTML = '<div class="empty">' + t('暂无数据') + '</div>';
+        } else {
+          var rh = '<table><thead><tr>' +
+            '<th>' + t('时间') + '</th><th>' + t('设备 ID') + '</th><th>' + t('域名') + '</th>' +
+            '<th>' + t('请求数') + '</th><th>' + t('Token') + '</th><th>' + t('成本') + '</th>' +
+            '<th>' + t('活跃用户') + '</th><th>' + t('活跃密钥') + '</th><th>' + t('请求类型') + '</th></tr></thead><tbody>';
+          rh += recent.map(function (r) {
+            var st = r.stats || {};
+            return '<tr>' +
+              '<td class="muted">' + fmtTime(r.generatedAt) + '</td>' +
+              '<td class="mono">' + esc(r.deviceId) + '</td>' +
+              '<td>' + esc(r.domain) + '</td>' +
+              '<td>' + fmt(st.requests && st.requests.total) + '</td>' +
+              '<td>' + fmt(st.tokens && st.tokens.total) + '</td>' +
+              '<td>' + fmtCost(st.cost) + '</td>' +
+              '<td>' + fmt(st.activeUsers) + '</td>' +
+              '<td>' + fmt(st.activeKeys) + '</td>' +
+              '<td>' + requestTypesHtml(st) + '</td></tr>';
+          }).join('');
+          rh += '</tbody></table>';
+          document.getElementById('recentTable').innerHTML = rh;
+        }
+      }
+
+      function load() {
+        if (loading) return;
+        loading = true;
+        fetch('/api/stats-report/overview')
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+          .then(render)
+          .catch(function (e) { console.error('加载统计数据失败:', e); })
+          .finally(function () { loading = false; });
+      }
+
+      load();
+      setInterval(load, REFRESH_MS);
+
+      // i18n 与语言切换
+      function apply() { if (window.I18N) I18N.applyDom(); }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+      else apply();
+      document.addEventListener('i18n:ready', apply);
+      var langEl = document.getElementById('langToggle');
+      if (langEl && window.I18N) {
+        langEl.value = I18N.current();
+        langEl.addEventListener('change', function () { I18N.load(langEl.value); });
+      }
+    })();
+  </script>
+</body>
+</html>
