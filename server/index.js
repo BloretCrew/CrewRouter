@@ -2309,6 +2309,14 @@ app.get('/setup', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'pages/setup.html'));
 });
 
+// 插件商店（第三期）：独立功能页 + OAuth + API
+app.get('/store', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'pages/store.html'));
+});
+app.get('/store/', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'pages/store.html'));
+});
+
 // 路由
 if (isDemo) {
   // 演示模式：挂载演示路由，拦截所有 API 和认证请求
@@ -2365,6 +2373,10 @@ if (isDemo) {
     express.static(path.join(registry.PLUGINS_DIR, pluginId))(req, res, next);
   });
 }
+
+// 插件商店（第三期）：独立于网关核心，demo 模式下同样可用
+const { createStoreRoutes } = require('./routes/store');
+app.use('/store', createStoreRoutes());
 
 // /v1 路由 404 诊断
 app.use('/v1', (req, res) => {
@@ -2522,6 +2534,12 @@ async function startServer() {
         await require('./plugins/registry').init();
       } catch (err) {
         Logger.error(`[plugins] 初始化失败: ${err.message}`);
+      }
+      // 插件商店（第三期）：初始化 plugin_store_* 表 + 演示数据（不影响系统表）
+      try {
+        await require('./store/store').init({ seedDemo: config.store && config.store.seedDemo !== false });
+      } catch (err) {
+        Logger.error(`[store] 插件商店初始化失败: ${err.message}`);
       }
       Logger.success('[启动] 数据库已就绪，可以接受请求');
     } catch (err) {

@@ -64,5 +64,15 @@
       "en": "en",
       "ru": "ru"
     }
+  },
+  "store": {
+    "seedDemo": true,
+    "passport": {
+      "appId": "your-passport-app-id",
+      "appSecret": "your-passport-app-secret",
+      "redirectUri": "https://router.bloret.net/store/auth/callback",
+      "sessionSecret": "your-store-session-signing-secret",
+      "adminUsernames": ["admin"]
+    }
   }
 }
