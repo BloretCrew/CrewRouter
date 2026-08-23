@@ -431,6 +431,47 @@ pub enum HookRunResult { Success, Skipped, Blocked, Failed }         // :49+
 <p class="evi">要点：① Blocked 与 Failed 语义分离，且失败策略是<strong>显式的 fail-open</strong>（可用性优先于管控）；② Stop 门控支持三方博弈：block（拦住）/ force_stop（用户级强停，覆盖 block）/ additional_context（注入上下文继续跑）。</p>
 </div>
 
+<h3>5.4 与 MCP 的关系（问题 4）：MCP 是插件的可选组件，也是独立配置面</h3>
+<div class="card">
+<ul>
+  <li>插件可携带 <code>.mcp.json</code> 作为约定组件随插件分发（<code>manifest.rs:9</code>）；MCP server 命令与 hook 脚本同被 trust.rs 列为「克隆仓库即带入任意代码执行」的风险面（<code>trust.rs:4-5</code>）。</li>
+  <li>MCP 也可独立于插件配置（agent 侧发现逻辑 <code>xai-grok-agent/src/discovery.rs</code> 与 plugins/discovery.rs 平行存在）。</li>
+  <li class="evi">与 Claude Code 同款关系：两套机制、可嵌套。hook 引擎本身无 McpTool 形态（runner 仅 command/http），比 Codex 少一层。</li>
+</ul>
+</div>
+
+<h3>5.5 沙箱与权限模型（问题 5）：显式信任门控 + 元数据可见/执行隔离的双态</h3>
+<div class="card">
+<pre><code>// grok-build/crates/codegen/xai-grok-agent/src/plugins/trust.rs:1-16（模块文档原文）
+//! Plugins from project directories (.grok/plugins/, .claude/plugins/)
+//! are an execution surface. A cloned repository could contain plugins with
+//! hook scripts or MCP server commands that run arbitrary code.
+//! **Trust granularity**: per-plugin-root (not per-worktree).
+//! **Trust key**: canonical absolute path of the plugin root directory
+//! **Trust storage**: ~/.grok/trusted-plugins (one canonical path per line)
+//! **Behavior for untrusted plugins**:
+//! - Skills and agents are discovered and listed (metadata-only).</code></pre>
+<ul>
+  <li><strong>信任粒度精确到单个插件根目录</strong>：信任一个插件不会连带信任同仓库其他插件；信任键是 dunce::canonicalize 后的绝对路径，防符号链接/大小写绕路。</li>
+  <li><strong>未信任插件的降级行为</strong>：skills/agents 仅元数据列出可见，hook/MCP 等执行面不启用——「看得见跑不了」。</li>
+  <li>hook 子进程继承用户权限运行，无 OS 沙箱（与 CC/Codex 一致）；防线是<strong>事前信任审批</strong>而非事后隔离。</li>
+</ul>
+</div>
+
+<h3>5.6 与 CrewRouter 插件系统的对比借鉴（问题 6）</h3>
+<div class="card">
+<h4>值得借鉴的设计</h4>
+<ol>
+  <li><strong>Blocked ≠ Failed + 显式 fail-open：</strong>把「hook 阻断」和「hook 自己挂了」分成两个结果类型，失败策略明文写死 fail-open（result.rs:63 注释）。我们的钩子管线有熔断（连续 5 错摘除，<code>hooks.js:11-14</code>），本质也是 fail-open，但<strong>未在协议层区分「决策性阻断」与「故障」</strong>——建议在 apply() 返回值中显式分型，避免插件把异常当阻断用。</li>
+  <li><strong>force_stop 覆盖 block 的三方门控：</strong>Stop 门控里用户级强停优先于插件阻断（result.rs:11）。映射到我们：<code>gateway:requestReceived</code> 若引入 block 决策，应同时定义管理员级 override，防止插件阻断把网关变成单点故障。</li>
+  <li><strong>零清单约定发现：</strong>没有 plugin.json 也能靠目录约定工作，降低最小插件的门槛。我们的 plugin.json 是强制的（host.js validateManifest），可考虑「只有 frontend/ 目录的纯 UI 插件免清单」的轻量通道。</li>
+  <li><strong>路径逃逸剔除：</strong>声明资源解析后拒绝 <code>..</code> 出根并告警（manifest.rs:52-70）。我们 vm 沙箱内风险较低，但插件声明的页面/静态资源路径校验可补同类检查。</li>
+  <li><strong>Claude 兼容布局作为分发策略：</strong>同时认 <code>.claude-plugin/</code>、<code>.claude/plugins/</code> 意味着 Claude 插件生态可直接平移。CrewRouter 商店若想冷启动内容量，「兼容导入 Claude/Codex 插件包中的 hooks+skills 声明」是低成本路径。</li>
+</ol>
+<h4>我们已有、Grok Build 没有的</h4>
+<p>vm 运行时沙箱、权限数组、钩子超时熔断依旧独有；Grok Build 的信任模型管的是「要不要让你跑」，我们管的是「跑了能碰什么」——两层互补。</p>
+</div>
+
 <!-- APPEND -->
 
 </main>
