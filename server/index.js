@@ -2309,13 +2309,15 @@ app.get('/setup', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'pages/setup.html'));
 });
 
-// 插件商店（第三期）：独立功能页 + OAuth + API
-app.get('/store', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'pages/store.html'));
-});
-app.get('/store/', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'pages/store.html'));
-});
+// 插件商店（第三期）：独立功能页 + OAuth + API，仅 demo: true 时启用
+if (isDemo) {
+  app.get('/store', (req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, 'pages/store.html'));
+  });
+  app.get('/store/', (req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, 'pages/store.html'));
+  });
+}
 
 // 路由
 if (isDemo) {
@@ -2374,9 +2376,11 @@ if (isDemo) {
   });
 }
 
-// 插件商店（第三期）：独立于网关核心，demo 模式下同样可用
-const { createStoreRoutes } = require('./routes/store');
-app.use('/store', createStoreRoutes());
+// 插件商店（第三期）：独立于网关核心，仅 demo: true 时启用
+if (isDemo) {
+  const { createStoreRoutes } = require('./routes/store');
+  app.use('/store', createStoreRoutes());
+}
 
 // /v1 路由 404 诊断
 app.use('/v1', (req, res) => {
