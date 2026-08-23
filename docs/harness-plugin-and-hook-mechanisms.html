@@ -373,6 +373,64 @@ execute(args, options) {
 <p>无隔离的进程内插件 = 一个恶意/劣质 npm 包即可窃取所有 API key 与会话数据。CrewRouter 的 vm 沙箱 + 显式 permission 声明正是对这个模型的修正，应坚持而非向其看齐。</p>
 </div>
 
+<!-- ================= 5. Grok Build ================= -->
+<h2 id="grok-build"><span class="section-label">5.</span> Grok Build（Rust 内建插件体系 + 显式信任门控，兼容 Claude 插件布局）</h2>
+<p class="small">源码：<code>grok-build/crates</code>（Rust workspace）· 关键 crate：<code>xai-grok-agent/src/plugins/</code>（约 8300 行）与独立引擎 <code>xai-grok-hooks</code> · 置信度：<span class="conf-high">高</span></p>
+
+<h3>5.1 插件形态（问题 1）：目录式插件，三重清单回退 + 零清单约定发现</h3>
+<div class="card">
+<pre><code>// grok-build/crates/codegen/xai-grok-agent/src/plugins/manifest.rs:1-11（模块文档原文）
+//! The canonical manifest location is `plugin.json` at the plugin root.
+//! Fallback locations (checked in order when the root manifest is absent):
+//! 1. `.grok-plugin/plugin.json`
+//! 2. `.claude-plugin/plugin.json`        ← 直接兼容 Claude Code 插件！
+//! If no manifest is found at all, the plugin can still function via
+//! convention-based discovery (skills/, agents/, .mcp.json, hooks/hooks.json)</code></pre>
+<ul>
+  <li><strong>形态：</strong>目录即插件。有清单用清单；没清单也能靠<strong>约定目录发现</strong>运作，插件名取目录名。</li>
+  <li><strong>安装：</strong>Git 安装器（<code>plugins/git_install.rs</code>，1596 行）+ Marketplace（<code>plugins/marketplace.rs</code>）+ 本地刷新（<code>local_refresh.rs</code>）+ 安装注册表（<code>install_registry.rs</code>）。项目级插件目录为 <code>.grok/plugins/</code> 与 <code>.claude/plugins/</code>（<code>plugins/trust.rs:3</code>）——对 Claude 插件生态双向兼容。</li>
+  <li><strong>前向兼容：</strong>未知字段静默忽略，「为新版上游编写的清单在旧版仍可加载」（<code>manifest.rs:9-11</code>）。</li>
+</ul>
+</div>
+
+<h3>5.2 插件 API 面（问题 2）：skills/agents/hooks/MCP 四类声明资源 + 路径逃逸防护</h3>
+<div class="card">
+<ul>
+  <li>插件可声明四类组件：<code>skills/</code>、<code>agents/</code>、hooks 配置（文件或内联 JSON）、MCP server 定义（<code>.mcp.json</code>）（<code>manifest.rs:9</code>、<code>hooks_adapter.rs:41-58</code> 支持内联 hooks 值）。</li>
+  <li><strong>路径安全：</strong>所有声明的相对路径解析后若含 <code>..</code> 逃逸插件根目录则<strong>告警并剔除</strong>（<code>manifest.rs:52-70</code> <code>PathOrPaths::resolve</code>）——声明式资源也有越界检查，这是 Claude Code 清单没有的细节。</li>
+  <li><strong>环境变量注入：</strong>装载时给 hook 注入插件上下文环境变量（plugin_root/plugin_data 等，<code>hooks_adapter.rs:15</code>、<code>manifest.rs</code> <code>substitute_env_vars</code>），让插件脚本能定位自身数据目录。</li>
+  <li>无进程内代码 SDK——与 Claude/Codex 同属「声明式资源包」流派。</li>
+</ul>
+</div>
+
+<h3>5.3 Hook 系统（问题 3）：独立通用引擎，16 事件，fail-open 设计</h3>
+<div class="card">
+<h4>事件全集（16 个，snake_case wire 格式 + 前向兼容）</h4>
+<pre><code>// grok-build/crates/codegen/xai-grok-workspace-types/src/rpc/hooks.rs:52-70
+pub enum HookEventNameWire {
+  SessionStart, SessionEnd, Stop, StopFailure, StopCancelled,
+  PreToolUse, PostToolUse, PostToolUseFailure,
+  PermissionDenied, UserPromptSubmit, Notification,
+  SubagentStart, SubagentStop, SubagentEnd,
+  PreCompact, PostCompact,
+  Unknown(String),   // ← 未知事件无损保留，部署版本偏差下解码不失败
+}</code></pre>
+<p>内部归一化：SubagentEnd 并入 SubagentStop canonical 通道派发（<code>xai-grok-hooks/src/discovery.rs:43-47</code>）。</p>
+<h4>配置位置与形态</h4>
+<p>用户级与项目级 settings/hooks 文件经 <code>xai-grok-hooks/src/discovery.rs</code> 发现并按事件建倒排索引（<code>:11-24</code> <code>HashMap&lt;HookEventName, Vec&lt;HookSpec&gt;&gt;</code>）；插件侧由 <code>hooks_adapter.rs</code> 预过滤后喂给<strong>同一个引擎</strong>——「Not a second engine」（模块文档原话，<code>hooks_adapter.rs:1-2</code>）。执行形态两种：<strong>command</strong> 与 <strong>http</strong>（<code>runner/command.rs</code>、<code>runner/http.rs</code>），http 支持 <code>${VAR}</code> 展开且回显区分 raw_url/展开后 url 以防泄密（<code>result.rs:32-40</code>）。</p>
+<h4>决策语义（比 Claude Code 更细的 Stop 门控）</h4>
+<pre><code>// grok-build/crates/codegen/xai-grok-hooks/src/result.rs
+pub enum HookDecision { Allow, Deny { reason, hook_name } }        // :5-8
+pub struct StopHookOutcome {                                        // :13-18
+  block_reason, additional_context,
+  force_stop: Option&lt;StopOverride&gt;,   // "continue:false" 强停；force_stop 覆盖 block
+}
+pub enum HookRunResult { Success, Skipped, Blocked, Failed }         // :49+
+//                                    ↑ 注释原文："a stop-gate decision, not a failure"
+//                                      Failed → fail-open（超时/崩溃不阻断主流程）</code></pre>
+<p class="evi">要点：① Blocked 与 Failed 语义分离，且失败策略是<strong>显式的 fail-open</strong>（可用性优先于管控）；② Stop 门控支持三方博弈：block（拦住）/ force_stop（用户级强停，覆盖 block）/ additional_context（注入上下文继续跑）。</p>
+</div>
+
 <!-- APPEND -->
 
 </main>
