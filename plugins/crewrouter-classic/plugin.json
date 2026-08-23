@@ -1,0 +1,11 @@
+{
+  "id": "crewrouter-classic",
+  "name": "CrewRouter 经典样式",
+  "version": "1.0.0",
+  "author": "CrewRouter",
+  "description": "当前前端设计系统的完整快照（浅色/深色双模式）。启用后用户可在「界面主题」中一键回到经典观感；即使日后基础样式演进，该主题仍保持本快照的样式不变。",
+  "permissions": ["themes:register"],
+  "themes": [
+    { "id": "classic", "name": "CrewRouter 经典样式", "entry": "frontend/classic.css" }
+  ]
+}
