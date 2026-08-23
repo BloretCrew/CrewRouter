@@ -262,6 +262,42 @@ pub struct PreToolUseOutcome {
 <p class="evi">要点：除了 block/context 注入外，<code>updated_input</code> 让 hook 能<strong>原地改写工具入参</strong>再放行——这是「中间人改写」语义的一等公民化，正是 CrewRouter 网关做的事在单机侧的缩影。每次 hook 执行都会产生 <code>HookRunSummary</code> 上报 UI（<code>protocol/src/protocol.rs</code> HookRunStatus/HookCompletedEvent）。</p>
 </div>
 
+<h3>3.4 与 MCP 的关系（问题 4）：MCP 三重身份——能力源、hook 执行器、可打包资产</h3>
+<div class="card">
+<ul>
+  <li><strong>独立配置面：</strong>MCP server 可独立于插件配置（<code>core/src/connectors.rs</code> 连接器体系）。</li>
+  <li><strong>插件内嵌：</strong>manifest 的 <code>mcp_servers</code> 段让插件自带 MCP 能力（<code>plugin/src/manifest.rs:29-35</code>）；apps 类资源配合 MCP 路由（<code>app_mcp_routing.rs</code>）。</li>
+  <li><strong>hook 执行载体：</strong><code>HookHandlerType::McpTool</code>（<code>protocol.rs:1528</code>）+ 专门的 <code>hooks/src/engine/mcp_runner.rs</code>（含 <code>HookMcpExecutor</code>，<code>engine/mod.rs:25</code>）——hook 处理逻辑可以部署成 MCP tool，由远端服务承担。</li>
+</ul>
+<p class="evi">定位结论：Codex 把 MCP 从「工具供给」进一步升格为「hook 计算载体」，插件则是把这些资产打包分发的容器。三者正交、互相嵌套。</p>
+</div>
+
+<h3>3.5 沙箱与权限模型（问题 5）：无代码沙箱，但有显式 Hook 信任状态机 + 环境变量清洗</h3>
+<div class="card">
+<table>
+<tr><th>机制</th><th>说明</th><th>证据</th></tr>
+<tr><td>Hook 信任状态机</td><td>每个 hook handler 带 <code>HookTrustStatus</code>；配置层提供 <code>bypass_hook_trust</code> 开关；TOML 与 JSON 来源的 hook 收敛到同一信任身份，避免「换个文件就绕过审批」</td><td><code>engine/mod.rs:33</code>、<code>registry.rs:43</code>、<code>discovery.rs:744</code></td></tr>
+<tr><td>环境变量清洗</td><td>hook 子进程启动前 <code>scrub_non_inheritable_env_vars</code> 剔除不可继承的敏感变量</td><td><code>registry.rs:33</code></td></tr>
+<tr><td>工具沙箱体系</td><td>Rust workspace 有完整 OS 级沙箱 crate 族：<code>linux-sandbox/</code>、<code>windows-sandbox-rs/</code>、<code>bwrap/</code>(bubblewrap)、<code>execpolicy/</code>、<code>network-proxy/</code>、<code>process-hardening/</code></td><td class="evi">注意：这些约束的是<strong>模型工具执行</strong>，不是插件/hook 本身</td></tr>
+<tr><td>插件本体</td><td>声明式资源（Markdown/清单），无进程内可执行代码，装载零代码执行风险</td><td><code>plugin/src/manifest.rs</code> 全文无代码加载路径</td></tr>
+</table>
+<p class="evi">与 Claude Code 相比：同样不搞插件运行时沙箱，但 Codex 多了<strong>显式信任审批流</strong>（trust status per hook）和<strong>子进程环境清洗</strong>两个防御纵深；OS 沙箱工程化程度也更高（专用 network proxy + exec policy）。</p>
+</div>
+
+<h3>3.6 与 CrewRouter 插件系统的对比借鉴（问题 6）</h3>
+<div class="card">
+<h4>值得借鉴的设计</h4>
+<ol>
+  <li><strong><code>updated_input</code> 结构化改写通道：</strong>Codex 把「hook 改写入参」做成显式字段而非整体 payload 替换。我们的 <code>gateway:beforeUpstream</code>/<code>gateway:requestReceived</code> 目前靠「返回非 undefined 对象即视为替换整个 payload」（<code>server/plugins/hooks.js:9</code> 约定）——建议约定合并语义（浅合并或字段级 diff），降低插件误覆盖整包的风险。</li>
+  <li><strong>Hook 信任状态机：</strong>per-hook trust 审批 + 跨配置源收敛信任身份（discovery.rs:744）。我们的 vm 沙箱在运行时已隔离，但「新装插件的钩子在首次生效前需人工确认」这层产品流程仍可借鉴，尤其针对从商店批量安装的场景。</li>
+  <li><strong>MCP 作为 hook 执行器：</strong><code>McpTool</code> 形态意味着重策略（内容审核、合规检查）可以外置为服务。我们网关侧可考虑允许 hook handler 声明为 <code>{type:'mcp', server, tool}</code>，host 代为调用——天然获得异步化与横向扩容。</li>
+  <li><strong>市场运营元数据：</strong>安装策略三态 + 鉴权时机两态（marketplace.rs:157-182）+ interface 展示段（capabilities/default_prompt/logo）。我们的插件商店统计上报可吸收这套字段。</li>
+  <li><strong>行业信号：</strong>引擎直接命名 <code>ClaudeHooksEngine</code> 说明 Claude Code 的 hook wire format 已是事实标准。CrewRouter 若做「多 harness 兼容钩子层」，对齐 CC/Codex 的事件名 + 输入输出 JSON 结构是最省力的互操作路径——我们的网关本来就转发这两家流量。</li>
+</ol>
+<h4>我们已有、Codex 没有的</h4>
+<p>vm 沙箱 + 权限数组 + 钩子超时熔断（见 2.6）依旧领先；Codex 的 command hook 同样是无沙箱全权 shell。</p>
+</div>
+
 <!-- APPEND -->
 
 </main>
