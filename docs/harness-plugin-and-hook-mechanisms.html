@@ -90,6 +90,85 @@
 <h2 id="overview"><span class="section-label">1.</span> 总体概览：扩展机制横向速览</h2>
 <p class="small">本章在全部章节完成后回填。</p>
 
+<!-- ================= 2. Claude Code ================= -->
+<h2 id="claude-code"><span class="section-label">2.</span> Claude Code（Hooks + Plugins 双轨制，Skill 作为第三层）</h2>
+<p class="small">源码：<code>claude-code-source-code/src</code>（完整解包 TypeScript 源码）· 置信度：<span class="conf-high">高</span>（全部结论均有源码佐证）</p>
+
+<h3>2.1 插件形态（问题 1）：Git 仓库式插件包 + Marketplace 分发</h3>
+<div class="card">
+<p><strong>原生机制：</strong>Claude Code 有两层独立的原生扩展机制——<strong>Plugins</strong>（功能打包分发）与 <strong>Hooks</strong>（生命周期钩子）。插件本质是一个含 <code>.claude-plugin/plugin.json</code> 清单的目录/Git 仓库，可捆绑七类组件。</p>
+<h4>插件清单能力面（manifest 一览即 API 面）</h4>
+<pre><code>// claude-code-source-code/src/utils/plugins/schemas.ts:884-898
+export const PluginManifestSchema = lazySchema(() =>
+  z.object({
+    ...PluginManifestMetadataSchema().shape,
+    ...PluginManifestHooksSchema().partial().shape,
+    ...PluginManifestCommandsSchema().partial().shape,
+    ...PluginManifestAgentsSchema().partial().shape,
+    ...PluginManifestSkillsSchema().partial().shape,
+    ...PluginManifestOutputStylesSchema().partial().shape,
+    ...PluginManifestChannelsSchema().partial().shape,
+    ...PluginManifestMcpServerSchema().partial().shape,
+    ...PluginManifestLspServerSchema().partial().shape,
+    ...PluginManifestSettingsSchema().partial().shape,
+    ...PluginManifestUserConfigSchema().partial().shape,
+  }),
+)</code></pre>
+<h4>安装方式</h4>
+<ul>
+  <li><strong>Marketplace 分发：</strong>市场源支持五种引用方式——直链 URL、GitHub 仓库、任意 Git URL、npm 包、本地路径（<code>src/utils/plugins/schemas.ts:906-912</code> <code>MarketplaceSourceSchema</code>）。官方市场清单走 GCS 拉取（<code>officialMarketplaceGcs.ts</code>），并有防「仿冒官方市场名」的同形字（homograph）校验（<code>schemas.ts:70-100</code> <code>BLOCKED_OFFICIAL_NAME_PATTERN</code>、<code>NON_ASCII_PATTERN</code>）。</li>
+  <li><strong>安装入口：</strong><code>/plugin</code> 交互菜单；无人值守场景走 <code>headlessPluginInstall.ts</code>；企业管理走 <code>managedPlugins.ts</code> + <code>pluginPolicy.ts</code>（策略白名单/黑名单，配套 <code>pluginBlocklist.ts</code>）。</li>
+  <li><strong>启用状态：</strong>记录在 settings 的 <code>enabledPlugins</code> 字段，支持热重载——settings 变更经 <code>settingsChangeDetector</code> 触发重载（<code>src/utils/plugins/loadPluginHooks.ts:18-26</code>）。</li>
+</ul>
+</div>
+
+<h3>2.2 插件 API 面（问题 2）：声明式组件挂载，而非代码级 SDK</h3>
+<div class="card">
+<p>Claude Code 插件<strong>没有传统意义的运行时代码 API</strong>（不提供 JS 模块在主进程内 import 后调用的接口）；它把「插件能做的事」全部表达为<strong>声明式的资源捆绑</strong>，由宿主装载器逐类吸收进主流程：</p>
+<table>
+<tr><th>组件</th><th>装载器源码</th><th>效果</th></tr>
+<tr><td>slash commands</td><td><code>src/utils/plugins/loadPluginCommands.ts</code></td><td>新增用户可敲的斜杠命令（命名空间化）</td></tr>
+<tr><td>subagents</td><td><code>src/utils/plugins/loadPluginAgents.ts</code></td><td>注册子代理定义</td></tr>
+<tr><td>skills</td><td><code>walkPluginMarkdown.ts</code> / <code>registerSkillHooks.ts</code></td><td>Markdown 技能包（SKILL.md）</td></tr>
+<tr><td>hooks</td><td><code>loadPluginHooks.ts</code></td><td>把插件 hooks 配置转成带插件上下文的本地 matcher（见 2.3）</td></tr>
+<tr><td>MCP servers</td><td><code>mcpPluginIntegration.ts</code></td><td>插件自带 MCP server 清单，甚至可打 MCPB/DXT 包（见 2.4）</td></tr>
+<tr><td>LSP servers</td><td><code>lspPluginIntegration.ts</code></td><td>语言服务器集成</td></tr>
+<tr><td>output styles / channels / settings / userConfig</td><td><code>loadPluginOutputStyles.ts</code> / <code>pluginOptionsStorage.ts</code></td><td>输出风格、频道、设置项与带存储的用户配置项</td></tr>
+</table>
+<p>插件 hooks 被转换时注入来源上下文：<code>pluginRoot</code>/<code>pluginName</code>/<code>pluginId</code>（<code>loadPluginHooks.ts:73-81</code>），使 hook 命令能定位自身插件目录内脚本。</p>
+</div>
+
+<h3>2.3 Hook 系统（问题 3）：事件最全的一套，四种 hook 形态，退出码 + JSON 双通道决策</h3>
+<div class="card">
+<h4>Hook 点位（事件全集）</h4>
+<p>SDK 导出的完整事件表（<code>src/entrypoints/sdk/coreTypes.ts:25-44</code> <code>HOOK_EVENTS</code>）：<code>PreToolUse</code>、<code>PostToolUse</code>、<code>PostToolUseFailure</code>、<code>Notification</code>、<code>UserPromptSubmit</code>、<code>SessionStart</code>/<code>SessionEnd</code>、<code>Stop</code>/<code>StopFailure</code>、<code>SubagentStart</code>/<code>SubagentStop</code>、<code>PreCompact</code>/<code>PostCompact</code>、<code>PermissionRequest</code>/<code>PermissionDenied</code>、<code>Setup</code>、<code>TeammateIdle</code>、<code>TaskCreated</code>/<code>TaskCompleted</code>。settings 校验层接受的键与之基本一致（<code>src/utils/settings/settings.ts:594-608</code>）。插件侧 matcher 表还多出内部事件：<code>Elicitation</code>、<code>ElicitationResult</code>、<code>ConfigChange</code>、<code>WorktreeCreate</code>/<code>WorktreeRemove</code>、<code>InstructionsLoaded</code>、<code>CwdChanged</code>、<code>FileChanged</code>（<code>loadPluginHooks.ts:27-58</code>）。</p>
+<h4>配置位置</h4>
+<p>settings.json 的 <code>hooks</code> 字段（用户级/项目级/本地级多层 settings 合并），结构为 <code>{ 事件名: [{ matcher, hooks: [...] }] }</code>；UI 管理入口 <code>/hooks</code>（<code>src/components/hooks/HooksConfigMenu.tsx</code>），配置快照与变更检测见 <code>hooksConfigSnapshot.ts</code> / <code>hooksConfigManager.ts</code>。</p>
+<h4>四种 hook 形态（不止 shell 命令一种！）</h4>
+<ul>
+  <li><strong>command</strong>：shell 命令，字段含 <code>timeout</code>/<code>statusMessage</code>/<code>once</code>（执行一次后移除）/<code>async</code>（后台不阻塞）/<code>asyncRewake</code>(后台且 exit 2 时唤醒模型)（<code>src/schemas/hooks.ts:31-64</code>）。</li>
+  <li><strong>prompt</strong>：交给 LLM 评估的 prompt，支持 <code>$ARGUMENTS</code> 占位符与指定 model（<code>schemas/hooks.ts:62-91</code>）——相当于内置「LLM-as-judge」钩子。</li>
+  <li><strong>http</strong>：POST JSON 到 URL，headers 支持显式白名单的环境变量插值（<code>allowedEnvVars</code>）（<code>schemas/hooks.ts:93-121</code>），SSRF 防护见 <code>src/utils/hooks/ssrfGuard.ts</code>。</li>
+  <li><strong>agent</strong>：由子代理执行的 hook（执行器 <code>src/utils/hooks/execAgentHook.ts</code>；另见 <code>execPromptHook.ts</code>/<code>execHttpHook.ts</code>）。</li>
+</ul>
+<p>所有形态共享 <code>if</code> 字段：用权限规则语法（如 <code>"Bash(git *)"</code>）预过滤，避免为不匹配的工具调用白白 spawn 进程（<code>schemas/hooks.ts:17-24</code>）。</p>
+<h4>输入</h4>
+<pre><code>// src/entrypoints/sdk/coreSchemas.ts:387-403  所有事件共享的基础输入（stdin JSON）
+session_id, transcript_path, cwd, permission_mode,
+agent_id   // 子代理内触发时才有，用于区分子代理调用
+agent_type
+// 事件附加字段，如 PreToolUse（coreSchemas.ts:415-419）：
+hook_event_name: 'PreToolUse', tool_name, tool_input</code></pre>
+<h4>返回如何影响主流程（双通道）</h4>
+<table>
+<tr><th>通道</th><th>语义</th><th>证据</th></tr>
+<tr><td>exit code 2</td><td>blocking error：<code>stderr</code> 回灌给模型；Stop hook 的阻断错误会以 system-reminder 形式入队唤醒模型</td><td><code>src/utils/hooks.ts:234-243</code>、<code>:330-333</code> <code>HookBlockingError</code></td></tr>
+<tr><td>exit code 0 + stdout JSON</td><td>结构化决策：<code>permissionBehavior: 'allow'|'deny'|'ask'|'passthrough'</code>（PreToolUse 可直接替模型做权限决定）、<code>additionalContext</code>（向上下文注入文本）、<code>systemMessage</code></td><td><code>src/utils/hooks.ts:338-347</code> <code>HookResult</code></td></tr>
+<tr><td>PostToolUse 特有</td><td><code>{decision:"block"}</code> 使工具结果被阻断原因替换；<code>preventContinuation</code> + <code>stopReason</code> 可直接终结本轮后续执行</td><td><code>src/services/tools/toolHooks.ts:88-130</code></td></tr>
+</table>
+<p class="evi">要点：PreToolUse hook 的 deny/allow 是<strong>权威决策</strong>（等价于权限系统一票），不是建议——这与多数 harness 把 hook 当「通知」有本质区别。</p>
+</div>
+
 <!-- APPEND -->
 
 </main>
