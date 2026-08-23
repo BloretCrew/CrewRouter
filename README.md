@@ -138,8 +138,23 @@ npm start          # 开发可用 npm run dev
 | `initialProviders` / `initialModels` | 首次初始化写入的供应商与模型 |
 | `feishu` / GitHub OAuth | 可选企业登录 |
 | `email` | 可选 SMTP（余额告警等） |
+| `statsReport.*` / `CR_STATS_REPORT_*` | 统计上报开关、地址、间隔与粒度（见下） |
 
 完整字段见 `config.example.json` 与 [docs/deployment.md](docs/deployment.md)。
+
+### 统计信息上报（可选）
+
+自建实例默认**不**上报任何数据；当首次进入控制台的管理员在授权弹窗中允许（或在管理后台 → 系统设置中开启「统计信息上报」后），实例会按 `interval`（默认每 1 小时）向官方服务器发送一次**匿名聚合**的使用统计：请求量、Token 消耗、成本、活跃用户/密钥数、请求类型分布，以及可选的模型/供应商分布（`granularity`）。
+
+不包含任何隐私信息：无用户名/邮箱/IP、无 API/上游密钥、无请求与回复正文。隐私优先，可在管理后台或 `config.json` 的 `statsReport.enabled: false` 随时关闭。
+
+| 配置 | 说明 |
+|------|------|
+| `statsReport.enabled` / `CR_STATS_REPORT_ENABLED` | 总开关，默认 `true`（仅为配置级强制，实际仍需管理员授权才上报）；`false` 时强制关闭 |
+| `statsReport.url` / `CR_STATS_REPORT_URL` | 上报地址，默认 `https://crewrouter.bloret.net/api/stats-report` |
+| `statsReport.token` / `CR_STATS_REPORT_TOKEN` | 可选共享令牌，配置后接收端才校验 |
+| `statsReport.interval` / `CR_STATS_REPORT_INTERVAL` | 上报间隔（秒），默认 `3600` |
+| `statsReport.granularity` / `CR_STATS_REPORT_GRANULARITY` | `detailed`（默认，含模型/供应商明细）或 `counts`（仅聚合计数） |
 
 ## 文档
 

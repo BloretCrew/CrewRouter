@@ -8073,6 +8073,12 @@ async function(ctx) {
     const loginReportEl = document.getElementById('loginReportEnabled');
     if (loginReportEl) settings['login_report_enabled'] = loginReportEl.checked;
 
+    // 统计信息上报开关（默认开启）+ 上报粒度（默认 detailed）
+    const statsReportEl = document.getElementById('statsReportEnabled');
+    if (statsReportEl) settings['stats_report_enabled'] = statsReportEl.checked;
+    const statsGranularityEl = document.getElementById('statsReportGranularity');
+    if (statsGranularityEl) settings['stats_report_granularity'] = statsGranularityEl.value;
+
     try {
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
@@ -8137,6 +8143,12 @@ async function(ctx) {
       // 登录状态上报开关（默认开启）
       const loginReportEl = document.getElementById('loginReportEnabled');
       if (loginReportEl) loginReportEl.checked = settings['login_report_enabled'] !== false;
+
+      // 统计信息上报开关（默认开启）+ 上报粒度（默认 detailed）
+      const statsReportEl = document.getElementById('statsReportEnabled');
+      if (statsReportEl) statsReportEl.checked = settings['stats_report_enabled'] !== false;
+      const statsGranularityEl = document.getElementById('statsReportGranularity');
+      if (statsGranularityEl) statsGranularityEl.value = settings['stats_report_granularity'] || 'detailed';
 
       // 全局代理池设置
       const subEl = document.getElementById('globalProxySubUrl');

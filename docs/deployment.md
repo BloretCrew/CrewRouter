@@ -77,6 +77,22 @@ Docker 镜像会从容器仓库拉取，无需手动管理程序文件。
 
 ---
 
+## 〇点六、统计信息上报（可选）
+
+自建实例**默认不**上报任何数据。首次进入控制台的管理员会在授权弹窗中决定是否允许；也可在 **管理后台 → 系统设置 → 统计信息上报** 随时开启/关闭，并选择粒度。
+
+开启后实例按 `interval`（默认每 1 小时）向官方服务器发送一次**匿名聚合**使用统计：请求量、Token 消耗、成本、活跃用户/密钥数、请求类型分布，以及可选的模型/供应商分布。明确不含用户名/邮箱/IP、API 密钥与上游密钥、请求与回复正文等隐私信息。
+
+| 配置 | 环境变量 | 说明 |
+|------|---------|------|
+| `statsReport.enabled` | `CR_STATS_REPORT_ENABLED` | 配置级总开关，`false` 强制关闭（仍需管理员授权才真正上报） |
+| `statsReport.url` | `CR_STATS_REPORT_URL` | 上报地址，默认 `https://crewrouter.bloret.net/api/stats-report` |
+| `statsReport.token` | `CR_STATS_REPORT_TOKEN` | 可选共享令牌，接收端配置后校验 |
+| `statsReport.interval` | `CR_STATS_REPORT_INTERVAL` | 上报间隔（秒），默认 `3600` |
+| `statsReport.granularity` | `CR_STATS_REPORT_GRANULARITY` | `detailed`（默认）或 `counts` |
+
+---
+
 ## 一、系统要求
 
 | 项目 | 最低要求 |

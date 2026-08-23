@@ -171,4 +171,5 @@ module.exports = {
   reportLoginEvent,
   reportLogoutEvent,
   invalidateEnabledCache,
+  resolveInstanceId,
 };

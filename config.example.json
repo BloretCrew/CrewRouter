@@ -60,6 +60,14 @@
     "token": "",
     "domain": ""
   },
+  "statsReport": {
+    "enabled": true,
+    "url": "https://crewrouter.bloret.net/api/stats-report",
+    "token": "",
+    "domain": "",
+    "interval": 3600,
+    "granularity": "detailed"
+  },
   "uiI18n": {
     "enabled": true,
     "baseUrl": "https://tr.bloret.net",

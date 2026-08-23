@@ -1664,6 +1664,22 @@ data: [DONE]</code></pre>
     </div>
   </div>
 
+  <!-- 统计上报授权模态框（仅管理员首次进入时展示） -->
+  <div id="statsConsentModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:560px;">
+      <div class="modal-header">
+        <h3><span data-i18n="允许统计上报吗？">允许统计上报吗？</span></h3>
+      </div>
+      <div class="modal-body">
+        <p style="line-height:1.8;color:var(--muted-foreground);"><span data-i18n="本实例将向官方服务器发送匿名聚合的使用统计，仅包含请求量、Token 消耗、成本、活跃用户/密钥数量、模型与用量分布等计数信息；不含任何用户名、邮箱、IP、API 密钥、上游密钥、请求内容与回复内容。可随时在管理后台关闭。">本实例将向官方服务器发送匿名聚合的使用统计，仅包含请求量、Token 消耗、成本、活跃用户/密钥数量、模型与用量分布等计数信息；不含任何用户名、邮箱、IP、API 密钥、上游密钥、请求内容与回复内容。可随时在管理后台关闭。</span></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="statsConsentReject"><span data-i18n="拒绝上报">拒绝上报</span></button>
+        <button class="btn btn-primary" id="statsConsentAllow"><span data-i18n="允许上报">允许上报</span></button>
+      </div>
+    </div>
+  </div>
+
   <!-- Co-Key 成员管理模态框 -->
   <div id="keyMembersModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width:520px;">

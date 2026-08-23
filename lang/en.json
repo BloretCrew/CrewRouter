@@ -2422,5 +2422,17 @@
   "定时任务": "Scheduled jobs",
   "主题": "Themes",
   "最近错误": "Last error",
-  "按 ID 排序": "Sort by id"
+  "按 ID 排序": "Sort by id",
+  "统计信息上报": "Usage statistics reporting",
+  "开启后，本实例每 1 小时向官方服务器发送一次匿名聚合使用统计。不记录用户名、邮箱、IP、密钥、请求内容等隐私信息，仅统计请求量、Token 消耗、成本、活跃用户/密钥数与用量分布。可随时关闭。": "When enabled, this instance sends an anonymous aggregate usage report to the official server every hour. It records no usernames, emails, IPs, API keys, or request contents; it only tallies request volume, token usage, cost, active users/keys, and usage distribution. You can turn it off at any time.",
+  "上报粒度": "Report granularity",
+  "含模型与供应商明细（默认）": "Include model & provider breakdown (default)",
+  "仅聚合计数（不含模型/供应商明细）": "Aggregate counts only (no model/provider breakdown)",
+  "影响上报内容：仅聚合计数更保守，不含具体模型/供应商；含模型与供应商明细会暴露本实例在用哪些模型/供应商。": "Affects what is uploaded: aggregate counts are more conservative and exclude specific models/providers; including the breakdown reveals which models/providers this instance uses.",
+  "允许统计上报吗？": "Allow usage statistics reporting?",
+  "本实例将向官方服务器发送匿名聚合的使用统计，仅包含请求量、Token 消耗、成本、活跃用户/密钥数量、模型与用量分布等计数信息；不含任何用户名、邮箱、IP、API 密钥、上游密钥、请求内容与回复内容。可随时在管理后台关闭。": "This instance will send anonymous aggregate usage statistics to the official server, including only counts such as request volume, token usage, cost, active users/keys, and model/usage distribution. It excludes any usernames, emails, IPs, API keys, upstream keys, and request/response contents. You can disable it any time in the admin panel.",
+  "拒绝上报": "Decline",
+  "允许上报": "Allow",
+  "检查统计上报授权失败:": "Failed to check usage reporting consent:",
+  "保存统计上报授权失败:": "Failed to save usage reporting consent:"
 }

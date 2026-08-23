@@ -3126,6 +3126,16 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// 统计上报开关更新后立即失效缓存，避免 60s TTL 延迟
+function invalidateStatsReporter(keys) {
+  const list = typeof keys === 'string' ? [keys] : keys;
+  if (list && list.some(k => k === 'stats_report_enabled')) {
+    try {
+      require('../utils/stats-reporter').invalidateEnabledCache();
+    } catch { /* 上报模块可选 */ }
+  }
+}
+
 // 更新系统设置（支持单个或批量）
 router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_SETTINGS, {
   resourceType: 'system',
@@ -3152,6 +3162,7 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
           [key, JSON.stringify(value)]
         );
       }
+      invalidateStatsReporter(entries.map(e => e[0]));
       return res.json({ success: true });
     }
 
@@ -3171,6 +3182,7 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
       'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
       [key, JSON.stringify(value)]
     );
+    invalidateStatsReporter(key);
     res.json({ success: true });
   } catch (error) {
     Logger.error('[更新系统设置] 错误:', error);

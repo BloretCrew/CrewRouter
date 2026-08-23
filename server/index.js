@@ -2355,6 +2355,8 @@ if (isDemo) {
   app.use('/api/i18n', require('./routes/i18n'));
   // 登录状态上报接收端：其他自建 CrewRouter 实例上报用户登录/退出事件
   app.use('/api/login-report', require('./routes/login-report'));
+  // 统计信息上报接收端：其他自建 CrewRouter 实例上报匿名聚合使用统计
+  app.use('/api/stats-report', require('./routes/stats-report'));
 } else {
   app.use('/api', require('./routes/setup'));
   app.use('/api/i18n', require('./routes/i18n'));
@@ -2594,6 +2596,12 @@ async function startServer() {
       startMessageAnalysisWorker({ intervalMs: 5000, batchSize: 50 });
     } catch (err) {
       Logger.warn(`[消息分析] 后台扫描器启动失败: ${err.message}`);
+    }
+    try {
+      const { startStatsReporter } = require('./utils/stats-reporter');
+      startStatsReporter();
+    } catch (err) {
+      Logger.warn(`[统计上报] 定时器启动失败: ${err.message}`);
     }
   }
 

@@ -46,6 +46,15 @@ const DEFAULTS = {
     token: '',
     domain: '',
   },
+  // 统计信息上报（自建实例向官方上报匿名聚合使用统计）
+  statsReport: {
+    enabled: true,                 // 配置级总开关，显式 false 强制关闭
+    url: 'https://crewrouter.bloret.net/api/stats-report',
+    token: '',
+    domain: '',
+    interval: 3600,                // 上报间隔（秒），默认 1 小时
+    granularity: 'detailed',       // 'counts' | 'detailed'：是否含模型/供应商明细
+  },
   demo: false,
 };
 
@@ -107,6 +116,14 @@ const ENV_MAP = {
   CR_LOGIN_REPORT_URL:     'loginReport.url',
   CR_LOGIN_REPORT_TOKEN:   'loginReport.token',
   CR_LOGIN_REPORT_DOMAIN:  'loginReport.domain',
+
+  // 统计信息上报
+  CR_STATS_REPORT_ENABLED:     'statsReport.enabled',
+  CR_STATS_REPORT_URL:         'statsReport.url',
+  CR_STATS_REPORT_TOKEN:       'statsReport.token',
+  CR_STATS_REPORT_DOMAIN:      'statsReport.domain',
+  CR_STATS_REPORT_INTERVAL:    'statsReport.interval',
+  CR_STATS_REPORT_GRANULARITY: 'statsReport.granularity',
 };
 
 // 深度合并对象（source 覆盖 target）

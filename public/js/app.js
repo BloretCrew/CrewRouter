@@ -163,6 +163,7 @@ class ConsoleApp {
       });
     }
     this.checkAdminStatus();
+    this._maybeShowStatsConsent();
   }
 
   async loadUserInfo() {
@@ -205,6 +206,36 @@ class ConsoleApp {
     }
   }
 
+  // 统计上报授权：仅管理员首次进入控制台时，且从未做过决定（stats_report_enabled 未设置）时弹窗
+  async _maybeShowStatsConsent() {
+    if (!this.user?.isAdmin) return;
+    try {
+      const res = await fetch('/api/admin/settings', { credentials: 'same-origin' });
+      if (!res.ok) return;
+      const settings = await res.json();
+      if (settings['stats_report_enabled'] !== undefined) return;
+      this.showModal('statsConsentModal');
+    } catch (error) {
+      console.warn(t('检查统计上报授权失败:'), error);
+    }
+  }
+
+  async _setStatsConsent(allow) {
+    this.closeModals();
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stats_report_enabled: !!allow, stats_report_granularity: 'detailed' })
+      });
+      if (!res.ok) {
+        console.warn(t('保存统计上报授权失败:'), res.status);
+      }
+    } catch (error) {
+      console.warn(t('保存统计上报授权失败:'), error);
+    }
+  }
+
   bindEvents() {
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
       item.addEventListener('click', () => this.navigateTo(item.dataset.page));
@@ -225,6 +256,10 @@ class ConsoleApp {
     document.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', () => this.closeModals());
     });
+
+    // 统计上报授权弹窗按钮（首次进入控制台，仅管理员可见）
+    document.getElementById('statsConsentAllow')?.addEventListener('click', () => this._setStatsConsent(true));
+    document.getElementById('statsConsentReject')?.addEventListener('click', () => this._setStatsConsent(false));
 
     // 点击遮罩空白处关闭弹窗（点到 .modal 本身，而非 .modal-content）
     document.querySelectorAll('.modal').forEach(modal => {

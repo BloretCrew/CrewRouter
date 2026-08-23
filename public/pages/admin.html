@@ -1224,6 +1224,21 @@
               <small style="color:var(--muted-foreground);font-size:12px;display:block;margin-top:6px;"><span data-i18n="开启后，本实例用户登录或退出时向官方服务器发送一次匿名事件。不记录用户名、邮箱等身份信息，仅记录域名、设备标识、账户类型（是否管理员）与时间，便于发现并跳转其他 CrewRouter 实例。可随时关闭。">开启后，本实例用户登录或退出时向官方服务器发送一次匿名事件。不记录用户名、邮箱等身份信息，仅记录域名、设备标识、账户类型（是否管理员）与时间，便于发现并跳转其他 CrewRouter 实例。可随时关闭。</span></small>
             </div>
             <div class="form-group">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="statsReportEnabled" style="width:16px;height:16px;" checked>
+                <span style="font-weight:600;"><span data-i18n="统计信息上报">统计信息上报</span></span>
+              </label>
+              <small style="color:var(--muted-foreground);font-size:12px;display:block;margin-top:6px;"><span data-i18n="开启后，本实例每 1 小时向官方服务器发送一次匿名聚合使用统计。不记录用户名、邮箱、IP、密钥、请求内容等隐私信息，仅统计请求量、Token 消耗、成本、活跃用户/密钥数与用量分布。可随时关闭。">开启后，本实例每 1 小时向官方服务器发送一次匿名聚合使用统计。不记录用户名、邮箱、IP、密钥、请求内容等隐私信息，仅统计请求量、Token 消耗、成本、活跃用户/密钥数与用量分布。可随时关闭。</span></small>
+            </div>
+            <div class="form-group">
+              <label for="statsReportGranularity"><span data-i18n="上报粒度">上报粒度</span></label>
+              <select id="statsReportGranularity" class="input">
+                <option value="detailed" data-i18n="含模型与供应商明细（默认）">含模型与供应商明细（默认）</option>
+                <option value="counts" data-i18n="仅聚合计数（不含模型/供应商明细）">仅聚合计数（不含模型/供应商明细）</option>
+              </select>
+              <small style="color:var(--muted-foreground);font-size:12px;display:block;margin-top:6px;"><span data-i18n="影响上报内容：仅聚合计数更保守，不含具体模型/供应商；含模型与供应商明细会暴露本实例在用哪些模型/供应商。">影响上报内容：仅聚合计数更保守，不含具体模型/供应商；含模型与供应商明细会暴露本实例在用哪些模型/供应商。</span></small>
+            </div>
+            <div class="form-group">
               <label><span data-i18n="可用模型列表">可用模型列表</span></label>
               <div id="modelListContainer" style="margin-top:4px;">
                 <div id="modelListTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:32px;align-items:center;"></div>
