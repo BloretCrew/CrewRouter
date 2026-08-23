@@ -401,7 +401,130 @@
 
   // ---------- 内置「插件管理」后台页 ----------
 
-  let manageState = { plugins: [], expanded: {} };
+  const PERM_GLOSSARY = {
+    'storage': '读写私有 KV 存储',
+    'network': '访问外部网络（受限）',
+    'gateway:modify': '改写网关请求/输出',
+    'provider:register': '注册供应商格式/转换/路由选择',
+    'apikey:modify': 'API Key 校验、创建与计费行为',
+    'billing:modify': '调整计费',
+    'cron:register': '定时任务',
+    'pages:register': '页面与插槽扩展',
+    'routes:register': '自建 HTTP API',
+    'themes:register': '主题扩展',
+    'stats:record': '统计维度扩展',
+    'models:list': '模型列表改写',
+  };
+
+  let manageState = { plugins: [], expanded: {}, search: '', sort: 'id' };
+
+  const mstyle = `
+    .mstat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:14px 0;}
+    .mstat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+    .mstat .v{font-size:22px;font-weight:700;line-height:1.1;}
+    .mstat .l{font-size:12px;color:var(--muted-foreground);margin-top:2px;}
+    .mstat.err .v{color:var(--destructive);}
+    .mstat.warn .v{color:#d97706;}
+    .mcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
+    .mhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .mtitle{font-size:15px;font-weight:600;}
+    .mtag{font-size:11px;color:var(--muted-foreground);font-family:monospace;background:var(--muted);padding:1px 7px;border-radius:6px;}
+    .mdesc{font-size:13px;color:var(--muted-foreground);margin:6px 0 0;}
+    .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--muted);color:var(--muted-foreground);margin-right:6px;border:1px solid transparent;}
+    .chip.on{background:rgba(22,163,74,.12);color:#16a34a;}
+    .chip.off{color:var(--muted-foreground);}
+    .chip.warn{background:rgba(217,119,6,.12);color:#d97706;}
+    .chip.perm{font-family:monospace;background:var(--muted);cursor:help;}
+    .chip.cap{background:var(--brand-blue-bg);color:var(--brand-blue);}
+    .msec{font-size:12px;color:var(--muted-foreground);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.04em;}
+    .mtable{width:100%;font-size:12px;border-collapse:collapse;}
+    .mtable th{text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--muted-foreground);font-weight:500;}
+    .mtable td{padding:4px 8px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-all;}
+    .msearch{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 14px;}
+    .mmut{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;}
+  `;
+
+  function statCard(v, label, cls) {
+    return `<div class="mstat ${cls || ''}"><div class="v">${esc(String(v))}</div><div class="l">${esc(label)}</div></div>`;
+  }
+
+  function permChip(p) {
+    const label = PERM_GLOSSARY[p] || p;
+    return `<span class="chip perm" title="${esc(label)}">${esc(p)}</span>`;
+  }
+
+  function pluginRow(pl) {
+    const open = !!manageState.expanded[pl.id];
+    const perms = (pl.permissions || []).map(permChip).join('') || '<span class="chip off">-</span>';
+
+    const statusChips = [
+      pl.enabled ? '<span class="chip on">● 已启用</span>' : '<span class="chip off">○ 已禁用</span>',
+      pl.onDisk ? '' : '<span class="chip warn">磁盘缺失</span>',
+      pl.loaded ? '<span class="chip on">运行中</span>' : '',
+      pl.errorCount > 0 || pl.lastError ? `<span class="chip warn">错误 ${esc(String(pl.errorCount))}</span>` : '',
+    ].join('');
+
+    const caps = [];
+    if (pl.pages?.length) caps.push(`<span class="chip cap">${esc(String(pl.pages.length))} 页面</span>`);
+    if (pl.slots?.length) caps.push(`<span class="chip cap">${esc(String(pl.slots.length))} 插槽</span>`);
+    if (pl.routes?.length) caps.push(`<span class="chip cap">${esc(String(pl.routes.length))} API</span>`);
+    if (pl.cron?.length) caps.push(`<span class="chip cap">${esc(String(pl.cron.length))} 定时任务</span>`);
+    if (pl.themes?.length) caps.push(`<span class="chip cap">${esc(String(pl.themes.length))} 主题</span>`);
+    const capsHtml = caps.join('') || '<span class="chip off">无能力注册</span>';
+
+    const detail = open ? pluginDetail(pl, perms) : '';
+    return `
+      <div class="mcard">
+        <div class="mhead">
+          <div style="flex:1;min-width:260px;">
+            <div class="mtitle">🧩 ${esc(pl.name)} <span class="mtag">v${esc(pl.version || '-')} · ${esc(pl.id)}</span></div>
+            ${pl.author ? `<div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">作者：${esc(pl.author)}</div>` : ''}
+            ${pl.description ? `<div class="mdesc">${esc(pl.description)}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            <div>${statusChips}</div>
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" ${pl.enabled ? 'checked' : ''} onchange="window.__pluginRT.toggle('${esc(pl.id)}', this.checked)"> ${esc(t('启用'))}</label>
+          </div>
+        </div>
+        <div style="margin-top:10px;">${capsHtml}</div>
+        <div class="mmut">
+          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--destructive);" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
+        </div>
+        ${detail}
+      </div>`;
+  }
+
+  function pluginDetail(pl, perms) {
+    const routesHtml = (pl.routes || []).map(r =>
+      `${esc((r.method || 'GET').toUpperCase())} <code style="font-family:monospace;">/api/plugins/${esc(pl.id)}${esc(r.path)}</code> <span style="color:var(--muted-foreground);font-size:11px;">(${esc(r.auth || 'user')})</span>`
+    ).join('<br>');
+    const cronHtml = (pl.cron || []).map(c =>
+      `<code style="font-family:monospace;">${esc(c.expr || '-')}</code> <span style="color:var(--muted-foreground);font-size:11px;">→ ${esc(c.handler || '-')}</span>`
+    ).join('<br>');
+    const themesHtml = (pl.themes || []).map(th => esc(th.name || th.id)).join('、');
+    const cfgText = esc(JSON.stringify(pl.config || {}, null, 2));
+
+    return `
+      <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:4px;">
+        <div class="msec">${esc(t('权限声明'))}</div>
+        <div>${perms}</div>
+        ${pl.routes?.length ? `<div class="msec">${esc(t('自有 API'))}</div><div style="font-size:12px;">${routesHtml}</div>` : ''}
+        ${pl.cron?.length ? `<div class="msec">${esc(t('定时任务'))}</div><div style="font-size:12px;">${cronHtml}</div>` : ''}
+        ${pl.themes?.length ? `<div class="msec">${esc(t('主题'))}</div><div style="font-size:12px;">${themesHtml}</div>` : ''}
+        <div class="msec">${esc(t('插件配置'))}(config)</div>
+        <textarea data-plugin-cfg="${esc(pl.id)}" rows="5" style="width:100%;font-family:monospace;font-size:12px;background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:8px;padding:8px;">${cfgText}</textarea>
+        <div style="margin-top:6px;display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
+          <div data-plugin-cfg-msg="${esc(pl.id)}" style="font-size:12px;align-self:center;"></div>
+        </div>
+        <div class="msec">${esc(t('插件数据'))}(plugin_data)</div>
+        <div data-plugin-data="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p></div>
+        ${pl.lastError ? `<div class="msec">${esc(t('最近错误'))}</div><div style="font-size:12px;color:var(--destructive);">⚠ ${esc(pl.lastError)}</div>
+          <div style="margin-top:4px;"><button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')">${esc(t('清除错误并重载'))}</button></div>` : ''}
+      </div>`;
+  }
 
   async function renderPluginsAdmin(container, keepExpand) {
     if (!container) return;
@@ -415,60 +538,44 @@
     }
     manageState.plugins = data.plugins || [];
 
-    const rows = manageState.plugins.map((pl) => {
-      const open = !!manageState.expanded[pl.id];
-      const perms = (pl.permissions || []).map(x => `<span style="display:inline-block;padding:1px 8px;border-radius:10px;background:var(--muted);font-size:11px;margin-right:4px;">${esc(x)}</span>`).join('');
-      const statusBadge = pl.enabled
-        ? `<span style="color:var(--success,#16a34a);">● ${esc(t('已启用'))}</span>`
-        : `<span style="color:var(--muted-foreground);">○ ${esc(t('已禁用'))}</span>`;
-      const errInfo = pl.lastError
-        ? `<div style="margin-top:6px;font-size:12px;color:var(--destructive);">⚠ ${esc(pl.lastError)}（${esc(String(pl.errorCount))}）</div>`
-        : '';
-      const cfgText = esc(JSON.stringify(pl.config || {}, null, 2));
-      const detail = open ? `
-        <div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;">
-          <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:4px;">${esc(t('权限声明'))}</div>
-          <div>${perms || '<span style="font-size:12px;color:var(--muted-foreground);">-</span>'}</div>
-          ${pl.routes?.length ? `<div style="font-size:12px;color:var(--muted-foreground);margin:8px 0 4px;">API: ${pl.routes.map(r => esc(`${(r.method || 'GET').toUpperCase()} /api/plugins/${pl.id}${r.path}`)).join('、')}</div>` : ''}
-          <div style="font-size:12px;color:var(--muted-foreground);margin:8px 0 4px;">${esc(t('插件配置'))}(config)</div>
-          <textarea data-plugin-cfg="${esc(pl.id)}" rows="5" style="width:100%;font-family:monospace;font-size:12px;background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:8px;padding:8px;">${cfgText}</textarea>
-          <div style="margin-top:6px;display:flex;gap:8px;">
-            <button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
-            ${pl.lastError ? `<button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')">${esc(t('清除错误并重载'))}</button>` : ''}
-          </div>
-          <div data-plugin-cfg-msg="${esc(pl.id)}" style="font-size:12px;margin-top:4px;"></div>
-          <div style="font-size:12px;color:var(--muted-foreground);margin:12px 0 4px;">${esc(t('插件数据'))}(plugin_data)</div>
-          <div data-plugin-data="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p></div>
-        </div>` : '';
-      return `
-        <div class="content-card" style="padding:14px 16px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:200px;">
-              <div style="font-weight:600;">🧩 ${esc(pl.name)} <span style="font-size:12px;color:var(--muted-foreground);">v${esc(pl.version || '-')} · ${esc(pl.id)}</span></div>
-              <div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">${esc(pl.description || '')}</div>
-              ${errInfo}
-            </div>
-            <div style="font-size:13px;">${statusBadge}${pl.onDisk ? '' : ` · <span style="color:var(--destructive);font-size:12px;">${esc(t('磁盘缺失'))}</span>`}</div>
-            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
-              <input type="checkbox" ${pl.enabled ? 'checked' : ''} onchange="window.__pluginRT.toggle('${esc(pl.id)}', this.checked)"> ${esc(t('启用'))}
-            </label>
-            <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
-            <button class="btn btn-ghost btn-sm" style="color:var(--destructive);" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
-          </div>
-          ${detail}
-        </div>`;
-    }).join('');
+    const q = manageState.search.trim().toLowerCase();
+    const filtered = manageState.plugins.filter(pl =>
+      !q || [pl.id, pl.name, pl.description, pl.author].some(x => String(x || '').toLowerCase().includes(q))
+    );
+    const sorted = [...filtered].sort((a, b) => {
+      if (manageState.sort === 'name') return String(a.name).localeCompare(String(b.name));
+      if (manageState.sort === 'enabled') return (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0);
+      return String(a.id).localeCompare(String(b.id));
+    });
 
+    const total = manageState.plugins.length;
+    const stats =
+      statCard(total, t('插件总数')) +
+      statCard(manageState.plugins.filter(p => p.enabled).length, t('已启用'), 'ok') +
+      statCard(manageState.plugins.filter(p => !p.enabled).length, t('已禁用')) +
+      statCard(manageState.plugins.filter(p => !p.onDisk).length, t('磁盘缺失'), 'warn') +
+      statCard(manageState.plugins.filter(p => p.errorCount > 0 || p.lastError).length, t('错误'), 'err');
+
+    const rows = sorted.map(pluginRow).join('');
     container.innerHTML = `
+      <style>${mstyle}</style>
       <div class="section-header">
         <div>
           <h2>${esc(t('插件管理'))}</h2>
           <p style="font-size:13px;color:var(--muted-foreground);margin:0;">${esc(t('安装方法：将插件目录放入服务器 plugins/ 目录，重启服务后在此启用。'))}</p>
         </div>
-        <div><button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
+        <div class="mmut" style="margin-top:0;"><button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
       </div>
-      ${rows.length ? rows : `<p style="color:var(--muted-foreground);font-size:14px;">${esc(t('暂无插件。将插件目录放入 plugins/ 后重启服务即可在此看到。'))}</p>`}
+      <div class="mstat-grid">${stats}</div>
+      <div class="msearch">
+        <input type="search" id="pluginSearchInput" class="input" style="flex:1;min-width:200px;" placeholder="${esc(t('搜索插件名称、ID、作者或描述'))}" value="${esc(manageState.search)}" oninput="window.__pluginRT.search(this.value)">
+        <select id="pluginSortSelect" class="select" onchange="window.__pluginRT.sort(this.value)">
+          <option value="id" ${manageState.sort === 'id' ? 'selected' : ''}>${esc(t('按名称排序'))}</option>
+          <option value="name" ${manageState.sort === 'name' ? 'selected' : ''}>${esc(t('按显示名排序'))}</option>
+          <option value="enabled" ${manageState.sort === 'enabled' ? 'selected' : ''}>${esc(t('按状态排序'))}</option>
+        </select>
+      </div>
+      ${rows ? rows : `<p style="color:var(--muted-foreground);font-size:14px;">${q ? esc(t('未找到匹配插件')) : esc(t('暂无插件。将插件目录放入 plugins/ 后重启服务即可在此看到。'))}</p>`}
     `;
   }
 
@@ -482,6 +589,8 @@
 
   window.__pluginRT = {
     refresh() { renderPluginsAdmin(document.getElementById('adminPluginsContent')); },
+    search(v) { manageState.search = v; this.refresh(); },
+    sort(v) { manageState.sort = v; this.refresh(); },
     expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); if (manageState.expanded[id]) this.loadData(id); },
     async loadData(id) {
       const box = document.querySelector(`[data-plugin-data="${id}"]`);
@@ -494,13 +603,13 @@
           box.innerHTML = `<p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('暂无数据'))}</p>`;
           return;
         }
-        box.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse;">
-          <tr><th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);">${esc(t('键'))}</th><th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);">${esc(t('值'))}</th><th style="text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);">${esc(t('更新时间'))}</th><th></th></tr>
+        box.innerHTML = `<table class="mtable">
+          <tr><th>${esc(t('键'))}</th><th>${esc(t('值'))}</th><th>${esc(t('更新时间'))}</th><th></th></tr>
           ${rows.map(r => `<tr>
-            <td style="padding:4px 8px;border-bottom:1px solid var(--border);font-family:monospace;">${esc(r.key)}</td>
-            <td style="padding:4px 8px;border-bottom:1px solid var(--border);font-family:monospace;word-break:break-all;max-width:320px;">${esc(JSON.stringify(r.value))}</td>
-            <td style="padding:4px 8px;border-bottom:1px solid var(--border);white-space:nowrap;">${esc(String(r.updatedAt || '').slice(0, 19).replace('T', ' '))}</td>
-            <td style="padding:4px 8px;border-bottom:1px solid var(--border);"><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px;" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')">${esc(t('删除'))}</button></td>
+            <td style="font-family:monospace;">${esc(r.key)}</td>
+            <td style="font-family:monospace;max-width:320px;">${esc(JSON.stringify(r.value))}</td>
+            <td style="white-space:nowrap;">${esc(String(r.updatedAt || '').slice(0, 19).replace('T', ' '))}</td>
+            <td><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px;" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')">${esc(t('删除'))}</button></td>
           </tr>`).join('')}
         </table>`;
       } catch (e) {

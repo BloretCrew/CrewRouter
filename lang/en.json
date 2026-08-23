@@ -2382,5 +2382,16 @@
   "PassPort 尚未配置，无法审核": "PassPort not configured, cannot review",
   "PassPort 尚未配置，无法提交插件": "PassPort not configured, cannot submit plugins",
   "PassPort 未配置，暂不能评分": "PassPort not configured, you cannot rate yet",
-  "SHA256（可选，64 位十六进制）": "SHA256 (optional, 64 hex chars)"
+  "SHA256（可选，64 位十六进制）": "SHA256 (optional, 64 hex chars)",
+  "插件总数": "Total plugins",
+  "搜索插件名称、ID、作者或描述": "Search by name, id, author or description",
+  "按名称排序": "Sort by name",
+  "按显示名排序": "Sort by display name",
+  "按状态排序": "Sort by status",
+  "未找到匹配插件": "No matching plugins",
+  "自有 API": "Own APIs",
+  "定时任务": "Scheduled jobs",
+  "主题": "Themes",
+  "最近错误": "Last error",
+  "按 ID 排序": "Sort by id"
 }

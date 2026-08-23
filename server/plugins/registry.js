@@ -401,6 +401,7 @@ async function listAll() {
     slots: (knownManifests.get(row.id)?.slots || []),
     routes: (knownManifests.get(row.id)?.routes || []),
     cron: (knownManifests.get(row.id)?.cron || []),
+    themes: (knownManifests.get(row.id)?.themes || []),
   }));
 }
 
