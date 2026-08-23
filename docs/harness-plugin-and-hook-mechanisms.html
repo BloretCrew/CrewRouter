@@ -298,6 +298,53 @@ pub struct PreToolUseOutcome {
 <p>vm 沙箱 + 权限数组 + 钩子超时熔断（见 2.6）依旧领先；Codex 的 command hook 同样是无沙箱全权 shell。</p>
 </div>
 
+<!-- ================= 4. OpenCode ================= -->
+<h2 id="opencode"><span class="section-label">4.</span> OpenCode（进程内 JS 插件 + output 原地改写的事件总线）</h2>
+<p class="small">源码：<code>opencode/packages/opencode</code>（TypeScript，Effect 架构；类型包 <code>packages/plugin</code>）· 置信度：<span class="conf-high">高</span></p>
+
+<h3>4.1 插件形态（问题 1）：JS/TS 模块文件，进程内 import，无独立进程</h3>
+<div class="card">
+<ul>
+  <li><strong>形态：</strong>插件就是 <strong>JavaScript/TypeScript 模块</strong>，实现 <code>@opencode-ai/plugin</code> 类型包定义的 <code>PluginModule</code>（导出一个接收 <code>PluginInput</code> 的 async 函数，返回 <code>Hooks</code> 对象）。宿主用动态 import 装载进<strong>同一 Node 进程</strong>。</li>
+  <li><strong>安装方式三种：</strong>① 项目目录 <code>.opencode/plugins/</code> 放置文件；② 全局目录 <code>~/.config/opencode/plugins/</code>；③ opencode.json 的 <code>plugin</code> 数组填 npm 包名——loader 会自动 npm 安装、做版本兼容检查（<code>checkPluginCompatibility</code>）、再动态 import（<code>src/plugin/loader.ts:9-29</code>、<code>:40-58</code> Plan/Resolved/Loaded 三阶段流水线；目录约定见捆绑文档 <code>packages/web/src/content/docs/config.mdx:801</code>）。</li>
+  <li><strong>内置插件：</strong>十几个 auth 类官方插件直接打包内置（Copilot/GitLab/Poe/Cloudflare/Azure/DigitalOcean/Snowflake/<strong>xAI</strong>/Cerebras 等，<code>src/plugin/index.ts:66-84</code>），说明「provider 鉴权」是这套机制的第一公民用途。</li>
+</ul>
+</div>
+
+<h3>4.2 插件 API 面（问题 2）：所有 hook 共享一个签名——<code>(input, output) => 改 output</code></h3>
+<div class="card">
+<p>OpenCode 的设计核心是<strong>统一触发器协议</strong>：每个 hook 都是 <code>(input, output) => Promise&lt;void&gt;</code>，插件<strong>原地修改 output 对象</strong>即完成「干预」，无需返回值（<code>src/plugin/index.ts:44-57</code> <code>trigger&lt;Name&gt;(name, input, output)</code> 泛型即按此签名约束全部事件名）。能力面：</p>
+<table>
+<tr><th>能力</th><th>hook 名</th><th>可改什么</th><th>证据（packages/plugin/src/index.ts）</th></tr>
+<tr><td rowspan="5"><strong>改请求</strong></td><td><code>chat.params</code></td><td>temperature/topP/topK/maxOutputTokens/options</td><td>:247-258</td></tr>
+<tr><td><code>chat.headers</code></td><td>发往 LLM 的 HTTP 头</td><td>:253-260</td></tr>
+<tr><td><code>chat.message</code></td><td>用户消息与 parts</td><td>:235-245</td></tr>
+<tr><td><code>experimental.chat.messages.transform</code></td><td>整条消息数组重写</td><td>:283-291</td></tr>
+<tr><td><code>experimental.chat.system.transform</code></td><td><strong>system prompt 数组整体重写</strong></td><td>:292-297</td></tr>
+<tr><td rowspan="3"><strong>管工具</strong></td><td><code>tool.execute.before</code></td><td>工具入参 args</td><td>:264-269</td></tr>
+<tr><td><code>tool.execute.after</code></td><td>结果 title/output/metadata</td><td>:271-280</td></tr>
+<tr><td><code>permission.ask</code></td><td>status 三态 <code>"ask"|"deny"|"allow"</code></td><td>:261</td></tr>
+<tr><td><strong>供工具</strong></td><td><code>tool</code> 字段</td><td>插件直接注册自定义 ToolDefinition</td><td>:230-231</td></tr>
+<tr><td><strong>环境</strong></td><td><code>shell.env</code> / <code>config</code> / <code>event</code></td><td>shell 环境变量 / 配置对象 / 全局事件总线监听</td><td>:227-229、:274-279</td></tr>
+<tr><td><strong>实验位</strong></td><td><code>experimental.*</code></td><td>压缩 prompt 定制、autocontinue 开关、小模型选择、text complete</td><td>:283-330+</td></tr>
+</table>
+<p class="evi">要点：这是三者中唯一能从插件里<strong>整体重写 system prompt 与消息历史</strong>的设计（experimental.chat.*.transform），干预深度直逼代理层。</p>
+</div>
+
+<h3>4.3 Hook 系统（问题 3）：没有配置文件式 hooks——hook 就是插件代码本身</h3>
+<div class="card">
+<p>与 Claude Code/Codex 的「settings 里声明外部命令」不同，OpenCode <strong>没有 hooks.json/settings.hooks 字段</strong>：hook 点位内建于运行时（<code>session/prompt.ts:308</code>、<code>session/tools.ts:107/120</code> 等处调用 <code>plugin.trigger(...)</code>），插件在初始化时把 JS 函数挂到这些点位上。</p>
+<h4>阻断语义：抛异常即拦截</h4>
+<pre><code>// opencode/packages/opencode/src/session/tools.ts:105-111
+execute(args, options) {
+  return run.promise(Effect.gen(function* () {
+    yield* plugin.trigger("tool.execute.before",
+      { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
+      { args })                      // ← args 被原地改写
+    const result = yield* item.execute(args, ctx)   // ← 用改后的 args 执行</code></pre>
+<p>hook 内 throw 会让 Effect 链中断 → 工具不执行（错误进入会话流）；<code>permission.ask</code> 的 deny 则是结构化三态决策。没有 exit code 之类的进程间协议——因为根本不在进程间。</p>
+</div>
+
 <!-- APPEND -->
 
 </main>
