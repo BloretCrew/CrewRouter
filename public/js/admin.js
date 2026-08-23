@@ -496,7 +496,8 @@ class AdminApp {
       'adminSettings': t('系统设置'),
       'adminTeams': t('Team 管理'),
       'adminUserGroups': t('用户组管理'),
-      'adminAuditLogs': t('操作日志')
+      'adminAuditLogs': t('操作日志'),
+      'adminPlugins': t('插件管理')
     };
     const pageTitleEl = document.getElementById('pageTitle');
     if (pageTitleEl) pageTitleEl.textContent = titles[page] || page;

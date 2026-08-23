@@ -92,17 +92,6 @@
       // 追加到第一个分区内置项之后
       navSection.appendChild(item);
     }
-
-    // 管理后台额外注入「插件管理」入口（内置页面）
-    if (area === 'admin' && !document.querySelector('.nav-item[data-page="adminPlugins"]')) {
-      const item = document.createElement('div');
-      item.className = 'nav-item';
-      item.setAttribute('data-page', 'adminPlugins');
-      item.innerHTML = `<img src="https://img.bloret.net/SF/puzzlepiece.extension?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="puzzlepiece.extension">
-        <span><span>${esc(t('插件管理'))}</span></span>`;
-      item.addEventListener('click', () => { if (window.adminApp) adminApp.navigateTo('adminPlugins'); });
-      navSection.appendChild(item);
-    }
   }
 
   function injectPageContainers(area) {
@@ -118,14 +107,6 @@
       wrap.className = 'page';
       wrap.id = `${p.pageId}Page`;
       wrap.innerHTML = `<div class="content-section" data-plugin-page="${esc(p.pageId)}"></div>`;
-      parent.appendChild(wrap);
-    }
-
-    if (area === 'admin' && !document.getElementById('adminPluginsPage')) {
-      const wrap = document.createElement('div');
-      wrap.className = 'page';
-      wrap.id = 'adminPluginsPage';
-      wrap.innerHTML = '<div class="content-section" data-plugin-admin-manage></div>';
       parent.appendChild(wrap);
     }
   }
@@ -197,8 +178,7 @@
           return;
         }
         if (page === 'adminPlugins') {
-          setPageTitle(t('插件管理'));
-          renderPluginsAdmin(document.querySelector('[data-plugin-admin-manage]'));
+          renderPluginsAdmin(document.getElementById('adminPluginsContent'));
           return;
         }
         // 设置页渲染主题选择器
@@ -361,7 +341,15 @@
     if (!area) return;
 
     const runtime = await fetchRuntime();
-    if (!runtime) return; // 后端尚未具备插件接口（如待重启的旧进程）时静默退出
+    if (!runtime) {
+      // 后端尚未具备插件接口（如待重启的旧进程）：插件页静默退出，
+      // 但原生的「插件管理」静态页需要给出明确提示
+      if (area === 'admin') {
+        const box = document.getElementById('adminPluginsContent');
+        if (box) box.innerHTML = `<p style="color:var(--muted-foreground);font-size:13px;">${esc(t('插件服务未就绪：请重启 CrewRouter 使插件系统生效。'))}</p>`;
+      }
+      return;
+    }
     const plugins = (runtime && Array.isArray(runtime.plugins)) ? runtime.plugins : [];
 
     state.area = area;
@@ -402,7 +390,7 @@
     const cur = currentPage();
     if (cur) {
       if (cur.startsWith('plugin_')) await renderPluginPageIfAny(cur);
-      else if (cur === 'adminPlugins') renderPluginsAdmin(document.querySelector('[data-plugin-admin-manage]'));
+      else if (cur === 'adminPlugins') renderPluginsAdmin(document.getElementById('adminPluginsContent'));
       else {
         if (cur === 'settings') renderUserThemePicker(document.getElementById('pluginThemePicker'));
         if (cur === 'adminSettings') renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
@@ -491,7 +479,7 @@
   }
 
   window.__pluginRT = {
-    refresh() { renderPluginsAdmin(document.querySelector('[data-plugin-admin-manage]')); },
+    refresh() { renderPluginsAdmin(document.getElementById('adminPluginsContent')); },
     expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); },
     async toggle(id, enabled) {
       try {

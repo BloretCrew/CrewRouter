@@ -2304,5 +2304,6 @@
   "已保存并生效": "Saved and applied",
   "已保存，刷新后对所有用户生效": "Saved. Refresh to apply to all users.",
   "选择管理员安装的主题插件提供的外观；仅改变界面样式。": "Choose an appearance provided by admin-installed theme plugins. Styles only.",
-  "为全体用户设置默认外观；用户可在控制台「用户设置 → 界面主题」中自行覆盖。": "Set the default appearance for all users. Each user can override it in Console → User Settings → Appearance Theme."
+  "为全体用户设置默认外观；用户可在控制台「用户设置 → 界面主题」中自行覆盖。": "Set the default appearance for all users. Each user can override it in Console → User Settings → Appearance Theme.",
+  "插件服务未就绪：请重启 CrewRouter 使插件系统生效。": "Plugin service not ready: restart CrewRouter to enable the plugin system."
 }
