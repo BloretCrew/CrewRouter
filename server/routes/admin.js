@@ -1413,6 +1413,13 @@ function csvEscape(value) {
   return s;
 }
 
+// 从 plugin_meta.customInstructions 取文件名列表（逗号连接，供 CSV 导出）
+function customInstructionsFiles(pluginMeta) {
+  const ci = pluginMeta && pluginMeta.customInstructions;
+  if (!Array.isArray(ci)) return '';
+  return ci.map((i) => i && i.file).filter(Boolean).map((f) => String(f).trim()).join(',');
+}
+
 router.get('/usage-logs', requireAuth, requireAdmin, async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -1443,6 +1450,11 @@ router.get('/usage-logs', requireAuth, requireAdmin, async (req, res) => {
         u.user_agent,
         u.latency_ms,
         u.ip_address,
+        COALESCE(
+          CASE WHEN jsonb_typeof(u.plugin_meta->'customInstructions') = 'array'
+               THEN jsonb_array_length(u.plugin_meta->'customInstructions')
+               ELSE 0 END, 0
+        ) as custom_instruction_count,
         u.cost,
         u.created_at,
         us.username,
@@ -1608,6 +1620,7 @@ router.get('/usage-logs/export', requireAuth, requireAdmin, async (req, res) => 
         u.prompt_tokens,
         u.completion_tokens,
         u.cached_tokens,
+        u.plugin_meta,
         u.cost,
         u.latency_ms,
         u.ip_address
@@ -1621,7 +1634,7 @@ router.get('/usage-logs/export', requireAuth, requireAdmin, async (req, res) => 
     const header = [
       '时间', '用户名', '用户ID', '模型', '上游模型ID', '系列', '供应商',
       'Key前缀', 'Key名称', '请求类型', '客户端', '总Token', '输入Token', '输出Token',
-      '缓存Token', '积分', '延迟ms', 'IP'
+      '缓存Token', '积分', '延迟ms', 'IP', '自定义提示词文件'
     ];
 
     const lines = [header.map(csvEscape).join(',')];
@@ -1645,7 +1658,8 @@ router.get('/usage-logs/export', requireAuth, requireAdmin, async (req, res) => 
         row.cached_tokens || 0,
         row.cost != null ? row.cost : '',
         row.latency_ms != null ? row.latency_ms : '',
-        row.ip_address || ''
+        row.ip_address || '',
+        customInstructionsFiles(row.plugin_meta)
       ].map(csvEscape).join(','));
     }
 
@@ -1687,6 +1701,7 @@ router.get('/usage-logs/:id', requireAuth, requireAdmin, async (req, res) => {
         u.ip_address,
         u.messages,
         u.response,
+        u.plugin_meta,
         u.cost,
         u.created_at,
         us.username,

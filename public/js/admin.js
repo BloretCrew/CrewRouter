@@ -7739,6 +7739,54 @@ async function(ctx) {
     return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:color-mix(in srgb, ${meta.color} 15%, transparent);color:${meta.color};">${escapeHtml(meta.label)}</span>`;
   }
 
+  /** 列表「命中自定义提示词文件」徽标：📄 N（N 为文件数） */
+  _customInstructionsBadge(count) {
+    const n = parseInt(count || 0, 10);
+    if (!(n > 0)) return '';
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;margin-left:6px;background:color-mix(in srgb, #22c55e 15%, transparent);color:#16a34a;" title="${n} ${t('个自定义提示词文件')}">📄 ${n}</span>`;
+  }
+
+  /** 详情「自定义提示词」区块 HTML（从 log.plugin_meta.customInstructions 渲染） */
+  _customInstructionsSectionHtml(log) {
+    const ci = log && log.plugin_meta && log.plugin_meta.customInstructions;
+    if (!ci) return '';
+    // 超大输入被跳过提取的情形
+    if (!Array.isArray(ci)) {
+      if (ci && ci.skipped === 'size') {
+        return `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('自定义提示词')}</span><span style="font-size:13px;color:var(--muted-foreground);">${t('请求过大，已跳过提取')}</span></div>`;
+      }
+      return '';
+    }
+    if (!ci.length) return '';
+    const blocks = ci.map((item, idx) => {
+      const file = escapeHtml(String(item && item.file || t('未知')));
+      const sourceLabel = this._customInstructionSourceLabel(item && item.source);
+      const chars = parseInt(item && item.chars || 0, 10);
+      const truncated = !!(item && item.truncated);
+      const truncNote = truncated ? ` <span style="color:#f59e0b;font-size:12px;">(${t('已截断')})</span>` : '';
+      const detail = `<span style="font-size:12px;color:var(--muted-foreground);">${sourceLabel}</span> <span style="font-size:12px;color:var(--muted-foreground);">${chars.toLocaleString()} ${t('字符')}</span>${truncNote}`;
+      const contentPre = `<pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:8px 0 0;max-height:220px;overflow-y:auto;${truncated ? 'display:none;' : ''}" data-custom-inst-content="${idx}">${escapeHtml(String(item && item.content || ''))}</pre>`;
+      const toggleBtn = truncated ? `<button type="button" class="btn btn-sm btn-secondary" data-custom-inst-toggle="${idx}" style="margin-top:8px;">${t('查看全部')}</button>` : '';
+      return `<div style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;word-break:break-all;">📄 ${file}</div>
+        <div style="margin-top:2px;">${detail}</div>
+        ${contentPre}${toggleBtn}
+      </div>`;
+    }).join('');
+    return `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('自定义提示词')}</span><div>${blocks || t('无')}</div></div>`;
+  }
+
+  _customInstructionSourceLabel(source) {
+    return ({
+      claude_md: 'CLAUDE.md',
+      agents_md: 'AGENTS.md',
+      cursorrules: '.cursorrules',
+      qwen_md: 'QWEN.md',
+      soul_md: 'SOUL.md',
+      other: t('其他'),
+    })[source] || t('其他');
+  }
+
   _formatUsageModelLabel(log) {
     return log.model_name
       || (log.request_type === 'fusion' ? 'Fusion' : null)
@@ -7836,7 +7884,7 @@ async function(ctx) {
                   <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;background:var(--muted);color:var(--foreground);">${escapeHtml(providerLabel)}</span>
                 </td>
                 <td>${this._usageRequestTypeBadge(log.request_type)}</td>
-                <td>${this._usageRequestSourceBadge(log.request_source)}</td>
+                <td>${this._usageRequestSourceBadge(log.request_source)}${this._customInstructionsBadge(log.custom_instruction_count)}</td>
                 <td style="white-space:nowrap;">
                   <div style="font-variant-numeric:tabular-nums;" title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</div>
                   <div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;">${tokenSub}</div>
@@ -8040,7 +8088,23 @@ async function(ctx) {
         <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
         <span style="font-size:14px;">${value}</span>
       </div>
-    `).join('') + messagesHtml + responseHtml);
+    `).join('') + this._customInstructionsSectionHtml(log) + messagesHtml + responseHtml);
+
+    // 截断文件「查看全部」展开/收起
+    const customRoot = document.getElementById('usageDetailContent');
+    if (customRoot) {
+      customRoot.querySelectorAll('button[data-custom-inst-toggle]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = parseInt(btn.getAttribute('data-custom-inst-toggle'), 10);
+          const pre = customRoot.querySelector(`pre[data-custom-inst-content="${idx}"]`);
+          if (!pre) return;
+          const hidden = pre.style.display === 'none';
+          pre.style.display = hidden ? '' : 'none';
+          btn.textContent = hidden ? t('收起') : t('查看全部');
+        });
+      });
+    }
 
     document.getElementById('usageDetailModal').style.display = 'flex';
     document.getElementById('usageDetailModal').classList.add('active');

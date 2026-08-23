@@ -2462,5 +2462,11 @@
   "刷新中...": "Refreshing...",
   "加载中...": "Loading...",
   "重新加载": "Reload",
-  "统计": "Stats"
+  "统计": "Stats",
+  "自定义提示词": "Custom Instructions",
+  "已截断": "Truncated",
+  "字符": "chars",
+  "查看全部": "View all",
+  "个自定义提示词文件": "custom instruction file(s)",
+  "请求过大，已跳过提取": "Request too large; extraction skipped"
 }
