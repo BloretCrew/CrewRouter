@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harness 插件与 Hook 机制研究报告 · CrewRouter</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
+    --text: #e6e8ee; --muted: #9aa3b2; --accent: #4f8cff; --accent2: #22c55e;
+    --code-bg: #0b0d12; --gold: #eab308; --red: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.65; }
+  header.hero { padding: 48px 24px 32px; text-align: center;
+    background: linear-gradient(180deg, #101c33 0%, var(--bg) 100%); border-bottom: 1px solid var(--line); }
+  header.hero h1 { margin: 0 0 8px; font-size: 29px; letter-spacing: 1px; }
+  header.hero p { margin: 4px 0; color: var(--muted); }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 24px 80px; }
+  h2 { font-size: 24px; margin: 56px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
+    display: flex; align-items: center; gap: 10px; }
+  h3 { font-size: 19px; margin: 32px 0 12px; }
+  h4 { font-size: 16px; margin: 22px 0 8px; color: var(--accent); }
+  p { margin: 10px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px;
+    padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; line-height: 1.5; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.85em; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.9em; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel2); color: #c9d2e0; white-space: nowrap; }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  .toc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 28px; }
+  .toc ol { margin: 6px 0; padding-left: 24px; }
+  .toc li { margin: 4px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 22px; margin: 18px 0; }
+  .proto { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 0.8em;
+    font-weight: 600; background: #312e81; color: #c7d2fe; }
+  .note { border-left: 4px solid var(--gold); background: rgba(234,179,8,0.06); padding: 10px 14px;
+    border-radius: 0 8px 8px 0; margin: 14px 0; }
+  .warn { border-left: 4px solid var(--red); background: rgba(239,68,68,0.06); padding: 10px 14px;
+    border-radius: 0 8px 8px 0; margin: 14px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .section-label { font-size: 0.8em; color: var(--accent2); text-transform: uppercase; letter-spacing: 1px; }
+  .evi { font-size: 0.85em; color: var(--muted); }
+  .conf-high { color: var(--accent2); font-weight: 600; }
+  .conf-mid { color: var(--gold); font-weight: 600; }
+  .conf-low { color: var(--red); font-weight: 600; }
+  footer { text-align: center; color: var(--muted); font-size: 0.85em; padding: 24px; border-top: 1px solid var(--line); }
+  .small { font-size: 0.85em; color: var(--muted); }
+</style>
+</head>
+
+<body>
+
+<header class="hero">
+  <h1>Harness 插件与 Hook 机制研究报告</h1>
+  <p>8 个 AI 编程助手（harness）原生插件 / 扩展机制的设计形态、Hook 点位、MCP 关系与沙箱权限模型分析</p>
+  <p>生成日期：2026-08-23 · 数据来源：仓库内源码逐一考古（<span class="evi">path:line 引用</span>）；无源码者基于公开资料推理并标注置信度<br>
+     姊妹篇：<a href="harness-prompt-and-message-construction.html">提示词构成</a> · <a href="harness-tool-call-formats.html">工具调用格式</a> · <a href="harness-request-behavior-research.md">请求行为研究</a></p>
+</header>
+
+<main>
+
+<div class="toc">
+  <strong>目录</strong>
+  <ol>
+    <li><a href="#overview">总体概览：扩展机制横向速览</a></li>
+    <li><a href="#claude-code">Claude Code（Hooks + Plugins + Skills 三层）</a></li>
+    <li><a href="#codex">Codex CLI（config.toml 通知钩子 + MCP + Rust 扩展）</a></li>
+    <li><a href="#opencode">OpenCode（JS Plugin API + 事件总线）</a></li>
+    <li><a href="#grok-build">Grok Build（Rust 内建 + MCP）</a></li>
+    <li><a href="#qwen-code">Qwen Code（命令/工具扩展层）</a></li>
+    <li><a href="#hermes">Hermes（Python plugins/ 目录 + toolsets）</a></li>
+    <li><a href="#openclaw">OpenClaw（extensions/ + Plugin SDK）</a></li>
+    <li><a href="#deepseek">DeepSeek Harness（公开资料推理）</a></li>
+    <li><a href="#comparison">横向对比表</a></li>
+    <li><a href="#lessons">对 CrewRouter 插件系统的借鉴建议</a></li>
+  </ol>
+</div>
+
+<!-- ================= 1. 概览 ================= -->
+<h2 id="overview"><span class="section-label">1.</span> 总体概览：扩展机制横向速览</h2>
+<p class="small">本章在全部章节完成后回填。</p>
+
+<!-- APPEND -->
+
+</main>
+
+<footer>
+  CrewRouter · Harness 插件与 Hook 机制研究报告 · 2026-08-23 · 纯源码考古，不含运行时验证
+</footer>
+
+</body>
+</html>
