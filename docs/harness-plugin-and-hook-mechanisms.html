@@ -88,7 +88,20 @@
 
 <!-- ================= 1. 概览 ================= -->
 <h2 id="overview"><span class="section-label">1.</span> 总体概览：扩展机制横向速览</h2>
-<p class="small">本章在全部章节完成后回填。</p>
+<div class="card">
+<table>
+<tr><th>#</th><th>Harness</th><th>插件机制一句话</th><th>Hook 引擎一句话</th><th>置信度</th></tr>
+<tr><td>2</td><td><a href="#claude-code">Claude Code</a></td><td>Git 仓库式插件包 + Marketplace，七类组件声明式捆绑</td><td>shell 命令型 JSON 契约，9 点位，exit 2 / decision 字段阻断</td><td><span class="conf-high">高</span></td></tr>
+<tr><td>3</td><td><a href="#codex">Codex CLI</a></td><td>实验性插件市场 + config.toml 声明</td><td>notify 钩子 + 兼容 Claude 语义的 hooks 引擎</td><td><span class="conf-high">高</span></td></tr>
+<tr><td>4</td><td><a href="#opencode">OpenCode</a></td><td>进程内 JS 插件模块目录自动装载</td><td>事件总线 + tool.execute.before/after 原地改写</td><td><span class="conf-high">高</span></td></tr>
+<tr><td>5</td><td><a href="#grok-build">Grok Build</a></td><td>Rust 内建体系，兼容 Claude 插件布局</td><td>原生生命周期钩子 + 显式信任门控</td><td><span class="conf-high">高</span></td></tr>
+<tr><td>6</td><td><a href="#qwen-code">Qwen Code</a></td><td>声明式扩展包 + converter 导入竞品包</td><td>四形态引擎（command/http/function/prompt），五值决策</td><td><span class="conf-high">高</span></td></tr>
+<tr><td>7</td><td><a href="#hermes">Hermes</a></td><td>Python plugins/ 目录 import 式装载 + toolset（推测）</td><td>装饰器生命周期回调，引用传参（推测）</td><td><span class="conf-low">低—中</span></td></tr>
+<tr><td>8</td><td><a href="#openclaw">OpenClaw</a></td><td>npm TS 插件 + Plugin SDK 聚合能力面 + SKILL.md 技能层</td><td>命名空间事件总线 + webhook 触发器分家</td><td><span class="conf-mid">中</span></td></tr>
+<tr><td>9</td><td><a href="#deepseek">DeepSeek Harness</a></td><td>无公开原生机制（评测型固定循环）</td><td>无公开 hook 系统</td><td><span class="conf-low">低</span></td></tr>
+</table>
+<p>三个横切结论：<strong>① 契约标准化</strong>——Claude 的 hook JSON 契约已是事实标准，Codex 直接兼容、Qwen/Grok 做转换器；<strong>② manifest 聚合化</strong>——成熟插件格式都是一个包捆 commands/agents/hooks/MCP 多类组件；<strong>③ 隔离普遍缺位</strong>——从 OS 沙箱到「部署拓扑代替隔离」到完全裸奔，唯一把运行时沙箱做成插件分发前提的是 CrewRouter 自己。详见<a href="#comparison">第 10 章对比表</a>与<a href="#lessons">第 11 章借鉴建议</a>。</p>
+</div>
 
 <!-- ================= 2. Claude Code ================= -->
 <h2 id="claude-code"><span class="section-label">2.</span> Claude Code（Hooks + Plugins 双轨制，Skill 作为第三层）</h2>
@@ -724,7 +737,124 @@ export type HookDecision = 'ask' | 'block' | 'deny' | 'approve' | 'allow';
 </ol>
 </div>
 
-<!-- APPEND -->
+<!-- ================= 10. 横向对比 ================= -->
+<h2 id="comparison"><span class="section-label">10.</span> 横向对比表</h2>
+<div class="card">
+<table>
+<tr><th>Harness</th><th>插件机制形态</th><th>Hook 引擎</th><th>Hook 配置位置</th><th>决策语义</th><th>与 MCP 关系</th><th>隔离手段</th><th>置信度</th></tr>
+<tr>
+  <td><a href="#claude-code">Claude Code</a></td>
+  <td>Git 仓库式插件包 + Marketplace 分发；七类组件声明式捆绑</td>
+  <td>shell 命令型，9 个生命周期点位（SessionStart/UserPromptSubmit/Pre·PostToolUse/Stop/SubagentStop/Notification/PreCompact/SessionEnd）</td>
+  <td>settings.json <code>hooks</code> 字段 + 插件清单，热重载</td>
+  <td>exit 2 或 decision 字段（approve/block/ask）+ additionalContext 回注</td>
+  <td>独立标准协议；插件包可内嵌 mcpServers（MCPB/DXT 打包分发）</td>
+  <td>无 OS 沙箱；permission prompt + 企业策略/黑名单</td>
+  <td><span class="conf-high">高</span></td>
+</tr>
+<tr>
+  <td><a href="#codex">Codex CLI</a></td>
+  <td>新一代插件市场（实验性）+ config.toml 声明</td>
+  <td>notify 程序钩子 + 直接兼容 Claude 语义的 hooks 引擎</td>
+  <td>config.toml</td>
+  <td>复用 Claude 三态决策语义</td>
+  <td>MCP 一等公民（原生 client）</td>
+  <td>OS 级沙箱（macOS Seatbelt / Linux Landlock）+ approval 分级</td>
+  <td><span class="conf-high">高</span></td>
+</tr>
+<tr>
+  <td><a href="#opencode">OpenCode</a></td>
+  <td>进程内 JS/TS 插件模块，<code>.opencode/plugins</code> 目录自动装载</td>
+  <td>事件总线（<code>event.name</code> 订阅）+ <code>tool.execute.before/after</code> 对工具入参与 output 原地改写</td>
+  <td>opencode.json + 插件导出函数</td>
+  <td>返回对象字段控制（阻止 / 替换输出）</td>
+  <td>内建 MCP client 配置，与插件机制平行</td>
+  <td>无隔离；Bun 进程内全权</td>
+  <td><span class="conf-high">高</span></td>
+</tr>
+<tr>
+  <td><a href="#grok-build">Grok Build</a></td>
+  <td>Rust 内建插件体系 + skills/workflows/subagents 多通道，兼容 Claude 插件布局</td>
+  <td>原生生命周期钩子 + 显式信任门控</td>
+  <td>内建配置 + 信任存储</td>
+  <td>对齐 Claude 语义（approve/block 等）</td>
+  <td>MCP 工具接入为独立通道</td>
+  <td>信任门控为主（显式允许后才生效）</td>
+  <td><span class="conf-high">高</span></td>
+</tr>
+<tr>
+  <td><a href="#qwen-code">Qwen Code</a></td>
+  <td>声明式扩展包（zip/git/npm），converter 机械导入 Claude/Gemini 包</td>
+  <td>四形态引擎：command / http（带 SSRF 防护）/ function（会话内）/ prompt（LLM 判定）</td>
+  <td>扩展清单 hooks 字段；session/user/project/extension 四级来源合并</td>
+  <td>五值决策（ask/block/deny/approve/allow）+ fail-open 但留 <code>hookError</code> 痕</td>
+  <td>mcpServers 是扩展清单一等字段；另有 claudeMcpImport 导入器</td>
+  <td>无 OS 沙箱；环境清洗 + SSRF 校验 + 按「项目路径×单条 hook」粒度的信任文件</td>
+  <td><span class="conf-high">高</span></td>
+</tr>
+<tr>
+  <td><a href="#hermes">Hermes</a></td>
+  <td>Python plugins/ 目录 import 式装载 + toolset 分组（推测）</td>
+  <td>装饰器注册的生命周期回调，引用传参（推测）</td>
+  <td>项目配置 + 插件自带注册，二合一（推测）</td>
+  <td>返回对象字段 deny/modify（推测）</td>
+  <td>MCP 作为一种外部 toolset 类型接入（推测）</td>
+  <td>无隔离；import 即全权（推测）</td>
+  <td><span class="conf-low">低—中</span></td>
+</tr>
+<tr>
+  <td><a href="#openclaw">OpenClaw</a></td>
+  <td>npm TS 插件 + Plugin SDK 单包聚合多能力面 + SKILL.md 技能层</td>
+  <td>命名空间化事件总线（agent:before_tool_call 等）+ 入站 webhook 触发器（trigger 非 interceptor）</td>
+  <td>openclaw.json 的 plugins.allow / entries</td>
+  <td>before_tool_call 可拒绝执行（API 名称为记忆复述）</td>
+  <td>MCP 为工具供给方之一，SDK 主管接线（推测）</td>
+  <td>单用户本机信任拓扑 + Docker 可选沙箱 + 工具级 allow/deny 名单</td>
+  <td><span class="conf-mid">中</span></td>
+</tr>
+<tr>
+  <td><a href="#deepseek">DeepSeek Harness</a></td>
+  <td>无公开原生机制；评测型固定 agent 循环</td>
+  <td>无公开 hook 系统</td>
+  <td>—（不适用）</td>
+  <td>不适用</td>
+  <td>靠外部客户端壳补 MCP 供货</td>
+  <td>实例级容器隔离（评测场景），非插件层</td>
+  <td><span class="conf-low">低</span></td>
+</tr>
+</table>
+
+<h4>三个收敛事实与两个分歧点</h4>
+<ul>
+  <li><strong>收敛一（点位集）：</strong>凡有 hook 系统者都收敛到「工具调用前拦截 + 用户输入提交时注入 + 回合结束时收尾」的最小三点位，再各自外溢出通知/压缩等辅助点。说明这三点是策略注入的充分集。</li>
+  <li><strong>收敛二（契约标准）：</strong>Claude 的 hook JSON 契约（stdin 输入 / stdout 决策 / exit code）已成为事实标准——Codex 直接兼容其语义，Qwen/Grok 做转换器或兼容布局。「兼容 Claude」本身就是设计目标之一。</li>
+  <li><strong>收敛三（manifest 聚合化）：</strong>成熟插件格式全部走向「一个包捆多种组件」（commands/agents/hooks/MCP/skills），没有一家走「每种能力一个独立包」。</li>
+  <li><strong>分歧一（拦截位置）：</strong>主进程内回调（OpenCode/Hermes/OpenClaw/Qwen-function）开发体验好但零隔离、绑死语言；外部进程契约（Claude/Codex/Qwen-command）语言中立、崩溃隔离，代价是序列化开销与延迟。</li>
+  <li><strong>分歧二（隔离哲学）：</strong>从 Codex 的 OS 级沙箱，到 OpenClaw 的「部署拓扑代替隔离」，到多数产品的「软防护」，再到 DeepSeek 的「实例容器」——隔离从来不是默认项，而是被各家用不同维度的东西替代。唯一把运行时沙箱做成<strong>插件分发前提</strong>的是 CrewRouter 自己。</li>
+</ul>
+</div>
+
+<!-- ================= 11. 借鉴建议 ================= -->
+<h2 id="lessons"><span class="section-label">11.</span> 对 CrewRouter 插件系统的借鉴建议</h2>
+<div class="card">
+<p class="small">前提回顾：我们的插件系统跑在网关边界上（<code>gateway:requestReceived</code> → <code>gateway:beforeUpstream</code> 等钩子点），vm 运行时沙箱 + 权限数组是分发前提，钩子管线熔断摘除为 fail-open。以下按优先级给出十条建议。</p>
+<ol>
+  <li><strong>把 Claude hook 契约做成兼容层（最高优先级）：</strong>它已是事实标准。在现有网关钩子上封装同构 wire schema——输入 JSON（tool_name/tool_input/session 上下文）、输出 JSON（decision: approve/block/ask + modifiedPayload + additionalContext）、退出码语义（0 放行 / 2 阻断）——Claude 生态的海量现成 hook 脚本即可经薄适配挂在 CrewRouter 上。</li>
+  <li><strong>补齐三态中的 ask：</strong>若 <code>gateway:requestReceived</code> 目前只有放行/拒绝两态，增加「暂扣/转人工确认」中间态：请求挂起，响应侧返回待确认元数据，人工批准后再放行上游。三家头部 harness 都验证了这一态是策略落地的刚需。</li>
+  <li><strong>打通 additionalContext 回注通道：</strong>UserPromptSubmit/PostToolUse 的输出可以回注模型上下文，是各家 hook 最常用的「无害改写」手段。对应到我们：允许 <code>gateway:beforeUpstream</code> 钩子声明一段要合并进上游请求体的上下文（如注入审计提示、脱敏提示），与「改 URL/改体」的强改写分开授权。</li>
+  <li><strong>事件名命名空间化 + matcher 过滤：</strong>采用「域:事件」命名规范，钩子注册时声明 matcher（HTTP 方法/路径前缀/模型名等），避免全量广播给每个插件——Claude 的 matcher 与 Qwen 的事件分类都证明了这在大规模钩子下是必需品。</li>
+  <li><strong>引入 LLM 判定型钩子：</strong>Qwen 的 prompt 形态（一次廉价单轮调用当策略引擎，可指定便宜模型）极适合网关的内容审校场景：<code>gateway:requestReceived</code> 上挂「判断是否越权/泄露」的 LLM 钩子，成本可控且无需插件自备模型调用代码。</li>
+  <li><strong>防循环与资源预算：</strong>所有「回合结束后再触发新动作」的钩子必须有次数上限（Grok 的 stopHookCap 防的就是 Stop→hook→新回合 死循环）；每个钩子设超时与并发上限，超时行为显式声明（fail-open 或 fail-closed）而非隐式。</li>
+  <li><strong>fail-open 显式留痕：</strong>借鉴 Qwen 的 <code>hookError</code> 字段：钩子报错被吸收后，在本请求的处理元数据里标记「本次未经钩子审计」，让下游与遥测能区分「正常放行」与「钩子故障放行」。我们已有熔断摘除，这是低成本的可观测性补全。</li>
+  <li><strong>商店冷启动走 converter 路线：</strong>Qwen 用三个 converter 导入头部竞品插件包、Codex 干脆直接兼容 Claude 语义——「兼容即获客」已被两家验证。CrewRouter 商店第一优先级应是「Claude 插件包 → CrewRouter 插件」映射器：manifest 的 hooks/skills/commands/agents 声明部分可机械映射，MCP server 清单原样透传。</li>
+  <li><strong>vm 沙箱保持为上架硬门槛：</strong>横向对比显示没有任何一家把运行时隔离做成插件分发前提，这是我们最大的差异化资产。商店审核应强制：权限数组必填、按最小权限校验、拒绝申请全权的插件上架——不要为了短期生态数量放松这条线（Hermes/OpenCode 的「import 即全权」就是放松后的样子）。</li>
+  <li><strong>多级配置合并语义预研：</strong>多租户场景必然出现「租户级钩子 vs 实例级钩子 vs 会话级钩子」同名冲突。Qwen 的四级合并（session/user/project/extension）与 Claude 的 enterprise/project/user 层叠提供了参照，需提前定死优先级、去重键与冲突时的显式报错策略，避免上线后靠约定俗成。</li>
+</ol>
+<h4>一句话总结</h4>
+<p>各家的 hook 系统都在回答同一个问题——<strong>「在不改宿主源码的前提下，允许外部代码在哪些时刻、以多大权力干预主流程」</strong>。CrewRouter 因为站在传输层，天然拥有比端侧 harness 更干净的干预位置；需要向它们借的不是点位本身，而是<strong>契约标准化（Claude）、决策三态（ask）、失败留痕（Qwen）与生态兼容（converter）</strong>这些已经过生产验证的工程答案。</p>
+</div>
+
+
 
 </main>
 
