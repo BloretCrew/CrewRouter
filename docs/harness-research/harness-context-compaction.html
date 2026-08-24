@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harness 上下文压缩与截断研究报告 · CrewRouter</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
+    --text: #e6e8ee; --muted: #9aa3b2; --accent: #4f8cff; --accent2: #22c55e;
+    --code-bg: #0b0d12; --gold: #eab308; --red: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.65; }
+  header.hero { padding: 48px 24px 32px; text-align: center;
+    background: linear-gradient(180deg, #101c33 0%, var(--bg) 100%); border-bottom: 1px solid var(--line); }
+  header.hero h1 { margin: 0 0 8px; font-size: 29px; letter-spacing: 1px; }
+  header.hero p { margin: 4px 0; color: var(--muted); }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 24px 80px; }
+  h2 { font-size: 24px; margin: 56px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
+    display: flex; align-items: center; gap: 10px; }
+  h3 { font-size: 19px; margin: 32px 0 12px; }
+  h4 { font-size: 16px; margin: 22px 0 8px; color: var(--accent); }
+  p { margin: 10px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px;
+    padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; line-height: 1.5; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.85em; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.9em; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel2); color: #c9d2e0; white-space: nowrap; }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  .toc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 28px; }
+  .toc ol { margin: 6px 0; padding-left: 24px; }
+  .toc li { margin: 4px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 22px; margin: 18px 0; }
+  .proto { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 0.8em;
+    font-weight: 600; background: #312e81; color: #c7d2fe; }
+  .note { border-left: 4px solid var(--gold); background: rgba(234,179,8,0.06); padding: 10px 14px;
+    border-radius: 0 8px 8px 0; margin: 14px 0; }
+  .warn { border-left: 4px solid var(--red); background: rgba(239,68,68,0.06); padding: 10px 14px;
+    border-radius: 0 8px 8px 0; margin: 14px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .section-label { font-size: 0.8em; color: var(--accent2); text-transform: uppercase; letter-spacing: 1px; }
+  .evi { font-size: 0.85em; color: var(--muted); }
+  .conf-high { color: var(--accent2); font-weight: 600; }
+  .conf-mid { color: var(--gold); font-weight: 600; }
+  .conf-low { color: var(--red); font-weight: 600; }
+  footer { text-align: center; color: var(--muted); font-size: 0.85em; padding: 24px; border-top: 1px solid var(--line); }
+  .small { font-size: 0.85em; color: var(--muted); }
+</style>
+</head>
+
+<body>
+
+<header class="hero">
+  <h1>Harness 上下文压缩与截断研究报告</h1>
+  <p>8 个 AI 编程助手（harness）的自动压缩触发阈值、摘要算法、分层保留策略、microcompact 工具结果清理，以及——网关注入方最关心的——<b>CLAUDE.md 类注入内容在长对话压缩中的存活率</b>的逐行源码考古</p>
+  <p>生成日期：2026-08-24 · 数据来源：仓库内源码逐一核实（<span class="evi">path:line 引用</span>）；无源码者基于公开资料推理并标注置信度<br>
+     姊妹篇：<a href="index.html">研究索引</a> · <a href="harness-streaming-and-caching.html">流式与缓存</a> · <a href="harness-subagent-attribution.html">子代理归因</a></p>
+</header>
+
+<main>
+
+<div class="toc">
+  <strong>目录</strong>
+  <ol>
+    <li><a href="#overview">总体概览：触发阈值与算法形态两张矩阵</a></li>
+    <li><a href="#claude-code">Claude Code（四层递进防线 + 附件重生通道）</a></li>
+    <li><a href="#codex">Codex CLI（服务端分派四条链 + 重注入契约）</a></li>
+    <li><a href="#grok-build">Grok Build（有损摘要 + 无损归档 + 逐字重注入）</a></li>
+    <li><a href="#opencode">OpenCode（有损折叠 + 预算尾巴的最简实现）</a></li>
+    <li><a href="#qwen-code">Qwen Code（claude-code 血统全量摘要 + 六态结果枚举）</a></li>
+    <li><a href="#hermes">Hermes（双体系：训练管线压缩器 + 运行时分层记忆）</a></li>
+    <li><a href="#openclaw">OpenClaw（会话树 checkpoint 化 + 结构性免疫设计）</a></li>
+    <li><a href="#deepseek">DeepSeek Harness（公开资料推理，低置信度）</a></li>
+    <li><a href="#comparison">深度对比：三种哲学、注入内容存活率总表、质量代价信号</a></li>
+    <li><a href="#lessons">对 CrewRouter 网关的落地建议</a></li>
+  </ol>
+</div>
+
+<!-- ================= 1. 概览 ================= -->
+<h2 id="overview"><span class="section-label">1.</span> 总体概览：触发阈值与算法形态两张矩阵</h2>
+
+<p>上下文窗口是有限的，而编程任务是长的——每个 harness 都必须回答同一个问题：「装不下的时候丢什么、留什么、怎么跟模型交代」。答案分化成三种哲学：<b>全量摘要派</b>（把整段历史交给 LLM 重述）、<b>分层保留派</b>（头部保护 + 尾部预算 + 中段才压）、<b>结构化保留派</b>（按角色/类型决定谁进摘要谁原样留下）。本报告同时回答一个对网关至关重要的问题：<b>注入型内容（CLAUDE.md/AGENTS.md/系统提示词）能不能活过一次压缩？</b></p>
+
+<h3>1.1 触发与阈值矩阵</h3>
+<table>
+<tr><th>客户端</th><th>默认触发阈值</th><th>阈值形态</th><th>触发时机</th><th>手动命令</th><th>特色触发</th></tr>
+<tr><td><b>Claude Code</b></td><td>有效窗口 −13k buffer（≈93%+）</td><td>多常量微调（20k 输出预留 + 13k auto + 20k warn/error + 3k manual）</td><td><b>请求前</b>四层顺序检查：snip→microcompact→collapse→autocompact</td><td><code>/compact</code> + 部分压缩</td><td>API prompt-too-long 后的反应式兜底（实验）；连续失败 3 次熔断</td></tr>
+<tr><td><b>Codex CLI</b></td><td><b>窗口的 90%</b>（配置会被 clamp 到 90%）</td><td>一刀切百分比 + 双计数口径（Total / BodyAfterPrefix）</td><td><b>请求前 + 每个 step 响应后</b>双检查；mid-turn 可即时压</td><td><code>/compact</code></td><td>模型切换 comp_hash 变化、大窗降小窗主动压；token-budget 余量提醒（一次性）</td></tr>
+<tr><td><b>Grok Build</b></td><td><b>85%</b></td><td>整数不等式 <code>used×100 ≥ window×pct</code>；6 层优先级解析（env&gt;model&gt;session&gt;远端×2&gt;默认）</td><td>四个时机：采样前门 / preflight 溢出 / 错误恢复 / 模型切换</td><td><code>/compact [上下文]</code></td><td><b>二段式预点火</b>：阈值 −10% 提前后台跑第一遍；五态抑制状态机防重复压</td></tr>
+<tr><td><b>OpenCode</b></td><td><code>tokens ≥ usable()</code> 绝对不等式</td><td>reserved = min(20k, provider maxOutput)；无百分比概念</td><td><b>step-finish 响应后</b>置位 + 下轮请求前执行</td><td><code>POST /session/:id/summarize</code></td><td>摘要消息自身永不触发下一轮压缩</td></tr>
+<tr><td><b>Qwen Code</b></td><td><b>85%</b> 与有效窗口取小（buffer 13k 明注镜像 claude-code）</td><td>三层阶梯公式 warn/auto/hard</td><td>发送前 cheap-gate + 失败后反应式救援</td><td><code>/compress &lt;text&gt;</code>（指令限 2000 字符）</td><td>截图积压 ≥20 张即压（image_overflow，不看 token）；熔断 3 次</td></tr>
+<tr><td><b>Hermes</b></td><td>运行时 <b>50%</b>（小窗抬到 75%/85%；gpt-5.5 类按模型抬到 85%）</td><td>threshold_percent + 头部 protect_first_n=3 + 尾窗 protect_last_n=20</td><td>四路冗余：turn 序言 preflight / 空闲压缩(opt-in) / API 报错反应式 / Codex 服务端原生(200k)</td><td><code>/compact</code></td><td>二次压缩需上轮降幅 &gt;5%；微压缩默认关闭；主动修剪后等 prompt 长回来才 re-arm（护缓存）</td></tr>
+<tr><td><b>OpenClaw</b></td><td><code>window − 16384 reserve</code></td><td>reserveTokens + keepRecentTokens=20k 尾部预算</td><td>preflight（soft 提前量 4k）+ transcript 字节保险丝</td><td><code>/compact [instructions]</code></td><td>Codex runtime 下让位服务端原生压缩只留字节保险丝；抢占路由四级（fits/truncate/compact 组合）</td></tr>
+<tr><td><b>DeepSeek Harness</b></td><td class="conf-low">未公开</td><td class="conf-low">—</td><td class="conf-low">—</td><td class="conf-low">—</td><td class="conf-low">未公开</td></tr>
+</table>
+
+<h3>1.2 算法与注入内容存活矩阵</h3>
+<table>
+<tr><th>客户端</th><th>核心算法</th><th>摘要模型</th><th>保留策略要点</th><th>找回机制</th><th>注入内容命运</th></tr>
+<tr><td><b>Claude Code</b></td><td>全量摘要派：整段历史进摘要（连用户消息都进，靠 9 段式 prompt 补救）</td><td>主循环同一模型（fork 复用 prompt cache）</td><td>全量 compact 不留原始消息；部分 compact 才有保留区；microcompact 白名单清老工具结果（60 分钟线/保最近 5 个）</td><td>摘要附 transcript 路径供回读；压缩后恢复最近 5 文件（50k 预算）</td><td>system 独立参数永入不了摘要；CLAUDE.md 走每回合 attachment 重生——<b>稳定存活</b></td></tr>
+<tr><td><b>Codex CLI</b></td><td>结构化保留派（local：只留用户消息原文+摘要；v2：角色分层保留）</td><td>local=当前主模型；remote v1/v2=<b>服务端</b>摘要；token-budget=干脆不摘要换新窗</td><td>v2 保尾弃头：user/developer/system 全保（64k 预算），agent 消息 ≤10k 才保；local 助手消息一条不留</td><td>无归档层；靠摘要质量</td><td>base_instructions 永不参与；AGENTS.md 属 world-state，<b>压缩后契约式全量重注入</b>（枚举注释即规格）</td></tr>
+<tr><td><b>Grok Build</b></td><td>混合：LLM 全量摘要为主 + 纯截断兜底 + 三模式归档（Summary/Transcript/Segments 四档详略）</td><td>专用压缩模型（默认 grok-4.20，可覆盖）</td><td>产物含近期消息逐字区；纯截断时 System 头永远保留、tool_use+results 不可拆分、末单元原位截断不丢弃</td><td><b>最强</b>：updates.jsonl / 分片 markdown 库 + INDEX.md 关键词索引，摘要内置指路文本让模型 read_file/grep 找回</td><td>AGENTS.md 有专门字段 <code>agents_md_reminder</code>，<b>逐字重注入到压缩产物第 3 位</b>（字段注释明言 preserves verbatim）</td></tr>
+<tr><td><b>OpenCode</b></td><td>极简折叠：固定五节模板摘要替换全部历史</td><td>隐藏内建 agent「compaction」（权限全 deny），模型回落会话当前模型</td><td>尾部预算 clamp(usable×25%, 2k..15k) 逐字保留；prune 通道护最近 40k 的工具输出</td><td><b>无</b>——「没带进新摘要的内容即丢失」写在更新指令里</td><td>压缩请求显式 <code>system:[]</code>，注入层与压缩层正交——<b>结构性存活</b>（但无显式抢救机制）</td></tr>
+<tr><td><b>Qwen Code</b></td><td>claude-code 式全历史单点摘要（注释自认「no split, no tail preservation」）+ 并行 microcompaction 清旧工具结果</td><td>可配压缩模型（放不下则回退主模型）；另有<b>缓存共享路径</b>复用主请求前缀</td><td>摘要后恢复 5 文件×5k + 3 图；&lt;all_user_messages&gt; 节强制列出全部用户话语</td><td>同 claude-code：transcript 回读 + 附件恢复</td><td>系统提示经 generationConfig 独立传递不在压缩输入内；压缩后重建 plan/subagent reminder——<b>稳定存活</b></td></tr>
+<tr><td><b>Hermes</b></td><td>分层保护 + 最小必要压缩（头 3 条 + 尾 20 轮保护，中段从第 2 个 tool response 起压，压够即停）；另有离线训练管线同思想</td><td>廉价 aux 模型（离线管线用 gemini-3-flash 经 OpenRouter）</td><td>微压缩永不吸收用户消息；clarify 回答 &lt;200 字符永不重摘；lean 模式尾窗仅保最近 6 个工具轮</td><td>session_search 恢复指针；ghost-skill 标记附取回方法</td><td>头部保护显式含 system prompt；MEMORY.md 一致时保留缓存 system 不重建；摘要反注入前言声明记忆始终权威——<b>防御性最强</b></td></tr>
+<tr><td><b>OpenClaw</b></td><td>预算切割 + 树形 checkpoint：尾部 keepRecentTokens 反向累积选切点，切点前整体摘要</td><td>当前会话主模型（maxTokens=min(0.8×reserve, 上限)）</td><td>切点合法性白名单：<b>toolResult 一律不可作切点</b>；迭代更新模式 PRESERVE 旧信息只增改删失效项</td><td>checkpoint 是会话树一等节点，可分支/可恢复；文件操作清单附摘要尾</td><td>压缩作用域只有会话树 transcript，系统提示/AGENTS.md 在树外每请求重组——<b>结构性免疫，全场唯一不可能误伤的设计</b></td></tr>
+<tr><td><b>DeepSeek Harness</b></td><td class="conf-low">未公开</td><td class="conf-low">—</td><td class="conf-low">—</td><td class="conf-low">—</td><td class="conf-low">未知</td></tr>
+</table>
+
+<div class="note"><b>一句话总览：</b>先给结论——<b>注入到 system 参数或每轮重建通道里的内容，在全部七家有源码实现的压缩器中都 100% 存活</b>；真正会丢内容的只有一种情况：注入被写成一次性普通消息混进对话历史。各家为此付出的工程代价差异极大：OpenClaw 用架构正交性零成本免疫，Grok Build 用显式字段逐字重注入，Claude Code/Qwen 靠附件重生通道，而 OpenCode 干脆没有任何抢救机制——它赌的是「摘要足够好」。</div>
+
+<!-- ================= 2. Claude Code ================= -->
+<h2 id="claude-code"><span class="section-label">2.</span> Claude Code（四层递进防线 + 附件重生通道）</h2>
+
+<h3>2.1 触发：能不清就不清的四层递进</h3>
+<p>主查询循环在<b>每次 API 请求之前</b>顺序执行四道递进的瘦身工序：snip（历史剪枝）→ microcompact → context-collapse → autocompact（<code>src/query.ts:399</code>；autocompact 调用点在构建 fullSystemPrompt 之后、采样之前，<code>:449</code>）。阈值常量体系：</p>
+<ul>
+<li>核心缓冲：<code>AUTOCOMPACT_BUFFER_TOKENS = 13_000</code>、warning/error 缓冲各 20k、手动阻塞缓冲 3k（<code>services/compact/autoCompact.ts:61</code>）。</li>
+<li><b>有效窗口 = 模型窗口 − min(模型最大输出, 20k)</b>——20k 的依据写在注释里：压缩摘要输出的 p99.99 实测 17,387 tokens（<code>autoCompact.ts:29</code>）。自动压缩触发点即「有效窗口 −13k」，折合窗口的约 93%+，并非固定百分比。</li>
+<li>预警三态：<code>calculateTokenWarningState</code> 返回剩余百分比与 warning/error/blocking 四档判定，UI 横幅「Context low · Run /compact to compact &amp; continue」超 error 阈值变红（<code>autoCompact.ts:93</code>、<code>TokenWarning.tsx:169</code>）。</li>
+<li>开关与逃生口：env 可缩窗口/设测试百分比；另有 ant-only 的 reactive compact 实验（API 返回 prompt-too-long 后兜底）；连续失败 ≥3 次熔断停试（<code>autoCompact.ts:66,189,256</code>）。</li>
+</ul>
+
+<h3>2.2 microcompact：只清老工具结果的精细手术</h3>
+<p>在全量摘要之前先做微创清理：只处理白名单工具的老结果（Read/Bash/Grep/Glob/WebSearch/WebFetch/Edit/Write），时间触发版在距上一条 assistant 消息超过 <b>60 分钟</b>（对应服务端 1h 缓存 TTL 过期——这个常量选择直接暴露了缓存意识）就清掉除最近 <b>5 个</b>之外的可清理工具结果，正文替换为占位符（<code>microCompact.ts:39,460</code>、<code>timeBasedMCConfig.ts:30</code>）。更精的是<b>缓存友好版</b>：走 <code>cache_edits</code> API 删除工具结果而<b>不破坏缓存前缀</b>（<code>microCompact.ts:290</code>）；还有 API 原生 context management 策略（180k 触发、保留最近 40k、clear_tool_uses + clear_thinking 双策略，<code>apiMicrocompact.ts:16</code>）。微压缩成功后抑制本轮压缩警告防止 UI 抖动。</p>
+
+<h3>2.3 全量摘要：九段式 prompt 与主模型自摘</h3>
+<p>摘要用<b>主循环同一模型</b>，优先经 runForkedAgent 复用主对话的 prompt cache——注释明示 cache-key 必须一致（system/tools/model/消息前缀）（<code>compact.ts:1176</code>）。prompt 是九段式结构定义（Primary Request / Key Technical Concepts / Files and Code Sections 含完整代码片段 / Errors and fixes / <b>All user messages</b> / Pending Tasks / Current Work / Next Step），要求模型先在 &lt;analysis&gt; 里逐段分析再输出 &lt;summary&gt;，交付时剥离草稿（<code>prompt.ts:62,28,306</code>）。摘要期间禁止一切工具调用。<b>全量 compact 不保留任何最近 N 条原始消息</b>——整段历史都进摘要，产物以 isCompactSummary 标记的 user 消息注入，开头固定文案「This session is being continued from a previous conversation that ran out of context…」，并附 transcript 路径允许模型回读原文（<code>compact.ts:327</code>、<code>prompt.ts:344</code>）。</p>
+<h4>压缩后的重生通道（对注入方最重要的机制）</h4>
+<ul>
+<li><b>文件快照恢复</b>：readFileState 先存后清，按时间戳恢复最近 5 个文件，总预算 50k tokens、单文件上限 5k（<code>compact.ts:118,521,1415</code>）。</li>
+<li><b>主动重注入清单</b>：文件附件（≤5）、plan、skill（总预算 25k）、deferred tools/agent listing/MCP instructions delta（<code>compact.ts:119,519</code>）。</li>
+<li><b>CLAUDE.md/memory 类内容根本不在被摘要的历史里</b>：它们走每回合动态 attachment 通道（claudemd/nested_memory），不在消息数组中，压缩后下回合自然重新生成（<code>utils/attachments.ts:40,872</code>）；system prompt 本身是独立 API 参数每轮重建。源码中不存在任何压缩时摘除 system/CLAUDE.md 的路径。</li>
+</ul>
+<p><b>质量代价信号</b>：无程序化摘要校验（靠 prompt 内 double-check 指令）；二次压缩追踪 RecompactionInfo 进遥测事件（含 turnsSincePreviousCompact 与 willRetriggerNextTick 预判）；实验性降级链先试 session-memory compaction（保 5 条文本消息 + [10k,40k] token 区间）失败再走 legacy 摘要；PTL 重试上限 3 次、流式重试 2 次（<code>compact.ts:315,655,228,132</code>、<code>sessionMemoryCompact.ts:57</code>）。</p>
+
+<!-- ================= 3. Codex CLI ================= -->
+<h2 id="codex"><span class="section-label">3.</span> Codex CLI（服务端分派四条链 + 重注入契约）</h2>
+
+<h3>3.1 触发：一刀切 90% 与双检查点</h3>
+<p>阈值规则简单粗暴：<code>auto_compact_token_limit</code> 未配置时默认取上下文窗口的 90%，显式配置也会被 clamp 到 90% 以内（<code>protocol/src/openai_models.rs:432,486</code>）。计数口径有两种 scope：Total（全量活动上下文）或 BodyAfterPrefix（只算当前压缩窗口基线之后的增量）（<code>session/context_window.rs:29</code>）。触发时机是<b>请求前 + 每个 step 响应后</b>双检查：pre-sampling 命中以 ContextLimit 压缩；mid-turn 发现 needs_follow_up 且超限则立即压缩并改用 BeforeLastUserMessage 注入方式（<code>session/turn.rs:1013,414-459</code>）。两个特殊 pre-turn 触发：模型切换导致 comp_hash 变化、从大窗模型降到小窗（ModelDownshift）。token-budget feature 下剩余 token 越线会注入一次性提醒（claim 位防重复，<code>session/token_budget.rs:80</code>）。每次压缩完成后固定警告用户：「多次压缩可能导致模型准确性下降，尽量开新线程」——这是八家里对质量代价最直白的告知（<code>core/src/compact.rs:387</code>）。</p>
+
+<h3>3.2 四条互斥实现链按 provider 能力分派</h3>
+<table>
+<tr><th>链路</th><th>机制</th><th>关键细节</th></tr>
+<tr><td>token-budget</td><td><b>完全跳过摘要</b>，直接换新上下文窗口</td><td>「skips model/server summarization and installs a fresh context window instead」（<code>compact_token_budget.rs:17,76</code>）——极端情况下的务实选择</td></tr>
+<tr><td>remote v2</td><td>服务端 /responses/compact 结构化接口</td><td>客户端决定保留哪些旧消息：user/developer/system 全保（64k 尾部预算，从最新组往回装、整组丢弃）、agent 消息 ≤10k 且非子代理进度才保（<code>compact_remote_v2.rs:65,510,554</code>）</td></tr>
+<tr><td>remote v1</td><td>服务端回传摘要文本</td><td>客户端不再跑摘要 prompt（<code>compact_remote.rs:50-55</code>）</td></tr>
+<tr><td>local</td><td>当前主模型自己生成摘要</td><td>极简风 prompt：「CONTEXT CHECKPOINT COMPACTION… Create a handoff summary for another LLM」列 progress/constraints/next steps/references 四要素；产物 = <b>仅用户消息原文</b> + 摘要前缀+最后一条 assistant 输出（<code>prompts/templates/compact/prompt.md:1</code>、<code>compact.rs:347</code>）</td></tr>
+</table>
+<p>模型 fallback：previous-model 压缩失败且错误可重试（ContextWindowExceeded/Overloaded 等）→ 用当前模型整体重试并打点；压缩途中撞窗口上限还能 remove_first_item 逐条删最老项续跑（<code>compact_model_fallback.rs:9</code>、<code>compact.rs:305,325</code>）。</p>
+
+<h3>3.3 注入内容的命运：写成契约的重注入</h3>
+<div class="note"><b>全场唯一把「重注入」写进类型系统注释的设计：</b>base_instructions（系统提示）永不参与压缩——每次请求独立携带包括压缩请求本身（<code>compact.rs:277</code>）；AGENTS.md/environment 等 initial context 由 world-state 各 section 渲染而成，压缩后<b>确定性全量重注入</b>——InitialContextInjection 枚举的文档注释原文即规格："the next regular turn will fully reinject initial context after compaction"（<code>compact.rs:60,85,362</code>、<code>session/mod.rs:3535</code>）。v2 还有专门开关可原样保留 client 注入的 developer 消息（吃 64k 预算，<code>compact_remote_v2.rs:469-489</code>）。对照结论：网关注入若走 base_instructions 绝对存活；走 initial-context 有契约保证；走 client developer message 有保留开关——三条路都有出口。</div>
+<p><b>质量代价信号</b>：无摘要校验（摘要直接取压缩轮内最后一条 assistant 消息加前缀即生效）；可观测性好——CodexCompactionEvent 记录 trigger/reason/implementation/phase/strategy/before-after tokens/cache 命中；内部有 window_number 代际计数但无面向用户的「已压缩 N 次」UI（<code>compact.rs:348,450</code>、<code>state/auto_compact_window.rs:73</code>）。</p>
+
+<!-- ================= 4. Grok Build ================= -->
+<h2 id="grok-build"><span class="section-label">4.</span> Grok Build（有损摘要 + 无损归档 + 逐字重注入）</h2>
+
+<h3>4.1 触发：6 层阈值解析 + 四时机 + 二段式预点火</h3>
+<p>默认阈值 85%（<code>xai-grok-shell/src/util/config/resolve/compaction.rs:13</code>），解析优先级六级：env &gt; [model.&lt;id&gt;] &gt; [session] &gt; 远端 per-model &gt; 远端全局 &gt; 默认；越界忽略回退（<code>:38-120</code>）。判定是整数不等式 <code>used×100 ≥ context_window×pct</code>，token 估算用 bytes/4 启发式、每图约 765 tokens（<code>xai-token-estimation/src/lib.rs:8-12,78-83</code>）。四个触发时机：采样回合前的门（Pre-sampling auto-compact trigger）、工具输出后的 preflight 溢出检查、采样报错且估超窗口的错误恢复、切到更小窗口模型时的主动压缩（<code>session/compaction.rs:1813-1981</code>、<code>turn.rs:2254-2258,2907-2917</code>）。最有特色的是<b>二段式预点火</b>：后台 pass-1 在「阈值 −10%」提前起跑，两遍切分点默认 0.95（<code>compaction.rs:26-38</code>、<code>two_pass.rs:12</code>）；配合<b>五态抑制状态机</b>（SUPPRESS_NONE/AUTH/STICKY/TURN/UNTIL_SUCCESS）防止重复压缩踩踏——手动 /compact 永不设置抑制（专项测试固化），内存 flush 进行中也禁止自动压缩（<code>compaction.rs:11-13,1820-1868,1846-1853</code>）。</p>
+
+<h3>4.2 算法：摘要为主、截断兜底、归档保底</h3>
+<p><b>摘要侧</b>：专用压缩模型（默认 grok-4.20，agent/YAML 可覆盖），prompt 固定七节结构——其中第 7 节要求<b>逐字或高保真列出全部非工具结果的用户消息</b>，末尾还允许吸收上下文中 AGENTS.md 的 <code>## Compact Instructions</code> 段落作为摘要侧重点（<code>intra_compaction/config.rs:202-207</code>、<code>templates/compaction_user_prompt.txt:47-49,82-90</code>）。<b>产物装配顺序</b>是全场最讲究的：原 system 消息原样保留为第一项 → &lt;user_info&gt; 前缀 → <b>project_instructions（AGENTS.md）</b> → agent 锚点 → &lt;user_query&gt; 包裹的最后提问 → 近期消息逐字区 → 摘要（附 transcript 提示）→ 可选 state reminder（<code>xai-chat-state/src/compaction_utils.rs:954-1022</code>）。装配后过 sanitize（剥孤儿 ToolResult）+ validate 双闸，违例回退最小历史。</p>
+<p><b>归档侧是其独门</b>：xai-compaction-transcript 提供三种模式——Summary 仅摘要 / Transcript 摘要+完整 updates.jsonl 指针 / Segments 摘要+分片 markdown 库（四档详略默认 Verbose，Balanced 档正文截 2000 字符）；单片段头带「HISTORICAL -- DO NOT EDIT」，附 Turn statistics 与关键词索引 INDEX.md（去停用词后上限 8 个）；片段内<b>保留工具 I/O 逐字</b>仅图片替换占位、剥离 reasoning；给模型的找回提示明说「需要压缩前细节请 read_file/grep 查询 segment_*.md 与 INDEX.md」（<code>compaction_mode.rs:13-77</code>、<code>xai-compaction-transcript/src/lib.rs:20-505,563-600</code>）。</p>
+<p><b>截断兜底</b>（放不下预算时）：从最旧整轮开始丢但 System 头永远保留；tool_use+results 视为不可拆分单元；最后一个放不下的单元<b>原位截断而非丢弃</b>（均分剩余预算追加标记）；legacy 过滤器丢 System 外的杂项但<b>保留先前的压缩摘要</b>（<code>compaction_utils.rs:157-256</code>、<code>history/filter.rs:41-55,149</code>）。还有个反直觉细节：<b>逐字摘要变体</b>——保留工具 I/O 与图片送摘要以命中引擎缓存前缀，与主路径的「剥离后再送」方向相反，按需选择（<code>compaction_utils.rs:135-155</code>）。</p>
+
+<h3>4.3 注入内容的命运：显式字段的逐字重注入</h3>
+<div class="note"><b>字段注释即证据：</b>agents_md_reminder ——「Pre-rendered AGENTS.md &lt;system-reminder&gt; block to re-inject after the user prefix… <b>This preserves project instructions verbatim across compaction</b>」（<code>compaction_utils.rs:918-923</code>）。执行点在 build_compacted_history 把 project_instructions 写回压缩产物的第 3 位（cwd 切换后改用目标项目指令），shell 侧组装处传入 agent.agents_md_user_reminder()；回归测试固化「无 AGENTS.md 时省略该位」（<code>:964-978</code>、<code>compaction.rs:1574,1585</code>、<code>compaction_utils_tests.rs:2199,2243</code>）。这是八家中对项目级注入内容最明确的存活保障。</div>
+
+<h3>4.4 质量代价信号：密度全场最高</h3>
+<ul>
+<li><b>退化摘要防护</b>：清洗后 &lt;500 字符判退化按瞬态重试（注释：生产健康摘要约 3,242 字符起）（<code>code_compaction/config.rs:16-20</code>、<code>summary.rs:123</code>、<code>sample.rs:101-115</code>）。</li>
+<li><b>缩减量守卫</b>：摘要未比原文缩小至少 20% 即拒收 InsufficientReduction（<code>intra_compaction/trigger.rs:69-77</code>）。</li>
+<li><b>重试阶梯</b>：主路径 max_attempts=3 / 延迟 3s / 超时 120s；每次尝试分类 success/degenerate/deterministic/transient 并持久化含被拒原文的工件（<code>config.rs:34-40</code>、<code>compaction_utils.rs:861-880</code>）。</li>
+<li><b>失败兜底链</b>：校验违例→最小历史；pass-1 缓存带前缀指纹失配即弃用；预点火任一阶段失败回退单遍；intra 错误全部非致命记日志继续（<code>session/compaction.rs:42-140,1604-1625</code>）。</li>
+<li><b>双向提示</b>：对人推 ACP 事件 auto_compact_cancelled/failed；对模型在摘要末尾追加 transcript/segment 指路文本、自动续跑时以合成用户消息告知已压缩可继续；产物持久化到 compaction_checkpoints/ 与 compaction_requests/ 目录（<code>notification.rs:1321-1390,1768-1778</code>、<code>compaction.rs:1650</code>）。</li>
+</ul>
+
+<!-- ================= 5. OpenCode ================= -->
+<h2 id="opencode"><span class="section-label">5.</span> OpenCode（有损折叠 + 预算尾巴的最简实现）</h2>
+
+<h3>5.1 触发：一条不等式 + 两个检查点</h3>
+<p>全部逻辑浓缩为一个绝对不等式：<code>isOverflow = 本步 token 总量 ≥ usable()</code>，其中 usable = model.limit.input − reserved（有 input 上限时）否则 context − maxOutput；reserved 默认 min(20_000, provider maxOutput)（<code>packages/opencode/src/session/overflow.ts:8-32</code>）。没有百分比概念。触发时机两处：step-finish 响应后置位 needsCompaction 并中断后续流（<code>processor.ts:477-482,644,679</code>）、下轮请求前检查上一步状态后 create({auto:true})（<code>prompt.ts:1161-1168</code>）；手动走 HTTP POST /session/:id/summarize。防护设计：摘要消息自身永不触发下一轮压缩（条件里显式排除 summary），重复压缩只保留最新一对产物旧对隐藏（<code>processor.ts:477-481</code>、<code>compaction.ts:95-112,365-370</code>）。</p>
+
+<h3>5.2 算法：隐藏 compaction agent + 五节模板 + 25% 尾巴</h3>
+<p>摘要是专用隐藏内建 agent「compaction」（权限全 deny，系统提示只要求输出结构化摘要、不要续写对话、与对话同语言），模型优先取 agent 配置否则回落会话当前模型（<code>agent.ts:219-228</code>、<code>session/compaction.ts:358-362</code>、<code>prompt/compaction.txt:1-4</code>）。模板五节：Objective / Important Details / Work State（Completed·Active·Blocked）/ Next Move / Relevant Files，要求 terse bullets 且<b>精确保留文件路径/符号/命令/错误串/URL/标识符</b>、「不得提及压缩过程本身」（<code>core/src/session/compaction.ts:14-45</code>）。迭代更新模式更狠：「&lt;prior-summary&gt; 用后即弃，<b>没带进新摘要的内容即丢失</b>」白纸黑字写在指令里（<code>:46-57</code>）。</p>
+<p><b>尾部保留预算</b>：preserveRecentBudget = clamp(usable×25%, 2k..15k) tokens 逐字不压，从最后一个用户回合向前累加整轮估算选取，splitTurn 允许轮内再切一刀（<code>compaction.ts:113-120,141-163,222-269</code>）。历史序列化成纯文本送摘要（[User]:/[Assistant]:/[Tool result]: 等前缀格式），工具输出超 2000 字符截断加标记。<b>prune 通道</b>独立于摘要运行：护最近 40k tokens 的工具输出不动，更旧的 completed 工具 part 整体清空（仅当可清理量 &gt;20k 才执行；跳过受保护工具与前 2 个用户回合；每轮结束后异步 fork 执行）（<code>compaction.ts:27-31,274-315</code>、<code>prompt.ts:1338</code>）。请求时 filterCompacted 把模型可见历史重组为「摘要 → 尾部原样 → 新消息」三段（<code>message-v2.ts:523-570</code>）。</p>
+
+<h3>5.3 注入内容与质量代价：正交即安全，丢失即丢失</h3>
+<div class="note"><b>结构性存活：</b>压缩请求显式传 <code>system:[]</code>、messages 仅一条包含 prompt+序列化对话的 user 消息——system prompt 与 AGENTS.md 注入完全不进摘要输入（<code>compaction.ts:420-445</code>）；注入属于常规请求构建层每请求重新装配。这是「架构正交」式的安全：不需要保护逻辑因为根本碰不到。代价的另一面：<b>没有任何找回通道</b>——被摘要掉的内容没有归档层，这是与 Grok Build 最大结构差异；压缩后自动续跑靠一条合成 user 消息（synthetic 标记 + 内部 metadata 注明非稳定契约）。</div>
+<p><b>质量代价信号</b>：摘要请求自身再溢出 → 写入 ContextOverflowError 终态（文案区分两种场景）直接停机交给用户（<code>compaction.ts:450-459</code>）；插件可在 experimental.session.compacting 钩子注入/改写提示、experimental.compaction.autocontinue 关闭自动续跑（<code>:371-377,496-512</code>）；成功发布 schema 化 Event.Compacted。配置面完整可调：compaction.{auto, prune, tail_turns, preserve_recent_tokens, reserved}。</p>
+
+<!-- ================= 6. Qwen Code ================= -->
+<h2 id="qwen-code"><span class="section-label">6.</span> Qwen Code（claude-code 血统全量摘要 + 六态结果枚举）</h2>
+
+<h3>6.1 触发：三层阶梯 + 截图积压触发器</h3>
+<p>阈值常量直接标注血统——AUTOCOMPACT_BUFFER=13k 的注释写明「镜像 claude-code autoCompact.ts:62」（<code>services/chatCompressionService.ts:109-142</code>）。三层阶梯公式：auto = min(85%×window, 有效窗口−13k)、warn = auto−20k、hard = min(window, max(有效窗−3k, auto+3k))（<code>:210-246</code>，设计注释 :191-209）。触发时机：sendMessageStream 发送前 cheap-gate（有效 token 未达 auto 直接 NOOP）；发送失败后反应式 overflow 救援强制压缩并 yield RETRY（<code>:430-487</code>、<code>geminiChat.ts:3244-3252</code>）。独有触发器：<b>工具返回图片积压 ≥20 张时即使未达 token 阈值也压</b>（image_overflow 原因码，<code>compactionInputSlimming.ts:115</code>）。手动 /compress 指令文本限 2000 字符。连续失败 3 次熔断直至 force 重置（<code>:417-428</code>）。</p>
+
+<h3>6.2 算法：全历史单点摘要的严密护栏版</h3>
+<p>注释原文自认「CLAUDE-CODE-STYLE FULL-HISTORY COMPRESSION…no split, no tail preservation」（<code>:510-513</code>）。执行模型优先配置的 compaction model、payload 放不下其窗口则回退主模型；两条执行路径值得注意：<b>冷路径</b>独立 side-query（流式、maxAttempts=1）与<b>缓存共享路径</b>——复用主请求前缀，Anthropic 下保 thinkingBudget=19_999 以维持缓存兼容（<code>:601-649,686-729,759-857</code>），这与 Claude Code 的 fork 复用缓存思路同源。prompt 要求先 &lt;analysis&gt; 草稿再输出 &lt;state_snapshot&gt; XML 九节（含 all_user_messages 全量列出用户话语）（<code>core/prompts.ts:559-606</code>）。产物 = 摘要 + model ack + 近期文件恢复（5 文件×5k/50k 预算）+ 近期图片恢复（3 张）+ plan-mode/subagent reminder 重建（<code>:1028-1046</code>、<code>postCompactAttachments.ts:27-60</code>）。</p>
+<p><b>并行的第二机制 microcompaction</b>：不摘要，直接把旧工具结果替换为占位符，白名单 10 类工具，总字符触发阈值 500_000（<code>microcompaction/microcompact.ts:14-51</code>、<code>clearContextDefaults.ts:7</code>）；对 file_path 类工具还上报被逐出的路径以精准失效读缓存（issue #4239）。side-query 输入瘦身把 inline 图片/文档替换为 mime 占位符防注入。</p>
+
+<h3>6.3 注入内容与质量代价：六态枚举是护栏密度标杆</h3>
+<p><b>注入内容</b>：system instruction 经 generationConfig 独立传递不在压缩输入内（压缩输入仅为对话历史浅拷贝，<code>:497-499</code>）；压缩完成后主动重建注入 plan-mode reminder 与后台 subagent 快照；/compress 用户指令与 PreCompact hook 的 additionalContext 会拼进摘要 prompt（分别限 2000/4000 字符防 PTL）（<code>:1038-1044,1070-1080,549-562</code>）。</p>
+<p><b>质量代价信号——六态结果枚举</b>：COMPRESSED / INFLATED_TOKEN_COUNT / TOKEN_COUNT_ERROR / EMPTY_SUMMARY / NOOP / OUTPUT_TRUNCATED（<code>turn.ts:351-381</code>）。配套兜底链全场最细：空摘要→失败；token 计数不可得→失败；<b>压缩后反而变大→INFLATED 失败</b>；输出打满预算判疑似截断→丢弃并计入熔断（预算钳位下改验 XML 闭合标签）；附件组装失败→降级成功而非崩溃（<code>:1203-1230,900-1008,1048-1090</code>）。事件经桥接变为顶层 ChatCompressed 给 UI 与子代理循环，telemetry 记录前后 token 与缓存共享情况；向用户暴露 PreCompact/PostCompact hooks。</p>
+
+<!-- ================= 7. Hermes ================= -->
+<h2 id="hermes"><span class="section-label">7.</span> Hermes（双体系：训练管线压缩器 + 运行时分层记忆）</h2>
+
+<h3>7.1 离线体系：trajectory_compressor.py 的「最小必要压缩」</h3>
+<p>根目录的 trajectory_compressor.py 是<b>离线训练数据管线</b>而非运行时组件，但它的六条策略自述恰好是理解其运行时设计的钥匙：保护首部（system/human/首 gpt/首 tool）、保护末 N 轮、只压中段且从第 2 个 tool response 起、<b>只压到刚好达标</b>、中段替换为单条 human 角色摘要消息、其余原样保留（<code>trajectory_compressor.py:5-16</code>）。数值：目标上限 15250 tokens、摘要目标 750、保护末 4 轮、aux 摘要模型 gemini-3-flash-preview 经 OpenRouter（temperature 0.3）、Kimi-K2 分词器 fallback len//4（<code>:83-106,459-521</code>）。两个精巧细节：「最小必要压缩」从可压区头部累加到省出目标即停，多余中段原样保留，若压缩区 ≤ 摘要预算干脆不压（防负收益）；<b>边界安全 _snap_boundary 保证切割点永不落在 tool 轮上</b>——防止 &lt;tool_call&gt;/&lt;tool_response&gt; 被拆散污染训练轨迹（<code>:800-844,526-562</code>）。</p>
+
+<h3>7.2 运行时体系：ContextCompressor 五步分层记忆</h3>
+<p>算法五步自述：先剪旧工具结果（免 LLM）→ 保头部（system prompt + 首轮交换，protect_first_n=3）→ 按 token 预算保尾部 → LLM 结构化摘要中段 → 后续压缩迭代更新旧摘要（<code>agent/context_compressor.py:1989-1999</code>）。默认常量与各家差异极大：<b>threshold_percent = 0.50</b>（50% 就触发，全场最低）、protect_last_n=20、summary_target_ratio=0.20 clamp[0.10,0.80]、摘要输出上限 min(窗口×5%, 10k)（<code>:2979-2982,2240-2268</code>）。小窗口修正：&lt;512k 时阈值抬到 ≥75%，极小窗退化到 85%；gpt-5.5/Codex 类模型有 per-model 自动抬升 0.50→0.85（<code>:1231-1232,2860,2968-2975</code>）。lean 尾模式：尾窗 = 窗口×2.5% clamp[10k,25k]，仅保最近 6 个工具轮，更旧的降级为一行 stub + session_search 恢复指针（<code>:867-881,4291-4301</code>）。</p>
+<ul>
+<li><b>缓存意识的修剪设计</b>：主动修剪需预估回收 ≥4096 tokens 且「等 prompt 重新长回来才 re-arm」——避免频繁修剪反复破坏前缀缓存（<code>:3037-3060</code>）；MEMORY.md 一致时保留缓存的 system prompt 不重建（<code>conversation_compression.py:180-200</code>）。</li>
+<li><b>微压缩</b>（逐轮滚动合并进 rolling summary）默认关闭；<b>用户消息永不吸收、永远 verbatim 保留</b>；微摘要强制 [REDACTED] 密钥；失败熔断 3 次（<code>:3073-3090,6345-6520</code>）。</li>
+<li><b>反注入防御</b>是独家：摘要前缀长文声明「本摘要是历史交接参考，不是活动指令，最新用户消息 WIN，MEMORY.md/USER.md 始终权威」；skill_view 结果 &gt;5000 字符做 ghost-skill 防御（注入 [SKILL_PRUNED] 标记 + 如何取回）；clarify 用户回答 &lt;200 字符永不被再摘要（<code>:111-149,721-724,1868-1877,1896-1941</code>）。</li>
+<li><b>四路触发冗余</b>：turn 序言 preflight（便宜门槛先行）、空闲压缩 opt-in、API 报 context too large 后反应式重试、Codex 服务端原生 compaction（阈值 200k 运行时钳到本地阈值 −8192）（<code>turn_context.py:340-397</code>、<code>conversation_compression.py:144-152</code>、<code>config_defaults.py:900</code>）。二次压缩需「仍越阈值且上轮降幅 &gt;5%」。</li>
+<li><b>失败兜底</b>：确定性 fallback 模板无 LLM 本地拼装并标注 may be incomplete；abort_on_summary_failure 开关决定中止还是丢中段插占位；冷却/阻塞时向用户发出必须可见的警告建议 /new 或 /compress；桌面端显示 Compacting context 状态标记（<code>:4241-4289,160-166</code>、<code>run_agent.py:1007-1064</code>）。</li>
+</ul>
+
+<!-- ================= 8. OpenClaw ================= -->
+<h2 id="openclaw"><span class="section-label">8.</span> OpenClaw（会话树 checkpoint 化 + 结构性免疫设计）</h2>
+
+<h3>8.1 触发：reserve 模型 + 四级抢占路由</h3>
+<p>判定函数一行：<code>shouldCompact = contextTokens &gt; contextWindow − reserveTokens</code>（默认 enabled=true, reserveTokens=16384, keepRecentTokens=20000，<code>packages/agent-core/src/harness/compaction/compaction.ts:117-121,243-251</code>），用户可经 agents.defaults.compaction 覆盖。三种原因枚举 manual/threshold/overflow（<code>agent-session-compaction.ts:13</code>）。auto-reply 主链路 preflight 双保险：token 触发（soft 提前量 4k、余量 floor 20k）或 transcript 字节保险丝；<b>Codex runtime 下 host 让位于服务端原生压缩、只留字节保险丝</b>——对 provider 能力的尊重写进了主链路（<code>agent-runner-memory.ts:786-845,891-899</code>）。发送前抢占路由四级：<code>fits | compact_only | truncate_tool_results_only | compact_then_truncate</code>——压缩与截断是可组合的两个动作而非二选一（<code>preemptive-compaction.types.ts:4-9</code>）；预算下限 8000 tokens 或窗口 50%，溢出重试上限 3 次。</p>
+
+<h3>8.2 算法：切点合法性 + 迭代更新摘要 + 树形 checkpoint</h3>
+<p><b>切割点算法</b>：从尾部按 keepRecentTokens 反向累积选切点，切点之前的全部进摘要；<b>切点合法性白名单</b>——user/assistant/bashExecution/custom/branchSummary/compactionSummary 可作切点，<b>toolResult 一律不可</b>（保证保留区不以孤立工具结果开头）；turn 中途切割时前半段单独二次摘要并拼接「Turn Context (split turn):」（<code>compaction.ts:329-341,413-484,905-922</code>）。摘要用当前会话主模型（maxTokens = min(0.8×reserve, model 上限)），prompt 是严格结构化 checkpoint：Goal / Constraints &amp; Preferences / Progress(Done·In Progress·Blocked) / Key Decisions / Next Steps / Critical Context，要求保留精确文件路径、函数名、报错原文（<code>:490-521,650-654</code>）。<b>迭代更新模式</b>是亮点：已有摘要时换用 UPDATE_SUMMARIZATION_PROMPT，规则「PRESERVE 全部旧信息、只增改删失效项」，旧摘要经标签传入（<code>:523-560,655-664</code>）。产物写入会话树的 compaction 条目 {summary, firstKeptEntryId}——<b>checkpoint 是会话树一等公民，可分支、可恢复</b>；摘要尾自动附本次 readFiles/modifiedFiles 清单；字符硬帽 16000 带 UTF-16 安全截断标记（<code>gateway-protocol/src/schema/sessions.ts:154-182</code>、<code>:92-104,923-925</code>）。附属机制：分支切换时对废弃分支做 branch summarization；服务端原生 compaction 以 replay 类型接入（anthropic-compaction / openai-responses-compaction）。</p>
+
+<h3>8.3 注入内容的命运：全场唯一「结构性免疫」的设计</h3>
+<div class="note"><b>架构即答案：</b>压缩的作用域只有会话树 transcript 条目（prepareCompaction 的参数类型就是 SessionTreeEntry[]），摘要 prompt 也自我限定为「user 和 assistant 的对话」；系统提示/AGENTS.md/技能注入不属于会话树、每请求重新装配——因此<b>天然不参与压缩也无须任何保护逻辑</b>（<code>compaction.ts:702-712,486</code>）。其他七家都需要某种机制保证注入内容存活（附件重生/显式重注入/头部保护），只有 OpenClaw 让这个问题在架构上不存在。大工具结果另有独立实时上限通道：单条占窗口 ≤30%、16k 字符帽，截断保诊断尾部；token 估算按类型从严（通用 4 chars/token、工具结果 2、JSON 3）（<code>tool-result-limits.ts:3-31</code>、<code>preemptive-compaction.ts:28-32</code>）。</div>
+<p><b>质量代价信号</b>：自动路径允许 retry-invalid-once（InvalidSummaryOutputError 重试一次）手动路径不重试；事件流 compaction_start/end 带 outcome 枚举 completed(tokensBefore/After)/failed/skipped/aborted；扩展可在 session_before_compact 事件中 <b>cancel 或接管整个压缩</b>（<code>agent-session-compaction.ts:14,55-59,70-117,186-200</code>）。</p>
+
+<!-- ================= 9. DeepSeek ================= -->
+<h2 id="deepseek"><span class="section-label">9.</span> DeepSeek Harness（公开资料推理，低置信度）</h2>
+<div class="warn">DeepSeek 官方编程 harness 无公开源码与压缩机制文档，本节置信度标注为低。</div>
+<p><span class="conf-low">推理</span> 公开渠道未见其长对话管理机制的描述。参考其 API 生态的两个事实可以做出有限推断：① DeepSeek 上下文缓存是磁盘级自动前缀缓存——压缩导致的整段前缀替换意味着缓存全 miss 全价重算，客户端若在意成本会有强烈的「少压一次」动机（Hermes 的「等 prompt 长回来才 re-arm」与 Claude Code 的 60 分钟线都印证了这种经济约束的普遍性）；② 其 API 无服务端 compaction 端点（对比 Anthropic cache_edits / OpenAI Responses compact），压缩必然是纯客户端实现。作为对照样本的价值：八家里没有任何一家公开采用「简单丢弃最老消息」的裸截断作为主路径——即使实现最简的 OpenCode 也是模板化摘要替换，说明「摘要优于截断」已是全行业收敛的结论。</p>
+
+<!-- ================= 10. 深度对比 ================= -->
+<h2 id="comparison"><span class="section-label">10.</span> 深度对比：三种哲学、注入内容存活率总表、质量代价信号</h2>
+
+<h3>10.1 差异的本质：三种压缩哲学</h3>
+<table>
+<tr><th>哲学</th><th>代表</th><th>核心赌注</th><th>代价</th></tr>
+<tr><td><b>全量摘要派</b></td><td>Claude Code、Qwen Code、Codex local</td><td>「高质量重述可以替代原始历史」——整段历史进摘要，靠九段式 prompt 与 analysis 草稿保证质量</td><td>摘要质量无程序化保障；细节丢失不可逆（靠 transcript 回读补救）</td></tr>
+<tr><td><b>分层保留派</b></td><td>Hermes、OpenCode、OpenClaw、Codex v2</td><td>「结构比内容重要」——头部/尾部/角色分层，中段才压；用户消息几乎全场享有原文豁免</td><td>预算参数难调；尾部窗口挤占摘要空间</td></tr>
+<tr><td><b>结构化保留+归档派</b></td><td>Grok Build、OpenClaw checkpoint</td><td>「上下文可以压狠，但被压掉的要能找回来」——transcript/segments 归档 + 树形可恢复 checkpoint</td><td>工程复杂度最高（Grok 的六层阈值/五态抑制/退化判定全是为此付费）</td></tr>
+</table>
+<p>一个反直觉的横向事实：<b>没有任何一家把「裸截断最老消息」作为主路径</b>——即使实现最简的 OpenCode 也是模板化 LLM 摘要替换；纯截断只以兜底形态存在（Grok 的 fit_conversation_to_budget、token-budget 换新窗）。行业已经收敛于「摘要优于截断」，分歧只在保留多少、找回多难。</p>
+
+<h3>10.2 注入内容存活率总表（网关注入方必读）</h3>
+<table>
+<tr><th>内容类型</th><th>存活机制</th><th>证据强度</th></tr>
+<tr><td>system prompt（API 参数）</td><td><b>八家全部 100% 存活</b>：它是独立请求参数，从不进入被压缩的消息数组——Claude 每轮重建 fullSystemPrompt、Codex 独立携带 base_instructions、Qwen 走 generationConfig、OpenCode 压缩时显式 system:[]</td><td><span class="conf-high">高：全部有源码直证</span></td></tr>
+<tr><td>CLAUDE.md / AGENTS.md 类项目记忆</td><td>三条存活通道并存：① Claude Code/Qwen 的每回合 attachment 重生；② Codex world-state 契约式重注入 + Grok 显式字段逐字重注入到产物第 3 位；③ OpenClaw/OpenCode 的架构正交（根本不在压缩域）。<b>结论：只要走这三类通道就存活</b></td><td><span class="conf-high">高：字段注释与回归测试双证</span></td></tr>
+<tr><td>一次性普通消息注入</td><td><b>会死</b>：混进对话历史的注入随历史被摘要，除非恰好被「All user messages」类 prompt 段落逐字收录（Grok 七节之第 7 节、Hermes 微压缩永不吸收用户消息是仅有的两个例外倾向）</td><td><span class="conf-low">高风险区：唯一会丢的位置</span></td></tr>
+<tr><td>技能说明 / 大块注入</td><td>半存活：Hermes ghost-skill 标记防模型误以为技能还在并附取回方法；Claude 压缩后重注入 skill 清单（25k 预算）；其他家无专门处理</td><td><span class="conf-mid">中：两家有显式设计</span></td></tr>
+</table>
+
+<h3>10.3 质量代价信号横向对比</h3>
+<ul>
+<li><b>熔断器是共识</b>：连续失败上限 3 次——Claude Code、Qwen Code、Hermes（微压缩）、三家完全一致地选择了这个数字。</li>
+<li><b>膨胀守卫两例</b>：Qwen 的 INFLATED_TOKEN_COUNT（压完反而变大判失败）与 Grok 的 InsufficientReduction（缩小不足 20% 拒收）是仅有的两个「对摘要效果本身设卡」的实现。</li>
+<li><b>对用户坦白度分化</b>：Codex 最直白（每次压缩后固定警告准确性下降建议开新线程）；Claude/Qwen 用横幅百分比轻描淡写；OpenClaw 把 outcome 枚举完整暴露给扩展；无人向模型隐瞒——压缩产物都会告知模型「你被压缩过」（固定开场白/边界标记/合成续跑消息三形态）。</li>
+<li><b>代际追踪普遍缺失 UI</b>：Claude 有 RecompactionInfo 遥测、Codex 有 window_number 内部计数、Grok 有 checkpoints 目录，但没有一家给用户看「本会话已压缩 N 次」的常驻指示——尽管它正是质量退化的最强先行指标。</li>
+</ul>
+
+<h3>10.4 已成为事实标准的行为</h3>
+<ul>
+<li><b>阈值谱系 85%–93%</b> 主流（85% 三家：Grok/Qwen/OpenClaw 近似；90% 一家：Codex；93%+ 折算一家：Claude），Hermes 运行时的 50% 是显著离群值（其小窗修正逻辑也承认这点）。</li>
+<li><b>触发时机 = 请求前主动检查 + 失败后反应式救援</b> 双层，七家一致；Codex/Grok 多出的 mid-turn/preflight 变体是同层细化。</li>
+<li><b>system 参数永不入压缩输入</b>——这条没有例外，是整个生态最硬的不变量。</li>
+<li><b>用户消息特殊地位</b>：Codex local 只留用户原文、Grok 要求逐字列出全部用户话语、Hermes 永不吸收用户消息、OpenClaw 切点只能落在 user 边界——「用户的原话是最神圣的历史」已是跨生态共识。</li>
+<li><b>microcompact 白名单清理老工具结果</b>在 Anthropic 血统的三家（Claude/Qwen 及其镜像注释）成型，占位符文案甚至逐字相同（[Old tool result content cleared]）。</li>
+</ul>
+
+<!-- ================= 11. 建议 ================= -->
+<h2 id="lessons"><span class="section-label">11.</span> 对 CrewRouter 网关的落地建议</h2>
+<div class="card">
+<p class="small">前提回顾：inject_prompts 是网关的核心差异化功能（按 key 绑定注入条目，经 <code>server/routes/inject-prompts.js</code> 管理、转发时拼入上游请求）；上一期已建立归因字段提取与缓存友好路由两个方向。本期研究直接回答「注入的提示词在长对话里的命运」。以下给出六条建议。</p>
+<ol>
+  <li><strong>注入位置红线：绝不做一次性普通消息（最高优先级）。</strong>本期最重要的结论——八家的压缩器都不会碰 system 参数与每轮重建通道，但会毫不犹豫地把对话历史里的普通消息摘要掉。落地自查：api.js 的注入拼装必须把 inject_prompts 条目放进 system 尾部（或独立 developer/system 角色），并在转换层保证它们<b>每个请求都重新出现</b>而不是只在首条消息出现一次。若现有实现存在「首条 user 消息拼接」形态的注入，应迁移——那是在把用户的注入提示送进各家摘要器的绞肉机。</li>
+  <li><strong>识别并标记 compaction 流量。</strong>第③期已证实 Codex 的 x-openai-subagent 头含 compact 取值；结合本期特征可建规则库：请求无工具定义 + system 为空或极简（OpenCode 显式 system:[]）+ 单条超长 user 消息含序列化历史痕迹 → 判定压缩摘要调用。这类请求应单独统计（它们 token 量大但属于维护性开销），并计入上期的 automation-result 思路——与 fusion/judge 调用同属「网关可见的非业务流量」。</li>
+  <li><strong>压缩边界的命中率骤降解释器。</strong>压缩重置前缀意味着上游前缀缓存全 miss（Hermes 源码注释明言分钟级时间戳都会在 compaction boundary 击穿 KV，PR #20451）。把第①期的击穿归因检测器扩一个原因候选：「检测到疑似压缩事件后的首次请求」——特征为 prompt 长度骤降 50%+ 且随后逐步回升。管理端命中率曲线上的陡降点从此有了自动标注。</li>
+  <li><strong>长对话成本预警产品化。</strong>客户端在窗口 85–93% 触发压缩，而压缩前的最后几次请求接近满窗计费、压缩本身又是一次大输入调用。网关天然看得见「某 API key 的请求 prompt tokens 连续攀升逼近该模型窗口」的趋势——可在管理端做「即将进入压缩周期」的成本预测提示。这比事后账单解释有价值得多。</li>
+  <li><strong>注入模板遵循字节稳定纪律（呼应第①期）。</strong>注入内容位于缓存前缀内，模板变更 = 全量用户前缀失效。结合本期证据补充两条：① 注入内容的时间类字段日期精度封顶（Hermes date-only 的教训）；② 注入条目的开关状态变化等同于模板变更，灰度发布按 key 分批。</li>
+  <li><strong>借 OpenClaw 思路审视自身架构正交性。</strong>它「结构性免疫」的本质是把易变对话与稳定指令放在两个存储域。CrewRouter 若未来引入服务端会话记忆/历史改写类功能（conversations 表已在），应从第一天就把「注入层」与「会话历史层」分开建模——不要让任何功能有能力把注入内容写进会被摘要、裁剪或导出删除的历史存储里。这是用一次架构决策换掉一整类未来的 bug。</li>
+</ol>
+<h4>一句话总结</h4>
+<p>八家 harness 用不同的工程路线收敛到了同一个答案：<strong>system 参数与每轮重建通道里的内容是不可侵犯的，对话历史里的一切都是可摘要的</strong>。CrewRouter 的注入提示词只要站在前者一侧就能穿越任何长度的工作会话；站在后者一侧则注定在某个深夜被一段九段式摘要悄悄吞掉。本期研究把这个生死线画清楚了，剩下的只是把注入位置钉死在线的正确一边。</p>
+</div>
+
+</main>
+
+<footer>
+  CrewRouter · Harness 上下文压缩与截断研究报告 · 2026-08-24 · 纯源码考古，不含运行时验证
+</footer>
+
+</body>
+</html>
