@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harness 子代理编排与流量归因研究报告 · CrewRouter</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
+    --text: #e6e8ee; --muted: #9aa3b2; --accent: #4f8cff; --accent2: #22c55e;
+    --code-bg: #0b0d12; --gold: #eab308; --red: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.65; }
+  header.hero { padding: 48px 24px 32px; text-align: center;
+    background: linear-gradient(180deg, #101c33 0%, var(--bg) 100%); border-bottom: 1px solid var(--line); }
+  header.hero h1 { margin: 0 0 8px; font-size: 29px; letter-spacing: 1px; }
+  header.hero p { margin: 4px 0; color: var(--muted); }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 24px 80px; }
+  h2 { font-size: 24px; margin: 56px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
+    display: flex; align-items: center; gap: 10px; }
+  h3 { font-size: 19px; margin: 32px 0 12px; }
+  h4 { font-size: 16px; margin: 22px 0 8px; color: var(--accent); }
+  p { margin: 10px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px;
+    padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; line-height: 1.5; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.85em; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.9em; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel2); color: #c9d2e0; white-space: nowrap; }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  .toc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 28px; }
+  .toc ol { margin: 6px 0; padding-left: 24px; }
+  .toc li { margin: 4px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 22px; margin: 18px 0; }
+  .proto { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 0.8em;
+    font-weight: 600; background: #312e81; color: #c7d2fe; }
+  .note { border-left: 4px solid var(--gold); background: rgba(234,179,8,0.06); padding: 10px 14px;
+    border-radius: 0 8px 8px 0; margin: 14px 0; }
+  .warn { border-left: 4px solid var(--red); background: rgba(239,68,68,0.06); padding: 10px 14px;
+    border-radius: 0 8px 8px 0; margin: 14px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .section-label { font-size: 0.8em; color: var(--accent2); text-transform: uppercase; letter-spacing: 1px; }
+  .evi { font-size: 0.85em; color: var(--muted); }
+  .conf-high { color: var(--accent2); font-weight: 600; }
+  .conf-mid { color: var(--gold); font-weight: 600; }
+  .conf-low { color: var(--red); font-weight: 600; }
+  footer { text-align: center; color: var(--muted); font-size: 0.85em; padding: 24px; border-top: 1px solid var(--line); }
+  .small { font-size: 0.85em; color: var(--muted); }
+</style>
+</head>
+
+<body>
+
+<header class="hero">
+  <h1>Harness 子代理编排与流量归因研究报告</h1>
+  <p>8 个 AI 编程助手（harness）的 Task/spawn 子代理机制、父子上下文传递、模型选择与并发控制，以及——网关视角最关心的——<b>一条 HTTP 请求能否被判定「来自哪个子代理」</b>的逐行源码考古</p>
+  <p>生成日期：2026-08-24 · 数据来源：仓库内源码逐一核实（<span class="evi">path:line 引用</span>）；无源码者基于公开资料推理并标注置信度<br>
+     姊妹篇：<a href="index.html">研究索引</a> · <a href="harness-streaming-and-caching.html">流式与缓存</a> · <a href="harness-prompt-and-message-construction.html">提示词构成</a></p>
+</header>
+
+<main>
+
+<div class="toc">
+  <strong>目录</strong>
+  <ol>
+    <li><a href="#overview">总体概览：编排形态与归因信号两张矩阵</a></li>
+    <li><a href="#claude-code">Claude Code（Agent 工具 + 父子共享 session_id 的归因盲区）</a></li>
+    <li><a href="#codex">Codex CLI（spawn_agent 多线程协作 + 全场最丰富的 HTTP 归因信号）</a></li>
+    <li><a href="#grok-build">Grok Build（task/spawn_subagent + 头部直通子会话 ID）</a></li>
+    <li><a href="#opencode">OpenCode（task 工具 + 网络层同质化，归因最难）</a></li>
+    <li><a href="#qwen-code">Qwen Code（Agent 工具 + promptId 内嵌子代理复合键）</a></li>
+    <li><a href="#hermes">Hermes（delegate_task + 协议层父子链路与逐子代理成本核算）</a></li>
+    <li><a href="#openclaw">OpenClaw（sessions_spawn + 自描述会话键与血统元数据）</a></li>
+    <li><a href="#deepseek">DeepSeek Harness（公开资料推理，低置信度）</a></li>
+    <li><a href="#comparison">深度对比：归因信号强弱排序与事实标准</a></li>
+    <li><a href="#lessons">对 CrewRouter 网关的落地建议</a></li>
+  </ol>
+</div>
+
+<!-- ================= 1. 概览 ================= -->
+<h2 id="overview"><span class="section-label">1.</span> 总体概览：编排形态与归因信号两张矩阵</h2>
+
+<p>现代编程 harness 已经普遍长出了「主代理派活、子代理干活」的第二层执行结构。一次用户可见的主任务背后，是若干个<b>独立计费的 API 会话</b>：每个子代理有自己的消息数组、自己的 system prompt、甚至不同的模型。对网关来说这意味着两件事：① 流量放大——一次人工交互可能产生数十倍的上游请求；② 归因难题——这些请求在 HTTP 层长得像不像「一家人」，决定了网关能不能把它们记在同一本账上。</p>
+
+<h3>1.1 编排形态矩阵</h3>
+<table>
+<tr><th>客户端</th><th>创建工具</th><th>子代理上下文</th><th>fork 能力</th><th>模型选择</th><th>并发默认上限</th><th>嵌套深度</th><th>结果回传</th></tr>
+<tr><td><b>Claude Code</b></td><td><code>Agent</code>（旧名 Task 为 alias）</td><td>全新会话，仅任务 prompt + agent 定义自己的 system prompt</td><td>有：fork 路径继承父全部对话且请求前缀与父字节一致</td><td>env &gt; 参数 &gt; frontmatter &gt; 继承父</td><td>无常量（并行靠单条消息多 tool use；批量技能 30）</td><td>general-purpose 可再嵌套；fork 内再 fork 被守卫拒绝</td><td>同步单条总结消息；后台 task-notification 带 token 统计</td></tr>
+<tr><td><b>Codex CLI</b></td><td><code>spawn_agent</code> + send/wait/interrupt/followup/list 六件套</td><td>独立 Session/thread；审批策略强制 never</td><td><b>默认 fork</b>：<code>fork_turns</code> 默认 "all" 继承父全部轮次</td><td>参数覆盖 &gt; 配置 default_subagent_model &gt; 继承当前</td><td><b>6</b>（agents.max_concurrent_threads_per_session）</td><td>depth 显式记录于 SessionSource，配 agents.max_depth</td><td>wait_agent 收割 Completed(final_msg)；状态变化以 subagent_notification 注入父对话</td></tr>
+<tr><td><b>Grok Build</b></td><td><code>task</code>（接受 Task/spawn_subagent 拼写）</td><td>全新子会话（uuid v7）；模型发起的 spawn 固定不继承</td><td>支持 Forked（父历史作 background_context）与 Resumed 三态</td><td>runtime override &gt; agent 定义 &gt; 父模型兜底；resume 钉死源模型</td><td><b>32</b>（env 可调，超限排队或失败）</td><td>MAX_SUBAGENT_DEPTH=1，达限直接剥除子的 task 工具</td><td>阻塞返回 SubagentCompleted{output,tokens,...}；后台完成注入 system-reminder</td></tr>
+<tr><td><b>OpenCode</b></td><td><code>task</code></td><td>全新子会话（sessions.create 带 parentID），跑完整 SessionPrompt 循环</td><td>无 fork（task_id 仅续跑旧子会话）</td><td>子 agent 配置 &gt; 继承父 assistant 消息的 model</td><td>无数值上限（单条助手消息多 tool call 并发 unbounded）</td><td>cfg.subagent_depth ?? 1；子会话默认 deny task/todowrite</td><td>前台 task_result 标签包裹文本；后台 synthetic part 注入父会话</td></tr>
+<tr><td><b>Qwen Code</b></td><td><code>Agent</code>（含团队 name 参数派生常驻队友）</td><td>常规子代理全新会话；仅 subagent_type:"fork" 继承父最近 N 个真实用户轮次</td><td>有，参数 fork_turns/fork_tools/fork_profile</td><td>model 是「档位」经 resolveModelGrade 解析；显式模型的代理不可覆盖</td><td><b>10</b> 后台全局（env 可调）+ 每模型 cap 映射</td><td>后台委派 v1 仅限顶层；fork 提示明写 Do not spawn sub-agents</td><td>顶层后台以 task-notification 注入（父方唯一回传通道）；结果剥离 analysis 块</td></tr>
+<tr><td><b>Hermes</b></td><td><code>delegate_task</code>（action: spawn/list/steer/stop）</td><td>独立会话（docstring 明示 fresh conversation），硬性剥夺再委派等 5 类工具</td><td>无 fork；父上下文只见委派调用与汇总结果</td><td>每任务 model 参数 &gt; 继承父；delegation 配置可整体改写 provider/base_url（跨供应商路由）</td><td><b>10</b>（delegation.max_concurrent_children，超限截断批次）</td><td>MAX_DEPTH=1；orchestrator 角色显式授予递归</td><td>fan-out 整批 join 后产出一个合并 results 块；异步经自 POST + X-Hermes-Session-Id 唤醒</td></tr>
+<tr><td><b>OpenClaw</b></td><td><code>sessions_spawn</code>（runtime: subagent|acp）</td><td>独立子会话，会话键铸造为 agent:&lt;id&gt;:subagent:&lt;uuid&gt;</td><td>context:"fork" 拉 requester transcript 且要求同 agent</td><td>显式参数 &gt; 按 agentId 配置解析</td><td><b>8</b> 全局（钳制 8..16）+ 每 agent 直系子代 5</td><td>DEFAULT_SUBAGENT_MAX_SPAWN_DEPTH=1，深度=会话键中 :subagent: 计数</td><td><b>推送式</b>自动 announce（禁轮询）；swarm 支持 JSON Schema 结构化收集</td></tr>
+<tr><td><b>DeepSeek Harness</b></td><td class="conf-low">未公开</td><td class="conf-low">未公开</td><td class="conf-low">—</td><td class="conf-low">未公开</td><td class="conf-low">未公开</td><td class="conf-low">未公开</td><td class="conf-low">未公开</td></tr>
+</table>
+
+<h3>1.2 归因信号强度矩阵（★ 网关视角核心）</h3>
+<table>
+<tr><th>客户端</th><th>HTTP 头信号</th><th>请求体信号</th><th>父子关系表达</th><th>system prompt 指纹</th><th>综合评级</th></tr>
+<tr><td><b>Claude Code</b></td><td>无专用头；beta 集合只随模型变</td><td>metadata.user_id 是 JSON（device_id/account_uuid/session_id），<b>session_id 进程级全局、父子共用</b>；普通子代理 thinkingConfig 强制 disabled</td><td><b>✗ 无法表达</b>（parentId 只在客户端遥测 ALS 里）</td><td>强：「You are an agent for Claude Code…」固定句式家族</td><td><span class="conf-low">弱：只能启发式</span></td></tr>
+<tr><td><b>Codex CLI</b></td><td><code>x-codex-parent-thread-id</code>、<code>x-openai-subagent</code>（collab_spawn 等）、x-codex-window-id、x-codex-turn-metadata</td><td>client_metadata 含 session_id/<b>thread_id</b>/turn_id/<b>parent_thread_id</b>/<b>parent_turn_id</b>/root_turn_id + blob（agent_name/subagent_kind/forked_from_thread_id）；prompt_cache_key 编码 {source}:{parent_thread_id}</td><td><b>✓✓ 三重冗余</b>（头 + body 键 + cache key）</td><td>不需要——结构化字段已足够</td><td><span class="conf-high">极强：结构化全链路</span></td></tr>
+<tr><td><b>Grok Build</b></td><td>每请求固定 8 个自描述头：<code>x-grok-session-id</code>=<b>子会话自身 uuid</b>、x-grok-conv-id、x-grok-turn-idx、x-grok-model-override、x-grok-agent-id（进程级，无区分度）</td><td>—</td><td>⚠️ 不在 HTTP 层（磁盘 SubagentMeta 与 GCS trace 有 parent_prompt_id/depth）</td><td>强：「You are a Grok Build subagent — a focused worker…」专用紧凑模板</td><td><span class="conf-high">强：头部直通实例 ID</span></td></tr>
+<tr><td><b>OpenCode</b></td><td><b>无任何会话/子代理头</b></td><td>无；OTel metadata.sessionId 不出网</td><td><b>✗ 完全不出网</b>（仅本地 DB parentID）</td><td>中：依赖具体 agent 的 prompt 是否替换基础提示</td><td><span class="conf-low">最弱：网络层同质化</span></td></tr>
+<tr><td><b>Qwen Code</b></td><td>无专用头</td><td><b>promptId = sessionId#subagentId#promptOrdinal</b> 复合键随每次请求传递；运行时事件带 subagentId 字段</td><td>△ 间接：共享父 sessionId 前缀 + # 后的子代理段</td><td>中：「You are a general-purpose subagent working for a parent agent」等固定开头</td><td><span class="conf-mid">中：请求体内可解析</span></td></tr>
+<tr><td><b>Hermes</b></td><td><code>X-Hermes-Session-Id</code> 会话绑定头（后台完成经自 POST 归因回源）</td><td>子代理稳定 ID sa-{i}-{hex8} + parent_subagent_id + tui_depth；TUI RPC delegation.status 直接暴露 {subagent_id,parent_id,depth,model}</td><td><b>✓ 协议层显式</b>+谱系校验函数 _is_descendant_of</td><td>强："You are a focused subagent working on a specific delegated task."</td><td><span class="conf-high">强：协议层父子链路</span></td></tr>
+<tr><td><b>OpenClaw</b></td><td>Gateway 内部路由用自描述会话键 agent:&lt;id&gt;:subagent:&lt;uuid&gt;</td><td>血统元数据 withAgentRuntimeExecutionLineage{relation,requesterRef,controllerRef,depth} + 策略 sha256 指纹；child_spawned 状态事件 actorId=父会话键</td><td><b>✓✓ 最结构化</b>（lineage + 事件审计双轨）</td><td>强：固定标记 # Subagent Context 与 [Subagent Task]</td><td><span class="conf-high">强：内部最结构化，外部可见性取决于部署</span></td></tr>
+<tr><td><b>DeepSeek Harness</b></td><td class="conf-low">未公开</td><td class="conf-low">未公开</td><td class="conf-low">—</td><td class="conf-low">未公开</td><td class="conf-low">未知</td></tr>
+</table>
+
+<div class="note"><b>一句话总览：</b>八家全部采用「独立子会话」模型（无一共享父消息数组跑增量），分歧集中在三点——要不要提供 fork 继承、并发上限差 5 倍（6~32）、以及<b>归因信号的有意与否</b>：Codex/OpenClaw/Hermes 把父子链路做成了协议的一部分，Grok/Qwen 让实例 ID 自然出现在头或键里，而 Claude Code 和 OpenCode 的子代理流量在网络层面目模糊，只能靠 system prompt 指纹辨认。</div>
+
+<!-- ================= 2. Claude Code ================= -->
+<h2 id="claude-code"><span class="section-label">2.</span> Claude Code（Agent 工具 + 父子共享 session_id 的归因盲区）</h2>
+
+<h3>2.1 编排机制</h3>
+<p>工具名 <code>Agent</code>，旧线协议名 <code>Task</code> 作为 alias 保留兼容（<code>src/tools/AgentTool/constants.ts:1-4</code>、<code>AgentTool.tsx:227</code>）。参数：description/prompt 必填，subagent_type/model(sonnet/opus/haiku)/run_in_background 可选，多代理扩展参数 name/team_name/mode 与 isolation/cwd（<code>AgentTool.tsx:81-107</code>）。subagent_type 省略时按 fork 门控决定走 fork 或默认 general-purpose（<code>:310-316</code>）。</p>
+<p><b>执行模型是全新 API 会话</b>：普通路径下子代理的消息数组只有一条 <code>createUserMessage({content: prompt})</code>（<code>AgentTool.tsx:537-540</code>），以它为 initialMessages 起独立 query 循环（<code>runAgent.ts:748-757</code>）；父传子的全部内容 = 该 agent 定义自己的 system prompt 加环境详情增强（<code>AgentTool.tsx:519-531</code>）。<b>例外是 fork 路径</b>：子继承父的完整对话上下文与父已渲染 system prompt 的逐字节副本（源码注释明说这是为了缓存一致），消息由 buildForkedMessages 构造——克隆父 assistant 全部 tool_use、占位 tool_result、附每子指令，并插入 <code>&lt;fork_boilerplate&gt;</code> 标记（<code>AgentTool.tsx:484-500,620-633</code>、<code>forkSubagent.ts:94-120</code>）。</p>
+<ul>
+<li><b>模型解析链</b>：env CLAUDE_CODE_SUBAGENT_MODEL &gt; 工具参数 model &gt; agent 定义 frontmatter &gt; 继承父（默认 'inherit'）（<code>src/utils/model/agent.ts:24-45</code>）；内置 Explore 对外部用户固定 haiku。</li>
+<li><b>并发</b>：无全局上限常量——并行方式是单条 assistant 消息里放多个 Agent tool use block（提示词明确要求这么做，<code>prompt.ts:245-250</code>）；仅批量技能 MAX_AGENTS=30、hook 场景 MAX_AGENT_TURNS=50；同步代理 120 秒后自动转后台（<code>AgentTool.tsx:73-79</code>）。</li>
+<li><b>结果回传</b>：同步结束只返回单条总结消息（取最后一条含文本的 assistant 消息），工具提示词明说「结果对用户不可见」；后台完成经 task-notification 投递 finalMessage + token/tool 统计（<code>agentToolUtils.ts:276-357</code>、<code>AgentTool.tsx:976-989</code>）。</li>
+<li><b>嵌套</b>：general-purpose 声明 tools:'*' 可再开子代理；内置 Explore 显式禁用 Agent 工具；fork 子内再 fork 被运行时守卫双保险拒绝（querySource 检查 + fork_boilerplate 消息扫描）；深度无专门计数器，靠每 agent maxTurns 封顶（FORK_AGENT maxTurns 200）。</li>
+</ul>
+
+<h3>2.2 归因：结构化信号为零，只剩指纹</h3>
+<div class="warn"><b>核心发现——父子共享 session_id：</b>每个请求都带 <code>metadata.user_id</code>，其值是一段 JSON：<code>{device_id, account_uuid, session_id}</code>（可被 CLAUDE_CODE_EXTRA_METADATA 追加，<code>src/services/api/claude.ts:519-528</code>）。但 session_id 来自 CLI 进程级全局 getSessionId()（<code>src/bootstrap/state.ts:331,431-432</code>）——<b>父与所有子代理共用同一个值</b>。也就是说网关即使完整解析 metadata，也无法从这一字段区分主任务与它的任何子代理。</div>
+<ul>
+<li><b>无 per-request 头差异</b>：不存在标识 agent 类型的 HTTP 头或 beta header；beta 集合只随模型变化（getModelBetas）。</li>
+<li><b>最强识别信号是 system prompt 首句指纹</b>：内置子代理均以固定句式开头——general-purpose「You are an agent for Claude Code…」、Explore「You are a file search specialist for Claude Code…」（<code>built-in/generalPurposeAgent.ts:1</code>、<code>exploreAgent.ts:22</code>）；主线程则是完整的主系统提示词。次级特征：普通子代理 thinkingConfig 被强制 disabled（fork 子除外，<code>runAgent.ts:676-684</code>）；fork 流量请求前缀与父字节一致且消息含 fork_boilerplate 标签（<code>forkSubagent.ts:9-12</code>）。</li>
+<li><b>agent 类型只活在客户端遥测里</b>：querySource = 'agent:builtin:&lt;type&gt;' | 'agent:custom'（<code>src/utils/promptCategory.ts:19-27</code>）；埋点 tengu_agent_tool_selected{agent_type, model} 走 OTel 一方日志——这些都不随模型请求出网。</li>
+<li><b>usage 聚合不分家</b>：成本在共享 API 层累加进全 session 全局状态（addToTotalSessionCost，<code>src/cost-tracker.ts:278-296</code>），每个子代理的 query 也走同一入口；/cost 只报总量 + 按模型分解，不按 agent 分。每子代理粒度的 token 只存在于后台任务 tracker 与 tengu_agent_tool_completed 埋点中；辅助设施有 Perfetto 追踪注册 (agentId, agentType, parentId)（<code>runAgent.ts:355-364</code>）。</li>
+</ul>
+
+<!-- ================= 3. Codex CLI ================= -->
+<h2 id="codex"><span class="section-label">3.</span> Codex CLI（spawn_agent 多线程协作 + 全场最丰富的 HTTP 归因信号）</h2>
+
+<h3>3.1 编排机制</h3>
+<p>Codex 把多代理做成了一组协作工具而非一次性派活：V2 为平铺 function <code>spawn_agent</code>（必填 task_name+message），配套 <code>send_message / wait_agent / interrupt_agent / followup_task / list_agents</code> 五件套（<code>core/src/tools/handlers/multi_agents_v2/</code> 各文件；spec 定义 <code>multi_agents_spec.rs:100-142</code>）。全参数包括 message/task_name/agent_type/<b>fork_turns</b>/model/reasoning_effort/service_tier。</p>
+<ul>
+<li><b>独立 Session/thread</b>：codex_delegate 新建 Session::spawn，独立 rollout 与上下文管理器，审批策略强制 never（<code>core/src/codex_delegate.rs:60-135</code>）。</li>
+<li><b>默认 fork 继承</b>：fork_turns 默认 "all" 继承父全部轮次（FullHistory），可为 none 或 N；full-history fork 且未指定 role 时继承父 developer_instructions；继承条目有裁剪规则（<code>multi_agents_v2/spawn.rs:126-141,280-315</code>、<code>agent/control/spawn.rs:52-90</code>）。这与 Claude Code 的「默认全新会话」正好相反。</li>
+<li><b>父子显式传参</b>：session_source = SubAgent(...)、parent_thread_id、thread_source=Subagent 显式传入（<code>codex_delegate.rs:84-110</code>）；user_instructions 从父继承。</li>
+<li><b>并发双层控制</b>：配置 agents.max_concurrent_threads_per_session 默认 <b>6</b>（DEFAULT_AGENT_MAX_THREADS，<code>config/mod.rs:225</code>）；注册表槽位 reserve_spawn_slot 超额报 AgentLimitReached + 运行时限流器仅作用于 V2 SubAgent（<code>agent/registry.rs:96-110</code>、<code>agent/control/execution.rs:46-98</code>）。槽位需 close_agent 显式释放（completed 也占位）。</li>
+<li><b>结果回传双向</b>：子线程事件流经 forward_events 转发；父用 wait_agent 收割最终态 Completed(final assistant message)；状态变化以 <code>&lt;subagent_notification&gt;</code> 用户角色片段注入父对话，过程进度落 TurnItem（<code>protocol/src/protocol.rs:1748-1760</code>、<code>context/subagent_notification.rs:29-44</code>）。</li>
+<li><b>嵌套深度显式建模</b>：SessionSource::SubAgent(ThreadSpawn{parent_thread_id, depth, agent_path, nickname, role})，子深度 = 父深度+1，超限判断配 agents.max_depth（<code>protocol.rs:2587-2680</code>、<code>registry.rs:79-93</code>）。</li>
+</ul>
+
+<h3>3.2 归因：三重冗余的父子链路（网关视角全场最佳）</h3>
+<table>
+<tr><th>层</th><th>字段</th><th>位置</th></tr>
+<tr><td rowspan="2">HTTP 头</td><td><code>x-codex-parent-thread-id</code>、<code>x-openai-subagent</code>（取值 review/compact/memory_consolidation/<b>collab_spawn</b>）、x-codex-window-id、x-codex-turn-metadata、originator</td><td><code>core/src/client.rs:148,151,621-657</code>、<code>responses_metadata.rs:399-414</code></td></tr>
+<tr><td>User-Agent 不随子代理变化（全局 codex_cli_rs），仅线程 originator 与默认不同才覆写</td><td><code>login/src/auth/default_client.rs:41</code>、<code>:133-143</code></td></tr>
+<tr><td rowspan="2">请求体</td><td>client_metadata：session_id/thread_id/window_id/turn_id/<b>parent_thread_id/parent_turn_id/root_turn_id</b></td><td><code>responses_metadata.rs:280-320</code></td></tr>
+<tr><td>turn-metadata 大 blob 内含 <b>agent_name</b>(AgentPath)/<b>subagent_kind</b>/<b>thread_source</b>/<b>forked_from_thread_id</b></td><td><code>:355-395</code>、字段常量表 <code>:29-55</code></td></tr>
+<tr><td>缓存键</td><td>prompt_cache_key：Internal 来源且有 parent_thread_id 时为 <code>{source}:{parent_thread_id}</code> 格式；其余为 responses_metadata.session_id</td><td><code>client.rs:484-496</code>、<code>common.rs:270</code></td></tr>
+</table>
+<div class="note"><b>一个反直觉细节：</b>非 root 子代理的 session_id 一律复用根会话的 session_id（<code>session/session.rs:770-777</code>）——wiremock 测试固化了「父子 thread-id 不同、session-id 相同」的契约（<code>core/tests/suite/prompt_cache_key.rs:130-158</code>）。也就是说 Codex 里区分身份要靠 <b>thread_id 维度</b>（每请求体必带），而不是 session_id；这一点与 Claude Code 恰成对照：Claude 连 thread 维度都没有。</div>
+<p><b>usage 聚合</b>：每个 Session 独立累计 TokenUsageInfo（total_token_usage 逐次 add_assign，<code>protocol/src/protocol.rs:2101-2140</code>、写入点 <code>context_manager/history.rs:96-118</code>）；<b>没有把子线程 usage 自动并入父线程总量</b>的通用路径——唯一显式合并样例是 guardian review 用 start/end 差值（<code>guardian/review_session.rs:161-168</code>）；TUI /status 只展示本线程 total。协作调用另有分析事件 track_collab_tool_call（带 model/reasoning_effort/agents_states）。这意味着网关若按 thread_id 分账，比客户端自带的报表还细。</p>
+
+<!-- ================= 4. Grok Build ================= -->
+<h2 id="grok-build"><span class="section-label">4.</span> Grok Build（task/spawn_subagent + 头部直通子会话 ID）</h2>
+
+<h3>4.1 编排机制</h3>
+<p>规范工具名 <code>task</code>，同时接受 Task/spawn_subagent 三种拼写（<code>xai-grok-tools/src/implementations/grok_build/task/mod.rs:180-188</code>）；编排器预设会把工具改名为 spawn_subagent、参数 run_in_background→background（<code>xai-grok-agent/src/config.rs:149-157</code>）。参数：prompt/description/subagent_type/run_in_background(默认 true)/isolation/resume_from/cwd/model/task_id（<code>xai-tool-types/src/task.rs:14-59</code>）；内置子代理三种 general-purpose/explore/plan。</p>
+<ul>
+<li><b>完全独立子会话</b>：child_session_id = 子代理的 uuid v7，新建持久化目录与 chat state（<code>subagent/handle_request.rs:459-462,640-652</code>）。上下文三来源 New/Forked/Resumed——Forked 把父历史作 <code>&lt;background_context&gt;</code> 注入，但<b>模型发起的 spawn 固定 fork_context:false 即全新消息数组</b>（<code>subagent/mod.rs:53-62</code>、<code>task/mod.rs:550</code>）。</li>
+<li><b>父传子四件套</b>：任务 prompt + persona 指令（system-reminder 形式）+ role prompt + agent 定义 prompt_body；子代理用独立的紧凑系统提示模板（PromptAudience::Subagent，非父模板），启动提示携带 is_subagent:true / parent_session_id / subagent_type（<code>handle_request.rs:505-520,986-992,1085</code>、<code>prompt/template.rs:49-50</code>）。</li>
+<li><b>模型解析三级</b>：runtime override &gt; agent 定义 model &gt; 父模型兜底；resume 时强制钉住源模型忽略调用方覆盖；另有 [subagents] 级 model_overrides 配置（<code>handle_request.rs:388-420,169-181</code>、<code>subagent_coordinator.rs:385-390</code>）。</li>
+<li><b>并发上限 32 全场最高</b>：DEFAULT_MAX_CONCURRENT=32，env GROK_MAX_CONCURRENT_SUBAGENTS 可调，超限行为可配 queue|fail（默认排队）；前台等待预算 600s 超时自动转后台（<code>task/admission.rs:6,41-58,104-127</code>、<code>subagent_coordinator.rs:168-173</code>）。</li>
+<li><b>结果回传双通道</b>：阻塞模式返回 SubagentCompleted{output, subagent_id, tool_calls, turns, duration_ms} 直接进父对话工具结果；后台 fire-and-forget + 完成后向父会话注入 system-reminder（轮次间缓冲投递）；ACP 事件 SubagentSpawned/Finished 含 tokens_used 提供中途可见性（<code>task/mod.rs:553-661</code>、<code>reminders/task_completion.rs:411-497</code>、<code>notification.rs:1686-1710</code>）。</li>
+<li><b>防递归靠剥工具</b>：MAX_SUBAGENT_DEPTH=1，depth 达上限时直接从子的工具集中剥离 task 工具（而非运行时报错）；嵌套 spawn 重挂到根会话（<code>task/mod.rs:36-46,365-373</code>、<code>coordinator/spawn.rs:110-152</code>）。</li>
+</ul>
+
+<h3>4.2 归因：HTTP 头直通子会话实例 ID</h3>
+<p>Grok Build 的每个采样请求固定携带 8 个自描述头：<code>x-grok-conv-id / x-grok-req-id / x-grok-model-override / x-grok-session-id / x-grok-agent-id</code> 及可选 x-grok-turn-idx/-deployment-id/-user-id（<code>xai-grok-sampler/src/client.rs:49-78</code>）。关键事实：<b>子代理请求的 x-grok-session-id 与 x-grok-conv-id 都取子会话自身的 uuid</b>（<code>session/acp_session_impl/turn.rs:2290-2320</code>、<code>xai-chat-state/src/actor/request_builder.rs:101</code>）——网关凭这一个头就能把请求精确归因到具体的子代理实例，并与父会话及其他兄弟子代理区分。两个限制：x-grok-agent-id 是进程级常量无区分度；<b>父子关系不在 HTTP 层表达</b>——它落在磁盘 SubagentMeta（parent_session_id 写入父会话目录 subagents/&lt;id&gt;/）与 GCS trace 元数据（parent_prompt_id/depth/isolation_mode）中（<code>handle_request.rs:518-580</code>）。</p>
+<p><b>辅助指纹</b>：子模板首句固定「You are a Grok Build subagent — a focused worker delegated a specific task.」（<code>templates/subagent_prompt.md:1</code>）；子代理被剥离 ask_user_question 工具造成 tools 数组形状差异（<code>subagent_coordinator.rs:52-54</code>）。</p>
+<p><b>usage 聚合是全场唯一有「回写父账本」设计的</b>：从子会话 chat-state 账本取 by-model 用量后，通过 SessionCommand::RecordSubagentUsage{by_model, parent_prompt_id, incomplete} 回写父会话；父侧折账归属当前 prompt 或仅 session 级（嵌套欠账有 sticky 标记防丢）；遥测事件 SubagentLaunched/SubagentLimitHit 记录编排行为（<code>subagent/attempt_runner.rs:266-333</code>、<code>run_loop.rs:1094-1120</code>、<code>updates.rs:147-174</code>、<code>handle_request.rs:944-953</code>）。</p>
+
+<!-- ================= 5. OpenCode ================= -->
+<h2 id="opencode"><span class="section-label">5.</span> OpenCode（task 工具 + 网络层同质化，归因最难）</h2>
+
+<h3>5.1 编排机制</h3>
+<p>工具名固定 <code>task</code>（<code>packages/opencode/src/tool/task.ts:19</code>），参数 description/prompt/subagent_type/task_id(恢复旧子会话续跑)/command/background。内置 subagent 型 agent 只有 general 与 explore（mode:"subagent"，<code>agent/agent.ts:180-217</code>），用户 config 可增删改。执行模型：sessions.create({parentID}) 创建全新子会话并跑完整 SessionPrompt 循环，父只传任务 prompt（<code>task.ts:158-212</code>）；权限派生自父会话 deny 规则与子 agent 自身规则合并。系统提示组装顺序：[agent.prompt 有则整体替换 provider 基础提示] + env + instructions + mcp + skills（<code>session/llm/request.ts:57-66</code>）。</p>
+<ul>
+<li><b>模型选择</b>：子 agent.config 可配 model，否则继承父 assistant 消息的 modelID/providerID；variant 仅在未显式指定模型时继承父值（<code>task.ts:178-210</code>）。</li>
+<li><b>并发无数值上限</b>：同一助手消息内多个 tool call 以 concurrency:"unbounded" 并发等待，即可并行发多个 task；后台子代理需 OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true 实验开关（<code>processor.ts:571-575</code>、<code>effect/runtime-flags.ts:43</code>）。</li>
+<li><b>结果回传</b>：前台等待完成后把最终 text 包成 <code>&lt;task id=… state="completed"&gt;&lt;task_result&gt;…&lt;/task_result&gt;&lt;/task&gt;</code> 进父对话；后台完成以 synthetic 文本 part 注入父会话；tool part metadata 暴露 parentSessionId/sessionId/model/background/jobId，且子会话本身是独立可见的会话行（<code>task.ts:67-78,186-199,229-258,330-347</code>）。</li>
+<li><b>嵌套双保险</b>：沿 parentID 链计算深度，≥cfg.subagent_depth(默认 1) 即拒绝；子会话权限默认 deny task/todowrite 除非子 agent 显式允许（<code>task.ts:105-118</code>、<code>agent/subagent-permissions.ts:17-23</code>）。</li>
+</ul>
+
+<h3>5.2 归因：八家中网络层最同质的一家</h3>
+<div class="warn"><b>核心发现：</b>OpenCode 的模型请求经 Vercel AI SDK 发出，headers 只来自 provider 配置——<b>没有任何子代理或会话专用 HTTP 头</b>（<code>session/llm/request.ts:84-100</code>）。唯一的会话标识在 OTel 遥测层（experimental_telemetry.metadata.sessionId = 子会话自身 id，functionId="session.llm"），但遥测是否出网取决于导出配置，不进请求体/头（<code>llm.ts:344-351</code>）。父子关系只存在于本地 DB 的 session 行 parentID 字段，完全不出网。</div>
+<p><b>仅存的启发式信号</b>：① 子 agent 若有专属 prompt 会替换基础提示（如 explore.txt）；② 环境块固定句式 "You are powered by the model named …"；③ 子会话历史全新——首条 user 即任务 prompt、历史短，与主会话的长前缀形态截然不同；④ 权限 deny 导致 tools 数组缺 task/todowrite 定义。<b>usage 聚合</b>：每条 assistant message 流式累计 cost/tokens 后持久化到会话行的 tokens_* 列（归一化含 cache read/write 分层计价），但<b>父会话不汇总子代理用量</b>——子用量记在子会话自己的行上，task 工具只回传文本（<code>session/session.ts:97-144,341-403</code>、<code>processor.ts:444-454</code>）。</p>
+
+<!-- ================= 6. Qwen Code ================= -->
+<h2 id="qwen-code"><span class="section-label">6.</span> Qwen Code（Agent 工具 + promptId 内嵌子代理复合键）</h2>
+
+<h3>6.1 编排机制</h3>
+<p>内置 <code>Agent</code> 工具，参数接口相当宽：prompt/description/subagent_type/model/fork_turns/fork_tools/fork_profile/run_in_background/name/isolation:'worktree'/working_dir（<code>packages/core/src/tools/agent/agent.ts:206-250,668</code>）。子代理定义来自 frontmatter 文件或内置注册表，默认 general-purpose，另有 Explore/statusline-setup/review 等。特色是 <b>name 参数经 TeamManager 派生常驻队友</b>——队友必并发、经团队消息汇报（<code>agent.ts:224-227,829</code>）。</p>
+<ul>
+<li><b>上下文</b>：常规子代理与队友不继承父会话历史（headless 独立 Config 与工具注册表）；仅 <code>subagent_type:"fork"</code> 继承父对话，可选最近 N 个真实用户轮次 fork_turns；fork 的系统提示直接写明 "Do not spawn sub-agents"（<code>agent.ts:858</code>、<code>tools/agent/fork-subagent.ts:29-32,218-251</code>）。</li>
+<li><b>模型选择走「档位」制</b>：model 参数是 grade 经 subagentManager.resolveModelGrade 解析；带显式 model 的自定义代理不可被覆盖；缺省 inherit 时回落到父当前模型（<code>agent.ts:2594-2682</code>、<code>subagents/subagent-manager.ts:147-166</code>）。</li>
+<li><b>并发两层限制</b>：后台子代理全局上限 DEFAULT_MAX_CONCURRENT_BACKGROUND_AGENTS=10（env QWEN_CODE_MAX_BACKGROUND_AGENTS 可调）+ 按模型 ID 的每模型 cap 映射；满员排队等槽；终态保留上限 MAX_RETAINED_TERMINAL_AGENTS=32（<code>agents/background-tasks.ts:50-148</code>、<code>agent.ts:2699-2719</code>）。</li>
+<li><b>结果回传</b>：顶层后台子代理终态以 task-notification 注入父对话——注释称其为「父方唯一回传通道」；前台内联返回 llmContent + returnDisplay(task_execution)；模型可见结果经 toModelVisibleSubagentResult 剥离 analysis 块（<code>background-tasks.ts:15</code>、<code>agents/subagent-result.ts:19-60</code>）。</li>
+<li><b>防递归三道闸</b>：后台委派 v1 仅限顶层——嵌套调用中显式 run_in_background:true 被运行时守卫拒绝、隐式请求降级为前台同步；fork 提示禁再 spawn；read_only 队友的执行允许表屏蔽 nested agents（<code>agent.ts:2630-2643,290-297</code>）。</li>
+</ul>
+
+<h3>6.2 归因：把身份编进每次请求的 promptId</h3>
+<p>Qwen Code 没有专用 HTTP 头，但有一个精巧的设计：<b>每次 LLM 请求的 promptId 复合键 = <code>${sessionId}#${subagentId}#${promptOrdinal}</code></b>，其中 subagentId = <code>${name}-${randomPart}</code>（<code>agents/runtime/agent-core.ts:883,922,463</code>）。loop 检测器同样以 sessionId#subagentId 作键。这意味着网关从请求体提取 prompt-id 类字段后，按 <code>#</code> 切分即可得到「父会话 / 哪个子代理实例 / 第几个请求」三元组——归因信息随每个请求自然出网，不需要额外协议支持。运行时事件（compact、finish 等）也统一携带 subagentId 字段。</p>
+<p><b>system prompt 指纹</b>：无统一机器标记，但内置代理各有固定提示词开头，如 general-purpose 的 "You are a general-purpose subagent working for a parent agent"（<code>subagents/builtin-agents.ts:54</code>）。<b>usage 聚合</b>：每个子代理运行实例持有独立统计对象（input/output/thought/cached/totalTokens + 工具级用量，<code>runtime/agent-statistics.ts:24-43</code>）；本次检索范围内未见把子代理 token 回写进父会话账本的路径——与 Grok Build 的主动回写形成对比。</p>
+
+<!-- ================= 7. Hermes ================= -->
+<h2 id="hermes"><span class="section-label">7.</span> Hermes（delegate_task + 协议层父子链路与逐子代理成本核算）</h2>
+
+<h3>7.1 编排机制</h3>
+<p>工具名 <code>delegate_task</code>，注册于 delegation 工具集（描述 "Spawn subagents with isolated context"），参数 goal/context/tasks[]/<b>role(leaf|orchestrator)</b>/output_schema/action(spawn|list|steer|stop)/subagent_id/message（<code>toolsets.py:300-301</code>、<code>tools/delegate_tool.py:4730-4921</code>）。模块 docstring 明示执行模型：「fresh conversation (no parent history)、own task_id、inherit parent toolsets、focused system prompt」，父上下文只见委派调用与汇总结果。</p>
+<ul>
+<li><b>硬性剥夺清单</b>：DELEGATE_BLOCKED_TOOLS = {delegate_task, clarify, memory, send_message, cronjob}——子代理天然不能再委派、不能反问用户、不能动记忆（<code>:49-56</code>）；子系统提示固定开头 "You are a focused subagent working on a specific delegated task."（<code>:1191</code>）。</li>
+<li><b>跨供应商路由能力</b>：单任务 model 参数覆盖否则继承父；delegation 配置可整体 override provider/base_url/api_key/max_tokens——即子代理可以整体路由到另一个便宜供应商（如 OpenRouter），这是八家中唯一把「子代理换供应商」做成一等配置的（<code>:1587-1609,1755,1891-1898</code>）。</li>
+<li><b>并发默认 10</b>：delegation.max_concurrent_children 可调（仅设下限 1，&gt;10 打一次性成本告警）；单轮超额 delegate 调用被截断到上限；每子代理独立迭代预算 max_iterations 默认 50（<code>:122,846-928,1737-1740</code>、<code>run_agent.py:4960-4978</code>）。</li>
+<li><b>整批聚合回传</b>：fan-out 作为异步单元 join 全部子代理后产出<b>一个合并 results 块</b>作为单条消息重新进入对话；不支持异步投递的会话降级同步或经自 POST /v1/chat/completions 带 X-Hermes-Session-Id 头唤醒原会话；每子代理有 append-only 实时日志文件（<code>:4080-4125</code>、<code>delegation_live_log.py:5-13</code>）。</li>
+<li><b>递归显式授权制</b>：默认 MAX_DEPTH=1 孙代拒绝；role='orchestrator' 才加回 delegation 工具集，深度超限时 role 自动降级 leaf；谱系校验辅助 _is_descendant_of/_resolve_session_lineage/_owns_subagent_record（<code>:129-132,1617-1701,380-426</code>）。</li>
+</ul>
+
+<h3>7.2 归因：进程注册表 + 协议层父子字段 + 逐子代理成本</h3>
+<ul>
+<li><b>稳定 ID 体系</b>：每个子代理获得 sa-{task_index}-{uuid4.hex8}，嵌套时记录 parent_subagent_id 与 tui_depth；进程级归因注册表 get_subagent_attribution 由终端 task_id 反查 {subagent_id, goal, delegation_id}（活跃 + 近期 FIFO 上限 200）——子代理启动的后台进程天然携带此 ID（<code>delegate_tool.py:157-190,1630-1632</code>）。</li>
+<li><b>HTTP 头</b>：X-Hermes-Session-Id 为 API 会话绑定头——后台批次完成后以此自 POST 唤醒源会话，意味着子代理完成事件可通过该头归因回源（<code>:4106-4110</code>、<code>run_agent.py:352</code>）。</li>
+<li><b>TUI/gateway RPC 协议有专门委派方法</b>：delegation.status 返回 active 列表/paused/max_spawn_depth/max_concurrent_children，active 记录字段 {subagent_id, <b>parent_id</b>, <b>depth</b>, goal, model, started_at,…}——协议层直接暴露完整父子链路（<code>tui_gateway/methods_session.py:3253-3305</code>、<code>delegate_tool.py:356-360</code>）。</li>
+<li><b>usage 是全场最细粒度</b>：account_usage.py 记的是账户配额维度（Codex 5h 窗口/Anthropic OAuth/OpenRouter credits 等）而非 token 归因；真正的归因在 delegate 结果条目里——每子代理记录 tokens{input,output}（取自 child session 计数）、api_calls/duration/model/exit_reason/truncated/tool_trace，以及 <b>cost_usd 折算进父会话总开销</b>（_child_cost_usd 序列化前剥除，移植自 kilocode#9448）（<code>delegate_tool.py:3079-3130</code>、<code>agent/account_usage.py:26-45</code>）。注意一个易混点：kanban worker 以 env HERMES_KANBAN_TASK 标记且被从 delegate 子进程剥离——它是另一种后台形态，不占用委派并发额度。</li>
+</ul>
+
+<!-- ================= 8. OpenClaw ================= -->
+<h2 id="openclaw"><span class="section-label">8.</span> OpenClaw（sessions_spawn + 自描述会话键与血统元数据）</h2>
+
+<h3>8.1 编排机制</h3>
+<p>工具名 <code>sessions_spawn</code>（"Starts subagent or ACP-backed sessions with inherited tool policy and delivery context"），参数矩阵是八家最宽的：task/taskName/label/runtime(subagent|acp)/agentId/model/runTimeoutSeconds/thinking/cwd/mode(run|session)/cleanup/sandbox(inherit|require)/<b>context(isolated|fork)</b>/lightContext/collect/outputSchema/groupId/attachments/resumeSessionId（<code>src/agents/tools/sessions-spawn-tool.ts:62,130-260</code>）；配套 subagents（列表/控制）、sessions_yield、agents_wait/list 工具。</p>
+<ul>
+<li><b>会话键即身份</b>：mintSpawnSessionKey 铸造 <code>agent:&lt;targetAgentId&gt;:subagent:&lt;uuid&gt;</code>（incognito 变体替换为 :subagent:incognito-）；context:"fork" 仅拉取 requester transcript 且要求同 agent；父传子上下文写进子系统提示——任务 + [Subagent Task] + requester 会话键/渠道 + 自己的会话键（<code>spawn-plan.ts:51-57</code>、<code>subagent-spawn-child-plan.ts:194-200</code>、<code>subagent-system-prompt.ts:95-108</code>）。</li>
+<li><b>并发双层</b>：子代理并发默认 DEFAULT_SUBAGENT_MAX_CONCURRENT=8（顶层 agent 并发按 CPU 数钳制在 8..16）；每 agent 直系子代默认 5，经 resolveChildAdmission + countActiveRunsForSession 准入（<code>config/agent-limits.ts:3-48</code>、<code>spawn-plan.ts:22-23</code>）。</li>
+<li><b>推送式结果回传</b>：子系统提示明文规定 "Finish: final auto-reported to &lt;parent&gt;"、"Results auto-announce to you, not main"——完成后由 completion/announce 管线投递给 requester，<b>禁止轮询</b>；终态写信号日志且 watcher=requester；swarm 用 JSON Schema 校验结构化收集结果（<code>subagent-system-prompt.ts:55,76-77</code>、<code>sessions/session-state-events.ts:1029-1057</code>）。</li>
+<li><b>深度用会话键计数</b>：DEFAULT_SUBAGENT_MAX_SPAWN_DEPTH=1，深度 = 数会话键中 :subagent: 出现次数，超限直接 forbidden；子系统提示按 canSpawn 分支，depth≥2 输出 "Leaf worker: cannot spawn"；cron 也拒收 subagent 目标防异步递归（<code>session-key-utils.ts:323-344</code>、<code>cron/service/wake.ts:56</code>）。</li>
+</ul>
+
+<h3>8.2 归因：内部最结构化的血统体系</h3>
+<ul>
+<li><b>执行血统元数据</b>：spawn 时构造 withAgentRuntimeExecutionLineage{relation:"sessions_spawn", requesterRef/controllerRef/<b>depth</b>}，并对 spawn-depth/sandbox/inherited-tool/target 各策略做 sha256 指纹引用——不仅记录「谁生了谁」，还记录「继承了什么策略」（<code>subagent-spawn-execution-identity.ts:15-58</code>）。</li>
+<li><b>状态事件显式记父子边</b>：recordSubagentSpawned 写 kind:"child_spawned"、actorType:"agent"、<b>actorId=requesterSessionKey</b>（父）、watcherSessionKeys=[requester]、去重键 child-spawned:&lt;runId&gt;；终态 run_completed/run_failed 同样挂 watcher；注册表持久化 requesterSessionKey/requesterOrigin/requesterDisplayKey（<code>session-state-events.ts:1010-1057</code>、<code>registry/subagent-registry.types.ts:45-47</code>）。这套事件流本身就是审计日志。</li>
+<li><b>usage 消息级随 transcript</b>：assistant 消息携带 usage{input,output,cacheRead,cacheWrite,totalTokens,cost{input,output,cacheRead,cacheWrite,total}}；一个值得抄的细节：<b>自动化回写（cron 等）使用全零 usage + model:"automation-result" 溯源标记</b>，避免机器流量污染真实用量统计；注册表维度只记时间与结局不聚合 token（<code>sessions/background-session-result.ts:20,99-119</code>）。</li>
+<li>对外可见性说明：visible=true 的 spawn 走 dashboard 持久会话路径；对外 HTTP 层的归因信号取决于部署形态（Gateway 内部路由用自描述会话键），纯 API 观察者仍可靠系统提示固定标记 # Subagent Context 与 [Subagent Task] 辨认。</li>
+</ul>
+
+<!-- ================= 9. DeepSeek ================= -->
+<h2 id="deepseek"><span class="section-label">9.</span> DeepSeek Harness（公开资料推理，低置信度）</h2>
+<div class="warn">DeepSeek 官方编程 harness 无公开源码与文档描述其多代理机制，本节置信度标注为低。</div>
+<p><span class="conf-low">推理</span> 公开渠道未见 DeepSeek harness 有 Task/spawn 类子代理工具的证据；其官方 CLI 形态更接近单代理循环 + MCP 扩展。若存在内部多代理实现，参考其 API 生态（OpenAI 兼容）大概率不会超出本报告 Codex/OpenAI wire 的信号模式（thread/session 元数据 + 自动前缀缓存亲和键）。作为横向对照的价值：八家里有两家（Claude Code、OpenCode）已经证明了「没有结构化归因信号」是真实存在的常态，网关设计不能假设所有客户端都会配合。</p>
+
+<!-- ================= 10. 深度对比 ================= -->
+<h2 id="comparison"><span class="section-label">10.</span> 深度对比：归因信号强弱排序与事实标准</h2>
+
+<h3>10.1 归因信号强弱排序（网关可提取性视角）</h3>
+<table>
+<tr><th>排名</th><th>客户端</th><th>网关单凭一次拦截能拿到什么</th><th>还差什么</th></tr>
+<tr><td>1</td><td><b>Codex</b></td><td>x-openai-subagent 判定「是子代理」→ thread_id 定位实例 → parent_thread_id 回连父 → agent_name 读角色名。四问全能答。</td><td>无</td></tr>
+<tr><td>2</td><td><b>Grok Build</b></td><td>x-grok-session-id 直接等于子会话 uuid，实例级区分零成本；x-grok-model-override 直读生效模型。</td><td>父子边不在 HTTP 层，需按时间邻近性或磁盘元数据推断</td></tr>
+<tr><td>3</td><td><b>OpenClaw</b></td><td>系统提示 # Subagent Context/[Subagent Task] 标记 + 会话键格式（Gateway 部署可见）。</td><td>血统元数据在内部事件流，外部观察者拿不到 depth/requesterRef 全貌</td></tr>
+<tr><td>4</td><td><b>Hermes</b></td><td>X-Hermes-Session-Id 绑定源会话；system 指纹强。</td><td>sa-{i}-{hex8}/parent_id/depth 在进程注册表与 RPC 层，不出模型请求</td></tr>
+<tr><td>5</td><td><b>Qwen Code</b></td><td>promptId 复合键 sessionId#subagentId#n 可解析出三元组。</td><td>依赖字段名识别（各家 SDK 对 prompt-id 类参数命名不一）；无显式头</td></tr>
+<tr><td>6</td><td><b>Claude Code</b></td><td>metadata.user_id 解析出 account/device/session（但 session 父子共用）；system 首句指纹判「是子代理」及类型。</td><td><b>无法定位具体实例、无法建父子边</b></td></tr>
+<tr><td>7</td><td><b>OpenCode</b></td><td>几乎为零：只能靠「全新短历史 + 可能的 agent prompt 替换 + 缺失工具定义」猜测。</td><td>一切结构化信号都不出网</td></tr>
+</table>
+
+<h3>10.2 差异的本质：归因信号是副产品，不是设计目标</h3>
+<p>为什么 Codex/OpenClaw/Hermes 的信号这么全而 Claude Code/OpenCode 几乎没有？规律很清晰：<b>归因信号的丰富度跟随客户端自身的需求</b>——Codex 要做六件套协作（wait/interrupt/list 必须有稳定句柄）、OpenClaw 要做推送式 announce 与审计（必须记 requester 边）、Hermes 的 delegation 是产品级功能（要 pause/steer/status），这些能力倒逼出结构化身份体系。反过来，Claude Code 的子代理是一次性的 fire-and-forget 派活（结果就一条总结消息），进程内 ALS 遥测够用，自然没有为网络层归因做任何事。<b>给网关的启示：</b>不要期待客户端「配合归因」，要设计一个对最弱信号（Claude Code/OpenCode 形态）也兜得住的分类体系，把强信号当增益而非前提。</p>
+
+<h3>10.3 已成为事实标准的行为</h3>
+<ul>
+<li><b>独立子会话无一例外</b>：八家全部是「新消息数组从零开始」模型，没有任何一家让子代理增量读写父对话；fork（整段继承）只是复制快照的语法糖。对网关意味着：每个子代理的第一个请求都是一次<b>冷启动的全量前缀计费</b>（fork 场景例外——Claude/Grok/Qwen 的 fork 都刻意保持前缀字节一致以命中缓存，这又回到了上一期缓存报告的主题）。</li>
+<li><b>默认深度 1</b>：除 Claude Code general-purpose 与 Hermes orchestrator 显式授权外，所有实现默认禁止孙代；且主流防递归手段是「剥工具」而非运行时报错。</li>
+<li><b>子代理默认继承父模型</b>：全部支持覆盖但缺省都是 inherit；「便宜模型跑子代理」是配置项而非默认值。</li>
+<li><b>结果压缩成单条消息回传</b>：无论过程多少轮，回到父对话的都是一条总结（Hermes 是整批合并成一块）。父上下文永远不会被子代理的过程膨胀。</li>
+<li><b>并发上限谱系 6–32</b>：Codex 6 / OpenClaw 8 / Qwen·Hermes 10 / Grok 32；一次主任务的请求放大倍数 = min(并发, 任务数) × 每子代理轮数，网关容量规划应按此估算而非按人工交互频率。</li>
+</ul>
+
+<!-- ================= 11. 建议 ================= -->
+<h2 id="lessons"><span class="section-label">11.</span> 对 CrewRouter 网关的落地建议</h2>
+<div class="card">
+<p class="small">前提回顾：<code>server/routes/api.js</code> 是唯一转发出口，usage_records 已有 request_source/user_agent/plugin_meta 列，<code>routes/client-events.js</code> 的 client_events 表已带 harness/session_id/tool_name 维度，<code>routes/stats-report.js</code> 已有客户端上报通道。以下按优先级给出八条建议。</p>
+<ol>
+  <li><strong>在 api.js 建立统一的归因字段提取层（最高优先级）。</strong>转发前对请求做一次「归因体检」，结果落 usage_records 新增 JSON 列（或先塞进现有 plugin_meta）：① Anthropic wire → 解析 <code>metadata.user_id</code> 内嵌 JSON 取 session_id/account_uuid；② OpenAI Responses wire → body 的 client_metadata.thread_id/parent_thread_id/root_turn_id/agent_name；③ 任意 wire → 扫自定义头 x-codex-parent-thread-id、x-openai-subagent、x-grok-session-id、X-Hermes-Session-Id；④ 任意 wire → 提取 prompt-id 类字段按 # 切分（Qwen 形态）。这一步不改任何转发行为，纯观测，风险最低收益最大。</li>
+  <li><strong>定义「逻辑任务」聚合模型。</strong>账本顶层单位不应是请求也不应是 API key，而是「一次主任务 = 父会话 + 其全部子会话」。父子边的建立优先级：parent_thread_id（Codex，精确）&gt; x-grok-session-id 与父会话的时间邻近配对（Grok，需启发式）&gt; promptId 前缀共享（Qwen）&gt; 同 session_id 内 system 指纹突变（Claude Code，只能聚不能拆）&gt; 无信号按 key+时间窗（OpenCode）。管理端先按此模型出「任务视图」，再谈按任务限额。</li>
+  <li><strong>内置 system prompt 指纹分类器作兜底。</strong>本期收集的五条固定句式可直接做成特征库：「You are an agent for Claude Code」「You are a file search specialist for Claude Code」「You are a Grok Build subagent」「You are a focused subagent working on a specific delegated task」「# Subagent Context / [Subagent Task]」，外加两个形态特征：普通子代理 thinkingConfig disabled、首条 user 消息即完整任务 prompt 且历史极短。分类结果标注置信度入库，强信号出现时反向校正指纹库。</li>
+  <li><strong>用量报表打「子代理流量占比」指标。</strong>三家客户端的报表都有盲区——Claude /cost 不分 agent、Codex 不合并父子、OpenCode 不汇总子会话——网关恰好站在能看到全局的位置。建议在 admin/user 统计里增加：子代理请求数与 token 占比（凭第 1 条的提取结果）、平均每逻辑任务的请求放大倍数。这个数字对用户理解账单、对网关做容量规划都是刚需。</li>
+  <li><strong>限流与配额按逻辑任务设计。</strong>一次主任务的突发 = 子代理并发（业界默认 6~32）× 多轮迭代，瞬时 RPS 可能是单人交互的数十倍。现有按 key 的限流会被单个重度用户的并行 spawn 打满，误伤同 key 其他用途；建议配额维度加「每逻辑任务并发子会话数」软限制，超限时排队而非拒绝（对齐 Grok 的 queue 行为）。</li>
+  <li><strong>透传保真：归因与缓存字段一个都不能丢。</strong>转换层（providers/transforms/*.js）改写 body 时必须原样保留 metadata.user_id、prompt_cache_key、client_metadata——前者是本期归因的原料，后者是上期报告证明的缓存路由亲和键。同理自定义头不要在转发时剥离。</li>
+  <li><strong>网关自身发起的调用打零用量标记。</strong>借鉴 OpenClaw 的 automation-result 模式：fusion 面板（panel-runner/judge-analyzer/synthesizer）与后续任何 LLM 审计调用，在 usage_records 里用专用 request_source 标记并视情况不计费或单独计费，避免机器流量污染用户账单与命中率统计——这与第 4 点的占比指标互为补充。</li>
+  <li><strong>为「fork 流量」做缓存感知的特殊记账。</strong>Claude Code fork 子代理的请求前缀与父逐字节一致、Codex fork_turns 继承父历史——这类请求天然高缓存命中，若按裸 input tokens 计费展示会让用户以为成本爆炸。结合上期报告的三桶口径，任务视图里对 fork 流量单独标注「继承前缀命中」，展示 adjusted 口径而非原始口径。</li>
+</ol>
+<h4>一句话总结</h4>
+<p>八家客户端在子代理编排上已经收敛出稳定范式（独立会话、深度 1、继承父模型、单条回传），但在「要不要让网络层知道这是谁」上分成泾渭分明的两派。CrewRouter 作为传输层，恰好是唯一能把两派流量放进同一本账的位置——<strong>先用强信号建精确链路，再用指纹库兜住弱信号，最后把「逻辑任务」做成计费与限流的原子单位</strong>，这三步做完，网关对多代理时代的可观测性就超过了任何单一客户端自己的报表。</p>
+</div>
+
+</main>
+
+<footer>
+  CrewRouter · Harness 子代理编排与流量归因研究报告 · 2026-08-24 · 纯源码考古，不含运行时验证
+</footer>
+
+</body>
+</html>
