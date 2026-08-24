@@ -79,6 +79,9 @@
       "ru": "ru"
     }
   },
+  "gateway": {
+    "fourth_cache_breakpoint": false
+  },
   "store": {
     "seedDemo": true,
     "pluginSource": ["https://crewrouter.bloret.net"],

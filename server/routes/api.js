@@ -74,6 +74,8 @@ const {
   normalizeProviderKeyEntries
 } = require('../utils/provider-keys');
 const ResponsesUpstream = require('../utils/responses-upstream');
+const { extractAttribution } = require('../utils/attribution');
+const crypto = require('crypto');
 
 // 非流式：上游整段响应（headers+body）超时。30s 对免费/慢模型过短，易误杀。
 const UPSTREAM_TIMEOUT = 180000; // 3 分钟
@@ -147,6 +149,7 @@ function buildUpstreamExceptionError(error, format = 'openai') {
  */
 async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, maxRetries, logPrefix, hookCtx = null) {
   let response;
+  const affinityKey = hookCtx?.affinityKey || null;
   let proxyInfo = currentProxyInfo;
   let lastError = null;
   const attempts = Math.max(1, parseInt(maxRetries, 10) || 1);
@@ -203,7 +206,7 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
         proxyPool.markProxy429(provider.id, proxyInfo.proxyId);
       }
       // 有代理（供应商级或全局强制）时尝试切换；无代理则继续按 attempts 直连重试
-      const nextProxy = await proxyPool.getProxyAgent(provider);
+      const nextProxy = await proxyPool.getProxyAgent(provider, affinityKey);
       if (nextProxy || proxyInfo) {
         proxyInfo = nextProxy;
         if (!proxyInfo && retry >= attempts - 1) break;
@@ -216,7 +219,7 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
     }
 
     if (response.status === 429 && retry < attempts - 1) {
-      const nextProxy = await proxyPool.getProxyAgent(provider);
+      const nextProxy = await proxyPool.getProxyAgent(provider, affinityKey);
       if (!nextProxy && !proxyInfo) break;
       const errText = await response.text().catch(() => '');
       lastError = new Error(`HTTP 429${errText ? ': ' + String(errText).slice(0, 200) : ''}`);
@@ -224,7 +227,7 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
       if (proxyInfo?.proxyId) {
         proxyPool.markProxy429(provider.id, proxyInfo.proxyId);
       }
-      proxyInfo = nextProxy || await proxyPool.getProxyAgent(provider);
+      proxyInfo = nextProxy || await proxyPool.getProxyAgent(provider, affinityKey);
       if (!proxyInfo) break;
       response = null;
       continue;
@@ -595,16 +598,53 @@ async function pluginMetaFrom(ctxMeta) {
 // 超大 messages 时标记 customInstructions = { skipped: 'size' }。
 async function buildUsagePluginMeta(ctxMeta, messages, system, req) {
   const pluginMeta = await pluginMetaFrom(ctxMeta);
-  if (messages == null) return pluginMeta;
+  const attribution = req ? extractAttribution(req) : null;
+  const withAttribution = attribution && (attribution.parentThreadId || attribution.subagent || attribution.sessionId || attribution.source.length)
+    ? { ...(pluginMeta || {}), attribution }
+    : pluginMeta;
+  if (messages == null) return withAttribution;
   const requestSource = req ? clientMetaFromReq(req).requestSource : null;
   const res = extractCustomInstructions(messages, system, { requestSource });
   if (res.skipped === 'size') {
-    return { ...(pluginMeta || {}), customInstructions: { skipped: 'size' } };
+    return { ...(withAttribution || {}), customInstructions: { skipped: 'size' } };
   }
   if (res.items && res.items.length) {
-    return { ...(pluginMeta || {}), customInstructions: res.items };
+    return { ...(withAttribution || {}), customInstructions: res.items };
   }
-  return pluginMeta;
+  return withAttribution;
+}
+
+function affinityKeyForRequest(req, body) {
+  const source = body || req?.body || {};
+  const promptCacheKey = source.prompt_cache_key;
+  if (typeof promptCacheKey === 'string' && promptCacheKey.trim()) return promptCacheKey.trim();
+  const userId = source.metadata?.user_id;
+  if (typeof userId === 'string' && userId.trim()) return userId.trim();
+  const system = source.system ?? source.instructions ?? (Array.isArray(source.messages) ? source.messages.find(m => m.role === 'system')?.content : '');
+  const text = typeof system === 'string' ? system : JSON.stringify(system || '');
+  return crypto.createHash('sha256').update(text).digest('hex').slice(0, 16);
+}
+
+function addFourthCacheBreakpoint(upstreamBody, sourceSystem = upstreamBody.system, enabled = config.gateway?.fourth_cache_breakpoint) {
+  if (!enabled || !Array.isArray(upstreamBody.messages) || upstreamBody.messages.length < 6) return false;
+  const cacheCount = (Array.isArray(sourceSystem) ? sourceSystem : [sourceSystem]).reduce((count, part) => {
+    if (part && typeof part === 'object' && part.cache_control) return count + 1;
+    return count;
+  }, 0) + upstreamBody.messages.reduce((count, message) => {
+    const content = Array.isArray(message.content) ? message.content : [];
+    return count + content.filter(block => block && typeof block === 'object' && block.cache_control).length;
+  }, 0);
+  if (cacheCount > 3 || cacheCount === 0) return false;
+  const lastUser = upstreamBody.messages[upstreamBody.messages.length - 1];
+  if (!lastUser || lastUser.role !== 'user') return false;
+  const content = Array.isArray(lastUser.content) ? lastUser.content : [{ type: 'text', text: String(lastUser.content || '') }];
+  if (content.some(block => block?.type === 'thinking')) return false;
+  const lastBlock = content[content.length - 1];
+  if (!lastBlock || typeof lastBlock !== 'object') return false;
+  lastBlock.cache_control = { type: 'ephemeral' };
+  lastUser.content = content;
+  Logger.debug('[proxyAnthropic] 已补充第四个缓存断点');
+  return true;
 }
 
 // 计费调整钩子：插件可按 倍率/固定额/重写 修改单次扣费（billing:calculate）
@@ -1251,7 +1291,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   }
 
   // 代理池支持：获取代理 agent 和重试次数
-  const proxyInfo = await proxyPool.getProxyAgent(provider);
+  const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
   const maxRetries = Math.min(proxyList.length || 1, 3);
   let currentProxyInfo = proxyInfo;
@@ -1324,7 +1364,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       currentProxyInfo,
       maxRetries,
       'proxyOpenAI',
-      { model, requestType: 'proxyOpenAI' }
+      { model, requestType: 'proxyOpenAI', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -1417,7 +1457,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
         // 插件 gateway:responseChunk 钩子：改写/丢弃 SSE 数据帧
         let frame = dataStr;
         if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
-          const out = await pluginHooks.maybeRewriteChunk(dataStr, { model, requestType: 'proxyOpenAI' });
+          const out = await pluginHooks.maybeRewriteChunk(dataStr, { model, requestType: 'proxyOpenAI', affinityKey: affinityKeyForRequest(req, req.body) });
           if (!out) return; // 空字符串视为丢弃该帧
           frame = out;
         }
@@ -1557,7 +1597,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       currentProxyInfo,
       maxRetries,
       'proxyOpenAI',
-      { model, requestType: 'proxyOpenAI' }
+      { model, requestType: 'proxyOpenAI', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -1652,7 +1692,7 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
     headers['Authorization'] = `Bearer ${provider.api_key}`;
   }
 
-  const proxyInfo = await proxyPool.getProxyAgent(provider);
+  const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
   const maxRetries = Math.min(proxyList.length || 1, 3);
   let currentProxyInfo = proxyInfo;
@@ -1678,7 +1718,7 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
     currentProxyInfo,
     maxRetries,
     'proxyChatToResponses',
-    { model, requestType: 'proxyChatToResponses' }
+    { model, requestType: 'proxyChatToResponses', affinityKey: affinityKeyForRequest(req, req.body) }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -1771,7 +1811,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   }
 
   // 代理池支持：获取代理 agent 和重试次数
-  const proxyInfo = await proxyPool.getProxyAgent(provider);
+  const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
   const maxRetries = Math.min(proxyList.length || 1, 3);
   let currentProxyInfo = proxyInfo;
@@ -1864,6 +1904,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   if (systemParts.length > 0) {
     upstreamBody.system = systemParts.join('\n');
   }
+  addFourthCacheBreakpoint(upstreamBody, system);
 
   if (body.temperature !== undefined) upstreamBody.temperature = body.temperature;
   if (body.top_p !== undefined) upstreamBody.top_p = body.top_p;
@@ -1903,7 +1944,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       currentProxyInfo,
       maxRetries,
       'proxyAnthropic',
-      { model, requestType: 'proxyAnthropic' }
+      { model, requestType: 'proxyAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -2010,7 +2051,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       // 插件 gateway:responseChunk 钩子：改写/丢弃输出增量
       let payloadText = JSON.stringify(payload);
       if (pluginHooks.hasSubscribers('gateway:responseChunk') && delta?.content) {
-        const out = await pluginHooks.maybeRewriteChunk(delta.content, { model, requestType: 'proxyAnthropic' });
+        const out = await pluginHooks.maybeRewriteChunk(delta.content, { model, requestType: 'proxyAnthropic', affinityKey: affinityKeyForRequest(req, req.body) });
         if (out === null) return;
         if (typeof out === 'string' && out !== delta.content) {
           payload = { ...payload, choices: [{ index: 0, delta: { ...delta, content: out }, finish_reason: finishReason }] };
@@ -2237,7 +2278,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       currentProxyInfo,
       maxRetries,
       'proxyAnthropic',
-      { model, requestType: 'proxyAnthropic' }
+      { model, requestType: 'proxyAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -2374,7 +2415,7 @@ async function handleChatCompletion(req, res) {
   // 吞图：在转发前剥离客户端图片并注入提示（默认禁用）
   applySwallowImagesIfEnabled(req);
 
-  let { model, messages, temperature, max_tokens, max_completion_tokens, top_p, frequency_penalty, presence_penalty, stop, stream, tools, tool_choice, response_format, n, fusion_preset } = req.body;
+  let { model, messages, temperature, max_tokens, max_completion_tokens, top_p, frequency_penalty, presence_penalty, stop, stream, tools, tool_choice, response_format, n, fusion_preset, prompt_cache_key } = req.body;
   // 兼容 max_completion_tokens（新 OpenAI / o 系列）
   if (max_tokens === undefined && max_completion_tokens !== undefined) {
     max_tokens = max_completion_tokens;
@@ -2581,6 +2622,7 @@ async function handleChatCompletion(req, res) {
     if (req.body.logit_bias !== undefined) body.logit_bias = req.body.logit_bias;
     if (req.body.user !== undefined) body.user = req.body.user;
     if (req.body.stream_options !== undefined) body.stream_options = req.body.stream_options;
+    if (prompt_cache_key !== undefined) body.prompt_cache_key = prompt_cache_key;
     if (modelConfig.forward_reasoning_effort && req.body.reasoning_effort !== undefined) {
       body.reasoning_effort = req.body.reasoning_effort;
     }
@@ -3524,9 +3566,10 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
   if (body.cache_control) upstreamBody.cache_control = body.cache_control;
   if (body.container) upstreamBody.container = body.container;
   if (body.inference_geo) upstreamBody.inference_geo = body.inference_geo;
+  addFourthCacheBreakpoint(upstreamBody, body.system);
 
   // 代理池支持
-  const proxyInfo = await proxyPool.getProxyAgent(provider);
+  const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
   const maxRetries = Math.min(proxyList.length || 1, 3);
   let currentProxyInfo = proxyInfo;
@@ -3548,7 +3591,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       currentProxyInfo,
       maxRetries,
       'proxyAnthropicToAnthropic',
-      { model, requestType: 'proxyAnthropicToAnthropic' }
+      { model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -3681,7 +3724,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
               // 插件 gateway:responseChunk 钩子：改写/丢弃直通帧
               let frameOut = data;
               if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
-                const out = await pluginHooks.maybeRewriteChunk(data, { model, requestType: 'proxyAnthropicToAnthropic' });
+                const out = await pluginHooks.maybeRewriteChunk(data, { model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) });
                 if (!out) continue;
                 frameOut = out;
               }
@@ -3722,7 +3765,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
               // 插件 gateway:responseChunk 钩子（残余缓冲区路径）
               let frameOut2 = data;
               if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
-                const out = await pluginHooks.maybeRewriteChunk(data, { model, requestType: 'proxyAnthropicToAnthropic' });
+                const out = await pluginHooks.maybeRewriteChunk(data, { model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) });
                 if (!out) continue;
                 frameOut2 = out;
               }
@@ -3811,7 +3854,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       currentProxyInfo,
       maxRetries,
       'proxyAnthropicToAnthropic',
-      { model, requestType: 'proxyAnthropicToAnthropic' }
+      { model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -3895,7 +3938,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   const startTime = Date.now();
 
   // 代理池支持
-  const proxyInfo = await proxyPool.getProxyAgent(provider);
+  const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
   const maxRetries = Math.min(proxyList.length || 1, 3);
   let currentProxyInfo = proxyInfo;
@@ -3922,7 +3965,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     currentProxyInfo,
     maxRetries,
     'proxyOpenAIToAnthropic',
-    { model, requestType: 'proxyOpenAIToAnthropic' }
+    { model, requestType: 'proxyOpenAIToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -4018,7 +4061,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   const emitSSE = async (obj) => {
     // 插件 gateway:responseChunk 钩子：改写输出事件文本（仅文本类 delta）
     if (pluginHooks.hasSubscribers('gateway:responseChunk') && obj.type === 'content_block_delta' && obj.delta?.type === 'text_delta' && obj.delta.text) {
-      const out = await pluginHooks.maybeRewriteChunk(obj.delta.text, { model, requestType: 'proxyOpenAIToAnthropic' });
+      const out = await pluginHooks.maybeRewriteChunk(obj.delta.text, { model, requestType: 'proxyOpenAIToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) });
       if (out === null) return;
       if (typeof out === 'string' && out !== obj.delta.text) {
         obj = { ...obj, delta: { ...obj.delta, text: out } };
@@ -4277,7 +4320,7 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
   const startTime = Date.now();
 
   // 代理池支持
-  const proxyInfo = await proxyPool.getProxyAgent(provider);
+  const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
   const maxRetries = Math.min(proxyList.length || 1, 3);
   let currentProxyInfo = proxyInfo;
@@ -4304,7 +4347,7 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
     currentProxyInfo,
     maxRetries,
     'proxyOpenAIToAnthropic',
-    { model, requestType: 'proxyOpenAIToAnthropic' }
+    { model, requestType: 'proxyOpenAIToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -4645,7 +4688,7 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
             totalContent += delta.content;
             let deltaText = delta.content;
             if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
-              const out = await pluginHooks.maybeRewriteChunk(deltaText, { model, requestType: 'Responses/OpenAI' });
+              const out = await pluginHooks.maybeRewriteChunk(deltaText, { model, requestType: 'Responses/OpenAI', affinityKey: affinityKeyForRequest(req, req.body) });
               if (out === null) continue;
               if (typeof out === 'string') {
                 totalContent = totalContent.slice(0, totalContent.length - deltaText.length) + out;
@@ -4825,7 +4868,7 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
               totalContent += parsed.delta.text;
               let deltaTextA = parsed.delta.text;
               if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
-                const out = await pluginHooks.maybeRewriteChunk(deltaTextA, { model, requestType: 'Responses/Anthropic' });
+                const out = await pluginHooks.maybeRewriteChunk(deltaTextA, { model, requestType: 'Responses/Anthropic', affinityKey: affinityKeyForRequest(req, req.body) });
                 if (out === null) continue;
                 if (typeof out === 'string') {
                   totalContent = totalContent.slice(0, totalContent.length - deltaTextA.length) + out;
@@ -4936,7 +4979,7 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
   const startTime = Date.now();
 
   // 代理池支持
-  const proxyInfo = await proxyPool.getProxyAgent(provider);
+  const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
   const maxRetries = Math.min(proxyList.length || 1, 3);
   let currentProxyInfo = proxyInfo;
@@ -4964,7 +5007,7 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
     currentProxyInfo,
     maxRetries,
     'Responses/OpenAI',
-    { model, requestType: 'Responses/OpenAI' }
+    { model, requestType: 'Responses/OpenAI', affinityKey: affinityKeyForRequest(req, req.body) }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -5075,7 +5118,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   const startTime = Date.now();
 
   // 代理池支持
-  const proxyInfo = await proxyPool.getProxyAgent(provider);
+  const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
   const maxRetries = Math.min(proxyList.length || 1, 3);
   let currentProxyInfo = proxyInfo;
@@ -5093,7 +5136,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
     currentProxyInfo,
     maxRetries,
     'Responses/Anthropic',
-    { model, requestType: 'Responses/Anthropic' }
+    { model, requestType: 'Responses/Anthropic', affinityKey: affinityKeyForRequest(req, req.body) }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -5277,7 +5320,7 @@ async function handleResponses(req, res) {
     upstreamModel = upModel;
     model = queueModelId;
     provider = prov;
-    currentProxyInfo = await proxyPool.getProxyAgent(provider);
+    currentProxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
     // 主 Key 预置；非流式/流式实际调用会再走多 Key fallback
     const effectiveApiKey = await getEffectiveApiKey(provider);
     providerWithKey = { ...provider, api_key: effectiveApiKey };
@@ -6002,3 +6045,5 @@ module.exports.invalidateApiKeyCacheByKeyId = invalidateApiKeyCacheByKeyId;
 module.exports.resolveModelQueue = resolveModelQueue;
 module.exports.resolveModelQueueForRequest = resolveModelQueueForRequest;
 module.exports.validateApiKey = validateApiKey;
+module.exports.affinityKeyForRequest = affinityKeyForRequest;
+module.exports.addFourthCacheBreakpoint = addFourthCacheBreakpoint;

@@ -56,6 +56,9 @@ const DEFAULTS = {
     granularity: 'detailed',       // 'counts' | 'detailed'：是否含模型/供应商明细
   },
   demo: false,
+  gateway: {
+    fourth_cache_breakpoint: false,
+  },
 };
 
 // 读取 config.json（如果存在）

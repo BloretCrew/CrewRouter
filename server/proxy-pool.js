@@ -23,6 +23,20 @@ const runtimeState = new Map();
 // 订阅地址缓存：providerId -> { proxies, fetchedAt }
 const subscriptionCache = new Map();
 const SUBSCRIPTION_CACHE_TTL = 5 * 60 * 1000; // 5 分钟缓存
+const affinityRoutes = new Map();
+const AFFINITY_MAX_KEYS = 1000;
+
+function affinityRouteKey(providerId, affinityKey) {
+  return `${providerId}:${affinityKey}`;
+}
+
+function rememberAffinity(key, proxyIndex) {
+  if (affinityRoutes.has(key)) affinityRoutes.delete(key);
+  affinityRoutes.set(key, proxyIndex);
+  while (affinityRoutes.size > AFFINITY_MAX_KEYS) {
+    affinityRoutes.delete(affinityRoutes.keys().next().value);
+  }
+}
 
 /**
  * 解析代理池 JSON
@@ -295,7 +309,7 @@ async function getProxies(provider) {
  * 2. 排除最近 60 秒内收到 429 的代理
  * 3. 如果所有代理都被限速，选择最早收到 429 的那个
  */
-function selectBestProxy(proxies, providerId) {
+function selectBestProxy(proxies, providerId, affinityKey = null) {
   const enabledProxies = proxies.filter(p => p.enabled !== false);
   if (enabledProxies.length === 0) return null;
 
@@ -303,10 +317,20 @@ function selectBestProxy(proxies, providerId) {
   const COOLDOWN_429 = 60 * 1000; // 429 冷却时间 60 秒
 
   // 获取每个代理的运行时状态
-  const candidates = enabledProxies.map(proxy => {
+  const candidates = enabledProxies.map((proxy, index) => {
     const state = getRuntimeState(providerId, proxy.id);
-    return { proxy, state };
+    return { proxy, state, index };
   });
+
+  if (affinityKey) {
+    const routeKey = affinityRouteKey(providerId, affinityKey);
+    const pinnedIndex = affinityRoutes.get(routeKey);
+    const pinned = pinnedIndex === undefined ? null : candidates.find(candidate => candidate.index === pinnedIndex);
+    if (pinned && !pinned.state.last429At) {
+      rememberAffinity(routeKey, pinned.index);
+      return pinned.proxy;
+    }
+  }
 
   // 排除最近 429 的代理
   const available = candidates.filter(({ state }) => {
@@ -315,8 +339,9 @@ function selectBestProxy(proxies, providerId) {
 
   // 如果有可用的，随机选择一个
   if (available.length > 0) {
-    const idx = Math.floor(Math.random() * available.length);
-    return available[idx].proxy;
+    const selected = available[Math.floor(Math.random() * available.length)];
+    if (affinityKey) rememberAffinity(affinityRouteKey(providerId, affinityKey), selected.index);
+    return selected.proxy;
   }
 
   // 所有代理都被限速，选择最早 429 的那个（可能已恢复）
@@ -325,7 +350,9 @@ function selectBestProxy(proxies, providerId) {
     const timeB = b.state.last429At || 0;
     return timeA - timeB;
   });
-  return candidates[0].proxy;
+  const selected = candidates[0];
+  if (affinityKey) rememberAffinity(affinityRouteKey(providerId, affinityKey), selected.index);
+  return selected.proxy;
 }
 
 /**
@@ -463,7 +490,7 @@ async function proxyFetch(url, options = {}) {
  *
  * 返回 { agent, proxyId, proxyUrl } 或 null
  */
-async function getProxyAgent(provider) {
+async function getProxyAgent(provider, affinityKey = null) {
   // 供应商单独配置优先
   if (provider?.proxy_enabled) {
     const mode = (provider.proxy_mode || 'pool').toLowerCase();
@@ -505,7 +532,7 @@ async function getProxyAgent(provider) {
     const proxies = await getProxies(provider);
     if (proxies.length === 0) return null;
 
-    const selected = selectBestProxy(proxies, provider.id);
+    const selected = selectBestProxy(proxies, provider.id, affinityKey);
     if (!selected) return null;
 
     const agent = createProxyAgent(selected.url);
