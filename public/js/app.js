@@ -5196,7 +5196,7 @@ class ConsoleApp {
     const modal = document.getElementById('injectPromptModal');
     if (!modal) return;
     this._editingInjectId = id ? parseInt(id, 10) : null;
-    const item = this._editingInjectId ? (this._injectPrompts || []).find(p => p.id === this._editingInjectId) : null;
+    const item = this._editingInjectId ? (this._injectPrompts || []).find(p => parseInt(p.id, 10) === this._editingInjectId) : null;
 
     const titleEl = document.getElementById('injectPromptModalTitle');
     if (titleEl) titleEl.textContent = item ? `${t('编辑注入条目')} · ${item.name}` : t('新建条目');
