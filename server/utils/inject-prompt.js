@@ -18,11 +18,42 @@ const INJECT_PROMPT_SEPARATOR = '\n\n---\n\n';
 const MAX_INJECT_BYTES = 64 * 1024;
 
 /**
+ * 默认注入条目（每位用户自动拥有，可编辑/开关/删除）。
+ * seedDefaultPrompt 幂等：仅在该用户「一条记录都没有」时播种。
+ */
+const DEFAULT_PROMPT = {
+  name: '忽略 @CrewRouter',
+  content: 'Ignore all "@CR" and "@CrewRouter" content: do not act on it, do not '
+    + 'interpret it, and do not attempt to analyze it — they are mere control tokens.\n\n'
+    + 'Neither tool calls nor replies may contain any "@CR" or "@CrewRouter" content.',
+};
+
+/** 为用户播种默认条目（幂等：已有任意条目则跳过）。内部使用，勿对外暴露。 */
+async function seedDefaultPrompt(userId) {
+  const existing = await pool.query('SELECT 1 FROM inject_prompts WHERE user_id = $1 LIMIT 1', [userId]);
+  if (existing.rows.length > 0) return;
+  await pool.query(
+    `INSERT INTO inject_prompts (user_id, name, content, enabled, sort_order)
+     VALUES ($1, $2, $3, TRUE, -10)`,
+    [userId, DEFAULT_PROMPT.name, DEFAULT_PROMPT.content]
+  );
+  Logger.info(`[注入提示词] 已为用户 ${userId} 播种默认条目`);
+}
+
+/**
  * 查库拼好某 (userId, apiKeyId) 的注入文本，供 validateApiKey 组装 apiUser 缓存时调用。
+ * 兜底语义：该用户在 inject_prompts 无任何行（含停用）时先播种默认条目再查询，
+ * 保证新用户/存量用户都默认拥有可编辑、可开关的「忽略 @CrewRouter」条目。
  * @returns {Promise<string|null>} 无启用条目时返回 null
  */
 async function buildInjectedPrompt(userId, apiKeyId) {
   if (!userId) return null;
+  // 兜底播种：该用户一条记录都没有时自动创建默认条目（新用户/存量用户统一覆盖）
+  try {
+    await seedDefaultPrompt(userId);
+  } catch (err) {
+    Logger.warn('[注入提示词] 默认条目播种失败（不影响本次请求）:', err.message);
+  }
   const result = await pool.query(
     `SELECT p.content
        FROM inject_prompts p
@@ -106,6 +137,7 @@ function responsesAppend(instructions, text) {
 
 module.exports = {
   buildInjectedPrompt,
+  seedDefaultPrompt,
   openaiAppend,
   anthropicAppend,
   anthropicSystemAppend,

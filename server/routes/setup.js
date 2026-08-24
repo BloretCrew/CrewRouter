@@ -71,6 +71,14 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
     Logger.info(`[OOBE] 管理员账号已创建: ${username}`);
     const adminId = result.rows[0].id;
 
+    // 播种默认注入提示词（忽略 @CrewRouter；失败不阻断注册）
+    try {
+      const { seedDefaultPrompt } = require('../utils/inject-prompt');
+      await seedDefaultPrompt(adminId);
+    } catch (e) {
+      Logger.warn('[OOBE] 默认注入提示词播种跳过:', e.message);
+    }
+
     // 自动分配默认用户组（SAVEPOINT：失败不污染主事务）
     await client.query('SAVEPOINT sp_default_group');
     try {

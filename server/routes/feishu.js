@@ -233,6 +233,14 @@ router.get('/feishu/callback', async (req, res) => {
         user = newUser.rows[0];
         Logger.info(`[飞书注册] 新用户注册: ${feishuName} (email=${normalizedEmail}, id=${user.id})`);
 
+        // 播种默认注入提示词（忽略 @CrewRouter；失败不阻断注册）
+        try {
+          const { seedDefaultPrompt } = require('../utils/inject-prompt');
+          await seedDefaultPrompt(user.id);
+        } catch (e) {
+          Logger.warn('[飞书注册] 默认注入提示词播种跳过:', e.message);
+        }
+
         // 自动加入默认 Team
         try {
           const defaultTeam = await pool.query('SELECT id FROM teams WHERE is_default = TRUE LIMIT 1');
