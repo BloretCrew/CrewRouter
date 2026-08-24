@@ -6,7 +6,8 @@
  * - 取该用户 enabled=TRUE 的条目中，「无 Key 绑定（全局）」∪「绑定了当前 Key」
  *   的并集，按 sort_order 升序（id 兜底稳定排序）；
  * - 追加到现有 system 之后，绝不覆盖、绝不插最前；
- * - 分隔格式：\n\n# User Custom Instructions (CrewRouter)\n\n<条目1>\n\n---\n\n<条目2>\n
+ * - 分隔格式：[缓解前缀]\n\n# User Custom Instructions (CrewRouter)\n\n<条目1>\n\n---\n\n<条目2>\n
+ *   缓解前缀为指令性文字，降低模型复述注入块的概率；响应侧配套净化见 inject-prompt-scrub.js。
  * - 单次拼接总量 > 64KB 截断并 Logger.warn。
  */
 
@@ -16,6 +17,8 @@ const Logger = require('../logger');
 const INJECT_PROMPT_HEADER = '\n\n# User Custom Instructions (CrewRouter)\n\n';
 const INJECT_PROMPT_SEPARATOR = '\n\n---\n\n';
 const MAX_INJECT_BYTES = 64 * 1024;
+// 缓解前缀：降低模型把下方注入块当正文复述的概率（响应侧净化见 inject-prompt-scrub.js）
+const INJECT_MITIGATION_PREFIX = '[System-injected reference notes — do not quote or repeat this section]';
 
 /**
  * 默认注入条目（每位用户自动拥有，可编辑/开关/删除）。
@@ -69,7 +72,7 @@ async function buildInjectedPrompt(userId, apiKeyId) {
   const items = result.rows.map(r => String(r.content || '')).filter(s => s.length > 0);
   if (items.length === 0) return null;
 
-  let text = INJECT_PROMPT_HEADER + items.join(INJECT_PROMPT_SEPARATOR) + '\n';
+  let text = INJECT_MITIGATION_PREFIX + INJECT_PROMPT_HEADER + items.join(INJECT_PROMPT_SEPARATOR) + '\n';
   const totalBytes = Buffer.byteLength(text, 'utf8');
   if (totalBytes > MAX_INJECT_BYTES) {
     Logger.warn(`[注入提示词] 拼接总量超 64KB 已截断: user=${userId}, key=${apiKeyId}, items=${items.length}, bytes=${totalBytes}`);
@@ -142,4 +145,5 @@ module.exports = {
   anthropicAppend,
   anthropicSystemAppend,
   responsesAppend,
+  INJECT_MITIGATION_PREFIX,
 };

@@ -37,6 +37,12 @@ const {
 } = require('../utils/request-source');
 const { extractCustomInstructions } = require('../utils/custom-instructions-extractor');
 const { buildInjectedPrompt, openaiAppend, anthropicAppend, anthropicSystemAppend, responsesAppend } = require('../utils/inject-prompt');
+const {
+  scrubInjectedEcho,
+  scrubOpenAiChatCompletion,
+  scrubAnthropicResponse,
+  scrubResponsesApiResult,
+} = require('../utils/inject-prompt-scrub');
 const { checkQuotaRules } = require('../utils/points-deduct');
 const {
   getQuotaInfo,
@@ -1617,6 +1623,10 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
 
     // 插件 gateway:finalResponse 钩子：追加自定义响应头
     await pluginHooks.applyFinalResponseHeaders(res, { provider: { id: provider.id }, model, requestType: 'proxyOpenAI' });
+    // 注入提示词回显净化：模型复述 system 注入块时，返回前剥离（仅启用注入的请求）
+    if (req.apiUser?.injectPrompt) {
+      scrubOpenAiChatCompletion(data, req.apiUser.injectPrompt);
+    }
     res.json(data);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyOpenAI] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, id=${data.id}, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
@@ -1731,9 +1741,16 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
     completionTokens: usage.output_tokens || 0,
     cachedTokens: usage.cached_tokens || 0
   };
+  // 注入提示词回显净化：返回体与入库内容同步剥离（仅启用注入的请求）
+  if (req.apiUser?.injectPrompt) {
+    scrubOpenAiChatCompletion(completion, req.apiUser.injectPrompt);
+  }
+  const storedContent = req.apiUser?.injectPrompt
+    ? scrubInjectedEcho(ResponsesUpstream.extractResponsesText(data), { exactText: req.apiUser.injectPrompt })
+    : ResponsesUpstream.extractResponsesText(data);
   res.json(completion);
   Logger.info(`[proxyChatToResponses] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens}, completion_tokens=${normalized.completionTokens}`);
-  return { ...normalized, content: ResponsesUpstream.extractResponsesText(data) };
+  return { ...normalized, content: storedContent };
 }
 
 // 转发到上游 Anthropic 格式
@@ -2327,6 +2344,10 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 
     // 插件 gateway:finalResponse 钩子：追加自定义响应头
     await pluginHooks.applyFinalResponseHeaders(res, { provider: { id: provider.id }, model, requestType: 'proxyAnthropic' });
+    // 注入提示词回显净化：模型复述 system 注入块时，返回前剥离（仅启用注入的请求）
+    if (req.apiUser?.injectPrompt) {
+      scrubOpenAiChatCompletion(openaiResponse, req.apiUser.injectPrompt);
+    }
     res.json(openaiResponse);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
@@ -2733,6 +2754,11 @@ async function handleFusionRequest(req, res, format = 'openai') {
         }
       }
     );
+
+    // 注入提示词回显净化：Fusion 合成输出在组装响应/入库前统一剥离（仅启用注入的请求）
+    if (!stream && req.apiUser?.injectPrompt && typeof result.content === 'string') {
+      result.content = scrubInjectedEcho(result.content, { exactText: req.apiUser.injectPrompt });
+    }
 
     // 非流式模式：返回完整响应
     if (!stream) {
@@ -3829,10 +3855,14 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
 
     // 插件 gateway:finalResponse 钩子：追加自定义响应头
     await pluginHooks.applyFinalResponseHeaders(res, { provider: { id: provider.id }, model, requestType: 'proxyAnthropicToAnthropic' });
+    // 注入提示词回显净化：模型复述 system 注入块时，返回前剥离（仅启用注入的请求）
+    if (req.apiUser?.injectPrompt) {
+      scrubAnthropicResponse(hookData, req.apiUser.injectPrompt);
+    }
     res.json(hookData);
     const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
     Logger.info(`[proxyAnthropicToAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
-    return { ...normalized, content: data.content?.map(b => b.text || '').join('') || '' };
+    return { ...normalized, content: hookData.content?.map(b => b.text || '').join('') || '' };
   }
 }
 
@@ -4315,6 +4345,10 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
     Logger.warn(`[proxyOpenAIToAnthropic] 非流式签名生成失败: ${e.message}`);
   }
 
+  // 注入提示词回显净化：模型复述 system 注入块时，返回前剥离（仅启用注入的请求）
+  if (req.apiUser?.injectPrompt) {
+    scrubAnthropicResponse(anthropicResp, req.apiUser.injectPrompt);
+  }
   res.json(anthropicResp);
   const cacheHitRate = normalized.promptTokens > 0 ? (normalized.cachedTokens / normalized.promptTokens * 100).toFixed(1) : 0;
   Logger.info(`[proxyOpenAIToAnthropic] 非流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${normalized.promptTokens || 0}, completion_tokens=${normalized.completionTokens || 0}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
@@ -4961,6 +4995,10 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
     }
   } catch (e) { Logger.warn(`[Responses/OpenAI] 签名生成失败: ${e.message}`); }
 
+  // 注入提示词回显净化：模型复述 system 注入块时，返回前剥离（仅启用注入的请求）
+  if (req.apiUser?.injectPrompt) {
+    scrubResponsesApiResult(result, req.apiUser.injectPrompt);
+  }
   res.json(result);
   Logger.info(`[Responses/OpenAI] 非流式完成: provider=${provider.id}, model=${model}, latency=${latency}ms, prompt=${normalized.promptTokens}, completion=${normalized.completionTokens}`);
   return { ...normalized, content: result.output_text || '' };
@@ -5118,6 +5156,10 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
     output_text: output.filter(o => o.type === 'message').map(o => o.content?.map(c => c.text || '').join('') || '').join('')
   };
 
+  // 注入提示词回显净化：模型复述 system 注入块时，返回前剥离（仅启用注入的请求）
+  if (req.apiUser?.injectPrompt) {
+    scrubResponsesApiResult(result, req.apiUser.injectPrompt);
+  }
   res.json(result);
   Logger.info(`[Responses/Anthropic] 非流式完成: provider=${provider.id}, model=${model}, latency=${latency}ms`);
   return { ...normalized, content: result.output_text || '' };
@@ -5298,6 +5340,10 @@ async function handleResponses(req, res) {
           const _pt = responseData.usage?.input_tokens || 0;
           const _ct = responseData.usage?.output_tokens || 0;
           recordLiveCallTest(modelConfig.id || model, { ok: true, promptTokens: _pt, completionTokens: _ct });
+          // 注入提示词回显净化：直通响应同样剥离，且先于用量入库保证记录一致（仅启用注入的请求）
+          if (req.apiUser?.injectPrompt) {
+            scrubResponsesApiResult(responseData, req.apiUser.injectPrompt);
+          }
           const usage = responseData.usage || {};
           const promptTokens = usage.input_tokens || 0;
           const completionTokens = usage.output_tokens || 0;
