@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harness 工具调用格式研究报告 · CrewRouter</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
+    --text: #e6e8ee; --muted: #9aa3b2; --accent: #4f8cff; --accent2: #22c55e;
+    --code-bg: #0b0d12; --gold: #eab308; --red: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.65; }
+  header.hero { padding: 48px 24px 32px; text-align: center;
+    background: linear-gradient(180deg, #131a2b 0%, var(--bg) 100%); border-bottom: 1px solid var(--line); }
+  header.hero h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: 1px; }
+  header.hero p { margin: 4px 0; color: var(--muted); }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 24px 80px; }
+  h2 { font-size: 24px; margin: 56px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
+    display: flex; align-items: center; gap: 10px; }
+  h3 { font-size: 19px; margin: 32px 0 12px; }
+  h4 { font-size: 16px; margin: 22px 0 8px; color: var(--accent); }
+  p { margin: 10px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px;
+    padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; line-height: 1.5; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.85em; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.9em; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel2); color: #c9d2e0; white-space: nowrap; }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  .toc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 28px; }
+  .toc ol { margin: 6px 0; padding-left: 24px; }
+  .toc li { margin: 4px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 22px; margin: 18px 0; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 20px; font-size: 0.75em;
+    font-weight: 600; vertical-align: middle; margin-left: 6px; }
+  .b-ts { background: #1e3a8a; color: #bfdbfe; }
+  .b-rs { background: #7c2d12; color: #fed7aa; }
+  .b-py { background: #14532d; color: #bbf7d0; }
+  .proto { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 0.8em;
+    font-weight: 600; background: #312e81; color: #c7d2fe; }
+  .tag { color: var(--gold); font-weight: 600; }
+  .note { border-left: 4px solid var(--gold); background: rgba(234,179,8,0.06); padding: 10px 14px;
+    border-radius: 0 8px 8px 0; margin: 14px 0; }
+  .warn { border-left: 4px solid var(--red); background: rgba(239,68,68,0.06); padding: 10px 14px;
+    border-radius: 0 8px 8px 0; margin: 14px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .tool-list li { margin: 3px 0; }
+  footer { text-align: center; color: var(--muted); font-size: 0.85em; padding: 24px; border-top: 1px solid var(--line); }
+  .section-label { font-size: 0.8em; color: var(--accent2); text-transform: uppercase; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>Harness 工具调用格式研究报告</h1>
+  <p>7 个 AI 编程助手（harness）内置 Tool Call 工具的 Schema 定义与线上协议（wire format）提取分析</p>
+  <p>生成日期：2026-08-22 · 研究方式：逐一读取各仓库源码</p>
+</header>
+
+<main>
+
+<div class="toc">
+  <strong>目录</strong>
+  <ol>
+    <li><a href="#overview">总体概览与横向对比</a></li>
+    <li><a href="#claude-code">Claude Code（TypeScript / Anthropic Messages）</a></li>
+    <li><a href="#codex">OpenAI Codex CLI（Rust / Responses API）</a></li>
+    <li><a href="#grok-build">Grok Build（Rust / OpenAI 兼容）</a></li>
+    <li><a href="#hermes">Hermes Agent（Python / OpenAI Chat）</a></li>
+    <li><a href="#openclaw">OpenClaw（TypeScript / 多 Provider）</a></li>
+    <li><a href="#opencode">OpenCode（TypeScript / Vercel AI SDK）</a></li>
+    <li><a href="#qwen-code">Qwen Code（TypeScript / OpenAI 兼容）</a></li>
+    <li><a href="#text-protocols">文本协议工具对比（apply_patch / XML 约定）</a></li>
+    <li><a href="#mcp">MCP 工具合并方式对比</a></li>
+    <li><a href="#conclusion">结论与关键文件索引</a></li>
+  </ol>
+</div>
+
+<!-- ======================= 1. 概览 ======================= -->
+<h2 id="overview"><span class="section-label">1.</span> 总体概览与横向对比</h2>
+
+<p>本报告基于以下 7 个仓库的 <strong>源码</strong>（非官方文档），提取每个 harness 的所有内置
+Tool Call 工具的参数 Schema 定义格式与线上调用协议。各仓库分析时点：</p>
+
+<table>
+  <tr><th>工具</th><th>实现语言</th><th>仓库</th><th>分析 HEAD</th><th>线上协议</th><th>Schema 定义方式</th></tr>
+  <tr><td>Claude Code</td><td>TypeScript</td><td>claude-code-source-code</td><td>2ca5dda (2026-04-01)</td><td><span class="proto">Anthropic Messages</span></td><td>Zod v4 → JSON Schema</td></tr>
+  <tr><td>Codex CLI</td><td>Rust</td><td>codex/codex-rs</td><td>343074d420 (2026-08-22)</td><td><span class="proto">OpenAI Responses</span></td><td>schemars JsonSchema</td></tr>
+  <tr><td>Grok Build</td><td>Rust</td><td>grok-build/crates</td><td>19d42e3 (2026-08-19)</td><td><span class="proto">Chat Completions / Responses 双轨</span></td><td>schemars JsonSchema</td></tr>
+  <tr><td>Hermes Agent</td><td>Python</td><td>hermes-agent</td><td>261a4efb90 (2026-08-22)</td><td><span class="proto">OpenAI Chat Completions</span></td><td>纯 Python dict</td></tr>
+  <tr><td>OpenClaw</td><td>TypeScript</td><td>openclaw</td><td>c7199713c28 (2026-08-22)</td><td><span class="proto">Anthropic / OpenAI / Responses / Gemini 多适配</span></td><td>TypeBox TSchema</td></tr>
+  <tr><td>OpenCode</td><td>TypeScript</td><td>opencode</td><td>e00890c672 (2026-08-22)</td><td><span class="proto">Vercel AI SDK（多 Provider）</span></td><td>Effect Schema</td></tr>
+  <tr><td>Qwen Code</td><td>TypeScript</td><td>qwen-code</td><td>cef54b8340 (2026-08-22)</td><td><span class="proto">OpenAI 兼容（DashScope）</span></td><td>FunctionDeclaration JSON Schema</td></tr>
+</table>
+
+<div class="note">
+<strong>结论速览：</strong>7 个工具最终都归结为两种业界通用 wire 形态之一 ——
+① Anthropic 的 <code>tools / tool_use / tool_result</code> 内容块；② OpenAI 系的
+<code>tools(type:function) / tool_calls / role=tool(或 function_call_output)</code>。
+差异集中在<strong>内部 Schema 定义语言</strong>（Zod / schemars / TypeBox / Effect Schema /
+纯 dict）与<strong>特殊文本协议</strong>（apply_patch、XML 约定）上。所有工具对 MCP 工具
+几乎统一采用 <code>mcp__&lt;server&gt;__&lt;tool&gt;</code> 命名前缀。
+</div>
+
+<h3>1.1 各工具内置工具数量一览</h3>
+<table>
+  <tr><th>工具</th><th>内置工具规模</th><th>典型工具命名风格</th></tr>
+  <tr><td>Claude Code</td><td>约 20+ 常驻 + 20+ 条件启用</td><td>PascalCase（<code>Bash</code>、<code>Read</code>、<code>Edit</code>）</td></tr>
+  <tr><td>Codex CLI</td><td>约 25 个（含命名空间）</td><td>snake_case（<code>exec_command</code>、<code>apply_patch</code>）</td></tr>
+  <tr><td>Grok Build</td><td>约 35 个（含多命名空间）</td><td>snake_case（<code>run_terminal_cmd</code>、<code>search_replace</code>）</td></tr>
+  <tr><td>Hermes Agent</td><td>92 个内置 + 插件/MCP</td><td>snake_case（<code>read_file</code>、<code>terminal</code>）</td></tr>
+  <tr><td>OpenClaw</td><td>60+ 个（按 profile 过滤）</td><td>snake_case（<code>exec</code>、<code>apply_patch</code>）</td></tr>
+  <tr><td>OpenCode</td><td>16 个内置</td><td>snake_case / camelCase 混合（<code>bash</code>、<code>todowrite</code>）</td></tr>
+  <tr><td>Qwen Code</td><td>30+ 个（多数 opt-in）</td><td>snake_case（<code>read_file</code>、<code>run_shell_command</code>）</td></tr>
+</table>
+
+<h3>1.2 通用文件编辑工具命名对照</h3>
+<table>
+  <tr><th>能力</th><th>Claude Code</th><th>Codex</th><th>Grok Build</th><th>Hermes</th><th>OpenClaw</th><th>OpenCode</th><th>Qwen Code</th></tr>
+  <tr><td>执行命令</td><td>Bash</td><td>exec_command</td><td>run_terminal_cmd</td><td>terminal</td><td>exec</td><td>bash</td><td>shell</td></tr>
+  <tr><td>读文件</td><td>Read</td><td>read_file*</td><td>read_file</td><td>read_file</td><td>read</td><td>read</td><td>read_file</td></tr>
+  <tr><td>写文件</td><td>Write</td><td>（经 apply_patch）</td><td>（search_replace）</td><td>write_file</td><td>write</td><td>write</td><td>write_file</td></tr>
+  <tr><td>精确编辑</td><td>Edit</td><td>apply_patch（文本）</td><td>search_replace</td><td>patch</td><td>edit / apply_patch</td><td>edit / apply_patch</td><td>edit</td></tr>
+  <tr><td>搜索</td><td>Grep / Glob</td><td>grep_files / list_dir</td><td>grep / list_dir</td><td>search_files</td><td>grep / find / ls</td><td>grep / glob</td><td>grep / glob / ls</td></tr>
+  <tr><td>子代理</td><td>Agent（旧 Task）</td><td>spawn_agent（multi_agent_v1）</td><td>task</td><td>delegate_task</td><td>sessions_spawn / subagents</td><td>task</td><td>agent</td></tr>
+  <tr><td>任务清单</td><td>TodoWrite</td><td>update_plan</td><td>todo_write</td><td>todo</td><td>—</td><td>todowrite</td><td>todo_write</td></tr>
+  <tr><td>联网</td><td>WebFetch / WebSearch</td><td>web_search（hosted）/ web.run</td><td>web_search / web_fetch</td><td>web_search / web_extract</td><td>web_search / web_fetch</td><td>webfetch / websearch</td><td>web_fetch / web_search</td></tr>
+  <tr><td>提问</td><td>AskUserQuestion</td><td>request_user_input</td><td>ask_user_question</td><td>clarify</td><td>ask_user</td><td>question</td><td>ask_user_question</td></tr>
+  <tr><td>MCP 发现</td><td>ToolSearch</td><td>tool_search</td><td>search_tool / use_tool</td><td>tool_search / tool_call</td><td>tool_search / tool_call</td><td>—（直接注入）</td><td>tool_search</td></tr>
+</table>
+
+<!-- ======================= 2. Claude Code ======================= -->
+<h2 id="claude-code"><span class="section-label">2.</span> Claude Code</h2>
+<p class="section-label">TypeScript / Anthropic Messages API</p>
+
+<div class="card">
+  <p><strong>定义语言：</strong>Zod v4（<code>z.strictObject</code> + <code>lazySchema</code> 包装），经
+  <code>src/utils/zodToJsonSchema.ts</code> 转 JSON Schema。<br>
+  <strong>线上协议：</strong>纯 Anthropic Messages API —— <code>tools</code> 数组（<code>input_schema</code>）、
+  assistant 的 <code>tool_use</code> block、结果以 user 消息内的 <code>tool_result</code> block 回传。
+  全库无 <code>chat/completions</code> 路径。<br>
+  <strong>工具注册：</strong><code>src/tools.ts</code> → <code>getAllBaseTools()</code>；实现位于
+  <code>src/tools/&lt;Name&gt;Tool/</code>。</p>
+</div>
+
+<h3>2.1 tools 数组元素格式（BetaTool）</h3>
+<pre><code>{
+  "name": "Read",
+  "description": "&lt;prompt() 生成的完整描述文本&gt;",
+  "input_schema": { "type": "object", "properties": {...}, "required": [...] },  // JSON Schema
+  // 条件附加：
+  "strict": true/false,            // 见 zodToJsonSchema 结果
+  "cache_control": { "type": "ephemeral" },          // prompt 缓存
+  "defer_loading": true,           // ToolSearch 延迟加载工具
+  "eager_input_streaming": true
+}</code></pre>
+
+<h3>2.2 调用与结果回传</h3>
+<pre><code>// assistant 发起调用（content block）
+{ "type": "tool_use", "id": "toolu_01...", "name": "Bash", "input": { "command": "ls" } }
+
+// 结果回传（user 消息内的 content block）
+{ "type": "tool_result", "tool_use_id": "toolu_01...", "content": "…输出…", "is_error": false }</code></pre>
+
+<h3>2.3 内置工具完整清单</h3>
+<div class="grid2">
+<ul class="tool-list">
+  <li><code>Bash</code> — 执行 shell 命令</li>
+  <li><code>Read</code> — 读文件（offset/limit/pages）</li>
+  <li><code>Write</code> — 写文件</li>
+  <li><code>Edit</code> — old_string/new_string 替换</li>
+  <li><code>Glob</code> / <code>Grep</code> — 文件匹配/正则搜索</li>
+  <li><code>WebFetch</code> / <code>WebSearch</code> — 抓取/搜索</li>
+  <li><code>Agent</code>（旧名 Task）— 子代理</li>
+  <li><code>TaskOutput</code> / <code>TaskStop</code> — 子代理结果/停止</li>
+  <li><code>TodoWrite</code> — 任务清单</li>
+  <li><code>NotebookEdit</code> — Jupyter 单元编辑</li>
+</ul>
+<ul class="tool-list">
+  <li><code>ExitPlanMode</code> / <code>EnterPlanMode</code> — 计划模式</li>
+  <li><code>AskUserQuestion</code> — 提问</li>
+  <li><code>Skill</code> — 技能加载</li>
+  <li><code>ToolSearch</code> — 延迟工具发现</li>
+  <li><code>ListMcpResources</code> / <code>ReadMcpResource</code> — MCP 资源</li>
+  <li><code>SendUserMessage</code>（旧 Brief）/ <code>SendMessage</code> — 消息</li>
+  <li>条件启用：PowerShell、REPL、Sleep、Cron*、Monitor、Worktree、LSP、Workflow、StructuredOutput 等</li>
+</ul>
+</div>
+
+<h3>2.4 代表工具 Schema 源码片段</h3>
+<h4>Bash（src/tools/BashTool/BashTool.tsx）</h4>
+<pre><code>const fullInputSchema = lazySchema(() => z.strictObject({
+  command: z.string().describe('The command to execute'),
+  timeout: semanticNumber(z.number().optional()).describe('Optional timeout in milliseconds'),
+  description: z.string().optional().describe('Clear, concise description of what this command does'),
+  run_in_background: semanticBoolean(z.boolean().optional()).describe('Set to true to run in background'),
+  dangerouslyDisableSandbox: semanticBoolean(z.boolean().optional()).describe('...'),
+  // _simulatedSedEdit 为内部字段，序列化前 omit，不暴露给模型（防绕过权限）
+}));</code></pre>
+
+<h4>Edit（src/tools/FileEditTool/types.ts）</h4>
+<pre><code>const inputSchema = lazySchema(() => z.strictObject({
+  file_path:  z.string().describe('The absolute path to the file to modify'),
+  old_string: z.string().describe('The text to replace'),
+  new_string: z.string().describe('The text to replace it with (must be different from old_string)'),
+  replace_all: semanticBoolean(z.boolean().default(false).optional()).describe('Replace all occurrences (default false)'),
+}));</code></pre>
+
+<h4>Grep（src/tools/GrepTool/GrepTool.ts）</h4>
+<pre><code>const inputSchema = lazySchema(() => z.strictObject({
+  pattern: z.string().describe('The regular expression pattern to search for'),
+  path: z.string().optional().describe('File or directory to search in (rg PATH)'),
+  glob: z.string().optional().describe('Glob pattern to filter files'),
+  output_mode: z.enum(['content','files_with_matches','count']).optional(),
+  '-B': ..., '-A': ..., '-C': ..., '-i': ..., type: ..., head_limit: ..., multiline: ...
+}));</code></pre>
+
+<div class="note"><strong>特殊点：</strong>
+① Bash 内部字段 <code>_simulatedSedEdit</code> 从模型可见 schema 剔除；② <code>&lt;system-reminder&gt;</code> 以纯文本注入
+tool_result/user 消息（提示层协议）；③ StructuredOutput 合成工具用 <code>z.object({}).passthrough()</code> 承载任意
+结构化 JSON（SDK 场景替代 XML 标签）；④ 未发现 XML 形式的 function-calling 文本协议。</div>
+
+<!-- ======================= 3. Codex ======================= -->
+<h2 id="codex"><span class="section-label">3.</span> OpenAI Codex CLI</h2>
+<p class="section-label">Rust / OpenAI Responses API</p>
+
+<div class="card">
+  <p><strong>定义语言：</strong>Rust 结构体 + <code>schemars::JsonSchema</code> derive；工具对象为
+  <code>ToolSpec</code> 枚举（<code>tools/src/tool_spec.rs</code>）。<br>
+  <strong>线上协议：</strong>仅 OpenAI <strong>Responses API</strong>（<code>POST /v1/responses</code>，SSE 或 WebSocket）。
+  Chat Completions 已被移除（<code>wire_api = "chat"</code> 报错）。<br>
+  <strong>工具注册：</strong><code>core/src/tools/spec_plan.rs</code> <code>add_core_tool_sources()</code>；
+  单个 handler 在 <code>core/src/tools/handlers/</code>。</p>
+</div>
+
+<h3>3.1 ToolSpec 四种工具形态</h3>
+<pre><code>// ① function（结构化 JSON 工具）
+{ "type": "function", "name": "exec_command", "description": "...", "strict": false,
+  "parameters": { "type":"object", "properties":{...}, "required":["cmd"], "additionalProperties":false } }
+
+// ② namespace（命名空间容器，内含多个 function）
+{ "type": "namespace", "name": "clock",
+  "tools": [ { "type":"function","name":"curr_time",... }, { "type":"function","name":"sleep",... } ] }
+
+// ③ custom / freeform（文本协议工具，如 apply_patch）
+{ "type": "custom", "name": "apply_patch", "description": "... FREEFORM tool, do not wrap in JSON ...",
+  "format": { "type": "grammar", "syntax": "lark", "definition": "start: begin_patch hunk+ end_patch ..." } }
+
+// ④ hosted / 服务端执行
+{ "type": "tool_search", "execution": "client", ... }
+{ "type": "web_search", "external_web_access": true, "search_context_size": "medium", ... }</code></pre>
+
+<h3>3.2 调用与结果回传（Responses API）</h3>
+<pre><code>// assistant 输出（SSE 解析为 ResponseItem）
+{ "type": "function_call", "name": "exec_command", "namespace": null,
+  "arguments": "{...}", "call_id": "..." }        // arguments 是 JSON 字符串
+{ "type": "custom_tool_call", "name": "apply_patch", "input": "*** Begin Patch...", "call_id": "..." }  // 纯文本
+{ "type": "tool_search_call", ... } / { "type": "web_search_call", ... }
+
+// 结果回传（追加到下一轮 input）
+{ "type": "function_call_output", "call_id": "...", "output": "..." }
+{ "type": "custom_tool_call_output", "call_id": "...", "name": "apply_patch", "output": "..." }</code></pre>
+
+<h3>3.3 内置工具完整清单</h3>
+<div class="grid2">
+<ul class="tool-list">
+  <li><code>exec_command</code> — 统一终端执行（cmd/workdir/tty/yield_time_ms/max_output_tokens/shell/login/environment_id）</li>
+  <li><code>write_stdin</code> — 向 exec 会话写输入</li>
+  <li><code>request_permissions</code> — 权限申请（reason + permissions profile）</li>
+  <li><code>apply_patch</code> — 文本补丁（freeform + Lark grammar）</li>
+  <li><code>update_plan</code> — 计划更新（explanation + plan[] step/status）</li>
+  <li><code>view_image</code> — 本地图片查看（path/detail）</li>
+  <li><code>get_context_remaining</code> / <code>new_context</code> — 上下文管理（无参）</li>
+</ul>
+<ul class="tool-list">
+  <li><code>wait_for_environment</code> — 等待环境就绪</li>
+  <li><code>request_user_input</code> — 提问（questions[]）</li>
+  <li><code>clock.curr_time</code> / <code>clock.sleep</code> — 命名空间工具</li>
+  <li><code>multi_agent_v1.*</code> — spawn/send_input/resume/wait/close</li>
+  <li><code>multi_agent_v2.*</code> — spawn/send_message/followup/wait/interrupt/list</li>
+  <li><code>tool_search</code> — 延迟工具发现（BM25）</li>
+  <li><code>web_search</code>（hosted）/ <code>web.run</code>（扩展）/ <code>image_gen.imagegen</code></li>
+  <li><code>list_mcp_resources</code> / <code>read_mcp_resource</code> 等</li>
+</ul>
+</div>
+
+<h3>3.4 代表工具 Schema</h3>
+<h4>exec_command（core/src/tools/handlers/shell_spec.rs）</h4>
+<pre><code>{ "type": "function", "name": "exec_command", "strict": false,
+  "description": "Runs a command in a PTY, returning output or a session ID for ongoing interaction.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "cmd":               { "type": "string",  "description": "Shell command to execute." },
+      "workdir":           { "type": "string",  "description": "Working directory. Defaults to the turn cwd." },
+      "tty":               { "type": "boolean", "description": "True allocates a PTY." },
+      "yield_time_ms":     { "type": "number",  "description": "Wait before yielding. Defaults to 10000 ms." },
+      "max_output_tokens": { "type": "number",  "description": "Output token budget. Defaults to 10000." },
+      "shell":             { "type": "string" }, "login": { "type": "boolean" }, "environment_id": { "type": "string" }
+    },
+    "required": ["cmd"], "additionalProperties": false
+  },
+  "output_schema": { "type": "object", "properties": { "chunk_id": {...}, "exit_code": {...}, "session_id": {...} } }
+}</code></pre>
+
+<h4>update_plan（core/src/tools/handlers/plan_spec.rs）</h4>
+<pre><code>{ "type": "function", "name": "update_plan", "strict": false,
+  "parameters": { "type": "object",
+    "properties": {
+      "explanation": { "type": "string" },
+      "plan": { "type": "array",
+        "items": { "type": "object",
+          "properties": {
+            "step":   { "type": "string" },
+            "status": { "type": "string", "enum": ["pending","in_progress","completed"] }
+          }, "required": ["step","status"], "additionalProperties": false } }
+    },
+    "required": ["plan"], "additionalProperties": false } }</code></pre>
+
+<div class="note"><strong>特殊点：</strong>所有内置工具 <code>strict=false</code>（注释明确 "TODO: Validation..."，与 OpenAI 强制
+structured outputs 不同）；Responses Lite 模式把工具作为 <code>input</code> 前缀的 <code>AdditionalTools</code> 注入；默认
+函数命名空间为 <code>"functions"</code>。</div>
+
+<!-- ======================= 4. Grok Build ======================= -->
+<h2 id="grok-build"><span class="section-label">4.</span> Grok Build</h2>
+<p class="section-label">Rust / OpenAI 兼容（Chat Completions + Responses 双轨）</p>
+
+<div class="card">
+  <p><strong>定义语言：</strong>统一 <code>Tool</code> trait（<code>crates/common/xai-tool-runtime/src/tool.rs</code>），
+  参数结构体 <code>derive(JsonSchema)</code>，用 schemars draft-07 生成 JSON Schema
+  （<code>generate_schema::&lt;T::Args&gt;()</code>）。<br>
+  <strong>线上协议：</strong>内部统一 <code>ConversationItem</code> 超集，向 API 转换时走两条线：
+  Chat Completions（<code>tools</code> + <code>role="tool"</code>）或 Responses
+  （<code>input</code> 中 <code>function_call</code> / <code>function_call_output</code>）。<br>
+  <strong>工具注册：</strong><code>crates/codegen/xai-grok-tools/src/registry/types.rs</code>。
+  工具按命名空间 <code>grok_build / grok_build_concise / grok_build_hashline / codex / opencode / mcp</code> 分类。</p>
+</div>
+
+<h3>4.1 tools 数组元素格式（ToolDefinition）</h3>
+<pre><code>{
+  "type": "function",
+  "function": {
+    "name": "read_file",
+    "description": "...",
+    "parameters": { "type": "object", "properties": {...}, "required": [...] }   // schemars draft-07
+  }
+}</code></pre>
+
+<h3>4.2 调用与结果回传</h3>
+<pre><code>// Chat Completions 形态
+assistant.tool_calls = [ { "id": "...", "type": "function",
+  "function": { "name": "read_file", "arguments": "{...}" } } ]      // arguments 为 JSON 字符串
+result: { "role": "tool", "content": "...", "tool_call_id": "..." }
+
+// Responses 形态
+input: { "type": "function_call", "call_id": "...", "name": "...", "arguments": "{...}" }
+result: { "type": "function_call_output", "call_id": "...", "output": "..." }</code></pre>
+
+<h3>4.3 内置工具完整清单（grok_build 主命名空间 + meta 工具）</h3>
+<div class="grid2">
+<ul class="tool-list">
+  <li><code>run_terminal_cmd</code> — Bash（command/timeout/description/background）</li>
+  <li><code>read_file</code> — 读文件（wire 字段 <code>target_file</code>）</li>
+  <li><code>search_replace</code> — 结构化编辑（file_path/old_string/new_string/replace_all）</li>
+  <li><code>list_dir</code> / <code>grep</code> — 列目录/搜索</li>
+  <li><code>todo_write</code> — 任务清单（camelCase）</li>
+  <li><code>update_goal</code> / <code>workflow</code> — 目标/工作流</li>
+  <li><code>task</code> — 子代理；<code>get_task_output</code> / <code>wait_tasks</code> / <code>kill_task</code></li>
+  <li><code>web_search</code> / <code>web_fetch</code> — 联网</li>
+</ul>
+<ul class="tool-list">
+  <li><code>image_gen</code> / <code>image_edit</code> / <code>image_to_video</code> / <code>reference_to_video</code></li>
+  <li><code>enter_plan_mode</code> / <code>exit_plan_mode</code> / <code>ask_user_question</code></li>
+  <li><code>monitor</code> — 后台监视</li>
+  <li><code>scheduler_create</code> / <code>scheduler_delete</code> / <code>scheduler_list</code></li>
+  <li><code>lsp</code> — 语言服务</li>
+  <li><code>memory_search</code> / <code>memory_get</code></li>
+  <li>meta 工具：<code>search_tool</code> / <code>use_tool</code>（MCP 动态呈现）</li>
+  <li>兼容命名空间：codex（apply_patch/read_file/grep_files…）、opencode（bash/read/edit/write…）、hashline*</li>
+</ul>
+</div>
+
+<h3>4.4 代表工具 Schema</h3>
+<h4>run_terminal_cmd（grok_build/bash/mod.rs）</h4>
+<pre><code>#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct BashToolInput {
+  pub command: String,        // 必填
+  pub timeout: Option&lt;u64&gt;,   // deserialize_lenient_u64（接受数字或字符串）
+  pub description: String,    // 必填
+  pub background: bool,       // 默认 false
+}</code></pre>
+
+<h4>search_replace（grok_build/search_replace/mod.rs）</h4>
+<pre><code>pub struct SearchReplaceInput {
+  pub file_path: String,      // 必填
+  pub old_string: String,     // 必填，需唯一匹配；置空表示创建新文件
+  pub new_string: String,     // 必填
+  pub replace_all: bool,      // 默认 false
+}</code></pre>
+
+<h4>use_tool（meta 工具，MCP 动态派发）</h4>
+<pre><code>pub struct UseToolInput {
+  pub tool_name: String,                    // 必填
+  pub tool_input: serde_json::Value,        // 必填，schema = { "type":"object", "additionalProperties":true }
+}</code></pre>
+
+<div class="note"><strong>特殊点：</strong>
+① <code>apply_patch</code>（codex 命名空间）为文本协议（见 §9）；② <code>search_tool</code>/<code>use_tool</code>
+让 MCP 工具集对模型保持稳定，避免每次发现新工具导致 KV cache 失效；③ 技能通过 SkillDiscoveryReminder 以
+<code>&lt;skill name="..."&gt;...body...&lt;/skill&gt;</code> 块注入，无独立 skill 工具（仅 opencode 命名空间有）；
+④ 每个工具调用事件带 <code>_meta["x.ai/tool"]</code> 规范元数据。</div>
+
+<!-- ======================= 5. Hermes ======================= -->
+<h2 id="hermes"><span class="section-label">5.</span> Hermes Agent</h2>
+<p class="section-label">Python / OpenAI Chat Completions</p>
+
+<div class="card">
+  <p><strong>定义语言：</strong>纯 Python dict（OpenAI function calling 风格），模块顶层
+  <code>registry.register(name, toolset, schema, handler, ...)</code> 自注册
+  （<code>tools/registry.py</code>），无装饰器、无 dataclass。<br>
+  <strong>线上协议：</strong>OpenAI chat 消息数组 —— <code>tools</code> + assistant <code>tool_calls</code> +
+  <code>role="tool"</code> 结果回传；另有 Anthropic / Bedrock Converse / Codex Responses / Gemini 适配层。<br>
+  <strong>工具数量：</strong>92 个内置工具（按文件 AST 扫描），插件/MCP 动态补充。</p>
+</div>
+
+<h3>5.1 tools 数组元素格式</h3>
+<pre><code>{
+  "type": "function",
+  "function": {
+    "name": "read_file",
+    "description": "Read a text file with line numbers and pagination...",
+    "parameters": { "type": "object", "properties": {...}, "required": [...] }
+  }
+}</code></pre>
+
+<h3>5.2 调用与结果回传</h3>
+<pre><code>// assistant 消息
+{ "role": "assistant", "content": "...",
+  "tool_calls": [ { "id": "call_01...", "type": "function",
+    "function": { "name": "read_file", "arguments": "{\"path\":\"...\"}" } } ],
+  "finish_reason": "tool_calls" }
+
+// 结果回传（handler 返回值必须是字符串）
+{ "role": "tool", "name": "read_file", "tool_call_id": "call_01...", "content": "LINE_NUM|CONTENT..." }</code></pre>
+
+<h3>5.3 内置工具完整清单（92 个，按文件分组节选）</h3>
+<div class="grid2">
+<ul class="tool-list">
+  <li>文件：<code>read_file</code>、<code>write_file</code>、<code>patch</code>、<code>search_files</code></li>
+  <li>运行：<code>terminal</code>、<code>process</code>、<code>execute_code</code></li>
+  <li>网络：<code>web_search</code>、<code>web_extract</code>、<code>x_search</code></li>
+  <li>视觉/媒体：<code>vision_analyze</code>、<code>image_generate</code>、<code>video_generate</code>、<code>text_to_speech</code>、BFL FLUX3 系列</li>
+  <li>知识：<code>skills_list</code>、<code>skill_view</code>、<code>skill_manage</code>、<code>memory</code>、<code>session_search</code></li>
+  <li>任务：<code>todo</code>、<code>delegate_task</code>、<code>cronjob</code>、<code>clarify</code></li>
+</ul>
+<ul class="tool-list">
+  <li>浏览器：<code>browser_navigate</code> / <code>_snapshot</code> / <code>_click</code> / <code>_type</code> / <code>_scroll</code> / <code>_cdp</code> 等 13 个</li>
+  <li>桌面：<code>computer_use</code>、<code>read_terminal</code>、<code>open_preview</code>、<code>apply_layout</code> 等</li>
+  <li>智能家居：<code>ha_list_entities</code>、<code>ha_call_service</code> 等</li>
+  <li>看板：<code>kanban_create</code> / <code>_list</code> / <code>_review</code> 等 15 个</li>
+  <li>消息：<code>discord</code>、<code>discord_admin</code>、飞书系列、元宝系列</li>
+  <li>项目：<code>project_list</code> / <code>project_create</code> / <code>project_switch</code></li>
+</ul>
+</div>
+
+<h3>5.4 代表工具 Schema 源码片段</h3>
+<h4>read_file（tools/file_tools.py）</h4>
+<pre><code>READ_FILE_SCHEMA = {
+  "name": "read_file",
+  "description": "Read a text file with line numbers and pagination. Output format: 'LINE_NUM|CONTENT'.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "path":   { "type": "string",  "description": "Path to the file to read" },
+      "offset": { "type": "integer", "description": "Line to start (1-indexed, default 1)", "default": 1, "minimum": 1 },
+      "limit":  { "type": "integer", "description": "Max lines (default 2000)", "default": 2000, "maximum": 2000 }
+    },
+    "required": ["path"]
+  }
+}
+registry.register(name="read_file", toolset="file", schema=READ_FILE_SCHEMA, handler=_handle_read_file, ...)</code></pre>
+
+<h4>terminal（tools/terminal_tool.py）</h4>
+<pre><code>TERMINAL_SCHEMA = {
+  "name": "terminal",
+  "parameters": { "type": "object",
+    "properties": {
+      "command":   { "type": "string",  "description": "The command to execute" },
+      "background":{ "type": "boolean", "default": False },
+      "timeout":   { "type": "integer", "minimum": 1 },
+      "workdir":   { "type": "string" },
+      "pty":       { "type": "boolean", "default": False },
+      "watch_patterns": { "type": "array", "items": { "type": "string" } }
+    }, "required": ["command"] }
+}</code></pre>
+
+<div class="note"><strong>特殊点：</strong>
+① 不可信工具结果（web/browser/MCP）包一层 <code>&lt;untrusted_tool_result source="..."&gt;...&lt;/untrusted_tool_result&gt;</code>
+XML 防间接注入；② 工具数量过多时用 <code>tool_search</code> / <code>tool_describe</code> / <code>tool_call</code>
+渐进披露桥接；③ 结构化结果走 <code>tool_result()</code> 返回 JSON 字符串；多模态用
+<code>{"_multimodal": true, "content": [...]}</code> 信封；④ handler 返回值必须为字符串。</div>
+
+<!-- ======================= 6. OpenClaw ======================= -->
+<h2 id="openclaw"><span class="section-label">6.</span> OpenClaw</h2>
+<p class="section-label">TypeScript / 多 Provider 适配（Anthropic / OpenAI / Responses / Gemini）</p>
+
+<div class="card">
+  <p><strong>定义语言：</strong>TypeBox <code>TSchema</code>（编译即 JSON Schema），统一
+  <code>AgentTool { name, label, description, parameters, outputSchema?, execute, executionMode? }</code>
+  （<code>packages/agent-core/src/types.ts:551</code>）。<br>
+  <strong>线上协议：</strong>内部统一 <code>Context { systemPrompt, messages, tools }</code>，由各 provider 适配器
+  （<code>packages/ai/src/providers/</code>）转换：Anthropic <code>input_schema</code>/<code>tool_result</code>、
+  OpenAI Completions <code>type:function</code>/<code>role:"tool"</code>、Responses
+  <code>function_call_output</code>、Gemini <code>functionDeclarations</code>/<code>functionResponse</code>。<br>
+  <strong>内置工具：</strong>60+ 个（core catalog 57 + grep/find/ls/bash + pdf + tool_search 家族），按
+  minimal/coding/messaging/full profile 过滤。</p>
+</div>
+
+<h3>6.1 内部统一消息结构</h3>
+<pre><code>// assistant 的 tool_call（归一化）
+{ "type": "toolCall", "id": "...", "name": "exec", "arguments": { ... },
+  "thoughtSignature"?: "...", "executionMode": "sequential" | "parallel" }
+
+// 工具结果（归一化）
+{ "role": "toolResult", "toolCallId": "...", "toolName": "exec",
+  "content": [ { "type": "text", "text": "..." } | { "type": "image", ... } ],
+  "details"?: {...}, "isError": false }</code></pre>
+
+<h3>6.2 各 Provider 的 wire 转换示例</h3>
+<pre><code>// Anthropic
+tools: [{ name, description, input_schema }]
+tool_result: user 消息内 { type: "tool_result", tool_use_id, content, is_error }  // 连续多个合并进一条 user 消息
+
+// OpenAI Chat Completions
+tools: [{ type: "function", function: { name, description, parameters, strict: false } }]
+result: { role: "tool", tool_call_id, content, name? }
+
+// OpenAI Responses
+tools: [{ type: "function", name, description, parameters, strict? }]
+result: { type: "function_call_output", call_id, output }
+
+// Gemini
+tools: [{ functionDeclarations: [{ name, description, parametersJsonSchema }] }]
+result: parts: [{ functionResponse: { name, response } }]</code></pre>
+
+<h3>6.3 内置工具完整清单（按 section 分组）</h3>
+<div class="grid2">
+<ul class="tool-list">
+  <li><strong>fs</strong>：read、write、edit、apply_patch</li>
+  <li><strong>runtime</strong>：exec、process、code_execution</li>
+  <li><strong>web</strong>：web_search、web_fetch、x_search</li>
+  <li><strong>memory</strong>：memory_search、memory_get</li>
+  <li><strong>sessions</strong>：sessions*、conversations_*、sessions_send、sessions_spawn、subagents、github_*、agents_wait、sessions_yield 等</li>
+  <li><strong>ui</strong>：browser、screen、dashboard、terminal、portal、canvas、show_widget</li>
+  <li><strong>messaging</strong>：message（action 分发）</li>
+  <li><strong>automation</strong>：heartbeat_respond、automations(cron)、gateway</li>
+  <li><strong>nodes</strong>：nodes、computer、mobile_ui</li>
+  <li><strong>agents</strong>：agents_list、get_goal、create_goal、update_goal、progress_card、ask_user、skill_workshop</li>
+  <li><strong>media</strong>：view_image、image_generate、music_generate、video_generate、tts、pdf</li>
+</ul>
+</div>
+
+<h3>6.4 代表工具 Schema 源码片段</h3>
+<h4>read（src/agents/sessions/tools/read-tool-contract.ts + read.ts）</h4>
+<pre><code>export const readToolInputSchema = Type.Object({
+  path:   Type.String({ description: "File path; relative/absolute." }),
+  offset: Type.Optional(Type.Integer({ minimum: 1 })),
+  limit:  Type.Optional(Type.Number()),
+  cursor: Type.Optional(Type.Integer({ minimum: 0 })),
+  optional: Type.Optional(Type.Literal(true, { description: "Missing paths return structured not_found" })),
+});
+
+// 工具对象（read.ts:472）
+{ name: "read", label: "read",
+  description: "Read text/image file... Continue with offset/limit, or cursor within a long line.",
+  parameters: readToolInputSchema, outputSchema: readToolOutputSchema,
+  async execute(toolCallId, params, signal?, onUpdate?, ctx?) { ... } }</code></pre>
+
+<h4>exec（src/agents/bash-tools.schemas.ts）</h4>
+<pre><code>export const execSchema = Type.Object({
+  command: Type.String({ description: "Shell command to execute" }),
+  workdir: Type.Optional(Type.String()),
+  env: Type.Optional(Type.Record(Type.String(), Type.String())),
+  yieldMs: Type.Optional(Type.Number({ description: "Default 10000" })),
+  background: Type.Optional(Type.Boolean()),
+  timeoutSeconds: Type.Optional(Type.Number()),
+  pty: Type.Optional(Type.Boolean()),
+  host: optionalStringEnum(["auto","sandbox","gateway","node"]),
+  ...
+});</code></pre>
+
+<div class="note"><strong>特殊点：</strong>① message/browser/nodes 工具刻意<strong>拍平 schema</strong>（注释明确：provider
+工具校验器拒绝嵌套 anyOf/union）；② message 用顶层 <code>action</code> 枚举分发 20 种操作，并带 snake_case
+别名字段；③ 发送前经 <code>normalizeToolParameterSchema</code> 按 modelCompat 清洗 schema。</div>
+
+<!-- ======================= 7. OpenCode ======================= -->
+<h2 id="opencode"><span class="section-label">7.</span> OpenCode</h2>
+<p class="section-label">TypeScript / Vercel AI SDK</p>
+
+<div class="card">
+  <p><strong>定义语言：</strong>Effect Schema（<code>Schema.Struct</code> + <code>.annotate({description})</code>），
+  经 <code>ToolJsonSchema.fromTool()</code> 转 JSON Schema（剥 optional null 分支、扁平 anyOf/allOf、整数补界）。
+  工具统一由 <code>Tool.define(id, init)</code> 注册（<code>packages/opencode/src/tool/tool.ts</code>）。<br>
+  <strong>线上协议：</strong>Vercel AI SDK（<code>streamText</code>），通过 <code>@ai-sdk/*</code> provider 包适配
+  各后端；工具结果为 AI SDK 的 tool-result part；持久化 part 见 <code>packages/schema/src/v1/session.ts</code>
+  <code>ToolPart</code>（state: pending/running/completed/error）。<br>
+  <strong>内置工具：</strong>16 个。</p>
+</div>
+
+<h3>7.1 工具框架</h3>
+<pre><code>interface Def {
+  id: string; description: string;
+  parameters: Schema.Decoder&lt;unknown&gt;;          // Effect Schema
+  execute(args, ctx): Effect.Effect&lt;ExecuteResult&gt;   // { title, metadata, output, attachments? }
+}
+// wrap(): 每次调用先 Schema.decodeUnknownEffect 校验，失败抛 InvalidArgumentsError
+//         （message 要求 LLM 重写输入），再执行并截断输出</code></pre>
+
+<h3>7.2 内置工具完整清单（16 个）</h3>
+<table>
+  <tr><th>工具</th><th>文件</th><th>参数</th></tr>
+  <tr><td><code>bash</code></td><td>tool/shell.ts</td><td>command* / timeout / workdir</td></tr>
+  <tr><td><code>read</code></td><td>tool/read.ts</td><td>filePath* / offset / limit</td></tr>
+  <tr><td><code>write</code></td><td>tool/write.ts</td><td>content* / filePath*</td></tr>
+  <tr><td><code>edit</code></td><td>tool/edit.ts</td><td>filePath* / oldString* / newString* / replaceAll</td></tr>
+  <tr><td><code>grep</code></td><td>tool/grep.ts</td><td>pattern* / path / include</td></tr>
+  <tr><td><code>glob</code></td><td>tool/glob.ts</td><td>pattern* / path</td></tr>
+  <tr><td><code>task</code></td><td>tool/task.ts</td><td>description* / prompt* / subagent_type* / task_id / command / background</td></tr>
+  <tr><td><code>todowrite</code></td><td>tool/todo.ts</td><td>todos[]（content/status/priority）</td></tr>
+  <tr><td><code>webfetch</code></td><td>tool/webfetch.ts</td><td>url* / format(text|markdown|html) / timeout</td></tr>
+  <tr><td><code>websearch</code></td><td>tool/websearch.ts</td><td>query* / numResults / type / livecrawl / contextMaxCharacters</td></tr>
+  <tr><td><code>skill</code></td><td>tool/skill.ts</td><td>name*</td></tr>
+  <tr><td><code>question</code></td><td>tool/question.ts</td><td>questions[]</td></tr>
+  <tr><td><code>lsp</code></td><td>tool/lsp.ts</td><td>operation* / filePath* / line* / character* / query（实验性）</td></tr>
+  <tr><td><code>apply_patch</code></td><td>tool/apply_patch.ts</td><td>patchText*（仅 gpt-* 非 oss 模型启用，与 edit/write 互斥）</td></tr>
+  <tr><td><code>execute</code></td><td>tool/code-mode.ts</td><td>code*（MCP 沙箱批量调用，实验性）</td></tr>
+  <tr><td><code>invalid</code></td><td>tool/invalid.ts</td><td>占位工具（"Do not use"），非法调用被重写为它</td></tr>
+</table>
+
+<h3>7.3 代表工具 Schema 源码片段</h3>
+<h4>edit（tool/edit.ts）</h4>
+<pre><code>export const Parameters = Schema.Struct({
+  filePath: Schema.String.annotate({ description: "The absolute path to the file to modify" }),
+  oldString: Schema.String.annotate({ description: "The text to replace" }),
+  newString: Schema.String.annotate({
+    description: "The text to replace it with (must be different from oldString)" }),
+  replaceAll: Schema.optional(Schema.Boolean).annotate({
+    description: "Replace all occurrences of oldString (default false)" }),
+});</code></pre>
+
+<h4>bash（tool/shell/prompt.ts）</h4>
+<pre><code>export function parameterSchema() {
+  return Schema.Struct({
+    command: Schema.String.annotate({ description: "The command to execute" }),
+    timeout: Schema.optional(PositiveInt).annotate({ description: "Optional timeout in milliseconds" }),
+    workdir: Schema.optional(Schema.String).annotate({
+      description: "The working directory to run the command in. Defaults to the current directory." }),
+  });
+}</code></pre>
+
+<div class="note"><strong>特殊点：</strong>① edit 实现 9 级容错替换链（精确→行 trim→块锚点 Levenshtein≥0.65→
+空白归一→缩进→转义→边界→上下文→多匹配），变更以 jsdiff unified diff 存 metadata；② <code>experimental_repairToolCall</code>
+把非法调用重写为 <code>invalid</code> 工具；③ provider 特判（OpenAI/Azure 强制 strict:false、Gemini 整数枚举转字符串）；
+④ <code>apply_patch</code> 为 Codex 风格文本协议（见 §9）。</div>
+
+<!-- ======================= 8. Qwen Code ======================= -->
+<h2 id="qwen-code"><span class="section-label">8.</span> Qwen Code</h2>
+<p class="section-label">TypeScript / OpenAI 兼容（DashScope）</p>
+
+<div class="card">
+  <p><strong>定义语言：</strong>gemini-cli 风格 —— 直接构造 <code>@google/genai</code> 的
+  <code>FunctionDeclaration { name, description, parametersJsonSchema }</code>
+  （<code>packages/core/src/tools/tools.ts</code> <code>DeclarativeTool</code> 基类）。<br>
+  <strong>线上协议：</strong>OpenAI 兼容端点（默认 DashScope），由 <code>converter.ts</code>
+  <code>convertGeminiToolsToOpenAI</code> 把 FunctionDeclaration 转 <code>tools: [{type:"function",...}]</code>；
+  内部另有 Gemini 原生直连路径（functionCall / functionResponse part）。<br>
+  <strong>工具注册：</strong><code>packages/core/src/config/config.ts</code> <code>createToolRegistry()</code>
+  （逐条 registerLazy 动态 import）。</p>
+</div>
+
+<h3>8.1 请求侧转换（FunctionDeclaration → OpenAI tools）</h3>
+<pre><code>{
+  "type": "function",
+  "function": { "name": "read_file", "description": "...", "parameters": { ... JSON Schema ... } }
+}
+// 之后 relaxSchemaForFunctionCalling：因 OpenAI 网关在 additionalProperties:false 时
+// 会把所有属性提升为 required，故放宽线上必填约束（本地仍按源 schema 校验）</code></pre>
+
+<h3>8.2 调用与结果回传</h3>
+<pre><code>// assistant 消息
+{ "role": "assistant", "tool_calls": [ { "id": "call_0", "type": "function",
+  "function": { "name": "read_file", "arguments": "{\"file_path\":\"...\"}" } } ] }
+
+// 结果回传（内部 functionResponse part → OpenAI role=tool）
+{ "role": "tool", "tool_call_id": "call_0", "content": [ { "type": "text", "text": "..." } ] }
+// 媒体经 splitToolMedia 剥离到后续合并的 user 消息（OpenAI 规范要求 tool 消息 content 只能含文本）</code></pre>
+
+<h3>8.3 内置工具完整清单（节选）</h3>
+<div class="grid2">
+<ul class="tool-list">
+  <li>核心：<code>read_file</code>、<code>write_file</code>、<code>edit</code>、<code>grep</code>、<code>glob</code>、
+      <code>list_directory(ls)</code>（opt-in）、<code>notebook_edit</code>、<code>zoom_image</code></li>
+  <li>运行：<code>shell</code>（run_shell_command）、<code>monitor</code>、<code>create_sub_session</code></li>
+  <li>子代理：<code>agent</code>、<code>list_agents</code>、<code>task_stop</code>、<code>send_message</code>、
+      <code>task_create</code>/<code>task_update</code>/<code>task_list</code>（opt-in）</li>
+  <li>规划：<code>todo_write</code>、<code>enter_plan_mode</code>、<code>exit_plan_mode</code>、<code>structured_output</code>、
+      <code>get_goal</code>/<code>update_goal</code>、<code>workflow</code>（opt-in）</li>
+</ul>
+<ul class="tool-list">
+  <li>联网：<code>web_fetch</code>、<code>web_search</code>（opt-in，DashScope 侧信道）</li>
+  <li>媒体：<code>image_gen</code>、<code>display_image</code>、<code>artifact</code>、<code>record_artifact</code></li>
+  <li>其他：<code>tool_search</code>、<code>read_mcp_resource</code>、<code>skill</code>、<code>ask_user_question</code>、
+      <code>lsp</code>（opt-in）、<code>cron_create</code>/<code>cron_list</code>/<code>cron_delete</code>（opt-in）、
+      <code>loop_wakeup</code>、<code>enter_worktree</code>/<code>exit_worktree</code>、
+      <code>team_*</code>、<code>computer_use__*</code>（9 个，opt-in）</li>
+</ul>
+</div>
+<div class="warn"><strong>已移除/不存在的工具（任务描述中的"预期"项已核实）：</strong>
+<code>replace</code>、<code>google_web_search</code>、<code>read_many_files</code>（仅测试 mock）、
+<code>save_memory</code>（仅保留常量名，无实现/注册）、单一 <code>task</code> 工具均不存在。</div>
+
+<h3>8.4 代表工具 Schema 源码片段</h3>
+<h4>todo_write（packages/core/src/tools/todoWrite.ts）</h4>
+<pre><code>const todoWriteToolSchemaData: FunctionDeclaration = {
+  name: 'todo_write',
+  description: 'Creates and manages a concise, user-visible task list for complex or multi-step work.',
+  parametersJsonSchema: {
+    type: 'object',
+    properties: {
+      todos: { type: 'array', items: { type: 'object',
+        properties: {
+          content: { type: 'string', minLength: 1 },
+          status:  { type: 'string', enum: ['pending','in_progress','completed'] },
+          id:      { type: 'string', maxLength: 500 },
+          blockedBy: { type: 'array', items: { type: 'string' }, uniqueItems: true },
+        }, required: ['content','status','id'], additionalProperties: false } },
+    },
+    required: ['todos'],
+    $schema: 'http://json-schema.org/draft-07/schema#',
+  },
+};</code></pre>
+
+<h4>shell（packages/core/src/tools/shell.ts）</h4>
+<pre><code>// 参数：command*(必填) / is_background / timeout(≤600000ms) / description / directory(绝对路径，须在工作区内)
+// required: ['command']；isOutputMarkdown=false；canUpdateOutput=true（流式增量更新）
+// 安全门：拒绝空命令、自杀命令、前台 sleep≥2s（提示用 monitor）、后台末尾禁裸 &</code></pre>
+
+<div class="note"><strong>特殊点：</strong>① <code>shouldDefer=true</code> 工具不出现在初始 function 列表，由
+<code>tool_search</code> 按需注入（省 token）；② <code>edit</code> 的 old_string/new_string 严禁转义、建议带 ≥3 行上下文；
+③ 工具结果内部用 functionResponse part（<code>response.output</code> + 媒体 <code>parts</code>），转 OpenAI 时媒体被拆到
+合并的 user 消息。</div>
+
+<!-- ======================= 9. 文本协议 ======================= -->
+<h2 id="text-protocols"><span class="section-label">9.</span> 文本协议工具对比</h2>
+
+<p>多数 harness 在结构化 JSON 工具之外，还保留一种<strong>纯文本协议</strong>工具用于批量文件编辑，
+其中最典型的是源自 Codex 的 <code>apply_patch</code>。</p>
+
+<h3>9.1 apply_patch 信封格式（Codex / OpenCode / OpenClaw / Grok-Build-codex 共用）</h3>
+<pre><code>*** Begin Patch
+*** Add File: hello.txt
++Hello world
+*** Update File: src/app.py
+@@ def greet():
+-print("Hi")
++print("Hello, world!")
+*** Move to: src/greet.py        &lt;!-- 可选重命名 --&gt;
+*** Delete File: obsolete.txt
+*** End Patch</code></pre>
+
+<table>
+  <tr><th>Header</th><th>含义</th><th>后续内容</th></tr>
+  <tr><td><code>*** Add File: &lt;path&gt;</code></td><td>新建文件</td><td>以 <code>+</code> 开头的内容行</td></tr>
+  <tr><td><code>*** Delete File: &lt;path&gt;</code></td><td>删除文件</td><td>无</td></tr>
+  <tr><td><code>*** Update File: &lt;path&gt;</code></td><td>就地修改</td><td>可选 <code>*** Move to:</code>，然后一个或多个 hunk</td></tr>
+  <tr><td>hunk</td><td>以 <code>@@</code> 开头（可带上下文标注如 <code>@@ def method():</code>）</td><td><code>+</code> 新增 / <code>-</code> 删除 / 空格 上下文行；可选 <code>*** End of File</code></td></tr>
+</table>
+
+<h4>各 harness 的 apply_patch 差异</h4>
+<table>
+  <tr><th>工具</th><th>呈现方式</th><th>语法约束</th><th>解析实现</th></tr>
+  <tr><td>Codex</td><td>custom/freeform 工具 + Lark grammar（严格语法）</td><td>支持 Add/Delete/Update/Move；模型可包在 bash heredoc 中（<code>apply_patch &lt;&lt;'EOF'</code>）</td><td>apply-patch crate：Lenient/Strict 双模式、StreamingPatchParser</td></tr>
+  <tr><td>OpenCode</td><td>普通工具 <code>apply_patch(patchText)</code></td><td>Codex 信封 + <code>@@</code> hunk + <code>+/-</code> 行</td><td>src/patch/index.ts</td></tr>
+  <tr><td>OpenClaw</td><td>工具 <code>apply_patch(input)</code></td><td><code>*** Begin Patch</code>/<code>*** End Patch</code></td><td>src/agents/apply-patch.ts</td></tr>
+  <tr><td>Grok Build</td><td>codex 命名空间 <code>apply_patch(patch)</code></td><td>同上（Add/Update/Delete/Move + hunk）</td><td>compute_all_changes 内存预计算后统一落盘</td></tr>
+  <tr><td>Claude Code</td><td>—（结构化 <code>Edit</code> 工具，无文本补丁协议）</td><td>—</td><td>—</td></tr>
+  <tr><td>Hermes</td><td>—（结构化 <code>patch</code> 工具，模糊 find-and-replace）</td><td>—</td><td>—</td></tr>
+  <tr><td>Qwen Code</td><td>—（结构化 <code>edit</code> 工具）</td><td>—</td><td>—</td></tr>
+</table>
+
+<h3>9.2 其他文本/XML 约定</h3>
+<ul>
+  <li><strong>Hermes 的 <code>&lt;untrusted_tool_result&gt;</code></strong>：外部来源工具结果包一层 XML 定界符，
+    内嵌定界符做中性化（下划线→连字符）防逃逸，防止间接提示注入。</li>
+  <li><strong>Claude Code 的 <code>&lt;system-reminder&gt;</code></strong>：以纯文本注入 tool_result/user 消息，
+    属于提示层协议，非工具调用协议。</li>
+  <li><strong>OpenCode 的 task 结果</strong>：前台结果包成 <code>&lt;task id="..." state="completed">&lt;task_result&gt;...&lt;/task_result&gt;&lt;/task&gt;</code> XML。</li>
+  <li><strong>Grok Build 的 <code>&lt;skill&gt;</code> 块</strong>：技能以 <code>&lt;skill name="..." description="..." path="...">body&lt;/skill&gt;</code> 注入。</li>
+</ul>
+
+<!-- ======================= 10. MCP ======================= -->
+<h2 id="mcp"><span class="section-label">10.</span> MCP 工具合并方式对比</h2>
+
+<table>
+  <tr><th>工具</th><th>命名前缀</th><th>Schema 处理</th><th>呈现策略</th></tr>
+  <tr><td>Claude Code</td><td><code>mcp__&lt;server&gt;__&lt;tool&gt;</code></td><td>MCP 的 inputSchema 直传（inputJSONSchema），内置走 Zod→JSON Schema</td><td>ToolSearch 延迟加载（defer_loading + tool_reference 发现）</td></tr>
+  <tr><td>Codex</td><td><code>mcp__&lt;server&gt;__&lt;tool&gt;</code>（冲突加 sha1 后缀，≤128 字符）</td><td>rmcp input_schema → ToolDefinition → ResponsesApiTool（strict=false）</td><td>默认 Direct；开 tool_search 时降级 Deferred；code_mode 时 CodeModeOnly</td></tr>
+  <tr><td>Grok Build</td><td><code>&lt;server&gt;__&lt;tool&gt;</code>（搜索/调用经 meta 工具）</td><td>search_tool 返回 schema，use_tool 透传开放对象</td><td>search_tool/use_tool 元工具，保持工具列表稳定</td></tr>
+  <tr><td>Hermes</td><td><code>mcp__&lt;server&gt;__&lt;tool&gt;</code>（toolset 以 <code>mcp-</code> 前缀命名）</td><td>inputSchema 转 OpenAI 风格 {name,description,parameters}；另提供 list_resources/read_resource 等</td><td>渐进披露目标对象（tool_search/tool_call 桥接）</td></tr>
+  <tr><td>OpenClaw</td><td><code>&lt;safeServer&gt;__&lt;tool&gt;</code>（≤64 字符）</td><td>inputSchema 归一化为 TSchema；resources/prompts 也投影为工具</td><td>物化为普通 AgentTool，bundle-mcp profile</td></tr>
+  <tr><td>OpenCode</td><td>直接注入（无固定前缀约定在源码中）</td><td>插件/自定义工具走 zod→JSON Schema</td><td>动态 MCP 资源工具 list_mcp_resources / list_mcp_resource_templates</td></tr>
+  <tr><td>Qwen Code</td><td><code>mcp__*</code>（经 read_mcp_resource 等）</td><td>MCP 的 parametersJsonSchema 直取</td><td>工具过多时经 tool_search 暴露</td></tr>
+</table>
+
+<!-- ======================= 11. 结论 ======================= -->
+<h2 id="conclusion"><span class="section-label">11.</span> 结论与关键文件索引</h2>
+
+<h3>11.1 核心结论</h3>
+<ol>
+  <li><strong>Schema 定义语言 4 类：</strong>Zod（Claude Code）、schemars derive（Codex、Grok Build）、
+    TypeBox（OpenClaw）、Effect Schema（OpenCode）；Hermes 用纯 dict，Qwen Code 直接写 JSON Schema。
+    最终都产出一份标准 JSON Schema（draft-07）。</li>
+  <li><strong>线上协议 2 大族：</strong>Anthropic Messages（Claude Code）与 OpenAI 系（Codex Responses、
+    Grok Build 双轨、Hermes Chat、Qwen Code 兼容、OpenCode AI SDK 多 provider）；OpenClaw 为最完整的
+    多协议适配层。</li>
+  <li><strong>工具结果统一约定：</strong>OpenAI 系为 <code>role:"tool" + tool_call_id</code>（Chat）或
+    <code>function_call_output + call_id</code>（Responses）；Anthropic 系为 <code>tool_result + tool_use_id</code>。
+    <code>arguments</code> 一律是 JSON 字符串。</li>
+  <li><strong>渐进披露（tool_search）成为标配：</strong>除 OpenCode 外，6 个 harness 都有延迟工具发现机制，
+    控制 token 成本并保持 KV cache 稳定。</li>
+  <li><strong>文本协议并存：</strong>apply_patch（Codex 系 4 家）与各种 XML 定界符约定（Hermes、Claude Code 等），
+    与结构化 JSON 工具互补。</li>
+</ol>
+
+<h3>11.2 关键文件索引</h3>
+<table>
+  <tr><th>工具</th><th>注册入口</th><th>Schema/协议核心文件</th></tr>
+  <tr><td>Claude Code</td><td>src/tools.ts</td><td>src/Tool.ts、src/utils/api.ts（toolToAPISchema）、src/utils/zodToJsonSchema.ts、src/services/api/claude.ts、src/services/mcp/client.ts</td></tr>
+  <tr><td>Codex</td><td>core/src/tools/spec_plan.rs</td><td>tools/src/tool_spec.rs、tools/src/responses_api.rs、core/src/tools/handlers/shell_spec.rs、apply_patch.lark、core/src/client.rs</td></tr>
+  <tr><td>Grok Build</td><td>crates/codegen/xai-grok-tools/src/registry/types.rs</td><td>crates/common/xai-tool-runtime/src/tool.rs、types/definition.rs、sampling-types/src/conversation/{chat_completions,responses}.rs</td></tr>
+  <tr><td>Hermes</td><td>tools/registry.py</td><td>model_tools.py、agent/chat_completion_helpers.py、agent/tool_dispatch_helpers.py、tools/mcp_tool.py</td></tr>
+  <tr><td>OpenClaw</td><td>src/agents/agent-tools.ts、packages/agent-core/src/types.ts</td><td>packages/llm-core/src/types.ts、packages/ai/src/providers/*（anthropic.ts、openai-completions.ts、google-shared.ts）、src/agents/bash-tools.schemas.ts</td></tr>
+  <tr><td>OpenCode</td><td>packages/opencode/src/tool/registry.ts</td><td>tool/tool.ts、tool/json-schema.ts、session/llm.ts、provider/transform.ts、schema/src/v1/session.ts</td></tr>
+  <tr><td>Qwen Code</td><td>packages/core/src/config/config.ts（createToolRegistry）</td><td>tools/tools.ts（DeclarativeTool）、core/openaiContentGenerator/converter.ts、core/coreToolScheduler.ts、core/geminiChat.ts</td></tr>
+</table>
+
+</main>
+
+<footer>
+  CrewRouter · docs/harness-tool-call-formats.html · 2026-08-22 · 数据来源：各仓库源码（分析 HEAD 见 §1 表格）
+</footer>
+
+</body>
+</html>

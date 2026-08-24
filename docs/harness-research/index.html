@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harness 研究报告索引</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+         background: #0d1117; color: #e6edf3; max-width: 860px; margin: 0 auto; padding: 40px 24px; line-height: 1.7; }
+  h1 { font-size: 26px; border-bottom: 1px solid #30363d; padding-bottom: 12px; }
+  .sub { color: #8b949e; font-size: 14px; margin-top: -8px; }
+  .card { display: block; border: 1px solid #30363d; border-radius: 10px; padding: 18px 22px;
+          margin: 14px 0; text-decoration: none; color: inherit; transition: border-color .15s, background .15s; }
+  .card:hover { border-color: #58a6ff; background: #161b22; }
+  .card h2 { margin: 0 0 6px; font-size: 17px; color: #58a6ff; }
+  .card p { margin: 0; color: #8b949e; font-size: 13.5px; }
+  .meta { float: right; color: #6e7681; font-size: 12px; font-weight: normal; }
+  footer { margin-top: 32px; color: #6e7681; font-size: 12.5px; border-top: 1px solid #30363d; padding-top: 12px; }
+</style>
+</head>
+<body>
+<h1>Harness 研究报告索引</h1>
+<p class="sub">八大 AI 编程客户端（Claude Code / Codex / Grok Build / OpenCode / Qwen Code / Hermes / OpenClaw / DeepSeek Harness）机制研究 · Bloret Crew</p>
+
+<a class="card" href="./harness-plugin-and-hook-mechanisms.html">
+  <span class="meta">89 KB · 更新 2026-08-23</span>
+  <h2>① 插件与 Hook 机制</h2>
+  <p>各家扩展体系横向拆解：Hooks/Plugins/Skills 双轨制、事件总线、信任门控、声明式扩展包，以及对 CrewRouter 插件系统的借鉴建议。</p>
+</a>
+
+<a class="card" href="./harness-prompt-and-message-construction.html">
+  <span class="meta">51 KB · 更新 2026-08-22</span>
+  <h2>② 系统提示词与消息构建</h2>
+  <p>各家如何拼装 system prompt、CLAUDE.md/AGENTS.md 等项目记忆的加载顺序与注入位置、消息角色规范化。</p>
+</a>
+
+<a class="card" href="./harness-tool-call-formats.html">
+  <span class="meta">57 KB · 更新 2026-08-22</span>
+  <h2>③ 工具调用格式</h2>
+  <p>内置工具定义格式、文本协议工具对比、MCP 工具合并方式，附关键文件索引。</p>
+</a>
+
+<footer>原始文件与本索引同目录存放 · 相关落地：CrewRouter 注入提示词（inject_prompts）、客户端事件上报（client-events）· 生成于 2026-08-24</footer>
+</body>
+</html>
