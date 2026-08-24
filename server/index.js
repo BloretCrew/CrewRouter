@@ -2386,6 +2386,8 @@ if (isDemo) {
   app.use('/api/user', require('./routes/notifications'));
   // 用户级自定义提示词（每人仅见自己的；admin 全站视图走 /api/admin/custom-instructions）
   app.use('/api/user', require('./routes/user-custom-instructions'));
+  // 注入提示词（请求侧 system 注入配置，demo 不挂载）
+  app.use('/api/user', require('./routes/inject-prompts'));
   // 客户端事件上报（hook → 实时活动看板）
   app.use('/api/client-events', require('./routes/client-events'));
   app.use('/api/playground', require('./routes/playground'));
@@ -2460,6 +2462,35 @@ app.use((req, res) => {
   res.status(404).json({ error: { message: 'Not found', type: 'not_found' } });
 });
 
+// ========== 自动迁移：注入提示词（条目表 + Key 绑定表） ==========
+async function ensureInjectPromptsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inject_prompts (
+        id BIGSERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        content TEXT NOT NULL,
+        enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_inject_prompts_user ON inject_prompts(user_id, enabled, sort_order)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inject_prompt_key_bindings (
+        prompt_id BIGINT NOT NULL REFERENCES inject_prompts(id) ON DELETE CASCADE,
+        api_key_id INTEGER NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+        PRIMARY KEY (prompt_id, api_key_id)
+      )
+    `);
+    Logger.info('[迁移] inject_prompts 注入提示词表已就绪');
+  } catch (err) {
+    Logger.warn(`[迁移] inject_prompts 表迁移跳过: ${err.message}`);
+  }
+}
+
 // 启动服务器
 const PORT = config.app.port || 20002;
 
@@ -2519,6 +2550,7 @@ async function runPendingMigrations() {
     ensureApiKeyFusionEnabled,
     ensureApiSignatureColumns,
     ensureApiKeySignatureColumns,
+    ensureInjectPromptsTable,
     ensureProviderMultiApiKeyColumns,
     ensureApiKeyEnabledColumns,
     ensureApiKeySwallowImages,

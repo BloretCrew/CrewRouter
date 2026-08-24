@@ -433,7 +433,7 @@ class ConsoleApp {
       case 'balance': await this.loadBalance(); break;
       case 'settings': this.loadSettings(); break;
       case 'auditLogs': await this.loadAuditLogs(1); break;
-      case 'prompts': await this.loadCustomPrompts(1); break;
+      case 'prompts': await Promise.all([this.loadInjectPrompts(), this.loadCustomPrompts(1)]); break;
     }
   }
 
@@ -5141,6 +5141,170 @@ class ConsoleApp {
     } catch (error) {
       console.error(t('加载提示词详情失败:'), error);
       setHTML(content, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+    }
+  }
+
+  // ================= 注入提示词（请求侧 system 注入，模型库同款卡片风格） =================
+
+  async loadInjectPrompts() {
+    const container = document.getElementById('injectPromptsList');
+    if (!container) return;
+    try {
+      const res = await fetch('/api/user/inject-prompts');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('加载失败'));
+      this._injectPrompts = data.items || [];
+      setHTML(container, this._injectPrompts.length
+        ? this._injectPrompts.map(item => this.renderInjectPromptCard(item)).join('')
+        : `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc" style="text-align:center;">${t('暂无注入条目，点击右上角「新建条目」创建')}</div></div></div>`);
+    } catch (error) {
+      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('加载失败'))}</div></div></div>`);
+    }
+  }
+
+  renderInjectPromptCard(item) {
+    if (!item) return '';
+    const preview = String(item.content || '').replace(/\s+/g, ' ').trim();
+    const boundCount = (item.bound_key_ids || []).length;
+    const scopeBadge = !item.enabled
+      ? ''
+      : (boundCount > 0
+        ? `<span class="model-item-badge" style="background:rgba(59,130,246,.12);color:var(--primary);">${t('{n} 个 Key', { n: boundCount })}</span>`
+        : `<span class="model-item-badge" style="background:rgba(34,197,94,.12);color:#16a34a;">${t('全局生效')}</span>`);
+    const disabledBadge = item.enabled ? '' : `<span class="model-item-badge series">${t('已停用')}</span>`;
+    return `
+    <div class="model-library-item ${item.enabled ? '' : 'model-hidden'}" data-inject-id="${escapeHtml(item.id)}" style="cursor:default;">
+      <div class="model-library-item-info">
+        <div class="model-library-item-name">
+          <span>${escapeHtml(item.name)}</span>
+          <div class="model-item-badges">${scopeBadge}${disabledBadge}</div>
+        </div>
+        <div class="model-library-item-desc" style="-webkit-line-clamp:1;">${escapeHtml(preview)}</div>
+      </div>
+      <div class="model-library-item-actions">
+        <label class="toggle-switch" onclick="event.stopPropagation()" title="${item.enabled ? t('点击停用') : t('点击启用')}">
+          <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="app.showInjectPromptModal(${parseInt(item.id, 10)})">${t('编辑')}</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})">${t('删除')}</button>
+      </div>
+    </div>`;
+  }
+
+  async showInjectPromptModal(id = null) {
+    const modal = document.getElementById('injectPromptModal');
+    if (!modal) return;
+    this._editingInjectId = id ? parseInt(id, 10) : null;
+    const item = this._editingInjectId ? (this._injectPrompts || []).find(p => p.id === this._editingInjectId) : null;
+
+    const titleEl = document.getElementById('injectPromptModalTitle');
+    if (titleEl) titleEl.textContent = item ? `${t('编辑注入条目')} · ${item.name}` : t('新建条目');
+    document.getElementById('injectPromptName').value = item?.name || '';
+    document.getElementById('injectPromptContent').value = item?.content || '';
+
+    // Key 绑定多选：每次打开拉取最新列表；不勾选任何 Key = 对所有 Key 全局生效
+    const keyListEl = document.getElementById('injectPromptKeyList');
+    setHTML(keyListEl, pageLoadingHtml(t('加载中...'), { compact: true }));
+    let keys = [];
+    try {
+      const res = await fetch('/api/user/inject-prompts/my-keys');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('加载失败'));
+      keys = data.items || [];
+    } catch (error) {
+      setHTML(keyListEl, `<p style="font-size:13px;color:var(--destructive);margin:0;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+      modal.style.display = 'flex';
+      modal.classList.add('active');
+      return;
+    }
+
+    const bound = new Set((item?.bound_key_ids || []).map(v => String(v)));
+    if (!keys.length) {
+      setHTML(keyListEl, `<p style="font-size:13px;color:var(--muted-foreground);margin:0;">${t('暂无可用 Key，保存后将对所有 Key 全局生效')}</p>`);
+    } else {
+      setHTML(keyListEl, `
+        <p style="font-size:12px;color:var(--muted-foreground);margin:0 0 4px;">${t('不勾选任何 Key 时对所有 Key 全局生效；勾选后仅对所选 Key 生效')}</p>
+        ${keys.map(k => `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);">
+            <input type="checkbox" class="inject-key-check" value="${escapeHtml(k.id)}" ${bound.has(String(k.id)) ? 'checked' : ''}>
+            <span>${escapeHtml(k.name)}${k.key_prefix ? `&nbsp;<code style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(k.key_prefix)}…</code>` : ''}</span>
+          </label>`).join('')}
+      `);
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+  }
+
+  /** 保存条目本体（新建或修改），返回条目 id */
+  async saveInjectPrompt() {
+    const id = this._editingInjectId;
+    const name = (document.getElementById('injectPromptName')?.value || '').trim();
+    const content = document.getElementById('injectPromptContent')?.value || '';
+    if (!name) { alert(t('名称不能为空')); return; }
+    if (!content.trim()) { alert(t('内容不能为空')); return; }
+    if (new TextEncoder().encode(content).length > 32 * 1024) { alert(t('内容超过 32KB 上限')); return; }
+
+    try {
+      const res = await fetch(id ? `/api/user/inject-prompts/${id}` : '/api/user/inject-prompts', {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, content })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('保存失败'));
+
+      // 绑定选择随条目一起保存
+      const keyIds = [...document.querySelectorAll('#injectPromptKeyList .inject-key-check:checked')].map(cb => parseInt(cb.value, 10));
+      await this.saveInjectPromptKeys(data.item?.id || id, keyIds);
+
+      this.closeModals();
+      this.showToast(t('已保存'), 'success');
+      await this.loadInjectPrompts();
+    } catch (error) {
+      alert(error.message || t('保存失败'));
+    }
+  }
+
+  /** 设置条目的 Key 绑定（空数组 = 全局） */
+  async saveInjectPromptKeys(promptId, keyIds) {
+    if (promptId == null) return;
+    const res = await fetch(`/api/user/inject-prompts/${promptId}/keys`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keyIds: Array.isArray(keyIds) ? keyIds : [] })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || t('保存失败'));
+  }
+
+  async deleteInjectPrompt(id) {
+    if (!confirm(t('确认删除此注入条目？删除后转发的请求不再包含该条内容'))) return;
+    try {
+      const res = await fetch(`/api/user/inject-prompts/${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('删除失败'));
+      this.showToast(t('已删除'), 'success');
+      await this.loadInjectPrompts();
+    } catch (error) {
+      alert(error.message || t('删除失败'));
+    }
+  }
+
+  async toggleInjectPrompt(id, enabled) {
+    try {
+      const res = await fetch(`/api/user/inject-prompts/${id}/toggle`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !!enabled })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('操作失败'));
+      await this.loadInjectPrompts();
+    } catch (error) {
+      alert(error.message || t('操作失败'));
+      await this.loadInjectPrompts();
     }
   }
 

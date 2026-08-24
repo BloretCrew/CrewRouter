@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { ensureOAuthTables } = require('../routes/oauth');
+const { buildInjectedPrompt } = require('../utils/inject-prompt');
 
 function sha256Hex(s) {
   return crypto.createHash('sha256').update(s).digest('hex');
@@ -89,6 +90,14 @@ async function authenticateOAuthAccessToken(req, res, next) {
       return res.status(403).json({ ok: false, error: 'API key has expired' });
     }
 
+    // 注入提示词：与 api.js validateApiKey 产物字段对齐（本路径无缓存，逐请求查库）
+    let injectPrompt = null;
+    try {
+      injectPrompt = await buildInjectedPrompt(key.user_id, key.id);
+    } catch (err) {
+      Logger.warn('[OAuth鉴权] 注入提示词查询失败:', err.message);
+    }
+
     req.apiUser = {
       userId: key.user_id,
       username: key.username,
@@ -97,6 +106,7 @@ async function authenticateOAuthAccessToken(req, res, next) {
       balance: key.balance,
       keyName: key.key_name || '',
       enabled: key.enabled !== false,
+      injectPrompt,
       viaOAuth: true,
       oauthClientId: row.client_id,
       oauthScope: row.scope,

@@ -36,6 +36,7 @@ const {
   normalizeRequestSource,
 } = require('../utils/request-source');
 const { extractCustomInstructions } = require('../utils/custom-instructions-extractor');
+const { buildInjectedPrompt, openaiAppend, anthropicAppend, anthropicSystemAppend, responsesAppend } = require('../utils/inject-prompt');
 const { checkQuotaRules } = require('../utils/points-deduct');
 const {
   getQuotaInfo,
@@ -1115,6 +1116,14 @@ async function validateApiKey(req, res, next) {
       crewrouterCommands: keyData.crewrouter_commands !== false
     };
 
+    // 注入提示词：查好拼接结果随 apiUser 一起缓存（无启用条目为 null）
+    try {
+      apiUser.injectPrompt = await buildInjectedPrompt(keyData.user_id, keyData.id);
+    } catch (err) {
+      Logger.warn('[API密钥验证] 注入提示词查询失败:', err.message);
+      apiUser.injectPrompt = null;
+    }
+
     // 缓存验证结果
     setCachedApiKey(apiKey, apiUser);
 
@@ -1281,6 +1290,12 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   if (body.user !== undefined) upstreamBody.user = body.user;
   // reasoning_effort：仅当模型开启 forward_reasoning_effort 时由上层写入 body
   if (body.reasoning_effort !== undefined) upstreamBody.reasoning_effort = body.reasoning_effort;
+
+  // 注入提示词：启用条目以尾部 system 消息追加进 system 区（复制数组，重试/换供应商不会重复拼接）
+  if (req.apiUser?.injectPrompt) {
+    upstreamBody.messages = openaiAppend([...(upstreamBody.messages || [])], req.apiUser.injectPrompt);
+  }
+
   if (stream && !upstreamBody.stream_options) {
     upstreamBody.stream_options = { include_usage: true };
   }
@@ -1633,6 +1648,10 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
   let currentProxyInfo = proxyInfo;
 
   const upstreamBody = ResponsesUpstream.chatToResponsesBody({ ...body, stream: !!stream }, model);
+  // 注入提示词：追加到 instructions（转换体本身无 instructions，等价追加进 system 区）
+  if (req.apiUser?.injectPrompt) {
+    upstreamBody.instructions = responsesAppend(upstreamBody.instructions, req.apiUser.injectPrompt);
+  }
   const msgCount = body.messages?.length || 0;
   Logger.info(`[proxyChatToResponses] 请求: provider=${provider.id}(${provider.name}), url=${url}, model=${model}, stream=${!!stream}, messages=${msgCount}, proxy=${currentProxyInfo?.proxyUrl || 'none'}`);
 
@@ -1818,6 +1837,11 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
         content: convertOpenAIContentToAnthropic(m.content)
       });
     }
+  }
+
+  // 注入提示词：启用条目追加到 systemParts 尾部后一并 join（systemParts 每次调用重建，重试安全）
+  if (req.apiUser?.injectPrompt) {
+    anthropicAppend(systemParts, req.apiUser.injectPrompt);
   }
 
   if (systemParts.length > 0) {
@@ -2333,6 +2357,12 @@ async function handleChatCompletion(req, res) {
   // 兼容 max_completion_tokens（新 OpenAI / o 系列）
   if (max_tokens === undefined && max_completion_tokens !== undefined) {
     max_tokens = max_completion_tokens;
+  }
+
+  // 注入提示词：Fusion 走独立上游调用（server/fusion），在此追加尾部 system 消息；
+  // 普通模型由 proxyOpenAI / proxyChatToResponses / proxyAnthropic 注入，避免重试时重复拼接
+  if (req.apiUser.injectPrompt && Array.isArray(messages) && (model === 'fusion' || model?.startsWith('fusion'))) {
+    openaiAppend(messages, req.apiUser.injectPrompt);
   }
 
   // 检测 Fusion 模型请求
@@ -2950,6 +2980,12 @@ async function handleAnthropicMessage(req, res) {
   applySwallowImagesIfEnabled(req);
 
   let { model, messages, system, max_tokens, stream, temperature, top_p, top_k, stop_sequences, tools, tool_choice, response_format, thinking, metadata, output_config, service_tier, cache_control, container, inference_geo } = req.body;
+
+  // 注入提示词：追加到 system 尾部（字符串尾接 / 块数组追加 text 块）；无配置时请求保持原样
+  if (req.apiUser.injectPrompt) {
+    system = anthropicSystemAppend(system, req.apiUser.injectPrompt);
+    req.body.system = system;
+  }
 
   Logger.info(`[Anthropic] 收到请求: model=${model}, stream=${!!stream}, messages=${messages?.length}`);
 
@@ -5106,6 +5142,11 @@ async function handleResponses(req, res) {
 
   const body = req.body;
   let { model, input, stream, temperature, max_output_tokens, top_p, tools, tool_choice, text, reasoning } = body;
+
+  // 注入提示词：追加到 instructions 尾部（上游透传与 chat 转换两条路径均携带）；无配置时请求保持原样
+  if (req.apiUser.injectPrompt) {
+    body.instructions = responsesAppend(body.instructions, req.apiUser.injectPrompt);
+  }
 
   // Fusion 模型检测
   if (model === 'fusion' || model?.startsWith('fusion')) {
