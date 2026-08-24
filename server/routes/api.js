@@ -50,6 +50,7 @@ const {
   buildSignatureForRequest
 } = require('../utils/api-signature');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { oauthBearer } = require('../middleware/oauth-bearer');
 const keyRefresher = require('../key-refresher');
 const proxyPool = require('../proxy-pool');
 const pluginHooks = require('../plugins/hooks');
@@ -2310,7 +2311,9 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 }
 
 // OpenAI 兼容: /v1/chat/completions 和 /api/chat/completions
-router.post('/chat/completions', validateApiKey, handleChatCompletion);
+// 双鉴权：Bearer crh_ 前缀走自有 OAuth access token（scope 需 gateway:invoke），
+// 其余凭证原样回落 validateApiKey，老路径零影响
+router.post('/chat/completions', oauthBearer, handleChatCompletion);
 
 async function handleChatCompletion(req, res) {
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
@@ -2868,7 +2871,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
 }
 
 // OpenAI 兼容: /v1/models (CrewRouter: 返回配置的模型列表 + fusion 固定)
-router.get('/models', validateApiKey, async (req, res) => {
+router.get('/models', oauthBearer, async (req, res) => {
   try {
     // 读取系统设置中配置的模型列表
     const settingsResult = await pool.query("SELECT value FROM settings WHERE key = 'model_list'");
@@ -2930,7 +2933,7 @@ router.get('/models', validateApiKey, async (req, res) => {
 });
 
 // Anthropic 兼容: /v1/messages 和 /api/messages
-router.post('/messages', validateApiKey, handleAnthropicMessage);
+router.post('/messages', oauthBearer, handleAnthropicMessage);
 
 async function handleAnthropicMessage(req, res) {
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
@@ -5085,7 +5088,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
 }
 
 // OpenAI 兼容: /v1/responses 和 /api/responses
-router.post('/responses', validateApiKey, handleResponses);
+router.post('/responses', oauthBearer, handleResponses);
 
 async function handleResponses(req, res) {
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');

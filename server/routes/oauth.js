@@ -313,7 +313,7 @@ async function issueTokenPair(clientId, userId, apiKeyId, scope) {
 // ---------- 吊销整条轮换链：向上找根，再向下递归吊销全部后代 ----------
 // （rotated_from 同时承载两种父子边：refresh→下一代 refresh、refresh→同批 access，
 //   因此自根向下的递归可覆盖链上每一代 token）
-async function revokeChain(tokenRow) {
+async function revokeChain(tokenRow, reason = '检测到 refresh 重用') {
   let rootId = tokenRow.id;
   for (let i = 0; i < 64; i++) {
     const up = await pool.query(`SELECT rotated_from FROM oauth_tokens WHERE id = $1`, [rootId]);
@@ -330,7 +330,7 @@ async function revokeChain(tokenRow) {
      UPDATE oauth_tokens SET revoked = TRUE WHERE id IN (SELECT id FROM down)`,
     [rootId]
   );
-  Logger.warn(`[OAuth授权] 检测到 refresh 重用，已吊销全链（root=#${rootId} client=${tokenRow.client_id} user=${tokenRow.user_id}）`);
+  Logger.warn(`[OAuth授权] ${reason}，已吊销全链（root=#${rootId} client=${tokenRow.client_id} user=${tokenRow.user_id}）`);
 }
 
 function sendTokenError(res, error, description) {
@@ -462,6 +462,104 @@ async function handleRefreshTokenGrant(p, res) {
     conn.release();
   }
 }
+
+// ---------- 授权管理：当前用户活跃授权链分组列表（控制台「授权管理」卡片数据源） ----------
+// 每次同意授权产生一条以根 refresh 为起点的轮换链；按链分组，组内任一 token 存活即视为活跃
+router.get('/oauth/authorizations', requireAuth, async (req, res) => {
+  try {
+    await ensureOAuthTables();
+    const r = await pool.query(
+      `WITH RECURSIVE tree AS (
+         SELECT id, rotated_from, kind, client_id, api_key_id, scope,
+                expires_at, revoked, created_at, last_used_at,
+                id AS root_id
+           FROM oauth_tokens
+          WHERE user_id = $1 AND kind = 'refresh' AND rotated_from IS NULL
+         UNION ALL
+         SELECT t.id, t.rotated_from, t.kind, t.client_id, t.api_key_id, t.scope,
+                t.expires_at, t.revoked, t.created_at, t.last_used_at,
+                tree.root_id
+           FROM oauth_tokens t
+           JOIN tree ON t.rotated_from = tree.id
+       )
+       SELECT root_id,
+              max(client_id)  AS client_id,
+              max(scope)      AS scope,
+              max(api_key_id) AS api_key_id,
+              min(created_at) AS authorized_at,
+              max(last_used_at) FILTER (WHERE NOT revoked)                      AS last_used_at,
+              max(expires_at)   FILTER (WHERE kind = 'refresh' AND NOT revoked)  AS refresh_expires_at
+         FROM tree
+        GROUP BY root_id
+       HAVING count(*) FILTER (WHERE NOT revoked) > 0
+     )
+     SELECT g.*, ak.name AS api_key_name
+       FROM g LEFT JOIN api_keys ak ON ak.id = g.api_key_id
+      ORDER BY g.authorized_at DESC`,
+      [req.session.user.id]
+    );
+
+    const clientName = (cid) => getClient(cid)?.name || cid;
+    const authorizations = r.rows.map((row) => ({
+      id: row.root_id,
+      client_id: row.client_id,
+      client_name: clientName(row.client_id),
+      scope: row.scope || '',
+      api_key_id: row.api_key_id,
+      api_key_name: row.api_key_name || '',
+      authorized_at: row.authorized_at,
+      last_used_at: row.last_used_at,
+      expires_at: row.refresh_expires_at,
+      expired: !row.refresh_expires_at || new Date(row.refresh_expires_at) < new Date(),
+    }));
+    res.json({ ok: true, authorizations });
+  } catch (err) {
+    Logger.error('[OAuth授权] 查询授权列表失败:', err.message);
+    res.status(500).json({ ok: false, error: 'internal error' });
+  }
+});
+
+// ---------- 吊销指定授权链（该 refresh 及其派生的所有 access 全部标 revoked） ----------
+router.post('/oauth/authorizations/revoke', requireAuth, async (req, res) => {
+  try {
+    await ensureOAuthTables();
+    const id = parseInt((req.body || {}).id, 10);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ ok: false, error: 'invalid id' });
+    }
+    const found = await pool.query(
+      `SELECT * FROM oauth_tokens WHERE id = $1 AND user_id = $2`,
+      [id, req.session.user.id]
+    );
+    const row = found.rows[0];
+    if (!row) {
+      return res.status(404).json({ ok: false, error: 'authorization not found' });
+    }
+    await revokeChain(row, `用户 ${req.session.user.username} 在控制台吊销授权`);
+    res.json({ ok: true });
+  } catch (err) {
+    Logger.error('[OAuth授权] 吊销授权失败:', err.message);
+    res.status(500).json({ ok: false, error: 'internal error' });
+  }
+});
+
+// ---------- RFC 7009 风格吊销：按 token 哈希找到所属链整体吊销，永远返回 200 ----------
+router.post('/oauth/revoke', async (req, res) => {
+  await ensureOAuthTables();
+  const token = String((req.body || {}).token || '');
+  if (token) {
+    try {
+      const found = await pool.query(`SELECT * FROM oauth_tokens WHERE token_hash = $1`, [sha256Hex(token)]);
+      if (found.rows[0]) {
+        await revokeChain(found.rows[0], 'RFC7009 吊销请求');
+      }
+    } catch (err) {
+      // RFC 7009 §2.1：即使处理异常也返回 200，不向客户端泄露 token 状态
+      Logger.error('[OAuth授权] revoke 处理失败:', err.message);
+    }
+  }
+  res.status(200).json({ ok: true });
+});
 
 // ---------- RFC 8414 元数据 ----------
 router.get('/.well-known/oauth-authorization-server', (req, res) => {

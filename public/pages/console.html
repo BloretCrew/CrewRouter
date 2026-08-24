@@ -561,6 +561,18 @@
 
           <div id="apiKeysList" class="api-keys-list"></div>
     </div>
+
+      <!-- 授权管理（自有 OAuth 服务签发的客户端授权，与 Passport 无关） -->
+      <div class="content-section" style="margin-top:16px;">
+        <div class="section-header">
+          <div>
+            <h2><span data-i18n="授权管理">授权管理</span></h2>
+            <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。">已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。</span></p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="app.loadAuthorizations()"><span data-i18n="刷新授权列表">刷新授权列表</span></button>
+        </div>
+        <div id="oauthAuthorizationsList"></div>
+      </div>
       </div>
 
       <!-- 统计信息页面 -->
@@ -2404,7 +2416,7 @@ data: [DONE]</code></pre>
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/dom.js?v=2"></script>
   <script src="/js/dialog.js?v=2"></script>
-  <script src="/js/app.js?v=28"></script>
+  <script src="/js/app.js?v=29"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

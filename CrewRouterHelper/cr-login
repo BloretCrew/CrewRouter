@@ -1,0 +1,322 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+cr-login —— CrewRouter OAuth 登录凭证管理器（供 Claude Code / Codex 等 AI 客户端使用）
+
+用法：
+  cr-login login  [--url URL]   浏览器 PKCE 授权（client_id=crewrouter-cli,
+                                scope=gateway:invoke），凭证写入 ~/.config/cr-login.json
+  cr-login logout               删除本地凭证
+  cr-login --print              输出当前有效 access token（临过期自动刷新，带文件锁防并发）
+  cr-login --env                输出 KEY=value 形式（可 eval / export 使用）
+
+Claude Code：settings.json 里 apiKeyHelper 指向本脚本 --print，
+Codex：无等价机制，用包装脚本把 --print 结果注入 OPENAI_API_KEY。
+
+铁律：--print 模式下任何错误只写 stderr 并退出非零，绝不在 stdout 混入日志。
+"""
+
+import argparse
+import base64
+import hashlib
+import json
+import os
+import secrets
+import sys
+import time
+import urllib.parse
+import urllib.request
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover
+    fcntl = None
+
+try:
+    import http.server
+    import threading
+    import webbrowser
+except ImportError:  # pragma: no cover
+    http.server = None
+    webbrowser = None
+
+CONFIG_PATH = os.environ.get(
+    "CR_LOGIN_CONFIG", os.path.expanduser("~/.config/cr-login.json")
+)
+TOKEN_LOCK_PATH = os.path.expanduser("~/.cache/cr-login-token.lock")
+
+OAUTH_CLIENT_ID = "crewrouter-cli"
+OAUTH_SCOPE = "gateway:invoke"
+REFRESH_AHEAD_SEC = 60  # 过期前 60s 触发自动刷新
+
+
+def _load_cfg():
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        return cfg if isinstance(cfg, dict) else None
+    except Exception:
+        return None
+
+
+def _save_cfg(cfg):
+    d = os.path.dirname(CONFIG_PATH)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    tmp = CONFIG_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, CONFIG_PATH)
+
+
+def _token_request(url, form):
+    data = urllib.parse.urlencode(form).encode("utf-8")
+    req = urllib.request.Request(
+        url + "/oauth/token", data=data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return None
+
+
+def get_access_token(verbose=False):
+    """返回有效 access token；临期在独占文件锁下刷新。失败返回 None。"""
+    cfg = _load_cfg()
+    if not cfg:
+        return None
+    now = time.time()
+    try:
+        exp = float(cfg.get("expires_at") or 0)
+    except (TypeError, ValueError):
+        exp = 0
+    if cfg.get("access_token") and exp > now + REFRESH_AHEAD_SEC:
+        return str(cfg["access_token"])
+    if not cfg.get("refresh_token"):
+        return None
+
+    url = str(cfg.get("url") or "").rstrip("/")
+    client_id = str(cfg.get("client_id") or OAUTH_CLIENT_ID)
+    lock_dir = os.path.dirname(TOKEN_LOCK_PATH)
+    if lock_dir:
+        try:
+            os.makedirs(lock_dir, exist_ok=True)
+        except Exception:
+            pass
+    with open(TOKEN_LOCK_PATH, "a+") as lockf:
+        if fcntl is not None:
+            try:
+                fcntl.flock(lockf.fileno(), fcntl.LOCK_EX)
+            except Exception:
+                pass
+        # 拿到锁后重读：并发调用方可能已刷新并轮换掉旧 refresh_token
+        fresh = _load_cfg() or {}
+        try:
+            fresh_exp = float(fresh.get("expires_at") or 0)
+        except (TypeError, ValueError):
+            fresh_exp = 0
+        if (fresh.get("access_token") and fresh_exp > time.time() + REFRESH_AHEAD_SEC
+                and fresh.get("refresh_token")):
+            return str(fresh["access_token"])
+        current_rt = str(fresh.get("refresh_token") or cfg["refresh_token"])
+        out = _token_request(url, {
+            "grant_type": "refresh_token",
+            "refresh_token": current_rt,
+            "client_id": client_id,
+        })
+        if not out or not out.get("access_token") or not out.get("refresh_token"):
+            return None
+        merged = dict(cfg)
+        merged.update({
+            "access_token": str(out["access_token"]),
+            "refresh_token": str(out["refresh_token"]),
+            "expires_at": time.time() + float(out.get("expires_in", 86400)),
+        })
+        merged.setdefault("client_id", client_id)
+        try:
+            _save_cfg(merged)
+        except Exception:
+            pass
+        return merged["access_token"]
+
+
+def cmd_login(args):
+    """浏览器 PKCE 授权；回调收 code 后本地换取 token 对"""
+    if http.server is None or webbrowser is None:
+        print("[cr-login] 当前 Python 缺少 http.server/webbrowser", file=sys.stderr)
+        return 1
+    url = str(args.url or os.environ.get("CR_ROUTER_URL") or "").rstrip("/")
+    if not url:
+        print("[cr-login] 需要 --url，例如：cr-login login --url http://127.0.0.1:20003",
+              file=sys.stderr)
+        return 1
+
+    verifier = secrets.token_urlsafe(48)
+    challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(verifier.encode("ascii")).digest()
+    ).rstrip(b"=").decode("ascii")
+    state = secrets.token_urlsafe(16)
+
+    result = {}
+    done = threading.Event()
+
+    class Callback(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            u = urllib.parse.urlparse(self.path)
+            params = urllib.parse.parse_qs(u.query)
+            result["code"] = (params.get("code") or [""])[0]
+            result["state"] = (params.get("state") or [""])[0]
+            result["error"] = (params.get("error") or [""])[0]
+            ok = bool(result["code"]) and result["state"] == state
+            body = (
+                "<meta charset='utf-8'><body style=\"font-family:system-ui;"
+                "display:flex;align-items:center;justify-content:center;min-height:80vh;\">"
+                + ("登录成功，请回到终端。" if ok else "授权失败，请回终端重试。")
+                + "</body>"
+            ).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            done.set()
+
+        def log_message(self, *a):
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Callback)
+    port = server.server_address[1]
+    redirect_uri = f"http://127.0.0.1:{port}/callback"
+    auth_url = url + "/oauth/authorize?" + urllib.parse.urlencode({
+        "client_id": OAUTH_CLIENT_ID,
+        "response_type": "code",
+        "scope": OAUTH_SCOPE,
+        "redirect_uri": redirect_uri,
+        "state": state,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+    })
+    print(f"[cr-login] 正在打开浏览器进行授权（本机回调端口 {port}）...")
+    try:
+        webbrowser.open(auth_url)
+    except Exception:
+        pass
+    print(f"[cr-login] 若浏览器未自动打开，请手动访问：\n{auth_url}")
+
+    deadline = time.time() + 300
+    server.timeout = 1
+    while not done.is_set() and time.time() < deadline:
+        server.handle_request()
+    server.server_close()
+
+    if not done.is_set():
+        print("[cr-login] 等待授权超时（5 分钟）", file=sys.stderr)
+        return 1
+    if result.get("error") or not result.get("code"):
+        print(f"[cr-login] 授权被拒绝或失败：{result.get('error') or '缺少 code'}", file=sys.stderr)
+        return 1
+    if result.get("state") != state:
+        print("[cr-login] state 校验失败，放弃换取 token", file=sys.stderr)
+        return 1
+
+    out = _token_request(url, {
+        "grant_type": "authorization_code",
+        "code": result["code"],
+        "client_id": OAUTH_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "code_verifier": verifier,
+    })
+    if not out or not out.get("access_token") or not out.get("refresh_token"):
+        print("[cr-login] 授权码换取 token 失败", file=sys.stderr)
+        return 1
+
+    _save_cfg({
+        "url": url,
+        "client_id": OAUTH_CLIENT_ID,
+        "access_token": str(out["access_token"]),
+        "refresh_token": str(out["refresh_token"]),
+        "expires_at": time.time() + float(out.get("expires_in", 86400)),
+        "scope": str(out.get("scope") or OAUTH_SCOPE),
+    })
+    print(f"[cr-login] 登录成功，凭证已写入 {CONFIG_PATH}（权限 600）")
+    return 0
+
+
+def cmd_logout(args):
+    try:
+        if os.path.exists(CONFIG_PATH):
+            # 尽力吊销服务端授权链，失败不阻塞本地登出
+            cfg = _load_cfg() or {}
+            base = str(cfg.get("url") or "").rstrip("/")
+            tok = cfg.get("access_token") or ""
+            if base and tok:
+                req = urllib.request.Request(
+                    base + "/oauth/revoke",
+                    data=json.dumps({"token": tok}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}, method="POST")
+                try:
+                    urllib.request.urlopen(req, timeout=3)
+                except Exception:
+                    pass
+            os.remove(CONFIG_PATH)
+            print(f"[cr-login] 已删除 {CONFIG_PATH}")
+        else:
+            print(f"[cr-login] 未找到本地凭证（{CONFIG_PATH}）")
+    except Exception as e:
+        print(f"[cr-login] 删除配置失败：{e}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="cr-login", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd")
+
+    p_login = sub.add_parser("login", help="浏览器 OAuth 授权并写入本地凭证")
+    p_login.add_argument("--url", default=None, help="CrewRouter 地址，如 http://127.0.0.1:20003")
+    p_login.set_defaults(fn=cmd_login)
+
+    p_logout = sub.add_parser("logout", help="吊销并删除本地凭证")
+    p_logout.set_defaults(fn=cmd_logout)
+
+    ap.add_argument("--print", dest="print_token", action="store_true",
+                    help="输出有效 access token（临期自动刷新）")
+    ap.add_argument("--env", dest="print_env", action="store_true",
+                    help="输出 KEY=value 行（OPENAI_API_KEY / CR_BASE_URL）")
+    args = ap.parse_args()
+
+    if args.print_token:
+        tok = get_access_token()
+        if not tok:
+            print("[cr-login] 无有效凭证，请先执行 cr-login login", file=sys.stderr)
+            return 1
+        print(tok)
+        return 0
+
+    if args.print_env:
+        tok = get_access_token()
+        if not tok:
+            print("[cr-login] 无有效凭证，请先执行 cr-login login", file=sys.stderr)
+            return 1
+        cfg = _load_cfg() or {}
+        base = str(cfg.get("url") or "").rstrip("/")
+        print(f"OPENAI_API_KEY={tok}")
+        print(f"CR_ACCESS_TOKEN={tok}")
+        if base:
+            print(f"CR_BASE_URL={base}")
+        return 0
+
+    if getattr(args, "cmd", None):
+        return args.fn(args)
+
+    ap.print_help()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# codex-cr —— 用 CrewRouter OAuth 凭证启动 Codex 的包装脚本
+# Codex 无 apiKeyHelper 等价机制，这里把 cr-login --print 的
+# access token 注入 OPENAI_API_KEY 后 exec 原 codex（不替换默认 codex 命令）。
+set -euo pipefail
+
+TOKEN="$("${HOME}/.local/bin/cr-login" --print)" || {
+  echo "[codex-cr] 获取 CrewRouter 凭证失败，请先执行: cr-login login --url http://127.0.0.1:20003" >&2
+  exit 1
+}
+export OPENAI_API_KEY="${TOKEN}"
+
+REAL_CODEX="$(command -v codex || true)"
+if [ -z "${REAL_CODEX}" ]; then
+  echo "[codex-cr] 未找到 codex 命令" >&2
+  exit 1
+fi
+exec "${REAL_CODEX}" "$@"

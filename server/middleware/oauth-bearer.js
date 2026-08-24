@@ -10,16 +10,27 @@
 const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
-const { validateApiKey } = require('../routes/api');
 const { ensureOAuthTables } = require('../routes/oauth');
 
 function sha256Hex(s) {
   return crypto.createHash('sha256').update(s).digest('hex');
 }
 
+/** 按 OAuth token 所调用的端点族确定必需 scope */
+function requiredScope(req) {
+  const base = req.baseUrl || '';
+  const url = req.originalUrl || req.url || '';
+  if (base.includes('client-events') || url.startsWith('/api/client-events')) return 'events:report';
+  // 网关端点（/v1/* 及同路由表的 /api/chat|models|messages|responses）一律要求 gateway:invoke
+  return 'gateway:invoke';
+}
+
 async function oauthBearer(req, res, next) {
   const auth = req.headers.authorization || '';
   if (!auth.startsWith(`Bearer crh_`)) {
+    // 惰性解引用：本模块与 routes/api.js 存在加载环（api.js 挂载点引用了本模块），
+    // 请求期再取 validateApiKey 可避开循环初始化拿到 undefined
+    const { validateApiKey } = require('../routes/api');
     return validateApiKey(req, res, next);
   }
   return authenticateOAuthAccessToken(req, res, next);
@@ -48,6 +59,14 @@ async function authenticateOAuthAccessToken(req, res, next) {
     }
     if (new Date(row.expires_at) < new Date()) {
       return deny(401, 'invalid_token', 'token expired');
+    }
+
+    // scope 校验：网关端点需 gateway:invoke，client-events 需 events:report
+    const required = requiredScope(req);
+    const granted = String(row.scope || '').split(/\s+/).filter(Boolean);
+    if (!granted.includes(required)) {
+      Logger.warn(`[OAuth鉴权] scope 不足: 需要 ${required}, 实际 "${row.scope}", path=${req.originalUrl}`);
+      return deny(403, 'insufficient_scope', `token missing required scope: ${required}`);
     }
 
     // 合成绑定 API Key 的身份对象（字段对齐 api.js getCachedApiKey 的产物）

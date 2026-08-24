@@ -410,6 +410,7 @@ class ConsoleApp {
         break;
       case 'apiKeys':
         await this.loadApiKeys();
+        this.loadAuthorizations();
         this._initApiKeysStickyBar();
         break;
       case 'stats':
@@ -529,6 +530,81 @@ class ConsoleApp {
       console.error(t('加载API密钥失败:'), error);
       if (container) setHTML(container, '<p style="text-align:center;color:var(--destructive);padding:40px;">' + t('加载失败，请刷新重试') + '</p>');
     }
+  }
+
+  // ===== OAuth 授权管理（自有 OAuth 服务，与 Passport 无关） =====
+
+  async loadAuthorizations() {
+    const container = document.getElementById('oauthAuthorizationsList');
+    if (!container) return;
+    try {
+      const res = await fetch('/oauth/authorizations');
+      if (res.status === 401) return;
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = Array.isArray(data?.authorizations) ? data.authorizations : [];
+      this._lastAuthorizations = list;
+      if (list.length === 0) {
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:24px;">' + t('暂无活跃授权') + '</p>');
+        return;
+      }
+      setHTML(container, `<div class="api-key-groups">${list.map(a => this._renderAuthorizationCard(a)).join('')}</div>`);
+    } catch (error) {
+      console.error(t('加载授权列表失败:'), error);
+    }
+  }
+
+  async revokeAuthorization(id) {
+    if (!await confirm(t('确定吊销该客户端的全部授权？其所有令牌将立即失效。'))) return;
+    try {
+      const res = await fetch('/oauth/authorizations/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        this.showToast(data.error || t('吊销失败'), 'error');
+        return;
+      }
+      this.showToast(t('授权已吊销'), 'success');
+      await this.loadAuthorizations();
+    } catch (error) {
+      console.error(t('吊销失败:'), error);
+      this.showToast(t('吊销失败'), 'error');
+    }
+  }
+
+  _formatOAuthTime(v, emptyText) {
+    if (!v) return emptyText;
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? '—' : d.toLocaleString();
+  }
+
+  _renderAuthorizationCard(a) {
+    const statusChip = a.expired
+      ? this._renderApiKeyChip(t('已过期'), 'danger')
+      : this._renderApiKeyChip(t('有效'), 'ok');
+    const scopeChips = String(a.scope || '').split(/\s+/).filter(Boolean)
+      .map(s => this._renderApiKeyChip(s, 'info')).join('');
+    return `
+      <section class="api-key-group api-key-group-normal">
+        <div class="api-key-group-header">
+          <div>
+            <h3 class="api-key-group-title">${escapeHtml(a.client_name || a.client_id)}</h3>
+            <p class="api-key-group-hint"><code>${escapeHtml(a.client_id)}</code></p>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="app.revokeAuthorization(${Number(a.id)})">${t('吊销')}</button>
+        </div>
+        <div style="padding:12px 16px;">
+          ${statusChip} ${scopeChips}
+          <div style="margin-top:10px;font-size:12px;color:var(--muted-foreground);line-height:1.9;">
+            <div>${t('绑定密钥')}：${escapeHtml(a.api_key_name || (a.api_key_id ? '#' + a.api_key_id : t('未知')))}</div>
+            <div>${t('最后使用')}：${escapeHtml(this._formatOAuthTime(a.last_used_at, t('从未使用')))}</div>
+            <div>${t('过期时间')}：${escapeHtml(this._formatOAuthTime(a.expires_at))}</div>
+          </div>
+        </div>
+      </section>`;
   }
 
   // ===== API Key 卡片渲染（清晰简明） =====
