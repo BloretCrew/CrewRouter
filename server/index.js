@@ -2373,6 +2373,8 @@ if (isDemo) {
   app.use('/api', require('./routes/setup'));
   app.use('/api/i18n', require('./routes/i18n'));
   app.use('/auth', require('./routes/auth'));
+  // GitHub 登录路由（从旧 oauth.js 拆出，自有 OAuth 服务见 routes/oauth.js）
+  app.use('/auth/github-legacy', require('./routes/oauth-github'));
   app.use('/auth', require('./routes/feishu'));
   app.use('/api', require('./routes/api'));
   app.use('/api/admin', require('./routes/admin'));
@@ -2388,6 +2390,8 @@ if (isDemo) {
   app.use('/api/conversations', require('./routes/conversations'));
   app.use('/api/2fa', require('./routes/two-factor'));
   app.use('/api/passkey', require('./routes/passkey'));
+  // 自有 OAuth 2.0 授权服务（PKCE；含 /.well-known 元数据，故挂根路径；demo 不挂载）
+  app.use('/', require('./routes/oauth'));
 
   // OpenAI 兼容路由（根路径，供 SDK 直接使用）
   const apiRoutes = require('./routes/api');

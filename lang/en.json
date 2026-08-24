@@ -2492,5 +2492,18 @@
   "复制内容": "Copy content",
   "最近引用记录": "Recent referencing requests",
   "记录 ID": "Record ID",
-  "加载提示词详情失败:": "Failed to load prompt details:"
+  "加载提示词详情失败:": "Failed to load prompt details:",
+  "授权确认 - CrewRouter": "Authorize - CrewRouter",
+  "授权请求": "Authorization request",
+  "正在请求访问你的 CrewRouter 账号": "wants to access your CrewRouter account",
+  "申请的权限": "Requested permissions",
+  "选择用于本次授权的 API Key": "Choose an API key for this authorization",
+  "本次授权将以所选密钥的身份行事，用量与计费归属该密钥。": "This authorization acts as the selected key; usage is metered and billed to it.",
+  "同意授权": "Approve",
+  "仅向 CrewRouter 上报客户端使用事件": "Report client activity events to CrewRouter",
+  "通过网关调用模型接口": "Call model APIs through the gateway",
+  "读取控制台数据（预留）": "Read console data (reserved)",
+  "授权链接无效或已过期，请从客户端重新发起。": "This authorization link is invalid or has expired. Please start again from your client.",
+  "请先登录后再进行授权。": "Please sign in before authorizing.",
+  "没有可用的 API Key，请先在控制台创建。": "No API keys available. Create one in the console first."
 }
