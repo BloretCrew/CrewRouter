@@ -35,6 +35,7 @@ const {
   isHarnessSource,
   normalizeRequestSource,
 } = require('../utils/request-source');
+const { extractCustomInstructions } = require('../utils/custom-instructions-extractor');
 const { checkQuotaRules } = require('../utils/points-deduct');
 const {
   getQuotaInfo,
@@ -49,6 +50,7 @@ const {
   buildSignatureForRequest
 } = require('../utils/api-signature');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { oauthBearer } = require('../middleware/oauth-bearer');
 const keyRefresher = require('../key-refresher');
 const proxyPool = require('../proxy-pool');
 const pluginHooks = require('../plugins/hooks');
@@ -579,6 +581,23 @@ async function pluginMetaFrom(ctxMeta) {
     Logger.warn(`[stats:record] 钩子异常: ${err.message}`);
     return null;
   }
+}
+
+// 在 plugin_meta 上合并「自定义提示词文件」提取结果（键 customInstructions）。
+// 只在 messages 存在时执行；提取无命中时保持 pluginMeta 原样（无键、零额外开销）；
+// 超大 messages 时标记 customInstructions = { skipped: 'size' }。
+async function buildUsagePluginMeta(ctxMeta, messages, system, req) {
+  const pluginMeta = await pluginMetaFrom(ctxMeta);
+  if (messages == null) return pluginMeta;
+  const requestSource = req ? clientMetaFromReq(req).requestSource : null;
+  const res = extractCustomInstructions(messages, system, { requestSource });
+  if (res.skipped === 'size') {
+    return { ...(pluginMeta || {}), customInstructions: { skipped: 'size' } };
+  }
+  if (res.items && res.items.length) {
+    return { ...(pluginMeta || {}), customInstructions: res.items };
+  }
+  return pluginMeta;
 }
 
 // 计费调整钩子：插件可按 倍率/固定额/重写 修改单次扣费（billing:calculate）
@@ -2292,7 +2311,9 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 }
 
 // OpenAI 兼容: /v1/chat/completions 和 /api/chat/completions
-router.post('/chat/completions', validateApiKey, handleChatCompletion);
+// 双鉴权：Bearer crh_ 前缀走自有 OAuth access token（scope 需 gateway:invoke），
+// 其余凭证原样回落 validateApiKey，老路径零影响
+router.post('/chat/completions', oauthBearer, handleChatCompletion);
 
 async function handleChatCompletion(req, res) {
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
@@ -2608,13 +2629,13 @@ async function handleChatCompletion(req, res) {
           requestType: 'chat',
         });
         // stats:record 钩子可附加统计维度（写入 usage_records.plugin_meta）
-        const pluginMeta = await pluginMetaFrom({
+        const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: modelConfig.id || userRequestedModel,
           provider: provider?.id || null,
           requestType: 'chat',
           apiKeyId: req.apiUser.keyId,
-        });
+        }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
         const localModelId = modelConfig.id || userRequestedModel;
         const latencyMs = Date.now() - liveCallStart;
@@ -2791,13 +2812,13 @@ async function handleFusionRequest(req, res, format = 'openai') {
           provider: null,
           requestType: 'fusion',
         });
-        const pluginMeta = await pluginMetaFrom({
+        const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: 'fusion',
           provider: null,
           requestType: 'fusion',
           apiKeyId: req.apiUser.keyId,
-        });
+        }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
         await pool.query(
           `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
@@ -2850,7 +2871,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
 }
 
 // OpenAI 兼容: /v1/models (CrewRouter: 返回配置的模型列表 + fusion 固定)
-router.get('/models', validateApiKey, async (req, res) => {
+router.get('/models', oauthBearer, async (req, res) => {
   try {
     // 读取系统设置中配置的模型列表
     const settingsResult = await pool.query("SELECT value FROM settings WHERE key = 'model_list'");
@@ -2912,7 +2933,7 @@ router.get('/models', validateApiKey, async (req, res) => {
 });
 
 // Anthropic 兼容: /v1/messages 和 /api/messages
-router.post('/messages', validateApiKey, handleAnthropicMessage);
+router.post('/messages', oauthBearer, handleAnthropicMessage);
 
 async function handleAnthropicMessage(req, res) {
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
@@ -3212,13 +3233,13 @@ async function handleAnthropicMessage(req, res) {
           provider: provider?.id || null,
           requestType: 'chat',
         });
-        const pluginMeta = await pluginMetaFrom({
+        const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: modelConfig.id || queueModelId,
           provider: provider?.id || null,
           requestType: 'chat',
           apiKeyId: req.apiUser.keyId,
-        });
+        }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
         const localModelId = modelConfig.id || queueModelId;
         const latencyMs = Date.now() - liveCallStart;
@@ -5067,7 +5088,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
 }
 
 // OpenAI 兼容: /v1/responses 和 /api/responses
-router.post('/responses', validateApiKey, handleResponses);
+router.post('/responses', oauthBearer, handleResponses);
 
 async function handleResponses(req, res) {
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
@@ -5251,13 +5272,13 @@ async function handleResponses(req, res) {
                 provider: provider?.id || null,
                 requestType: 'responses',
               });
-              const pluginMeta = await pluginMetaFrom({
+              const pluginMeta = await buildUsagePluginMeta({
                 userId: req.apiUser.userId,
                 model: modelConfig.id || model,
                 provider: provider?.id || null,
                 requestType: 'responses',
                 apiKeyId: req.apiUser.keyId,
-              });
+              }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
               const localModelId = modelConfig.id || model;
               await pool.query(
                 `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
@@ -5360,13 +5381,13 @@ async function handleResponses(req, res) {
               provider: provider?.id || null,
               requestType: 'responses',
             });
-            const pluginMeta = await pluginMetaFrom({
+            const pluginMeta = await buildUsagePluginMeta({
               userId: req.apiUser.userId,
               model: modelConfig.id || model,
               provider: provider?.id || null,
               requestType: 'responses',
               apiKeyId: req.apiUser.keyId,
-            });
+            }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
             const localModelId = modelConfig.id || model;
             const latencyMs = Date.now() - liveCallStart;
             await pool.query(
@@ -5546,13 +5567,13 @@ async function handleResponses(req, res) {
             provider: provider?.id || null,
             requestType: 'responses',
           });
-          const pluginMeta = await pluginMetaFrom({
+          const pluginMeta = await buildUsagePluginMeta({
             userId: req.apiUser.userId,
             model: modelConfig.id || model,
             provider: provider?.id || null,
             requestType: 'responses',
             apiKeyId: req.apiUser.keyId,
-          });
+          }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
           const requestParams = usageEstimated
             ? { estimated: true, estimate_method: 'output_chars/4', prompt_tokens_policy: 'zero_when_unknown' }
             : { estimated: false };
@@ -5620,13 +5641,13 @@ async function handleResponses(req, res) {
           provider: provider?.id || null,
           requestType: 'responses',
         });
-        const pluginMeta = await pluginMetaFrom({
+        const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: modelConfig.id || model,
           provider: provider?.id || null,
           requestType: 'responses',
           apiKeyId: req.apiUser.keyId,
-        });
+        }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
         const localModelId = modelConfig.id || model;
         await pool.query(
@@ -5800,13 +5821,13 @@ async function handleResponses(req, res) {
           provider: provider?.id || null,
           requestType: 'responses',
         });
-        const pluginMeta = await pluginMetaFrom({
+        const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: modelConfig.id || model,
           provider: provider?.id || null,
           requestType: 'responses',
           apiKeyId: req.apiUser.keyId,
-        });
+        }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
         const localModelId = modelConfig.id || model;
         const latencyMs = typeof liveCallStart === 'number' ? Date.now() - liveCallStart : null;

@@ -497,6 +497,7 @@ class AdminApp {
       'adminTeams': t('Team 管理'),
       'adminUserGroups': t('用户组管理'),
       'adminAuditLogs': t('操作日志'),
+      'adminPrompts': t('提示词'),
       'adminPlugins': t('插件管理')
     };
     const pageTitleEl = document.getElementById('pageTitle');
@@ -640,6 +641,9 @@ class AdminApp {
         break;
       case 'adminAuditLogs':
         await this.loadAdminAuditLogs(1);
+        break;
+      case 'adminPrompts':
+        await this.loadAdminCustomPrompts(1);
         break;
     }
   }
@@ -7739,6 +7743,54 @@ async function(ctx) {
     return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:color-mix(in srgb, ${meta.color} 15%, transparent);color:${meta.color};">${escapeHtml(meta.label)}</span>`;
   }
 
+  /** 列表「命中自定义提示词文件」徽标：📄 N（N 为文件数） */
+  _customInstructionsBadge(count) {
+    const n = parseInt(count || 0, 10);
+    if (!(n > 0)) return '';
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;margin-left:6px;background:color-mix(in srgb, #22c55e 15%, transparent);color:#16a34a;" title="${n} ${t('个自定义提示词文件')}">📄 ${n}</span>`;
+  }
+
+  /** 详情「自定义提示词」区块 HTML（从 log.plugin_meta.customInstructions 渲染） */
+  _customInstructionsSectionHtml(log) {
+    const ci = log && log.plugin_meta && log.plugin_meta.customInstructions;
+    if (!ci) return '';
+    // 超大输入被跳过提取的情形
+    if (!Array.isArray(ci)) {
+      if (ci && ci.skipped === 'size') {
+        return `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('自定义提示词')}</span><span style="font-size:13px;color:var(--muted-foreground);">${t('请求过大，已跳过提取')}</span></div>`;
+      }
+      return '';
+    }
+    if (!ci.length) return '';
+    const blocks = ci.map((item, idx) => {
+      const file = escapeHtml(String(item && item.file || t('未知')));
+      const sourceLabel = this._customInstructionSourceLabel(item && item.source);
+      const chars = parseInt(item && item.chars || 0, 10);
+      const truncated = !!(item && item.truncated);
+      const truncNote = truncated ? ` <span style="color:#f59e0b;font-size:12px;">(${t('已截断')})</span>` : '';
+      const detail = `<span style="font-size:12px;color:var(--muted-foreground);">${sourceLabel}</span> <span style="font-size:12px;color:var(--muted-foreground);">${chars.toLocaleString()} ${t('字符')}</span>${truncNote}`;
+      const contentPre = `<pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:8px 0 0;max-height:220px;overflow-y:auto;${truncated ? 'display:none;' : ''}" data-custom-inst-content="${idx}">${escapeHtml(String(item && item.content || ''))}</pre>`;
+      const toggleBtn = truncated ? `<button type="button" class="btn btn-sm btn-secondary" data-custom-inst-toggle="${idx}" style="margin-top:8px;">${t('查看全部')}</button>` : '';
+      return `<div style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;word-break:break-all;">📄 ${file}</div>
+        <div style="margin-top:2px;">${detail}</div>
+        ${contentPre}${toggleBtn}
+      </div>`;
+    }).join('');
+    return `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('自定义提示词')}</span><div>${blocks || t('无')}</div></div>`;
+  }
+
+  _customInstructionSourceLabel(source) {
+    return ({
+      claude_md: 'CLAUDE.md',
+      agents_md: 'AGENTS.md',
+      cursorrules: '.cursorrules',
+      qwen_md: 'QWEN.md',
+      soul_md: 'SOUL.md',
+      other: t('其他'),
+    })[source] || t('其他');
+  }
+
   _formatUsageModelLabel(log) {
     return log.model_name
       || (log.request_type === 'fusion' ? 'Fusion' : null)
@@ -7836,7 +7888,7 @@ async function(ctx) {
                   <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;background:var(--muted);color:var(--foreground);">${escapeHtml(providerLabel)}</span>
                 </td>
                 <td>${this._usageRequestTypeBadge(log.request_type)}</td>
-                <td>${this._usageRequestSourceBadge(log.request_source)}</td>
+                <td>${this._usageRequestSourceBadge(log.request_source)}${this._customInstructionsBadge(log.custom_instruction_count)}</td>
                 <td style="white-space:nowrap;">
                   <div style="font-variant-numeric:tabular-nums;" title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</div>
                   <div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;">${tokenSub}</div>
@@ -8040,7 +8092,23 @@ async function(ctx) {
         <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
         <span style="font-size:14px;">${value}</span>
       </div>
-    `).join('') + messagesHtml + responseHtml);
+    `).join('') + this._customInstructionsSectionHtml(log) + messagesHtml + responseHtml);
+
+    // 截断文件「查看全部」展开/收起
+    const customRoot = document.getElementById('usageDetailContent');
+    if (customRoot) {
+      customRoot.querySelectorAll('button[data-custom-inst-toggle]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = parseInt(btn.getAttribute('data-custom-inst-toggle'), 10);
+          const pre = customRoot.querySelector(`pre[data-custom-inst-content="${idx}"]`);
+          if (!pre) return;
+          const hidden = pre.style.display === 'none';
+          pre.style.display = hidden ? '' : 'none';
+          btn.textContent = hidden ? t('收起') : t('查看全部');
+        });
+      });
+    }
 
     document.getElementById('usageDetailModal').style.display = 'flex';
     document.getElementById('usageDetailModal').classList.add('active');
@@ -11547,6 +11615,200 @@ async function(ctx) {
     } catch (error) {
       setHTML(listEl, `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
       setHTML(paginationEl, '');
+    }
+  }
+
+  // ========== 提示词（历史自定义提示词，重复合并） ==========
+
+  /** 列表：GET /api/admin/custom-instructions */
+  async loadAdminCustomPrompts(page = 1) {
+    this.promptPage = Math.max(parseInt(page, 10) || 1, 1);
+    const container = document.getElementById('adminPromptsList');
+    if (!container) return;
+    setHTML(container, pageLoadingHtml(t('加载提示词...'), { compact: true }));
+
+    const search = (document.getElementById('adminPromptSearchInput')?.value || '').trim();
+    const source = (document.getElementById('adminPromptSourceFilter')?.value || '').trim();
+    const sort = (document.getElementById('adminPromptSortSelect')?.value || 'count').trim();
+    const params = new URLSearchParams({ page: String(this.promptPage), pageSize: '20' });
+    if (search) params.set('search', search);
+    if (source) params.set('source', source);
+    if (sort) params.set('sort', sort);
+
+    try {
+      const res = await fetch(`/api/admin/custom-instructions?${params}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('加载失败'));
+
+      const countEl = document.getElementById('adminPromptCount');
+      const pageInfoEl = document.getElementById('adminPromptPageInfo');
+      const prevBtn = document.getElementById('adminPromptPrevBtn');
+      const nextBtn = document.getElementById('adminPromptNextBtn');
+      const totalPages = Math.ceil((data.total || 0) / 20) || 1;
+
+      if (countEl) countEl.textContent = `${t('共')}${data.total || 0}${t('条去重结果')}`;
+      if (pageInfoEl) pageInfoEl.textContent = `${t('第')}${data.page} / ${totalPages}${t('页')}`;
+      if (prevBtn) prevBtn.disabled = data.page <= 1;
+      if (nextBtn) nextBtn.disabled = data.page >= totalPages;
+
+      if (!data.items || data.items.length === 0) {
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无提示词记录') + '</p>');
+        return;
+      }
+      this._promptsCache = data.items;
+
+      setHTML(container, `
+        <table>
+          <thead>
+            <tr>
+              <th>${t('文件名')}</th>
+              <th>${t('来源')}</th>
+              <th>${t('字符数')}</th>
+              <th>${t('出现次数')}</th>
+              <th>${t('关联用户')}</th>
+              <th>${t('首次出现')}</th>
+              <th>${t('最近出现')}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.items.map((item, idx) => `
+              <tr style="cursor:pointer;" data-admin-prompt-idx="${idx}" title="${t('点击查看详情')}">
+                <td class="cell-clip" style="max-width:280px;">
+                  <div style="font-weight:500;display:flex;align-items:center;gap:6px;">📄 ${escapeHtml(item.file || t('(未知文件)'))}${item.truncated ? `<span style="font-size:11px;color:var(--muted-foreground);">(${t('截断存储')})</span>` : ''}</div>
+                  <div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.preview || '')}</div>
+                </td>
+                <td>${this._usageRequestSourceBadge(item.source)}</td>
+                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.chars, 10) || 0).toLocaleString()}</td>
+                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.occurrence_count, 10) || 0).toLocaleString()}</td>
+                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.user_count, 10) || 0).toLocaleString()}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.first_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.last_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
+                <td class="cell-actions"><button type="button" class="btn btn-sm btn-secondary" data-admin-prompt-view-idx="${idx}">${t('查看内容')}</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `);
+
+      container.querySelectorAll('tr[data-admin-prompt-idx]').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('button')) return;
+          const item = this._promptsCache[parseInt(tr.getAttribute('data-admin-prompt-idx'), 10)];
+          if (item) this.showAdminPromptDetail(item.fingerprint);
+        });
+      });
+      container.querySelectorAll('button[data-admin-prompt-view-idx]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const item = this._promptsCache[parseInt(btn.getAttribute('data-admin-prompt-view-idx'), 10)];
+          if (item) this.showAdminPromptDetail(item.fingerprint);
+        });
+      });
+    } catch (error) {
+      console.error(t('加载提示词失败:'), error);
+      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+    }
+  }
+
+  clearAdminPromptFilters() {
+    for (const id of ['adminPromptSearchInput', 'adminPromptSourceFilter']) {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    }
+    const sortEl = document.getElementById('adminPromptSortSelect');
+    if (sortEl) sortEl.value = 'count';
+    this.loadAdminCustomPrompts(1);
+  }
+
+  /** 详情弹窗：完整内容 + 最近引用记录 */
+  async showAdminPromptDetail(fingerprint) {
+    const modal = document.getElementById('adminPromptDetailModal');
+    const body = document.getElementById('adminPromptDetailBody');
+    if (!modal || !body) return;
+    body.innerHTML = pageLoadingHtml(t('加载详情...'), { compact: true });
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+
+    try {
+      const res = await fetch(`/api/admin/custom-instructions/${encodeURIComponent(fingerprint)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('加载失败'));
+
+      const titleEl = document.getElementById('adminPromptDetailTitle');
+      if (titleEl) titleEl.textContent = `${t('提示词详情')} · ${data.file || t('(未知文件)')}`;
+
+      const fmtTime = (v) => v ? new Date(v).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '-';
+      const rows = [
+        [t('文件名'), escapeHtml(data.file || t('(未知文件)'))],
+        [t('客户端'), this._usageRequestSourceBadge(data.source)],
+        [t('字符数'), (parseInt(data.chars, 10) || 0).toLocaleString()],
+        [t('出现次数'), `${(parseInt(data.occurrence_count, 10) || 0).toLocaleString()}${data.truncated ? ` <span style="font-size:11px;color:var(--muted-foreground);">(${t('截断存储')})</span>` : ''}`],
+        [t('关联用户'), (parseInt(data.user_count, 10) || 0).toLocaleString()],
+        [t('注入位置'), (data.positions || []).length ? escapeHtml(data.positions.join(', ')) : '-'],
+        [t('首次出现'), escapeHtml(fmtTime(data.first_seen))],
+        [t('最近出现'), escapeHtml(fmtTime(data.last_seen))],
+      ];
+
+      let refsHtml = '';
+      if (Array.isArray(data.recent_refs) && data.recent_refs.length) {
+        refsHtml = `
+          <h4 style="margin:16px 0 8px;font-size:14px;">${t('最近引用记录')}（${t('最近')} ${data.recent_refs.length} ${t('条')}）</h4>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead><tr><th>${t('记录 ID')}</th><th>${t('时间')}</th><th>${t('用户')}</th><th>${t('模型')}</th><th>${t('客户端')}</th></tr></thead>
+              <tbody>
+                ${data.recent_refs.map(r => `
+                  <tr>
+                    <td><code style="font-size:12px;">${escapeHtml(String(r.record_id))}</code></td>
+                    <td style="white-space:nowrap;font-size:12px;">${escapeHtml(fmtTime(r.created_at))}</td>
+                    <td>${escapeHtml(r.username || String(r.user_id ?? '-'))}</td>
+                    <td class="cell-clip" style="max-width:220px;">${escapeHtml(r.model_id || '-')}</td>
+                    <td>${this._usageRequestSourceBadge(r.request_source)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>`;
+      }
+
+      setHTML(body, `
+        ${rows.map(([label, value]) => `
+          <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
+            <span style="font-size:14px;">${value}</span>
+          </div>
+        `).join('')}
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:12px 0 0;border-bottom:1px solid var(--border);">
+          <span style="color:var(--muted-foreground);font-size:13px;">${t('完整内容')}</span>
+          <pre id="adminPromptFullContent" style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(data.content || '')}</pre>
+        </div>
+        <div style="padding:8px 0;"><button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.copyAdminPromptContent(this)">⧉ ${t('复制内容')}</button></div>
+        ${refsHtml}
+      `);
+    } catch (error) {
+      console.error(t('加载提示词详情失败:'), error);
+      setHTML(body, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+    }
+  }
+
+  copyAdminPromptContent(btn) {
+    const text = document.getElementById('adminPromptFullContent')?.textContent || '';
+    const done = () => {
+      if (!btn) return;
+      const original = btn.innerHTML;
+      btn.innerHTML = `✓ ${t('已复制')}`;
+      setTimeout(() => { btn.innerHTML = original; }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); done(); } catch { /* 忽略 */ }
+      document.body.removeChild(ta);
     }
   }
 
