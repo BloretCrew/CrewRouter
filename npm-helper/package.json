@@ -1,0 +1,27 @@
+{
+  "name": "@bloret/crewrouter-helper",
+  "version": "1.0.0",
+  "description": "CrewRouter 客户端事件统一上报器（Node.js 零依赖 CLI）：hook / emit / watch / login / logout / test / --print",
+  "license": "MIT",
+  "bin": {
+    "crewrouter-helper": "bin/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "crewrouter",
+    "claude-code",
+    "codex",
+    "grok",
+    "hooks",
+    "oauth",
+    "cli"
+  ]
+}
