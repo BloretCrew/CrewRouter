@@ -94,10 +94,6 @@
             <img src="https://img.bloret.net/SF/list.bullet.clipboard?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="list.bullet.clipboard" style="display:inline-block;vertical-align:middle;">
             <span><span data-i18n="操作日志">操作日志</span></span>
           </div>
-          <div class="nav-item" data-page="adminPrompts">
-            <img src="https://img.bloret.net/SF/doc.plaintext?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="doc.plaintext" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="提示词">提示词</span></span>
-          </div>
           <div class="nav-item" data-page="adminPlugins">
             <img src="https://img.bloret.net/SF/puzzlepiece.extension?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="puzzlepiece.extension" style="display:inline-block;vertical-align:middle;">
             <span><span data-i18n="插件管理">插件管理</span></span>
@@ -1133,47 +1129,6 @@
           </div>
           <div id="adminAuditLogsList" style="display:flex;flex-direction:column;gap:8px;"></div>
           <div id="adminAuditLogsPagination" style="display:flex;justify-content:center;gap:8px;margin-top:16px;"></div>
-        </div>
-      </div>
-
-      <!-- 提示词页面（历史自定义提示词，重复合并） -->
-      <div id="adminPromptsPage" class="page">
-        <div class="content-section">
-          <div class="section-header">
-            <h2><span data-i18n="提示词">提示词</span></h2>
-            <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;"><span data-i18n="历史收集到的自定义提示词文件，相同内容自动合并显示">历史收集到的自定义提示词文件，相同内容自动合并显示</span></p>
-          </div>
-          <div class="admin-filter-bar" style="margin-bottom:16px;">
-            <input type="text" id="adminPromptSearchInput" class="input" placeholder="搜索文件名或内容..." data-i18n-placeholder="搜索文件名或内容..." style="min-width:200px;" onkeydown="if(event.key==='Enter')adminApp.loadAdminCustomPrompts(1)">
-            <select id="adminPromptSourceFilter" class="input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
-              <option value=""><span data-i18n="全部客户端">全部客户端</span></option>
-              <option value="grok">Grok</option>
-              <option value="codex">Codex</option>
-              <option value="claude_code">Claude Code</option>
-              <option value="opencode">OpenCode</option>
-              <option value="qwen_code">Qwen Code</option>
-              <option value="hermes">Hermes</option>
-              <option value="openclaw">OpenClaw</option>
-              <option value="deepseek_harness">DeepSeek Harness</option>
-              <option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option>
-            </select>
-            <select id="adminPromptSortSelect" class="input" style="min-width:130px;">
-              <option value="count"><span data-i18n="按出现次数排序">按出现次数排序</span></option>
-              <option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></option>
-              <option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></option>
-            </select>
-            <button type="button" class="btn btn-primary" onclick="adminApp.loadAdminCustomPrompts(1)"><span data-i18n="查询">查询</span></button>
-            <button type="button" class="btn btn-secondary" onclick="adminApp.clearAdminPromptFilters()"><span data-i18n="清除">清除</span></button>
-            <span id="adminPromptCount" class="filter-info"></span>
-          </div>
-          <div id="adminPromptsList" class="models-table">
-            <!-- 提示词列表由 JS 动态加载 -->
-          </div>
-          <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-            <button id="adminPromptPrevBtn" class="btn btn-secondary" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
-            <span id="adminPromptPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-            <button id="adminPromptNextBtn" class="btn btn-secondary" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage + 1)"><span data-i18n="下一页">下一页</span></button>
-          </div>
         </div>
       </div>
 
@@ -2459,17 +2414,6 @@
       <div class="modal-body" id="modelUptimeModalBody">
         <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
       </div>
-    </div>
-  </div>
-
-  <!-- 提示词详情弹窗 -->
-  <div id="adminPromptDetailModal" class="modal" style="display:none;">
-    <div class="modal-content modal-wide">
-      <div class="modal-header">
-        <h3 id="adminPromptDetailTitle"><span data-i18n="提示词详情">提示词详情</span></h3>
-        <button class="modal-close" onclick="adminApp.closeModals()">&times;</button>
-      </div>
-      <div class="modal-body" id="adminPromptDetailBody"></div>
     </div>
   </div>
 <script>

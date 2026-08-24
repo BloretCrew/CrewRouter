@@ -6,8 +6,7 @@
  * （会话开始/结束、工具调用）POST 到本端点，用于控制台「实时活动」看板。
  *
  * 设计要点：
- *  - 双鉴权：Bearer crh_ 前缀走自有 OAuth access token（middleware/oauth-bearer.js），
- *    其余回落网关 API Key（Authorization: Bearer cr-sk-...）
+ *  - 鉴权复用网关的 API Key（Authorization: Bearer cr-sk-...）
  *  - harness 必须是 request-source.js 定义的 8 种之一（与用量统计同一套标识）
  *  - 落库失败只记日志、仍返回 ok —— 上报绝不能阻塞客户端工具执行
  *  - 表结构自行 ensure（CREATE TABLE IF NOT EXISTS），不动 init-db.js DDL
@@ -17,7 +16,7 @@ const express = require('express');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { HARNESS_SOURCES } = require('../utils/request-source');
-const { oauthBearer } = require('../middleware/oauth-bearer');
+const { validateApiKey } = require('./api');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -55,8 +54,7 @@ function strOrNull(v, maxLen = 512) {
 }
 
 // ---------- 上报 ----------
-// 双鉴权：Bearer crh_ 前缀走自有 OAuth access token，其余回落 API Key 校验
-router.post('/', oauthBearer, async (req, res) => {
+router.post('/', validateApiKey, async (req, res) => {
   const body = req.body || {};
   const harness = strOrNull(body.harness, 64);
   const event = strOrNull(body.event, 32);

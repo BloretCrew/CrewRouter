@@ -204,11 +204,6 @@ class ConsoleApp {
       adminLink.style.display = 'flex';
       adminLink.onclick = () => window.location.href = '/admin';
     }
-    // 「提示词」页读取全局聚合数据（/api/admin/*），仅对管理员显示入口
-    const promptsNav = document.getElementById('promptsNav');
-    if (promptsNav && this.user.isAdmin) {
-      promptsNav.style.display = 'flex';
-    }
   }
 
   // 统计上报授权：仅管理员首次进入控制台时，且从未做过决定（stats_report_enabled 未设置）时弹窗
@@ -351,7 +346,7 @@ class ConsoleApp {
       'dashboard': t('控制台'), 'modelLibrary': t('模型库'), 'myUpstream': t('我的上游'),
       'myProviders': t('我的上游'), 'myTeamModels': t('我的上游'),
       'apiKeys': t('API Key 与用量'), 'stats': t('统计信息'), 'projectWork': t('项目工作'), 'leaderboard': t('排行榜'), 'docs': t('接口文档'),
-      'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志'), 'prompts': t('提示词')
+      'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志')
     };
     const pageTitleEl = document.getElementById('pageTitle');
     if (pageTitleEl) pageTitleEl.textContent = titles[targetPage] || targetPage;
@@ -410,7 +405,6 @@ class ConsoleApp {
         break;
       case 'apiKeys':
         await this.loadApiKeys();
-        this.loadAuthorizations();
         this._initApiKeysStickyBar();
         break;
       case 'stats':
@@ -433,7 +427,6 @@ class ConsoleApp {
       case 'balance': await this.loadBalance(); break;
       case 'settings': this.loadSettings(); break;
       case 'auditLogs': await this.loadAuditLogs(1); break;
-      case 'prompts': await this.loadCustomPrompts(1); break;
     }
   }
 
@@ -530,81 +523,6 @@ class ConsoleApp {
       console.error(t('加载API密钥失败:'), error);
       if (container) setHTML(container, '<p style="text-align:center;color:var(--destructive);padding:40px;">' + t('加载失败，请刷新重试') + '</p>');
     }
-  }
-
-  // ===== OAuth 授权管理（自有 OAuth 服务，与 Passport 无关） =====
-
-  async loadAuthorizations() {
-    const container = document.getElementById('oauthAuthorizationsList');
-    if (!container) return;
-    try {
-      const res = await fetch('/oauth/authorizations');
-      if (res.status === 401) return;
-      if (!res.ok) return;
-      const data = await res.json();
-      const list = Array.isArray(data?.authorizations) ? data.authorizations : [];
-      this._lastAuthorizations = list;
-      if (list.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:24px;">' + t('暂无活跃授权') + '</p>');
-        return;
-      }
-      setHTML(container, `<div class="api-key-groups">${list.map(a => this._renderAuthorizationCard(a)).join('')}</div>`);
-    } catch (error) {
-      console.error(t('加载授权列表失败:'), error);
-    }
-  }
-
-  async revokeAuthorization(id) {
-    if (!await confirm(t('确定吊销该客户端的全部授权？其所有令牌将立即失效。'))) return;
-    try {
-      const res = await fetch('/oauth/authorizations/revoke', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) {
-        this.showToast(data.error || t('吊销失败'), 'error');
-        return;
-      }
-      this.showToast(t('授权已吊销'), 'success');
-      await this.loadAuthorizations();
-    } catch (error) {
-      console.error(t('吊销失败:'), error);
-      this.showToast(t('吊销失败'), 'error');
-    }
-  }
-
-  _formatOAuthTime(v, emptyText) {
-    if (!v) return emptyText;
-    const d = new Date(v);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleString();
-  }
-
-  _renderAuthorizationCard(a) {
-    const statusChip = a.expired
-      ? this._renderApiKeyChip(t('已过期'), 'danger')
-      : this._renderApiKeyChip(t('有效'), 'ok');
-    const scopeChips = String(a.scope || '').split(/\s+/).filter(Boolean)
-      .map(s => this._renderApiKeyChip(s, 'info')).join('');
-    return `
-      <section class="api-key-group api-key-group-normal">
-        <div class="api-key-group-header">
-          <div>
-            <h3 class="api-key-group-title">${escapeHtml(a.client_name || a.client_id)}</h3>
-            <p class="api-key-group-hint"><code>${escapeHtml(a.client_id)}</code></p>
-          </div>
-          <button class="btn btn-danger btn-sm" onclick="app.revokeAuthorization(${Number(a.id)})">${t('吊销')}</button>
-        </div>
-        <div style="padding:12px 16px;">
-          ${statusChip} ${scopeChips}
-          <div style="margin-top:10px;font-size:12px;color:var(--muted-foreground);line-height:1.9;">
-            <div>${t('绑定密钥')}：${escapeHtml(a.api_key_name || (a.api_key_id ? '#' + a.api_key_id : t('未知')))}</div>
-            <div>${t('最后使用')}：${escapeHtml(this._formatOAuthTime(a.last_used_at, t('从未使用')))}</div>
-            <div>${t('过期时间')}：${escapeHtml(this._formatOAuthTime(a.expires_at))}</div>
-          </div>
-        </div>
-      </section>`;
   }
 
   // ===== API Key 卡片渲染（清晰简明） =====
@@ -4973,199 +4891,6 @@ class ConsoleApp {
   _usageRequestSourceBadge(source) {
     const meta = this._usageRequestSourceMeta(source);
     return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:color-mix(in srgb, ${meta.color} 15%, transparent);color:${meta.color};">${escapeHtml(meta.label)}</span>`;
-  }
-
-  /** 「提示词」页：历史自定义提示词列表（去重合并，/api/admin/custom-instructions） */
-  async loadCustomPrompts(page = 1) {
-    this.promptPage = Math.max(parseInt(page, 10) || 1, 1);
-    const container = document.getElementById('promptsList');
-    if (!container) return;
-    setHTML(container, pageLoadingHtml(t('加载提示词...'), { compact: true }));
-
-    const search = (document.getElementById('promptSearchInput')?.value || '').trim();
-    const source = (document.getElementById('promptSourceFilter')?.value || '').trim();
-    const sort = (document.getElementById('promptSortSelect')?.value || 'count').trim();
-    const params = new URLSearchParams({ page: String(this.promptPage), pageSize: '20' });
-    if (search) params.set('search', search);
-    if (source) params.set('source', source);
-    if (sort) params.set('sort', sort);
-
-    try {
-      const res = await fetch(`/api/admin/custom-instructions?${params}`);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || t('加载失败'));
-
-      const countEl = document.getElementById('promptCount');
-      const pageInfoEl = document.getElementById('promptPageInfo');
-      const prevBtn = document.getElementById('promptPrevBtn');
-      const nextBtn = document.getElementById('promptNextBtn');
-      const totalPages = Math.ceil((data.total || 0) / 20) || 1;
-
-      if (countEl) countEl.textContent = `${t('共')}${data.total || 0}${t('条去重结果')}`;
-      if (pageInfoEl) pageInfoEl.textContent = `${t('第')}${data.page} / ${totalPages}${t('页')}`;
-      if (prevBtn) prevBtn.disabled = data.page <= 1;
-      if (nextBtn) nextBtn.disabled = data.page >= totalPages;
-
-      if (!data.items || data.items.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无提示词记录') + '</p>');
-        return;
-      }
-      this._promptsCache = data.items;
-
-      setHTML(container, `
-        <table>
-          <thead>
-            <tr>
-              <th>${t('文件名')}</th>
-              <th>${t('来源')}</th>
-              <th>${t('字符数')}</th>
-              <th>${t('出现次数')}</th>
-              <th>${t('关联用户')}</th>
-              <th>${t('首次出现')}</th>
-              <th>${t('最近出现')}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.items.map((item, idx) => `
-              <tr style="cursor:pointer;" data-prompt-idx="${idx}" title="${t('点击查看详情')}">
-                <td class="cell-clip" style="max-width:280px;">
-                  <div style="font-weight:500;display:flex;align-items:center;gap:6px;">📄 ${escapeHtml(item.file || t('(未知文件)'))}${item.truncated ? `<span style="font-size:11px;color:var(--muted-foreground);">(${t('截断存储')})</span>` : ''}</div>
-                  <div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.preview || '')}</div>
-                </td>
-                <td>${this._usageRequestSourceBadge(item.source)}</td>
-                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.chars, 10) || 0).toLocaleString()}</td>
-                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.occurrence_count, 10) || 0).toLocaleString()}</td>
-                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.user_count, 10) || 0).toLocaleString()}</td>
-                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.first_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
-                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.last_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
-                <td class="cell-actions"><button type="button" class="btn btn-sm btn-secondary" data-prompt-view-idx="${idx}">${t('查看内容')}</button></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `);
-
-      container.querySelectorAll('tr[data-prompt-idx]').forEach(tr => {
-        tr.addEventListener('click', (e) => {
-          if (e.target.closest('button')) return;
-          const item = this._promptsCache[parseInt(tr.getAttribute('data-prompt-idx'), 10)];
-          if (item) this.showCustomPromptDetail(item.fingerprint);
-        });
-      });
-      container.querySelectorAll('button[data-prompt-view-idx]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const item = this._promptsCache[parseInt(btn.getAttribute('data-prompt-view-idx'), 10)];
-          if (item) this.showCustomPromptDetail(item.fingerprint);
-        });
-      });
-    } catch (error) {
-      console.error(t('加载提示词失败:'), error);
-      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
-    }
-  }
-
-  clearPromptFilters() {
-    for (const id of ['promptSearchInput', 'promptSourceFilter']) {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    }
-    const sortEl = document.getElementById('promptSortSelect');
-    if (sortEl) sortEl.value = 'count';
-    this.loadCustomPrompts(1);
-  }
-
-  /** 「提示词」详情弹窗：完整内容 + 最近引用记录 */
-  async showCustomPromptDetail(fingerprint) {
-    const modal = document.getElementById('promptDetailModal');
-    const content = document.getElementById('promptDetailContent');
-    if (!modal || !content) return;
-    setHTML(content, pageLoadingHtml(t('加载详情...'), { compact: true }));
-    modal.style.display = 'flex';
-    modal.classList.add('active');
-
-    try {
-      const res = await fetch(`/api/admin/custom-instructions/${encodeURIComponent(fingerprint)}`);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || t('加载失败'));
-      this._promptDetailData = data;
-
-      const titleEl = document.getElementById('promptDetailTitle');
-      if (titleEl) titleEl.textContent = `${t('提示词详情')} · ${data.file || t('(未知文件)')}`;
-
-      const fmtTime = (v) => v ? new Date(v).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : '-';
-      const rows = [
-        [t('文件名'), escapeHtml(data.file || t('(未知文件)'))],
-        [t('客户端'), this._usageRequestSourceBadge(data.source)],
-        [t('字符数'), (parseInt(data.chars, 10) || 0).toLocaleString()],
-        [t('出现次数'), `${(parseInt(data.occurrence_count, 10) || 0).toLocaleString()}${data.truncated ? ` <span style="font-size:11px;color:var(--muted-foreground);">(${t('截断存储')})</span>` : ''}`],
-        [t('关联用户'), (parseInt(data.user_count, 10) || 0).toLocaleString()],
-        [t('注入位置'), (data.positions || []).length ? escapeHtml(data.positions.join(', ')) : '-'],
-        [t('首次出现'), escapeHtml(fmtTime(data.first_seen))],
-        [t('最近出现'), escapeHtml(fmtTime(data.last_seen))],
-      ];
-
-      let refsHtml = '';
-      if (Array.isArray(data.recent_refs) && data.recent_refs.length) {
-        refsHtml = `
-          <h4 style="margin:16px 0 8px;font-size:14px;">${t('最近引用记录')}（${t('最近')} ${data.recent_refs.length} ${t('条')}）</h4>
-          <div style="overflow-x:auto;">
-            <table>
-              <thead><tr><th>${t('记录 ID')}</th><th>${t('时间')}</th><th>${t('用户')}</th><th>${t('模型')}</th><th>${t('客户端')}</th></tr></thead>
-              <tbody>
-                ${data.recent_refs.map(r => `
-                  <tr>
-                    <td><code style="font-size:12px;">${escapeHtml(String(r.record_id))}</code></td>
-                    <td style="white-space:nowrap;font-size:12px;">${escapeHtml(fmtTime(r.created_at))}</td>
-                    <td>${escapeHtml(r.username || String(r.user_id ?? '-'))}</td>
-                    <td class="cell-clip" style="max-width:220px;">${escapeHtml(r.model_id || '-')}</td>
-                    <td>${this._usageRequestSourceBadge(r.request_source)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>`;
-      }
-
-      setHTML(content, `
-        ${rows.map(([label, value]) => `
-          <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-            <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
-            <span style="font-size:14px;">${value}</span>
-          </div>
-        `).join('')}
-        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:12px 0 0;border-bottom:1px solid var(--border);">
-          <span style="color:var(--muted-foreground);font-size:13px;">${t('完整内容')}</span>
-          <pre id="promptFullContent" style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(data.content || '')}</pre>
-        </div>
-        <div style="padding:8px 0;"><button type="button" class="btn btn-sm btn-secondary" onclick="app.copyPromptContent(this)">⧉ ${t('复制内容')}</button></div>
-        ${refsHtml}
-      `);
-    } catch (error) {
-      console.error(t('加载提示词详情失败:'), error);
-      setHTML(content, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
-    }
-  }
-
-  copyPromptContent(btn) {
-    const text = document.getElementById('promptFullContent')?.textContent || '';
-    const done = () => {
-      if (!btn) return;
-      const original = btn.innerHTML;
-      btn.innerHTML = `✓ ${t('已复制')}`;
-      setTimeout(() => { btn.innerHTML = original; }, 1500);
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done).catch(() => {});
-    } else {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand('copy'); done(); } catch { /* 忽略 */ }
-      document.body.removeChild(ta);
-    }
   }
 
   _buildUsageLogFilterParams() {
