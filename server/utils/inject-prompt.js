@@ -26,7 +26,7 @@ async function buildInjectedPrompt(userId, apiKeyId) {
   const result = await pool.query(
     `SELECT p.content
        FROM inject_prompts p
-      WHERE p.user_id = $1 AND p.enabled = TRUE
+      WHERE (p.user_id = $1 OR p.user_id IS NULL) AND p.enabled = TRUE
         AND (
           NOT EXISTS (SELECT 1 FROM inject_prompt_key_bindings b WHERE b.prompt_id = p.id)
           OR EXISTS (SELECT 1 FROM inject_prompt_key_bindings b WHERE b.prompt_id = p.id AND b.api_key_id = $2)
