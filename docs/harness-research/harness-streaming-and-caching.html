@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harness 流式响应与 Prompt Caching 研究报告 · CrewRouter</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
+    --text: #e6e8ee; --muted: #9aa3b2; --accent: #4f8cff; --accent2: #22c55e;
+    --code-bg: #0b0d12; --gold: #eab308; --red: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    line-height: 1.65; }
+  header.hero { padding: 48px 24px 32px; text-align: center;
+    background: linear-gradient(180deg, #101c33 0%, var(--bg) 100%); border-bottom: 1px solid var(--line); }
+  header.hero h1 { margin: 0 0 8px; font-size: 29px; letter-spacing: 1px; }
+  header.hero p { margin: 4px 0; color: var(--muted); }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 24px 80px; }
+  h2 { font-size: 24px; margin: 56px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
+    display: flex; align-items: center; gap: 10px; }
+  h3 { font-size: 19px; margin: 32px 0 12px; }
+  h4 { font-size: 16px; margin: 22px 0 8px; color: var(--accent); }
+  p { margin: 10px 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px;
+    padding: 1px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.88em; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; line-height: 1.5; }
+  pre code { background: none; border: none; padding: 0; font-size: 0.85em; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.9em; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel2); color: #c9d2e0; white-space: nowrap; }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  .toc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 28px; }
+  .toc ol { margin: 6px 0; padding-left: 24px; }
+  .toc li { margin: 4px 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 22px; margin: 18px 0; }
+  .proto { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 0.8em;
+    font-weight: 600; background: #312e81; color: #c7d2fe; }
+  .note { border-left: 4px solid var(--gold); background: rgba(234,179,8,0.06); padding: 10px 14px;
+    border-radius: 0 8px 8px 0; margin: 14px 0; }
+  .warn { border-left: 4px solid var(--red); background: rgba(239,68,68,0.06); padding: 10px 14px;
+    border-radius: 0 8px 8px 0; margin: 14px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .section-label { font-size: 0.8em; color: var(--accent2); text-transform: uppercase; letter-spacing: 1px; }
+  .evi { font-size: 0.85em; color: var(--muted); }
+  .conf-high { color: var(--accent2); font-weight: 600; }
+  .conf-mid { color: var(--gold); font-weight: 600; }
+  .conf-low { color: var(--red); font-weight: 600; }
+  footer { text-align: center; color: var(--muted); font-size: 0.85em; padding: 24px; border-top: 1px solid var(--line); }
+  .small { font-size: 0.85em; color: var(--muted); }
+</style>
+</head>
+
+<body>
+
+<header class="hero">
+  <h1>Harness 流式响应与 Prompt Caching 研究报告</h1>
+  <p>8 个 AI 编程助手（harness）的 SSE 流式协议消费语义、partial JSON 容错、心跳/重试策略，与 prompt caching 断点放置、防击穿工程、缓存计费口径的逐行源码考古</p>
+  <p>生成日期：2026-08-24 · 数据来源：仓库内源码逐一核实（<span class="evi">path:line 引用</span>）；无源码者基于公开资料推理并标注置信度<br>
+     姊妹篇：<a href="index.html">研究索引</a> · <a href="harness-prompt-and-message-construction.html">提示词构成</a> · <a href="harness-tool-call-formats.html">工具调用格式</a></p>
+</header>
+
+<main>
+
+<div class="toc">
+  <strong>目录</strong>
+  <ol>
+    <li><a href="#overview">总体概览：流式与缓存横向速览（两张矩阵）</a></li>
+    <li><a href="#claude-code">Claude Code（SDK 委托解析 + 全场最重的显式缓存工程）</a></li>
+    <li><a href="#codex">Codex CLI（自研 SSE 解析 + 服务端托管缓存）</a></li>
+    <li><a href="#grok-build">Grok Build（三层自研采样管线 + 手工三断点）</a></li>
+    <li><a href="#opencode">OpenCode（AI SDK 薄壳 + 会话层 Effect 重试）</a></li>
+    <li><a href="#qwen-code">Qwen Code（Gemini 协议归一内核 + 分通道缓存策略）</a></li>
+    <li><a href="#hermes">Hermes（防御性应用层工程 + 最重的 4 断点布局）</a></li>
+    <li><a href="#openclaw">OpenClaw（一 provider 一 transport + 声明式缓存界碑）</a></li>
+    <li><a href="#deepseek">DeepSeek Harness（公开资料推理，低置信度）</a></li>
+    <li><a href="#comparison">深度对比：差异本质、兼容性陷阱、事实标准</a></li>
+    <li><a href="#lessons">对 CrewRouter 网关的落地建议</a></li>
+  </ol>
+</div>
+
+<!-- ================= 1. 概览 ================= -->
+<h2 id="overview"><span class="section-label">1.</span> 总体概览：流式与缓存横向速览</h2>
+
+<p>流式响应是所有 harness 与模型之间的唯一传输形态——八家无一例外使用 SSE（或其变体）接收增量输出；prompt caching 则是成本结构里杠杆最大的单一变量：同一次会话的重复前缀，命中与不命中的价格差在 Anthropic 上是 <strong>10 倍</strong>（读 0.1×、写 1.25×）。本报告把两个主题合并研究，因为它们在源码里共享同一个模块：请求拼装与流解析。</p>
+
+<h3>1.1 流式协议矩阵</h3>
+<table>
+<tr><th>客户端</th><th>SSE 解析方式</th><th>事件粒度</th><th>tool 参数聚合</th><th>thinking 流表示</th><th>空闲超时</th><th>失败恢复模型</th><th>完成判定</th></tr>
+<tr><td><b>Claude Code</b></td><td>Anthropic SDK 内置解析，客户端维护 delta 状态机</td><td>delta 级（按 block index 寻址）</td><td><code>input_json_delta</code> 字符串拼接，block stop 才 parse</td><td><code>thinking_delta</code>+<code>signature_delta</code> 同块顺序追加</td><td>90s watchdog（opt-in env）；30s stall 事后检测；600s 仅覆盖响应头</td><td>整请求重放 ×10（500ms×2ⁿ cap 32s），可降级非流式</td><td>收到 <code>message_delta</code> 的 stop_reason</td></tr>
+<tr><td><b>Codex CLI</b></td><td>自研：<code>eventsource_stream</code> + tokio task + mpsc(1600)</td><td>item 级（聚合为完整 output_item）</td><td><b>不做增量聚合</b>：arguments 随 <code>output_item.done</code> 一次到位</td><td>reasoning summary 双模式：实时 delta / SequentialCutoff 整段投递</td><td>300s idle timeout；无整体请求超时</td><td>整请求重放：stream ×5 / request ×4（200ms×2ⁿ±10%），连接故障可无限重连，WS→HTTPS 传输降级</td><td>收到 <code>response.completed</code> 才算完成，提前 EOF 即报错</td></tr>
+<tr><td><b>Grok Build</b></td><td>自研三层管线：reqwest+eventsource_stream → 纯函数 L2 → actor</td><td>delta 级归一为内部 SamplingEvent</td><td>按 index 累积 arguments_buffer，流末一次性组装；会话层多级修复兜底</td><td>Text/Reasoning 共享单调 chunk_index 保序；合成 Reasoning 项排在正文前</td><td><b>双层</b>：300s 完全断流 + 内容感知计时器抓「只有 keepalive 无实质内容」</td><td>最重预算：15 次尝试 ≈5.5min，2ⁿ±20% 抖动，Retry-After 分路径 clamp，x-should-retry 否决权，HTTP/1.1 连接池逃逸重建</td><td>L2 未发终止事件即 drop 会合成错误；finish_reason 缺失强制改写 ToolCalls</td></tr>
+<tr><td><b>OpenCode</b></td><td>Vercel AI SDK fullStream 委托（native 运行时实验中自建状态机）</td><td>part 级（SDK part → LLMEvent → SessionPart 三级归一）</td><td>SDK 拼接；repairToolCall 钩子修大小写/回灌 invalid 合成工具</td><td>稳定 ID reasoning-N part 化存储；native 在首条正文前显式闭合 reasoning</td><td>自身无（下沉 SDK/transport）</td><td>HTTP 层 maxRetries=0；会话层 Effect Schedule 整次重跑 ×5（2s×2±25%，尊 Retry-After）</td><td>finish reason 白名单校验，非法值归一 unknown</td></tr>
+<tr><td><b>Qwen Code</b></td><td>Gemini SDK / OpenAI SDK 委托 + content-type 校验防 HTML 拦截页</td><td>Gemini chunk 归一（functionCall 为完整对象非增量）</td><td>Gemini 路径整对象直达；OpenAI 路径 SDK 处理</td><td>thought part + thoughtSignature 回填合并</td><td>240s idle + <b>900s 总寿命上限</b>（不随 chunk 刷新，防 drip-feed）</td><td>四套独立预算：通用×7 / 限流×10(60s 起) / 无效流×4 / 传输断流×2+续传×3</td><td>有 finishReason 才 yield Finished；MAX_TOKENS 打截断标记</td></tr>
+<tr><td><b>Hermes</b></td><td>三种 api_mode 各自独立流循环（chat_completions / anthropic_messages / codex_responses）</td><td>delta 级 + per-provider 怪癖修正层</td><td>arguments += 拼接；<b>name 用赋值不用 +=</b>（防 MiniMax 每 chunk 重发全名）；流后 JSON 修复器兜底</td><td>reasoning_content 持久化回传（DeepSeek/Kimi 不带会 400）；单写者不变量保序</td><td>应用层 stale detector 180s（上下文缩放至 300s）+ 连续 5 次放弃；<b>read=None 不设读超时</b></td><td>decorrelated jitter backoff；EmptyStreamError 统一「诚实失败」信号；假流式 provider 会话级切非流式</td><td>零 chunk guard：无 finish_reason 且无内容 → EmptyStreamError 拒绝伪造成功</td></tr>
+<tr><td><b>OpenClaw</b></td><td>注册制 monorepo：一 provider 一 transport 文件，翻译为平台无关事件流</td><td>delta 级 + 早到事件缓冲保序（deferred-event-buffer）</td><td><b>partial-json 库边流边出中间值</b>；legacy function_call 归一化；256KB 缓冲上限</td><td>原生 thinking delta + 第三方 reasoning_content 回放分支；reasoning-tag partitioner 切分</td><td>首事件超时看门狗（Azure 固定 30s）+ 流活动上报</td><td>宿主层 failover 分类器（replay-safety 优先，防未知输出被二次执行）；Retry-After 手写解析三种 HTTP-date</td><td>stop reason 双协议各自映射归一；终局 usage 恢复专项处理</td></tr>
+<tr><td><b>DeepSeek Harness</b></td><td class="conf-low">公开资料推理：OpenAI 兼容 SSE</td><td class="conf-low">delta 级</td><td class="conf-low">标准 OpenAI 增量拼接</td><td class="conf-low">reasoning_content 字段（DeepSeek V 系列原生）</td><td class="conf-low">未公开</td><td class="conf-low">未公开</td><td class="conf-low">finish_reason 标准语义</td></tr>
+</table>
+
+<h3>1.2 Prompt caching 矩阵</h3>
+<table>
+<tr><th>客户端</th><th>流派</th><th>断点位置</th><th>TTL</th><th>缓存字段读取</th><th>代表性防击穿手段</th></tr>
+<tr><td><b>Claude Code</b></td><td>显式断点派（重度工程化）</td><td>system 多块（org/global scope）+ 最后一条消息恰好 1 个断点</td><td>5m 默认 / 1h 按 allowlist latch</td><td>cache_creation/cache_read + ephemeral_5m/1h 细分 + cache_deleted</td><td>TTL/beta header latch 进 STATE；工具 schema 字节级缓存；静态/动态边界哨兵；hash-diff 击穿归因检测器</td></tr>
+<tr><td><b>Codex CLI</b></td><td>自动前缀派</td><td>无断点，只发 <code>prompt_cache_key</code> 会话亲和键（子代理继承父 thread id）</td><td>服务端托管</td><td>cached_input_tokens / cache_write_input_tokens，TUI 分 cached/blended 口径</td><td>动态内容（时间/环境）隔离进消息流不动 instructions；Arc&lt;RawValue&gt; 保工具列表字节稳定</td></tr>
+<tr><td><b>Grok Build</b></td><td>混合：Messages 显式，其余自动</td><td>恰好 3 断点：system 尾块 / transcript 尾 tip / 上一个 tip（第 4 槽位注释「留给网关自动缓存」）</td><td>ephemeral 默认</td><td>TokenUsage.cached_prompt_tokens + cache_creation_prompt_tokens，会话级 UsageTotals 台账</td><td>跳过 thinking 块打点（API 拒绝）；纯文本消息升级为 block 承载</td></tr>
+<tr><td><b>OpenCode</b></td><td>显式断点派（抽象成多 provider 方言）</td><td>最后 ≤2 条 system + 最后 ≤2 条非 system 消息；native 策略默认锚 latest-user-message</td><td>≥3600s 映射 "1h"</td><td>tokens.cache.{write,read} 三桶，adjustedInputTokens = input − read − write</td><td>ANTHROPIC_BREAKPOINT_CAP=4 超限静默丢弃并计数；store=false 时剥离 itemId 保请求体不可变</td></tr>
+<tr><td><b>Qwen Code</b></td><td>分通道：DashScope 自动 / Anthropic 显式</td><td>Anthropic 三锚点：system 静态前缀块 / 最后一个 tool（常 5K+ token 最大最稳）/ 尾部 user</td><td>ephemeral / 1h / global 可选</td><td>cachedContentTokenCount 归一口径 + OTel 导出 cache_read/creation</td><td>beta header 以 wire 实际值为单一事实源门控；staticSystemPrefix 动态部分不进缓存体</td></tr>
+<tr><td><b>Hermes</b></td><td>显式断点派（全场最重布局）</td><td>默认 4 断点：静态 system 前缀 + system 尾 + 最后 2 条非 system；Alibaba/Qwen 家族也打标但 TTL 钳 5m</td><td>可配 1h，按家族钳制</td><td>CanonicalUsage 三桶 + 五家字段 fallback 表（DeepSeek/Kimi/OpenRouter/写侧四级）</td><td>date-only 时间戳（分钟精度会在压缩边界击穿 KV）；builder 注册式 stable-prefix 最长真前缀拆分；envelope 空 content 载体黑名单</td></tr>
+<tr><td><b>OpenClaw</b></td><td>显式断点派（声明式界碑）</td><td>HTML 注释界碑切割 stable/dynamic；messages 用 deepest-stable-message 策略锚最后一条<b>稳定</b> user；预算 4</td><td>env OPENCLAW_CACHE_RETENTION=long → 1h</td><td>三值齐才有效的快照校验 + iterations[] 取最后一次迭代为真实窗口</td><td>工具确定性排序（locale 无关）；文本归一化（CRLF→LF 等）；易变运行时载体消息排除出断点选择</td></tr>
+<tr><td><b>DeepSeek Harness</b></td><td class="conf-low">自动缓存派</td><td class="conf-low">无显式控制（API 层磁盘级隐式缓存）</td><td class="conf-low">服务端托管</td><td class="conf-low">prompt_cache_hit_tokens / prompt_cache_miss_tokens</td><td class="conf-low">未公开</td></tr>
+</table>
+
+<div class="note"><b>一句话总览：</b>流式上，「谁负责把字节流变成结构」 split 成三个流派——SDK 委托（Claude Code/OpenCode/Qwen）、自研状态机（Codex/Grok Build/OpenClaw/Hermes）；缓存上则 split 成两派——显式断点派（Anthropic 系生态，五家）与自动前缀派（OpenAI/Gemini/DeepSeek 系，靠路由亲和键而非断点）。所有精细的工程都花在同一件事上：<b>保卫请求前缀的字节稳定性</b>。</div>
+
+<!-- ================= 2. Claude Code ================= -->
+<h2 id="claude-code"><span class="section-label">2.</span> Claude Code（SDK 委托解析 + 全场最重的显式缓存工程）</h2>
+
+<h3>2.1 流式：SDK 托管字节，客户端管状态机</h3>
+<p>SSE 字节解析完全托付给 Anthropic SDK，但 Claude Code <b>刻意绕开了 SDK 的高级流封装</b>：<code>anthropic.beta.messages.create({...params, stream:true}).withResponse()</code> 取 raw Stream 而非 <code>BetaMessageStream</code>——源码注释明说是为了避免 SDK partial JSON 解析的 O(n²) 开销（<code>src/services/api/claude.ts:1820-1824</code>）。事件消费是一个大 switch（<code>claude.ts:1979-2298</code>）：</p>
+<table>
+<tr><th>事件</th><th>处理要点</th><th>位置</th></tr>
+<tr><td><code>message_start</code></td><td>记录 partialMessage、TTFT 打点、usage 初始化</td><td><code>claude.ts:1980</code></td></tr>
+<tr><td><code>content_block_start</code></td><td>tool_use → <code>input:''</code> 占位；text → <code>text:''</code> 防 SDK 重复；thinking → <code>thinking:''+signature:''</code> 先占位（注释：「即使 signature_delta 不来也保证字段存在」）</td><td><code>claude.ts:1996-2038</code></td></tr>
+<tr><td><code>content_block_delta</code></td><td>六个 delta 子类型：<code>citations_delta</code>（TODO 未处理）、<code>input_json_delta</code>、<code>text_delta</code>、<code>signature_delta</code>、<code>thinking_delta</code>、<code>connector_text_delta</code></td><td><code>claude.ts:2053-2162</code></td></tr>
+<tr><td><code>content_block_stop</code></td><td>组装 AssistantMessage 并 yield（每个 block 一条消息）</td><td><code>claude.ts:2171</code></td></tr>
+<tr><td><code>message_delta</code></td><td>usage 累加；stop_reason <b>直接属性变异写回已 yield 的最后一条消息</b>（保证 transcript 引用一致）；max_tokens/context_window_exceeded 特判</td><td><code>claude.ts:2213-2294</code></td></tr>
+<tr><td><code>message_stop</code></td><td>空 case</td><td><code>claude.ts:2295</code></td></tr>
+<tr><td><code>ping</code></td><td><b>不消费</b>（services/api 下零匹配）</td><td>—</td></tr>
+</table>
+<h4>partial JSON 容错</h4>
+<p><code>content_block_start</code> 时把 tool_use 的 input 初始化为空字符串，此后每条 <code>input_json_delta</code> 只做纯字符串拼接 <code>contentBlock.input += delta.partial_json</code>（<code>claude.ts:2113</code>），<b>绝不边流边 parse</b>；解析推迟到 <code>content_block_stop</code> 由 <code>normalizeContentFromAPI</code> 统一执行（<code>claude.ts:2196-2199</code>）。防御面：delta 引用不存在的 block index 直接抛 <code>RangeError('Content block not found')</code>（<code>claude.ts:2056-2064</code>），类型不符抛错并上报 <code>tengu_streaming_error</code> 遥测（<code>claude.ts:2060-2111</code>）。乱序容错的答案是 index 寻址——内容永远追加到 <code>contentBlocks[part.index]</code>。</p>
+<h4>超时与重试：分层看门狗 + 整请求重放</h4>
+<ul>
+<li><b>三层超时</b>：30s stall 检测（只在下一事件到达后事后判定，<code>claude.ts:1936,1947-1966</code>）；90s 流级 idle watchdog（默认关闭，需 <code>CLAUDE_ENABLE_STREAM_WATCHDOG</code>，超时 abort 并抛 'Stream idle timeout'，<code>claude.ts:1869-1927</code>）；600s 请求级超时只覆盖初始响应头不管流体（<code>src/services/api/client.ts:144</code>，注释自己承认了这个盲区）。</li>
+<li><b>重试 = 整请求重放</b>，无 Last-Event-ID 续传：withRetry 循环重新执行整个 operation，默认 10 次、500ms×2ⁿ cap 32s + ≤25% 抖动、服务端 retry-after 优先（<code>src/services/api/withRetry.ts:51-53,186-190,531-547</code>）。529 连续 3 次触发 fallback model 切换（<code>withRetry.ts:54,330-350</code>）；unattended 模式退避 cap 放宽到 5min、总等待 6h、每 30s 心跳输出 api_retry 进度（<code>withRetry.ts:92-99,485-505</code>）。</li>
+<li><b>降级路径</b>：流中断可降级为非流式重试（<code>claude.ts:2503-2530</code>，可用 flag 关闭以防双工具执行的已知缺陷 inc-4258）；ECONNRESET/EPIPE 视为陈旧 keep-alive 连接并禁用连接池（<code>withRetry.ts:111-118,216-230</code>）。</li>
+<li>仓库里唯一的 Last-Event-ID/<code>from_sequence_num</code> 续传在 <code>src/cli/transports/SSETransport.ts:209-260</code>——但那是 session ingress 远端桥接通道，<b>模型 API 无续传</b>。</li>
+</ul>
+<div class="note"><b>完整性哲学：</b>没有事件序号校验。收尾检查只有一条——<code>!partialMessage || (无新消息 && 无 stopReason)</code> 即抛 'Stream ended without receiving any events' 触发非流式 fallback（<code>claude.ts:2341-2364</code>），这条同时覆盖「200 但非 SSE 体」和「message_start 后断流」两种网关故障形态。stop_reason 只可能来自 message_delta，它是唯一完成判据。</div>
+
+<h3>2.2 缓存：把前缀保卫做成一门工程学</h3>
+<p>Claude Code 是显式断点派的极致。断点构造函数返回 <code>{type:'ephemeral', ttl?:'1h', scope?:'global'}</code>（<code>claude.ts:358-374</code>），布局是「system 多块断点 + 消息级恰好一个断点」：</p>
+<ul>
+<li><b>system 层多块</b>：<code>buildSystemPromptBlocks</code> 按 attribution scope 分块打标，源码注释警告「再加一块会 400」（<code>claude.ts:3213-3238</code>；分块策略 <code>src/utils/api.ts:296-360</code>）。</li>
+<li><b>消息层单断点</b>：<code>addCacheBreakpoints</code> 每请求只放一个标记在最后一条消息上；fork 场景 <code>skipCacheWrite</code> 把它移到倒数第二条避免写放大（<code>claude.ts:3062-3105,3078-3089</code>）。</li>
+<li><b>进阶特性</b>：tool_result 块支持 <code>cache_reference = tool_use_id</code> 复用引用（<code>claude.ts:3166-3208</code>）；探活请求也带 ephemeral 断点（<code>validateModel.ts:69</code>）。</li>
+</ul>
+<h4>防击穿手段清单（每条都有注释佐证）</h4>
+<table>
+<tr><th>威胁</th><th>对策</th><th>位置</th></tr>
+<tr><td>TTL 资格/GrowthBook 开关 mid-session 翻转（会 bust ~20K tokens）</td><td>latch 进 STATE，会话内不再变</td><td><code>claude.ts:398-412</code></td></tr>
+<tr><td>beta header mid-session toggle（bust ~50-70K tokens）</td><td>sticky-on latch，只开不关</td><td><code>claude.ts:1402-1407</code></td></tr>
+<tr><td>MCP 动态工具列表</td><td><code>needsToolBasedCacheMarker</code>，系统 prompt 降级为不可 global 缓存</td><td><code>claude.ts:1208-1213,1375-1379</code></td></tr>
+<tr><td>GrowthBook 热更新导致工具 schema 序列化字节漂移</td><td>toolSchemaCache 会话级字节稳定缓存</td><td><code>utils/api.ts:133-150</code></td></tr>
+<tr><td>动态内容混入 system 前缀</td><td><code>SYSTEM_PROMPT_DYNAMIC_BOUNDARY</code> 哨兵行，boundary 后内容不参与 global 缓存，注释警告不得随意移动</td><td><code>constants/prompts.ts:105-114</code></td></tr>
+<tr><td>/advisor 开关 churn 大前缀</td><td>advisor server tool 固定追加到工具 schema 之后，「只 churn 小尾巴」</td><td><code>claude.ts:1385-1390</code></td></tr>
+<tr><td>fast-mode 429 重试换模型击穿缓存</td><td>短重试坚持同模型名以保 prompt cache</td><td><code>withRetry.ts:273-290</code></td></tr>
+</table>
+<h4>usage 口径与击穿检测器</h4>
+<p><code>updateUsage</code> 读 <code>cache_creation_input_tokens/cache_read_input_tokens</code> 且带 &gt;0 保护防止 message_delta 把值归零覆写（<code>claude.ts:2920-2946</code>）；细分 <code>cache_creation.ephemeral_1h/5m_input_tokens</code> 两桶（<code>claude.ts:2954-2962</code>）和实验性 <code>cache_deleted_input_tokens</code>（<code>claude.ts:2966-2982</code>）。/cost 报表聚合两桶（<code>src/utils/stats.ts:334-337</code>）。最有特色的是<b>缓存击穿归因检测器</b>：每次流结束后 <code>checkResponseForCacheBreak</code> 按 system/tools/per-tool schema/beta header 的 hash diff 定位击穿原因，token 掉落阈值 <code>MIN_CACHE_MISS_TOKENS=2000</code>，diff 写临时文件供人工排查（<code>promptCacheBreakDetection.ts:18-40,120</code>，调用点 <code>claude.ts:2383-2390</code>）——已知动态源清单里甚至点名了 AgentTool/SkillTool 内嵌的动态 agent 列表。</p>
+
+<!-- ================= 3. Codex CLI ================= -->
+<h2 id="codex"><span class="section-label">3.</span> Codex CLI（自研 SSE 解析 + 服务端托管缓存）</h2>
+
+<h3>3.1 流式：item 级聚合，信任服务端</h3>
+<p>SSE 解析已重构进独立 crate：<code>spawn_response_stream</code> 起 tokio task + mpsc(1600) channel（<code>codex-api/src/sse/responses.rs:39,70</code>），逐帧用 <code>eventsource_stream::Eventsource</code> 解析（<code>responses.rs:549</code>），HTTP 发起点强制 <code>Accept: text/event-stream</code>（<code>codex-api/src/endpoint/responses.rs:139-156</code>）。core 层另有 Responses-over-WebSocket 双通道与 turn-state sticky routing（<code>core/src/client.rs:10-24,974-980</code>）。消费端事件 match 在 <code>codex-api/src/sse/responses.rs:349-519</code>：</p>
+<table>
+<tr><th>SSE 事件</th><th>ResponseEvent</th><th>备注</th></tr>
+<tr><td><code>response.output_item.done</code></td><td>OutputItemDone</td><td><b>function_call 的完整 arguments 随此一次到位</b></td></tr>
+<tr><td><code>response.output_text.delta</code></td><td>OutputTextDelta</td><td>正文增量</td></tr>
+<tr><td><code>response.custom_tool_call_input.delta</code></td><td>ToolCallInputDelta</td><td>仅 custom tool（apply_patch 类）；只用于 UI diff 展示，权威输入仍取 done 项</td></tr>
+<tr><td><code>response.reasoning_summary_text.delta/.done</code></td><td>ReasoningSummaryDelta/Done</td><td>双模式见下</td></tr>
+<tr><td><code>response.reasoning_text.delta</code></td><td>ReasoningContentDelta</td><td>raw reasoning，按到达序转发不排序</td></tr>
+<tr><td><code>response.created / response.completed</code></td><td>Created / Completed</td><td><b>completed 是唯一完成判据</b>，收到即终止循环（<code>responses.rs:637-644</code>）</td></tr>
+<tr><td><code>response.failed / incomplete</code></td><td>分类错误 / ApiError::Stream</td><td>failed 会解析 retry-after 并区分 ContextWindowExceeded/Quota/Overloaded 等</td></tr>
+<tr><td><code>function_call_arguments.delta/.done</code> 等 10+ 事件</td><td colspan="2"><b>显式忽略列表</b>（<code>responses.rs:496-509</code>）：不做 function_call arguments 增量聚合，其余 *.delta 一律 trace 忽略</td></tr>
+</table>
+<h4>reasoning 双模式与顺序保证</h4>
+<p>开启 <code>ConcurrentReasoningSummaries</code> feature 时跳过实时 delta，改为消费 <code>reasoning_summary_text.done</code> 整段文本、按 <code>summary_index</code> 升序发出并在段间插分隔符（<code>core/src/session/turn.rs:2677-2709</code>）；未开启则实时转发 delta（<code>turn.rs:2635-2658</code>）。请求侧相应声明 <code>stream_options.reasoning_summary_delivery: SequentialCutoff</code> 并 <code>include=["reasoning.encrypted_content"]</code>（<code>client.rs:921-927</code>）。顺序保证的总原则：文本/推理按到达序追加，item 定位依赖先到的 <code>output_item.added</code> 建立 active_item，缺失即 error_or_panic（<code>turn.rs:2585-2615</code>）。</p>
+<h4>超时、重试与完整性</h4>
+<ul>
+<li><b>空闲超时 300s</b>（<code>model-provider-info/src/lib.rs:27</code>），机制是 <code>tokio::time::timeout(idle_timeout, stream.next())</code>，超时报 "idle timeout waiting for SSE"（<code>sse/responses.rs:553-578</code>）；某内置 provider 收紧到 5s（<code>model-provider/src/provider.rs:572</code>）。无整体请求级超时。不消费 ping/SSE 注释。</li>
+<li><b>整请求重放</b>：常规流错误 stream ×5 / request ×4（用户可配，硬上限 100），200ms×2ⁿ ±10% 抖动；连接故障在 feature 开启时可无限重连，5s 起指数 ×2 cap 60s（<code>core/src/responses_retry.rs:17-124</code>，常量 <code>util.rs:5-8</code>）。WebSocket→HTTPS 传输层可降级且 retries 清零重来（<code>responses_retry.rs:85-102</code>）。</li>
+<li><b>完整性</b>：流提前 EOF → <code>ApiError::Stream("stream closed before response.completed")</code>（<code>sse/responses.rs:564-569</code>）——「必须见到 completed」是硬约束；缺 id 的流式 item 由 <code>assign_missing_streamed_response_item_id</code> 补齐；<code>end_turn:false</code> 时置 needs_follow_up 继续 turn（<code>turn.rs:2296,2575-2578</code>）。tool arguments 不做中途 parse，完整 String 推迟到工具执行阶段才解析（<code>core/src/tools/router.rs:150-166</code>），天然免疫 partial JSON 问题。</li>
+</ul>
+
+<h3>3.2 缓存：一个键值搞定，其余交给服务端</h3>
+<p>Codex 是自动前缀派的代表：请求里没有任何 cache_control，等价物是 <b><code>prompt_cache_key</code> 会话亲和键</b>——主会话直接用 session_id，内部子代理用 <code>{source}:{parent_thread_id}</code> 格式继承父线程（<code>core/src/client.rs:485-495,944-959</code>；字段定义 <code>codex-api/src/common.rs:270</code>）。测试固化了它的稳定性语义：跨模型切换、跨 per-turn override 必须保持不变（<code>core/tests/suite/prompt_caching.rs:436-439,704-707</code>）。</p>
+<p>前缀稳定的实现方式是<b>结构分层</b>而非内容清洗：base instructions 走顶层 <code>instructions</code> 字段（<code>client.rs:948-949</code>），所有动态上下文一律作为 input items 追加在对话流里——<code>&lt;environment_context&gt;</code> 是 user 块（可在 config 关闭，<code>config/mod.rs:702-703</code>）、当前时间做成独立的 developer 消息片段 <code>&lt;current_time_reminder&gt;</code> 而非混入 instructions（<code>context/current_time_reminder.rs:22-37</code>）、AGENTS.md 渲染为对话 item（<code>agents_md.rs:372-400</code>）。</p>
+<p>usage 侧解析 <code>TokenUsage.cached_input_tokens ← input_tokens_details.cached_tokens</code> 与 <code>cache_write_input_tokens ← cache_write_tokens</code>（<code>sse/responses.rs:130-158</code>），TUI 提供 cached/non_cached/blended 三种口径展示（<code>tui/src/token_usage.rs:14-40</code>），OTel 导出 <code>gen_ai.usage.cache_read.input_tokens</code>（<code>turn.rs:2259-2261</code>）。配合 <code>store:false</code> 无状态重放全量 input items（<code>client.rs:953</code>）；工具列表序列化用 <code>Arc&lt;RawValue&gt;</code> 保原始字节零拷贝克隆，间接利于请求字节稳定（<code>common.rs:218-250</code>）。</p>
+
+<!-- ================= 4. Grok Build ================= -->
+<h2 id="grok-build"><span class="section-label">4.</span> Grok Build（三层自研采样管线 + 手工三断点）</h2>
+
+<h3>4.1 流式：L1 字节 → L2 纯函数变换 → actor 重试环</h3>
+<p>Grok Build 的流式管线是全场架构感最强的自研实现。L1 原始解析在采样器 <code>xai-grok-sampler/src/client.rs</code>，同一文件支持三条后端通道：Chat Completions <code>chat_completion_stream</code>（<code>:1009</code>）、Responses API <code>create_response_stream</code>（<code>:1359</code>）、Anthropic Messages <code>create_message_stream</code>（<code>:1698</code>）；请求侧用 <code>#[serde(flatten)]</code> 包装注入 <code>stream:true + stream_options.include_usage:true</code>（<code>:286-298</code>），首个 chunk 手工剥离 UTF-8 BOM 以规避 eventsource-stream 0.2.3 的切片 bug（<code>:1118-1130</code>）。L2 是纯函数变换层，把三种后端的原始 chunk 流统一折叠为内部 <code>SamplingEvent</code> 枚举（StreamStarted / FirstToken / ChannelToken / ToolCallDelta / ResponseStarted / ReasoningCompleted / Completed / Retrying / Failed 等，<code>events.rs:52-171</code>）；后端分派在 actor 的 <code>run_one_attempt</code> 三分支调用（<code>actor/request_task.rs:528-598</code>）。</p>
+<h4>Chat Completions delta 字段消费全集</h4>
+<p><code>choices[0].finish_reason</code> 记录 StopReason（<code>stream/chat_completions.rs:147-151</code>）；<code>delta.content</code> 首次触发 FirstToken 后发 ChannelToken{Text}（<code>:156-175</code>）；<code>delta.reasoning_content</code> 发 ChannelToken{Reasoning}（<code>:177-193</code>）；<code>delta.tool_calls[]</code> 按 index 发 ToolCallDelta（<code>:195-230</code>）；顶层 usage 走 last-write-wins 且 cost 只增不清零（<code>:130-141</code>）；<code>system_fingerprint</code>/<code>model</code> 取自首 chunk（<code>:124-129</code>）。Responses 后端则消费 OutputTextDelta、ReasoningSummaryTextDelta、ReasoningTextDelta、FunctionCallArgumentsDelta 等并在终态事件用 <code>context_details.input+output</code> 重写 total_tokens（<code>stream/responses.rs:225-300</code>、<code>client.rs:139-190</code>）。</p>
+<h4>partial JSON 与顺序保证</h4>
+<p>L2 按 index 用 BTreeMap 累积 (id,name,arguments_buffer)，流结束一次性组装 ToolCall，中途不 parse（<code>chat_completions.rs:71-77,196-222,248-256</code>）。会话层兜底链很有看头：空参数串归一为 "{}"；模型输出多个连排 JSON 对象时用 <code>serde_json::StreamDeserializer</code> 拆成多次调用；parse 失败在 doom-loop 场景退化为 trimmed 原文；StructuredOutput 校验失败把错误文本作为 tool_result 回灌要求修正且有重试上限（<code>tool_input_parsing.rs:5-44</code>、<code>session/acp_session_impl/turn.rs:1907-1932,3004-3017</code>）。顺序上 Text/Reasoning 共享同一个单调递增 chunk_index，另有仅计正文的 message_chunk_count 用于丢事件检测补偿（<code>chat_completions.rs:76-84</code>）；持久化时 reasoning 合成为排在 Assistant 正文之前的独立项（<code>:264-279</code>）。</p>
+<h4>超时与重试：预算最重的实现</h4>
+<ul>
+<li><b>双层空闲检测</b>：外层 300s 默认 idle timeout 抓「完全断流」，内层内容感知计时器抓「只有 keepalive/空 delta 但无实质内容」——Messages 后端 Ping 明确不算内容（<code>request_task.rs:34-40</code>、<code>chat_completions.rs:30-38,232-246</code>、<code>stream/messages.rs:39-50</code>）。连接层 keepalive 常量齐全：http2_keep_alive_interval 20s / tcp_keepalive 30s / connect_timeout 30s（<code>xai-grok-http/src/lib.rs:319-334</code>）。</li>
+<li><b>重试预算全场最大</b>：默认最多 15 次尝试约 5.5 分钟，2ⁿ 秒退避 ±20% 抖动，单次等待 cap 30s；429 连续阈值 2；env &gt; 模型配置 &gt; 默认三级覆盖（<code>sampler/src/retry.rs:45-127,76-82</code>）。Retry-After 解析只认整数秒且封顶 120s，通用路径 clamp 到 30s、429 路径原样等待（<code>client.rs:227-235</code>、<code>retry.rs:236-266</code>）。</li>
+<li><b>可重试分类精细</b>：429 + 除 525/526 外全部 5xx + 连接错误 + mid-stream 错误 + EmptyResponse 可重试；400/401/403/404/408/422/Auth/Serialization/IdleTimeout/MaxTokensTruncation 直接 fatal；响应头 <code>x-should-retry:false</code> 拥有一票否决权（<code>retry.rs:1-42,168-268</code>）。特殊恢复：首次传输类错误强制重建 HTTP/1.1 客户端逃离"中毒"的 HTTP/2 连接池（<code>retry.rs:250-266</code>、<code>request_task.rs:430-458</code>）；413/图片处理错误剥图重试。</li>
+<li><b>完整性</b>：有 tool_calls 但缺 finish_reason 时强制改写为 ToolCalls（<code>chat_completions.rs:258-262</code>）；stop_reason==Length 升级为 MaxTokensTruncation 错误；正文计数为 0 但含文本时补发 fallback chunk（丢事件补偿）；L2 未发终止事件就被 drop 会合成 "stream dropped without terminal event" 错误（<code>request_task.rs:669-713</code>）；首个传输错误后流即终结防止 h2 忙循环（<code>client.rs:1136-1145</code>）；未知 stop reason 用 untagged <code>Unknown(String)</code> 保底不炸终态解析（<code>sampling-types/src/messages.rs:228-241</code>）。</li>
+</ul>
+
+<h3>3.2 缓存：三断点设计里给网关留了第四槽位</h3>
+<p>仅 Anthropic Messages 后端发显式断点：<code>CacheControl { type:"ephemeral" }</code>（<code>xai-grok-sampling-types/src/messages.rs:91-102</code>），<code>apply_cache_breakpoints</code> 打恰好 3 个——system 最后一块、transcript 尾部 tip、最后一个 assistant 之前的上一条 user（<code>sampling-types/src/conversation/messages.rs:39-73</code>）。两处防御性细节：thinking 块跳过打点（API 拒绝）、纯文本消息升级为 block 形式承载标记（<code>:5-37</code>）。</p>
+<div class="note"><b>对网关研究最有价值的一条注释：</b>断点数量设计的源码注释原文——「只在断点写缓存，仅标 system 会让 transcript 不缓存；第 3 个覆盖一次追加超过 API 20-block lookback 的回合；<b>第 4 个槽位留给网关自动缓存</b>，5 个会被拒」（<code>conversation/messages.rs:36-43</code>）。也就是说 Grok Build 在客户端就预设了「上游可能有个网关会替自己打最后一个断点」——CrewRouter 正好可以坐进这个位置。测试还固化了「恰好 2 个 message 级标记」的不变量（<code>messages_tests.rs:150-212</code>）。</div>
+<p>Chat Completions/Responses 后端不发 cache_control，依赖上游自动前缀缓存。usage 归一口径：<code>TokenUsage.cached_prompt_tokens ← prompt_tokens_details.cached_tokens / cache_read_input_tokens</code>、<code>cache_creation_prompt_tokens ← cache_creation_input_tokens</code>，注释特别强调 <code>prompt_tokens</code> 恒为全量 prompt、<b>不要做减法</b>（<code>conversation.rs:753-801</code>）。Messages 流式路径在 message_start 读入 final_cache_read/creation 并随 message_delta 更新（<code>stream/messages.rs:108-121,462-476,531-546</code>）。会话级台账 <code>UsageTotals{cached_read_tokens, cache_creation_tokens,...}</code> 逐次累加（<code>xai-chat-state/src/usage.rs:31-61</code>），对外投影到状态行和 headless usage JSON（<code>xai-grok-status-line/src/context.rs:179-188</code>、<code>notification.rs:185-206,320-341</code>）——这是八家里会话级缓存统计最完整的一家。</p>
+
+<!-- ================= 5. OpenCode ================= -->
+<h2 id="opencode"><span class="section-label">5.</span> OpenCode（AI SDK 薄壳 + 会话层 Effect 重试）</h2>
+
+<h3>5.1 流式：引擎委托，自己只做两级归一化</h3>
+<p>主路径完全交给 Vercel AI SDK：<code>streamText({...})</code> 把 <code>result.fullStream</code> 接入 Effect Stream（<code>packages/opencode/src/session/llm.ts:280,373</code>），再经适配器把 SDK part 归一为内部 LLMEvent（<code>session/llm/ai-sdk.ts:80-288</code>）。消费的 part 全集：start-step→stepStart、finish-step→stepFinish（raw finish_reason 为 network_error 时直接抛 ResponseStreamError）、finish、text-start/delta/end、reasoning-start/delta/end、tool-input-start/delta/end、tool-call、tool-result、tool-error、error；<code>raw</code> part 仅对 github-copilot 开启用于计费提取。另有 opt-in 的实验性 native 运行时（<code>session/llm/native-runtime.ts:54-63</code>）开始自建协议状态机：OpenAI Chat 协议处理 <code>delta.reasoning_content</code>、按 index 累积 tool_calls、chunk 级 cached_tokens、固定带 stream_options.include_usage（<code>packages/llm/src/protocols/openai-chat.ts:361,388-440</code>）。</p>
+<h4>partial JSON 容错与 reasoning 保序</h4>
+<p>AI SDK 主路径的拼接由 SDK 完成，OpenCode 提供修复钩子 <code>experimental_repairToolCall</code>：工具名大小写不符且有对应小写工具则改名重试，否则把 <code>{tool,error}</code> 塞给名为 "invalid" 的合成工具回给模型（<code>llm.ts:296-309</code>）。native 路径更严格：arguments 原始字符串累积，终结时 parse 失败<b>让整个流 fail</b>——源码注释解释这是刻意让 parse 失败暴露在边界而非 halt 时（<code>openai-chat.ts:444-452</code>）。processor 层还有第三道兜底：非对象 input 包成 <code>{value:input}</code>（<code>processor.ts:335-337</code>）。reasoning 用稳定 ID <code>reasoning-N</code> part 化存储，孤儿 delta 静默丢弃；native 协议在首条 content/tool delta 到来时显式闭合 reasoning 保证块序（<code>openai-chat.ts:421-432</code>）；收尾 cleanup 给所有未闭合 part 补时间戳、悬挂 tool call 标记 interrupted（<code>processor.ts:279-315,539-594</code>）。</p>
+<h4>超时上移缺失，重试全在会话层</h4>
+<ul>
+<li>OpenCode 自身代码<b>没有</b>空闲超时/SSE 注释行处理——这些全部下沉在 AI SDK 或 transport 内部；取消靠 AbortController + Effect scope 自动传播（<code>llm.ts:360-365,321</code>）。</li>
+<li>HTTP 层显式 <code>maxRetries: 0</code>（<code>llm.ts:323</code>）；会话层用 Effect Schedule 包裹整个流处理做「整次尝试原子重跑」：初始延迟 2000ms ×2 退避 ±25% 抖动、最多 5 次、无 retry-after 头时 cap 30s（<code>session/retry.ts:22-83</code>、<code>processor.ts:655-667</code>）。可重试判定：ContextOverflow 不重试、status≥500 强制可重试、正则匹配 overloaded/network/stream timeout 等。</li>
+<li>完整性靠 finish reason 白名单（非法值归一 unknown）+ 每次 step-finish 落库并检查上下文溢出触发压缩；自研 doom-loop 检测：连续 3 个同工具同参数调用触发 permission 询问（<code>processor.ts:28,350-379</code>）。无事件序号校验。</li>
+</ul>
+
+<h3>5.2 缓存：多 provider 方言抽象最通用</h3>
+<p>显式断点派。<code>applyCaching</code> 给最后 ≤2 条 system + 最后 ≤2 条非 system 消息注入 providerOptions，按 provider 翻译方言：anthropic/openrouter/alibaba 用 <code>cacheControl:{type:"ephemeral"}</code>、bedrock 用 <code>cachePoint</code>、openaiCompatible 用 <code>cache_control</code>、copilot 用 <code>copilot_cache_control</code>（<code>provider/transform.ts:359-406</code>）。实验性 native 运行时有完整 cache policy 抽象：默认 <code>AUTO = {tools:true, system:true, messages:"latest-user-message"}</code>，四档解析（undefined/auto/none/object），只有 anthropic-messages 与 bedrock-converse 尊重 inline hint，OpenAI/Gemini 直接走隐式跳过（<code>packages/llm/src/cache-policy.ts:15-42</code>）；Anthropic 下沉硬编码 <code>ANTHROPIC_BREAKPOINT_CAP=4</code> 超限静默丢弃并计数，TTL ≥3600s 映射 "1h"（<code>protocols/anthropic-messages.ts:233-251</code>）。锚定 latest-user-message 的注释点明动机：intra-turn 多轮命中同一前缀（<code>cache-policy.ts:5-13</code>）。</p>
+<p>usage 口径是三桶制：<code>tokens.cache.{write,read}</code> 分开统计，<code>adjustedInputTokens = input − read − write</code>，成本按 read/write 分别乘单价（<code>session/session.ts:338-396</code>）；适配层从 metadata 兜底读 anthropic/vertex/bedrock/venice 四家字段名（<code>ai-sdk.ts:43-64</code>）。保前缀稳定的独门措施：store=false 时剥离 Responses itemId 保证请求体逐字节不可变（<code>transform.ts:505-512</code>）。</p>
+
+<!-- ================= 6. Qwen Code ================= -->
+<h2 id="qwen-code"><span class="section-label">6.</span> Qwen Code（Gemini 协议归一内核 + 分通道缓存策略）</h2>
+
+<h3>6.1 流式：所有 provider 先规范化成 Gemini chunk</h3>
+<p>内部统一规范是 Gemini <code>GenerateContentResponse</code>：Gemini 原生通道经 SDK 流式调用（<code>packages/core/src/core/geminiContentGenerator/geminiContentGenerator.ts:235-246</code>）；<b>Qwen OAuth 通道反而走 DashScope 的 OpenAI 兼容端点</b>（默认基址 <code>dashscope.aliyuncs.com/compatible-mode/v1</code>，<code>qwen/qwenContentGenerator.ts:27,39-45</code>、<code>openaiContentGenerator/constants.ts:69-70</code>），流管线会校验响应 content-type 必须是 <code>text/event-stream</code>，否则抛 <code>NonSSEResponseError</code>——防的是网关返回 HTML 拦截页被当成功消费（<code>openaiContentGenerator/pipeline.ts:246,610-670</code>）。Turn 层事件泵（<code>core/turn.ts:546-684</code>）统一分发：retry / model_fallback / compressed / Thought / Content / functionCalls / Citation / Finished / UserCancelled / Error。</p>
+<h4>Gemini 协议的天然差异：functionCall 非增量</h4>
+<p>与 Anthropic/OpenAI 系不同，Gemini 协议路径的 functionCall 是<b>完整对象、非增量</b>——<code>turn.ts:645</code> 直接遍历整对象，无任何字符串拼接逻辑，partial JSON 问题在该路径上不存在。thought part 携带 thoughtSignature，历史合并时把流中第一个同时带 thought 与签名的 part 回填签名到合并后的 thought part（<code>geminiChat.ts:4880-4899</code>）。DashScope 尾包怪癖被显式容忍：最后一个 choice 带 finishReason 但空 content、或空 choices 只带 usage，都算有效响应（<code>geminiChat.ts:1100-1120</code>）。</p>
+<h4>双看门狗 + 四套重试预算</h4>
+<ul>
+<li><b>240s idle timeout</b>（env 可调）+ <b>900s 总寿命上限</b>：后者不随 chunk 到达刷新，专防 drip-feed 式慢速流永久挂起（issue #8597；<code>constants.ts:33,60</code>、<code>pipeline.ts:683-699</code>）。SDK 请求超时另有 120s。SSE 注释行心跳未发现。</li>
+<li><b>四套互相独立的重试预算</b>是本家特色：通用 retryWithBackoff ×7（1.5s 起，cap 5min，长等待期 30s 心跳日志）；限流退避 ×10 且起始延迟 60s 对齐 DashScope 每分钟配额窗（注释自述「对齐 Claude Code」）；无效输出流 ×4（transient）+ 协议标签泄漏 ×2 独立预算；传输断流重放 ×2 + 续传 ×3 两套账本（<code>utils/retry.ts:24-26,91-92</code>、<code>geminiChat.ts:486-509,1048-1051</code>）。断流续传靠注入 TRANSPORT_CONTINUATION_MESSAGE 指令让模型接着写；截断恢复最多 3 次、带重叠去重扫描（<code>geminiChat.ts:533-629</code>）。</li>
+<li><b>完整性</b>：有 finishReason 才 yield Finished（注释原文强调）；MAX_TOKENS 时给 pendingToolCalls 打 wasOutputTruncated 标记供下游区分截断 vs 参数错误（<code>turn.ts:658-668</code>）；空 stream/缺 finish reason 归类 transient invalid-stream 走独立重试预算。</li>
+</ul>
+
+<h3>6.2 缓存：一个客户端里并存两种策略</h3>
+<p><b>DashScope/Qwen 路径零显式缓存参数</b>，完全依赖服务端隐式上下文缓存；forkedAgent 子代理的注释明言设计意图是「单轮、无工具、shares parent prompt cache」（<code>utils/forkedAgent.ts:10-20,347-351</code>）。<b>Anthropic 通道则是完整显式断点注入，三个锚点</b>：system 文本块（支持 staticSystemPrefix 静态前缀分割）、<b>最后一个 tool</b>（注释：最大最稳的前缀，常 5K+ token，跨会话收益最大）、最后一条 user message（<code>anthropicContentGenerator/converter.ts:411-443,977-1049,1301-1340</code>）。可选 <code>ttl:'1h'</code> 与 <code>scope:'global'</code>。</p>
+<div class="note"><b>beta header 门控模式：</b>Qwen Code 以 wire 上实际值做单一事实源——只有 body 真带了 <code>scope:'global'</code> 才发 <code>prompt-caching-scope-2026-01-05</code> beta 头，真带了 ttl 1h 才发 <code>extended-cache-ttl-2025-04-11</code>（<code>anthropicContentGenerator.ts:545-580,616-685</code>）。这个「header 与 body 强一致」的设计避免了声明了能力却没用上导致的行为歧义，值得代理网关借鉴。</div>
+<p>usage 归一口径为 <code>cachedContentTokenCount ← cache_read_input_tokens / cached_tokens</code>（<code>telemetry/session-tracing.ts:76-81</code>），OTel 导出 cache_read/cache_creation 两项（<code>:860-875</code>）；协议差异注释明确 <code>cache_creation_input_tokens</code> 为 Anthropic 独有、OpenAI 无对应（<code>usage.ts:23-26</code>）。击穿风险排查：<code>core/prompts.ts</code> 中无任何时间戳类动态内容（grep 无命中），静态性靠源头保证而非事后清洗。</p>
+
+<!-- ================= 7. Hermes ================= -->
+<h2 id="hermes"><span class="section-label">7.</span> Hermes（防御性应用层工程 + 最重的 4 断点布局）</h2>
+
+<h3>7.1 流式：三种 api_mode 各自硬扛 + 应用层 stale detector</h3>
+<p>Hermes 是 Python 端「原生兼容协议多样性」路线的代表：同一入口 <code>interruptible_streaming_api_call</code> 并存三种 api_mode——chat_completions（OpenAI 兼容 stream=True）、anthropic_messages（SDK messages.stream）、codex_responses（Responses raw 迭代）（<code>agent/chat_completion_helpers.py:3277-3283,4503-4565</code>；<code>agent/codex_runtime.py:503,966,1367</code>）。代价是大量 per-provider 怪癖修正代码（见下）。对用户的投递侧另有一套进程内回调桥：agent 工作线程同步 on_delta → Queue → asyncio 缓冲/限速/渐进编辑平台消息，结构化事件契约是 MessageChunk/MessageStop/Commentary frozen dataclass，源码注释概括为「聪明 agent 发数据、聪明网关管投递」（<code>gateway/stream_consumer.py:1-13</code>、<code>gateway/stream_events.py:41-79</code>）；平台编辑节奏 0.8s/次、缓冲阈值 24 字符（<code>gateway/config.py:760-762</code>）；TUI 网关走 newline-delimited JSON-RPC，高频 token 帧 33ms 合批（<code>tui_gateway/ws.py:8-60</code>）。</p>
+<h4>per-provider 怪癖清单（每条都是真实事故修复）</h4>
+<table>
+<tr><th>怪癖</th><th>对策</th><th>位置</th></tr>
+<tr><td>MiniMax M2.7 via NVIDIA NIM 每 chunk 重发完整函数名，+= 拼接产生 "read_fileread_file"</td><td><code>function.name</code> 用赋值不用 +=（对齐 OpenAI Node SDK/LiteLLM 行为）</td><td><code>chat_completion_helpers.py:4223-4232</code></td></tr>
+<tr><td>Ollama 同 index 换新 id 的 tool_calls、Poolside 整数 id</td><td>同 index 换 id 重定向新槽位；整数 id 转字符串</td><td><code>:4180-4221</code></td></tr>
+<tr><td>DeepSeek v4/Kimi thinking 模型要求 assistant tool-call 消息必带回 reasoning_content 否则 HTTP 400</td><td>空时补单空格 pad 回传</td><td><code>:2210-2222</code></td></tr>
+<tr><td>GLM-5.1 via Ollama 输出尾逗号/未闭合括号/Python None</td><td>_repair_tool_call_arguments 修复器，修不动返 "{}" 并标 has_truncated_tool_args</td><td><code>:4316-4338</code></td></tr>
+<tr><td>DeepInfra 类在流中夹 error chunk</td><td>识别 in-stream 错误抛 ProviderStreamError，防空流误导重试</td><td><code>:4103-4125</code></td></tr>
+<tr><td>NIM 网关实测 120s idle kill 长思考请求</td><td>按模型分级的 reasoning stale floor 表（600/300/180s）</td><td><code>agent/reasoning_timeouts.py:62-90</code></td></tr>
+<tr><td>反代 30–60s FIN 空闲回收导致连接池 CLOSE-WAIT 堆积</td><td>httpx keepalive_expiry=20 提前主动回收</td><td><code>run_agent.py:5135-5145</code></td></tr>
+<tr><td>provider 假支持流式（实际返回完成对象）</td><td>切非流式并会话级 _disable_streaming 一票禁用</td><td><code>chat_completion_helpers.py:4277-4291</code></td></tr>
+</table>
+<h4>超时哲学：read=None + 应用层 stale 探测</h4>
+<p>HTTP 客户端超时 <code>connect=15s, read=None(SSE 不设读超时), write=15s, pool=10s</code>（<code>run_agent.py:5148-5155</code>）——读超时交给应用层的 stale detector：流式默认 180s，上下文估算 &gt;100k 时放宽到 300s、&gt;50k 到 240s；连续 5 次 stale 才放弃报错（<code>chat_completion_helpers.py:812-857</code>）；非流式 90s（2026-05 从 300s 下调加速 fallback），本地端点直接禁用。完整性上以 <b>EmptyStreamError 作为统一的「诚实失败」信号</b>：finish_reason 为空且无任何内容 → 拒绝伪造成功回合（<code>:4360-4373</code>）；部分 JSON args 按 finish_reason 分流处理——length 提取 max_tokens 重试，无 finish_reason 走 partial-stub 快速失败，避免误报「输出长度截断」（<code>:4375-4400</code>）。重试用 decorrelated jitter backoff 防惊群，Retry-After 支持数值与 HTTP-date 两态（<code>agent/retry_utils.py:23-87</code>）；并发安全靠单写者不变量 claim_stream_writer，过期流的写入直接停读（<code>:4529-4543</code>）。</p>
+
+<h3>7.2 缓存：全场最重的断点布局 + 最细的字段 fallback 表</h3>
+<ul>
+<li><b>默认 4 断点</b>：静态 system 前缀 + system 尾部 + 最后 2 条非 system 消息；无静态前缀时 fallback 为 1 system + 最后 3 条（<code>agent/prompt_caching.py:2-7</code>）。TTL 可配 1h。</li>
+<li><b>Alibaba/Qwen 家族也打标</b>：opencode/DashScope 直连等上游接受 Anthropic 式 cache_control 出现在 OpenAI wire 上（否则「零命中全价重计费」，引用 pi-mono #3392/#3393），但其上下文缓存只认 5m、拒 1h，故 TTL 钳制（<code>agent_runtime_helpers.py:2202-2209</code>、<code>prompt_caching.py:124-133</code>）。</li>
+<li><b>载体合法性检查</b>：envelope 布局（OpenRouter 等）下 role:tool 空 content 的顶层标记会导致<b>静默挂起</b>、纯 tool_calls 空 assistant 顶层标记被忽略——两类一律跳过不打；native 布局由适配器把标记移入 tool_result block 内（<code>prompt_caching.py:38-56,91-111</code>）。</li>
+<li><b>时间戳治理</b>：系统提示的时间行刻意 date-only——注释明言分钟精度会在压缩边界/fresh-agent/resume 等每次重建时击穿 prefix-cache KV（PR #20451）；timezone 全天恒定才附带保证 byte-stable；永生会话干脆去掉日期只留时区（<code>agent/system_prompt.py:848-894</code>）。</li>
+<li><b>builder 注册式 stable-prefix</b>：skill/webhook/cron 在构造期注册静态 scaffold，运行期取最长真前缀拆分为「stable_prefix(带断点) + 易变尾巴(不带)」，刻意不做分隔符启发式防止易变字节被吸进缓存体；注册表 LRU 32 条/4MB，命中即刷新防高频 cron 任务挤出（<code>agent/prompt_cache_boundary.py:21-88</code>、<code>prompt_caching.py:62-78</code>）。</li>
+<li><b>usage fallback 表全场最全</b>：<code>normalize_response_usage</code> 归一三种 API 形态，读侧兼容 OpenAI cached_tokens、Anthropic 顶层字段（OpenRouter/Vercel/Cline 类代理转发场景）、DeepSeek <code>prompt_cache_hit_tokens</code>、Kimi 顶层 cached_tokens；写侧四级 fallback；还有 per-model 缓存单价表（0.10～1.50 USD/M）与 MiniMax-M3 特例观测——其 <code>cache_read_input_tokens</code> 恒带 +128 底噪、creation 恒 0，<b>不可作命中信号</b>（<code>agent/usage_pricing.py:123-380,1280-1417</code>）。</li>
+</ul>
+
+<!-- ================= 8. OpenClaw ================= -->
+<h2 id="openclaw"><span class="section-label">8.</span> OpenClaw（一 provider 一 transport + 声明式缓存界碑）</h2>
+
+<h3>8.1 流式：注册制 transport，渠道永远不碰原始 SSE</h3>
+<p>OpenClaw 的架构是「一个 provider 一个 transport 文件」的注册制 monorepo：<code>packages/ai/src/transports/anthropic-transport-stream.ts</code>（Anthropic Messages SSE）、<code>openai-completions-stream.ts</code>、Responses 支持 <code>transport: "sse"|"websocket"|"websocket-cached"|"auto"</code> 四种传输（<code>transports/openai-responses-websocket-client.test.ts:269</code>）。各上游协议在 packages/ai 内被翻译成平台无关的 AssistantMessageEvent 流；Telegram/Discord 等聊天渠道<b>从不直连模型</b>——Gateway 把 agent 事件流投影成 snapshot/delta 给各通道渲染（<code>src/gateway/live-chat-projector.ts:20-44</code>）。首 SSE 事件看门狗：HTTP 头已开但 N ms 内无首个事件即 abort，Azure 固定 30s（<code>utils/stream-first-event-timeout.ts:50-66</code>、<code>openai-responses-contracts.ts:24</code>）。</p>
+<h4>partial-json 边流边解析 + 乱序容错</h4>
+<p>与「攒完再 parse」的主流做法不同，OpenClaw 用 <b>partial-json 库边流边出中间值</b>（未闭合 JSON 也能产出可用的部分参数，<code>utils/json-parse.ts:2</code>），配 repairJson 修复字符串内原始控制字符与非法转义。legacy function_call 单通道归一化为现代 tool_calls 格式，缓冲上限 256KB/1024 条防内存失控（<code>providers/openai-completions-tool-calls.ts:7-29</code>）；id-only 续流绑定同一字节状态防重复计数。乱序容错做得最细：text_delta 缺 event.index 时恢复索引或新建 block（<code>anthropic-transport-stream.ts:1576-1589</code>），早到事件进 deferred-event-buffer 保序（<code>:81</code>）。第三方厂商的 reasoning_content 兼容回放分支 + reasoning-tag partitioner 从正文切思考段（<code>:1541-1577</code>）。</p>
+<h4>重试决策集中在宿主层，replay-safety 优先</h4>
+<ul>
+<li>SDK 层重试关到 0（Anthropic SDK <code>maxRetries ?? 0</code>，<code>providers/anthropic.ts:423</code>），决策上移宿主 failover 分类器 <code>classifyFailoverSignal</code>。</li>
+<li><b>replay 安全阀</b>是其独有设计：两类错误码标记「不可重放」——provider 已产出输出后失败、dispatch 后结果不明——防止未知输出被二次执行（<code>src/llm/utils/retry.ts:10-46</code>）。</li>
+<li>Retry-After 手写解析支持三种 HTTP-date 格式（IMF-fixdate/RFC850/asctime），含 RFC9110 两位数年份滚动规则（<code>packages/ai/src/internal/retry-after.ts:30-80</code>）。流断后续传有专项模块 openai-responses-continuation.ts 与 provider-compaction-replay.ts（opaque data 重放）。</li>
+<li>SSE 解析错误有专项回归测试（anthropic.sse-parse-error.test.ts 等）；stop reason 双协议各自映射归一；终局 usage 恢复专项处理（terminal-usage 模块）。</li>
+</ul>
+
+<h3>8.2 缓存：把「前缀字节稳定」做成通用基础设施</h3>
+<ul>
+<li><b>声明式界碑</b>：系统提示用 HTML 注释 <code>&lt;!-- CACHE_BOUNDARY --&gt;</code> 显式切割 stable/dynamic 两段，stablePrefix 块带 cache_control、dynamicSuffix 不带；hook 覆盖的 prompt 无界碑时自动补一个；动态追加统一走「插到界碑后」的 API（<code>utils/system-prompt-cache-boundary.ts:10-63</code>、<code>transports/anthropic-payload-policy.ts:146-190</code>）。</li>
+<li><b>deepest-stable-message 断点策略</b>：从尾部向前找最近一条稳定 user 消息落断点；易变的 runtimeContextCarrier 载体消息被排除出候选，使最深断点锚在最后一条真正稳定的 turn 上；tool_result 作 fallback 载体；预算 messageCacheControlLimit=4（<code>anthropic-payload-policy.ts:209-270</code>、<code>providers/anthropic.ts:1149-1179</code>）。TTL 经 env OPENCLAW_CACHE_RETENTION=long 映射 1h。</li>
+<li><b>确定性归一化三件套</b>：工具按 name 排序（locale 无关）、文本段落代理对消毒 + CRLF→LF + 行尾空白裁剪、capability ids 去重排序——把「同样逻辑内容产出同样字节」做成通用设施而非 per-provider 补丁（<code>utils/prompt-cache-stability.ts:10-50</code>）。</li>
+<li><b>时间信息放用户消息</b>：会话重置 prompt 把当前时间行以 nowMs 参数化追加在用户消息里而非 system，不污染缓存前缀（<code>src/auto-reply/reply/session-reset-prompt.ts:109-122</code>）。</li>
+<li><b>usage 校验最严格</b>：快照必须 input/cacheRead/cacheWrite 三值齐才有效；写侧细分 ephemeral_5m/1h 两桶；多轮 iterations[] 取最后一次迭代为真实 context window——顶层字段是跨迭代累计计费值，直接用会算错窗口（<code>providers/anthropic-usage.ts:42-95</code>）。OpenAI 侧另有 prompt_cache_key 64 字符截断钳制（<code>providers/openai-prompt-cache.ts:1-14</code>）。</li>
+</ul>
+
+<!-- ================= 9. DeepSeek ================= -->
+<h2 id="deepseek"><span class="section-label">9.</span> DeepSeek Harness（公开资料推理，低置信度）</h2>
+<div class="warn">DeepSeek 官方编程 harness 无公开源码，本节基于公开 API 文档与社区资料推理，置信度标注为低；结论仅供方向性参考。</div>
+<p><span class="conf-low">推理</span> DeepSeek API 是标准 OpenAI 兼容 SSE（chat.completions chunk 形态），reasoning 模型经 <code>reasoning_content</code> 字段流式输出思考内容（与 Hermes 表格中「DeepSeek v4/Kimi 要求回传 reasoning_content」的怪癖互为印证）。缓存上是<b>自动缓存派</b>：服务端磁盘级前缀缓存，无需任何显式控制参数，命中部分按约 1/10 价格计费；usage 返回 <code>prompt_cache_hit_tokens / prompt_cache_miss_tokens</code> 二元组而非三桶模型（Hermes 的 fallback 表里专门兼容了这个字段形态，佐证其真实性）。流式语义上无 ping 心跳消费、重连依赖客户端整请求重放的公开实践与主流一致。作为对照样本的价值在于：它证明了自动前缀缓存在 API 层可以完全下沉为基础设施，客户端唯一要做的是别把前缀弄脏。</p>
+
+<!-- ================= 10. 深度对比 ================= -->
+<h2 id="comparison"><span class="section-label">10.</span> 深度对比：差异本质、兼容性陷阱、事实标准</h2>
+
+<h3>10.1 差异的本质：三个正交的设计轴</h3>
+<p>八家的差异不是随机散布，而是三条设计轴上的三种选型组合：</p>
+<ol>
+<li><b>「谁把字节流变成结构」</b>：SDK 委托（Claude Code、OpenCode、Qwen Code）换来了维护成本趋近于零，代价是超时/重试语义受制于 SDK 的黑盒（OpenCode 干脆显式 maxRetries=0 再在会话层自建，就是对这种失控的补偿）；自研状态机（Codex、Grok Build、Hermes、OpenClaw）换来 per-provider 怪癖的精细修正能力（函数名重发、同 index 换 id、流中夹 error chunk），代价是每个新 provider 都要重新踩一遍坑。</li>
+<li><b>「事件粒度多粗」</b>：delta 级（Claude/Grok/Hermes/OpenClaw）保住打字机体验但必须自己解决 partial JSON；item 级（Codex 聚合到 output_item.done 才处理 function_call）直接消灭了 partial JSON 问题——这是「信任服务端缓冲」的架构表态，前提是上游 API 提供了 item 级事件。Gemini 协议（Qwen）走第三条路：协议本身就把工具调用做成完整对象，问题在协议层不存在。</li>
+<li><b>「缓存谁来管」</b>：显式断点派（Anthropic 生态五家）把缓存当客户端责任，于是长出了 latch、哨兵行、界碑、stable-prefix 注册表这一整族防御工事；自动前缀派（Codex/OpenAI 系、DashScope、DeepSeek）把缓存下沉为服务端基础设施，客户端只贡献一个路由亲和键。两派的分野完全跟随底层 API 能力，而非团队偏好。</li>
+</ol>
+
+<h3>10.2 兼容性陷阱清单（网关与多 provider 客户端的雷区）</h3>
+<table>
+<tr><th>陷阱</th><th>细节</th><th>出处</th></tr>
+<tr><td><code>function.name</code> 增量拼接假设</td><td>MiniMax via NIM 每 chunk 重发全名，+= 产生 "read_fileread_file"；正确做法是赋值语义</td><td>Hermes <code>chat_completion_helpers.py:4223-4232</code></td></tr>
+<tr><td>cache_control 出现在 OpenAI wire 上</td><td>Alibaba/Qwen 家族接受 Anthropic 式标记但只认 5m TTL、拒 1h；不打标则零命中全价计费</td><td>Hermes <code>agent_runtime_helpers.py:2202-2209</code></td></tr>
+<tr><td>空 content 载体上的断点</td><td>envelope 布局下 role:tool 空 content 顶层标记<b>静默挂起</b>；纯 tool_calls 空 assistant 标记被忽略</td><td>Hermes <code>prompt_caching.py:47-56</code></td></tr>
+<tr><td>thinking 块上不能打断点</td><td>API 拒绝，客户端需跳过（Grok 显式跳过；Claude 不给 thinking 加标记）</td><td>Grok <code>conversation/messages.rs:5-37</code>、Claude <code>claude.ts:657-664</code></td></tr>
+<tr><td>断点数量硬上限 4</td><td>第 5 个会被拒；各家都在预算内做布局（Grok 甚至留槽位给网关）</td><td>Grok 注释、OpenCode CAP=4、OpenClaw limit=4</td></tr>
+<tr><td>reasoning_content 必须回传</td><td>DeepSeek v4/Kimi thinking 模型要求 assistant tool-call 消息带回 reasoning_content 否则 HTTP 400</td><td>Hermes <code>:2210-2222</code></td></tr>
+<tr><td>usage 字段名分裂</td><td>cached_tokens / prompt_cache_hit_tokens / cachedContentTokenCount / cache_read_input_tokens / 顶层 vs details 五种形态并存</td><td>Hermes <code>usage_pricing.py:1280-1379</code></td></tr>
+<tr><td>非 SSE content-type</td><td>网关返回 HTML 拦截页时 content-type 不是 text/event-stream，不校验就会把 HTML 当成功消费</td><td>Qwen <code>pipeline.ts:246,610-670</code></td></tr>
+<tr><td>DashScope 双尾包</td><td>finishReason+空 content / 空 choices+usage 两种尾包形态，严格校验会误判失败</td><td>Qwen <code>geminiChat.ts:1100-1120</code></td></tr>
+<tr><td>缓存底噪数据</td><td>MiniMax-M3 的 cache_read 恒带 +128 底噪且 creation 恒 0，不可作命中率信号</td><td>Hermes <code>usage_pricing.py:1398-1417</code></td></tr>
+<tr><td>x-should-retry 响应头</td><td>false 时拥有一票否决权，忽略它会造成无意义重试甚至重复扣费</td><td>Grok <code>retry.rs:168-268</code></td></tr>
+<tr><td>replay 不安全错误</td><td>provider 已产出输出后失败/结果不明时重放会二次执行副作用</td><td>OpenClaw <code>src/llm/utils/retry.ts:10-20</code></td></tr>
+</table>
+
+<h3>10.3 已成为事实标准的行为</h3>
+<ul>
+<li><b>整请求重放，无人续传</b>：八家的模型流中断后全部重放整个请求，没有一家对模型 API 使用 Last-Event-ID 续传（Claude 的续传机制仅存在于 session ingress 桥接通道）。对网关的含义：<b>中断一个流 = 上游重算一次全量 token</b>，这正是缓存价值的放大器。</li>
+<li><b>指数退避 + 抖动是标配</b>：所有实现都是 ×2 指数 + 10~25% 抖动；Retry-After 头普遍被尊重且优先于本地退避曲线。cap 各异：32s（Claude）/30s（Grok）/60s（Codex 连接）/5min（Qwen 限流）。</li>
+<li><b>空闲看门狗谱系 90–300s</b>：Claude 90s（opt-in）、Qwen 240s、Codex 与 Grok 300s、Hermes 180s 应用层探测。共同点是都区分「请求级」与「流级」两类超时，且承认请求级超时不管流体。</li>
+<li><b>动态内容后置</b>：无论哪一派，「把易变内容挪出缓存前缀」都已制度化——Codex 的 current_time_reminder developer 片段、Hermes 的 date-only 时间行、OpenClaw 的界碑后动态区、Claude 的 DYNAMIC_BOUNDARY 哨兵。这是跨生态最一致的工程共识。</li>
+<li><b>缓存三桶计费口径</b>：input/cache_read/cache_creation 分开统计并分开乘单价已是头部客户端标配；「prompt_tokens 恒为全量、不做减法」（Grok 注释）与「adjustedInput = input − read − write」（OpenCode）两种口径并存，前者是原始值后者是展示值。</li>
+</ul>
+
+<!-- ================= 11. 建议 ================= -->
+<h2 id="lessons"><span class="section-label">11.</span> 对 CrewRouter 网关的落地建议</h2>
+<div class="card">
+<p class="small">前提回顾：网关在 <code>server/routes/api.js</code> 完成 provider 选择 → <code>proxy-pool.js</code> 代理出口选择 → <code>gateway:beforeUpstream</code> 插件钩子 → 转发与流式回传；<code>server/providers/anthropic.js:62-63</code> 已读 cache_read/cache_creation 两字段，<code>providers/openai.js:56</code> 已读 cached_tokens，<code>routes/user.js:66</code> 的 usage_records 已有 cached_tokens 列并在 user/admin 统计里 SUM。以下按优先级给出十条建议。</p>
+<ol>
+  <li><strong>缓存友好路由（最高优先级）：给代理池加亲和键。</strong>Codex 用 prompt_cache_key、OpenClaw 给 OpenAI 系做 cache key 截断钳制，证明「路由亲和键」已是公开模式；而多上游账号轮询是缓存杀手——同一个会话落到不同上游账号，前缀缓存必然 miss。落地：<code>proxy-pool.js</code> 的 <code>getProxyAgent(provider)</code> 增加 affinityKey 参数；<code>api.js</code> 从请求体提取亲和键（Anthropic 的 metadata.user_id、Responses 的 prompt_cache_key、或 system 前缀 hash），同键粘住同一出口账号。注意与现有 429 摘除逻辑共存：粘住的出口被摘除才漂移，漂移后固定到新出口而非回到轮询。</li>
+  <li><strong>尊重 Grok Build 预留的「第四断点槽位」。</strong>其源码注释明言客户端只打 3 个断点、第 4 槽位留给网关（<code>conversation/messages.rs:36-43</code>）。落地：转发 Anthropic 协议时若检测到 body 中 cache_control 断点数 ≤3 且消息数较多，可在最后一条 user 消息上补一个 ephemeral 断点再上行——这是唯一一处网关可以主动「替客户端」优化缓存的位置；断点数已达 4 或落在 thinking 块上时绝不补（API 会拒）。</li>
+  <li><strong>转换层保真 cache_control 并拆开计费口径。</strong><code>transforms/anthropic-to-openai.js:198-200</code> 目前把 cached_tokens 映射为 cache_read 而 cache_creation 恒 0；<code>openai-to-anthropic.js:216-236</code> 把 read+write 合并回 prompt_tokens_details.cached_tokens。建议：①转换时不丢消息体内的 cache_control 标记（丢标记 = 上游自动缓存前缀错位）；②usage_records 增加 cache_write_tokens 列，把「读 0.1×/写 1.25×」的三桶口径带进计费——Hermes 的 per-model 缓存单价表（<code>usage_pricing.py:123-380</code>）可作为定价参照；③前端命中率面板用 SUM(cache_read)/SUM(prompt) 计算，但按 Hermes 的教训排除 MiniMax 类恒定底噪模型。</li>
+  <li><strong>击穿归因检测器网关化。</strong>Claude Code 在客户端做 system/tools/beta-header hash diff 定位击穿原因（阈值 MIN_CACHE_MISS_TOKENS=2000）。网关视角更天然：同一亲和键的连续请求，对比 system 前缀与 tools 数组的 hash，命中率骤降时在管理端标注候选原因（system 变了/tools 变了/换上游账号了/TTL 过期了）。这能把「用户抱怨费用高」从猜测变成定位。</li>
+  <li><strong>网关流式超时必须 ≥ 客户端看门狗。</strong>客户端 idle watchdog 谱系 90–300s（Qwen 240s/Codex 300s），若 api.js 的 UPSTREAM_TIMEOUT 小于它们，会出现网关先杀流、客户端把锅算给上游的假故障。建议：SSE 流式路径学 Hermes <code>read=None</code> 不设读超时，改用 ≥300s 的应用层 idle 探测 + 连续 N 次才判死；非流式路径维持现有较短超时。</li>
+  <li><strong>等待首包期间向下游注入 SSE 注释行心跳。</strong>推理模型首 token 可达数分钟，NAT/LB 可能掐静默连接。所有客户端都不消费 ping 事件但 SDK 会吞掉 SSE 注释行（: keep-alive），Claude Code 的 stall 检测也只在真实事件到达后触发——因此注释行是安全的无害填充。落地：api.js 流式回传循环里每 15s 写一行 <code>: ping\n\n</code>，同时透传上游 Retry-After 头给下游（四家的退避逻辑都以它为最高优先级）。</li>
+  <li><strong>错误页 content-type 纪律。</strong>Qwen Code 校验 text/event-stream 否则抛 NonSSEResponseError——网关自身的 401/429/502 若以 HTML 页返回给 /v1/messages 流式请求，客户端能识别为失败（好事），但要确保不会以 200 + HTML 返回；统一 JSON 错误体 + 正确 status code 即可同时满足所有八家的解析器。</li>
+  <li><strong>usage 归一层照抄 Hermes fallback 表。</strong>其 <code>normalize_response_usage</code> 兼容五种读侧字段形态与四级写侧 fallback（<code>usage_pricing.py:1280-1379</code>），网关作为多上游汇聚点必然遇到同样碎片化——把它移植成 providers 层的统一归一函数，下游 usage_records 就永远只存一种形态。</li>
+  <li><strong>子代理流量识别为下一期铺垫。</strong>Codex 的 prompt_cache_key 里已编码 <code>{source}:{parent_thread_id}</code> 结构、Anthropic metadata.user_id 是现成的会话标识——本期发现的这些信号将在子代理归因报告中展开，建议 api.js 先把 prompt_cache_key/metadata 原样落库到 plugin_meta 或新增列，为归因分析留存原料。</li>
+  <li><strong>把「字节稳定」写进网关自己的注入逻辑。</strong>inject_prompts 注入的内容会成为请求前缀的一部分：注入模板一旦变更，全部用户的缓存前缀集体失效。借鉴四家共识——注入内容放 system 尾部或消息区（界碑之后）、时间类字段日期精度封顶、模板版本号不进前缀、灰度发布按用户分批切换。</li>
+</ol>
+<h4>一句话总结</h4>
+<p>八家客户端花了两千行源码回答同一个问题——<strong>「如何让每一次请求的前缀与上一次逐字节相同」</strong>。网关站在比客户端更好的位置上：它看得见亲和键（谁该共享缓存）、握着路由权（谁能命中缓存）、摸得到断点预算（还剩几个空槽）。把这三件事做完，网关就从「流量管道」升级成了「缓存优化器」，而这是任何端侧客户端都做不到的。</p>
+</div>
+
+</main>
+
+<footer>
+  CrewRouter · Harness 流式响应与 Prompt Caching 研究报告 · 2026-08-24 · 纯源码考古，不含运行时验证
+</footer>
+
+</body>
+</html>
