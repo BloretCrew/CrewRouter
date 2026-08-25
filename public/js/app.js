@@ -5334,11 +5334,45 @@ class ConsoleApp {
       system: { label: `${this._sfIcon('gearshape.fill', '9ca3af')} ${t('系统')}`, color: 'var(--muted-foreground)' },
     };
     const meta = roleMap[evt.role] || roleMap.system;
+    // assistant 正文渲染 Markdown（白名单清洗）；user/system 保持纯文本
+    let bodyHtml;
+    if (evt.role === 'assistant' && typeof marked !== 'undefined') {
+      bodyHtml = this._renderSafeMarkdown(String(evt.text || '')) + (evt.truncated ? '\n…' : '');
+    } else {
+      bodyHtml = escapeHtml(evt.text || '') + (evt.truncated ? '\n…' : '');
+    }
     return `
       <li class="timeline-event role-${escapeHtml(evt.role || 'system')}">
         <span class="timeline-event-tag" style="color:${meta.color};">${meta.label}</span>
-        <div class="timeline-event-text role-${escapeHtml(evt.role || 'system')}-text">${escapeHtml(evt.text || '')}${evt.truncated ? '\n…' : ''}</div>
+        <div class="timeline-event-text timeline-md-body role-${escapeHtml(evt.role || 'system')}-text">${bodyHtml}</div>
       </li>`;
+  }
+
+  /** Markdown 安全渲染：marked.parse + 白名单清洗 */
+  _renderSafeMarkdown(text) {
+    try {
+      const raw = marked.parse(text);
+      const tpl = document.createElement('template');
+      tpl.innerHTML = raw;
+      const ALLOWED = new Set(['P','H1','H2','H3','H4','H5','H6','UL','OL','LI','CODE','PRE','BLOCKQUOTE','STRONG','EM','DEL','S','A','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','IMG','BR','HR','SPAN']);
+      const walk = (node) => {
+        [...node.children].forEach(child => {
+          if (!ALLOWED.has(child.tagName)) { child.remove(); return; }
+          [...child.attributes].forEach(attr => {
+            const n = attr.name.toLowerCase();
+            if (n.startsWith('on')) child.removeAttribute(attr.name);
+            else if (n === 'href' || n === 'src') {
+              if (!/^(https?:|data:image)/i.test(attr.value)) child.removeAttribute(attr.name);
+            }
+          });
+          walk(child);
+        });
+      };
+      walk(tpl.content);
+      return tpl.innerHTML;
+    } catch (_) {
+      return escapeHtml(text);
+    }
   }
 
   /** 返回会话列表 */
