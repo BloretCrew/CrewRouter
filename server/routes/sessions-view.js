@@ -544,7 +544,7 @@ function buildSessionDigest(records) {
 }
 
 // POST /:sessionKey/summary —— 生成并缓存
-router.post('/:sessionKey/summary', requireAuth, async (req, res) => {
+router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
   try {
     await ensureSummaryTable();
     const uid = req.session.user.id;
@@ -602,7 +602,7 @@ router.post('/:sessionKey/summary', requireAuth, async (req, res) => {
 });
 
 // GET /:sessionKey/summary —— 读缓存
-router.get('/:sessionKey/summary', requireAuth, async (req, res) => {
+router.get('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
   try {
     await ensureSummaryTable();
     const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
