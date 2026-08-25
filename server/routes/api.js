@@ -1918,7 +1918,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   if (systemParts.length > 0) {
     upstreamBody.system = systemParts.join('\n');
   }
-  addFourthCacheBreakpoint(upstreamBody, system);
+  addFourthCacheBreakpoint(upstreamBody, systemParts);
 
   if (body.temperature !== undefined) upstreamBody.temperature = body.temperature;
   if (body.top_p !== undefined) upstreamBody.top_p = body.top_p;
