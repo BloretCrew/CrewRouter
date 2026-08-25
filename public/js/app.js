@@ -6201,6 +6201,50 @@ class ConsoleApp {
     }
   }
 
+  // ========== 会话总结 ==========
+  async generateSessionSummary(force = false) {
+    const key = this._detailSessionKey;
+    if (!key) return;
+    const bodyEl = document.getElementById('sessionSummaryBody');
+    if (!force) {
+      try {
+        const cached = await fetch(`/api/user/sessions/${encodeURIComponent(key)}/summary`);
+        const cj = await cached.json();
+        if (cj.summary) {
+          if (bodyEl) setHTML(bodyEl, escapeHtml(cj.summary));
+          this.showModal('sessionSummaryModal');
+          this._sessionSummaryText = cj.summary;
+          return;
+        }
+      } catch (_) { /* 缓存读取失败则直接生成 */ }
+    }
+    if (bodyEl) setHTML(bodyEl, `<span style="color:var(--muted-foreground);">${t('正在阅读会话并生成总结...')}</span>`);
+    this.showModal('sessionSummaryModal');
+    try {
+      const res = await fetch(`/api/user/sessions/${encodeURIComponent(key)}/summary`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t('总结生成失败'));
+      if (bodyEl) setHTML(bodyEl, escapeHtml(data.summary || ''));
+      this._sessionSummaryText = data.summary || '';
+      this.showToast(t('总结已生成'), 'success');
+    } catch (error) {
+      if (bodyEl) setHTML(bodyEl, `<span style="color:var(--danger);">${escapeHtml(error.message)}</span>`);
+    }
+  }
+
+  async regenerateSessionSummary() {
+    await this.generateSessionSummary(true);
+  }
+
+  async copySessionSummary() {
+    try {
+      await navigator.clipboard.writeText(this._sessionSummaryText || '');
+      this.showToast(t('已复制到剪贴板'), 'success');
+    } catch (_) {
+      this.showToast(t('复制失败'), 'error');
+    }
+  }
+
   async toggleHookNotifyPush(enabled) {
     try {
       const res = await fetch('/api/user/hook-notify-rules/push-enabled', {

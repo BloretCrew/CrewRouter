@@ -1258,10 +1258,14 @@
               <h2 id="sessionDetailTitle" style="margin:0;"></h2>
             </div>
           </div>
+          <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+            <button class="btn btn-secondary" onclick="app.generateSessionSummary()"><span data-i18n="生成总结">生成总结</span></button>
+          </div>
           <div id="sessionDetailMetaBar" class="session-card-meta" style="margin-bottom:16px;"></div>
           <div id="sessionTimeline" class="timeline"></div>
           <div style="display:flex;justify-content:center;margin-top:16px;">
             <button id="sessionMoreBtn" class="btn btn-secondary" onclick="app.loadSessionMessages(app._detailSessionKey, (app._detailMsgPage || 1) + 1)"><span data-i18n="加载更多">加载更多</span></button>
+            <button class="btn btn-secondary" style="margin-left:8px;" onclick="app.generateSessionSummary()"><span data-i18n="生成总结">生成总结</span></button>
           </div>
         </div>
       </div>
@@ -1895,6 +1899,21 @@ data: [DONE]</code></pre>
             </div>
           </div>
         </div>
+  <div id="sessionSummaryModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:640px;">
+      <div class="modal-header">
+        <h3><span data-i18n="会话总结">会话总结</span></h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="sessionSummaryBody" style="white-space:pre-wrap;font-size:13.5px;line-height:1.6;max-height:50vh;overflow-y:auto;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="app.regenerateSessionSummary()"><span data-i18n="重新生成">重新生成</span></button>
+        <button type="button" class="btn btn-primary" onclick="app.copySessionSummary()"><span data-i18n="复制">复制</span></button>
+      </div>
+    </div>
+  </div>
   <div id="statsConsentModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width:560px;">
       <div class="modal-header">
@@ -2580,7 +2599,7 @@ data: [DONE]</code></pre>
   <script src="/js/dialog.js?v=2"></script>
   <script src="/js/session-tool-groups.js?v=2"></script>
   <script src="/js/vendor/marked.min.js"></script>
-  <script src="/js/app.js?v=46"></script>
+  <script src="/js/app.js?v=47"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

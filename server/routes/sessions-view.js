@@ -12,6 +12,7 @@ const router = express.Router();
 const { pool } = require('../models/database');
 const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
+const config = require('../config-loader');
 
 const DEFAULT_DAYS = 7;
 const MAX_DAYS = 90;
@@ -475,6 +476,143 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
   } catch (error) {
     Logger.error('[会话详情] 查询错误:', error);
     res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// ========== 会话总结 ==========
+const SUMMARY_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS session_summaries (
+    id BIGSERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_key TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    model TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, session_key)
+  )`;
+let summaryTableReady = false;
+async function ensureSummaryTable() {
+  if (summaryTableReady) return;
+  await pool.query(SUMMARY_TABLE_SQL);
+  summaryTableReady = true;
+}
+
+// 内部推理：本地网关 + 服务端持有的第一个可用 key
+async function callInternalLLM(promptText, userId) {
+  // 用该用户自己的 CrewRouter 密钥调用本地网关——计费/注入/归因等规则与普通请求一致
+  const keyRow = await pool.query(
+    "SELECT id, key_value FROM api_keys WHERE user_id = $1 AND enabled = TRUE AND name ILIKE 'crewrouter' ORDER BY id ASC LIMIT 1",
+    [userId]);
+  if (!keyRow.rows[0]) throw new Error('未找到 CrewRouter 密钥');
+  const port = config.port || 20003;
+  const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${keyRow.rows[0].key_value}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: promptText }],
+      max_tokens: 1200,
+    }),
+    signal: AbortSignal.timeout(120000),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error?.message || `上游 ${res.status}`);
+  return j.choices?.[0]?.message?.content || '';
+}
+
+// 组装会话全文（截断保护）
+function buildSessionDigest(records) {
+  const parts = [];
+  for (const rec of records) {
+    for (const e of rec.events || []) {
+      if (e.type === 'text' && (e.role === 'user' || e.role === 'assistant')) {
+        parts.push(`${e.role === 'user' ? '[用户]' : '[助手]'} ${String(e.text || '').slice(0, 1500)}`);
+      } else if (e.type === 'tool_call') {
+        parts.push(`[工具] ${e.name}: ${String(e.argsPreview || '').slice(0, 200)}`);
+      }
+    }
+  }
+  let text = parts.join('\n');
+  if (text.length > 30000) {
+    const half = 15000;
+    text = text.slice(0, half) + '\n[……中间内容省略……]\n' + text.slice(-half);
+  }
+  return text;
+}
+
+// POST /:sessionKey/summary —— 生成并缓存
+router.post('/:sessionKey/summary', requireAuth, async (req, res) => {
+  try {
+    await ensureSummaryTable();
+    const uid = req.session.user.id;
+    const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
+    if (!sessionKey) return res.status(400).json({ error: '缺少 sessionKey' });
+    // 属主校验：该会话必须有当前用户的记录
+    const own = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM usage_records WHERE user_id = $1
+        AND COALESCE(plugin_meta->'attribution'->>'sessionId','') = $2`,
+      [uid, sessionKey]);
+    if (!own.rows[0].n && !sessionKey.startsWith('bucket-')) {
+      return res.status(404).json({ error: '会话不存在' });
+    }
+    // 拉全量记录（复用详情查询逻辑但取大页）
+    const recRes = await pool.query(
+      `SELECT id, messages, response, reasoning_content FROM usage_records
+        WHERE user_id = $1
+          AND COALESCE(plugin_meta->'attribution'->>'sessionId','') = $2
+        ORDER BY created_at ASC LIMIT 500`,
+      [uid, sessionKey]);
+    const allEvents = [];
+    for (const row of recRes.rows) {
+      for (const e of parseMessagesToEvents(row.messages)) allEvents.push(e);
+      const rt = truncStr(String(row.response || '').trim(), LIMIT_TEXT);
+      if (rt) allEvents.push({ type: 'text', role: 'assistant', text: rt });
+    }
+    if (!allEvents.length) return res.status(400).json({ error: '会话没有可总结的内容' });
+    const digest = buildSessionDigest([{ events: allEvents }]);
+    const prompt = [
+      '请对以下 AI 编程助手的会话记录生成结构化中文总结，包含小节：目标、做了什么、关键决定、当前状态、下一步建议。总长不超过 500 字，直接输出总结正文。',
+      '--- 会话记录开始 ---',
+      digest,
+      '--- 会话记录结束 ---',
+    ].join('\n');
+    let summary;
+    try {
+      summary = await callInternalLLM(prompt, uid);
+    } catch (err) {
+      Logger.error('[会话总结] 推理失败:', err.message);
+      return res.status(502).json({ error: err.message || '总结生成失败' });
+    }
+    if (!summary) return res.status(502).json({ error: '模型未返回内容' });
+    await pool.query(
+      `INSERT INTO session_summaries (user_id, session_key, summary, model)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (user_id, session_key)
+       DO UPDATE SET summary = EXCLUDED.summary, model = EXCLUDED.model, created_at = CURRENT_TIMESTAMP`,
+      [uid, sessionKey, summary, 'internal']
+    );
+    res.json({ sessionKey, summary });
+  } catch (error) {
+    Logger.error('[会话总结] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /:sessionKey/summary —— 读缓存
+router.get('/:sessionKey/summary', requireAuth, async (req, res) => {
+  try {
+    await ensureSummaryTable();
+    const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
+    const r = await pool.query(
+      'SELECT summary, created_at FROM session_summaries WHERE user_id = $1 AND session_key = $2',
+      [req.session.user.id, sessionKey]);
+    res.json({ sessionKey, summary: r.rows[0]?.summary || null, createdAt: r.rows[0]?.created_at || null });
+  } catch (error) {
+    Logger.error('[会话总结] 读取失败:', error);
+    res.status(500).json({ error: '读取失败' });
   }
 });
 
