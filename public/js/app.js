@@ -736,8 +736,8 @@ class ConsoleApp {
           <div class="api-key-title">
             <span class="api-key-drag-handle" draggable="true" title="${t('拖拽调整顺序')}" aria-hidden="true"
               ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)">⠿</span>
-            <label class="pg-toggle api-key-enable-toggle" title="${isEnabled ? t('点击禁用') : t('点击启用')}">
-              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)">
+            <label class="pg-toggle api-key-enable-toggle" title="${/^crewrouter$/i.test(String(key.name || '')) ? t('CrewRouter 密钥为系统依赖，不可切换') : (isEnabled ? t('点击禁用') : t('点击启用'))}">
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} ${/^crewrouter$/i.test(String(key.name || '')) ? 'disabled' : `onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)"`}>
               <span class="pg-toggle-slider"></span>
             </label>
             <div class="api-key-title-text">
