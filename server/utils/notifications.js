@@ -142,6 +142,7 @@ module.exports = {
   NOTIFICATION_TYPES,
   getNotificationSettings,
   updateNotificationSettings,
+  createNotification,
   notifyUser,
   sendBark,
   listNotifications,

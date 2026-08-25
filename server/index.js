@@ -637,6 +637,30 @@ async function ensureNotificationSettings() {
   }
 }
 
+// ========== 自动迁移：hook 事件通知订阅规则 ==========
+async function ensureHookNotifyRules() {
+  try {
+    // 总开关默认关，避免所有用户被事件推送轰炸
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS hook_notify_push_enabled BOOLEAN DEFAULT FALSE`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS hook_notify_rules (
+        id BIGSERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL DEFAULT '',
+        harness TEXT NOT NULL DEFAULT '*',
+        event_type TEXT NOT NULL DEFAULT '*',
+        tool_name_pattern TEXT DEFAULT '',
+        enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_hook_notify_rules_user ON hook_notify_rules(user_id, enabled)');
+    Logger.info('[迁移] hook 事件通知规则表已就绪');
+  } catch (err) {
+    Logger.warn(`[迁移] hook 通知规则表迁移跳过: ${err.message}`);
+  }
+}
+
 // ========== 自动迁移：额度预警相关字段 ==========
 async function ensureBalanceAlertSettings() {
   try {
@@ -2384,6 +2408,7 @@ if (isDemo) {
   app.use('/api/user', require('./routes/user'));
   app.use('/api/user', require('./routes/balance-alert'));
   app.use('/api/user', require('./routes/notifications'));
+  app.use('/api/user', require('./routes/hook-notify-rules'));
   // 用户级自定义提示词（每人仅见自己的；admin 全站视图走 /api/admin/custom-instructions）
   app.use('/api/user', require('./routes/user-custom-instructions'));
   app.use('/api/user', require('./routes/attribution-view'));
@@ -2523,6 +2548,7 @@ async function runPendingMigrations() {
     ensureUsageMessageAnalysisTable,
     backfillUsageRecords,
     ensureBalanceAlertSettings,
+    ensureHookNotifyRules,
     ensureNotificationSettings,
     ensureProductsTable,
     ensureQuotaDataTable,

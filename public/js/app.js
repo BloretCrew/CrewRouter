@@ -5990,6 +5990,7 @@ class ConsoleApp {
       // 加载签名设置与通知
       this.loadSignatureSettings();
       this.loadNotificationSettings();
+      this.loadHookNotifySettings();
       this.loadNotifications();
     }
   }
@@ -6062,6 +6063,133 @@ class ConsoleApp {
   async markNotificationRead(id) { await fetch(`/api/user/notifications/${id}/read`, { method: 'PUT' }); await this.loadNotifications(); }
   async deleteNotification(id) { await fetch(`/api/user/notifications/${id}`, { method: 'DELETE' }); await this.loadNotifications(); }
   async clearNotifications() { if (!confirm(t('确定清空全部通知吗？'))) return; await fetch('/api/user/notifications', { method: 'DELETE' }); await this.loadNotifications(); }
+
+  // ========== 事件通知（hook 事件订阅推送） ==========
+  async loadHookNotifySettings() {
+    const list = document.getElementById('hookNotifyRulesList');
+    if (!list) return;
+    try {
+      const res = await fetch('/api/user/hook-notify-rules');
+      if (!res.ok) throw new Error(t('加载失败'));
+      const data = await res.json();
+      const toggle = document.getElementById('hookNotifyPushEnabled');
+      if (toggle) toggle.checked = data.pushEnabled === true;
+      this._hookNotifyRules = Array.isArray(data.rules) ? data.rules : [];
+      this.renderHookNotifyRules();
+    } catch (error) {
+      list.innerHTML = '<div style="color:var(--destructive);font-size:13px;">' + t('事件通知规则加载失败') + '</div>';
+    }
+  }
+
+  async toggleHookNotifyPush(enabled) {
+    try {
+      const res = await fetch('/api/user/hook-notify-rules/push-enabled', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !!enabled })
+      });
+      if (!res.ok) throw new Error(t('保存失败'));
+      this.showToast(enabled ? t('事件推送已开启') : t('事件推送已关闭'), 'success');
+    } catch (error) {
+      this.showToast(error.message || t('保存失败'), 'error');
+      const toggle = document.getElementById('hookNotifyPushEnabled');
+      if (toggle) toggle.checked = !enabled;
+    }
+  }
+
+  renderHookNotifyRules() {
+    const list = document.getElementById('hookNotifyRulesList');
+    if (!list) return;
+    const rules = Array.isArray(this._hookNotifyRules) ? this._hookNotifyRules : [];
+    if (!rules.length) {
+      list.innerHTML = '<div style="color:var(--muted-foreground);font-size:13px;padding:8px 0;">' + t('暂无订阅规则，点击右上角「新建规则」创建。') + '</div>';
+      return;
+    }
+    list.innerHTML = rules.map(rule => {
+      const harnessLabel = rule.harness === '*' ? t('全部工具') : this._harnessLabel(rule.harness);
+      const eventLabels = {
+        '*': t('全部事件'),
+        session_start: t('会话开始'),
+        session_end: t('会话结束'),
+        tool_use: t('工具调用'),
+      };
+      const eventLabel = eventLabels[rule.eventType] || rule.eventType;
+      const patternText = rule.toolNamePattern ? ` · ${t('工具名')} ${escapeHtml(rule.toolNamePattern)}` : '';
+      return `
+        <div class="model-library-item" style="margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <strong>${escapeHtml(rule.name || t('未命名规则'))}</strong>
+            <span class="session-badge" style="${rule.enabled ? 'color:#10b981;background:color-mix(in srgb,#10b981 12%,transparent);' : 'color:var(--muted-foreground);background:var(--muted);'}">${rule.enabled ? t('已启用') : t('已停用')}</span>
+            <span style="margin-left:auto;display:flex;gap:6px;">
+              <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="app.showHookNotifyRuleModal(${rule.id})">${t('编辑')}</button>
+              <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="app.deleteHookNotifyRule(${rule.id})">${t('删除')}</button>
+            </span>
+          </div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13px;color:var(--muted-foreground);">
+            <span>⚙️ ${escapeHtml(harnessLabel)}</span>
+            <span>📡 ${escapeHtml(eventLabel)}</span>
+            ${patternText ? `<span>🔧 ${escapeHtml(patternText)}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async showHookNotifyRuleModal(id) {
+    const modal = document.getElementById('hookNotifyRuleModal');
+    if (!modal) return;
+    // harness 下拉：8 家客户端 + 全部
+    const harnessSelect = document.getElementById('hookRuleHarness');
+    const current = harnessSelect.value;
+    harnessSelect.innerHTML = `<option value="*">${t('全部工具')}</option>` +
+      this._libraryHarnessList().map(h => `<option value="${h.id}">${escapeHtml(h.label)}</option>`).join('');
+    if (current && harnessSelect.querySelector(`option[value="${current}"]`)) harnessSelect.value = current;
+
+    const rule = id ? (this._hookNotifyRules || []).find(r => r.id === id) : null;
+    this._editingHookRuleId = rule ? rule.id : null;
+    document.getElementById('hookNotifyRuleModalTitle').textContent = rule ? t('编辑订阅规则') : t('新建订阅规则');
+    document.getElementById('hookRuleName').value = rule ? (rule.name || '') : '';
+    if (rule) harnessSelect.value = rule.harness;
+    document.getElementById('hookRuleEventType').value = rule ? rule.eventType : '*';
+    document.getElementById('hookRuleToolPattern').value = rule ? (rule.toolNamePattern || '') : '';
+    document.getElementById('hookRuleEnabled').checked = rule ? rule.enabled !== false : true;
+    this.showModal('hookNotifyRuleModal');
+  }
+
+  async saveHookNotifyRule() {
+    const body = {
+      name: document.getElementById('hookRuleName')?.value || '',
+      harness: document.getElementById('hookRuleHarness')?.value || '*',
+      eventType: document.getElementById('hookRuleEventType')?.value || '*',
+      toolNamePattern: document.getElementById('hookRuleToolPattern')?.value || '',
+      enabled: document.getElementById('hookRuleEnabled')?.checked !== false,
+    };
+    const editingId = this._editingHookRuleId;
+    try {
+      const res = await fetch(editingId ? `/api/user/hook-notify-rules/${editingId}` : '/api/user/hook-notify-rules', {
+        method: editingId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t('保存失败'));
+      this.closeModals();
+      this.showToast(t('规则已保存'), 'success');
+      await this.loadHookNotifySettings();
+    } catch (error) {
+      this.showToast(error.message || t('保存失败'), 'error');
+    }
+  }
+
+  async deleteHookNotifyRule(id) {
+    if (!(await Dialog.confirm(t('删除订阅规则'), t('确定删除该订阅规则吗？删除后不再按其推送事件。')))) return;
+    try {
+      const res = await fetch(`/api/user/hook-notify-rules/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(t('删除失败'));
+      this.showToast(t('规则已删除'), 'success');
+      await this.loadHookNotifySettings();
+    } catch (error) {
+      this.showToast(error.message || t('删除失败'), 'error');
+    }
+  }
 
   loadSignatureSettings() {
     const toggle = document.getElementById('apiSignatureToggle');

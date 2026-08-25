@@ -19,11 +19,75 @@ const Logger = require('../logger');
 const { HARNESS_SOURCES } = require('../utils/request-source');
 const { oauthBearer } = require('../middleware/oauth-bearer');
 const { requireAuth } = require('../middleware/auth');
+const { createNotification, sendBark } = require('../utils/notifications');
 
 const router = express.Router();
 
 const HARNESS_SET = new Set(HARNESS_SOURCES);
 const EVENT_TYPES = new Set(['session_start', 'session_end', 'tool_use']);
+
+// ---------- 事件推送（订阅规则命中 → 站内通知 + Bark） ----------
+// 频控：同 (userId, harness, sessionId, event) 60 秒内只推一次（内存即可，重启清零可接受）
+const pushRateLimitMap = new Map();
+const PUSH_RATE_LIMIT_MS = 60 * 1000;
+
+// 工具名 glob 匹配：'*' 通配任意串，其余字符按字面匹配
+function globMatch(pattern, value) {
+  const p = String(pattern || '').trim();
+  if (!p || p === '*') return true;
+  if (!value) return false;
+  const regex = new RegExp('^' + p.split('*').map(s => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$', 'i');
+  return regex.test(String(value));
+}
+
+async function notifyHookEvent({ userId, harness, event, sessionId, toolName, cwd }) {
+  // 总开关关 → 跳过
+  const setting = await pool.query(
+    'SELECT hook_notify_push_enabled FROM users WHERE id = $1', [userId]
+  );
+  if (!setting.rows[0] || setting.rows[0].hook_notify_push_enabled !== true) return;
+
+  // 单条 SQL 取全部启用规则，JS 侧逐条匹配
+  const rules = await pool.query(
+    `SELECT id, harness, event_type, tool_name_pattern FROM hook_notify_rules
+      WHERE user_id = $1 AND enabled = TRUE`,
+    [userId]
+  );
+  const matched = (rules.rows || []).find(r =>
+    (r.harness === '*' || r.harness === harness) &&
+    (r.event_type === '*' || r.event_type === event) &&
+    globMatch(r.tool_name_pattern, toolName)
+  );
+  if (!matched) return;
+
+  // 频控键：无 sessionId 时退化为 (userId, harness, event)
+  const rateKey = `${userId}|${harness}|${sessionId || ''}|${event}`;
+  const now = Date.now();
+  const last = pushRateLimitMap.get(rateKey) || 0;
+  if (now - last < PUSH_RATE_LIMIT_MS) return;
+  pushRateLimitMap.set(rateKey, now);
+  // 防 Map 无界增长：只保留最近 2000 个键
+  if (pushRateLimitMap.size > 2000) {
+    for (const k of pushRateLimitMap.keys()) {
+      pushRateLimitMap.delete(k);
+      if (pushRateLimitMap.size <= 1000) break;
+    }
+  }
+
+  const titleParts = [harness];
+  if (event === 'tool_use') titleParts.push(toolName || 'tool_use');
+  else titleParts.push(event);
+  const bodyParts = [
+    sessionId ? `session: ${String(sessionId).slice(0, 24)}` : '',
+    toolName ? `tool: ${String(toolName).slice(0, 64)}` : '',
+    cwd ? `cwd: ...${String(cwd).slice(-64)}` : '',
+  ].filter(Boolean);
+
+  await createNotification(userId, 'hook_event', `[CrewRouter] ${titleParts.join(' · ')}`, bodyParts.join('\n') || event, {
+    harness, event, sessionId, toolName,
+  });
+  await sendBark(userId, `[CrewRouter] ${titleParts.join(' · ')}`, bodyParts.join('\n') || event);
+}
 
 // ---------- 建表（懒执行一次） ----------
 let tableReady = false;
@@ -93,6 +157,17 @@ router.post('/', oauthBearer, async (req, res) => {
     );
   } catch (err) {
     Logger.error('[客户端事件] 落库失败:', err.message);
+  }
+  // 订阅规则推送：异步执行，失败只记日志，绝不阻塞客户端上报应答
+  if (req.apiUser?.userId) {
+    notifyHookEvent({
+      userId: req.apiUser.userId,
+      harness,
+      event,
+      sessionId: strOrNull(body.session_id, 128),
+      toolName: strOrNull(body.tool_name, 128),
+      cwd: strOrNull(body.cwd, 512),
+    }).catch(err => Logger.warn(`[客户端事件] 事件推送失败: ${err.message}`));
   }
   // 无论落库成败都对客户端返回 ok，避免阻塞其工具流
   res.json({ ok: true });
