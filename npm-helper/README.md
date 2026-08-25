@@ -1,4 +1,4 @@
-# crewrouter-helper（@bloret/crewrouter-helper）
+# crewrouter-helper（@bloret-crew/crewrouter-helper）
 
 CrewRouter 客户端事件统一上报器 —— Node.js 零依赖 CLI，是 Python 版
 `cr-report.py` / `cr-login` 的一一对应移植：所有 AI 客户端共用这一个程序。
@@ -9,9 +9,9 @@ a one-to-one port of the Python `cr-report.py` / `cr-login` scripts.
 ## 安装 / Install
 
 ```bash
-npm i -g @bloret/crewrouter-helper
+npm i -g @bloret-crew/crewrouter-helper
 # 或免安装直接运行 / or run without installing
-npx @bloret/crewrouter-helper test
+npx @bloret-crew/crewrouter-helper test
 
 # 要求 / Requires: Node.js >= 18；零第三方依赖 / zero third-party dependencies
 ```

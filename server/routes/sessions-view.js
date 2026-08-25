@@ -58,6 +58,32 @@ function pressureLevel(totalTokens) {
 }
 
 /** content（string | 多模态 blocks 数组 | 对象）→ 可读文本，跳过图片块 */
+/**
+ * 显示净化：模拟客户端实际展示行为——
+ * 1. <system-reminder>/<task-notification> 等系统注入块整段隐藏（客户端不显示）
+ * 2. 其余 XML 风格标签剥壳留文（如 <cmd>xxx</cmd> 只显示 xxx）
+ * 3. 常见实体还原
+ */
+const HIDDEN_BLOCKS = /<\/(system-reminder|task-notification|local-command-stdout|local-command-stderr|bash-input|bash-stdout|bash-stderr)>[\s\S]*?/g;
+function cleanDisplayText(text) {
+  let t = String(text || '');
+  // 成对隐藏块：从开标签到闭标签整体删除（含未闭合到结尾的情况）
+  for (const tag of ['system-reminder', 'task-notification', 'local-command-stdout', 'local-command-stderr']) {
+    const re = new RegExp(`<${tag}(?:\\s[^>]*)?>[\\s\\S]*?</${tag}>`, 'g');
+    const reOpen = new RegExp(`<${tag}(?:\\s[^>]*)?>[\\s\\S]*$`, 'g');
+    t = t.replace(re, '').replace(reOpen, '');
+  }
+  // 其余 XML 标签：剥壳留文（自闭合直接删）
+  t = t.replace(/<[a-zA-Z][a-zA-Z0-9_-]*(?:\s[^>]*)?\/>/g, '');
+  t = t.replace(/<\/[a-zA-Z][a-zA-Z0-9_-]*>/g, '');
+  t = t.replace(/<[a-zA-Z][a-zA-Z0-9_-]*(?:\s[^>]*)?>/g, '');
+  // 实体还原
+  t = t.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
+  // 多余空行收敛
+  t = t.replace(/\n{3,}/g, '\n\n');
+  return t.trim();
+}
+
 function contentToText(content) {
   if (content == null) return '';
   if (typeof content === 'string') return content;
@@ -94,7 +120,7 @@ function parseMessagesToEvents(messages) {
     const role = String(m.role || '');
 
     if (role === 'system' || role === 'developer') {
-      const text = contentToText(m.content).trim();
+      const text = cleanDisplayText(contentToText(m.content));
       if (text) events.push({ type: 'text', role: 'system', text: truncStr(text, LIMIT_TEXT), truncated: text.length > LIMIT_TEXT });
       continue;
     }
@@ -115,11 +141,12 @@ function parseMessagesToEvents(messages) {
         const text = m.content
           .filter(b => b && b.type !== 'tool_result')
           .map(b => contentToText(b))
-          .join('\n').trim();
-        if (text) events.push({ type: 'text', role: 'user', text: truncStr(text, LIMIT_TEXT), truncated: text.length > LIMIT_TEXT });
+          .join('\n');
+        const cleaned = cleanDisplayText(text);
+        if (cleaned) events.push({ type: 'text', role: 'user', text: truncStr(cleaned, LIMIT_TEXT), truncated: cleaned.length > LIMIT_TEXT });
       } else {
-        const text = contentToText(m.content).trim();
-        if (text) events.push({ type: 'text', role: 'user', text: truncStr(text, LIMIT_TEXT), truncated: text.length > LIMIT_TEXT });
+        const cleaned = cleanDisplayText(contentToText(m.content));
+        if (cleaned) events.push({ type: 'text', role: 'user', text: truncStr(cleaned, LIMIT_TEXT), truncated: cleaned.length > LIMIT_TEXT });
       }
       continue;
     }
@@ -141,9 +168,9 @@ function parseMessagesToEvents(messages) {
         const raw = String(m.reasoning_content).trim();
         if (raw) events.push({ type: 'thinking', preview: truncStr(raw, LIMIT_THINKING), truncated: raw.length > LIMIT_THINKING });
       }
-      const text = contentToText(m.content).replace(/\n+$/, '').trim();
-      if (text) {
-        events.push({ type: 'text', role: 'assistant', text: truncStr(text, LIMIT_TEXT), truncated: text.length > LIMIT_TEXT });
+      const cleanedA = cleanDisplayText(contentToText(m.content));
+      if (cleanedA) {
+        events.push({ type: 'text', role: 'assistant', text: truncStr(cleanedA, LIMIT_TEXT), truncated: cleanedA.length > LIMIT_TEXT });
       }
       if (Array.isArray(m.content)) {
         for (const block of m.content) {
