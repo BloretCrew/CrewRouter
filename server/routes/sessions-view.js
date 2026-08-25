@@ -107,6 +107,7 @@ function parseMessagesToEvents(messages) {
             events.push({
               type: 'tool_result',
               name: block.name || pendingToolNames[block.tool_use_id] || null,
+              is_error: block.is_error === true,
               resultPreview: truncStr(contentToText(block.content), LIMIT_TOOL_RESULT),
             });
           }
@@ -124,10 +125,13 @@ function parseMessagesToEvents(messages) {
     }
 
     if (role === 'tool') {
+      const toolText = contentToText(m.content);
+      const errSniff = /^\s*(Error|ERROR|Traceback|fatal:) /.test(toolText) || m.is_error === true;
       events.push({
         type: 'tool_result',
         name: m.name || pendingToolCallsLookup(m.tool_call_id, pendingToolNames),
-        resultPreview: truncStr(contentToText(m.content), LIMIT_TOOL_RESULT),
+        is_error: errSniff,
+        resultPreview: truncStr(toolText, LIMIT_TOOL_RESULT),
       });
       continue;
     }
@@ -149,6 +153,7 @@ function parseMessagesToEvents(messages) {
               type: 'tool_call',
               name: block.name || 'unknown',
               argsPreview: truncStr(safeStringify(block.input), LIMIT_TOOL_ARGS),
+              argsObj: (block.input && typeof block.input === 'object') ? block.input : null,
             });
           }
         }
@@ -159,10 +164,14 @@ function parseMessagesToEvents(messages) {
           const name = tc.function?.name || tc.name || 'unknown';
           if (tc.id) pendingToolNames[tc.id] = name;
           const args = tc.function?.arguments ?? tc.arguments ?? tc.input;
+          let argsObj = null;
+          if (args && typeof args === 'object') argsObj = args;
+          else if (typeof args === 'string') { try { argsObj = JSON.parse(args); } catch (_) {} }
           events.push({
             type: 'tool_call',
             name,
             argsPreview: truncStr(typeof args === 'string' ? args : safeStringify(args), LIMIT_TOOL_ARGS),
+            argsObj,
           });
         }
       }

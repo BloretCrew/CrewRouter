@@ -5163,33 +5163,52 @@ class ConsoleApp {
   /** 时间线单事件：文本 / 工具调用 / 工具结果 / 思考 */
   renderTimelineEvent(evt) {
     if (!evt || typeof evt !== 'object') return '';
+    // —— 工具调用：Claude Code 终端风格一行式 ⏺ Tool(args 摘要) + 可折叠参数/结果 ——
     if (evt.type === 'tool_call') {
       const name = evt.name || 'unknown';
+      let argsLine = '';
+      try {
+        const args = (evt.argsObj && typeof evt.argsObj === 'object')
+          ? evt.argsObj
+          : JSON.parse(evt.argsPreview || '{}');
+        const keys = Object.keys(args);
+        if (keys.length) {
+          const first = keys[0];
+          const v = String(args[first] ?? '').replace(/\s+/g, ' ');
+          argsLine = `${first}: ${v.length > 80 ? v.slice(0, 80) + '…' : v}`;
+        }
+      } catch (_) { /* argsPreview 非 JSON 时保持原样 */ }
       return `
         <li class="timeline-event type-tool_call">
-          <span class="timeline-event-tag" style="color:#f59e0b;">🔧 ${t('工具调用')} · ${escapeHtml(name)}</span>
-          ${evt.argsPreview ? `
-          <details>
-            <summary>${t('参数')}</summary>
-            <pre>${escapeHtml(evt.argsPreview)}${evt.truncated ? '\n…' : ''}</pre>
-          </details>` : ''}
+          <details class="tool-block">
+            <summary class="tool-call-line"><span class="tool-dot">⏺</span> <span class="tool-name">${escapeHtml(name)}</span><span class="tool-args">${escapeHtml(argsLine)}</span></summary>
+            ${evt.argsPreview ? `<pre class="tool-args-full">${escapeHtml(evt.argsPreview)}${evt.truncated ? '\n…' : ''}</pre>` : ''}
+          </details>
         </li>`;
     }
+    // —— 工具结果：缩进折叠块，错误红标 ——
     if (evt.type === 'tool_result') {
+      const errCls = evt.is_error ? ' tool-result-error' : '';
+      const errTag = evt.is_error ? `<span class="tool-error-tag">${t('错误')}</span>` : '';
       return `
-        <li class="timeline-event type-tool_result">
-          <span class="timeline-event-tag" style="color:#8b5cf6;">📥 ${t('工具结果')}${evt.name ? ' · ' + escapeHtml(evt.name) : ''}</span>
-          ${evt.resultPreview ? `<div class="timeline-event-text">${escapeHtml(evt.resultPreview)}${evt.resultPreview && evt.resultPreview.length >= 800 ? '\n…' : ''}</div>` : ''}
+        <li class="timeline-event type-tool_result${errCls}">
+          <details class="tool-block tool-result-block" ${evt.is_error ? 'open' : ''}>
+            <summary class="tool-result-line"><span class="tool-result-icon">⎿</span> ${errTag}<span class="tool-result-owner">${escapeHtml(evt.name || t('工具结果'))}</span></summary>
+            ${evt.resultPreview ? `<pre class="tool-result-text">${escapeHtml(evt.resultPreview)}${evt.resultPreview.length >= 800 ? '\n…' : ''}</pre>` : ''}
+          </details>
         </li>`;
     }
+    // —— thinking：斜体灰字，默认折叠 ——
     if (evt.type === 'thinking') {
       return `
         <li class="timeline-event type-thinking">
-          <span class="timeline-event-tag" style="color:#ec4899;">💭 ${t('思考')}</span>
-          <div class="timeline-event-text" style="font-style:italic;color:var(--muted-foreground);">${escapeHtml(evt.preview || '')}${evt.truncated ? '\n…' : ''}</div>
+          <details class="thinking-block">
+            <summary>💭 ${t('思考')}</summary>
+            <div class="timeline-event-text thinking-text">${escapeHtml(evt.preview || '')}${evt.truncated ? '\n…' : ''}</div>
+          </details>
         </li>`;
     }
-    // text 事件（user / assistant / system）
+    // —— 正文：user 高亮气泡 / assistant 常规 / system 弱化 ——
     const roleMap = {
       user: { label: `👤 ${t('用户')}`, color: '#3b82f6' },
       assistant: { label: `🤖 ${t('助手')}`, color: '#10b981' },
@@ -5199,7 +5218,7 @@ class ConsoleApp {
     return `
       <li class="timeline-event role-${escapeHtml(evt.role || 'system')}">
         <span class="timeline-event-tag" style="color:${meta.color};">${meta.label}</span>
-        <div class="timeline-event-text">${escapeHtml(evt.text || '')}${evt.truncated ? '\n…' : ''}</div>
+        <div class="timeline-event-text role-${escapeHtml(evt.role || 'system')}-text">${escapeHtml(evt.text || '')}${evt.truncated ? '\n…' : ''}</div>
       </li>`;
   }
 

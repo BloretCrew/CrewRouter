@@ -1194,6 +1194,23 @@
           .timeline-event details pre { white-space:pre-wrap; word-break:break-all; font-size:12px; line-height:1.5; margin:6px 0 0; padding:8px 10px; border-radius:8px; background:var(--background); border:1px solid var(--border); max-height:260px; overflow:auto; }
           .timeline-record-head { display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:12px; color:var(--muted-foreground); margin:14px 0 8px; padding-top:10px; border-top:1px dashed var(--border); }
           .timeline-record-head:first-child { border-top:none; margin-top:0; padding-top:0; }
+          /* 客户端终端风格时间线（tool 一行式 / 折叠 / 错误红标） */
+          .timeline-event details.tool-block { margin:2px 0 0; }
+          .timeline-event details.tool-block summary { list-style:none; display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--foreground); }
+          .timeline-event details.tool-block summary::-webkit-details-marker { display:none; }
+          .timeline-event details.tool-block[open] summary { color:var(--brand-blue, #3b82f6); }
+          .tool-dot { color:#f59e0b; font-size:11px; }
+          .tool-name { font-weight:600; }
+          .tool-args { color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:420px; font-size:12px; }
+          .tool-args-full, .tool-result-text { white-space:pre-wrap; word-break:break-word; font-size:12px; line-height:1.5; margin:6px 0 0; padding:8px 10px; border-radius:8px; background:var(--background); border:1px solid var(--border); max-height:260px; overflow:auto; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; }
+          .tool-result-block { border-left:2px solid var(--border); padding-left:10px; margin-left:6px; }
+          .type-tool_result.tool-result-error .tool-result-line { color:#ef4444; }
+          .type-tool_result.tool-result-error .tool-result-text { border-color:#ef444455; background:rgba(239,68,68,.06); }
+          .tool-error-tag { display:inline-block; font-size:10.5px; font-weight:700; padding:0 6px; border-radius:5px; background:rgba(239,68,68,.14); color:#ef4444; margin-right:6px; }
+          .thinking-block summary { list-style:none; cursor:pointer; font-size:12.5px; color:#ec4899; user-select:none; }
+          .thinking-block summary::-webkit-details-marker { display:none; }
+          .thinking-text { font-style:italic; color:var(--muted-foreground); margin-top:4px; }
+          .role-user-text { background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25); border-radius:10px; padding:8px 12px; }
         </style>
         <div class="content-section" id="sessionsListWrap">
           <div class="section-header">
@@ -2514,7 +2531,7 @@ data: [DONE]</code></pre>
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/dom.js?v=2"></script>
   <script src="/js/dialog.js?v=2"></script>
-  <script src="/js/app.js?v=35"></script>
+  <script src="/js/app.js?v=36"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航
