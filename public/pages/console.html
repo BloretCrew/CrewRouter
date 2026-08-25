@@ -1213,6 +1213,8 @@
           .thinking-text { font-style:italic; color:var(--muted-foreground); margin-top:4px; }
           .merged-tag { color:var(--muted-foreground); font-size:11px; font-style:italic; opacity:.7; }
           .timeline-record-head.merged { opacity:.75; }
+          .summary-spinner { width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--info);border-radius:50%;animation:summary-spin .8s linear infinite; }
+          @keyframes summary-spin { to { transform:rotate(360deg); } }
           .role-user-text { background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25); border-radius:10px; padding:8px 12px; }
         </style>
         <div class="content-section" id="sessionsListWrap">
@@ -1909,7 +1911,7 @@ data: [DONE]</code></pre>
         <div id="sessionSummaryBody" style="white-space:pre-wrap;font-size:13.5px;line-height:1.6;max-height:50vh;overflow-y:auto;"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="app.regenerateSessionSummary()"><span data-i18n="重新生成">重新生成</span></button>
+        <button type="button" class="btn btn-secondary" id="sessionSummaryRegenBtn" onclick="app.regenerateSessionSummary()"><span data-i18n="重新生成">重新生成</span></button>
         <button type="button" class="btn btn-primary" onclick="app.copySessionSummary()"><span data-i18n="复制">复制</span></button>
       </div>
     </div>

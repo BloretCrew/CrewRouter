@@ -91,6 +91,13 @@ class ConsoleApp {
     this._pendingProviderRenderRaf = null;
     this._hashRouteBound = false;
     this._ignoreHashChange = false;
+    // 会话总结状态（后台生成任务与切换会话隔离）
+    this._summaryPending = false;
+    this._sessionSummaryText = '';
+    this._summaryDoneFor = null;
+    this._summaryError = null;
+    this._summarySeq = 0;
+    this._lastPageFingerprint = '';
     this.init();
   }
 
@@ -5135,6 +5142,13 @@ class ConsoleApp {
     this._detailLoaded = 0;
     this._detailTotal = 0;
     this._renderedEventSigs = [];
+    // 切换会话时的状态隔离：清空上一会话的总结状态与分页指纹，避免串会话
+    this._summaryPending = false;
+    this._sessionSummaryText = '';
+    this._summaryDoneFor = null;
+    this._summaryError = null;
+    this._lastPageFingerprint = '';
+    this._setSummaryRegenDisabled(false);
     const listWrap = document.getElementById('sessionsListWrap');
     const detailWrap = document.getElementById('sessionDetailWrap');
     if (!listWrap || !detailWrap) return;
@@ -6202,10 +6216,25 @@ class ConsoleApp {
   }
 
   // ========== 会话总结 ==========
+  /** 后台生成中禁用「重新生成」按钮，避免并发重复请求 */
+  _setSummaryRegenDisabled(disabled) {
+    const btn = document.getElementById('sessionSummaryRegenBtn');
+    if (btn) btn.disabled = !!disabled;
+  }
+
   async generateSessionSummary(force = false) {
     const key = this._detailSessionKey;
     if (!key) return;
     const bodyEl = document.getElementById('sessionSummaryBody');
+
+    // 后台任务进行中：重开弹窗显示进度，不重复发起
+    if (this._summaryPending) {
+      this._renderSummaryLoading(bodyEl);
+      this.showModal('sessionSummaryModal');
+      return;
+    }
+
+    // 非强制时先读缓存，命中直接展示
     if (!force) {
       try {
         const cached = await fetch(`/api/user/sessions/${encodeURIComponent(key)}/summary`);
@@ -6218,21 +6247,68 @@ class ConsoleApp {
         }
       } catch (_) { /* 缓存读取失败则直接生成 */ }
     }
-    if (bodyEl) setHTML(bodyEl, `<span style="color:var(--muted-foreground);">${t('正在阅读会话并生成总结...')}</span>`);
+
+    // 弹窗显示加载提示；用户可关闭弹窗让任务在后台继续
+    this._renderSummaryLoading(bodyEl);
     this.showModal('sessionSummaryModal');
+    this._summaryPending = true;
+    this._setSummaryRegenDisabled(true);
+
+    // 记录本次请求归属：会话 key + 请求序号，供切换会话后的状态隔离与回调校验
+    const reqKey = key;
+    const reqSeq = ++this._summarySeq;
+
+    // 后台执行：await 不阻塞用户浏览；完成后 toast；仍处于同一会话时刷新弹窗内容
     try {
       const res = await fetch(`/api/user/sessions/${encodeURIComponent(key)}/summary`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t('总结生成失败'));
-      if (bodyEl) setHTML(bodyEl, escapeHtml(data.summary || ''));
-      this._sessionSummaryText = data.summary || '';
+      // 仅在仍处于发起时的会话才写回弹窗内容；否则只 toast 通知
+      if (this._detailSessionKey === reqKey) {
+        this._sessionSummaryText = data.summary || '';
+        this._summaryDoneFor = reqKey;
+        const live = document.getElementById('sessionSummaryBody');
+        if (live && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
+          setHTML(live, escapeHtml(data.summary || ''));
+        }
+      }
       this.showToast(t('总结已生成'), 'success');
     } catch (error) {
-      if (bodyEl) setHTML(bodyEl, `<span style="color:var(--danger);">${escapeHtml(error.message)}</span>`);
+      this._summaryError = error.message || t('总结生成失败');
+      if (this._detailSessionKey === reqKey) {
+        const live = document.getElementById('sessionSummaryBody');
+        if (live && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
+          setHTML(live, `<span style="color:var(--danger);">${escapeHtml(this._summaryError)}</span>`);
+        }
+      }
+      this.showToast(t('总结生成失败'), 'error');
+    } finally {
+      // 仅当没有更新的请求接管时才清除 pending 标志
+      if (this._summarySeq === reqSeq) {
+        this._summaryPending = false;
+        this._setSummaryRegenDisabled(false);
+      }
     }
   }
 
+  _renderSummaryLoading(bodyEl) {
+    if (!bodyEl) return;
+    setHTML(bodyEl, `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px 0;">
+        <div class="summary-spinner"></div>
+        <span style="color:var(--muted-foreground);font-size:13px;">${t('正在阅读会话并生成总结...')}</span>
+        <small style="color:var(--muted-foreground);opacity:.7;">${t('可以关闭此窗口，完成后会通知你')}</small>
+      </div>`);
+  }
+
   async regenerateSessionSummary() {
+    // 防重：后台任务进行中忽略点击，避免并发重复请求
+    if (this._summaryPending) {
+      const bodyEl = document.getElementById('sessionSummaryBody');
+      this._renderSummaryLoading(bodyEl);
+      this.showModal('sessionSummaryModal');
+      return;
+    }
     await this.generateSessionSummary(true);
   }
 
