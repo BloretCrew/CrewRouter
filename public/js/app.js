@@ -5188,7 +5188,12 @@ class ConsoleApp {
         this._appendRenderedEventSigs(evts);
         // eventsCount 为原始事件数；被抑制的重放数 = 原始数 - 实际渲染数
         const suppressed = Math.max(Number(record.eventsCount || 0) - evts.length, 0);
-        const eventsHtml = evts.map(e => this.renderTimelineEvent(e)).join('');
+        // 连续工具折叠：≥3 个连续工具事件合并为客户端风格摘要行（可展开明细）
+        const groups = groupToolRuns(evts);
+        const eventsHtml = groups.map(g => {
+          if (g.type === 'single') return this.renderTimelineEvent(g.event);
+          return this.renderToolSummaryRow(g);
+        }).join('');
         return `
           <li>
             <div class="timeline-record-head">
@@ -5257,6 +5262,18 @@ class ConsoleApp {
   }
 
   /** 时间线单事件：文本 / 工具调用 / 工具结果 / 思考 */
+  renderToolSummaryRow(group) {
+    const sentence = summarySentence(group.groups, group.hashes, t);
+    const count = (group.events || []).length;
+    return `
+      <li class="timeline-event type-tool_summary">
+        <details class="tool-block">
+          <summary class="tool-call-line"><span class="tool-dot" style="color:var(--info);">⏺</span> <span class="tool-summary-text">${sentence}</span><span class="tool-args">${count} ${t('次操作')}</span></summary>
+          ${group.events.map(e => this.renderTimelineEvent(e)).join('')}
+        </details>
+      </li>`;
+  }
+
   renderTimelineEvent(evt) {
     if (!evt || typeof evt !== 'object') return '';
     // —— 工具调用：Claude Code 终端风格一行式 ⏺ Tool(args 摘要) + 可折叠参数/结果 ——
