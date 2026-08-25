@@ -2558,7 +2558,7 @@
   "工具结果": "Tool result",
   "加载更多": "Load more",
   "事件通知": "Event Notifications",
-  "客户端上报的会话开始/结束、工具调用事件，按订阅规则推送到站内通知与 Bark。": "Session start/end and tool-use events reported by clients are pushed to in-app notifications and Bark according to your subscription rules.",
+  "客户端上报的会话开始/结束、工具调用事件，开启总开关后推送到站内通知与 Bark。": "Session start/end and tool-use events reported by clients are pushed to in-app notifications and Bark while the master switch is on.",
   "新建规则": "New Rule",
   "启用事件推送": "Enable Event Push",
   "总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。": "No events are pushed while this master switch is off; Bark push also requires enabling Bark above with a Server Key configured.",

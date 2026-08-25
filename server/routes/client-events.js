@@ -47,6 +47,7 @@ async function notifyHookEvent({ userId, harness, event, sessionId, toolName, cw
   );
   if (!setting.rows[0] || setting.rows[0].hook_notify_push_enabled !== true) return;
 
+
   // 单条 SQL 取全部启用规则，JS 侧逐条匹配
   const rules = await pool.query(
     `SELECT id, harness, event_type, tool_name_pattern FROM hook_notify_rules

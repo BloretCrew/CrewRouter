@@ -1700,21 +1700,19 @@ data: [DONE]</code></pre>
           <div id="notificationsList"><div style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="加载中...">加载中...</span></div></div>
         </div>
 
-        <!-- 事件通知（hook 上报事件订阅推送） -->
+        <!-- 事件通知（hook 上报事件推送开关） -->
         <div class="content-section" style="margin-top:24px;">
           <div class="section-header">
             <div>
               <h2><span data-i18n="事件通知">事件通知</span></h2>
-              <p style="margin:4px 0 0;color:var(--muted-foreground);font-size:13px;"><span data-i18n="客户端上报的会话开始/结束、工具调用事件，按订阅规则推送到站内通知与 Bark。">客户端上报的会话开始/结束、工具调用事件，按订阅规则推送到站内通知与 Bark。</span></p>
+              <p style="margin:4px 0 0;color:var(--muted-foreground);font-size:13px;"><span data-i18n="客户端上报的会话开始/结束、工具调用事件，开启总开关后推送到站内通知与 Bark。">客户端上报的会话开始/结束、工具调用事件，开启总开关后推送到站内通知与 Bark。</span></p>
             </div>
-            <button type="button" class="btn btn-primary" onclick="app.showHookNotifyRuleModal()"><span data-i18n="新建规则">新建规则</span></button>
           </div>
           <div style="padding:20px;border:1px solid var(--border);border-radius:12px;">
-            <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 16px;">
+            <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0;">
               <div><label style="margin:0;"><span data-i18n="启用事件推送">启用事件推送</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。">总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。</span></small></div>
               <label class="pg-toggle"><input type="checkbox" id="hookNotifyPushEnabled" onchange="app.toggleHookNotifyPush(this.checked)"><span class="pg-toggle-slider"></span></label>
             </div>
-            <div id="hookNotifyRulesList"><div style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="加载中...">加载中...</span></div></div>
           </div>
         </div>
 
@@ -2542,48 +2540,6 @@ data: [DONE]</code></pre>
       </div>
       <div class="modal-footer">
         <button id="confirmAddEditModel" class="btn btn-primary"><span data-i18n="添加">添加</span></button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 事件通知订阅规则编辑弹窗 -->
-  <div id="hookNotifyRuleModal" class="modal" style="display:none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="hookNotifyRuleModalTitle"><span data-i18n="新建订阅规则">新建订阅规则</span></h3>
-        <button class="modal-close">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="hookRuleName"><span data-i18n="规则名称（可选）">规则名称（可选）</span></label>
-          <input type="text" id="hookRuleName" class="input" placeholder="例如：只看 Bash 调用" data-i18n-placeholder="例如：只看 Bash 调用">
-        </div>
-        <div class="form-group">
-          <label for="hookRuleHarness"><span data-i18n="工具（harness）">工具（harness）</span></label>
-          <select id="hookRuleHarness" class="select">
-            <option value="*"><span data-i18n="全部工具">全部工具</span></option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="hookRuleEventType"><span data-i18n="事件类型">事件类型</span></label>
-          <select id="hookRuleEventType" class="select">
-            <option value="*"><span data-i18n="全部事件">全部事件</span></option>
-            <option value="session_start"><span data-i18n="会话开始">会话开始</span></option>
-            <option value="session_end"><span data-i18n="会话结束">会话结束</span></option>
-            <option value="tool_use"><span data-i18n="工具调用">工具调用</span></option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="hookRuleToolPattern"><span data-i18n="工具名通配（可选）">工具名通配（可选）</span></label>
-          <input type="text" id="hookRuleToolPattern" class="input" placeholder="Bash*" data-i18n-placeholder="Bash*">
-          <small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="支持 * 通配，留空表示全部工具名。仅对工具调用事件生效。">支持 * 通配，留空表示全部工具名。仅对工具调用事件生效。</span></small>
-        </div>
-        <div class="form-group" style="display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" id="hookRuleEnabled" checked><label for="hookRuleEnabled" style="margin:0;"><span data-i18n="启用该规则">启用该规则</span></label>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button id="confirmSaveHookRule" class="btn btn-primary" onclick="app.saveHookNotifyRule()"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
   </div>
