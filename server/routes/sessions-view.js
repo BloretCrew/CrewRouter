@@ -446,7 +446,10 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
         latencyMs: row.latency_ms == null ? null : Number(row.latency_ms),
         harness: row.request_source,
         eventsCount: events.length,
-        eventsHash: require('crypto').createHash('sha256').update(JSON.stringify(events)).digest('hex'),
+        // 相同请求判定：只取 user 角色文本做指纹（模型回复每次措辞不同，不能参与）
+        userFingerprint: require('crypto').createHash('sha256').update(
+          JSON.stringify(events.filter(e => e.type === 'text' && e.role === 'user').map(e => e.text))
+        ).digest('hex'),
         events: newEvents,
       };
     });
@@ -457,7 +460,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
     for (const rec of rawRecords) {
       const last = merged[merged.length - 1];
       // 完全相同的请求（原始事件流 hash 一致）：并入前一条，tokens 累加
-      if (last && rec.eventsHash && rec.eventsHash === last.eventsHash) {
+      if (last && rec.userFingerprint && rec.userFingerprint === last.userFingerprint) {
         last.tokens += rec.tokens;
         last.cachedTokens += rec.cachedTokens;
         last.repeatCount = (last.repeatCount || 1) + 1;
