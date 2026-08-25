@@ -5162,9 +5162,9 @@ class ConsoleApp {
       }
 
       const records = Array.isArray(data.records) ? data.records : [];
-              const evts = record.events || [];
+      const frag = records.map(record => {
+        const evts = record.events || [];
         const merged = evts.length === 0 && Number(record.eventsCount || 0) > 0;
-const frag = records.map(record => {
         const eventsHtml = evts.map(e => this.renderTimelineEvent(e)).join('');
         return `
           <li>
