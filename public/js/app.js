@@ -3489,31 +3489,47 @@ class ConsoleApp {
   // ========== 统计信息 ==========
   _statsData = null;
 
+  // 任务是否包含可展开的子代理明细：有子代理会话，或拆分出多个子节点时展开
+  _taskTreeExpandable(tree) {
+    const children = (tree.children || []);
+    return children.some(c => c.subagent) || children.length > 1;
+  }
+
+  // 渲染任务树单棵；无子代理明细的任务渲染为不可展开的普通行
+  _renderTaskTree(tree) {
+    const totals = tree.totals || {};
+    const rootName = String(tree.taskKey || '');
+    const summary = `<span class="stats-insight-name" title="${escapeHtml(rootName)}">${escapeHtml(rootName.slice(0, 36))}</span>
+      <span>${Number(totals.requests || 0).toLocaleString()} ${t('请求')} · ${this._formatBigNumber(Number(totals.tokens || 0))} Token</span>
+      <span class="task-tree-label" title="${escapeHtml(String(tree.rootLabel || ''))}">${escapeHtml(String(tree.rootLabel || '').slice(0, 40))}</span>`;
+    if (!this._taskTreeExpandable(tree)) {
+      return `<div class="stats-insight-item" style="padding:12px 0;border-bottom:1px solid var(--border);">${summary}</div>`;
+    }
+    const childRows = (tree.children || []).map(c => `
+      <div class="task-tree-child">
+        <code title="${escapeHtml(c.sessionId)}">${escapeHtml(String(c.sessionId || '').slice(0, 24))}</code>
+        ${c.subagent ? `<span class="task-tree-subagent">${escapeHtml(c.subagent)}</span>` : `<span class="task-tree-subagent muted">${t('主任务会话')}</span>`}
+        <span>${Number(c.requestCount || 0).toLocaleString()} ${t('请求')}</span>
+        <span title="${Number(c.totalTokens || 0).toLocaleString()}">${this._formatBigNumber(Number(c.totalTokens || 0))} Token</span>
+      </div>`).join('');
+    return `<details class="task-tree-root stats-insight-item" style="padding:12px 0;border-bottom:1px solid var(--border);">
+      <summary>${summary}<span class="task-tree-chevron">▾</span></summary>
+      <div class="task-tree-children">${childRows}</div>
+    </details>`;
+  }
+
   async loadTaskGroups() {
     const section = document.getElementById('taskGroupsSection');
     const list = document.getElementById('taskGroupsList');
     if (!section || !list) return;
     try {
-      const res = await fetch(`/api/user/task-groups?days=${encodeURIComponent(document.getElementById('statsTimeRange')?.value || '30')}`);
+      const res = await fetch(`/api/user/task-tree?days=${encodeURIComponent(document.getElementById('statsTimeRange')?.value || '30')}`);
       if (!res.ok) throw new Error(t('逻辑任务加载失败'));
       const data = await res.json();
-      const groups = Array.isArray(data.groups) ? data.groups : [];
-      section.style.display = groups.length ? 'block' : 'none';
-      setHTML(list, groups.map((g, i) => `<div class="stats-insight-item" style="padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="app.loadTaskDetails('${escapeHtml(String(g.taskId).replace(/'/g, '\\&#39;'))}', ${i})"><span class="stats-insight-name" title="${escapeHtml(g.taskId)}">${escapeHtml(String(g.taskId).slice(0, 36))}</span><span>${Number(g.requests || 0).toLocaleString()} ${t('请求')} · ${this._formatBigNumber(Number(g.totalTokens || 0))} Token</span><span>${g.compactionCount ? '🗜️ ' + g.compactionCount : ''} <span id="taskPressure-${i}" class="task-pressure-badge">…</span></span></div>`).join(''));
-      groups.forEach((g, i) => { if (g.taskId !== '未归因') this.loadTaskPressure(g.taskId, i); });
+      const trees = Array.isArray(data.taskTree) ? data.taskTree : [];
+      section.style.display = trees.length ? 'block' : 'none';
+      setHTML(list, trees.map(t => this._renderTaskTree(t)).join(''));
     } catch (error) { section.style.display = 'none'; console.warn(error); }
-  }
-
-  async loadTaskPressure(sessionId, index) {
-    try { const res = await fetch(`/api/user/context-pressure?sessionId=${encodeURIComponent(sessionId)}`); const data = await res.json(); const el = document.getElementById(`taskPressure-${index}`); if (el) { el.textContent = data.pressureLevel === 'critical' ? t('高压') : data.pressureLevel === 'warning' ? t('注意') : t('正常'); el.style.color = data.pressureLevel === 'critical' ? 'var(--danger)' : data.pressureLevel === 'warning' ? 'var(--warning)' : 'var(--success)'; el.title = data.suggestion || ''; } } catch (_) {}
-  }
-
-  async loadTaskDetails(taskId) {
-    const res = await fetch(`/api/user/task-groups?days=${encodeURIComponent(document.getElementById('statsTimeRange')?.value || '30')}&taskId=${encodeURIComponent(taskId)}`);
-    if (!res.ok) return;
-    const data = await res.json();
-    const details = (data.requests || []).map(r => `${r.created_at} · ${r.model_id || '-'} · ${Number(r.tokens_used || 0).toLocaleString()} Token`).join('\\n');
-    alert(details || t('暂无请求明细'));
   }
 
   /** 实时活动看板：各客户端 hook 上报的最近事件（30s 轮询） */

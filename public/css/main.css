@@ -4961,3 +4961,68 @@ html.dark .spinner {
 .team-detail-section.collapsed .team-detail-section-actions {
   display: none !important;
 }
+
+/* ============ 逻辑任务树视图 ============ */
+.task-tree-root > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.task-tree-root > summary::-webkit-details-marker {
+  display: none;
+}
+.task-tree-root[open] > summary > .task-tree-chevron {
+  transform: rotate(180deg);
+}
+.task-tree-chevron {
+  margin-left: auto;
+  color: var(--muted-foreground);
+  transition: transform 0.15s ease;
+}
+.task-tree-children {
+  margin-top: 8px;
+  padding-left: 16px;
+  border-left: 2px solid var(--border);
+}
+.task-tree-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.task-tree-child code {
+  background: var(--muted);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-tree-subagent {
+  background: var(--brand-blue-bg);
+  color: var(--brand-blue);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+.task-tree-subagent.muted {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+.task-tree-label {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}

@@ -97,6 +97,96 @@ router.get('/task-groups', requireAuth, async (req, res) => {
   }
 });
 
+// ---------- 任务树视图 ----------
+//
+// 归因层 attribution = {sessionId, parentThreadId, thread_id, subagent, isCompaction, source[], harness}
+// 树结构：parentThreadId 为根节点，sessionId/thread_id 为子节点；无父子的独立会话作为单节点树。
+// 仅统计有归因的记录（plugin_meta->'attribution'），属主校验与现有路由一致。
+
+function taskTreeKeyOf(row) {
+  return row.parent_thread_id || row.session_id || row.thread_id || '未归因';
+}
+
+router.get('/task-tree', requireAuth, async (req, res) => {
+  const userId = req.session.user.id;
+  const days = daysParam(req.query.days);
+  try {
+    const result = await pool.query(`
+      SELECT
+        COALESCE(NULLIF(u.plugin_meta->'attribution'->>'parentThreadId', ''), '') AS parent_thread_id,
+        COALESCE(NULLIF(u.plugin_meta->'attribution'->>'sessionId', ''), '') AS session_id,
+        COALESCE(NULLIF(u.plugin_meta->'attribution'->>'thread_id', ''), '') AS thread_id,
+        COALESCE(u.plugin_meta->'attribution'->>'harness', '') AS harness,
+        COALESCE(u.plugin_meta->'attribution'->>'subagent', '') AS subagent,
+        u.tokens_used,
+        u.created_at
+      FROM usage_records u
+      WHERE u.user_id = $1
+        AND u.created_at >= NOW() - ($2::int * INTERVAL '1 day')
+        AND u.plugin_meta ? 'attribution'
+      ORDER BY u.created_at ASC
+    `, [userId, days]);
+
+    // 按根 key 分组，组内再按 child key（sessionId/thread_id）聚合子代理明细
+    const rootMap = new Map();
+    for (const row of result.rows) {
+      const rootKey = taskTreeKeyOf(row);
+      let root = rootMap.get(rootKey);
+      if (!root) {
+        root = {
+          taskKey: rootKey,
+          rootLabel: '',
+          children: new Map(),
+          totals: { requests: 0, tokens: 0 },
+          earliest: null,
+        };
+        rootMap.set(rootKey, root);
+      }
+
+      const childKey = row.session_id || row.thread_id || rootKey;
+      let child = root.children.get(childKey);
+      if (!child) {
+        child = { sessionId: childKey, requestCount: 0, totalTokens: 0, lastSeen: null, subagents: new Set() };
+        root.children.set(childKey, child);
+      }
+
+      child.requestCount += 1;
+      child.totalTokens += Number(row.tokens_used || 0);
+      if (!child.lastSeen || row.created_at > child.lastSeen) child.lastSeen = row.created_at;
+      if (row.subagent) child.subagents.add(row.subagent);
+
+      root.totals.requests += 1;
+      root.totals.tokens += Number(row.tokens_used || 0);
+      if (!root.earliest || row.created_at < root.earliest.created_at) root.earliest = row;
+    }
+
+    const payload = [];
+    for (const root of rootMap.values()) {
+      const children = [...root.children.values()].map(c => ({
+        sessionId: c.sessionId,
+        requestCount: c.requestCount,
+        totalTokens: c.totalTokens,
+        lastSeen: c.lastSeen,
+        subagent: [...c.subagents].sort().filter(Boolean).join('、') || '',
+      }));
+      const earliest = root.earliest;
+      const label = [earliest.harness, earliest.created_at ? new Date(earliest.created_at).toLocaleString('zh-CN', { hour12: false }) : '']
+        .filter(Boolean).join(' · ');
+      payload.push({
+        taskKey: root.taskKey,
+        rootLabel: label || root.taskKey,
+        children,
+        totals: { requests: root.totals.requests, tokens: root.totals.tokens },
+      });
+    }
+
+    res.json({ days, taskTree: payload });
+  } catch (error) {
+    Logger.error('[任务树聚合] 查询错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 router.get('/context-pressure', requireAuth, async (req, res) => {
   const sessionId = String(req.query.sessionId || '').trim();
   if (!sessionId) return res.json({ pressureLevel: 'ok', estimatedWindowPct: 0, suggestion: '暂无会话标识，继续当前对话即可。' });
