@@ -104,6 +104,10 @@
             <img src="https://img.bloret.net/SF/text.quote?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="text.quote">
             <span><span data-i18n="提示词">提示词</span></span>
           </div>
+          <div class="nav-item" data-page="sessions">
+            <img src="https://img.bloret.net/SF/bubble.left?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="bubble.left">
+            <span><span data-i18n="会话">会话</span></span>
+          </div>
         </div>
 
         <div class="nav-section">
@@ -1164,6 +1168,80 @@
             <button id="promptPrevBtn" class="btn btn-secondary" onclick="app.loadCustomPrompts(app.promptPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
             <span id="promptPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
             <button id="promptNextBtn" class="btn btn-secondary" onclick="app.loadCustomPrompts(app.promptPage + 1)"><span data-i18n="下一页">下一页</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 会话页面（经网关的客户端会话聚合，只读） -->
+      <div id="sessionsPage" class="page">
+        <style>
+          .session-card-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--muted-foreground); }
+          .session-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; white-space:nowrap; background:color-mix(in srgb, var(--muted-foreground) 12%, transparent); color:var(--muted-foreground); }
+          .session-badge.cached { background:rgba(16,185,129,.12); color:#10b981; }
+          .session-badge.pressure-warning { background:rgba(245,158,11,.14); color:#f59e0b; }
+          .session-badge.pressure-critical { background:rgba(239,68,68,.14); color:#ef4444; }
+          .timeline { list-style:none; margin:0; padding:0 0 0 18px; border-left:2px solid var(--border); display:flex; flex-direction:column; gap:10px; }
+          .timeline-event { position:relative; padding:10px 12px; border-radius:10px; background:color-mix(in srgb, var(--muted-foreground) 6%, transparent); overflow-wrap:anywhere; }
+          .timeline-event::before { content:''; position:absolute; left:-25px; top:14px; width:10px; height:10px; border-radius:50%; background:var(--muted-foreground); box-shadow:0 0 0 3px var(--background); }
+          .timeline-event.role-user::before { background:#3b82f6; }
+          .timeline-event.role-assistant::before { background:#10b981; }
+          .timeline-event.type-tool_call::before { background:#f59e0b; }
+          .timeline-event.type-tool_result::before { background:#8b5cf6; }
+          .timeline-event.type-thinking::before { background:#ec4899; }
+          .timeline-event-tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.02em; margin-bottom:4px; opacity:.85; }
+          .timeline-event-text { white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.55; max-height:220px; overflow-y:auto; }
+          .timeline-event details summary { cursor:pointer; font-size:12.5px; color:var(--brand-blue, #3b82f6); user-select:none; }
+          .timeline-event details pre { white-space:pre-wrap; word-break:break-all; font-size:12px; line-height:1.5; margin:6px 0 0; padding:8px 10px; border-radius:8px; background:var(--background); border:1px solid var(--border); max-height:260px; overflow:auto; }
+          .timeline-record-head { display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:12px; color:var(--muted-foreground); margin:14px 0 8px; padding-top:10px; border-top:1px dashed var(--border); }
+          .timeline-record-head:first-child { border-top:none; margin-top:0; padding-top:0; }
+        </style>
+        <div class="content-section" id="sessionsListWrap">
+          <div class="section-header">
+            <div>
+              <h2><span data-i18n="会话">会话</span></h2>
+              <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="经过网关的客户端会话，按逻辑会话聚合展示消息时间线与工具调用">经过网关的客户端会话，按逻辑会话聚合展示消息时间线与工具调用</span></p>
+            </div>
+          </div>
+          <div class="admin-filter-bar">
+            <select id="sessionDaysFilter" class="input" style="flex:0;min-width:120px;">
+              <option value="1"><span data-i18n="最近 1 天">最近 1 天</span></option>
+              <option value="7" selected><span data-i18n="最近 7 天">最近 7 天</span></option>
+              <option value="30"><span data-i18n="最近 30 天">最近 30 天</span></option>
+            </select>
+            <select id="sessionSourceFilter" class="input" style="flex:0;min-width:150px;" title="客户端来源" data-i18n-title="客户端来源">
+              <option value=""><span data-i18n="全部客户端">全部客户端</span></option>
+              <option value="grok">Grok</option>
+              <option value="codex">Codex</option>
+              <option value="claude_code">Claude Code</option>
+              <option value="opencode">OpenCode</option>
+              <option value="qwen_code">Qwen Code</option>
+              <option value="hermes">Hermes</option>
+              <option value="openclaw">OpenClaw</option>
+              <option value="deepseek_harness">DeepSeek Harness</option>
+              <option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option>
+            </select>
+            <button class="btn btn-primary" onclick="app.loadSessions(1)"><span data-i18n="查询">查询</span></button>
+            <span id="sessionsCountInfo" class="filter-info"></span>
+          </div>
+          <div id="sessionsList" class="model-library-list"></div>
+          <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+            <button id="sessionsPrevBtn" class="btn btn-secondary" onclick="app.loadSessions(app._sessionsPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
+            <span id="sessionsPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
+            <button id="sessionsNextBtn" class="btn btn-secondary" onclick="app.loadSessions(app._sessionsPage + 1)"><span data-i18n="下一页">下一页</span></button>
+          </div>
+        </div>
+
+        <div class="content-section" id="sessionDetailWrap" style="display:none;">
+          <div class="section-header">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <button class="btn btn-secondary btn-sm" onclick="app.closeSessionDetail()"><span data-i18n="← 返回会话列表">← 返回会话列表</span></button>
+              <h2 id="sessionDetailTitle" style="margin:0;"></h2>
+            </div>
+          </div>
+          <div id="sessionDetailMetaBar" class="session-card-meta" style="margin-bottom:16px;"></div>
+          <div id="sessionTimeline" class="timeline"></div>
+          <div style="display:flex;justify-content:center;margin-top:16px;">
+            <button id="sessionMoreBtn" class="btn btn-secondary" onclick="app.loadSessionMessages(app._detailSessionKey, (app._detailMsgPage || 1) + 1)"><span data-i18n="加载更多">加载更多</span></button>
           </div>
         </div>
       </div>
@@ -2436,7 +2514,7 @@ data: [DONE]</code></pre>
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/dom.js?v=2"></script>
   <script src="/js/dialog.js?v=2"></script>
-  <script src="/js/app.js?v=34"></script>
+  <script src="/js/app.js?v=35"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

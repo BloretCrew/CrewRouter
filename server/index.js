@@ -2387,6 +2387,8 @@ if (isDemo) {
   // 用户级自定义提示词（每人仅见自己的；admin 全站视图走 /api/admin/custom-instructions）
   app.use('/api/user', require('./routes/user-custom-instructions'));
   app.use('/api/user', require('./routes/attribution-view'));
+  // 会话 Tab 只读视图（归因聚合 + 消息时间线，严格 user_id 隔离，demo 不挂载）
+  app.use('/api/user', require('./routes/sessions-view'));
   // 注入提示词（请求侧 system 注入配置，demo 不挂载）
   app.use('/api/user', require('./routes/inject-prompts'));
   // 客户端事件上报（hook → 实时活动看板）

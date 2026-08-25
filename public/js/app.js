@@ -435,6 +435,7 @@ class ConsoleApp {
       case 'settings': this.loadSettings(); break;
       case 'auditLogs': await this.loadAuditLogs(1); break;
       case 'prompts': await Promise.all([this.loadInjectPrompts(), this.loadCustomPrompts(1)]); break;
+      case 'sessions': await this.loadSessions(this._sessionsPage || 1); break;
     }
   }
 
@@ -5001,6 +5002,214 @@ class ConsoleApp {
   _usageRequestSourceBadge(source) {
     const meta = this._usageRequestSourceMeta(source);
     return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:color-mix(in srgb, ${meta.color} 15%, transparent);color:${meta.color};">${escapeHtml(meta.label)}</span>`;
+  }
+
+  // ==================== 会话 Tab（经网关的客户端会话聚合，只读） ====================
+
+  /** 会话列表（服务端已按归因 sessionId / 小时窗分桶聚合，仅当前用户自己的数据） */
+  async loadSessions(page = 1) {
+    this._sessionsPage = Math.max(parseInt(page, 10) || 1, 1);
+    const container = document.getElementById('sessionsList');
+    if (!container) return;
+    setHTML(container, pageLoadingHtml(t('加载会话...'), { compact: true }));
+
+    const days = (document.getElementById('sessionDaysFilter')?.value || '7').trim();
+    const source = (document.getElementById('sessionSourceFilter')?.value || '').trim();
+    const params = new URLSearchParams({ days, page: String(this._sessionsPage), pageSize: '20' });
+    if (source) params.set('source', source);
+
+    try {
+      const res = await fetch(`/api/user/sessions?${params}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('加载失败'));
+
+      const total = Number(data.total || 0);
+      const totalPages = Math.ceil(total / (data.pageSize || 20)) || 1;
+      const countEl = document.getElementById('sessionsCountInfo');
+      if (countEl) countEl.textContent = `${t('共')} ${total} ${t('个会话')}`;
+      const prevBtn = document.getElementById('sessionsPrevBtn');
+      const nextBtn = document.getElementById('sessionsNextBtn');
+      if (prevBtn) { prevBtn.disabled = this._sessionsPage <= 1; }
+      if (nextBtn) { nextBtn.disabled = this._sessionsPage >= totalPages; }
+      const pageInfoEl = document.getElementById('sessionsPageInfo');
+      if (pageInfoEl) pageInfoEl.textContent = `${t('第')}${this._sessionsPage} / ${totalPages}${t('页')}`;
+
+      if (!data.items || !data.items.length) {
+        setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc" style="text-align:center;">${t('所选时间范围内暂无会话')}</div></div></div>`);
+        return;
+      }
+      setHTML(container, data.items.map(item => this.renderSessionCard(item)).join(''));
+    } catch (error) {
+      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('会话加载失败'))}</div></div></div>`);
+    }
+  }
+
+  renderSessionCard(item) {
+    const key = String(item.sessionKey || '');
+    const keyAttr = key.replace(/'/g, '\\&#39;');
+    const harnessMeta = this._usageRequestSourceMeta(item.harness);
+    const cached = Number(item.totalCachedTokens || 0);
+    const pressureBadge = item.pressureLevel === 'critical'
+      ? `<span class="session-badge pressure-critical" title="${t('上下文压力')}">${t('高压')}</span>`
+      : item.pressureLevel === 'warning'
+        ? `<span class="session-badge pressure-warning" title="${t('上下文压力')}">${t('注意')}</span>`
+        : '';
+    const range = `${this.formatRelativeTime(item.firstSeen)} → ${this.formatRelativeTime(item.lastSeen)}`;
+    const cwdText = item.cwd ? `<div class="model-library-item-desc" style="-webkit-line-clamp:1;" title="${escapeHtml(item.cwd)}">📁 ${escapeHtml(String(item.cwd).slice(-80))}</div>` : '';
+    const lastTool = item.lastToolName ? ` · ${t('最近')}: ${item.lastToolName}` : '';
+    return `
+      <div class="model-library-item" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
+        <div class="model-library-item-info">
+          <div class="model-library-item-name">
+            ${this._harnessIconHtml(item.harness, 16)}
+            <span>${escapeHtml(harnessMeta.label)}</span>
+            <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;" title="${escapeHtml(key)}">${escapeHtml(key.slice(0, 18))}…</span>
+          </div>
+          ${cwdText}
+          <div class="session-card-meta">
+            <span>${escapeHtml(range)}</span>
+            <span>${Number(item.requestCount || 0)} ${t('次请求')} · ${Number(item.toolCallCount || 0)} ${t('工具调用')}${escapeHtml(lastTool)}</span>
+          </div>
+        </div>
+        <div class="model-library-item-actions model-item-badges">
+          <span class="model-item-badge" title="${t('总 Token')}">${this._formatBigNumber(Number(item.totalTokens || 0))}</span>
+          ${cached ? `<span class="model-item-badge series session-badge-cached" style="background:rgba(16,185,129,.12);color:#10b981;" title="${t('缓存命中 Token')}">${t('缓存')} ${this._formatBigNumber(cached)}</span>` : ''}
+          ${pressureBadge}
+        </div>
+      </div>`;
+  }
+
+  /** 进入会话详情：切换视图并加载第一页消息时间线 */
+  showSessionDetail(sessionKey) {
+    this._detailSessionKey = String(sessionKey || '');
+    this._detailMsgPage = 0;
+    this._detailLoaded = 0;
+    this._detailTotal = 0;
+    const listWrap = document.getElementById('sessionsListWrap');
+    const detailWrap = document.getElementById('sessionDetailWrap');
+    if (!listWrap || !detailWrap) return;
+    listWrap.style.display = 'none';
+    detailWrap.style.display = '';
+    setHTML(document.getElementById('sessionTimeline'), '');
+    setHTML(document.getElementById('sessionDetailMetaBar'), pageLoadingHtml(t('加载会话...'), { compact: true }));
+    const moreBtn = document.getElementById('sessionMoreBtn');
+    if (moreBtn) moreBtn.style.display = '';
+    window.scrollTo({ top: 0 });
+    this.loadSessionMessages(this._detailSessionKey, 1);
+  }
+
+  /** 会话消息时间线（按请求 ASC 分页；翻页时追加渲染） */
+  async loadSessionMessages(sessionKey, page = 1) {
+    const timeline = document.getElementById('sessionTimeline');
+    const metaBar = document.getElementById('sessionDetailMetaBar');
+    if (!timeline || !sessionKey) return;
+
+    try {
+      const res = await fetch(`/api/user/sessions/${encodeURIComponent(sessionKey)}/messages?page=${encodeURIComponent(page)}&pageSize=10`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('加载失败'));
+
+      this._detailMsgPage = page;
+      this._detailTotal = Number(data.total || 0);
+
+      if (page === 1) {
+        // 详情元信息条（首条与末条记录覆盖时间范围）
+        const records = Array.isArray(data.records) ? data.records : [];
+        let totalTokens = 0, totalCached = 0;
+        const models = new Set();
+        for (const r of records) { totalTokens += Number(r.tokens || 0); totalCached += Number(r.cachedTokens || 0); models.add(r.model); }
+        const harnessMeta = this._usageRequestSourceMeta(records[0]?.harness || 'unknown');
+        setHTML(metaBar, `
+          <span>${this._harnessIconHtml(records[0]?.harness || 'unknown', 14)} ${escapeHtml(harnessMeta.label)}</span>
+          <span class="session-badge">${records[0]?.model ? escapeHtml(String(records[0].model).slice(0, 24)) : t('未知模型')}</span>
+          <span>${this._detailTotal} ${t('次请求')}</span>
+          <span class="session-badge" title="${t('本页 Token 合计')}">${t('Token')} ${this._formatBigNumber(totalTokens)}</span>
+          ${totalCached ? `<span class="session-badge cached">${t('缓存')} ${this._formatBigNumber(totalCached)}</span>` : ''}
+          <span>${escapeHtml(records.length ? `${new Date(records[0].ts).toLocaleString()} → ${new Date(records[records.length - 1].ts).toLocaleString()}` : '')}</span>
+        `);
+        setHTML(timeline, '');
+      }
+
+      const records = Array.isArray(data.records) ? data.records : [];
+      const frag = records.map(record => {
+        const eventsHtml = (record.events || []).map(e => this.renderTimelineEvent(e)).join('');
+        return `
+          <li>
+            <div class="timeline-record-head">
+              <span title="${escapeHtml(new Date(record.ts).toISOString())}">${escapeHtml(new Date(record.ts).toLocaleTimeString())}</span>
+              <span>🤖 ${escapeHtml(record.model ? String(record.model).slice(0, 20) : '-')}</span>
+              <span>${this._formatBigNumber(Number(record.tokens || 0))} Token</span>
+              ${Number(record.cachedTokens || 0) ? `<span style="color:#10b981;">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
+              ${record.latencyMs != null ? `<span>${(record.latencyMs / 1000).toFixed(1)}s</span>` : ''}
+              ${(record.events || []).length} ${t('个事件')}
+            </div>
+            ${eventsHtml}
+          </li>`;
+      }).join('');
+      timeline.insertAdjacentHTML('beforeend', frag);
+
+      this._detailLoaded += records.length;
+      const moreBtn = document.getElementById('sessionMoreBtn');
+      if (moreBtn) moreBtn.style.display = this._detailLoaded >= this._detailTotal ? 'none' : '';
+
+      if (page === 1 && !records.length) {
+        setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${t('该会话暂无消息明细')}</div></li>`);
+      }
+    } catch (error) {
+      setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${escapeHtml(error.message || t('会话详情加载失败'))}</div></li>`);
+    }
+  }
+
+  /** 时间线单事件：文本 / 工具调用 / 工具结果 / 思考 */
+  renderTimelineEvent(evt) {
+    if (!evt || typeof evt !== 'object') return '';
+    if (evt.type === 'tool_call') {
+      const name = evt.name || 'unknown';
+      return `
+        <li class="timeline-event type-tool_call">
+          <span class="timeline-event-tag" style="color:#f59e0b;">🔧 ${t('工具调用')} · ${escapeHtml(name)}</span>
+          ${evt.argsPreview ? `
+          <details>
+            <summary>${t('参数')}</summary>
+            <pre>${escapeHtml(evt.argsPreview)}${evt.truncated ? '\n…' : ''}</pre>
+          </details>` : ''}
+        </li>`;
+    }
+    if (evt.type === 'tool_result') {
+      return `
+        <li class="timeline-event type-tool_result">
+          <span class="timeline-event-tag" style="color:#8b5cf6;">📥 ${t('工具结果')}${evt.name ? ' · ' + escapeHtml(evt.name) : ''}</span>
+          ${evt.resultPreview ? `<div class="timeline-event-text">${escapeHtml(evt.resultPreview)}${evt.resultPreview && evt.resultPreview.length >= 800 ? '\n…' : ''}</div>` : ''}
+        </li>`;
+    }
+    if (evt.type === 'thinking') {
+      return `
+        <li class="timeline-event type-thinking">
+          <span class="timeline-event-tag" style="color:#ec4899;">💭 ${t('思考')}</span>
+          <div class="timeline-event-text" style="font-style:italic;color:var(--muted-foreground);">${escapeHtml(evt.preview || '')}${evt.truncated ? '\n…' : ''}</div>
+        </li>`;
+    }
+    // text 事件（user / assistant / system）
+    const roleMap = {
+      user: { label: `👤 ${t('用户')}`, color: '#3b82f6' },
+      assistant: { label: `🤖 ${t('助手')}`, color: '#10b981' },
+      system: { label: `⚙️ ${t('系统')}`, color: 'var(--muted-foreground)' },
+    };
+    const meta = roleMap[evt.role] || roleMap.system;
+    return `
+      <li class="timeline-event role-${escapeHtml(evt.role || 'system')}">
+        <span class="timeline-event-tag" style="color:${meta.color};">${meta.label}</span>
+        <div class="timeline-event-text">${escapeHtml(evt.text || '')}${evt.truncated ? '\n…' : ''}</div>
+      </li>`;
+  }
+
+  /** 返回会话列表 */
+  closeSessionDetail() {
+    const listWrap = document.getElementById('sessionsListWrap');
+    const detailWrap = document.getElementById('sessionDetailWrap');
+    if (listWrap) listWrap.style.display = '';
+    if (detailWrap) detailWrap.style.display = 'none';
+    this._detailSessionKey = null;
   }
 
   /** 「提示词」页：历史自定义提示词列表（去重合并，仅当前用户自己的，/api/user/custom-instructions） */
