@@ -83,5 +83,5 @@ function summarySentence(groups, hashes, t) {
   if (groups.todo) parts.push(t('更新了任务清单'));
   if (groups.bash) parts.push(t('执行了') + groups.bash + t('条命令'));
   if (groups.other) parts.push(t('调用了') + groups.other + t('个其他工具'));
-  return parts.join('，');
+  return parts.join('，') + '。';
 }
