@@ -1,3 +1,34 @@
+const TOOL_SUMMARY_RULES = [
+  [/^(bash|run_terminal_command|terminal|shell)$/i, (a) => String(a.command || a.cmd || '').split('\n')[0].slice(0, 100)],
+  [/^read$/i, (a) => String(a.file_path || a.path || '')],
+  [/^(write|edit|multiedit|notebookedit)$/i, (a) => {
+    const p = String(a.file_path || a.path || '');
+    const lines = typeof a.content === 'string' ? a.content.split('\n').length : '';
+    return lines ? `${p} (+${lines})` : p;
+  }],
+  [/^grep$/i, (a) => `"${String(a.pattern || '').slice(0, 60)}"${a.path ? ' in ' + a.path : ''}`],
+  [/^(websearch|web_fetch|fetch)$/i, (a) => `"${String(a.query || a.url || '').slice(0, 80)}"`],
+  [/^(todowrite|todo_write)$/i, (a) => `${Array.isArray(a.todos) ? a.todos.length + ' items' : ''}`.trim()],
+  [/^(glob|ls)$/i, (a) => String(a.pattern || a.path || '')],
+];
+
+function summarizeToolCall(name, argsObj, argsPreview) {
+  let args = argsObj && typeof argsObj === 'object' ? argsObj : null;
+  if (!args && argsPreview) { try { args = JSON.parse(argsPreview); } catch (_) {} }
+  if (!args || typeof args !== 'object') return '';
+  for (const [re, fn] of TOOL_SUMMARY_RULES) {
+    if (re.test(name)) {
+      try { return String(fn(args) || ''); } catch (_) { break; }
+    }
+  }
+  for (const k of Object.keys(args)) {
+    const v = args[k];
+    if (typeof v === 'string' || typeof v === 'number') return `${k}: ${String(v).slice(0, 90)}`;
+  }
+  return '';
+}
+
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -5168,16 +5199,9 @@ class ConsoleApp {
       const name = evt.name || 'unknown';
       let argsLine = '';
       try {
-        const args = (evt.argsObj && typeof evt.argsObj === 'object')
-          ? evt.argsObj
-          : JSON.parse(evt.argsPreview || '{}');
-        const keys = Object.keys(args);
-        if (keys.length) {
-          const first = keys[0];
-          const v = String(args[first] ?? '').replace(/\s+/g, ' ');
-          argsLine = `${first}: ${v.length > 80 ? v.slice(0, 80) + '…' : v}`;
-        }
-      } catch (_) { /* argsPreview 非 JSON 时保持原样 */ }
+        const argsObj = (evt.argsObj && typeof evt.argsObj === 'object') ? evt.argsObj : null;
+        argsLine = summarizeToolCall(name, argsObj, evt.argsPreview || '');
+      } catch (_) { /* 摘要失败时保持空 */ }
       return `
         <li class="timeline-event type-tool_call">
           <details class="tool-block">
