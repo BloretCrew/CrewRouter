@@ -237,7 +237,7 @@
             <h2 id="teamDetailTitle"><span data-i18n="Team 详情">Team 详情</span></h2>
             <div class="section-actions">
               <button id="setDefaultTeamBtn" class="btn btn-sm btn-warning"><span data-i18n="设为默认">设为默认</span></button>
-              <button id="setFrontierTeamBtn" class="btn btn-sm" style="border:1px solid #8b5cf6;color:#8b5cf6;"><span data-i18n="设为前沿">设为前沿</span></button>
+              <button id="setFrontierTeamBtn" class="btn btn-sm" style="border:1px solid var(--purple);color:var(--purple);"><span data-i18n="设为前沿">设为前沿</span></button>
               <button id="editTeamBtn" class="btn btn-secondary"><span data-i18n="编辑">编辑</span></button>
               <button id="deleteTeamBtn" class="btn btn-danger"><span data-i18n="删除">删除</span></button>
             </div>
@@ -613,12 +613,12 @@
             <div id="providerTagPopoverTitle" style="font-weight:600;font-size:13px;margin-bottom:8px;"><span data-i18n="创建标签">创建标签</span></div>
             <input type="text" id="newProviderTagName" class="input" placeholder="标签名称" data-i18n-placeholder="标签名称" style="margin-bottom:8px;font-size:13px;" maxlength="100">
             <div class="color-picker color-picker-row" id="providerTagColorPicker" style="margin-bottom:10px;">
-              <span class="provider-tag-color-dot color-dot" data-color="#3b82f6" style="background:#3b82f6;" onclick="adminApp.selectProviderTagColor(this)"></span>
-              <span class="provider-tag-color-dot color-dot" data-color="#10b981" style="background:#10b981;" onclick="adminApp.selectProviderTagColor(this)"></span>
-              <span class="provider-tag-color-dot color-dot" data-color="#f59e0b" style="background:#f59e0b;" onclick="adminApp.selectProviderTagColor(this)"></span>
-              <span class="provider-tag-color-dot color-dot" data-color="#ef4444" style="background:#ef4444;" onclick="adminApp.selectProviderTagColor(this)"></span>
-              <span class="provider-tag-color-dot color-dot" data-color="#8b5cf6" style="background:#8b5cf6;" onclick="adminApp.selectProviderTagColor(this)"></span>
-              <span class="provider-tag-color-dot color-dot" data-color="#ec4899" style="background:#ec4899;" onclick="adminApp.selectProviderTagColor(this)"></span>
+              <span class="provider-tag-color-dot color-dot" data-color="var(--info)" style="background:var(--info);" onclick="adminApp.selectProviderTagColor(this)"></span>
+              <span class="provider-tag-color-dot color-dot" data-color="var(--success)" style="background:var(--success);" onclick="adminApp.selectProviderTagColor(this)"></span>
+              <span class="provider-tag-color-dot color-dot" data-color="var(--warning)" style="background:var(--warning);" onclick="adminApp.selectProviderTagColor(this)"></span>
+              <span class="provider-tag-color-dot color-dot" data-color="var(--danger)" style="background:var(--danger);" onclick="adminApp.selectProviderTagColor(this)"></span>
+              <span class="provider-tag-color-dot color-dot" data-color="var(--purple)" style="background:var(--purple);" onclick="adminApp.selectProviderTagColor(this)"></span>
+              <span class="provider-tag-color-dot color-dot" data-color="var(--pink)" style="background:var(--pink);" onclick="adminApp.selectProviderTagColor(this)"></span>
               <span class="provider-tag-color-dot color-dot" data-color="#6366f1" style="background:#6366f1;" onclick="adminApp.selectProviderTagColor(this)"></span>
               <span class="provider-tag-color-dot color-dot" data-color="#14b8a6" style="background:#14b8a6;" onclick="adminApp.selectProviderTagColor(this)"></span>
             </div>
@@ -707,7 +707,7 @@
           <div id="statsTabOverview" class="stats-tab-content">
             <!-- 统计概要卡片 -->
             <div class="stats-overview-grid" style="margin-bottom:24px;">
-              <div class="stats-overview-card" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">
+              <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--info),#2563eb);">
                 <div class="stats-overview-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                 </div>
@@ -717,7 +717,7 @@
                   <span class="stats-overview-sub" id="statsAvgDailyRequests"><span data-i18n="日均 -">日均 -</span></span>
                 </div>
               </div>
-              <div class="stats-overview-card" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">
+              <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--purple),#7c3aed);">
                 <div class="stats-overview-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 </div>
@@ -727,7 +727,7 @@
                   <span class="stats-overview-sub" id="statsAvgDailyTokens"><span data-i18n="日均 -">日均 -</span></span>
                 </div>
               </div>
-              <div class="stats-overview-card" style="background:linear-gradient(135deg,#10b981,#059669);">
+              <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--success),#059669);">
                 <div class="stats-overview-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </div>
@@ -737,7 +737,7 @@
                   <span class="stats-overview-sub" id="statsAvgDailyCost"><span data-i18n="日均 -">日均 -</span></span>
                 </div>
               </div>
-              <div class="stats-overview-card" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+              <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--warning),#d97706);">
                 <div class="stats-overview-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                 </div>
@@ -763,7 +763,7 @@
             <div class="today-yesterday-grid">
               <div class="today-yesterday-card">
                 <div class="today-yesterday-header">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                   <span><span data-i18n="今日">今日</span></span>
                 </div>
                 <div class="today-yesterday-metrics">
@@ -1215,7 +1215,7 @@
           <div id="updateProgressBox" style="display:none;padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:13px;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;">
             <div id="updateProgressText"><span data-i18n="准备中…">准备中…</span></div>
             <div style="margin-top:8px;height:6px;background:#dbeafe;border-radius:3px;overflow:hidden;">
-              <div id="updateProgressBar" style="height:100%;width:0%;background:#3b82f6;transition:width .3s;"></div>
+              <div id="updateProgressBar" style="height:100%;width:0%;background:var(--info);transition:width .3s;"></div>
             </div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -2308,7 +2308,7 @@
             </div>
             <div style="text-align:center;padding:14px 8px;background:var(--muted);border-radius:10px;">
               <div style="font-size:11px;color:var(--muted-foreground);margin-bottom:6px;"><span data-i18n="剩余额度">剩余额度</span></div>
-              <div style="font-size:18px;font-weight:600;color:#10b981;" id="quotaRemaining">-</div>
+              <div style="font-size:18px;font-weight:600;color:var(--success);" id="quotaRemaining">-</div>
             </div>
     </div>
         </div>

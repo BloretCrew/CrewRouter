@@ -1058,7 +1058,7 @@ class ConsoleApp {
     }
     document.getElementById('createKeyTagName').value = name || '';
     document.querySelectorAll('#createKeyTagColors .color-dot').forEach(d => {
-      d.classList.toggle('selected', d.dataset.color === (color || '#3b82f6'));
+      d.classList.toggle('selected', d.dataset.color === (color || 'var(--info)'));
     });
     if (!document.querySelector('#createKeyTagColors .color-dot.selected')) {
       document.querySelector('#createKeyTagColors .color-dot')?.classList.add('selected');
@@ -1075,7 +1075,7 @@ class ConsoleApp {
     this._openKeyTagPopover(btnEl, {
       title: t('创建标签'),
       name: '',
-      color: '#3b82f6',
+      color: 'var(--info)',
       submitLabel: t('创建'),
       onSubmit: () => app.saveKeyTag()
     });
@@ -1088,7 +1088,7 @@ class ConsoleApp {
     this._openKeyTagPopover(btnEl, {
       title: t('编辑标签'),
       name: tag.name || '',
-      color: tag.color || '#3b82f6',
+      color: tag.color || 'var(--info)',
       submitLabel: t('保存'),
       onSubmit: () => app.saveKeyTag()
     });
@@ -1109,7 +1109,7 @@ class ConsoleApp {
     const name = document.getElementById('createKeyTagName').value.trim();
     if (!name) { this.showToast(t('请输入标签名称'), 'error'); return; }
     const colorEl = document.querySelector('#createKeyTagColors .color-dot.selected');
-    const color = colorEl ? colorEl.dataset.color : '#3b82f6';
+    const color = colorEl ? colorEl.dataset.color : 'var(--info)';
     const editingId = this._editingKeyTagId;
     try {
       const res = editingId
@@ -3423,7 +3423,7 @@ class ConsoleApp {
       setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="project-work-stat"><span>${label}</span><strong>${escapeHtml(value)}</strong><small>${sub}</small></div>`).join(''));
       setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)}${t('次 ·')}${fmtTok(p.tokens)}${t('Token · 最近')}${date(p.last_activity)}</small></span><span class="project-work-arrow">→</span></button>`).join(''));
       setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)}${t(')" title="' + t('复制工作区路径') + '">')}${escapeHtml(p.workspace_path)}${'</button></div></div><div class="project-work-project-metrics"><div><span>' + t('请求')}</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmtTok(p.tokens)}${'</strong></div><div><span>' + t('活跃')}</span><strong>${fmt(p.active_days)}${t('天')}</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || t('未标记客户端')}</span><span>${money(p.cost)}${t('积分')}</span></div></article>`).join(''));
-      if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('AI 请求'), data: (data.daily || []).map(r => r.requests), borderColor: '#0f766e', backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: t('活跃项目'), data: (data.daily || []).map(r => r.projects), borderColor: '#f59e0b', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
+      if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('AI 请求'), data: (data.daily || []).map(r => r.requests), borderColor: '#0f766e', backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: t('活跃项目'), data: (data.daily || []).map(r => r.projects), borderColor: 'var(--warning)', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
     } catch (error) {
       console.error(error);
       if (statusEl) statusEl.textContent = t('同步失败');
@@ -3479,7 +3479,7 @@ class ConsoleApp {
       const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || ('<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--muted-foreground);">' + t('暂无数据') + '</td></tr>')}</tbody></table></div>`;
       setHTML(document.getElementById('userMessageStatsBlockTable'), table([t('区块'), t('请求数'), t('出现次数')], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
       setHTML(document.getElementById('userMessageStatsSourceTable'), table(['Harness', t('请求数'), t('平均消息'), t('平均字符'), 'Token'], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td></tr>`; }).join('')));
-      if (typeof Chart !== 'undefined') this._upsertChart('_userMessageStatsDailyChart', document.getElementById('userMessageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('请求数'), data: (data.daily || []).map(r => r.requests), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: '#8b5cf6', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
+      if (typeof Chart !== 'undefined') this._upsertChart('_userMessageStatsDailyChart', document.getElementById('userMessageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('请求数'), data: (data.daily || []).map(r => r.requests), borderColor: 'var(--info)', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: 'var(--purple)', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
     } catch (error) {
       console.error(error);
       setHTML(document.getElementById('userMessageStatsSummary'), `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
@@ -3505,7 +3505,7 @@ class ConsoleApp {
   }
 
   async loadTaskPressure(sessionId, index) {
-    try { const res = await fetch(`/api/user/context-pressure?sessionId=${encodeURIComponent(sessionId)}`); const data = await res.json(); const el = document.getElementById(`taskPressure-${index}`); if (el) { el.textContent = data.pressureLevel === 'critical' ? t('高压') : data.pressureLevel === 'warning' ? t('注意') : t('正常'); el.style.color = data.pressureLevel === 'critical' ? '#ef4444' : data.pressureLevel === 'warning' ? '#f59e0b' : '#10b981'; el.title = data.suggestion || ''; } } catch (_) {}
+    try { const res = await fetch(`/api/user/context-pressure?sessionId=${encodeURIComponent(sessionId)}`); const data = await res.json(); const el = document.getElementById(`taskPressure-${index}`); if (el) { el.textContent = data.pressureLevel === 'critical' ? t('高压') : data.pressureLevel === 'warning' ? t('注意') : t('正常'); el.style.color = data.pressureLevel === 'critical' ? 'var(--danger)' : data.pressureLevel === 'warning' ? 'var(--warning)' : 'var(--success)'; el.title = data.suggestion || ''; } } catch (_) {}
   }
 
   async loadTaskDetails(taskId) {
@@ -4166,7 +4166,7 @@ class ConsoleApp {
     const summaryHtml = `
       <div class="model-test-summary">
         <div class="model-test-summary-item">
-          <div class="model-test-summary-value" style="color:#10b981;">${passed}</div>
+          <div class="model-test-summary-value" style="color:var(--success);">${passed}</div>
           <div class="model-test-summary-label">通过</div>
         </div>
         ${failed > 0 ? `
@@ -4180,7 +4180,7 @@ class ConsoleApp {
         </div>
       </div>
       <div class="model-test-summary-bar">
-        <div class="model-test-summary-bar-fill" style="width:${passPct}%;${failed > 0 ? 'background:linear-gradient(90deg,#10b981,' + (passPct > 50 ? '#eab308' : 'var(--destructive)') + ')' : ''}"></div>
+        <div class="model-test-summary-bar-fill" style="width:${passPct}%;${failed > 0 ? 'background:linear-gradient(90deg,var(--success),' + (passPct > 50 ? '#eab308' : 'var(--destructive)') + ')' : ''}"></div>
       </div>
     `;
 
@@ -4432,7 +4432,7 @@ class ConsoleApp {
               <span class="stats-insight-value">${requests.toLocaleString()}</span>
             </div>
             <div style="height:4px;background:var(--muted);border-radius:2px;overflow:hidden;">
-              <div style="height:100%;width:${barW}%;background:#06b6d4;border-radius:2px;"></div>
+              <div style="height:100%;width:${barW}%;background:var(--cyan);border-radius:2px;"></div>
             </div>
           </div>`;
         }).join(''));
@@ -4573,19 +4573,19 @@ class ConsoleApp {
     const latencies = rows.map(r => Math.round(parseFloat(r.avg_latency || 0)));
 
     this._upsertChart('_uDailyReqChart', document.getElementById('userDailyRequestsChart'), 'line', {
-      labels, datasets: [{ label: t('请求数'), data: requests, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
+      labels, datasets: [{ label: t('请求数'), data: requests, borderColor: 'var(--info)', backgroundColor: 'rgba(59,130,246,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
     }, this._lineChartOpts());
 
     this._upsertChart('_uDailyTokChart', document.getElementById('userDailyTokensChart'), 'line', {
-      labels, datasets: [{ label: 'Token', data: tokens, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
+      labels, datasets: [{ label: 'Token', data: tokens, borderColor: 'var(--purple)', backgroundColor: 'rgba(139,92,246,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
     }, this._lineChartOpts());
 
     this._upsertChart('_uDailyCostChart', document.getElementById('userDailyCostChart'), 'line', {
-      labels, datasets: [{ label: t('积分'), data: costs, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
+      labels, datasets: [{ label: t('积分'), data: costs, borderColor: 'var(--success)', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
     }, this._lineChartOpts());
 
     this._upsertChart('_uDailyLatChart', document.getElementById('userDailyLatencyChart'), 'line', {
-      labels, datasets: [{ label: t('延迟(ms)'), data: latencies, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
+      labels, datasets: [{ label: t('延迟(ms)'), data: latencies, borderColor: 'var(--warning)', backgroundColor: 'rgba(245,158,11,0.15)', fill: true, tension: 0.4, pointRadius: 3, pointHoverRadius: 6 }]
     }, this._lineChartOpts('ms'));
   }
 
@@ -4602,8 +4602,8 @@ class ConsoleApp {
     this._upsertChart('_uHourlyChart', document.getElementById('userHourlyChart'), 'bar', {
       labels,
       datasets: [
-        { label: t('请求数'), data: requests, backgroundColor: 'rgba(59,130,246,0.7)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
-        { label: 'Token', data: tokens, backgroundColor: 'rgba(139,92,246,0.5)', borderColor: '#8b5cf6', borderWidth: 1, borderRadius: 4, yAxisID: 'y1' }
+        { label: t('请求数'), data: requests, backgroundColor: 'rgba(59,130,246,0.7)', borderColor: 'var(--info)', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
+        { label: 'Token', data: tokens, backgroundColor: 'rgba(139,92,246,0.5)', borderColor: 'var(--purple)', borderWidth: 1, borderRadius: 4, yAxisID: 'y1' }
       ]
     }, {
       responsive: true, maintainAspectRatio: false,
@@ -4625,7 +4625,7 @@ class ConsoleApp {
     });
     const requests = top.map(m => parseInt(m.requests || 0));
     const costs = top.map(m => parseFloat(m.cost || 0));
-    const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#14b8a6'];
+    const colors = ['var(--info)', 'var(--purple)', 'var(--success)', 'var(--warning)', 'var(--danger)', 'var(--cyan)', 'var(--pink)', '#14b8a6'];
     const c = this._getChartColors();
     const doughnutOpts = {
       responsive: true, maintainAspectRatio: false,
@@ -4647,7 +4647,7 @@ class ConsoleApp {
     if (!d || !d.byApiKey || d.byApiKey.length === 0 || typeof Chart === 'undefined') return;
     const labels = d.byApiKey.map(k => k.key_name || k.key_prefix || 'Key');
     const requests = d.byApiKey.map(k => parseInt(k.requests || 0));
-    const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#14b8a6'];
+    const colors = ['var(--info)', 'var(--purple)', 'var(--success)', 'var(--warning)', 'var(--danger)', 'var(--cyan)', 'var(--pink)', '#14b8a6'];
     const c = this._getChartColors();
 
     this._upsertChart('_uApiKeyChart', document.getElementById('userApiKeyChart'), 'bar', {
@@ -4671,7 +4671,7 @@ class ConsoleApp {
       const promptTokens = parseInt(r.prompt_tokens || 0);
       const cachedTokens = parseInt(r.cached_tokens || 0);
       const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
-      const cacheColor = cachedTokens > 0 ? '#10b981' : 'var(--muted-foreground)';
+      const cacheColor = cachedTokens > 0 ? 'var(--success)' : 'var(--muted-foreground)';
       return `<tr>
         <td style="padding:8px;border-bottom:1px solid var(--border);">${new Date(r.date).toLocaleDateString('zh-CN')}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(r.requests).toLocaleString()}</td>
@@ -4692,7 +4692,7 @@ class ConsoleApp {
       const promptTokens = parseInt(m.prompt_tokens || 0);
       const cachedTokens = parseInt(m.cached_tokens || 0);
       const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
-      const cacheColor = cachedTokens > 0 ? '#10b981' : 'var(--muted-foreground)';
+      const cacheColor = cachedTokens > 0 ? 'var(--success)' : 'var(--muted-foreground)';
       return `<tr>
         <td style="padding:8px;border-bottom:1px solid var(--border);font-size:12px;">${m.model_name || t('(已删除)')}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(m.requests).toLocaleString()}</td>
@@ -4717,7 +4717,7 @@ class ConsoleApp {
       <td style="padding:8px;border-bottom:1px solid var(--border);font-family:monospace;">${k.key_prefix || ''}****</td>
       <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(k.requests).toLocaleString()}</td>
       <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${kTokens.toLocaleString()}">${this._formatBigNumber(kTokens)}</td>
-      <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${cachedTokens > 0 ? '<span style="color:#10b981;" title="' + cachedTokens.toLocaleString() + '">' + this._formatBigNumber(cachedTokens) + '</span>' : '-'}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${cachedTokens > 0 ? '<span style="color:var(--success);" title="' + cachedTokens.toLocaleString() + '">' + this._formatBigNumber(cachedTokens) + '</span>' : '-'}</td>
       <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">¥${parseFloat(k.cost).toFixed(4)}</td>
     </tr>`;
     }).join(''));
@@ -4957,17 +4957,17 @@ class ConsoleApp {
       },
       codex: {
         label: 'Codex',
-        color: '#10b981',
+        color: 'var(--success)',
         icon: 'https://img.bloret.net/img/1781951439833/5dd31c41da3d9ba8d8c63c41ba899d52'
       },
       claude_code: {
         label: 'Claude Code',
-        color: '#f59e0b',
+        color: 'var(--warning)',
         icon: 'https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1'
       },
       opencode: {
         label: 'OpenCode',
-        color: '#3b82f6',
+        color: 'var(--info)',
         icon: 'https://img.bloret.net/img/1781951398735/6d800bec66c4599b4f8e8e42bb9331d6'
       },
       qwen_code: {
@@ -4977,7 +4977,7 @@ class ConsoleApp {
       },
       hermes: {
         label: 'Hermes',
-        color: '#ec4899',
+        color: 'var(--pink)',
         icon: 'https://img.bloret.net/img/1783300640677/085bcecf994f63347ce29dcdadffdb9f'
       },
       openclaw: {
@@ -5104,7 +5104,7 @@ class ConsoleApp {
         </div>
         <div class="model-library-item-actions model-item-badges">
           <span class="model-item-badge" title="${t('总 Token')}">${this._formatBigNumber(Number(item.totalTokens || 0))}</span>
-          ${cached ? `<span class="model-item-badge series session-badge-cached" style="background:rgba(16,185,129,.12);color:#10b981;" title="${t('缓存命中 Token')}">${t('缓存')} ${this._formatBigNumber(cached)}</span>` : ''}
+          ${cached ? `<span class="model-item-badge series session-badge-cached" style="background:rgba(16,185,129,.12);color:var(--success);" title="${t('缓存命中 Token')}">${t('缓存')} ${this._formatBigNumber(cached)}</span>` : ''}
           ${pressureBadge}
         </div>
       </div>`;
@@ -5179,7 +5179,7 @@ class ConsoleApp {
               <span title="${escapeHtml(new Date(record.ts).toISOString())}">${escapeHtml(new Date(record.ts).toLocaleTimeString())}</span>
               <span>${this._sfIcon('text.bubble', '10b981')} ${escapeHtml(record.model ? String(record.model).slice(0, 20) : '-')}</span>
               <span>${this._formatBigNumber(Number(record.tokens || 0))} Token</span>
-              ${Number(record.cachedTokens || 0) ? `<span style="color:#10b981;">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
+              ${Number(record.cachedTokens || 0) ? `<span style="color:var(--success);">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
               ${record.latencyMs != null ? `<span>${(record.latencyMs / 1000).toFixed(1)}s</span>` : ''}
               ${suppressed > 0 ? `<span class="merged-tag">上下文重放 +${suppressed}</span>` : `${evts.length} 个事件`}
             </div>
@@ -5283,8 +5283,8 @@ class ConsoleApp {
     }
     // —— 正文：user 高亮气泡 / assistant 常规 / system 弱化 ——
     const roleMap = {
-      user: { label: `${this._sfIcon('person.crop.circle', '3b82f6')} ${t('用户')}`, color: '#3b82f6' },
-      assistant: { label: `${this._sfIcon('text.bubble', '10b981')} ${t('助手')}`, color: '#10b981' },
+      user: { label: `${this._sfIcon('person.crop.circle', '3b82f6')} ${t('用户')}`, color: 'var(--info)' },
+      assistant: { label: `${this._sfIcon('text.bubble', '10b981')} ${t('助手')}`, color: 'var(--success)' },
       system: { label: `${this._sfIcon('gearshape.fill', '9ca3af')} ${t('系统')}`, color: 'var(--muted-foreground)' },
     };
     const meta = roleMap[evt.role] || roleMap.system;
@@ -5725,7 +5725,7 @@ class ConsoleApp {
               const cachedTokens = parseInt(log.cached_tokens || 0, 10);
               const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
               const cacheDisplay = cachedTokens > 0
-                ? `<span style="color:#10b981;" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
+                ? `<span style="color:var(--success);" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
                 : '<span style="color:var(--muted-foreground);">-</span>';
               const modelLabel = log.model_name
                 || (log.request_type === 'fusion' ? 'Fusion' : null)
@@ -5832,7 +5832,7 @@ class ConsoleApp {
     const cachedTokens = parseInt(log.cached_tokens || 0, 10);
     const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
     const cacheDisplay = cachedTokens > 0
-      ? `<span title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="color:#10b981;font-size:12px;">(${cacheRate}${t('% 命中)')}</span>`
+      ? `<span title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="color:var(--success);font-size:12px;">(${cacheRate}${t('% 命中)')}</span>`
       : '0';
 
     const modelLabel = log.model_name
@@ -5931,7 +5931,7 @@ class ConsoleApp {
             const pct = limit > 0 ? Math.min(100, (current / limit) * 100) : 0;
             const isWarning = pct >= 80;
             const isOver = pct >= 100;
-            const barColor = isOver ? 'var(--destructive, #ef4444)' : isWarning ? '#f59e0b' : 'var(--brand-blue, #3b82f6)';
+            const barColor = isOver ? 'var(--destructive, var(--danger))' : isWarning ? 'var(--warning)' : 'var(--brand-blue, var(--info))';
             const isRequests = rule.rule_type === 'requests';
             const unit = isRequests ? t('次') : 'tokens';
             const typeLabel = isRequests ? t('请求次数') : t('Token 用量');
@@ -6029,7 +6029,7 @@ class ConsoleApp {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t('保存失败'));
-      if (status) { status.textContent = t('保存成功'); status.style.color = '#22c55e'; }
+      if (status) { status.textContent = t('保存成功'); status.style.color = 'var(--success)'; }
     } catch (error) {
       if (status) { status.textContent = error.message || t('保存失败'); status.style.color = 'var(--destructive)'; }
     }
@@ -6042,7 +6042,7 @@ class ConsoleApp {
       const res = await fetch('/api/user/notification-settings/test', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t('发送失败'));
-      if (status) { status.textContent = t('测试通知已发送'); status.style.color = '#22c55e'; }
+      if (status) { status.textContent = t('测试通知已发送'); status.style.color = 'var(--success)'; }
     } catch (error) {
       if (status) { status.textContent = error.message || t('发送失败'); status.style.color = 'var(--destructive)'; }
     }
@@ -6118,7 +6118,7 @@ class ConsoleApp {
         <div class="model-library-item" style="margin-bottom:10px;">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <strong>${escapeHtml(rule.name || t('未命名规则'))}</strong>
-            <span class="session-badge" style="${rule.enabled ? 'color:#10b981;background:color-mix(in srgb,#10b981 12%,transparent);' : 'color:var(--muted-foreground);background:var(--muted);'}">${rule.enabled ? t('已启用') : t('已停用')}</span>
+            <span class="session-badge" style="${rule.enabled ? 'color:var(--success);background:color-mix(in srgb,var(--success) 12%,transparent);' : 'color:var(--muted-foreground);background:var(--muted);'}">${rule.enabled ? t('已启用') : t('已停用')}</span>
             <span style="margin-left:auto;display:flex;gap:6px;">
               <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="app.showHookNotifyRuleModal(${rule.id})">${t('编辑')}</button>
               <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="app.deleteHookNotifyRule(${rule.id})">${t('删除')}</button>
@@ -6258,7 +6258,7 @@ class ConsoleApp {
         this.user.api_signature_enabled = toggle.checked;
         this.user.api_signature_template = template.value;
         status.textContent = t('保存成功');
-        status.style.color = '#22c55e';
+        status.style.color = 'var(--success)';
       } else {
         status.textContent = data.error || t('保存失败');
         status.style.color = 'var(--destructive)';
@@ -6303,7 +6303,7 @@ class ConsoleApp {
         this.user.avatar = data.url;
         this.updateUserInfo();
         statusEl.textContent = t('上传成功');
-        statusEl.style.color = '#22c55e';
+        statusEl.style.color = 'var(--success)';
       } else {
         statusEl.textContent = data.error || t('上传失败');
         statusEl.style.color = 'var(--destructive)';
@@ -6349,7 +6349,7 @@ class ConsoleApp {
       const data = await res.json();
       if (res.ok) {
         statusEl.textContent = data.message || t('密码修改成功');
-        statusEl.style.color = '#22c55e';
+        statusEl.style.color = 'var(--success)';
         document.getElementById('currentPassword').value = '';
         document.getElementById('newPassword').value = '';
         document.getElementById('confirmNewPassword').value = '';
@@ -7110,7 +7110,7 @@ ${extractorBody}
   showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:10000;padding:12px 20px;border-radius:8px;font-size:14px;color:white;box-shadow:0 4px 12px rgba(0,0,0,0.15);transition:opacity 0.3s;opacity:0;`;
-    toast.style.background = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6';
+    toast.style.background = type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--info)';
     toast.textContent = message;
     document.body.appendChild(toast);
     requestAnimationFrame(() => { toast.style.opacity = '1'; });
@@ -7144,7 +7144,7 @@ ${extractorBody}
       if (data.enabled) {
         statusBadge.textContent = t('已启用');
         statusBadge.style.background = 'rgba(34,197,94,0.1)';
-        statusBadge.style.color = '#22c55e';
+        statusBadge.style.color = 'var(--success)';
         if (setupDiv) setupDiv.style.display = 'none';
         if (disableDiv) disableDiv.style.display = 'block';
         if (startBtn) startBtn.style.display = 'none';
@@ -7264,7 +7264,7 @@ ${extractorBody}
       if (data.success) {
         if (statusEl) {
           statusEl.textContent = t('2FA 已成功启用');
-          statusEl.style.color = '#22c55e';
+          statusEl.style.color = 'var(--success)';
         }
         const setupDiv = document.getElementById('twoFactorSetup');
         if (setupDiv) setupDiv.dataset.active = '0';
@@ -7311,7 +7311,7 @@ ${extractorBody}
       if (data.success) {
         if (statusEl) {
           statusEl.textContent = t('2FA 已关闭');
-          statusEl.style.color = '#22c55e';
+          statusEl.style.color = 'var(--success)';
         }
         const pwdInput = document.getElementById('tfaDisablePassword');
         if (pwdInput) pwdInput.value = '';
@@ -7488,7 +7488,7 @@ ${extractorBody}
     const setStatus = (msg, ok) => {
       if (!statusEl) return;
       statusEl.textContent = msg;
-      statusEl.style.color = ok ? '#22c55e' : 'var(--destructive)';
+      statusEl.style.color = ok ? 'var(--success)' : 'var(--destructive)';
     };
 
     if (!window.PublicKeyCredential) {
@@ -7894,7 +7894,7 @@ ${extractorBody}
       const resp = await fetch(`/api/user/providers/${providerId}/ping`);
       const data = await resp.json();
       const resultHtml = data.ok
-        ? `<span style="color:${data.latency_ms <= 300 ? '#10b981' : data.latency_ms <= 1000 ? '#f59e0b' : 'var(--destructive)'};font-weight:500;">${data.latency_ms}ms</span>`
+        ? `<span style="color:${data.latency_ms <= 300 ? 'var(--success)' : data.latency_ms <= 1000 ? 'var(--warning)' : 'var(--destructive)'};font-weight:500;">${data.latency_ms}ms</span>`
         : `<span style="color:var(--destructive);" title="${escapeHtml(data.error || '')}">${t('失败')}</span>`;
       if (display) setHTML(display, resultHtml);
       if (pageDisplay) setHTML(pageDisplay, resultHtml);
@@ -8289,7 +8289,7 @@ ${extractorBody}
               <td>${m.series ? `<span style="font-size:11px;background:var(--muted);padding:2px 6px;border-radius:4px;">${escapeHtml(m.series)}</span>` : '<span style="color:var(--muted-foreground);font-size:12px;">-</span>'}</td>
               <td style="font-size:13px;">×${parseFloat(m.model_multiplier || 1.0).toFixed(2)}</td>
               <td>${m.enabled !== false
-                ? '<span style="font-size:11px;color:var(--success,var(--brand-green,#22c55e));">' + t('● 启用') + '</span>'
+                ? '<span style="font-size:11px;color:var(--success,var(--brand-green,var(--success)));">' + t('● 启用') + '</span>'
                 : '<span style="font-size:11px;color:var(--destructive);">' + t('● 禁用') + '</span>'
               }</td>
               <td>
@@ -9833,7 +9833,7 @@ ${extractorBody}
 
       let barColor = 'var(--primary)';
       if (pct >= 90) barColor = 'var(--destructive)';
-      else if (pct >= 70) barColor = '#f59e0b';
+      else if (pct >= 70) barColor = 'var(--warning)';
 
       const credits = q.credits || {};
       const resetCredits = q.rateLimitResetCredits?.available_count;
@@ -9849,7 +9849,7 @@ ${extractorBody}
             const periodPct = Math.max(0, Math.min(100, Number(period.percent) || 0));
             let periodColor = 'var(--primary)';
             if (periodPct >= 90) periodColor = 'var(--destructive)';
-            else if (periodPct >= 70) periodColor = '#f59e0b';
+            else if (periodPct >= 70) periodColor = 'var(--warning)';
             const resetText = period.resetsAt ? this.formatQuotaResetTime(period.resetsAt) : '';
             const resetTitle = period.resetsAt ? new Date(period.resetsAt).toLocaleString('zh-CN', { hour12: false }) : '';
             const periodRange = period.startsAt || period.resetsAt

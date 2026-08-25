@@ -545,13 +545,13 @@
               <input type="text" id="createKeyTagName" class="input" placeholder="标签名称" data-i18n-placeholder="标签名称" style="width:100%;margin-bottom:10px;" maxlength="20">
               <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:6px;"><span data-i18n="选择颜色">选择颜色</span></div>
               <div class="color-picker color-picker-row" id="createKeyTagColors">
-                <div class="color-dot selected" data-color="#3b82f6" style="background:#3b82f6;" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#10b981" style="background:#10b981;" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#f59e0b" style="background:#f59e0b;" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#ef4444" style="background:#ef4444;" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#8b5cf6" style="background:#8b5cf6;" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#ec4899" style="background:#ec4899;" onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#06b6d4" style="background:#06b6d4;" onclick="app.selectTagColor(this)"></div>
+                <div class="color-dot selected" data-color="var(--info)" style="background:var(--info);" onclick="app.selectTagColor(this)"></div>
+                <div class="color-dot" data-color="var(--success)" style="background:var(--success);" onclick="app.selectTagColor(this)"></div>
+                <div class="color-dot" data-color="var(--warning)" style="background:var(--warning);" onclick="app.selectTagColor(this)"></div>
+                <div class="color-dot" data-color="var(--danger)" style="background:var(--danger);" onclick="app.selectTagColor(this)"></div>
+                <div class="color-dot" data-color="var(--purple)" style="background:var(--purple);" onclick="app.selectTagColor(this)"></div>
+                <div class="color-dot" data-color="var(--pink)" style="background:var(--pink);" onclick="app.selectTagColor(this)"></div>
+                <div class="color-dot" data-color="var(--cyan)" style="background:var(--cyan);" onclick="app.selectTagColor(this)"></div>
                 <div class="color-dot" data-color="#f97316" style="background:#f97316;" onclick="app.selectTagColor(this)"></div>
                 <div class="color-dot" data-color="#84cc16" style="background:#84cc16;" onclick="app.selectTagColor(this)"></div>
                 <div class="color-dot" data-color="#6366f1" style="background:#6366f1;" onclick="app.selectTagColor(this)"></div>
@@ -656,7 +656,7 @@
 
           <!-- 概览卡片 -->
           <div class="stats-overview-grid">
-            <div class="stats-overview-card" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">
+            <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--info),#2563eb);">
               <div class="stats-overview-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
               </div>
@@ -666,7 +666,7 @@
                 <span class="stats-overview-sub" id="statsAvgDailyRequests"></span>
               </div>
             </div>
-            <div class="stats-overview-card" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);">
+            <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--purple),#7c3aed);">
               <div class="stats-overview-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               </div>
@@ -676,7 +676,7 @@
                 <span class="stats-overview-sub" id="statsTokenBreakdown"></span>
               </div>
             </div>
-            <div class="stats-overview-card" style="background:linear-gradient(135deg,#10b981,#059669);">
+            <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--success),#059669);">
               <div class="stats-overview-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               </div>
@@ -686,7 +686,7 @@
                 <span class="stats-overview-sub" id="statsAvgDailyCost"></span>
               </div>
             </div>
-            <div class="stats-overview-card" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+            <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--warning),#d97706);">
               <div class="stats-overview-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               </div>
@@ -729,7 +729,7 @@
           <div id="cacheHitSection" class="cache-hit-section" style="display:none;">
             <div class="cache-hit-header">
               <div class="cache-hit-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12l3 3 5-5"/>
                 </svg>
                 <span><span data-i18n="Prompt 缓存命中">Prompt 缓存命中</span></span>
@@ -759,7 +759,7 @@
           <div class="today-yesterday-grid">
             <div class="today-yesterday-card">
               <div class="today-yesterday-header">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                 <span><span data-i18n="今日">今日</span></span>
               </div>
               <div class="today-yesterday-metrics">
@@ -843,7 +843,7 @@
             <div class="stats-overview-insights">
               <div class="stats-insight-card">
                 <div class="stats-insight-header">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--info)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                   <span><span data-i18n="最常用模型">最常用模型</span></span>
                 </div>
                 <div id="topModelsList" class="stats-insight-list">
@@ -852,7 +852,7 @@
               </div>
               <div class="stats-insight-card">
                 <div class="stats-insight-header">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                   <span><span data-i18n="高峰时段">高峰时段</span></span>
                 </div>
                 <div id="peakHoursList" class="stats-insight-list">
@@ -861,7 +861,7 @@
               </div>
               <div class="stats-insight-card">
                 <div class="stats-insight-header">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                   <span><span data-i18n="积分消耗趋势">积分消耗趋势</span></span>
                 </div>
                 <div id="costTrendList" class="stats-insight-list">
@@ -870,7 +870,7 @@
               </div>
               <div class="stats-insight-card">
                 <div class="stats-insight-header">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12l3 3 5-5"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12l3 3 5-5"/></svg>
                   <span><span data-i18n="关键指标">关键指标</span></span>
                 </div>
                 <div id="keyMetricsList" class="stats-insight-list">
@@ -888,7 +888,7 @@
               </div>
               <div class="stats-insight-card">
                 <div class="stats-insight-header">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
                   <span><span data-i18n="插件维度">插件维度</span></span>
                 </div>
                 <div id="topPluginsList" class="stats-insight-list">
@@ -1177,20 +1177,20 @@
         <style>
           .session-card-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--muted-foreground); }
           .session-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; white-space:nowrap; background:color-mix(in srgb, var(--muted-foreground) 12%, transparent); color:var(--muted-foreground); }
-          .session-badge.cached { background:rgba(16,185,129,.12); color:#10b981; }
-          .session-badge.pressure-warning { background:rgba(245,158,11,.14); color:#f59e0b; }
-          .session-badge.pressure-critical { background:rgba(239,68,68,.14); color:#ef4444; }
+          .session-badge.cached { background:rgba(16,185,129,.12); color:var(--success); }
+          .session-badge.pressure-warning { background:rgba(245,158,11,.14); color:var(--warning); }
+          .session-badge.pressure-critical { background:rgba(239,68,68,.14); color:var(--danger); }
           .timeline { list-style:none; margin:0; padding:0 0 0 18px; border-left:2px solid var(--border); display:flex; flex-direction:column; gap:10px; }
           .timeline-event { position:relative; padding:10px 12px; border-radius:10px; background:color-mix(in srgb, var(--muted-foreground) 6%, transparent); overflow-wrap:anywhere; }
           .timeline-event::before { content:''; position:absolute; left:-25px; top:14px; width:10px; height:10px; border-radius:50%; background:var(--muted-foreground); box-shadow:0 0 0 3px var(--background); }
-          .timeline-event.role-user::before { background:#3b82f6; }
-          .timeline-event.role-assistant::before { background:#10b981; }
-          .timeline-event.type-tool_call::before { background:#f59e0b; }
-          .timeline-event.type-tool_result::before { background:#8b5cf6; }
-          .timeline-event.type-thinking::before { background:#ec4899; }
+          .timeline-event.role-user::before { background:var(--info); }
+          .timeline-event.role-assistant::before { background:var(--success); }
+          .timeline-event.type-tool_call::before { background:var(--warning); }
+          .timeline-event.type-tool_result::before { background:var(--purple); }
+          .timeline-event.type-thinking::before { background:var(--pink); }
           .timeline-event-tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.02em; margin-bottom:4px; opacity:.85; }
           .timeline-event-text { white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.55; max-height:220px; overflow-y:auto; }
-          .timeline-event details summary { cursor:pointer; font-size:12.5px; color:var(--brand-blue, #3b82f6); user-select:none; }
+          .timeline-event details summary { cursor:pointer; font-size:12.5px; color:var(--brand-blue, var(--info)); user-select:none; }
           .timeline-event details pre { white-space:pre-wrap; word-break:break-all; font-size:12px; line-height:1.5; margin:6px 0 0; padding:8px 10px; border-radius:8px; background:var(--background); border:1px solid var(--border); max-height:260px; overflow:auto; }
           .timeline-record-head { display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:12px; color:var(--muted-foreground); margin:14px 0 8px; padding-top:10px; border-top:1px dashed var(--border); }
           .timeline-record-head:first-child { border-top:none; margin-top:0; padding-top:0; }
@@ -1198,16 +1198,16 @@
           .timeline-event details.tool-block { margin:2px 0 0; }
           .timeline-event details.tool-block summary { list-style:none; display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--foreground); }
           .timeline-event details.tool-block summary::-webkit-details-marker { display:none; }
-          .timeline-event details.tool-block[open] summary { color:var(--brand-blue, #3b82f6); }
-          .tool-dot { color:#f59e0b; font-size:11px; }
+          .timeline-event details.tool-block[open] summary { color:var(--brand-blue, var(--info)); }
+          .tool-dot { color:var(--warning); font-size:11px; }
           .tool-name { font-weight:600; }
           .tool-args { color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:420px; font-size:12px; }
           .tool-args-full, .tool-result-text { white-space:pre-wrap; word-break:break-word; font-size:12px; line-height:1.5; margin:6px 0 0; padding:8px 10px; border-radius:8px; background:var(--background); border:1px solid var(--border); max-height:260px; overflow:auto; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; }
           .tool-result-block { border-left:2px solid var(--border); padding-left:10px; margin-left:6px; }
-          .type-tool_result.tool-result-error .tool-result-line { color:#ef4444; }
+          .type-tool_result.tool-result-error .tool-result-line { color:var(--danger); }
           .type-tool_result.tool-result-error .tool-result-text { border-color:#ef444455; background:rgba(239,68,68,.06); }
-          .tool-error-tag { display:inline-block; font-size:10.5px; font-weight:700; padding:0 6px; border-radius:5px; background:rgba(239,68,68,.14); color:#ef4444; margin-right:6px; }
-          .thinking-block summary { list-style:none; cursor:pointer; font-size:12.5px; color:#ec4899; user-select:none; }
+          .tool-error-tag { display:inline-block; font-size:10.5px; font-weight:700; padding:0 6px; border-radius:5px; background:rgba(239,68,68,.14); color:var(--danger); margin-right:6px; }
+          .thinking-block summary { list-style:none; cursor:pointer; font-size:12.5px; color:var(--pink); user-select:none; }
           .thinking-block summary::-webkit-details-marker { display:none; }
           .thinking-text { font-style:italic; color:var(--muted-foreground); margin-top:4px; }
           .merged-tag { color:var(--muted-foreground); font-size:11px; font-style:italic; opacity:.7; }
@@ -1385,7 +1385,7 @@ const res = await client.chat.completions.create({
               <h2><span data-i18n="聊天补全 (Chat Completions)">聊天补全 (Chat Completions)</span></h2>
               <div class="doc-section">
                 <div style="display:inline-flex;align-items:center;gap:8px;background:var(--muted);padding:6px 12px;border-radius:8px;font-family:monospace;font-size:14px;margin-bottom:12px;">
-                  <span style="background:#10b981;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">POST</span>
+                  <span style="background:var(--success);color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">POST</span>
                   <span>/v1/chat/completions</span>
                 </div>
                 <p><span data-i18n="完全兼容 OpenAI SDK 和 API 格式。">完全兼容 OpenAI SDK 和 API 格式。</span></p>
@@ -1434,7 +1434,7 @@ data: [DONE]</code></pre>
               <h2><span data-i18n="模型列表">模型列表</span></h2>
               <div class="doc-section">
                 <div style="display:inline-flex;align-items:center;gap:8px;background:var(--muted);padding:6px 12px;border-radius:8px;font-family:monospace;font-size:14px;margin-bottom:12px;">
-                  <span style="background:#10b981;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">GET</span>
+                  <span style="background:var(--success);color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">GET</span>
                   <span>/v1/models</span>
                 </div>
                 <p><span data-i18n="返回所有已启用模型的列表，兼容 OpenAI 格式。">返回所有已启用模型的列表，兼容 OpenAI 格式。</span></p>
@@ -1452,7 +1452,7 @@ data: [DONE]</code></pre>
               <h2><span data-i18n="Anthropic 兼容接口">Anthropic 兼容接口</span></h2>
               <div class="doc-section">
                 <div style="display:inline-flex;align-items:center;gap:8px;background:var(--muted);padding:6px 12px;border-radius:8px;font-family:monospace;font-size:14px;margin-bottom:12px;">
-                  <span style="background:#10b981;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">POST</span>
+                  <span style="background:var(--success);color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">POST</span>
                   <span>/v1/messages</span>
                 </div>
                 <p><span data-i18n="兼容 Anthropic Claude API 格式，底层自动转换。">兼容 Anthropic Claude API 格式，底层自动转换。</span></p>
@@ -1493,9 +1493,9 @@ data: [DONE]</code></pre>
                 <table class="docs-table">
                   <thead><tr><th><span data-i18n="方法">方法</span></th><th><span data-i18n="路径">路径</span></th><th><span data-i18n="说明">说明</span></th></tr></thead>
                   <tbody>
-                    <tr><td><span style="color:#10b981;">GET</span></td><td><code>/api/user/api-keys</code></td><td><span data-i18n="获取 API Key 列表">获取 API Key 列表</span></td></tr>
-                    <tr><td><span style="color:#f59e0b;">POST</span></td><td><code>/api/user/api-keys</code></td><td><span data-i18n="创建 API Key">创建 API Key</span></td></tr>
-                    <tr><td><span style="color:#ef4444;">DELETE</span></td><td><code>/api/user/api-keys/:id</code></td><td><span data-i18n="删除 API Key">删除 API Key</span></td></tr>
+                    <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/user/api-keys</code></td><td><span data-i18n="获取 API Key 列表">获取 API Key 列表</span></td></tr>
+                    <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/user/api-keys</code></td><td><span data-i18n="创建 API Key">创建 API Key</span></td></tr>
+                    <tr><td><span style="color:var(--danger);">DELETE</span></td><td><code>/api/user/api-keys/:id</code></td><td><span data-i18n="删除 API Key">删除 API Key</span></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1504,10 +1504,10 @@ data: [DONE]</code></pre>
                 <table class="docs-table">
                   <thead><tr><th><span data-i18n="方法">方法</span></th><th><span data-i18n="路径">路径</span></th><th><span data-i18n="说明">说明</span></th></tr></thead>
                   <tbody>
-                    <tr><td><span style="color:#10b981;">GET</span></td><td><code>/api/user/balance</code></td><td><span data-i18n="获取积分信息">获取积分信息</span></td></tr>
-                    <tr><td><span style="color:#10b981;">GET</span></td><td><code>/api/user/usage</code></td><td><span data-i18n="获取使用统计">获取使用统计</span></td></tr>
-                    <tr><td><span style="color:#f59e0b;">POST</span></td><td><code>/api/user/redeem</code></td><td><span data-i18n="兑换充值码">兑换充值码</span></td></tr>
-                    <tr><td><span style="color:#3b82f6;">PUT</span></td><td><code>/api/user/settings</code></td><td><span data-i18n="更新用户设置">更新用户设置</span></td></tr>
+                    <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/user/balance</code></td><td><span data-i18n="获取积分信息">获取积分信息</span></td></tr>
+                    <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/user/usage</code></td><td><span data-i18n="获取使用统计">获取使用统计</span></td></tr>
+                    <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/user/redeem</code></td><td><span data-i18n="兑换充值码">兑换充值码</span></td></tr>
+                    <tr><td><span style="color:var(--info);">PUT</span></td><td><code>/api/user/settings</code></td><td><span data-i18n="更新用户设置">更新用户设置</span></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1521,13 +1521,13 @@ data: [DONE]</code></pre>
                 <table class="docs-table">
                   <thead><tr><th><span data-i18n="方法">方法</span></th><th><span data-i18n="路径">路径</span></th><th><span data-i18n="说明">说明</span></th></tr></thead>
                   <tbody>
-                    <tr><td><span style="color:#10b981;">GET</span></td><td><code>/api/conversations</code></td><td><span data-i18n="获取对话列表">获取对话列表</span></td></tr>
-                    <tr><td><span style="color:#f59e0b;">POST</span></td><td><code>/api/conversations</code></td><td><span data-i18n="创建新对话">创建新对话</span></td></tr>
-                    <tr><td><span style="color:#10b981;">GET</span></td><td><code>/api/conversations/:id</code></td><td><span data-i18n="获取对话详情">获取对话详情</span></td></tr>
-                    <tr><td><span style="color:#3b82f6;">PUT</span></td><td><code>/api/conversations/:id</code></td><td><span data-i18n="更新对话">更新对话</span></td></tr>
-                    <tr><td><span style="color:#f59e0b;">POST</span></td><td><code>/api/conversations/:id/messages</code></td><td><span data-i18n="追加消息">追加消息</span></td></tr>
-                    <tr><td><span style="color:#f59e0b;">POST</span></td><td><code>/api/conversations/:id/fork</code></td><td><span data-i18n="复制对话">复制对话</span></td></tr>
-                    <tr><td><span style="color:#ef4444;">DELETE</span></td><td><code>/api/conversations/:id</code></td><td><span data-i18n="删除对话">删除对话</span></td></tr>
+                    <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/conversations</code></td><td><span data-i18n="获取对话列表">获取对话列表</span></td></tr>
+                    <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/conversations</code></td><td><span data-i18n="创建新对话">创建新对话</span></td></tr>
+                    <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/conversations/:id</code></td><td><span data-i18n="获取对话详情">获取对话详情</span></td></tr>
+                    <tr><td><span style="color:var(--info);">PUT</span></td><td><code>/api/conversations/:id</code></td><td><span data-i18n="更新对话">更新对话</span></td></tr>
+                    <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/conversations/:id/messages</code></td><td><span data-i18n="追加消息">追加消息</span></td></tr>
+                    <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/conversations/:id/fork</code></td><td><span data-i18n="复制对话">复制对话</span></td></tr>
+                    <tr><td><span style="color:var(--danger);">DELETE</span></td><td><code>/api/conversations/:id</code></td><td><span data-i18n="删除对话">删除对话</span></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -2787,7 +2787,7 @@ data: [DONE]</code></pre>
     /* 实时活动看板 */
     .live-activity-section { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card, rgba(255,255,255,.03)); }
     .live-activity-header { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
-    .live-activity-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,.6); animation: liveActivityPulse 2s infinite; }
+    .live-activity-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 0 rgba(34,197,94,.6); animation: liveActivityPulse 2s infinite; }
     @keyframes liveActivityPulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 70% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
     .live-activity-sub { font-weight: 400; font-size: 12px; color: var(--muted-foreground); }
     .live-activity-row, .live-activity-sess { display: flex; align-items: center; gap: 12px; padding: 6px 0; font-size: 13px; border-bottom: 1px dashed var(--border); }

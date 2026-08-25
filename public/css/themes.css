@@ -46,6 +46,15 @@
   --bg-gradient-start: #fff8fa;
   --bg-gradient-end: #f4f8ff;
   --dot-color: rgba(20,86,240,0.12);
+
+  /* Semantic status colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --danger: #ef4444;
+  --purple: #8b5cf6;
+  --pink: #ec4899;
+  --cyan: #06b6d4;
 }
 
 /* ============================================
@@ -86,6 +95,15 @@
   --bg-gradient-start: #0f0f0f;
   --bg-gradient-end: #141414;
   --dot-color: rgba(255,255,255,0.05);
+
+  /* Semantic status colors */
+  --success: #34d399;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+  --danger: #f87171;
+  --purple: #a78bfa;
+  --pink: #f472b6;
+  --cyan: #22d3ee;
 }
 
 /* ============================================
