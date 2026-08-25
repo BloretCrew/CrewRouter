@@ -5162,8 +5162,10 @@ class ConsoleApp {
       }
 
       const records = Array.isArray(data.records) ? data.records : [];
-      const frag = records.map(record => {
-        const eventsHtml = (record.events || []).map(e => this.renderTimelineEvent(e)).join('');
+              const evts = record.events || [];
+        const merged = evts.length === 0 && Number(record.eventsCount || 0) > 0;
+const frag = records.map(record => {
+        const eventsHtml = evts.map(e => this.renderTimelineEvent(e)).join('');
         return `
           <li>
             <div class="timeline-record-head">
@@ -5172,7 +5174,7 @@ class ConsoleApp {
               <span>${this._formatBigNumber(Number(record.tokens || 0))} Token</span>
               ${Number(record.cachedTokens || 0) ? `<span style="color:#10b981;">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
               ${record.latencyMs != null ? `<span>${(record.latencyMs / 1000).toFixed(1)}s</span>` : ''}
-              ${(record.events || []).length} ${t('个事件')}
+              ${merged ? `上下文重放 +${record.eventsCount}` : `${evts.length} 个事件`}
             </div>
             ${eventsHtml}
           </li>`;

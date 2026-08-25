@@ -380,6 +380,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
       OFFSET ${offset} LIMIT ${pageSize}
     `, [userId, sessionKey]);
 
+    let prevEvents = null; // 上一条记录的完整事件流（跨页时从缓存恢复）
     const records = recordsResult.rows.map(row => {
       const events = parseMessagesToEvents(row.messages);
       // 列级 reasoning_content（响应侧思考）有而消息流里没有 thinking 时补充
@@ -392,6 +393,23 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
       if (responseText) {
         events.push({ type: 'text', role: 'assistant', text: responseText, truncated: String(row.response).length > LIMIT_TEXT });
       }
+      // 跨请求增量去重：客户端每请求重放全量上下文，相邻记录的 events 有长公共前缀。
+      // 只保留相对前一条记录新增的尾部事件；完全相同则 events 置空（前端跳过渲染）。
+      let newEvents = events;
+      if (prevEvents) {
+        const ser = (e) => JSON.stringify(e);
+        const a = events.map(ser);
+        const b = prevEvents.map(ser);
+        let common = 0;
+        const maxCommon = Math.min(a.length, b.length);
+        while (common < maxCommon && a[common] === b[common]) common++;
+        // 公共前缀超过一半视为上下文重放，只展示新增尾部；否则保留全量（可能是并行请求）
+        if (common >= Math.ceil(a.length / 2) || common === a.length) {
+          newEvents = events.slice(common);
+        }
+      }
+      prevEvents = events;
+
       return {
         id: row.id,
         ts: row.created_at,
@@ -400,7 +418,8 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
         cachedTokens: Number(row.cached_tokens || 0),
         latencyMs: row.latency_ms == null ? null : Number(row.latency_ms),
         harness: row.request_source,
-        events,
+        eventsCount: events.length,
+        events: newEvents,
       };
     });
 
