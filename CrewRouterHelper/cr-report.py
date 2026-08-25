@@ -70,8 +70,13 @@ REFRESH_AHEAD_SEC = 60  # 过期前 60s 触发自动刷新
 EVENT_MAP = {
     "SessionStart": "session_start",
     "SessionEnd": "session_end",
+    "UserPromptSubmit": "prompt_submit",
     "PreToolUse": "tool_use",
     "PostToolUse": "tool_use",
+    "Notification": "notification",
+    "Stop": "response_stop",
+    "SubagentStop": "subagent_stop",
+    "PreCompact": "pre_compact",
 }
 
 

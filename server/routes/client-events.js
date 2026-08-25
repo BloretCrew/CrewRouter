@@ -24,7 +24,7 @@ const { createNotification, sendBark } = require('../utils/notifications');
 const router = express.Router();
 
 const HARNESS_SET = new Set(HARNESS_SOURCES);
-const EVENT_TYPES = new Set(['session_start', 'session_end', 'tool_use']);
+const EVENT_TYPES = new Set(['session_start', 'session_end', 'prompt_submit', 'tool_use', 'notification', 'response_stop', 'subagent_stop', 'pre_compact']);
 
 // ---------- 事件推送（订阅规则命中 → 站内通知 + Bark） ----------
 // 频控：同 (userId, harness, sessionId, event) 60 秒内只推一次（内存即可，重启清零可接受）

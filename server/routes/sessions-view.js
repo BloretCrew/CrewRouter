@@ -407,8 +407,8 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
       OFFSET ${offset} LIMIT ${pageSize}
     `, [userId, sessionKey]);
 
-    let prevEvents = null; // 上一条记录的完整事件流（跨页时从缓存恢复）
-    const records = recordsResult.rows.map(row => {
+    let prevEvents = null; // 上一条记录的完整事件流
+    const rawRecords = recordsResult.rows.map(row => {
       const events = parseMessagesToEvents(row.messages);
       // 列级 reasoning_content（响应侧思考）有而消息流里没有 thinking 时补充
       const reasoningHead = truncStr(String(row.reasoning_content || '').trim(), LIMIT_THINKING);
@@ -446,9 +446,26 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
         latencyMs: row.latency_ms == null ? null : Number(row.latency_ms),
         harness: row.request_source,
         eventsCount: events.length,
+        eventsHash: require('crypto').createHash('sha256').update(JSON.stringify(events)).digest('hex'),
         events: newEvents,
       };
     });
+
+    // 相同请求合并：相邻记录 events 完全一致 → 视为同一次调用，
+    // tokens/cachedTokens 累加进第一条并记 repeatCount，其余从返回中剔除
+    const merged = [];
+    for (const rec of rawRecords) {
+      const last = merged[merged.length - 1];
+      // 完全相同的请求（原始事件流 hash 一致）：并入前一条，tokens 累加
+      if (last && rec.eventsHash && rec.eventsHash === last.eventsHash) {
+        last.tokens += rec.tokens;
+        last.cachedTokens += rec.cachedTokens;
+        last.repeatCount = (last.repeatCount || 1) + 1;
+        continue;
+      }
+      merged.push(rec);
+    }
+    const records = merged;
 
     res.json({ sessionKey, page, pageSize, total, records });
   } catch (error) {

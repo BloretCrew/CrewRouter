@@ -5203,7 +5203,7 @@ class ConsoleApp {
               <span>${this._formatBigNumber(Number(record.tokens || 0))} Token</span>
               ${Number(record.cachedTokens || 0) ? `<span style="color:var(--success);">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
               ${record.latencyMs != null ? `<span>${(record.latencyMs / 1000).toFixed(1)}s</span>` : ''}
-              ${suppressed > 0 ? `<span class="merged-tag">上下文重放 +${suppressed}</span>` : `${evts.length} 个事件`}
+              ${suppressed > 0 ? `<span class="merged-tag">上下文重放 +${suppressed}</span>` : `${evts.length} 个事件`}${Number(record.repeatCount || 0) > 1 ? ` · <span class="merged-tag">重复 ×${record.repeatCount}</span>` : ''}
             </div>
             ${eventsHtml}
           </li>`;
@@ -6161,7 +6161,7 @@ class ConsoleApp {
 
   showHookNotifySelection() {
     const harnesses = ['claude_code', 'codex', 'grok', 'qwen_code', 'opencode', 'openclaw', 'deepseek_harness', 'hermes'];
-    const events = [['session_start', '会话开始'], ['session_end', '会话结束'], ['tool_use', '工具调用']];
+    const events = [['session_start', '会话开始'], ['session_end', '会话结束'], ['prompt_submit', '用户提问'], ['tool_use', '工具调用'], ['notification', '客户端通知'], ['response_stop', '回复完成'], ['subagent_stop', '子代理结束'], ['pre_compact', '即将压缩']];
     const sel = this._hookNotifySelection || { harnesses: [], eventTypes: [] };
     const hWrap = document.getElementById('hookNotifyHarnessChecks');
     const eWrap = document.getElementById('hookNotifyEventChecks');
