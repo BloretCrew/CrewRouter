@@ -5264,7 +5264,7 @@ class ConsoleApp {
 
   /** 时间线单事件：文本 / 工具调用 / 工具结果 / 思考 */
   renderToolSummaryRow(group) {
-    const sentence = summarySentence(group.groups, group.hashes, t);
+    const sentence = summarySentence(group.groups, group.hashes, t, group.thinkingCount || 0);
     const count = (group.events || []).length;
     return `
       <li class="timeline-event type-tool_summary">

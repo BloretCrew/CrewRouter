@@ -38,54 +38,41 @@ function extractCommitHash(evt) {
 //       thinking 与 tool_call/tool_result 交错时各自成段，不互相合并（工具段已按现有逻辑折叠）。
 function groupToolRuns(events) {
   const out = [];
-  let run = [];
-  let runKind = null;   // 'tool' | 'thinking' | null
+  let run = [];          // 当前工作段：连续的 thinking + tool_call + tool_result
+  let thinkingCount = 0; // 段内 thinking 计数
   const flushRun = () => {
-    if (!run.length) { run = []; runKind = null; return; }
-    if (runKind === 'tool') {
-      if (run.length < 3) {
-        // 少于3个工具不折叠，逐个渲染
-        for (const e of run) out.push({ type: 'single', event: e });
-      } else {
-        const counts = {};
-        const hashes = [];
-        for (const e of run) {
-          if (e.type !== 'tool_call') continue;  // 只统计调用侧，结果成对不重复计数
-          const cat = classifyToolEvent(e);
-          counts[cat] = (counts[cat] || 0) + 1;
-          if (cat === 'commit') {
-            // hash 从对应的 result 提取（run 中紧跟的 tool_result）
-            const h = extractCommitHash(e);
-            if (h) hashes.push(h);
-          }
+    if (!run.length) return;
+    const toolCalls = run.filter(e => e.type === 'tool_call');
+    if (run.length < 3 || toolCalls.length === 0) {
+      // 少于3个事件或没有工具调用：逐个渲染
+      for (const e of run) out.push({ type: 'single', event: e });
+    } else {
+      const counts = {};
+      const hashes = [];
+      for (const e of toolCalls) {
+        const cat = classifyToolEvent(e);
+        counts[cat] = (counts[cat] || 0) + 1;
+        if (cat === 'commit') {
+          const h = extractCommitHash(e);
+          if (h) hashes.push(h);
         }
-        out.push({ type: 'summary', groups: counts, hashes, events: run.slice() });
       }
-    } else if (runKind === 'thinking') {
-      // 连续纯 thinking 段：≥2 折叠为摘要行，单个保持原样
-      if (run.length >= 2) {
-        out.push({ type: 'thinking_summary', events: run.slice() });
-      } else {
-        for (const e of run) out.push({ type: 'single', event: e });
-      }
+      out.push({ type: 'summary', groups: counts, hashes, thinkingCount, events: run.slice() });
     }
     run = [];
-    runKind = null;
-  };
-  const kindOf = (e) => {
-    if (e.type === 'tool_call' || e.type === 'tool_result') return 'tool';
-    if (e.type === 'thinking') return 'thinking';
-    return null;
+    thinkingCount = 0;
   };
   for (const e of events) {
-    const kind = kindOf(e);
-    if (!kind) {
+    if (e.type === 'tool_call' || e.type === 'tool_result') {
+      run.push(e);
+    } else if (e.type === 'thinking') {
+      // thinking 归入当前工作段（不打断）；若段为空则先记下（可能后面跟工具）
+      run.push(e);
+      thinkingCount++;
+    } else {
+      // text/system 事件是分段边界
       flushRun();
       out.push({ type: 'single', event: e });
-    } else {
-      if (runKind && runKind !== kind) flushRun();
-      if (!runKind) runKind = kind;
-      run.push(e);
     }
   }
   flushRun();
@@ -93,7 +80,7 @@ function groupToolRuns(events) {
 }
 
 // 摘要文案（中文序数化：5→"搜索了5次文件"，2→"写入了两个文件"）
-function summarySentence(groups, hashes, t) {
+function summarySentence(groups, hashes, t, thinkingCount) {
   const numCn = ['零','一','两','三','四','五','六','七','八','九'];
   const cnNum = (n) => n <= 9 ? numCn[n] : String(n);
   const parts = [];
@@ -105,5 +92,6 @@ function summarySentence(groups, hashes, t) {
   if (groups.todo) parts.push(t('更新了任务清单'));
   if (groups.bash) parts.push(t('执行了') + groups.bash + t('条命令'));
   if (groups.other) parts.push(t('调用了') + groups.other + t('个其他工具'));
+  if (thinkingCount) parts.push(t('深度思考了') + thinkingCount + t('次'));
   return parts.join('，') + '。';
 }
