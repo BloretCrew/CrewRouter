@@ -719,8 +719,10 @@ class ConsoleApp {
       { label: t('用量详情'), onClick: `app.showKeyUsage(${key.id}, '${safeName}')` },
       ...(isOwner ? [
         { label: t('成员管理'), onClick: `app.showKeyMembers(${key.id})` },
-        { type: 'divider' },
-        { label: t('删除密钥'), className: 'danger', onClick: `app.deleteApiKey(${key.id})` }
+        ...(/^crewrouter$/i.test(String(key.name || '')) ? [] : [
+          { type: 'divider' },
+          { label: t('删除密钥'), className: 'danger', onClick: `app.deleteApiKey(${key.id})` }
+        ])
       ] : (key.is_co_key ? [
         { type: 'divider' },
         { label: t('退出 Co-Key'), className: 'danger', onClick: `app.leaveCoKey(${key.id})` }
@@ -5153,7 +5155,8 @@ class ConsoleApp {
     if (!timeline || !sessionKey) return;
 
     try {
-      const res = await fetch(`/api/user/sessions/${encodeURIComponent(sessionKey)}/messages?page=${encodeURIComponent(page)}&pageSize=10`);
+      const lastFp = page > 1 ? (this._lastPageFingerprint || '') : '';
+      const res = await fetch(`/api/user/sessions/${encodeURIComponent(sessionKey)}/messages?page=${encodeURIComponent(page)}&pageSize=10${lastFp ? `&lastFingerprint=${encodeURIComponent(lastFp)}` : ''}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('加载失败'));
 
@@ -5178,6 +5181,7 @@ class ConsoleApp {
         setHTML(timeline, '');
         // refresh / 首次加载都从空白时间线开始，签名序列一并重置（跨页去重状态）
         this._renderedEventSigs = [];
+        this._lastPageFingerprint = '';
       }
 
       const records = Array.isArray(data.records) ? data.records : [];
@@ -5211,6 +5215,8 @@ class ConsoleApp {
       timeline.insertAdjacentHTML('beforeend', frag);
 
       this._detailLoaded += records.length;
+      // 记录本页最后一条的指纹，供下一页跨页合并相同请求
+      if (records.length) this._lastPageFingerprint = records[records.length - 1].userFingerprint || '';
       const moreBtn = document.getElementById('sessionMoreBtn');
       if (moreBtn) moreBtn.style.display = this._detailLoaded >= this._detailTotal ? 'none' : '';
 

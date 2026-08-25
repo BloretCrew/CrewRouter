@@ -383,6 +383,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
   const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
   if (!sessionKey) return res.status(400).json({ error: '缺少 sessionKey' });
   const { page, pageSize, offset } = pageParams(req.query, DETAIL_PAGE_SIZE);
+  const lastFingerprint = String(req.query.lastFingerprint || '').trim();
 
   try {
     const baseWhere = `

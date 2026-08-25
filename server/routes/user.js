@@ -487,12 +487,17 @@ router.delete('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_DELE
   try {
     await client.query('BEGIN');
     const owned = await client.query(
-      'SELECT id FROM api_keys WHERE id = $1 AND user_id = $2 FOR UPDATE',
+      'SELECT id, name FROM api_keys WHERE id = $1 AND user_id = $2 FOR UPDATE',
       [req.params.id, req.session.user.id]
     );
     if (owned.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: '密钥不存在或无权删除' });
+    }
+    // CrewRouter 内部密钥受保护：禁止删除（客户端上报/凭证依赖此 key）
+    if (/^crewrouter$/i.test(String(owned.rows[0].name || ''))) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'CrewRouter 密钥为系统依赖，禁止删除' });
     }
     // 历史库可能仍是 RESTRICT 外键：先断开用量关联，再删密钥
     await client.query('UPDATE usage_records SET api_key_id = NULL WHERE api_key_id = $1', [req.params.id]);
@@ -1063,6 +1068,11 @@ router.put('/api-keys/:id/enabled', requireAuth, auditMiddleware(ACTIONS.API_KEY
   try {
     const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
+    // CrewRouter 内部密钥受保护：禁止启停
+    const nameCheck = await pool.query('SELECT name FROM api_keys WHERE id = $1', [req.params.id]);
+    if (/^crewrouter$/i.test(String(nameCheck.rows[0]?.name || ''))) {
+      return res.status(403).json({ error: 'CrewRouter 密钥为系统依赖，禁止禁用或启用' });
+    }
     const result = await pool.query(
       'UPDATE api_keys SET enabled = $1 WHERE id = $2 RETURNING id, enabled',
       [!!enabled, req.params.id]
