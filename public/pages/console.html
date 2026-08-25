@@ -1188,6 +1188,7 @@
           .timeline-event.type-tool_call::before { background:var(--warning); }
           .timeline-event.type-tool_result::before { background:var(--purple); }
           .timeline-event.type-thinking::before { background:var(--pink); }
+          .timeline-event.type-thinking_summary::before { background:var(--pink); }
           .timeline-event-tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.02em; margin-bottom:4px; opacity:.85; }
           .timeline-event-text { white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.55; max-height:220px; overflow-y:auto; }
           .timeline-event details summary { cursor:pointer; font-size:12.5px; color:var(--brand-blue, var(--info)); user-select:none; }
@@ -1712,6 +1713,34 @@ data: [DONE]</code></pre>
             <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0;">
               <div><label style="margin:0;"><span data-i18n="启用事件推送">启用事件推送</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。">总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。</span></small></div>
               <label class="pg-toggle"><input type="checkbox" id="hookNotifyPushEnabled" onchange="app.toggleHookNotifyPush(this.checked)"><span class="pg-toggle-slider"></span></label>
+            <button type="button" class="btn btn-secondary" style="margin-top:12px;" onclick="app.showHookNotifySelection()"><span data-i18n="选择要推送的事件">选择要推送的事件</span></button>
+          </div>
+        </div>
+
+        <!-- 事件通知选择对话框 -->
+        <div id="hookNotifySelectModal" class="modal" style="display:none;">
+          <div class="modal-content" style="max-width:480px;">
+            <div class="modal-header">
+              <h3><span data-i18n="选择要推送的事件">选择要推送的事件</span></h3>
+              <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div style="margin-bottom:14px;">
+                <strong style="font-size:13px;"><span data-i18n="客户端（harness）">客户端（harness）</span></strong>
+                <div id="hookNotifyHarnessChecks" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"></div>
+              </div>
+              <div style="margin-bottom:14px;">
+                <strong style="font-size:13px;"><span data-i18n="事件类型">事件类型</span></strong>
+                <div id="hookNotifyEventChecks" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;"></div>
+              </div>
+              <small style="color:var(--muted-foreground);"><span data-i18n="不勾选任何项表示推送全部。">不勾选任何项表示推送全部。</span></small>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" onclick="app.closeModal('hookNotifySelectModal')"><span data-i18n="取消">取消</span></button>
+              <button type="button" class="btn btn-primary" onclick="app.saveHookNotifySelection()"><span data-i18n="保存">保存</span></button>
+            </div>
+          </div>
+        </div>
             </div>
           </div>
         </div>
@@ -2550,7 +2579,7 @@ data: [DONE]</code></pre>
   <script src="/js/dom.js?v=2"></script>
   <script src="/js/dialog.js?v=2"></script>
   <script src="/js/session-tool-groups.js?v=1"></script>
-  <script src="/js/app.js?v=42"></script>
+  <script src="/js/app.js?v=43"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

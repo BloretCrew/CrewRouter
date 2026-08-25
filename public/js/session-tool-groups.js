@@ -31,39 +31,61 @@ function extractCommitHash(evt) {
   return h.length > 8 ? h.slice(0, 8) : h;
 }
 
-// 主入口：把事件流中的连续工具段折叠为摘要组
-// 返回 [{type:'summary', groups:{cat:count, ...}, hashes:[...], events:[原始事件]}, ..., {type:'single', event}]
+// 主入口：把事件流中的连续工具段 / 连续 thinking 段折叠为摘要组
+// 返回 [{type:'summary', groups:{cat:count, ...}, hashes:[...], events:[原始事件]},
+//        {type:'thinking_summary', events:[原始事件]}, ..., {type:'single', event}]
+// 规则：连续纯 thinking 段（≥2 个）折叠为「已深度思考」摘要行；
+//       thinking 与 tool_call/tool_result 交错时各自成段，不互相合并（工具段已按现有逻辑折叠）。
 function groupToolRuns(events) {
   const out = [];
   let run = [];
+  let runKind = null;   // 'tool' | 'thinking' | null
   const flushRun = () => {
-    if (!run.length) return;
-    if (run.length < 3) {
-      // 少于3个工具不折叠，逐个渲染
-      for (const e of run) out.push({ type: 'single', event: e });
-    } else {
-      const counts = {};
-      const hashes = [];
-      for (const e of run) {
-        if (e.type !== 'tool_call') continue;  // 只统计调用侧，结果成对不重复计数
-        const cat = classifyToolEvent(e);
-        counts[cat] = (counts[cat] || 0) + 1;
-        if (cat === 'commit') {
-          // hash 从对应的 result 提取（run 中紧跟的 tool_result）
-          const h = extractCommitHash(e);
-          if (h) hashes.push(h);
+    if (!run.length) { run = []; runKind = null; return; }
+    if (runKind === 'tool') {
+      if (run.length < 3) {
+        // 少于3个工具不折叠，逐个渲染
+        for (const e of run) out.push({ type: 'single', event: e });
+      } else {
+        const counts = {};
+        const hashes = [];
+        for (const e of run) {
+          if (e.type !== 'tool_call') continue;  // 只统计调用侧，结果成对不重复计数
+          const cat = classifyToolEvent(e);
+          counts[cat] = (counts[cat] || 0) + 1;
+          if (cat === 'commit') {
+            // hash 从对应的 result 提取（run 中紧跟的 tool_result）
+            const h = extractCommitHash(e);
+            if (h) hashes.push(h);
+          }
         }
+        out.push({ type: 'summary', groups: counts, hashes, events: run.slice() });
       }
-      out.push({ type: 'summary', groups: counts, hashes, events: run.slice() });
+    } else if (runKind === 'thinking') {
+      // 连续纯 thinking 段：≥2 折叠为摘要行，单个保持原样
+      if (run.length >= 2) {
+        out.push({ type: 'thinking_summary', events: run.slice() });
+      } else {
+        for (const e of run) out.push({ type: 'single', event: e });
+      }
     }
     run = [];
+    runKind = null;
+  };
+  const kindOf = (e) => {
+    if (e.type === 'tool_call' || e.type === 'tool_result') return 'tool';
+    if (e.type === 'thinking') return 'thinking';
+    return null;
   };
   for (const e of events) {
-    if (e.type === 'tool_call' || e.type === 'tool_result') {
-      run.push(e);
-    } else {
+    const kind = kindOf(e);
+    if (!kind) {
       flushRun();
       out.push({ type: 'single', event: e });
+    } else {
+      if (runKind && runKind !== kind) flushRun();
+      if (!runKind) runKind = kind;
+      run.push(e);
     }
   }
   flushRun();

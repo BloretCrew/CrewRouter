@@ -5192,6 +5192,7 @@ class ConsoleApp {
         const groups = groupToolRuns(evts);
         const eventsHtml = groups.map(g => {
           if (g.type === 'single') return this.renderTimelineEvent(g.event);
+          if (g.type === 'thinking_summary') return this.renderThinkingSummaryRow(g);
           return this.renderToolSummaryRow(g);
         }).join('');
         return `
@@ -5269,6 +5270,18 @@ class ConsoleApp {
       <li class="timeline-event type-tool_summary">
         <details class="tool-block">
           <summary class="tool-call-line"><span class="tool-dot" style="color:var(--info);">⏺</span> <span class="tool-summary-text">${sentence}</span><span class="tool-args">${count} ${t('次操作')}</span></summary>
+          ${group.events.map(e => this.renderTimelineEvent(e)).join('')}
+        </details>
+      </li>`;
+  }
+
+  /** 连续 thinking 段折叠摘要行：点击展开全部思考内容（复用 thinking-block 样式） */
+  renderThinkingSummaryRow(group) {
+    const count = (group.events || []).length;
+    return `
+      <li class="timeline-event type-thinking_summary">
+        <details class="thinking-block">
+          <summary>${this._sfIcon('brain.head.profile', 'ec4899')} ${t('已深度思考')}<span class="tool-args">${count} ${t('段思考')}</span></summary>
           ${group.events.map(e => this.renderTimelineEvent(e)).join('')}
         </details>
       </li>`;
@@ -6105,8 +6118,46 @@ class ConsoleApp {
       const res = await fetch('/api/user/hook-notify-rules');
       const data = await res.json();
       toggle.checked = data.pushEnabled === true;
+      this._hookNotifySelection = data.selection || { harnesses: [], eventTypes: [] };
     } catch (error) {
       toggle.checked = false;
+      this._hookNotifySelection = { harnesses: [], eventTypes: [] };
+    }
+  }
+
+  showHookNotifySelection() {
+    const harnesses = ['claude_code', 'codex', 'grok', 'qwen_code', 'opencode', 'openclaw', 'deepseek_harness', 'hermes'];
+    const events = [['session_start', '会话开始'], ['session_end', '会话结束'], ['tool_use', '工具调用']];
+    const sel = this._hookNotifySelection || { harnesses: [], eventTypes: [] };
+    const hWrap = document.getElementById('hookNotifyHarnessChecks');
+    const eWrap = document.getElementById('hookNotifyEventChecks');
+    if (!hWrap || !eWrap) return;
+    hWrap.innerHTML = harnesses.map(h => {
+      const on = sel.harnesses.includes(h) ? ' checked' : '';
+      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-harness" value="${h}"${on}> ${h}</label>`;
+    }).join('');
+    eWrap.innerHTML = events.map(([v, label]) => {
+      const on = sel.eventTypes.includes(v) ? ' checked' : '';
+      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-event" value="${v}"${on}> ${t(label)}</label>`;
+    }).join('');
+    this.showModal('hookNotifySelectModal');
+  }
+
+  async saveHookNotifySelection() {
+    try {
+      const harnesses = [...document.querySelectorAll('#hookNotifyHarnessChecks .hn-harness:checked')].map(c => c.value);
+      const eventTypes = [...document.querySelectorAll('#hookNotifyEventChecks .hn-event:checked')].map(c => c.value);
+      const res = await fetch('/api/user/hook-notify-rules/selection', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ harnesses, eventTypes })
+      });
+      if (!res.ok) throw new Error(t('保存失败'));
+      this._hookNotifySelection = { harnesses, eventTypes };
+      this.closeModal('hookNotifySelectModal');
+      this.showToast(t('事件通知偏好已保存'), 'success');
+    } catch (error) {
+      this.showToast(error.message || t('保存失败'), 'error');
     }
   }
 
