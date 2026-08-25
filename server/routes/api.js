@@ -74,7 +74,8 @@ const {
   normalizeProviderKeyEntries
 } = require('../utils/provider-keys');
 const ResponsesUpstream = require('../utils/responses-upstream');
-const { extractAttribution } = require('../utils/attribution');
+const { extractAttribution, classifyCompaction } = require('../utils/attribution');
+const { createStreamScrubber } = require('../utils/inject-prompt-stream');
 const crypto = require('crypto');
 
 // 非流式：上游整段响应（headers+body）超时。30s 对免费/慢模型过短，易误杀。
@@ -599,8 +600,10 @@ async function pluginMetaFrom(ctxMeta) {
 async function buildUsagePluginMeta(ctxMeta, messages, system, req) {
   const pluginMeta = await pluginMetaFrom(ctxMeta);
   const attribution = req ? extractAttribution(req) : null;
-  const withAttribution = attribution && (attribution.parentThreadId || attribution.subagent || attribution.sessionId || attribution.source.length)
-    ? { ...(pluginMeta || {}), attribution }
+  const isCompaction = req ? classifyCompaction(req.body) : false;
+  const hasAttribution = !!(attribution && (attribution.parentThreadId || attribution.subagent || attribution.sessionId || attribution.source.length));
+  const withAttribution = (hasAttribution || isCompaction)
+    ? { ...(pluginMeta || {}), attribution: { ...(attribution || {}), isCompaction } }
     : pluginMeta;
   if (messages == null) return withAttribution;
   const requestSource = req ? clientMetaFromReq(req).requestSource : null;
@@ -1420,6 +1423,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
     let clientDisconnected = false;
     let backpressureCount = 0;
     let gotDone = false;
+    const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
 
     // 检测客户端断开连接
     req.on('close', () => {
@@ -1462,7 +1466,11 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
           frame = out;
         }
         const parsed = JSON.parse(frame);
-        const content = parsed.choices?.[0]?.delta?.content || '';
+        const originalContent = parsed.choices?.[0]?.delta?.content || '';
+        const content = streamScrubber.feed(originalContent);
+        if (parsed.choices?.[0]?.delta && originalContent !== content) {
+          parsed.choices[0].delta.content = content;
+        }
         totalContent += content;
         if (parsed.usage) lastUsage = parsed.usage;
         const normalizedChunk = ensureChatCompletionChunk(parsed, {
@@ -1541,6 +1549,12 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       }
     }
 
+    const residualScrubbed = streamScrubber.flush();
+    if (residualScrubbed && !clientDisconnected) {
+      const ok = writeWithDrain(`data: ${JSON.stringify(buildChatCompletionChunk({ id: streamChunkId, created: streamCreated, model, delta: { content: residualScrubbed } }))}\n\n`);
+      if (!ok) await waitForDrain();
+      totalContent += residualScrubbed;
+    }
     const latency = Date.now() - startTime;
     const normalized = normalizeUsageTokens(lastUsage, 'openai');
 
@@ -1758,7 +1772,7 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
     Logger.stream(`[proxyChatToResponses] SSE 头已发送, 开始流式传输: provider=${provider.id}(${provider.name}), model=${model}, url=${url}`);
 
     const { content, usage } = await ResponsesUpstream.streamResponsesAsChatCompletion(response.body, res, {
-      model, logPrefix: 'proxyChatToResponses'
+      model, logPrefix: 'proxyChatToResponses', scrubber: createStreamScrubber(req.apiUser?.injectPrompt)
     });
 
     const streamUsage = usage || {};
@@ -1993,6 +2007,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     let roleEmitted = false;
     let streamFinishReason = 'stop'; // OpenAI finish_reason
     let hasToolCalls = false;
+    const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
 
     // 检测客户端断开连接
     req.on('close', () => {
@@ -2112,9 +2127,9 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
                 if (currentBlockType === 'thinking' && parsed.delta?.thinking) {
                   await emitOpenAIChunk({ reasoning_content: parsed.delta.thinking });
                 } else if (currentBlockType === 'text' && parsed.delta?.text) {
-                  const chunk = parsed.delta.text;
+                  const chunk = streamScrubber.feed(parsed.delta.text);
                   totalContent += chunk;
-                  await emitOpenAIChunk({ content: chunk });
+                  if (chunk) await emitOpenAIChunk({ content: chunk });
                 } else if (currentBlockType === 'tool_use' && (parsed.delta?.type === 'input_json_delta' || parsed.delta?.partial_json != null)) {
                   // 增量工具参数（OpenAI tool_calls 流式标准）
                   const partial = parsed.delta.partial_json || '';
@@ -2197,6 +2212,12 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       }
     }
 
+    const residualScrubbed = streamScrubber.flush();
+    if (residualScrubbed && !clientDisconnected) {
+      const ok = writeWithDrain(`data: ${JSON.stringify(buildChatCompletionChunk({ id: streamChunkId, created: streamCreated, model, delta: { content: residualScrubbed } }))}\n\n`);
+      if (!ok) await waitForDrain();
+      totalContent += residualScrubbed;
+    }
     const latency = Date.now() - startTime;
     // Build a synthetic usage object for normalizeUsageTokens (Anthropic format)
     const syntheticUsage = {
@@ -3631,6 +3652,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
     let clientDisconnected = false;
     let backpressureCount = 0;
     let gotDone = false;
+    const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
 
     // 检测客户端断开连接
     req.on('close', () => {
@@ -3706,7 +3728,9 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
                 currentBlockType = parsed.content_block?.type || null;
               } else if (parsed.type === 'content_block_delta') {
                 if (currentBlockType === 'text') {
-                  totalContent += parsed.delta?.text || '';
+                  const scrubbedText = streamScrubber.feed(parsed.delta?.text || '');
+                  parsed.delta.text = scrubbedText;
+                  totalContent += scrubbedText;
                 } else if (currentBlockType === 'thinking') {
                   // Thinking content tracked but not added to totalContent
                 }
@@ -3722,7 +3746,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
                 continue;
               }
               // 插件 gateway:responseChunk 钩子：改写/丢弃直通帧
-              let frameOut = data;
+              let frameOut = JSON.stringify(parsed);
               if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
                 const out = await pluginHooks.maybeRewriteChunk(data, { model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) });
                 if (!out) continue;
@@ -3763,7 +3787,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
                 continue;
               }
               // 插件 gateway:responseChunk 钩子（残余缓冲区路径）
-              let frameOut2 = data;
+              let frameOut2 = JSON.stringify(parsed);
               if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
                 const out = await pluginHooks.maybeRewriteChunk(data, { model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) });
                 if (!out) continue;
@@ -3776,6 +3800,13 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
             }
           }
         }
+      }
+      const residualScrubbed = streamScrubber.flush();
+      if (residualScrubbed && !clientDisconnected) {
+        const residualEvent = { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: residualScrubbed } };
+        const ok = writeWithDrain(`data: ${JSON.stringify(residualEvent)}\n\n`);
+        if (!ok) await waitForDrain();
+        totalContent += residualScrubbed;
       }
     } catch (err) {
       if (err.name === 'AbortError' || err.name === 'TimeoutError') {
@@ -5631,18 +5662,27 @@ async function handleResponses(req, res) {
       const decoder = new TextDecoder();
       let totalContent = '';
       let streamUsage = null; // { input_tokens, output_tokens, cached_tokens }
+      const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           const text = decoder.decode(value, { stream: true });
-          res.write(text);
+          if (!req.apiUser?.injectPrompt) {
+            res.write(text);
+          }
           for (const line of text.split('\n')) {
             if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
             try {
               const parsed = JSON.parse(line.slice(6));
               if (parsed.type === 'response.output_text.delta') {
-                totalContent += parsed.delta || '';
+                const delta = streamScrubber.feed(parsed.delta || '');
+                parsed.delta = delta;
+                totalContent += delta;
+              }
+              if (req.apiUser?.injectPrompt) {
+                const eventText = `data: ${JSON.stringify(parsed)}\n\n`;
+                res.write(eventText);
               }
               // 优先取上游 usage（response.completed 或带 usage 的事件）
               const u = parsed.response?.usage || parsed.usage || null;
@@ -5651,6 +5691,11 @@ async function handleResponses(req, res) {
               }
             } catch { /* ignore parse errors in passthrough */ }
           }
+        }
+        const residual = streamScrubber.flush();
+        if (residual && !res.writableEnded) {
+          totalContent += residual;
+          res.write(`event: response.output_text.delta\ndata: ${JSON.stringify({ type: 'response.output_text.delta', delta: residual })}\n\n`);
         }
       } finally {
         if (!res.writableEnded) res.end();

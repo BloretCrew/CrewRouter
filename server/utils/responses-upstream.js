@@ -366,9 +366,10 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
     if (!obj || typeof obj !== 'object' || obj.type === 'response.output_text.done') return;
     switch (obj.type) {
       case 'response.output_text.delta': {
-        const d = obj.delta || '';
+        const original = obj.delta || '';
+        const d = opts.scrubber ? opts.scrubber.feed(original) : original;
         if (d) { content += d; sawContentDelta = true; sawReasoningDelta = false; }
-        sendChunk({ content: d || '' });
+        if (d) sendChunk({ content: d });
         break;
       }
       case 'response.reasoning_summary_text.delta':
@@ -496,6 +497,12 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
       reasoning,
       usage: streamUsage
     };
+  }
+
+  const residual = opts.scrubber ? opts.scrubber.flush() : '';
+  if (residual) {
+    content += residual;
+    sendChunk({ content: residual });
   }
 
   // 流结束：发送带 finish_reason 的收尾 chunk + usage（须在 res.end() 之前）

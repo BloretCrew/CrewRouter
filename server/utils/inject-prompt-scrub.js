@@ -14,7 +14,7 @@
  * 已知限制：
  * - 多条目回显若未逐字复述全量拼接文本，锚点扫描只剥到首个分隔符，
  *   后续条目残留——接入点传入 exactText（buildInjectedPrompt 原文）时走精确移除优先。
- * - 流式路径未接入净化（降级），残余风险见任务总结。
+ * - 流式路径通过 createStreamScrubber 在内容增量层净化。
  */
 
 'use strict';

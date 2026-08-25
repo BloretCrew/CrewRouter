@@ -39,6 +39,7 @@ import time
 import urllib.parse
 import urllib.request
 import urllib.error
+from pathlib import Path
 
 try:
     import fcntl  # POSIX 文件锁，防多 hook 并发刷新踩踏轮换链
@@ -53,13 +54,13 @@ except ImportError:  # pragma: no cover
     http.server = None
     webbrowser = None
 
-CONFIG_PATH = os.environ.get(
-    "CR_REPORT_CONFIG", os.path.expanduser("~/.config/cr-report.json")
-)
-GROK_SESSIONS_DIR = os.path.expanduser("~/.grok/sessions")
-STATE_PATH = os.path.expanduser("~/.cache/cr-report-grok-state.json")
+CONFIG_PATH = Path(os.environ.get(
+    "CR_REPORT_CONFIG", str(Path.home() / ".config" / "cr-report.json")
+)).expanduser()
+GROK_SESSIONS_DIR = Path.home() / ".grok" / "sessions"
+STATE_PATH = Path.home() / ".cache" / "cr-report-grok-state.json"
 # 刷新必须串行的锁文件：并发 hook 同时刷会导致旧 refresh 重放被服务端全链吊销
-TOKEN_LOCK_PATH = os.path.expanduser("~/.cache/cr-report-token.lock")
+TOKEN_LOCK_PATH = Path.home() / ".cache" / "cr-report-token.lock"
 
 OAUTH_CLIENT_ID = "crewrouter-helper"
 OAUTH_SCOPE = "events:report"
@@ -85,10 +86,10 @@ def _load_cfg():
 
 def _save_cfg(cfg):
     """写回配置并收紧权限为 600（含长期 refresh_token，不能组/其他人可读）"""
-    d = os.path.dirname(CONFIG_PATH)
+    d = CONFIG_PATH.parent
     if d:
-        os.makedirs(d, exist_ok=True)
-    tmp = CONFIG_PATH + ".tmp"
+        d.mkdir(parents=True, exist_ok=True)
+    tmp = Path(str(CONFIG_PATH) + ".tmp")
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
     os.chmod(tmp, 0o600)
@@ -147,10 +148,10 @@ def oauth_access_token(cfg):
 
     url = str(cfg.get("url") or "").rstrip("/")
     client_id = str(cfg.get("client_id") or OAUTH_CLIENT_ID)
-    lock_dir = os.path.dirname(TOKEN_LOCK_PATH)
+    lock_dir = TOKEN_LOCK_PATH.parent
     if lock_dir:
         try:
-            os.makedirs(lock_dir, exist_ok=True)
+            lock_dir.mkdir(parents=True, exist_ok=True)
         except Exception:
             pass
     with open(TOKEN_LOCK_PATH, "a+") as lockf:
@@ -284,7 +285,7 @@ def _load_state():
 
 def _save_state(state):
     try:
-        os.makedirs(os.path.dirname(STATE_PATH), exist_ok=True)
+        STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
         with open(STATE_PATH, "w", encoding="utf-8") as f:
             json.dump(state, f)
     except Exception:
@@ -294,9 +295,9 @@ def _save_state(state):
 def scan_grok_files():
     """返回 {updates.jsonl 绝对路径: 文件大小}"""
     out = {}
-    if not os.path.isdir(GROK_SESSIONS_DIR):
+    if not GROK_SESSIONS_DIR.is_dir():
         return out
-    for root, _dirs, files in os.walk(GROK_SESSIONS_DIR):
+    for root, _dirs, files in os.walk(str(GROK_SESSIONS_DIR)):
         if "updates.jsonl" in files:
             p = os.path.join(root, "updates.jsonl")
             try:

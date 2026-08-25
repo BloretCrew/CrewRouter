@@ -5,6 +5,7 @@ const { pool } = require('../models/database');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const config = require('../config-loader');
 const Logger = require('../logger');
+const { markCompactionBoundaries } = require('../utils/cache-hit-anomaly');
 const { lookupProvider, searchProviders, fetchProvidersIndex } = require('../provider-lookup');
 const keyRefresher = require('../key-refresher');
 const proxyPool = require('../proxy-pool');
@@ -1195,6 +1196,8 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
         to_char(created_at, 'YYYY-MM-DD') as date,
         COUNT(*) as requests,
         SUM(tokens_used) as tokens,
+        SUM(prompt_tokens) as prompt_tokens,
+        SUM(completion_tokens) as completion_tokens,
         SUM(cached_tokens) as cached_tokens,
         SUM(cost) as cost
       FROM usage_records u
@@ -1339,13 +1342,17 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
     const { buildSourceStats } = require('../utils/source-stats');
     const { bySource, sourceSummary } = buildSourceStats(bySourceResult.rows);
 
+    const dailyWithAnomalies = markCompactionBoundaries(
+      [...dailyResult.rows].sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    ).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
     res.json({
       users: parseInt(usersResult.rows[0].total),
       models: parseInt(modelsResult.rows[0].total),
       apiKeys: parseInt(apiKeysResult.rows[0].total),
       days: startDate && endDate ? null : days,
       range: startDate && endDate ? { start: startDate, end: endDate } : { days },
-      daily: dailyResult.rows,
+      daily: dailyWithAnomalies,
       byModel: byModelResult.rows,
       byProvider: byProviderResult.rows,
       bySource,

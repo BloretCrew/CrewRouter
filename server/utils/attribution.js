@@ -27,6 +27,32 @@ function addSignal(signals, kind, value) {
   return normalized;
 }
 
+const COMPACTION_FEATURES = Object.freeze({
+  minUserChars: 8000,
+  maxSystemChars: 200,
+  historyPatterns: [
+    /previous conversation/i,
+    /conversation summary/i,
+    /serialized history/i,
+    /(?:^|\\n)\\s*role\\s*[:=]/i,
+    /(?:^|\\n)\\s*\\"role\\"\\s*:/i,
+  ],
+});
+
+function classifyCompaction(body = {}) {
+  if (!body || typeof body !== 'object') return false;
+  if ((Array.isArray(body.tools) && body.tools.length > 0) || (body.tool_definitions && Object.keys(body.tool_definitions).length > 0)) return false;
+  const system = body.system ?? body.instructions ?? '';
+  const systemText = typeof system === 'string' ? system : JSON.stringify(system || '');
+  if (systemText.trim().length >= COMPACTION_FEATURES.maxSystemChars) return false;
+  const messages = Array.isArray(body.messages) ? body.messages : [];
+  if (messages.length !== 1 || messages[0]?.role !== 'user') return false;
+  const content = messages[0].content;
+  const userText = typeof content === 'string' ? content : JSON.stringify(content || '');
+  return userText.length > COMPACTION_FEATURES.minUserChars
+    && COMPACTION_FEATURES.historyPatterns.some(pattern => pattern.test(userText));
+}
+
 function extractAttribution(req = {}) {
   const body = req.body && typeof req.body === 'object' ? req.body : {};
   const signals = [];
@@ -77,4 +103,4 @@ function extractAttribution(req = {}) {
   return { parentThreadId, subagent, sessionId, source: signals };
 }
 
-module.exports = { extractAttribution };
+module.exports = { extractAttribution, classifyCompaction, COMPACTION_FEATURES };

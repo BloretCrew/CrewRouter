@@ -6840,6 +6840,7 @@ async function(ctx) {
       const tok = parseInt(u.tokens || 0, 10);
       return req > 0 ? Math.round(tok / req) : 0;
     });
+    const anomalyPoints = usage.map(u => u.suspected_compaction_boundary ? 6 : 0);
 
     const style = getComputedStyle(document.documentElement);
     const textSecondary = style.getPropertyValue('--muted-foreground').trim() || '#94a3b8';
@@ -6868,8 +6869,10 @@ async function(ctx) {
         backgroundColor: 'rgba(59,130,246,0.15)',
         fill: true,
         tension: 0.4,
-        pointRadius: 3,
-        pointHoverRadius: 6
+        pointRadius: anomalyPoints,
+        pointHoverRadius: 6,
+        pointBackgroundColor: usage.map(u => u.suspected_compaction_boundary ? '#ef4444' : '#3b82f6'),
+        pointBorderColor: usage.map(u => u.suspected_compaction_boundary ? '#ef4444' : '#3b82f6')
       }]
     }, commonOptions());
 
@@ -6924,6 +6927,7 @@ async function(ctx) {
     const labels = usage.map(u => new Date(u.date).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }));
     const requests = usage.map(u => parseInt(u.requests || 0, 10));
     const costs = usage.map(u => parseFloat(u.cost || 0));
+    const anomalyPoints = usage.map(u => u.suspected_compaction_boundary ? 6 : 0);
 
     const style = getComputedStyle(document.documentElement);
     const textSecondary = style.getPropertyValue('--muted-foreground').trim() || '#94a3b8';

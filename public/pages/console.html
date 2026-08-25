@@ -704,6 +704,12 @@
             </div>
           </div>
 
+          <!-- 逻辑任务聚合视图 -->
+          <div id="taskGroupsSection" class="content-section" style="margin-top:16px;display:none;">
+            <div class="section-header"><div><h3><span data-i18n="逻辑任务">逻辑任务</span></h3><p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="按父线程聚合请求并显示上下文压力">按父线程聚合请求并显示上下文压力</span></p></div></div>
+            <div id="taskGroupsList"></div>
+          </div>
+
           <!-- 实时活动看板（客户端 hook 事件上报） -->
           <div id="liveActivitySection" class="live-activity-section" style="display:none;">
             <div class="live-activity-header">
@@ -2430,7 +2436,7 @@ data: [DONE]</code></pre>
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/dom.js?v=2"></script>
   <script src="/js/dialog.js?v=2"></script>
-  <script src="/js/app.js?v=33"></script>
+  <script src="/js/app.js?v=34"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

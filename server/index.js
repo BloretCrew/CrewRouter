@@ -2386,6 +2386,7 @@ if (isDemo) {
   app.use('/api/user', require('./routes/notifications'));
   // 用户级自定义提示词（每人仅见自己的；admin 全站视图走 /api/admin/custom-instructions）
   app.use('/api/user', require('./routes/user-custom-instructions'));
+  app.use('/api/user', require('./routes/attribution-view'));
   // 注入提示词（请求侧 system 注入配置，demo 不挂载）
   app.use('/api/user', require('./routes/inject-prompts'));
   // 客户端事件上报（hook → 实时活动看板）

@@ -41,9 +41,14 @@ command = "~/.local/bin/cr-report.py hook --harness codex"
 ```
 
 ### Grok（无 hook → watch 模式常驻）
+Linux/macOS 可用 `nohup`：
 ```bash
 nohup ~/.local/bin/cr-report.py watch --harness grok >/dev/null 2>&1 &
 ```
+Windows 请使用“任务计划程序”创建登录时启动任务，程序填写 `py`，参数填写
+`C:\\path\\cr-report.py watch --harness grok`；或将同一命令加入用户启动文件夹的快捷方式。
+路径由 Python `pathlib` 按当前用户目录解析，Windows watch 未实测。
+
 tail `~/.grok/sessions/**/updates.jsonl`：新会话目录 → session_start，
 tool_call 行 → tool_use。状态存 `~/.cache/cr-report-grok-state.json`。
 
