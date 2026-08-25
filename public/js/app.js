@@ -5086,7 +5086,7 @@ class ConsoleApp {
         ? `<span class="session-badge pressure-warning" title="${t('上下文压力')}">${t('注意')}</span>`
         : '';
     const range = `${this.formatRelativeTime(item.firstSeen)} → ${this.formatRelativeTime(item.lastSeen)}`;
-    const cwdText = item.cwd ? `<div class="model-library-item-desc" style="-webkit-line-clamp:1;" title="${escapeHtml(item.cwd)}">📁 ${escapeHtml(String(item.cwd).slice(-80))}</div>` : '';
+    const cwdText = item.cwd ? `<div class="model-library-item-desc" style="-webkit-line-clamp:1;" title="${escapeHtml(item.cwd)}">${this._sfIcon('folder.fill', '9ca3af')} ${escapeHtml(String(item.cwd).slice(-80))}</div>` : '';
     const lastTool = item.lastToolName ? ` · ${t('最近')}: ${item.lastToolName}` : '';
     return `
       <div class="model-library-item" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
@@ -5116,6 +5116,7 @@ class ConsoleApp {
     this._detailMsgPage = 0;
     this._detailLoaded = 0;
     this._detailTotal = 0;
+    this._renderedEventSigs = [];
     const listWrap = document.getElementById('sessionsListWrap');
     const detailWrap = document.getElementById('sessionDetailWrap');
     if (!listWrap || !detailWrap) return;
@@ -5159,22 +5160,28 @@ class ConsoleApp {
           <span>${escapeHtml(records.length ? `${new Date(records[0].ts).toLocaleString()} → ${new Date(records[records.length - 1].ts).toLocaleString()}` : '')}</span>
         `);
         setHTML(timeline, '');
+        // refresh / 首次加载都从空白时间线开始，签名序列一并重置（跨页去重状态）
+        this._renderedEventSigs = [];
       }
 
       const records = Array.isArray(data.records) ? data.records : [];
       const frag = records.map(record => {
-        const evts = record.events || [];
-        const merged = evts.length === 0 && Number(record.eventsCount || 0) > 0;
+        const rawEvents = Array.isArray(record.events) ? record.events : [];
+        // 跨页去重：与已渲染签名序列尾部比对，上下文重放部分不再重复渲染
+        const evts = this._dedupeRenderedEvents(rawEvents);
+        this._appendRenderedEventSigs(evts);
+        // eventsCount 为原始事件数；被抑制的重放数 = 原始数 - 实际渲染数
+        const suppressed = Math.max(Number(record.eventsCount || 0) - evts.length, 0);
         const eventsHtml = evts.map(e => this.renderTimelineEvent(e)).join('');
         return `
           <li>
             <div class="timeline-record-head">
               <span title="${escapeHtml(new Date(record.ts).toISOString())}">${escapeHtml(new Date(record.ts).toLocaleTimeString())}</span>
-              <span>🤖 ${escapeHtml(record.model ? String(record.model).slice(0, 20) : '-')}</span>
+              <span>${this._sfIcon('text.bubble', '10b981')} ${escapeHtml(record.model ? String(record.model).slice(0, 20) : '-')}</span>
               <span>${this._formatBigNumber(Number(record.tokens || 0))} Token</span>
               ${Number(record.cachedTokens || 0) ? `<span style="color:#10b981;">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
               ${record.latencyMs != null ? `<span>${(record.latencyMs / 1000).toFixed(1)}s</span>` : ''}
-              ${merged ? `上下文重放 +${record.eventsCount}` : `${evts.length} 个事件`}
+              ${suppressed > 0 ? `<span class="merged-tag">上下文重放 +${suppressed}</span>` : `${evts.length} 个事件`}
             </div>
             ${eventsHtml}
           </li>`;
@@ -5189,7 +5196,47 @@ class ConsoleApp {
         setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${t('该会话暂无消息明细')}</div></li>`);
       }
     } catch (error) {
-      setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${escapeHtml(error.message || t('会话详情加载失败'))}</div></li>`);
+      if (page > 1 && timeline.children.length) {
+        // 翻页失败不整块重绘：保留已渲染内容与签名状态一致，仅追加错误提示行
+        timeline.insertAdjacentHTML('beforeend', `<li><div class="timeline-event-text" style="text-align:center;color:var(--destructive);padding:16px;">${escapeHtml(error.message || t('会话详情加载失败'))}</div></li>`);
+      } else {
+        setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${escapeHtml(error.message || t('会话详情加载失败'))}</div></li>`);
+      }
+    }
+  }
+
+  /** 时间线内联 SF 小图标（12px，随文基线对齐） */
+  _sfIcon(name, color) {
+    return `<img src="https://img.bloret.net/SF/${encodeURIComponent(name)}?color=${encodeURIComponent(color)}" alt="" class="sf-icon" data-sf-name="${escapeHtml(name)}" style="display:inline-block;vertical-align:-2px;width:12px;height:12px;">`;
+  }
+
+  /**
+   * 跨页事件去重：把本记录事件序列化后与已渲染签名序列（_renderedEventSigs）尾部对齐，
+   * 求最长公共重叠（新序列前缀 == 已渲染序列后缀）。重叠 ≥ 新事件数一半视为上下文
+   * 重放，只渲染新增尾部；否则全量渲染（同后端相邻记录比对算法）。
+   */
+  _dedupeRenderedEvents(events) {
+    const incoming = Array.isArray(events) ? events : [];
+    if (!incoming.length) return [];
+    const sigs = Array.isArray(this._renderedEventSigs) ? this._renderedEventSigs : [];
+    if (!sigs.length) return incoming;
+    const incSigs = incoming.map(e => JSON.stringify(e));
+    let overlap = 0;
+    for (let k = Math.min(incSigs.length, sigs.length); k >= Math.ceil(incSigs.length / 2); k--) {
+      let matched = true;
+      for (let i = 0; i < k; i++) {
+        if (sigs[sigs.length - k + i] !== incSigs[i]) { matched = false; break; }
+      }
+      if (matched) { overlap = k; break; }
+    }
+    return overlap >= Math.ceil(incSigs.length / 2) ? incoming.slice(overlap) : incoming;
+  }
+
+  /** 渲染完成后把新事件签名追加进已渲染序列 */
+  _appendRenderedEventSigs(events) {
+    if (!Array.isArray(this._renderedEventSigs)) this._renderedEventSigs = [];
+    for (const e of (Array.isArray(events) ? events : [])) {
+      this._renderedEventSigs.push(JSON.stringify(e));
     }
   }
 
@@ -5207,7 +5254,7 @@ class ConsoleApp {
       return `
         <li class="timeline-event type-tool_call">
           <details class="tool-block">
-            <summary class="tool-call-line"><span class="tool-dot">⏺</span> <span class="tool-name">${escapeHtml(name)}</span><span class="tool-args">${escapeHtml(argsLine)}</span></summary>
+            <summary class="tool-call-line"><span class="tool-dot">${this._sfIcon('hammer.fill', 'f59e0b')}</span> <span class="tool-name">${escapeHtml(name)}</span><span class="tool-args">${escapeHtml(argsLine)}</span></summary>
             ${evt.argsPreview ? `<pre class="tool-args-full">${escapeHtml(evt.argsPreview)}${evt.truncated ? '\n…' : ''}</pre>` : ''}
           </details>
         </li>`;
@@ -5219,7 +5266,7 @@ class ConsoleApp {
       return `
         <li class="timeline-event type-tool_result${errCls}">
           <details class="tool-block tool-result-block" ${evt.is_error ? 'open' : ''}>
-            <summary class="tool-result-line"><span class="tool-result-icon">⎿</span> ${errTag}<span class="tool-result-owner">${escapeHtml(evt.name || t('工具结果'))}</span></summary>
+            <summary class="tool-result-line"><span class="tool-result-icon">${this._sfIcon('arrow.turn.down.right', '8b5cf6')}</span> ${errTag}<span class="tool-result-owner">${escapeHtml(evt.name || t('工具结果'))}</span></summary>
             ${evt.resultPreview ? `<pre class="tool-result-text">${escapeHtml(evt.resultPreview)}${evt.resultPreview.length >= 800 ? '\n…' : ''}</pre>` : ''}
           </details>
         </li>`;
@@ -5229,16 +5276,16 @@ class ConsoleApp {
       return `
         <li class="timeline-event type-thinking">
           <details class="thinking-block">
-            <summary>💭 ${t('思考')}</summary>
+            <summary>${this._sfIcon('brain.head.profile', 'ec4899')} ${t('思考')}</summary>
             <div class="timeline-event-text thinking-text">${escapeHtml(evt.preview || '')}${evt.truncated ? '\n…' : ''}</div>
           </details>
         </li>`;
     }
     // —— 正文：user 高亮气泡 / assistant 常规 / system 弱化 ——
     const roleMap = {
-      user: { label: `👤 ${t('用户')}`, color: '#3b82f6' },
-      assistant: { label: `🤖 ${t('助手')}`, color: '#10b981' },
-      system: { label: `⚙️ ${t('系统')}`, color: 'var(--muted-foreground)' },
+      user: { label: `${this._sfIcon('person.crop.circle', '3b82f6')} ${t('用户')}`, color: '#3b82f6' },
+      assistant: { label: `${this._sfIcon('text.bubble', '10b981')} ${t('助手')}`, color: '#10b981' },
+      system: { label: `${this._sfIcon('gearshape.fill', '9ca3af')} ${t('系统')}`, color: 'var(--muted-foreground)' },
     };
     const meta = roleMap[evt.role] || roleMap.system;
     return `
@@ -5255,6 +5302,7 @@ class ConsoleApp {
     if (listWrap) listWrap.style.display = '';
     if (detailWrap) detailWrap.style.display = 'none';
     this._detailSessionKey = null;
+    this._renderedEventSigs = [];
   }
 
   /** 「提示词」页：历史自定义提示词列表（去重合并，仅当前用户自己的，/api/user/custom-instructions） */
