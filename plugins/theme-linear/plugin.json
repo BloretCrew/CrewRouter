@@ -1,0 +1,11 @@
+{
+  "id": "theme-linear",
+  "name": "Linear 风",
+  "version": "1.0.0",
+  "author": "CrewRouter",
+  "description": "设计语言主题包「Linear 风」：紧凑克制、大圆角收紧为 6px、阴影极浅、低饱和灰阶背景、紫罗兰强调色。仅覆盖界面样式变量，不改动任何功能行为。",
+  "permissions": ["themes:register"],
+  "themes": [
+    { "id": "linear", "name": "Linear 风", "entry": "frontend/linear.css" }
+  ]
+}

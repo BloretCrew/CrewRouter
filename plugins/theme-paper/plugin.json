@@ -1,0 +1,11 @@
+{
+  "id": "theme-paper",
+  "name": "纸感浅色",
+  "version": "1.0.0",
+  "author": "CrewRouter",
+  "description": "设计语言主题包「纸感浅色」：米白纸底、无阴影、细实线边框区分层级、中等圆角；深色为「夜间纸」。仅覆盖界面样式变量，不改动任何功能行为。",
+  "permissions": ["themes:register"],
+  "themes": [
+    { "id": "paper", "name": "纸感浅色", "entry": "frontend/paper.css" }
+  ]
+}

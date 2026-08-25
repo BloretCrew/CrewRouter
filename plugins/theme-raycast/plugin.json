@@ -1,0 +1,11 @@
+{
+  "id": "theme-raycast",
+  "name": "Raycast 风",
+  "version": "1.0.0",
+  "author": "CrewRouter",
+  "description": "设计语言主题包「Raycast 风」：大圆角、重悬浮多层柔和阴影、高对比深底、红橙强调色、控件间距宽松。仅覆盖界面样式变量，不改动任何功能行为。",
+  "permissions": ["themes:register"],
+  "themes": [
+    { "id": "raycast", "name": "Raycast 风", "entry": "frontend/raycast.css" }
+  ]
+}

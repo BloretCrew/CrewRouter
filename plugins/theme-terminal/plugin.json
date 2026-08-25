@@ -1,0 +1,11 @@
+{
+  "id": "theme-terminal",
+  "name": "复古终端",
+  "version": "1.0.0",
+  "author": "CrewRouter",
+  "description": "设计语言主题包「复古终端」：零圆角、无阴影全扁平、全站等宽字体；浅色米白底墨黑字，深色纯黑底荧光绿前景，语义色调为绿系/琥珀终端色。仅覆盖界面样式变量，不改动任何功能行为。",
+  "permissions": ["themes:register"],
+  "themes": [
+    { "id": "terminal", "name": "复古终端", "entry": "frontend/terminal.css" }
+  ]
+}
