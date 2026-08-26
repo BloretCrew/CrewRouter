@@ -80,18 +80,22 @@ function groupToolRuns(events) {
 }
 
 // 摘要文案（中文序数化：5→"搜索了5次文件"，2→"写入了两个文件"）
+// 其他语言用阿拉伯数字与半角标点，保证英文句式通顺
 function summarySentence(groups, hashes, t, thinkingCount) {
+  const zh = typeof window.I18N !== 'undefined' && window.I18N.lang === 'zh';
   const numCn = ['零','一','两','三','四','五','六','七','八','九'];
-  const cnNum = (n) => n <= 9 ? numCn[n] : String(n);
+  const nStr = (n) => (zh && n >= 0 && n <= 9) ? numCn[n] : String(n);
+  const sep = zh ? '，' : ', ';
+  const end = zh ? '。' : '.';
   const parts = [];
-  if (groups.search) parts.push(t('搜索了') + groups.search + t('次文件'));
-  if (groups.read) parts.push(t('读取了') + cnNum(groups.read) + t('个文件'));
-  if (groups.write) parts.push(t('写入了') + cnNum(groups.write) + t('个文件'));
+  if (groups.search) parts.push(t('搜索了') + nStr(groups.search) + t('次文件'));
+  if (groups.read) parts.push(t('读取了') + nStr(groups.read) + t('个文件'));
+  if (groups.write) parts.push(t('写入了') + nStr(groups.write) + t('个文件'));
   if (hashes.length) parts.push(t('提交了') + ' ' + hashes.map(escapeHtml).join(', '));
-  else if (groups.commit) parts.push(t('提交了') + cnNum(groups.commit) + t('次'));
+  else if (groups.commit) parts.push(t('提交了') + nStr(groups.commit) + t('次'));
   if (groups.todo) parts.push(t('更新了任务清单'));
-  if (groups.bash) parts.push(t('执行了') + groups.bash + t('条命令'));
-  if (groups.other) parts.push(t('调用了') + groups.other + t('个其他工具'));
-  if (thinkingCount) parts.push(t('深度思考了') + thinkingCount + t('次'));
-  return parts.join('，') + '。';
+  if (groups.bash) parts.push(t('执行了') + nStr(groups.bash) + t('条命令'));
+  if (groups.other) parts.push(t('调用了') + nStr(groups.other) + t('个其他工具'));
+  if (thinkingCount) parts.push(t('深度思考了') + nStr(thinkingCount) + t('次'));
+  return parts.join(sep) + end;
 }

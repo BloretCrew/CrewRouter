@@ -3568,8 +3568,8 @@ class ConsoleApp {
           const last = s.last_event_at ? this.formatRelativeTime(s.last_event_at) : '-';
           return `<div class="live-activity-row">
             <span class="live-activity-harness">${this._harnessIconHtml(h.id, 16)} ${escapeHtml(meta.label)}</span>
-            <span class="live-activity-num" title="${Number(s.active_sessions) || 0} 个活跃会话">${this._formatBigNumber(Number(s.active_sessions) || 0)} 会话</span>
-            <span class="live-activity-num" title="${Number(s.tool_calls) || 0} 次工具调用 / 5 分钟">${this._formatBigNumber(Number(s.tool_calls) || 0)} 调用</span>
+            <span class="live-activity-num" title="${Number(s.active_sessions) || 0} ${t('个活跃会话')}">${this._formatBigNumber(Number(s.active_sessions) || 0)} ${t('个活跃会话')}</span>
+            <span class="live-activity-num" title="${Number(s.tool_calls) || 0} ${t('次工具调用')} / 5 ${t('分钟')}">${this._formatBigNumber(Number(s.tool_calls) || 0)} ${t('次工具调用')}</span>
             <span class="live-activity-last">${escapeHtml(last)}</span>
           </div>`;
         });
@@ -5228,7 +5228,7 @@ class ConsoleApp {
               <span>${this._formatBigNumber(Number(record.tokens || 0))} Token</span>
               ${Number(record.cachedTokens || 0) ? `<span style="color:var(--success);">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
               ${record.latencyMs != null ? `<span>${(record.latencyMs / 1000).toFixed(1)}s</span>` : ''}
-              ${suppressed > 0 ? `<span class="merged-tag">上下文重放 +${suppressed}</span>` : `${evts.length} 个事件`}${Number(record.repeatCount || 0) > 1 ? ` · <span class="merged-tag">重复 ×${record.repeatCount}</span>` : ''}
+              ${suppressed > 0 ? `<span class="merged-tag">${t('上下文重放')} +${suppressed}</span>` : `${evts.length} ${t('个事件')}`}${Number(record.repeatCount || 0) > 1 ? ` · <span class="merged-tag">${t('重复')} ×${record.repeatCount}</span>` : ''}
             </div>
             ${eventsHtml}
           </li>`;

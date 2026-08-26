@@ -230,7 +230,7 @@
       opts.push(`<option value="" ${!selectedId ? 'selected' : ''}>${esc(t('内置默认主题'))}</option>`);
     }
     for (const th of state.themes) {
-      opts.push(`<option value="${esc(th.id)}" ${selectedId === th.id ? 'selected' : ''}>${esc(th.name)}</option>`);
+      opts.push(`<option value="${esc(th.id)}" ${selectedId === th.id ? 'selected' : ''}>${esc(t(th.name))}</option>`);
     }
     return opts.join('');
   }
