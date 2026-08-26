@@ -522,6 +522,71 @@ async function callInternalLLM(promptText, userId) {
   return j.choices?.[0]?.message?.content || '';
 }
 
+// 读取 web ReadableStream（Node 18+）
+function readWebStream(bodyStream) {
+  const reader = bodyStream.getReader();
+  return {
+    [Symbol.asyncIterator]() {
+      return {
+        next: () => reader.read(),
+        return: () => { reader.releaseLock(); return Promise.resolve({ done: true, value: undefined }); },
+      };
+    }
+  };
+}
+
+// 内部推理（流式）：本地网关 + 服务端持有的第一个可用 key，逐段产出内容增量
+async function* streamInternalLLM(promptText, userId) {
+  const keyRow = await pool.query(
+    "SELECT id, key_value FROM api_keys WHERE user_id = $1 AND enabled = TRUE AND name ILIKE 'crewrouter' ORDER BY id ASC LIMIT 1",
+    [userId]);
+  if (!keyRow.rows[0]) throw new Error('未找到 CrewRouter 密钥');
+  const port = config.port || 20003;
+  const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${keyRow.rows[0].key_value}`,
+      'Accept': 'text/event-stream',
+    },
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: promptText }],
+      max_tokens: 1200,
+      stream: true,
+    }),
+    signal: AbortSignal.timeout(120000),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j.error?.message || `上游 ${res.status}`);
+  }
+  const decoder = new TextDecoder();
+  let buf = '';
+  for await (const chunk of readWebStream(res.body)) {
+    buf += decoder.decode(chunk, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() || '';
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line.startsWith('data: ')) continue;
+      const data = line.slice(6).trim();
+      if (data === '[DONE]') return;
+      let j;
+      try { j = JSON.parse(data); } catch (_) { continue; }
+      const delta = j.choices?.[0]?.delta?.content;
+      if (delta) yield delta;
+    }
+  }
+  // 处理缓冲区残留（无结尾换行）
+  const residual = buf.trim();
+  if (residual.startsWith('data: ')) {
+    const data = residual.slice(6).trim();
+    if (data !== '[DONE]') {
+      try { const j = JSON.parse(data); const delta = j.choices?.[0]?.delta?.content; if (delta) yield delta; } catch (_) { /* ignore */ }
+    }
+  }
+}
+
 // 组装会话全文（截断保护）
 function buildSessionDigest(records) {
   const parts = [];
@@ -542,7 +607,7 @@ function buildSessionDigest(records) {
   return text;
 }
 
-// POST /:sessionKey/summary —— 生成并缓存
+// POST /:sessionKey/summary —— 生成并缓存（支持 ?stream=1 / Accept: text/event-stream 流式输出）
 router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
   try {
     await ensureSummaryTable();
@@ -572,29 +637,63 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
     }
     if (!allEvents.length) return res.status(400).json({ error: '会话没有可总结的内容' });
     const digest = buildSessionDigest([{ events: allEvents }]);
-        const promptHeader = 'You are a session summarizer. The following is a full interaction log between a user and an AI coding assistant (with many tool-call logs). Ignore tool-noise, focus on: the user goal, the action timeline, and final outcome. Output structured Chinese summary with sections.';
     const prompt = [
       '请对以下 AI 编程助手的会话记录生成结构化中文总结，包含小节：目标、做了什么、关键决定、当前状态、下一步建议。总长不超过 500 字，直接输出总结正文。',
       '--- 会话记录开始 ---',
       digest,
       '--- 会话记录结束 ---',
     ].join('\n');
-    let summary;
-    try {
-      summary = await callInternalLLM(prompt, uid);
-    } catch (err) {
-      Logger.error('[会话总结] 推理失败:', err.message);
-      return res.status(502).json({ error: err.message || '总结生成失败' });
-    }
-    if (!summary) return res.status(502).json({ error: '模型未返回内容' });
-    await pool.query(
+    const persistSummary = (summary) => pool.query(
       `INSERT INTO session_summaries (user_id, session_key, summary, model)
        VALUES ($1,$2,$3,$4)
        ON CONFLICT (user_id, session_key)
        DO UPDATE SET summary = EXCLUDED.summary, model = EXCLUDED.model, created_at = CURRENT_TIMESTAMP`,
       [uid, sessionKey, summary, 'internal']
     );
-    res.json({ sessionKey, summary });
+    const wantStream = req.query.stream === '1' || (req.headers.accept || '').includes('text/event-stream');
+    if (!wantStream) {
+      // 非流式：整体返回 JSON（兼容旧客户端）
+      let summary;
+      try {
+        summary = await callInternalLLM(prompt, uid);
+      } catch (err) {
+        Logger.error('[会话总结] 推理失败:', err.message);
+        return res.status(502).json({ error: err.message || '总结生成失败' });
+      }
+      if (!summary) return res.status(502).json({ error: '模型未返回内容' });
+      await persistSummary(summary);
+      return res.json({ sessionKey, summary });
+    }
+
+    // 流式：先发 SSE 头，再逐段转发增量，最后 done（含完整文案并落库）
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-store');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
+    const writeEvent = (obj) => {
+      if (res.writableEnded) return;
+      res.write(`data: ${JSON.stringify(obj)}\n\n`);
+    };
+    let full = '';
+    try {
+      for await (const delta of streamInternalLLM(prompt, uid)) {
+        full += delta;
+        writeEvent({ type: 'delta', text: delta });
+      }
+      if (!full.trim()) {
+        writeEvent({ type: 'error', error: '模型未返回内容' });
+        return res.end();
+      }
+      await persistSummary(full);
+      writeEvent({ type: 'done', summary: full });
+      res.end();
+    } catch (err) {
+      Logger.error('[会话总结] 流式推理失败:', err.message);
+      // 生成中断（可能已输出部分增量）：明确报错，不落库，避免前端误当成完整缓存
+      writeEvent({ type: 'error', error: err.message || '总结生成失败' });
+      if (!res.writableEnded) res.end();
+    }
   } catch (error) {
     Logger.error('[会话总结] 错误:', error);
     res.status(500).json({ error: '服务器错误' });

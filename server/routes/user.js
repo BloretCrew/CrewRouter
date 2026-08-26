@@ -522,6 +522,14 @@ router.put('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE,
 }), async (req, res) => {
   const { customModelName, name } = req.body || {};
   try {
+    // CrewRouter 内部密钥受保护：禁止改名（含改出/改成 CrewRouter）
+    const cur = await pool.query('SELECT name FROM api_keys WHERE id = $1', [req.params.id]);
+    if (/^crewrouter$/i.test(String(cur.rows[0]?.name || '')) && name !== undefined) {
+      return res.status(403).json({ error: 'CrewRouter 密钥为系统依赖，禁止改名' });
+    }
+    if (name !== undefined && /^crewrouter$/i.test(String(name ?? '').trim())) {
+      return res.status(400).json({ error: '不能使用保留名称 CrewRouter' });
+    }
     const sets = [];
     const params = [];
     let idx = 1;

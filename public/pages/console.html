@@ -1213,10 +1213,15 @@
           .thinking-block summary { list-style:none; cursor:pointer; font-size:12.5px; color:var(--pink); user-select:none; }
           .thinking-block summary::-webkit-details-marker { display:none; }
           .thinking-text { font-style:italic; color:var(--muted-foreground); margin-top:4px; }
+          .key-system-badge { display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:5px;background:rgba(59,130,246,.12);color:var(--info);margin-left:6px;vertical-align:middle; }
           .merged-tag { color:var(--muted-foreground); font-size:11px; font-style:italic; opacity:.7; }
           .timeline-record-head.merged { opacity:.75; }
           .summary-spinner { width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--info);border-radius:50%;animation:summary-spin .8s linear infinite; }
           @keyframes summary-spin { to { transform:rotate(360deg); } }
+          .session-summary-inline { border:1px solid var(--border); border-left:3px solid var(--info); border-radius:12px; background:var(--card); padding:12px 16px; }
+          .session-summary-inline summary { cursor:pointer; user-select:none; font-size:13px; display:flex; align-items:center; gap:8px; }
+          .session-summary-inline summary::-webkit-details-marker { display:none; }
+          .session-summary-inline .summary-inline-body { white-space:pre-wrap; font-size:13px; line-height:1.55; max-height:220px; overflow-y:auto; margin-top:8px; }
           .role-user-text { background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25); border-radius:10px; padding:8px 12px; }
         </style>
         <div class="content-section" id="sessionsListWrap">
@@ -1266,6 +1271,8 @@
             <button class="btn btn-secondary" onclick="app.generateSessionSummary()"><span data-i18n="生成总结">生成总结</span></button>
           </div>
           <div id="sessionDetailMetaBar" class="session-card-meta" style="margin-bottom:16px;"></div>
+          <!-- 会话总结内联展示：生成时流式渲染，完成后可折叠；有缓存进入时也展示 -->
+          <div id="sessionSummaryInline" style="display:none;margin-bottom:16px;"></div>
           <div id="sessionTimeline" class="timeline"></div>
           <div style="display:flex;justify-content:center;margin-top:16px;">
             <button id="sessionMoreBtn" class="btn btn-secondary" onclick="app.loadSessionMessages(app._detailSessionKey, (app._detailMsgPage || 1) + 1)"><span data-i18n="加载更多">加载更多</span></button>
@@ -2603,7 +2610,7 @@ data: [DONE]</code></pre>
   <script src="/js/dialog.js?v=2"></script>
   <script src="/js/session-tool-groups.js?v=2"></script>
   <script src="/js/vendor/marked.min.js"></script>
-  <script src="/js/app.js?v=47"></script>
+  <script src="/js/app.js?v=48"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

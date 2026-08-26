@@ -100,6 +100,7 @@ class ConsoleApp {
     // per-session 总结缓存命中状态：cachedKeys 记录「已有缓存」的会话，checkedKeys 记录「已查过」的会话，避免重复查询
     this._summaryCachedKeys = new Set();
     this._summaryCheckedKeys = new Set();
+    this._summaryCacheTextMap = {};   // sessionKey -> 已确认的缓存文案，供顶部内联展示复用
     this._lastPageFingerprint = '';
     this.init();
   }
@@ -746,19 +747,15 @@ class ConsoleApp {
           <div class="api-key-title">
             <span class="api-key-drag-handle" draggable="true" title="${t('拖拽调整顺序')}" aria-hidden="true"
               ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)">⠿</span>
-            <label class="pg-toggle api-key-enable-toggle" title="${/^crewrouter$/i.test(String(key.name || '')) ? t('CrewRouter 密钥为系统依赖，不可切换') : (isEnabled ? t('点击禁用') : t('点击启用'))}">
-              <input type="checkbox" ${isEnabled ? 'checked' : ''} ${/^crewrouter$/i.test(String(key.name || '')) ? 'disabled' : `onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)"`}>
+            ${/^crewrouter$/i.test(String(key.name || '')) ? '' : `
+            <label class="pg-toggle api-key-enable-toggle" title="${isEnabled ? t('点击禁用') : t('点击启用')}">
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)">
               <span class="pg-toggle-slider"></span>
-            </label>
+            </label>`}
             <div class="api-key-title-text">
               <div class="api-key-name-row">
-                <span class="api-key-name api-key-name-editable"
-                  role="button"
-                  tabindex="0"
-                  title="${t('点击以重命名')}"
-                  data-key-id="${key.id}"
-                  onclick="event.stopPropagation();app.startApiKeyInlineRename(${key.id}, this)"
-                  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();app.startApiKeyInlineRename(${key.id}, this);}">${escapeHtml(displayName)}</span>
+                <span class="api-key-name" data-key-id="${key.id}">${escapeHtml(displayName)}</span>
+                ${/^crewrouter$/i.test(String(key.name || '')) ? '<span class="key-system-badge" title="' + t('系统依赖密钥，不可删除/改名/启停') + '">' + t('系统') + '</span>' : ''}
                 <div class="api-key-chips">${chips}</div>
                 <span class="api-key-meta-divider" aria-hidden="true"></span>
                 ${this.renderApiKeyTags(key)}
@@ -5152,8 +5149,12 @@ class ConsoleApp {
     this._summaryError = null;
     this._lastPageFingerprint = '';
     this._setSummaryRegenDisabled(false);
+    // 清空上一会话的顶部内联总结容器，避免串会话
+    const inlineEl = document.getElementById('sessionSummaryInline');
+    if (inlineEl) { inlineEl.innerHTML = ''; inlineEl.style.display = 'none'; delete inlineEl.dataset.built; }
     // 总结按钮缓存状态：已知命中直接置为「查看总结」，否则异步探测一次避免重复查询
     this._applySummaryBtnText(this._detailSessionKey, this._summaryCachedKeys.has(this._detailSessionKey));
+    this._renderInlineCachedSummary(this._detailSessionKey);
     this._probeSessionSummaryCache(this._detailSessionKey);
     const listWrap = document.getElementById('sessionsListWrap');
     const detailWrap = document.getElementById('sessionDetailWrap');
@@ -6394,7 +6395,7 @@ class ConsoleApp {
     });
   }
 
-  /** 异步探测当前会话的 GET summary 缓存，命中则把按钮置为「查看总结」；同一会话只探测一次 */
+  /** 异步探测当前会话的 GET summary 缓存，命中则把按钮置为「查看总结」并在顶部展示；同一会话只探测一次 */
   async _probeSessionSummaryCache(sessionKey) {
     if (!sessionKey || this._summaryCheckedKeys.has(sessionKey)) return;
     this._summaryCheckedKeys.add(sessionKey);
@@ -6403,9 +6404,64 @@ class ConsoleApp {
       const data = await res.json().catch(() => ({}));
       if (data && data.summary) {
         this._summaryCachedKeys.add(sessionKey);
-        if (sessionKey === this._detailSessionKey) this._applySummaryBtnText(sessionKey, true);
+        this._summaryCacheTextMap[sessionKey] = data.summary;
+        if (sessionKey === this._detailSessionKey) {
+          this._applySummaryBtnText(sessionKey, true);
+          this._renderSessionSummaryInline(sessionKey, data.summary, 'done');
+        }
       }
     } catch (_) { /* 探测失败保持「生成总结」 */ }
+  }
+
+  /** 会话页顶部内联容器：已知缓存直接按完成态渲染，否则清空隐藏 */
+  _renderInlineCachedSummary(sessionKey) {
+    if (sessionKey !== this._detailSessionKey) return;
+    const text = this._summaryCacheTextMap[sessionKey];
+    if (text) {
+      this._renderSessionSummaryInline(sessionKey, text, 'done');
+    } else {
+      const el = document.getElementById('sessionSummaryInline');
+      if (el) { el.innerHTML = ''; el.style.display = 'none'; delete el.dataset.built; }
+    }
+  }
+
+  /** 会话页顶部内联总结：流式/完成/错误三态可视化（复用一个 details 结构，流式时只更新文本节点） */
+  _renderSessionSummaryInline(sessionKey, text, state, errMsg) {
+    if (sessionKey !== this._detailSessionKey) return;
+    const el = document.getElementById('sessionSummaryInline');
+    if (!el) return;
+    el.style.display = '';
+    if (!el.dataset.built) {
+      el.dataset.built = '1';
+      const details = document.createElement('details');
+      details.className = 'session-summary-inline';
+      details.open = true;
+      const summary = document.createElement('summary');
+      const spinner = document.createElement('span');
+      spinner.className = 'summary-spinner';
+      spinner.style.cssText = 'width:16px;height:16px;border-width:2px;flex:none;';
+      const label = document.createElement('span');
+      const body = document.createElement('div');
+      body.className = 'summary-inline-body';
+      summary.append(spinner, label);
+      details.append(summary, body);
+      el.append(details);
+      el._details = details;
+      el._spinner = spinner;
+      el._label = label;
+      el._body = body;
+    }
+    if (state === 'error') {
+      el._label.textContent = t('总结生成失败');
+      el._spinner.style.display = 'none';
+      el._body.textContent = errMsg || t('总结生成失败');
+      el._details.open = true;
+      return;
+    }
+    el._label.textContent = state === 'done' ? t('会话总结') : t('正在生成会话总结...');
+    el._spinner.style.display = state === 'done' ? 'none' : '';
+    el._body.textContent = text || '';
+    el._details.open = true;
   }
 
   async toggleHookNotifyPush(enabled) {
