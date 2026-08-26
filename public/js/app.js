@@ -97,6 +97,9 @@ class ConsoleApp {
     this._summaryDoneFor = null;
     this._summaryError = null;
     this._summarySeq = 0;
+    // per-session 总结缓存命中状态：cachedKeys 记录「已有缓存」的会话，checkedKeys 记录「已查过」的会话，避免重复查询
+    this._summaryCachedKeys = new Set();
+    this._summaryCheckedKeys = new Set();
     this._lastPageFingerprint = '';
     this.init();
   }
@@ -5149,6 +5152,9 @@ class ConsoleApp {
     this._summaryError = null;
     this._lastPageFingerprint = '';
     this._setSummaryRegenDisabled(false);
+    // 总结按钮缓存状态：已知命中直接置为「查看总结」，否则异步探测一次避免重复查询
+    this._applySummaryBtnText(this._detailSessionKey, this._summaryCachedKeys.has(this._detailSessionKey));
+    this._probeSessionSummaryCache(this._detailSessionKey);
     const listWrap = document.getElementById('sessionsListWrap');
     const detailWrap = document.getElementById('sessionDetailWrap');
     if (!listWrap || !detailWrap) return;
@@ -6253,6 +6259,8 @@ class ConsoleApp {
     this.showModal('sessionSummaryModal');
     this._summaryPending = true;
     this._setSummaryRegenDisabled(true);
+    // 模型库顶部任务条：进入后台生成即亮出加载环（与弹窗是否开着无关，用户可能已切走）
+    this._updateTaskBar('loading');
 
     // 记录本次请求归属：会话 key + 请求序号，供切换会话后的状态隔离与回调校验
     const reqKey = key;
@@ -6263,6 +6271,14 @@ class ConsoleApp {
       const res = await fetch(`/api/user/sessions/${encodeURIComponent(key)}/summary`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t('总结生成失败'));
+      // 生成成功后该会话的总结已入库，缓存命中状态记下来供按钮切换
+      this._summaryCachedKeys.add(reqKey);
+      // 仅当没有更新的请求接管时才更新任务条为完成态，避免旧结果覆盖新任务
+      if (this._summarySeq === reqSeq) {
+        this._updateTaskBar('done', { summary: data.summary || '' });
+        // 若用户仍停留在发起时的会话详情页，同步两个按钮文字为「查看总结」
+        if (this._detailSessionKey === reqKey) this._applySummaryBtnText(reqKey, true);
+      }
       // 仅在仍处于发起时的会话才写回弹窗内容；否则只 toast 通知
       if (this._detailSessionKey === reqKey) {
         this._sessionSummaryText = data.summary || '';
@@ -6281,6 +6297,8 @@ class ConsoleApp {
           setHTML(live, `<span style="color:var(--danger);">${escapeHtml(this._summaryError)}</span>`);
         }
       }
+      // 生成失败时收起加载条，避免留下无限旋转的进行中提示
+      if (this._summarySeq === reqSeq) this._updateTaskBar('hidden');
       this.showToast(t('总结生成失败'), 'error');
     } finally {
       // 仅当没有更新的请求接管时才清除 pending 标志
@@ -6289,6 +6307,49 @@ class ConsoleApp {
         this._setSummaryRegenDisabled(false);
       }
     }
+  }
+
+  /** 模型库顶部任务条：后台总结任务的进行中/完成状态 */
+  _updateTaskBar(state, payload = {}) {
+    const bar = document.getElementById('modelLibraryTaskBar');
+    if (!bar) return;
+    if (state === 'hidden') { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+    if (state === 'loading') {
+      bar.style.display = '';
+      setHTML(bar, `
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid var(--border);border-radius:12px;background:var(--card);">
+          <div class="summary-spinner"></div>
+          <span style="font-size:13px;color:var(--muted-foreground);">${t('正在生成会话总结...')}<small style="margin-left:6px;opacity:.7;">${t('可离开此页，完成后在此查看')}</small></span>
+        </div>`);
+      return;
+    }
+    if (state === 'done') {
+      const text = String(payload.summary || '');
+      bar.style.display = '';
+      setHTML(bar, `
+        <div style="padding:14px 16px;border:1px solid var(--border);border-left:3px solid var(--success);border-radius:12px;background:var(--card);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <strong style="font-size:13px;">${t('会话总结已生成')}</strong>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="app.dismissModelLibraryTaskBar()" title="${t('关闭')}" style="padding:2px 8px;">✕</button>
+          </div>
+          <div style="white-space:pre-wrap;font-size:13px;line-height:1.55;max-height:180px;overflow-y:auto;">${escapeHtml(text)}</div>
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <button type="button" class="btn btn-sm btn-primary" onclick="app.openSessionSummaryModal()">${t('查看一次')}</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="app.copySessionSummary()">${t('复制')}</button>
+          </div>
+        </div>`);
+      this._sessionSummaryText = text;
+      return;
+    }
+  }
+
+  dismissModelLibraryTaskBar() { this._updateTaskBar('hidden'); }
+  openSessionSummaryModal() {
+    const bodyEl = document.getElementById('sessionSummaryBody');
+    if (bodyEl && this._sessionSummaryText) setHTML(bodyEl, escapeHtml(this._sessionSummaryText));
+    this.showModal('sessionSummaryModal');
+    // 查看一次即消失
+    this._updateTaskBar('hidden');
   }
 
   _renderSummaryLoading(bodyEl) {
@@ -6319,6 +6380,32 @@ class ConsoleApp {
     } catch (_) {
       this.showToast(t('复制失败'), 'error');
     }
+  }
+
+  /** 把当前详情页两个总结按钮文字切为「生成总结」/「查看总结」（仅作用于当前展示的会话） */
+  _applySummaryBtnText(sessionKey, hasCache) {
+    if (sessionKey !== this._detailSessionKey) return;
+    const label = hasCache ? t('查看总结') : t('生成总结');
+    document.querySelectorAll('#sessionDetailWrap [data-i18n]').forEach(el => {
+      if (el.dataset.i18n === '生成总结' || el.dataset.i18n === '查看总结') {
+        el.textContent = label;
+        el.dataset.i18n = hasCache ? '查看总结' : '生成总结';
+      }
+    });
+  }
+
+  /** 异步探测当前会话的 GET summary 缓存，命中则把按钮置为「查看总结」；同一会话只探测一次 */
+  async _probeSessionSummaryCache(sessionKey) {
+    if (!sessionKey || this._summaryCheckedKeys.has(sessionKey)) return;
+    this._summaryCheckedKeys.add(sessionKey);
+    try {
+      const res = await fetch(`/api/user/sessions/${encodeURIComponent(sessionKey)}/summary`);
+      const data = await res.json().catch(() => ({}));
+      if (data && data.summary) {
+        this._summaryCachedKeys.add(sessionKey);
+        if (sessionKey === this._detailSessionKey) this._applySummaryBtnText(sessionKey, true);
+      }
+    } catch (_) { /* 探测失败保持「生成总结」 */ }
   }
 
   async toggleHookNotifyPush(enabled) {

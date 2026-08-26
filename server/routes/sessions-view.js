@@ -512,7 +512,6 @@ async function callInternalLLM(promptText, userId) {
       'Authorization': `Bearer ${keyRow.rows[0].key_value}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: promptText }],
       max_tokens: 1200,
     }),
@@ -573,6 +572,7 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
     }
     if (!allEvents.length) return res.status(400).json({ error: '会话没有可总结的内容' });
     const digest = buildSessionDigest([{ events: allEvents }]);
+        const promptHeader = 'You are a session summarizer. The following is a full interaction log between a user and an AI coding assistant (with many tool-call logs). Ignore tool-noise, focus on: the user goal, the action timeline, and final outcome. Output structured Chinese summary with sections.';
     const prompt = [
       '请对以下 AI 编程助手的会话记录生成结构化中文总结，包含小节：目标、做了什么、关键决定、当前状态、下一步建议。总长不超过 500 字，直接输出总结正文。',
       '--- 会话记录开始 ---',
