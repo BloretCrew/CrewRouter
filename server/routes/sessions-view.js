@@ -16,6 +16,8 @@ const config = require('../config-loader');
 
 const DEFAULT_DAYS = 7;
 const MAX_DAYS = 90;
+// 搜索专用：只搜最近 7 天（默认与上限均为 7，把 ILIKE 扫描范围压到最小）
+const SEARCH_MAX_DAYS = 7;
 const DEFAULT_PAGE_SIZE = 20;
 const DETAIL_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
@@ -39,6 +41,11 @@ const SESSION_KEY_SQL = `COALESCE(
 
 function daysParam(value) {
   return Math.min(Math.max(parseInt(value, 10) || DEFAULT_DAYS, 1), MAX_DAYS);
+}
+
+/** 搜索天数：默认 7、上限 7（大 JSON 全表 ILIKE 代价高，必须收窄窗口） */
+function searchDaysParam(value) {
+  return Math.min(Math.max(parseInt(value, 10) || DEFAULT_DAYS, 1), SEARCH_MAX_DAYS);
 }
 
 function pageParams(query, defaultSize) {
@@ -376,10 +383,11 @@ router.get('/sessions', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /sessions/search?q=<关键词>&days=30
+// GET /sessions/search?q=<关键词>&days=7
 // 会话内容全文检索（messages::text + response，ILIKE），结果按会话聚合，
-// 每会话返回最多 3 条命中摘录。性能说明：ILIKE 全表扫在当前数据量下可接受；
-// 如后续数据量增大可引入 pg_trgm GIN 索引优化，暂不做全文索引。
+// 每会话返回最多 3 条命中摘录。搜索窗口固定最近 7 天（默认与上限均为 7），
+// SQL 先按 created_at 收窄到 7 天再 LIKE；ILIKE 走 messages/response 上的
+// pg_trgm GIN 表达式索引（idx_ur_msg_trgm / idx_ur_resp_trgm，若已建成）。
 // ---------------------------------------------------------------------------
 const SEARCH_MAX_SESSIONS = 20;
 const SEARCH_MAX_PREVIEWS = 3;
@@ -416,7 +424,7 @@ function buildExcerpt(text, lowerKeyword) {
 router.get('/sessions/search', requireAuth, async (req, res) => {
   const userId = req.session.user.id;
   const q = String(req.query.q || '').trim().slice(0, 100);
-  const days = daysParam(req.query.days === undefined ? DEFAULT_DAYS : req.query.days);
+  const days = searchDaysParam(req.query.days);
   if (!q) return res.status(400).json({ error: '缺少关键词' });
 
   try {
