@@ -376,6 +376,105 @@ router.get('/sessions', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /sessions/search?q=<关键词>&days=30
+// 会话内容全文检索（messages::text + response，ILIKE），结果按会话聚合，
+// 每会话返回最多 3 条命中摘录。性能说明：ILIKE 全表扫在当前数据量下可接受；
+// 如后续数据量增大可引入 pg_trgm GIN 索引优化，暂不做全文索引。
+// ---------------------------------------------------------------------------
+const SEARCH_MAX_SESSIONS = 20;
+const SEARCH_MAX_PREVIEWS = 3;
+const SEARCH_EXCERPT_RADIUS = 80;
+const SEARCH_EXCERPT_MAX = 300;
+const SEARCH_MARK_START = '<<<MARK>>>';
+const SEARCH_MARK_END = '<<<END>>>';
+
+/** ILIKE 转义 % _ \ 特殊字符 */
+function escapeLike(value) {
+  return String(value).replace(/[\\%_]/g, ch => `\\${ch}`);
+}
+
+/** 在原文中定位关键词并截取前后片段，命中词用标记包裹（前端替换为高亮 span） */
+function buildExcerpt(text, lowerKeyword) {
+  const raw = String(text || '');
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  const idx = lower.indexOf(lowerKeyword);
+  if (idx < 0) return null;
+  const start = Math.max(0, idx - SEARCH_EXCERPT_RADIUS);
+  const end = Math.min(raw.length, idx + lowerKeyword.length + SEARCH_EXCERPT_RADIUS);
+  let excerpt = raw.slice(start, end);
+  if (start > 0) excerpt = `…${excerpt}`;
+  if (end < raw.length) excerpt = `${excerpt}…`;
+  // 大小写不敏感替换命中词为标记（正则元字符已按字面转义）
+  const kwPattern = lowerKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  excerpt = excerpt.replace(new RegExp(kwPattern, 'gi'), m => `${SEARCH_MARK_START}${m}${SEARCH_MARK_END}`);
+  // 双重保险：超长截断时避免把 MARK 标记切一半
+  if (excerpt.length > SEARCH_EXCERPT_MAX) excerpt = excerpt.slice(0, SEARCH_EXCERPT_MAX);
+  return excerpt;
+}
+
+router.get('/sessions/search', requireAuth, async (req, res) => {
+  const userId = req.session.user.id;
+  const q = String(req.query.q || '').trim().slice(0, 100);
+  const days = daysParam(req.query.days === undefined ? DEFAULT_DAYS : req.query.days);
+  if (!q) return res.status(400).json({ error: '缺少关键词' });
+
+  try {
+    const like = `%${escapeLike(q)}%`;
+    const rowsResult = await pool.query(`
+      SELECT id,
+             ${SESSION_KEY_SQL} AS session_key,
+             COALESCE(request_source, 'unknown') AS request_source,
+             created_at,
+             messages::text AS messages_text,
+             response
+      FROM usage_records u
+      WHERE u.user_id = $1
+        AND u.created_at >= NOW() - ($2::int * INTERVAL '1 day')
+        AND (u.messages::text ILIKE $3 OR u.response ILIKE $3)
+      ORDER BY u.created_at DESC
+    `, [userId, days, like]);
+
+    // Node 内聚合：每会话记 matchCount / 时间范围 / 前 N 条摘录
+    const sessions = new Map();
+    for (const row of rowsResult.rows) {
+      const key = row.session_key;
+      let entry = sessions.get(key);
+      if (!entry) {
+        entry = { sessionKey: key, harness: row.request_source, matchCount: 0, firstSeen: row.created_at, lastSeen: row.created_at, previews: [] };
+        sessions.set(key, entry);
+      }
+      entry.matchCount++;
+      if (row.created_at < entry.firstSeen) entry.firstSeen = row.created_at;
+      if (row.created_at > entry.lastSeen) entry.lastSeen = row.created_at;
+      if (entry.previews.length < SEARCH_MAX_PREVIEWS) {
+        const lowerQ = q.toLowerCase();
+        let excerpt = buildExcerpt(String(row.response || ''), lowerQ)
+          || buildExcerpt(cleanDisplayText(contentToText(row.messages)), lowerQ);
+        if (!excerpt && row.messages_text && String(row.messages_text).toLowerCase().includes(lowerQ)) {
+          // 展示文本未命中但原始 messages::text 命中（如 tool_call 参数里的关键词）：
+          // 回退到原始文本截取，保证有预览
+          excerpt = buildExcerpt(truncStr(String(row.messages_text), LIMIT_TEXT), lowerQ);
+        }
+        if (excerpt) entry.previews.push({ ts: row.created_at, excerpt });
+      }
+    }
+
+    // 最近活跃的会话优先，最多返回 20 个会话
+    const all = [...sessions.values()].sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
+    res.json({
+      q,
+      days,
+      totalSessions: all.length,
+      results: all.slice(0, SEARCH_MAX_SESSIONS),
+    });
+  } catch (error) {
+    Logger.error('[会话搜索] 查询错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /sessions/:sessionKey/messages?page=&pageSize=
 // 该会话的消息时间线（created_at ASC 分页展开为事件流）
 // ---------------------------------------------------------------------------

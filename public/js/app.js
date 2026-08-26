@@ -5067,6 +5067,13 @@ class ConsoleApp {
     this._sessionsPage = Math.max(parseInt(page, 10) || 1, 1);
     const container = document.getElementById('sessionsList');
     if (!container) return;
+    // 正常列表加载时退出内容搜索视图（清空搜索框 = 恢复列表）
+    const searchWrap = document.getElementById('sessionsSearchResultsWrap');
+    if (searchWrap) {
+      searchWrap.style.display = 'none';
+      const input = document.getElementById('sessionsSearchInput');
+      if (input) input.value = '';
+    }
     setHTML(container, pageLoadingHtml(t('加载会话...'), { compact: true }));
 
     const days = (document.getElementById('sessionDaysFilter')?.value || '7').trim();
@@ -5133,6 +5140,95 @@ class ConsoleApp {
           ${pressureBadge}
         </div>
       </div>`;
+  }
+
+  /** 会话内容搜索：调 /search 端点，按会话聚合渲染结果卡片（复用列表卡片样式） */
+  async runSessionsSearch() {
+    const container = document.getElementById('sessionsSearchResults');
+    const wrap = document.getElementById('sessionsSearchResultsWrap');
+    const listEl = document.getElementById('sessionsList');
+    if (!container || !wrap) return;
+    const q = (document.getElementById('sessionsSearchInput')?.value || '').trim();
+    // 空关键词 = 清空搜索，恢复列表
+    if (!q) { this.clearSessionsSearch(); return; }
+
+    const days = (document.getElementById('sessionDaysFilter')?.value || '7').trim();
+    wrap.style.display = '';
+    if (listEl) {
+      listEl.style.display = 'none';
+      const pager = listEl.nextElementSibling;
+      if (pager && pager.querySelector('#sessionsPrevBtn')) pager.style.display = 'none';
+    }
+    setHTML(container, pageLoadingHtml(t('搜索中...'), { compact: true }));
+    const infoEl = document.getElementById('sessionsSearchInfo');
+
+    try {
+      const params = new URLSearchParams({ q, days });
+      const res = await fetch(`/api/user/sessions/search?${params}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('加载失败'));
+      const results = Array.isArray(data.results) ? data.results : [];
+      if (infoEl) infoEl.textContent = `${t('共')} ${Number(data.totalSessions || 0)} ${t('个匹配会话')}`;
+      if (!results.length) {
+        setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc" style="text-align:center;">${t('无匹配结果')}</div></div></div>`);
+        return;
+      }
+      setHTML(container, results.map(item => this.renderSessionSearchResult(item)).join(''));
+    } catch (error) {
+      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('搜索失败'))}</div></div></div>`);
+    }
+  }
+
+  /** 搜索结果摘录：<<<MARK>>>/<<<END>>> 替换为高亮 <mark>（其余内容已 escapeHtml） */
+  _renderSearchExcerpt(excerpt) {
+    return escapeHtml(String(excerpt || ''))
+      .replace(/&lt;&lt;&lt;MARK&gt;&gt;&gt;/g, '<mark class="search-hit">')
+      .replace(/&lt;&lt;&lt;END&gt;&gt;&gt;/g, '</mark>');
+  }
+
+  /** 渲染单条搜索结果卡片：会话信息 + matchCount 徽标 + 最多 3 条命中摘录 */
+  renderSessionSearchResult(item) {
+    const key = String(item.sessionKey || '');
+    const keyAttr = key.replace(/'/g, '\\&#39;');
+    const harnessMeta = this._usageRequestSourceMeta(item.harness);
+    const range = `${this.formatRelativeTime(item.firstSeen)} → ${this.formatRelativeTime(item.lastSeen)}`;
+    const previews = (Array.isArray(item.previews) ? item.previews : [])
+      .map(p => `
+        <div class="session-search-excerpt">
+          <span style="color:var(--muted-foreground);opacity:.75;">${escapeHtml(new Date(p.ts).toLocaleString())} · </span>${this._renderSearchExcerpt(p.excerpt)}
+        </div>`).join('');
+    return `
+      <div class="model-library-item" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
+        <div class="model-library-item-info">
+          <div class="model-library-item-name">
+            ${this._harnessIconHtml(item.harness, 16)}
+            <span>${escapeHtml(harnessMeta.label)}</span>
+            <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;" title="${escapeHtml(key)}">${escapeHtml(key.slice(0, 18))}…</span>
+          </div>
+          <div class="session-card-meta">
+            <span>${escapeHtml(range)}</span>
+          </div>
+          ${previews}
+        </div>
+        <div class="model-library-item-actions model-item-badges">
+          <span class="model-item-badge session-badge-cached" style="background:rgba(245,158,11,.14);color:var(--warning);" title="${t('命中请求数')}">${Number(item.matchCount || 0)} ${t('条命中')}</span>
+        </div>
+      </div>`;
+  }
+
+  /** 清空搜索：恢复正常会话列表视图 */
+  clearSessionsSearch() {
+    const input = document.getElementById('sessionsSearchInput');
+    if (input) input.value = '';
+    const wrap = document.getElementById('sessionsSearchResultsWrap');
+    if (wrap) wrap.style.display = 'none';
+    const listEl = document.getElementById('sessionsList');
+    if (listEl) {
+      listEl.style.display = '';
+      const pager = listEl.nextElementSibling;
+      if (pager && pager.querySelector('#sessionsPrevBtn')) pager.style.display = '';
+    }
+    this.loadSessions(this._sessionsPage || 1);
   }
 
   /** 进入会话详情：切换视图并加载第一页消息时间线 */
