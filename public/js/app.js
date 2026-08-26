@@ -6267,11 +6267,49 @@ class ConsoleApp {
     const reqKey = key;
     const reqSeq = ++this._summarySeq;
 
-    // 后台执行：await 不阻塞用户浏览；完成后 toast；仍处于同一会话时刷新弹窗内容
+    // 后台执行：SSE 流式读取，实时渲染；await 不阻塞用户浏览
     try {
-      const res = await fetch(`/api/user/sessions/${encodeURIComponent(key)}/summary`, { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t('总结生成失败'));
+      const res = await fetch(`/api/user/sessions/${encodeURIComponent(key)}/summary?stream=1`, { method: 'POST' });
+      if (!res.ok) {
+        const j = await res.json().catch(()=>({}));
+        throw new Error(j.error || t('总结生成失败'));
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = '';
+      let buf = '';
+      const renderAcc = () => {
+        this._sessionSummaryText = acc;
+        const liveBody = document.getElementById('sessionSummaryBody');
+        if (liveBody && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
+          setHTML(liveBody, this._renderSafeMarkdown(acc));
+          liveBody.scrollTop = liveBody.scrollHeight;
+        }
+        this._updateTaskBar('loading', { chars: acc.length });
+      };
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split('\n\n');
+        buf = parts.pop() || '';
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith('data:')) continue;
+          try {
+            const obj = JSON.parse(line.slice(5).trim());
+            if (obj.type === 'delta' && obj.text) { acc += obj.text; renderAcc(); }
+            else if (obj.type === 'done') { if (obj.summary) acc = obj.summary; renderAcc(); }
+            else if (obj.type === 'error') throw new Error(obj.error || t('总结生成失败'));
+          } catch (e) { if (e.message && !/JSON/.test(e.message)) throw e; }
+        }
+      }
+      renderAcc();
+      this._summaryCachedKeys.add(reqKey);
+      this._setSummaryRegenDisabled(false);
+      this.showToast(t('总结已生成'), 'success');
+      this._updateTaskBar('done', { summary: acc });
+      return;
       // 生成成功后该会话的总结已入库，缓存命中状态记下来供按钮切换
       this._summaryCachedKeys.add(reqKey);
       // 仅当没有更新的请求接管时才更新任务条为完成态，避免旧结果覆盖新任务

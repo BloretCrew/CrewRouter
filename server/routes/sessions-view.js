@@ -587,6 +587,55 @@ async function* streamInternalLLM(promptText, userId) {
   }
 }
 
+// 流式变体：SSE 解析 + onDelta 回调（保留用户密钥计费链路）
+async function callInternalLLMStream(promptText, userId, onDelta) {
+  const keyRow = await pool.query(
+    "SELECT id, key_value FROM api_keys WHERE user_id = $1 AND enabled = TRUE AND name ILIKE 'crewrouter' ORDER BY id ASC LIMIT 1",
+    [userId]);
+  if (!keyRow.rows[0]) throw new Error('未找到 CrewRouter 密钥');
+  const port = config.port || 20003;
+  const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${keyRow.rows[0].key_value}`,
+    },
+    body: JSON.stringify({
+      messages: [{ role: 'user', content: promptText }],
+      max_tokens: 1200,
+      stream: true,
+    }),
+    signal: AbortSignal.timeout(180000),
+  });
+  if (!res.ok) {
+    const j = await res.json().catch(() => ({}));
+    throw new Error(j.error?.message || `上游 ${res.status}`);
+  }
+  let full = '';
+  let buffer = '';
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith('data:')) continue;
+      const dataStr = t.slice(5).trim();
+      if (dataStr === '[DONE]') continue;
+      try {
+        const j = JSON.parse(dataStr);
+        const delta = j.choices?.[0]?.delta?.content || '';
+        if (delta) { full += delta; onDelta(delta); }
+      } catch (_) {}
+    }
+  }
+  return full;
+}
+
 // 组装会话全文（截断保护）
 function buildSessionDigest(records) {
   const parts = [];
