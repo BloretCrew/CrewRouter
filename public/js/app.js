@@ -5107,7 +5107,7 @@ class ConsoleApp {
       }
       setHTML(container, data.items.map(item => this.renderSessionCard(item)).join(''));
     } catch (error) {
-      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('会话加载失败'))}</div></div></div>`);
+      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('会话加载失败'))}<div style="margin-top:10px;"><button class="btn btn-secondary btn-sm" onclick="app.loadSessions(${this._sessionsPage || 1})">${t('重试')}</button></div></div></div></div>`);
     }
   }
 
@@ -5119,6 +5119,9 @@ class ConsoleApp {
     const summaryBadge = item.summaryCreatedAt
       ? `<span class="session-badge cached" title="${t('最近更新')} ${escapeHtml(new Date(item.summaryCreatedAt).toLocaleString())}">${t('缓存摘要')} · ${escapeHtml(this.formatRelativeTime(item.summaryCreatedAt))}</span>`
       : '';
+    const previewSource = item.summary || item.lastMessagePreview || '';
+    const previewText = String(previewSource).split(/[。.!！？?\n]/)[0].slice(0, 60);
+    const preview = previewText ? `<div class="session-card-preview" title="${escapeHtml(previewSource)}">${escapeHtml(previewText)}</div>` : '';
     const pressureBadge = item.pressureLevel === 'critical'
       ? `<span class="session-badge pressure-critical" title="${t('上下文压力')}">${t('高压')}</span>`
       : item.pressureLevel === 'warning'
@@ -5136,6 +5139,7 @@ class ConsoleApp {
             <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;" title="${escapeHtml(key)}">${escapeHtml(key.slice(0, 18))}…</span>
           </div>
           ${cwdText}
+          ${preview}
           <div class="session-card-meta">
             <span>${escapeHtml(range)}</span>
             <span>${Number(item.requestCount || 0)} ${t('次请求')} · ${Number(item.toolCallCount || 0)} ${t('工具调用')}${escapeHtml(lastTool)}</span>
@@ -5242,6 +5246,7 @@ class ConsoleApp {
   /** 进入会话详情：切换视图并加载第一页消息时间线 */
   showSessionDetail(sessionKey) {
     this._detailSessionKey = String(sessionKey || '');
+    this._ensureSessionAutoLoad();
     this._detailMsgPage = 0;
     this._detailLoaded = 0;
     this._detailTotal = 0;
@@ -5277,11 +5282,18 @@ class ConsoleApp {
   async loadSessionMessages(sessionKey, page = 1) {
     const timeline = document.getElementById('sessionTimeline');
     const metaBar = document.getElementById('sessionDetailMetaBar');
-    if (!timeline || !sessionKey) return;
+    if (!timeline || !sessionKey || this._detailLoading) return;
+    this._detailLoading = true;
+    const moreBtn = document.getElementById('sessionMoreBtn');
+    if (page === 1) {
+      setHTML(timeline, `<li class="session-detail-skeleton"><div class="skeleton-bar" style="width:65%"></div><div class="skeleton-bar" style="width:90%"></div><div class="skeleton-bar" style="width:78%"></div></li>`);
+    } else if (moreBtn) {
+      moreBtn.disabled = true;
+    }
 
     try {
       const lastFp = page > 1 ? (this._lastPageFingerprint || '') : '';
-      const res = await fetch(`/api/user/sessions/${encodeURIComponent(sessionKey)}/messages?page=${encodeURIComponent(page)}&pageSize=10${lastFp ? `&lastFingerprint=${encodeURIComponent(lastFp)}` : ''}`);
+      const res = await fetch(`/api/user/sessions/${encodeURIComponent(sessionKey)}/messages?page=${encodeURIComponent(page)}&pageSize=40${lastFp ? `&lastFingerprint=${encodeURIComponent(lastFp)}` : ''}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('加载失败'));
 
@@ -5337,11 +5349,12 @@ class ConsoleApp {
             ${eventsHtml}
           </li>`;
       }).join('');
-      timeline.insertAdjacentHTML('beforeend', frag);
+      if (page === 1) timeline.insertAdjacentHTML('beforeend', frag);
+      else if (frag) timeline.insertAdjacentHTML('afterbegin', frag);
 
       this._detailLoaded += records.length;
-      // 记录本页最后一条的指纹，供下一页跨页合并相同请求
-      if (records.length) this._lastPageFingerprint = records[records.length - 1].userFingerprint || '';
+      // 下一页继续向更早记录翻页，保存当前页最早一条的指纹。
+      if (records.length) this._lastPageFingerprint = records[0].userFingerprint || '';
       const moreBtn = document.getElementById('sessionMoreBtn');
       if (moreBtn) moreBtn.style.display = this._detailLoaded >= this._detailTotal ? 'none' : '';
 
@@ -5349,15 +5362,19 @@ class ConsoleApp {
         setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${t('该会话暂无消息明细')}</div></li>`);
       }
     } catch (error) {
+      const retry = `<button class="btn btn-secondary btn-sm" onclick="app.loadSessionMessages('${this._jsString(sessionKey)}', ${page})">${t('重试')}</button>`;
       if (page > 1 && timeline.children.length) {
-        // 翻页失败不整块重绘：保留已渲染内容与签名状态一致，仅追加错误提示行
-        timeline.insertAdjacentHTML('beforeend', `<li><div class="timeline-event-text" style="text-align:center;color:var(--destructive);padding:16px;">${escapeHtml(error.message || t('会话详情加载失败'))}</div></li>`);
+        timeline.insertAdjacentHTML('beforeend', `<li><div class="timeline-event-text" style="text-align:center;color:var(--destructive);padding:16px;">${escapeHtml(error.message || t('会话详情加载失败'))}<div style="margin-top:8px;">${retry}</div></div></li>`);
       } else {
-        setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${escapeHtml(error.message || t('会话详情加载失败'))}</div></li>`);
+        setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${escapeHtml(error.message || t('会话详情加载失败'))}<div style="margin-top:8px;">${retry}</div></div></li>`);
       }
+    } finally {
+      this._detailLoading = false;
+      if (moreBtn) moreBtn.disabled = false;
     }
   }
 
+  /** 展开详情时提示可查看完整工作段。 */
   /** 时间线内联 SF 小图标（12px，随文基线对齐） */
   _sfIcon(name, color) {
     return `<img src="https://img.bloret.net/SF/${encodeURIComponent(name)}?color=${encodeURIComponent(color)}" alt="" class="sf-icon" data-sf-name="${escapeHtml(name)}" style="display:inline-block;vertical-align:-2px;width:12px;height:12px;">`;
@@ -5412,7 +5429,7 @@ class ConsoleApp {
     return `
       <li class="timeline-event type-thinking_summary">
         <details class="thinking-block">
-          <summary>${this._sfIcon('brain.head.profile', 'ec4899')} ${t('已深度思考')}<span class="tool-args">${count} ${t('段思考')}</span></summary>
+          <summary title="${t('点击展开全部')}" aria-label="${t('点击展开全部')}">${this._sfIcon('brain.head.profile', 'ec4899')} ${t('已深度思考')}<span class="tool-args">${count} ${t('段思考')} · ${t('展开全部')}</span></summary>
           ${group.events.map(e => this.renderTimelineEvent(e)).join('')}
         </details>
       </li>`;
@@ -5509,6 +5526,19 @@ class ConsoleApp {
   }
 
   /** 返回会话列表 */
+  _ensureSessionAutoLoad() {
+    if (this._sessionAutoLoadBound) return;
+    this._sessionAutoLoadBound = true;
+    window.addEventListener('scroll', () => {
+      if (this.currentPage !== 'sessions' || !this._detailSessionKey || this._detailLoading) return;
+      const moreBtn = document.getElementById('sessionMoreBtn');
+      if (moreBtn?.style.display === 'none') return;
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 240) {
+        this.loadSessionMessages(this._detailSessionKey, (this._detailMsgPage || 1) + 1);
+      }
+    }, { passive: true });
+  }
+
   closeSessionDetail() {
     const listWrap = document.getElementById('sessionsListWrap');
     const detailWrap = document.getElementById('sessionDetailWrap');

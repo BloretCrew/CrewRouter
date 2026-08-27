@@ -2581,6 +2581,7 @@
   "个会话": "sessions",
   "所选时间范围内暂无会话": "No sessions in the selected time range",
   "会话加载失败": "Failed to load sessions",
+  "点击展开全部": "Click to expand all",
   "上下文压力": "Context pressure",
   "工具调用": "tool calls",
   "← 返回会话列表": "← Back to sessions",

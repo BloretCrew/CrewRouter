@@ -1223,7 +1223,7 @@
           .session-summary-inline summary button { margin-left:auto; }
           .session-summary-modal-meta { display:flex;gap:8px;align-items:center;color:var(--muted-foreground);font-size:11px;margin-top:4px; }
           .session-summary-inline summary::-webkit-details-marker { display:none; }
-          .session-summary-inline .summary-inline-body { font-size:13px; line-height:1.55; max-height:220px; overflow-y:auto; margin-top:8px; }
+          .session-summary-inline .summary-inline-body { white-space:pre-wrap; font-size:13px; line-height:1.55; max-height:220px; overflow-y:auto; margin-top:8px; }
           .summary-inline-time { display:block; color:var(--muted-foreground); font-size:11px; margin-top:4px; }
           .session-summary-md h1,.session-summary-md h2,.session-summary-md h3 { margin:14px 0 6px; line-height:1.3; }
           .session-summary-md h1:first-child,.session-summary-md h2:first-child,.session-summary-md h3:first-child { margin-top:0; }
@@ -1232,7 +1232,13 @@
           .session-summary-md pre { background:#111827; color:#e5e7eb; padding:10px 12px; border-radius:8px; overflow:auto; }
           .session-summary-md strong { color:var(--info); }
           @media (max-width:600px) { .session-summary-md { font-size:13px; } .session-summary-md pre { font-size:11px; } }
-          .role-user-text { background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25); border-radius:10px; padding:8px 12px; }
+          .role-user-text { background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25); border-left:3px solid var(--info); border-radius:10px; padding:8px 12px; }
+          .role-assistant-text { background:rgba(16,185,129,.07); border:1px solid rgba(16,185,129,.22); border-left:3px solid var(--success); border-radius:10px; padding:8px 12px; }
+          .session-card-preview { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:1; overflow:hidden; margin-top:6px; font-size:12.5px; color:var(--muted-foreground); }
+          .session-detail-skeleton { display:flex; flex-direction:column; gap:10px; padding:10px 0; }
+          .session-detail-skeleton .skeleton-bar { height:14px; border-radius:7px; background:linear-gradient(90deg, var(--secondary) 25%, color-mix(in srgb, var(--secondary) 50%, var(--background)) 50%, var(--secondary) 75%); background-size:200% 100%; animation:session-shimmer 1.5s infinite; }
+          @keyframes session-shimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+          .timeline-event details summary:hover { background:color-mix(in srgb, var(--pink) 10%, transparent); border-radius:6px; }
           .session-search-excerpt { font-size:12.5px; color:var(--muted-foreground); line-height:1.5; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
           .session-search-excerpt mark.search-hit { background:rgba(245,158,11,.28); color:inherit; border-radius:3px; padding:0 2px; }
         </style>
@@ -1278,6 +1284,7 @@
           </div>
           <div id="sessionsList" class="model-library-list"></div>
           <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
+
             <button id="sessionsPrevBtn" class="btn btn-secondary" onclick="app.loadSessions(app._sessionsPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
             <span id="sessionsPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
             <button id="sessionsNextBtn" class="btn btn-secondary" onclick="app.loadSessions(app._sessionsPage + 1)"><span data-i18n="下一页">下一页</span></button>

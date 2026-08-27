@@ -306,6 +306,14 @@ router.get('/sessions', requireAuth, async (req, res) => {
 
     const rows = aggregated.rows;
     const total = rows.length ? Number(rows[0].grand_total || 0) : 0;
+    const summaryRows = rows.length ? await (async () => {
+      await ensureSummaryTable();
+      return pool.query(
+        `SELECT session_key, summary, created_at FROM session_summaries WHERE user_id = $1 AND session_key = ANY($2::text[])`,
+        [userId, rows.map(row => row.session_key)]
+      );
+    })() : { rows: [] };
+    const summaries = new Map(summaryRows.rows.map(row => [row.session_key, row]));
 
     // 本页会话的最后一条记录 → 工具调用统计 / 最近工具名 / cwd 痕迹。
     // 转发请求带全量历史消息，最后一条记录即覆盖整个会话的累计工具调用。
@@ -334,7 +342,8 @@ router.get('/sessions', requireAuth, async (req, res) => {
           (SELECT LEFT(e->>'content', 4000)
            FROM jsonb_array_elements(CASE WHEN jsonb_typeof(u.messages) = 'array' THEN u.messages ELSE '[]'::jsonb END) e
            WHERE (e->>'role') IN ('system', 'developer')
-           LIMIT 1) AS system_head
+           LIMIT 1) AS system_head,
+          LEFT(COALESCE(u.response, ''), 500) AS response_preview
         FROM usage_records u
         WHERE u.id = ANY($1::int[])
       `, [ids]);
@@ -364,6 +373,7 @@ router.get('/sessions', requireAuth, async (req, res) => {
         let toolCallCount = Number(row.tool_call_count || 0);
         let lastToolName = row.last_tool_name || null;
         let cwd = null;
+        let lastMessagePreview = cleanDisplayText(row.response_preview || '');
         const rawMessages = parsedById.get(row.id);
         if (rawMessages) {
           const events = parseMessagesToEvents(rawMessages);
@@ -375,10 +385,12 @@ router.get('/sessions', requireAuth, async (req, res) => {
             lastToolName = calls.length ? calls[calls.length - 1].name : null;
           }
           cwd = extractCwd(rawMessages);
+          const textEvents = events.filter(e => e.type === 'text' && (e.role === 'user' || e.role === 'assistant'));
+          if (textEvents.length) lastMessagePreview = cleanDisplayText(textEvents[textEvents.length - 1].text || '');
         } else if (row.system_head) {
           cwd = extractCwd([{ role: 'system', content: row.system_head }]);
         }
-        details.set(row.id, { toolCallCount, lastToolName, cwd });
+        details.set(row.id, { toolCallCount, lastToolName, cwd, lastMessagePreview: truncStr(lastMessagePreview, 500) });
       }
     }
 
@@ -397,6 +409,9 @@ router.get('/sessions', requireAuth, async (req, res) => {
         toolCallCount: Number(meta.toolCallCount || 0),
         lastToolName: meta.lastToolName || null,
         cwd: meta.cwd || null,
+        summary: summaries.get(row.session_key)?.summary || null,
+        summaryCreatedAt: summaries.get(row.session_key)?.created_at || null,
+        lastMessagePreview: meta.lastMessagePreview || null,
         pressureLevel: pressureLevel(Number(row.total_tokens || 0)),
       };
     });
@@ -566,10 +581,13 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
       total = Number(countResult.rows[0]?.total || 0);
       if (!total) return res.json({ sessionKey, page, pageSize, total: 0, records: [] });
       const recordsResult = await pool.query(`
-        ${DETAIL_COLUMNS}
-        WHERE ${baseWhere}
-        ORDER BY created_at ASC
-        OFFSET ${offset} LIMIT ${pageSize}
+        SELECT * FROM (
+          ${DETAIL_COLUMNS}
+          WHERE ${baseWhere}
+          ORDER BY created_at DESC, id DESC
+          OFFSET ${offset} LIMIT ${pageSize}
+        ) page_rows
+        ORDER BY created_at ASC, id ASC
       `, [userId, sessionKey]);
       rawDetailRows = recordsResult.rows;
     }
