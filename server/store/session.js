@@ -3,7 +3,7 @@
  *
  * 商店会话与 CrewRouter 的 express-session 完全隔离：
  *  - 不写 req.session、不建 user_sessions 行、不依赖 Core 的会话中间件；
- *  - 只把 { username, nickname, avatar, admin } 签名进 cookie `bl_store_session`。
+ *  - 只把 { username, avatar, admin } 签名进 cookie `bl_store_session`。
  *
  * 每次解码都要验签，防篡改；cookie 中不携带 apptoken。
  */
@@ -19,7 +19,7 @@ function sign(payloadB64, secret) {
 }
 
 /**
- * @param {object} user { username, nickname, avatar, admin }
+ * @param {object} user { username, avatar, admin }
  * @param {string} secret
  * @returns {string} cookie value
  */
@@ -31,7 +31,6 @@ function encodeSession(user, secret) {
   }
   const body = {
     username: user.username,
-    nickname: user.nickname || user.username,
     avatar: user.avatar || '',
     admin: !!user.admin,
     iat: Date.now(),
@@ -62,7 +61,6 @@ function decodeSession(cookieValue, secret) {
     }
     return {
       username: body.username,
-      nickname: body.nickname || body.username,
       avatar: body.avatar || '',
       admin: !!body.admin,
       iat: body.iat,

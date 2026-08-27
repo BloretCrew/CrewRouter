@@ -123,12 +123,7 @@ function createStoreRoutes() {
         return res.redirect('/store?auth=error');
       }
       const admin = passportLib.isAdminUser(username, profile.admin, cfg);
-      sessionLib.setSessionCookie(res, {
-        username,
-        nickname: profile.nickname || username,
-        avatar: profile.avatar || '',
-        admin,
-      }, cfg.sessionSecret, isSecureReq(req));
+      sessionLib.setSessionCookie(res, { username, avatar: profile.avatar || '', admin }, cfg.sessionSecret, isSecureReq(req));
       Logger.info('[store-routes] 登录成功', username, 'admin=', admin, '->', returnTo);
       res.redirect(returnTo.includes('?') ? `${returnTo}&auth=ok` : `${returnTo}?auth=ok`);
     } catch (e) {
@@ -158,12 +153,7 @@ function createStoreRoutes() {
     res.json({
       success: true,
       loggedIn: true,
-      user: {
-        username: req.storeUser.username,
-        nickname: req.storeUser.nickname || req.storeUser.username,
-        avatar: req.storeUser.avatar,
-        admin: !!req.storeUser.admin,
-      },
+      user: { username: req.storeUser.username, avatar: req.storeUser.avatar, admin: !!req.storeUser.admin },
       config: { configured: cfg.isConfigured },
     });
   });

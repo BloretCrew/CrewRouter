@@ -235,7 +235,7 @@ class ConsoleApp {
   updateUserInfo() {
     const usernameEl = document.getElementById('username');
     const avatarEl = document.getElementById('userAvatar');
-    if (usernameEl) usernameEl.textContent = this.user.nickname || this.user.display_name || this.user.username;
+    if (usernameEl) usernameEl.textContent = this.user.username;
     if (avatarEl) {
       avatarEl.src = this.user.avatar || '';
       avatarEl.onerror = () => {
@@ -720,7 +720,7 @@ class ConsoleApp {
     const safeName = this._jsString(key.name || 'API Key');
     const displayName = key.name || 'API Key';
     const isOwner = key.is_owner !== false;
-    const ownerName = key.owner?.nickname || key.owner?.display_name || key.owner?.username || '';
+    const ownerName = key.owner?.username || '';
     const memberCount = Array.isArray(key.members) ? key.members.length : 0;
     const coKeyMeta = key.is_co_key
       ? `${'<span class="api-key-dot">·</span><span class="api-key-sub-muted">' + t('由')}${escapeHtml(ownerName)}${t('发起')}</span>`
@@ -3732,14 +3732,14 @@ class ConsoleApp {
       // 用户头像
       const avatarHtml = u.avatar
         ? `<img src="${escapeHtml(u.avatar)}" class="leaderboard-avatar" onerror="this.style.display='none'">`
-        : `<div class="leaderboard-avatar-placeholder">${escapeHtml((u.nickname || u.display_name || u.username || '?').charAt(0).toUpperCase())}</div>`;
+        : `<div class="leaderboard-avatar-placeholder">${escapeHtml((u.username || '?').charAt(0).toUpperCase())}</div>`;
 
       return `<tr class="${isCurrent ? 'leaderboard-current-row' : ''}">
         <td class="leaderboard-rank-cell">${rankHtml}</td>
         <td>
           <div class="leaderboard-user-cell">
             ${avatarHtml}
-            <span class="leaderboard-username">${escapeHtml(u.nickname || u.display_name || u.username)}</span>
+            <span class="leaderboard-username">${escapeHtml(u.username)}</span>
             ${isCurrent ? '<span class="badge badge-info" style="margin-left:6px;font-size:11px;">' + t('我') + '</span>' : ''}
           </div>
         </td>
@@ -6883,7 +6883,7 @@ class ConsoleApp {
       const members = Array.isArray(data.members) ? data.members : [];
       setHTML(list, members.length ? members.map(member => `
         <div class="co-key-member-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;">
-          <div><strong>${escapeHtml(member.nickname || member.display_name || member.username || '')}</strong><div class="api-key-sub-muted">@${escapeHtml(member.username || '')} · ${escapeHtml(member.email || '')}</div></div>
+          <div><strong>${escapeHtml(member.username || '')}</strong><div class="api-key-sub-muted">${escapeHtml(member.email || '')}</div></div>
           <button type="button" class="btn btn-sm btn-secondary" onclick="app.removeKeyMember(${member.id})">移除</button>
         </div>`).join('') : '<p class="api-key-sub-muted" style="text-align:center;padding:18px;">' + t('暂无共同成员') + '</p>');
     } catch (error) {

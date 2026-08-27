@@ -182,7 +182,7 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         COALESCE(tag_agg.tags, '[]'::jsonb) AS tags,
         COALESCE(queue_agg.model_queue, '[]'::jsonb) AS model_queue,
         COALESCE(harness_agg.harness_models, '[]'::jsonb) AS harness_models,
-        jsonb_build_object('id', owner.id, 'username', owner.username, 'nickname', owner.nickname, 'email', owner.email) AS owner,
+        jsonb_build_object('id', owner.id, 'username', owner.username, 'email', owner.email) AS owner,
         COALESCE(member_agg.members, '[]'::jsonb) AS members,
         COALESCE(member_agg.member_count, 0) AS member_count,
         (ak.user_id = $1) AS is_owner,
@@ -250,7 +250,7 @@ router.get('/api-keys', requireAuth, async (req, res) => {
       LEFT JOIN (
         SELECT akmem.api_key_id,
                COUNT(*)::int AS member_count,
-               jsonb_agg(jsonb_build_object('id', u.id, 'username', u.username, 'nickname', u.nickname, 'email', u.email)
+               jsonb_agg(jsonb_build_object('id', u.id, 'username', u.username, 'email', u.email)
                          ORDER BY akmem.created_at, u.id) AS members
         FROM api_key_members akmem
         JOIN users u ON u.id = akmem.user_id
@@ -403,7 +403,7 @@ router.post('/api-keys/:id/members', requireAuth, auditMiddleware(ACTIONS.COKEY_
     const access = await getOwnedApiKey(pool, req.params.id, req.session.user.id);
     if (!access) return res.status(403).json({ error: '仅发起者可管理成员' });
     const userResult = await pool.query(
-      `SELECT id, username, nickname, email FROM users
+      `SELECT id, username, email FROM users
        WHERE LOWER(username) = $1 OR LOWER(email) = $1
        LIMIT 1`,
       [identity]
@@ -4853,7 +4853,6 @@ router.get('/leaderboard', requireAuth, async (req, res) => {
       SELECT
         u.id AS user_id,
         u.username,
-        u.nickname,
         u.avatar,
         COALESCE(SUM(qd.count), 0)::BIGINT AS total_requests,
         COALESCE(SUM(qd.weighted_tokens), 0)::BIGINT AS total_tokens,
@@ -4862,7 +4861,7 @@ router.get('/leaderboard', requireAuth, async (req, res) => {
       FROM users u
       LEFT JOIN quota_data qd ON qd.user_id = u.id
         AND qd.created_at >= NOW() - $1::INTERVAL
-      GROUP BY u.id, u.username, u.nickname, u.avatar, u.balance, u.refund_balance
+      GROUP BY u.id, u.username, u.avatar, u.balance, u.refund_balance
       HAVING COALESCE(SUM(qd.count), 0) > 0
       ORDER BY ${sortDef.sql} ${sortDef.dir} NULLS LAST
       LIMIT 100
@@ -4904,7 +4903,6 @@ router.get('/leaderboard', requireAuth, async (req, res) => {
       return {
         userId: u.user_id,
         username: u.username,
-        nickname: u.nickname || u.username,
         avatar: u.avatar,
         totalRequests: parseInt(u.total_requests) || 0,
         totalTokens: parseInt(u.total_tokens) || 0,

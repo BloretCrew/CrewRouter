@@ -60,7 +60,6 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) UNIQUE NOT NULL,
-        nickname VARCHAR(255),
         email VARCHAR(255) UNIQUE,
         password_hash VARCHAR(255),
         avatar VARCHAR(500),
@@ -82,7 +81,6 @@ async function initDatabase() {
 
     // 兼容旧表：OOBE / 注册路径依赖的 users 列
     const userCoreCols = [
-      { name: 'nickname', type: 'VARCHAR(255)' },
       { name: 'email_verified', type: 'BOOLEAN DEFAULT TRUE' },
       { name: 'group_id', type: 'INTEGER' },
       { name: 'team_id', type: 'INTEGER' },
