@@ -181,6 +181,90 @@ function computeSplit(startDate, endDate, detailWindowDays) {
   return { detail: { start: cutoff, end: endDate }, agg: { start: startDate, end: aggEnd } };
 }
 
+// ---------- 双轨分流计划（/stats、/leaderboard 共用） ----------
+
+/** 聚合表覆盖范围缓存（30s TTL，回填/每日聚合运行时更新） */
+let aggCoverageCache = { value: null, loadedAt: 0 };
+
+const maxStr = (a, b) => (a > b ? a : b);
+const minStr = (a, b) => (a < b ? a : b);
+
+/** 回填/每日聚合写入后调用，让统计端立即看到新覆盖范围 */
+function invalidateAggCoverageCache() {
+  aggCoverageCache = { value: null, loadedAt: 0 };
+}
+
+async function readAggCoverage() {
+  const now = Date.now();
+  if (aggCoverageCache.value && now - aggCoverageCache.loadedAt < CONFIG_TTL_MS) {
+    return aggCoverageCache.value;
+  }
+  let value = { min: null, max: null };
+  try {
+    const r = await pool.query(`SELECT MIN(agg_date)::text AS min_d, MAX(agg_date)::text AS max_d FROM ${AGG_TABLE}`);
+    const norm = (v) => (v ? String(v).slice(0, 10) : null);
+    value = { min: norm(r.rows[0] && r.rows[0].min_d), max: norm(r.rows[0] && r.rows[0].max_d) };
+  } catch (err) {
+    Logger.warn(`[每日聚合] 读取聚合表覆盖范围失败: ${err.message}`);
+  }
+  aggCoverageCache = { value, loadedAt: now };
+  return value;
+}
+
+/**
+ * 计算 [startDate, endDate]（上海日历日，含）的双轨查询计划。
+ * 返回 { detail: {start,end}|null, agg: {start,end}|null, detailWindowDays, aggAvailable, aggPartial }
+ * - detail=null 表示整段都走聚合；agg=null 表示整段都走明细。
+ * - 不变量：detail 与 agg 两段严格不相交（无重叠）；除「聚合表未覆盖的
+ *   外层窗口旧端」（完整回填下这些日期本就无数据）外无空洞。
+ * - 聚合表实际未覆盖的窗口外侧（回填滞后）由明细兜底，避免两段之间出现空洞。
+ */
+async function computeDualPlan(startDate, endDate) {
+  const cfg = await getRetentionConfig();
+  const aggReady = await isAggTableReady();
+  const full = { detail: { start: startDate, end: endDate }, agg: null, detailWindowDays: cfg.purgeDays, aggAvailable: aggReady, aggPartial: false };
+  if (!cfg.aggEnabled || !aggReady || !cfg.purgeDays) return full;
+  const split = computeSplit(startDate, endDate, cfg.purgeDays);
+  if (!split.agg) return { ...split, detailWindowDays: cfg.purgeDays, aggAvailable: true, aggPartial: false };
+
+  const cov = await readAggCoverage();
+  if (!cov.min) return { ...full, aggAvailable: true }; // 表存在但为空（历史未回填）：全部走明细
+
+  // 聚合段 = 外层窗口 ∩ 聚合表实际覆盖范围（与明细段必然不相交）
+  const aggStart = maxStr(split.agg.start, cov.min);
+  const aggEnd = minStr(split.agg.end, cov.max);
+  if (aggStart > aggEnd) return { ...full, aggAvailable: true, aggPartial: true };
+
+  // 请求段整体都在明细保留窗口之外
+  if (!split.detail) {
+    // 覆盖不全（回填起点晚于请求起点 / 未回填到请求终点）→ 全部交回明细，避免丢数据
+    if (aggStart > split.agg.start || aggEnd < split.agg.end) {
+      return { ...full, aggAvailable: true, aggPartial: true };
+    }
+    return { detail: null, agg: { start: aggStart, end: aggEnd }, detailWindowDays: cfg.purgeDays, aggAvailable: true, aggPartial: false };
+  }
+
+  let detailStart = split.detail.start;
+  let aggPartial = false;
+  if (aggStart > split.agg.start) {
+    // 聚合表未覆盖外层窗口旧端：完整回填（MIN(usage_records) 同步启动）下
+    // 这些日期本就无数据，直接丢弃即可，不回拉明细（避免与聚合段重叠）。
+    aggPartial = true;
+  }
+  if (aggEnd < split.agg.end) {
+    // 聚合表未覆盖到外层窗口新端（回填滞后）→ 缺口段交回明细
+    detailStart = minStr(detailStart, addDays(aggEnd, 1));
+    aggPartial = true;
+  }
+  return {
+    detail: { start: detailStart, end: split.detail.end },
+    agg: { start: aggStart, end: aggEnd },
+    detailWindowDays: cfg.purgeDays,
+    aggAvailable: true,
+    aggPartial,
+  };
+}
+
 // ---------- 健康检查（批间守护） ----------
 
 function isHealthy() {
@@ -313,6 +397,7 @@ async function backfillDailyAgg({ dryRun = false, startDate = null, endDate = nu
     }
     if (i < chunks.length - 1) await sleep(batchIntervalMs);
   }
+  if (!dryRun && totalRows > 0) invalidateAggCoverageCache();
   logRetention(`[回填] ${aborted ? '中止' : '完成'}：${dryRun ? '预计聚合' : '写入'} ${totalRows} 行${aborted ? '（未全部处理）' : ''}`);
   return { aggregated: totalRows, months: chunks.length, dryRun, aborted };
 }
@@ -361,6 +446,7 @@ async function runDailyAggCatchup() {
     await sleep(800);
     d = addDays(d, 1);
   }
+  if (total > 0) invalidateAggCoverageCache();
   logRetention(`[每日聚合] ${aborted ? '中止' : '完成'}：补跑 ${total} 行`);
   return { aggregated: total, aborted };
 }
@@ -398,10 +484,10 @@ function startDailyAggScheduler() {
 
 /**
  * 拉取窗口外聚合明细行（含名称联表）。
- * @param {object} opts { start, end, userId, modelId, requestSource, teamId, providerId }
+ * @param {object} opts { start, end, userId, userIds, modelId, requestSource, teamId, providerId }
  * @returns {Promise<Array>} 每行一个（天,用户,模型,密钥,客户端）聚合组
  */
-async function fetchAggRows({ start, end, userId = null, modelId = null, requestSource = null, teamId = null, providerId = null } = {}) {
+async function fetchAggRows({ start, end, userId = null, userIds = null, userTeamId = null, userGroupId = null, modelId = null, requestSource = null, teamId = null, providerId = null } = {}) {
   const params = [start, end];
   let sql = `
     SELECT
@@ -410,8 +496,9 @@ async function fetchAggRows({ start, end, userId = null, modelId = null, request
       a.request_count, a.tokens_used, a.cached_tokens, a.weighted_tokens, a.cost,
       a.latency_sum, a.latency_count, a.prompt_tokens, a.completion_tokens,
       COALESCE(NULLIF(m.name, ''), '未知模型') AS model_name,
+      m.provider AS model_provider,
+      COALESCE(p.name, '') AS provider_name,
       COALESCE(usr.username, '未知成员') AS user_name,
-      usr.team_id,
       usr.team_id,
       COALESCE(t.name, '未分配 Team') AS team_name,
       ug.id AS group_id,
@@ -420,6 +507,7 @@ async function fetchAggRows({ start, end, userId = null, modelId = null, request
       ak.key_prefix
     FROM ${AGG_TABLE} a
     LEFT JOIN models m ON m.id = a.model_id
+    LEFT JOIN providers p ON p.id = m.provider
     LEFT JOIN users usr ON usr.id = a.user_id
     LEFT JOIN teams t ON t.id = usr.team_id
     LEFT JOIN user_groups ug ON ug.id = usr.group_id
@@ -428,6 +516,19 @@ async function fetchAggRows({ start, end, userId = null, modelId = null, request
   if (userId) {
     params.push(userId);
     sql += ` AND a.user_id = $${params.length}`;
+  }
+  if (userIds && userIds.length) {
+    params.push(userIds.map(Number));
+    sql += ` AND a.user_id = ANY($${params.length}::int[])`;
+  }
+  if (userTeamId) {
+    // users.team_id（成员当前主 Team）维度的过滤：与 admin /stats/multi 的团队筛选同域
+    params.push(userTeamId);
+    sql += ` AND usr.team_id = $${params.length}::int`;
+  }
+  if (userGroupId) {
+    params.push(userGroupId);
+    sql += ` AND usr.group_id = $${params.length}::int`;
   }
   if (modelId) {
     params.push(modelId);
@@ -516,6 +617,221 @@ function mergeDaily(detailRows, aggRows) {
   return [...map.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
 }
 
+// ---------- 双轨折叠/合并（/stats 各段行形状，与明细查询别名一致） ----------
+
+/**
+ * 按 keyField 把聚合明细行折叠成 /stats 分组段行形状。
+ * @param {Array<object>} rows fetchAggRows 输出
+ * @param {string} keyField 分组键字段（保留原名）
+ * @param {string|null} nameField 名称字段（首个非空）
+ * @param {Array<[string,string]>} sums agg 字段 → 输出字段
+ * @param {object} [opts] { latency: 是否输出 avg_latency }
+ */
+function foldAgg(rows, keyField, nameField, sums, { latency = false } = {}) {
+  const map = new Map();
+  for (const r of rows || []) {
+    const k = String(r[keyField] == null ? '' : r[keyField]);
+    let c = map.get(k);
+    if (!c) {
+      c = { [keyField]: r[keyField] ?? null };
+      if (nameField) c[nameField] = r[nameField] || null;
+      for (const [, to] of sums) c[to] = 0;
+      if (latency) { c.latency_sum = 0; c.latency_count = 0; }
+      map.set(k, c);
+    }
+    if (nameField && !c[nameField] && r[nameField]) c[nameField] = r[nameField];
+    for (const [from, to] of sums) c[to] += Number(r[from]) || 0;
+    if (latency) { c.latency_sum += Number(r.latency_sum) || 0; c.latency_count += Number(r.latency_count) || 0; }
+  }
+  const out = [...map.values()];
+  if (latency) {
+    for (const v of out) {
+      v.avg_latency = v.latency_count > 0 ? v.latency_sum / v.latency_count : null;
+      delete v.latency_sum;
+      delete v.latency_count;
+    }
+  }
+  return out;
+}
+
+/** 日粒度（/stats daily 形状） */
+function foldAggDaily(rows, { latency = false } = {}) {
+  return foldAgg(rows, 'date', null, [
+    ['request_count', 'requests'], ['tokens_used', 'tokens'],
+    ['prompt_tokens', 'prompt_tokens'], ['completion_tokens', 'completion_tokens'],
+    ['cached_tokens', 'cached_tokens'], ['cost', 'cost'],
+  ], { latency });
+}
+
+/** 客户端 × 日期（dailyBySource 形状） */
+function foldAggDailyBySource(rows) {
+  const map = new Map();
+  for (const r of rows || []) {
+    const k = `${r.date}\u0000${String(r.request_source || 'unknown')}`;
+    let c = map.get(k);
+    if (!c) {
+      c = { date: r.date, request_source: String(r.request_source || 'unknown'), requests: 0, tokens: 0, cost: 0 };
+      map.set(k, c);
+    }
+    c.requests += Number(r.request_count) || 0;
+    c.tokens += Number(r.tokens_used) || 0;
+    c.cost += Number(r.cost) || 0;
+  }
+  return [...map.values()];
+}
+
+/** 客户端 × 模型（bySourceModel 形状） */
+function foldAggBySourceModel(rows) {
+  const map = new Map();
+  for (const r of rows || []) {
+    const k = `${String(r.request_source || 'unknown')}\u0000${String(r.model_id == null ? '' : r.model_id)}`;
+    let c = map.get(k);
+    if (!c) {
+      c = {
+        request_source: String(r.request_source || 'unknown'),
+        model_id: r.model_id ?? null,
+        model_name: r.model_name || null,
+        requests: 0, tokens: 0, cost: 0,
+      };
+      map.set(k, c);
+    }
+    c.requests += Number(r.request_count) || 0;
+    c.tokens += Number(r.tokens_used) || 0;
+    c.cost += Number(r.cost) || 0;
+  }
+  return [...map.values()];
+}
+
+/** 供应商（byProvider 形状）：聚合表无历史 provider 维度，以模型当前供应商近似 */
+function foldAggByProvider(rows) {
+  const map = new Map();
+  for (const r of rows || []) {
+    const k = String(r.model_provider == null ? '' : r.model_provider);
+    let c = map.get(k);
+    if (!c) {
+      c = { provider: r.provider_name || r.model_provider || '未知', requests: 0, tokens: 0, cached_tokens: 0, cost: 0 };
+      map.set(k, c);
+    }
+    c.requests += Number(r.request_count) || 0;
+    c.tokens += Number(r.tokens_used) || 0;
+    c.cached_tokens += Number(r.cached_tokens) || 0;
+    c.cost += Number(r.cost) || 0;
+  }
+  return [...map.values()];
+}
+
+/** 模型（byModel 形状） */
+function foldAggByModel(rows) {
+  return foldAgg(rows, 'model_id', 'model_name', [
+    ['request_count', 'requests'], ['tokens_used', 'tokens'],
+    ['prompt_tokens', 'prompt_tokens'], ['completion_tokens', 'completion_tokens'],
+    ['cached_tokens', 'cached_tokens'], ['cost', 'cost'],
+  ], { latency: true });
+}
+
+/** 客户端（bySource 形状） */
+function foldAggBySource(rows) {
+  return foldAgg(rows, 'request_source', null, [
+    ['request_count', 'requests'], ['tokens_used', 'tokens'],
+    ['prompt_tokens', 'prompt_tokens'], ['completion_tokens', 'completion_tokens'],
+    ['cached_tokens', 'cached_tokens'], ['cost', 'cost'],
+  ], { latency: true });
+}
+
+/** 成员（byUser 形状） */
+function foldAggByUser(rows) {
+  return foldAgg(rows, 'user_id', 'user_name', [
+    ['request_count', 'requests'], ['tokens_used', 'tokens'],
+    ['cached_tokens', 'cached_tokens'], ['cost', 'cost'],
+  ], { latency: true });
+}
+
+/** Team（byTeam 形状）：聚合侧以成员当前主 Team（users.team_id）近似 */
+function foldAggByTeam(rows) {
+  return foldAgg(rows, 'team_id', 'team_name', [
+    ['request_count', 'requests'], ['tokens_used', 'tokens'],
+    ['cached_tokens', 'cached_tokens'], ['cost', 'cost'],
+  ], { latency: true });
+}
+
+/** 用户组（byGroup 形状） */
+function foldAggByGroup(rows) {
+  return foldAgg(rows, 'group_id', 'group_name', [
+    ['request_count', 'requests'], ['tokens_used', 'tokens'],
+    ['cached_tokens', 'cached_tokens'], ['cost', 'cost'],
+  ], { latency: true });
+}
+
+/** API Key（byApiKey 形状） */
+function foldAggByApiKey(rows) {
+  const map = new Map();
+  for (const r of rows || []) {
+    const k = String(r.api_key_id == null ? '' : r.api_key_id);
+    let c = map.get(k);
+    if (!c) {
+      c = { key_id: r.api_key_id ?? null, key_name: r.key_name || null, key_prefix: r.key_prefix || null, requests: 0, tokens: 0, cached_tokens: 0, cost: 0 };
+      map.set(k, c);
+    }
+    c.requests += Number(r.request_count) || 0;
+    c.tokens += Number(r.tokens_used) || 0;
+    c.cached_tokens += Number(r.cached_tokens) || 0;
+    c.cost += Number(r.cost) || 0;
+  }
+  return [...map.values()];
+}
+
+/**
+ * 双轨合并：按 keyField 把两组分组行求和合并，数值字段相加。
+ * 结果行以 detail 行形状为准；agg 独有键用 agg 行补出。
+ * @param {Array<object>} detailRows
+ * @param {Array<object>} aggRows
+ * @param {string} keyField 合并键字段（两边都有）
+ * @param {Array<string>} sumFields 需要相加的数值字段
+ * @param {string} [nameField] 名称字段：detail 优先、agg 兜底
+ */
+function sumMergeByKey(detailRows, aggRows, keyField, sumFields, nameField = null) {
+  const map = new Map();
+  const keyOf = (r) => String(r[keyField] == null ? '' : r[keyField]);
+  for (const r of aggRows || []) {
+    const k = keyOf(r);
+    let cur = map.get(k);
+    if (!cur) {
+      cur = { ...r };
+      for (const f of sumFields) if (cur[f] == null) cur[f] = 0;
+      map.set(k, cur);
+    }
+    for (const f of sumFields) cur[f] = Number(cur[f] || 0) + Number(r[f] || 0);
+  }
+  for (const r of detailRows || []) {
+    const k = keyOf(r);
+    let cur = map.get(k);
+    if (!cur) {
+      cur = { ...r };
+      for (const f of sumFields) if (cur[f] == null) cur[f] = 0;
+      map.set(k, cur);
+    } else {
+      for (const f of sumFields) cur[f] = Number(cur[f] || 0) + Number(r[f] || 0);
+      if (nameField && r[nameField] != null && r[nameField] !== '') cur[nameField] = r[nameField];
+      if (r.avg_latency != null) cur.avg_latency = r.avg_latency;
+    }
+  }
+  return [...map.values()];
+}
+
+/**
+ * 双轨合并每日行（dailyBySource/dailyBySource 按 composite key）：
+ * @param {Array<object>} detailRows
+ * @param {Array<object>} aggRows
+ * @param {string} keyField detail/agg 行上已有的组合键字段
+ */
+function mergeByKey(detailRows, aggRows, keyField) {
+  const map = new Map();
+  const keyOf = (r) => String(r[keyField] == null ? '' : r[keyField]);
+  for (const r of aggRows || []) map.set(keyOf(r), { ...r });
+  for (const r of detailRows || []) map.set(keyOf(r), { ...r });
+  return [...map.values()];
+}
+
 module.exports = {
   AGG_TABLE,
   DEFAULT_DETAIL_WINDOW_DAYS,
@@ -524,6 +840,8 @@ module.exports = {
   ensureUsageDailyAggTable,
   isAggTableReady,
   computeSplit,
+  computeDualPlan,
+  invalidateAggCoverageCache,
   addDays,
   monthChunks,
   isHealthy,
@@ -533,6 +851,19 @@ module.exports = {
   startDailyAggScheduler,
   fetchAggRows,
   foldAggRows,
+  foldAgg,
+  foldAggDaily,
+  foldAggDailyBySource,
+  foldAggBySourceModel,
+  foldAggByProvider,
+  foldAggByModel,
+  foldAggBySource,
+  foldAggByUser,
+  foldAggByTeam,
+  foldAggByGroup,
+  foldAggByApiKey,
   mergeGrouped,
   mergeDaily,
+  mergeByKey,
+  sumMergeByKey,
 };

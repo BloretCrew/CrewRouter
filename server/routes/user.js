@@ -1325,6 +1325,22 @@ router.get('/stats', requireAuth, async (req, res) => {
       start_date = range.start;
       end_date = range.end;
     }
+    // 数据保留双轨：窗口 > 90 天时，明细查询上移到保留窗口起点，旧段走聚合表
+    let aggStart = null, aggEnd = null, dualPlan = null;
+    try {
+      const agg = require('../utils/usage-agg');
+      const plan = await agg.computeDualPlan(start_date, end_date);
+      dualPlan = plan;
+      if (plan && plan.agg) {
+        aggStart = plan.agg.start;
+        aggEnd = plan.agg.end;
+        // 明细段起点上移（避免查已被聚合覆盖的旧数据）
+        start_date = plan.detail.start;
+      }
+    } catch (e) {
+      Logger.warn('[stats] 双轨计划计算失败，回退全明细:', e.message);
+    }
+
     dateFilter = `AND ur.created_at >= $${paramIdx}::date AND ur.created_at < ($${paramIdx + 1}::date + INTERVAL '1 day')`;
     params.push(start_date, end_date);
     paramIdx += 2;
@@ -1507,8 +1523,33 @@ router.get('/stats', requireAuth, async (req, res) => {
     summary.identified_rate = sourceSummary.identified_rate;
     summary.active_sources = sourceSummary.active_sources;
 
+    // 数据保留双轨：合并聚合段（>90 天旧数据）到日序列/汇总
+    let dailyRowsFinal;
+    if (dualPlan && dualPlan.agg && aggStart && aggEnd) {
+      try {
+        const agg = require('../utils/usage-agg');
+        const aggRows = await agg.fetchAggRows({ start: aggStart, end: aggEnd, userId, modelId: filterModel || null, requestSource: filterSource || null });
+        const combinedDaily = agg.mergeDaily(dailyResult.rows, aggRows);
+        dailyRowsFinal = combinedDaily;
+        if (summary) {
+          const folds = agg.foldAggRows(aggRows) || [];
+          const foldSum = folds.reduce((a, x) => {
+            a.request_count += Number(x.request_count || 0);
+            a.tokens_used += Number(x.tokens_used || 0);
+            a.cost += Number(x.cost || 0);
+            return a;
+          }, { request_count: 0, tokens_used: 0, cost: 0 });
+          summary.total_requests = (Number(summary.total_requests) || 0) + foldSum.request_count;
+          summary.total_tokens = (Number(summary.total_tokens) || 0) + foldSum.tokens_used;
+          summary.total_cost = (Number(summary.total_cost) || 0) + foldSum.cost;
+        }
+      } catch (e) {
+        Logger.warn('[stats] 聚合段合并失败（不影响明细段）:', e.message);
+      }
+    }
+
     res.json({
-      daily: dailyResult.rows,
+      daily: typeof dailyRowsFinal !== 'undefined' ? dailyRowsFinal : dailyResult,
       byModel: modelResult.rows,
       hourly: hourlyResult.rows,
       byApiKey: apiKeyResult.rows,
