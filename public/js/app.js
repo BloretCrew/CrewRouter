@@ -5257,6 +5257,7 @@ class ConsoleApp {
     this._summaryPending = false;
     this._sessionSummaryText = '';
     this._summaryDoneFor = null;
+    this._summaryModalSessionKey = null;
     this._summaryError = null;
     this._detailCursor = null;
     this._setSummaryRegenDisabled(false);
@@ -5291,6 +5292,7 @@ class ConsoleApp {
     const moreBtn = document.getElementById('sessionMoreBtn');
     const previousHeight = page > 1 ? document.documentElement.scrollHeight : 0;
     const previousScrollY = page > 1 ? window.scrollY : 0;
+    let requestSucceeded = false;
     if (page === 1) {
       setHTML(timeline, `<li class="session-detail-skeleton"><div class="skeleton-bar" style="width:65%"></div><div class="skeleton-bar" style="width:90%"></div><div class="skeleton-bar" style="width:78%"></div></li>`);
     } else if (moreBtn) {
@@ -5375,6 +5377,7 @@ class ConsoleApp {
       if (page === 1) timeline.insertAdjacentHTML('beforeend', frag);
       else if (frag) timeline.insertAdjacentHTML('afterbegin', frag);
       this._removeDetailLoadError();
+      requestSucceeded = true;
 
       this._detailLoaded += records.length;
       this._detailCursor = data.nextCursor || null;
@@ -5400,10 +5403,14 @@ class ConsoleApp {
     } finally {
       if (requestSeq === this._detailRequestSeq) this._detailLoading = false;
       if (requestSeq === this._detailRequestSeq && moreBtn) {
-        moreBtn.disabled = false;
-        if (!this._detailCursor) this._updateSessionMoreButton(moreBtn, 'done');
+        if (requestSucceeded) {
+          moreBtn.disabled = false;
+          if (!this._detailCursor) this._updateSessionMoreButton(moreBtn, 'done');
+        } else {
+          this._updateSessionMoreButton(moreBtn, 'more');
+        }
       }
-      if (requestSeq === this._detailRequestSeq && page >= 1 && this._detailSessionKey === sessionKey && this._detailCursor && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 240) {
+      if (requestSucceeded && requestSeq === this._detailRequestSeq && page >= 1 && this._detailSessionKey === sessionKey && this._detailCursor && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 240) {
         queueMicrotask(() => this.loadSessionMessages(sessionKey, page + 1));
       }
     }
@@ -5548,7 +5555,7 @@ class ConsoleApp {
       if (this.currentPage !== 'sessions' || !this._detailSessionKey || this._detailLoading) return;
       const moreBtn = document.getElementById('sessionMoreBtn');
       if (moreBtn?.style.display === 'none') return;
-      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 240) {
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 240 && this._detailCursor) {
         this.loadSessionMessages(this._detailSessionKey, (this._detailMsgPage || 1) + 1);
       }
     }, { passive: true });
@@ -5566,6 +5573,7 @@ class ConsoleApp {
     this._detailLoaded = 0;
     this._detailTotal = 0;
     this._summaryPending = false;
+    this._summaryModalSessionKey = null;
     this._summaryTaskSessionKey = null;
     const listWrap = document.getElementById('sessionsListWrap');
     const detailWrap = document.getElementById('sessionDetailWrap');
@@ -6388,11 +6396,13 @@ class ConsoleApp {
   /** 后台生成中禁用「重新生成」按钮，避免并发重复请求 */
   _setSummaryRegenDisabled(disabled) {
     const btn = document.getElementById('sessionSummaryRegenBtn');
+    const topBtn = document.getElementById('sessionSummaryRegenTopBtn');
     if (btn) btn.disabled = !!disabled;
+    if (topBtn) topBtn.disabled = !!disabled;
   }
 
-  async generateSessionSummary(force = false) {
-    const key = this._detailSessionKey;
+  async generateSessionSummary(force = false, sessionKey = '') {
+    const key = String(sessionKey || this._detailSessionKey || '');
     if (!key) return;
     const bodyEl = document.getElementById('sessionSummaryBody');
 
@@ -6429,6 +6439,7 @@ class ConsoleApp {
     const reqKey = key;
     const reqSeq = ++this._summarySeq;
     // 弹窗显示加载提示；用户可关闭弹窗让任务在后台继续
+    this._summaryModalSessionKey = reqKey;
     this._renderSummaryLoading(bodyEl);
     this.showModal('sessionSummaryModal');
     this._summaryPending = true;
@@ -6448,11 +6459,26 @@ class ConsoleApp {
       const decoder = new TextDecoder();
       let acc = '';
       let buf = '';
+      let summaryPhase = 'reading';
+      const renderSummaryPhase = (phase) => {
+        if (this._summarySeq !== reqSeq || this._summaryModalSessionKey !== reqKey) return;
+        const liveBody = document.getElementById('sessionSummaryBody');
+        if (liveBody && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
+          this._renderSummaryLoading(liveBody, phase);
+        }
+      };
       let dataLines = [];
       const handleEvent = (data) => {
         if (!data) return;
         const obj = JSON.parse(data);
-        if (obj.type === 'delta' && obj.text) { acc += obj.text; renderAcc(); }
+        if (obj.type === 'delta' && obj.text) {
+          if (summaryPhase !== 'generating') {
+            summaryPhase = 'generating';
+            renderSummaryPhase(summaryPhase);
+          }
+          acc += obj.text;
+          renderAcc();
+        }
         else if (obj.type === 'done') { if (obj.summary) acc = obj.summary; if (obj.createdAt) createdAt = obj.createdAt; renderAcc(); }
         else if (obj.type === 'error') throw new Error(obj.error || t('总结生成失败'));
       };
@@ -6575,6 +6601,7 @@ class ConsoleApp {
   openSessionSummaryModal(sessionKey = '') {
     const key = String(sessionKey || '');
     if (!key) return;
+    this._summaryModalSessionKey = key;
     const text = this._summaryCacheTextMap[key] || (key === this._summaryTaskSessionKey ? this._summaryTaskText : '');
     const bodyEl = document.getElementById('sessionSummaryBody');
     if (bodyEl) setHTML(bodyEl, text ? this._renderSafeMarkdown(text) : '');
@@ -6585,25 +6612,26 @@ class ConsoleApp {
     this._updateTaskBar('hidden');
   }
 
-  _renderSummaryLoading(bodyEl) {
+  _renderSummaryLoading(bodyEl, phase = 'reading') {
     if (!bodyEl) return;
     setHTML(bodyEl, `
       <div class="summary-loading">
         <div class="summary-spinner"></div>
-        <span class="summary-loading-stage">${t('正在阅读会话...')}</span>
-        <small>${t('正在生成...')}</small>
+        <span class="summary-loading-stage">${t(phase === 'generating' ? '正在生成...' : '正在阅读会话...')}</span>
       </div>`);
   }
 
   async regenerateSessionSummary() {
-    // 防重：当前会话后台任务进行中忽略点击，避免并发重复请求
-    if (this._summaryPendingKeys.has(this._detailSessionKey)) {
+    const key = String(this._summaryModalSessionKey || this._detailSessionKey || '');
+    if (!key) return;
+    // 防重：目标会话后台任务进行中忽略点击，避免并发重复请求
+    if (this._summaryPendingKeys.has(key)) {
       const bodyEl = document.getElementById('sessionSummaryBody');
       this._renderSummaryLoading(bodyEl);
       this.showModal('sessionSummaryModal');
       return;
     }
-    await this.generateSessionSummary(true);
+    await this.generateSessionSummary(true, key);
   }
 
   _summaryPlainText(text) {
@@ -6613,7 +6641,7 @@ class ConsoleApp {
   }
 
   async copySessionSummary(sessionKey = '') {
-    const key = String(sessionKey || this._detailSessionKey || '');
+    const key = String(sessionKey || this._summaryModalSessionKey || this._detailSessionKey || '');
     if (!key) return;
     const text = this._summaryCacheTextMap[key] || (key === this._summaryTaskSessionKey ? this._summaryTaskText : '');
     try {
@@ -7658,6 +7686,7 @@ ${extractorBody}
       m.style.display = 'none';
       m.classList.remove('active');
     });
+    this._summaryModalSessionKey = null;
   }
 
   showToast(message, type = 'info') {

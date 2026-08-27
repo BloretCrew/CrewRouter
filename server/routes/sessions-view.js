@@ -564,7 +564,6 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
         ${DETAIL_COLUMNS}
         WHERE user_id = $1 AND ${SESSION_KEY_SQL.replace(/u\./g, '')} = $2
         ORDER BY created_at ASC, id ASC
-        LIMIT 2000
       `, [userId, sessionKey]);
       total = fullRes.rows.length;
       const expanded = expandSessionMessages(fullRes.rows);
