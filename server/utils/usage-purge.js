@@ -134,7 +134,8 @@ async function runPurgeOnce(opts = {}) {
   let consecutiveFailures = 0;
   let aborted = false;
 
-  while (true) {
+  const maxTotal = normalizePositiveInt(opts.maxTotalRecords, Number.MAX_SAFE_INTEGER);
+  while (deleted < maxTotal) {
     if (!(await isHealthy())) {
       consecutiveFailures += 1;
       logRetention(`[清除] 健康检查失败（${consecutiveFailures}/2）`);
