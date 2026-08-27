@@ -6355,6 +6355,7 @@ class ConsoleApp {
           this._summaryCacheTextMap[key] = cj.summary;
           this._summaryCacheTimeMap[key] = cj.createdAt || null;
           if (bodyEl) setHTML(bodyEl, this._renderSafeMarkdown(cj.summary));
+          this._summaryCacheTextMap[key] = cj.summary;
           this._sessionSummaryText = cj.summary;
           this._summaryDoneFor = key;
           this._applySummaryModalMeta(key, cj.createdAt);
@@ -6398,7 +6399,7 @@ class ConsoleApp {
       };
       let createdAt = null;
       const renderAcc = () => {
-        this._sessionSummaryText = acc;
+        this._summaryCacheTextMap[reqKey] = acc;
         if (this._detailSessionKey === reqKey) this._renderSessionSummaryInline(reqKey, acc, 'loading');
         const liveBody = document.getElementById('sessionSummaryBody');
         if (liveBody && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
@@ -6432,6 +6433,7 @@ class ConsoleApp {
       this._summaryDoneFor = reqKey;
       this._summaryTaskSessionKey = reqKey;
       this._summaryTaskText = acc;
+      if (this._detailSessionKey === reqKey) this._sessionSummaryText = acc;
       this._setSummaryRegenDisabled(false);
       if (this._detailSessionKey === reqKey) this._applySummaryBtnText(reqKey, true);
       if (this._detailSessionKey === reqKey) {
@@ -6496,7 +6498,6 @@ class ConsoleApp {
             <button type="button" class="btn btn-sm btn-secondary" onclick="app.copySessionSummary('${this._jsString(sessionKey)}')">${t('复制')}</button>
           </div>
         </div>`);
-      this._sessionSummaryText = text;
       return;
     }
   }
@@ -6507,7 +6508,7 @@ class ConsoleApp {
     const text = key === this._summaryTaskSessionKey ? this._summaryTaskText : (this._summaryCacheTextMap[key] || '');
     const bodyEl = document.getElementById('sessionSummaryBody');
     if (bodyEl) setHTML(bodyEl, text ? this._renderSafeMarkdown(text) : '');
-    this._sessionSummaryText = text;
+    if (key === this._detailSessionKey) this._sessionSummaryText = text;
     this._summaryDoneFor = key;
     this._applySummaryModalMeta(key, this._summaryCacheTimeMap[key]);
     this.showModal('sessionSummaryModal');
