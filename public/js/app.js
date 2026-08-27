@@ -8243,10 +8243,29 @@ ${extractorBody}
     const data = await res.json();
     const session = data.session || {};
     const events = data.events || [];
-    const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? t('成功') : t('失败')}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
+    const semanticsMeta = {
+      primary: { label: '主对话', color: 'var(--muted-foreground)' },
+      subagent: { label: '子代理', color: 'var(--primary)' },
+      title: { label: '标题', color: '#8b5cf6' },
+      compaction: { label: '压缩', color: '#f97316' },
+      retry: { label: '重试', color: '#ca8a04' },
+      plan: { label: '计划', color: '#16a34a' },
+      review: { label: '评审', color: '#dc2626' },
+      heartbeat: { label: '心跳', color: 'var(--muted-foreground)' },
+      other_automation: { label: '其他自动', color: '#475569' },
+      unknown: { label: '未知', color: 'var(--muted-foreground)' },
+    };
+    const renderSemantics = semantics => {
+      const type = semantics?.type || 'unknown';
+      const meta = semanticsMeta[type] || semanticsMeta.unknown;
+      const reasonCodes = Array.isArray(semantics?.reason_codes) ? semantics.reason_codes : [];
+      const title = reasonCodes.length ? ` title="${escapeHtml(reasonCodes.join(', '))}"` : '';
+      return `<span class="badge"${title} style="color:${meta.color};border:1px solid ${meta.color};">${escapeHtml(meta.label)}</span>`;
+    };
+    const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${renderSemantics(e.semantics)}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? t('成功') : t('失败')}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
     const detail = document.createElement('div');
     detail.className = 'trace-report-modal';
-    detail.innerHTML = `${'<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>' + t('跟踪报告')}${escapeHtml(session.public_id)}${'</h3><button class="btn btn-secondary btn-sm" onclick="this.closest(\'.trace-report-modal\').remove()">' + t('关闭')}</button></div><p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="6">暂无事件</td></tr>'}</tbody></table></div></div>`;
+    detail.innerHTML = `${'<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>' + t('跟踪报告')}${escapeHtml(session.public_id)}${'</h3><button class="btn btn-secondary btn-sm" onclick="this.closest(\'.trace-report-modal\').remove()">' + t('关闭')}</button></div><p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div></div>`;
     document.body.appendChild(detail);
     detail.addEventListener('click', e => { if (e.target === detail) detail.remove(); });
     this.loadTraceReports().catch(() => {});

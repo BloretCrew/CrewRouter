@@ -51,7 +51,10 @@ router.get('/trace-sessions/:publicId', requireAuth, async (req, res) => {
   try {
     const r = await pool.query(`UPDATE trace_sessions SET viewed_at = COALESCE(viewed_at, CURRENT_TIMESTAMP) WHERE public_id = $1 AND user_id = $2 RETURNING *`, [req.params.publicId, req.session.user.id]);
     if (!r.rows.length) return res.status(404).json({ error: '报告不存在' });
-    const events = await pool.query('SELECT * FROM trace_events WHERE session_id = $1 ORDER BY created_at, id', [r.rows[0].id]);
+    const events = await pool.query(`SELECT te.*, ur.plugin_meta->'request_semantics' AS semantics
+      FROM trace_events te
+      LEFT JOIN usage_records ur ON ur.id = te.usage_record_id
+      WHERE te.session_id = $1 ORDER BY te.created_at, te.id`, [r.rows[0].id]);
     res.json({ session: r.rows[0], events: events.rows });
   } catch (e) { Logger.error('[跟踪报告详情] 错误:', e); res.status(500).json({ error: '服务器错误' }); }
 });
