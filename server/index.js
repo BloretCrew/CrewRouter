@@ -2689,6 +2689,14 @@ async function startServer() {
 
   app.listen(PORT, () => {
     Logger.success(`${config.app.name} API 服务运行于 http://localhost:${PORT}`);
+    // Phase 1：每日聚合调度（数据保留系统）
+    try {
+      const agg = require('./utils/usage-agg');
+      agg.startDailyAggScheduler();
+      Logger.info('[每日聚合] 调度器已启动');
+    } catch (err) {
+      Logger.warn(`[每日聚合] 调度器启动失败: ${err.message}`);
+    }
   });
 }
 
