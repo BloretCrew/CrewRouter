@@ -5116,6 +5116,9 @@ class ConsoleApp {
     const keyAttr = key.replace(/'/g, '\\&#39;');
     const harnessMeta = this._usageRequestSourceMeta(item.harness);
     const cached = Number(item.totalCachedTokens || 0);
+    const summaryBadge = item.summaryCreatedAt
+      ? `<span class="session-badge cached" title="${t('最近更新')} ${escapeHtml(new Date(item.summaryCreatedAt).toLocaleString())}">${t('缓存摘要')} · ${escapeHtml(this.formatRelativeTime(item.summaryCreatedAt))}</span>`
+      : '';
     const pressureBadge = item.pressureLevel === 'critical'
       ? `<span class="session-badge pressure-critical" title="${t('上下文压力')}">${t('高压')}</span>`
       : item.pressureLevel === 'warning'
@@ -5141,6 +5144,7 @@ class ConsoleApp {
         <div class="model-library-item-actions model-item-badges">
           <span class="model-item-badge" title="${t('总 Token')}">${this._formatBigNumber(Number(item.totalTokens || 0))}</span>
           ${cached ? `<span class="model-item-badge series session-badge-cached" style="background:rgba(16,185,129,.12);color:var(--success);" title="${t('缓存命中 Token')}">${t('缓存')} ${this._formatBigNumber(cached)}</span>` : ''}
+          ${summaryBadge}
           ${pressureBadge}
         </div>
       </div>`;
@@ -5481,7 +5485,7 @@ class ConsoleApp {
       const raw = marked.parse(text);
       const tpl = document.createElement('template');
       tpl.innerHTML = raw;
-      const ALLOWED = new Set(['P','H1','H2','H3','H4','H5','H6','UL','OL','LI','CODE','PRE','BLOCKQUOTE','STRONG','EM','DEL','S','A','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','IMG','BR','HR','SPAN']);
+      const ALLOWED = new Set(['P','H1','H2','H3','H4','H5','H6','UL','OL','LI','CODE','PRE','BLOCKQUOTE','STRONG','EM','DEL','S','A','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','BR','HR','SPAN']);
       const walk = (node) => {
         [...node.children].forEach(child => {
           if (!ALLOWED.has(child.tagName)) { child.remove(); return; }
@@ -6334,11 +6338,10 @@ class ConsoleApp {
   async generateSessionSummary(force = false) {
     const key = this._detailSessionKey;
     if (!key) return;
-    this._summaryTaskSessionKey = key;
     const bodyEl = document.getElementById('sessionSummaryBody');
 
     // 后台任务进行中：重开弹窗显示进度，不重复发起
-    if (this._summaryPending) {
+    if (this._summaryPendingKeys.has(key)) {
       this._renderSummaryLoading(bodyEl);
       this.showModal('sessionSummaryModal');
       return;
@@ -6355,7 +6358,6 @@ class ConsoleApp {
           this._summaryCacheTextMap[key] = cj.summary;
           this._summaryCacheTimeMap[key] = cj.createdAt || null;
           if (bodyEl) setHTML(bodyEl, this._renderSafeMarkdown(cj.summary));
-          this._summaryCacheTextMap[key] = cj.summary;
           this._sessionSummaryText = cj.summary;
           this._summaryDoneFor = key;
           this._applySummaryModalMeta(key, cj.createdAt);
@@ -6374,6 +6376,7 @@ class ConsoleApp {
     this._renderSummaryLoading(bodyEl);
     this.showModal('sessionSummaryModal');
     this._summaryPending = true;
+    this._summaryPendingKeys.add(reqKey);
     this._setSummaryRegenDisabled(true);
     // 模型库顶部任务条：进入后台生成即亮出加载环（与弹窗是否开着无关，用户可能已切走）
     this._updateTaskBar('loading', { sessionKey: reqKey });
@@ -6402,11 +6405,11 @@ class ConsoleApp {
         this._summaryCacheTextMap[reqKey] = acc;
         if (this._detailSessionKey === reqKey) this._renderSessionSummaryInline(reqKey, acc, 'loading');
         const liveBody = document.getElementById('sessionSummaryBody');
-        if (liveBody && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
+        if (this._detailSessionKey === reqKey && liveBody && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
           setHTML(liveBody, this._renderSafeMarkdown(acc));
           liveBody.scrollTop = liveBody.scrollHeight;
         }
-        this._updateTaskBar('loading', { chars: acc.length, sessionKey: reqKey });
+        if (this._summarySeq === reqSeq) this._updateTaskBar('loading', { chars: acc.length, sessionKey: reqKey });
       };
       while (true) {
         const { done, value } = await reader.read();
@@ -6418,24 +6421,32 @@ class ConsoleApp {
           const line = raw.replace(/\r$/, '');
           if (line === '') {
             if (!dataLines.length) continue;
-            try { handleEvent(dataLines.join('\n').trim()); } catch (e) { if (e.message && !/JSON/.test(e.message)) throw e; }
+            handleEvent(dataLines.join('\n').trim());
             dataLines = [];
           } else if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
         }
       }
       buf += decoder.decode();
-      if (buf) { const tail = buf.replace(/\r$/, ''); if (tail.startsWith('data:')) dataLines.push(tail.slice(5).replace(/^ /, '')); }
+      if (buf) {
+        const tail = buf.replace(/\r$/, '');
+        if (tail.startsWith('data:')) dataLines.push(tail.slice(5).replace(/^ /, ''));
+      }
       if (dataLines.length) handleEvent(dataLines.join('\n').trim());
       renderAcc();
       this._summaryCachedKeys.add(reqKey);
       this._summaryCacheTextMap[reqKey] = acc;
       this._summaryCacheTimeMap[reqKey] = createdAt || new Date().toISOString();
-      this._summaryDoneFor = reqKey;
-      this._summaryTaskSessionKey = reqKey;
-      this._summaryTaskText = acc;
-      if (this._detailSessionKey === reqKey) this._sessionSummaryText = acc;
-      this._setSummaryRegenDisabled(false);
-      if (this._detailSessionKey === reqKey) this._applySummaryBtnText(reqKey, true);
+      if (this._detailSessionKey === reqKey) {
+        this._summaryDoneFor = reqKey;
+        this._sessionSummaryText = acc;
+        this._setSummaryRegenDisabled(false);
+        this._applySummaryBtnText(reqKey, true);
+      }
+      if (this._summarySeq === reqSeq) {
+        this._summaryTaskSessionKey = reqKey;
+        this._summaryTaskText = acc;
+        this._setSummaryRegenDisabled(false);
+      }
       if (this._detailSessionKey === reqKey) {
         this._renderSessionSummaryInline(reqKey, acc, 'done', null, this._summaryCacheTimeMap[reqKey]);
       }
@@ -6443,20 +6454,21 @@ class ConsoleApp {
       if (this._summarySeq === reqSeq) this._updateTaskBar('done', { summary: acc, sessionKey: reqKey });
       return;
     } catch (error) {
-      this._summaryError = error.message || t('总结生成失败');
+      const summaryError = error.message || t('总结生成失败');
+      if (this._summarySeq === reqSeq) this._summaryError = summaryError;
       if (this._detailSessionKey === reqKey) {
-        this._renderSessionSummaryInline(reqKey, '', 'error', this._summaryError);
+        this._renderSessionSummaryInline(reqKey, '', 'error', summaryError);
 
         const live = document.getElementById('sessionSummaryBody');
         if (live && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
-          setHTML(live, `<span style="color:var(--danger);">${escapeHtml(this._summaryError)}</span>`);
+          setHTML(live, `<span style="color:var(--danger);">${escapeHtml(summaryError)}</span>`);
         }
       }
       // 生成失败时收起加载条，避免留下无限旋转的进行中提示
       if (this._summarySeq === reqSeq) this._updateTaskBar('hidden');
       this.showToast(t('总结生成失败'), 'error');
     } finally {
-      // 仅当没有更新的请求接管时才清除 pending 标志
+      this._summaryPendingKeys.delete(reqKey);
       if (this._summarySeq === reqSeq) {
         this._summaryPending = false;
         this._setSummaryRegenDisabled(false);
@@ -6504,8 +6516,9 @@ class ConsoleApp {
 
   dismissModelLibraryTaskBar() { this._updateTaskBar('hidden'); }
   openSessionSummaryModal(sessionKey = '') {
-    const key = String(sessionKey || this._summaryTaskSessionKey || this._detailSessionKey || '');
-    const text = key === this._summaryTaskSessionKey ? this._summaryTaskText : (this._summaryCacheTextMap[key] || '');
+    const key = String(sessionKey || '');
+    if (!key) return;
+    const text = this._summaryCacheTextMap[key] || (key === this._summaryTaskSessionKey ? this._summaryTaskText : '');
     const bodyEl = document.getElementById('sessionSummaryBody');
     if (bodyEl) setHTML(bodyEl, text ? this._renderSafeMarkdown(text) : '');
     if (key === this._detailSessionKey) this._sessionSummaryText = text;
@@ -6526,8 +6539,8 @@ class ConsoleApp {
   }
 
   async regenerateSessionSummary() {
-    // 防重：后台任务进行中忽略点击，避免并发重复请求
-    if (this._summaryPending) {
+    // 防重：当前会话后台任务进行中忽略点击，避免并发重复请求
+    if (this._summaryPendingKeys.has(this._detailSessionKey)) {
       const bodyEl = document.getElementById('sessionSummaryBody');
       this._renderSummaryLoading(bodyEl);
       this.showModal('sessionSummaryModal');
@@ -6543,8 +6556,9 @@ class ConsoleApp {
   }
 
   async copySessionSummary(sessionKey = '') {
-    const key = String(sessionKey || this._summaryTaskSessionKey || this._summaryDoneFor || this._detailSessionKey || '');
-    const text = key === this._summaryTaskSessionKey ? this._summaryTaskText : (this._summaryCacheTextMap[key] || '');
+    const key = String(sessionKey || '');
+    if (!key) return;
+    const text = this._summaryCacheTextMap[key] || (key === this._summaryTaskSessionKey ? this._summaryTaskText : '');
     try {
       await navigator.clipboard.writeText(this._summaryPlainText(text));
       this.showToast(t('已复制到剪贴板'), 'success');

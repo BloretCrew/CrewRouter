@@ -1261,6 +1261,7 @@
               <option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option>
             </select>
             <button class="btn btn-primary" onclick="app.loadSessions(1)"><span data-i18n="查询">查询</span></button>
+            <button class="btn btn-secondary" onclick="app.loadSessions(app._sessionsPage || 1)" title="刷新会话列表" data-i18n-title="刷新会话列表"><span data-i18n="刷新">刷新</span></button>
             <span id="sessionsCountInfo" class="filter-info"></span>
             <input id="sessionsSearchInput" class="input" style="flex:1;min-width:200px;margin-left:auto;" type="text"
                    placeholder="搜索会话内容" data-i18n-placeholder="搜索会话内容" data-i18n-title="搜索会话内容（消息全文与回复，回车触发）"
