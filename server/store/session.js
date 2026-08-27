@@ -10,6 +10,7 @@
 
 const crypto = require('crypto');
 const Logger = require('../logger');
+const { displayName } = require('../display-name');
 
 const COOKIE_NAME = 'bl_store_session';
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
@@ -31,7 +32,7 @@ function encodeSession(user, secret) {
   }
   const body = {
     username: user.username,
-    nickname: user.nickname || user.username,
+    nickname: displayName(user, user.username),
     avatar: user.avatar || '',
     admin: !!user.admin,
     iat: Date.now(),

@@ -96,7 +96,7 @@
       function render(info) {
         var html = '';
         html += '<div class="pi-title">' + esc(info.name) + '</div>';
-        html += '<div class="pi-byline">v' + esc(info.version) + ' · ' + esc(info.author || info.authorUsername || '') + ' · <code>' + esc(info.id) + '</code></div>';
+        html += '<div class="pi-byline">v' + esc(info.version) + ' · ' + esc(info.authorNickname || info.author || info.authorUsername || '') + ' · <code>' + esc(info.id) + '</code></div>';
         if (info.description) html += '<div class="pi-desc">' + esc(info.description) + '</div>';
 
         html += '<div class="pi-section"><h3>权限</h3><ul>' + permHtml(info.permissions) + '</ul></div>';
