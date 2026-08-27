@@ -5,7 +5,6 @@ const { pool } = require('../models/database');
 const Logger = require('../logger');
 const config = require('../config-loader');
 const { reportLoginEvent } = require('../utils/login-reporter');
-const { displayName } = require('../display-name');
 
 // GitHub OAuth 配置
 const GITHUB_CLIENT_ID = config.github?.clientId || '';
@@ -79,7 +78,7 @@ router.get('/github/callback', async (req, res) => {
       req.session.user = {
         id: user.id,
         username: user.username,
-        nickname: displayName(user, user.username),
+        nickname: user.nickname || user.username,
         email: user.email,
         avatar: user.avatar,
         isAdmin: user.is_admin,
@@ -126,7 +125,7 @@ router.get('/github/callback', async (req, res) => {
           req.session.user = {
             id: user.id,
             username: user.username,
-            nickname: displayName(user, user.username),
+            nickname: user.nickname || user.username,
             email: user.email,
             avatar: user.avatar,
             isAdmin: user.is_admin,

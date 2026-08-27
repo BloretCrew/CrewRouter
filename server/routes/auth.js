@@ -5,7 +5,6 @@ const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { ACTIONS, logAction } = require('../utils/audit-log');
 const { reportLoginEvent, reportLogoutEvent } = require('../utils/login-reporter');
-const { displayName } = require('../display-name');
 
 // 邮箱格式验证
 function isValidEmail(email) {
@@ -62,7 +61,7 @@ router.post('/login', async (req, res) => {
     req.session.user = {
       id: user.id,
       username: user.username,
-      nickname: displayName(user, user.username),
+      nickname: user.nickname || user.username,
       email: user.email,
       avatar: user.avatar,
       isAdmin: user.is_admin,
@@ -153,7 +152,7 @@ router.post('/login/2fa', async (req, res) => {
     req.session.user = {
       id: user.id,
       username: user.username,
-      nickname: displayName(user, user.username),
+      nickname: user.nickname || user.username,
       email: user.email,
       avatar: user.avatar,
       isAdmin: user.is_admin,

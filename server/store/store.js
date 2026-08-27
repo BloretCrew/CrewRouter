@@ -275,9 +275,7 @@ function canSeePending(plugin, user) {
 function toLauncherManifest(plugin) {
   return {
     name: plugin.name,
-    master: plugin.authorNickname || plugin.author || plugin.authorUsername || 'unknown',
-    authorUsername: plugin.authorUsername || '',
-    authorNickname: plugin.authorNickname || plugin.authorUsername || '',
+    master: plugin.author || plugin.authorUsername || 'unknown',
     download: plugin.download,
     version: plugin.version,
   };
@@ -1052,9 +1050,8 @@ async function getPluginPackageInfo(id) {
     id: plugin.id,
     name: plugin.name,
     version: plugin.version,
-    author: plugin.authorNickname || plugin.author || plugin.authorUsername || '',
+    author: plugin.author || '',
     authorUsername: plugin.authorUsername || '',
-    authorNickname: plugin.authorNickname || plugin.authorUsername || '',
     description: plugin.description || '',
     longDescription: plugin.longDescription || '',
     permissions: plugin.permissions || [],

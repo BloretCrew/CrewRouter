@@ -9,13 +9,12 @@ const {
   bufferToBase64url,
 } = require('../utils/PassKey');
 const Logger = require('../logger');
-const { displayName } = require('../display-name');
 
 function buildSessionUser(user) {
   return {
     id: user.id,
     username: user.username,
-    nickname: displayName(user, user.username),
+    nickname: user.nickname || user.username,
     email: user.email,
     avatar: user.avatar,
     isAdmin: user.is_admin,
