@@ -56,8 +56,19 @@ function pageParams(query, defaultSize) {
   return { page, pageSize, offset: (page - 1) * pageSize };
 }
 
-function hasMoreDetailRows(rawRowCount, total, page, pageSize) {
-  return rawRowCount === pageSize && total > page * pageSize;
+function hasMoreCursorPage(fetchedRowCount, pageSize) {
+  return fetchedRowCount > pageSize;
+}
+
+function hasMoreCompressedSlice(sliceStart) {
+  return sliceStart > 0;
+}
+
+function buildDetailNextCursor(hasMore, lastRecord) {
+  return hasMore && lastRecord ? {
+    beforeCreatedAt: lastRecord.created_at,
+    beforeId: lastRecord.id,
+  } : null;
 }
 
 function truncStr(value, max) {
@@ -563,6 +574,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
 
     let total;
     let rawDetailRows;
+    let hasMore;
     if (hasDelta) {
       const fullRes = await pool.query(`
         ${DETAIL_COLUMNS}
@@ -580,6 +592,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
         ...row,
         messages: expanded[sliceStart + k] || [],
       }));
+      hasMore = hasMoreCompressedSlice(sliceStart);
     } else {
       const countResult = await pool.query(
         `SELECT COUNT(*)::int AS total FROM usage_records WHERE ${baseWhere}`,
@@ -595,20 +608,17 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
           WHERE ${baseWhere}
             ${cursorWhere}
           ORDER BY created_at DESC, id DESC
-          ${hasCursor ? '' : `OFFSET ${offset}`} LIMIT ${pageSize}
+          ${hasCursor ? '' : `OFFSET ${offset}`} LIMIT ${pageSize + 1}
         ) page_rows
         ORDER BY created_at ASC, id ASC
       `, queryParams);
-      rawDetailRows = recordsResult.rows;
+      hasMore = hasMoreCursorPage(recordsResult.rows.length, pageSize);
+      rawDetailRows = recordsResult.rows.slice(0, pageSize);
     }
 
     const records = buildDetailRecords(rawDetailRows);
-    const hasMore = hasMoreDetailRows(rawDetailRows.length, total, page, pageSize);
     const lastRecord = rawDetailRows[0];
-    const nextCursor = hasMore && lastRecord ? {
-      beforeCreatedAt: lastRecord.created_at,
-      beforeId: lastRecord.id,
-    } : null;
+    const nextCursor = buildDetailNextCursor(hasMore, lastRecord);
 
     res.json({ sessionKey, page, pageSize, total, records, nextCursor });
   } catch (error) {
@@ -978,4 +988,6 @@ router.get('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
-module.exports.hasMoreDetailRows = hasMoreDetailRows;
+module.exports.hasMoreCursorPage = hasMoreCursorPage;
+module.exports.hasMoreCompressedSlice = hasMoreCompressedSlice;
+module.exports.buildDetailNextCursor = buildDetailNextCursor;
