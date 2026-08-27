@@ -221,10 +221,11 @@ async function compressSession(sessionId, { dryRun = false } = {}) {
         SET messages = $2::jsonb,
             storage_mode = $3,
             delta_seq = $4,
-            orig_ctx_msgs = $5,
-            orig_ctx_bytes = $6,
+            delta_base = $5,
+            orig_ctx_msgs = $6,
+            orig_ctx_bytes = $7,
             plugin_meta = jsonb_set(
-              jsonb_set(COALESCE(plugin_meta, '{}'::jsonb), '{attribution,compressedAt}', $7::jsonb),
+              jsonb_set(COALESCE(plugin_meta, '{}'::jsonb), '{attribution,compressedAt}', $8::jsonb),
               '{attribution,archived}', 'true'::jsonb)
         WHERE id = $1
       `, [p.id, JSON.stringify(p.messages), p.storage_mode, p.delta_seq, p.delta_base, p.orig_ctx_msgs, p.orig_ctx_bytes, JSON.stringify(new Date().toISOString())]);
