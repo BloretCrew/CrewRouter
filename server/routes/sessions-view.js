@@ -602,7 +602,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
       );
       total = Number(countResult.rows[0]?.total || 0);
       if (!total) return res.json({ sessionKey, page, pageSize, total: 0, records: [] });
-      const cursorWhere = hasCursor ? 'AND (created_at, id) < ($3::timestamp, $4::int)' : '';
+      const cursorWhere = hasCursor ? 'AND (created_at, id) < ($3::timestamptz, $4::int)' : '';
       const queryParams = hasCursor ? [userId, sessionKey, cursorCreatedAt, cursorId] : [userId, sessionKey];
       const recordsResult = await pool.query(`
         SELECT * FROM (
