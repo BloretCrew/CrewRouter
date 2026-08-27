@@ -87,11 +87,13 @@ async function getRetentionConfig({ fresh = false } = {}) {
   const purgeDays = await readSettingInt('retention.purge_days', DEFAULT_DETAIL_WINDOW_DAYS);
   const compressDays = await readSettingInt('retention.compress_days', DEFAULT_COMPRESS_DAYS);
   const compressSizeGb = await readSettingInt('retention.compress_size_gb', 0);
+  const purgeSizeGb = await readSettingInt('retention.purge_size_gb', 0);
   const value = {
     aggEnabled,
     purgeDays: purgeDays > 0 ? purgeDays : 0,
     compressDays: compressDays > 0 ? compressDays : 0,
     compressSizeGb: compressSizeGb > 0 ? compressSizeGb : 0,
+    purgeSizeGb: purgeSizeGb > 0 ? purgeSizeGb : 0,
   };
   configCache = { value, loadedAt: now };
   return value;
@@ -481,6 +483,32 @@ function scheduleNextDailyAgg() {
   Logger.info(`[每日聚合] 下次执行: ${next.toLocaleString()}`);
 }
 
+/** 调度保留任务：每天 04:05 执行压缩与清除，任务结果统一写 retention.log。 */
+function startRetentionScheduler() {
+  if (config.demo) return;
+  const schedule = () => {
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(4, 5, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    setTimeout(async () => {
+      try {
+        const { runCompressOnce } = require('./usage-compress');
+        const { runPurgeOnce } = require('./usage-purge');
+        await runCompressOnce();
+        await runPurgeOnce();
+        logRetention('[保留调度] 04:05 压缩与清除完成');
+      } catch (err) {
+        Logger.warn(`[保留调度] 执行异常: ${err.message}`);
+        logRetention(`[保留调度] 执行异常: ${err.message}`);
+      }
+      schedule();
+    }, next.getTime() - now.getTime());
+    Logger.info(`[保留调度] 下次执行: ${next.toLocaleString()}`);
+  };
+  schedule();
+}
+
 /** 非 demo 模式：启动即补跑一次（停机错过 03:05 的兜底），随后按日调度 */
 function startDailyAggScheduler() {
   if (config.demo) return;
@@ -861,6 +889,7 @@ module.exports = {
   backfillDailyAgg,
   runDailyAggCatchup,
   startDailyAggScheduler,
+  startRetentionScheduler,
   fetchAggRows,
   foldAggRows,
   foldAgg,

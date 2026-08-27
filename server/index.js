@@ -2704,7 +2704,9 @@ async function startServer() {
     try {
       const agg = require('./utils/usage-agg');
       agg.startDailyAggScheduler();
+      agg.startRetentionScheduler();
       Logger.info('[每日聚合] 调度器已启动');
+      Logger.info('[保留调度] 调度器已启动（每日 04:05）');
     } catch (err) {
       Logger.warn(`[每日聚合] 调度器启动失败: ${err.message}`);
     }
