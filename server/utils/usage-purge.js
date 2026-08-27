@@ -31,15 +31,13 @@ function archivedOrUnownedSql(alias = 'u') {
   )`;
 }
 
-async function getPurgeCandidateStats(cutoff) {
+async function getPurgeCandidateStats(cutoff, sizeTriggered = false) {
+  const where = sizeTriggered ? `${archivedOrUnownedSql('u')}` : `u.created_at < $1::timestamptz AND ${archivedOrUnownedSql('u')}`;
   const result = await pool.query(
-    `SELECT
-       COUNT(*)::int AS records,
+    `SELECT COUNT(*)::int AS records,
        COUNT(DISTINCT NULLIF(plugin_meta->'attribution'->>'sessionId', ''))::int AS sessions
-     FROM usage_records u
-     WHERE u.created_at < $1::timestamptz
-       AND ${archivedOrUnownedSql('u')}`,
-    [cutoff]
+     FROM usage_records u WHERE ${where}`,
+    sizeTriggered ? [] : [cutoff]
   );
   const row = result.rows[0] || {};
   return {
@@ -48,14 +46,31 @@ async function getPurgeCandidateStats(cutoff) {
   };
 }
 
-async function deleteBatch(cutoff, batchSize) {
+function estimatePurgeDryRun(stats, batchSize, sizeTriggered, purgeSizeGb) {
+  const candidateCount = stats.records;
+  const batches = candidateCount ? Math.ceil(candidateCount / batchSize) : 0;
+  return {
+    candidateCount,
+    candidateSessions: stats.sessions,
+    estimatedDeletionResult: {
+      records: candidateCount,
+      batches,
+      analysisRecords: candidateCount,
+      stopReason: candidateCount ? 'candidates-exhausted' : 'no-candidates',
+      sizeTriggered,
+      sizeThresholdGb: purgeSizeGb,
+    },
+  };
+}
+
+async function deleteBatch(cutoff, batchSize, sizeTriggered = false) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const candidates = await client.query(
       `SELECT id
        FROM usage_records u
-       WHERE u.created_at < $1::timestamptz
+       WHERE (${sizeTriggered ? 'TRUE' : 'FALSE'} OR u.created_at < $1::timestamptz)
          AND ${archivedOrUnownedSql('u')}
        ORDER BY u.created_at ASC, u.id ASC
        LIMIT $2`,
@@ -111,28 +126,38 @@ async function runPurgeOnce(opts = {}) {
     ? DEFAULTS.batchIntervalMs
     : Math.max(0, Number(opts.batchIntervalMs) || 0);
 
-  if (!Number.isFinite(purgeDays) || purgeDays < 0) {
-    throw new Error(`无效的 purgeDays: ${opts.purgeDays}`);
+  if (!Number.isInteger(purgeDays) || purgeDays < 0 || purgeDays > 3650) {
+    const error = new Error('purge_days must be a non-negative integer within range');
+    error.code = 'RETENTION_INVALID_VALUE';
+    throw error;
+  }
+  if (!Number.isInteger(purgeSizeGb) || purgeSizeGb < 0 || purgeSizeGb > 1024) {
+    const error = new Error('purge_size_gb must be a non-negative integer within range');
+    error.code = 'RETENTION_INVALID_VALUE';
+    throw error;
   }
   if (purgeDays === 0 && purgeSizeGb === 0) {
     logRetention('[清除] 跳过：时长和大小阈值均为 0');
     return { deleted: 0, analysisDeleted: 0, sessions: 0, aborted: false, dryRun, skipped: 'disabled' };
   }
-  if (purgeDays === 0) {
-    logRetention(`[清除] 大小阈值 ${purgeSizeGb} GB 暂不执行：当前清除器仅支持按时长安全删除`);
-    return { deleted: 0, analysisDeleted: 0, sessions: 0, aborted: false, dryRun, skipped: 'size-only-unsupported' };
+  const sizeTriggered = purgeSizeGb > 0 && (await tableSizeBytes()) > purgeSizeGb * GB;
+  const ageEnabled = purgeDays > 0;
+  const cutoff = ageEnabled ? new Date(Date.now() - purgeDays * 86400000).toISOString() : null;
+  if (!sizeTriggered && !ageEnabled) {
+    logRetention(`[清除] 跳过：表大小未超过 ${purgeSizeGb} GB 且时长阈值已禁用`);
+    return { deleted: 0, analysisDeleted: 0, sessions: 0, aborted: false, dryRun, skipped: 'size-under-threshold' };
   }
-
-  const cutoff = new Date(Date.now() - purgeDays * 86400000).toISOString();
   logRetention(`[清除] 开始${dryRun ? '（dry-run）' : ''}：窗口=${purgeDays}天，边界=${cutoff}`);
 
   if (dryRun) {
-    const stats = await getPurgeCandidateStats(cutoff);
+    const stats = await getPurgeCandidateStats(cutoff, sizeTriggered);
     logRetention(`[清除][dry-run] 边界 ${cutoff}，预计删除 ${stats.records} 行，受影响 session ${stats.sessions} 个`);
+    const estimate = estimatePurgeDryRun(stats, batchSize, sizeTriggered, purgeSizeGb);
     return {
-      deleted: stats.records,
-      analysisDeleted: 0,
-      sessions: stats.sessions,
+      deleted: estimate.estimatedDeletionResult.records,
+      analysisDeleted: estimate.estimatedDeletionResult.analysisRecords,
+      sessions: estimate.candidateSessions,
+      ...estimate,
       aborted: false,
       dryRun: true,
       cutoff,
@@ -159,13 +184,14 @@ async function runPurgeOnce(opts = {}) {
     }
     consecutiveFailures = 0;
 
-    const result = await deleteBatch(cutoff, batchSize);
+    const result = await deleteBatch(cutoff, batchSize, sizeTriggered);
     if (result.deleted === 0) break;
     deleted += result.deleted;
     analysisDeleted += result.analysisDeleted;
     batches += 1;
     logRetention(`[清除] 批次 ${batches}：删除 usage_records ${result.deleted} 行，analysis ${result.analysisDeleted} 行，累计 ${deleted} 行`);
 
+    if (sizeTriggered && (await tableSizeBytes()) <= purgeSizeGb * GB) break;
     if (result.deleted < batchSize) break;
     await sleep(batchIntervalMs);
   }

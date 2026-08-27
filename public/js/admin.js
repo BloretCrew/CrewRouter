@@ -357,8 +357,10 @@ class AdminApp {
     // 数据保留配置与手动任务
     const retentionForm = document.getElementById('retentionConfigForm');
     if (retentionForm) retentionForm.addEventListener('submit', (e) => this.saveRetentionConfig(e));
-    document.getElementById('retentionRunCompressBtn')?.addEventListener('click', () => this.runRetentionTask('compress'));
-    document.getElementById('retentionRunPurgeBtn')?.addEventListener('click', () => this.runRetentionTask('purge'));
+    document.getElementById('retentionRunCompressPreviewBtn')?.addEventListener('click', () => this.runRetentionTask('compress', true));
+    document.getElementById('retentionRunPurgePreviewBtn')?.addEventListener('click', () => this.runRetentionTask('purge', true));
+    document.getElementById('retentionRunCompressBtn')?.addEventListener('click', () => this.runRetentionTask('compress', false));
+    document.getElementById('retentionRunPurgeBtn')?.addEventListener('click', () => this.runRetentionTask('purge', false));
 
     // 管理员设置表单
     const adminSettingsForm = document.getElementById('adminSettingsForm');
@@ -8213,7 +8215,7 @@ async function(ctx) {
       });
       const data = await response.json().catch(() => ({}));
       const message = document.getElementById('retentionConfigMessage');
-      if (!response.ok) throw new Error(data.error || t('保存失败'));
+      if (!response.ok) throw new Error(t(data.code || '') || data.error || t('保存失败'));
       if (message) { message.textContent = t('数据保留配置已保存'); message.style.color = 'var(--success, #16a34a)'; }
     } catch (error) {
       const message = document.getElementById('retentionConfigMessage');
@@ -8221,18 +8223,32 @@ async function(ctx) {
     } finally { if (btn) btn.disabled = false; }
   }
 
-  async runRetentionTask(kind) {
-    const button = document.getElementById(`retentionRun${kind === 'compress' ? 'Compress' : 'Purge'}Btn`);
+  async runRetentionTask(kind, dryRun = false) {
+    const suffix = kind === 'compress' ? 'Compress' : 'Purge';
+    const button = document.getElementById(`retentionRun${dryRun ? suffix + 'Preview' : suffix}Btn`);
+    if (!dryRun && !confirm(t('确认立即执行数据保留任务？'))) return;
     if (button) button.disabled = true;
     try {
       const response = await fetch(`/api/admin/retention/run-${kind}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dry_run: true }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dry_run: dryRun }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || t('执行失败'));
-      alert(`${t('dry-run 完成')}\n${JSON.stringify(data.result || {}, null, 2)}`);
+      if (!response.ok) throw new Error(t(data.code || '') || data.error || t('执行失败'));
+      if (data.taskId) await this.pollRetentionTask(data.taskId);
     } catch (error) { alert(error.message); }
     finally { if (button) button.disabled = false; }
+  }
+
+  async pollRetentionTask(taskId) {
+    for (let i = 0; i < 600; i++) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch(`/api/admin/retention/tasks/${encodeURIComponent(taskId)}`);
+      const task = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(task.error || t('任务状态获取失败'));
+      if (task.status === 'completed') { alert(`${t('任务完成')}\n${JSON.stringify(task.result || {}, null, 2)}`); return; }
+      if (task.status === 'failed') throw new Error(t(task.error?.code || '') || task.error?.message || t('执行失败'));
+    }
+    throw new Error(t('任务执行超时'));
   }
 
   async loadSettings() {
