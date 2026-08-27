@@ -7,33 +7,57 @@ const {
   buildDetailNextCursor,
 } = require('../routes/sessions-view');
 
-function cursorPages(total, pageSize) {
+function paginateNonCompressed(total, pageSize) {
+  const records = Array.from({ length: total }, (_, index) => ({ id: index + 1 }));
   const pages = [];
-  let remaining = total;
-  while (remaining > 0) {
-    const fetchedRowCount = Math.min(pageSize + 1, remaining);
-    const rowCount = Math.min(pageSize, fetchedRowCount);
-    pages.push({ rowCount, hasMore: hasMoreCursorPage(fetchedRowCount, pageSize) });
-    remaining -= rowCount;
+  let cursorIndex = total;
+
+  while (cursorIndex > 0) {
+    // Simulate DESC query, LIMIT pageSize + 1, then outer ASC reorder.
+    const eligible = records.slice(0, cursorIndex).reverse();
+    const fetched = eligible.slice(0, pageSize + 1).reverse();
+    const hasMore = hasMoreCursorPage(fetched.length, pageSize);
+    const pageRows = fetched.slice(-pageSize);
+    pages.push({ ids: pageRows.map(row => row.id), hasMore });
+    cursorIndex = pageRows[0]?.id ? pageRows[0].id - 1 : 0;
+    if (!hasMore) break;
   }
   return pages;
 }
 
-assert.deepStrictEqual(cursorPages(45, 40), [
-  { rowCount: 40, hasMore: true },
-  { rowCount: 5, hasMore: false },
-]);
-assert.deepStrictEqual(cursorPages(100, 40), [
-  { rowCount: 40, hasMore: true },
-  { rowCount: 40, hasMore: true },
-  { rowCount: 20, hasMore: false },
-]);
+function paginateCompressed(total, pageSize) {
+  const pages = [];
+  let sliceEnd = total;
+  while (sliceEnd > 0) {
+    const sliceStart = Math.max(0, sliceEnd - pageSize);
+    const pageRows = Array.from({ length: sliceEnd - sliceStart }, (_, index) => sliceStart + index + 1);
+    pages.push({ ids: pageRows, hasMore: hasMoreCompressedSlice(sliceStart) });
+    sliceEnd = sliceStart;
+  }
+  return pages;
+}
 
+assert.deepStrictEqual(paginateNonCompressed(45, 40), [
+  { ids: Array.from({ length: 40 }, (_, index) => index + 6), hasMore: true },
+  { ids: Array.from({ length: 5 }, (_, index) => index + 1), hasMore: false },
+]);
+assert.deepStrictEqual(paginateNonCompressed(100, 40), [
+  { ids: Array.from({ length: 40 }, (_, index) => index + 61), hasMore: true },
+  { ids: Array.from({ length: 40 }, (_, index) => index + 21), hasMore: true },
+  { ids: Array.from({ length: 20 }, (_, index) => index + 1), hasMore: false },
+]);
+assert.deepStrictEqual(paginateCompressed(45, 40), [
+  { ids: Array.from({ length: 40 }, (_, index) => index + 6), hasMore: true },
+  { ids: Array.from({ length: 5 }, (_, index) => index + 1), hasMore: false },
+]);
+assert.deepStrictEqual(paginateCompressed(100, 40), [
+  { ids: Array.from({ length: 40 }, (_, index) => index + 61), hasMore: true },
+  { ids: Array.from({ length: 40 }, (_, index) => index + 21), hasMore: true },
+  { ids: Array.from({ length: 20 }, (_, index) => index + 1), hasMore: false },
+]);
 assert.strictEqual(hasMoreCursorPage(0, 40), false);
 assert.strictEqual(hasMoreCursorPage(40, 40), false);
 assert.strictEqual(hasMoreCursorPage(41, 40), true);
-assert.strictEqual(hasMoreCompressedSlice(5), true);
-assert.strictEqual(hasMoreCompressedSlice(0), false);
 assert.deepStrictEqual(
   buildDetailNextCursor(true, { created_at: '2026-08-27T00:00:00.000Z', id: 123 }),
   { beforeCreatedAt: '2026-08-27T00:00:00.000Z', beforeId: 123 }
