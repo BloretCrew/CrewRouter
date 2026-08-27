@@ -1225,6 +1225,36 @@
         </div>
 
         <div class="content-section">
+          <h2><span data-i18n="数据保留">数据保留</span></h2>
+          <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="压缩和删除按时长或表大小任一条件触发；输入 0 表示禁用该条件，删除阈值为 0 表示永不删除。">压缩和删除按时长或表大小任一条件触发；输入 0 表示禁用该条件，删除阈值为 0 表示永不删除。</span></p>
+          <form id="retentionConfigForm" class="settings-form" onsubmit="return false;">
+            <div class="form-group">
+              <label><span data-i18n="压缩阈值">压缩阈值</span></label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input type="number" id="retentionCompressDays" class="input" min="0" max="3650" step="1" placeholder="天" data-i18n-placeholder="天" style="flex:1;min-width:120px;">
+                <input type="number" id="retentionCompressSizeGb" class="input" min="0" max="1024" step="1" placeholder="GB" data-i18n-placeholder="GB" style="flex:1;min-width:120px;">
+              </div>
+            </div>
+            <div class="form-group">
+              <label><span data-i18n="删除阈值">删除阈值</span></label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input type="number" id="retentionPurgeDays" class="input" min="0" max="3650" step="1" placeholder="天" data-i18n-placeholder="天" style="flex:1;min-width:120px;">
+                <input type="number" id="retentionPurgeSizeGb" class="input" min="0" max="1024" step="1" placeholder="GB" data-i18n-placeholder="GB" style="flex:1;min-width:120px;">
+              </div>
+            </div>
+            <div class="form-group">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="retentionAggEnabled" style="width:16px;height:16px;"><span data-i18n="启用每日聚合">启用每日聚合</span></label>
+            </div>
+            <div id="retentionConfigMessage" style="font-size:13px;margin-bottom:12px;"></div>
+            <div class="form-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="submit" class="btn btn-primary" id="retentionSaveBtn"><span data-i18n="保存保留配置">保存保留配置</span></button>
+              <button type="button" class="btn btn-secondary" id="retentionRunCompressBtn"><span data-i18n="立即压缩（dry-run）">立即压缩（dry-run）</span></button>
+              <button type="button" class="btn btn-secondary" id="retentionRunPurgeBtn"><span data-i18n="立即清除（dry-run）">立即清除（dry-run）</span></button>
+            </div>
+          </form>
+        </div>
+
+        <div class="content-section">
           <h2><span data-i18n="系统设置">系统设置</span></h2>
           <form id="adminSettingsForm" class="settings-form">
             <div class="form-group">

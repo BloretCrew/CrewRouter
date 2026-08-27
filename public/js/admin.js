@@ -354,6 +354,12 @@ class AdminApp {
       });
     }
 
+    // 数据保留配置与手动任务
+    const retentionForm = document.getElementById('retentionConfigForm');
+    if (retentionForm) retentionForm.addEventListener('submit', (e) => this.saveRetentionConfig(e));
+    document.getElementById('retentionRunCompressBtn')?.addEventListener('click', () => this.runRetentionTask('compress'));
+    document.getElementById('retentionRunPurgeBtn')?.addEventListener('click', () => this.runRetentionTask('purge'));
+
     // 管理员设置表单
     const adminSettingsForm = document.getElementById('adminSettingsForm');
     if (adminSettingsForm) {
@@ -8174,6 +8180,61 @@ async function(ctx) {
     }
   }
 
+  async saveRetentionConfig(e) {
+    e.preventDefault();
+    const fields = ['CompressDays', 'CompressSizeGb', 'PurgeDays', 'PurgeSizeGb'];
+    const values = {};
+    for (const field of fields) {
+      const value = Number(document.getElementById(`retention${field}`)?.value);
+      if (!Number.isInteger(value) || value < 0) {
+        alert(t('数据保留配置必须是非负整数'));
+        return;
+      }
+      values[field] = value;
+    }
+    if (values.CompressDays && values.PurgeDays && values.CompressDays >= values.PurgeDays) {
+      alert(t('压缩天数必须小于删除天数'));
+      return;
+    }
+    if (values.CompressSizeGb && values.PurgeSizeGb && values.CompressSizeGb >= values.PurgeSizeGb) {
+      alert(t('压缩大小必须小于删除大小'));
+      return;
+    }
+    const btn = document.getElementById('retentionSaveBtn');
+    if (btn) btn.disabled = true;
+    try {
+      const response = await fetch('/api/admin/retention-config', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          compress_days: values.CompressDays, compress_size_gb: values.CompressSizeGb,
+          purge_days: values.PurgeDays, purge_size_gb: values.PurgeSizeGb,
+          agg_enabled: document.getElementById('retentionAggEnabled')?.checked === true,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      const message = document.getElementById('retentionConfigMessage');
+      if (!response.ok) throw new Error(data.error || t('保存失败'));
+      if (message) { message.textContent = t('数据保留配置已保存'); message.style.color = 'var(--success, #16a34a)'; }
+    } catch (error) {
+      const message = document.getElementById('retentionConfigMessage');
+      if (message) { message.textContent = error.message; message.style.color = 'var(--destructive, #dc2626)'; }
+    } finally { if (btn) btn.disabled = false; }
+  }
+
+  async runRetentionTask(kind) {
+    const button = document.getElementById(`retentionRun${kind === 'compress' ? 'Compress' : 'Purge'}Btn`);
+    if (button) button.disabled = true;
+    try {
+      const response = await fetch(`/api/admin/retention/run-${kind}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dry_run: true }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || t('执行失败'));
+      alert(`${t('dry-run 完成')}\n${JSON.stringify(data.result || {}, null, 2)}`);
+    } catch (error) { alert(error.message); }
+    finally { if (button) button.disabled = false; }
+  }
+
   async loadSettings() {
     try {
       const response = await fetch('/api/admin/settings');
@@ -8205,6 +8266,17 @@ async function(ctx) {
       if (refreshInput) refreshInput.value = String(refreshSec);
       // 若已在统计页，应用最新间隔
       this._startStatsRefreshTimer();
+
+      // 数据保留配置
+      const retentionResponse = await fetch('/api/admin/retention-config');
+      if (retentionResponse.ok) {
+        const retention = await retentionResponse.json();
+        document.getElementById('retentionCompressDays').value = retention.compress_days;
+        document.getElementById('retentionCompressSizeGb').value = retention.compress_size_gb;
+        document.getElementById('retentionPurgeDays').value = retention.purge_days;
+        document.getElementById('retentionPurgeSizeGb').value = retention.purge_size_gb;
+        document.getElementById('retentionAggEnabled').checked = retention.agg_enabled !== false;
+      }
 
       // 系统单代理
       const sysEnabledEl = document.getElementById('systemProxyEnabled');
