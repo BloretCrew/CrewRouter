@@ -1218,6 +1218,14 @@
           .timeline-record-head.merged { opacity:.75; }
           .summary-spinner { width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--info);border-radius:50%;animation:summary-spin .8s linear infinite; }
           @keyframes summary-spin { to { transform:rotate(360deg); } }
+          .session-more-actions { display:flex;justify-content:center;gap:8px;margin-top:16px; }
+          .session-more-done { color:var(--muted-foreground);opacity:.7;cursor:default; }
+          .summary-loading { display:flex;flex-direction:column;align-items:center;gap:10px;padding:28px 0;color:var(--muted-foreground); }
+          .summary-loading small { opacity:.7; }
+          .session-summary-modal-actions { display:flex;align-items:center;gap:6px; }
+          .summary-modal-body { font-size:13.5px;line-height:1.6;max-height:50vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent; }
+          .summary-modal-body::-webkit-scrollbar,.summary-inline-body::-webkit-scrollbar { width:6px; }
+          .summary-modal-body::-webkit-scrollbar-thumb,.summary-inline-body::-webkit-scrollbar-thumb { background:var(--border);border-radius:6px; }
           .session-summary-inline { border:1px solid var(--border); border-left:3px solid var(--info); border-radius:12px; background:var(--card); padding:12px 16px; }
           .session-summary-inline summary { cursor:pointer; user-select:none; font-size:13px; display:flex; align-items:center; gap:8px; }
           .session-summary-inline summary button { margin-left:auto; }
@@ -1305,8 +1313,8 @@
           <!-- 会话总结内联展示：生成时流式渲染，完成后可折叠；有缓存进入时也展示 -->
           <div id="sessionSummaryInline" style="display:none;margin-bottom:16px;"></div>
           <div id="sessionTimeline" class="timeline"></div>
-          <div style="display:flex;justify-content:center;margin-top:16px;">
-            <button id="sessionMoreBtn" class="btn btn-secondary" onclick="app.loadSessionMessages(app._detailSessionKey, (app._detailMsgPage || 1) + 1)"><span data-i18n="加载更多">加载更多</span></button>
+          <div class="session-more-actions">
+            <button id="sessionMoreBtn" class="btn btn-secondary" onclick="app.loadSessionMessages(app._detailSessionKey, (app._detailMsgPage || 1) + 1)"><span data-i18n="加载更多（向上翻更早）">加载更多（向上翻更早）</span></button>
             <button class="btn btn-secondary" style="margin-left:8px;" onclick="app.generateSessionSummary()"><span data-i18n="生成总结">生成总结</span></button>
           </div>
         </div>
@@ -1945,10 +1953,14 @@ data: [DONE]</code></pre>
           <h3 id="sessionSummaryTitle"><span data-i18n="会话总结">会话总结</span> <code id="sessionSummaryKey"></code></h3>
           <div class="session-summary-modal-meta"><span id="sessionSummaryTime"></span></div>
         </div>
-        <button class="modal-close">&times;</button>
+        <div class="session-summary-modal-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="sessionSummaryRegenTopBtn" onclick="app.regenerateSessionSummary()"><span data-i18n="重新生成">重新生成</span></button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="app.copySessionSummary()"><span data-i18n="复制">复制</span></button>
+          <button class="modal-close" aria-label="关闭">&times;</button>
+        </div>
       </div>
       <div class="modal-body">
-        <div id="sessionSummaryBody" class="session-summary-md" style="font-size:13.5px;line-height:1.6;max-height:50vh;overflow-y:auto;"></div>
+        <div id="sessionSummaryBody" class="session-summary-md summary-modal-body"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="sessionSummaryRegenBtn" onclick="app.regenerateSessionSummary()"><span data-i18n="重新生成">重新生成</span></button>

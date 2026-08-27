@@ -5275,7 +5275,7 @@ class ConsoleApp {
     setHTML(document.getElementById('sessionTimeline'), '');
     setHTML(document.getElementById('sessionDetailMetaBar'), pageLoadingHtml(t('加载会话...'), { compact: true }));
     const moreBtn = document.getElementById('sessionMoreBtn');
-    if (moreBtn) moreBtn.style.display = '';
+    this._updateSessionMoreButton(moreBtn, 'more');
     window.scrollTo({ top: 0 });
     this.loadSessionMessages(this._detailSessionKey, 1);
   }
@@ -5289,10 +5289,12 @@ class ConsoleApp {
     const cursor = page > 1 ? this._detailCursor : null;
     this._detailLoading = true;
     const moreBtn = document.getElementById('sessionMoreBtn');
+    const previousHeight = page > 1 ? document.documentElement.scrollHeight : 0;
+    const previousScrollY = page > 1 ? window.scrollY : 0;
     if (page === 1) {
       setHTML(timeline, `<li class="session-detail-skeleton"><div class="skeleton-bar" style="width:65%"></div><div class="skeleton-bar" style="width:90%"></div><div class="skeleton-bar" style="width:78%"></div></li>`);
     } else if (moreBtn) {
-      moreBtn.disabled = true;
+      this._updateSessionMoreButton(moreBtn, 'loading');
     }
 
     try {
@@ -5375,9 +5377,13 @@ class ConsoleApp {
       this._removeDetailLoadError();
 
       this._detailLoaded += records.length;
-      if (data.nextCursor) this._detailCursor = data.nextCursor;
+      this._detailCursor = data.nextCursor || null;
       const moreBtn = document.getElementById('sessionMoreBtn');
-      if (moreBtn) moreBtn.style.display = records.length < 40 || !data.nextCursor ? 'none' : '';
+      this._updateSessionMoreButton(moreBtn, data.nextCursor ? 'more' : 'done');
+      if (page > 1) {
+        const heightDelta = document.documentElement.scrollHeight - previousHeight;
+        window.scrollTo({ top: previousScrollY + heightDelta });
+      }
 
       if (page === 1 && !records.length) {
         setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${t('该会话暂无消息明细')}</div></li>`);
@@ -5393,11 +5399,25 @@ class ConsoleApp {
       }
     } finally {
       if (requestSeq === this._detailRequestSeq) this._detailLoading = false;
-      if (requestSeq === this._detailRequestSeq && moreBtn) moreBtn.disabled = false;
-      if (requestSeq === this._detailRequestSeq && page >= 1 && this._detailSessionKey === sessionKey && moreBtn?.style.display !== 'none' && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 240) {
+      if (requestSeq === this._detailRequestSeq && moreBtn) {
+        moreBtn.disabled = false;
+        if (!this._detailCursor) this._updateSessionMoreButton(moreBtn, 'done');
+      }
+      if (requestSeq === this._detailRequestSeq && page >= 1 && this._detailSessionKey === sessionKey && this._detailCursor && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 240) {
         queueMicrotask(() => this.loadSessionMessages(sessionKey, page + 1));
       }
     }
+  }
+
+  _updateSessionMoreButton(button, state) {
+    if (!button) return;
+    button.style.display = '';
+    button.disabled = state === 'loading' || state === 'done';
+    button.querySelector('[data-i18n]')?.replaceChildren(document.createTextNode(t(
+      state === 'loading' ? '加载中...' : state === 'done' ? '已到最早消息' : '加载更多（向上翻更早）'
+    )));
+    button.title = t(state === 'done' ? '已到最早消息' : '加载更多（向上翻更早）');
+    button.classList.toggle('session-more-done', state === 'done');
   }
 
   /** 时间线内联 SF 小图标（12px，随文基线对齐） */
@@ -6542,7 +6562,8 @@ class ConsoleApp {
           </div>
           <div class="session-summary-md" style="max-height:180px;overflow-y:auto;">${this._renderSafeMarkdown(text)}</div>
           <div style="margin-top:10px;display:flex;gap:8px;">
-            <button type="button" class="btn btn-sm btn-primary" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')">${t('查看一次')}</button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')">${t('查看总结')}</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="app.showSessionDetail('${this._jsString(sessionKey)}')">${t('跳到该会话')}</button>
             <button type="button" class="btn btn-sm btn-secondary" onclick="app.copySessionSummary('${this._jsString(sessionKey)}')">${t('复制')}</button>
           </div>
         </div>`);
@@ -6567,10 +6588,10 @@ class ConsoleApp {
   _renderSummaryLoading(bodyEl) {
     if (!bodyEl) return;
     setHTML(bodyEl, `
-      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px 0;">
+      <div class="summary-loading">
         <div class="summary-spinner"></div>
-        <span style="color:var(--muted-foreground);font-size:13px;">${t('正在阅读会话并生成总结...')}</span>
-        <small style="color:var(--muted-foreground);opacity:.7;">${t('可以关闭此窗口，完成后会通知你')}</small>
+        <span class="summary-loading-stage">${t('正在阅读会话...')}</span>
+        <small>${t('正在生成...')}</small>
       </div>`);
   }
 
@@ -6592,7 +6613,7 @@ class ConsoleApp {
   }
 
   async copySessionSummary(sessionKey = '') {
-    const key = String(sessionKey || '');
+    const key = String(sessionKey || this._detailSessionKey || '');
     if (!key) return;
     const text = this._summaryCacheTextMap[key] || (key === this._summaryTaskSessionKey ? this._summaryTaskText : '');
     try {
@@ -6698,7 +6719,7 @@ class ConsoleApp {
       el._details.open = true;
       return;
     }
-    el._label.textContent = state === 'done' ? t('缓存摘要') : t('正在生成会话总结...');
+    el._label.textContent = state === 'done' ? t('会话总结') : t('正在生成会话总结...');
     el._spinner.style.display = state === 'done' ? 'none' : '';
     el._refresh.style.display = state === 'done' ? '' : 'none';
     el._time.textContent = state === 'done' && createdAt ? `${t('最近更新')} ${this.formatRelativeTime(createdAt)}` : '';

@@ -568,7 +568,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
       `, [userId, sessionKey]);
       total = fullRes.rows.length;
       const expanded = expandSessionMessages(fullRes.rows);
-      let sliceStart = offset;
+      let sliceStart = Math.max(0, total - pageSize);
       if (hasCursor) {
         const cursorIndex = fullRes.rows.findIndex(row => row.id === cursorId);
         sliceStart = cursorIndex >= 0 ? Math.max(0, cursorIndex - pageSize) : 0;
@@ -600,8 +600,12 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
     }
 
     const records = buildDetailRecords(rawDetailRows);
+    const pageStart = hasCursor
+      ? Math.max(0, total - page * pageSize)
+      : Math.max(0, total - pageSize);
+    const hasMore = rawDetailRows.length > 0 && pageStart > 0;
     const lastRecord = rawDetailRows[0];
-    const nextCursor = lastRecord ? {
+    const nextCursor = hasMore && lastRecord ? {
       beforeCreatedAt: lastRecord.created_at,
       beforeId: lastRecord.id,
     } : null;
