@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harness 请求语义与分类研究报告 · CrewRouter</title>
+<style>
+  :root { --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a; --text:#e6e8ee; --muted:#9aa3b2; --accent:#4f8cff; --accent2:#22c55e; --code-bg:#0b0d12; --gold:#eab308; --red:#ef4444; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; line-height:1.65; }
+  header.hero { padding:48px 24px 32px; text-align:center; background:linear-gradient(180deg,#101c33 0%,var(--bg) 100%); border-bottom:1px solid var(--line); }
+  header.hero h1 { margin:0 0 8px; font-size:29px; letter-spacing:1px; }
+  header.hero p { margin:4px 0; color:var(--muted); }
+  main { max-width:1080px; margin:0 auto; padding:32px 24px 80px; }
+  h2 { font-size:24px; margin:56px 0 16px; padding-bottom:8px; border-bottom:2px solid var(--accent); display:flex; align-items:center; gap:10px; }
+  h3 { font-size:19px; margin:32px 0 12px; }
+  h4 { font-size:16px; margin:22px 0 8px; color:var(--accent); }
+  p { margin:10px 0; }
+  a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
+  code { background:var(--code-bg); border:1px solid var(--line); border-radius:4px; padding:1px 5px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.88em; }
+  pre { background:var(--code-bg); border:1px solid var(--line); border-radius:8px; padding:14px 16px; overflow-x:auto; line-height:1.5; }
+  pre code { background:none; border:none; padding:0; font-size:.85em; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:.9em; }
+  th,td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; } th { background:var(--panel2); color:#c9d2e0; white-space:nowrap; } tr:nth-child(even) td { background:rgba(255,255,255,.015); }
+  .toc,.card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px 22px; margin:18px 0; }
+  .toc ol { margin:6px 0; padding-left:24px; } .toc li { margin:4px 0; }
+  .note { border-left:4px solid var(--gold); background:rgba(234,179,8,.06); padding:10px 14px; border-radius:0 8px 8px 0; margin:14px 0; }
+  .warn { border-left:4px solid var(--red); background:rgba(239,68,68,.06); padding:10px 14px; border-radius:0 8px 8px 0; margin:14px 0; }
+  .section-label { font-size:.8em; color:var(--accent2); text-transform:uppercase; letter-spacing:1px; }
+  .evi,.small { font-size:.85em; color:var(--muted); } .conf-high { color:var(--accent2); font-weight:600; } .conf-mid { color:var(--gold); font-weight:600; } .conf-low { color:var(--red); font-weight:600; }
+  footer { text-align:center; color:var(--muted); font-size:.85em; padding:24px; border-top:1px solid var(--line); }
+  @media (max-width:760px) { main { padding:20px 14px 56px; } header.hero { padding:34px 16px 24px; } header.hero h1 { font-size:24px; } table { display:block; overflow-x:auto; white-space:normal; } h2 { font-size:21px; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <h1>Harness 请求语义与分类研究报告</h1>
+  <p>一次用户交互背后的主对话、子代理、标题、压缩、重试与计划请求：从客户端源码到 CrewRouter 网关可执行信号</p>
+  <p>生成日期：2026-08-28 · 研究对象：Claude Code / Codex CLI / Grok Build / OpenCode / Qwen Code / Hermes / OpenClaw / DeepSeek Harness<br>
+    姊妹篇：<a href="index.html">研究索引</a> · <a href="harness-subagent-attribution.html">子代理归因</a> · <a href="harness-context-compaction.html">上下文压缩</a> · <a href="harness-prompt-and-message-construction.html">提示词构成</a></p>
+</header>
+<main>
+<div class="toc"><strong>目录</strong><ol>
+  <li><a href="#conclusion">先给结论：请求语义分类与证据等级</a></li>
+  <li><a href="#taxonomy">通用请求类型与判别顺序</a></li>
+  <li><a href="#clients">八家客户端逐一分析</a></li>
+  <li><a href="#title">重点：会话标题生成</a></li>
+  <li><a href="#gateway">CrewRouter 落地建议</a></li>
+  <li><a href="#limits">边界、误报与验证方法</a></li>
+</ol></div>
+
+<h2 id="conclusion"><span class="section-label">1.</span> 先给结论：请求语义分类与证据等级</h2>
+<p>网关收到的 HTTP 请求不能仅按 endpoint 或 User-Agent 理解。对同一个客户端，用户发一条消息、模型调用工具、后台子代理、压缩上下文和生成标题都可能复用同一 API 路径。最稳妥的做法是：先识别<b>客户端来源</b>，再用请求头、请求体、system prompt、模型/参数和相邻时序组合出<b>请求语义</b>，最后把判定结果与证据保存到 <code>usage_records.plugin_meta</code>，而不是把启发式结果覆盖到基础的 <code>request_type</code>（现有 <code>api.js</code> 在响应 finish 时仅按 path 记 <code>responses/anthropic/chat</code>）。</p>
+<table>
+<tr><th>请求语义</th><th>触发者</th><th>典型外观</th><th>网关判别信心</th></tr>
+<tr><td><b>主对话</b></td><td>用户直接发消息，模型继续当前回合</td><td>完整 system/tools；最近一条 user 消息是自然语言；之后可能有工具调用和多轮 follow-up</td><td><span class="conf-high">高（组合信号）</span></td></tr>
+<tr><td><b>子代理</b></td><td>主代理的 Agent/Task/spawn 工具</td><td>专用父子头、thread/session 复合键，或独立 subagent system prompt；通常是新会话或 fork</td><td><span class="conf-high">Codex/Hermes/OpenClaw 高；Claude/OpenCode 低</span></td></tr>
+<tr><td><b>标题</b></td><td>客户端为会话列表生成短标题</td><td>短历史或首条 user 内容；无工具；短输出；常用专用 title/summary agent 或小模型。公开源码证据不均匀</td><td><span class="conf-mid">中到低，须校准</span></td></tr>
+<tr><td><b>压缩/摘要</b></td><td>窗口接近上限、手动 compact，或 overflow 救援</td><td>极简/空 system、无工具、单条很长 user，正文含 serialized history / previous conversation / role 标记；或专用端点/头</td><td><span class="conf-high">OpenCode/Codex/Grok 等；通用启发式中</span></td></tr>
+<tr><td><b>重试/恢复</b></td><td>429、超时、断流、prompt-too-long 或上游临时错误</td><td>短时间内同一 session/thread、相同或近似 body 重发；可能带 retry header 或相同 idempotency/cache key</td><td><span class="conf-high">时序+请求指纹较高</span></td></tr>
+<tr><td><b>计划/评审</b></td><td>plan mode、review/guardian、用户显式审查命令</td><td>system/agent prompt 有 plan/review/guardian 指纹；模型、工具集合或权限策略发生变化</td><td><span class="conf-mid">中，依客户端而定</span></td></tr>
+<tr><td><b>心跳/探测</b></td><td>连接保活、能力探测、空闲唤醒</td><td>空或极短 body、无正常 user 消息、固定 endpoint；有时根本不调用模型</td><td><span class="conf-low">低，需结合访问日志</span></td></tr>
+<tr><td><b>其他自动化</b></td><td>缓存预热、索引、后台通知、目标摘要</td><td>固定 system prompt、极短输入或结构化输入；常紧跟主请求或会话事件</td><td><span class="conf-mid">需要客户端专属规则</span></td></tr>
+</table>
+<div class="note"><b>核心原则：</b>「没有工具 + 单条长 user」可以标记为疑似压缩，但不能直接把所有短请求归为标题。标题、压缩和 review 都可能使用短历史；必须保留 <code>reason_codes</code> 与 <code>confidence</code>，允许后续用真实流量校准。</div>
+
+<h2 id="taxonomy"><span class="section-label">2.</span> 通用请求类型与判别顺序</h2>
+<h3>2.1 推荐的判别流水线</h3>
+<pre><code>① endpoint / HTTP method
+→ ② 客户端来源（request-source.js）
+→ ③ 强语义头与结构化 body 元数据
+→ ④ 专用 endpoint、system prompt、agent/tool 结构
+→ ⑤ body 大小、token 参数、模型与请求时序
+→ ⑥ 与同 session/thread 的前后请求比对
+→ ⑦ 输出 request_semantics + confidence + reason_codes</code></pre>
+<p>当前代码已经具备两块可复用基础：<code>extractAttribution()</code> 可提取 Codex/Grok/Hermes 等头和 body 归因字段；<code>classifyCompaction()</code> 已实现「无工具、system 极短、单条 user、长历史痕迹」启发式（<code>server/utils/attribution.js:30-56</code>）。本报告不要求改运行时代码；以下是文档层面的分类规格。</p>
+<h3>2.2 信号优先级</h3>
+<table>
+<tr><th>优先级</th><th>信号</th><th>说明</th></tr>
+<tr><td>1</td><td>专用 endpoint / header / 显式类型字段</td><td>例如 OpenCode <code>POST /session/:id/summarize</code>、Codex <code>x-openai-subagent</code> 的 <code>compact</code>/<code>review</code>、OpenClaw 内部 session key。可直接给高置信度。</td></tr>
+<tr><td>2</td><td>结构化父子或会话 ID</td><td>Codex 的 <code>client_metadata.thread_id/parent_thread_id</code>、Qwen 的 <code>promptId=session#subagent#ordinal</code>、Hermes 的 <code>X-Hermes-Session-Id</code>。</td></tr>
+<tr><td>3</td><td>system prompt / agent prompt 指纹</td><td>标题、压缩、plan、subagent 通常有专用模板；必须使用完整短语或结构组合，不要使用裸 <code>system-reminder</code>、<code>CLAUDE.md</code> 这类跨产品弱特征。</td></tr>
+<tr><td>4</td><td>消息形状与参数</td><td>工具是否存在、消息数量、是否单条超长 user、<code>max_tokens</code> 是否很小、是否要求 JSON/XML、模型是否为廉价小模型。</td></tr>
+<tr><td>5</td><td>时序与重复指纹</td><td>紧跟主请求、相同 body 重发、同一 thread 的短间隔请求可支持判断，但单独不能定类。</td></tr>
+</table>
+<h3>2.3 语义字段建议</h3>
+<pre><code>plugin_meta.request_semantics = {
+  type: "primary|subagent|title|compaction|retry|plan|review|heartbeat|other",
+  confidence: "high|medium|low",
+  reason_codes: ["header.x-openai-subagent=compact", "single_long_history_user"],
+  parent_request_id: "...",       // 若能在网关内关联
+  session_key: "...",             // 脱敏后的 thread/session key
+  is_billable_business: true,
+  is_maintenance: false,
+  classifier_version: "2026-08-28"
+}</code></pre>
+<p>语义分类应与 API 格式字段分离：<code>request_type=responses|anthropic|chat</code> 仍表示协议入口，<code>request_semantics.type</code> 表示业务含义。标题和压缩是否计费由策略层决定，分类器只负责记录事实与置信度。</p>
+
+<h2 id="clients"><span class="section-label">3.</span> 八家客户端逐一分析</h2>
+<h3 id="claude">3.1 Claude Code</h3>
+<table><tr><th>类型</th><th>可观察信号</th><th>结论</th></tr>
+<tr><td>主对话</td><td>完整 Claude Code system prompt；普通 user/assistant/tool 循环。</td><td>默认类型。</td></tr>
+<tr><td>子代理</td><td>没有专用 HTTP 头；普通 Agent system prompt 常含「You are an agent for Claude Code…」，Explore 有 file search specialist 指纹；父子共用进程级 <code>metadata.user_id.session_id</code>。见 <code>AgentTool.tsx:537-540</code>、<code>services/api/claude.ts:519-528</code>、<code>bootstrap/state.ts:331,431-432</code>。</td><td><span class="conf-low">低到中</span>：依赖 system 指纹；fork 子可继承完整父历史，不能只看消息长度。</td></tr>
+<tr><td>标题</td><td>公开报告材料没有足够源码证据确认独立 title API 或固定 title prompt。</td><td><span class="conf-low">未知/待抓包</span>，不要把短请求默认判成标题。</td></tr>
+<tr><td>压缩</td><td>请求前 autocompact；实验性 prompt-too-long 反应式通道；压缩请求可复用主模型缓存。见 <code>src/query.ts:399,449</code>、<code>services/compact/autoCompact.ts:61</code>。压缩 body 的通用形状可命中现有 <code>classifyCompaction()</code>。</td><td><span class="conf-high">中到高</span>：若出现单条长历史 user 且无工具，标记疑似 compaction。</td></tr>
+<tr><td>plan/review</td><td>system attachment 中 <code>plan_mode</code>/<code>verify_plan_reminder</code>；Agent 类型和工具列表变化。见提示词报告 system section 表。</td><td><span class="conf-mid">中</span>，通常是主请求的模式，不一定是独立请求。</td></tr>
+</table>
+<p class="evi">标题证据等级：低。Claude Code 的子代理和压缩证据来自既有源码考古；标题生成若存在，需从实际网络日志确认。</p>
+
+<h3 id="codex">3.2 Codex CLI</h3>
+<table><tr><th>类型</th><th>可观察信号</th><th>结论</th></tr>
+<tr><td>主对话</td><td>Responses 请求，普通 thread metadata；完整工具和环境上下文。</td><td>无特殊标记时默认类型。</td></tr>
+<tr><td>子代理</td><td><code>x-codex-parent-thread-id</code>、<code>x-openai-subagent=collab_spawn</code>；body 的 <code>client_metadata.thread_id/parent_thread_id/parent_turn_id/root_turn_id</code>；turn metadata 有 <code>subagent_kind</code>/<code>thread_source</code>。见 <code>core/src/client.rs:148,151,621-657</code>、<code>responses_metadata.rs:280-395</code>。</td><td><span class="conf-high">高</span>：三重冗余，可按 thread_id 分账。</td></tr>
+<tr><td>标题</td><td>现有材料未确认独立 title 请求。Codex 有服务端/客户端多种维护调用，不能用 <code>source</code> 或小输出单独推断。</td><td><span class="conf-low">待验证</span>。</td></tr>
+<tr><td>压缩</td><td><code>x-openai-subagent=compact</code>；可能是 remote <code>/responses/compact</code> 或 local compact。压缩实现包括 token-budget、remote v1/v2、local，见 <code>core/src/compact.rs</code>、<code>compact_remote_v2.rs</code>。</td><td><span class="conf-high">高</span>：专用 header 优先。</td></tr>
+<tr><td>review/plan</td><td><code>x-openai-subagent=review</code> 或 guardian/review session；thread source、agent path 和权限策略发生变化。</td><td><span class="conf-high">高</span>（有 header 时）。</td></tr>
+</table>
+
+<h3 id="grok">3.3 Grok Build</h3>
+<table><tr><th>类型</th><th>可观察信号</th><th>结论</th></tr>
+<tr><td>主对话</td><td><code>x-grok-session-id</code>、<code>x-grok-conv-id</code>、turn index 等固定头；主 system 含 Grok Build 身份和 <code>&lt;user_info&gt;</code>。</td><td>固定头用于会话定位，不等于子代理。</td></tr>
+<tr><td>子代理</td><td>子会话自身 uuid 在 <code>x-grok-session-id</code>；system 含「You are a Grok Build subagent」；父关系主要在本地 SubagentMeta/GCS trace 的 <code>parent_prompt_id/depth</code>，不一定出网。见 <code>subagent/handle_request.rs:459-462,505-520</code>。</td><td><span class="conf-high">高</span>识别子代理实例；父子链路 HTTP 层不完整。</td></tr>
+<tr><td>标题/目标摘要</td><td>已有材料明确出现 <code>Goal Plan Writer</code>、<code>Goal Summarizer</code>、<code>Goal Strategist</code> system 指纹。见 <code>request-source.js:90-100</code> 与提示词构成报告。</td><td><span class="conf-mid">中到高</span>：可标为 goal/title 类自动化，但需区分用户可见计划。</td></tr>
+<tr><td>压缩</td><td>默认 85%；专用压缩模型/模板；two-pass prefire；compaction checkpoint 和 compaction request 工件。见 <code>session/compaction.rs:1813-1981</code>、<code>compaction_utils.rs:918-978</code>。</td><td><span class="conf-high">高</span>：结构指纹+时序可识别。</td></tr>
+<tr><td>plan/review</td><td>Goal Plan Writer、Plan agent、<code>enter_plan_mode</code>/<code>exit_plan_mode</code> 工具；工具集合和 system prompt 变化。</td><td><span class="conf-high">中到高</span>。</td></tr>
+</table>
+
+<h3 id="opencode">3.4 OpenCode</h3>
+<table><tr><th>类型</th><th>可观察信号</th><th>结论</th></tr>
+<tr><td>主对话</td><td>多条 system 或 OpenAI OAuth 的 instructions；正常 SessionPrompt 循环。</td><td>默认类型。</td></tr>
+<tr><td>子代理</td><td>网络层没有会话/子代理头；parentID 只在本地 session DB；task 子会话仍跑完整循环。见 <code>packages/opencode/src/session/</code>。</td><td><span class="conf-low">低</span>：仅 system/消息指纹启发式。</td></tr>
+<tr><td>标题</td><td>源码材料明确存在 <code>summary/title</code> agent prompt 家族，但当前网络端不一定暴露 agent 名。短输入、无工具、输出短是辅助信号。</td><td><span class="conf-mid">中</span>：须用 system prompt 精确指纹或会话事件关联。</td></tr>
+<tr><td>压缩</td><td>明确端点 <code>POST /session/:id/summarize</code>；自动压缩使用隐藏 compaction agent；压缩时 <code>system:[]</code>，messages 通常只有一条带序列化历史的 user。见 <code>compaction.ts:420-445</code>、<code>processor.ts:477-482</code>。</td><td><span class="conf-high">高</span>：端点优先，body 形状次之。</td></tr>
+<tr><td>plan/review</td><td>Agent prompt 可替换基础提示词；plan/review 是否独立调用取决于插件与 agent 配置。</td><td><span class="conf-low">低到中</span>。</td></tr>
+</table>
+
+<h3 id="qwen">3.5 Qwen Code</h3>
+<table><tr><th>类型</th><th>可观察信号</th><th>结论</th></tr>
+<tr><td>主对话</td><td>普通 Qwen Code system/environment context；promptId 只有 session 前缀或常规序号。</td><td>默认类型。</td></tr>
+<tr><td>子代理</td><td><code>promptId=sessionId#subagentId#promptOrdinal</code>；system 有「general-purpose subagent working for a parent agent」；运行时事件含 subagentId。见子代理报告与 <code>server/utils/attribution.js:96-100</code> 的兼容解析。</td><td><span class="conf-mid">中到高</span>：可解析复合键，但父关系部分间接。</td></tr>
+<tr><td>标题</td><td>现有源码材料未确认稳定的 title 专用请求；分析类 prompt 可能与自动化摘要混淆。</td><td><span class="conf-low">待验证</span>。</td></tr>
+<tr><td>压缩</td><td>全历史压缩，支持可配置 compression model；压缩输入为历史浅拷贝，system instruction 独立传递；失败可反应式 RETRY，结果有 <code>COMPRESSED/NOOP/OUTPUT_TRUNCATED</code> 等状态。见 <code>services/chatCompressionService.ts:430-487</code>、<code>turn.ts:351-381</code>。</td><td><span class="conf-mid">中到高</span>：body 形状与压缩模型组合。</td></tr>
+<tr><td>plan/review</td><td>压缩后会重建 plan-mode reminder；后台 subagent 快照和 plan reminder 是结构化附件。</td><td><span class="conf-mid">中</span>。</td></tr>
+</table>
+
+<h3 id="hermes">3.6 Hermes</h3>
+<table><tr><th>类型</th><th>可观察信号</th><th>结论</th></tr>
+<tr><td>主对话</td><td><code>X-Hermes-Session-Id</code>；Hermes Agent system/coding context。</td><td>默认类型。</td></tr>
+<tr><td>子代理</td><td><code>X-Hermes-Session-Id</code> 绑定子会话；稳定子代理 ID <code>sa-...</code>、<code>parent_subagent_id</code>、<code>tui_depth</code>；后台完成经自 POST 唤醒。</td><td><span class="conf-high">高</span>：协议层显式父子链路。</td></tr>
+<tr><td>标题</td><td>公开材料未确认独立 title 请求；离线 trajectory compressor 不是运行时标题生成器，不能混为一谈。</td><td><span class="conf-low">待验证</span>。</td></tr>
+<tr><td>压缩</td><td>运行时分层 ContextCompressor；可见 compact 状态；摘要 marker 为 <code>[CONTEXT COMPACTION — REFERENCE ONLY]</code>。API context-too-large 后可反应式重试，Codex provider 另有原生路径。见 <code>turn_context.py:340-397</code>、<code>agent/context_compressor.py:1989-1999</code>。</td><td><span class="conf-mid">中</span>：未必有一个独立 HTTP 请求，很多压缩发生在客户端本地。</td></tr>
+<tr><td>plan/review</td><td>delegate_task 的角色和工具权限可变；security reviewer 有明确 system 指纹。</td><td><span class="conf-mid">中到高</span>。</td></tr>
+</table>
+
+<h3 id="openclaw">3.7 OpenClaw</h3>
+<table><tr><th>类型</th><th>可观察信号</th><th>结论</th></tr>
+<tr><td>主对话</td><td>Gateway session key；system 有 OpenClaw identity、Workspace Files、Control 段。</td><td>默认类型。</td></tr>
+<tr><td>子代理</td><td>会话键 <code>agent:&lt;id&gt;:subagent:&lt;uuid&gt;</code>；lineage 元数据含 relation/requesterRef/controllerRef/depth；事件 actorId 是父会话键。见 <code>sessions_spawn</code> 与 <code>withAgentRuntimeExecutionLineage</code>。</td><td><span class="conf-high">高</span>（若网关部署在其 Gateway 路由之后）。</td></tr>
+<tr><td>标题</td><td>现有材料没有确认稳定的 title API。自动 announce/后台结果是事件驱动，不应误标标题。</td><td><span class="conf-low">待验证</span>。</td></tr>
+<tr><td>压缩</td><td>会话树 compaction entry；Codex runtime 可让位服务端压缩；本地 transcript 作用域与系统提示分离。见 <code>packages/agent-core/src/harness/compaction/compaction.ts:117-121,243-251</code>。</td><td><span class="conf-mid">中到高</span>：本地/Gateway 内部可能根本没有单独上游摘要 HTTP 请求。</td></tr>
+<tr><td>plan/review</td><td>branch summary、session_before_compact 事件、扩展可 cancel/接管压缩；审查可能是独立 agent session。</td><td><span class="conf-mid">中。</span></td></tr>
+</table>
+
+<h3 id="deepseek">3.8 DeepSeek Harness</h3>
+<div class="warn"><b>公开证据不足：</b>现有研究材料没有找到官方编程 harness 的公开源码、请求协议或标题/压缩实现。以下只能列出网关应保留的观测字段，不能把推理写成事实。</div>
+<table><tr><th>类型</th><th>当前可用信号</th><th>置信度</th></tr>
+<tr><td>主对话</td><td>若 system 含「You are an AI agent powered by DeepSeek Harness」或 <code>harness:identity</code>，可识别来源；见 <code>server/utils/request-source.js:80-86</code>。</td><td><span class="conf-mid">来源识别中</span></td></tr>
+<tr><td>子代理/标题/压缩/重试</td><td>未公开。仅记录 body、headers、模型、时序，等待抓包或上游源码。</td><td><span class="conf-low">未知</span></td></tr>
+</table>
+
+<h2 id="title"><span class="section-label">4.</span> 重点：会话标题生成</h2>
+<h3>4.1 能确认什么，不能确认什么</h3>
+<p>会话标题是本任务中最容易误判的维护流量。一个客户端可能在首条用户消息后生成一次标题，也可能在首轮完成后异步生成；标题请求还可能由服务端完成，客户端不会向 CrewRouter 发第二个模型请求。现有材料能确认 OpenCode 有 <code>summary/title</code> agent prompt 家族、Grok 有 Goal 系列 prompt 指纹；但对 Claude Code、Codex CLI、Qwen Code、Hermes、OpenClaw、DeepSeek，不能仅凭当前仓库报告断言存在或不存在独立 title 请求。</p>
+<table><tr><th>客户端</th><th>独立标题请求证据</th><th>可能辨别方式</th><th>置信度</th></tr>
+<tr><td>Claude Code</td><td>未确认固定 title API</td><td>专用 system 指纹、首条 user 后紧跟的短输出请求；否则归 primary/other</td><td><span class="conf-low">低</span></td></tr>
+<tr><td>Codex CLI</td><td>未确认；不要把 review/compact 头当 title</td><td>专用 <code>x-openai-subagent</code> 值若未来出现，优先按值；无值时用短输出+时序</td><td><span class="conf-low">低</span></td></tr>
+<tr><td>Grok Build</td><td>Goal Plan Writer/Summarizer/Strategist 指纹可见</td><td>system prompt 精确匹配；模型/输出较小；首轮或目标状态改变后异步出现</td><td><span class="conf-mid">中</span></td></tr>
+<tr><td>OpenCode</td><td><code>summary/title</code> agent prompt 家族出现在提示词构成材料</td><td>agent prompt 指纹；无工具；短 user history/短 completion；关联同一 session 的上一请求</td><td><span class="conf-mid">中</span></td></tr>
+<tr><td>Qwen Code</td><td>未确认固定 title 调用</td><td>专用 system/模型指纹；避免仅凭 <code>max_tokens</code> 小判定</td><td><span class="conf-low">低</span></td></tr>
+<tr><td>Hermes</td><td>未确认；离线摘要器不等于标题器</td><td>若有 title marker 或短异步请求再建立规则</td><td><span class="conf-low">低</span></td></tr>
+<tr><td>OpenClaw</td><td>未确认独立上游标题调用</td><td>优先查 Gateway 事件/本地 session entry；HTTP 层没有证据则不强行分类</td><td><span class="conf-low">低</span></td></tr>
+<tr><td>DeepSeek</td><td>未公开</td><td>只能记录未知自动化请求</td><td><span class="conf-low">低</span></td></tr>
+</table>
+<h3>4.2 标题请求的可操作组合规则</h3>
+<ol>
+<li><b>强规则：</b>命中显式 title/summary endpoint、header 或 system prompt 的专用固定短语时，分类为 <code>title</code>，置信度 high。</li>
+<li><b>中规则：</b>无工具定义、输入主要是首条或短历史 user 内容、输出上限显著小于主对话，且发生在会话首条消息后 0–10 秒内；分类为 <code>title</code>，置信度 medium。</li>
+<li><b>排除规则：</b>命中 <code>x-openai-subagent=compact</code>、OpenCode <code>/summarize</code>、单条超长历史序列化 user 或 compaction marker 时，优先归 <code>compaction</code>，不要被短 completion 覆盖。</li>
+<li><b>不确定规则：</b>只有「短输入+短输出」而没有时序、模型或 prompt 证据时，归 <code>other_automation</code> / low，不归 title。</li>
+</ol>
+<pre><code>title_candidate = no_tools
+  && short_or_first_turn_history
+  && completion_cap_small
+  && (title_prompt_match || follows_first_user_request)
+  && !compaction_signal
+  && !subagent_signal</code></pre>
+<h3>4.3 如何验证标题事实</h3>
+<p>建议为每家客户端准备干净会话，记录完整的 method/path/headers/body/model/时间戳，并分别测试：首条消息、第二条消息、重命名会话、长对话压缩、离线/断网恢复。将请求按 session/thread 排序，重点观察首条 user 后是否出现「同一 session 的短请求」，以及该请求是否含专用 title prompt。只有重复实验得到稳定序列后，才把规则升级为 high。</p>
+
+<h2 id="gateway"><span class="section-label">5.</span> CrewRouter 网关落地建议</h2>
+<h3>5.1 入库与计费</h3>
+<ol>
+<li><b>保留协议类型和语义类型两列概念。</b>不要用现有 <code>request_type</code> 覆盖语义；协议类型继续表示 chat/anthropic/responses，语义写入 <code>plugin_meta.request_semantics</code>，避免运行时 schema 迁移扩大范围。</li>
+<li><b>维护性请求单独统计。</b>标题、压缩、缓存预热、后台摘要可标记 <code>is_maintenance=true</code>；默认报表分别展示总 token、业务 token、维护 token。是否收费应由产品策略决定，不要由低置信度分类器自动免单。</li>
+<li><b>子代理按 thread/session 分账。</b>Codex 用 thread_id，Hermes 用 session/subagent ID，Grok 用子 session ID，Qwen 解析 promptId；Claude Code/OpenCode 无强信号时保留 unknown，不要把 system 指纹当成绝对事实。</li>
+<li><b>重试去重而不是删账。</b>每次 HTTP 尝试都保留原始记录，并用相邻请求指纹关联 <code>retry_group_id</code>；报表可以同时展示尝试次数和最终业务回合成本。</li>
+<li><b>记录分类器版本与命中原因。</b>规则会随着客户端版本变化；没有 <code>classifier_version</code> 和 <code>reason_codes</code>，历史报表无法解释分类漂移。</li>
+</ol>
+<h3>5.2 最小规则库</h3>
+<table><tr><th>规则</th><th>分类</th><th>置信度</th><th>动作</th></tr>
+<tr><td>OpenCode <code>POST /session/:id/summarize</code></td><td>compaction</td><td>high</td><td>维护流量；关联 session id</td></tr>
+<tr><td><code>x-openai-subagent=compact</code> 或明确 compact endpoint</td><td>compaction</td><td>high</td><td>记录压缩原因/implementation（若 body 可得）</td></tr>
+<tr><td><code>x-openai-subagent=review</code> 或 Codex guardian review source</td><td>review</td><td>high</td><td>按父 thread 关联，不当作普通子代理</td></tr>
+<tr><td>Codex <code>client_metadata.parent_thread_id</code> / Hermes parent id / OpenClaw subagent key</td><td>subagent</td><td>high</td><td>建立 parent-child 关系</td></tr>
+<tr><td>无工具+空/短 system+单条长 user+历史序列化痕迹</td><td>compaction</td><td>medium</td><td>标记疑似，保留原始证据</td></tr>
+<tr><td>Grok Goal* 或 OpenCode title/summary prompt 精确指纹</td><td>title/other automation</td><td>medium</td><td>按客户端版本校准</td></tr>
+<tr><td>同 session/thread 短时间近似 body 重发</td><td>retry</td><td>medium</td><td>加入 retry_group，不覆盖原请求</td></tr>
+</table>
+<h3>5.3 建议的报表视图</h3>
+<ul>
+<li><b>用户回合视图：</b>按 root session/thread 聚合 primary + 子代理 + maintenance，展示总成本和各类占比。</li>
+<li><b>维护开销视图：</b>单独展示 title、compaction、retry、review、other automation 的请求数、输入 token、缓存命中率和失败率。</li>
+<li><b>不确定性视图：</b>按客户端和 classifier version 统计 low/medium/high 比例，帮助决定哪些规则值得继续抓包。</li>
+<li><b>缓存视图：</b>压缩前后 prompt token 突降、缓存命中率突降的时间点，与 compaction 标记联动，解释成本尖峰。</li>
+</ul>
+
+<h2 id="limits"><span class="section-label">6.</span> 边界、误报与验证方法</h2>
+<div class="warn"><b>不能从 HTTP 层确定的情况：</b>客户端在本地完成标题/摘要、服务端代做标题、子代理复用完全相同的 system prompt、用户消息恰好长且像序列化历史、以及客户端自定义 system prompt。此时应记录 unknown/low，而不是伪造确定分类。</div>
+<table><tr><th>风险</th><th>典型误报</th><th>缓解</th></tr>
+<tr><td>短请求误报</td><td>把所有低 max_tokens 请求当 title</td><td>要求 title prompt 或首轮时序等第二证据。</td></tr>
+<tr><td>长 user 误报</td><td>用户粘贴长日志被判 compaction</td><td>必须同时满足无工具、历史格式 marker、system 极简；增加序列化字段检测。</td></tr>
+<tr><td>子代理误报</td><td>system 中出现 subagent 字样但其实是用户自定义 prompt</td><td>专用 header/body 优先；system 指纹只给 medium/low。</td></tr>
+<tr><td>重试重复计费</td><td>429 后相同请求被当两个业务回合</td><td>保留两条尝试记录，使用 retry_group_id 做报表聚合。</td></tr>
+<tr><td>本地压缩漏记</td><td>OpenClaw/Hermes 压缩发生在客户端，网关只看到下一次普通请求</td><td>不要声称「没有压缩」；记录不可观测，依赖客户端事件或 prompt 长度突降。</td></tr>
+</table>
+<h3>6.1 最终总结</h3>
+<p><b>八家客户端的共同事实：</b>一次用户交互不等于一次模型请求。主对话可能派生子代理、计划/评审、压缩和重试；标题请求则不是所有客户端都能从公开源码确认，甚至可能由本地或服务端完成。</p>
+<p><b>标题生成的可辨别方法：</b>优先使用显式 title/summary endpoint 或专用 system prompt；其次组合「首条消息后短时序 + 无工具 + 短历史 + 小输出上限 + 非压缩形状」。仅凭短输入或小模型不能定类。</p>
+<p><b>网关最重要的落地动作：</b>把语义分类作为带证据和置信度的附加元数据；用 Codex/Hermes/OpenClaw 的结构化链路做高置信度父子归因；用 OpenCode endpoint 和 Codex compact header 识别压缩；对 Claude Code、DeepSeek 以及未确认的 title 流量保持诚实的 unknown；在报表中分开业务 token、维护 token 和重试尝试。</p>
+</main>
+<footer>本报告只新增研究文档，不修改 CrewRouter 运行时代码 · 证据引用以既有仓库研究报告和现有归因实现为主 · 生成于 2026-08-28</footer>
+</body>
+</html>
