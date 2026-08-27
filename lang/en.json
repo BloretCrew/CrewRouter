@@ -2647,6 +2647,8 @@
   "查看总结": "View summary",
   "生成总结": "Generate summary",
   "最近更新": "Updated",
+  "缓存摘要": "Cached summary",
+  "总结缓存读取失败": "Failed to read summary cache",
   "会话总结": "Session summary",
   "事件通知已开启": "Event notifications enabled",
   "事件通知已关闭": "Event notifications disabled",

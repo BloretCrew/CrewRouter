@@ -93,6 +93,7 @@ class ConsoleApp {
     this._ignoreHashChange = false;
     // 会话总结状态（后台生成任务与切换会话隔离）
     this._summaryPending = false;
+    this._summaryPendingKeys = new Set();
     this._sessionSummaryText = '';
     this._summaryDoneFor = null;
     this._summaryError = null;
@@ -5486,11 +5487,13 @@ class ConsoleApp {
           if (!ALLOWED.has(child.tagName)) { child.remove(); return; }
           [...child.attributes].forEach(attr => {
             const n = attr.name.toLowerCase();
-            if (n.startsWith('on')) child.removeAttribute(attr.name);
-            else if (n === 'href' || n === 'src') {
-              if (!/^(https?:|data:image)/i.test(attr.value)) child.removeAttribute(attr.name);
-            }
+            if (n.startsWith('on') || !['href', 'title', 'target', 'rel'].includes(n)) child.removeAttribute(attr.name);
+            else if (n === 'href' && !/^https?:\/\//i.test(attr.value)) child.removeAttribute(attr.name);
           });
+          if (child.tagName === 'A') {
+            child.setAttribute('target', '_blank');
+            child.setAttribute('rel', 'noopener noreferrer nofollow');
+          }
           walk(child);
         });
       };
@@ -6345,6 +6348,7 @@ class ConsoleApp {
     if (!force) {
       try {
         const cached = await fetch(`/api/user/sessions/${encodeURIComponent(key)}/summary`);
+        if (!cached.ok) throw new Error(t('总结缓存读取失败'));
         const cj = await cached.json();
         if (cj.summary) {
           this._summaryCachedKeys.add(key);
@@ -6362,6 +6366,9 @@ class ConsoleApp {
       } catch (_) { /* 缓存读取失败则直接生成 */ }
     }
 
+    // 记录本次请求归属：会话 key + 请求序号，供切换会话后的状态隔离与回调校验
+    const reqKey = key;
+    const reqSeq = ++this._summarySeq;
     // 弹窗显示加载提示；用户可关闭弹窗让任务在后台继续
     this._renderSummaryLoading(bodyEl);
     this.showModal('sessionSummaryModal');
@@ -6369,10 +6376,6 @@ class ConsoleApp {
     this._setSummaryRegenDisabled(true);
     // 模型库顶部任务条：进入后台生成即亮出加载环（与弹窗是否开着无关，用户可能已切走）
     this._updateTaskBar('loading', { sessionKey: reqKey });
-
-    // 记录本次请求归属：会话 key + 请求序号，供切换会话后的状态隔离与回调校验
-    const reqKey = key;
-    const reqSeq = ++this._summarySeq;
 
     // 后台执行：SSE 流式读取，实时渲染；await 不阻塞用户浏览
     try {
@@ -6385,6 +6388,15 @@ class ConsoleApp {
       const decoder = new TextDecoder();
       let acc = '';
       let buf = '';
+      let dataLines = [];
+      const handleEvent = (data) => {
+        if (!data) return;
+        const obj = JSON.parse(data);
+        if (obj.type === 'delta' && obj.text) { acc += obj.text; renderAcc(); }
+        else if (obj.type === 'done') { if (obj.summary) acc = obj.summary; if (obj.createdAt) createdAt = obj.createdAt; renderAcc(); }
+        else if (obj.type === 'error') throw new Error(obj.error || t('总结生成失败'));
+      };
+      let createdAt = null;
       const renderAcc = () => {
         this._sessionSummaryText = acc;
         if (this._detailSessionKey === reqKey) this._renderSessionSummaryInline(reqKey, acc, 'loading');
@@ -6399,52 +6411,35 @@ class ConsoleApp {
         const { done, value } = await reader.read();
         if (done) break;
         buf += decoder.decode(value, { stream: true });
-        const parts = buf.split('\n\n');
-        buf = parts.pop() || '';
-        for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith('data:')) continue;
-          try {
-            const obj = JSON.parse(line.slice(5).trim());
-            if (obj.type === 'delta' && obj.text) { acc += obj.text; renderAcc(); }
-            else if (obj.type === 'done') { if (obj.summary) acc = obj.summary; renderAcc(); }
-            else if (obj.type === 'error') throw new Error(obj.error || t('总结生成失败'));
-          } catch (e) { if (e.message && !/JSON/.test(e.message)) throw e; }
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+        for (const raw of lines) {
+          const line = raw.replace(/\r$/, '');
+          if (line === '') {
+            if (!dataLines.length) continue;
+            try { handleEvent(dataLines.join('\n').trim()); } catch (e) { if (e.message && !/JSON/.test(e.message)) throw e; }
+            dataLines = [];
+          } else if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
         }
       }
+      buf += decoder.decode();
+      if (buf) { const tail = buf.replace(/\r$/, ''); if (tail.startsWith('data:')) dataLines.push(tail.slice(5).replace(/^ /, '')); }
+      if (dataLines.length) handleEvent(dataLines.join('\n').trim());
       renderAcc();
       this._summaryCachedKeys.add(reqKey);
       this._summaryCacheTextMap[reqKey] = acc;
-      this._summaryCacheTimeMap[reqKey] = new Date().toISOString();
+      this._summaryCacheTimeMap[reqKey] = createdAt || new Date().toISOString();
       this._summaryDoneFor = reqKey;
       this._summaryTaskSessionKey = reqKey;
       this._summaryTaskText = acc;
       this._setSummaryRegenDisabled(false);
-      this._applySummaryBtnText(reqKey, true);
+      if (this._detailSessionKey === reqKey) this._applySummaryBtnText(reqKey, true);
       if (this._detailSessionKey === reqKey) {
         this._renderSessionSummaryInline(reqKey, acc, 'done', null, this._summaryCacheTimeMap[reqKey]);
       }
       this.showToast(t('总结已生成'), 'success');
       if (this._summarySeq === reqSeq) this._updateTaskBar('done', { summary: acc, sessionKey: reqKey });
       return;
-      /* legacy non-stream completion path retained for compatibility */
-      this._summaryCachedKeys.add(reqKey);
-      // 仅当没有更新的请求接管时才更新任务条为完成态，避免旧结果覆盖新任务
-      if (this._summarySeq === reqSeq) {
-        this._updateTaskBar('done', { summary: data.summary || '' });
-        // 若用户仍停留在发起时的会话详情页，同步两个按钮文字为「查看总结」
-        if (this._detailSessionKey === reqKey) this._applySummaryBtnText(reqKey, true);
-      }
-      // 仅在仍处于发起时的会话才写回弹窗内容；否则只 toast 通知
-      if (this._detailSessionKey === reqKey) {
-        this._sessionSummaryText = data.summary || '';
-        this._summaryDoneFor = reqKey;
-        const live = document.getElementById('sessionSummaryBody');
-        if (live && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
-          setHTML(live, escapeHtml(data.summary || ''));
-        }
-      }
-      this.showToast(t('总结已生成'), 'success');
     } catch (error) {
       this._summaryError = error.message || t('总结生成失败');
       if (this._detailSessionKey === reqKey) {
@@ -6509,7 +6504,7 @@ class ConsoleApp {
   dismissModelLibraryTaskBar() { this._updateTaskBar('hidden'); }
   openSessionSummaryModal(sessionKey = '') {
     const key = String(sessionKey || this._summaryTaskSessionKey || this._detailSessionKey || '');
-    const text = key === this._summaryTaskSessionKey ? this._summaryTaskText : (this._summaryCacheTextMap[key] || this._sessionSummaryText || '');
+    const text = key === this._summaryTaskSessionKey ? this._summaryTaskText : (this._summaryCacheTextMap[key] || '');
     const bodyEl = document.getElementById('sessionSummaryBody');
     if (bodyEl) setHTML(bodyEl, text ? this._renderSafeMarkdown(text) : '');
     this._sessionSummaryText = text;
@@ -6548,7 +6543,7 @@ class ConsoleApp {
 
   async copySessionSummary(sessionKey = '') {
     const key = String(sessionKey || this._summaryTaskSessionKey || this._summaryDoneFor || this._detailSessionKey || '');
-    const text = key === this._summaryTaskSessionKey ? this._summaryTaskText : (this._summaryCacheTextMap[key] || this._sessionSummaryText || '');
+    const text = key === this._summaryTaskSessionKey ? this._summaryTaskText : (this._summaryCacheTextMap[key] || '');
     try {
       await navigator.clipboard.writeText(this._summaryPlainText(text));
       this.showToast(t('已复制到剪贴板'), 'success');
@@ -6575,6 +6570,7 @@ class ConsoleApp {
     this._summaryCheckedKeys.add(sessionKey);
     try {
       const res = await fetch(`/api/user/sessions/${encodeURIComponent(sessionKey)}/summary`);
+      if (!res.ok) throw new Error(t('总结缓存读取失败'));
       const data = await res.json().catch(() => ({}));
       if (data && data.summary) {
         this._summaryCachedKeys.add(sessionKey);
@@ -6625,16 +6621,22 @@ class ConsoleApp {
       spinner.className = 'summary-spinner';
       spinner.style.cssText = 'width:16px;height:16px;border-width:2px;flex:none;';
       const label = document.createElement('span');
+      const refresh = document.createElement('button');
+      refresh.type = 'button';
+      refresh.className = 'btn btn-secondary btn-sm';
+      refresh.textContent = t('重新生成');
+      refresh.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); this.generateSessionSummary(true); });
       const body = document.createElement('div');
       body.className = 'summary-inline-body session-summary-md';
       const time = document.createElement('small');
       time.className = 'summary-inline-time';
-      summary.append(spinner, label);
+      summary.append(spinner, label, refresh);
       details.append(summary, time, body);
       el.append(details);
       el._details = details;
       el._spinner = spinner;
       el._label = label;
+      el._refresh = refresh;
       el._time = time;
       el._body = body;
     }
@@ -6645,8 +6647,9 @@ class ConsoleApp {
       el._details.open = true;
       return;
     }
-    el._label.textContent = state === 'done' ? t('会话总结') : t('正在生成会话总结...');
+    el._label.textContent = state === 'done' ? t('缓存摘要') : t('正在生成会话总结...');
     el._spinner.style.display = state === 'done' ? 'none' : '';
+    el._refresh.style.display = state === 'done' ? '' : 'none';
     el._time.textContent = state === 'done' && createdAt ? `${t('最近更新')} ${this.formatRelativeTime(createdAt)}` : '';
     if (state === 'done') setHTML(el._body, this._renderSafeMarkdown(text || ''));
     else el._body.textContent = text || '';
