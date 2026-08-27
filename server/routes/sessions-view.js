@@ -75,8 +75,18 @@ function pressureLevel(totalTokens) {
  * 3. 常见实体还原
  */
 const HIDDEN_BLOCKS = /<\/(system-reminder|task-notification|local-command-stdout|local-command-stderr|bash-input|bash-stdout|bash-stderr)>[\s\S]*?/g;
-function cleanDisplayText(text) {
+function stripInjectedBlocks(text) {
   let t = String(text || '');
+  for (const tag of ['system-reminder', 'task-notification', 'local-command-stdout', 'local-command-stderr']) {
+    const re = new RegExp(`<${tag}(?:\\s[^>]*)?>[\\s\\S]*?</${tag}>`, 'gi');
+    const reOpen = new RegExp(`<${tag}(?:\\s[^>]*)?>[\\s\\S]*$`, 'gi');
+    t = t.replace(re, '').replace(reOpen, '');
+  }
+  return t.trim();
+}
+
+function cleanDisplayText(text) {
+  let t = stripInjectedBlocks(text);
   // 成对隐藏块：从开标签到闭标签整体删除（含未闭合到结尾的情况）
   for (const tag of ['system-reminder', 'task-notification', 'local-command-stdout', 'local-command-stderr']) {
     const re = new RegExp(`<${tag}(?:\\s[^>]*)?>[\\s\\S]*?</${tag}>`, 'g');
@@ -87,6 +97,8 @@ function cleanDisplayText(text) {
   t = t.replace(/<[a-zA-Z][a-zA-Z0-9_-]*(?:\s[^>]*)?\/>/g, '');
   t = t.replace(/<\/[a-zA-Z][a-zA-Z0-9_-]*>/g, '');
   t = t.replace(/<[a-zA-Z][a-zA-Z0-9_-]*(?:\s[^>]*)?>/g, '');
+  // 还原常见实体，避免注入块被编码后绕过上面的精确过滤
+  t = t.replace(/&lt;\/?(?:system-reminder|task-notification|local-command-stdout|local-command-stderr)[^&]*&gt;[\s\S]*?(?:&lt;\/\s*(?:system-reminder|task-notification|local-command-stdout|local-command-stderr)\s*&gt;)?/gi, '');
   // 实体还原
   t = t.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
   // 多余空行收敛
@@ -726,29 +738,36 @@ async function* streamInternalLLM(promptText, userId) {
   }
   const decoder = new TextDecoder();
   let buf = '';
+  let dataLines = [];
+  const consumeLine = function* (raw) {
+    const line = raw.replace(/\r$/, '');
+    if (line === '') {
+      if (!dataLines.length) return;
+      const data = dataLines.join('\n').trim();
+      dataLines = [];
+      if (data === '[DONE]') return 'done';
+      try {
+        const j = JSON.parse(data);
+        const delta = j.choices?.[0]?.delta?.content;
+        if (delta) yield delta;
+      } catch (_) { /* ignore malformed upstream event */ }
+      return;
+    }
+    if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
+  };
   for await (const chunk of readWebStream(res.body)) {
     buf += decoder.decode(chunk, { stream: true });
     const lines = buf.split('\n');
     buf = lines.pop() || '';
     for (const raw of lines) {
-      const line = raw.trim();
-      if (!line.startsWith('data: ')) continue;
-      const data = line.slice(6).trim();
-      if (data === '[DONE]') return;
-      let j;
-      try { j = JSON.parse(data); } catch (_) { continue; }
-      const delta = j.choices?.[0]?.delta?.content;
-      if (delta) yield delta;
+      for (const value of consumeLine(raw)) { if (value === 'done') return; yield value; }
     }
   }
-  // 处理缓冲区残留（无结尾换行）
-  const residual = buf.trim();
-  if (residual.startsWith('data: ')) {
-    const data = residual.slice(6).trim();
-    if (data !== '[DONE]') {
-      try { const j = JSON.parse(data); const delta = j.choices?.[0]?.delta?.content; if (delta) yield delta; } catch (_) { /* ignore */ }
-    }
+  buf += decoder.decode();
+  if (buf) {
+    for (const value of consumeLine(buf)) { if (value === 'done') return; yield value; }
   }
+  for (const value of consumeLine('')) { if (value === 'done') return; yield value; }
 }
 
 // 流式变体：SSE 解析 + onDelta 回调（保留用户密钥计费链路）
@@ -839,19 +858,16 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
     const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
     if (!sessionKey) return res.status(400).json({ error: '缺少 sessionKey' });
     // 属主校验：该会话必须有当前用户的记录
+    const summaryWhere = `${SESSION_KEY_SQL} = $2`;
     const own = await pool.query(
-      `SELECT COUNT(*)::int AS n FROM usage_records WHERE user_id = $1
-        AND COALESCE(plugin_meta->'attribution'->>'sessionId','') = $2`,
+      `SELECT COUNT(*)::int AS n FROM usage_records u WHERE u.user_id = $1 AND ${summaryWhere}`,
       [uid, sessionKey]);
-    if (!own.rows[0].n && !sessionKey.startsWith('bucket-')) {
-      return res.status(404).json({ error: '会话不存在' });
-    }
-    // 拉全量记录（复用详情查询逻辑但取大页）
+    if (!own.rows[0].n) return res.status(404).json({ error: '会话不存在' });
+    // 按会话键表达式读取，兼容显式 sessionId 与 bucket-* 会话
     const recRes = await pool.query(
-      `SELECT id, messages, response, reasoning_content FROM usage_records
-        WHERE user_id = $1
-          AND COALESCE(plugin_meta->'attribution'->>'sessionId','') = $2
-        ORDER BY created_at ASC LIMIT 500`,
+      `SELECT id, messages, response, reasoning_content, created_at FROM usage_records u
+        WHERE u.user_id = $1 AND ${summaryWhere}
+        ORDER BY created_at ASC, id ASC LIMIT 1000`,
       [uid, sessionKey]);
     const allEvents = [];
     for (const row of recRes.rows) {
@@ -912,7 +928,11 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
         return res.end();
       }
       await persistSummary(full);
-      writeEvent({ type: 'done', summary: full });
+      const saved = await pool.query(
+        'SELECT created_at FROM session_summaries WHERE user_id = $1 AND session_key = $2',
+        [uid, sessionKey]
+      );
+      writeEvent({ type: 'done', summary: full, createdAt: saved.rows[0]?.created_at || new Date().toISOString() });
       res.end();
     } catch (err) {
       Logger.error('[会话总结] 流式推理失败:', err.message);
