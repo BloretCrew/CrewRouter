@@ -619,9 +619,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
     }
 
     const records = buildDetailRecords(rawDetailRows);
-    const lastRecord = hasDelta
-      ? rawDetailRows[0]
-      : rawDetailRows[rawDetailRows.length - 1];
+    const lastRecord = rawDetailRows[0];
     const nextCursor = buildDetailNextCursor(hasMore, lastRecord);
 
     res.json({ sessionKey, page, pageSize, total, records, nextCursor });

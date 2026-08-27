@@ -58,6 +58,25 @@ assert.deepStrictEqual(paginateCompressed(100, 40), [
 assert.strictEqual(hasMoreCursorPage(0, 40), false);
 assert.strictEqual(hasMoreCursorPage(40, 40), false);
 assert.strictEqual(hasMoreCursorPage(41, 40), true);
+
+function firstNonCompressedPageCursor(total, pageSize) {
+  const records = Array.from({ length: total }, (_, index) => ({
+    created_at: `2026-08-27T00:00:${String(index + 1).padStart(2, '0')}.000Z`,
+    id: index + 1,
+  }));
+  const fetched = records.slice(0, total).reverse().slice(0, pageSize + 1).reverse();
+  const pageRows = fetched.slice(-pageSize);
+  return buildDetailNextCursor(fetched.length > pageSize, pageRows[0]);
+}
+
+assert.deepStrictEqual(firstNonCompressedPageCursor(45, 40), {
+  beforeCreatedAt: '2026-08-27T00:00:06.000Z',
+  beforeId: 6,
+});
+assert.deepStrictEqual(firstNonCompressedPageCursor(100, 40), {
+  beforeCreatedAt: '2026-08-27T00:00:61.000Z',
+  beforeId: 61,
+});
 assert.deepStrictEqual(
   buildDetailNextCursor(true, { created_at: '2026-08-27T00:00:00.000Z', id: 123 }),
   { beforeCreatedAt: '2026-08-27T00:00:00.000Z', beforeId: 123 }
