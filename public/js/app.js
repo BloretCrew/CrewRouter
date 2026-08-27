@@ -105,7 +105,8 @@ class ConsoleApp {
     this._summaryCacheTimeMap = {};   // sessionKey -> 缓存生成时间
     this._summaryTaskSessionKey = null;
     this._summaryTaskText = '';
-    this._lastPageFingerprint = '';
+    this._detailCursor = null;
+    this._detailRequestSeq = 0;
     this.init();
   }
 
@@ -5245,6 +5246,8 @@ class ConsoleApp {
 
   /** 进入会话详情：切换视图并加载第一页消息时间线 */
   showSessionDetail(sessionKey) {
+    this._detailRequestSeq = (this._detailRequestSeq || 0) + 1;
+    this._detailLoading = false;
     this._detailSessionKey = String(sessionKey || '');
     this._ensureSessionAutoLoad();
     this._detailMsgPage = 0;
@@ -5256,7 +5259,7 @@ class ConsoleApp {
     this._sessionSummaryText = '';
     this._summaryDoneFor = null;
     this._summaryError = null;
-    this._lastPageFingerprint = '';
+    this._detailCursor = null;
     this._setSummaryRegenDisabled(false);
     // 清空上一会话的顶部内联总结容器，避免串会话
     const inlineEl = document.getElementById('sessionSummaryInline');
@@ -5282,7 +5285,8 @@ class ConsoleApp {
   async loadSessionMessages(sessionKey, page = 1) {
     const timeline = document.getElementById('sessionTimeline');
     const metaBar = document.getElementById('sessionDetailMetaBar');
-    if (!timeline || !sessionKey || this._detailLoading) return;
+    const requestSeq = this._detailRequestSeq;
+    if (!timeline || !sessionKey || this._detailLoading || sessionKey !== this._detailSessionKey) return;
     this._detailLoading = true;
     const moreBtn = document.getElementById('sessionMoreBtn');
     if (page === 1) {
@@ -5292,11 +5296,16 @@ class ConsoleApp {
     }
 
     try {
-      const lastFp = page > 1 ? (this._lastPageFingerprint || '') : '';
-      const res = await fetch(`/api/user/sessions/${encodeURIComponent(sessionKey)}/messages?page=${encodeURIComponent(page)}&pageSize=40${lastFp ? `&lastFingerprint=${encodeURIComponent(lastFp)}` : ''}`);
+      const cursor = page > 1 ? this._detailCursor : null;
+      if (page > 1 && !cursor) return;
+      const cursorParams = cursor
+        ? `&beforeCreatedAt=${encodeURIComponent(cursor.beforeCreatedAt)}&beforeId=${encodeURIComponent(cursor.beforeId)}`
+        : '';
+      const res = await fetch(`/api/user/sessions/${encodeURIComponent(sessionKey)}/messages?page=${encodeURIComponent(page)}&pageSize=40${cursorParams}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || t('加载失败'));
 
+      if (requestSeq !== this._detailRequestSeq || sessionKey !== this._detailSessionKey) return;
       this._detailMsgPage = page;
       this._detailTotal = Number(data.total || 0);
 
@@ -5318,15 +5327,23 @@ class ConsoleApp {
         setHTML(timeline, '');
         // refresh / 首次加载都从空白时间线开始，签名序列一并重置（跨页去重状态）
         this._renderedEventSigs = [];
-        this._lastPageFingerprint = '';
+        this._detailCursor = null;
       }
 
       const records = Array.isArray(data.records) ? data.records : [];
+      const renderedEvents = new Map();
+      const recordsForDedupe = page > 1 ? [...records].reverse() : records;
+      for (const record of recordsForDedupe) {
+        const rawEvents = Array.isArray(record.events) ? record.events : [];
+        // 跨页去重：旧页从邻近边界开始处理，避免插入方向与签名顺序相反。
+        const evts = this._dedupeRenderedEvents(rawEvents);
+        renderedEvents.set(record.id, evts);
+        this._appendRenderedEventSigs(evts, page > 1);
+      }
       const frag = records.map(record => {
         const rawEvents = Array.isArray(record.events) ? record.events : [];
-        // 跨页去重：与已渲染签名序列尾部比对，上下文重放部分不再重复渲染
-        const evts = this._dedupeRenderedEvents(rawEvents);
-        this._appendRenderedEventSigs(evts);
+        const evts = renderedEvents.get(record.id) || [];
+
         // eventsCount 为原始事件数；被抑制的重放数 = 原始数 - 实际渲染数
         const suppressed = Math.max(Number(record.eventsCount || 0) - evts.length, 0);
         // 连续工具折叠：≥3 个连续工具事件合并为客户端风格摘要行（可展开明细）
@@ -5351,12 +5368,12 @@ class ConsoleApp {
       }).join('');
       if (page === 1) timeline.insertAdjacentHTML('beforeend', frag);
       else if (frag) timeline.insertAdjacentHTML('afterbegin', frag);
+      this._removeDetailLoadError();
 
       this._detailLoaded += records.length;
-      // 下一页继续向更早记录翻页，保存当前页最早一条的指纹。
-      if (records.length) this._lastPageFingerprint = records[0].userFingerprint || '';
+      if (data.nextCursor) this._detailCursor = data.nextCursor;
       const moreBtn = document.getElementById('sessionMoreBtn');
-      if (moreBtn) moreBtn.style.display = this._detailLoaded >= this._detailTotal ? 'none' : '';
+      if (moreBtn) moreBtn.style.display = records.length < 40 || !data.nextCursor ? 'none' : '';
 
       if (page === 1 && !records.length) {
         setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${t('该会话暂无消息明细')}</div></li>`);
@@ -5364,13 +5381,17 @@ class ConsoleApp {
     } catch (error) {
       const retry = `<button class="btn btn-secondary btn-sm" onclick="app.loadSessionMessages('${this._jsString(sessionKey)}', ${page})">${t('重试')}</button>`;
       if (page > 1 && timeline.children.length) {
-        timeline.insertAdjacentHTML('beforeend', `<li><div class="timeline-event-text" style="text-align:center;color:var(--destructive);padding:16px;">${escapeHtml(error.message || t('会话详情加载失败'))}<div style="margin-top:8px;">${retry}</div></div></li>`);
+        this._removeDetailLoadError();
+        timeline.insertAdjacentHTML('beforeend', `<li class="session-detail-load-error"><div class="timeline-event-text" style="text-align:center;color:var(--destructive);padding:16px;">${escapeHtml(error.message || t('会话详情加载失败'))}<div style="margin-top:8px;">${retry}</div></div></li>`);
       } else {
         setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${escapeHtml(error.message || t('会话详情加载失败'))}<div style="margin-top:8px;">${retry}</div></div></li>`);
       }
     } finally {
-      this._detailLoading = false;
-      if (moreBtn) moreBtn.disabled = false;
+      if (requestSeq === this._detailRequestSeq) this._detailLoading = false;
+      if (requestSeq === this._detailRequestSeq && moreBtn) moreBtn.disabled = false;
+      if (requestSeq === this._detailRequestSeq && page >= 1 && this._detailSessionKey === sessionKey && moreBtn?.style.display !== 'none' && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 240) {
+        queueMicrotask(() => this.loadSessionMessages(sessionKey, page + 1));
+      }
     }
   }
 
@@ -5381,33 +5402,30 @@ class ConsoleApp {
   }
 
   /**
-   * 跨页事件去重：把本记录事件序列化后与已渲染签名序列（_renderedEventSigs）尾部对齐，
-   * 求最长公共重叠（新序列前缀 == 已渲染序列后缀）。重叠 ≥ 新事件数一半视为上下文
-   * 重放，只渲染新增尾部；否则全量渲染（同后端相邻记录比对算法）。
+   * 跨页事件去重：旧页插入时间线头部，因此比较旧页尾部与已渲染头部。
+   * 签名序列始终按 DOM 的时间顺序维护，避免把插入方向与比较方向混用。
    */
   _dedupeRenderedEvents(events) {
     const incoming = Array.isArray(events) ? events : [];
-    if (!incoming.length) return [];
     const sigs = Array.isArray(this._renderedEventSigs) ? this._renderedEventSigs : [];
-    if (!sigs.length) return incoming;
+    if (!incoming.length || !sigs.length) return incoming;
     const incSigs = incoming.map(e => JSON.stringify(e));
-    let overlap = 0;
-    for (let k = Math.min(incSigs.length, sigs.length); k >= Math.ceil(incSigs.length / 2); k--) {
+    const minOverlap = Math.ceil(incSigs.length / 2);
+    for (let k = Math.min(incSigs.length, sigs.length); k >= minOverlap; k--) {
       let matched = true;
       for (let i = 0; i < k; i++) {
-        if (sigs[sigs.length - k + i] !== incSigs[i]) { matched = false; break; }
+        if (incSigs[incSigs.length - k + i] !== sigs[i]) { matched = false; break; }
       }
-      if (matched) { overlap = k; break; }
+      if (matched) return incoming.slice(0, incSigs.length - k);
     }
-    return overlap >= Math.ceil(incSigs.length / 2) ? incoming.slice(overlap) : incoming;
+    return incoming;
   }
 
-  /** 渲染完成后把新事件签名追加进已渲染序列 */
-  _appendRenderedEventSigs(events) {
+  /** 按实际 DOM 顺序维护签名：新页插入头部，首屏追加尾部。 */
+  _appendRenderedEventSigs(events, prepend = false) {
     if (!Array.isArray(this._renderedEventSigs)) this._renderedEventSigs = [];
-    for (const e of (Array.isArray(events) ? events : [])) {
-      this._renderedEventSigs.push(JSON.stringify(e));
-    }
+    const next = (Array.isArray(events) ? events : []).map(e => JSON.stringify(e));
+    this._renderedEventSigs = prepend ? next.concat(this._renderedEventSigs) : this._renderedEventSigs.concat(next);
   }
 
   /** 时间线单事件：文本 / 工具调用 / 工具结果 / 思考 */
@@ -5539,7 +5557,19 @@ class ConsoleApp {
     }, { passive: true });
   }
 
+  _removeDetailLoadError() {
+    document.querySelectorAll('#sessionTimeline .session-detail-load-error').forEach(el => el.remove());
+  }
+
   closeSessionDetail() {
+    this._detailRequestSeq = (this._detailRequestSeq || 0) + 1;
+    this._detailLoading = false;
+    this._detailCursor = null;
+    this._detailMsgPage = 0;
+    this._detailLoaded = 0;
+    this._detailTotal = 0;
+    this._summaryPending = false;
+    this._summaryTaskSessionKey = null;
     const listWrap = document.getElementById('sessionsListWrap');
     const detailWrap = document.getElementById('sessionDetailWrap');
     if (listWrap) listWrap.style.display = '';

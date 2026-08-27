@@ -306,13 +306,10 @@ router.get('/sessions', requireAuth, async (req, res) => {
 
     const rows = aggregated.rows;
     const total = rows.length ? Number(rows[0].grand_total || 0) : 0;
-    const summaryRows = rows.length ? await (async () => {
-      await ensureSummaryTable();
-      return pool.query(
-        `SELECT session_key, summary, created_at FROM session_summaries WHERE user_id = $1 AND session_key = ANY($2::text[])`,
-        [userId, rows.map(row => row.session_key)]
-      );
-    })() : { rows: [] };
+      const summaryRows = rows.length ? await pool.query(
+      `SELECT session_key, summary, created_at FROM session_summaries WHERE user_id = $1 AND session_key = ANY($2::text[])`,
+      [userId, rows.map(row => row.session_key)]
+    ) : { rows: [] };
     const summaries = new Map(summaryRows.rows.map(row => [row.session_key, row]));
 
     // 本页会话的最后一条记录 → 工具调用统计 / 最近工具名 / cwd 痕迹。
@@ -534,7 +531,9 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
   const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
   if (!sessionKey) return res.status(400).json({ error: '缺少 sessionKey' });
   const { page, pageSize, offset } = pageParams(req.query, DETAIL_PAGE_SIZE);
-  const lastFingerprint = String(req.query.lastFingerprint || '').trim();
+  const cursorCreatedAt = String(req.query.beforeCreatedAt || '').trim();
+  const cursorId = Number.parseInt(req.query.beforeId, 10);
+  const hasCursor = cursorCreatedAt && Number.isInteger(cursorId) && cursorId > 0;
 
   try {
     const baseWhere = `
@@ -543,7 +542,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
       AND ${SESSION_KEY_SQL.replace(/u\./g, '')} = $2
     `;
 
-    // 压缩会话探测：有 delta 记录则整段拉取展开（锚点可能在 90 天窗口外），再按页切片
+    // 压缩会话探测：有 delta 记录则整段拉取展开，再按页切片
     const deltaCheck = await pool.query(
       `SELECT EXISTS (SELECT 1 FROM usage_records WHERE ${baseWhere} AND storage_mode = 'delta') AS has_delta`,
       [userId, sessionKey]
@@ -569,9 +568,14 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
       `, [userId, sessionKey]);
       total = fullRes.rows.length;
       const expanded = expandSessionMessages(fullRes.rows);
-      rawDetailRows = fullRes.rows.slice(offset, offset + pageSize).map((row, k) => ({
+      let sliceStart = offset;
+      if (hasCursor) {
+        const cursorIndex = fullRes.rows.findIndex(row => row.id === cursorId);
+        sliceStart = cursorIndex >= 0 ? Math.max(0, cursorIndex - pageSize) : 0;
+      }
+      rawDetailRows = fullRes.rows.slice(sliceStart, sliceStart + pageSize).map((row, k) => ({
         ...row,
-        messages: expanded[offset + k] || [],
+        messages: expanded[sliceStart + k] || [],
       }));
     } else {
       const countResult = await pool.query(
@@ -580,21 +584,29 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
       );
       total = Number(countResult.rows[0]?.total || 0);
       if (!total) return res.json({ sessionKey, page, pageSize, total: 0, records: [] });
+      const cursorWhere = hasCursor ? 'AND (created_at, id) < ($3::timestamp, $4::int)' : '';
+      const queryParams = hasCursor ? [userId, sessionKey, cursorCreatedAt, cursorId] : [userId, sessionKey];
       const recordsResult = await pool.query(`
         SELECT * FROM (
           ${DETAIL_COLUMNS}
           WHERE ${baseWhere}
+            ${cursorWhere}
           ORDER BY created_at DESC, id DESC
-          OFFSET ${offset} LIMIT ${pageSize}
+          ${hasCursor ? '' : `OFFSET ${offset}`} LIMIT ${pageSize}
         ) page_rows
         ORDER BY created_at ASC, id ASC
-      `, [userId, sessionKey]);
+      `, queryParams);
       rawDetailRows = recordsResult.rows;
     }
 
     const records = buildDetailRecords(rawDetailRows);
+    const lastRecord = rawDetailRows[0];
+    const nextCursor = lastRecord ? {
+      beforeCreatedAt: lastRecord.created_at,
+      beforeId: lastRecord.id,
+    } : null;
 
-    res.json({ sessionKey, page, pageSize, total, records });
+    res.json({ sessionKey, page, pageSize, total, records, nextCursor });
   } catch (error) {
     Logger.error('[会话详情] 查询错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -674,22 +686,6 @@ function buildDetailRecords(rawRows) {
 }
 
 // ========== 会话总结 ==========
-const SUMMARY_TABLE_SQL = `
-  CREATE TABLE IF NOT EXISTS session_summaries (
-    id BIGSERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    session_key TEXT NOT NULL,
-    summary TEXT NOT NULL,
-    model TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, session_key)
-  )`;
-let summaryTableReady = false;
-async function ensureSummaryTable() {
-  if (summaryTableReady) return;
-  await pool.query(SUMMARY_TABLE_SQL);
-  summaryTableReady = true;
-}
 
 // 内部推理：本地网关 + 服务端持有的第一个可用 key
 async function callInternalLLM(promptText, userId) {
@@ -871,7 +867,6 @@ function buildSessionDigest(records) {
 // POST /:sessionKey/summary —— 生成并缓存（支持 ?stream=1 / Accept: text/event-stream 流式输出）
 router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
   try {
-    await ensureSummaryTable();
     const uid = req.session.user.id;
     const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
     if (!sessionKey) return res.status(400).json({ error: '缺少 sessionKey' });
@@ -967,7 +962,6 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
 // GET /:sessionKey/summary —— 读缓存
 router.get('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
   try {
-    await ensureSummaryTable();
     const sessionKey = String(req.params.sessionKey || '').slice(0, 200).trim();
     const r = await pool.query(
       'SELECT summary, created_at FROM session_summaries WHERE user_id = $1 AND session_key = $2',

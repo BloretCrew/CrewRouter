@@ -882,6 +882,26 @@ async function ensureProductsTable() {
   }
 }
 
+// ========== 自动迁移：会话总结表 ==========
+async function ensureSessionSummariesTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS session_summaries (
+        id BIGSERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        session_key TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        model TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, session_key)
+      )
+    `);
+    Logger.info('[迁移] 表 session_summaries 已就绪');
+  } catch (err) {
+    Logger.warn(`[迁移] session_summaries 表创建跳过: ${err.message}`);
+  }
+}
+
 // ========== 自动迁移：按小时聚合使用数据表 ==========
 async function ensureQuotaDataTable() {
   try {
@@ -2557,6 +2577,7 @@ async function runPendingMigrations() {
     ensureUsageCompressColumns,
     ensureTraceSessionTables,
     ensureUsageMessageAnalysisTable,
+    ensureSessionSummariesTable,
     backfillUsageRecords,
     ensureBalanceAlertSettings,
     ensureHookNotifyRules,
