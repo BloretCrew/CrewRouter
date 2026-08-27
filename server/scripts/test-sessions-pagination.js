@@ -37,6 +37,32 @@ function paginateCompressed(total, pageSize) {
   return pages;
 }
 
+function paginateCompressedWithCursor(total, pageSize) {
+  const rows = Array.from({ length: total }, (_, index) => ({
+    created_at: `2026-08-27T00:00:${String(index + 1).padStart(2, '0')}.000Z`,
+    id: index + 1,
+  }));
+  const pages = [];
+  let sliceEnd = total;
+  while (sliceEnd > 0) {
+    const sliceStart = Math.max(0, sliceEnd - pageSize);
+    const pageRows = rows.slice(sliceStart, sliceEnd);
+    const hasMore = hasMoreCompressedSlice(sliceStart);
+    pages.push({
+      ids: pageRows.map(row => row.id),
+      nextCursor: buildDetailNextCursor(hasMore, pageRows[0]),
+    });
+    sliceEnd = sliceStart;
+  }
+  return pages;
+}
+
+function assertUniquePageCoverage(pages, total) {
+  const ids = pages.flatMap(page => page.ids);
+  assert.strictEqual(ids.length, total);
+  assert.strictEqual(new Set(ids).size, total);
+}
+
 assert.deepStrictEqual(paginateNonCompressed(45, 40), [
   { ids: Array.from({ length: 40 }, (_, index) => index + 6), hasMore: true },
   { ids: Array.from({ length: 5 }, (_, index) => index + 1), hasMore: false },
@@ -55,6 +81,22 @@ assert.deepStrictEqual(paginateCompressed(100, 40), [
   { ids: Array.from({ length: 40 }, (_, index) => index + 21), hasMore: true },
   { ids: Array.from({ length: 20 }, (_, index) => index + 1), hasMore: false },
 ]);
+
+const compressed45 = paginateCompressedWithCursor(45, 40);
+assert.deepStrictEqual(compressed45.map(page => page.nextCursor), [
+  { beforeCreatedAt: '2026-08-27T00:00:06.000Z', beforeId: 6 },
+  null,
+]);
+assertUniquePageCoverage(compressed45, 45);
+
+const compressed100 = paginateCompressedWithCursor(100, 40);
+assert.deepStrictEqual(compressed100.map(page => page.nextCursor), [
+  { beforeCreatedAt: '2026-08-27T00:00:61.000Z', beforeId: 61 },
+  { beforeCreatedAt: '2026-08-27T00:00:21.000Z', beforeId: 21 },
+  null,
+]);
+assertUniquePageCoverage(compressed100, 100);
+
 assert.strictEqual(hasMoreCursorPage(0, 40), false);
 assert.strictEqual(hasMoreCursorPage(40, 40), false);
 assert.strictEqual(hasMoreCursorPage(41, 40), true);
