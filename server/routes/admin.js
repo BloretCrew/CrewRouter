@@ -34,6 +34,7 @@ const { normalizeTestUserAgent } = require('../utils/model-test');
 const { getRetentionConfig, invalidateRetentionConfigCache } = require('../utils/usage-agg');
 const { runCompressOnce } = require('../utils/usage-compress');
 const { runPurgeOnce } = require('../utils/usage-purge');
+const retentionRunner = require('../utils/retention-runner');
 const {
   generateDefaultQuotaScript,
   queryProviderQuota,
@@ -3240,10 +3241,14 @@ function normalizeRetentionPayload(body = {}) {
     aggEnabled: body.agg_enabled === true,
   };
   if (config.compressDays && config.purgeDays && config.compressDays >= config.purgeDays) {
-    throw new Error('compress_days 必须小于 purge_days（非 0 时）');
+    const error = new Error('compress_days must be less than purge_days when both are non-zero');
+    error.code = 'RETENTION_DAYS_ORDER';
+    throw error;
   }
   if (config.compressSizeGb && config.purgeSizeGb && config.compressSizeGb >= config.purgeSizeGb) {
-    throw new Error('compress_size_gb 必须小于 purge_size_gb（非 0 时）');
+    const error = new Error('compress_size_gb must be less than purge_size_gb when both are non-zero');
+    error.code = 'RETENTION_SIZE_ORDER';
+    throw error;
   }
   return config;
 }
@@ -3251,16 +3256,11 @@ function normalizeRetentionPayload(body = {}) {
 router.get('/retention-config', requireAuth, requireAdmin, async (req, res) => {
   try {
     const cfg = await getRetentionConfig({ fresh: true });
-    const size = await Promise.all(['retention.compress_size_gb', 'retention.purge_size_gb'].map(async (key) => {
-      const result = await pool.query('SELECT value FROM settings WHERE key = $1', [key]);
-      if (!result.rows.length) return 0;
-      try { return Number(JSON.parse(result.rows[0].value)) || 0; } catch { return Number(result.rows[0].value) || 0; }
-    }));
     res.json({
       compress_days: cfg.compressDays,
       purge_days: cfg.purgeDays,
-      compress_size_gb: size[0],
-      purge_size_gb: size[1],
+      compress_size_gb: cfg.compressSizeGb,
+      purge_size_gb: cfg.purgeSizeGb,
       agg_enabled: cfg.aggEnabled,
     });
   } catch (error) {
@@ -3288,21 +3288,22 @@ router.put('/retention-config', requireAuth, requireAdmin, auditMiddleware(ACTIO
     invalidateRetentionConfigCache();
     res.json({ success: true, ...req.body });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ code: error.code || 'RETENTION_INVALID_VALUE', error: error.message });
   }
 });
 
-async function runRetentionTask(task, req, res) {
-  try {
-    const result = await task({ dryRun: Boolean(req.body?.dry_run) });
-    return res.json({ success: true, result });
-  } catch (error) {
-    Logger.error('[数据保留] 任务执行失败:', error);
-    return res.status(500).json({ error: error.message });
-  }
+function runRetentionTask(task, kind, req, res) {
+  const started = retentionRunner.startTask(kind, task, { dryRun: Boolean(req.body?.dry_run) });
+  if (started.conflict) return res.status(409).json({ code: 'RETENTION_TASK_BUSY', error: '数据保留任务正在执行' });
+  return res.status(202).json({ taskId: started.taskId, status: 'queued' });
 }
-router.post('/retention/run-compress', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_SETTINGS, { resourceType: 'retention', descriptionFrom: () => '立即执行数据压缩' }), (req, res) => runRetentionTask(runCompressOnce, req, res));
-router.post('/retention/run-purge', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_SETTINGS, { resourceType: 'retention', descriptionFrom: () => '立即执行数据清除' }), (req, res) => runRetentionTask(runPurgeOnce, req, res));
+router.get('/retention/tasks/:taskId', requireAuth, requireAdmin, (req, res) => {
+  const task = retentionRunner.getTask(req.params.taskId);
+  if (!task) return res.status(404).json({ code: 'RETENTION_TASK_NOT_FOUND', error: '任务不存在' });
+  res.json(task);
+});
+router.post('/retention/run-compress', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_SETTINGS, { resourceType: 'retention', descriptionFrom: () => '立即执行数据压缩' }), (req, res) => runRetentionTask(runCompressOnce, 'compress', req, res));
+router.post('/retention/run-purge', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_SETTINGS, { resourceType: 'retention', descriptionFrom: () => '立即执行数据清除' }), (req, res) => runRetentionTask(runPurgeOnce, 'purge', req, res));
 
 // ========== 飞书登录配置 ==========
 

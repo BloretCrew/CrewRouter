@@ -27,6 +27,7 @@ const { shanghaiDateString, shanghaiDateRange } = require('./timezone');
 const DEFAULT_DETAIL_WINDOW_DAYS = 90;
 // 会话增量压缩年龄门槛默认值（Phase 2）：超过该天数的会话才压缩
 const DEFAULT_COMPRESS_DAYS = 14;
+const RETENTION_LIMITS = { days: 3650, sizeGb: 1024 };
 const AGG_TABLE = 'usage_daily_agg';
 const HEALTH_PORT = (config.app && config.app.port) || 20003;
 
@@ -58,10 +59,10 @@ async function readSetting(key) {
   }
 }
 
-async function readSettingInt(key, fallback) {
+async function readSettingInt(key, fallback, max) {
   const raw = await readSetting(key);
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) ? n : fallback;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 && n <= max ? n : fallback;
 }
 
 async function readSettingBool(key, fallback) {
@@ -84,10 +85,10 @@ async function getRetentionConfig({ fresh = false } = {}) {
     return configCache.value;
   }
   const aggEnabled = await readSettingBool('retention.agg_enabled', true);
-  const purgeDays = await readSettingInt('retention.purge_days', DEFAULT_DETAIL_WINDOW_DAYS);
-  const compressDays = await readSettingInt('retention.compress_days', DEFAULT_COMPRESS_DAYS);
-  const compressSizeGb = await readSettingInt('retention.compress_size_gb', 0);
-  const purgeSizeGb = await readSettingInt('retention.purge_size_gb', 0);
+  const purgeDays = await readSettingInt('retention.purge_days', DEFAULT_DETAIL_WINDOW_DAYS, RETENTION_LIMITS.days);
+  const compressDays = await readSettingInt('retention.compress_days', DEFAULT_COMPRESS_DAYS, RETENTION_LIMITS.days);
+  const compressSizeGb = await readSettingInt('retention.compress_size_gb', 0, RETENTION_LIMITS.sizeGb);
+  const purgeSizeGb = await readSettingInt('retention.purge_size_gb', 0, RETENTION_LIMITS.sizeGb);
   const value = {
     aggEnabled,
     purgeDays: purgeDays > 0 ? purgeDays : 0,
@@ -484,8 +485,10 @@ function scheduleNextDailyAgg() {
 }
 
 /** 调度保留任务：每天 04:05 执行压缩与清除，任务结果统一写 retention.log。 */
+let retentionSchedulerStarted = false;
 function startRetentionScheduler() {
-  if (config.demo) return;
+  if (config.demo || retentionSchedulerStarted) return;
+  retentionSchedulerStarted = true;
   const schedule = () => {
     const now = new Date();
     const next = new Date(now);
@@ -495,9 +498,12 @@ function startRetentionScheduler() {
       try {
         const { runCompressOnce } = require('./usage-compress');
         const { runPurgeOnce } = require('./usage-purge');
-        await runCompressOnce();
-        await runPurgeOnce();
-        logRetention('[保留调度] 04:05 压缩与清除完成');
+        const { runExclusive } = require('./retention-runner');
+        const result = await runExclusive('scheduled', async () => {
+          await runCompressOnce();
+          return runPurgeOnce();
+        });
+        logRetention(`[保留调度] 04:05 压缩与清除完成${result?.skipped ? `（${result.skipped}）` : ''}`);
       } catch (err) {
         Logger.warn(`[保留调度] 执行异常: ${err.message}`);
         logRetention(`[保留调度] 执行异常: ${err.message}`);
