@@ -83,7 +83,7 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
        LEFT JOIN teams t ON u.team_id = t.id
        LEFT JOIN user_groups ug ON u.group_id = ug.id`;
     const selectCols = `
-       SELECT u.id, u.username, u.email, u.email_verified, u.avatar, u.balance, u.refund_balance,
+       SELECT u.id, u.username, u.nickname, u.email, u.email_verified, u.avatar, u.balance, u.refund_balance,
               u.is_admin, u.tags, u.rate_limit_rpm, u.rate_limit_tpm, u.created_at,
               u.team_id, t.name AS team_name,
               u.group_id, ug.name AS group_name`;
@@ -102,7 +102,7 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
     let where = '';
     const params = [];
     if (q) {
-      where = ` WHERE (u.username ILIKE $1 OR u.email ILIKE $1)`;
+      where = ` WHERE (u.username ILIKE $1 OR COALESCE(u.nickname, '') ILIKE $1 OR u.email ILIKE $1)`;
       params.push(`%${q}%`);
     }
 
@@ -1761,7 +1761,7 @@ router.get('/providers', requireAuth, requireAdmin, async (req, res) => {
     } catch (_) { /* ignore */ }
 
     const selectSql = hasCreatedBy
-      ? `SELECT p.*, u.username FROM providers p LEFT JOIN users u ON p.created_by = u.id`
+      ? `SELECT p.*, u.username, u.nickname, u.nickname AS display_name FROM providers p LEFT JOIN users u ON p.created_by = u.id`
       : `SELECT p.* FROM providers p`;
     const fromSql = hasCreatedBy
       ? `FROM providers p LEFT JOIN users u ON p.created_by = u.id`
@@ -1785,7 +1785,7 @@ router.get('/providers', requireAuth, requireAdmin, async (req, res) => {
     if (q) {
       const fields = [`p.name ILIKE $${idx}`, `COALESCE(p.base_url,'') ILIKE $${idx}`];
       if (hasNotes) fields.push(`COALESCE(p.notes,'') ILIKE $${idx}`);
-      if (hasCreatedBy) fields.push(`COALESCE(u.username,'') ILIKE $${idx}`);
+      if (hasCreatedBy) fields.push(`COALESCE(u.username,'') ILIKE $${idx}`, `COALESCE(u.nickname,'') ILIKE $${idx}`);
       whereParts.push(`(${fields.join(' OR ')})`);
       params.push(`%${q}%`);
       idx++;

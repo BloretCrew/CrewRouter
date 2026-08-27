@@ -685,7 +685,7 @@ class PlaygroundApp {
     const meta = msg?.meta || extraMeta;
 
     // 用户信息
-    const userName = this.userInfo?.username || t('你');
+    const userName = this.userInfo?.nickname || this.userInfo?.display_name || this.userInfo?.username || t('你');
     const userAvatar = this.userInfo?.avatar || '';
 
     // 模型信息

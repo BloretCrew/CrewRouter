@@ -204,6 +204,7 @@ function rowToPlugin(row) {
     version: row.version,
     author: row.author || '',
     authorUsername: row.author_username,
+    authorNickname: row.author_nickname || row.author_username,
     description: row.description || '',
     longDescription: row.long_description || '',
     url: row.url || '',
@@ -237,6 +238,7 @@ function publicView(plugin, opts = {}) {
     version: plugin.version,
     author: plugin.author,
     authorUsername: plugin.authorUsername,
+    authorNickname: plugin.authorNickname || plugin.authorUsername,
     description: plugin.description,
     longDescription: plugin.longDescription || '',
     url: plugin.url || '',
@@ -317,6 +319,8 @@ ALTER TABLE plugin_store_plugins
   ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS sha256 TEXT NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS pending_update JSONB NULL;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname VARCHAR(255);
 
 CREATE TABLE IF NOT EXISTS plugin_store_ratings (
   plugin_id TEXT NOT NULL REFERENCES plugin_store_plugins(id) ON DELETE CASCADE,
@@ -498,14 +502,21 @@ async function listPlugins(opts = {}) {
     orderBy = 'install_count DESC, updated_at DESC';
   }
 
-  const sql = `SELECT * FROM plugin_store_plugins ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${orderBy}`;
+  const sql = `SELECT p.*, u.nickname AS author_nickname
+    FROM plugin_store_plugins p
+    LEFT JOIN users u ON LOWER(u.username) = LOWER(p.author_username)
+    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    ORDER BY ${orderBy}`;
   const res = await q(sql, params);
   const includePending = opts.scope === 'mine' || opts.scope === 'admin';
   return res.rows.map((row) => publicView(rowToPlugin(row), { includePending }));
 }
 
 async function getPlugin(id) {
-  const res = await q('SELECT * FROM plugin_store_plugins WHERE id = $1', [id]);
+  const res = await q(`SELECT p.*, u.nickname AS author_nickname
+    FROM plugin_store_plugins p
+    LEFT JOIN users u ON LOWER(u.username) = LOWER(p.author_username)
+    WHERE p.id = $1`, [id]);
   return rowToPlugin(res.rows[0]);
 }
 
@@ -769,6 +780,7 @@ function ratingRowToPublic(row, replies) {
   return {
     pluginId: row.plugin_id,
     username: row.username,
+    nickname: row.nickname || row.username,
     stars: Number(row.stars),
     comment: row.comment || '',
     createdAt: iso(row.created_at),
@@ -784,6 +796,7 @@ function replyRowToPublic(row) {
     pluginId: row.plugin_id,
     ratingUsername: row.rating_username,
     username: row.username,
+    nickname: row.nickname || row.username,
     body: row.body || '',
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
@@ -793,7 +806,11 @@ function replyRowToPublic(row) {
 async function listRepliesForRatings(pluginId, ratingUsernames) {
   if (!ratingUsernames || !ratingUsernames.length) return new Map();
   const res = await q(
-    `SELECT * FROM plugin_store_rating_replies WHERE plugin_id = $1 AND rating_username = ANY($2::text[]) ORDER BY created_at ASC`,
+    `SELECT r.*, u.nickname
+       FROM plugin_store_rating_replies r
+       LEFT JOIN users u ON LOWER(u.username) = LOWER(r.username)
+      WHERE r.plugin_id = $1 AND r.rating_username = ANY($2::text[])
+      ORDER BY r.created_at ASC`,
     [pluginId, ratingUsernames]
   );
   const map = new Map();
@@ -820,7 +837,11 @@ async function listRatings(pluginId, opts = {}) {
   if (!plugin) throw storeError('插件不存在', 'NOT_FOUND');
 
   const listRes = await q(
-    `SELECT * FROM plugin_store_ratings WHERE plugin_id = $1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3`,
+    `SELECT r.*, u.nickname
+       FROM plugin_store_ratings r
+       LEFT JOIN users u ON LOWER(u.username) = LOWER(r.username)
+      WHERE r.plugin_id = $1
+      ORDER BY r.updated_at DESC LIMIT $2 OFFSET $3`,
     [pluginId, limit, offset]
   );
   const usernames = listRes.rows.map((r) => r.username);
@@ -838,9 +859,10 @@ async function listRatings(pluginId, opts = {}) {
 
 async function getUserRating(pluginId, username) {
   if (!username) return null;
-  const res = await q(`SELECT * FROM plugin_store_ratings WHERE plugin_id = $1 AND username = $2`, [
-    pluginId, username,
-  ]);
+  const res = await q(`SELECT r.*, u.nickname
+    FROM plugin_store_ratings r
+    LEFT JOIN users u ON LOWER(u.username) = LOWER(r.username)
+    WHERE r.plugin_id = $1 AND r.username = $2`, [pluginId, username]);
   return ratingRowToPublic(res.rows[0]);
 }
 

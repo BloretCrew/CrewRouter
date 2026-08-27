@@ -78,6 +78,7 @@ router.get('/github/callback', async (req, res) => {
       req.session.user = {
         id: user.id,
         username: user.username,
+        nickname: user.nickname || user.username,
         email: user.email,
         avatar: user.avatar,
         isAdmin: user.is_admin,
@@ -124,6 +125,7 @@ router.get('/github/callback', async (req, res) => {
           req.session.user = {
             id: user.id,
             username: user.username,
+            nickname: user.nickname || user.username,
             email: user.email,
             avatar: user.avatar,
             isAdmin: user.is_admin,

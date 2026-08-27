@@ -61,6 +61,7 @@ router.post('/login', async (req, res) => {
     req.session.user = {
       id: user.id,
       username: user.username,
+      nickname: user.nickname || user.username,
       email: user.email,
       avatar: user.avatar,
       isAdmin: user.is_admin,
@@ -151,6 +152,7 @@ router.post('/login/2fa', async (req, res) => {
     req.session.user = {
       id: user.id,
       username: user.username,
+      nickname: user.nickname || user.username,
       email: user.email,
       avatar: user.avatar,
       isAdmin: user.is_admin,

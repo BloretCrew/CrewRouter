@@ -14,6 +14,7 @@ function buildSessionUser(user) {
   return {
     id: user.id,
     username: user.username,
+    nickname: user.nickname || user.username,
     email: user.email,
     avatar: user.avatar,
     isAdmin: user.is_admin,
@@ -293,3 +294,4 @@ router.get('/list', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.buildSessionUser = buildSessionUser;

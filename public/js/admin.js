@@ -248,7 +248,7 @@ class AdminApp {
     const usernameEl = document.getElementById('username');
     const avatarEl = document.getElementById('userAvatar');
     
-    if (usernameEl) usernameEl.textContent = this.user.username;
+    if (usernameEl) usernameEl.textContent = this.user.nickname || this.user.display_name || this.user.username;
     if (avatarEl) {
       avatarEl.src = this.user.avatar || '';
       avatarEl.onerror = () => {
@@ -760,7 +760,7 @@ class AdminApp {
         <tbody>
           ${users.map(user => `
             <tr>
-              <td><strong>${escapeHtml(user.username)}</strong></td>
+              <td><strong>${escapeHtml(user.nickname || user.display_name || user.username)}</strong></td>
               <td style="color:var(--muted-foreground);font-size:12px;">${escapeHtml(user.email) || '-'}</td>
               <td>${user.email_verified ? '<span style="color:#16a34a;font-size:12px;">' + t('✓ 已验证') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('✗ 未验证') + '</span>'}</td>
               <td style="font-variant-numeric:tabular-nums;">${parseFloat(user.balance || 0).toFixed(0)}</td>
@@ -3072,7 +3072,7 @@ class AdminApp {
                 <div class="provider-row-name">${escapeHtml(provider.name)}</div>
                 <div class="provider-row-url" title="${escapeHtml(provider.base_url || '')}">${escapeHtml(provider.base_url || '')}</div>
               </td>
-              ${showOwner ? `<td style="font-size:12px;color:var(--muted-foreground);">${escapeHtml(provider.username || t('未知'))}</td>` : ''}
+              ${showOwner ? `<td style="font-size:12px;color:var(--muted-foreground);">${escapeHtml(provider.nickname || provider.display_name || provider.username || t('未知'))}</td>` : ''}
               <td class="provider-tags-cell">${this._renderProviderTagChips(provider.tags, pid)}</td>
               <td>${keyModeDisplay}</td>
               <td>${proxyDisplay}</td>
@@ -9653,7 +9653,7 @@ async function(ctx) {
     setHTML(container, `<table class="data-table"><thead><tr>
       <th>用户名</th><th>邮箱</th><th>积分</th><th>操作</th>
     </tr></thead><tbody>${pg.items.map(m => `<tr>
-      <td>${escapeHtml(m.username)}</td>
+      <td>${escapeHtml(m.nickname || m.display_name || m.username)}</td>
       <td>${escapeHtml(m.email || '-')}</td>
       <td>${parseFloat(m.balance || 0).toFixed(0)}</td>
       <td><button class="btn btn-sm btn-danger" onclick="adminApp.removeUserGroupMember(${groupId}, ${m.id})">移除</button></td>
@@ -9710,7 +9710,7 @@ async function(ctx) {
           setHTML(listEl, rows.map(u => `
             <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
               <input type="checkbox" value="${u.id}" class="group-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
-              <span>${escapeHtml(u.username)}</span>
+              <span>${escapeHtml(u.nickname || u.display_name || u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
             </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.group-member-checkbox').forEach(cb => {
@@ -10331,7 +10331,7 @@ async function(ctx) {
     setHTML(container, `<table class="data-table"><thead><tr>
       <th>用户名</th><th>邮箱</th><th>加入时间</th>${isPersonal ? '' : '<th>' + t('操作') + '</th>'}
     </tr></thead><tbody>${pg.items.map(m => `<tr>
-      <td>${escapeHtml(m.username)}</td>
+      <td>${escapeHtml(m.nickname || m.display_name || m.username)}</td>
       <td>${escapeHtml(m.email || '-')}</td>
       <td>${new Date(m.created_at).toLocaleDateString()}</td>
       ${isPersonal ? '' : `<td><button class="btn btn-sm btn-danger" onclick="adminApp.removeTeamMember(${teamId}, ${m.id})">${t('移除')}</button></td>`}
@@ -10397,7 +10397,7 @@ async function(ctx) {
           setHTML(listEl, rows.map(u => `
             <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
               <input type="checkbox" value="${u.id}" class="team-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
-              <span>${escapeHtml(u.username)}</span>
+              <span>${escapeHtml(u.nickname || u.display_name || u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
               ${u.team_name ? `<span class="badge">${escapeHtml(u.team_name)}</span>` : ''}
             </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');

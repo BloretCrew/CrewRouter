@@ -62,7 +62,7 @@
     var logoutBtn = document.getElementById('storeLogoutBtn');
     if (me.loggedIn) {
       userBox.style.display = 'inline';
-      userBox.textContent = (me.user.username) + (me.user.admin ? ' · admin' : '') + (me.user.avatar ? ' · ' : '');
+      userBox.textContent = (me.user.nickname || me.user.username) + (me.user.admin ? ' · admin' : '') + (me.user.avatar ? ' · ' : '');
       loginBtn.style.display = 'none';
       logoutBtn.style.display = 'inline';
       mine.style.display = 'inline';
@@ -135,7 +135,7 @@
           '<div class="store-card__name">' + esc(p.name) + '</div>' +
           '<div class="store-card__desc">' + esc(p.description || '') + '</div>' +
           '<div class="store-card__tags">' + tagChips(p.tags.slice(0, 3)) + '</div>' +
-          '<div class="store-card__meta"><span>v' + esc(p.version) + '</span><span>' + esc(p.authorUsername || p.author) + '</span><span>' + rating + '</span></div>' +
+          '<div class="store-card__meta"><span>v' + esc(p.version) + '</span><span>' + esc(p.authorNickname || p.author || p.authorUsername) + '</span><span>' + rating + '</span></div>' +
           '<div class="store-card__actions"><a class="btn btn-primary btn-sm" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + t('详情') + '</a></div>' +
         '</div>' +
       '</article>'
@@ -218,10 +218,10 @@
     if (!ratings || !ratings.length) return '<div class="store-empty" style="padding:20px;">' + esc(t('暂无评分')) + '</div>';
     return ratings.map(function (r) {
       var replies = (r.replies || []).map(function (rp) {
-        return '<div class="store-rating-item" style="margin:8px 0 0; "><div class="store-rating-item__head"><strong>' + esc(rp.username) + '</strong><span>' + esc(fmtDate(rp.createdAt)) + '</span></div><div>' + esc(rp.body) + '</div></div>';
+        return '<div class="store-rating-item" style="margin:8px 0 0; "><div class="store-rating-item__head"><strong>' + esc(rp.nickname || rp.username) + '</strong><span>' + esc(fmtDate(rp.createdAt)) + '</span></div><div>' + esc(rp.body) + '</div></div>';
       }).join('');
       return '<div class="store-rating-item">' +
-        '<div class="store-rating-item__head"><strong>' + esc(r.username) + '</strong>' + starHtml(r.stars) + '<span>' + esc(fmtDate(r.updatedAt || r.createdAt)) + '</span></div>' +
+        '<div class="store-rating-item__head"><strong>' + esc(r.nickname || r.username) + '</strong>' + starHtml(r.stars) + '<span>' + esc(fmtDate(r.updatedAt || r.createdAt)) + '</span></div>' +
         (r.comment ? '<div style="margin-top:6px;">' + esc(r.comment) + '</div>' : '') +
         (replies ? '<div style="margin-top:8px;">' + replies + '</div>' : '') +
         '<div style="margin-top:8px;"><button class="btn btn-sm btn-secondary" data-reply-user="' + esc(r.username) + '">' + esc(t('回复')) + '</button></div>' +
@@ -240,7 +240,7 @@
       html += '<div class="store-detail__head">' +
         '<div class="store-detail__icon">' + (p.icon ? '<img src="' + esc(p.icon) + '" style="width:72px;height:72px;border-radius:16px;object-fit:cover;">' : '🧩') + '</div>' +
         '<div><div class="store-detail__title">' + esc(p.name) + '</div>' +
-        '<div class="store-detail__byline">v' + esc(p.version) + ' · ' + esc(p.authorUsername || p.author) + '</div>' +
+        '<div class="store-detail__byline">v' + esc(p.version) + ' · ' + esc(p.authorNickname || p.author || p.authorUsername) + '</div>' +
         '<div class="store-detail__stats"><span>' + esc(t('安装')) + ' ' + (p.installCount || 0) + '</span><span>' + esc(t('评分')) + ' ' + (p.ratingCount || 0) + '</span></div>' +
         '</div></div>';
       html += '<div class="store-detail__body">' +
@@ -554,7 +554,7 @@
             var statusText = p.status === 'approved' ? t('已上架') : p.status === 'rejected' ? t('已拒绝') : t('待审核');
             return '<div class="store-admin-row">' +
               '<div class="store-admin-row__meta"><div><strong>' + esc(p.name) + '</strong> <span class="btn btn-sm btn-secondary">' + esc(statusText) + '</span> ' + (p.hasPendingUpdate ? t('待更新审核') : '') + '</div>' +
-              '<div style="font-size:12px;color:var(--muted-foreground);margin-top:4px;">v' + esc(p.version) + ' · ' + esc(p.id) + ' · ' + esc(p.authorUsername || p.author) + ' · ' + esc(t('安装')) + ' ' + (p.installCount || 0) + '</div>' +
+              '<div style="font-size:12px;color:var(--muted-foreground);margin-top:4px;">v' + esc(p.version) + ' · ' + esc(p.id) + ' · ' + esc(p.authorNickname || p.author || p.authorUsername) + ' · ' + esc(t('安装')) + ' ' + (p.installCount || 0) + '</div>' +
               (p.rejectReason ? '<div style="font-size:12px;color:var(--destructive);margin-top:4px;">' + esc(t('拒绝原因')) + '：' + esc(p.rejectReason) + '</div>' : '') +
               '</div>' +
               '<div class="store-admin-row__actions">' +
