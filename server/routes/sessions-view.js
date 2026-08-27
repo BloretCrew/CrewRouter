@@ -817,7 +817,8 @@ function buildSessionDigest(records) {
   }
   const recentTools = toolResults.slice(-5);
   const errorTools = recentTools.filter(e => e.is_error);
-  const selectedTools = [...errorTools, ...recentTools.filter(e => !e.is_error && !errorTools.includes(e))].slice(-5);
+  const normalTools = recentTools.filter(e => !e.is_error);
+  const selectedTools = errorTools.slice(0, 5).concat(normalTools.slice(0, Math.max(0, 5 - errorTools.length)));
   for (const e of selectedTools) {
     const result = cleanDisplayText(String(e.resultPreview || '')).slice(0, LIMIT_TOOL_RESULT);
     if (result) parts.push(`[工具结果${e.is_error ? '·错误' : ''}] ${String(e.name || 'unknown').slice(0, 100)}: ${result}`);
@@ -887,7 +888,7 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
       }
       if (!summary) return res.status(502).json({ error: '模型未返回内容' });
       await persistSummary(summary);
-      return res.json({ sessionKey, summary });
+      return res.json({ sessionKey, summary, createdAt: new Date().toISOString() });
     }
 
     // 流式：先发 SSE 头，再逐段转发增量，最后 done（含完整文案并落库）

@@ -6393,7 +6393,7 @@ class ConsoleApp {
           setHTML(liveBody, this._renderSafeMarkdown(acc));
           liveBody.scrollTop = liveBody.scrollHeight;
         }
-        this._updateTaskBar('loading', { chars: acc.length });
+        this._updateTaskBar('loading', { chars: acc.length, sessionKey: reqKey });
       };
       while (true) {
         const { done, value } = await reader.read();
@@ -6427,7 +6427,7 @@ class ConsoleApp {
       this.showToast(t('总结已生成'), 'success');
       if (this._summarySeq === reqSeq) this._updateTaskBar('done', { summary: acc, sessionKey: reqKey });
       return;
-      // 生成成功后该会话的总结已入库，缓存命中状态记下来供按钮切换
+      /* legacy non-stream completion path retained for compatibility */
       this._summaryCachedKeys.add(reqKey);
       // 仅当没有更新的请求接管时才更新任务条为完成态，避免旧结果覆盖新任务
       if (this._summarySeq === reqSeq) {
