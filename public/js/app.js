@@ -5253,7 +5253,6 @@ class ConsoleApp {
     this._detailMsgPage = 0;
     this._detailLoaded = 0;
     this._detailTotal = 0;
-    this._renderedEventSigs = [];
     // 切换会话时的状态隔离：清空上一会话的总结状态与分页指纹，避免串会话
     this._summaryPending = false;
     this._sessionSummaryText = '';
@@ -5287,6 +5286,7 @@ class ConsoleApp {
     const metaBar = document.getElementById('sessionDetailMetaBar');
     const requestSeq = this._detailRequestSeq;
     if (!timeline || !sessionKey || this._detailLoading || sessionKey !== this._detailSessionKey) return;
+    const cursor = page > 1 ? this._detailCursor : null;
     this._detailLoading = true;
     const moreBtn = document.getElementById('sessionMoreBtn');
     if (page === 1) {
@@ -5296,7 +5296,6 @@ class ConsoleApp {
     }
 
     try {
-      const cursor = page > 1 ? this._detailCursor : null;
       if (page > 1 && !cursor) return;
       const cursorParams = cursor
         ? `&beforeCreatedAt=${encodeURIComponent(cursor.beforeCreatedAt)}&beforeId=${encodeURIComponent(cursor.beforeId)}`
@@ -5325,24 +5324,29 @@ class ConsoleApp {
           <span>${escapeHtml(records.length ? `${new Date(records[0].ts).toLocaleString()} → ${new Date(records[records.length - 1].ts).toLocaleString()}` : '')}</span>
         `);
         setHTML(timeline, '');
-        // refresh / 首次加载都从空白时间线开始，签名序列一并重置（跨页去重状态）
-        this._renderedEventSigs = [];
+        // refresh / 首次加载都从空白时间线开始。
         this._detailCursor = null;
+        this._detailFirstRecordEvents = null;
       }
 
       const records = Array.isArray(data.records) ? data.records : [];
-      const renderedEvents = new Map();
-      const recordsForDedupe = page > 1 ? [...records].reverse() : records;
-      for (const record of recordsForDedupe) {
-        const rawEvents = Array.isArray(record.events) ? record.events : [];
-        // 跨页去重：旧页从邻近边界开始处理，避免插入方向与签名顺序相反。
-        const evts = this._dedupeRenderedEvents(rawEvents);
-        renderedEvents.set(record.id, evts);
-        this._appendRenderedEventSigs(evts, page > 1);
+      // buildDetailRecords 只在当前页内按相邻记录去除上下文前缀；游标保证记录不重复。
+      // 跨页只检查旧页首记录与已渲染首记录这一条边界：旧页上下文是新页上下文的前缀。
+      if (page > 1 && records.length && Array.isArray(this._detailFirstRecordEvents) && this._detailFirstRecordEvents.length) {
+        const boundary = this._detailFirstRecordEvents.map(event => JSON.stringify(event));
+        const boundaryRecord = records[0];
+        const incoming = Array.isArray(boundaryRecord.events) ? boundaryRecord.events : [];
+        const incomingSigs = incoming.map(event => JSON.stringify(event));
+        let overlap = 0;
+        while (overlap < incomingSigs.length && overlap < boundary.length && incomingSigs[overlap] === boundary[overlap]) overlap++;
+        if (overlap >= Math.ceil(incomingSigs.length / 2)) boundaryRecord.events = incoming.slice(overlap);
+      }
+      if (records.length) {
+        const firstEvents = Array.isArray(records[0].events) ? records[0].events : [];
+        this._detailFirstRecordEvents = firstEvents.slice();
       }
       const frag = records.map(record => {
-        const rawEvents = Array.isArray(record.events) ? record.events : [];
-        const evts = renderedEvents.get(record.id) || [];
+        const evts = Array.isArray(record.events) ? record.events : [];
 
         // eventsCount 为原始事件数；被抑制的重放数 = 原始数 - 实际渲染数
         const suppressed = Math.max(Number(record.eventsCount || 0) - evts.length, 0);
@@ -5379,6 +5383,7 @@ class ConsoleApp {
         setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${t('该会话暂无消息明细')}</div></li>`);
       }
     } catch (error) {
+      if (requestSeq !== this._detailRequestSeq || sessionKey !== this._detailSessionKey) return;
       const retry = `<button class="btn btn-secondary btn-sm" onclick="app.loadSessionMessages('${this._jsString(sessionKey)}', ${page})">${t('重试')}</button>`;
       if (page > 1 && timeline.children.length) {
         this._removeDetailLoadError();
@@ -5395,37 +5400,9 @@ class ConsoleApp {
     }
   }
 
-  /** 展开详情时提示可查看完整工作段。 */
   /** 时间线内联 SF 小图标（12px，随文基线对齐） */
   _sfIcon(name, color) {
     return `<img src="https://img.bloret.net/SF/${encodeURIComponent(name)}?color=${encodeURIComponent(color)}" alt="" class="sf-icon" data-sf-name="${escapeHtml(name)}" style="display:inline-block;vertical-align:-2px;width:12px;height:12px;">`;
-  }
-
-  /**
-   * 跨页事件去重：旧页插入时间线头部，因此比较旧页尾部与已渲染头部。
-   * 签名序列始终按 DOM 的时间顺序维护，避免把插入方向与比较方向混用。
-   */
-  _dedupeRenderedEvents(events) {
-    const incoming = Array.isArray(events) ? events : [];
-    const sigs = Array.isArray(this._renderedEventSigs) ? this._renderedEventSigs : [];
-    if (!incoming.length || !sigs.length) return incoming;
-    const incSigs = incoming.map(e => JSON.stringify(e));
-    const minOverlap = Math.ceil(incSigs.length / 2);
-    for (let k = Math.min(incSigs.length, sigs.length); k >= minOverlap; k--) {
-      let matched = true;
-      for (let i = 0; i < k; i++) {
-        if (incSigs[incSigs.length - k + i] !== sigs[i]) { matched = false; break; }
-      }
-      if (matched) return incoming.slice(0, incSigs.length - k);
-    }
-    return incoming;
-  }
-
-  /** 按实际 DOM 顺序维护签名：新页插入头部，首屏追加尾部。 */
-  _appendRenderedEventSigs(events, prepend = false) {
-    if (!Array.isArray(this._renderedEventSigs)) this._renderedEventSigs = [];
-    const next = (Array.isArray(events) ? events : []).map(e => JSON.stringify(e));
-    this._renderedEventSigs = prepend ? next.concat(this._renderedEventSigs) : this._renderedEventSigs.concat(next);
   }
 
   /** 时间线单事件：文本 / 工具调用 / 工具结果 / 思考 */
@@ -5575,7 +5552,6 @@ class ConsoleApp {
     if (listWrap) listWrap.style.display = '';
     if (detailWrap) detailWrap.style.display = 'none';
     this._detailSessionKey = null;
-    this._renderedEventSigs = [];
   }
 
   /** 「提示词」页：历史自定义提示词列表（去重合并，仅当前用户自己的，/api/user/custom-instructions） */

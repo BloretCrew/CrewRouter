@@ -306,7 +306,7 @@ router.get('/sessions', requireAuth, async (req, res) => {
 
     const rows = aggregated.rows;
     const total = rows.length ? Number(rows[0].grand_total || 0) : 0;
-      const summaryRows = rows.length ? await pool.query(
+    const summaryRows = rows.length ? await pool.query(
       `SELECT session_key, summary, created_at FROM session_summaries WHERE user_id = $1 AND session_key = ANY($2::text[])`,
       [userId, rows.map(row => row.session_key)]
     ) : { rows: [] };

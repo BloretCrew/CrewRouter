@@ -898,7 +898,8 @@ async function ensureSessionSummariesTable() {
     `);
     Logger.info('[迁移] 表 session_summaries 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] session_summaries 表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] session_summaries 表创建失败: ${err.message}`);
+    throw err;
   }
 }
 
@@ -2638,6 +2639,7 @@ async function runPendingMigrations() {
       await fn();
     } catch (err) {
       Logger.warn(`[启动] 迁移 ${fn.name} 异常: ${err.message}`);
+      if (fn === ensureSessionSummariesTable) throw err;
     }
   }
 
