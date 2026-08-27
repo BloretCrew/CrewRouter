@@ -105,6 +105,7 @@ class ConsoleApp {
     this._summaryCacheTimeMap = {};   // sessionKey -> 缓存生成时间
     this._summaryTaskSessionKey = null;
     this._summaryTaskText = '';
+    this._summaryPhaseMap = Object.create(null);
     this._detailCursor = null;
     this._detailRequestSeq = 0;
     this.init();
@@ -6406,9 +6407,15 @@ class ConsoleApp {
     if (!key) return;
     const bodyEl = document.getElementById('sessionSummaryBody');
 
-    // 后台任务进行中：重开弹窗显示进度，不重复发起
+    // 后台任务进行中：按会话恢复弹窗目标、已收增量与当前阶段，不重复发起
     if (this._summaryPendingKeys.has(key)) {
-      this._renderSummaryLoading(bodyEl);
+      const text = this._summaryCacheTextMap[key] || '';
+      const phase = this._summaryPhaseMap[key] || 'reading';
+      this._summaryModalSessionKey = key;
+      this._summaryDoneFor = key;
+      this._applySummaryModalMeta(key, this._summaryCacheTimeMap[key]);
+      if (key === this._detailSessionKey) this._sessionSummaryText = text;
+      this._renderSummaryLoading(bodyEl, phase, text);
       this.showModal('sessionSummaryModal');
       return;
     }
@@ -6460,6 +6467,7 @@ class ConsoleApp {
       let acc = '';
       let buf = '';
       let summaryPhase = 'reading';
+      this._summaryPhaseMap[reqKey] = summaryPhase;
       const renderSummaryPhase = (phase) => {
         if (this._summarySeq !== reqSeq || this._summaryModalSessionKey !== reqKey) return;
         const liveBody = document.getElementById('sessionSummaryBody');
@@ -6474,6 +6482,7 @@ class ConsoleApp {
         if (obj.type === 'delta' && obj.text) {
           if (summaryPhase !== 'generating') {
             summaryPhase = 'generating';
+            this._summaryPhaseMap[reqKey] = summaryPhase;
             renderSummaryPhase(summaryPhase);
           }
           acc += obj.text;
@@ -6487,7 +6496,7 @@ class ConsoleApp {
         this._summaryCacheTextMap[reqKey] = acc;
         if (this._detailSessionKey === reqKey) this._renderSessionSummaryInline(reqKey, acc, 'loading');
         const liveBody = document.getElementById('sessionSummaryBody');
-        if (this._detailSessionKey === reqKey && liveBody && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
+        if (this._summarySeq === reqSeq && this._summaryModalSessionKey === reqKey && liveBody && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
           setHTML(liveBody, this._renderSafeMarkdown(acc));
           liveBody.scrollTop = liveBody.scrollHeight;
         }
@@ -6566,10 +6575,13 @@ class ConsoleApp {
     if (state === 'loading') {
       bar.style.display = '';
       if (payload.sessionKey) this._summaryTaskSessionKey = payload.sessionKey;
+      const sessionKey = String(payload.sessionKey || this._summaryTaskSessionKey || '');
+      if (sessionKey) this._summaryTaskSessionKey = sessionKey;
       setHTML(bar, `
         <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid var(--border);border-radius:12px;background:var(--card);">
           <div class="summary-spinner"></div>
           <span style="font-size:13px;color:var(--muted-foreground);">${t('正在生成会话总结...')}<small style="margin-left:6px;opacity:.7;">${t('可离开此页，完成后在此查看')}</small></span>
+          ${sessionKey ? `<button type="button" class="btn btn-sm btn-secondary" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')">${t('查看总结')}</button>` : ''}
         </div>`);
       return;
     }
@@ -6604,21 +6616,29 @@ class ConsoleApp {
     this._summaryModalSessionKey = key;
     const text = this._summaryCacheTextMap[key] || (key === this._summaryTaskSessionKey ? this._summaryTaskText : '');
     const bodyEl = document.getElementById('sessionSummaryBody');
-    if (bodyEl) setHTML(bodyEl, text ? this._renderSafeMarkdown(text) : '');
-    if (key === this._detailSessionKey) this._sessionSummaryText = text;
-    this._summaryDoneFor = key;
-    this._applySummaryModalMeta(key, this._summaryCacheTimeMap[key]);
+    if (this._summaryPendingKeys.has(key)) {
+      this._summaryDoneFor = key;
+      this._applySummaryModalMeta(key, this._summaryCacheTimeMap[key]);
+      if (key === this._detailSessionKey) this._sessionSummaryText = text;
+      this._renderSummaryLoading(bodyEl, this._summaryPhaseMap[key] || 'reading', text);
+    } else {
+      if (bodyEl) setHTML(bodyEl, text ? this._renderSafeMarkdown(text) : '');
+      if (key === this._detailSessionKey) this._sessionSummaryText = text;
+      this._summaryDoneFor = key;
+      this._applySummaryModalMeta(key, this._summaryCacheTimeMap[key]);
+    }
     this.showModal('sessionSummaryModal');
     this._updateTaskBar('hidden');
   }
 
-  _renderSummaryLoading(bodyEl, phase = 'reading') {
+  _renderSummaryLoading(bodyEl, phase = 'reading', text = '') {
     if (!bodyEl) return;
+    const content = text ? `<div class="session-summary-md" style="margin-top:12px;">${this._renderSafeMarkdown(text)}</div>` : '';
     setHTML(bodyEl, `
       <div class="summary-loading">
         <div class="summary-spinner"></div>
         <span class="summary-loading-stage">${t(phase === 'generating' ? '正在生成...' : '正在阅读会话...')}</span>
-      </div>`);
+      </div>${content}`);
   }
 
   async regenerateSessionSummary() {
