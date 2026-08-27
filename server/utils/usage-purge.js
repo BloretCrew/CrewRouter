@@ -8,6 +8,12 @@ const DEFAULTS = {
   batchSize: 500,
   batchIntervalMs: 2000,
 };
+const GB = 1024 * 1024 * 1024;
+
+async function tableSizeBytes() {
+  const result = await pool.query(`SELECT pg_total_relation_size('usage_records') AS bytes`);
+  return Number((result.rows[0] && result.rows[0].bytes) || 0);
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -98,6 +104,7 @@ async function deleteBatch(cutoff, batchSize) {
 async function runPurgeOnce(opts = {}) {
   const cfg = await getRetentionConfig({ fresh: true });
   const purgeDays = opts.purgeDays === undefined ? cfg.purgeDays : Number(opts.purgeDays);
+  const purgeSizeGb = opts.purgeSizeGb === undefined ? cfg.purgeSizeGb : Number(opts.purgeSizeGb);
   const dryRun = Boolean(opts.dryRun);
   const batchSize = normalizePositiveInt(opts.batchSize, DEFAULTS.batchSize);
   const batchIntervalMs = opts.batchIntervalMs === undefined
@@ -107,9 +114,13 @@ async function runPurgeOnce(opts = {}) {
   if (!Number.isFinite(purgeDays) || purgeDays < 0) {
     throw new Error(`无效的 purgeDays: ${opts.purgeDays}`);
   }
-  if (purgeDays === 0) {
-    logRetention('[清除] 跳过：purgeDays=0（按时长清除已关闭）');
+  if (purgeDays === 0 && purgeSizeGb === 0) {
+    logRetention('[清除] 跳过：时长和大小阈值均为 0');
     return { deleted: 0, analysisDeleted: 0, sessions: 0, aborted: false, dryRun, skipped: 'disabled' };
+  }
+  if (purgeDays === 0) {
+    logRetention(`[清除] 大小阈值 ${purgeSizeGb} GB 暂不执行：当前清除器仅支持按时长安全删除`);
+    return { deleted: 0, analysisDeleted: 0, sessions: 0, aborted: false, dryRun, skipped: 'size-only-unsupported' };
   }
 
   const cutoff = new Date(Date.now() - purgeDays * 86400000).toISOString();
