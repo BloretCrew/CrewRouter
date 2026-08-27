@@ -56,6 +56,10 @@ function pageParams(query, defaultSize) {
   return { page, pageSize, offset: (page - 1) * pageSize };
 }
 
+function hasMoreDetailRows(rawRowCount, total, page, pageSize) {
+  return rawRowCount === pageSize && total > page * pageSize;
+}
+
 function truncStr(value, max) {
   if (value == null) return '';
   const str = typeof value === 'string' ? value : String(value);
@@ -599,10 +603,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
     }
 
     const records = buildDetailRecords(rawDetailRows);
-    const pageStart = hasCursor
-      ? Math.max(0, total - page * pageSize)
-      : Math.max(0, total - pageSize);
-    const hasMore = rawDetailRows.length > 0 && pageStart > 0;
+    const hasMore = hasMoreDetailRows(rawDetailRows.length, total, page, pageSize);
     const lastRecord = rawDetailRows[0];
     const nextCursor = hasMore && lastRecord ? {
       beforeCreatedAt: lastRecord.created_at,
@@ -977,3 +978,4 @@ router.get('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.hasMoreDetailRows = hasMoreDetailRows;

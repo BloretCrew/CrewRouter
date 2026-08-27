@@ -7,6 +7,7 @@
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",
     "init-db": "node server/scripts/init-db.js",
+    "test:sessions-pagination": "node server/scripts/test-sessions-pagination.js",
     "test:usage-accuracy": "node server/scripts/test-usage-accuracy.js",
     "test:quota-usage": "node server/scripts/test-quota-usage.js",
     "build": "node deploy/build/build-release.js release",
