@@ -788,6 +788,16 @@ async function ensureUsageRecordsFields() {
   }
 }
 
+// ========== 自动迁移：Phase 2 会话增量压缩列（usage_records） ==========
+async function ensureUsageCompressColumns() {
+  try {
+    await require('./utils/usage-compress').ensureUsageCompressColumns();
+    Logger.info('[迁移] usage_records 增量压缩列已就绪');
+  } catch (err) {
+    Logger.warn(`[迁移] usage_records 压缩列迁移跳过: ${err.message}`);
+  }
+}
+
 // ========== 自动迁移：消息结构分析持久化表 ==========
 async function ensureUsageMessageAnalysisTable() {
   try {
@@ -2544,6 +2554,7 @@ async function runPendingMigrations() {
     ensureAuthEnhancements,
     ensureEmailVerification,
     ensureUsageRecordsFields,
+    ensureUsageCompressColumns,
     ensureTraceSessionTables,
     ensureUsageMessageAnalysisTable,
     backfillUsageRecords,

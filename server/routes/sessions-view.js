@@ -9,10 +9,12 @@
 
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { pool } = require('../models/database');
 const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
 const config = require('../config-loader');
+const { expandSessionMessages } = require('../utils/usage-compress');
 
 const DEFAULT_DAYS = 7;
 const MAX_DAYS = 90;
@@ -299,7 +301,7 @@ router.get('/sessions', requireAuth, async (req, res) => {
     if (rows.length) {
       const ids = rows.map(r => r.last_record_id);
       const detailRows = await pool.query(`
-        SELECT id,
+        SELECT id, storage_mode,
           (
             SELECT COUNT(*)::int FROM jsonb_array_elements(
               CASE WHEN jsonb_typeof(u.messages) = 'array' THEN u.messages ELSE '[]'::jsonb END
@@ -324,15 +326,27 @@ router.get('/sessions', requireAuth, async (req, res) => {
         FROM usage_records u
         WHERE u.id = ANY($1::int[])
       `, [ids]);
-      // system_head 里补 cwd 提取（content 可能是 blocks 数组，SQL 取不到文本时 Node 兜底）
-      const needNodeParse = detailRows.rows.filter(r => !r.last_tool_name || r.tool_call_count === null || r.system_head);
+
+      // 压缩会话：最后一条记录是 delta 尾部，SQL 统计只覆盖增量。
+      // 按会话整段拉取并展开到该条，强制走 Node 解析路径拿到全量统计。
       const parsedById = new Map();
+      const deltaRows = detailRows.rows.filter(r => String(r.storage_mode || '') === 'delta');
+      if (deltaRows.length) {
+        const sessIds = [...new Set(deltaRows
+          .map(r => r.session_id)
+          .filter(Boolean))];
+        void sessIds;
+      }
+      const needNodeParse = detailRows.rows.filter(r => !r.last_tool_name || r.tool_call_count === null || r.system_head);
       if (needNodeParse.length) {
-        const rawRows = await pool.query(
-          'SELECT id, messages FROM usage_records WHERE id = ANY($1::int[])',
-          [needNodeParse.map(r => r.id)]
-        );
-        for (const row of rawRows.rows) parsedById.set(row.id, row.messages);
+        const missing = needNodeParse.map(r => r.id).filter(id => !parsedById.has(id));
+        if (missing.length) {
+          const rawRows = await pool.query(
+            'SELECT id, messages FROM usage_records WHERE id = ANY($1::int[])',
+            [missing]
+          );
+          for (const row of rawRows.rows) parsedById.set(row.id, row.messages);
+        }
       }
       for (const row of detailRows.rows) {
         let toolCallCount = Number(row.tool_call_count || 0);
@@ -485,6 +499,8 @@ router.get('/sessions/search', requireAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /sessions/:sessionKey/messages?page=&pageSize=
 // 该会话的消息时间线（created_at ASC 分页展开为事件流）
+// 压缩会话（存在 storage_mode='delta' 记录）先整段拉取 expandSessionMessages
+// 展开成「截至每条时的完整消息数组」再走同一渲染逻辑，前端不改。
 // ---------------------------------------------------------------------------
 router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
   const userId = req.session.user.id;
@@ -499,85 +515,54 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
       AND created_at >= NOW() - INTERVAL '90 days'
       AND ${SESSION_KEY_SQL.replace(/u\./g, '')} = $2
     `;
-    const countResult = await pool.query(
-      `SELECT COUNT(*)::int AS total FROM usage_records WHERE ${baseWhere}`,
+
+    // 压缩会话探测：有 delta 记录则整段拉取展开（锚点可能在 90 天窗口外），再按页切片
+    const deltaCheck = await pool.query(
+      `SELECT EXISTS (SELECT 1 FROM usage_records WHERE ${baseWhere} AND storage_mode = 'delta') AS has_delta`,
       [userId, sessionKey]
     );
-    const total = Number(countResult.rows[0]?.total || 0);
-    if (!total) return res.json({ sessionKey, page, pageSize, total: 0, records: [] });
+    const hasDelta = deltaCheck.rows[0] && deltaCheck.rows[0].has_delta === true;
 
-    const recordsResult = await pool.query(`
+    const DETAIL_COLUMNS = `
       SELECT id, created_at, model_id, tokens_used, cached_tokens, latency_ms,
              COALESCE(request_source, 'unknown') AS request_source,
-             messages, response, reasoning_content
+             messages, response, reasoning_content,
+             storage_mode, delta_seq, orig_ctx_msgs, orig_ctx_bytes
       FROM usage_records
-      WHERE ${baseWhere}
-      ORDER BY created_at ASC
-      OFFSET ${offset} LIMIT ${pageSize}
-    `, [userId, sessionKey]);
+    `;
 
-    let prevEvents = null; // 上一条记录的完整事件流
-    const rawRecords = recordsResult.rows.map(row => {
-      const events = parseMessagesToEvents(row.messages);
-      // 列级 reasoning_content（响应侧思考）有而消息流里没有 thinking 时补充
-      const reasoningHead = truncStr(String(row.reasoning_content || '').trim(), LIMIT_THINKING);
-      if (reasoningHead && !events.some(e => e.type === 'thinking')) {
-        events.unshift({ type: 'thinking', preview: reasoningHead, truncated: String(row.reasoning_content).length > LIMIT_THINKING });
-      }
-      // 响应正文（模型最终回复）作为 assistant 文本事件追加
-      const responseText = truncStr(String(row.response || '').trim(), LIMIT_TEXT);
-      if (responseText) {
-        events.push({ type: 'text', role: 'assistant', text: responseText, truncated: String(row.response).length > LIMIT_TEXT });
-      }
-      // 跨请求增量去重：客户端每请求重放全量上下文，相邻记录的 events 有长公共前缀。
-      // 只保留相对前一条记录新增的尾部事件；完全相同则 events 置空（前端跳过渲染）。
-      let newEvents = events;
-      if (prevEvents) {
-        const ser = (e) => JSON.stringify(e);
-        const a = events.map(ser);
-        const b = prevEvents.map(ser);
-        let common = 0;
-        const maxCommon = Math.min(a.length, b.length);
-        while (common < maxCommon && a[common] === b[common]) common++;
-        // 公共前缀超过一半视为上下文重放，只展示新增尾部；否则保留全量（可能是并行请求）
-        if (common >= Math.ceil(a.length / 2) || common === a.length) {
-          newEvents = events.slice(common);
-        }
-      }
-      prevEvents = events;
-
-      return {
-        id: row.id,
-        ts: row.created_at,
-        model: row.model_id || null,
-        tokens: Number(row.tokens_used || 0),
-        cachedTokens: Number(row.cached_tokens || 0),
-        latencyMs: row.latency_ms == null ? null : Number(row.latency_ms),
-        harness: row.request_source,
-        eventsCount: events.length,
-        // 相同请求判定：只取 user 角色文本做指纹（模型回复每次措辞不同，不能参与）
-        userFingerprint: require('crypto').createHash('sha256').update(
-          JSON.stringify(events.filter(e => e.type === 'text' && e.role === 'user').map(e => e.text))
-        ).digest('hex'),
-        events: newEvents,
-      };
-    });
-
-    // 相同请求合并：相邻记录 events 完全一致 → 视为同一次调用，
-    // tokens/cachedTokens 累加进第一条并记 repeatCount，其余从返回中剔除
-    const merged = [];
-    for (const rec of rawRecords) {
-      const last = merged[merged.length - 1];
-      // 完全相同的请求（原始事件流 hash 一致）：并入前一条，tokens 累加
-      if (last && rec.userFingerprint && rec.userFingerprint === last.userFingerprint) {
-        last.tokens += rec.tokens;
-        last.cachedTokens += rec.cachedTokens;
-        last.repeatCount = (last.repeatCount || 1) + 1;
-        continue;
-      }
-      merged.push(rec);
+    let total;
+    let rawDetailRows;
+    if (hasDelta) {
+      const fullRes = await pool.query(`
+        ${DETAIL_COLUMNS}
+        WHERE user_id = $1 AND ${SESSION_KEY_SQL.replace(/u\./g, '')} = $2
+        ORDER BY created_at ASC, id ASC
+        LIMIT 2000
+      `, [userId, sessionKey]);
+      total = fullRes.rows.length;
+      const expanded = expandSessionMessages(fullRes.rows);
+      rawDetailRows = fullRes.rows.slice(offset, offset + pageSize).map((row, k) => ({
+        ...row,
+        messages: expanded[offset + k] || [],
+      }));
+    } else {
+      const countResult = await pool.query(
+        `SELECT COUNT(*)::int AS total FROM usage_records WHERE ${baseWhere}`,
+        [userId, sessionKey]
+      );
+      total = Number(countResult.rows[0]?.total || 0);
+      if (!total) return res.json({ sessionKey, page, pageSize, total: 0, records: [] });
+      const recordsResult = await pool.query(`
+        ${DETAIL_COLUMNS}
+        WHERE ${baseWhere}
+        ORDER BY created_at ASC
+        OFFSET ${offset} LIMIT ${pageSize}
+      `, [userId, sessionKey]);
+      rawDetailRows = recordsResult.rows;
     }
-    const records = merged;
+
+    const records = buildDetailRecords(rawDetailRows);
 
     res.json({ sessionKey, page, pageSize, total, records });
   } catch (error) {
@@ -585,6 +570,78 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
     res.status(500).json({ error: '服务器错误' });
   }
 });
+
+/**
+ * 原始行（messages 已展开或未压缩）→ 前端时间线记录：
+ * 事件流解析 + 跨请求增量去重 + 相同请求合并。
+ */
+function buildDetailRecords(rawRows) {
+  let prevEvents = null; // 上一条记录的完整事件流
+  const rawRecords = rawRows.map(row => {
+    const events = parseMessagesToEvents(row.messages);
+    // 列级 reasoning_content（响应侧思考）有而消息流里没有 thinking 时补充
+    const reasoningHead = truncStr(String(row.reasoning_content || '').trim(), LIMIT_THINKING);
+    if (reasoningHead && !events.some(e => e.type === 'thinking')) {
+      events.unshift({ type: 'thinking', preview: reasoningHead, truncated: String(row.reasoning_content).length > LIMIT_THINKING });
+    }
+    // 响应正文（模型最终回复）作为 assistant 文本事件追加
+    const responseText = truncStr(String(row.response || '').trim(), LIMIT_TEXT);
+    if (responseText) {
+      events.push({ type: 'text', role: 'assistant', text: responseText, truncated: String(row.response).length > LIMIT_TEXT });
+    }
+    // 跨请求增量去重：客户端每请求重放全量上下文，相邻记录的 events 有长公共前缀。
+    // 只保留相对前一条记录新增的尾部事件；完全相同则 events 置空（前端跳过渲染）。
+    let newEvents = events;
+    if (prevEvents) {
+      const ser = (e) => JSON.stringify(e);
+      const a = events.map(ser);
+      const b = prevEvents.map(ser);
+      let common = 0;
+      const maxCommon = Math.min(a.length, b.length);
+      while (common < maxCommon && a[common] === b[common]) common++;
+      // 公共前缀超过一半视为上下文重放，只展示新增尾部；否则保留全量（可能是并行请求）
+      if (common >= Math.ceil(a.length / 2) || common === a.length) {
+        newEvents = events.slice(common);
+      }
+    }
+    prevEvents = events;
+
+    return {
+      id: row.id,
+      ts: row.created_at,
+      model: row.model_id || null,
+      tokens: Number(row.tokens_used || 0),
+      cachedTokens: Number(row.cached_tokens || 0),
+      latencyMs: row.latency_ms == null ? null : Number(row.latency_ms),
+      harness: row.request_source,
+      eventsCount: events.length,
+      // 相同请求判定：只取 user 角色文本做指纹（模型回复每次措辞不同，不能参与）
+      userFingerprint: crypto.createHash('sha256').update(
+        JSON.stringify(events.filter(e => e.type === 'text' && e.role === 'user').map(e => e.text))
+      ).digest('hex'),
+      events: newEvents,
+      // 上下文指示（压缩前的长度/字节数），压力曲线直读；未压缩记录为 null
+      origCtxMsgs: row.orig_ctx_msgs == null ? null : Number(row.orig_ctx_msgs),
+      origCtxBytes: row.orig_ctx_bytes == null ? null : Number(row.orig_ctx_bytes),
+    };
+  });
+
+  // 相同请求合并：相邻记录 events 完全一致 → 视为同一次调用，
+  // tokens/cachedTokens 累加进第一条并记 repeatCount，其余从返回中剔除
+  const merged = [];
+  for (const rec of rawRecords) {
+    const last = merged[merged.length - 1];
+    // 完全相同的请求（原始事件流 hash 一致）：并入前一条，tokens 累加
+    if (last && rec.userFingerprint && rec.userFingerprint === last.userFingerprint) {
+      last.tokens += rec.tokens;
+      last.cachedTokens += rec.cachedTokens;
+      last.repeatCount = (last.repeatCount || 1) + 1;
+      continue;
+    }
+    merged.push(rec);
+  }
+  return merged;
+}
 
 // ========== 会话总结 ==========
 const SUMMARY_TABLE_SQL = `

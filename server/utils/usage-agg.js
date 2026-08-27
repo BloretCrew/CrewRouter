@@ -25,6 +25,8 @@ const { shanghaiDateString, shanghaiDateRange } = require('./timezone');
 
 // 明细保留窗口默认值 = Phase 4 retention.purge_days 的默认值（90 天）
 const DEFAULT_DETAIL_WINDOW_DAYS = 90;
+// 会话增量压缩年龄门槛默认值（Phase 2）：超过该天数的会话才压缩
+const DEFAULT_COMPRESS_DAYS = 14;
 const AGG_TABLE = 'usage_daily_agg';
 const HEALTH_PORT = (config.app && config.app.port) || 20003;
 
@@ -71,8 +73,10 @@ async function readSettingBool(key, fallback) {
 
 /**
  * 读取保留配置（Phase 4 的 key 先行生效，缺省用任务书默认值）。
- * @returns {Promise<{aggEnabled: boolean, purgeDays: number}>}
+ * @returns {Promise<{aggEnabled: boolean, purgeDays: number, compressDays: number, compressSizeGb: number}>}
  *   purgeDays=0 表示永不按时长删除 → 明细窗口视为无限，双轨恒走明细。
+ *   compressDays 为会话增量压缩的年龄门槛（默认 14 天）；compressSizeGb=0 表示
+ *   不启用大小阈值触发（Phase 2 增量压缩，Phase 4 配置联动）。
  */
 async function getRetentionConfig({ fresh = false } = {}) {
   const now = Date.now();
@@ -81,7 +85,14 @@ async function getRetentionConfig({ fresh = false } = {}) {
   }
   const aggEnabled = await readSettingBool('retention.agg_enabled', true);
   const purgeDays = await readSettingInt('retention.purge_days', DEFAULT_DETAIL_WINDOW_DAYS);
-  const value = { aggEnabled, purgeDays: purgeDays > 0 ? purgeDays : 0 };
+  const compressDays = await readSettingInt('retention.compress_days', DEFAULT_COMPRESS_DAYS);
+  const compressSizeGb = await readSettingInt('retention.compress_size_gb', 0);
+  const value = {
+    aggEnabled,
+    purgeDays: purgeDays > 0 ? purgeDays : 0,
+    compressDays: compressDays > 0 ? compressDays : 0,
+    compressSizeGb: compressSizeGb > 0 ? compressSizeGb : 0,
+  };
   configCache = { value, loadedAt: now };
   return value;
 }
@@ -835,6 +846,7 @@ function mergeByKey(detailRows, aggRows, keyField) {
 module.exports = {
   AGG_TABLE,
   DEFAULT_DETAIL_WINDOW_DAYS,
+  DEFAULT_COMPRESS_DAYS,
   getRetentionConfig,
   invalidateRetentionConfigCache,
   ensureUsageDailyAggTable,
