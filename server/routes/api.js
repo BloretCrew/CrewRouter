@@ -75,6 +75,7 @@ const {
 } = require('../utils/provider-keys');
 const ResponsesUpstream = require('../utils/responses-upstream');
 const { extractAttribution, classifyCompaction } = require('../utils/attribution');
+const { classifyRequestSemantics } = require('../utils/request-semantics');
 const { createStreamScrubber } = require('../utils/inject-prompt-stream');
 const crypto = require('crypto');
 
@@ -601,20 +602,26 @@ async function buildUsagePluginMeta(ctxMeta, messages, system, req) {
   const pluginMeta = await pluginMetaFrom(ctxMeta);
   const attribution = req ? extractAttribution(req) : null;
   const isCompaction = req ? classifyCompaction(req.body) : false;
+  const requestSource = req ? clientMetaFromReq(req).requestSource : null;
+  const requestSemantics = req
+    ? classifyRequestSemantics({ body: req.body, headers: req.headers, requestSource, url: req.originalUrl || req.url })
+    : null;
   const hasAttribution = !!(attribution && (attribution.parentThreadId || attribution.subagent || attribution.sessionId || attribution.source.length));
   const withAttribution = (hasAttribution || isCompaction)
     ? { ...(pluginMeta || {}), attribution: { ...(attribution || {}), isCompaction } }
     : pluginMeta;
-  if (messages == null) return withAttribution;
-  const requestSource = req ? clientMetaFromReq(req).requestSource : null;
+  const withSemantics = requestSemantics
+    ? { ...(withAttribution || {}), request_semantics: requestSemantics }
+    : withAttribution;
+  if (messages == null) return withSemantics;
   const res = extractCustomInstructions(messages, system, { requestSource });
   if (res.skipped === 'size') {
-    return { ...(withAttribution || {}), customInstructions: { skipped: 'size' } };
+    return { ...(withSemantics || {}), customInstructions: { skipped: 'size' } };
   }
   if (res.items && res.items.length) {
-    return { ...(withAttribution || {}), customInstructions: res.items };
+    return { ...(withSemantics || {}), customInstructions: res.items };
   }
-  return withAttribution;
+  return withSemantics;
 }
 
 function affinityKeyForRequest(req, body) {
