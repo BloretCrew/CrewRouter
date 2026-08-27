@@ -101,6 +101,9 @@ class ConsoleApp {
     this._summaryCachedKeys = new Set();
     this._summaryCheckedKeys = new Set();
     this._summaryCacheTextMap = {};   // sessionKey -> 已确认的缓存文案，供顶部内联展示复用
+    this._summaryCacheTimeMap = {};   // sessionKey -> 缓存生成时间
+    this._summaryTaskSessionKey = null;
+    this._summaryTaskText = '';
     this._lastPageFingerprint = '';
     this.init();
   }
@@ -6328,6 +6331,7 @@ class ConsoleApp {
   async generateSessionSummary(force = false) {
     const key = this._detailSessionKey;
     if (!key) return;
+    this._summaryTaskSessionKey = key;
     const bodyEl = document.getElementById('sessionSummaryBody');
 
     // 后台任务进行中：重开弹窗显示进度，不重复发起
@@ -6343,9 +6347,16 @@ class ConsoleApp {
         const cached = await fetch(`/api/user/sessions/${encodeURIComponent(key)}/summary`);
         const cj = await cached.json();
         if (cj.summary) {
-          if (bodyEl) setHTML(bodyEl, escapeHtml(cj.summary));
-          this.showModal('sessionSummaryModal');
+          this._summaryCachedKeys.add(key);
+          this._summaryCacheTextMap[key] = cj.summary;
+          this._summaryCacheTimeMap[key] = cj.createdAt || null;
+          if (bodyEl) setHTML(bodyEl, this._renderSafeMarkdown(cj.summary));
           this._sessionSummaryText = cj.summary;
+          this._summaryDoneFor = key;
+          this._applySummaryModalMeta(key, cj.createdAt);
+          this._renderSessionSummaryInline(key, cj.summary, 'done', null, cj.createdAt);
+          this._applySummaryBtnText(key, true);
+          this.showModal('sessionSummaryModal');
           return;
         }
       } catch (_) { /* 缓存读取失败则直接生成 */ }
@@ -6357,7 +6368,7 @@ class ConsoleApp {
     this._summaryPending = true;
     this._setSummaryRegenDisabled(true);
     // 模型库顶部任务条：进入后台生成即亮出加载环（与弹窗是否开着无关，用户可能已切走）
-    this._updateTaskBar('loading');
+    this._updateTaskBar('loading', { sessionKey: reqKey });
 
     // 记录本次请求归属：会话 key + 请求序号，供切换会话后的状态隔离与回调校验
     const reqKey = key;
@@ -6376,6 +6387,7 @@ class ConsoleApp {
       let buf = '';
       const renderAcc = () => {
         this._sessionSummaryText = acc;
+        if (this._detailSessionKey === reqKey) this._renderSessionSummaryInline(reqKey, acc, 'loading');
         const liveBody = document.getElementById('sessionSummaryBody');
         if (liveBody && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
           setHTML(liveBody, this._renderSafeMarkdown(acc));
@@ -6402,9 +6414,18 @@ class ConsoleApp {
       }
       renderAcc();
       this._summaryCachedKeys.add(reqKey);
+      this._summaryCacheTextMap[reqKey] = acc;
+      this._summaryCacheTimeMap[reqKey] = new Date().toISOString();
+      this._summaryDoneFor = reqKey;
+      this._summaryTaskSessionKey = reqKey;
+      this._summaryTaskText = acc;
       this._setSummaryRegenDisabled(false);
+      this._applySummaryBtnText(reqKey, true);
+      if (this._detailSessionKey === reqKey) {
+        this._renderSessionSummaryInline(reqKey, acc, 'done', null, this._summaryCacheTimeMap[reqKey]);
+      }
       this.showToast(t('总结已生成'), 'success');
-      this._updateTaskBar('done', { summary: acc });
+      if (this._summarySeq === reqSeq) this._updateTaskBar('done', { summary: acc, sessionKey: reqKey });
       return;
       // 生成成功后该会话的总结已入库，缓存命中状态记下来供按钮切换
       this._summaryCachedKeys.add(reqKey);
@@ -6427,6 +6448,8 @@ class ConsoleApp {
     } catch (error) {
       this._summaryError = error.message || t('总结生成失败');
       if (this._detailSessionKey === reqKey) {
+        this._renderSessionSummaryInline(reqKey, '', 'error', this._summaryError);
+
         const live = document.getElementById('sessionSummaryBody');
         if (live && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
           setHTML(live, `<span style="color:var(--danger);">${escapeHtml(this._summaryError)}</span>`);
@@ -6451,6 +6474,7 @@ class ConsoleApp {
     if (state === 'hidden') { bar.style.display = 'none'; bar.innerHTML = ''; return; }
     if (state === 'loading') {
       bar.style.display = '';
+      if (payload.sessionKey) this._summaryTaskSessionKey = payload.sessionKey;
       setHTML(bar, `
         <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid var(--border);border-radius:12px;background:var(--card);">
           <div class="summary-spinner"></div>
@@ -6460,6 +6484,10 @@ class ConsoleApp {
     }
     if (state === 'done') {
       const text = String(payload.summary || '');
+      const sessionKey = String(payload.sessionKey || this._summaryTaskSessionKey || '');
+      this._summaryTaskSessionKey = sessionKey;
+      this._summaryTaskText = text;
+      bar.dataset.sessionKey = sessionKey;
       bar.style.display = '';
       setHTML(bar, `
         <div style="padding:14px 16px;border:1px solid var(--border);border-left:3px solid var(--success);border-radius:12px;background:var(--card);">
@@ -6467,10 +6495,10 @@ class ConsoleApp {
             <strong style="font-size:13px;">${t('会话总结已生成')}</strong>
             <button type="button" class="btn btn-sm btn-secondary" onclick="app.dismissModelLibraryTaskBar()" title="${t('关闭')}" style="padding:2px 8px;">✕</button>
           </div>
-          <div style="white-space:pre-wrap;font-size:13px;line-height:1.55;max-height:180px;overflow-y:auto;">${escapeHtml(text)}</div>
+          <div class="session-summary-md" style="max-height:180px;overflow-y:auto;">${this._renderSafeMarkdown(text)}</div>
           <div style="margin-top:10px;display:flex;gap:8px;">
-            <button type="button" class="btn btn-sm btn-primary" onclick="app.openSessionSummaryModal()">${t('查看一次')}</button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="app.copySessionSummary()">${t('复制')}</button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')">${t('查看一次')}</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="app.copySessionSummary('${this._jsString(sessionKey)}')">${t('复制')}</button>
           </div>
         </div>`);
       this._sessionSummaryText = text;
@@ -6479,11 +6507,15 @@ class ConsoleApp {
   }
 
   dismissModelLibraryTaskBar() { this._updateTaskBar('hidden'); }
-  openSessionSummaryModal() {
+  openSessionSummaryModal(sessionKey = '') {
+    const key = String(sessionKey || this._summaryTaskSessionKey || this._detailSessionKey || '');
+    const text = key === this._summaryTaskSessionKey ? this._summaryTaskText : (this._summaryCacheTextMap[key] || this._sessionSummaryText || '');
     const bodyEl = document.getElementById('sessionSummaryBody');
-    if (bodyEl && this._sessionSummaryText) setHTML(bodyEl, escapeHtml(this._sessionSummaryText));
+    if (bodyEl) setHTML(bodyEl, text ? this._renderSafeMarkdown(text) : '');
+    this._sessionSummaryText = text;
+    this._summaryDoneFor = key;
+    this._applySummaryModalMeta(key, this._summaryCacheTimeMap[key]);
     this.showModal('sessionSummaryModal');
-    // 查看一次即消失
     this._updateTaskBar('hidden');
   }
 
@@ -6508,9 +6540,17 @@ class ConsoleApp {
     await this.generateSessionSummary(true);
   }
 
-  async copySessionSummary() {
+  _summaryPlainText(text) {
+    const box = document.createElement('div');
+    box.innerHTML = this._renderSafeMarkdown(String(text || ''));
+    return String(box.textContent || box.innerText || '').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  async copySessionSummary(sessionKey = '') {
+    const key = String(sessionKey || this._summaryTaskSessionKey || this._summaryDoneFor || this._detailSessionKey || '');
+    const text = key === this._summaryTaskSessionKey ? this._summaryTaskText : (this._summaryCacheTextMap[key] || this._sessionSummaryText || '');
     try {
-      await navigator.clipboard.writeText(this._sessionSummaryText || '');
+      await navigator.clipboard.writeText(this._summaryPlainText(text));
       this.showToast(t('已复制到剪贴板'), 'success');
     } catch (_) {
       this.showToast(t('复制失败'), 'error');
@@ -6539,9 +6579,10 @@ class ConsoleApp {
       if (data && data.summary) {
         this._summaryCachedKeys.add(sessionKey);
         this._summaryCacheTextMap[sessionKey] = data.summary;
+        this._summaryCacheTimeMap[sessionKey] = data.createdAt || null;
         if (sessionKey === this._detailSessionKey) {
           this._applySummaryBtnText(sessionKey, true);
-          this._renderSessionSummaryInline(sessionKey, data.summary, 'done');
+          this._renderSessionSummaryInline(sessionKey, data.summary, 'done', null, data.createdAt);
         }
       }
     } catch (_) { /* 探测失败保持「生成总结」 */ }
@@ -6552,15 +6593,24 @@ class ConsoleApp {
     if (sessionKey !== this._detailSessionKey) return;
     const text = this._summaryCacheTextMap[sessionKey];
     if (text) {
-      this._renderSessionSummaryInline(sessionKey, text, 'done');
+      this._renderSessionSummaryInline(sessionKey, text, 'done', null, this._summaryCacheTimeMap[sessionKey]);
     } else {
       const el = document.getElementById('sessionSummaryInline');
       if (el) { el.innerHTML = ''; el.style.display = 'none'; delete el.dataset.built; }
     }
   }
 
+  _applySummaryModalMeta(sessionKey, createdAt) {
+    const title = document.getElementById('sessionSummaryTitle');
+    const keyEl = document.getElementById('sessionSummaryKey');
+    const timeEl = document.getElementById('sessionSummaryTime');
+    if (title) title.textContent = t('会话总结');
+    if (keyEl) keyEl.textContent = sessionKey ? String(sessionKey).slice(0, 18) + (String(sessionKey).length > 18 ? '…' : '') : '';
+    if (timeEl) timeEl.textContent = createdAt ? `${t('最近更新')} ${this.formatRelativeTime(createdAt)}` : '';
+  }
+
   /** 会话页顶部内联总结：流式/完成/错误三态可视化（复用一个 details 结构，流式时只更新文本节点） */
-  _renderSessionSummaryInline(sessionKey, text, state, errMsg) {
+  _renderSessionSummaryInline(sessionKey, text, state, errMsg, createdAt) {
     if (sessionKey !== this._detailSessionKey) return;
     const el = document.getElementById('sessionSummaryInline');
     if (!el) return;
@@ -6576,13 +6626,16 @@ class ConsoleApp {
       spinner.style.cssText = 'width:16px;height:16px;border-width:2px;flex:none;';
       const label = document.createElement('span');
       const body = document.createElement('div');
-      body.className = 'summary-inline-body';
+      body.className = 'summary-inline-body session-summary-md';
+      const time = document.createElement('small');
+      time.className = 'summary-inline-time';
       summary.append(spinner, label);
-      details.append(summary, body);
+      details.append(summary, time, body);
       el.append(details);
       el._details = details;
       el._spinner = spinner;
       el._label = label;
+      el._time = time;
       el._body = body;
     }
     if (state === 'error') {
@@ -6594,7 +6647,9 @@ class ConsoleApp {
     }
     el._label.textContent = state === 'done' ? t('会话总结') : t('正在生成会话总结...');
     el._spinner.style.display = state === 'done' ? 'none' : '';
-    el._body.textContent = text || '';
+    el._time.textContent = state === 'done' && createdAt ? `${t('最近更新')} ${this.formatRelativeTime(createdAt)}` : '';
+    if (state === 'done') setHTML(el._body, this._renderSafeMarkdown(text || ''));
+    else el._body.textContent = text || '';
     el._details.open = true;
   }
 
