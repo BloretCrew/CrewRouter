@@ -191,11 +191,6 @@ class ConsoleApp {
   }
 
   async init() {
-    try {
-      upgradeBloraControls(document);
-    } catch (e) {
-      console.warn('[blora] upgradeBloraControls 失败（不影响主流程）:', e.message);
-    }
     await this.loadUserInfo();
     if (!this.user) return;
     this.bindEvents();

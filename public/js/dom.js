@@ -102,126 +102,145 @@
   global.getBloraCheckedControls = (selector, root = document) => [...root.querySelectorAll(selector)].filter(getBloraChecked);
 
   /** 唯一推荐的 HTML 写入入口（替代 el.innerHTML = ...） */
+  let bloraUpgradeDepth = 0;
+
+  function isBloraHost(el) {
+    return !!el && typeof el.tagName === 'string' && el.tagName.startsWith('BLORA-');
+  }
+
+  function collectMatches(scope, selector) {
+    const list = [];
+    if (scope.matches?.(selector)) list.push(scope);
+    if (scope.querySelectorAll) list.push(...scope.querySelectorAll(selector));
+    return list;
+  }
+
   function upgradeBloraControls(root) {
+    if (bloraUpgradeDepth > 0) return;
     const scope = root && root.querySelectorAll ? root : document;
-    const datepickers = [];
-    const timepickers = [];
-    if (scope.matches?.('input[type="date"]')) datepickers.push(scope);
-    if (scope.matches?.('input[type="time"]')) timepickers.push(scope);
-    datepickers.push(...scope.querySelectorAll('input[type="date"]'));
-    timepickers.push(...scope.querySelectorAll('input[type="time"]'));
-    datepickers.forEach((input) => {
-      const replacement = document.createElement('blora-datepicker');
-      [...input.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.name === 'class' ? `${attr.value} blora-input` : attr.value));
-      if (input.value) replacement.setAttribute('value', input.value);
-      input.replaceWith(replacement);
-    });
-    timepickers.forEach((input) => {
-      const replacement = document.createElement('blora-timepicker');
-      [...input.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.name === 'class' ? `${attr.value} blora-input` : attr.value));
-      if (input.value) replacement.setAttribute('value', input.value);
-      input.replaceWith(replacement);
-    });
-    const enhanceToggle = (input, tagName) => {
-      const replacement = document.createElement(tagName);
-      [...input.attributes].forEach((attr) => {
-        if (attr.name === 'type' || attr.name === 'class') return;
-        replacement.setAttribute(attr.name, attr.value);
-      });
-      if (input.checked) replacement.setAttribute('checked', '');
-      if (input.value && input.value !== 'on') replacement.setAttribute('value', input.value);
-      const parentLabel = input.closest('label');
-      const labelText = input.getAttribute('aria-label') || parentLabel?.textContent?.trim() || '';
-      if (labelText) replacement.setAttribute('label', labelText);
-      if (input.className) replacement.className = input.className;
-      replacement.classList.remove('blora-input');
-      input.replaceWith(replacement);
-    };
-    const checkboxes = [];
-    const ranges = [];
-    if (scope.matches?.('input[type="checkbox"]')) checkboxes.push(scope);
-    if (scope.matches?.('input[type="range"]')) ranges.push(scope);
-    checkboxes.push(...scope.querySelectorAll('input[type="checkbox"]'));
-    ranges.push(...scope.querySelectorAll('input[type="range"]'));
-    checkboxes.forEach((input) => enhanceToggle(input, input.closest('label.pg-toggle') ? 'blora-switch' : 'blora-checkbox'));
-    ranges.forEach((input) => {
-      const replacement = document.createElement('blora-range');
-      [...input.attributes].forEach((attr) => {
-        if (!['type', 'class', 'value'].includes(attr.name)) replacement.setAttribute(attr.name, attr.value);
-      });
-      if (input.min) replacement.setAttribute('min', input.min);
-      if (input.max) replacement.setAttribute('max', input.max);
-      const value = input.value || input.min || 0;
-      replacement.setAttribute('values', `${value},${value}`);
-      if (input.id) replacement.id = input.id;
-      if (input.getAttribute('oninput')) replacement.setAttribute('data-oninput', input.getAttribute('oninput'));
-      replacement.className = input.className;
-      replacement.classList.remove('blora-input');
-      input.replaceWith(replacement);
-    });
-    if (!customElements.get('blora-select')) {
-      scope.querySelectorAll('button').forEach((button) => button.classList.add('blora-button'));
+    if (scope.nodeType === Node.ELEMENT_NODE && (isBloraHost(scope) && scope.tagName !== 'BLORA-SELECT' && scope.tagName !== 'BLORA-DIALOG')) {
       return;
     }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => upgradeBloraControls(document), { once: true });
+    bloraUpgradeDepth++;
+    try {
+      collectMatches(scope, 'input[type="date"]').forEach((input) => {
+        if (isBloraHost(input) || input.closest?.('blora-datepicker')) return;
+        const replacement = document.createElement('blora-datepicker');
+        [...input.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.name === 'class' ? `${attr.value} blora-input` : attr.value));
+        if (input.value) replacement.setAttribute('value', input.value);
+        input.replaceWith(replacement);
+      });
+      collectMatches(scope, 'input[type="time"]').forEach((input) => {
+        if (isBloraHost(input) || input.closest?.('blora-timepicker')) return;
+        const replacement = document.createElement('blora-timepicker');
+        [...input.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.name === 'class' ? `${attr.value} blora-input` : attr.value));
+        if (input.value) replacement.setAttribute('value', input.value);
+        input.replaceWith(replacement);
+      });
+      const enhanceToggle = (input, tagName) => {
+        if (isBloraHost(input) || input.closest?.('blora-checkbox, blora-switch')) return;
+        const replacement = document.createElement(tagName);
+        [...input.attributes].forEach((attr) => {
+          if (attr.name === 'type' || attr.name === 'class') return;
+          replacement.setAttribute(attr.name, attr.value);
+        });
+        if (input.checked) replacement.setAttribute('checked', '');
+        if (input.value && input.value !== 'on') replacement.setAttribute('value', input.value);
+        const parentLabel = input.closest('label');
+        const labelText = input.getAttribute('aria-label') || parentLabel?.textContent?.trim() || '';
+        if (labelText) replacement.setAttribute('label', labelText);
+        if (input.className) replacement.className = input.className;
+        replacement.classList.remove('blora-input');
+        input.replaceWith(replacement);
+      };
+      collectMatches(scope, 'input[type="checkbox"]').forEach((input) => {
+        enhanceToggle(input, input.closest('label.pg-toggle') ? 'blora-switch' : 'blora-checkbox');
+      });
+      collectMatches(scope, 'input[type="range"]').forEach((input) => {
+        if (isBloraHost(input) || input.closest?.('blora-range')) return;
+        const replacement = document.createElement('blora-range');
+        [...input.attributes].forEach((attr) => {
+          if (!['type', 'class', 'value'].includes(attr.name)) replacement.setAttribute(attr.name, attr.value);
+        });
+        if (input.min) replacement.setAttribute('min', input.min);
+        if (input.max) replacement.setAttribute('max', input.max);
+        const value = input.value || input.min || 0;
+        replacement.setAttribute('values', `${value},${value}`);
+        if (input.id) replacement.id = input.id;
+        if (input.getAttribute('oninput')) replacement.setAttribute('data-oninput', input.getAttribute('oninput'));
+        replacement.className = input.className;
+        replacement.classList.remove('blora-input');
+        input.replaceWith(replacement);
+      });
+
+      const enhanceButtons = () => {
+        collectMatches(scope, 'button').forEach((button) => {
+          if (isBloraHost(button) || button.closest?.('blora-select')) return;
+          if (button.classList.contains('blora-button') && button.dataset.variant && button.dataset.size) return;
+          const legacy = button.classList;
+          const variant = button.dataset.variant || (legacy.contains('btn-primary') ? 'primary' : legacy.contains('btn-danger') ? 'danger' : legacy.contains('btn-ghost') ? 'ghost' : legacy.contains('btn-secondary') ? 'secondary' : 'secondary');
+          const size = button.dataset.size || (legacy.contains('btn-icon') ? 'icon' : legacy.contains('btn-sm') ? 'sm' : 'md');
+          button.classList.add('blora-button');
+          ['btn', 'btn-primary', 'btn-danger', 'btn-ghost', 'btn-secondary', 'btn-outline', 'btn-link', 'btn-icon', 'btn-sm', 'btn-lg'].forEach((name) => legacy.remove(name));
+          button.dataset.variant = variant;
+          button.dataset.size = size;
+          if (!button.type) button.type = 'button';
+        });
+      };
+
+      if (!customElements.get('blora-select')) {
+        enhanceButtons();
+        return;
+      }
+
+      const normalizeOptions = (select) => {
+        select.querySelectorAll(':scope > option').forEach((option) => {
+          const replacement = document.createElement('blora-option');
+          [...option.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.value));
+          replacement.textContent = option.textContent;
+          option.replaceWith(replacement);
+        });
+      };
+      collectMatches(scope, 'blora-select').forEach(normalizeOptions);
+      collectMatches(scope, 'select:not(blora-select)').forEach((select) => {
+        if (isBloraHost(select)) return;
+        const replacement = document.createElement('blora-select');
+        [...select.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.value));
+        [...select.options].forEach((option) => {
+          const item = document.createElement('blora-option');
+          [...option.attributes].forEach((attr) => item.setAttribute(attr.name, attr.value));
+          item.textContent = option.textContent;
+          replacement.appendChild(item);
+        });
+        if (select.value) replacement.setAttribute('value', select.value);
+        select.replaceWith(replacement);
+      });
+      enhanceButtons();
+      collectMatches(scope, 'input').forEach((input) => {
+        if (isBloraHost(input)) return;
+        input.classList.add('blora-input');
+        input.classList.remove('input', 'form-input');
+      });
+      collectMatches(scope, 'textarea').forEach((textarea) => {
+        if (isBloraHost(textarea)) return;
+        textarea.classList.add('blora-textarea');
+        textarea.classList.remove('input', 'textarea', 'form-input');
+      });
+      collectMatches(scope, 'blora-select').forEach((select) => select.classList.remove('select', 'form-input'));
+      collectMatches(scope, 'table').forEach((table) => table.classList.add('blora-table'));
+    } finally {
+      bloraUpgradeDepth--;
     }
-    const normalizeOptions = (select) => {
-      select.querySelectorAll(':scope > option').forEach((option) => {
-        const replacement = document.createElement('blora-option');
-        [...option.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.value));
-        replacement.textContent = option.textContent;
-        option.replaceWith(replacement);
-      });
-    };
-    scope.querySelectorAll('blora-select').forEach(normalizeOptions);
-    const bloraSelect = scope.matches?.('blora-select') ? [scope] : [];
-    bloraSelect.forEach(normalizeOptions);
-    const selects = [];
-    if (scope.matches?.('select:not(blora-select)')) selects.push(scope);
-    selects.push(...scope.querySelectorAll('select:not(blora-select)'));
-    selects.forEach((select) => {
-      const replacement = document.createElement('blora-select');
-      [...select.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.value));
-      [...select.options].forEach((option) => {
-        const item = document.createElement('blora-option');
-        [...option.attributes].forEach((attr) => item.setAttribute(attr.name, attr.value));
-        item.textContent = option.textContent;
-        replacement.appendChild(item);
-      });
-      if (select.value) replacement.setAttribute('value', select.value);
-      select.replaceWith(replacement);
-    });
-    scope.querySelectorAll('button').forEach((button) => {
-      const legacy = button.classList;
-      const variant = button.dataset.variant || (legacy.contains('btn-primary') ? 'primary' : legacy.contains('btn-danger') ? 'danger' : legacy.contains('btn-ghost') ? 'ghost' : legacy.contains('btn-secondary') ? 'secondary' : 'secondary');
-      const size = button.dataset.size || (legacy.contains('btn-icon') ? 'icon' : legacy.contains('btn-sm') ? 'sm' : 'md');
-      button.classList.add('blora-button');
-      ['btn', 'btn-primary', 'btn-danger', 'btn-ghost', 'btn-secondary', 'btn-outline', 'btn-link', 'btn-icon', 'btn-sm', 'btn-lg'].forEach((name) => legacy.remove(name));
-      button.dataset.variant = variant;
-      button.dataset.size = size;
-      if (!button.type) button.type = 'button';
-    });
-    scope.querySelectorAll('input').forEach((input) => {
-      input.classList.add('blora-input');
-      input.classList.remove('input', 'form-input');
-    });
-    scope.querySelectorAll('textarea').forEach((textarea) => {
-      textarea.classList.add('blora-textarea');
-      textarea.classList.remove('input', 'textarea', 'form-input');
-    });
-    scope.querySelectorAll('blora-select').forEach((select) => select.classList.remove('select', 'form-input'));
-    scope.querySelectorAll('table').forEach((table) => table.classList.add('blora-table'));
   }
 
   function observeBloraControls() {
     if (!window.MutationObserver || document.documentElement.dataset.bloraObserver) return;
     document.documentElement.dataset.bloraObserver = '1';
     new MutationObserver((records) => {
+      if (bloraUpgradeDepth > 0) return;
       records.forEach((record) => record.addedNodes.forEach((node) => {
         if (node.nodeType !== Node.ELEMENT_NODE) return;
-        // blora-select 自己观察选项变更；仅跳过选项及其子节点。
-        if (node.matches('blora-option') || node.closest('blora-option')) return;
+        if (isBloraHost(node) || node.closest?.('blora-option, blora-select')) return;
         upgradeBloraControls(node);
       }));
     }).observe(document.documentElement, { childList: true, subtree: true });
