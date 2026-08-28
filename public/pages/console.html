@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css?v=24">
   <link rel="stylesheet" href="/css/project-work.css?v=1">
+  <link rel="stylesheet" href="/css/settings.css?v=1">
   <script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
@@ -1691,8 +1692,45 @@ data: [DONE]</code></pre>
 
       <!-- 用户设置页面 -->
       <div id="settingsPage" class="page">
-        <div class="content-section">
-          <h2><span data-i18n="用户设置">用户设置</span></h2>
+        <div id="settingsOverview" class="settings-overview">
+          <div class="settings-version-card">
+            <div class="settings-version-icon">i</div>
+            <div>
+              <strong><span data-i18n="当前版本">当前版本</span></strong>
+              <span>CrewRouter</span>
+            </div>
+            <b id="settingsVersionLabel">-</b>
+          </div>
+          <p class="settings-overview-hint"><span data-i18n="选择一个类别以管理相关设置">选择一个类别以管理相关设置</span></p>
+          <div class="settings-category-grid">
+            <button type="button" class="settings-category-card" data-settings-category="profile">
+              <span class="settings-category-icon">◎</span><span><strong><span data-i18n="个人资料">个人资料</span></strong><small><span data-i18n="头像与界面主题">头像与界面主题</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+            <button type="button" class="settings-category-card" data-settings-category="notifications">
+              <span class="settings-category-icon">♧</span><span><strong><span data-i18n="通知">通知</span></strong><small><span data-i18n="站内通知与 Bark 推送">站内通知与 Bark 推送</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+            <button type="button" class="settings-category-card" data-settings-category="security">
+              <span class="settings-category-icon">◉</span><span><strong><span data-i18n="安全">安全</span></strong><small><span data-i18n="双重认证、通行密钥与密码">双重认证、通行密钥与密码</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+            <button type="button" class="settings-category-card" data-settings-category="signature">
+              <span class="settings-category-icon">⌁</span><span><strong><span data-i18n="API 签名">API 签名</span></strong><small><span data-i18n="自定义 API 回复签名">自定义 API 回复签名</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+            <button type="button" class="settings-category-card" data-settings-category="plugins">
+              <span class="settings-category-icon">✣</span><span><strong><span data-i18n="插件">插件</span></strong><small><span data-i18n="插件数据授权">插件数据授权</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+            <button type="button" class="settings-category-card" data-settings-category="events">
+              <span class="settings-category-icon">☷</span><span><strong><span data-i18n="事件通知">事件通知</span></strong><small><span data-i18n="客户端事件推送偏好">客户端事件推送偏好</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="settingsDetail" class="settings-detail" hidden>
+          <button type="button" id="settingsBackButton" class="settings-back-button">‹ <span data-i18n="返回设置">返回设置</span></button>
+          <div id="settingsDetailTitle" class="settings-detail-title"></div>
+        </div>
+
+        <div class="content-section settings-section settings-category-profile">
+          <h2><span data-i18n="个人资料">个人资料</span></h2>
           <form id="settingsForm" class="settings-form">
             <div class="form-group">
               <label><span data-i18n="头像">头像</span></label>
@@ -1715,7 +1753,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 界面主题（插件主题，plugin-runtime.js 渲染选择器） -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-profile" style="margin-top:24px;">
           <div class="section-header">
             <div>
               <h2><span data-i18n="界面主题">界面主题</span></h2>
@@ -1728,7 +1766,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 通知设置 -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-notifications" style="margin-top:24px;">
           <div class="section-header">
             <div>
               <h2><span data-i18n="通知设置">通知设置</span></h2>
@@ -1751,7 +1789,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 插件数据授权 -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-plugins" style="margin-top:24px;">
           <div class="section-header">
             <div>
               <h2><span data-i18n="插件授权">插件授权</span></h2>
@@ -1773,7 +1811,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 事件通知（hook 上报事件推送开关） -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-events" style="margin-top:24px;">
           <div class="section-header">
             <div>
               <h2><span data-i18n="事件通知">事件通知</span></h2>
@@ -1791,7 +1829,7 @@ data: [DONE]</code></pre>
 
 
         <!-- 安全设置 -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-security" style="margin-top:24px;">
           <h2><span data-i18n="安全设置">安全设置</span></h2>
           
           <!-- 2FA 设置 -->
@@ -1876,7 +1914,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- API 签名设置 -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-signature" style="margin-top:24px;">
           <h2><span data-i18n="API 签名设置">API 签名设置</span></h2>
           <div style="padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">

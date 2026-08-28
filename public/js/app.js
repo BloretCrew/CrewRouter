@@ -300,6 +300,11 @@ class ConsoleApp {
       item.addEventListener('click', () => this.navigateTo(item.dataset.page));
     });
 
+    document.querySelectorAll('[data-settings-category]').forEach(item => {
+      item.addEventListener('click', () => this.showSettingsCategory(item.dataset.settingsCategory));
+    });
+    document.getElementById('settingsBackButton')?.addEventListener('click', () => this.showSettingsOverview());
+
     document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
     document.getElementById('createApiKeyBtn')?.addEventListener('click', () => this.showModal('createApiKeyModal'));
     document.getElementById('confirmCreateApiKey')?.addEventListener('click', () => this.createApiKey());
@@ -6252,7 +6257,31 @@ class ConsoleApp {
     }
   }
 
+  showSettingsOverview() {
+    const overview = document.getElementById('settingsOverview');
+    const detail = document.getElementById('settingsDetail');
+    if (overview) overview.hidden = false;
+    if (detail) detail.hidden = true;
+    document.querySelectorAll('.settings-section').forEach(section => { section.hidden = true; });
+  }
+
+  showSettingsCategory(category) {
+    const overview = document.getElementById('settingsOverview');
+    const detail = document.getElementById('settingsDetail');
+    const title = document.getElementById('settingsDetailTitle');
+    const sections = [...document.querySelectorAll(`.settings-category-${category}`)];
+    if (!sections.length) return;
+    if (overview) overview.hidden = true;
+    if (detail) detail.hidden = false;
+    if (title) title.textContent = document.querySelector(`[data-settings-category="${category}"] strong`)?.textContent || '';
+    document.querySelectorAll('.settings-section').forEach(item => { item.hidden = !sections.includes(item); });
+    sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   loadSettings() {
+    this.showSettingsOverview();
+    const version = document.getElementById('settingsVersionLabel');
+    if (version) version.textContent = window.CREWROUTER_VERSION || '-';
     if (this.user) {
       document.getElementById('settingsAvatar').value = this.user.avatar || '';
       const preview = document.getElementById('settingsAvatarPreview');
