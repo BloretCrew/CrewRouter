@@ -14,9 +14,9 @@ router.post('/auth-invites', requireAdmin, async (req, res) => {
       `INSERT INTO auth_invites (token_hash, created_by, expires_at) VALUES ($1, $2, $3)`,
       [hashToken(token), req.session.user.id, expiresAt]
     );
-    const proto = req.secure ? 'https' : 'https';
     const host = req.get('host');
-    res.json({ token, url: `${proto}://${host}/?invite=${encodeURIComponent(token)}`, expires_at: expiresAt.toISOString() });
+    if (!host || /[\r\n]/.test(host)) return res.status(400).json({ error: '无效的主机名' });
+    res.json({ token, url: `https://${host}/?invite=${encodeURIComponent(token)}`, expires_at: expiresAt.toISOString() });
   } catch (err) {
     res.status(500).json({ error: '生成邀请链接失败' });
   }
@@ -47,7 +47,7 @@ router.post('/auth-invites/:id/revoke', requireAdmin, async (req, res) => {
 async function validateInvite(token, client = pool) {
   if (!token) return null;
   const result = await client.query(
-    `SELECT * FROM auth_invites WHERE token_hash = $1 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP`,
+    `SELECT * FROM auth_invites WHERE token_hash = $1 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP FOR UPDATE`,
     [hashToken(String(token))]
   );
   return result.rows[0] || null;

@@ -409,7 +409,7 @@ async function ensureAuthModeTables() {
     const setup = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");
     const mode = await pool.query("SELECT 1 FROM settings WHERE key = 'auth_mode' LIMIT 1");
     if (setup.rows.length && !mode.rows.length) {
-      await pool.query("INSERT INTO settings (key, value) VALUES ('auth_mode', 'feishu') ON CONFLICT (key) DO NOTHING");
+      await pool.query("INSERT INTO settings (key, value) VALUES ('auth_mode', $1::jsonb) ON CONFLICT (key) DO NOTHING", [JSON.stringify('feishu')]);
     }
   } catch (err) { Logger.warn(`[迁移] auth_mode/passport 迁移跳过: ${err.message}`); }
 }

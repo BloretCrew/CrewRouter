@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
-const { getAuthMode, setAuthMode } = require('../utils/auth-mode');
+const { getAuthMode, setAuthMode, decodeMode } = require('../utils/auth-mode');
 
 /**
  * OOBE 仅保留一步：创建管理员。
@@ -19,7 +19,8 @@ router.get('/setup/status', async (req, res) => {
     const needsSetup = result.rows.length === 0;
     Logger.info(`[OOBE] status 查询: needsSetup=${needsSetup}`);
     const authModeResult = await pool.query("SELECT value FROM settings WHERE key = 'auth_mode'");
-    res.json({ needsSetup, dbReady: true, authMode: authModeResult.rows[0]?.value || null });
+    const authMode = authModeResult.rows[0] ? decodeMode(authModeResult.rows[0].value) : null;
+    res.json({ needsSetup, dbReady: true, authMode });
   } catch (error) {
     // settings 表不存在 = 数据库尚未初始化完成
     Logger.warn(`[OOBE] status 失败（数据库可能未就绪）: ${error.message}`);
@@ -56,6 +57,10 @@ router.post('/setup/mode', requireSetupMode, async (req, res) => {
 // 唯一步骤：创建管理员并完成 OOBE
 router.post('/setup/admin', requireSetupMode, async (req, res) => {
   const { username, email, password } = req.body;
+  const selectedMode = await getAuthMode();
+  if (!selectedMode || !['feishu', 'passport'].includes(selectedMode)) {
+    return res.status(400).json({ error: '请先选择账号系统模式' });
+  }
 
   if (!username || !username.trim()) {
     return res.status(400).json({ error: '用户名不能为空' });
@@ -67,6 +72,7 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock($1)', [731946]);
 
     const bcrypt = require('bcryptjs');
     const passwordHash = bcrypt.hashSync(password, 10);
@@ -140,9 +146,13 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
       Logger.warn('[OOBE] 创建个人账户 Team 跳过:', teamErr.message);
     }
 
-    // 标记 OOBE 完成
+    // 标记 OOBE 完成；模式必须先存在且为合法值
+    const selected = await client.query("SELECT value FROM settings WHERE key = 'auth_mode' FOR UPDATE");
+    if (!selected.rows.length || !decodeMode(selected.rows[0].value)) {
+      throw Object.assign(new Error('请先选择账号系统模式'), { code: 'AUTH_MODE_REQUIRED' });
+    }
     await client.query(
-      "INSERT INTO settings (key, value) VALUES ('setup_complete', $1) ON CONFLICT (key) DO NOTHING",
+      "INSERT INTO settings (key, value) VALUES ('setup_complete', $1::jsonb) ON CONFLICT (key) DO NOTHING",
       [JSON.stringify({ completed_at: new Date().toISOString(), method: 'admin-created' })]
     );
     Logger.info('[OOBE] 初始化完成（仅管理员一步）');

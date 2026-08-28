@@ -32,10 +32,10 @@ const DEFAULT_PROMPT = {
 };
 
 /** 为用户播种默认条目（幂等：已有任意条目则跳过）。内部使用，勿对外暴露。 */
-async function seedDefaultPrompt(userId) {
-  const existing = await pool.query('SELECT 1 FROM inject_prompts WHERE user_id = $1 LIMIT 1', [userId]);
+async function seedDefaultPrompt(userId, db = pool) {
+  const existing = await db.query('SELECT 1 FROM inject_prompts WHERE user_id = $1 LIMIT 1', [userId]);
   if (existing.rows.length > 0) return;
-  await pool.query(
+  await db.query(
     `INSERT INTO inject_prompts (user_id, name, content, enabled, sort_order)
      VALUES ($1, $2, $3, TRUE, -10)`,
     [userId, DEFAULT_PROMPT.name, DEFAULT_PROMPT.content]

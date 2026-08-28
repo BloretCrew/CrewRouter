@@ -174,16 +174,36 @@ class AdminApp {
       const section = document.getElementById('passportInvitesSection');
       if (!section) return;
       section.style.display = 'block';
+      const request = async (url, options) => {
+        const response = await fetch(url, options);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
+        return data;
+      };
+      const showError = (err) => { document.getElementById('inviteResult').textContent = err.message || String(err); };
       const render = async () => {
-        const rows = await fetch('/api/auth-invites').then(r => r.json());
-        document.getElementById('inviteList').innerHTML = (Array.isArray(rows) ? rows : []).map(x => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">#${x.id} · ${x.status} · ${x.expires_at}${x.status === 'active' ? ` <button class="btn btn-sm" onclick="adminApp.revokeInvite(${x.id})">撤销</button>` : ''}</div>`).join('');
+        try {
+          const rows = await request('/api/auth-invites');
+          const list = document.getElementById('inviteList');
+          list.replaceChildren();
+          (Array.isArray(rows) ? rows : []).forEach((x) => {
+            const row = document.createElement('div'); row.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border)';
+            row.textContent = `#${x.id} · ${['active', 'used', 'expired'].includes(x.status) ? x.status : 'unknown'} · ${new Date(x.expires_at).toLocaleString()}`;
+            if (x.status === 'active') { const btn = document.createElement('button'); btn.className = 'btn btn-sm'; btn.textContent = '撤销'; btn.onclick = () => this.revokeInvite(x.id); row.append(' ', btn); }
+            list.appendChild(row);
+          });
+        } catch (err) { showError(err); }
       };
       document.getElementById('generateInviteBtn')?.addEventListener('click', async () => {
-        const data = await fetch('/api/auth-invites', { method: 'POST' }).then(r => r.json());
-        document.getElementById('inviteResult').textContent = data.url || data.error || '';
-        render();
+        try {
+          const data = await request('/api/auth-invites', { method: 'POST' });
+          const result = document.getElementById('inviteResult'); result.replaceChildren();
+          const text = document.createElement('span'); text.textContent = data.url || ''; result.appendChild(text);
+          if (data.url) { const btn = document.createElement('button'); btn.className = 'btn btn-sm'; btn.textContent = '复制'; btn.onclick = () => navigator.clipboard.writeText(data.url).catch(showError); result.append(' ', btn); }
+          await render();
+        } catch (err) { showError(err); }
       });
-      this.revokeInvite = async (id) => { await fetch(`/api/auth-invites/${id}/revoke`, { method: 'POST' }); render(); };
+      this.revokeInvite = async (id) => { try { await request(`/api/auth-invites/${id}/revoke`, { method: 'POST' }); await render(); } catch (err) { showError(err); } };
       render();
     } catch (_) {}
   }

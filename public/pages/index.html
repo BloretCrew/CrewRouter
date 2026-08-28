@@ -133,7 +133,7 @@
 
         <!-- 第三方登录（按账号系统模式显示） -->
         <div id="passportLoginSection" class="login-oauth" style="display: none;">
-          <a href="/auth/passport" class="login-btn login-btn-feishu"><span>使用 Bloret PassPort 登录</span></a>
+          <a href="/auth/passport" id="passportLoginLink" class="login-btn login-btn-feishu"><span>使用 Bloret PassPort 登录</span></a>
         </div>
         <div id="feishuLoginSection" class="login-oauth" style="display: none;">
           <a href="/auth/feishu" class="login-btn login-btn-feishu">
@@ -158,6 +158,13 @@
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/theme.js?v=2"></script>
   <script>
+    (function () {
+      const invite = new URLSearchParams(window.location.search).get('invite');
+      if (invite && /^[A-Za-z0-9_-]{20,200}$/.test(invite)) {
+        sessionStorage.setItem('passportInvite', invite);
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+      }
+    })();
     (async function () {
       try {
         const r = await fetch('/auth/status');
@@ -166,6 +173,9 @@
         const passport = document.getElementById('passportLoginSection');
         if (d.authMode === 'passport') { if (passport) passport.style.display = 'block'; if (feishu) feishu.style.display = 'none'; }
         else if (d.feishuEnabled && feishu) feishu.style.display = 'block';
+        const link = document.getElementById('passportLoginLink');
+        const storedInvite = sessionStorage.getItem('passportInvite');
+        if (link && storedInvite) link.href = `/auth/passport?invite=${encodeURIComponent(storedInvite)}`;
       } catch (_) {}
     })();
   </script>
