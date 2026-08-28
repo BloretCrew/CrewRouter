@@ -1600,7 +1600,7 @@ pre {
 }
 
 .api-key-card.key-disabled::before {
-  background: #ef4444;
+  background: var(--status-danger);
 }
 
 /* API Key 拖拽排序 */
@@ -1889,8 +1889,8 @@ pre {
 }
 
 .api-key-tags-overflow-remove:hover {
-  color: #dc2626;
-  background: rgba(239, 68, 68, 0.08);
+  color: var(--status-danger);
+  background: color-mix(in srgb, var(--status-danger) 8%, transparent);
 }
 
 .api-key-tags-overflow-manage {
@@ -2045,7 +2045,7 @@ pre {
 }
 
 .copy-btn.copied {
-  color: #10b981;
+  color: var(--status-success);
 }
 
 .api-key-body {
@@ -3369,7 +3369,7 @@ pre {
 }
 
 .cache-saved {
-  color: #10b981;
+  color: var(--status-success);
 }
 
 /* ============================================
