@@ -18,7 +18,7 @@ npx @bloret-crew/crewrouter-helper test
 
 ## 交互式 TUI
 
-在交互式终端直接运行 `crewrouter-helper`，即可打开菜单：查看连接状态、登录/配置服务、为 Claude Code / Qwen Code / Codex 写入上报 Hook，以及发送测试事件。菜单使用方向键选择、Enter 确认，`q` 或 Esc 返回；客户端配置会保留已有内容，重复配置不会重复添加 Hook。
+在交互式终端直接运行 `crewrouter-helper`，即可打开菜单：查看连接状态、登录/配置服务、为 Claude Code / Qwen Code / Codex 写入上报 Hook，以及发送测试事件。菜单使用方向键选择、Enter 确认，`q` 或 Esc 返回；同时支持 `j/k` 作为备用导航键。客户端配置会保留已有内容，重复配置不会重复添加 Hook。当前包保持 Node.js 18+ 零依赖设计；OpenTUI 目前要求 Bun 1.3+ 或 Node.js 26.4+ ESM，因此未作为运行时依赖引入。
 
 客户端配置入口会自动写入：Claude Code 的 `~/.claude/settings.json`、Qwen Code 的 `~/.qwen/settings.json`、Codex 的 `~/.codex/config.toml`。非交互环境仍显示原有帮助信息，适合脚本和 Hook 调用。
 

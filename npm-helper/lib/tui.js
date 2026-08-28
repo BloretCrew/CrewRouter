@@ -95,6 +95,7 @@ function selectMenu(title, items, { selected = 0, multi = false } = {}) {
   return new Promise((resolve) => {
     let cursor = Math.max(0, Math.min(selected, items.length - 1));
     const chosen = new Set();
+    let escapeBuffer = '';
     const previousRaw = process.stdin.isRaw;
     const draw = () => {
       process.stdout.write('\x1b[2J\x1b[H');
@@ -110,23 +111,37 @@ function selectMenu(title, items, { selected = 0, multi = false } = {}) {
       process.stdin.removeListener('data', onData);
       process.stdin.setRawMode(Boolean(previousRaw));
       process.stdin.pause();
+      process.stdout.write('\x1b[?25h');
       resolve(value);
     };
     const onData = (buffer) => {
-      const key = buffer.toString();
-      if (key === '\\u0003' || key.toLowerCase() === 'q' || key === '\\u001b') return finish(null);
-      if (key === '\\u001b[A' || key === 'k') cursor = (cursor + items.length - 1) % items.length;
-      else if (key === '\\u001b[B' || key === 'j') cursor = (cursor + 1) % items.length;
-      else if (multi && key === ' ') {
-        if (chosen.has(cursor)) chosen.delete(cursor); else chosen.add(cursor);
-      } else if (key === '\r' || key === '\\n') {
-        return finish(multi ? [...chosen].sort((a, b) => a - b) : cursor);
+      for (const byte of buffer) {
+        const key = String.fromCharCode(byte);
+        if (escapeBuffer || byte === 0x1b) {
+          escapeBuffer += key;
+          if (escapeBuffer === '\x1b[A') {
+            cursor = (cursor + items.length - 1) % items.length;
+            escapeBuffer = '';
+          } else if (escapeBuffer === '\x1b[B') {
+            cursor = (cursor + 1) % items.length;
+            escapeBuffer = '';
+          } else if (escapeBuffer.length > 3) escapeBuffer = '';
+          continue;
+        }
+        if (byte === 3 || key.toLowerCase() === 'q') return finish(null);
+        if (multi && key === ' ') {
+          if (chosen.has(cursor)) chosen.delete(cursor); else chosen.add(cursor);
+        } else if (byte === 13 || byte === 10) {
+          return finish(multi ? [...chosen].sort((a, b) => a - b) : cursor);
+        } else if (key === 'k') cursor = (cursor + items.length - 1) % items.length;
+        else if (key === 'j') cursor = (cursor + 1) % items.length;
       }
       draw();
     };
     process.stdin.setRawMode(true);
     process.stdin.resume();
     process.stdin.on('data', onData);
+    process.stdout.write('\x1b[?25l');
     draw();
   });
 }
