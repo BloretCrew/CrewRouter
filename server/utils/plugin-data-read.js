@@ -74,16 +74,18 @@ async function modelList() {
   // 探测列是否存在，避免版本差异崩溃
   const col = await pool.query(
     `SELECT column_name FROM information_schema.columns
-     WHERE table_name = 'models' AND column_name IN ('enabled','provider_id','model_multiplier','alias','health','last_response_code')`
+     WHERE table_name = 'models' AND column_name IN ('enabled','provider','provider_id','model_multiplier','alias','health','last_response_code')`
   );
   const cols = new Set(col.rows.map(r => r.column_name));
+  // models 表的供应商列：新版用 provider，旧版可能 provider_id
+  const providerCol = cols.has('provider') ? 'provider' : (cols.has('provider_id') ? 'provider_id' : null);
 
   let healthSel = '';
   if (cols.has('health')) healthSel += ', health';
   if (cols.has('last_response_code')) healthSel += ', last_response_code';
 
   const r = await pool.query(
-    `SELECT id, name, alias, provider_id, model_multiplier, enabled ${healthSel}
+    `SELECT id, name, alias, ${providerCol || 'NULL AS provider'}, model_multiplier, enabled ${healthSel}
      FROM models ORDER BY id LIMIT 500`
   );
   return r.rows;

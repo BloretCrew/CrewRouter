@@ -312,7 +312,7 @@ function buildContext(plugin, hooksBus, logPrefix) {
       if (allowedHosts.size && !allowedHosts.has(host)) {
         throw new Error(`[plugins:${id}] webhook 目标域 ${host} 不在 allowedHosts 白名单`);
       }
-      const check = validateUrl(url, { allowPrivate: false });
+      const check = await validateUrl(url, { allowPrivate: false });
       if (!check.ok) throw new Error(`[plugins:${id}] webhook 被 SSRF 校验拒绝: ${check.error}`);
       await pool.query(
         `CREATE TABLE IF NOT EXISTS plugin_webhooks (
@@ -337,7 +337,7 @@ function buildContext(plugin, hooksBus, logPrefix) {
           try {
             const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: eventName, payload, ts: Date.now() }) };
             if (w.secret) opts.headers['X-Webhook-Secret'] = w.secret;
-            const check = validateUrl(w.url, { allowPrivate: false });
+            const check = await validateUrl(w.url, { allowPrivate: false });
             if (check.ok) {
               await Promise.race([
                 fetch(w.url, { ...opts, signal: AbortSignal.timeout(10000) }),
