@@ -36,7 +36,7 @@ const {
   normalizeRequestSource,
 } = require('../utils/request-source');
 const { extractCustomInstructions } = require('../utils/custom-instructions-extractor');
-const { buildInjectedPrompt, openaiAppend, anthropicAppend, anthropicSystemAppend, responsesAppend } = require('../utils/inject-prompt');
+const { buildInjectedPrompt, openaiAppend, anthropicAppend, anthropicMessageAppend, responsesAppend } = require('../utils/inject-prompt');
 const {
   scrubInjectedEcho,
   scrubOpenAiChatCompletion,
@@ -1347,7 +1347,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   // reasoning_effort：仅当模型开启 forward_reasoning_effort 时由上层写入 body
   if (body.reasoning_effort !== undefined) upstreamBody.reasoning_effort = body.reasoning_effort;
 
-  // 注入提示词：启用条目以尾部 system 消息追加进 system 区（复制数组，重试/换供应商不会重复拼接）
+  // 注入提示词：插入首条 user 消息前的 meta user（复制数组，重试/换供应商不会重复拼接）
   if (req.apiUser?.injectPrompt) {
     upstreamBody.messages = openaiAppend([...(upstreamBody.messages || [])], req.apiUser.injectPrompt);
   }
@@ -1719,9 +1719,9 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
   let currentProxyInfo = proxyInfo;
 
   const upstreamBody = ResponsesUpstream.chatToResponsesBody({ ...body, stream: !!stream }, model);
-  // 注入提示词：追加到 instructions（转换体本身无 instructions，等价追加进 system 区）
+  // 注入提示词：放入 Responses input 首条 user 前的 meta user
   if (req.apiUser?.injectPrompt) {
-    upstreamBody.instructions = responsesAppend(upstreamBody.instructions, req.apiUser.injectPrompt);
+    upstreamBody.input = responsesAppend(upstreamBody.input, req.apiUser.injectPrompt);
   }
   const msgCount = body.messages?.length || 0;
   Logger.info(`[proxyChatToResponses] 请求: provider=${provider.id}(${provider.name}), url=${url}, model=${model}, stream=${!!stream}, messages=${msgCount}, proxy=${currentProxyInfo?.proxyUrl || 'none'}`);
@@ -1917,9 +1917,9 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     }
   }
 
-  // 注入提示词：启用条目追加到 systemParts 尾部后一并 join（systemParts 每次调用重建，重试安全）
+  // 注入提示词：放入 Anthropic 首条 user 消息前的 contextual meta user
   if (req.apiUser?.injectPrompt) {
-    anthropicAppend(systemParts, req.apiUser.injectPrompt);
+    anthropicAppend(upstreamBody.messages, req.apiUser.injectPrompt);
   }
 
   if (systemParts.length > 0) {
@@ -2449,8 +2449,7 @@ async function handleChatCompletion(req, res) {
     max_tokens = max_completion_tokens;
   }
 
-  // 注入提示词：Fusion 走独立上游调用（server/fusion），在此追加尾部 system 消息；
-  // 普通模型由 proxyOpenAI / proxyChatToResponses / proxyAnthropic 注入，避免重试时重复拼接
+  // 注入提示词：Fusion 走独立上游调用，在首条 user 消息前插入 meta user
   if (req.apiUser.injectPrompt && Array.isArray(messages) && (model === 'fusion' || model?.startsWith('fusion'))) {
     openaiAppend(messages, req.apiUser.injectPrompt);
   }
@@ -3077,10 +3076,10 @@ async function handleAnthropicMessage(req, res) {
 
   let { model, messages, system, max_tokens, stream, temperature, top_p, top_k, stop_sequences, tools, tool_choice, response_format, thinking, metadata, output_config, service_tier, cache_control, container, inference_geo } = req.body;
 
-  // 注入提示词：追加到 system 尾部（字符串尾接 / 块数组追加 text 块）；无配置时请求保持原样
+  // 注入提示词：插入 Anthropic messages 首条 user 前；无配置时请求保持原样
   if (req.apiUser.injectPrompt) {
-    system = anthropicSystemAppend(system, req.apiUser.injectPrompt);
-    req.body.system = system;
+    messages = anthropicMessageAppend([...(messages || [])], req.apiUser.injectPrompt);
+    req.body.messages = messages;
   }
 
   Logger.info(`[Anthropic] 收到请求: model=${model}, stream=${!!stream}, messages=${messages?.length}`);
@@ -5266,9 +5265,9 @@ async function handleResponses(req, res) {
   const body = req.body;
   let { model, input, stream, temperature, max_output_tokens, top_p, tools, tool_choice, text, reasoning } = body;
 
-  // 注入提示词：追加到 instructions 尾部（上游透传与 chat 转换两条路径均携带）；无配置时请求保持原样
+  // 注入提示词：放入 Responses input 首条 user 前的 meta user；无配置时请求保持原样
   if (req.apiUser.injectPrompt) {
-    body.instructions = responsesAppend(body.instructions, req.apiUser.injectPrompt);
+    body.input = responsesAppend(body.input, req.apiUser.injectPrompt);
   }
 
   // Fusion 模型检测
