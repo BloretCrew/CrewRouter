@@ -7127,7 +7127,7 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('退出失败'));
       this.showToast(t('已退出 Co-Key'), 'success');
       this.closeApiKeyMoreMenus();
-      this.hideModal('keyMembersModal');
+      this.closeModal('keyMembersModal');
       await this.loadApiKeys();
     } catch (error) {
       this.showToast(error.message || t('退出失败'), 'error');
