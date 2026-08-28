@@ -165,8 +165,6 @@
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => upgradeBloraControls(document), { once: true });
-    } else {
-      upgradeBloraControls(document);
     }
     const normalizeOptions = (select) => {
       select.querySelectorAll(':scope > option').forEach((option) => {
