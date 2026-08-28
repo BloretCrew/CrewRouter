@@ -6226,9 +6226,7 @@ async function(ctx) {
       ? t('SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化')
       : t('Codex WHAM 使用导入的 OAuth Token 查询 ChatGPT Codex 的 5 小时与 7 天窗口，接口为非公开接口，字段可能变化');
     if (label) label.textContent = isGrok ? 'SuperGrok auth.json' : 'Codex auth.json';
-    if (authHint) authHint.innerHTML = isGrok
-      ? t('文件通常位于') + ' <code>~/.grok/auth.json</code>' + t('，即 Linux/macOS 下的') + '<code>' + t('/home/你的用户名/.grok/auth.json') + '</code>' + t('。Token 会保存到当前供应商，请勿上传给第三方。')
-      : t('文件通常位于') + ' <code>~/.codex/auth.json</code>' + t('，即 Linux/macOS 下的') + '<code>' + t('/home/你的用户名/.codex/auth.json') + '</code>' + t('。Token 会保存到当前供应商，请勿上传给第三方。');
+    if (authHint) setHTML(authHint, html`${t('文件通常位于')} <code>${isGrok ? '~/.grok/auth.json' : '~/.codex/auth.json'}</code>${t('，即 Linux/macOS 下的')}<code>${isGrok ? t('/home/你的用户名/.grok/auth.json') : t('/home/你的用户名/.codex/auth.json')}</code>${t('。Token 会保存到当前供应商，请勿上传给第三方。')}`);
     if (textarea) textarea.placeholder = isGrok ? '{"access_token":"...","user_id":"..."}' : '{"tokens":{"access_token":"...","refresh_token":"..."}}';
   }
 
@@ -11050,7 +11048,7 @@ async function(ctx) {
   }
 
   closeTestResultModal() {
-    document.getElementById('adminTestResultModal').style.display = 'none';
+    this.closeModal('adminTestResultModal');
   }
 
   async testModel(modelId, buttonEl) {
