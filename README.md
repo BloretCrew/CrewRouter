@@ -49,12 +49,21 @@ CrewRouter 把多家上游模型供应商收成 **一个 OpenAI / Anthropic 兼�
 - [x] **Playground** — 控制台内交互调试与会话历史
 - [x] **开箱向导** — 首次启动 OOBE 完成数据库与管理员配置
 - [x] **深浅色主题** — 跟随系统或手动切换
+- [x] **插件系统** — 沙箱插件框架：网关钩子、页面/插槽/路由扩展、主题插件，全能力面覆盖
+- [x] **插件商店** — 浏览、评分、一键安装、更新检测（demo 模式 / 自托管可配置源）
+- [x] **全站国际化** — 中英双语，译文托管实时拉取
+- [x] **注入提示词** — 按 key/全局条目化，Claude Code 风格注入，响应自动净化
+- [x] **客户端事件上报** — CrewRouterHelper 上报 + 实时活动看板
+- [x] **OAuth 2.0 授权服务** — PKCE、AI 客户端凭证
+- [x] **模型库增强** — 收藏、全局搜索、Key 拖拽排序、队列回退
+- [x] **自定义提示词指纹** — 调用记录标记 CLAUDE.md/AGENTS.md 等
+- [x] **会话总结** — 会话标签、生成总结
 
 ## 兼容的客户端
 
 只需更换 `base_url`，无需改业务代码：
 
-Claude Code · Claude Desktop · Codex · OpenCode · OpenClaw · Hermes Agent · Grok Build · DeepSeek Harness · Kilo Code · Cline · Cherry Studio · Qwen Code · Cursor · 以及一切走 OpenAI / Anthropic 协议的工具
+Claude Code · Claude Desktop · Codex · OpenCode · OpenClaw · Hermes Agent · Grok Build · DeepSeek Harness · Kilo Code · Cline · Cherry Studio · Qwen Code · Cursor · 以及一切走 OpenAI / Anthropic 协议的工具，以及安装了对应插件的任意客户端
 
 ```bash
 # 只需更换 base_url
@@ -170,7 +179,8 @@ npm start          # 开发可用 npm run dev
 
 - **运行时** Node.js · Express
 - **数据** PostgreSQL
-- **前端** 原生 HTML / CSS / JS（控制台、管理后台、Playground、Showcase）
+- **前端** 原生 HTML / CSS / JS（控制台、管理后台、Playground、Showcase），含 i18n 与插件运行时
+- **服务端** OAuth 授权服务与插件商店
 - **安全** Session、TOTP、WebAuthn、OAuth、SSRF 校验
 
 ## 开源许可
