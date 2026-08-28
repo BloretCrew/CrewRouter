@@ -220,8 +220,8 @@
     new MutationObserver((records) => {
       records.forEach((record) => record.addedNodes.forEach((node) => {
         if (node.nodeType !== Node.ELEMENT_NODE) return;
-        // blora-select 自己观察选项变更；跳过其内部节点，避免双重重渲染。
-        if (node.matches('blora-option') || (node.closest('blora-select') && !node.matches('blora-select'))) return;
+        // blora-select 自己观察选项变更；仅跳过选项及其子节点。
+        if (node.matches('blora-option') || node.closest('blora-option')) return;
         upgradeBloraControls(node);
       }));
     }).observe(document.documentElement, { childList: true, subtree: true });
