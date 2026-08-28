@@ -2636,6 +2636,7 @@
   "名": "",
   "测试失败:": "Test failed: ",
   "上下文重放": "context replay",
+  "已折叠 {count} 个旧事件": "Collapsed {count} old events",
   "重复": "repeated",
   "次操作": " ops",
   "加载提示词失败:": "Failed to load prompts: ",

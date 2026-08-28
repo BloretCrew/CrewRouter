@@ -34,6 +34,7 @@ const LIMIT_TEXT = 2000;
 const LIMIT_TOOL_ARGS = 500;
 const LIMIT_TOOL_RESULT = 800;
 const LIMIT_THINKING = 300;
+const MAX_EVENTS_PER_RECORD = 120;
 
 /** 会话键表达式：优先归因 sessionId，否则回退「key + 小时窗」启发式分桶 */
 const SESSION_KEY_SQL = `COALESCE(
@@ -663,6 +664,8 @@ function buildDetailRecords(rawRows) {
       }
     }
     prevEvents = events;
+    const eventsTruncated = newEvents.length > MAX_EVENTS_PER_RECORD;
+    if (eventsTruncated) newEvents = newEvents.slice(-MAX_EVENTS_PER_RECORD);
 
     return {
       id: row.id,
@@ -678,6 +681,7 @@ function buildDetailRecords(rawRows) {
         JSON.stringify(events.filter(e => e.type === 'text' && e.role === 'user').map(e => e.text))
       ).digest('hex'),
       events: newEvents,
+      eventsTruncated,
       // 上下文指示（压缩前的长度/字节数），压力曲线直读；未压缩记录为 null
       origCtxMsgs: row.orig_ctx_msgs == null ? null : Number(row.orig_ctx_msgs),
       origCtxBytes: row.orig_ctx_bytes == null ? null : Number(row.orig_ctx_bytes),

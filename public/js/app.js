@@ -5370,7 +5370,7 @@ class ConsoleApp {
               <span>${this._formatBigNumber(Number(record.tokens || 0))} Token</span>
               ${Number(record.cachedTokens || 0) ? `<span style="color:var(--success);">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
               ${record.latencyMs != null ? `<span>${(record.latencyMs / 1000).toFixed(1)}s</span>` : ''}
-              ${suppressed > 0 ? `<span class="merged-tag">${t('上下文重放')} +${suppressed}</span>` : `${evts.length} ${t('个事件')}`}${Number(record.repeatCount || 0) > 1 ? ` · <span class="merged-tag">${t('重复')} ×${record.repeatCount}</span>` : ''}
+              ${record.eventsTruncated ? `<span class="merged-tag">${t('已折叠 {count} 个旧事件', { count: suppressed })}</span>` : suppressed > 0 ? `<span class="merged-tag">${t('上下文重放')} +${suppressed}</span>` : `${evts.length} ${t('个事件')}`}${Number(record.repeatCount || 0) > 1 ? ` · <span class="merged-tag">${t('重复')} ×${record.repeatCount}</span>` : ''}
             </div>
             ${eventsHtml}
           </li>`;
