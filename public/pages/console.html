@@ -2234,7 +2234,7 @@ data: [DONE]</code></pre>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="/js/theme.js?v=2"></script>
 <script src="/js/i18n.js?v=2"></script>
-<script src="/js/dom.js?v=4"></script>
+<script src="/js/dom.js?v=6"></script>
 <script src="/js/dialog.js?v=2"></script>
 <script src="/js/session-tool-groups.js?v=2"></script>
 <script src="/js/vendor/marked.min.js"></script>
@@ -2274,7 +2274,7 @@ data: [DONE]</code></pre>
           Object.keys(docsContent).forEach(key => {
             const page = document.getElementById('doc-' + key);
             if (page && docsContent[key]) {
-              page.innerHTML = docsContent[key];
+              setHTML(page, docsContent[key]);
             }
           });
         }
@@ -2295,7 +2295,7 @@ data: [DONE]</code></pre>
     function openDocsEditor() {
       const page = document.getElementById('doc-' + currentDocPage);
       if (page) {
-        document.getElementById('docsEditorContent').value = page.innerHTML;
+        document.getElementById('docsEditorContent').value = page.textContent || '';
       }
       document.getElementById('docsEditorModal').style.display = 'flex';
     }
@@ -2314,7 +2314,7 @@ data: [DONE]</code></pre>
         
         if (res.ok) {
           const page = document.getElementById('doc-' + currentDocPage);
-          if (page) page.innerHTML = content;
+          if (page) setHTML(page, content);
           document.getElementById('docsEditorModal').style.display = 'none';
         } else {
           alert('保存失败');

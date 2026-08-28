@@ -80,6 +80,27 @@
     return el;
   }
 
+  function getBloraChecked(control) {
+    return !!(control && (control.checked === true || control.hasAttribute('checked')));
+  }
+
+  function setBloraChecked(control, checked) {
+    if (!control) return;
+    if ('checked' in control) control.checked = !!checked;
+    control.toggleAttribute('checked', !!checked);
+  }
+
+  function getBloraValue(control) {
+    if (!control) return '';
+    if (control.tagName === 'BLORA-RANGE') return control.values?.[0] ?? control.getAttribute('values')?.split(',')[0] ?? '';
+    return control.value ?? control.getAttribute('value') ?? '';
+  }
+
+  global.getBloraChecked = getBloraChecked;
+  global.setBloraChecked = setBloraChecked;
+  global.getBloraValue = getBloraValue;
+  global.getBloraCheckedControls = (selector, root = document) => [...root.querySelectorAll(selector)].filter(getBloraChecked);
+
   /** 唯一推荐的 HTML 写入入口（替代 el.innerHTML = ...） */
   function upgradeBloraControls(root) {
     const scope = root && root.querySelectorAll ? root : document;
@@ -133,6 +154,7 @@
       const value = input.value || input.min || 0;
       replacement.setAttribute('values', `${value},${value}`);
       if (input.id) replacement.id = input.id;
+      if (input.getAttribute('oninput')) replacement.setAttribute('data-oninput', input.getAttribute('oninput'));
       replacement.className = input.className;
       replacement.classList.remove('blora-input');
       input.replaceWith(replacement);
@@ -141,21 +163,6 @@
       scope.querySelectorAll('button').forEach((button) => button.classList.add('blora-button'));
       return;
     }
-    const getChecked = (control) => control?.checked === true || control?.hasAttribute('checked');
-    const setChecked = (control, checked) => {
-      if (!control) return;
-      if ('checked' in control) control.checked = !!checked;
-      control.toggleAttribute('checked', !!checked);
-    };
-    const getValue = (control) => {
-      if (!control) return '';
-      if (control.tagName === 'BLORA-RANGE') return control.values?.[0] ?? control.getAttribute('values')?.split(',')[0] ?? '';
-      return control.value ?? control.getAttribute('value') ?? '';
-    };
-    global.getBloraChecked = getChecked;
-    global.setBloraChecked = setChecked;
-    global.getBloraValue = getValue;
-    global.getBloraCheckedControls = (selector, root = document) => [...root.querySelectorAll(selector)].filter(getChecked);
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => upgradeBloraControls(document), { once: true });
     } else {
@@ -227,10 +234,24 @@
       .replace(/<\/option>/gi, '</blora-option>');
   }
 
+  function sanitizeHtml(content) {
+    const template = document.createElement('template');
+    template.innerHTML = normalizeBloraMarkup(content);
+    const dangerous = template.content.querySelectorAll('script, iframe, object, embed, link, meta, style');
+    dangerous.forEach((el) => el.remove());
+    template.content.querySelectorAll('*').forEach((el) => {
+      [...el.attributes].forEach((attr) => {
+        const name = attr.name.toLowerCase();
+        if (name.startsWith('on') || (name === 'href' || name === 'src' || name === 'action') && !/^(https?:|mailto:|#|\/)/i.test(attr.value)) el.removeAttribute(attr.name);
+      });
+    });
+    return template.innerHTML;
+  }
+
   function setHTML(el, content) {
     const node = resolveEl(el);
     if (!node) return null;
-    node.innerHTML = normalizeBloraMarkup(content);
+    node.innerHTML = sanitizeHtml(content);
     upgradeBloraControls(node);
     return node;
   }

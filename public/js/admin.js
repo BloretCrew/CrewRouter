@@ -5915,24 +5915,24 @@ async function(ctx) {
     items.forEach(item => {
       if (item.style.display !== 'none') {
         const cb = item.querySelector('input[type="checkbox"]');
-        if (cb) cb.checked = checked;
+        if (cb) setBloraChecked(cb, checked);
       }
     });
     this.updateFetchedModelsCount();
   }
 
   updateFetchedModelsCount() {
-    const checked = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]:checked').length;
-    const total = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]').length;
+    const checked = getBloraCheckedControls('.fetched-model-checkbox', document.getElementById('fetchedModelsList')).length;
+    const total = document.querySelectorAll('#fetchedModelsList blora-checkbox, #fetchedModelsList blora-switch').length;
     document.getElementById('selectAllFetchedModels').checked = checked > 0 && checked === total;
   }
 
   async saveFetchedModels() {
     const providerId = this.currentFetchProviderId;
-    const checkboxes = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]');
+    const checkboxes = document.querySelectorAll('#fetchedModelsList blora-checkbox, #fetchedModelsList blora-switch');
     const enabledModelIds = [];
     checkboxes.forEach(cb => {
-      if (cb.checked) {
+      if (getBloraChecked(cb)) {
         enabledModelIds.push(cb.value);
       }
     });
@@ -9791,7 +9791,7 @@ async function(ctx) {
             </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.group-member-checkbox').forEach(cb => {
             cb.onchange = () => {
-              if (cb.checked) selected.add(parseInt(cb.value));
+              if (getBloraChecked(cb)) selected.add(parseInt(cb.value));
               else selected.delete(parseInt(cb.value));
             };
           });
@@ -10479,7 +10479,7 @@ async function(ctx) {
             </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.team-member-checkbox').forEach(cb => {
             cb.onchange = () => {
-              if (cb.checked) selected.add(parseInt(cb.value));
+              if (getBloraChecked(cb)) selected.add(parseInt(cb.value));
               else selected.delete(parseInt(cb.value));
             };
           });

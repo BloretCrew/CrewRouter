@@ -2952,7 +2952,7 @@ class ConsoleApp {
       // 存储 keyId 并重写保存逻辑
       this._editingKeyModelsId = keyId;
       this._saveKeyModelsOverride = async () => {
-        const panelModels = Array.from(container.querySelectorAll('.fusion-panel-cb:checked')).map(cb => cb.value);
+        const panelModels = getBloraCheckedControls('.fusion-panel-cb', container).map(cb => getBloraValue(cb));
         const judgeModelId = document.getElementById('fusionJudgeSelect').value;
         const outerModelId = document.getElementById('fusionOuterSelect').value;
 
@@ -2960,7 +2960,7 @@ class ConsoleApp {
           const saveRes = await fetch(`/api/user/api-keys/${keyId}/fusion-config`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ panel_models: panelModels, judge_model_id: judgeModelId, outer_model_id: outerModelId, fusion_enabled: document.getElementById('fusionEnabledToggle')?.checked ?? true })
+            body: JSON.stringify({ panel_models: panelModels, judge_model_id: judgeModelId, outer_model_id: outerModelId, fusion_enabled: getBloraChecked(document.getElementById('fusionEnabledToggle')) })
           });
           if (saveRes.ok) {
             this.closeModals();
@@ -2989,9 +2989,9 @@ class ConsoleApp {
 
   _toggleAllFusionPanels() {
     const visible = document.querySelectorAll('#fusionPanelList .fusion-panel-item:not([style*="display: none"]) .fusion-panel-cb');
-    const allChecked = Array.from(visible).every(cb => cb.checked);
-    visible.forEach(cb => cb.checked = !allChecked);
-    const count = document.querySelectorAll('#fusionPanelList .fusion-panel-cb[checked]').length;
+    const allChecked = Array.from(visible).every(getBloraChecked);
+    visible.forEach(cb => setBloraChecked(cb, !allChecked));
+    const count = getBloraCheckedControls('.fusion-panel-cb', document.getElementById('fusionPanelList')).length;
     document.getElementById('fusionPanelCount').textContent = `${count}${t('个模型已选')}`;
   }
 
@@ -3140,9 +3140,9 @@ class ConsoleApp {
     const warning = document.getElementById('keyOptionQuotaWarning');
     const swallow = document.getElementById('keyOptionSwallowImages');
     const commands = document.getElementById('keyOptionCrewRouterCommands');
-    if (warning) warning.checked = key.quota_warning_enabled !== false;
-    if (swallow) swallow.checked = key.swallow_images === true;
-    if (commands) commands.checked = key.crewrouter_commands !== false;
+    if (warning) setBloraChecked(warning, key.quota_warning_enabled !== false);
+    if (swallow) setBloraChecked(swallow, key.swallow_images === true);
+    if (commands) setBloraChecked(commands, key.crewrouter_commands !== false);
     this.showModal('keyOptionsModal');
   }
 
@@ -3243,14 +3243,14 @@ class ConsoleApp {
       }
       const data = await res.json();
 
-      document.getElementById('scheduleEnabled').checked = data.schedule_enabled || false;
+      setBloraChecked(document.getElementById('scheduleEnabled'), data.schedule_enabled || false);
       document.getElementById('scheduleOnTime').value = data.schedule_on_time ? data.schedule_on_time.substring(0, 5) : '09:00';
       document.getElementById('scheduleOffTime').value = data.schedule_off_time ? data.schedule_off_time.substring(0, 5) : '18:00';
       document.getElementById('scheduleTimezone').value = data.schedule_timezone || 'Asia/Shanghai';
 
       const days = data.schedule_days || [0, 1, 2, 3, 4, 5, 6];
       document.querySelectorAll('.schedule-day').forEach(cb => {
-        cb.checked = days.includes(parseInt(cb.value));
+        setBloraChecked(cb, days.includes(parseInt(getBloraValue(cb))));
       });
 
       this._toggleScheduleFields();
@@ -3263,12 +3263,12 @@ class ConsoleApp {
   }
 
   _toggleScheduleFields() {
-    const enabled = document.getElementById('scheduleEnabled').checked;
+    const enabled = getBloraChecked(document.getElementById('scheduleEnabled'));
     document.getElementById('scheduleFields').style.display = enabled ? '' : 'none';
   }
 
   async saveKeySchedule() {
-    const schedule_enabled = document.getElementById('scheduleEnabled').checked;
+    const schedule_enabled = getBloraChecked(document.getElementById('scheduleEnabled'));
     const schedule_on_time = document.getElementById('scheduleOnTime').value;
     const schedule_off_time = document.getElementById('scheduleOffTime').value;
     const schedule_timezone = document.getElementById('scheduleTimezone').value;
@@ -5857,7 +5857,7 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('保存失败'));
 
       // 绑定选择随条目一起保存
-      const keyIds = [...document.querySelectorAll('#injectPromptKeyList .inject-key-check:checked')].map(cb => parseInt(cb.value, 10));
+      const keyIds = getBloraCheckedControls('.inject-key-check', document.getElementById('injectPromptKeyList')).map(cb => parseInt(getBloraValue(cb), 10));
       await this.saveInjectPromptKeys(data.item?.id || id, keyIds);
 
       this.closeModals();
@@ -8721,7 +8721,7 @@ ${extractorBody}
   }
 
   async saveManagedModels() {
-    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
+    const checked = getBloraCheckedControls('.manage-model-checkbox');
     const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) {
@@ -8755,7 +8755,7 @@ ${extractorBody}
 
   // 批量操作函数
   _updateManageModelsBatchBar() {
-    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
+    const checked = getBloraCheckedControls('.manage-model-checkbox');
     const count = checked.length;
     const batchBar = document.getElementById('manageModelsBatchBar');
     const countEl = document.getElementById('manageModelsSelectedCount');
@@ -8769,7 +8769,7 @@ ${extractorBody}
   }
 
   async batchEnableModels(enabled) {
-    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
+    const checked = getBloraCheckedControls('.manage-model-checkbox');
     const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) return;
@@ -8799,7 +8799,7 @@ ${extractorBody}
   }
 
   async batchDeleteManagedModels() {
-    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
+    const checked = getBloraCheckedControls('.manage-model-checkbox');
     const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) return;
@@ -8834,7 +8834,7 @@ ${extractorBody}
   }
 
   async executeBatchSetPrices() {
-    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
+    const checked = getBloraCheckedControls('.manage-model-checkbox');
     const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) return;
@@ -8979,7 +8979,7 @@ ${extractorBody}
   }
 
   updateMyModelsBatchButtons() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
+    const checked = getBloraCheckedControls('.my-team-model-checkbox');
     const count = checked.length;
     const ids = ['batchEnableMyModelsBtn', 'batchDisableMyModelsBtn', 'batchEditMyModelsBtn', 'batchDeleteMyModelsBtn'];
     ids.forEach(id => {
@@ -8989,7 +8989,7 @@ ${extractorBody}
   }
 
   async batchDeleteMyTeamModels() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
+    const checked = getBloraCheckedControls('.my-team-model-checkbox');
     const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？此操作不可撤销。')}`)) return;
@@ -9021,7 +9021,7 @@ ${extractorBody}
   }
 
   async _batchUpdateMyTeamModels(updates, action) {
-    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
+    const checked = getBloraCheckedControls('.my-team-model-checkbox');
     const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要')}${action}${t('选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
@@ -9045,7 +9045,7 @@ ${extractorBody}
   }
 
   showBatchEditMyModelsModal() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
+    const checked = getBloraCheckedControls('.my-team-model-checkbox');
     const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
 
@@ -9072,7 +9072,7 @@ ${extractorBody}
   }
 
   async saveBatchEditMyModels() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
+    const checked = getBloraCheckedControls('.my-team-model-checkbox');
     const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
 
@@ -12607,11 +12607,11 @@ ${extractorBody}
 
   async confirmSelectKey() {
     console.log(t('[模型库] 确认选择 Key'));
-    const selected = document.querySelector('input[name="selectKeyRadio"]:checked');
+    const selected = document.querySelector('blora-radio[name="selectKeyRadio"][checked], input[name="selectKeyRadio"]:checked');
     console.log(t('[模型库] 选中的 Key:'), selected);
     if (!selected) { alert(t('请选择一个 API Key')); return; }
 
-    const keyId = parseInt(selected.value);
+    const keyId = parseInt(getBloraValue(selected));
     const modelId = this._selectingModelId;
     console.log(t('[模型库] 准备应用模型:'), { keyId, modelId });
 
