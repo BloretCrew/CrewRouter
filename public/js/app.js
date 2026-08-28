@@ -6406,7 +6406,7 @@ class ConsoleApp {
 
   async markNotificationRead(id) { await fetch(`/api/user/notifications/${id}/read`, { method: 'PUT' }); await this.loadNotifications(); }
   async deleteNotification(id) { await fetch(`/api/user/notifications/${id}`, { method: 'DELETE' }); await this.loadNotifications(); }
-  async clearNotifications() { if (!confirm(t('确定清空全部通知吗？'))) return; await fetch('/api/user/notifications', { method: 'DELETE' }); await this.loadNotifications(); }
+  async clearNotifications() { await fetch('/api/user/notifications', { method: 'DELETE' }); await this.loadNotifications(); }
 
   // ========== 事件通知（简化：仅总开关） ==========
   async loadHookNotifySettings() {

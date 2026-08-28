@@ -15,7 +15,7 @@
 .settings-category-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
 .settings-category-card { display:grid; grid-template-columns:32px minmax(0,1fr) 18px; align-items:center; gap:12px; min-height:86px; padding:16px 18px; border:1px solid var(--border); border-radius:12px; background:var(--card); color:var(--foreground); text-align:left; cursor:pointer; transition:background .15s, border-color .15s, transform .15s; }
 .settings-category-card:hover { background:var(--accent); border-color:var(--ring); transform:translateY(-1px); }
-.settings-category-icon { display:grid; place-items:center; width:30px; height:30px; font-size:23px; color:var(--muted-foreground); }
+.settings-category-icon { display:block; width:30px; height:30px; object-fit:contain; opacity:.86; }
 .settings-category-card strong,.settings-category-card small { display:block; }
 .settings-category-card strong { font-size:15px; }
 .settings-category-card small { margin-top:4px; color:var(--muted-foreground); font-size:12px; }
