@@ -29,7 +29,7 @@
 <body class="blora-page blora-scope">
 <!-- 移动端顶部导航栏 -->
 <div class="mobile-topbar">
-<button aria-label="打开菜单" class="mobile-hamburger" data-i18n-title="打开菜单" id="sidebarToggle">
+<button aria-label="打开菜单" class="blora-button mobile-hamburger" data-i18n-title="打开菜单" id="sidebarToggle" type="button">
 <svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-width="2" viewbox="0 0 24 24" width="20">
 <line x1="3" x2="21" y1="6" y2="6"></line><line x1="3" x2="21" y1="12" y2="12"></line><line x1="3" x2="21" y1="18" y2="18"></line>
 </svg>
@@ -38,7 +38,7 @@
 <img alt="Logo" src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918"/>
 </div>
 <div class="mobile-topbar-title" id="mobilePageTitle"><span data-i18n="统计信息">统计信息</span></div>
-<button class="btn btn-icon" data-i18n-title="切换主题" data-variant="secondary" id="themeToggleMobile" style="width:32px;height:32px;" title="切换主题" type="button">
+<button class="blora-button" data-i18n-title="切换主题" data-variant="secondary" id="themeToggleMobile" style="width:32px;height:32px;" title="切换主题" type="button" data-size="icon">
 <svg class="icon-sun" fill="none" height="18" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="18">
 <circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
 </svg>
@@ -127,7 +127,7 @@
 <img alt="头像" class="avatar" data-i18n-title="头像" id="userAvatar" src=""/>
 <span id="username"></span>
 </div>
-<button class="btn btn-icon" data-i18n-title="登出" data-variant="secondary" id="logoutBtn" title="登出" type="button">
+<button class="blora-button" data-i18n-title="登出" data-variant="secondary" id="logoutBtn" title="登出" type="button" data-size="icon">
 <img alt="" class="sf-icon" data-sf-name="arrow.right.square" height="16" src="https://img.bloret.net/SF/arrow.right.square?color=white" style="display:inline-block;vertical-align:middle;" width="16"/>
 </button>
 </div>
@@ -137,11 +137,11 @@
 <div class="content-header">
 <h1 id="pageTitle"><span data-i18n="统计信息">统计信息</span></h1>
 <div class="theme-toggle">
-<select class="btn btn-icon" id="langToggle" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;" title="Language">
-<option value="zh">中文</option>
-<option value="en">EN</option>
-</select>
-<button class="btn btn-icon" data-i18n-title="切换主题" data-variant="secondary" id="themeToggle" title="切换主题" type="button">
+<blora-select id="langToggle" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;" title="Language">
+<blora-option value="zh">中文</blora-option>
+<blora-option value="en">EN</blora-option>
+</blora-select>
+<button class="blora-button" data-i18n-title="切换主题" data-variant="secondary" id="themeToggle" title="切换主题" type="button" data-size="icon">
 <svg class="icon-sun" fill="none" height="20" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="20">
 <circle cx="12" cy="12" r="5"></circle>
 <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
@@ -161,7 +161,7 @@
 <h2><span data-i18n="用户管理">用户管理</span></h2>
 <div class="admin-stat-cards" id="userStatsCards"></div>
 <div class="admin-filter-bar">
-<input class="input" data-i18n-placeholder="搜索用户名或邮箱..." id="userSearchInput" oninput="adminApp.filterUsers(this.value)" placeholder="搜索用户名或邮箱..." type="text"/>
+<input class="blora-input" data-i18n-placeholder="搜索用户名或邮箱..." id="userSearchInput" oninput="adminApp.filterUsers(this.value)" placeholder="搜索用户名或邮箱..." type="text"/>
 </div>
 <div class="users-table" id="usersList">
 <!-- 用户列表将通过JS动态加载 -->
@@ -176,10 +176,10 @@
 <span class="page-sticky-title"><span data-i18n="Team 管理">Team 管理</span></span>
 <div class="model-search-box model-library-sticky-search">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-<input autocomplete="off" class="model-search-input" data-i18n-placeholder="搜索 Team 名称或描述..." id="adminTeamsStickySearch" oninput="adminApp.onAdminTeamFilterInput(this.value, 'sticky')" placeholder="搜索 Team 名称或描述..." type="text"/>
+<input autocomplete="off" class="model-search-input blora-input" data-i18n-placeholder="搜索 Team 名称或描述..." id="adminTeamsStickySearch" oninput="adminApp.onAdminTeamFilterInput(this.value, 'sticky')" placeholder="搜索 Team 名称或描述..." type="text"/>
 </div>
 <span class="filter-info" id="adminTeamsStickyCount"></span>
-<button class="btn btn-primary btn-sm" data-i18n-title="创建 Team" data-size="sm" data-variant="primary" onclick="adminApp.showCreateTeamModal()" title="创建 Team" type="button"><span data-i18n="创建 Team">创建 Team</span></button>
+<button class="blora-button" data-i18n-title="创建 Team" data-size="sm" data-variant="primary" onclick="adminApp.showCreateTeamModal()" title="创建 Team" type="button"><span data-i18n="创建 Team">创建 Team</span></button>
 </div>
 </div>
 <!-- 滚动后悬浮顶栏：Team 详情 · 模型权限筛选（默认隐藏，由 JS 控制） -->
@@ -188,19 +188,19 @@
 <span class="page-sticky-title"><span data-i18n="模型权限">模型权限</span></span>
 <div class="model-search-box model-library-sticky-search">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-<input autocomplete="off" class="model-search-input" data-i18n-placeholder="搜索模型名称、上游 ID、系列或供应商..." id="adminTeamModelsStickySearch" oninput="adminApp.onAdminTeamModelFilterInput('search', this.value, 'sticky')" placeholder="搜索模型名称、上游 ID、系列或供应商..." type="text"/>
+<input autocomplete="off" class="model-search-input blora-input" data-i18n-placeholder="搜索模型名称、上游 ID、系列或供应商..." id="adminTeamModelsStickySearch" oninput="adminApp.onAdminTeamModelFilterInput('search', this.value, 'sticky')" placeholder="搜索模型名称、上游 ID、系列或供应商..." type="text"/>
 </div>
-<select aria-label="供应商筛选" class="select model-library-sticky-select" data-i18n-title="供应商筛选" id="adminTeamModelsStickyProvider" onchange="adminApp.onAdminTeamModelFilterInput('provider', this.value, 'sticky')">
-<option value=""><span data-i18n="全部供应商">全部供应商</span></option>
-</select>
-<select aria-label="状态筛选" class="select model-library-sticky-select" data-i18n-title="状态筛选" id="adminTeamModelsStickyStatus" onchange="adminApp.onAdminTeamModelFilterInput('status', this.value, 'sticky')">
-<option value=""><span data-i18n="全部状态">全部状态</span></option>
-<option value="enabled"><span data-i18n="本 Team 已启用">本 Team 已启用</span></option>
-<option value="disabled"><span data-i18n="本 Team 未启用">本 Team 未启用</span></option>
-</select>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.clearTeamModelFilters()" type="button"><span data-i18n="清除">清除</span></button>
-<button class="btn btn-sm btn-primary" data-i18n-title="启用当前筛选结果" data-size="sm" data-variant="primary" onclick="adminApp.batchToggleFilteredTeamModels(true)" title="启用当前筛选结果" type="button"><span data-i18n="启用筛选">启用筛选</span></button>
-<button class="btn btn-sm btn-secondary" data-i18n-title="禁用当前筛选结果" data-size="sm" data-variant="secondary" onclick="adminApp.batchToggleFilteredTeamModels(false)" title="禁用当前筛选结果" type="button"><span data-i18n="禁用筛选">禁用筛选</span></button>
+<blora-select aria-label="供应商筛选" class="model-library-sticky-select" data-i18n-title="供应商筛选" id="adminTeamModelsStickyProvider" onchange="adminApp.onAdminTeamModelFilterInput('provider', this.value, 'sticky')">
+<blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
+</blora-select>
+<blora-select aria-label="状态筛选" class="model-library-sticky-select" data-i18n-title="状态筛选" id="adminTeamModelsStickyStatus" onchange="adminApp.onAdminTeamModelFilterInput('status', this.value, 'sticky')">
+<blora-option value=""><span data-i18n="全部状态">全部状态</span></blora-option>
+<blora-option value="enabled"><span data-i18n="本 Team 已启用">本 Team 已启用</span></blora-option>
+<blora-option value="disabled"><span data-i18n="本 Team 未启用">本 Team 未启用</span></blora-option>
+</blora-select>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.clearTeamModelFilters()" type="button"><span data-i18n="清除">清除</span></button>
+<button class="blora-button" data-i18n-title="启用当前筛选结果" data-size="sm" data-variant="primary" onclick="adminApp.batchToggleFilteredTeamModels(true)" title="启用当前筛选结果" type="button"><span data-i18n="启用筛选">启用筛选</span></button>
+<button class="blora-button" data-i18n-title="禁用当前筛选结果" data-size="sm" data-variant="secondary" onclick="adminApp.batchToggleFilteredTeamModels(false)" title="禁用当前筛选结果" type="button"><span data-i18n="禁用筛选">禁用筛选</span></button>
 <span class="filter-info" id="adminTeamModelsStickyCount"></span>
 </div>
 </div>
@@ -209,11 +209,11 @@
 <div class="admin-stat-cards" id="teamStatsCards"></div>
 <div class="admin-page-header">
 <div class="section-actions">
-<button class="btn btn-primary" data-variant="primary" id="createTeamBtn" type="button"><span data-i18n="创建 Team">创建 Team</span></button>
+<button class="blora-button" data-variant="primary" id="createTeamBtn" type="button"><span data-i18n="创建 Team">创建 Team</span></button>
 </div>
 </div>
 <div class="admin-filter-bar" id="adminTeamsFilters">
-<input class="input" data-i18n-placeholder="搜索 Team 名称或描述..." id="teamSearchInput" oninput="adminApp.onAdminTeamFilterInput(this.value, 'main')" placeholder="搜索 Team 名称或描述..." type="text"/>
+<input class="blora-input" data-i18n-placeholder="搜索 Team 名称或描述..." id="teamSearchInput" oninput="adminApp.onAdminTeamFilterInput(this.value, 'main')" placeholder="搜索 Team 名称或描述..." type="text"/>
 <span class="filter-info" id="teamCount"></span>
 </div>
 <!-- 列表悬浮顶栏哨兵 -->
@@ -227,10 +227,10 @@
 <div class="section-header">
 <h2 id="teamDetailTitle"><span data-i18n="Team 详情">Team 详情</span></h2>
 <div class="section-actions">
-<button class="btn btn-sm btn-warning" data-size="sm" data-variant="secondary" id="setDefaultTeamBtn" type="button"><span data-i18n="设为默认">设为默认</span></button>
-<button class="btn btn-sm" data-size="sm" data-variant="secondary" id="setFrontierTeamBtn" style="border:1px solid var(--purple);color:var(--purple);" type="button"><span data-i18n="设为前沿">设为前沿</span></button>
-<button class="btn btn-secondary" data-variant="secondary" id="editTeamBtn" type="button"><span data-i18n="编辑">编辑</span></button>
-<button class="btn btn-danger" data-variant="danger" id="deleteTeamBtn" type="button"><span data-i18n="删除">删除</span></button>
+<button class="blora-button btn-warning" data-size="sm" data-variant="secondary" id="setDefaultTeamBtn" type="button"><span data-i18n="设为默认">设为默认</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" id="setFrontierTeamBtn" style="border:1px solid var(--purple);color:var(--purple);" type="button"><span data-i18n="设为前沿">设为前沿</span></button>
+<button class="blora-button" data-variant="secondary" id="editTeamBtn" type="button"><span data-i18n="编辑">编辑</span></button>
+<button class="blora-button" data-variant="danger" id="deleteTeamBtn" type="button"><span data-i18n="删除">删除</span></button>
 </div>
 </div>
 <!-- Team 成员管理（默认可折叠且默认折叠） -->
@@ -240,11 +240,11 @@
 <svg aria-hidden="true" class="collapse-icon" fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><polyline points="6 9 12 15 18 9"></polyline></svg>
 <span><span data-i18n="成员管理">成员管理</span></span>
 </h3>
-<button class="btn btn-primary btn-sm" data-i18n-title="添加成员" data-size="sm" data-variant="primary" id="addTeamMemberBtn" onclick="event.stopPropagation();" title="添加成员" type="button"><span data-i18n="添加成员">添加成员</span></button>
+<button class="blora-button" data-i18n-title="添加成员" data-size="sm" data-variant="primary" id="addTeamMemberBtn" onclick="event.stopPropagation();" title="添加成员" type="button"><span data-i18n="添加成员">添加成员</span></button>
 </div>
 <div class="team-detail-section-body" id="teamMembersSectionBody">
 <div class="admin-filter-bar">
-<input class="input" data-i18n-placeholder="搜索成员用户名或邮箱..." id="teamMemberSearchInput" oninput="adminApp.filterTeamMembers()" placeholder="搜索成员用户名或邮箱..." type="text"/>
+<input class="blora-input" data-i18n-placeholder="搜索成员用户名或邮箱..." id="teamMemberSearchInput" oninput="adminApp.filterTeamMembers()" placeholder="搜索成员用户名或邮箱..." type="text"/>
 </div>
 <div class="users-table" id="teamMembersList">
 <!-- 成员列表将通过JS动态加载 -->
@@ -259,11 +259,11 @@
 <span><span data-i18n="模型权限">模型权限</span></span>
 </h3>
 <div class="section-actions team-detail-section-actions" onclick="event.stopPropagation();" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-<button class="btn btn-secondary btn-sm" data-i18n-title="展开全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.expandAllTeamModelProviders()" title="展开全部供应商" type="button"><span data-i18n="展开全部">展开全部</span></button>
-<button class="btn btn-secondary btn-sm" data-i18n-title="折叠全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.collapseAllTeamModelProviders()" title="折叠全部供应商" type="button"><span data-i18n="折叠全部">折叠全部</span></button>
-<button class="btn btn-primary btn-sm" data-i18n-title="按名称关键字批量启用" data-size="sm" data-variant="primary" onclick="adminApp.batchEnableTeamModelsByName()" title="按名称关键字批量启用" type="button"><span data-i18n="按名称批量启用">按名称批量启用</span></button>
-<button class="btn btn-sm btn-primary" data-i18n-title="启用当前筛选结果中的全部模型" data-size="sm" data-variant="primary" onclick="adminApp.batchToggleFilteredTeamModels(true)" title="启用当前筛选结果中的全部模型" type="button"><span data-i18n="启用筛选结果">启用筛选结果</span></button>
-<button class="btn btn-sm btn-secondary" data-i18n-title="禁用当前筛选结果中的全部模型" data-size="sm" data-variant="secondary" onclick="adminApp.batchToggleFilteredTeamModels(false)" title="禁用当前筛选结果中的全部模型" type="button"><span data-i18n="禁用筛选结果">禁用筛选结果</span></button>
+<button class="blora-button" data-i18n-title="展开全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.expandAllTeamModelProviders()" title="展开全部供应商" type="button"><span data-i18n="展开全部">展开全部</span></button>
+<button class="blora-button" data-i18n-title="折叠全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.collapseAllTeamModelProviders()" title="折叠全部供应商" type="button"><span data-i18n="折叠全部">折叠全部</span></button>
+<button class="blora-button" data-i18n-title="按名称关键字批量启用" data-size="sm" data-variant="primary" onclick="adminApp.batchEnableTeamModelsByName()" title="按名称关键字批量启用" type="button"><span data-i18n="按名称批量启用">按名称批量启用</span></button>
+<button class="blora-button" data-i18n-title="启用当前筛选结果中的全部模型" data-size="sm" data-variant="primary" onclick="adminApp.batchToggleFilteredTeamModels(true)" title="启用当前筛选结果中的全部模型" type="button"><span data-i18n="启用筛选结果">启用筛选结果</span></button>
+<button class="blora-button" data-i18n-title="禁用当前筛选结果中的全部模型" data-size="sm" data-variant="secondary" onclick="adminApp.batchToggleFilteredTeamModels(false)" title="禁用当前筛选结果中的全部模型" type="button"><span data-i18n="禁用筛选结果">禁用筛选结果</span></button>
 </div>
 </div>
 <div class="team-detail-section-body" id="teamModelsSectionBody">
@@ -271,17 +271,17 @@
 <div class="admin-filter-bar model-filter-bar" id="teamModelFilters" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
 <div class="model-search-box" style="flex:1;min-width:200px;">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-<input class="model-search-input" data-i18n-placeholder="搜索模型名称、上游 ID、系列或供应商..." id="teamModelListSearchInput" oninput="adminApp.onAdminTeamModelFilterInput('search', this.value, 'main')" placeholder="搜索模型名称、上游 ID、系列或供应商..." type="text"/>
+<input class="model-search-input blora-input" data-i18n-placeholder="搜索模型名称、上游 ID、系列或供应商..." id="teamModelListSearchInput" oninput="adminApp.onAdminTeamModelFilterInput('search', this.value, 'main')" placeholder="搜索模型名称、上游 ID、系列或供应商..." type="text"/>
 </div>
-<select class="select" id="teamModelProviderFilter" onchange="adminApp.onAdminTeamModelFilterInput('provider', this.value, 'main')">
-<option value=""><span data-i18n="全部供应商">全部供应商</span></option>
-</select>
-<select class="select" id="teamModelStatusFilter" onchange="adminApp.onAdminTeamModelFilterInput('status', this.value, 'main')">
-<option value=""><span data-i18n="全部状态">全部状态</span></option>
-<option value="enabled"><span data-i18n="本 Team 已启用">本 Team 已启用</span></option>
-<option value="disabled"><span data-i18n="本 Team 未启用">本 Team 未启用</span></option>
-</select>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.clearTeamModelFilters()" type="button"><span data-i18n="清除筛选">清除筛选</span></button>
+<blora-select id="teamModelProviderFilter" onchange="adminApp.onAdminTeamModelFilterInput('provider', this.value, 'main')">
+<blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
+</blora-select>
+<blora-select id="teamModelStatusFilter" onchange="adminApp.onAdminTeamModelFilterInput('status', this.value, 'main')">
+<blora-option value=""><span data-i18n="全部状态">全部状态</span></blora-option>
+<blora-option value="enabled"><span data-i18n="本 Team 已启用">本 Team 已启用</span></blora-option>
+<blora-option value="disabled"><span data-i18n="本 Team 未启用">本 Team 未启用</span></blora-option>
+</blora-select>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.clearTeamModelFilters()" type="button"><span data-i18n="清除筛选">清除筛选</span></button>
 <span class="filter-info" id="teamModelListCount"></span>
 </div>
 <!-- 模型权限悬浮顶栏哨兵 -->
@@ -300,11 +300,11 @@
 <div class="admin-stat-cards" id="userGroupStatsCards"></div>
 <div class="admin-page-header">
 <div class="section-actions">
-<button class="btn btn-primary" data-variant="primary" id="createUserGroupBtn" type="button"><span data-i18n="创建用户组">创建用户组</span></button>
+<button class="blora-button" data-variant="primary" id="createUserGroupBtn" type="button"><span data-i18n="创建用户组">创建用户组</span></button>
 </div>
 </div>
 <div class="admin-filter-bar">
-<input class="input" data-i18n-placeholder="搜索用户组名称或描述..." id="userGroupSearchInput" oninput="adminApp.filterUserGroups()" placeholder="搜索用户组名称或描述..." type="text"/>
+<input class="blora-input" data-i18n-placeholder="搜索用户组名称或描述..." id="userGroupSearchInput" oninput="adminApp.filterUserGroups()" placeholder="搜索用户组名称或描述..." type="text"/>
 <span class="filter-info" id="userGroupCount"></span>
 </div>
 <div class="models-table" id="userGroupsList">
@@ -316,8 +316,8 @@
 <div class="section-header">
 <h2 id="userGroupDetailTitle"><span data-i18n="用户组详情">用户组详情</span></h2>
 <div class="section-actions">
-<button class="btn btn-secondary" data-variant="secondary" id="editUserGroupBtn" type="button"><span data-i18n="编辑">编辑</span></button>
-<button class="btn btn-danger" data-variant="danger" id="deleteUserGroupBtn" type="button"><span data-i18n="删除">删除</span></button>
+<button class="blora-button" data-variant="secondary" id="editUserGroupBtn" type="button"><span data-i18n="编辑">编辑</span></button>
+<button class="blora-button" data-variant="danger" id="deleteUserGroupBtn" type="button"><span data-i18n="删除">删除</span></button>
 </div>
 </div>
 <!-- 用户组规则管理 -->
@@ -334,10 +334,10 @@
 <div class="content-section">
 <div class="section-header">
 <h3><span data-i18n="组内成员">组内成员</span></h3>
-<button class="btn btn-primary btn-sm" data-size="sm" data-variant="primary" id="addUserGroupMemberBtn" type="button"><span data-i18n="添加成员">添加成员</span></button>
+<button class="blora-button" data-size="sm" data-variant="primary" id="addUserGroupMemberBtn" type="button"><span data-i18n="添加成员">添加成员</span></button>
 </div>
 <div class="admin-filter-bar">
-<input class="input" data-i18n-placeholder="搜索成员用户名或邮箱..." id="userGroupMemberSearchInput" oninput="adminApp.filterUserGroupMembers()" placeholder="搜索成员用户名或邮箱..." type="text"/>
+<input class="blora-input" data-i18n-placeholder="搜索成员用户名或邮箱..." id="userGroupMemberSearchInput" oninput="adminApp.filterUserGroupMembers()" placeholder="搜索成员用户名或邮箱..." type="text"/>
 </div>
 <div class="users-table" id="userGroupMembersList">
 <!-- 成员列表将通过JS动态加载 -->
@@ -352,34 +352,34 @@
 <div class="model-library-sticky-inner">
 <div class="model-search-box model-library-sticky-search">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-<input autocomplete="off" class="model-search-input" data-i18n-placeholder="搜索模型名称、上游 ID、系列..." id="adminModelsStickySearch" oninput="adminApp.onAdminModelFilterInput('search', this.value, 'sticky')" placeholder="搜索模型名称、上游 ID、系列..." type="text"/>
+<input autocomplete="off" class="model-search-input blora-input" data-i18n-placeholder="搜索模型名称、上游 ID、系列..." id="adminModelsStickySearch" oninput="adminApp.onAdminModelFilterInput('search', this.value, 'sticky')" placeholder="搜索模型名称、上游 ID、系列..." type="text"/>
 </div>
-<select aria-label="供应商筛选" class="select model-library-sticky-select" data-i18n-title="供应商筛选" id="adminModelsStickyProvider" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'sticky')">
-<option value=""><span data-i18n="全部供应商">全部供应商</span></option>
-</select>
-<select aria-label="状态筛选" class="select model-library-sticky-select" data-i18n-title="状态筛选" id="adminModelsStickyStatus" onchange="adminApp.onAdminModelFilterInput('status', this.value, 'sticky')">
-<option value=""><span data-i18n="全部状态">全部状态</span></option>
-<option value="enabled"><span data-i18n="已启用">已启用</span></option>
-<option value="disabled"><span data-i18n="已禁用">已禁用</span></option>
-</select>
-<button class="btn btn-secondary btn-sm model-library-sticky-more-btn" data-i18n-title="更多筛选" data-size="sm" data-variant="secondary" id="adminModelsStickyMoreBtn" onclick="adminApp.toggleAdminModelsStickyMore()" title="更多筛选" type="button"><span data-i18n="更多筛选">
+<blora-select aria-label="供应商筛选" class="model-library-sticky-select" data-i18n-title="供应商筛选" id="adminModelsStickyProvider" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'sticky')">
+<blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
+</blora-select>
+<blora-select aria-label="状态筛选" class="model-library-sticky-select" data-i18n-title="状态筛选" id="adminModelsStickyStatus" onchange="adminApp.onAdminModelFilterInput('status', this.value, 'sticky')">
+<blora-option value=""><span data-i18n="全部状态">全部状态</span></blora-option>
+<blora-option value="enabled"><span data-i18n="已启用">已启用</span></blora-option>
+<blora-option value="disabled"><span data-i18n="已禁用">已禁用</span></blora-option>
+</blora-select>
+<button class="blora-button model-library-sticky-more-btn" data-i18n-title="更多筛选" data-size="sm" data-variant="secondary" id="adminModelsStickyMoreBtn" onclick="adminApp.toggleAdminModelsStickyMore()" title="更多筛选" type="button"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
-<button class="btn btn-primary btn-sm" data-i18n-title="添加模型" data-size="sm" data-variant="primary" onclick="adminApp.showAddModelModal()" title="添加模型" type="button"><span data-i18n="添加模型">添加模型</span></button>
+<button class="blora-button" data-i18n-title="添加模型" data-size="sm" data-variant="primary" onclick="adminApp.showAddModelModal()" title="添加模型" type="button"><span data-i18n="添加模型">添加模型</span></button>
 </div>
 <div aria-hidden="true" class="model-library-sticky-advanced" id="adminModelsStickyAdvanced" style="display:none;">
-<select aria-label="系列筛选" class="select model-library-sticky-select" data-i18n-title="系列筛选" id="adminModelsStickySeries" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'sticky')">
-<option value=""><span data-i18n="全部系列">全部系列</span></option>
-</select>
-<select aria-label="测试状态" class="select model-library-sticky-select" data-i18n-title="测试状态" id="adminModelsStickyTest" onchange="adminApp.onAdminModelFilterInput('test', this.value, 'sticky')">
-<option value=""><span data-i18n="全部测试状态">全部测试状态</span></option>
-<option value="pass"><span data-i18n="测试通过">测试通过</span></option>
-<option value="fail"><span data-i18n="测试失败">测试失败</span></option>
-<option value="untested"><span data-i18n="未测试">未测试</span></option>
-</select>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.clearModelFilters()" type="button"><span data-i18n="清除筛选">清除筛选</span></button>
-<button class="btn btn-sm btn-secondary" data-i18n-title="展开全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" type="button"><span data-i18n="展开">展开</span></button>
-<button class="btn btn-sm btn-secondary" data-i18n-title="折叠全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" type="button"><span data-i18n="折叠">折叠</span></button>
+<blora-select aria-label="系列筛选" class="model-library-sticky-select" data-i18n-title="系列筛选" id="adminModelsStickySeries" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'sticky')">
+<blora-option value=""><span data-i18n="全部系列">全部系列</span></blora-option>
+</blora-select>
+<blora-select aria-label="测试状态" class="model-library-sticky-select" data-i18n-title="测试状态" id="adminModelsStickyTest" onchange="adminApp.onAdminModelFilterInput('test', this.value, 'sticky')">
+<blora-option value=""><span data-i18n="全部测试状态">全部测试状态</span></blora-option>
+<blora-option value="pass"><span data-i18n="测试通过">测试通过</span></blora-option>
+<blora-option value="fail"><span data-i18n="测试失败">测试失败</span></blora-option>
+<blora-option value="untested"><span data-i18n="未测试">未测试</span></blora-option>
+</blora-select>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.clearModelFilters()" type="button"><span data-i18n="清除筛选">清除筛选</span></button>
+<button class="blora-button" data-i18n-title="展开全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" type="button"><span data-i18n="展开">展开</span></button>
+<button class="blora-button" data-i18n-title="折叠全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" type="button"><span data-i18n="折叠">折叠</span></button>
 <span class="filter-info" id="adminModelsStickyCount"></span>
 </div>
 </div>
@@ -391,26 +391,26 @@
 </div>
 <div class="model-library-header-actions" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
 <div class="admin-action-dropdown" id="batchActionsGroup" style="display:none;">
-<button class="btn btn-secondary btn-sm" data-size="sm" data-variant="secondary" onclick="adminApp.toggleBatchDropdown(event)" type="button"><span data-i18n="批量操作">
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.toggleBatchDropdown(event)" type="button"><span data-i18n="批量操作">
                   批量操作 </span><svg fill="none" height="12" stroke="currentColor" stroke-width="2" style="margin-left:4px;" viewbox="0 0 24 24" width="12"><polyline points="6 9 12 15 18 9"></polyline></svg>
 </button>
 <div class="dropdown-menu" id="batchDropdownMenu">
-<button class="dropdown-item" id="batchEnableModelsBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.batchUpdateModels(true)"><span data-i18n="启用所选">启用所选</span></button>
-<button class="dropdown-item" id="batchDisableModelsBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.batchUpdateModels(false)"><span data-i18n="禁用所选">禁用所选</span></button>
+<button class="blora-button dropdown-item" id="batchEnableModelsBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.batchUpdateModels(true)" type="button"><span data-i18n="启用所选">启用所选</span></button>
+<button class="blora-button dropdown-item" id="batchDisableModelsBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.batchUpdateModels(false)" type="button"><span data-i18n="禁用所选">禁用所选</span></button>
 <div class="dropdown-divider"></div>
-<button class="dropdown-item" id="batchSetPricesBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchSetPricesModal()"><span data-i18n="设置价格">设置价格</span></button>
-<button class="dropdown-item" id="batchAdjustPricesBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchAdjustPricesModal()"><span data-i18n="调整价格">调整价格</span></button>
-<button class="dropdown-item" id="batchAdjustByRefBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchAdjustByRefModal()"><span data-i18n="按参考价设置">按参考价设置</span></button>
+<button class="blora-button dropdown-item" id="batchSetPricesBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchSetPricesModal()" type="button"><span data-i18n="设置价格">设置价格</span></button>
+<button class="blora-button dropdown-item" id="batchAdjustPricesBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchAdjustPricesModal()" type="button"><span data-i18n="调整价格">调整价格</span></button>
+<button class="blora-button dropdown-item" id="batchAdjustByRefBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchAdjustByRefModal()" type="button"><span data-i18n="按参考价设置">按参考价设置</span></button>
 <div class="dropdown-divider"></div>
-<button class="dropdown-item" id="batchSetRateLimitBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchSetRateLimitModal()"><span data-i18n="设置速率限制">设置速率限制</span></button>
-<button class="dropdown-item" id="batchEditDescBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchEditDescModal()"><span data-i18n="修改说明">修改说明</span></button>
-<button class="dropdown-item" id="batchSetSeriesBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchSetSeriesModal()"><span data-i18n="设置系列">设置系列</span></button>
+<button class="blora-button dropdown-item" id="batchSetRateLimitBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchSetRateLimitModal()" type="button"><span data-i18n="设置速率限制">设置速率限制</span></button>
+<button class="blora-button dropdown-item" id="batchEditDescBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchEditDescModal()" type="button"><span data-i18n="修改说明">修改说明</span></button>
+<button class="blora-button dropdown-item" id="batchSetSeriesBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchSetSeriesModal()" type="button"><span data-i18n="设置系列">设置系列</span></button>
 <div class="dropdown-divider"></div>
-<button class="dropdown-item danger" id="batchDeleteModelsBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.batchDeleteModels()"><span data-i18n="批量删除">批量删除</span></button>
+<button class="blora-button dropdown-item danger" id="batchDeleteModelsBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.batchDeleteModels()" type="button"><span data-i18n="批量删除">批量删除</span></button>
 </div>
 </div>
 <div class="model-test-batch-btn expand-dropdown" id="adminTestDropdown" style="display:inline-block;position:relative;">
-<button class="btn btn-secondary btn-sm" data-size="sm" data-variant="secondary" onclick="adminApp.toggleTestDropdown(event)" type="button">
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.toggleTestDropdown(event)" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" x2="12.01" y1="17" y2="17"></line></svg><span data-i18n="一键测试">
                   一键测试
                   </span><svg fill="none" height="10" stroke="currentColor" stroke-width="2" style="margin-left:2px;" viewbox="0 0 24 24" width="10"><path d="m6 9 6 6 6-6"></path></svg>
@@ -420,10 +420,10 @@
 <div class="dropdown-item" onclick="adminApp.testSelectedModels()"><span data-i18n="测试选中模型">测试选中模型</span></div>
 </div>
 </div>
-<button class="btn btn-secondary btn-sm" data-size="sm" data-variant="secondary" onclick="adminApp.showBatchJsonPricesModal()" type="button"><span data-i18n="JSON 定价">JSON 定价</span></button>
-<button class="btn btn-secondary btn-sm" data-size="sm" data-variant="secondary" onclick="adminApp.exportModelsCsv()" type="button"><span data-i18n="导出 CSV">导出 CSV</span></button>
-<button class="btn btn-secondary btn-sm" data-size="sm" data-variant="secondary" onclick="adminApp.showSeriesIconsModal()" type="button"><span data-i18n="系列图标">系列图标</span></button>
-<button class="btn btn-primary btn-sm" data-size="sm" data-variant="primary" id="addModelBtn" type="button"><span data-i18n="添加模型">添加模型</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.showBatchJsonPricesModal()" type="button"><span data-i18n="JSON 定价">JSON 定价</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.exportModelsCsv()" type="button"><span data-i18n="导出 CSV">导出 CSV</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.showSeriesIconsModal()" type="button"><span data-i18n="系列图标">系列图标</span></button>
+<button class="blora-button" data-size="sm" data-variant="primary" id="addModelBtn" type="button"><span data-i18n="添加模型">添加模型</span></button>
 </div>
 </div>
 <div class="admin-stat-cards" id="modelStatsCards"></div>
@@ -431,29 +431,29 @@
 <div class="model-filter-bar admin-models-filter-bar" id="adminModelsFilters">
 <div class="model-search-box">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-<input class="model-search-input" data-i18n-placeholder="搜索模型名称、上游 ID、系列..." id="modelSearchInput" oninput="adminApp.onAdminModelFilterInput('search', this.value, 'main')" placeholder="搜索模型名称、上游 ID、系列..." type="text"/>
+<input class="model-search-input blora-input" data-i18n-placeholder="搜索模型名称、上游 ID、系列..." id="modelSearchInput" oninput="adminApp.onAdminModelFilterInput('search', this.value, 'main')" placeholder="搜索模型名称、上游 ID、系列..." type="text"/>
 </div>
 <div class="model-filter-selects admin-models-filter-selects">
-<select class="select" id="modelProviderFilter" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'main')">
-<option value=""><span data-i18n="全部供应商">全部供应商</span></option>
-</select>
-<select class="select" id="modelStatusFilter" onchange="adminApp.onAdminModelFilterInput('status', this.value, 'main')">
-<option value=""><span data-i18n="全部状态">全部状态</span></option>
-<option value="enabled"><span data-i18n="已启用">已启用</span></option>
-<option value="disabled"><span data-i18n="已禁用">已禁用</span></option>
-</select>
-<select class="select" id="modelSeriesFilter" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'main')">
-<option value=""><span data-i18n="全部系列">全部系列</span></option>
-</select>
-<select class="select" id="modelTestFilter" onchange="adminApp.onAdminModelFilterInput('test', this.value, 'main')">
-<option value=""><span data-i18n="全部测试状态">全部测试状态</span></option>
-<option value="pass"><span data-i18n="测试通过">测试通过</span></option>
-<option value="fail"><span data-i18n="测试失败">测试失败</span></option>
-<option value="untested"><span data-i18n="未测试">未测试</span></option>
-</select>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.clearModelFilters()" type="button"><span data-i18n="清除筛选">清除筛选</span></button>
-<button class="btn btn-sm btn-secondary" data-i18n-title="展开全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" type="button"><span data-i18n="展开">展开</span></button>
-<button class="btn btn-sm btn-secondary" data-i18n-title="折叠全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" type="button"><span data-i18n="折叠">折叠</span></button>
+<blora-select id="modelProviderFilter" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'main')">
+<blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
+</blora-select>
+<blora-select id="modelStatusFilter" onchange="adminApp.onAdminModelFilterInput('status', this.value, 'main')">
+<blora-option value=""><span data-i18n="全部状态">全部状态</span></blora-option>
+<blora-option value="enabled"><span data-i18n="已启用">已启用</span></blora-option>
+<blora-option value="disabled"><span data-i18n="已禁用">已禁用</span></blora-option>
+</blora-select>
+<blora-select id="modelSeriesFilter" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'main')">
+<blora-option value=""><span data-i18n="全部系列">全部系列</span></blora-option>
+</blora-select>
+<blora-select id="modelTestFilter" onchange="adminApp.onAdminModelFilterInput('test', this.value, 'main')">
+<blora-option value=""><span data-i18n="全部测试状态">全部测试状态</span></blora-option>
+<blora-option value="pass"><span data-i18n="测试通过">测试通过</span></blora-option>
+<blora-option value="fail"><span data-i18n="测试失败">测试失败</span></blora-option>
+<blora-option value="untested"><span data-i18n="未测试">未测试</span></blora-option>
+</blora-select>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.clearModelFilters()" type="button"><span data-i18n="清除筛选">清除筛选</span></button>
+<button class="blora-button" data-i18n-title="展开全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" type="button"><span data-i18n="展开">展开</span></button>
+<button class="blora-button" data-i18n-title="折叠全部供应商" data-size="sm" data-variant="secondary" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" type="button"><span data-i18n="折叠">折叠</span></button>
 <span class="filter-info" id="modelCount"></span>
 </div>
 </div>
@@ -471,22 +471,22 @@
 <div class="model-library-sticky-inner">
 <div class="model-search-box model-library-sticky-search">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-<input autocomplete="off" class="model-search-input" data-i18n-placeholder="搜索供应商名称、Base URL 或备注..." id="adminProvidersStickySearch" oninput="adminApp.onAdminProviderFilterInput('search', this.value, 'sticky')" placeholder="搜索供应商名称、Base URL 或备注..." type="text"/>
+<input autocomplete="off" class="model-search-input blora-input" data-i18n-placeholder="搜索供应商名称、Base URL 或备注..." id="adminProvidersStickySearch" oninput="adminApp.onAdminProviderFilterInput('search', this.value, 'sticky')" placeholder="搜索供应商名称、Base URL 或备注..." type="text"/>
 </div>
-<select aria-label="状态筛选" class="select model-library-sticky-select" data-i18n-title="状态筛选" id="adminProvidersStickyStatus" onchange="adminApp.onAdminProviderFilterInput('status', this.value, 'sticky')">
-<option value=""><span data-i18n="所有状态">所有状态</span></option>
-<option value="enabled"><span data-i18n="已启用">已启用</span></option>
-<option value="disabled"><span data-i18n="已禁用">已禁用</span></option>
-</select>
-<select aria-label="范围筛选" class="select model-library-sticky-select" data-i18n-title="范围筛选" id="adminProvidersStickyScope" onchange="adminApp.onAdminProviderFilterInput('scope', this.value, 'sticky')">
-<option value=""><span data-i18n="全部范围">全部范围</span></option>
-<option value="global"><span data-i18n="全局供应商">全局供应商</span></option>
-<option value="user"><span data-i18n="用户供应商">用户供应商</span></option>
-</select>
-<button class="btn btn-secondary btn-sm model-library-sticky-more-btn" data-i18n-title="更多筛选" data-size="sm" data-variant="secondary" id="adminProvidersStickyMoreBtn" onclick="adminApp.toggleAdminProvidersStickyMore()" title="更多筛选" type="button"><span data-i18n="更多筛选">
+<blora-select aria-label="状态筛选" class="model-library-sticky-select" data-i18n-title="状态筛选" id="adminProvidersStickyStatus" onchange="adminApp.onAdminProviderFilterInput('status', this.value, 'sticky')">
+<blora-option value=""><span data-i18n="所有状态">所有状态</span></blora-option>
+<blora-option value="enabled"><span data-i18n="已启用">已启用</span></blora-option>
+<blora-option value="disabled"><span data-i18n="已禁用">已禁用</span></blora-option>
+</blora-select>
+<blora-select aria-label="范围筛选" class="model-library-sticky-select" data-i18n-title="范围筛选" id="adminProvidersStickyScope" onchange="adminApp.onAdminProviderFilterInput('scope', this.value, 'sticky')">
+<blora-option value=""><span data-i18n="全部范围">全部范围</span></blora-option>
+<blora-option value="global"><span data-i18n="全局供应商">全局供应商</span></blora-option>
+<blora-option value="user"><span data-i18n="用户供应商">用户供应商</span></blora-option>
+</blora-select>
+<button class="blora-button model-library-sticky-more-btn" data-i18n-title="更多筛选" data-size="sm" data-variant="secondary" id="adminProvidersStickyMoreBtn" onclick="adminApp.toggleAdminProvidersStickyMore()" title="更多筛选" type="button"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
-<button class="btn btn-primary btn-sm" data-i18n-title="添加供应商" data-size="sm" data-variant="primary" onclick="adminApp.showAddProviderWizard()" title="添加供应商" type="button"><span data-i18n="添加供应商">添加供应商</span></button>
+<button class="blora-button" data-i18n-title="添加供应商" data-size="sm" data-variant="primary" onclick="adminApp.showAddProviderWizard()" title="添加供应商" type="button"><span data-i18n="添加供应商">添加供应商</span></button>
 </div>
 <!-- 标签常驻：支持拖拽到供应商卡片分配 -->
 <div aria-label="供应商标签" class="page-sticky-tag-row" data-i18n-title="供应商标签">
@@ -494,12 +494,12 @@
 <div class="key-tag-chips page-sticky-tag-chips" id="adminProvidersStickyTags"></div>
 </div>
 <div aria-hidden="true" class="model-library-sticky-advanced" id="adminProvidersStickyAdvanced" style="display:none;">
-<select aria-label="密钥模式" class="select model-library-sticky-select" data-i18n-title="密钥模式" id="adminProvidersStickyKeyMode" onchange="adminApp.onAdminProviderFilterInput('keyMode', this.value, 'sticky')">
-<option value=""><span data-i18n="全部密钥">全部密钥</span></option>
-<option value="fixed"><span data-i18n="固定密钥">固定密钥</span></option>
-<option value="script"><span data-i18n="脚本模式">脚本模式</span></option>
-</select>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" id="adminProvidersStickyClearBtn" onclick="adminApp.clearProviderFilters()" style="display:none;" type="button"><span data-i18n="清除筛选">清除筛选</span></button>
+<blora-select aria-label="密钥模式" class="model-library-sticky-select" data-i18n-title="密钥模式" id="adminProvidersStickyKeyMode" onchange="adminApp.onAdminProviderFilterInput('keyMode', this.value, 'sticky')">
+<blora-option value=""><span data-i18n="全部密钥">全部密钥</span></blora-option>
+<blora-option value="fixed"><span data-i18n="固定密钥">固定密钥</span></blora-option>
+<blora-option value="script"><span data-i18n="脚本模式">脚本模式</span></blora-option>
+</blora-select>
+<button class="blora-button" data-size="sm" data-variant="secondary" id="adminProvidersStickyClearBtn" onclick="adminApp.clearProviderFilters()" style="display:none;" type="button"><span data-i18n="清除筛选">清除筛选</span></button>
 <span class="filter-info" id="adminProvidersStickyCount"></span>
 </div>
 </div>
@@ -513,34 +513,34 @@
 <div class="admin-stat-cards" id="providerStatsCards"></div>
 <div class="admin-page-header">
 <div class="section-actions provider-toolbar">
-<button class="btn btn-secondary" data-variant="secondary" id="importOpenCodeBtn" type="button"><span data-i18n="导入配置">导入配置</span></button>
+<button class="blora-button" data-variant="secondary" id="importOpenCodeBtn" type="button"><span data-i18n="导入配置">导入配置</span></button>
 <div class="provider-more-menu" id="providerMoreMenu">
-<button aria-expanded="false" aria-haspopup="true" class="btn btn-secondary" data-i18n-title="更多操作" data-variant="secondary" id="providerMoreMenuBtn" onclick="adminApp.toggleProviderMoreMenu(event)" title="更多操作" type="button"><span data-i18n="更多">
+<button aria-expanded="false" aria-haspopup="true" class="blora-button" data-i18n-title="更多操作" data-variant="secondary" id="providerMoreMenuBtn" onclick="adminApp.toggleProviderMoreMenu(event)" title="更多操作" type="button"><span data-i18n="更多">
                   更多
                   </span><svg fill="none" height="12" stroke="currentColor" stroke-width="2" style="margin-left:4px;" viewbox="0 0 24 24" width="12"><polyline points="6 9 12 15 18 9"></polyline></svg>
 </button>
 <div class="provider-more-dropdown" id="providerMoreDropdown" role="menu" style="display:none;">
-<button class="provider-more-item" id="pingAllProvidersBtn" onclick="adminApp.pingAllProviders();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
+<button class="blora-button provider-more-item" id="pingAllProvidersBtn" onclick="adminApp.pingAllProviders();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg><span data-i18n="检测本页连通性">
                     检测本页连通性
                   </span></button>
-<button class="provider-more-item" onclick="adminApp.exportProvidersCsv();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
+<button class="blora-button provider-more-item" onclick="adminApp.exportProvidersCsv();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg><span data-i18n="导出 CSV">
                     导出 CSV
                   </span></button>
-<button class="provider-more-item" onclick="adminApp.refreshPageQuotas();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
+<button class="blora-button provider-more-item" onclick="adminApp.refreshPageQuotas();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span data-i18n="刷新本页额度">
                     刷新本页额度
                   </span></button>
-<button class="provider-more-item" onclick="adminApp.batchSyncPageProviders();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
+<button class="blora-button provider-more-item" onclick="adminApp.batchSyncPageProviders();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 16h5v5"></path></svg><span data-i18n="同步本页模型">
                     同步本页模型
                   </span></button>
-<button class="provider-more-item" onclick="adminApp.batchSyncSelectedProviders();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
+<button class="blora-button provider-more-item" onclick="adminApp.batchSyncSelectedProviders();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span data-i18n="批量同步选中">
                     批量同步选中
                   </span></button>
-<button class="provider-more-item provider-more-item-danger" onclick="adminApp.cleanupAllStaleModels();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
+<button class="blora-button provider-more-item provider-more-item-danger" onclick="adminApp.cleanupAllStaleModels();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg><span data-i18n="清理所有已下架模型">
                     清理所有已下架模型
                   </span></button>
@@ -548,40 +548,40 @@
 </div>
 <div class="provider-batch-bar" id="providerBatchBar" style="display:none;">
 <span class="provider-batch-count" id="providerSelectedCount"><span data-i18n="已选 0 个">已选 0 个</span></span>
-<button class="btn btn-sm btn-primary" data-size="sm" data-variant="primary" onclick="adminApp.batchSyncSelectedProviders()" type="button"><span data-i18n="批量同步模型">批量同步模型</span></button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.clearProviderSelection()" type="button"><span data-i18n="清除选择">清除选择</span></button>
+<button class="blora-button" data-size="sm" data-variant="primary" onclick="adminApp.batchSyncSelectedProviders()" type="button"><span data-i18n="批量同步模型">批量同步模型</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.clearProviderSelection()" type="button"><span data-i18n="清除选择">清除选择</span></button>
 </div>
-<button class="btn btn-secondary" data-i18n-title="对比各供应商上游列表，删除本地已下架模型记录" data-variant="secondary" id="cleanupAllStaleModelsBtn" onclick="adminApp.cleanupAllStaleModels()" title="对比各供应商上游列表，删除本地已下架模型记录" type="button"><span data-i18n="清理所有已下架模型">清理所有已下架模型</span></button>
-<button class="btn btn-primary" data-variant="primary" id="addProviderBtn" type="button"><span data-i18n="添加供应商">添加供应商</span></button>
+<button class="blora-button" data-i18n-title="对比各供应商上游列表，删除本地已下架模型记录" data-variant="secondary" id="cleanupAllStaleModelsBtn" onclick="adminApp.cleanupAllStaleModels()" title="对比各供应商上游列表，删除本地已下架模型记录" type="button"><span data-i18n="清理所有已下架模型">清理所有已下架模型</span></button>
+<button class="blora-button" data-variant="primary" id="addProviderBtn" type="button"><span data-i18n="添加供应商">添加供应商</span></button>
 <div class="provider-view-toggle">
-<button class="btn btn-sm btn-secondary" data-i18n-title="表格视图" data-size="sm" data-variant="secondary" id="providerViewTableBtn" onclick="adminApp.setProviderView('table')" style="padding:6px 8px;" title="表格视图" type="button">
+<button class="blora-button" data-i18n-title="表格视图" data-size="sm" data-variant="secondary" id="providerViewTableBtn" onclick="adminApp.setProviderView('table')" style="padding:6px 8px;" title="表格视图" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><rect height="7" width="7" x="3" y="3"></rect><rect height="7" width="7" x="14" y="3"></rect><rect height="7" width="7" x="3" y="14"></rect><rect height="7" width="7" x="14" y="14"></rect></svg>
 </button>
-<button class="btn btn-sm btn-secondary" data-i18n-title="卡片视图" data-size="sm" data-variant="secondary" id="providerViewCardBtn" onclick="adminApp.setProviderView('card')" style="padding:6px 8px;" title="卡片视图" type="button">
+<button class="blora-button" data-i18n-title="卡片视图" data-size="sm" data-variant="secondary" id="providerViewCardBtn" onclick="adminApp.setProviderView('card')" style="padding:6px 8px;" title="卡片视图" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><rect height="14" rx="2" ry="2" width="20" x="2" y="3"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
 </button>
 </div>
 </div>
 </div>
 <div class="admin-filter-bar" id="adminProvidersFilters">
-<input class="input" data-i18n-placeholder="搜索供应商名称、Base URL 或备注..." id="providerSearchInput" oninput="adminApp.onAdminProviderFilterInput('search', this.value, 'main')" placeholder="搜索供应商名称、Base URL 或备注..." type="text"/>
-<select class="select" id="providerStatusFilter" onchange="adminApp.onAdminProviderFilterInput('status', this.value, 'main')">
-<option value=""><span data-i18n="所有状态">所有状态</span></option>
-<option value="enabled"><span data-i18n="已启用">已启用</span></option>
-<option value="disabled"><span data-i18n="已禁用">已禁用</span></option>
-</select>
-<select class="select" data-i18n-title="范围" id="providerScopeFilter" onchange="adminApp.onAdminProviderFilterInput('scope', this.value, 'main')" title="范围">
-<option value=""><span data-i18n="全部范围">全部范围</span></option>
-<option value="global"><span data-i18n="全局供应商">全局供应商</span></option>
-<option value="user"><span data-i18n="用户供应商">用户供应商</span></option>
-</select>
-<select class="select" data-i18n-title="密钥模式" id="providerKeyModeFilter" onchange="adminApp.onAdminProviderFilterInput('keyMode', this.value, 'main')" title="密钥模式">
-<option value=""><span data-i18n="全部密钥">全部密钥</span></option>
-<option value="fixed"><span data-i18n="固定密钥">固定密钥</span></option>
-<option value="script"><span data-i18n="脚本模式">脚本模式</span></option>
-</select>
+<input class="blora-input" data-i18n-placeholder="搜索供应商名称、Base URL 或备注..." id="providerSearchInput" oninput="adminApp.onAdminProviderFilterInput('search', this.value, 'main')" placeholder="搜索供应商名称、Base URL 或备注..." type="text"/>
+<blora-select id="providerStatusFilter" onchange="adminApp.onAdminProviderFilterInput('status', this.value, 'main')">
+<blora-option value=""><span data-i18n="所有状态">所有状态</span></blora-option>
+<blora-option value="enabled"><span data-i18n="已启用">已启用</span></blora-option>
+<blora-option value="disabled"><span data-i18n="已禁用">已禁用</span></blora-option>
+</blora-select>
+<blora-select data-i18n-title="范围" id="providerScopeFilter" onchange="adminApp.onAdminProviderFilterInput('scope', this.value, 'main')" title="范围">
+<blora-option value=""><span data-i18n="全部范围">全部范围</span></blora-option>
+<blora-option value="global"><span data-i18n="全局供应商">全局供应商</span></blora-option>
+<blora-option value="user"><span data-i18n="用户供应商">用户供应商</span></blora-option>
+</blora-select>
+<blora-select data-i18n-title="密钥模式" id="providerKeyModeFilter" onchange="adminApp.onAdminProviderFilterInput('keyMode', this.value, 'main')" title="密钥模式">
+<blora-option value=""><span data-i18n="全部密钥">全部密钥</span></blora-option>
+<blora-option value="fixed"><span data-i18n="固定密钥">固定密钥</span></blora-option>
+<blora-option value="script"><span data-i18n="脚本模式">脚本模式</span></blora-option>
+</blora-select>
 <span class="filter-info" id="providerCount"></span>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" id="clearProviderFiltersBtn" onclick="adminApp.clearProviderFilters()" style="display:none;" type="button"><span data-i18n="清除筛选">清除筛选</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" id="clearProviderFiltersBtn" onclick="adminApp.clearProviderFilters()" style="display:none;" type="button"><span data-i18n="清除筛选">清除筛选</span></button>
 </div>
 <!-- 供应商标签管理栏（拖拽到供应商分配，点击筛选） -->
 <div class="key-tag-bar provider-tag-bar" id="providerTagBar" style="display:flex;margin-bottom:12px;">
@@ -592,7 +592,7 @@
 <!-- 供应商标签创建/编辑浮层 -->
 <div id="createProviderTagPopover" style="display:none;position:absolute;z-index:100;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:260px;">
 <div id="providerTagPopoverTitle" style="font-weight:600;font-size:13px;margin-bottom:8px;"><span data-i18n="创建标签">创建标签</span></div>
-<input class="input" data-i18n-placeholder="标签名称" id="newProviderTagName" maxlength="100" placeholder="标签名称" style="margin-bottom:8px;font-size:13px;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="标签名称" id="newProviderTagName" maxlength="100" placeholder="标签名称" style="margin-bottom:8px;font-size:13px;" type="text"/>
 <div class="color-picker color-picker-row" id="providerTagColorPicker" style="margin-bottom:10px;">
 <span class="provider-tag-color-dot color-dot" data-color="var(--info)" onclick="adminApp.selectProviderTagColor(this)" style="background:var(--info);"></span>
 <span class="provider-tag-color-dot color-dot" data-color="var(--success)" onclick="adminApp.selectProviderTagColor(this)" style="background:var(--success);"></span>
@@ -604,8 +604,8 @@
 <span class="provider-tag-color-dot color-dot" data-color="#14b8a6" onclick="adminApp.selectProviderTagColor(this)" style="background:#14b8a6;"></span>
 </div>
 <div style="display:flex;gap:6px;justify-content:flex-end;">
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.hideCreateProviderTagPopover()" style="font-size:12px;" type="button"><span data-i18n="取消">取消</span></button>
-<button class="btn btn-sm btn-primary" data-size="sm" data-variant="primary" id="providerTagPopoverSubmit" onclick="adminApp.saveProviderTag()" style="font-size:12px;" type="button"><span data-i18n="创建">创建</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.hideCreateProviderTagPopover()" style="font-size:12px;" type="button"><span data-i18n="取消">取消</span></button>
+<button class="blora-button" data-size="sm" data-variant="primary" id="providerTagPopoverSubmit" onclick="adminApp.saveProviderTag()" style="font-size:12px;" type="button"><span data-i18n="创建">创建</span></button>
 </div>
 </div>
 <div class="models-table" id="adminProvidersList">
@@ -629,52 +629,52 @@
 </div>
 <div style="display:flex;align-items:center;gap:8px;">
 <label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="时间范围">时间范围</span></label>
-<select class="select" id="adminStatsDays" onchange="adminApp.loadStats()" style="min-width:120px;">
-<option value="7"><span data-i18n="最近 7 天">最近 7 天</span></option>
-<option selected="" value="30"><span data-i18n="最近 30 天">最近 30 天</span></option>
-<option value="90"><span data-i18n="最近 90 天">最近 90 天</span></option>
-<option value="180"><span data-i18n="最近 180 天">最近 180 天</span></option>
-<option value="365"><span data-i18n="最近 1 年">最近 1 年</span></option>
-</select>
+<blora-select id="adminStatsDays" onchange="adminApp.loadStats()" style="min-width:120px;">
+<blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
+<blora-option selected="" value="30"><span data-i18n="最近 30 天">最近 30 天</span></blora-option>
+<blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option>
+<blora-option value="180"><span data-i18n="最近 180 天">最近 180 天</span></blora-option>
+<blora-option value="365"><span data-i18n="最近 1 年">最近 1 年</span></blora-option>
+</blora-select>
 </div>
 </div>
 <!-- 插件插槽：管理统计页顶部 -->
 <div data-cr-slot="admin-stats:top"></div>
 <!-- Tab 导航 -->
 <div class="stats-tab-bar">
-<button class="active" onclick="adminApp.switchStatsTab('overview')">
+<button class="blora-button active" onclick="adminApp.switchStatsTab('overview')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><rect height="7" width="7" x="3" y="3"></rect><rect height="7" width="7" x="14" y="3"></rect><rect height="7" width="7" x="14" y="14"></rect><rect height="7" width="7" x="3" y="14"></rect></svg><span data-i18n="总览">
               总览
             </span></button>
-<button onclick="adminApp.switchStatsTab('multi')">
+<button class="blora-button" onclick="adminApp.switchStatsTab('multi')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="6" r="2"></circle><circle cx="12" cy="18" r="2"></circle><path d="M7 7l3.5 8M17 7l-3.5 8M7 6h10"></path></svg><span data-i18n="多维分析">
               多维分析
             </span></button>
-<button onclick="adminApp.switchStatsTab('daily')">
+<button class="blora-button" onclick="adminApp.switchStatsTab('daily')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg><span data-i18n="每日统计">
               每日统计
             </span></button>
-<button onclick="adminApp.switchStatsTab('models')">
+<button class="blora-button" onclick="adminApp.switchStatsTab('models')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg><span data-i18n="模型分析">
               模型分析
             </span></button>
-<button onclick="adminApp.switchStatsTab('providers')">
+<button class="blora-button" onclick="adminApp.switchStatsTab('providers')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><rect height="14" rx="2" ry="2" width="20" x="2" y="7"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg><span data-i18n="供应商分析">
               供应商分析
             </span></button>
-<button onclick="adminApp.switchStatsTab('clients')">
+<button class="blora-button" onclick="adminApp.switchStatsTab('clients')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span data-i18n="客户端">
               客户端
             </span></button>
-<button onclick="adminApp.switchStatsTab('members')">
+<button class="blora-button" onclick="adminApp.switchStatsTab('members')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="9" cy="7" r="4"></circle><path d="M2 21a7 7 0 0 1 14 0"></path><path d="M16 11a4 4 0 1 0 0-8"></path><path d="M18 21a6 6 0 0 0-4-5.65"></path></svg><span data-i18n="成员 / Team / 用户组">
               成员 / Team / 用户组
             </span></button>
-<button onclick="adminApp.switchStatsTab('messages')">
+<button class="blora-button" onclick="adminApp.switchStatsTab('messages')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M4 4h16v12H5l-1 4V4z"></path><path d="M8 8h8M8 12h5"></path></svg><span data-i18n="消息分析">
               消息分析
             </span></button>
-<button onclick="adminApp.switchStatsTab('logs')">
+<button class="blora-button" onclick="adminApp.switchStatsTab('logs')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" x2="8" y1="13" y2="13"></line><line x1="16" x2="8" y1="17" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg><span data-i18n="调用记录">
               调用记录
             </span></button>
@@ -813,14 +813,14 @@
 <div class="multi-stats-legend"><span class="multi-stats-dot"></span><span data-i18n="当前统计周期">当前统计周期</span></div>
 </div>
 <div class="admin-filter-bar multi-stats-filters" id="adminStatsMultiFilters">
-<label><span data-i18n="成员">成员</span><select class="input" id="multiStatsUser"><option value=""><span data-i18n="全部成员">全部成员</span></option></select></label>
-<label>Team<select class="input" id="multiStatsTeam"><option value=""><span data-i18n="全部 Team">全部 Team</span></option></select></label>
-<label><span data-i18n="用户组">用户组</span><select class="input" id="multiStatsGroup"><option value=""><span data-i18n="全部用户组">全部用户组</span></option></select></label>
-<label><span data-i18n="模型">模型</span><select class="input" id="multiStatsModel"><option value=""><span data-i18n="全部模型">全部模型</span></option></select></label>
-<label><span data-i18n="供应商">供应商</span><select class="input" id="multiStatsProvider"><option value=""><span data-i18n="全部供应商">全部供应商</span></option></select></label>
-<label><span data-i18n="客户端">客户端</span><select class="input" id="multiStatsSource"><option value=""><span data-i18n="全部客户端">全部客户端</span></option></select></label>
-<label><span data-i18n="项目">项目</span><select class="input" id="multiStatsProject"><option value=""><span data-i18n="全部项目">全部项目</span></option></select></label>
-<div class="multi-stats-filter-actions"><button class="btn btn-primary btn-sm" data-size="sm" data-variant="primary" onclick="adminApp.loadMultiStats()" type="button"><span data-i18n="查询">查询</span></button><button class="btn btn-ghost btn-sm" data-size="sm" data-variant="ghost" onclick="adminApp.resetMultiStatsFilters()" type="button"><span data-i18n="重置">重置</span></button></div>
+<label><span data-i18n="成员">成员</span><blora-select id="multiStatsUser"><blora-option value=""><span data-i18n="全部成员">全部成员</span></blora-option></blora-select></label>
+<label>Team<blora-select id="multiStatsTeam"><blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option></blora-select></label>
+<label><span data-i18n="用户组">用户组</span><blora-select id="multiStatsGroup"><blora-option value=""><span data-i18n="全部用户组">全部用户组</span></blora-option></blora-select></label>
+<label><span data-i18n="模型">模型</span><blora-select id="multiStatsModel"><blora-option value=""><span data-i18n="全部模型">全部模型</span></blora-option></blora-select></label>
+<label><span data-i18n="供应商">供应商</span><blora-select id="multiStatsProvider"><blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option></blora-select></label>
+<label><span data-i18n="客户端">客户端</span><blora-select id="multiStatsSource"><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option></blora-select></label>
+<label><span data-i18n="项目">项目</span><blora-select id="multiStatsProject"><blora-option value=""><span data-i18n="全部项目">全部项目</span></blora-option></blora-select></label>
+<div class="multi-stats-filter-actions"><button class="blora-button" data-size="sm" data-variant="primary" onclick="adminApp.loadMultiStats()" type="button"><span data-i18n="查询">查询</span></button><button class="blora-button" data-size="sm" data-variant="ghost" onclick="adminApp.resetMultiStatsFilters()" type="button"><span data-i18n="重置">重置</span></button></div>
 </div>
 <div class="stats-overview-grid multi-stats-summary" id="adminStatsMultiSummary"></div>
 <div class="responsive-grid-2 multi-stats-chart-row">
@@ -877,7 +877,7 @@
 <div class="chart-card">
 <h4><span data-i18n="模型详细统计">模型详细统计</span></h4>
 <div class="admin-filter-bar" style="margin-bottom:12px;">
-<input class="input" data-i18n-placeholder="搜索模型名称..." id="modelStatsSearchInput" oninput="adminApp.filterModelStatsTable()" placeholder="搜索模型名称..." type="text"/>
+<input class="blora-input" data-i18n-placeholder="搜索模型名称..." id="modelStatsSearchInput" oninput="adminApp.filterModelStatsTable()" placeholder="搜索模型名称..." type="text"/>
 </div>
 <div id="modelStatsTable">
 <!-- 模型统计表格将通过JS动态加载 -->
@@ -909,7 +909,7 @@
 <div class="chart-card">
 <h4><span data-i18n="供应商详细统计">供应商详细统计</span></h4>
 <div class="admin-filter-bar" style="margin-bottom:12px;">
-<input class="input" data-i18n-placeholder="搜索供应商名称..." id="providerStatsSearchInput" oninput="adminApp.filterProviderStatsTable()" placeholder="搜索供应商名称..." type="text"/>
+<input class="blora-input" data-i18n-placeholder="搜索供应商名称..." id="providerStatsSearchInput" oninput="adminApp.filterProviderStatsTable()" placeholder="搜索供应商名称..." type="text"/>
 </div>
 <div id="providerStatsTable">
 <!-- 供应商统计表格将通过JS动态加载 -->
@@ -949,12 +949,12 @@
 <div class="stats-tab-content" id="statsTabMessages" style="display:none;">
 <p style="font-size:13px;color:var(--muted-foreground);margin:0 0 12px;"><span data-i18n="直接读取已保存 messages 中的实际区块和字段，不用识别标签代替原始数据。">直接读取已保存 messages 中的实际区块和字段，不用识别标签代替原始数据。</span></p>
 <div class="admin-filter-bar" style="margin-bottom:16px;">
-<select class="input" id="messageStatsSourceFilter" style="min-width:140px;">
-<option value=""><span data-i18n="全部 harness">全部 harness</span></option><option value="grok">Grok</option><option value="codex">Codex</option><option value="claude_code">Claude Code</option><option value="opencode">OpenCode</option><option value="qwen_code">Qwen Code</option><option value="hermes">Hermes</option><option value="openclaw">OpenClaw</option><option value="deepseek_harness">DeepSeek Harness</option><option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option>
-</select>
-<input class="input" data-i18n-placeholder="工作区路径（可选）" id="messageStatsWorkspaceFilter" placeholder="工作区路径（可选）" style="min-width:220px;"/>
-<select class="input" id="messageStatsBlockFilter" style="min-width:150px;"><option value=""><span data-i18n="全部区块">全部区块</span></option><option value="user_info">user_info</option><option value="git_status">git_status</option><option value="jj_status">jj_status</option><option value="project_layout">project_layout</option><option value="environment_context">environment_context</option><option value="system-reminder">system-reminder</option></select>
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.loadMessageStats()" type="button"><span data-i18n="查询">查询</span></button>
+<blora-select id="messageStatsSourceFilter" style="min-width:140px;">
+<blora-option value=""><span data-i18n="全部 harness">全部 harness</span></blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
+</blora-select>
+<input class="blora-input" data-i18n-placeholder="工作区路径（可选）" id="messageStatsWorkspaceFilter" placeholder="工作区路径（可选）" style="min-width:220px;"/>
+<blora-select id="messageStatsBlockFilter" style="min-width:150px;"><blora-option value=""><span data-i18n="全部区块">全部区块</span></blora-option><blora-option value="user_info">user_info</blora-option><blora-option value="git_status">git_status</blora-option><blora-option value="jj_status">jj_status</blora-option><blora-option value="project_layout">project_layout</blora-option><blora-option value="environment_context">environment_context</blora-option><blora-option value="system-reminder">system-reminder</blora-option></blora-select>
+<button class="blora-button" data-variant="primary" onclick="adminApp.loadMessageStats()" type="button"><span data-i18n="查询">查询</span></button>
 </div>
 <div class="stats-overview-grid" id="messageStatsSummary" style="margin-bottom:20px;"></div>
 <div class="responsive-grid-2" style="margin-bottom:20px;"><div class="chart-card"><h4><span data-i18n="项目活跃趋势">项目活跃趋势</span></h4><div class="chart-container"><canvas id="messageStatsDailyChart"></canvas></div></div><div class="chart-card"><h4><span data-i18n="项目结构区块">项目结构区块</span></h4><div id="messageStatsBlockTable"></div></div></div>
@@ -994,43 +994,43 @@
 <div class="stats-tab-content" id="statsTabLogs" style="display:none;">
 <p style="font-size:13px;color:var(--muted-foreground);margin:0 0 12px;"><span data-i18n="查看 API 调用明细，支持按用户、模型、供应商、类型与日期筛选。点击行可查看完整详情。">查看 API 调用明细，支持按用户、模型、供应商、类型与日期筛选。点击行可查看完整详情。</span></p>
 <div class="admin-filter-bar" style="margin-bottom:16px;">
-<input class="input" data-i18n-placeholder="用户 ID 或用户名..." id="usageLogUserFilter" onkeydown="if(event.key==='Enter')adminApp.loadUsageLogs(1)" placeholder="用户 ID 或用户名..." style="min-width:140px;" type="text"/>
-<input class="input" data-i18n-placeholder="模型名称..." id="usageLogModelFilter" onkeydown="if(event.key==='Enter')adminApp.loadUsageLogs(1)" placeholder="模型名称..." style="min-width:130px;" type="text"/>
-<input class="input" data-i18n-placeholder="供应商..." id="usageLogProviderFilter" onkeydown="if(event.key==='Enter')adminApp.loadUsageLogs(1)" placeholder="供应商..." style="min-width:120px;" type="text"/>
-<select class="input" id="usageLogRequestTypeFilter" style="min-width:130px;">
-<option value=""><span data-i18n="全部类型">全部类型</span></option>
-<option value="chat"><span data-i18n="Chat 对话">Chat 对话</span></option>
-<option value="responses">Responses</option>
-<option value="fusion"><span data-i18n="Fusion 融合">Fusion 融合</span></option>
-<option value="playground">Playground</option>
-</select>
-<select class="input" data-i18n-title="客户端来源" id="usageLogRequestSourceFilter" style="min-width:140px;" title="客户端来源">
-<option value=""><span data-i18n="全部客户端">全部客户端</span></option>
-<option value="grok">Grok</option>
-<option value="codex">Codex</option>
-<option value="claude_code">Claude Code</option>
-<option value="opencode">OpenCode</option>
-<option value="qwen_code">Qwen Code</option>
-<option value="hermes">Hermes</option>
-<option value="openclaw">OpenClaw</option>
-<option value="deepseek_harness">DeepSeek Harness</option>
-<option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option>
-</select>
-<input class="input" data-i18n-title="开始日期" id="usageLogStartDate" title="开始日期" type="date"/>
-<input class="input" data-i18n-title="结束日期" id="usageLogEndDate" title="结束日期" type="date"/>
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.loadUsageLogs(1)" type="button"><span data-i18n="查询">查询</span></button>
-<button class="btn btn-secondary" data-variant="secondary" onclick="adminApp.clearUsageLogFilters()" type="button"><span data-i18n="清除">清除</span></button>
-<button class="btn btn-secondary" data-i18n-title="按当前筛选条件导出 CSV（最多 5 万条）" data-variant="secondary" id="usageLogExportBtn" onclick="adminApp.exportUsageLogs()" title="按当前筛选条件导出 CSV（最多 5 万条）" type="button"><span data-i18n="导出 CSV">导出 CSV</span></button>
-<button class="btn btn-secondary" data-i18n-title="导出最近 N 天的用量聚合 JSON（按模型分组，不含任何请求/响应正文）" data-variant="secondary" id="usageAggregateExportBtn" onclick="adminApp.exportUsageAggregate()" title="导出最近 N 天的用量聚合 JSON（按模型分组，不含任何请求/响应正文）" type="button"><span data-i18n="导出用量聚合">导出用量聚合</span></button>
+<input class="blora-input" data-i18n-placeholder="用户 ID 或用户名..." id="usageLogUserFilter" onkeydown="if(event.key==='Enter')adminApp.loadUsageLogs(1)" placeholder="用户 ID 或用户名..." style="min-width:140px;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="模型名称..." id="usageLogModelFilter" onkeydown="if(event.key==='Enter')adminApp.loadUsageLogs(1)" placeholder="模型名称..." style="min-width:130px;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="供应商..." id="usageLogProviderFilter" onkeydown="if(event.key==='Enter')adminApp.loadUsageLogs(1)" placeholder="供应商..." style="min-width:120px;" type="text"/>
+<blora-select id="usageLogRequestTypeFilter" style="min-width:130px;">
+<blora-option value=""><span data-i18n="全部类型">全部类型</span></blora-option>
+<blora-option value="chat"><span data-i18n="Chat 对话">Chat 对话</span></blora-option>
+<blora-option value="responses">Responses</blora-option>
+<blora-option value="fusion"><span data-i18n="Fusion 融合">Fusion 融合</span></blora-option>
+<blora-option value="playground">Playground</blora-option>
+</blora-select>
+<blora-select data-i18n-title="客户端来源" id="usageLogRequestSourceFilter" style="min-width:140px;" title="客户端来源">
+<blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
+<blora-option value="grok">Grok</blora-option>
+<blora-option value="codex">Codex</blora-option>
+<blora-option value="claude_code">Claude Code</blora-option>
+<blora-option value="opencode">OpenCode</blora-option>
+<blora-option value="qwen_code">Qwen Code</blora-option>
+<blora-option value="hermes">Hermes</blora-option>
+<blora-option value="openclaw">OpenClaw</blora-option>
+<blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
+<blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
+</blora-select>
+<input class="blora-input" data-i18n-title="开始日期" id="usageLogStartDate" title="开始日期" type="date"/>
+<input class="blora-input" data-i18n-title="结束日期" id="usageLogEndDate" title="结束日期" type="date"/>
+<button class="blora-button" data-variant="primary" onclick="adminApp.loadUsageLogs(1)" type="button"><span data-i18n="查询">查询</span></button>
+<button class="blora-button" data-variant="secondary" onclick="adminApp.clearUsageLogFilters()" type="button"><span data-i18n="清除">清除</span></button>
+<button class="blora-button" data-i18n-title="按当前筛选条件导出 CSV（最多 5 万条）" data-variant="secondary" id="usageLogExportBtn" onclick="adminApp.exportUsageLogs()" title="按当前筛选条件导出 CSV（最多 5 万条）" type="button"><span data-i18n="导出 CSV">导出 CSV</span></button>
+<button class="blora-button" data-i18n-title="导出最近 N 天的用量聚合 JSON（按模型分组，不含任何请求/响应正文）" data-variant="secondary" id="usageAggregateExportBtn" onclick="adminApp.exportUsageAggregate()" title="导出最近 N 天的用量聚合 JSON（按模型分组，不含任何请求/响应正文）" type="button"><span data-i18n="导出用量聚合">导出用量聚合</span></button>
 <span class="filter-info" id="usageLogCount"></span>
 </div>
 <div class="models-table" id="usageLogsList">
 <!-- API 调用记录将通过JS动态加载 -->
 </div>
 <div style="display: flex; justify-content: center; gap: 8px; margin-top: 16px;">
-<button class="btn btn-secondary" data-variant="secondary" disabled="" id="usageLogPrevBtn" onclick="adminApp.loadUsageLogs(adminApp.usageLogPage - 1)" type="button"><span data-i18n="上一页">上一页</span></button>
+<button class="blora-button" data-variant="secondary" disabled="" id="usageLogPrevBtn" onclick="adminApp.loadUsageLogs(adminApp.usageLogPage - 1)" type="button"><span data-i18n="上一页">上一页</span></button>
 <span id="usageLogPageInfo" style="padding: 8px 12px; color: var(--muted-foreground);"></span>
-<button class="btn btn-secondary" data-variant="secondary" id="usageLogNextBtn" onclick="adminApp.loadUsageLogs(adminApp.usageLogPage + 1)" type="button"><span data-i18n="下一页">下一页</span></button>
+<button class="blora-button" data-variant="secondary" id="usageLogNextBtn" onclick="adminApp.loadUsageLogs(adminApp.usageLogPage + 1)" type="button"><span data-i18n="下一页">下一页</span></button>
 </div>
 </div>
 </div>
@@ -1044,23 +1044,23 @@
 <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="查看近期 API 调用失败记录，便于排查上游故障与用户问题">查看近期 API 调用失败记录，便于排查上游故障与用户问题</span></p>
 </div>
 <div class="section-actions">
-<button class="btn btn-secondary" data-variant="secondary" onclick="adminApp.loadErrorLogs()" type="button"><span data-i18n="刷新">刷新</span></button>
+<button class="blora-button" data-variant="secondary" onclick="adminApp.loadErrorLogs()" type="button"><span data-i18n="刷新">刷新</span></button>
 </div>
 </div>
 <div class="admin-filter-bar" style="margin-bottom:16px;">
-<input class="input" data-i18n-placeholder="用户 ID 或用户名..." id="errorLogUserFilter" placeholder="用户 ID 或用户名..." style="min-width:140px;" type="text"/>
-<input class="input" data-i18n-placeholder="模型名称..." id="errorLogModelFilter" placeholder="模型名称..." style="min-width:120px;" type="text"/>
-<input class="input" data-i18n-placeholder="供应商..." id="errorLogProviderFilter" placeholder="供应商..." style="min-width:120px;" type="text"/>
-<input class="input" data-i18n-placeholder="状态码" id="errorLogStatusFilter" max="599" min="100" placeholder="状态码" style="width:90px;" type="number"/>
-<input class="input" data-i18n-placeholder="错误类型..." id="errorLogTypeFilter" placeholder="错误类型..." style="min-width:120px;" type="text"/>
-<input class="input" id="errorLogStartDate" type="date"/>
-<input class="input" id="errorLogEndDate" type="date"/>
+<input class="blora-input" data-i18n-placeholder="用户 ID 或用户名..." id="errorLogUserFilter" placeholder="用户 ID 或用户名..." style="min-width:140px;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="模型名称..." id="errorLogModelFilter" placeholder="模型名称..." style="min-width:120px;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="供应商..." id="errorLogProviderFilter" placeholder="供应商..." style="min-width:120px;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="状态码" id="errorLogStatusFilter" max="599" min="100" placeholder="状态码" style="width:90px;" type="number"/>
+<input class="blora-input" data-i18n-placeholder="错误类型..." id="errorLogTypeFilter" placeholder="错误类型..." style="min-width:120px;" type="text"/>
+<input class="blora-input" id="errorLogStartDate" type="date"/>
+<input class="blora-input" id="errorLogEndDate" type="date"/>
 <label data-i18n-title="仅显示最终返回给客户端的错误（不含队列重试中的中间失败）" style="display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--muted-foreground);white-space:nowrap;cursor:pointer;" title="仅显示最终返回给客户端的错误（不含队列重试中的中间失败）">
 <blora-checkbox checked="" id="errorLogFinalOnly" label="仅最终错误"></blora-checkbox><span data-i18n="仅最终错误">
               仅最终错误
             </span></label>
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.loadErrorLogs(1)" type="button"><span data-i18n="查询">查询</span></button>
-<button class="btn btn-secondary" data-variant="secondary" onclick="adminApp.clearErrorLogFilters()" type="button"><span data-i18n="清除">清除</span></button>
+<button class="blora-button" data-variant="primary" onclick="adminApp.loadErrorLogs(1)" type="button"><span data-i18n="查询">查询</span></button>
+<button class="blora-button" data-variant="secondary" onclick="adminApp.clearErrorLogFilters()" type="button"><span data-i18n="清除">清除</span></button>
 <span class="filter-info" id="errorLogCount"></span>
 </div>
 <p id="errorLogRetentionHint" style="font-size:12px;color:var(--muted-foreground);margin:0 0 12px;"></p>
@@ -1068,9 +1068,9 @@
 <div class="page-loading"><div aria-label="加载中" class="loading-spinner" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
 </div>
 <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-<button class="btn btn-secondary" data-variant="secondary" disabled="" id="errorLogPrevBtn" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage - 1)" type="button"><span data-i18n="上一页">上一页</span></button>
+<button class="blora-button" data-variant="secondary" disabled="" id="errorLogPrevBtn" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage - 1)" type="button"><span data-i18n="上一页">上一页</span></button>
 <span id="errorLogPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-<button class="btn btn-secondary" data-variant="secondary" id="errorLogNextBtn" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage + 1)" type="button"><span data-i18n="下一页">下一页</span></button>
+<button class="blora-button" data-variant="secondary" id="errorLogNextBtn" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage + 1)" type="button"><span data-i18n="下一页">下一页</span></button>
 </div>
 </div>
 </div>
@@ -1080,20 +1080,20 @@
 <div class="section-header">
 <h2><span data-i18n="操作日志">操作日志</span></h2>
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-<input class="input" data-i18n-placeholder="搜索用户名/描述" id="adminAuditLogSearch" onkeydown="if(event.key==='Enter')adminApp.loadAdminAuditLogs(1)" placeholder="搜索用户名/描述" style="width:200px;" type="text"/>
-<select class="input" id="adminAuditLogResourceFilter" onchange="adminApp.loadAdminAuditLogs(1)" style="width:auto;">
-<option value=""><span data-i18n="全部资源">全部资源</span></option>
-<option value="api_key">API Key</option>
-<option value="user"><span data-i18n="用户">用户</span></option>
-<option value="auth"><span data-i18n="认证">认证</span></option>
-<option value="provider"><span data-i18n="供应商">供应商</span></option>
-<option value="model"><span data-i18n="模型">模型</span></option>
-<option value="team">Team</option>
-<option value="system"><span data-i18n="系统">系统</span></option>
-<option value="product"><span data-i18n="商品">商品</span></option>
-<option value="redemption_code"><span data-i18n="兑换码">兑换码</span></option>
-</select>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.loadAdminAuditLogs(1)" type="button"><span data-i18n="刷新">刷新</span></button>
+<input class="blora-input" data-i18n-placeholder="搜索用户名/描述" id="adminAuditLogSearch" onkeydown="if(event.key==='Enter')adminApp.loadAdminAuditLogs(1)" placeholder="搜索用户名/描述" style="width:200px;" type="text"/>
+<blora-select id="adminAuditLogResourceFilter" onchange="adminApp.loadAdminAuditLogs(1)" style="width:auto;">
+<blora-option value=""><span data-i18n="全部资源">全部资源</span></blora-option>
+<blora-option value="api_key">API Key</blora-option>
+<blora-option value="user"><span data-i18n="用户">用户</span></blora-option>
+<blora-option value="auth"><span data-i18n="认证">认证</span></blora-option>
+<blora-option value="provider"><span data-i18n="供应商">供应商</span></blora-option>
+<blora-option value="model"><span data-i18n="模型">模型</span></blora-option>
+<blora-option value="team">Team</blora-option>
+<blora-option value="system"><span data-i18n="系统">系统</span></blora-option>
+<blora-option value="product"><span data-i18n="商品">商品</span></blora-option>
+<blora-option value="redemption_code"><span data-i18n="兑换码">兑换码</span></blora-option>
+</blora-select>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.loadAdminAuditLogs(1)" type="button"><span data-i18n="刷新">刷新</span></button>
 </div>
 </div>
 <div id="adminAuditLogsList" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -1108,35 +1108,35 @@
 <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;"><span data-i18n="历史收集到的自定义提示词文件，相同内容自动合并显示">历史收集到的自定义提示词文件，相同内容自动合并显示</span></p>
 </div>
 <div class="admin-filter-bar" style="margin-bottom:16px;">
-<input class="input" data-i18n-placeholder="搜索文件名或内容..." id="adminPromptSearchInput" onkeydown="if(event.key==='Enter')adminApp.loadAdminCustomPrompts(1)" placeholder="搜索文件名或内容..." style="min-width:200px;" type="text"/>
-<select class="input" data-i18n-title="客户端来源" id="adminPromptSourceFilter" style="min-width:140px;" title="客户端来源">
-<option value=""><span data-i18n="全部客户端">全部客户端</span></option>
-<option value="grok">Grok</option>
-<option value="codex">Codex</option>
-<option value="claude_code">Claude Code</option>
-<option value="opencode">OpenCode</option>
-<option value="qwen_code">Qwen Code</option>
-<option value="hermes">Hermes</option>
-<option value="openclaw">OpenClaw</option>
-<option value="deepseek_harness">DeepSeek Harness</option>
-<option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option>
-</select>
-<select class="input" id="adminPromptSortSelect" style="min-width:130px;">
-<option value="count"><span data-i18n="按出现次数排序">按出现次数排序</span></option>
-<option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></option>
-<option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></option>
-</select>
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.loadAdminCustomPrompts(1)" type="button"><span data-i18n="查询">查询</span></button>
-<button class="btn btn-secondary" data-variant="secondary" onclick="adminApp.clearAdminPromptFilters()" type="button"><span data-i18n="清除">清除</span></button>
+<input class="blora-input" data-i18n-placeholder="搜索文件名或内容..." id="adminPromptSearchInput" onkeydown="if(event.key==='Enter')adminApp.loadAdminCustomPrompts(1)" placeholder="搜索文件名或内容..." style="min-width:200px;" type="text"/>
+<blora-select data-i18n-title="客户端来源" id="adminPromptSourceFilter" style="min-width:140px;" title="客户端来源">
+<blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
+<blora-option value="grok">Grok</blora-option>
+<blora-option value="codex">Codex</blora-option>
+<blora-option value="claude_code">Claude Code</blora-option>
+<blora-option value="opencode">OpenCode</blora-option>
+<blora-option value="qwen_code">Qwen Code</blora-option>
+<blora-option value="hermes">Hermes</blora-option>
+<blora-option value="openclaw">OpenClaw</blora-option>
+<blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
+<blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
+</blora-select>
+<blora-select id="adminPromptSortSelect" style="min-width:130px;">
+<blora-option value="count"><span data-i18n="按出现次数排序">按出现次数排序</span></blora-option>
+<blora-option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></blora-option>
+<blora-option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></blora-option>
+</blora-select>
+<button class="blora-button" data-variant="primary" onclick="adminApp.loadAdminCustomPrompts(1)" type="button"><span data-i18n="查询">查询</span></button>
+<button class="blora-button" data-variant="secondary" onclick="adminApp.clearAdminPromptFilters()" type="button"><span data-i18n="清除">清除</span></button>
 <span class="filter-info" id="adminPromptCount"></span>
 </div>
 <div class="models-table" id="adminPromptsList">
 <!-- 提示词列表由 JS 动态加载 -->
 </div>
 <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-<button class="btn btn-secondary" data-variant="secondary" disabled="" id="adminPromptPrevBtn" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage - 1)" type="button"><span data-i18n="上一页">上一页</span></button>
+<button class="blora-button" data-variant="secondary" disabled="" id="adminPromptPrevBtn" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage - 1)" type="button"><span data-i18n="上一页">上一页</span></button>
 <span id="adminPromptPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-<button class="btn btn-secondary" data-variant="secondary" id="adminPromptNextBtn" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage + 1)" type="button"><span data-i18n="下一页">下一页</span></button>
+<button class="blora-button" data-variant="secondary" id="adminPromptNextBtn" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage + 1)" type="button"><span data-i18n="下一页">下一页</span></button>
 </div>
 </div>
 </div>
@@ -1144,7 +1144,7 @@
 <div class="page" id="adminSettingsPage">
 <div class="content-section" id="passportInvitesSection" style="display:none;">
 <h2>邀请链接</h2>
-<button class="btn btn-primary" data-variant="primary" id="generateInviteBtn" type="button">生成邀请链接</button>
+<button class="blora-button" data-variant="primary" id="generateInviteBtn" type="button">生成邀请链接</button>
 <div id="inviteResult" style="margin:12px 0;word-break:break-all;"></div>
 <div id="inviteList"></div>
 </div>
@@ -1188,8 +1188,8 @@
 </div>
 </div>
 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-<button class="btn btn-secondary" data-variant="secondary" id="updateCheckBtn" onclick="adminApp.checkForUpdate(true)" type="button"><span data-i18n="检查更新">检查更新</span></button>
-<button class="btn btn-primary" data-variant="primary" disabled="" id="updateApplyBtn" onclick="adminApp.applyUpdate()" type="button"><span data-i18n="一键更新">一键更新</span></button>
+<button class="blora-button" data-variant="secondary" id="updateCheckBtn" onclick="adminApp.checkForUpdate(true)" type="button"><span data-i18n="检查更新">检查更新</span></button>
+<button class="blora-button" data-variant="primary" disabled="" id="updateApplyBtn" onclick="adminApp.applyUpdate()" type="button"><span data-i18n="一键更新">一键更新</span></button>
 </div>
 </div>
 <div class="content-section">
@@ -1199,15 +1199,15 @@
 <div class="form-group">
 <label><span data-i18n="压缩阈值">压缩阈值</span></label>
 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-<input class="input" data-i18n-placeholder="天" id="retentionCompressDays" max="3650" min="0" placeholder="天" step="1" style="flex:1;min-width:120px;" type="number"/>
-<input class="input" data-i18n-placeholder="GB" id="retentionCompressSizeGb" max="1024" min="0" placeholder="GB" step="1" style="flex:1;min-width:120px;" type="number"/>
+<input class="blora-input" data-i18n-placeholder="天" id="retentionCompressDays" max="3650" min="0" placeholder="天" step="1" style="flex:1;min-width:120px;" type="number"/>
+<input class="blora-input" data-i18n-placeholder="GB" id="retentionCompressSizeGb" max="1024" min="0" placeholder="GB" step="1" style="flex:1;min-width:120px;" type="number"/>
 </div>
 </div>
 <div class="form-group">
 <label><span data-i18n="删除阈值">删除阈值</span></label>
 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-<input class="input" data-i18n-placeholder="天" id="retentionPurgeDays" max="3650" min="0" placeholder="天" step="1" style="flex:1;min-width:120px;" type="number"/>
-<input class="input" data-i18n-placeholder="GB" id="retentionPurgeSizeGb" max="1024" min="0" placeholder="GB" step="1" style="flex:1;min-width:120px;" type="number"/>
+<input class="blora-input" data-i18n-placeholder="天" id="retentionPurgeDays" max="3650" min="0" placeholder="天" step="1" style="flex:1;min-width:120px;" type="number"/>
+<input class="blora-input" data-i18n-placeholder="GB" id="retentionPurgeSizeGb" max="1024" min="0" placeholder="GB" step="1" style="flex:1;min-width:120px;" type="number"/>
 </div>
 </div>
 <div class="form-group">
@@ -1215,11 +1215,11 @@
 </div>
 <div id="retentionConfigMessage" style="font-size:13px;margin-bottom:12px;"></div>
 <div class="form-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
-<button class="btn btn-primary" data-variant="primary" id="retentionSaveBtn" type="submit"><span data-i18n="保存保留配置">保存保留配置</span></button>
-<button class="btn btn-secondary" data-variant="secondary" id="retentionRunCompressPreviewBtn" type="button"><span data-i18n="预览压缩（dry-run）">预览压缩（dry-run）</span></button>
-<button class="btn btn-secondary" data-variant="secondary" id="retentionRunPurgePreviewBtn" type="button"><span data-i18n="预览清除（dry-run）">预览清除（dry-run）</span></button>
-<button class="btn btn-primary" data-variant="primary" id="retentionRunCompressBtn" type="button"><span data-i18n="立即执行压缩">立即执行压缩</span></button>
-<button class="btn btn-primary" data-variant="primary" id="retentionRunPurgeBtn" type="button"><span data-i18n="立即执行清除">立即执行清除</span></button>
+<button class="blora-button" data-variant="primary" id="retentionSaveBtn" type="submit"><span data-i18n="保存保留配置">保存保留配置</span></button>
+<button class="blora-button" data-variant="secondary" id="retentionRunCompressPreviewBtn" type="button"><span data-i18n="预览压缩（dry-run）">预览压缩（dry-run）</span></button>
+<button class="blora-button" data-variant="secondary" id="retentionRunPurgePreviewBtn" type="button"><span data-i18n="预览清除（dry-run）">预览清除（dry-run）</span></button>
+<button class="blora-button" data-variant="primary" id="retentionRunCompressBtn" type="button"><span data-i18n="立即执行压缩">立即执行压缩</span></button>
+<button class="blora-button" data-variant="primary" id="retentionRunPurgeBtn" type="button"><span data-i18n="立即执行清除">立即执行清除</span></button>
 </div>
 </form>
 </div>
@@ -1228,36 +1228,36 @@
 <form class="settings-form" id="adminSettingsForm">
 <div class="form-group">
 <label for="systemName"><span data-i18n="系统名称">系统名称</span></label>
-<input class="input" id="systemName" type="text" value="Crant AI Studio"/>
+<input class="blora-input" id="systemName" type="text" value="Crant AI Studio"/>
 </div>
 <div class="form-group">
 <label for="defaultBalance"><span data-i18n="默认用户积分">默认用户积分</span></label>
-<input class="input" id="defaultBalance" step="1" type="number" value="1000"/>
+<input class="blora-input" id="defaultBalance" step="1" type="number" value="1000"/>
 </div>
 <div class="form-group">
 <label for="apiKeyExpiry"><span data-i18n="默认API密钥有效期（天）">默认API密钥有效期（天）</span></label>
-<input class="input" id="apiKeyExpiry" type="number" value="30"/>
+<input class="blora-input" id="apiKeyExpiry" type="number" value="30"/>
 </div>
 <div class="form-group">
 <label><span data-i18n="计费模式">计费模式</span></label>
 <div style="display:flex;gap:16px;margin-top:4px;">
 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-<input checked="" name="billingMode" type="radio" value="token"/><span data-i18n="按 Token 计费"> 按 Token 计费
+<input class="blora-input" checked="" name="billingMode" type="radio" value="token"/><span data-i18n="按 Token 计费"> 按 Token 计费
                 </span></label>
 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-<input name="billingMode" type="radio" value="rate"/><span data-i18n="按速率（每次请求）计费"> 按速率（每次请求）计费
+<input class="blora-input" name="billingMode" type="radio" value="rate"/><span data-i18n="按速率（每次请求）计费"> 按速率（每次请求）计费
                 </span></label>
 </div>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="按 Token 计费：根据实际使用量扣费。按速率计费：每次请求扣除固定金额。">按 Token 计费：根据实际使用量扣费。按速率计费：每次请求扣除固定金额。</span></small>
 </div>
 <div class="form-group" id="ratePriceGroup" style="display:none;">
 <label for="ratePricePerRequest"><span data-i18n="每次请求价格（¥）">每次请求价格（¥）</span></label>
-<input class="input" id="ratePricePerRequest" min="0" step="0.001" type="number" value="0.01"/>
+<input class="blora-input" id="ratePricePerRequest" min="0" step="0.001" type="number" value="0.01"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="用户每次 API 调用扣除的固定金额">用户每次 API 调用扣除的固定金额</span></small>
 </div>
 <div class="form-group">
 <label for="statsRefreshInterval"><span data-i18n="统计信息刷新间隔（秒）">统计信息刷新间隔（秒）</span></label>
-<input class="input" id="statsRefreshInterval" max="300" min="3" step="1" type="number" value="10"/>
+<input class="blora-input" id="statsRefreshInterval" max="300" min="3" step="1" type="number" value="10"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="管理后台「统计信息」页自动刷新间隔，默认 10 秒，范围 3–300 秒">管理后台「统计信息」页自动刷新间隔，默认 10 秒，范围 3–300 秒</span></small>
 </div>
 <div class="form-group">
@@ -1276,10 +1276,10 @@
 </div>
 <div class="form-group">
 <label for="statsReportGranularity"><span data-i18n="上报粒度">上报粒度</span></label>
-<select class="input" id="statsReportGranularity">
-<option data-i18n="含模型与供应商明细（默认）" value="detailed">含模型与供应商明细（默认）</option>
-<option data-i18n="仅聚合计数（不含模型/供应商明细）" value="counts">仅聚合计数（不含模型/供应商明细）</option>
-</select>
+<blora-select id="statsReportGranularity">
+<blora-option data-i18n="含模型与供应商明细（默认）" value="detailed">含模型与供应商明细（默认）</blora-option>
+<blora-option data-i18n="仅聚合计数（不含模型/供应商明细）" value="counts">仅聚合计数（不含模型/供应商明细）</blora-option>
+</blora-select>
 <small style="color:var(--muted-foreground);font-size:12px;display:block;margin-top:6px;"><span data-i18n="影响上报内容：仅聚合计数更保守，不含具体模型/供应商；含模型与供应商明细会暴露本实例在用哪些模型/供应商。">影响上报内容：仅聚合计数更保守，不含具体模型/供应商；含模型与供应商明细会暴露本实例在用哪些模型/供应商。</span></small>
 </div>
 <div class="form-group">
@@ -1287,8 +1287,8 @@
 <div id="modelListContainer" style="margin-top:4px;">
 <div id="modelListTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:32px;align-items:center;"></div>
 <div style="display:flex;gap:8px;">
-<input class="input" data-i18n-placeholder="输入模型 ID，如 claude-fable-5" id="modelListInput" placeholder="输入模型 ID，如 claude-fable-5" style="flex:1;" type="text"/>
-<button class="btn btn-secondary" data-variant="secondary" id="modelListAddBtn" type="button"><span data-i18n="添加">添加</span></button>
+<input class="blora-input" data-i18n-placeholder="输入模型 ID，如 claude-fable-5" id="modelListInput" placeholder="输入模型 ID，如 claude-fable-5" style="flex:1;" type="text"/>
+<button class="blora-button" data-variant="secondary" id="modelListAddBtn" type="button"><span data-i18n="添加">添加</span></button>
 </div>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="fusion 固定保留，不可删除；至少保留一个非 fusion 的模型 ID；可自由添加/删除其他模型。">
                   fusion 固定保留，不可删除；至少保留一个非 fusion 的模型 ID；可自由添加/删除其他模型。
@@ -1296,7 +1296,7 @@
 </div>
 </div>
 <div class="form-actions">
-<button class="btn btn-primary" data-variant="primary" type="submit"><span data-i18n="保存设置">保存设置</span></button>
+<button class="blora-button" data-variant="primary" type="submit"><span data-i18n="保存设置">保存设置</span></button>
 </div>
 </form>
 </div>
@@ -1316,29 +1316,29 @@
 </div>
 <div class="form-group">
 <label for="feishuAppId">App ID</label>
-<input autocomplete="off" class="input" id="feishuAppId" placeholder="cli_xxxxxxxx" type="text"/>
+<input autocomplete="off" class="blora-input" id="feishuAppId" placeholder="cli_xxxxxxxx" type="text"/>
 </div>
 <div class="form-group">
 <label for="feishuAppSecret">App Secret</label>
-<input autocomplete="new-password" class="input" data-i18n-placeholder="已配置则留空不修改" id="feishuAppSecret" placeholder="已配置则留空不修改" type="password"/>
+<input autocomplete="new-password" class="blora-input" data-i18n-placeholder="已配置则留空不修改" id="feishuAppSecret" placeholder="已配置则留空不修改" type="password"/>
 <small id="feishuSecretHint" style="color:var(--muted-foreground);margin-top:4px;display:none;"><span data-i18n="当前已配置密钥，留空则保持不变">当前已配置密钥，留空则保持不变</span></small>
 </div>
 <div class="form-group">
 <label for="feishuTenantKey"><span data-i18n="Tenant Key（可选）">Tenant Key（可选）</span></label>
-<input autocomplete="off" class="input" data-i18n-placeholder="企业 tenant_key，留空则不限制企业" id="feishuTenantKey" placeholder="企业 tenant_key，留空则不限制企业" type="text"/>
+<input autocomplete="off" class="blora-input" data-i18n-placeholder="企业 tenant_key，留空则不限制企业" id="feishuTenantKey" placeholder="企业 tenant_key，留空则不限制企业" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="填写后仅允许该企业租户下的飞书用户登录">填写后仅允许该企业租户下的飞书用户登录</span></small>
 </div>
 <div class="form-group">
 <label><span data-i18n="OAuth 回调地址">OAuth 回调地址</span></label>
 <div style="display:flex;gap:8px;align-items:center;">
-<input class="input" id="feishuRedirectUri" readonly="" style="font-family:monospace;flex:1;background:var(--muted);" type="text"/>
-<button class="btn btn-secondary" data-variant="secondary" id="feishuCopyRedirectBtn" onclick="adminApp.copyFeishuRedirectUri()" type="button"><span data-i18n="复制">复制</span></button>
+<input class="blora-input" id="feishuRedirectUri" readonly="" style="font-family:monospace;flex:1;background:var(--muted);" type="text"/>
+<button class="blora-button" data-variant="secondary" id="feishuCopyRedirectBtn" onclick="adminApp.copyFeishuRedirectUri()" type="button"><span data-i18n="复制">复制</span></button>
 </div>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="请将此地址配置到飞书开放平台应用的重定向 URL 中">请将此地址配置到飞书开放平台应用的重定向 URL 中</span></small>
 </div>
 <div id="feishuConfigSource" style="font-size:12px;color:var(--muted-foreground);margin-bottom:12px;"></div>
 <div class="form-actions">
-<button class="btn btn-primary" data-variant="primary" id="feishuSaveBtn" onclick="adminApp.saveFeishuLoginSettings()" type="button"><span data-i18n="保存飞书配置">保存飞书配置</span></button>
+<button class="blora-button" data-variant="primary" id="feishuSaveBtn" onclick="adminApp.saveFeishuLoginSettings()" type="button"><span data-i18n="保存飞书配置">保存飞书配置</span></button>
 </div>
 </form>
 </div>
@@ -1349,7 +1349,7 @@
 <form id="systemProxyForm">
 <div class="form-group">
 <label for="systemProxyUrl"><span data-i18n="代理地址">代理地址</span></label>
-<input class="input" data-i18n-placeholder="http://127.0.0.1:7890 或 socks5://127.0.0.1:1080" id="systemProxyUrl" placeholder="http://127.0.0.1:7890 或 socks5://127.0.0.1:1080" style="font-family:monospace;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="http://127.0.0.1:7890 或 socks5://127.0.0.1:1080" id="systemProxyUrl" placeholder="http://127.0.0.1:7890 或 socks5://127.0.0.1:1080" style="font-family:monospace;" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="示例：http://user:pass@host:port、https://host:port、socks5://host:1080、socks5h://host:1080。供应商勾选「使用系统代理」时使用此地址，无需开启下方全局选项。">示例：http://user:pass@host:port、https://host:port、socks5://host:1080、socks5h://host:1080。供应商勾选「使用系统代理」时使用此地址，无需开启下方全局选项。</span></small>
 </div>
 <div class="form-group">
@@ -1360,7 +1360,7 @@
 <small style="color:var(--muted-foreground);font-size:12px;display:block;margin-top:6px;"><span data-i18n="开启后，所有供应商的上游请求均走上方代理。关闭时，仅在供应商管理中单独启用代理的供应商会走代理（可填自定义地址或引用本页代理地址）。">开启后，所有供应商的上游请求均走上方代理。关闭时，仅在供应商管理中单独启用代理的供应商会走代理（可填自定义地址或引用本页代理地址）。</span></small>
 </div>
 <div class="form-actions">
-<button class="btn btn-primary" data-variant="primary" type="submit"><span data-i18n="保存代理设置">保存代理设置</span></button>
+<button class="blora-button" data-variant="primary" type="submit"><span data-i18n="保存代理设置">保存代理设置</span></button>
 </div>
 </form>
 </div>
@@ -1377,7 +1377,7 @@
 <div class="form-group">
 <label><span data-i18n="订阅地址（推荐，无数量上限）">订阅地址（推荐，无数量上限）</span></label>
 <div style="display:flex;gap:8px;">
-<input class="input" id="globalProxySubUrl" placeholder="http://provider.com/proxy-list?token=xxx" style="font-family:monospace;flex:1;" type="text"/>
+<input class="blora-input" id="globalProxySubUrl" placeholder="http://provider.com/proxy-list?token=xxx" style="font-family:monospace;flex:1;" type="text"/>
 </div>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="系统每 5 分钟自动从该地址拉取代理列表，无需手动导入">系统每 5 分钟自动从该地址拉取代理列表，无需手动导入</span></small>
 </div>
@@ -1385,20 +1385,20 @@
 <label><span data-i18n="手动代理列表">手动代理列表</span></label>
 <div id="globalProxyPoolList" style="margin-bottom:8px;"></div>
 <div style="display:flex;gap:8px;">
-<input class="input" data-i18n-placeholder="http://proxy:8080 或 socks5://proxy:1080" id="globalNewProxyUrl" placeholder="http://proxy:8080 或 socks5://proxy:1080" style="font-family:monospace;flex:1;" type="text"/>
-<button class="btn btn-secondary" data-variant="secondary" onclick="adminApp.addGlobalProxy()" type="button"><span data-i18n="添加">添加</span></button>
+<input class="blora-input" data-i18n-placeholder="http://proxy:8080 或 socks5://proxy:1080" id="globalNewProxyUrl" placeholder="http://proxy:8080 或 socks5://proxy:1080" style="font-family:monospace;flex:1;" type="text"/>
+<button class="blora-button" data-variant="secondary" onclick="adminApp.addGlobalProxy()" type="button"><span data-i18n="添加">添加</span></button>
 </div>
 <div style="display:flex;gap:8px;margin-top:8px;">
-<input class="input" data-i18n-placeholder="从 URL 导入（txt 文件，每行一个代理）" id="globalImportProxyUrl" placeholder="从 URL 导入（txt 文件，每行一个代理）" style="font-family:monospace;flex:1;" type="text"/>
-<button class="btn btn-secondary" data-variant="secondary" onclick="adminApp.importGlobalProxies()" type="button"><span data-i18n="导入">导入</span></button>
+<input class="blora-input" data-i18n-placeholder="从 URL 导入（txt 文件，每行一个代理）" id="globalImportProxyUrl" placeholder="从 URL 导入（txt 文件，每行一个代理）" style="font-family:monospace;flex:1;" type="text"/>
+<button class="blora-button" data-variant="secondary" onclick="adminApp.importGlobalProxies()" type="button"><span data-i18n="导入">导入</span></button>
 </div>
 <div style="display:flex;gap:8px;margin-top:8px;">
-<textarea class="input" data-i18n-placeholder="批量粘贴代理（每行一个）" id="globalBatchProxyInput" placeholder="批量粘贴代理（每行一个）" rows="2" style="font-family:monospace;flex:1;resize:vertical;"></textarea>
-<button class="btn btn-secondary" data-variant="secondary" onclick="adminApp.batchAddGlobalProxies()" style="align-self:flex-end;" type="button"><span data-i18n="批量添加">批量添加</span></button>
+<textarea class="blora-textarea" data-i18n-placeholder="批量粘贴代理（每行一个）" id="globalBatchProxyInput" placeholder="批量粘贴代理（每行一个）" rows="2" style="font-family:monospace;flex:1;resize:vertical;"></textarea>
+<button class="blora-button" data-variant="secondary" onclick="adminApp.batchAddGlobalProxies()" style="align-self:flex-end;" type="button"><span data-i18n="批量添加">批量添加</span></button>
 </div>
 </div>
 <div class="form-actions">
-<button class="btn btn-primary" data-variant="primary" type="submit"><span data-i18n="保存代理池设置">保存代理池设置</span></button>
+<button class="blora-button" data-variant="primary" type="submit"><span data-i18n="保存代理池设置">保存代理池设置</span></button>
 </div>
 </form>
 </div>
@@ -1406,93 +1406,92 @@
 </main>
 </div>
 <!-- 编辑用户模态框 -->
-<div class="modal" id="editUserModal" style="display: none;">
-<div class="modal-content">
-<div class="modal-header">
+<blora-dialog id="editUserModal"
+
+<div slot="header">
 <h3><span data-i18n="编辑用户">编辑用户</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
-<input id="editUserId" type="hidden"/>
+<div>
+<input class="blora-input" id="editUserId" type="hidden"/>
 <div class="form-group">
 <label for="editUserEmail"><span data-i18n="邮箱">邮箱</span></label>
-<input class="input" id="editUserEmail" placeholder="user@example.com" type="email"/>
+<input class="blora-input" id="editUserEmail" placeholder="user@example.com" type="email"/>
 </div>
 <div class="form-group">
 <label for="editUserEmailVerified"><span data-i18n="邮箱验证状态">邮箱验证状态</span></label>
-<select class="select" id="editUserEmailVerified">
-<option value="true"><span data-i18n="已验证">已验证</span></option>
-<option value="false"><span data-i18n="未验证">未验证</span></option>
-</select>
+<blora-select id="editUserEmailVerified">
+<blora-option value="true"><span data-i18n="已验证">已验证</span></blora-option>
+<blora-option value="false"><span data-i18n="未验证">未验证</span></blora-option>
+</blora-select>
 </div>
 <div class="form-group">
 <label for="editUserAdmin"><span data-i18n="管理员权限">管理员权限</span></label>
-<select class="select" id="editUserAdmin">
-<option value="false"><span data-i18n="普通用户">普通用户</span></option>
-<option value="true"><span data-i18n="管理员">管理员</span></option>
-</select>
+<blora-select id="editUserAdmin">
+<blora-option value="false"><span data-i18n="普通用户">普通用户</span></blora-option>
+<blora-option value="true"><span data-i18n="管理员">管理员</span></blora-option>
+</blora-select>
 </div>
 <div class="form-group">
 <label for="editUserBalance"><span data-i18n="积分">积分</span></label>
-<input class="input" id="editUserBalance" step="1" type="number"/>
+<input class="blora-input" id="editUserBalance" step="1" type="number"/>
 </div>
 <div class="form-group">
 <label for="editUserGroup"><span data-i18n="用户组">用户组</span></label>
-<select class="select" id="editUserGroup">
-<option value=""><span data-i18n="无用户组">无用户组</span></option>
-</select>
+<blora-select id="editUserGroup">
+<blora-option value=""><span data-i18n="无用户组">无用户组</span></blora-option>
+</blora-select>
 </div>
 <div class="form-group">
 <label for="editUserTags"><span data-i18n="标签（逗号分隔）">标签（逗号分隔）</span></label>
-<input class="input" data-i18n-placeholder="标签1, 标签2" id="editUserTags" placeholder="标签1, 标签2" type="text"/>
+<input class="blora-input" data-i18n-placeholder="标签1, 标签2" id="editUserTags" placeholder="标签1, 标签2" type="text"/>
 </div>
 <div class="form-group">
 <label for="editUserRateLimitRpm"><span data-i18n="速率限制 - 每分钟请求数（0=不限制）">速率限制 - 每分钟请求数（0=不限制）</span></label>
-<input class="input" id="editUserRateLimitRpm" min="0" type="number" value="0"/>
+<input class="blora-input" id="editUserRateLimitRpm" min="0" type="number" value="0"/>
 </div>
 <div class="form-group">
 <label for="editUserRateLimitTpm"><span data-i18n="速率限制 - 每分钟Token数（0=不限制）">速率限制 - 每分钟Token数（0=不限制）</span></label>
-<input class="input" id="editUserRateLimitTpm" min="0" type="number" value="0"/>
+<input class="blora-input" id="editUserRateLimitTpm" min="0" type="number" value="0"/>
 </div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" id="saveUserBtn" type="button"><span data-i18n="保存">保存</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" id="saveUserBtn" type="button"><span data-i18n="保存">保存</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 添加模型模态框 -->
-<div class="modal" id="addModelModal" style="display: none;">
-<div class="modal-content">
-<div class="modal-header">
+<blora-dialog id="addModelModal"
+
+<div slot="header">
 <h3><span data-i18n="添加模型">添加模型</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
-<input id="modelId" type="hidden"/>
+<div>
+<input class="blora-input" id="modelId" type="hidden"/>
 <div class="form-group">
 <label for="upstreamModelId"><span data-i18n="上游模型ID">上游模型ID</span></label>
-<input class="input" data-i18n-placeholder="例如：gpt-4" id="upstreamModelId" placeholder="例如：gpt-4" type="text"/>
+<input class="blora-input" data-i18n-placeholder="例如：gpt-4" id="upstreamModelId" placeholder="例如：gpt-4" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="供应商识别的模型名称，同一供应商下不可重复，不同供应商可使用相同模型名">供应商识别的模型名称，同一供应商下不可重复，不同供应商可使用相同模型名</span></small>
 </div>
 <div class="form-group">
 <label for="modelAlias"><span data-i18n="别名（可选）">别名（可选）</span></label>
-<input class="input" data-i18n-placeholder="例如：my-gpt4" id="modelAlias" placeholder="例如：my-gpt4" type="text"/>
+<input class="blora-input" data-i18n-placeholder="例如：my-gpt4" id="modelAlias" placeholder="例如：my-gpt4" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="设置别名后，用户将通过别名请求模型，供应商仍使用原始上游模型名">设置别名后，用户将通过别名请求模型，供应商仍使用原始上游模型名</span></small>
 </div>
 <div class="form-group">
 <label for="modelProvider"><span data-i18n="提供商">提供商</span></label>
-<select class="select" id="modelProvider" onchange="adminApp.onModelProviderChange()">
+<blora-select id="modelProvider" onchange="adminApp.onModelProviderChange()">
 <!-- 供应商列表将通过JS动态加载 -->
-</select>
+</blora-select>
 </div>
 <div class="form-group">
 <label for="modelSeries"><span data-i18n="系列">系列</span></label>
-<input class="input" data-i18n-placeholder="例如：GPT-4系列（可选）" id="modelSeries" placeholder="例如：GPT-4系列（可选）" type="text"/>
+<input class="blora-input" data-i18n-placeholder="例如：GPT-4系列（可选）" id="modelSeries" placeholder="例如：GPT-4系列（可选）" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="系列名称将显示在用户控制台，用于分类筛选模型">系列名称将显示在用户控制台，用于分类筛选模型</span></small>
 </div>
 <div class="form-group">
 <label for="modelDescription"><span data-i18n="描述">描述</span></label>
-<textarea class="textarea" id="modelDescription" rows="3"></textarea>
+<textarea class="blora-textarea" id="modelDescription" rows="3"></textarea>
 </div>
 <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;">
 <div style="font-weight:600;margin-bottom:12px;color:var(--foreground);"><span data-i18n="倍率设置">倍率设置</span></div>
@@ -1502,7 +1501,7 @@
           </span></small>
 <div class="form-group">
 <label for="modelMultiplier"><span data-i18n="倍率">倍率</span></label>
-<input class="input" id="modelMultiplier" step="0.01" type="number" value="1.0"/>
+<input class="blora-input" id="modelMultiplier" step="0.01" type="number" value="1.0"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="模型越贵倍率越高。例如 GPT-4 设为 10，GPT-3.5 设为 1">模型越贵倍率越高。例如 GPT-4 设为 10，GPT-3.5 设为 1</span></small>
 </div>
 </div>
@@ -1510,40 +1509,40 @@
 <div style="font-weight:600;margin-bottom:12px;color:var(--foreground);"><span data-i18n="模型路由（可选，用于根据思考模式自动切换模型）">模型路由（可选，用于根据思考模式自动切换模型）</span></div>
 <div class="form-group">
 <label for="modelThinkingModel"><span data-i18n="思考模式模型">思考模式模型</span></label>
-<select class="select" id="modelThinkingModel">
-<option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></option>
-</select>
+<blora-select id="modelThinkingModel">
+<blora-option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></blora-option>
+</blora-select>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="开启思考模式时实际使用的模型">开启思考模式时实际使用的模型</span></small>
 </div>
 <div class="form-group">
 <label for="modelNonThinkingModel"><span data-i18n="非思考模式模型">非思考模式模型</span></label>
-<select class="select" id="modelNonThinkingModel">
-<option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></option>
-</select>
+<blora-select id="modelNonThinkingModel">
+<blora-option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></blora-option>
+</blora-select>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="关闭思考模式时实际使用的模型">关闭思考模式时实际使用的模型</span></small>
 </div>
 </div>
 <div class="form-group">
 <label for="modelRateLimitRpm"><span data-i18n="速率限制 - 每分钟请求数（0=不限制）">速率限制 - 每分钟请求数（0=不限制）</span></label>
-<input class="input" id="modelRateLimitRpm" min="0" type="number" value="0"/>
+<input class="blora-input" id="modelRateLimitRpm" min="0" type="number" value="0"/>
 </div>
 <div class="form-group">
 <label for="modelRateLimitTpm"><span data-i18n="速率限制 - 每分钟Token数（0=不限制）">速率限制 - 每分钟Token数（0=不限制）</span></label>
-<input class="input" id="modelRateLimitTpm" min="0" type="number" value="0"/>
+<input class="blora-input" id="modelRateLimitTpm" min="0" type="number" value="0"/>
 </div>
 <div class="form-group">
 <label for="modelEnabled"><span data-i18n="启用状态">启用状态</span></label>
-<select class="select" id="modelEnabled">
-<option value="true"><span data-i18n="启用">启用</span></option>
-<option value="false"><span data-i18n="禁用">禁用</span></option>
-</select>
+<blora-select id="modelEnabled">
+<blora-option value="true"><span data-i18n="启用">启用</span></blora-option>
+<blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>
+</blora-select>
 </div>
 <div class="form-group">
 <label for="modelForwardReasoningEffort"><span data-i18n="透传 reasoning_effort">透传 reasoning_effort</span></label>
-<select class="select" id="modelForwardReasoningEffort">
-<option value="false"><span data-i18n="关闭（默认）">关闭（默认）</span></option>
-<option value="true"><span data-i18n="开启">开启</span></option>
-</select>
+<blora-select id="modelForwardReasoningEffort">
+<blora-option value="false"><span data-i18n="关闭（默认）">关闭（默认）</span></blora-option>
+<blora-option value="true"><span data-i18n="开启">开启</span></blora-option>
+</blora-select>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="开启后，客户端请求中的 reasoning_effort（及 Responses API 的 reasoning.effort）会转发给上游；关闭则丢弃该字段">开启后，客户端请求中的 reasoning_effort（及 Responses API 的 reasoning.effort）会转发给上游；关闭则丢弃该字段</span></small>
 </div>
 <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;">
@@ -1553,65 +1552,64 @@
           </span></small>
 <div class="form-group">
 <label for="modelTestUserAgent"><span data-i18n="测试 User-Agent">测试 User-Agent</span></label>
-<input autocomplete="off" class="input" data-i18n-placeholder="例如：claude-cli/2.0.0 (external, cli)" id="modelTestUserAgent" maxlength="500" placeholder="例如：claude-cli/2.0.0 (external, cli)" type="text"/>
+<input autocomplete="off" class="blora-input" data-i18n-placeholder="例如：claude-cli/2.0.0 (external, cli)" id="modelTestUserAgent" maxlength="500" placeholder="例如：claude-cli/2.0.0 (external, cli)" type="text"/>
 <div class="test-ua-presets" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','claude-cli/2.0.0 (external, cli)')" type="button">Claude Code</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','codex_cli_rs/0.42.0 (Mac OS; arm64) terminal')" type="button">Codex</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','grok-shell/1.2.3 (linux; x86_64)')" type="button">Grok</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','opencode/latest/cli')" type="button">OpenCode</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','QwenCode/1.0.0 (linux; x64)')" type="button">Qwen Code</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','hermes-cli/0.9.0')" type="button">Hermes</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','openclaw/2026.3.22')" type="button">OpenClaw</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','deepseek-harness/0.1.0 (+https://github.com/deepseek-ai/deepseek-harness)')" type="button">DeepSeek</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','')" type="button"><span data-i18n="清空">清空</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','claude-cli/2.0.0 (external, cli)')" type="button">Claude Code</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','codex_cli_rs/0.42.0 (Mac OS; arm64) terminal')" type="button">Codex</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','grok-shell/1.2.3 (linux; x86_64)')" type="button">Grok</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','opencode/latest/cli')" type="button">OpenCode</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','QwenCode/1.0.0 (linux; x64)')" type="button">Qwen Code</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','hermes-cli/0.9.0')" type="button">Hermes</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','openclaw/2026.3.22')" type="button">OpenClaw</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','deepseek-harness/0.1.0 (+https://github.com/deepseek-ai/deepseek-harness)')" type="button">DeepSeek</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','')" type="button"><span data-i18n="清空">清空</span></button>
 </div>
 </div>
 </div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" id="saveModelBtn" type="button"><span data-i18n="保存">保存</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" id="saveModelBtn" type="button"><span data-i18n="保存">保存</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 添加/编辑供应商模态框 -->
-<div class="modal" id="addProviderModal" style="display: none;">
-<div class="modal-content modal-content-lg">
-<div class="modal-header">
+<blora-dialog id="addProviderModal" size="lg"
+
+<div slot="header">
 <h3 id="providerModalTitle"><span data-i18n="添加供应商">添加供应商</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
-<input id="providerId" type="hidden"/>
+<div>
+<input class="blora-input" id="providerId" type="hidden"/>
 <!-- 基础字段（始终可见） -->
 <div class="provider-form-basics">
 <div class="form-group">
 <label for="providerName"><span data-i18n="供应商名称">供应商名称</span></label>
 <div style="display:flex;gap:8px;">
-<input class="input" data-i18n-placeholder="例如：OpenAI" id="providerName" placeholder="例如：OpenAI" style="flex:1;" type="text"/>
-<button class="btn btn-secondary" data-variant="secondary" id="lookupProviderBtn" type="button"><span data-i18n="从 models.dev 查询">从 models.dev 查询</span></button>
+<input class="blora-input" data-i18n-placeholder="例如：OpenAI" id="providerName" placeholder="例如：OpenAI" style="flex:1;" type="text"/>
+<button class="blora-button" data-variant="secondary" id="lookupProviderBtn" type="button"><span data-i18n="从 models.dev 查询">从 models.dev 查询</span></button>
 </div>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="同一供应商可重复添加。点击查询可按名称自动填充 Base URL 等信息。">同一供应商可重复添加。点击查询可按名称自动填充 Base URL 等信息。</span></small>
 </div>
 <div class="form-group">
 <label for="providerBaseUrl">Base URL</label>
-<input class="input" data-i18n-placeholder="例如：https://api.openai.com/v1" id="providerBaseUrl" placeholder="例如：https://api.openai.com/v1" type="text"/>
+<input class="blora-input" data-i18n-placeholder="例如：https://api.openai.com/v1" id="providerBaseUrl" placeholder="例如：https://api.openai.com/v1" type="text"/>
 </div>
 <div class="form-group" id="providerFixedKeysSection">
 <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
 <label style="margin:0;">API Key <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;"><span data-i18n="（可留空，保存后稍后补全）">（可留空，保存后稍后补全）</span></span></label>
 <div class="provider-key-select-mode" id="providerKeySelectModeWrap" style="display:flex;align-items:center;gap:12px;font-size:13px;">
 <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:normal;margin:0;">
-<input checked="" name="providerKeySelectMode" onchange="adminApp.onProviderKeySelectModeChange()" type="radio" value="order"/><span data-i18n="顺序模式">
+<input class="blora-input" checked="" name="providerKeySelectMode" onchange="adminApp.onProviderKeySelectModeChange()" type="radio" value="order"/><span data-i18n="顺序模式">
                   顺序模式
                 </span></label>
 <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:normal;margin:0;">
-<input name="providerKeySelectMode" onchange="adminApp.onProviderKeySelectModeChange()" type="radio" value="weight"/><span data-i18n="权重模式">
+<input class="blora-input" name="providerKeySelectMode" onchange="adminApp.onProviderKeySelectModeChange()" type="radio" value="weight"/><span data-i18n="权重模式">
                   权重模式
                 </span></label>
 </div>
 </div>
 <div class="provider-api-keys-list" id="providerApiKeysList"></div>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" id="addProviderApiKeyBtn" onclick="adminApp.addProviderApiKeyRow()" style="margin-top:8px;" type="button"><span data-i18n="+ 添加 Key">
+<button class="blora-button" data-size="sm" data-variant="secondary" id="addProviderApiKeyBtn" onclick="adminApp.addProviderApiKeyRow()" style="margin-top:8px;" type="button"><span data-i18n="+ 添加 Key">
               + 添加 Key
             </span></button>
 <small style="color:var(--muted-foreground);margin-top:6px;display:block;line-height:1.5;">
@@ -1621,23 +1619,23 @@
               编辑时修改 Key 文本即更新；留空该项在保存时会被忽略。
             </small>
 <!-- 兼容旧逻辑：隐藏单字段 -->
-<input id="providerApiKey" type="hidden" value=""/>
+<input class="blora-input" id="providerApiKey" type="hidden" value=""/>
 </div>
 <div class="form-row-2">
 <div class="form-group">
 <label for="providerFormat"><span data-i18n="API 格式">API 格式</span></label>
-<select class="select" id="providerFormat">
-<option value="openai">Chat Completions</option>
-<option value="responses">Responses</option>
-<option value="anthropic">Anthropic Messages</option>
-</select>
+<blora-select id="providerFormat">
+<blora-option value="openai">Chat Completions</blora-option>
+<blora-option value="responses">Responses</blora-option>
+<blora-option value="anthropic">Anthropic Messages</blora-option>
+</blora-select>
 </div>
 <div class="form-group">
 <label for="providerEnabled"><span data-i18n="启用状态">启用状态</span></label>
-<select class="select" id="providerEnabled">
-<option value="true"><span data-i18n="启用">启用</span></option>
-<option value="false"><span data-i18n="禁用">禁用</span></option>
-</select>
+<blora-select id="providerEnabled">
+<blora-option value="true"><span data-i18n="启用">启用</span></blora-option>
+<blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>
+</blora-select>
 </div>
 </div>
 </div>
@@ -1647,17 +1645,17 @@
 <div class="provider-form-section-body">
 <div class="form-group">
 <label for="providerKeyMode"><span data-i18n="密钥模式">密钥模式</span></label>
-<select class="select" id="providerKeyMode" onchange="adminApp.toggleKeyMode()">
-<option value="fixed"><span data-i18n="固定密钥（传统模式）">固定密钥（传统模式）</span></option>
-<option value="script"><span data-i18n="脚本刷新（动态密钥）">脚本刷新（动态密钥）</span></option>
-</select>
+<blora-select id="providerKeyMode" onchange="adminApp.toggleKeyMode()">
+<blora-option value="fixed"><span data-i18n="固定密钥（传统模式）">固定密钥（传统模式）</span></blora-option>
+<blora-option value="script"><span data-i18n="脚本刷新（动态密钥）">脚本刷新（动态密钥）</span></blora-option>
+</blora-select>
 </div>
-<div id="keyScriptSection" style="display:none;">
+<div id="keyScriptSection">
 <details class="provider-script-doc" id="keyScriptDocDetails">
 <summary><span data-i18n="📖 脚本开发文档（点击展开）">📖 脚本开发文档（点击展开）</span></summary>
 <div style="margin-top:12px;padding:12px;background:var(--background);border:1px solid var(--border);border-radius:10px;">
 <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.copyKeyScriptDoc()" style="font-size:12px;" type="button">
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.copyKeyScriptDoc()" style="font-size:12px;" type="button">
 <svg fill="none" height="12" stroke="currentColor" stroke-width="2" style="margin-right:4px;" viewbox="0 0 24 24" width="12"><rect height="13" rx="2" width="13" x="9" y="9"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span data-i18n="复制文档">
                       复制文档
                     </span></button>
@@ -1665,7 +1663,7 @@
 <div id="keyScriptDocContent" style="font-size:12px;line-height:1.7;color:var(--muted-foreground);max-height:260px;overflow-y:auto;">
 <div style="margin-bottom:10px;"><strong style="color:var(--foreground);"><span data-i18n="执行方式：">执行方式：</span></strong><span data-i18n="脚本被包装为">脚本被包装为 </span><code style="background:var(--muted);padding:1px 5px;border-radius:3px;">async function(ctx)</code><span data-i18n="执行"> 执行</span></div>
 <div style="margin-bottom:10px;"><strong style="color:var(--foreground);"><span data-i18n="上下文变量 ctx：">上下文变量 ctx：</span></strong></div>
-<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px;">
+<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px;" class="blora-table">
 <tr><td style="padding:3px 8px;border:1px solid var(--border);font-family:monospace;">ctx.baseUrl</td><td style="padding:3px 8px;border:1px solid var(--border);"><span data-i18n="供应商 Base URL（已去除尾部 /）">供应商 Base URL（已去除尾部 /）</span></td></tr>
 <tr><td style="padding:3px 8px;border:1px solid var(--border);font-family:monospace;">ctx.providerId</td><td style="padding:3px 8px;border:1px solid var(--border);"><span data-i18n="供应商 ID">供应商 ID</span></td></tr>
 <tr><td style="padding:3px 8px;border:1px solid var(--border);font-family:monospace;">ctx.providerName</td><td style="padding:3px 8px;border:1px solid var(--border);"><span data-i18n="供应商名称">供应商名称</span></td></tr>
@@ -1686,21 +1684,21 @@
                     </span></div>
 <div style="margin-bottom:6px;"><strong style="color:var(--foreground);"><span data-i18n="💡 快速示例：">💡 快速示例：</span></strong></div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-<button class="btn btn-sm" data-size="sm" data-variant="secondary" onclick="adminApp.fillKeyScriptExample('oauth2')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" type="button">OAuth2 Client Credentials</button>
-<button class="btn btn-sm" data-size="sm" data-variant="secondary" onclick="adminApp.fillKeyScriptExample('jwt')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" type="button"><span data-i18n="JWT 签名获取">JWT 签名获取</span></button>
-<button class="btn btn-sm" data-size="sm" data-variant="secondary" onclick="adminApp.fillKeyScriptExample('login')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" type="button"><span data-i18n="账密登录获取 Token">账密登录获取 Token</span></button>
-<button class="btn btn-sm" data-size="sm" data-variant="secondary" onclick="adminApp.fillKeyScriptExample('custom')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" type="button"><span data-i18n="自定义 HTTP 请求">自定义 HTTP 请求</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.fillKeyScriptExample('oauth2')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" type="button">OAuth2 Client Credentials</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.fillKeyScriptExample('jwt')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" type="button"><span data-i18n="JWT 签名获取">JWT 签名获取</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.fillKeyScriptExample('login')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" type="button"><span data-i18n="账密登录获取 Token">账密登录获取 Token</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.fillKeyScriptExample('custom')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" type="button"><span data-i18n="自定义 HTTP 请求">自定义 HTTP 请求</span></button>
 </div>
 </div>
 </div>
 </details>
 <div class="form-group">
 <label for="providerKeyScript"><span data-i18n="密钥刷新脚本">密钥刷新脚本</span></label>
-<textarea class="input" id="providerKeyScript" rows="8" style="font-family:monospace;font-size:12px;line-height:1.5;"></textarea>
+<textarea class="blora-textarea" id="providerKeyScript" rows="8" style="font-family:monospace;font-size:12px;line-height:1.5;"></textarea>
 </div>
 <div class="form-group">
 <label for="providerKeyRefreshInterval"><span data-i18n="刷新间隔（秒）">刷新间隔（秒）</span></label>
-<input class="input" id="providerKeyRefreshInterval" min="60" placeholder="3600" type="number" value="3600"/>
+<input class="blora-input" id="providerKeyRefreshInterval" min="60" placeholder="3600" type="number" value="3600"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="最少 60 秒。脚本返回">
                   最少 60 秒。脚本返回 </span><code>expiresIn</code><span data-i18n="时会覆盖此值"> 时会覆盖此值
                 </span></small>
@@ -1714,74 +1712,74 @@
 <div class="provider-form-section-body">
 <div class="form-group">
 <label for="providerModelsUrl"><span data-i18n="模型列表 URL（可选）">模型列表 URL（可选）</span></label>
-<input class="input" data-i18n-placeholder="留空自动推断，或填 /v1/models 或完整 URL" id="providerModelsUrl" placeholder="留空自动推断，或填 /v1/models 或完整 URL" type="text"/>
+<input class="blora-input" data-i18n-placeholder="留空自动推断，或填 /v1/models 或完整 URL" id="providerModelsUrl" placeholder="留空自动推断，或填 /v1/models 或完整 URL" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="覆盖默认的模型列表获取地址，留空则根据 Base URL 自动拼接">覆盖默认的模型列表获取地址，留空则根据 Base URL 自动拼接</span></small>
 </div>
 <div class="form-group">
 <label for="providerQuotaEnabled"><span data-i18n="额度查询">额度查询</span></label>
-<select class="select" id="providerQuotaEnabled" onchange="adminApp.toggleQuotaScheduleFields()">
-<option value="true"><span data-i18n="启用（用户可查看此供应商额度）">启用（用户可查看此供应商额度）</span></option>
-<option value="false"><span data-i18n="关闭">关闭</span></option>
-</select>
+<blora-select id="providerQuotaEnabled" onchange="adminApp.toggleQuotaScheduleFields()">
+<blora-option value="true"><span data-i18n="启用（用户可查看此供应商额度）">启用（用户可查看此供应商额度）</span></blora-option>
+<blora-option value="false"><span data-i18n="关闭">关闭</span></blora-option>
+</blora-select>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="启用后，有权限的用户可在模型库页面查看该供应商的剩余额度">启用后，有权限的用户可在模型库页面查看该供应商的剩余额度</span></small>
 </div>
 <div class="form-group" id="providerQuotaScheduleGroup">
 <label for="providerQuotaScheduleEnabled"><span data-i18n="定时查询">定时查询</span></label>
-<select class="select" id="providerQuotaScheduleEnabled" onchange="adminApp.toggleQuotaScheduleFields()">
-<option value="false"><span data-i18n="关闭">关闭</span></option>
-<option value="true"><span data-i18n="开启">开启</span></option>
-</select>
+<blora-select id="providerQuotaScheduleEnabled" onchange="adminApp.toggleQuotaScheduleFields()">
+<blora-option value="false"><span data-i18n="关闭">关闭</span></blora-option>
+<blora-option value="true"><span data-i18n="开启">开启</span></blora-option>
+</blora-select>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="开启后按下方间隔自动查询并缓存额度。用户查看额度时优先使用缓存，无需每次打上游。">开启后按下方间隔自动查询并缓存额度。用户查看额度时优先使用缓存，无需每次打上游。</span></small>
 </div>
 <div class="form-group" id="providerQuotaScheduleIntervalGroup">
 <label for="providerQuotaScheduleInterval"><span data-i18n="查询间隔">查询间隔</span></label>
-<select class="select" id="providerQuotaScheduleInterval">
-<option value="600"><span data-i18n="每 10 分钟">每 10 分钟</span></option>
-<option value="1800"><span data-i18n="每 30 分钟">每 30 分钟</span></option>
-<option value="3600"><span data-i18n="每 1 小时">每 1 小时</span></option>
-<option value="7200"><span data-i18n="每 2 小时">每 2 小时</span></option>
-<option value="21600"><span data-i18n="每 6 小时">每 6 小时</span></option>
-<option value="43200"><span data-i18n="每 12 小时">每 12 小时</span></option>
-<option value="86400"><span data-i18n="每 24 小时">每 24 小时</span></option>
-</select>
+<blora-select id="providerQuotaScheduleInterval">
+<blora-option value="600"><span data-i18n="每 10 分钟">每 10 分钟</span></blora-option>
+<blora-option value="1800"><span data-i18n="每 30 分钟">每 30 分钟</span></blora-option>
+<blora-option value="3600"><span data-i18n="每 1 小时">每 1 小时</span></blora-option>
+<blora-option value="7200"><span data-i18n="每 2 小时">每 2 小时</span></blora-option>
+<blora-option value="21600"><span data-i18n="每 6 小时">每 6 小时</span></blora-option>
+<blora-option value="43200"><span data-i18n="每 12 小时">每 12 小时</span></blora-option>
+<blora-option value="86400"><span data-i18n="每 24 小时">每 24 小时</span></blora-option>
+</blora-select>
 </div>
 <div id="providerQuotaScheduleMeta" style="display:none;font-size:12px;color:var(--muted-foreground);margin:-4px 0 12px;"></div>
 <div class="form-group">
 <label for="providerQuotaMode"><span data-i18n="额度查询方式">额度查询方式</span></label>
-<select class="select" id="providerQuotaMode" onchange="adminApp.toggleCodexQuotaImport();adminApp.toggleArkQuotaConfig()">
-<option value="script"><span data-i18n="通用脚本（按 Base URL 查询）">通用脚本（按 Base URL 查询）</span></option>
-<option value="opencode_go">OpenCode Go（/zen/go/v1/usage）</option>
-<option value="codex_wham">Codex WHAM（ChatGPT OAuth）</option>
-<option value="grok_billing">SuperGrok（Grok CLI OAuth）</option>
-<option value="ark_inference"><span data-i18n="火山方舟按量推理（GetInferenceUsage）">火山方舟按量推理（GetInferenceUsage）</span></option>
-<option value="ark_afp"><span data-i18n="火山方舟 Agent Plan（GetAFPUsage）">火山方舟 Agent Plan（GetAFPUsage）</span></option>
-</select>
+<blora-select id="providerQuotaMode" onchange="adminApp.toggleCodexQuotaImport();adminApp.toggleArkQuotaConfig()">
+<blora-option value="script"><span data-i18n="通用脚本（按 Base URL 查询）">通用脚本（按 Base URL 查询）</span></blora-option>
+<blora-option value="opencode_go">OpenCode Go（/zen/go/v1/usage）</blora-option>
+<blora-option value="codex_wham">Codex WHAM（ChatGPT OAuth）</blora-option>
+<blora-option value="grok_billing">SuperGrok（Grok CLI OAuth）</blora-option>
+<blora-option value="ark_inference"><span data-i18n="火山方舟按量推理（GetInferenceUsage）">火山方舟按量推理（GetInferenceUsage）</span></blora-option>
+<blora-option value="ark_afp"><span data-i18n="火山方舟 Agent Plan（GetAFPUsage）">火山方舟 Agent Plan（GetAFPUsage）</span></blora-option>
+</blora-select>
 <small id="providerQuotaModeHint" style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="Codex WHAM 使用导入的 OAuth Token 查询 ChatGPT Codex 的 5 小时与 7 天窗口，接口为非公开接口，字段可能变化">Codex WHAM 使用导入的 OAuth Token 查询 ChatGPT Codex 的 5 小时与 7 天窗口，接口为非公开接口，字段可能变化</span></small>
 </div>
-<div class="form-group" id="arkQuotaConfigSection" style="display:none;">
+<div class="form-group" id="arkQuotaConfigSection">
 <label><span data-i18n="火山方舟 OpenAPI 签名配置">火山方舟 OpenAPI 签名配置</span></label>
 <div class="form-row-2">
-<input class="input" id="providerArkAccessKey" placeholder="Access Key" type="text"/>
-<input class="input" data-i18n-placeholder="Secret Key（留空保留原值）" id="providerArkSecretKey" placeholder="Secret Key（留空保留原值）" type="password"/>
+<input class="blora-input" id="providerArkAccessKey" placeholder="Access Key" type="text"/>
+<input class="blora-input" data-i18n-placeholder="Secret Key（留空保留原值）" id="providerArkSecretKey" placeholder="Secret Key（留空保留原值）" type="password"/>
 </div>
 <div class="form-row-2" style="margin-top:8px;">
-<input class="input" id="providerArkRegion" placeholder="Region" type="text" value="cn-north-1"/>
-<input class="input" id="providerArkService" placeholder="Service" type="text" value="ark"/>
+<input class="blora-input" id="providerArkRegion" placeholder="Region" type="text" value="cn-north-1"/>
+<input class="blora-input" id="providerArkService" placeholder="Service" type="text" value="ark"/>
 </div>
-<input class="input" data-i18n-placeholder="Action，例如 GetInferenceUsage / GetAFPUsage" id="providerArkAction" placeholder="Action，例如 GetInferenceUsage / GetAFPUsage" style="margin-top:8px;" type="text" value="GetInferenceUsage"/>
-<textarea class="textarea textarea-mono" id="providerArkParams" placeholder='请求参数 JSON，例如 {"StartTime":"2026-08-01","EndTime":"2026-08-15"}' rows="3" style="margin-top:8px;"></textarea>
+<input class="blora-input" data-i18n-placeholder="Action，例如 GetInferenceUsage / GetAFPUsage" id="providerArkAction" placeholder="Action，例如 GetInferenceUsage / GetAFPUsage" style="margin-top:8px;" type="text" value="GetInferenceUsage"/>
+<textarea class="textarea-mono blora-textarea" id="providerArkParams" placeholder='请求参数 JSON，例如 {"StartTime":"2026-08-01","EndTime":"2026-08-15"}' rows="3" style="margin-top:8px;"></textarea>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="使用火山引擎标准 HMAC-SHA256 签名，请按官方 API 文档填写具体 Action 参数。Secret Key 仅服务端保存。">使用火山引擎标准 HMAC-SHA256 签名，请按官方 API 文档填写具体 Action 参数。Secret Key 仅服务端保存。</span></small>
 </div>
-<div class="form-group" id="codexQuotaImportSection" style="display:none;">
+<div class="form-group" id="codexQuotaImportSection">
 <label for="providerCodexConfigText" id="providerQuotaAuthLabel">Codex auth.json</label>
 <p id="providerQuotaAuthHint" style="color:var(--muted-foreground);font-size:12px;margin:0 0 8px;"><span data-i18n="文件通常位于">文件通常位于 </span><code>~/.codex/auth.json</code><span data-i18n="，即 Linux/macOS 下的">，即 Linux/macOS 下的 </span><code><span data-i18n="/home/你的用户名/.codex/auth.json">/home/你的用户名/.codex/auth.json</span></code><span data-i18n="。Token 会保存到当前供应商，请勿上传给第三方。">。Token 会保存到当前供应商，请勿上传给第三方。</span></p>
-<textarea class="textarea textarea-mono" id="providerCodexConfigText" placeholder='{"tokens":{"access_token":"...","refresh_token":"..."}}' rows="6"></textarea>
-<input accept=".json,.jsonc" class="input" id="providerCodexConfigFile" style="margin-top:8px;color:var(--muted-foreground);" type="file"/>
-<button class="btn btn-secondary" data-variant="secondary" id="bindCodexQuotaBtn" style="margin-top:8px;" type="button"><span data-i18n="导入并绑定到当前供应商">导入并绑定到当前供应商</span></button>
+<textarea class="textarea-mono blora-textarea" id="providerCodexConfigText" placeholder='{"tokens":{"access_token":"...","refresh_token":"..."}}' rows="6"></textarea>
+<input accept=".json,.jsonc" class="blora-input" id="providerCodexConfigFile" style="margin-top:8px;color:var(--muted-foreground);" type="file"/>
+<button class="blora-button" data-variant="secondary" id="bindCodexQuotaBtn" style="margin-top:8px;" type="button"><span data-i18n="导入并绑定到当前供应商">导入并绑定到当前供应商</span></button>
 </div>
 <div class="form-group">
 <label for="providerNotes"><span data-i18n="备注">备注</span></label>
-<textarea class="input" data-i18n-placeholder="供应商备注，对有权限访问的用户可见" id="providerNotes" placeholder="供应商备注，对有权限访问的用户可见" rows="3"></textarea>
+<textarea class="blora-textarea" data-i18n-placeholder="供应商备注，对有权限访问的用户可见" id="providerNotes" placeholder="供应商备注，对有权限访问的用户可见" rows="3"></textarea>
 </div>
 </div>
 </details>
@@ -1796,16 +1794,16 @@
 </label>
 <small style="color:var(--muted-foreground);font-size:12px;display:block;margin-top:6px;"><span data-i18n="启用后，该供应商的 API 请求将通过下方所选方式走代理">启用后，该供应商的 API 请求将通过下方所选方式走代理</span></small>
 </div>
-<div id="providerProxyOptions" style="display:none;">
+<div id="providerProxyOptions">
 <div class="form-group">
 <label><span data-i18n="代理方式">代理方式</span></label>
 <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
 <label style="display:flex;align-items:center;gap:8px;font-weight:normal;cursor:pointer;">
-<input checked="" name="providerProxyMode" onchange="adminApp.toggleProviderProxyMode()" type="radio" value="single"/>
+<input class="blora-input" checked="" name="providerProxyMode" onchange="adminApp.toggleProviderProxyMode()" type="radio" value="single"/>
 <span><span data-i18n="代理（单个地址）">代理（单个地址）</span></span>
 </label>
 <label style="display:flex;align-items:center;gap:8px;font-weight:normal;cursor:pointer;">
-<input name="providerProxyMode" onchange="adminApp.toggleProviderProxyMode()" type="radio" value="pool"/>
+<input class="blora-input" name="providerProxyMode" onchange="adminApp.toggleProviderProxyMode()" type="radio" value="pool"/>
 <span><span data-i18n="代理池（系统全局代理池，可自动切换）">代理池（系统全局代理池，可自动切换）</span></span>
 </label>
 </div>
@@ -1820,11 +1818,11 @@
 </div>
 <div class="form-group" id="providerProxyUrlGroup">
 <label for="providerProxyUrl"><span data-i18n="自定义代理地址">自定义代理地址</span></label>
-<input class="input" data-i18n-placeholder="http://127.0.0.1:7890 或 socks5://127.0.0.1:1080" id="providerProxyUrl" placeholder="http://127.0.0.1:7890 或 socks5://127.0.0.1:1080" style="font-family:monospace;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="http://127.0.0.1:7890 或 socks5://127.0.0.1:1080" id="providerProxyUrl" placeholder="http://127.0.0.1:7890 或 socks5://127.0.0.1:1080" style="font-family:monospace;" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="支持 http / https / socks4 / socks5 / socks5h">支持 http / https / socks4 / socks5 / socks5h</span></small>
 </div>
 </div>
-<div id="providerProxyPoolHint" style="display:none;">
+<div id="providerProxyPoolHint">
 <p style="color:var(--muted-foreground);font-size:12px;margin:0;"><span data-i18n="将使用「系统设置 → 代理池设置」中的全局列表/订阅。限速（429）时会自动切换代理。">将使用「系统设置 → 代理池设置」中的全局列表/订阅。限速（429）时会自动切换代理。</span></p>
 </div>
 </div>
@@ -1836,17 +1834,17 @@
 <div class="provider-form-section-body">
 <div class="form-group">
 <label for="providerTestUserAgent"><span data-i18n="测试 User-Agent">测试 User-Agent</span></label>
-<input autocomplete="off" class="input" data-i18n-placeholder="例如：claude-cli/2.0.0 (external, cli)" id="providerTestUserAgent" maxlength="500" placeholder="例如：claude-cli/2.0.0 (external, cli)" type="text"/>
+<input autocomplete="off" class="blora-input" data-i18n-placeholder="例如：claude-cli/2.0.0 (external, cli)" id="providerTestUserAgent" maxlength="500" placeholder="例如：claude-cli/2.0.0 (external, cli)" type="text"/>
 <div class="test-ua-presets" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','claude-cli/2.0.0 (external, cli)')" type="button">Claude Code</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','codex_cli_rs/0.42.0 (Mac OS; arm64) terminal')" type="button">Codex</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','grok-shell/1.2.3 (linux; x86_64)')" type="button">Grok</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','opencode/latest/cli')" type="button">OpenCode</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','QwenCode/1.0.0 (linux; x64)')" type="button">Qwen Code</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','hermes-cli/0.9.0')" type="button">Hermes</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','openclaw/2026.3.22')" type="button">OpenClaw</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','deepseek-harness/0.1.0 (+https://github.com/deepseek-ai/deepseek-harness)')" type="button">DeepSeek</button>
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','')" type="button"><span data-i18n="清空">清空</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','claude-cli/2.0.0 (external, cli)')" type="button">Claude Code</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','codex_cli_rs/0.42.0 (Mac OS; arm64) terminal')" type="button">Codex</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','grok-shell/1.2.3 (linux; x86_64)')" type="button">Grok</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','opencode/latest/cli')" type="button">OpenCode</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','QwenCode/1.0.0 (linux; x64)')" type="button">Qwen Code</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','hermes-cli/0.9.0')" type="button">Hermes</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','openclaw/2026.3.22')" type="button">OpenClaw</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','deepseek-harness/0.1.0 (+https://github.com/deepseek-ai/deepseek-harness)')" type="button">DeepSeek</button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','')" type="button"><span data-i18n="清空">清空</span></button>
 </div>
 <small style="color:var(--muted-foreground);margin-top:6px;display:block;"><span data-i18n="测试该供应商下任意模型时，将使用此 User-Agent 请求上游。留空则不发送自定义 UA。不影响正式业务转发。">
                 测试该供应商下任意模型时，将使用此 User-Agent 请求上游。留空则不发送自定义 UA。不影响正式业务转发。
@@ -1862,17 +1860,17 @@
 <div style="display:flex;flex-direction:column;gap:12px;">
 <div style="display:flex;align-items:center;gap:8px;">
 <label for="providerContentTypeMode" style="font-size:13px;min-width:100px;">Content-Type</label>
-<select class="select" id="providerContentTypeMode" style="flex:1;">
-<option value="hardcoded">application/json</option>
-<option value="passthrough"><span data-i18n="透传客户端请求头">透传客户端请求头</span></option>
-</select>
+<blora-select id="providerContentTypeMode" style="flex:1;">
+<blora-option value="hardcoded">application/json</blora-option>
+<blora-option value="passthrough"><span data-i18n="透传客户端请求头">透传客户端请求头</span></blora-option>
+</blora-select>
 </div>
 <div style="display:flex;align-items:center;gap:8px;">
 <label for="providerForwardHeaders" style="font-size:13px;min-width:100px;"><span data-i18n="UA / Accept / 其他">UA / Accept / 其他</span></label>
-<select class="select" id="providerForwardHeaders" style="flex:1;">
-<option value="true"><span data-i18n="透传">透传</span></option>
-<option value="false"><span data-i18n="不转发">不转发</span></option>
-</select>
+<blora-select id="providerForwardHeaders" style="flex:1;">
+<blora-option value="true"><span data-i18n="透传">透传</span></blora-option>
+<blora-option value="false"><span data-i18n="不转发">不转发</span></blora-option>
+</blora-select>
 </div>
 <small style="color:var(--muted-foreground);font-size:12px;display:block;"><span data-i18n="Content-Type 选择「透传」则使用客户端原始 Content-Type，否则始终为 application/json。">
                   Content-Type 选择「透传」则使用客户端原始 Content-Type，否则始终为 application/json。</span><br/><span data-i18n="UA/Accept 选择「透传」则转发通用请求头（Authorization、Cookie 等敏感头始终不转发）。">
@@ -1894,29 +1892,28 @@
 </div>
 </details>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" id="saveProviderBtn" type="button"><span data-i18n="保存">保存</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" id="saveProviderBtn" type="button"><span data-i18n="保存">保存</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 导入 OpenCode 配置模态框 -->
-<div class="modal" id="importOpenCodeModal" style="display: none;">
-<div class="modal-content">
-<div class="modal-header">
+<blora-dialog id="importOpenCodeModal"
+
+<div slot="header">
 <h3><span data-i18n="导入配置">导入配置</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <p style="color: var(--muted-foreground); margin-bottom: 16px; font-size: 14px;"><span data-i18n="支持 OpenCode auth.json 和 Claude Code 配置两种格式，自动识别并导入供应商 API Key 和 Base URL。">
           支持 OpenCode auth.json 和 Claude Code 配置两种格式，自动识别并导入供应商 API Key 和 Base URL。
         </span></p>
 <div class="form-group">
 <label for="importProviderName"><span data-i18n="供应商名称">供应商名称 </span><span style="color:var(--destructive);">*</span></label>
-<input class="input" data-i18n-placeholder="例如: 我的 OpenAI, Claude 代理" id="importProviderName" placeholder="例如: 我的 OpenAI, Claude 代理" type="text"/>
+<input class="blora-input" data-i18n-placeholder="例如: 我的 OpenAI, Claude 代理" id="importProviderName" placeholder="例如: 我的 OpenAI, Claude 代理" type="text"/>
 </div>
 <div class="form-group">
 <label for="openCodeConfigText"><span data-i18n="配置内容 (JSON)">配置内容 (JSON)</span></label>
-<textarea class="textarea textarea-mono" id="openCodeConfigText" placeholder='格式一: OpenCode auth.json
+<textarea class="textarea-mono blora-textarea" id="openCodeConfigText" placeholder='格式一: OpenCode auth.json
 {
   "openai": { "type": "api", "key": "sk-xxx" },
   "anthropic": { "type": "api", "key": "sk-ant-xxx" }
@@ -1933,40 +1930,39 @@
 </div>
 <div class="form-group">
 <label><span data-i18n="或上传文件">或上传文件</span></label>
-<input accept=".json,.jsonc" class="input" id="openCodeConfigFile" style="color: var(--muted-foreground);" type="file"/>
+<input accept=".json,.jsonc" class="blora-input" id="openCodeConfigFile" style="color: var(--muted-foreground);" type="file"/>
 </div>
-<div id="importPreview" style="display: none;">
+<div id="importPreview">
 <h4 style="margin: 16px 0 8px; color: var(--foreground);"><span data-i18n="预览导入内容">预览导入内容</span></h4>
 <div id="importPreviewContent" style="background: var(--muted); padding: 12px; border-radius: 8px; font-size: 13px; max-height: 200px; overflow-y: auto; color: var(--muted-foreground);"></div>
 </div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" id="confirmImportOpenCodeBtn" type="button"><span data-i18n="导入">导入</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" id="confirmImportOpenCodeBtn" type="button"><span data-i18n="导入">导入</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 选择模型对话框 -->
-<div class="modal" id="fetchModelsModal" style="display: none;">
-<div class="modal-content model-picker-modal">
-<div class="modal-header">
+<blora-dialog id="fetchModelsModal"
+
+<div slot="header">
 <h3 id="fetchModelsTitle"><span data-i18n="获取模型列表">获取模型列表</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <div id="fetchModelsLoading" style="text-align:center;padding:20px;color:var(--muted-foreground);">
 <div class="page-loading"><div aria-label="加载中" class="loading-spinner" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="正在获取模型列表...">正在获取模型列表...</span></div></div>
 </div>
 <div id="fetchModelsError" style="display:none;text-align:center;padding:20px;color:var(--destructive);"></div>
-<div class="model-picker" id="fetchModelsContent" style="display:none;">
+<div class="model-picker" id="fetchModelsContent">
 <div class="model-picker-toolbar">
 <div style="display:flex;gap:8px;margin-bottom:10px;">
-<input class="input" data-i18n-placeholder="搜索模型名称..." id="fetchedModelsSearch" oninput="adminApp.filterFetchedModels()" placeholder="搜索模型名称..." style="flex:1;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="搜索模型名称..." id="fetchedModelsSearch" oninput="adminApp.filterFetchedModels()" placeholder="搜索模型名称..." style="flex:1;" type="text"/>
 </div>
 <div id="fetchedModelsTabs" style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;">
-<button class="btn btn-sm btn-primary" data-filter="all" data-size="sm" data-variant="primary" onclick="adminApp.setFetchedModelsFilter('all')" type="button"><span data-i18n="全部">全部</span></button>
-<button class="btn btn-sm btn-secondary" data-filter="enabled" data-size="sm" data-variant="secondary" onclick="adminApp.setFetchedModelsFilter('enabled')" type="button"><span data-i18n="已启用">已启用</span></button>
-<button class="btn btn-sm btn-secondary" data-filter="disabled" data-size="sm" data-variant="secondary" onclick="adminApp.setFetchedModelsFilter('disabled')" type="button"><span data-i18n="未启用">未启用</span></button>
-<button class="btn btn-sm btn-secondary" data-filter="stale" data-size="sm" data-variant="secondary" onclick="adminApp.setFetchedModelsFilter('stale')" type="button"><span data-i18n="已失效">已失效</span></button>
+<button class="blora-button" data-filter="all" data-size="sm" data-variant="primary" onclick="adminApp.setFetchedModelsFilter('all')" type="button"><span data-i18n="全部">全部</span></button>
+<button class="blora-button" data-filter="enabled" data-size="sm" data-variant="secondary" onclick="adminApp.setFetchedModelsFilter('enabled')" type="button"><span data-i18n="已启用">已启用</span></button>
+<button class="blora-button" data-filter="disabled" data-size="sm" data-variant="secondary" onclick="adminApp.setFetchedModelsFilter('disabled')" type="button"><span data-i18n="未启用">未启用</span></button>
+<button class="blora-button" data-filter="stale" data-size="sm" data-variant="secondary" onclick="adminApp.setFetchedModelsFilter('stale')" type="button"><span data-i18n="已失效">已失效</span></button>
 </div>
 <div style="display:flex;justify-content:space-between;align-items:center;">
 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -1979,45 +1975,43 @@
 <div class="model-picker-scroll model-picker-flat" id="fetchedModelsList"></div>
 </div>
 </div>
-<div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-<button class="btn btn-secondary" data-i18n-title="删除上游已不存在的本地模型记录" data-variant="secondary" id="cleanupStaleModelsBtn" onclick="adminApp.cleanupStaleModelsInFetchModal()" style="display:none;color:var(--destructive);" title="删除上游已不存在的本地模型记录" type="button"><span data-i18n="清理已下架模型">清理已下架模型</span></button>
+<div slot="footer" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+<button class="blora-button" data-i18n-title="删除上游已不存在的本地模型记录" data-variant="secondary" id="cleanupStaleModelsBtn" onclick="adminApp.cleanupStaleModelsInFetchModal()" style="display:none;color:var(--destructive);" title="删除上游已不存在的本地模型记录" type="button"><span data-i18n="清理已下架模型">清理已下架模型</span></button>
 <div style="display:flex;gap:8px;margin-left:auto;">
-<button class="btn btn-primary" data-variant="primary" id="saveFetchedModelsBtn" onclick="adminApp.saveFetchedModels()" style="display:none;" type="button"><span data-i18n="保存">保存</span></button>
+<button class="blora-button" data-variant="primary" id="saveFetchedModelsBtn" onclick="adminApp.saveFetchedModels()" type="button"><span data-i18n="保存">保存</span></button>
 </div>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 批量设置固定价格模态框 -->
-<div class="modal" id="batchSetPricesModal" style="display: none;">
-<div class="modal-content">
-<div class="modal-header">
+<blora-dialog id="batchSetPricesModal"
+
+<div slot="header">
 <h3><span data-i18n="批量设置固定价格">批量设置固定价格</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将为选中的">将为选中的 </span><strong id="batchSetPricesCount">0</strong><span data-i18n="个模型设置以下价格："> 个模型设置以下价格：</span></p>
 <div class="form-group">
 <label for="batchSetInputPrice"><span data-i18n="输入价格（人民币/百万Token）">输入价格（人民币/百万Token）</span></label>
-<input class="input" id="batchSetInputPrice" step="0.000001" type="number" value="0.01"/>
+<input class="blora-input" id="batchSetInputPrice" step="0.000001" type="number" value="0.01"/>
 </div>
 <div class="form-group">
 <label for="batchSetOutputPrice"><span data-i18n="输出价格（人民币/百万Token）">输出价格（人民币/百万Token）</span></label>
-<input class="input" id="batchSetOutputPrice" step="0.000001" type="number" value="0.01"/>
+<input class="blora-input" id="batchSetOutputPrice" step="0.000001" type="number" value="0.01"/>
 </div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.executeBatchSetPrices()" type="button"><span data-i18n="确认设置">确认设置</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchSetPrices()" type="button"><span data-i18n="确认设置">确认设置</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- JSON 批量定价模态框 -->
-<div class="modal" id="batchJsonPricesModal" style="display: none;">
-<div class="modal-content" style="max-width: 560px;">
-<div class="modal-header">
+<blora-dialog id="batchJsonPricesModal"
+
+<div slot="header">
 <h3><span data-i18n="JSON 批量定价">JSON 批量定价</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="使用 JSON 格式为不同模型设置不同价格，单位：">使用 JSON 格式为不同模型设置不同价格，单位：</span><strong><span data-i18n="¥/百万Token">¥/百万Token</span></strong></p>
 <div style="background:var(--muted);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted-foreground);">
 <div style="font-weight:600;margin-bottom:6px;color:var(--foreground);"><span data-i18n="格式说明">格式说明</span></div>
@@ -2027,22 +2021,21 @@
   "deepseek-chat": {"in": 0.5, "out": 1.0}
 }</code>
 </div>
-<textarea class="textarea textarea-mono" id="batchJsonPricesInput" placeholder='{\n  "model-id": {"in": 2.0, "out": 4.0}\n}' style="height:200px;"></textarea>
+<textarea class="textarea-mono blora-textarea" id="batchJsonPricesInput" placeholder='{\n  "model-id": {"in": 2.0, "out": 4.0}\n}' style="height:200px;"></textarea>
 <div id="batchJsonPricesResult" style="margin-top:8px;font-size:12px;display:none;"></div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.executeBatchJsonPrices()" type="button"><span data-i18n="应用价格">应用价格</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchJsonPrices()" type="button"><span data-i18n="应用价格">应用价格</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- JSON 批量定参考价模态框 -->
-<div class="modal" id="batchJsonRefPricesModal" style="display: none;">
-<div class="modal-content" style="max-width: 560px;">
-<div class="modal-header">
+<blora-dialog id="batchJsonRefPricesModal"
+
+<div slot="header">
 <h3><span data-i18n="JSON 批量定参考价">JSON 批量定参考价</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="使用 JSON 格式为不同模型设置参考价格，单位：">使用 JSON 格式为不同模型设置参考价格，单位：</span><strong><span data-i18n="¥/百万Token">¥/百万Token</span></strong></p>
 <div style="background:var(--muted);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted-foreground);">
 <div style="font-weight:600;margin-bottom:6px;color:var(--foreground);"><span data-i18n="格式说明">格式说明</span></div>
@@ -2052,153 +2045,147 @@
   "deepseek-chat": {"in": 0.5, "out": 1.0}
 }</code>
 </div>
-<textarea class="textarea textarea-mono" id="batchJsonRefPricesInput" placeholder='{\n  "model-id": {"in": 2.0, "out": 4.0}\n}' style="height:200px;"></textarea>
+<textarea class="textarea-mono blora-textarea" id="batchJsonRefPricesInput" placeholder='{\n  "model-id": {"in": 2.0, "out": 4.0}\n}' style="height:200px;"></textarea>
 <div id="batchJsonRefPricesResult" style="margin-top:8px;font-size:12px;display:none;"></div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.executeBatchJsonRefPrices()" type="button"><span data-i18n="应用参考价">应用参考价</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchJsonRefPrices()" type="button"><span data-i18n="应用参考价">应用参考价</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 批量调整价格（按比例）模态框 -->
-<div class="modal" id="batchAdjustPricesModal" style="display: none;">
-<div class="modal-content">
-<div class="modal-header">
+<blora-dialog id="batchAdjustPricesModal"
+
+<div slot="header">
 <h3><span data-i18n="批量按比例调整价格">批量按比例调整价格</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将对选中的">将对选中的 </span><strong id="batchAdjustPricesCount">0</strong><span data-i18n="个模型的价格按比例调整："> 个模型的价格按比例调整：</span></p>
 <div class="form-group">
 <label for="batchAdjustPercentage"><span data-i18n="调整百分比（正数为涨价，负数为降价）">调整百分比（正数为涨价，负数为降价）</span></label>
-<input class="input" data-i18n-placeholder="例如: 10 表示涨价10%，-20 表示降价20%" id="batchAdjustPercentage" placeholder="例如: 10 表示涨价10%，-20 表示降价20%" step="1" type="number" value="10"/>
+<input class="blora-input" data-i18n-placeholder="例如: 10 表示涨价10%，-20 表示降价20%" id="batchAdjustPercentage" placeholder="例如: 10 表示涨价10%，-20 表示降价20%" step="1" type="number" value="10"/>
 </div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.executeBatchAdjustPrices()" type="button"><span data-i18n="确认调整">确认调整</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchAdjustPrices()" type="button"><span data-i18n="确认调整">确认调整</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 批量设置速率限制模态框 -->
-<div class="modal" id="batchSetRateLimitModal" style="display: none;">
-<div class="modal-content">
-<div class="modal-header">
+<blora-dialog id="batchSetRateLimitModal"
+
+<div slot="header">
 <h3><span data-i18n="批量设置速率限制">批量设置速率限制</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将为选中的">将为选中的 </span><strong id="batchSetRateLimitCount">0</strong><span data-i18n="个模型设置以下速率限制："> 个模型设置以下速率限制：</span></p>
 <div class="form-group">
 <label for="batchRateLimitRpm"><span data-i18n="每分钟请求数（0=不限制）">每分钟请求数（0=不限制）</span></label>
-<input class="input" id="batchRateLimitRpm" min="0" type="number" value="0"/>
+<input class="blora-input" id="batchRateLimitRpm" min="0" type="number" value="0"/>
 </div>
 <div class="form-group">
 <label for="batchRateLimitTpm"><span data-i18n="每分钟Token数（0=不限制）">每分钟Token数（0=不限制）</span></label>
-<input class="input" id="batchRateLimitTpm" min="0" type="number" value="0"/>
+<input class="blora-input" id="batchRateLimitTpm" min="0" type="number" value="0"/>
 </div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.executeBatchSetRateLimit()" type="button"><span data-i18n="确认设置">确认设置</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchSetRateLimit()" type="button"><span data-i18n="确认设置">确认设置</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 批量修改说明模态框 -->
-<div class="modal" id="batchEditDescModal" style="display: none;">
-<div class="modal-content" style="max-width: 600px;">
-<div class="modal-header">
+<blora-dialog id="batchEditDescModal" size="lg"
+
+<div slot="header">
 <h3><span data-i18n="批量修改模型说明">批量修改模型说明</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将为选中的">将为选中的 </span><strong id="batchEditDescCount">0</strong><span data-i18n="个模型修改说明："> 个模型修改说明：</span></p>
 <div id="batchEditDescModelsList" style="margin-bottom: 16px; max-height: 200px; overflow-y: auto; padding: 12px; background: var(--muted); border-radius: 8px; font-size: 13px;">
 </div>
 <div class="form-group">
 <label for="batchDescMode"><span data-i18n="修改模式">修改模式</span></label>
-<select class="select" id="batchDescMode" onchange="adminApp.toggleBatchDescMode()">
-<option value="replace"><span data-i18n="替换为新说明">替换为新说明</span></option>
-<option value="append"><span data-i18n="追加到现有说明">追加到现有说明</span></option>
-<option value="prepend"><span data-i18n="前置到现有说明">前置到现有说明</span></option>
-</select>
+<blora-select id="batchDescMode" onchange="adminApp.toggleBatchDescMode()">
+<blora-option value="replace"><span data-i18n="替换为新说明">替换为新说明</span></blora-option>
+<blora-option value="append"><span data-i18n="追加到现有说明">追加到现有说明</span></blora-option>
+<blora-option value="prepend"><span data-i18n="前置到现有说明">前置到现有说明</span></blora-option>
+</blora-select>
 </div>
 <div class="form-group">
 <label for="batchDescValue"><span data-i18n="说明内容">说明内容</span></label>
-<textarea class="textarea" data-i18n-placeholder="输入新的模型说明..." id="batchDescValue" placeholder="输入新的模型说明..." rows="4"></textarea>
+<textarea class="blora-textarea" data-i18n-placeholder="输入新的模型说明..." id="batchDescValue" placeholder="输入新的模型说明..." rows="4"></textarea>
 </div>
 <div id="batchEditDescStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.executeBatchEditDesc()" type="button"><span data-i18n="确认修改">确认修改</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchEditDesc()" type="button"><span data-i18n="确认修改">确认修改</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 批量设置系列模态框 -->
-<div class="modal" id="batchSetSeriesModal" style="display: none;">
-<div class="modal-content" style="max-width: 500px;">
-<div class="modal-header">
+<blora-dialog id="batchSetSeriesModal"
+
+<div slot="header">
 <h3><span data-i18n="批量设置系列">批量设置系列</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将为选中的">将为选中的 </span><strong id="batchSetSeriesCount">0</strong><span data-i18n="个模型设置系列："> 个模型设置系列：</span></p>
 <div id="batchSetSeriesModelsList" style="margin-bottom: 16px; max-height: 200px; overflow-y: auto; padding: 12px; background: var(--muted); border-radius: 8px; font-size: 13px;">
 </div>
 <div class="form-group">
 <label for="batchSeriesValue"><span data-i18n="系列名称">系列名称</span></label>
-<input class="input" data-i18n-placeholder="输入系列名称（留空则清除系列）" id="batchSeriesValue" placeholder="输入系列名称（留空则清除系列）" type="text"/>
+<input class="blora-input" data-i18n-placeholder="输入系列名称（留空则清除系列）" id="batchSeriesValue" placeholder="输入系列名称（留空则清除系列）" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="系列名称将显示在用户控制台，用于分类筛选模型">系列名称将显示在用户控制台，用于分类筛选模型</span></small>
 </div>
 <div id="batchSetSeriesStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.executeBatchSetSeries()" type="button"><span data-i18n="确认设置">确认设置</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchSetSeries()" type="button"><span data-i18n="确认设置">确认设置</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 系列图标管理模态框 -->
-<div class="modal" id="seriesIconsModal" style="display: none;">
-<div class="modal-content" style="max-width: 600px;">
-<div class="modal-header">
+<blora-dialog id="seriesIconsModal" size="lg"
+
+<div slot="header">
 <h3><span data-i18n="系列图标管理">系列图标管理</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="为每个系列设置图标，图标将显示在用户控制台的模型卡片上。">为每个系列设置图标，图标将显示在用户控制台的模型卡片上。</span></p>
 <div style="display:flex;gap:8px;margin-bottom:16px;">
-<select class="select" id="newSeriesName" style="flex:1;">
-<option value=""><span data-i18n="选择系列...">选择系列...</span></option>
-</select>
-<input class="input" data-i18n-placeholder="图标 URL" id="newSeriesIconUrl" placeholder="图标 URL" style="flex:2;" type="text"/>
-<button class="btn btn-primary" data-variant="primary" onclick="adminApp.addSeriesIcon()" type="button"><span data-i18n="添加">添加</span></button>
+<blora-select id="newSeriesName" style="flex:1;">
+<blora-option value=""><span data-i18n="选择系列...">选择系列...</span></blora-option>
+</blora-select>
+<input class="blora-input" data-i18n-placeholder="图标 URL" id="newSeriesIconUrl" placeholder="图标 URL" style="flex:2;" type="text"/>
+<button class="blora-button" data-variant="primary" onclick="adminApp.addSeriesIcon()" type="button"><span data-i18n="添加">添加</span></button>
 </div>
 <div id="seriesIconsList" style="max-height:400px;overflow-y:auto;"></div>
 <div id="seriesIconsStatus" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px;"></div>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 按参考价百分比批量设置价格模态框 -->
-<div class="modal" id="batchAdjustByRefModal" style="display: none;">
-<div class="modal-content" style="max-width: 800px;">
-<div class="modal-header">
+<blora-dialog id="batchAdjustByRefModal" size="lg"
+
+<div slot="header">
 <h3><span data-i18n="按参考价百分比设置价格">按参考价百分比设置价格</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将选中的">将选中的 </span><strong id="batchAdjustByRefCount">0</strong><span data-i18n="个模型的实际价格设置为参考价的指定百分比："> 个模型的实际价格设置为参考价的指定百分比：</span></p>
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
 <div class="form-group" style="margin-bottom:0;">
 <label for="batchRefInputPct"><span data-i18n="输入价百分比（%）">输入价百分比（%）</span></label>
-<input class="input" data-i18n-placeholder="如 80" id="batchRefInputPct" placeholder="如 80" step="1" type="number" value="100"/>
+<input class="blora-input" data-i18n-placeholder="如 80" id="batchRefInputPct" placeholder="如 80" step="1" type="number" value="100"/>
 </div>
 <div class="form-group" style="margin-bottom:0;">
 <label for="batchRefOutputPct"><span data-i18n="输出价百分比（%）">输出价百分比（%）</span></label>
-<input class="input" data-i18n-placeholder="如 80" id="batchRefOutputPct" placeholder="如 80" step="1" type="number" value="100"/>
+<input class="blora-input" data-i18n-placeholder="如 80" id="batchRefOutputPct" placeholder="如 80" step="1" type="number" value="100"/>
 </div>
 </div>
-<div id="batchAdjustByRefPreview" style="display:none;">
+<div id="batchAdjustByRefPreview">
 <h4 style="margin:0 0 8px;color:var(--foreground);font-size:14px;"><span data-i18n="预览（价格单位：¥/百万Token）">预览（价格单位：¥/百万Token）</span></h4>
 <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;">
-<table style="width:100%;border-collapse:collapse;font-size:12px;">
+<table style="width:100%;border-collapse:collapse;font-size:12px;" class="blora-table">
 <thead>
 <tr style="background:var(--muted);">
 <th style="padding:8px;text-align:left;border-bottom:1px solid var(--border);"><span data-i18n="模型">模型</span></th>
@@ -2216,20 +2203,19 @@
 </div>
 <div id="batchAdjustByRefStatus" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px;"></div>
 </div>
-<div class="modal-footer">
-<button class="btn btn-secondary" data-variant="secondary" onclick="adminApp.previewBatchAdjustByRef()" type="button"><span data-i18n="预览">预览</span></button>
-<button class="btn btn-primary" data-variant="primary" id="batchAdjustByRefConfirmBtn" onclick="adminApp.executeBatchAdjustByRef()" style="display:none;" type="button"><span data-i18n="确认执行">确认执行</span></button>
+<div slot="footer">
+<button class="blora-button" data-variant="secondary" onclick="adminApp.previewBatchAdjustByRef()" type="button"><span data-i18n="预览">预览</span></button>
+<button class="blora-button" data-variant="primary" id="batchAdjustByRefConfirmBtn" onclick="adminApp.executeBatchAdjustByRef()" type="button"><span data-i18n="确认执行">确认执行</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 供应商额度查询模态框 -->
-<div class="modal" id="providerQuotaModal" style="display: none;">
-<div class="modal-content" style="max-width: 560px;">
-<div class="modal-header">
+<blora-dialog id="providerQuotaModal"
+
+<div slot="header">
 <h3><span data-i18n="供应商额度查询">供应商额度查询</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <!-- Loading -->
 <div id="quotaLoading" style="text-align:center;padding:32px 0;">
 <div class="page-loading"><div aria-label="加载中" class="loading-spinner" data-i18n-title="加载中" role="status"></div><div class="page-loading-text" id="quotaLoadingText"><span data-i18n="正在查询供应商额度，请稍候...">正在查询供应商额度，请稍候...</span></div></div>
@@ -2237,7 +2223,7 @@
 <!-- Error -->
 <div id="quotaError" style="display:none;padding:16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;color:var(--destructive);font-size:13px;"></div>
 <!-- 查询结果 -->
-<div id="quotaContent" style="display:none;">
+<div id="quotaContent">
 <div style="text-align:center;margin-bottom:20px;">
 <div id="quotaProviderName" style="font-size:18px;font-weight:600;"></div>
 <div id="quotaPlanName" style="font-size:13px;color:var(--brand-blue);margin-top:4px;"></div>
@@ -2275,52 +2261,49 @@
 </div>
 </div>
 <!-- 脚本编辑器 -->
-<div id="quotaScriptEditor" style="display:none;">
+<div id="quotaScriptEditor">
 <div style="margin-bottom:12px;">
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
 <span style="font-size:14px;font-weight:600;"><span data-i18n="查询脚本">查询脚本</span></span>
 <div style="display:flex;gap:6px;">
-<button class="btn btn-sm btn-secondary" data-size="sm" data-variant="secondary" onclick="adminApp.resetQuotaScript()" type="button"><span data-i18n="恢复默认">恢复默认</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.resetQuotaScript()" type="button"><span data-i18n="恢复默认">恢复默认</span></button>
 </div>
 </div>
 <p style="font-size:12px;color:var(--muted-foreground);margin-bottom:12px;"><span data-i18n="脚本格式与 cc-switch 一致，包含">
               脚本格式与 cc-switch 一致，包含 </span><code>request</code><span data-i18n="（请求配置）和">（请求配置）和 </span><code>extractor</code><span data-i18n="（响应解析函数）。支持变量：">（响应解析函数）。支持变量：</span><code>{baseUrl}</code> <code>{apiRoot}</code> <code>{apiKey}</code> <code>{providerId}</code> <code>{providerName}</code>
 </p>
-<textarea class="textarea textarea-mono" id="quotaScriptText" style="min-height:280px;font-size:12px;line-height:1.5;"></textarea>
+<textarea class="textarea-mono blora-textarea" id="quotaScriptText" style="min-height:280px;font-size:12px;line-height:1.5;"></textarea>
 </div>
 </div>
 </div>
-<div class="modal-footer" id="quotaModalFooter">
-<button class="btn btn-secondary" data-variant="secondary" id="quotaEditBtn" onclick="adminApp.editQuotaScript()" type="button"><span data-i18n="编辑脚本">编辑脚本</span></button>
-<button class="btn btn-primary" data-variant="primary" id="quotaSaveBtn" onclick="adminApp.saveQuotaScript()" style="display:none;" type="button"><span data-i18n="保存并查询">保存并查询</span></button>
-<button class="btn btn-secondary" data-variant="secondary" id="quotaCancelEditBtn" onclick="adminApp.checkProviderQuota(adminApp._quotaProviderId)" style="display:none;" type="button"><span data-i18n="取消">取消</span></button>
+<div slot="footer" id="quotaModalFooter">
+<button class="blora-button" data-variant="secondary" id="quotaEditBtn" onclick="adminApp.editQuotaScript()" type="button"><span data-i18n="编辑脚本">编辑脚本</span></button>
+<button class="blora-button" data-variant="primary" id="quotaSaveBtn" onclick="adminApp.saveQuotaScript()" type="button"><span data-i18n="保存并查询">保存并查询</span></button>
+<button class="blora-button" data-variant="secondary" id="quotaCancelEditBtn" onclick="adminApp.checkProviderQuota(adminApp._quotaProviderId)" type="button"><span data-i18n="取消">取消</span></button>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 用量详情模态框 -->
-<div class="modal" id="usageDetailModal" style="display: none;">
-<div class="modal-content modal-wide">
-<div class="modal-header">
+<blora-dialog id="usageDetailModal" size="lg"
+
+<div slot="header">
 <h3><span data-i18n="用量详情">用量详情</span></h3>
-<button class="modal-close">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <div id="usageDetailContent"></div>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 调用错误详情模态框 -->
-<div class="modal" id="errorDetailModal" style="display: none;">
-<div class="modal-content modal-wide">
-<div class="modal-header">
+<blora-dialog id="errorDetailModal" size="lg"
+
+<div slot="header">
 <h3><span data-i18n="调用错误详情">调用错误详情</span></h3>
-<button class="modal-close" onclick="adminApp.closeErrorDetailModal()">×</button>
+
 </div>
-<div class="modal-body">
+<div>
 <div id="errorDetailContent"></div>
 </div>
-</div>
-</div>
+</blora-dialog>
 <style>
     @keyframes spin {
       to { transform: rotate(360deg); }
@@ -2351,8 +2334,8 @@
   </style>
 <script src="/js/theme.js?v=2"></script>
 <script src="/js/dom.js?v=6"></script>
-<script src="/js/dialog.js?v=2"></script>
-<script src="/js/admin.js?v=16"></script>
+<script src="/js/dialog.js?v=3"></script>
+<script src="/js/admin.js?v=17"></script>
 <script src="/js/plugin-runtime.js?v=1"></script>
 <script>
     // 移动端侧边栏切换
@@ -2392,40 +2375,37 @@
     });
   </script>
 <!-- 模型测试结果弹窗 -->
-<div class="modal" id="adminTestResultModal" style="display:none;">
-<div class="modal-overlay" onclick="adminApp.closeTestResultModal()"></div>
-<div class="modal-content" style="max-width:640px;">
-<div class="modal-header">
+<blora-dialog id="adminTestResultModal"
+
+
+<div slot="header">
 <h3><span data-i18n="模型测试结果">模型测试结果</span></h3>
-<button class="modal-close" onclick="adminApp.closeTestResultModal()">×</button>
+
 </div>
-<div class="modal-body" id="adminTestResultBody">
+<div id="adminTestResultBody">
 <div class="page-loading page-loading-compact"><div aria-label="加载中" class="loading-spinner md" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 模型调用可用率详情 -->
-<div class="modal" id="modelUptimeModal" style="display:none;">
-<div class="modal-content" style="max-width:720px;">
-<div class="modal-header">
+<blora-dialog id="modelUptimeModal"
+
+<div slot="header">
 <h3 id="modelUptimeModalTitle"><span data-i18n="模型调用状态">模型调用状态</span></h3>
-<button class="modal-close" onclick="adminApp.closeModals()">×</button>
+
 </div>
-<div class="modal-body" id="modelUptimeModalBody">
+<div id="modelUptimeModalBody">
 <div class="page-loading page-loading-compact"><div aria-label="加载中" class="loading-spinner md" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
 </div>
-</div>
-</div>
+</blora-dialog>
 <!-- 提示词详情弹窗 -->
-<div class="modal" id="adminPromptDetailModal" style="display:none;">
-<div class="modal-content modal-wide">
-<div class="modal-header">
+<blora-dialog id="adminPromptDetailModal" size="lg"
+
+<div slot="header">
 <h3 id="adminPromptDetailTitle"><span data-i18n="提示词详情">提示词详情</span></h3>
-<button class="modal-close" onclick="adminApp.closeModals()">×</button>
+
 </div>
-<div class="modal-body" id="adminPromptDetailBody"></div>
-</div>
-</div>
+<div id="adminPromptDetailBody"></div>
+</blora-dialog>
 <script>
   // Page-level i18n: apply catalog to static DOM once ready.
   (function () {

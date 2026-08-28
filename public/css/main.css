@@ -2760,6 +2760,7 @@
  */
 .modal-content.model-picker-modal,
 .modal-content.key-model-picker-modal,
+blora-dialog.model-picker-modal,
 .dialog-panel.model-picker-modal {
   width: min(1120px, calc(100vw - 32px));
   max-width: 1120px !important;
@@ -2769,6 +2770,7 @@
 
 .model-picker-modal .modal-header,
 .key-model-picker-modal .modal-header,
+blora-dialog.model-picker-modal::part(header),
 .model-picker-modal .dialog-title {
   flex-shrink: 0;
   margin-bottom: 0;
@@ -2776,6 +2778,7 @@
 
 .model-picker-modal .modal-footer,
 .key-model-picker-modal .modal-footer,
+blora-dialog.model-picker-modal::part(footer),
 .model-picker-modal .dialog-actions {
   flex-shrink: 0;
 }
@@ -2783,6 +2786,7 @@
 /* picker 弹窗 body 不滚动，列表内部滚动 */
 .model-picker-modal .modal-body,
 .key-model-picker-modal .modal-body,
+blora-dialog.model-picker-modal::part(body),
 .model-picker-modal .dialog-content {
   overflow: hidden !important;
   padding: 0 !important;

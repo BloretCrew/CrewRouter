@@ -5252,7 +5252,7 @@ class ConsoleApp {
     this._setSummaryRegenDisabled(false);
     // 清空上一会话的顶部内联总结容器，避免串会话
     const inlineEl = document.getElementById('sessionSummaryInline');
-    if (inlineEl) { inlineEl.innerHTML = ''; inlineEl.style.display = 'none'; delete inlineEl.dataset.built; }
+    if (inlineEl) { clearChildren(inlineEl); inlineEl.style.display = 'none'; delete inlineEl.dataset.built; }
     // 总结按钮缓存状态：已知命中直接置为「查看总结」，否则异步探测一次避免重复查询
     this._applySummaryBtnText(this._detailSessionKey, this._summaryCachedKeys.has(this._detailSessionKey));
     this._renderInlineCachedSummary(this._detailSessionKey);
@@ -6732,7 +6732,7 @@ class ConsoleApp {
       this._renderSessionSummaryInline(sessionKey, text, 'done', null, this._summaryCacheTimeMap[sessionKey]);
     } else {
       const el = document.getElementById('sessionSummaryInline');
-      if (el) { el.innerHTML = ''; el.style.display = 'none'; delete el.dataset.built; }
+      if (el) { clearChildren(el); el.style.display = 'none'; delete el.dataset.built; }
     }
   }
 

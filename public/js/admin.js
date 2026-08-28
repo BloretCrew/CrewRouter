@@ -468,19 +468,6 @@ class AdminApp {
       });
     });
 
-    // 模态框关闭按钮
-    const modalCloseButtons = document.querySelectorAll('.modal-close');
-    modalCloseButtons.forEach(btn => {
-      btn.addEventListener('click', () => this.closeModals());
-    });
-
-    // 点击遮罩空白处关闭弹窗（点到 .modal 本身，而非 .modal-content）
-    document.querySelectorAll('.modal').forEach(modal => {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) this.closeModals();
-      });
-    });
-
     // 可退款复选框切换手续费率显示
     const codeRefundable = document.getElementById('codeRefundable');
     if (codeRefundable) {
@@ -502,9 +489,32 @@ class AdminApp {
     }
   }
 
-  closeModals() {
-    document.querySelectorAll('.modal').forEach(modal => {
+  showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    if (typeof modal.show === 'function') modal.show();
+    else {
+      modal.style.display = 'flex';
+      modal.classList.add('active');
+    }
+    modal.dispatchEvent(new CustomEvent('admin-modal-open', { bubbles: true, detail: { id: modalId } }));
+  }
+
+  closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    if (typeof modal.close === 'function') modal.close();
+    else {
       modal.style.display = 'none';
+      modal.classList.remove('active');
+    }
+    modal.dispatchEvent(new CustomEvent('admin-modal-close', { bubbles: true, detail: { id: modalId } }));
+  }
+
+  closeModals() {
+    document.querySelectorAll('blora-dialog[open], .modal.active, .modal[style*="display: flex"]').forEach((modal) => {
+      if (typeof modal.close === 'function') modal.close();
+      else { modal.style.display = 'none'; modal.classList.remove('active'); }
     });
   }
 
@@ -857,8 +867,7 @@ class AdminApp {
     // 加载用户组列表
     this.loadUserGroupsForSelect(user.group_id);
 
-    document.getElementById('editUserModal').style.display = 'flex';
-    document.getElementById('editUserModal').classList.add('active');
+    this.showModal('editUserModal');
   }
 
   async loadUserGroupsForSelect(selectedGroupId) {
@@ -1698,7 +1707,7 @@ class AdminApp {
     if (!body || !modal) return;
     if (title) title.textContent = `${modelName || modelId}${t('· 调用状态（近 24 小时）')}`;
     setHTML(body, pageLoadingHtml(t('加载中...'), { compact: true }));
-    modal.style.display = 'flex';
+    this.showModal(modal.id);
     try {
       const res = await fetch(`/api/admin/models/${encodeURIComponent(modelId)}/uptime?days=${this._uptimeDays}`);
       if (!res.ok) throw new Error(t('加载失败'));
@@ -2390,8 +2399,7 @@ class AdminApp {
     this.loadProviderOptions().then(() => {
       document.getElementById('modelProvider').value = '';
       this.onModelProviderChange();
-      document.getElementById('addModelModal').style.display = 'flex';
-      document.getElementById('addModelModal').classList.add('active');
+      this.showModal('addModelModal');
     });
   }
 
@@ -2418,8 +2426,7 @@ class AdminApp {
       this.loadModelOptions().then(() => {
         document.getElementById('modelThinkingModel').value = model.thinking_model_id || '';
         document.getElementById('modelNonThinkingModel').value = model.non_thinking_model_id || '';
-        document.getElementById('addModelModal').style.display = 'flex';
-        document.getElementById('addModelModal').classList.add('active');
+        this.showModal('addModelModal');
       });
     });
   }
@@ -4168,8 +4175,7 @@ class AdminApp {
     this.renderProviderTagAssignment([]);
     this._setProviderFormSectionsOpen({});
 
-    document.getElementById('addProviderModal').style.display = 'flex';
-    document.getElementById('addProviderModal').classList.add('active');
+    this.showModal('addProviderModal');
   }
 
   async lookupProviderInfo() {
@@ -4267,8 +4273,7 @@ class AdminApp {
     this.renderProviderTagAssignment(provider.tags || []);
     this._setProviderFormSectionsOpen({});
 
-    document.getElementById('addProviderModal').style.display = 'flex';
-    document.getElementById('addProviderModal').classList.add('active');
+    this.showModal('addProviderModal');
   }
 
   async saveProvider() {
@@ -5529,8 +5534,7 @@ async function(ctx) {
     if (cleanupBtn) cleanupBtn.style.display = 'none';
     document.getElementById('selectAllFetchedModels').checked = false;
 
-    document.getElementById('fetchModelsModal').style.display = 'flex';
-    document.getElementById('fetchModelsModal').classList.add('active');
+    this.showModal('fetchModelsModal');
 
     try {
       const url = `/api/admin/providers/${providerId}/fetch-models`;
@@ -6008,8 +6012,7 @@ async function(ctx) {
     error.style.display = 'none';
     content.style.display = 'none';
     editor.style.display = 'none';
-    modal.style.display = 'flex';
-    modal.classList.add('active');
+    this.showModal(modal.id);
 
     // 切换按钮：显示结果模式
     document.getElementById('quotaEditBtn').style.display = '';
@@ -6301,8 +6304,7 @@ async function(ctx) {
     document.getElementById('importPreview').style.display = 'none';
     clearChildren(document.getElementById('importPreviewContent'));
     
-    document.getElementById('importOpenCodeModal').style.display = 'flex';
-    document.getElementById('importOpenCodeModal').classList.add('active');
+    this.showModal('importOpenCodeModal');
   }
 
   handleConfigFileUpload(event) {
@@ -7741,16 +7743,14 @@ async function(ctx) {
 
     const modal = document.getElementById('errorDetailModal');
     if (modal) {
-      modal.style.display = 'flex';
-      modal.classList.add('active');
+      this.showModal(modal.id);
     }
   }
 
   closeErrorDetailModal() {
     const modal = document.getElementById('errorDetailModal');
     if (modal) {
-      modal.style.display = 'none';
-      modal.classList.remove('active');
+      this.closeModal(modal.id);
     }
   }
 
@@ -8086,8 +8086,7 @@ async function(ctx) {
         const content = document.getElementById('usageDetailContent');
         if (modal && content) {
           setHTML(content, pageLoadingHtml(t('加载详情...'), { compact: true }));
-          modal.style.display = 'flex';
-          modal.classList.add('active');
+          this.showModal(modal.id);
         }
         const res = await fetch(`/api/admin/usage-logs/${log.id}`);
         if (!res.ok) throw new Error(`${t('加载详情失败 (')}${res.status})`);
@@ -8198,8 +8197,7 @@ async function(ctx) {
       });
     }
 
-    document.getElementById('usageDetailModal').style.display = 'flex';
-    document.getElementById('usageDetailModal').classList.add('active');
+    this.showModal('usageDetailModal');
   }
 
   async saveAdminSettings(e) {
@@ -8555,8 +8553,7 @@ async function(ctx) {
     document.getElementById('batchSetInputPrice').value = '0.01';
     document.getElementById('batchSetOutputPrice').value = '0.01';
     document.getElementById('batchSetCachedOutputPrice').value = '0';
-    document.getElementById('batchSetPricesModal').style.display = 'flex';
-    document.getElementById('batchSetPricesModal').classList.add('active');
+    this.showModal('batchSetPricesModal');
   }
 
   async executeBatchSetPrices() {
@@ -8601,8 +8598,7 @@ async function(ctx) {
   showBatchJsonPricesModal() {
     document.getElementById('batchJsonPricesInput').value = '';
     document.getElementById('batchJsonPricesResult').style.display = 'none';
-    document.getElementById('batchJsonPricesModal').style.display = 'flex';
-    document.getElementById('batchJsonPricesModal').classList.add('active');
+    this.showModal('batchJsonPricesModal');
   }
 
   async exportModelsCsv() {
@@ -8807,8 +8803,7 @@ async function(ctx) {
   showBatchJsonRefPricesModal() {
     document.getElementById('batchJsonRefPricesInput').value = '';
     document.getElementById('batchJsonRefPricesResult').style.display = 'none';
-    document.getElementById('batchJsonRefPricesModal').style.display = 'flex';
-    document.getElementById('batchJsonRefPricesModal').classList.add('active');
+    this.showModal('batchJsonRefPricesModal');
   }
 
   async executeBatchJsonRefPrices() {
@@ -8876,8 +8871,7 @@ async function(ctx) {
     if (count === 0) return;
     document.getElementById('batchAdjustPricesCount').textContent = count;
     document.getElementById('batchAdjustPercentage').value = '10';
-    document.getElementById('batchAdjustPricesModal').style.display = 'flex';
-    document.getElementById('batchAdjustPricesModal').classList.add('active');
+    this.showModal('batchAdjustPricesModal');
   }
 
   async executeBatchAdjustPrices() {
@@ -8926,8 +8920,7 @@ async function(ctx) {
     document.getElementById('batchSetRateLimitCount').textContent = count;
     document.getElementById('batchRateLimitRpm').value = '0';
     document.getElementById('batchRateLimitTpm').value = '0';
-    document.getElementById('batchSetRateLimitModal').style.display = 'flex';
-    document.getElementById('batchSetRateLimitModal').classList.add('active');
+    this.showModal('batchSetRateLimitModal');
   }
 
   async executeBatchSetRateLimit() {
@@ -8985,8 +8978,7 @@ async function(ctx) {
     document.getElementById('batchEditDescStatus').style.display = 'none';
     document.getElementById('batchDescValue').placeholder = t('输入新的模型说明...');
     
-    document.getElementById('batchEditDescModal').style.display = 'flex';
-    document.getElementById('batchEditDescModal').classList.add('active');
+    this.showModal('batchEditDescModal');
   }
 
   toggleBatchDescMode() {
@@ -9087,8 +9079,7 @@ async function(ctx) {
     document.getElementById('batchSeriesValue').value = '';
     document.getElementById('batchSetSeriesStatus').style.display = 'none';
     
-    document.getElementById('batchSetSeriesModal').style.display = 'flex';
-    document.getElementById('batchSetSeriesModal').classList.add('active');
+    this.showModal('batchSetSeriesModal');
   }
 
   async executeBatchSetSeries() {
@@ -9133,8 +9124,7 @@ async function(ctx) {
 
   // 系列图标管理
   async showSeriesIconsModal() {
-    document.getElementById('seriesIconsModal').style.display = 'flex';
-    document.getElementById('seriesIconsModal').classList.add('active');
+    this.showModal('seriesIconsModal');
     await this.loadSeriesNames();
     await this.loadSeriesIcons();
   }
@@ -9247,8 +9237,7 @@ async function(ctx) {
     clearChildren(document.getElementById('batchAdjustByRefPreviewBody'));
     document.getElementById('batchAdjustByRefStatus').style.display = 'none';
     document.getElementById('batchAdjustByRefConfirmBtn').style.display = 'none';
-    document.getElementById('batchAdjustByRefModal').style.display = 'flex';
-    document.getElementById('batchAdjustByRefModal').classList.add('active');
+    this.showModal('batchAdjustByRefModal');
   }
 
   async previewBatchAdjustByRef() {
@@ -11895,9 +11884,8 @@ async function(ctx) {
     const modal = document.getElementById('adminPromptDetailModal');
     const body = document.getElementById('adminPromptDetailBody');
     if (!modal || !body) return;
-    body.innerHTML = pageLoadingHtml(t('加载详情...'), { compact: true });
-    modal.style.display = 'flex';
-    modal.classList.add('active');
+    setHTML(body, pageLoadingHtml(t('加载详情...'), { compact: true }));
+    this.showModal(modal.id);
 
     try {
       const res = await fetch(`/api/admin/custom-instructions/${encodeURIComponent(fingerprint)}`);
