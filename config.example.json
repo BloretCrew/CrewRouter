@@ -3,6 +3,7 @@
     "name": "CrewRouter",
     "port": 20003,
     "host": "localhost",
+    "publicOrigin": "https://router.example.com",
     "sessionSecret": "your-session-secret-here",
     "demo": false
   },
@@ -17,6 +18,11 @@
     "appId": "your-feishu-app-id",
     "appSecret": "your-feishu-app-secret",
     "tenantKey": "your-feishu-tenant-key"
+  },
+  "passport": {
+    "appId": "your-passport-app-id",
+    "appSecret": "your-passport-app-secret",
+    "redirectCallbackHost": "https://router.example.com/auth/passport/callback"
   },
   "initialProviders": [
     {
@@ -84,6 +90,7 @@
   },
   "store": {
     "seedDemo": true,
+    "passportNote": "store.passport 仅用于插件商店 OAuth；顶层 passport 用于 CrewRouter 主认证。",
     "pluginSource": ["https://crewrouter.bloret.net"],
     "updateCheck": {
       "enabled": true,

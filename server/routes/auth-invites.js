@@ -2,8 +2,23 @@ const express = require('express');
 const crypto = require('crypto');
 const { pool } = require('../models/database');
 const { requireAdmin } = require('../middleware/auth');
+const config = require('../config-loader');
 
 const router = express.Router();
+
+function getPublicOrigin(req) {
+  const configured = config.app?.publicOrigin || config.passport?.redirectCallbackHost;
+  if (configured) {
+    const url = new URL(configured);
+    if (url.protocol !== 'https:') throw new Error('公开 origin 必须使用 HTTPS');
+    return url.origin;
+  }
+  const host = String(req.get('host') || '');
+  if (!/^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}(?::\d{1,5})?$/.test(host) && !/^localhost(?::\d{1,5})?$/.test(host)) {
+    throw new Error('无法安全确定公开 origin');
+  }
+  return `https://${host}`;
+}
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 router.post('/auth-invites', requireAdmin, async (req, res) => {
@@ -14,9 +29,8 @@ router.post('/auth-invites', requireAdmin, async (req, res) => {
       `INSERT INTO auth_invites (token_hash, created_by, expires_at) VALUES ($1, $2, $3)`,
       [hashToken(token), req.session.user.id, expiresAt]
     );
-    const host = req.get('host');
-    if (!host || /[\r\n]/.test(host)) return res.status(400).json({ error: '无效的主机名' });
-    res.json({ token, url: `https://${host}/?invite=${encodeURIComponent(token)}`, expires_at: expiresAt.toISOString() });
+    const origin = getPublicOrigin(req);
+    res.json({ token, url: `${origin}/?invite=${encodeURIComponent(token)}`, expires_at: expiresAt.toISOString() });
   } catch (err) {
     res.status(500).json({ error: '生成邀请链接失败' });
   }

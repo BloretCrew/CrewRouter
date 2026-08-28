@@ -29,6 +29,7 @@ const DEFAULTS = {
     name: 'CrewRouter',
     port: 20003,
     host: 'localhost',
+    publicOrigin: '',
     sessionSecret: 'change-me-in-production',
     demo: false,
   },
@@ -88,6 +89,7 @@ const ENV_MAP = {
   CR_APP_NAME:           'app.name',
   CR_APP_PORT:           'app.port',
   CR_APP_HOST:           'app.host',
+  CR_APP_PUBLIC_ORIGIN:  'app.publicOrigin',
   CR_SESSION_SECRET:     'app.sessionSecret',
   CR_DEMO:               'app.demo',
 
