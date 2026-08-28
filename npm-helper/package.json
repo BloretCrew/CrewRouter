@@ -1,6 +1,6 @@
 {
   "name": "@bloret-crew/crewrouter-helper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CrewRouter 客户端事件统一上报器（Node.js 零依赖 CLI）：hook / emit / watch / login / logout / test / --print",
   "license": "MIT",
   "bin": {
