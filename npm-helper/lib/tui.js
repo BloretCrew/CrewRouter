@@ -80,30 +80,69 @@ function configureClient(index) {
   throw new Error('未知客户端');
 }
 
-function createPrompt() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const ask = (question) => new Promise((resolve) => rl.question(question, resolve));
-  return { rl, ask };
+function askText(question) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
 }
 
-async function chooseClient(ask) {
-  console.log('\n选择要写入上报 Hook 的客户端：');
-  HARNESS_CHOICES.forEach((item, i) => console.log(`  ${i + 1}. ${item[0]} (${path.join('~', item[2])})`));
-  console.log('  4. 全部配置');
-  const choice = (await ask('请输入编号：')).trim();
-  if (choice === '4') return [0, 1, 2];
-  const index = Number(choice) - 1;
-  return Number.isInteger(index) && index >= 0 && index < 3 ? [index] : [];
+function selectMenu(title, items, { selected = 0, multi = false } = {}) {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let cursor = Math.max(0, Math.min(selected, items.length - 1));
+    const chosen = new Set();
+    const previousRaw = process.stdin.isRaw;
+    const draw = () => {
+      process.stdout.write('\x1b[2J\x1b[H');
+      console.log(`=== ${title} ===\n`);
+      items.forEach((item, index) => {
+        const mark = multi ? (chosen.has(index) ? '[✓]' : '[ ]') : ' ';
+        const pointer = index === cursor ? '❯' : ' ';
+        console.log(`${pointer} ${mark} ${item}`);
+      });
+      console.log(`\n↑/↓ 选择${multi ? '，空格勾选' : ''}，Enter 确认，q 取消`);
+    };
+    const finish = (value) => {
+      process.stdin.removeListener('data', onData);
+      process.stdin.setRawMode(Boolean(previousRaw));
+      process.stdin.pause();
+      resolve(value);
+    };
+    const onData = (buffer) => {
+      const key = buffer.toString();
+      if (key === '\\u0003' || key.toLowerCase() === 'q' || key === '\\u001b') return finish(null);
+      if (key === '\\u001b[A' || key === 'k') cursor = (cursor + items.length - 1) % items.length;
+      else if (key === '\\u001b[B' || key === 'j') cursor = (cursor + 1) % items.length;
+      else if (multi && key === ' ') {
+        if (chosen.has(cursor)) chosen.delete(cursor); else chosen.add(cursor);
+      } else if (key === '\r' || key === '\\n') {
+        return finish(multi ? [...chosen].sort((a, b) => a - b) : cursor);
+      }
+      draw();
+    };
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.on('data', onData);
+    draw();
+  });
 }
 
-async function configureClients(ask) {
-  const selected = await chooseClient(ask);
-  if (!selected.length) {
-    console.log('未选择有效客户端。');
-    return;
-  }
-  const confirmed = (await ask('将保留原有配置并写入 Hook，继续吗？[Y/n] ')).trim().toLowerCase();
-  if (confirmed && confirmed !== 'y' && confirmed !== 'yes') return;
+async function chooseClient() {
+  const items = HARNESS_CHOICES.map((item) => `${item[0]} (${path.join('~', item[2])})`).concat('全部配置');
+  const choice = await selectMenu('选择要写入上报 Hook 的客户端', items);
+  if (choice === null) return [];
+  return choice === HARNESS_CHOICES.length ? HARNESS_CHOICES.map((_, index) => index) : [choice];
+}
+
+async function configureClients() {
+  const selected = await chooseClient();
+  if (!selected.length) return;
+  const confirmed = await selectMenu('确认写入客户端配置', ['继续（保留已有配置）', '取消']);
+  if (confirmed !== 0) return;
   for (const index of selected) {
     try { console.log(`已配置 ${HARNESS_CHOICES[index][0]}：${configureClient(index)}`); }
     catch (err) { console.log(`配置 ${HARNESS_CHOICES[index][0]} 失败：${err.message}`); }
@@ -120,29 +159,19 @@ function showStatus() {
 }
 
 async function runTui(actions) {
-  const { rl, ask } = createPrompt();
-  try {
-    for (;;) {
-      console.log('\n=== CrewRouter Helper ===');
-      console.log('1. 查看状态');
-      console.log('2. 登录 / 配置服务');
-      console.log('3. 配置客户端 Hook');
-      console.log('4. 发送测试事件');
-      console.log('5. 退出');
-      const choice = (await ask('请选择：')).trim();
-      if (choice === '1') showStatus();
-      else if (choice === '2') {
-        const url = (await ask('服务地址（留空使用官方商店或 CREWROUTER_URL）：')).trim();
-        await actions.login(url ? { url } : {});
-      } else if (choice === '3') await configureClients(ask);
-      else if (choice === '4') await actions.test();
-      else if (choice === '5' || choice.toLowerCase() === 'q') break;
-      else console.log('请输入 1-5。');
-    }
-  } finally {
-    rl.close();
+  const menu = ['查看状态', '登录 / 配置服务', '配置客户端 Hook', '发送测试事件', '退出'];
+  for (;;) {
+    const choice = await selectMenu('CrewRouter Helper', menu);
+    if (choice === null || choice === 4) break;
+    if (choice === 0) showStatus();
+    else if (choice === 1) {
+      const url = await askText('服务地址（留空使用官方商店或 CREWROUTER_URL）：');
+      await actions.login(url ? { url } : {});
+    } else if (choice === 2) await configureClients();
+    else if (choice === 3) await actions.test();
+    await askText('按 Enter 返回主菜单...');
   }
   return 0;
 }
 
-module.exports = { runTui, configureClient, configureClients };
+module.exports = { runTui, configureClient, configureClients, selectMenu };

@@ -163,7 +163,7 @@ const HELP = `${PROG} —— 客户端事件统一上报器（Node.js 零依赖�
   ${PROG} login   [--url http://127.0.0.1:20003]      浏览器 OAuth PKCE 授权
   ${PROG} logout                                      删除本地凭证
   ${PROG} test    [--harness hermes]                  发测试事件验证链路
-  ${PROG}                                           交互式 TUI（终端菜单）
+  ${PROG}                                           交互式 TUI（方向键选择）
   ${PROG} --print                                    输出有效 access token（自动刷新）
 
 事件取值：session_start | session_end | tool_use
