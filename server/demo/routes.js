@@ -265,12 +265,20 @@ router.get('/model-library/search', (req, res) => {
     }
   }
   if (q) models = models.filter(m => [m.name, m.description, m.alias, m.series, m.upstream_model_id, m.provider_name].some(v => String(v || '').toLowerCase().includes(q)));
-  if (provider && provider !== 'all') models = models.filter(m => String(m.provider || m.provider_id) === provider);
+  if (provider && provider !== 'all') {
+    const normalizedProvider = provider.toLowerCase();
+    models = models.filter(m => [m.provider, m.provider_id, m.provider_name]
+      .some(value => String(value || '').toLowerCase() === normalizedProvider));
+  }
   if (series && series !== 'all') models = models.filter(m => String(m.series) === series);
   if (test === 'pass') models = models.filter(m => m.test_ok === true);
   if (test === 'fail') models = models.filter(m => m.test_ok === false);
   if (test === 'untested') models = models.filter(m => m.test_ok !== true && m.test_ok !== false);
-  if (tag && tag !== 'all') models = models.filter(m => (m.tags || []).some(t => String(t.id) === tag || String(t.name) === tag));
+  if (tag && tag !== 'all') {
+    const normalizedTag = tag.replace(/^tag:/i, '').trim().toLowerCase();
+    models = models.filter(m => (m.tags || []).some(t =>
+      String(t.id).toLowerCase() === normalizedTag || String(t.name).toLowerCase() === normalizedTag));
+  }
   if (sort === 'name_asc') models.sort((a, b) => String(a.name).localeCompare(String(b.name)));
   if (sort === 'name_desc') models.sort((a, b) => String(b.name).localeCompare(String(a.name)));
   if (sort === 'price_asc') models.sort((a, b) => (a.input_price_per_1k_tokens || 0) - (b.input_price_per_1k_tokens || 0));

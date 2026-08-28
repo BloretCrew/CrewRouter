@@ -124,10 +124,10 @@ const DEMO_PRODUCTS = [
 ];
 
 const DEMO_REDEMPTION_CODES = [
-  { id: 1, code: 'DEMO-START-100', amount: 100, max_uses: 1, used_count: 1, expires_at: '2026-12-31T23:59:59Z', batch_name: '演示新手批次', created_by: 1, refundable: true, fee_rate: 0.05, created_at: '2025-02-01T00:00:00Z' },
-  { id: 2, code: 'DEMO-TEAM-500', amount: 500, max_uses: 5, used_count: 2, expires_at: '2027-01-31T23:59:59Z', batch_name: '演示团队批次', created_by: 1, refundable: true, fee_rate: 0.1, created_at: '2025-02-10T00:00:00Z' },
-  { id: 3, code: 'DEMO-WELCOME-50', amount: 50, max_uses: 1, used_count: 0, expires_at: '2026-10-31T23:59:59Z', batch_name: '欢迎体验批次', created_by: 1, refundable: false, fee_rate: 0, created_at: '2025-02-18T00:00:00Z' },
-  { id: 4, code: 'DEMO-EXPIRED-20', amount: 20, max_uses: 1, used_count: 1, expires_at: '2025-01-31T23:59:59Z', batch_name: '历史演示批次', created_by: 1, refundable: true, fee_rate: 0.02, created_at: '2025-01-01T00:00:00Z' }
+  { id: 1, code: 'DEMO-START-100', amount: 100, max_uses: 1, used_count: 1, expires_at: '2026-12-31T23:59:59Z', batch_name: '演示新手批次', created_by: 1, created_by_name: 'Demo User', refundable: true, fee_rate: 0.05, created_at: '2025-02-01T00:00:00Z' },
+  { id: 2, code: 'DEMO-TEAM-500', amount: 500, max_uses: 5, used_count: 2, expires_at: '2027-01-31T23:59:59Z', batch_name: '演示团队批次', created_by: 1, created_by_name: 'Demo User', refundable: true, fee_rate: 0.1, created_at: '2025-02-10T00:00:00Z' },
+  { id: 3, code: 'DEMO-WELCOME-50', amount: 50, max_uses: 1, used_count: 0, expires_at: '2026-10-31T23:59:59Z', batch_name: '欢迎体验批次', created_by: 1, created_by_name: 'Demo User', refundable: false, fee_rate: 0, created_at: '2025-02-18T00:00:00Z' },
+  { id: 4, code: 'DEMO-EXPIRED-20', amount: 20, max_uses: 1, used_count: 1, expires_at: '2025-01-31T23:59:59Z', batch_name: '历史演示批次', created_by: 1, created_by_name: 'Demo User', refundable: true, fee_rate: 0.02, created_at: '2025-01-01T00:00:00Z' }
 ];
 
 const DEMO_CODE_BALANCES = [
