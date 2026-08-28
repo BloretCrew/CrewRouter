@@ -64,6 +64,7 @@
   --status-warn-strong: #a16207;
   --status-info: #2563eb;
   --status-danger: #dc2626;
+  --status-danger-soft: #fef2f2;
   --status-neutral: #64748b;
   --text-muted-soft: #94a3b8;
   --on-accent: #ffffff;
@@ -149,6 +150,7 @@
   --status-warn-strong: #fde68a;
   --status-info: #60a5fa;
   --status-danger: #f87171;
+  --status-danger-soft: rgba(248, 113, 113, 0.15);
   --status-neutral: #94a3b8;
   --text-muted-soft: #94a3b8;
   --on-accent: #ffffff;
@@ -377,7 +379,7 @@ pre {
 }
 
 .btn-danger:hover {
-  background: #dc2626;
+  background: var(--status-danger);
 }
 
 .btn-link {
@@ -650,8 +652,8 @@ pre {
 }
 
 .dark .badge-default {
-  background: rgba(20,86,240,0.2);
-  color: #60a5fa;
+  background: color-mix(in srgb, var(--brand-blue) 20%, transparent);
+  color: var(--status-info);
 }
 
 .badge-secondary {
@@ -666,63 +668,63 @@ pre {
 }
 
 .badge-success {
-  background: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
+  background: var(--status-success-soft);
+  color: var(--status-success);
+  border: 1px solid color-mix(in srgb, var(--status-success) 30%, transparent);
 }
 
 .dark .badge-success {
-  background: rgba(16,185,129,0.15);
-  color: #6ee7b7;
-  border-color: rgba(16,185,129,0.3);
+  background: color-mix(in srgb, var(--status-success-soft) 15%, transparent);
+  color: var(--status-success);
+  border-color: color-mix(in srgb, var(--status-success) 30%, transparent);
 }
 
 .badge-warning {
-  background: #fffbeb;
-  color: #b45309;
-  border: 1px solid #fde68a;
+  background: var(--status-warn-soft);
+  color: var(--status-warn-strong);
+  border: 1px solid color-mix(in srgb, var(--status-warn) 30%, transparent);
 }
 
 .dark .badge-warning {
-  background: rgba(245,158,11,0.15);
-  color: #fcd34d;
-  border-color: rgba(245,158,11,0.3);
+  background: color-mix(in srgb, var(--status-warn-soft) 15%, transparent);
+  color: var(--status-warn-strong);
+  border-color: color-mix(in srgb, var(--status-warn) 30%, transparent);
 }
 
 .badge-danger {
-  background: #fff1f2;
-  color: #be123c;
-  border: 1px solid #fecdd3;
+  background: var(--status-danger-soft);
+  color: var(--status-danger);
+  border: 1px solid color-mix(in srgb, var(--status-danger) 30%, transparent);
 }
 
 .dark .badge-danger {
-  background: rgba(244,63,94,0.15);
-  color: #fda4af;
-  border-color: rgba(244,63,94,0.3);
+  background: color-mix(in srgb, var(--status-danger-soft) 100%, transparent);
+  color: var(--status-danger);
+  border-color: color-mix(in srgb, var(--status-danger) 30%, transparent);
 }
 
 .badge-info {
-  background: #f0f9ff;
-  color: var(--brand-blue);
-  border: 1px solid #bae6fd;
+  background: color-mix(in srgb, var(--status-info) 10%, transparent);
+  color: var(--status-info);
+  border: 1px solid color-mix(in srgb, var(--status-info) 30%, transparent);
 }
 
 .dark .badge-info {
-  background: rgba(14,165,233,0.15);
-  color: #7dd3fc;
-  border-color: rgba(14,165,233,0.3);
+  background: color-mix(in srgb, var(--status-info) 15%, transparent);
+  color: var(--status-info);
+  border-color: color-mix(in srgb, var(--status-info) 30%, transparent);
 }
 
 .badge-violet {
-  background: #f5f3ff;
-  color: #6d28d9;
-  border: 1px solid #ddd6fe;
+  background: color-mix(in srgb, var(--chart-2) 10%, transparent);
+  color: var(--purple);
+  border: 1px solid color-mix(in srgb, var(--purple) 30%, transparent);
 }
 
 .dark .badge-violet {
-  background: rgba(139,92,246,0.15);
-  color: #c4b5fd;
-  border-color: rgba(139,92,246,0.3);
+  background: color-mix(in srgb, var(--chart-2) 15%, transparent);
+  color: var(--purple);
+  border-color: color-mix(in srgb, var(--purple) 30%, transparent);
 }
 
 /* ============================================
@@ -1942,28 +1944,28 @@ pre {
 }
 
 .api-key-chip-ok {
-  background: rgba(16, 185, 129, 0.12);
-  color: #059669;
-  border-color: rgba(16, 185, 129, 0.22);
+  background: var(--status-success-soft);
+  color: var(--status-success);
+  border-color: color-mix(in srgb, var(--status-success) 22%, transparent);
 }
 
 .api-key-chip-warn {
-  background: rgba(245, 158, 11, 0.12);
-  color: #b45309;
-  border-color: rgba(245, 158, 11, 0.22);
+  background: var(--status-warn-soft);
+  color: var(--status-warn-strong);
+  border-color: color-mix(in srgb, var(--status-warn) 22%, transparent);
 }
 
 .api-key-chip-danger,
 .api-key-chip-off {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
-  border-color: rgba(239, 68, 68, 0.2);
+  background: var(--status-danger-soft);
+  color: var(--status-danger);
+  border-color: color-mix(in srgb, var(--status-danger) 20%, transparent);
 }
 
 .api-key-chip-info {
-  background: rgba(59, 130, 246, 0.1);
-  color: #2563eb;
-  border-color: rgba(59, 130, 246, 0.2);
+  background: color-mix(in srgb, var(--status-info) 10%, transparent);
+  color: var(--status-info);
+  border-color: color-mix(in srgb, var(--status-info) 20%, transparent);
 }
 
 .api-key-chip-muted {
@@ -2297,7 +2299,7 @@ pre {
 }
 
 .api-key-more-item.danger {
-  color: #dc2626;
+  color: var(--status-danger);
 }
 
 .api-key-more-divider {
@@ -2323,18 +2325,18 @@ pre {
 }
 
 .api-key-status.active {
-  background: #ecfdf5;
-  color: #047857;
+  background: var(--status-success-soft);
+  color: var(--status-success);
 }
 
 .api-key-status.expiring {
-  background: #fffbeb;
-  color: #b45309;
+  background: var(--status-warn-soft);
+  color: var(--status-warn-strong);
 }
 
 .api-key-status.expired {
-  background: #fff1f2;
-  color: #be123c;
+  background: var(--status-danger-soft);
+  color: var(--status-danger);
 }
 
 .api-key-stats {
@@ -2761,18 +2763,18 @@ pre {
 }
 
 .alert-warning {
-  background: rgba(245,158,11,0.1);
-  border: 1px solid rgba(245,158,11,0.3);
-  color: #b45309;
+  background: color-mix(in srgb, var(--status-warn-soft) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--status-warn) 30%, transparent);
+  color: var(--status-warn-strong);
 }
 
 /* ============================================
    Error Message
    ============================================ */
 .error-message {
-  background: rgba(239,68,68,0.1);
-  border: 1px solid rgba(239,68,68,0.3);
-  color: var(--destructive);
+  background: var(--alert-error-bg);
+  border: 1px solid var(--alert-error-border);
+  color: var(--alert-error-fg);
   padding: 12px 16px;
   border-radius: 12px;
   font-size: 14px;
@@ -3057,7 +3059,7 @@ pre {
 
 .stats-tab-bar button.active {
   color: var(--foreground);
-  border-bottom-color: #3b82f6;
+  border-bottom-color: var(--status-info);
 }
 
 .chart-card {
@@ -4013,7 +4015,7 @@ pre {
 }
 
 .dialog-btn-danger:hover {
-  background: #dc2626;
+  background: var(--status-danger);
 }
 
 .dialog-btn-cancel {
@@ -4425,23 +4427,23 @@ pre {
 }
 
 .admin-card-badge.green {
-  background: rgba(16,185,129,0.1);
-  color: #10b981;
+  background: color-mix(in srgb, var(--status-success-soft) 10%, transparent);
+  color: var(--status-success);
 }
 
 .admin-card-badge.red {
-  background: rgba(239,68,68,0.1);
-  color: var(--destructive);
+  background: var(--status-danger-soft);
+  color: var(--status-danger);
 }
 
 .admin-card-badge.yellow {
-  background: rgba(245,158,11,0.1);
-  color: #f59e0b;
+  background: color-mix(in srgb, var(--status-warn-soft) 10%, transparent);
+  color: var(--status-warn);
 }
 
 .admin-card-badge.blue {
-  background: rgba(59,130,246,0.1);
-  color: #3b82f6;
+  background: color-mix(in srgb, var(--status-info) 10%, transparent);
+  color: var(--status-info);
 }
 
 .admin-card-badge.gray {
