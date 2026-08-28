@@ -10,6 +10,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/settings.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -1180,14 +1181,35 @@
 
       <!-- 系统设置页面 -->
       <div id="adminSettingsPage" class="page">
-        <div class="content-section" id="passportInvitesSection" style="display:none;">
+        <div id="adminSettingsOverview" class="settings-overview">
+          <div class="settings-version-card">
+            <div class="settings-version-icon">i</div>
+            <div><strong><span data-i18n="当前版本">当前版本</span></strong><span>CrewRouter</span></div>
+            <b id="adminSettingsVersionLabel">-</b>
+          </div>
+          <p class="settings-overview-hint"><span data-i18n="选择一个类别以管理相关设置">选择一个类别以管理相关设置</span></p>
+          <div class="settings-category-grid">
+            <button type="button" class="settings-category-card" data-admin-settings-category="general"><span class="settings-category-icon">⚙</span><span><strong><span data-i18n="常规">常规</span></strong><small><span data-i18n="系统名称、积分与模型列表">系统名称、积分与模型列表</span></small></span><span class="settings-category-arrow">›</span></button>
+            <button type="button" class="settings-category-card" data-admin-settings-category="appearance"><span class="settings-category-icon">◌</span><span><strong><span data-i18n="外观">外观</span></strong><small><span data-i18n="默认主题与界面外观">默认主题与界面外观</span></small></span><span class="settings-category-arrow">›</span></button>
+            <button type="button" class="settings-category-card" data-admin-settings-category="updates"><span class="settings-category-icon">↻</span><span><strong><span data-i18n="版本与更新">版本与更新</span></strong><small><span data-i18n="检查版本与一键更新">检查版本与一键更新</span></small></span><span class="settings-category-arrow">›</span></button>
+            <button type="button" class="settings-category-card" data-admin-settings-category="retention"><span class="settings-category-icon">▤</span><span><strong><span data-i18n="数据保留">数据保留</span></strong><small><span data-i18n="压缩、清理与聚合策略">压缩、清理与聚合策略</span></small></span><span class="settings-category-arrow">›</span></button>
+            <button type="button" class="settings-category-card" data-admin-settings-category="auth"><span class="settings-category-icon">◎</span><span><strong><span data-i18n="登录与认证">登录与认证</span></strong><small><span data-i18n="飞书登录与邀请链接">飞书登录与邀请链接</span></small></span><span class="settings-category-arrow">›</span></button>
+            <button type="button" class="settings-category-card" data-admin-settings-category="network"><span class="settings-category-icon">◎</span><span><strong><span data-i18n="网络">网络</span></strong><small><span data-i18n="代理地址与代理池">代理地址与代理池</span></small></span><span class="settings-category-arrow">›</span></button>
+          </div>
+        </div>
+        <div id="adminSettingsDetail" class="settings-detail" hidden>
+          <button type="button" id="adminSettingsBackButton" class="settings-back-button">‹ <span data-i18n="返回设置">返回设置</span></button>
+          <div id="adminSettingsDetailTitle" class="settings-detail-title"></div>
+        </div>
+
+        <div class="content-section admin-settings-section admin-settings-category-auth" id="passportInvitesSection" style="display:none;">
           <h2>邀请链接</h2>
           <button class="btn btn-primary" id="generateInviteBtn">生成邀请链接</button>
           <div id="inviteResult" style="margin:12px 0;word-break:break-all;"></div>
           <div id="inviteList"></div>
         </div>
         <!-- 默认主题（插件主题，plugin-runtime.js 渲染选择器） -->
-        <div class="content-section" style="margin-bottom:24px;">
+        <div class="content-section admin-settings-section admin-settings-category-appearance" style="margin-bottom:24px;">
           <h2><span data-i18n="默认主题">默认主题</span></h2>
           <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="为全体用户设置默认外观；用户可在控制台「用户设置 → 界面主题」中自行覆盖。">为全体用户设置默认外观；用户可在控制台「用户设置 → 界面主题」中自行覆盖。</span></p>
           <div style="padding:16px;border:1px solid var(--border);border-radius:12px;">
@@ -1195,7 +1217,7 @@
           </div>
         </div>
         <!-- 版本与自动更新 -->
-        <div class="content-section" id="updateSection">
+        <div class="content-section admin-settings-section admin-settings-category-updates" id="updateSection">
           <h2><span data-i18n="版本与更新">版本与更新</span></h2>
           <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="检查官方最新版本，并支持一键下载安装后自动重启（仅直接运行部署可用）。">
             检查官方最新版本，并支持一键下载安装后自动重启（仅直接运行部署可用）。
@@ -1231,7 +1253,7 @@
           </div>
         </div>
 
-        <div class="content-section">
+        <div class="content-section admin-settings-section admin-settings-category-retention">
           <h2><span data-i18n="数据保留">数据保留</span></h2>
           <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="压缩和删除按时长或表大小任一条件触发；输入 0 表示禁用该条件，删除阈值为 0 表示永不删除。">压缩和删除按时长或表大小任一条件触发；输入 0 表示禁用该条件，删除阈值为 0 表示永不删除。</span></p>
           <form id="retentionConfigForm" class="settings-form" onsubmit="return false;">
@@ -1263,7 +1285,7 @@
           </form>
         </div>
 
-        <div class="content-section">
+        <div class="content-section admin-settings-section admin-settings-category-general">
           <h2><span data-i18n="系统设置">系统设置</span></h2>
           <form id="adminSettingsForm" class="settings-form">
             <div class="form-group">
@@ -1343,7 +1365,7 @@
         </div>
 
         <!-- 飞书登录配置 -->
-        <div class="content-section">
+        <div class="content-section admin-settings-section admin-settings-category-auth">
           <h2><span data-i18n="飞书登录">飞书登录</span></h2>
           <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="配置飞书企业应用 OAuth 后，用户可在登录页使用飞书一键登录。保存后立即生效，无需重启服务。">
             配置飞书企业应用 OAuth 后，用户可在登录页使用飞书一键登录。保存后立即生效，无需重启服务。
@@ -1386,7 +1408,7 @@
         </div>
 
         <!-- 系统单代理设置 -->
-        <div class="content-section">
+        <div class="content-section admin-settings-section admin-settings-category-network">
           <h2><span data-i18n="代理设置">代理设置</span></h2>
           <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="配置系统级代理地址（HTTP / HTTPS / SOCKS4 / SOCKS5）。默认不对全部流量生效；可勾选下方选项让所有上游连接走代理，或仅在供应商中单独开启。">配置系统级代理地址（HTTP / HTTPS / SOCKS4 / SOCKS5）。默认不对全部流量生效；可勾选下方选项让所有上游连接走代理，或仅在供应商中单独开启。</span></p>
           <form id="systemProxyForm">
@@ -1409,7 +1431,7 @@
         </div>
 
         <!-- 代理池全局设置 -->
-        <div class="content-section">
+        <div class="content-section admin-settings-section admin-settings-category-network">
           <h2><span data-i18n="代理池设置">代理池设置</span></h2>
           <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="全局代理池配置，供应商编辑中选择「代理池」模式并启用后自动生效。支持 IP 限速时自动切换代理。">全局代理池配置，供应商编辑中选择「代理池」模式并启用后自动生效。支持 IP 限速时自动切换代理。</span></p>
 

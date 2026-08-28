@@ -309,6 +309,11 @@ class AdminApp {
       });
     });
 
+    document.querySelectorAll('[data-admin-settings-category]').forEach(item => {
+      item.addEventListener('click', () => this.showAdminSettingsCategory(item.dataset.adminSettingsCategory));
+    });
+    document.getElementById('adminSettingsBackButton')?.addEventListener('click', () => this.showAdminSettingsOverview());
+
     // 登出按钮
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
@@ -8327,7 +8332,32 @@ async function(ctx) {
     throw new Error(t('任务执行超时'));
   }
 
+  showAdminSettingsOverview() {
+    const overview = document.getElementById('adminSettingsOverview');
+    const detail = document.getElementById('adminSettingsDetail');
+    if (overview) overview.hidden = false;
+    if (detail) detail.hidden = true;
+    document.querySelectorAll('.admin-settings-section').forEach(section => { section.hidden = true; });
+  }
+
+  showAdminSettingsCategory(category) {
+    const overview = document.getElementById('adminSettingsOverview');
+    const detail = document.getElementById('adminSettingsDetail');
+    const title = document.getElementById('adminSettingsDetailTitle');
+    const sections = [...document.querySelectorAll(`.admin-settings-category-${category}`)];
+    if (!sections.length) return;
+    if (overview) overview.hidden = true;
+    if (detail) detail.hidden = false;
+    if (title) title.textContent = document.querySelector(`[data-admin-settings-category="${category}"] strong`)?.textContent || '';
+    document.querySelectorAll('.admin-settings-section').forEach(item => { item.hidden = !sections.includes(item); });
+    sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   async loadSettings() {
+    this.showAdminSettingsOverview();
+    const version = document.getElementById('adminSettingsVersionLabel');
+    const currentVersion = document.getElementById('updateCurrentVersion')?.textContent;
+    if (version) version.textContent = currentVersion && currentVersion !== '-' ? currentVersion : '-';
     try {
       const response = await fetch('/api/admin/settings');
       if (!response.ok) return;
@@ -12147,6 +12177,8 @@ async function(ctx) {
     const applyBtn = document.getElementById('updateApplyBtn');
 
     if (curEl) curEl.textContent = data.currentVersion ? `v${data.currentVersion}` : '-';
+    const settingsVersion = document.getElementById('adminSettingsVersionLabel');
+    if (settingsVersion && data.currentVersion) settingsVersion.textContent = `v${data.currentVersion}`;
     if (latEl) {
       latEl.textContent = data.latestVersion ? `v${data.latestVersion}` : '-';
       latEl.style.color = data.hasUpdate ? 'var(--status-info)' : '';
