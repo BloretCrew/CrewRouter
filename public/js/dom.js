@@ -219,7 +219,10 @@
     document.documentElement.dataset.bloraObserver = '1';
     new MutationObserver((records) => {
       records.forEach((record) => record.addedNodes.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) upgradeBloraControls(node);
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        // blora-select 自己观察选项变更；跳过其内部节点，避免双重重渲染。
+        if (node.matches('blora-option') || (node.closest('blora-select') && !node.matches('blora-select'))) return;
+        upgradeBloraControls(node);
       }));
     }).observe(document.documentElement, { childList: true, subtree: true });
   }
