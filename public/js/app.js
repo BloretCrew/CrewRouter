@@ -506,8 +506,9 @@ class ConsoleApp {
   }
 
   getSFIcon(name, size) {
-    const color = (window.themeManager?.resolvedTheme || 'dark') === 'dark' ? 'white' : 'black';
-    return `<img src="https://img.bloret.net/SF/${name}?color=${color}" alt="" width="${size || 18}" height="${size || 18}" class="sf-icon" data-sf-name="${name}" style="display:inline-block;vertical-align:middle;">`;
+    const iconName = name === 'gear' ? 'settings' : name === 'plus' ? 'plus' : name === 'trash' ? 'trash-2' : 'circle-help';
+    const icon = window.Blora?.createBloraIcon?.(iconName, size || 18);
+    return icon ? icon.outerHTML : '';
   }
 
   async loadApiKeys() {
@@ -3800,7 +3801,7 @@ class ConsoleApp {
   }
 
   closeModelTestModal() {
-    document.getElementById('modelTestModal').style.display = 'none';
+    this.closeModal('modelTestModal');
   }
 
   async testModel(modelId, buttonEl) {
@@ -4133,7 +4134,7 @@ class ConsoleApp {
   async _runBatchTest(modelIds, loadingMsg) {
     const modal = document.getElementById('modelTestModal');
     const body = document.getElementById('modelTestModalBody');
-    modal.style.display = 'flex';
+    this.showModal('modelTestModal');
     setHTML(body, `
       <div style="text-align:center;padding:40px 20px;">
         <div style="display:inline-block;width:36px;height:36px;border:3px solid #222;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:20px;"></div>
@@ -4168,9 +4169,9 @@ class ConsoleApp {
   _showModelTestResult(modelId, result) {
     const modal = document.getElementById('modelTestModal');
     const body = document.getElementById('modelTestModalBody');
-    const title = modal?.querySelector('.modal-header h3');
+    const title = modal?.querySelector('[slot="header"] h3');
     if (title) title.textContent = `${t('测试结果 [')}${result.model || t('模型测试')}]`;
-    modal.style.display = 'flex';
+    this.showModal('modelTestModal');
     this._renderTestResults([{ modelId, ...result }]);
   }
 
@@ -5420,7 +5421,9 @@ class ConsoleApp {
 
   /** 时间线内联 SF 小图标（12px，随文基线对齐） */
   _sfIcon(name, color) {
-    return `<img src="https://img.bloret.net/SF/${encodeURIComponent(name)}?color=${encodeURIComponent(color)}" alt="" class="sf-icon" data-sf-name="${escapeHtml(name)}" style="display:inline-block;vertical-align:-2px;width:12px;height:12px;">`;
+    const iconName = name === 'folder.fill' ? 'folder' : name === 'text.bubble' ? 'message-circle' : 'circle-help';
+    const icon = window.Blora?.createBloraIcon?.(iconName, 12);
+    return icon ? icon.outerHTML : '';
   }
 
   /** 时间线单事件：文本 / 工具调用 / 工具结果 / 思考 */

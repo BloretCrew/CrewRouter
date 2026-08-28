@@ -28,7 +28,7 @@
 <body class="blora-page blora-scope">
 <!-- 移动端顶部导航栏 -->
 <div class="mobile-topbar">
-<button aria-label="打开菜单" class="mobile-hamburger" data-i18n-title="打开菜单" id="sidebarToggle">
+<button aria-label="打开菜单" class="mobile-hamburger blora-button" data-i18n-title="打开菜单" data-size="md" data-variant="secondary" id="sidebarToggle" type="button">
 <svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-width="2" viewbox="0 0 24 24" width="20">
 <line x1="3" x2="21" y1="6" y2="6"></line><line x1="3" x2="21" y1="12" y2="12"></line><line x1="3" x2="21" y1="18" y2="18"></line>
 </svg>
@@ -37,8 +37,8 @@
 <img alt="Logo" src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918"/>
 </div>
 <div class="mobile-topbar-title" id="mobilePageTitle"><span data-i18n="控制台">控制台</span></div>
-<blora-select class="btn btn-icon blora-select" id="langToggleMobile" style="width:auto;height:32px;padding:0 6px;font-size:13px;cursor:pointer;margin-right:8px;" title="Language"><blora-option value="zh">中文</blora-option><blora-option value="en">English</blora-option></blora-select>
-<button class="btn btn-icon blora-button" data-i18n-title="切换主题" id="themeToggleMobile" style="width:32px;height:32px;" title="切换主题" data-variant="secondary" type="button">
+<blora-select class="blora-select" id="langToggleMobile" style="width:auto;height:32px;padding:0 6px;font-size:13px;cursor:pointer;margin-right:8px;" title="Language"><blora-option value="zh">中文</blora-option><blora-option value="en">English</blora-option></blora-select>
+<button class="blora-button" data-i18n-title="切换主题" data-variant="secondary" id="themeToggleMobile" style="width:32px;height:32px;" title="切换主题" type="button">
 <svg class="icon-sun" fill="none" height="18" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="18">
 <circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
 </svg>
@@ -126,10 +126,10 @@
 <img alt="头像" class="avatar" data-i18n-title="头像" id="userAvatar" src=""/>
 <span id="username"></span>
 </div>
-<button class="btn btn-icon blora-button" data-i18n-title="登出" id="logoutBtn" title="登出" data-variant="secondary" type="button">
+<button class="blora-button" data-i18n-title="登出" data-variant="secondary" id="logoutBtn" title="登出" type="button">
 <img alt="" class="sf-icon" data-sf-name="arrow.right.square" height="16" src="https://img.bloret.net/SF/arrow.right.square?color=white" width="16"/>
 </button>
-<blora-select class="btn btn-icon blora-select" id="langToggle" style="width:auto;height:32px;padding:0 6px;font-size:12px;cursor:pointer;" title="Language"><blora-option value="zh">中文</blora-option><blora-option value="en">EN</blora-option></blora-select>
+<blora-select class="blora-select" id="langToggle" style="width:auto;height:32px;padding:0 6px;font-size:12px;cursor:pointer;" title="Language"><blora-option value="zh">中文</blora-option><blora-option value="en">EN</blora-option></blora-select>
 </div>
 </aside>
 <!-- 主内容区 -->
@@ -137,7 +137,7 @@
 <div class="content-header">
 <h1 id="pageTitle"><span data-i18n="控制台">控制台</span></h1>
 <div class="theme-toggle">
-<button class="btn btn-icon blora-button" data-i18n-title="切换主题" id="themeToggle" title="切换主题" data-variant="secondary" type="button">
+<button class="blora-button" data-i18n-title="切换主题" data-variant="secondary" id="themeToggle" title="切换主题" type="button">
 <svg class="icon-sun" fill="none" height="20" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="20">
 <circle cx="12" cy="12" r="5"></circle>
 <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
@@ -158,26 +158,26 @@
 <!-- 滚动后悬浮顶栏：筛选 + 搜索 + Key 切换（默认隐藏，由 JS 控制） -->
 <div aria-hidden="true" class="model-library-sticky-bar" id="modelLibraryStickyBar">
 <div class="model-library-sticky-inner">
-<blora-select aria-label="供应商筛选" class="select model-library-sticky-select blora-select" data-i18n-title="供应商筛选" id="libraryStickyProviderFilter"><blora-option value="all">全部供应商</blora-option></blora-select>
+<blora-select aria-label="供应商筛选" class="model-library-sticky-select blora-select" data-i18n-title="供应商筛选" id="libraryStickyProviderFilter"><blora-option value="all">全部供应商</blora-option></blora-select>
 <div class="model-search-box model-library-sticky-search">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
 <input autocomplete="off" class="model-search-input blora-input" data-i18n-placeholder="搜索模型、供应商、Team..." id="libraryStickySearchInput" placeholder="搜索模型、供应商、Team..." type="text"/>
 </div>
-<button class="btn btn-secondary btn-sm model-library-sticky-more-btn blora-button" data-i18n-title="更多筛选" id="libraryStickyMoreFiltersBtn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" type="button" data-variant="secondary" data-size="sm"><span data-i18n="更多筛选">
+<button class="model-library-sticky-more-btn blora-button" data-i18n-title="更多筛选" data-size="sm" data-variant="secondary" id="libraryStickyMoreFiltersBtn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" type="button"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
 <div class="model-library-sticky-key-wrap expand-dropdown" id="libraryStickyKeyWrap" style="display:none;">
-<button aria-expanded="false" aria-haspopup="menu" class="model-library-sticky-key-btn" id="libraryStickyKeyBtn" onclick="app.toggleLibraryStickyKeyOrBubble(event)" type="button">
+<button aria-expanded="false" aria-haspopup="menu" class="model-library-sticky-key-btn blora-button" data-size="md" data-variant="secondary" id="libraryStickyKeyBtn" onclick="app.toggleLibraryStickyKeyOrBubble(event)" type="button">
 <span class="sticky-key-name">API Key</span>
 </button>
 <div class="expand-dropdown-menu model-library-sticky-key-menu" id="libraryStickyKeyMenu" role="menu" style="display:none;"></div>
 </div>
 </div>
 <div aria-hidden="true" class="model-library-sticky-advanced" id="libraryStickyAdvancedFilters" style="display:none;">
-<blora-select aria-label="系列筛选" class="select model-library-sticky-select blora-select" data-i18n-title="系列筛选" id="libraryStickySeriesFilter"><blora-option value="all">全部系列</blora-option></blora-select>
-<blora-select aria-label="标签筛选" class="select model-library-sticky-select blora-select" data-i18n-title="标签筛选" id="libraryStickyProviderTagFilter"><blora-option value="all">全部标签</blora-option></blora-select>
-<blora-select aria-label="测试状态" class="select model-library-sticky-select blora-select" data-i18n-title="测试状态" id="libraryStickyTestFilter"><blora-option value="all">全部状态</blora-option><blora-option value="pass">测试通过</blora-option><blora-option value="fail">测试失败</blora-option><blora-option value="untested">未测试</blora-option></blora-select>
-<blora-select aria-label="排序" class="select model-library-sticky-select model-library-sticky-sort blora-select" data-i18n-title="排序" id="libraryStickySort"><blora-option value="default">默认 / 自定义排序</blora-option><blora-option value="price_asc">价格低→高</blora-option><blora-option value="price_desc">价格高→低</blora-option><blora-option value="name_asc">名称 A-Z</blora-option><blora-option value="name_desc">名称 Z-A</blora-option><blora-option value="test_latency_asc">测试最快</blora-option><blora-option value="test_latency_desc">测试最慢</blora-option><blora-option value="test_tps_desc">吞吐最高</blora-option></blora-select>
+<blora-select aria-label="系列筛选" class="model-library-sticky-select blora-select" data-i18n-title="系列筛选" id="libraryStickySeriesFilter"><blora-option value="all">全部系列</blora-option></blora-select>
+<blora-select aria-label="标签筛选" class="model-library-sticky-select blora-select" data-i18n-title="标签筛选" id="libraryStickyProviderTagFilter"><blora-option value="all">全部标签</blora-option></blora-select>
+<blora-select aria-label="测试状态" class="model-library-sticky-select blora-select" data-i18n-title="测试状态" id="libraryStickyTestFilter"><blora-option value="all">全部状态</blora-option><blora-option value="pass">测试通过</blora-option><blora-option value="fail">测试失败</blora-option><blora-option value="untested">未测试</blora-option></blora-select>
+<blora-select aria-label="排序" class="model-library-sticky-select model-library-sticky-sort blora-select" data-i18n-title="排序" id="libraryStickySort"><blora-option value="default">默认 / 自定义排序</blora-option><blora-option value="price_asc">价格低→高</blora-option><blora-option value="price_desc">价格高→低</blora-option><blora-option value="name_asc">名称 A-Z</blora-option><blora-option value="name_desc">名称 Z-A</blora-option><blora-option value="test_latency_asc">测试最快</blora-option><blora-option value="test_latency_desc">测试最慢</blora-option><blora-option value="test_tps_desc">吞吐最高</blora-option></blora-select>
 </div>
 </div>
 <div class="trace-reports-banner" id="traceReportsBanner" style="display:none;"></div>
@@ -188,16 +188,16 @@
 <span class="model-library-header-hint"><span data-i18n="点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定">点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定</span></span>
 </div>
 <div class="model-library-header-actions" id="modelLibraryHeaderActions">
-<button class="btn btn-secondary btn-sm blora-button" data-i18n-title="管理自有供应商与模型" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-variant="secondary" data-size="sm" type="button">
+<button class="blora-button" data-i18n-title="管理自有供应商与模型" data-size="sm" data-variant="secondary" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><rect height="14" rx="2" width="20" x="2" y="7"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg><span data-i18n="我的上游">
               我的上游
             </span></button>
-<button class="btn btn-primary btn-sm blora-button" data-i18n-title="添加自己的供应商" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-variant="primary" data-size="sm" type="button">
+<button class="blora-button" data-i18n-title="添加自己的供应商" data-size="sm" data-variant="primary" onclick="app.showAddProviderModal()" title="添加自己的供应商" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M12 5v14M5 12h14"></path></svg><span data-i18n="添加供应商">
               添加供应商
             </span></button>
 <div class="expand-dropdown" id="libraryMoreDropdown">
-<button class="btn btn-secondary btn-sm blora-button" data-i18n-title="更多操作" onclick="app.toggleLibraryMoreDropdown(event)" title="更多操作" data-variant="secondary" data-size="sm" type="button"><span data-i18n="更多">
+<button class="blora-button" data-i18n-title="更多操作" data-size="sm" data-variant="secondary" onclick="app.toggleLibraryMoreDropdown(event)" title="更多操作" type="button"><span data-i18n="更多">
                 更多
                 </span><svg fill="none" height="10" stroke="currentColor" stroke-width="2" style="margin-left:2px;" viewbox="0 0 24 24" width="10"><path d="m6 9 6 6 6-6"></path></svg>
 </button>
@@ -254,7 +254,7 @@
 <h3><span data-i18n="供应商额度">供应商额度</span></h3>
 <p><span data-i18n="显示上次刷新（定时 / 手动）的结果">显示上次刷新（定时 / 手动）的结果</span></p>
 </div>
-<button aria-label="刷新额度" class="model-quota-refresh" data-i18n-title="刷新额度" id="providerQuotaRefreshBtn" onclick="app.refreshProviderQuota()" title="刷新额度" type="button">
+<button aria-label="刷新额度" class="model-quota-refresh blora-button" data-i18n-title="刷新额度" data-size="md" data-variant="secondary" id="providerQuotaRefreshBtn" onclick="app.refreshProviderQuota()" title="刷新额度" type="button">
 <svg aria-hidden="true" viewbox="0 0 24 24"><path d="M20 11a8.1 8.1 0 0 0-14.9-4L3 9m0 0V4m0 5h5M4 13a8.1 8.1 0 0 0 14.9 4L21 15m0 0v5m0-5h-5"></path></svg>
 </button>
 </div>
@@ -267,16 +267,16 @@
 <span class="library-reorder-toolbar-hint"><span data-i18n="拖拽 ⠿ 调整顺序，或一键按测试结果写入自定义排序">拖拽 ⠿ 调整顺序，或一键按测试结果写入自定义排序</span></span>
 </div>
 <div class="library-reorder-toolbar-actions">
-<button class="btn btn-secondary btn-sm blora-button" data-i18n-title="通过的模型优先，延迟从低到高" onclick="app.applyLibraryOrderByTest('test_latency_asc')" title="通过的模型优先，延迟从低到高" type="button" data-variant="secondary" data-size="sm"><span data-i18n="延迟快→慢">
+<button class="blora-button" data-i18n-title="通过的模型优先，延迟从低到高" data-size="sm" data-variant="secondary" onclick="app.applyLibraryOrderByTest('test_latency_asc')" title="通过的模型优先，延迟从低到高" type="button"><span data-i18n="延迟快→慢">
               延迟快→慢
             </span></button>
-<button class="btn btn-secondary btn-sm blora-button" data-i18n-title="通过的模型优先，延迟从高到低" onclick="app.applyLibraryOrderByTest('test_latency_desc')" title="通过的模型优先，延迟从高到低" type="button" data-variant="secondary" data-size="sm"><span data-i18n="延迟慢→快">
+<button class="blora-button" data-i18n-title="通过的模型优先，延迟从高到低" data-size="sm" data-variant="secondary" onclick="app.applyLibraryOrderByTest('test_latency_desc')" title="通过的模型优先，延迟从高到低" type="button"><span data-i18n="延迟慢→快">
               延迟慢→快
             </span></button>
-<button class="btn btn-secondary btn-sm blora-button" data-i18n-title="通过的模型优先，吞吐从高到低" onclick="app.applyLibraryOrderByTest('test_tps_desc')" title="通过的模型优先，吞吐从高到低" type="button" data-variant="secondary" data-size="sm"><span data-i18n="吞吐高→低">
+<button class="blora-button" data-i18n-title="通过的模型优先，吞吐从高到低" data-size="sm" data-variant="secondary" onclick="app.applyLibraryOrderByTest('test_tps_desc')" title="通过的模型优先，吞吐从高到低" type="button"><span data-i18n="吞吐高→低">
               吞吐高→低
             </span></button>
-<button class="btn btn-secondary btn-sm blora-button" data-i18n-title="清除全部自定义排序" onclick="app.resetLibraryOrder()" title="清除全部自定义排序" type="button" data-variant="secondary" data-size="sm"><span data-i18n="重置排序">
+<button class="blora-button" data-i18n-title="清除全部自定义排序" data-size="sm" data-variant="secondary" onclick="app.resetLibraryOrder()" title="清除全部自定义排序" type="button"><span data-i18n="重置排序">
               重置排序
             </span></button>
 </div>
@@ -288,16 +288,16 @@
 <input class="model-search-input blora-input" data-i18n-placeholder="搜索模型、供应商、Team..." id="librarySearchInput" placeholder="搜索模型、供应商、Team..." type="text"/>
 </div>
 <div class="model-filter-selects">
-<blora-select class="select blora-select" id="libraryProviderFilter"><blora-option value="all">全部供应商</blora-option></blora-select>
-<button class="btn btn-secondary btn-sm blora-button" data-i18n-title="更多筛选" id="libraryMoreFiltersBtn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" type="button" data-variant="secondary" data-size="sm"><span data-i18n="更多筛选">
+<blora-select class="blora-select" id="libraryProviderFilter"><blora-option value="all">全部供应商</blora-option></blora-select>
+<button class="blora-button" data-i18n-title="更多筛选" data-size="sm" data-variant="secondary" id="libraryMoreFiltersBtn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" type="button"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
 </div>
 <div class="model-filter-selects model-filter-advanced" id="libraryAdvancedFilters" style="display:none;width:100%;">
-<blora-select class="select blora-select" id="librarySeriesFilter"><blora-option value="all">全部系列</blora-option></blora-select>
-<blora-select class="select blora-select" id="libraryProviderTagFilter"><blora-option value="all">全部标签</blora-option></blora-select>
-<blora-select class="select blora-select" id="libraryTestFilter"><blora-option value="all">全部状态</blora-option><blora-option value="pass">测试通过</blora-option><blora-option value="fail">测试失败</blora-option><blora-option value="untested">未测试</blora-option></blora-select>
-<blora-select class="select blora-select" id="librarySort"><blora-option value="default">默认 / 自定义排序</blora-option><blora-option value="price_asc">价格低→高</blora-option><blora-option value="price_desc">价格高→低</blora-option><blora-option value="name_asc">名称 A-Z</blora-option><blora-option value="name_desc">名称 Z-A</blora-option><blora-option value="test_latency_asc">测试最快</blora-option><blora-option value="test_latency_desc">测试最慢</blora-option><blora-option value="test_tps_desc">吞吐最高</blora-option></blora-select>
+<blora-select class="blora-select" id="librarySeriesFilter"><blora-option value="all">全部系列</blora-option></blora-select>
+<blora-select class="blora-select" id="libraryProviderTagFilter"><blora-option value="all">全部标签</blora-option></blora-select>
+<blora-select class="blora-select" id="libraryTestFilter"><blora-option value="all">全部状态</blora-option><blora-option value="pass">测试通过</blora-option><blora-option value="fail">测试失败</blora-option><blora-option value="untested">未测试</blora-option></blora-select>
+<blora-select class="blora-select" id="librarySort"><blora-option value="default">默认 / 自定义排序</blora-option><blora-option value="price_asc">价格低→高</blora-option><blora-option value="price_desc">价格高→低</blora-option><blora-option value="name_asc">名称 A-Z</blora-option><blora-option value="name_desc">名称 Z-A</blora-option><blora-option value="test_latency_asc">测试最快</blora-option><blora-option value="test_latency_desc">测试最慢</blora-option><blora-option value="test_tps_desc">吞吐最高</blora-option></blora-select>
 </div>
 </div>
 <!-- 悬浮顶栏显隐哨兵：滚出视口后显示 sticky bar -->
@@ -317,35 +317,35 @@
 <div class="section-header">
 <h2><span data-i18n="我的上游">我的上游</span></h2>
 <div class="section-actions" id="myUpstreamProviderActions">
-<button class="btn btn-secondary blora-button" id="batchDeleteBtn" onclick="app.batchDeleteProviders()" style="display:none;" data-variant="secondary" type="button"><span data-i18n="批量删除">批量删除</span></button>
-<button class="btn btn-primary blora-button" onclick="app.showAddProviderModal()" data-variant="primary" type="button"><span data-i18n="添加供应商">添加供应商</span></button>
+<button class="blora-button" data-variant="secondary" id="batchDeleteBtn" onclick="app.batchDeleteProviders()" style="display:none;" type="button"><span data-i18n="批量删除">批量删除</span></button>
+<button class="blora-button" data-variant="primary" onclick="app.showAddProviderModal()" type="button"><span data-i18n="添加供应商">添加供应商</span></button>
 </div>
 <div class="section-actions" id="myUpstreamModelActions" style="display:none;">
-<button class="btn btn-secondary blora-button" id="batchEnableMyModelsBtn" onclick="app.batchEnableMyTeamModels()" style="display:none;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" id="batchEnableMyModelsBtn" onclick="app.batchEnableMyTeamModels()" style="display:none;" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M20 6 9 17l-5-5"></path></svg><span data-i18n="批量启用">
                 批量启用
               </span></button>
-<button class="btn btn-secondary blora-button" id="batchDisableMyModelsBtn" onclick="app.batchDisableMyTeamModels()" style="display:none;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" id="batchDisableMyModelsBtn" onclick="app.batchDisableMyTeamModels()" style="display:none;" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M18 6 6 18M6 6l12 12"></path></svg><span data-i18n="批量禁用">
                 批量禁用
               </span></button>
-<button class="btn btn-secondary blora-button" id="batchEditMyModelsBtn" onclick="app.showBatchEditMyModelsModal()" style="display:none;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" id="batchEditMyModelsBtn" onclick="app.showBatchEditMyModelsModal()" style="display:none;" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg><span data-i18n="批量编辑">
                 批量编辑
               </span></button>
-<button class="btn btn-secondary blora-button" id="batchDeleteMyModelsBtn" onclick="app.batchDeleteMyTeamModels()" style="display:none;color:var(--destructive);" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" id="batchDeleteMyModelsBtn" onclick="app.batchDeleteMyTeamModels()" style="display:none;color:var(--destructive);" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg><span data-i18n="批量删除">
                 批量删除
               </span></button>
-<button class="btn btn-primary blora-button" onclick="app.showAddModelModal()" data-variant="primary" type="button">
+<button class="blora-button" data-variant="primary" onclick="app.showAddModelModal()" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M12 5v14M5 12h14"></path></svg><span data-i18n="添加模型">
                 添加模型
               </span></button>
 </div>
 </div>
 <div class="my-upstream-tabs" role="tablist">
-<button class="my-upstream-tab active" data-upstream-tab="providers" onclick="app.switchMyUpstreamTab('providers')" type="button"><span data-i18n="供应商">供应商</span></button>
-<button class="my-upstream-tab" data-upstream-tab="models" onclick="app.switchMyUpstreamTab('models')" type="button"><span data-i18n="模型">模型</span></button>
+<button class="my-upstream-tab active blora-button" data-size="md" data-upstream-tab="providers" data-variant="secondary" onclick="app.switchMyUpstreamTab('providers')" type="button"><span data-i18n="供应商">供应商</span></button>
+<button class="my-upstream-tab blora-button" data-size="md" data-upstream-tab="models" data-variant="secondary" onclick="app.switchMyUpstreamTab('models')" type="button"><span data-i18n="模型">模型</span></button>
 </div>
 <p class="my-upstream-hint" id="myUpstreamHint"><span data-i18n="管理自有上游供应商；导入的模型会出现在「模型」页签，也可在模型库中绑定到 API Key。">管理自有上游供应商；导入的模型会出现在「模型」页签，也可在模型库中绑定到 API Key。</span></p>
 <div class="my-upstream-pane" id="myUpstreamProvidersPane">
@@ -373,53 +373,52 @@
 <div aria-hidden="true" class="page" id="myProvidersPage" style="display:none !important;"></div>
 <div aria-hidden="true" class="page" id="myTeamModelsPage" style="display:none !important;"></div>
 <!-- 批量编辑模型模态框 -->
-<blora-dialog id="batchEditMyModelsModal"><div class="modal-header" slot="header">
+<blora-dialog id="batchEditMyModelsModal"><div slot="header">
 <h3><span data-i18n="批量编辑模型">批量编辑模型</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <p id="batchEditMyModelsInfo" style="font-size:13px;color:var(--muted-foreground);margin-bottom:16px;"></p>
 <div style="display:flex;flex-direction:column;gap:14px;">
 <div>
 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
 <input class="blora-input" id="batchEditMyModelsEnabledCheck" type="checkbox"/><span data-i18n="启用状态"> 启用状态
                 </span></label>
-<blora-select class="select blora-select" disabled="" id="batchEditMyModelsEnabled" style="margin-top:4px;"><blora-option value="true">启用</blora-option><blora-option value="false">禁用</blora-option></blora-select>
+<blora-select class="blora-select" disabled="" id="batchEditMyModelsEnabled" style="margin-top:4px;"><blora-option value="true">启用</blora-option><blora-option value="false">禁用</blora-option></blora-select>
 </div>
 <div>
 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
 <input class="blora-input" id="batchEditMyModelsSeriesCheck" type="checkbox"/><span data-i18n="系列"> 系列
                 </span></label>
-<input class="input blora-input" data-i18n-placeholder="系列名称" disabled="" id="batchEditMyModelsSeries" placeholder="系列名称" style="margin-top:4px;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="系列名称" disabled="" id="batchEditMyModelsSeries" placeholder="系列名称" style="margin-top:4px;" type="text"/>
 </div>
 <div>
 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
 <input class="blora-input" id="batchEditMyModelsDescCheck" type="checkbox"/><span data-i18n="描述"> 描述
                 </span></label>
-<textarea class="input blora-textarea" data-i18n-placeholder="模型描述" disabled="" id="batchEditMyModelsDesc" placeholder="模型描述" rows="2" style="margin-top:4px;resize:vertical;"></textarea>
+<textarea class="blora-textarea" data-i18n-placeholder="模型描述" disabled="" id="batchEditMyModelsDesc" placeholder="模型描述" rows="2" style="margin-top:4px;resize:vertical;"></textarea>
 </div>
 <div>
 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
 <input class="blora-input" id="batchEditMyModelsAliasCheck" type="checkbox"/><span data-i18n="别名"> 别名
                 </span></label>
-<input class="input blora-input" data-i18n-placeholder="模型别名" disabled="" id="batchEditMyModelsAlias" placeholder="模型别名" style="margin-top:4px;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="模型别名" disabled="" id="batchEditMyModelsAlias" placeholder="模型别名" style="margin-top:4px;" type="text"/>
 </div>
 <div style="display:flex;gap:12px;">
 <div style="flex:1;">
 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
 <input class="blora-input" id="batchEditMyModelsInputPriceCheck" type="checkbox"/><span data-i18n="输入价格"> 输入价格
                   </span></label>
-<input class="input blora-input" data-i18n-placeholder="每 1K tokens" disabled="" id="batchEditMyModelsInputPrice" min="0" placeholder="每 1K tokens" step="0.001" style="margin-top:4px;" type="number"/>
+<input class="blora-input" data-i18n-placeholder="每 1K tokens" disabled="" id="batchEditMyModelsInputPrice" min="0" placeholder="每 1K tokens" step="0.001" style="margin-top:4px;" type="number"/>
 </div>
 <div style="flex:1;">
 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
 <input class="blora-input" id="batchEditMyModelsOutputPriceCheck" type="checkbox"/><span data-i18n="输出价格"> 输出价格
                   </span></label>
-<input class="input blora-input" data-i18n-placeholder="每 1K tokens" disabled="" id="batchEditMyModelsOutputPrice" min="0" placeholder="每 1K tokens" step="0.001" style="margin-top:4px;" type="number"/>
+<input class="blora-input" data-i18n-placeholder="每 1K tokens" disabled="" id="batchEditMyModelsOutputPrice" min="0" placeholder="每 1K tokens" step="0.001" style="margin-top:4px;" type="number"/>
 </div>
 </div>
 </div>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" onclick="app.saveBatchEditMyModels()" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="app.saveBatchEditMyModels()" type="button"><span data-i18n="保存">保存</span></button>
 </div></blora-dialog>
 <!-- API密钥页面 -->
 <div class="page" id="apiKeysPage">
@@ -428,7 +427,7 @@
 <div class="model-library-sticky-inner">
 <span class="page-sticky-title"><span data-i18n="API 密钥">API 密钥</span></span>
 <span class="page-sticky-hint"><span data-i18n="拖拽标签到下方密钥卡片">拖拽标签到下方密钥卡片</span></span>
-<button class="btn btn-primary btn-sm blora-button" onclick="app.showModal('createApiKeyModal')" style="margin-left:auto;" type="button" data-variant="primary" data-size="sm"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
+<button class="blora-button" data-size="sm" data-variant="primary" onclick="app.showModal('createApiKeyModal')" style="margin-left:auto;" type="button"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
 </div>
 <div aria-label="密钥标签" class="page-sticky-tag-row" data-i18n-title="密钥标签">
 <span class="page-sticky-tag-label" data-i18n-title="拖拽标签到密钥卡片进行分配" title="拖拽标签到密钥卡片进行分配"><span data-i18n="标签">标签</span></span>
@@ -438,7 +437,7 @@
 <div class="content-section">
 <div class="section-header">
 <h2><span data-i18n="API 密钥">API 密钥</span></h2>
-<button class="btn btn-primary blora-button" id="createApiKeyBtn" data-variant="primary" type="button"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
+<button class="blora-button" data-variant="primary" id="createApiKeyBtn" type="button"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
 </div>
 <!-- 我的 Key 用量概览（不含他人发起的 Co-Key） -->
 <div class="usage-overview" data-i18n-title="仅统计由您发起的 API Key 用量" id="usageOverview" style="display:none;" title="仅统计由您发起的 API Key 用量">
@@ -466,7 +465,7 @@
 <div class="key-tag-popover-arrow"></div>
 <div class="key-tag-popover-content">
 <div id="keyTagPopoverTitle" style="font-weight:600;font-size:13px;margin-bottom:8px;"><span data-i18n="创建标签">创建标签</span></div>
-<input class="input blora-input" data-i18n-placeholder="标签名称" id="createKeyTagName" maxlength="20" placeholder="标签名称" style="width:100%;margin-bottom:10px;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="标签名称" id="createKeyTagName" maxlength="20" placeholder="标签名称" style="width:100%;margin-bottom:10px;" type="text"/>
 <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:6px;"><span data-i18n="选择颜色">选择颜色</span></div>
 <div class="color-picker color-picker-row" id="createKeyTagColors">
 <div class="color-dot selected" data-color="var(--info)" onclick="app.selectTagColor(this)" style="background:var(--info);"></div>
@@ -481,8 +480,8 @@
 <div class="color-dot" data-color="#6366f1" onclick="app.selectTagColor(this)" style="background:#6366f1;"></div>
 </div>
 <div style="display:flex;gap:8px;margin-top:12px;">
-<button class="btn btn-primary btn-sm blora-button" id="keyTagPopoverSubmit" onclick="app.saveKeyTag()" style="flex:1;" data-variant="primary" data-size="sm" type="button"><span data-i18n="创建">创建</span></button>
-<button class="btn btn-secondary btn-sm blora-button" onclick="app.hideCreateKeyTagPopover()" data-variant="secondary" data-size="sm" type="button"><span data-i18n="取消">取消</span></button>
+<button class="blora-button" data-size="sm" data-variant="primary" id="keyTagPopoverSubmit" onclick="app.saveKeyTag()" style="flex:1;" type="button"><span data-i18n="创建">创建</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="app.hideCreateKeyTagPopover()" type="button"><span data-i18n="取消">取消</span></button>
 </div>
 </div>
 </div>
@@ -495,7 +494,7 @@
 <h2><span data-i18n="授权管理">授权管理</span></h2>
 <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。">已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。</span></p>
 </div>
-<button class="btn btn-secondary btn-sm blora-button" onclick="app.loadAuthorizations()" data-variant="secondary" data-size="sm" type="button"><span data-i18n="刷新授权列表">刷新授权列表</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="app.loadAuthorizations()" type="button"><span data-i18n="刷新授权列表">刷新授权列表</span></button>
 </div>
 <div id="oauthAuthorizationsList"></div>
 </div>
@@ -515,26 +514,26 @@
 <div class="stats-filters">
 <div class="stats-filter-group">
 <label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label>
-<blora-select class="select blora-select" id="statsTimeRange" onchange="app.loadStats()"><blora-option value="7">最近 7 天</blora-option><blora-option selected="" value="30">最近 30 天</blora-option><blora-option value="90">最近 90 天</blora-option><blora-option value="180">最近 180 天</blora-option><blora-option value="365">最近 1 年</blora-option><blora-option value="custom">自定义</blora-option></blora-select>
+<blora-select class="blora-select" id="statsTimeRange" onchange="app.loadStats()"><blora-option value="7">最近 7 天</blora-option><blora-option selected="" value="30">最近 30 天</blora-option><blora-option value="90">最近 90 天</blora-option><blora-option value="180">最近 180 天</blora-option><blora-option value="365">最近 1 年</blora-option><blora-option value="custom">自定义</blora-option></blora-select>
 </div>
 <div class="stats-filter-group">
 <label class="stats-filter-label"><span data-i18n="模型">模型</span></label>
-<blora-select class="select blora-select" id="statsModelFilter" onchange="app.loadStats()"><blora-option value="">全部模型</blora-option></blora-select>
+<blora-select class="blora-select" id="statsModelFilter" onchange="app.loadStats()"><blora-option value="">全部模型</blora-option></blora-select>
 </div>
 <div class="stats-filter-group">
 <label class="stats-filter-label"><span data-i18n="供应商">供应商</span></label>
-<blora-select class="select blora-select" id="statsProviderFilter" onchange="app.loadStats()"><blora-option value="">全部供应商</blora-option></blora-select>
+<blora-select class="blora-select" id="statsProviderFilter" onchange="app.loadStats()"><blora-option value="">全部供应商</blora-option></blora-select>
 </div>
 <div class="stats-filter-group">
 <label class="stats-filter-label">Team</label>
-<blora-select class="select blora-select" id="statsTeamFilter" onchange="app.loadStats()"><blora-option value="">全部 Team</blora-option></blora-select>
+<blora-select class="blora-select" id="statsTeamFilter" onchange="app.loadStats()"><blora-option value="">全部 Team</blora-option></blora-select>
 </div>
 <div class="stats-filter-group">
 <label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label>
-<blora-select class="select blora-select" data-i18n-title="按 harness / 客户端筛选" id="statsSourceFilter" onchange="app.loadStats()" title="按 harness / 客户端筛选"><blora-option value="">全部客户端</blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown">未知/其他</blora-option></blora-select>
+<blora-select class="blora-select" data-i18n-title="按 harness / 客户端筛选" id="statsSourceFilter" onchange="app.loadStats()" title="按 harness / 客户端筛选"><blora-option value="">全部客户端</blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown">未知/其他</blora-option></blora-select>
 </div>
 <div class="stats-filter-group" style="align-self:flex-end;">
-<button class="btn btn-ghost btn-sm blora-button" onclick="app.resetStatsFilters()" data-variant="ghost" data-size="sm" type="button">
+<button class="blora-button" data-size="sm" data-variant="ghost" onclick="app.resetStatsFilters()" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg><span data-i18n="重置">
                 重置
               </span></button>
@@ -542,10 +541,10 @@
 </div>
 <div id="statsCustomDateRange" style="display:none;gap:8px;align-items:center;margin-bottom:16px;padding:12px;background:var(--muted);border-radius:8px;">
 <label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="自定义范围：">自定义范围：</span></label>
-<input class="input blora-input" id="statsStartDate" style="padding:6px 10px;height:36px;" type="date"/>
+<blora-datepicker class="blora-input" id="statsStartDate" style="padding:6px 10px;height:36px;"></blora-datepicker>
 <span style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="至">至</span></span>
-<input class="input blora-input" id="statsEndDate" style="padding:6px 10px;height:36px;" type="date"/>
-<button class="btn btn-primary btn-sm blora-button" onclick="app.loadStats()" data-variant="primary" data-size="sm" type="button"><span data-i18n="查询">查询</span></button>
+<blora-datepicker class="blora-input" id="statsEndDate" style="padding:6px 10px;height:36px;"></blora-datepicker>
+<button class="blora-button" data-size="sm" data-variant="primary" onclick="app.loadStats()" type="button"><span data-i18n="查询">查询</span></button>
 </div>
 <!-- 概览卡片 -->
 <div class="stats-overview-grid">
@@ -692,35 +691,35 @@
 </div>
 <!-- 图表标签页 -->
 <div class="stats-tab-bar">
-<button class="active" onclick="app.switchStatsTab('overview')">
+<button class="stats-tab active blora-button" data-size="sm" data-variant="ghost" onclick="app.switchStatsTab('overview')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><rect height="7" width="7" x="3" y="3"></rect><rect height="7" width="7" x="14" y="3"></rect><rect height="7" width="7" x="14" y="14"></rect><rect height="7" width="7" x="3" y="14"></rect></svg><span data-i18n="概览">
               概览
             </span></button>
-<button class="" onclick="app.switchStatsTab('daily')">
+<button class="stats-tab blora-button" data-size="sm" data-variant="ghost" onclick="app.switchStatsTab('daily')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg><span data-i18n="每日趋势">
               每日趋势
             </span></button>
-<button class="" onclick="app.switchStatsTab('hourly')">
+<button class="stats-tab blora-button" data-size="sm" data-variant="ghost" onclick="app.switchStatsTab('hourly')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><span data-i18n="时段分布">
               时段分布
             </span></button>
-<button class="" onclick="app.switchStatsTab('model')">
+<button class="stats-tab blora-button" data-size="sm" data-variant="ghost" onclick="app.switchStatsTab('model')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg><span data-i18n="模型分析">
               模型分析
             </span></button>
-<button class="" onclick="app.switchStatsTab('apikey')">
+<button class="stats-tab blora-button" data-size="sm" data-variant="ghost" onclick="app.switchStatsTab('apikey')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg><span data-i18n="密钥分析">
               密钥分析
             </span></button>
-<button class="" onclick="app.switchStatsTab('source')">
+<button class="stats-tab blora-button" data-size="sm" data-variant="ghost" onclick="app.switchStatsTab('source')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span data-i18n="客户端">
               客户端
             </span></button>
-<button class="" onclick="app.switchStatsTab('messages')">
+<button class="stats-tab blora-button" data-size="sm" data-variant="ghost" onclick="app.switchStatsTab('messages')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M4 4h16v12H5l-1 4V4z"></path><path d="M8 8h8M8 12h5"></path></svg><span data-i18n="消息分析">
               消息分析
             </span></button>
-<button class="" onclick="app.switchStatsTab('logs')">
+<button class="stats-tab blora-button" data-size="sm" data-variant="ghost" onclick="app.switchStatsTab('logs')" type="button">
 <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" x2="8" y1="13" y2="13"></line><line x1="16" x2="8" y1="17" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg><span data-i18n="调用记录">
               调用记录
             </span></button>
@@ -956,23 +955,23 @@
 <!-- 调用记录 -->
 <div class="stats-tab-content" id="statsTabLogs" style="display:none;">
 <div class="admin-filter-bar" style="margin-bottom:16px;">
-<input class="input blora-input" data-i18n-placeholder="模型名称..." id="usageLogModelFilter" placeholder="模型名称..." style="min-width:140px;" type="text"/>
-<blora-select class="input blora-select" id="usageLogRequestTypeFilter" style="min-width:130px;"><blora-option value="">全部类型</blora-option><blora-option value="chat">chat</blora-option><blora-option value="responses">responses</blora-option><blora-option value="fusion">fusion</blora-option><blora-option value="playground">playground</blora-option></blora-select>
-<blora-select class="input blora-select" data-i18n-title="客户端来源" id="usageLogRequestSourceFilter" style="min-width:140px;" title="客户端来源"><blora-option value="">全部客户端</blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown">未知/其他</blora-option></blora-select>
-<input class="input blora-input" id="usageLogStartDate" type="date"/>
-<input class="input blora-input" id="usageLogEndDate" type="date"/>
-<button class="btn btn-primary blora-button" onclick="app.loadUsageLogs()" data-variant="primary" type="button"><span data-i18n="查询">查询</span></button>
-<button class="btn btn-secondary blora-button" onclick="app.clearUsageLogFilters()" data-variant="secondary" type="button"><span data-i18n="清除">清除</span></button>
-<button class="btn btn-secondary blora-button" data-i18n-title="按当前筛选条件导出 CSV（最多 5 万条）" id="usageLogExportBtn" onclick="app.exportUsageLogs()" title="按当前筛选条件导出 CSV（最多 5 万条）" data-variant="secondary" type="button"><span data-i18n="导出 CSV">导出 CSV</span></button>
+<input class="blora-input" data-i18n-placeholder="模型名称..." id="usageLogModelFilter" placeholder="模型名称..." style="min-width:140px;" type="text"/>
+<blora-select class="blora-select" id="usageLogRequestTypeFilter" style="min-width:130px;"><blora-option value="">全部类型</blora-option><blora-option value="chat">chat</blora-option><blora-option value="responses">responses</blora-option><blora-option value="fusion">fusion</blora-option><blora-option value="playground">playground</blora-option></blora-select>
+<blora-select class="blora-select" data-i18n-title="客户端来源" id="usageLogRequestSourceFilter" style="min-width:140px;" title="客户端来源"><blora-option value="">全部客户端</blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown">未知/其他</blora-option></blora-select>
+<blora-datepicker class="blora-input" id="usageLogStartDate"></blora-datepicker>
+<blora-datepicker class="blora-input" id="usageLogEndDate"></blora-datepicker>
+<button class="blora-button" data-variant="primary" onclick="app.loadUsageLogs()" type="button"><span data-i18n="查询">查询</span></button>
+<button class="blora-button" data-variant="secondary" onclick="app.clearUsageLogFilters()" type="button"><span data-i18n="清除">清除</span></button>
+<button class="blora-button" data-i18n-title="按当前筛选条件导出 CSV（最多 5 万条）" data-variant="secondary" id="usageLogExportBtn" onclick="app.exportUsageLogs()" title="按当前筛选条件导出 CSV（最多 5 万条）" type="button"><span data-i18n="导出 CSV">导出 CSV</span></button>
 <span class="filter-info" id="usageLogCount"></span>
 </div>
 <div class="models-table" id="usageLogsList">
 <!-- 调用记录由 JS 动态加载 -->
 </div>
 <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-<button class="btn btn-secondary blora-button" disabled="" id="usageLogPrevBtn" onclick="app.loadUsageLogs(app.usageLogPage - 1)" data-variant="secondary" type="button"><span data-i18n="上一页">上一页</span></button>
+<button class="blora-button" data-variant="secondary" disabled="" id="usageLogPrevBtn" onclick="app.loadUsageLogs(app.usageLogPage - 1)" type="button"><span data-i18n="上一页">上一页</span></button>
 <span id="usageLogPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-<button class="btn btn-secondary blora-button" id="usageLogNextBtn" onclick="app.loadUsageLogs(app.usageLogPage + 1)" data-variant="secondary" type="button"><span data-i18n="下一页">下一页</span></button>
+<button class="blora-button" data-variant="secondary" id="usageLogNextBtn" onclick="app.loadUsageLogs(app.usageLogPage + 1)" type="button"><span data-i18n="下一页">下一页</span></button>
 </div>
 </div>
 </div>
@@ -986,7 +985,7 @@
 <h2><span data-i18n="注入提示词">注入提示词</span></h2>
 <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="转发的请求会自动把启用的条目追加到 system 末尾，客户端零改动">转发的请求会自动把启用的条目追加到 system 末尾，客户端零改动</span></p>
 </div>
-<button class="btn btn-primary btn-sm blora-button" onclick="app.showInjectPromptModal()" data-variant="primary" data-size="sm" type="button"><span data-i18n="新建条目">新建条目</span></button>
+<button class="blora-button" data-size="sm" data-variant="primary" onclick="app.showInjectPromptModal()" type="button"><span data-i18n="新建条目">新建条目</span></button>
 </div>
 <div class="model-library-list" id="injectPromptsList" style="padding:0;">
 <!-- 注入条目列表由 JS 动态加载 -->
@@ -1000,20 +999,20 @@
 </div>
 </div>
 <div class="admin-filter-bar" style="margin-bottom:16px;">
-<input class="input blora-input" data-i18n-placeholder="搜索文件名或内容..." id="promptSearchInput" onkeydown="if(event.key==='Enter')app.loadCustomPrompts(1)" placeholder="搜索文件名或内容..." style="min-width:200px;" type="text"/>
-<blora-select class="input blora-select" data-i18n-title="客户端来源" id="promptSourceFilter" style="min-width:140px;" title="客户端来源"><blora-option value="">全部客户端</blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown">未知/其他</blora-option></blora-select>
-<blora-select class="input blora-select" id="promptSortSelect" style="min-width:130px;"><blora-option value="count">按出现次数排序</blora-option><blora-option value="last_seen">按最近出现排序</blora-option><blora-option value="first_seen">按首次出现排序</blora-option></blora-select>
-<button class="btn btn-primary blora-button" onclick="app.loadCustomPrompts(1)" data-variant="primary" type="button"><span data-i18n="查询">查询</span></button>
-<button class="btn btn-secondary blora-button" onclick="app.clearPromptFilters()" data-variant="secondary" type="button"><span data-i18n="清除">清除</span></button>
+<input class="blora-input" data-i18n-placeholder="搜索文件名或内容..." id="promptSearchInput" onkeydown="if(event.key==='Enter')app.loadCustomPrompts(1)" placeholder="搜索文件名或内容..." style="min-width:200px;" type="text"/>
+<blora-select class="blora-select" data-i18n-title="客户端来源" id="promptSourceFilter" style="min-width:140px;" title="客户端来源"><blora-option value="">全部客户端</blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown">未知/其他</blora-option></blora-select>
+<blora-select class="blora-select" id="promptSortSelect" style="min-width:130px;"><blora-option value="count">按出现次数排序</blora-option><blora-option value="last_seen">按最近出现排序</blora-option><blora-option value="first_seen">按首次出现排序</blora-option></blora-select>
+<button class="blora-button" data-variant="primary" onclick="app.loadCustomPrompts(1)" type="button"><span data-i18n="查询">查询</span></button>
+<button class="blora-button" data-variant="secondary" onclick="app.clearPromptFilters()" type="button"><span data-i18n="清除">清除</span></button>
 <span class="filter-info" id="promptCount"></span>
 </div>
 <div class="models-table" id="promptsList">
 <!-- 提示词列表由 JS 动态加载 -->
 </div>
 <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-<button class="btn btn-secondary blora-button" disabled="" id="promptPrevBtn" onclick="app.loadCustomPrompts(app.promptPage - 1)" data-variant="secondary" type="button"><span data-i18n="上一页">上一页</span></button>
+<button class="blora-button" data-variant="secondary" disabled="" id="promptPrevBtn" onclick="app.loadCustomPrompts(app.promptPage - 1)" type="button"><span data-i18n="上一页">上一页</span></button>
 <span id="promptPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-<button class="btn btn-secondary blora-button" id="promptNextBtn" onclick="app.loadCustomPrompts(app.promptPage + 1)" data-variant="secondary" type="button"><span data-i18n="下一页">下一页</span></button>
+<button class="blora-button" data-variant="secondary" id="promptNextBtn" onclick="app.loadCustomPrompts(app.promptPage + 1)" type="button"><span data-i18n="下一页">下一页</span></button>
 </div>
 </div>
 </div>
@@ -1101,46 +1100,46 @@
 </div>
 </div>
 <div class="admin-filter-bar">
-<blora-select class="input blora-select" id="sessionDaysFilter" style="flex:0;min-width:120px;"><blora-option value="1">最近 1 天</blora-option><blora-option selected="" value="7">最近 7 天</blora-option></blora-select>
-<blora-select class="input blora-select" data-i18n-title="客户端来源" id="sessionSourceFilter" style="flex:0;min-width:150px;" title="客户端来源"><blora-option value="">全部客户端</blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown">未知/其他</blora-option></blora-select>
-<button class="btn btn-primary blora-button" onclick="app.loadSessions(1)" data-variant="primary" type="button"><span data-i18n="查询">查询</span></button>
-<button class="btn btn-secondary blora-button" data-i18n-title="刷新会话列表" onclick="app.loadSessions(app._sessionsPage || 1)" title="刷新会话列表" data-variant="secondary" type="button"><span data-i18n="刷新">刷新</span></button>
+<blora-select class="blora-select" id="sessionDaysFilter" style="flex:0;min-width:120px;"><blora-option value="1">最近 1 天</blora-option><blora-option selected="" value="7">最近 7 天</blora-option></blora-select>
+<blora-select class="blora-select" data-i18n-title="客户端来源" id="sessionSourceFilter" style="flex:0;min-width:150px;" title="客户端来源"><blora-option value="">全部客户端</blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown">未知/其他</blora-option></blora-select>
+<button class="blora-button" data-variant="primary" onclick="app.loadSessions(1)" type="button"><span data-i18n="查询">查询</span></button>
+<button class="blora-button" data-i18n-title="刷新会话列表" data-variant="secondary" onclick="app.loadSessions(app._sessionsPage || 1)" title="刷新会话列表" type="button"><span data-i18n="刷新">刷新</span></button>
 <span class="filter-info" id="sessionsCountInfo"></span>
-<input class="input blora-input" data-i18n-placeholder="搜索会话内容" data-i18n-title="搜索会话内容（消息全文与回复，回车触发）" id="sessionsSearchInput" onkeydown="if(event.key==='Enter')app.runSessionsSearch();" placeholder="搜索会话内容" style="flex:1;min-width:200px;margin-left:auto;" type="text"/>
-<button class="btn btn-secondary blora-button" onclick="app.runSessionsSearch()" data-variant="secondary" type="button"><span data-i18n="搜索">搜索</span></button>
+<input class="blora-input" data-i18n-placeholder="搜索会话内容" data-i18n-title="搜索会话内容（消息全文与回复，回车触发）" id="sessionsSearchInput" onkeydown="if(event.key==='Enter')app.runSessionsSearch();" placeholder="搜索会话内容" style="flex:1;min-width:200px;margin-left:auto;" type="text"/>
+<button class="blora-button" data-variant="secondary" onclick="app.runSessionsSearch()" type="button"><span data-i18n="搜索">搜索</span></button>
 </div>
 <!-- 内容搜索结果视图（与正常列表互斥显示） -->
 <div id="sessionsSearchResultsWrap" style="display:none;">
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
 <span id="sessionsSearchInfo" style="font-size:12.5px;color:var(--muted-foreground);"></span>
-<button class="btn btn-secondary btn-sm blora-button" onclick="app.clearSessionsSearch()" style="margin-left:auto;" data-variant="secondary" data-size="sm" type="button"><span data-i18n="返回会话列表">返回会话列表</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="app.clearSessionsSearch()" style="margin-left:auto;" type="button"><span data-i18n="返回会话列表">返回会话列表</span></button>
 </div>
 <div class="model-library-list" id="sessionsSearchResults"></div>
 </div>
 <div class="model-library-list" id="sessionsList"></div>
 <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-<button class="btn btn-secondary blora-button" disabled="" id="sessionsPrevBtn" onclick="app.loadSessions(app._sessionsPage - 1)" data-variant="secondary" type="button"><span data-i18n="上一页">上一页</span></button>
+<button class="blora-button" data-variant="secondary" disabled="" id="sessionsPrevBtn" onclick="app.loadSessions(app._sessionsPage - 1)" type="button"><span data-i18n="上一页">上一页</span></button>
 <span id="sessionsPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-<button class="btn btn-secondary blora-button" id="sessionsNextBtn" onclick="app.loadSessions(app._sessionsPage + 1)" data-variant="secondary" type="button"><span data-i18n="下一页">下一页</span></button>
+<button class="blora-button" data-variant="secondary" id="sessionsNextBtn" onclick="app.loadSessions(app._sessionsPage + 1)" type="button"><span data-i18n="下一页">下一页</span></button>
 </div>
 </div>
 <div class="content-section" id="sessionDetailWrap" style="display:none;">
 <div class="section-header">
 <div style="display:flex;align-items:center;gap:10px;">
-<button class="btn btn-secondary btn-sm blora-button" onclick="app.closeSessionDetail()" data-variant="secondary" data-size="sm" type="button"><span data-i18n="← 返回会话列表">← 返回会话列表</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="app.closeSessionDetail()" type="button"><span data-i18n="← 返回会话列表">← 返回会话列表</span></button>
 <h2 id="sessionDetailTitle" style="margin:0;"></h2>
 </div>
 </div>
 <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-<button class="btn btn-secondary blora-button" onclick="app.generateSessionSummary()" data-variant="secondary" type="button"><span data-i18n="生成总结">生成总结</span></button>
+<button class="blora-button" data-variant="secondary" onclick="app.generateSessionSummary()" type="button"><span data-i18n="生成总结">生成总结</span></button>
 </div>
 <div class="session-card-meta" id="sessionDetailMetaBar" style="margin-bottom:16px;"></div>
 <!-- 会话总结内联展示：生成时流式渲染，完成后可折叠；有缓存进入时也展示 -->
 <div id="sessionSummaryInline" style="display:none;margin-bottom:16px;"></div>
 <div class="timeline" id="sessionTimeline"></div>
 <div class="session-more-actions">
-<button class="btn btn-secondary blora-button" id="sessionMoreBtn" onclick="app.loadSessionMessages(app._detailSessionKey, (app._detailMsgPage || 1) + 1)" data-variant="secondary" type="button"><span data-i18n="加载更多（向上翻更早）">加载更多（向上翻更早）</span></button>
-<button class="btn btn-secondary blora-button" onclick="app.generateSessionSummary()" style="margin-left:8px;" data-variant="secondary" type="button"><span data-i18n="生成总结">生成总结</span></button>
+<button class="blora-button" data-variant="secondary" id="sessionMoreBtn" onclick="app.loadSessionMessages(app._detailSessionKey, (app._detailMsgPage || 1) + 1)" type="button"><span data-i18n="加载更多（向上翻更早）">加载更多（向上翻更早）</span></button>
+<button class="blora-button" data-variant="secondary" onclick="app.generateSessionSummary()" style="margin-left:8px;" type="button"><span data-i18n="生成总结">生成总结</span></button>
 </div>
 </div>
 </div>
@@ -1158,11 +1157,11 @@
 <div class="project-work-status" id="projectWorkStatus"><span data-i18n="正在同步活动...">正在同步活动...</span></div>
 </div>
 <div class="stats-filters project-work-filters">
-<div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label><blora-select class="select blora-select" id="projectWorkTimeRange" onchange="app.loadProjectWorkStats()"><blora-option value="7">最近 7 天</blora-option><blora-option selected="" value="30">最近 30 天</blora-option><blora-option value="90">最近 90 天</blora-option><blora-option value="180">最近 180 天</blora-option><blora-option value="365">最近 1 年</blora-option><blora-option value="custom">自定义</blora-option></blora-select></div>
-<div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label><blora-select class="select blora-select" id="projectWorkSourceFilter" onchange="app.loadProjectWorkStats()"><blora-option value="">全部客户端</blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown">未知/其他</blora-option></blora-select></div>
-<div class="stats-filter-group" style="align-self:flex-end;"><button class="btn btn-ghost btn-sm blora-button" onclick="app.navigateTo('stats')" data-variant="ghost" data-size="sm" type="button"><span data-i18n="返回总统计">返回总统计</span></button></div>
+<div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label><blora-select class="blora-select" id="projectWorkTimeRange" onchange="app.loadProjectWorkStats()"><blora-option value="7">最近 7 天</blora-option><blora-option selected="" value="30">最近 30 天</blora-option><blora-option value="90">最近 90 天</blora-option><blora-option value="180">最近 180 天</blora-option><blora-option value="365">最近 1 年</blora-option><blora-option value="custom">自定义</blora-option></blora-select></div>
+<div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label><blora-select class="blora-select" id="projectWorkSourceFilter" onchange="app.loadProjectWorkStats()"><blora-option value="">全部客户端</blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown">未知/其他</blora-option></blora-select></div>
+<div class="stats-filter-group" style="align-self:flex-end;"><button class="blora-button" data-size="sm" data-variant="ghost" onclick="app.navigateTo('stats')" type="button"><span data-i18n="返回总统计">返回总统计</span></button></div>
 </div>
-<div id="projectWorkCustomRange" style="display:none;gap:8px;align-items:center;margin-bottom:16px;padding:12px;background:var(--muted);border-radius:8px;"><label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="自定义范围：">自定义范围：</span></label><input class="input blora-input" id="projectWorkStartDate" type="date"/><span style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="至">至</span></span><input class="input blora-input" id="projectWorkEndDate" type="date"/><button class="btn btn-primary btn-sm blora-button" onclick="app.loadProjectWorkStats()" data-variant="primary" data-size="sm" type="button"><span data-i18n="查询">查询</span></button></div>
+<div id="projectWorkCustomRange" style="display:none;gap:8px;align-items:center;margin-bottom:16px;padding:12px;background:var(--muted);border-radius:8px;"><label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="自定义范围：">自定义范围：</span></label><blora-datepicker class="blora-input" id="projectWorkStartDate"></blora-datepicker><span style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="至">至</span></span><blora-datepicker class="blora-input" id="projectWorkEndDate"></blora-datepicker><button class="blora-button" data-size="sm" data-variant="primary" onclick="app.loadProjectWorkStats()" type="button"><span data-i18n="查询">查询</span></button></div>
 <div class="project-work-summary" id="projectWorkSummary"><div class="project-work-loading"><span data-i18n="正在读取项目活动...">正在读取项目活动...</span></div></div>
 <div class="project-work-grid"><div class="project-work-chart-card"><div class="project-work-card-title"><strong><span data-i18n="最近活动">最近活动</span></strong><span><span data-i18n="每日请求与活跃项目">每日请求与活跃项目</span></span></div><div class="project-work-chart"><canvas id="userProjectDailyChart"></canvas></div></div><div class="project-work-focus-card"><div class="project-work-card-title"><strong><span data-i18n="最近活跃项目">最近活跃项目</span></strong><span><span data-i18n="按最近活动排序">按最近活动排序</span></span></div><div class="project-work-recent" id="projectWorkRecent"><div class="project-work-loading"><span data-i18n="正在读取...">正在读取...</span></div></div></div></div>
 <div class="project-work-list-card"><div class="project-work-card-title"><strong><span data-i18n="项目工作台">项目工作台</span></strong><span><span data-i18n="点击项目可复制工作区路径">点击项目可复制工作区路径</span></span></div><div class="project-work-projects" id="projectWorkProjects"><div class="project-work-loading"><span data-i18n="正在读取项目...">正在读取项目...</span></div></div></div>
@@ -1181,11 +1180,11 @@
 <div class="stats-filters">
 <div class="stats-filter-group">
 <label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label>
-<blora-select class="select blora-select" id="leaderboardTimeRange" onchange="app.loadLeaderboard()"><blora-option value="7">最近 7 天</blora-option><blora-option selected="" value="30">最近 30 天</blora-option><blora-option value="90">最近 90 天</blora-option><blora-option value="365">最近 1 年</blora-option></blora-select>
+<blora-select class="blora-select" id="leaderboardTimeRange" onchange="app.loadLeaderboard()"><blora-option value="7">最近 7 天</blora-option><blora-option selected="" value="30">最近 30 天</blora-option><blora-option value="90">最近 90 天</blora-option><blora-option value="365">最近 1 年</blora-option></blora-select>
 </div>
 <div class="stats-filter-group">
 <label class="stats-filter-label"><span data-i18n="排序方式">排序方式</span></label>
-<blora-select class="select blora-select" id="leaderboardSort" onchange="app.loadLeaderboard()"><blora-option value="tokens">Token 数</blora-option><blora-option value="requests">请求数</blora-option><blora-option value="points">消耗积分</blora-option><blora-option value="cache">缓存命中率</blora-option><blora-option value="balance">当前余额</blora-option></blora-select>
+<blora-select class="blora-select" id="leaderboardSort" onchange="app.loadLeaderboard()"><blora-option value="tokens">Token 数</blora-option><blora-option value="requests">请求数</blora-option><blora-option value="points">消耗积分</blora-option><blora-option value="cache">缓存命中率</blora-option><blora-option value="balance">当前余额</blora-option></blora-select>
 </div>
 </div>
 <!-- 排行榜表格 -->
@@ -1410,14 +1409,13 @@ data: [DONE]</code></pre>
 </div>
 </div>
 <!-- 文档编辑弹窗 -->
-<blora-dialog id="docsEditorModal" size="lg"><div class="modal-header" slot="header">
+<blora-dialog id="docsEditorModal" size="lg"><div slot="header">
 <h3><span data-i18n="编辑文档">编辑文档</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <p style="margin-bottom:12px;color:var(--muted-foreground);font-size:13px;"><span data-i18n="使用 HTML 格式编辑当前页面内容。">使用 HTML 格式编辑当前页面内容。</span></p>
-<textarea class="textarea textarea-mono blora-textarea" id="docsEditorContent" style="min-height:400px;"></textarea>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" onclick="saveDocsContent()" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
+<textarea class="textarea-mono blora-textarea" id="docsEditorContent" style="min-height:400px;"></textarea>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="saveDocsContent()" type="button"><span data-i18n="保存">保存</span></button>
 </div></blora-dialog>
 <!-- 积分页面 -->
 <div class="page" id="balancePage">
@@ -1463,8 +1461,8 @@ data: [DONE]</code></pre>
 <div class="section-header">
 <h2><span data-i18n="操作日志">操作日志</span></h2>
 <div style="display:flex;gap:8px;align-items:center;">
-<blora-select class="input blora-select" id="auditLogActionFilter" onchange="app.loadAuditLogs(1)" style="width:auto;"><blora-option value="">全部操作</blora-option><blora-option value="api_key">API Key</blora-option><blora-option value="cokey">Co-Key</blora-option><blora-option value="user">用户</blora-option><blora-option value="auth">认证</blora-option><blora-option value="provider">供应商</blora-option><blora-option value="model">模型</blora-option></blora-select>
-<button class="btn btn-sm btn-secondary blora-button" onclick="app.loadAuditLogs(1)" type="button" data-variant="secondary" data-size="sm"><span data-i18n="刷新">刷新</span></button>
+<blora-select class="blora-select" id="auditLogActionFilter" onchange="app.loadAuditLogs(1)" style="width:auto;"><blora-option value="">全部操作</blora-option><blora-option value="api_key">API Key</blora-option><blora-option value="cokey">Co-Key</blora-option><blora-option value="user">用户</blora-option><blora-option value="auth">认证</blora-option><blora-option value="provider">供应商</blora-option><blora-option value="model">模型</blora-option></blora-select>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="app.loadAuditLogs(1)" type="button"><span data-i18n="刷新">刷新</span></button>
 </div>
 </div>
 <div id="auditLogsList" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -1483,7 +1481,7 @@ data: [DONE]</code></pre>
 <div style="flex:1;">
 <input class="blora-input" id="settingsAvatar" name="avatar" type="hidden"/>
 <div style="display:flex;gap:8px;align-items:center;">
-<label class="btn btn-secondary" for="avatarFileInput" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:13px;border-radius:8px;">
+<label for="avatarFileInput" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:13px;border-radius:8px;">
 <img alt="" class="sf-icon" data-sf-name="photo" height="14" src="https://img.bloret.net/SF/photo?color=black" width="14"/><span data-i18n="上传头像">
                       上传头像
                     </span></label>
@@ -1520,13 +1518,13 @@ data: [DONE]</code></pre>
 <div><label style="margin:0;"><span data-i18n="启用 Bark 通知">启用 Bark 通知</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="Bark 是 iOS 推送工具，请填写 Server Key。">Bark 是 iOS 推送工具，请填写 Server Key。</span></small></div>
 <label class="pg-toggle"><input class="blora-input" id="barkEnabled" type="checkbox"/><span class="pg-toggle-slider"></span></label>
 </div>
-<div class="form-group"><label for="barkServerKey">Bark Server Key</label><input autocomplete="off" class="input blora-input" data-i18n-placeholder="请输入 Bark Server Key" id="barkServerKey" placeholder="请输入 Bark Server Key" type="password"/></div>
-<div class="form-group"><label for="barkEndpoint"><span data-i18n="Bark 服务地址">Bark 服务地址</span></label><input class="input blora-input" id="barkEndpoint" placeholder="https://api.day.app" value="https://api.day.app"/><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="使用自建 Bark 服务时可修改。">使用自建 Bark 服务时可修改。</span></small></div>
+<div class="form-group"><label for="barkServerKey">Bark Server Key</label><input autocomplete="off" class="blora-input" data-i18n-placeholder="请输入 Bark Server Key" id="barkServerKey" placeholder="请输入 Bark Server Key" type="password"/></div>
+<div class="form-group"><label for="barkEndpoint"><span data-i18n="Bark 服务地址">Bark 服务地址</span></label><input class="blora-input" id="barkEndpoint" placeholder="https://api.day.app" value="https://api.day.app"/><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="使用自建 Bark 服务时可修改。">使用自建 Bark 服务时可修改。</span></small></div>
 <div style="display:flex;gap:20px;flex-wrap:wrap;margin:12px 0 16px;">
 <label style="display:flex;align-items:center;gap:8px;"><input class="blora-input" id="notifyQuota" type="checkbox"/><span data-i18n="额度不足通知"> 额度不足通知</span></label>
 <label style="display:flex;align-items:center;gap:8px;"><input class="blora-input" id="notifyErrors" type="checkbox"/><span data-i18n="请求异常通知"> 请求异常通知</span></label>
 </div>
-<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><button class="btn btn-primary blora-button" onclick="app.saveNotificationSettings()" type="button" data-variant="primary"><span data-i18n="保存通知设置">保存通知设置</span></button><button class="btn btn-secondary blora-button" onclick="app.testBarkNotification()" type="button" data-variant="secondary"><span data-i18n="发送测试通知">发送测试通知</span></button><span id="notificationSettingsStatus" style="font-size:13px;"></span></div>
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><button class="blora-button" data-variant="primary" onclick="app.saveNotificationSettings()" type="button"><span data-i18n="保存通知设置">保存通知设置</span></button><button class="blora-button" data-variant="secondary" onclick="app.testBarkNotification()" type="button"><span data-i18n="发送测试通知">发送测试通知</span></button><span id="notificationSettingsStatus" style="font-size:13px;"></span></div>
 </div>
 </div>
 <!-- 插件数据授权 -->
@@ -1546,7 +1544,7 @@ data: [DONE]</code></pre>
 </div>
 </div>
 <div class="content-section" style="margin-top:24px;">
-<div class="section-header"><h2><span data-i18n="我的通知">我的通知</span></h2><button class="btn btn-secondary blora-button" onclick="app.clearNotifications()" type="button" data-variant="secondary"><span data-i18n="清空通知">清空通知</span></button></div>
+<div class="section-header"><h2><span data-i18n="我的通知">我的通知</span></h2><button class="blora-button" data-variant="secondary" onclick="app.clearNotifications()" type="button"><span data-i18n="清空通知">清空通知</span></button></div>
 <div id="notificationsList"><div style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="加载中...">加载中...</span></div></div>
 </div>
 <!-- 事件通知（hook 上报事件推送开关） -->
@@ -1562,7 +1560,7 @@ data: [DONE]</code></pre>
 <div><label style="margin:0;"><span data-i18n="启用事件推送">启用事件推送</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。">总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。</span></small></div>
 <label class="pg-toggle"><input class="blora-input" id="hookNotifyPushEnabled" onchange="app.toggleHookNotifyPush(this.checked)" type="checkbox"/><span class="pg-toggle-slider"></span></label>
 </div>
-<button class="btn btn-secondary blora-button" onclick="app.showHookNotifySelection()" style="margin-top:12px;" type="button" data-variant="secondary"><span data-i18n="选择要推送的事件">选择要推送的事件</span></button>
+<button class="blora-button" data-variant="secondary" onclick="app.showHookNotifySelection()" style="margin-top:12px;" type="button"><span data-i18n="选择要推送的事件">选择要推送的事件</span></button>
 </div>
 </div>
 <!-- 安全设置 -->
@@ -1577,7 +1575,7 @@ data: [DONE]</code></pre>
 </div>
 <div style="display:flex;align-items:center;gap:8px;">
 <span class="status-badge" id="twoFactorStatus" style="padding:4px 12px;border-radius:20px;font-size:12px;"></span>
-<button class="btn btn-secondary blora-button" id="tfaStartBtn" onclick="app.generate2FA()" style="display:none;" data-variant="secondary" type="button"><span data-i18n="启用 2FA">启用 2FA</span></button>
+<button class="blora-button" data-variant="secondary" id="tfaStartBtn" onclick="app.generate2FA()" style="display:none;" type="button"><span data-i18n="启用 2FA">启用 2FA</span></button>
 </div>
 </div>
 <div id="twoFactorSetup" style="display:none;">
@@ -1591,9 +1589,9 @@ data: [DONE]</code></pre>
 <div>
 <p style="margin-bottom:8px;font-size:14px;"><span data-i18n="输入应用生成的 6 位验证码：">输入应用生成的 6 位验证码：</span></p>
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-<input autocomplete="one-time-code" class="input blora-input" id="tfaVerifyCode" inputmode="numeric" maxlength="6" placeholder="000000" style="width:120px;" type="text"/>
-<button class="btn btn-primary blora-button" id="tfaEnableBtn" onclick="app.enable2FA()" data-variant="primary" type="button"><span data-i18n="验证并启用">验证并启用</span></button>
-<button class="btn btn-secondary blora-button" onclick="app.cancel2FASetup()" type="button" data-variant="secondary"><span data-i18n="取消">取消</span></button>
+<input autocomplete="one-time-code" class="blora-input" id="tfaVerifyCode" inputmode="numeric" maxlength="6" placeholder="000000" style="width:120px;" type="text"/>
+<button class="blora-button" data-variant="primary" id="tfaEnableBtn" onclick="app.enable2FA()" type="button"><span data-i18n="验证并启用">验证并启用</span></button>
+<button class="blora-button" data-variant="secondary" onclick="app.cancel2FASetup()" type="button"><span data-i18n="取消">取消</span></button>
 </div>
 <div id="tfaSetupStatus" style="margin-top:8px;font-size:13px;"></div>
 </div>
@@ -1602,8 +1600,8 @@ data: [DONE]</code></pre>
 <div id="twoFactorDisable" style="display:none;">
 <p style="margin-bottom:12px;font-size:14px;"><span data-i18n="您已启用双重认证。如需关闭，请验证密码：">您已启用双重认证。如需关闭，请验证密码：</span></p>
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-<input class="input blora-input" data-i18n-placeholder="输入当前密码" id="tfaDisablePassword" placeholder="输入当前密码" style="width:200px;" type="password"/>
-<button class="btn btn-secondary blora-button" onclick="app.disable2FA()" style="color:var(--destructive);border-color:var(--destructive);" data-variant="secondary" type="button"><span data-i18n="关闭 2FA">关闭 2FA</span></button>
+<input class="blora-input" data-i18n-placeholder="输入当前密码" id="tfaDisablePassword" placeholder="输入当前密码" style="width:200px;" type="password"/>
+<button class="blora-button" data-variant="secondary" onclick="app.disable2FA()" style="color:var(--destructive);border-color:var(--destructive);" type="button"><span data-i18n="关闭 2FA">关闭 2FA</span></button>
 </div>
 <div id="tfaDisableStatus" style="margin-top:8px;font-size:13px;"></div>
 </div>
@@ -1615,7 +1613,7 @@ data: [DONE]</code></pre>
 <h3 style="margin:0;font-size:16px;"><span data-i18n="通行密钥 (Passkeys)">通行密钥 (Passkeys)</span></h3>
 <p style="margin:4px 0 0;font-size:13px;color:var(--muted-foreground);"><span data-i18n="使用指纹、面部识别或硬件密钥登录">使用指纹、面部识别或硬件密钥登录</span></p>
 </div>
-<button class="btn btn-secondary blora-button" onclick="app.registerPasskey()" data-variant="secondary" type="button"><span data-i18n="添加新设备">添加新设备</span></button>
+<button class="blora-button" data-variant="secondary" onclick="app.registerPasskey()" type="button"><span data-i18n="添加新设备">添加新设备</span></button>
 </div>
 <ul id="passkeyList" style="list-style:none;padding:0;margin:0;">
 <li style="list-style:none;"><div class="page-loading page-loading-compact"><div aria-label="加载中" class="loading-spinner md" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div></li>
@@ -1628,18 +1626,18 @@ data: [DONE]</code></pre>
 <form class="settings-form" id="changePasswordForm" onsubmit="return false;">
 <div class="form-group">
 <label for="currentPassword"><span data-i18n="当前密码">当前密码</span></label>
-<input class="input blora-input" data-i18n-placeholder="请输入当前密码" id="currentPassword" placeholder="请输入当前密码" style="max-width:400px;" type="password"/>
+<input class="blora-input" data-i18n-placeholder="请输入当前密码" id="currentPassword" placeholder="请输入当前密码" style="max-width:400px;" type="password"/>
 </div>
 <div class="form-group">
 <label for="newPassword"><span data-i18n="新密码">新密码</span></label>
-<input class="input blora-input" data-i18n-placeholder="请输入新密码（至少6位）" id="newPassword" placeholder="请输入新密码（至少6位）" style="max-width:400px;" type="password"/>
+<input class="blora-input" data-i18n-placeholder="请输入新密码（至少6位）" id="newPassword" placeholder="请输入新密码（至少6位）" style="max-width:400px;" type="password"/>
 </div>
 <div class="form-group">
 <label for="confirmNewPassword"><span data-i18n="确认新密码">确认新密码</span></label>
-<input class="input blora-input" data-i18n-placeholder="请再次输入新密码" id="confirmNewPassword" placeholder="请再次输入新密码" style="max-width:400px;" type="password"/>
+<input class="blora-input" data-i18n-placeholder="请再次输入新密码" id="confirmNewPassword" placeholder="请再次输入新密码" style="max-width:400px;" type="password"/>
 </div>
 <div id="changePasswordStatus" style="font-size:13px;margin-top:8px;"></div>
-<button class="btn btn-primary blora-button" id="changePasswordBtn" style="margin-top:12px;padding:8px 24px;border-radius:8px;" type="button" data-variant="primary"><span data-i18n="修改密码">修改密码</span></button>
+<button class="blora-button" data-variant="primary" id="changePasswordBtn" style="margin-top:12px;padding:8px 24px;border-radius:8px;" type="button"><span data-i18n="修改密码">修改密码</span></button>
 </form>
 </div>
 <!-- API 签名设置 -->
@@ -1659,14 +1657,14 @@ data: [DONE]</code></pre>
 <div id="signatureTemplateGroup">
 <div class="form-group">
 <label for="apiSignatureTemplate"><span data-i18n="签名模板">签名模板</span></label>
-<textarea class="input blora-textarea" data-i18n-placeholder="{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}" id="apiSignatureTemplate" placeholder="{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}" style="width:100%;min-height:60px;font-family:monospace;font-size:13px;resize:vertical;"></textarea>
+<textarea class="blora-textarea" data-i18n-placeholder="{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}" id="apiSignatureTemplate" placeholder="{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}" style="width:100%;min-height:60px;font-family:monospace;font-size:13px;resize:vertical;"></textarea>
 <p style="font-size:12px;color:var(--muted-foreground);margin:6px 0 0;line-height:1.6;"><span data-i18n="可用变量：">
                   可用变量：</span><code>{model}</code><span data-i18n="模型 ·"> 模型 · </span><code>{tokens}</code><span data-i18n="Token 数 ·"> Token 数 · </span><code>{cache_hit}</code><span data-i18n="缓存命中率 ·"> 缓存命中率 · </span><code>{cached_tokens}</code><span data-i18n="缓存命中 Token 数 ·"> 缓存命中 Token 数 · </span><code>{provider}</code><span data-i18n="供应商 ·"> 供应商 · </span><code>{cost}</code><span data-i18n="费用 ·"> 费用 · </span><code>{username}</code><span data-i18n="用户名 ·"> 用户名 · </span><code>{key_name}</code><span data-i18n="API Key 名称 ·"> API Key 名称 · </span><code>{balance}</code><span data-i18n="积分 ·"> 积分 · </span><code>{group_name}</code><span data-i18n="用户组 ·"> 用户组 · </span><code>{team_name}</code> Team · <code>{quota_info}</code><span data-i18n="限额 ·"> 限额 · </span><code>{today_requests}</code><span data-i18n="今日调用次数 ·"> 今日调用次数 · </span><code>{today_tokens}</code><span data-i18n="今日 Token 数"> 今日 Token 数
                 </span></p>
 </div>
 <div style="display:flex;align-items:center;gap:12px;">
-<button class="btn btn-primary blora-button" onclick="app.saveSignatureSettings()" data-variant="primary" type="button"><span data-i18n="保存签名设置">保存签名设置</span></button>
-<button class="btn btn-secondary blora-button" onclick="app.resetSignatureTemplate()" data-variant="secondary" type="button"><span data-i18n="恢复默认">恢复默认</span></button>
+<button class="blora-button" data-variant="primary" onclick="app.saveSignatureSettings()" type="button"><span data-i18n="保存签名设置">保存签名设置</span></button>
+<button class="blora-button" data-variant="secondary" onclick="app.resetSignatureTemplate()" type="button"><span data-i18n="恢复默认">恢复默认</span></button>
 <span id="signatureSaveStatus" style="font-size:13px;"></span>
 </div>
 <div id="signaturePreview" style="margin-top:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);font-family:monospace;white-space:pre-wrap;min-height:36px;"></div>
@@ -1677,26 +1675,24 @@ data: [DONE]</code></pre>
 </main>
 </div>
 <!-- 创建API密钥模态框 -->
-<blora-dialog id="createApiKeyModal"><div class="modal-header" slot="header">
+<blora-dialog id="createApiKeyModal"><div slot="header">
 <h3><span data-i18n="创建 API 密钥">创建 API 密钥</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div class="form-group">
 <label for="apiKeyName"><span data-i18n="密钥名称（可选）">密钥名称（可选）</span></label>
-<input class="input blora-input" data-i18n-placeholder="例如：生产环境、开发测试" id="apiKeyName" placeholder="例如：生产环境、开发测试" type="text"/>
+<input class="blora-input" data-i18n-placeholder="例如：生产环境、开发测试" id="apiKeyName" placeholder="例如：生产环境、开发测试" type="text"/>
 </div>
 <div class="form-group">
 <label for="apiKeyExpiry"><span data-i18n="有效期">有效期</span></label>
-<blora-select class="select blora-select" id="apiKeyExpiry"><blora-option value="">永不过期</blora-option><blora-option value="24">24 小时</blora-option><blora-option value="168">7 天</blora-option><blora-option value="720">30 天</blora-option></blora-select>
+<blora-select class="blora-select" id="apiKeyExpiry"><blora-option value="">永不过期</blora-option><blora-option value="24">24 小时</blora-option><blora-option value="168">7 天</blora-option><blora-option value="720">30 天</blora-option></blora-select>
 </div>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" id="confirmCreateApiKey" data-variant="primary" type="button"><span data-i18n="创建">创建</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" id="confirmCreateApiKey" type="button"><span data-i18n="创建">创建</span></button>
 </div></blora-dialog>
 <!-- 统计上报授权模态框（仅管理员首次进入时展示） -->
-<blora-dialog id="hookNotifySelectModal"><div class="modal-header" slot="header">
+<blora-dialog id="hookNotifySelectModal"><div slot="header">
 <h3><span data-i18n="选择要推送的事件">选择要推送的事件</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div style="margin-bottom:14px;">
 <strong style="font-size:13px;"><span data-i18n="客户端（harness）">客户端（harness）</span></strong>
 <div id="hookNotifyHarnessChecks" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"></div>
@@ -1706,60 +1702,56 @@ data: [DONE]</code></pre>
 <div id="hookNotifyEventChecks" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px;"></div>
 </div>
 <small style="color:var(--muted-foreground);"><span data-i18n="不勾选任何项表示推送全部。">不勾选任何项表示推送全部。</span></small>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-secondary blora-button" onclick="app.closeModal('hookNotifySelectModal')" type="button" data-variant="secondary"><span data-i18n="取消">取消</span></button>
-<button class="btn btn-primary blora-button" onclick="app.saveHookNotifySelection()" type="button" data-variant="primary"><span data-i18n="保存">保存</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="secondary" onclick="app.closeModal('hookNotifySelectModal')" type="button"><span data-i18n="取消">取消</span></button>
+<button class="blora-button" data-variant="primary" onclick="app.saveHookNotifySelection()" type="button"><span data-i18n="保存">保存</span></button>
 </div></blora-dialog>
-<blora-dialog id="sessionSummaryModal"><div class="modal-header" slot="header">
+<blora-dialog id="sessionSummaryModal"><div slot="header">
 <div>
 <h3 id="sessionSummaryTitle"><span data-i18n="会话总结">会话总结</span> <code id="sessionSummaryKey"></code></h3>
 <div class="session-summary-modal-meta"><span id="sessionSummaryTime"></span></div>
 </div>
 <div class="session-summary-modal-actions">
-<button class="btn btn-secondary btn-sm blora-button" id="sessionSummaryRegenTopBtn" onclick="app.regenerateSessionSummary()" type="button" data-variant="secondary" data-size="sm"><span data-i18n="重新生成">重新生成</span></button>
-<button class="btn btn-secondary btn-sm blora-button" onclick="app.copySessionSummary()" type="button" data-variant="secondary" data-size="sm"><span data-i18n="复制">复制</span></button>
-
+<button class="blora-button" data-size="sm" data-variant="secondary" id="sessionSummaryRegenTopBtn" onclick="app.regenerateSessionSummary()" type="button"><span data-i18n="重新生成">重新生成</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="app.copySessionSummary()" type="button"><span data-i18n="复制">复制</span></button>
 </div>
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div class="session-summary-md summary-modal-body" id="sessionSummaryBody"></div>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-secondary blora-button" id="sessionSummaryRegenBtn" onclick="app.regenerateSessionSummary()" type="button" data-variant="secondary"><span data-i18n="重新生成">重新生成</span></button>
-<button class="btn btn-primary blora-button" onclick="app.copySessionSummary()" type="button" data-variant="primary"><span data-i18n="复制">复制</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="secondary" id="sessionSummaryRegenBtn" onclick="app.regenerateSessionSummary()" type="button"><span data-i18n="重新生成">重新生成</span></button>
+<button class="blora-button" data-variant="primary" onclick="app.copySessionSummary()" type="button"><span data-i18n="复制">复制</span></button>
 </div></blora-dialog>
-<blora-dialog id="statsConsentModal"><div class="modal-header" slot="header">
+<blora-dialog id="statsConsentModal"><div slot="header">
 <h3><span data-i18n="允许统计上报吗？">允许统计上报吗？</span></h3>
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <p style="line-height:1.8;color:var(--muted-foreground);"><span data-i18n="本实例将向官方服务器发送匿名聚合的使用统计，仅包含请求量、Token 消耗、成本、活跃用户/密钥数量、模型与用量分布等计数信息；不含任何用户名、邮箱、IP、API 密钥、上游密钥、请求内容与回复内容。可随时在管理后台关闭。">本实例将向官方服务器发送匿名聚合的使用统计，仅包含请求量、Token 消耗、成本、活跃用户/密钥数量、模型与用量分布等计数信息；不含任何用户名、邮箱、IP、API 密钥、上游密钥、请求内容与回复内容。可随时在管理后台关闭。</span></p>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-secondary blora-button" id="statsConsentReject" data-variant="secondary" type="button"><span data-i18n="拒绝上报">拒绝上报</span></button>
-<button class="btn btn-primary blora-button" id="statsConsentAllow" data-variant="primary" type="button"><span data-i18n="允许上报">允许上报</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="secondary" id="statsConsentReject" type="button"><span data-i18n="拒绝上报">拒绝上报</span></button>
+<button class="blora-button" data-variant="primary" id="statsConsentAllow" type="button"><span data-i18n="允许上报">允许上报</span></button>
 </div></blora-dialog>
 <!-- Co-Key 成员管理模态框 -->
-<blora-dialog id="keyMembersModal"><div class="modal-header" slot="header">
+<blora-dialog id="keyMembersModal"><div slot="header">
 <h3><span data-i18n="Co-Key 成员管理">Co-Key 成员管理</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <p style="margin:0 0 14px;color:var(--muted-foreground);font-size:13px;line-height:1.6;"><span data-i18n="共同成员可以查看完整 Key、用量并管理配置；只有发起者可以管理成员和删除 Key。调用费用及模型权限仍归发起者。">共同成员可以查看完整 Key、用量并管理配置；只有发起者可以管理成员和删除 Key。调用费用及模型权限仍归发起者。</span></p>
 <div style="display:flex;gap:8px;margin-bottom:16px;">
-<input class="input blora-input" data-i18n-placeholder="输入完整用户名或邮箱" id="keyMemberIdentity" placeholder="输入完整用户名或邮箱" style="flex:1;" type="text"/>
-<button class="btn btn-primary blora-button" onclick="app.addKeyMember()" type="button" data-variant="primary"><span data-i18n="添加">添加</span></button>
+<input class="blora-input" data-i18n-placeholder="输入完整用户名或邮箱" id="keyMemberIdentity" placeholder="输入完整用户名或邮箱" style="flex:1;" type="text"/>
+<button class="blora-button" data-variant="primary" onclick="app.addKeyMember()" type="button"><span data-i18n="添加">添加</span></button>
 </div>
 <div id="keyMembersList" style="display:flex;flex-direction:column;gap:8px;"></div>
 </div></blora-dialog>
 <!-- API密钥模型管理模态框（支持有序模型队列） -->
-<blora-dialog id="keyModelsModal" size="lg"><div class="modal-header" slot="header">
+<blora-dialog id="keyModelsModal" size="lg"><div slot="header">
 <h3 id="keyModelsTitle"><span data-i18n="管理可用模型">管理可用模型</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div id="keyModelsContent"></div>
-</div><div class="modal-footer" slot="footer" id="keyModelsFooter" slot="footer">
-<button class="btn btn-primary blora-button" id="keyModelsSaveBtn" onclick="app.saveKeyModels()" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
+</div><div id="keyModelsFooter" slot="footer">
+<button class="blora-button" data-variant="primary" id="keyModelsSaveBtn" onclick="app.saveKeyModels()" type="button"><span data-i18n="保存">保存</span></button>
 </div></blora-dialog>
 <!-- API Key 选项设置模态框 -->
-<blora-dialog id="keyOptionsModal"><div class="modal-header" slot="header">
+<blora-dialog id="keyOptionsModal"><div slot="header">
 <h3><span data-i18n="API Key 选项">API Key 选项</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);"><span data-i18n="集中管理当前 API Key 的附加开关。">集中管理当前 API Key 的附加开关。</span></div>
 <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
 <label style="margin:0;"><span data-i18n="额度预警">额度预警</span></label>
@@ -1773,37 +1765,35 @@ data: [DONE]</code></pre>
 <label style="margin:0;"><span data-i18n="允许 @CrewRouter 指令">允许 @CrewRouter 指令</span></label>
 <label class="pg-toggle"><input class="blora-input" id="keyOptionCrewRouterCommands" type="checkbox"/><span class="pg-toggle-slider"></span></label>
 </div>
-</div><div class="modal-footer" slot="footer" slot="footer"><button class="btn btn-primary blora-button" onclick="app.saveKeyOptions()" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button></div></blora-dialog>
+</div><div slot="footer"><button class="blora-button" data-variant="primary" onclick="app.saveKeyOptions()" type="button"><span data-i18n="保存">保存</span></button></div></blora-dialog>
 <!-- API Key 签名设置模态框 -->
-<blora-dialog id="keySignatureModal"><div class="modal-header" slot="header">
+<blora-dialog id="keySignatureModal"><div slot="header">
 <h3><span data-i18n="API Key 签名设置">API Key 签名设置</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);"><span data-i18n='为当前 API Key 单独设置签名策略，覆盖用户默认设置。如选择"继承"，则使用用户默认签名配置。'>
           为当前 API Key 单独设置签名策略，覆盖用户默认设置。如选择"继承"，则使用用户默认签名配置。
         </span></div>
 <div class="form-group">
 <label><span data-i18n="签名启用策略">签名启用策略</span></label>
-<blora-select class="select blora-select" id="keySignatureMode" onchange="app.toggleKeySignatureMode()"><blora-option value="inherit">继承用户默认设置</blora-option><blora-option value="enable">强制启用</blora-option><blora-option value="disable">强制禁用</blora-option></blora-select>
+<blora-select class="blora-select" id="keySignatureMode" onchange="app.toggleKeySignatureMode()"><blora-option value="inherit">继承用户默认设置</blora-option><blora-option value="enable">强制启用</blora-option><blora-option value="disable">强制禁用</blora-option></blora-select>
 </div>
 <div id="keySignatureTemplateGroup">
 <div class="form-group">
 <label for="keySignatureTemplate"><span data-i18n="自定义签名模板（可选）">自定义签名模板（可选）</span></label>
-<textarea class="input blora-textarea" data-i18n-placeholder="留空则使用用户默认模板" id="keySignatureTemplate" placeholder="留空则使用用户默认模板" style="width:100%;min-height:60px;font-family:monospace;font-size:13px;resize:vertical;"></textarea>
+<textarea class="blora-textarea" data-i18n-placeholder="留空则使用用户默认模板" id="keySignatureTemplate" placeholder="留空则使用用户默认模板" style="width:100%;min-height:60px;font-family:monospace;font-size:13px;resize:vertical;"></textarea>
 <p style="font-size:12px;color:var(--muted-foreground);margin:6px 0 0;line-height:1.6;"><span data-i18n="可用变量：">
               可用变量：</span><code>{model}</code><span data-i18n="模型 ·"> 模型 · </span><code>{tokens}</code><span data-i18n="Token 数 ·"> Token 数 · </span><code>{cache_hit}</code><span data-i18n="缓存命中率 ·"> 缓存命中率 · </span><code>{cached_tokens}</code><span data-i18n="缓存命中 Token 数 ·"> 缓存命中 Token 数 · </span><code>{provider}</code><span data-i18n="供应商 ·"> 供应商 · </span><code>{cost}</code><span data-i18n="费用 ·"> 费用 · </span><code>{username}</code><span data-i18n="用户名 ·"> 用户名 · </span><code>{key_name}</code><span data-i18n="API Key 名称 ·"> API Key 名称 · </span><code>{balance}</code><span data-i18n="积分 ·"> 积分 · </span><code>{group_name}</code><span data-i18n="用户组 ·"> 用户组 · </span><code>{team_name}</code> Team · <code>{quota_info}</code><span data-i18n="限额 ·"> 限额 · </span><code>{today_requests}</code><span data-i18n="今日调用次数 ·"> 今日调用次数 · </span><code>{today_tokens}</code><span data-i18n="今日 Token 数"> 今日 Token 数
             </span></p>
 </div>
 </div>
 <div id="keySignaturePreview" style="margin-top:12px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);font-family:monospace;white-space:pre-wrap;min-height:36px;"></div>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" onclick="app.saveKeySignature()" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="app.saveKeySignature()" type="button"><span data-i18n="保存">保存</span></button>
 </div></blora-dialog>
 <!-- 定时开关设置弹窗 -->
-<blora-dialog id="keyScheduleModal"><div class="modal-header" slot="header">
+<blora-dialog id="keyScheduleModal"><div slot="header">
 <h3><span data-i18n="定时开关设置">定时开关设置</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);"><span data-i18n="设置自动启用/禁用的时间表。到达开启时间时密钥自动启用，到达关闭时间时自动禁用。">
           设置自动启用/禁用的时间表。到达开启时间时密钥自动启用，到达关闭时间时自动禁用。
         </span></div>
@@ -1817,11 +1807,11 @@ data: [DONE]</code></pre>
 <div id="scheduleFields">
 <div class="form-group">
 <label><span data-i18n="开启时间">开启时间</span></label>
-<input class="input blora-input" id="scheduleOnTime" style="width:100%;" type="time" value="09:00"/>
+<blora-timepicker class="blora-input" id="scheduleOnTime" style="width:100%;" value="09:00"></blora-timepicker>
 </div>
 <div class="form-group">
 <label><span data-i18n="关闭时间">关闭时间</span></label>
-<input class="input blora-input" id="scheduleOffTime" style="width:100%;" type="time" value="18:00"/>
+<blora-timepicker class="blora-input" id="scheduleOffTime" style="width:100%;" value="18:00"></blora-timepicker>
 </div>
 <div class="form-group">
 <label><span data-i18n="生效日期">生效日期</span></label>
@@ -1837,17 +1827,16 @@ data: [DONE]</code></pre>
 </div>
 <div class="form-group">
 <label><span data-i18n="时区">时区</span></label>
-<blora-select class="select blora-select" id="scheduleTimezone" style="width:100%;"><blora-option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</blora-option><blora-option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</blora-option><blora-option value="America/New_York">America/New_York (ET)</blora-option><blora-option value="America/Los_Angeles">America/Los_Angeles (PT)</blora-option><blora-option value="Europe/London">Europe/London (GMT/BST)</blora-option><blora-option value="Europe/Berlin">Europe/Berlin (CET)</blora-option><blora-option value="UTC">UTC</blora-option></blora-select>
+<blora-select class="blora-select" id="scheduleTimezone" style="width:100%;"><blora-option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</blora-option><blora-option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</blora-option><blora-option value="America/New_York">America/New_York (ET)</blora-option><blora-option value="America/Los_Angeles">America/Los_Angeles (PT)</blora-option><blora-option value="Europe/London">Europe/London (GMT/BST)</blora-option><blora-option value="Europe/Berlin">Europe/Berlin (CET)</blora-option><blora-option value="UTC">UTC</blora-option></blora-select>
 </div>
 </div>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" onclick="app.saveKeySchedule()" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="app.saveKeySchedule()" type="button"><span data-i18n="保存">保存</span></button>
 </div></blora-dialog>
 <!-- 添加供应商向导模态框 -->
-<blora-dialog id="addProviderModal"><div class="modal-header" slot="header">
+<blora-dialog id="addProviderModal"><div slot="header">
 <h3><span data-i18n="添加供应商">添加供应商</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div id="addProviderError" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
 <!-- 步骤 1: 选择供应商 -->
 <div class="provider-step" id="providerStep1">
@@ -1856,7 +1845,7 @@ data: [DONE]</code></pre>
 <div style="font-weight:600;font-size:16px;"><span data-i18n="选择供应商">选择供应商</span></div>
 </div>
 <div style="margin-bottom:12px;">
-<input class="input blora-input" data-i18n-placeholder="搜索供应商..." id="providerSearchInput" oninput="app.filterProviderList(this.value)" placeholder="搜索供应商..." style="width:100%;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="搜索供应商..." id="providerSearchInput" oninput="app.filterProviderList(this.value)" placeholder="搜索供应商..." style="width:100%;" type="text"/>
 </div>
 <div class="provider-list-container" id="providerListContainer" style="max-height:300px;overflow-y:auto;">
 <div class="page-loading page-loading-compact"><div aria-label="加载中" class="loading-spinner md" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
@@ -1875,28 +1864,27 @@ data: [DONE]</code></pre>
 <div id="customProviderFields" style="display:none;">
 <div class="form-group">
 <label for="providerBaseUrl">Base URL <span style="color:var(--destructive);">*</span></label>
-<input class="input blora-input" id="providerBaseUrl" placeholder="https://api.example.com/v1" type="text"/>
+<input class="blora-input" id="providerBaseUrl" placeholder="https://api.example.com/v1" type="text"/>
 </div>
 <div class="form-group">
 <label for="providerFormat"><span data-i18n="API 格式">API 格式</span></label>
-<blora-select class="select blora-select" id="providerFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option></blora-select>
+<blora-select class="blora-select" id="providerFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option></blora-select>
 </div>
 </div>
 <div class="form-group">
 <label for="providerApiKey">API Key <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;"><span data-i18n="（可留空，保存后稍后补全）">（可留空，保存后稍后补全）</span></span></label>
-<input class="input blora-input" data-i18n-placeholder="sk-xxx（可选）" id="providerApiKey" placeholder="sk-xxx（可选）" type="password"/>
+<input class="blora-input" data-i18n-placeholder="sk-xxx（可选）" id="providerApiKey" placeholder="sk-xxx（可选）" type="password"/>
 </div>
 <div style="display:flex;gap:8px;margin-top:16px;">
-<button class="btn btn-secondary blora-button" onclick="app.showProviderStep(1)" data-variant="secondary" type="button"><span data-i18n="← 返回">← 返回</span></button>
-<button class="btn btn-primary blora-button" onclick="app.saveProvider()" style="flex:1;" data-variant="primary" type="button"><span data-i18n="添加">添加</span></button>
+<button class="blora-button" data-variant="secondary" onclick="app.showProviderStep(1)" type="button"><span data-i18n="← 返回">← 返回</span></button>
+<button class="blora-button" data-variant="primary" onclick="app.saveProvider()" style="flex:1;" type="button"><span data-i18n="添加">添加</span></button>
 </div>
 </div>
 </div></blora-dialog>
 <!-- 编辑供应商模态框 -->
-<blora-dialog id="editProviderModal"><div class="modal-header" slot="header">
+<blora-dialog id="editProviderModal"><div slot="header">
 <h3><span data-i18n="编辑供应商">编辑供应商</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div id="editProviderError" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
 <input class="blora-input" id="editProviderId" type="hidden"/>
 <div class="form-group">
@@ -1905,24 +1893,23 @@ data: [DONE]</code></pre>
 </div>
 <div class="form-group">
 <label for="editProviderBaseUrl">Base URL</label>
-<input class="input blora-input" id="editProviderBaseUrl" placeholder="https://api.example.com/v1" type="text"/>
+<input class="blora-input" id="editProviderBaseUrl" placeholder="https://api.example.com/v1" type="text"/>
 </div>
 <div class="form-group">
 <label for="editProviderApiKey">API Key <span style="font-size:12px;color:var(--muted-foreground);"><span data-i18n="（留空则不更新）">（留空则不更新）</span></span></label>
-<input class="input blora-input" data-i18n-placeholder="留空则不更新" id="editProviderApiKey" placeholder="留空则不更新" type="password"/>
+<input class="blora-input" data-i18n-placeholder="留空则不更新" id="editProviderApiKey" placeholder="留空则不更新" type="password"/>
 </div>
 <div class="form-group">
 <label for="editProviderFormat"><span data-i18n="API 格式">API 格式</span></label>
-<blora-select class="select blora-select" id="editProviderFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option></blora-select>
+<blora-select class="blora-select" id="editProviderFormat"><blora-option value="openai">Chat Completions</blora-option><blora-option value="responses">Responses</blora-option><blora-option value="anthropic">Anthropic Messages</blora-option></blora-select>
 </div>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" onclick="app.updateProvider()" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="app.updateProvider()" type="button"><span data-i18n="保存">保存</span></button>
 </div></blora-dialog>
 <!-- 管理模型模态框 -->
-<blora-dialog id="manageModelsModal"><div class="modal-header" slot="header">
+<blora-dialog id="manageModelsModal"><div slot="header">
 <h3 id="manageModelsTitle"><span data-i18n="管理模型">管理模型</span></h3>
-
-</div><div class="modal-body" slot="" slot="" style="overflow-y:auto;">
+</div><div style="overflow-y:auto;">
 <div id="manageModelsLoading" style="text-align:center;padding:40px;">
 <div class="page-loading page-loading-compact"><div aria-label="加载中" class="loading-spinner md" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
 </div>
@@ -1930,17 +1917,17 @@ data: [DONE]</code></pre>
 <div id="manageModelsContent" style="display:none;">
 <!-- 搜索和刷新 -->
 <div style="display:flex;gap:12px;margin-bottom:12px;">
-<input class="input blora-input" data-i18n-placeholder="搜索模型..." id="manageModelsSearch" oninput="app.filterManageModels(this.value)" placeholder="搜索模型..." style="flex:1;" type="text"/>
-<button class="btn btn-secondary blora-button" onclick="app.refreshProviderModelsForManage()" data-variant="secondary" type="button"><span data-i18n="刷新列表">刷新列表</span></button>
+<input class="blora-input" data-i18n-placeholder="搜索模型..." id="manageModelsSearch" oninput="app.filterManageModels(this.value)" placeholder="搜索模型..." style="flex:1;" type="text"/>
+<button class="blora-button" data-variant="secondary" onclick="app.refreshProviderModelsForManage()" type="button"><span data-i18n="刷新列表">刷新列表</span></button>
 </div>
 <!-- 批量操作栏 -->
 <div id="manageModelsBatchBar" style="display:none;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--muted);border-radius:8px;flex-wrap:wrap;align-items:center;">
 <span style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="已选">已选 </span><strong id="manageModelsSelectedCount">0</strong><span data-i18n="个模型"> 个模型</span></span>
 <div style="margin-left:auto;display:flex;gap:6px;">
-<button class="btn btn-sm btn-secondary blora-button" onclick="app.batchEnableModels(true)" data-variant="secondary" data-size="sm" type="button"><span data-i18n="启用">启用</span></button>
-<button class="btn btn-sm btn-secondary blora-button" onclick="app.batchEnableModels(false)" data-variant="secondary" data-size="sm" type="button"><span data-i18n="禁用">禁用</span></button>
-<button class="btn btn-sm btn-secondary blora-button" onclick="app.showBatchPriceDialog()" data-variant="secondary" data-size="sm" type="button"><span data-i18n="设置价格">设置价格</span></button>
-<button class="btn btn-sm blora-button" onclick="app.batchDeleteManagedModels()" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" data-variant="secondary" data-size="sm" type="button"><span data-i18n="删除">删除</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="app.batchEnableModels(true)" type="button"><span data-i18n="启用">启用</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="app.batchEnableModels(false)" type="button"><span data-i18n="禁用">禁用</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="app.showBatchPriceDialog()" type="button"><span data-i18n="设置价格">设置价格</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="app.batchDeleteManagedModels()" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" type="button"><span data-i18n="删除">删除</span></button>
 </div>
 </div>
 <!-- 全选 -->
@@ -1956,90 +1943,86 @@ data: [DONE]</code></pre>
 </div>
 </div></blora-dialog>
 <!-- 批量设置价格对话框 -->
-<blora-dialog id="batchPriceModal" size="sm"><div class="modal-header" slot="header">
+<blora-dialog id="batchPriceModal" size="sm"><div slot="header">
 <h3><span data-i18n="批量设置价格">批量设置价格</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <p style="font-size:13px;color:var(--muted-foreground);margin-bottom:16px;"><span data-i18n="为选中的模型设置统一价格（人民币/百万Token）">为选中的模型设置统一价格（人民币/百万Token）</span></p>
 <div class="form-group">
 <label for="batchInputPrice"><span data-i18n="输入价格">输入价格</span></label>
-<input class="input blora-input" data-i18n-placeholder="留空则不修改" id="batchInputPrice" min="0" placeholder="留空则不修改" step="0.000001" type="number"/>
+<input class="blora-input" data-i18n-placeholder="留空则不修改" id="batchInputPrice" min="0" placeholder="留空则不修改" step="0.000001" type="number"/>
 </div>
 <div class="form-group">
 <label for="batchOutputPrice"><span data-i18n="输出价格">输出价格</span></label>
-<input class="input blora-input" data-i18n-placeholder="留空则不修改" id="batchOutputPrice" min="0" placeholder="留空则不修改" step="0.000001" type="number"/>
+<input class="blora-input" data-i18n-placeholder="留空则不修改" id="batchOutputPrice" min="0" placeholder="留空则不修改" step="0.000001" type="number"/>
 </div>
 <div class="form-group">
 <label for="batchCachedPrice"><span data-i18n="缓存输出价格">缓存输出价格</span></label>
-<input class="input blora-input" data-i18n-placeholder="留空则不修改" id="batchCachedPrice" min="0" placeholder="留空则不修改" step="0.000001" type="number"/>
+<input class="blora-input" data-i18n-placeholder="留空则不修改" id="batchCachedPrice" min="0" placeholder="留空则不修改" step="0.000001" type="number"/>
 </div>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" onclick="app.executeBatchSetPrices()" data-variant="primary" type="button"><span data-i18n="应用">应用</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="app.executeBatchSetPrices()" type="button"><span data-i18n="应用">应用</span></button>
 </div></blora-dialog>
 <!-- 选择 API Key 模态框 -->
-<blora-dialog id="selectKeyModal" size="sm"><div class="modal-header" slot="header">
+<blora-dialog id="selectKeyModal" size="sm"><div slot="header">
 <h3><span data-i18n="选择 API Key">选择 API Key</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div id="selectKeyContent"></div>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" onclick="app.confirmSelectKey()" data-variant="primary" type="button"><span data-i18n="确认">确认</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="app.confirmSelectKey()" type="button"><span data-i18n="确认">确认</span></button>
 </div></blora-dialog>
 <!-- API密钥用量详情模态框 -->
-<blora-dialog id="keyUsageModal"><div class="modal-header" slot="header">
+<blora-dialog id="keyUsageModal"><div slot="header">
 <h3 id="keyUsageTitle"><span data-i18n="密钥用量详情">密钥用量详情</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div id="keyUsageContent"></div>
 </div></blora-dialog>
 <!-- 配置工具选择模态框 -->
-<blora-dialog id="configToolSelectModal"><div class="modal-header" slot="header">
+<blora-dialog id="configToolSelectModal"><div slot="header">
 <h3><span data-i18n="生成配置">生成配置</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <p style="color:var(--muted-foreground);margin-bottom:16px;font-size:13px;"><span data-i18n="选择你要配置的工具：">选择你要配置的工具：</span></p>
 <div style="display:flex;flex-direction:column;gap:10px;">
-<button class="btn blora-button" onclick="app.generateToolConfig('claude')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateToolConfig('claude')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="" height="20" src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" style="margin-right:10px;border-radius:4px;" width="20"/>
             Claude Code
             <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">~/.claude/settings.json</span>
 </button>
-<button class="btn blora-button" onclick="app.generateToolConfig('codex')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateToolConfig('codex')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="" height="20" src="https://img.bloret.net/img/1781951439833/5dd31c41da3d9ba8d8c63c41ba899d52" style="margin-right:10px;border-radius:4px;" width="20"/>
             Codex
             <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">~/.codex/config.toml</span>
 </button>
-<button class="btn blora-button" onclick="app.generateToolConfig('opencode')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateToolConfig('opencode')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="" height="20" src="https://img.bloret.net/img/1781951398735/6d800bec66c4599b4f8e8e42bb9331d6" style="margin-right:10px;border-radius:4px;" width="20"/>
             OpenCode
             <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">opencode.json</span>
 </button>
-<button class="btn blora-button" onclick="app.generateToolConfig('grok')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateToolConfig('grok')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="Grok" height="20" src="https://img.bloret.net/img/1783646659585/b5f2e4758d401fa16e43dd9d58278c5c" style="margin-right:10px;border-radius:4px;" width="20"/>
             Grok Build
             <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">~/.grok/config.toml</span>
 </button>
-<button class="btn blora-button" onclick="app.generateToolConfig('deepseek')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateToolConfig('deepseek')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="DeepSeek Harness" height="20" src="https://img.bloret.net/img/1786632261665/ef60a8b9b5a3da93259ffb7b024fd80f" style="margin-right:10px;border-radius:4px;" width="20"/>
             DeepSeek Harness
             <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">~/.dsh/settings.yaml</span>
 </button>
-<button class="btn blora-button" onclick="app.generateToolConfig('qwen_code')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateToolConfig('qwen_code')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="Qwen Code" height="20" src="https://img.bloret.net/img/1783300468869/0e65783456053817af53fe8e72836b5d" style="margin-right:10px;border-radius:4px;" width="20"/>
             Qwen Code
             <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">~/.qwen/settings.json</span>
 </button>
-<button class="btn blora-button" onclick="app.generateToolConfig('hermes')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateToolConfig('hermes')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="Hermes" height="20" src="https://img.bloret.net/img/1783300640677/085bcecf994f63347ce29dcdadffdb9f" style="margin-right:10px;border-radius:4px;" width="20"/>
             Hermes
             <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">OPENAI_BASE_URL</span>
 </button>
-<button class="btn blora-button" onclick="app.generateToolConfig('openclaw')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateToolConfig('openclaw')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="OpenClaw" height="20" src="https://img.bloret.net/img/1783300468566/b085d548a9a6683cc47d4dc104e93d7a" style="margin-right:10px;border-radius:4px;" width="20"/>
             OpenClaw
             <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">openclaw.json</span>
 </button>
-<button class="btn blora-button" onclick="app.showCcSwitchSubmenu()" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.showCcSwitchSubmenu()" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="" height="20" src="https://img.bloret.net/img/1782959477140/73ea67d49cd40c9b00b85de08e5ee534" style="margin-right:10px;border-radius:4px;" width="20"/>
             CC Switch
             <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;"><span data-i18n="ccswitch:// 一键导入">ccswitch:// 一键导入</span></span>
@@ -2048,52 +2031,48 @@ data: [DONE]</code></pre>
 </div></blora-dialog>
 <!-- 配置生成结果模态框 -->
 <!-- CC Switch 子菜单模态框 -->
-<blora-dialog id="ccSwitchSubmenuModal"><div class="modal-header" slot="header">
+<blora-dialog id="ccSwitchSubmenuModal"><div slot="header">
 <h3><span data-i18n="CC Switch 一键导入">CC Switch 一键导入</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <p style="color:var(--muted-foreground);margin-bottom:16px;font-size:13px;"><span data-i18n="选择要导入的目标应用：">选择要导入的目标应用：</span></p>
 <div style="display:flex;flex-direction:column;gap:10px;">
-<button class="btn blora-button" onclick="app.generateCcSwitchLink('claude')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateCcSwitchLink('claude')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="" height="20" src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" style="margin-right:10px;border-radius:4px;" width="20"/>
             Claude Code
           </button>
-<button class="btn blora-button" onclick="app.generateCcSwitchLink('codex')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateCcSwitchLink('codex')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="" height="20" src="https://img.bloret.net/img/1781951439833/5dd31c41da3d9ba8d8c63c41ba899d52" style="margin-right:10px;border-radius:4px;" width="20"/>
             Codex
           </button>
-<button class="btn blora-button" onclick="app.generateCcSwitchLink('gemini')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" data-variant="secondary" type="button">
+<button class="blora-button" data-variant="secondary" onclick="app.generateCcSwitchLink('gemini')" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" type="button">
 <img alt="" height="20" src="https://img.bloret.net/img/1781991757737/4589a05ed1f724de155c9916b5f9dcdd" style="margin-right:10px;border-radius:4px;" width="20"/>
             Gemini
           </button>
 </div>
 </div></blora-dialog>
 <!-- CC Switch 链接结果模态框 -->
-<blora-dialog id="ccSwitchResultModal"><div class="modal-header" slot="header">
+<blora-dialog id="ccSwitchResultModal"><div slot="header">
 <h3 id="ccSwitchResultTitle">CC Switch</h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <p id="ccSwitchResultDesc" style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"></p>
 <div style="position:relative;">
-<textarea class="textarea blora-textarea" id="ccSwitchResultLink" readonly="" rows="3" style="width:100%;font-family:monospace;font-size:12px;resize:none;padding-right:56px;"></textarea>
-<button class="btn btn-sm btn-primary blora-button" onclick="app.copyCcSwitchLink()" style="position:absolute;top:8px;right:8px;" data-variant="primary" data-size="sm" type="button"><span data-i18n="复制">复制</span></button>
+<textarea class="blora-textarea" id="ccSwitchResultLink" readonly="" rows="3" style="width:100%;font-family:monospace;font-size:12px;resize:none;padding-right:56px;"></textarea>
+<button class="blora-button" data-size="sm" data-variant="primary" onclick="app.copyCcSwitchLink()" style="position:absolute;top:8px;right:8px;" type="button"><span data-i18n="复制">复制</span></button>
 </div>
 <div id="ccSwitchDeepLinkBtn" style="margin-top:12px;text-align:center;"></div>
 </div></blora-dialog>
-<blora-dialog id="configOutputModal"><div class="modal-header" slot="header">
+<blora-dialog id="configOutputModal"><div slot="header">
 <h3 id="configOutputTitle"><span data-i18n="配置">配置</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <p id="configOutputDesc" style="color:var(--muted-foreground);margin-bottom:12px;font-size:13px;"></p>
-<textarea class="input blora-textarea" id="configOutputContent" readonly="" rows="28" style="font-family:monospace;font-size:12px;resize:vertical;width:100%;white-space:pre;"></textarea>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" onclick="app.copyConfigOutput()" data-variant="primary" type="button"><span data-i18n="复制配置">复制配置</span></button>
+<textarea class="blora-textarea" id="configOutputContent" readonly="" rows="28" style="font-family:monospace;font-size:12px;resize:vertical;width:100%;white-space:pre;"></textarea>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="app.copyConfigOutput()" type="button"><span data-i18n="复制配置">复制配置</span></button>
 </div></blora-dialog>
 <!-- cc-switch 额度查询脚本模态框 -->
-<blora-dialog id="usageScriptModal"><div class="modal-header" slot="header">
+<blora-dialog id="usageScriptModal"><div slot="header">
 <h3><span data-i18n="cc-switch 额度查询脚本">cc-switch 额度查询脚本</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <p style="color:var(--muted-foreground);margin-bottom:20px;font-size:13px;"><span data-i18n="自定义展示内容，脚本会实时生成。将最终结果粘贴到 cc-switch 的「自定义查询脚本」中即可。">
           自定义展示内容，脚本会实时生成。将最终结果粘贴到 cc-switch 的「自定义查询脚本」中即可。
         </span></p>
@@ -2125,8 +2104,8 @@ data: [DONE]</code></pre>
 <div class="ccs-option-group">
 <div class="ccs-option-title"><span data-i18n="显示样式">显示样式</span></div>
 <div class="ccs-segment" id="ccsStyleSegment">
-<button class="ccs-segment-item active" data-value="compact" onclick="app._setCcsStyle('compact')"><span data-i18n="紧凑">紧凑</span></button>
-<button class="ccs-segment-item" data-value="bar" onclick="app._setCcsStyle('bar')"><span data-i18n="进度条">进度条</span></button>
+<button class="ccs-segment-item active blora-button" data-size="md" data-value="compact" data-variant="secondary" onclick="app._setCcsStyle('compact')" type="button"><span data-i18n="紧凑">紧凑</span></button>
+<button class="ccs-segment-item blora-button" data-size="md" data-value="bar" data-variant="secondary" onclick="app._setCcsStyle('bar')" type="button"><span data-i18n="进度条">进度条</span></button>
 </div>
 <div id="ccsBarOptions" style="display:none;margin-top:12px;">
 <div class="ccs-option-title"><span data-i18n="进度条长度">进度条长度</span></div>
@@ -2167,100 +2146,99 @@ data: [DONE]</code></pre>
 <span style="font-size:12px;font-weight:600;color:var(--muted-foreground);text-transform:uppercase;letter-spacing:0.5px;"><span data-i18n="生成的脚本（可直接编辑）">生成的脚本（可直接编辑）</span></span>
 <span id="ccsLineCount" style="font-size:12px;color:var(--muted-foreground);"></span>
 </div>
-<textarea class="input blora-textarea" id="usageScriptOutput" rows="20" style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;resize:vertical;width:100%;white-space:pre;line-height:1.5;"></textarea>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" onclick="app.copyUsageScript()" data-variant="primary" type="button"><span data-i18n="复制脚本">复制脚本</span></button>
+<textarea class="blora-textarea" id="usageScriptOutput" rows="20" style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;resize:vertical;width:100%;white-space:pre;line-height:1.5;"></textarea>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" onclick="app.copyUsageScript()" type="button"><span data-i18n="复制脚本">复制脚本</span></button>
 </div></blora-dialog>
 <!-- 添加/编辑模型模态框 -->
-<blora-dialog id="addEditModelModal"><div class="modal-header" slot="header">
+<blora-dialog id="addEditModelModal"><div slot="header">
 <h3 id="addEditModelTitle"><span data-i18n="添加模型">添加模型</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div id="addEditModelError" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
 <input class="blora-input" id="editModelId" type="hidden"/>
 <input class="blora-input" id="modelFormId" type="hidden"/>
 <div class="form-group">
 <label for="modelFormUpstreamId"><span data-i18n="上游模型ID">上游模型ID</span></label>
-<input class="input blora-input" data-i18n-placeholder="例如：gpt-4" id="modelFormUpstreamId" placeholder="例如：gpt-4" type="text"/>
+<input class="blora-input" data-i18n-placeholder="例如：gpt-4" id="modelFormUpstreamId" placeholder="例如：gpt-4" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="供应商识别的模型名称，同一供应商下不可重复，不同供应商可使用相同模型名">供应商识别的模型名称，同一供应商下不可重复，不同供应商可使用相同模型名</span></small>
 </div>
 <div class="form-group">
 <label for="modelFormAlias"><span data-i18n="别名（可选）">别名（可选）</span></label>
-<input class="input blora-input" data-i18n-placeholder="例如：my-gpt4" id="modelFormAlias" placeholder="例如：my-gpt4" type="text"/>
+<input class="blora-input" data-i18n-placeholder="例如：my-gpt4" id="modelFormAlias" placeholder="例如：my-gpt4" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="设置别名后，用户将通过别名请求模型，供应商仍使用原始上游模型名">设置别名后，用户将通过别名请求模型，供应商仍使用原始上游模型名</span></small>
 </div>
 <div class="form-group">
 <label for="modelFormProvider"><span data-i18n="提供商">提供商</span></label>
-<blora-select class="select blora-select" id="modelFormProvider"></blora-select>
+<blora-select class="blora-select" id="modelFormProvider"></blora-select>
 </div>
 <div class="form-group">
 <label for="modelFormSeries"><span data-i18n="系列">系列</span></label>
-<input class="input blora-input" data-i18n-placeholder="例如：GPT-4系列（可选）" id="modelFormSeries" placeholder="例如：GPT-4系列（可选）" type="text"/>
+<input class="blora-input" data-i18n-placeholder="例如：GPT-4系列（可选）" id="modelFormSeries" placeholder="例如：GPT-4系列（可选）" type="text"/>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="系列名称将显示在用户控制台，用于分类筛选模型">系列名称将显示在用户控制台，用于分类筛选模型</span></small>
 </div>
 <div class="form-group">
 <label for="modelFormDescription"><span data-i18n="描述">描述</span></label>
-<textarea class="textarea blora-textarea" id="modelFormDescription" rows="3"></textarea>
+<textarea class="blora-textarea" id="modelFormDescription" rows="3"></textarea>
 </div>
 <div class="form-group">
 <label for="modelFormInputPrice"><span data-i18n="输入价格（人民币/百万Token）">输入价格（人民币/百万Token）</span></label>
-<input class="input blora-input" id="modelFormInputPrice" step="0.000001" type="number" value="0.01"/>
+<input class="blora-input" id="modelFormInputPrice" step="0.000001" type="number" value="0.01"/>
 </div>
 <div class="form-group">
 <label for="modelFormOutputPrice"><span data-i18n="输出价格（人民币/百万Token）">输出价格（人民币/百万Token）</span></label>
-<input class="input blora-input" id="modelFormOutputPrice" step="0.000001" type="number" value="0.01"/>
+<input class="blora-input" id="modelFormOutputPrice" step="0.000001" type="number" value="0.01"/>
 </div>
 <div class="form-group">
 <label for="modelFormCachedPrice"><span data-i18n="缓存输出价格（人民币/百万Token）">缓存输出价格（人民币/百万Token）</span></label>
-<input class="input blora-input" id="modelFormCachedPrice" step="0.000001" type="number" value="0"/>
+<input class="blora-input" id="modelFormCachedPrice" step="0.000001" type="number" value="0"/>
 </div>
 <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;">
 <div style="font-weight:600;margin-bottom:12px;color:var(--foreground);"><span data-i18n="参考价（官方参考价，用于用户端展示对比）">参考价（官方参考价，用于用户端展示对比）</span></div>
 <div class="form-group">
 <label for="modelFormRefInputPrice"><span data-i18n="参考输入价格（人民币/百万Token）">参考输入价格（人民币/百万Token）</span></label>
-<input class="input blora-input" id="modelFormRefInputPrice" step="0.000001" type="number" value="0"/>
+<input class="blora-input" id="modelFormRefInputPrice" step="0.000001" type="number" value="0"/>
 </div>
 <div class="form-group">
 <label for="modelFormRefOutputPrice"><span data-i18n="参考输出价格（人民币/百万Token）">参考输出价格（人民币/百万Token）</span></label>
-<input class="input blora-input" id="modelFormRefOutputPrice" step="0.000001" type="number" value="0"/>
+<input class="blora-input" id="modelFormRefOutputPrice" step="0.000001" type="number" value="0"/>
 </div>
 </div>
 <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px;">
 <div style="font-weight:600;margin-bottom:12px;color:var(--foreground);"><span data-i18n="模型路由（可选，用于根据思考模式自动切换模型）">模型路由（可选，用于根据思考模式自动切换模型）</span></div>
 <div class="form-group">
 <label for="modelFormThinkingModel"><span data-i18n="思考模式模型">思考模式模型</span></label>
-<blora-select class="select blora-select" id="modelFormThinkingModel"><blora-option value="">不设置（使用自身）</blora-option></blora-select>
+<blora-select class="blora-select" id="modelFormThinkingModel"><blora-option value="">不设置（使用自身）</blora-option></blora-select>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="开启思考模式时实际使用的模型">开启思考模式时实际使用的模型</span></small>
 </div>
 <div class="form-group">
 <label for="modelFormNonThinkingModel"><span data-i18n="非思考模式模型">非思考模式模型</span></label>
-<blora-select class="select blora-select" id="modelFormNonThinkingModel"><blora-option value="">不设置（使用自身）</blora-option></blora-select>
+<blora-select class="blora-select" id="modelFormNonThinkingModel"><blora-option value="">不设置（使用自身）</blora-option></blora-select>
 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="关闭思考模式时实际使用的模型">关闭思考模式时实际使用的模型</span></small>
 </div>
 </div>
 <div class="form-group">
 <label for="modelFormRateLimitRpm"><span data-i18n="速率限制 - 每分钟请求数（0=不限制）">速率限制 - 每分钟请求数（0=不限制）</span></label>
-<input class="input blora-input" id="modelFormRateLimitRpm" min="0" type="number" value="0"/>
+<input class="blora-input" id="modelFormRateLimitRpm" min="0" type="number" value="0"/>
 </div>
 <div class="form-group">
 <label for="modelFormRateLimitTpm"><span data-i18n="速率限制 - 每分钟Token数（0=不限制）">速率限制 - 每分钟Token数（0=不限制）</span></label>
-<input class="input blora-input" id="modelFormRateLimitTpm" min="0" type="number" value="0"/>
+<input class="blora-input" id="modelFormRateLimitTpm" min="0" type="number" value="0"/>
 </div>
 <div class="form-group">
 <label for="modelFormEnabled"><span data-i18n="启用状态">启用状态</span></label>
-<blora-select class="select blora-select" id="modelFormEnabled"><blora-option value="true">启用</blora-option><blora-option value="false">禁用</blora-option></blora-select>
+<blora-select class="blora-select" id="modelFormEnabled"><blora-option value="true">启用</blora-option><blora-option value="false">禁用</blora-option></blora-select>
 </div>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-primary blora-button" id="confirmAddEditModel" data-variant="primary" type="button"><span data-i18n="添加">添加</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="primary" id="confirmAddEditModel" type="button"><span data-i18n="添加">添加</span></button>
 </div></blora-dialog>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="/js/theme.js?v=2"></script>
 <script src="/js/i18n.js?v=2"></script>
-<script src="/js/dom.js?v=3"></script>
+<script src="/js/dom.js?v=4"></script>
 <script src="/js/dialog.js?v=2"></script>
 <script src="/js/session-tool-groups.js?v=2"></script>
 <script src="/js/vendor/marked.min.js"></script>
-<script src="/js/app.js?v=54"></script>
+<script src="/js/app.js?v=55"></script>
 <script src="/js/plugin-runtime.js?v=1"></script>
 <script>
     // 文档分页导航
@@ -2467,46 +2445,41 @@ data: [DONE]</code></pre>
     .live-activity-empty { color: var(--muted-foreground); font-size: 13px; padding: 8px 0; }
   </style>
 <!-- 模型测试结果弹窗 -->
-<blora-dialog id="modelTestModal"><div class="modal-header" slot="header">
+<blora-dialog id="modelTestModal"><div slot="header">
 <h3><span data-i18n="模型测试结果">模型测试结果</span></h3>
-
-</div><div class="modal-body" slot="" id="modelTestModalBody" slot="">
+</div><div id="modelTestModalBody">
 <div class="page-loading page-loading-compact"><div aria-label="加载中" class="loading-spinner md" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
 </div></blora-dialog>
 <!-- 模型调用可用率详情 -->
-<blora-dialog id="modelUptimeModal" size="lg"><div class="modal-header" slot="header">
+<blora-dialog id="modelUptimeModal" size="lg"><div slot="header">
 <h3 id="modelUptimeModalTitle"><span data-i18n="模型调用状态">模型调用状态</span></h3>
-
-</div><div class="modal-body" slot="" id="modelUptimeModalBody" slot="">
+</div><div id="modelUptimeModalBody">
 <div class="page-loading page-loading-compact"><div aria-label="加载中" class="loading-spinner md" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
 </div></blora-dialog>
 <!-- 调用记录详情 -->
-<blora-dialog id="usageDetailModal"><div class="modal-header" slot="header">
+<blora-dialog id="usageDetailModal"><div slot="header">
 <h3><span data-i18n="调用详情">调用详情</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div id="usageDetailContent"></div>
 </div></blora-dialog>
 <!-- 注入提示词编辑弹窗 -->
-<blora-dialog id="injectPromptModal"><div class="modal-header" slot="header">
+<blora-dialog id="injectPromptModal"><div slot="header">
 <h3 id="injectPromptModalTitle"><span data-i18n="新建条目">新建条目</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;"><span data-i18n="名称">名称</span></label>
-<input class="input blora-input" data-i18n-placeholder="例如：项目代码规范" id="injectPromptName" placeholder="例如：项目代码规范" style="width:100%;margin-bottom:14px;" type="text"/>
+<input class="blora-input" data-i18n-placeholder="例如：项目代码规范" id="injectPromptName" placeholder="例如：项目代码规范" style="width:100%;margin-bottom:14px;" type="text"/>
 <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;"><span data-i18n="内容">内容</span></label>
 <textarea class="blora-textarea" data-i18n-placeholder="输入提示词正文，转发时按顺序拼接到 system 末尾" id="injectPromptContent" placeholder="输入提示词正文，转发时按顺序拼接到 system 末尾" rows="12" style="width:100%;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:12.5px;line-height:1.5;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--background);color:var(--foreground);resize:vertical;"></textarea>
 <p style="font-size:12px;color:var(--muted-foreground);margin:6px 0 14px;"><span data-i18n="单条上限 32KB；启用的条目按顺序拼接，总量超 64KB 会截断">单条上限 32KB；启用的条目按顺序拼接，总量超 64KB 会截断</span></p>
 <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;"><span data-i18n="生效范围">生效范围</span></label>
 <div id="injectPromptKeyList" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px 12px;"></div>
-</div><div class="modal-footer" slot="footer" slot="footer">
-<button class="btn btn-secondary blora-button" onclick="app.closeModals()" data-variant="secondary" type="button"><span data-i18n="取消">取消</span></button>
-<button class="btn btn-primary blora-button" onclick="app.saveInjectPrompt()" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
+</div><div slot="footer">
+<button class="blora-button" data-variant="secondary" onclick="app.closeModals()" type="button"><span data-i18n="取消">取消</span></button>
+<button class="blora-button" data-variant="primary" onclick="app.saveInjectPrompt()" type="button"><span data-i18n="保存">保存</span></button>
 </div></blora-dialog>
-<blora-dialog id="promptDetailModal"><div class="modal-header" slot="header">
+<blora-dialog id="promptDetailModal"><div slot="header">
 <h3 id="promptDetailTitle"><span data-i18n="提示词详情">提示词详情</span></h3>
-
-</div><div class="modal-body" slot="" slot="">
+</div><div>
 <div id="promptDetailContent"></div>
 </div></blora-dialog>
 </body>

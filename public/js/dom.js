@@ -83,7 +83,39 @@
   /** 唯一推荐的 HTML 写入入口（替代 el.innerHTML = ...） */
   function upgradeBloraControls(root) {
     const scope = root && root.querySelectorAll ? root : document;
-    if (!customElements.get('blora-select')) return;
+    const datepickers = [];
+    const timepickers = [];
+    if (scope.matches?.('input[type="date"]')) datepickers.push(scope);
+    if (scope.matches?.('input[type="time"]')) timepickers.push(scope);
+    datepickers.push(...scope.querySelectorAll('input[type="date"]'));
+    timepickers.push(...scope.querySelectorAll('input[type="time"]'));
+    datepickers.forEach((input) => {
+      const replacement = document.createElement('blora-datepicker');
+      [...input.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.name === 'class' ? `${attr.value} blora-input` : attr.value));
+      if (input.value) replacement.setAttribute('value', input.value);
+      input.replaceWith(replacement);
+    });
+    timepickers.forEach((input) => {
+      const replacement = document.createElement('blora-timepicker');
+      [...input.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.name === 'class' ? `${attr.value} blora-input` : attr.value));
+      if (input.value) replacement.setAttribute('value', input.value);
+      input.replaceWith(replacement);
+    });
+    if (!customElements.get('blora-select')) {
+      scope.querySelectorAll('button').forEach((button) => button.classList.add('blora-button'));
+      return;
+    }
+    const normalizeOptions = (select) => {
+      select.querySelectorAll(':scope > option').forEach((option) => {
+        const replacement = document.createElement('blora-option');
+        [...option.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.value));
+        replacement.textContent = option.textContent;
+        option.replaceWith(replacement);
+      });
+    };
+    scope.querySelectorAll('blora-select').forEach(normalizeOptions);
+    const bloraSelect = scope.matches?.('blora-select') ? [scope] : [];
+    bloraSelect.forEach(normalizeOptions);
     const selects = [];
     if (scope.matches?.('select:not(blora-select)')) selects.push(scope);
     selects.push(...scope.querySelectorAll('select:not(blora-select)'));
@@ -100,24 +132,37 @@
       select.replaceWith(replacement);
     });
     scope.querySelectorAll('button').forEach((button) => {
+      const legacy = button.classList;
+      const variant = button.dataset.variant || (legacy.contains('btn-primary') ? 'primary' : legacy.contains('btn-danger') ? 'danger' : legacy.contains('btn-ghost') ? 'ghost' : legacy.contains('btn-secondary') ? 'secondary' : 'secondary');
+      const size = button.dataset.size || (legacy.contains('btn-icon') ? 'icon' : legacy.contains('btn-sm') ? 'sm' : 'md');
       button.classList.add('blora-button');
+      ['btn', 'btn-primary', 'btn-danger', 'btn-ghost', 'btn-secondary', 'btn-outline', 'btn-link', 'btn-icon', 'btn-sm', 'btn-lg'].forEach((name) => legacy.remove(name));
+      button.dataset.variant = variant;
+      button.dataset.size = size;
       if (!button.type) button.type = 'button';
-      if (button.classList.contains('btn-primary')) button.dataset.variant = 'primary';
-      else if (button.classList.contains('btn-danger')) button.dataset.variant = 'danger';
-      else if (button.classList.contains('btn-ghost')) button.dataset.variant = 'ghost';
-      else if (button.classList.contains('btn-secondary')) button.dataset.variant = 'secondary';
-      if (button.classList.contains('btn-sm')) button.dataset.size = 'sm';
-      if (button.classList.contains('btn-icon')) button.dataset.size = 'icon';
     });
-    scope.querySelectorAll('input').forEach((input) => input.classList.add('blora-input'));
-    scope.querySelectorAll('textarea').forEach((textarea) => textarea.classList.add('blora-textarea'));
+    scope.querySelectorAll('input').forEach((input) => {
+      input.classList.add('blora-input');
+      input.classList.remove('input', 'form-input');
+    });
+    scope.querySelectorAll('textarea').forEach((textarea) => {
+      textarea.classList.add('blora-textarea');
+      textarea.classList.remove('input', 'textarea', 'form-input');
+    });
+    scope.querySelectorAll('blora-select').forEach((select) => select.classList.remove('select', 'form-input'));
     scope.querySelectorAll('table').forEach((table) => table.classList.add('blora-table'));
+  }
+
+  function normalizeBloraMarkup(content) {
+    return toHtmlString(content)
+      .replace(/<option\b/gi, '<blora-option')
+      .replace(/<\/option>/gi, '</blora-option>');
   }
 
   function setHTML(el, content) {
     const node = resolveEl(el);
     if (!node) return null;
-    node.innerHTML = toHtmlString(content);
+    node.innerHTML = normalizeBloraMarkup(content);
     upgradeBloraControls(node);
     return node;
   }
@@ -125,7 +170,8 @@
   function appendHTML(el, content) {
     const node = resolveEl(el);
     if (!node) return null;
-    node.insertAdjacentHTML('beforeend', toHtmlString(content));
+    node.insertAdjacentHTML('beforeend', normalizeBloraMarkup(content));
+    upgradeBloraControls(node);
     return node;
   }
 

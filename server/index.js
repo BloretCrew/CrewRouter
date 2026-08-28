@@ -2294,7 +2294,8 @@ app.use((req, res, next) => {
 });
 
 // 静态文件（开发环境禁用强缓存）
-app.use('/blora', express.static(path.join(process.cwd(), 'node_modules/@bloret-crew/blora-design/dist'), { etag: false, maxAge: 0 }));
+const BLORA_DIST = path.join(path.dirname(PUBLIC_DIR), 'node_modules/@bloret-crew/blora-design/dist');
+app.use('/blora', express.static(BLORA_DIST, { etag: false, maxAge: 0 }));
 app.use(express.static(PUBLIC_DIR, { etag: false, maxAge: 0 }));
 
 // 版本号接口（无需认证）

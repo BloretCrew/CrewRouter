@@ -4486,3 +4486,30 @@ pre {
   pointer-events: none;
   cursor: not-allowed;
 }
+
+/* Blora semantic bridge for legacy business layout tokens. */
+.blora-scope {
+  --background: var(--blora-color-surface-canvas);
+  --foreground: var(--blora-color-text-primary);
+  --card: var(--blora-color-surface-default);
+  --card-foreground: var(--blora-color-text-primary);
+  --popover: var(--blora-color-surface-raised);
+  --popover-foreground: var(--blora-color-text-primary);
+  --primary: var(--blora-color-action-primary-default);
+  --primary-foreground: var(--blora-color-text-on-accent);
+  --secondary: var(--blora-color-surface-raised);
+  --secondary-foreground: var(--blora-color-text-primary);
+  --muted: var(--blora-color-surface-raised);
+  --muted-foreground: var(--blora-color-text-muted);
+  --accent: var(--blora-color-action-primary-soft);
+  --accent-foreground: var(--blora-color-text-primary);
+  --destructive: var(--blora-color-status-danger);
+  --border: var(--blora-color-border-subtle);
+  --input: var(--blora-color-border-subtle);
+  --ring: var(--blora-color-action-primary-default);
+  --brand-blue: var(--blora-color-action-primary-default);
+  --status-success: var(--blora-color-status-success);
+  --status-warn: var(--blora-color-status-warning);
+  --status-danger: var(--blora-color-status-danger);
+  --status-info: var(--blora-color-status-info);
+}
