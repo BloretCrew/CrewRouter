@@ -144,4 +144,4 @@ errors go to stderr with a non-zero exit.)
 
 ## License
 
-MIT
+GNU General Public License v3.0 only (GPL-3.0-only)

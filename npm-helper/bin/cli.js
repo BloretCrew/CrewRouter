@@ -3,6 +3,8 @@
 
 /**
  * crewrouter-helper —— 客户端事件统一上报器（Node.js 零依赖版）
+ * Copyright (C) 2026 Bloret
+ * SPDX-License-Identifier: GPL-3.0-only
  *
  * 子命令与 Python 版 cr-report.py / cr-login 一一对应：
  *   hook    --harness <id> [--event <type>]   读 stdin Claude 风格 hook JSON 转发

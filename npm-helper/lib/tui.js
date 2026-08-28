@@ -1,5 +1,8 @@
 'use strict';
 
+// Copyright (C) 2026 Bloret
+// SPDX-License-Identifier: GPL-3.0-only
+
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
