@@ -18,6 +18,26 @@ for (const chunk of ['before\n<system-re', 'minder>\n# claudeMd\nContents of x (
 output += newScrubber.flush();
 assert.strictEqual(output, 'before\nafter');
 
+const inline = createStreamScrubber(newPrompt);
+output = inline.feed('answer <system-reminder>\n# claudeMd\nsecret\n</system-reminder> after');
+output += inline.flush();
+assert.strictEqual(output, 'answer <system-reminder>\n# claudeMd\nsecret\n</system-reminder> after');
+
+const atStart = createStreamScrubber(newPrompt);
+output = atStart.feed('<system-reminder>\n# claudeMd\nsecret\n</system-reminder>after');
+output += atStart.flush();
+assert.strictEqual(output, 'after');
+
+const singleLine = createStreamScrubber(newPrompt);
+output = singleLine.feed('answer\n  <system-reminder>\n# claudeMd\nsecret\n</system-reminder>after');
+output += singleLine.flush();
+assert.strictEqual(output, 'answer\nafter');
+
+const crlf = createStreamScrubber(newPrompt);
+output = crlf.feed('answer\r\n\t<system-reminder>\r\n# claudeMd\r\nsecret\r\n</system-reminder>after');
+output += crlf.flush();
+assert.strictEqual(output, 'answer\r\nafter');
+
 const longPrefix = '<system-reminder>\n' + 'x'.repeat(400) + '\n# claudeMd\nsecret\n</system-reminder>';
 const longScrubber = createStreamScrubber(longPrefix);
 output = '';

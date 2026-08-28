@@ -14,10 +14,11 @@ function createStreamScrubber(injectPrompt) {
   let finished = false;
 
   function findStart(text) {
-    const newIndex = text.toLowerCase().indexOf(START_TAG);
+    // 新格式必须从文本开头或换行后的独立标签开始，避免吞掉同一行内联文本。
+    const newMatch = /(?:^|(?:\r\n|\n))[ \t]*<system-reminder>/i.exec(text);
     const oldMatch = OLD_FULL_RE.exec(text) || OLD_HEADER_RE.exec(text);
-    if (newIndex >= 0 && (!oldMatch || newIndex <= oldMatch.index)) {
-      return { index: newIndex, length: START_TAG.length, newFormat: true };
+    if (newMatch && (!oldMatch || newMatch.index <= oldMatch.index)) {
+      return { index: newMatch.index, length: newMatch[0].length, newFormat: true };
     }
     if (oldMatch) return { index: oldMatch.index, length: oldMatch[0].length, newFormat: false };
     return null;
@@ -38,7 +39,9 @@ function createStreamScrubber(injectPrompt) {
       const start = findStart(pending);
       if (start) {
         out += pending.slice(0, start.index);
-        if (start.index > 0 && (pending[start.index] === '\n' || pending[start.index] === '\r')) out += '\n';
+        if (start.index > 0 && (pending[start.index] === '\n' || pending[start.index] === '\r')) {
+          out += pending[start.index] === '\r' && pending[start.index + 1] === '\n' ? '\r\n' : '\n';
+        }
         pending = pending.slice(start.index + start.length);
         swallowing = true;
         newFormat = start.newFormat;
