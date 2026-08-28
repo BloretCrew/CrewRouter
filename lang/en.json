@@ -2696,5 +2696,17 @@
   "无匹配结果": "No matching results",
   "个匹配会话": "matching sessions",
   "条命中": "hits",
-  "命中请求数": "Matched requests"
+  "命中请求数": "Matched requests",
+  "插件系统（含主题）": "Sandboxed plugins support gateway hooks, page/slot/route extensions, and multiple themes.",
+  "全站国际化": "Site-wide internationalization",
+  "全站页面和脚本支持中文、英文双语，译文实时拉取并提供本地回退。": "Chinese and English support across pages and scripts, with live translations and a local fallback.",
+  "客户端事件上报 / 实时看板": "Client event reporting / real-time dashboard",
+  "CrewRouterHelper 上报客户端事件，实时活动看板聚合展示运行情况。": "CrewRouterHelper reports client events to a real-time activity dashboard.",
+  "OAuth 授权服务": "OAuth authorization service",
+  "自有 OAuth 2.0 服务支持 PKCE、网关双鉴权和 AI 客户端凭证供给。": "Built-in OAuth 2.0 service with PKCE, dual gateway authentication and AI client credentials.",
+  "模型库增强（收藏/搜索）": "Enhanced model library (favorites/search)",
+  "支持模型收藏、全局搜索、供应商多 Key 切换、拖拽排序和队列回退。": "Star models, search globally, switch provider keys, drag to reorder and fall back through a model queue.",
+  "浏览、评分、评论并一键安装插件，支持每日更新检测和自托管源。": "Browse, rate, review and install plugins in one click, with daily update checks and self-hosted sources.",
+  "按全局或 API Key 配置提示词，采用 Claude Code 风格注入并自动净化回显。": "Configure prompts globally or per API key with Claude Code-style injection and automatic response cleanup.",
+  "沙箱插件支持网关钩子、页面/插槽/路由扩展，并可接入多套主题。": "Sandboxed plugins support gateway hooks, page/slot/route extensions, and multiple themes."
 }
