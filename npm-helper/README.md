@@ -35,7 +35,8 @@ harness 取值 / Harness ids: `claude_code` / `codex` / `grok` / `opencode` /
 ## 登录与凭证 / Login & credentials
 
 ```bash
-crewrouter-helper login --url http://127.0.0.1:20003   # 浏览器 PKCE 授权
+crewrouter-helper login                                  # 打开官方商店，选择已登录过的 CrewRouter 后授权
+crewrouter-helper login --url http://127.0.0.1:20003   # 直接在指定 CrewRouter 授权
 crewrouter-helper test                                  # 应输出 HTTP 200 {"ok":true}
 crewrouter-helper logout                                # 删除 ~/.config/cr-report.json
 ```

@@ -78,6 +78,74 @@
     window.location.href = AUTH + '/login?return_to=' + encodeURIComponent(returnTo);
   }
 
+  function base64UrlJson(value) {
+    return btoa(JSON.stringify(value)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  }
+
+  function openHelperLoginTargets() {
+    var params = new URLSearchParams(location.search);
+    var nonce = params.get('state') || '';
+    var redirectUri = params.get('redirect_uri') || '';
+    var clientId = params.get('client_id') || '';
+    var scope = params.get('scope') || '';
+    var challenge = params.get('code_challenge') || '';
+    var challengeMethod = params.get('code_challenge_method') || 'S256';
+    if (!nonce || !redirectUri || !clientId || !challenge) {
+      setBanner('err', t('登录参数不完整，请回终端重试'));
+      return;
+    }
+    if (!me.loggedIn) {
+      api('/me').then(function (data) {
+        me = data;
+        if (!me.loggedIn) {
+          setBanner('warn', t('请先登录官方商店，再选择 CrewRouter'));
+          login();
+          return null;
+        }
+        return api('/install-targets');
+      }).then(function (data) {
+        if (data) renderHelperLoginTargets(data, nonce, redirectUri, clientId, scope, challenge, challengeMethod);
+      }).catch(function (e) { setBanner('err', e.message || t('加载登录过的 CrewRouter 失败')); });
+      return;
+    }
+    renderHelperLoginTargets(null, nonce, redirectUri, clientId, scope, challenge, challengeMethod);
+  }
+
+  function renderHelperLoginTargets(initial, nonce, redirectUri, clientId, scope, challenge, challengeMethod) {
+    var targetPromise = initial ? Promise.resolve(initial) : api('/install-targets');
+    targetPromise.then(function (data) {
+      var targets = data.targets || [];
+      var html = '<div class="store-modal-mask" id="storeHelperLoginMask"><div class="store-modal">';
+      html += '<div class="store-modal__head"><h3>' + esc(t('选择要登录的 CrewRouter')) + '</h3></div>';
+      html += '<p style="color:var(--muted-foreground);font-size:13px;margin:0 0 14px;">' + esc(t('请选择你要登录的 CrewRouter，登录完成后会回到终端。')) + '</p>';
+      if (!targets.length) {
+        html += '<div class="store-empty">' + esc(t('未检测到你登录过的 CrewRouter')) + '</div>';
+      } else {
+        html += '<div class="store-modal__list">' + targets.map(function (tg) {
+          var targetState = base64UrlJson({ nonce: nonce, router_url: 'https://' + tg.domain });
+          var url = 'https://' + tg.domain + '/oauth/authorize?' + new URLSearchParams({
+            client_id: clientId, response_type: 'code', scope: scope,
+            redirect_uri: redirectUri, state: targetState,
+            code_challenge: challenge, code_challenge_method: challengeMethod
+          }).toString();
+          return '<a class="store-target store-target--ok" href="' + esc(url) + '">' +
+            '<div class="store-target__domain">' + esc(tg.domain) + '</div>' +
+            '<div class="store-target__meta">' + esc(fmtDate(tg.lastLogin)) + ' · ' + esc(String(tg.logins)) + ' ' + esc(t('次登录')) + '</div>' +
+          '</a>';
+        }).join('') + '</div>';
+      }
+      html += '</div></div>';
+      var wrap = document.createElement('div');
+      wrap.innerHTML = html;
+      document.body.appendChild(wrap.firstChild);
+      var mask = document.getElementById('storeHelperLoginMask');
+      if (!targets.length) setBanner('warn', t('未检测到你登录过的 CrewRouter，请先在某个 CrewRouter 登录一次。'));
+      if (mask) mask.addEventListener('click', function (e) { if (e.target === mask) mask.remove(); });
+    }).catch(function (e) {
+      setBanner('err', e.message || t('加载登录过的 CrewRouter 失败'));
+    });
+  }
+
   function starHtml(score) {
     var cls = ['', 'store-stars'];
     var html = '<span class="' + cls[1] + '">';
@@ -678,6 +746,10 @@
   }
 
   function boot() {
+    if (new URLSearchParams(location.search).get('helper_login') === '1') {
+      openHelperLoginTargets();
+      return;
+    }
     document.getElementById('storeLoginBtn').addEventListener('click', login);
     document.getElementById('storeLogoutBtn').addEventListener('click', function () {
       window.location.href = AUTH + '/logout';

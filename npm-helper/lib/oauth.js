@@ -159,108 +159,115 @@ function openBrowser(target) {
 
 /** 浏览器 PKCE 授权：本机随机端口收回调 → 换 token → 写配置（chmod 600）。返回退出码。 */
 async function runLogin({ url }) {
-  const base = String(url || '').replace(/\/+$/, '');
-  if (!base) {
-    console.error(
-      `[crewrouter-helper] 需要 --url 或环境变量 CREWROUTER_URL，例如：` +
-        `crewrouter-helper login --url http://127.0.0.1:20003`
-    );
-    return 1;
-  }
-
   const { verifier, challenge } = makePkce();
   const state = crypto.randomBytes(16).toString('base64url');
+  if (!url) return runStoreLogin({ verifier, challenge, state });
+  return runDirectLogin({ base: String(url).replace(/\/+$/, ''), verifier, challenge, state });
+}
 
-  let done = false;
-  let gotCode = '';
-  let gotState = '';
-  let gotError = '';
-  const server = http.createServer((req, res) => {
-    const q = new URL(req.url, 'http://127.0.0.1').searchParams;
-    gotCode = q.get('code') || '';
-    gotState = q.get('state') || '';
-    gotError = q.get('error') || '';
-    const ok = Boolean(gotCode) && gotState === state;
-    const body = Buffer.from(
-      "<meta charset='utf-8'><body style=\"font-family:system-ui;" +
-        'display:flex;align-items:center;justify-content:center;min-height:80vh;">' +
-        (ok ? '登录成功，请回到终端。' : '授权失败，请回终端重试。') +
-        '</body>',
-      'utf8'
-    );
-    res.writeHead(200, {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Content-Length': body.length,
-    });
-    res.end(body);
-    done = true;
-  });
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', resolve);
-  });
-  const port = server.address().port;
-  const redirectUri = `http://127.0.0.1:${port}/callback`;
-  const authUrl =
-    base +
-    '/oauth/authorize?' +
-    new URLSearchParams({
-      client_id: OAUTH_CLIENT_ID,
-      response_type: 'code',
-      scope: OAUTH_SCOPE,
-      redirect_uri: redirectUri,
-      state,
-      code_challenge: challenge,
-      code_challenge_method: 'S256',
-    }).toString();
-
-  console.log(`[crewrouter-helper] 正在打开浏览器进行授权（本机回调端口 ${port}）...`);
-  if (process.env.CREWROUTER_NO_BROWSER === '1' || process.env.CR_REPORT_NO_BROWSER === '1') {
-    console.log(authUrl);
-  } else {
-    openBrowser(authUrl);
-    console.log(`[crewrouter-helper] 若浏览器未自动打开，请手动访问：\n${authUrl}`);
-  }
-
-  const deadline = Date.now() + 300000; // 5 分钟
-  while (!done && Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 250));
-  }
-  server.close();
-
-  if (!done) {
-    console.error('[crewrouter-helper] 等待授权超时（5 分钟）');
+async function runStoreLogin({ verifier, challenge, state }) {
+  const server = await createCallbackServer();
+  const storeUrl = 'https://crewrouter.bloret.net/store?' + new URLSearchParams({
+    helper_login: '1', client_id: OAUTH_CLIENT_ID, scope: OAUTH_SCOPE,
+    redirect_uri: server.redirectUri, state, code_challenge: challenge,
+    code_challenge_method: 'S256',
+  }).toString();
+  console.log('[crewrouter-helper] 未指定 --url，正在打开官方商店选择要登录的 CrewRouter...');
+  printBrowserUrl(storeUrl);
+  const callback = await waitForCallback(server);
+  if (!callback) return 1;
+  let selected;
+  try { selected = JSON.parse(Buffer.from(callback.state, 'base64url').toString('utf8')); } catch (_) {}
+  if (callback.error || !callback.code || !selected || selected.nonce !== state) {
+    console.error(`[crewrouter-helper] 授权被拒绝或回调校验失败：${callback.error || 'state 无效'}`);
     return 1;
   }
-  if (gotError || !gotCode) {
-    console.error(`[crewrouter-helper] 授权被拒绝或失败：${gotError || '缺少 code'}`);
+  const base = String(selected.router_url || '').replace(/\/+$/, '');
+  if (!/^https?:\/\//i.test(base)) {
+    console.error('[crewrouter-helper] 商店未返回有效的 CrewRouter 地址');
     return 1;
   }
-  if (gotState !== state) {
+  return exchangeAuthorizationCode(base, callback, verifier, server.redirectUri);
+}
+
+async function runDirectLogin({ base, verifier, challenge, state }) {
+  if (!base) {
+    console.error('[crewrouter-helper] 需要 --url 或环境变量 CREWROUTER_URL，例如：crewrouter-helper login --url http://127.0.0.1:20003');
+    return 1;
+  }
+  const server = await createCallbackServer();
+  const authUrl = base + '/oauth/authorize?' + new URLSearchParams({
+    client_id: OAUTH_CLIENT_ID, response_type: 'code', scope: OAUTH_SCOPE,
+    redirect_uri: server.redirectUri, state, code_challenge: challenge,
+    code_challenge_method: 'S256',
+  }).toString();
+  console.log(`[crewrouter-helper] 正在打开浏览器进行授权（本机回调端口 ${server.port}）...`);
+  printBrowserUrl(authUrl);
+  const callback = await waitForCallback(server);
+  if (!callback) return 1;
+  if (callback.error || !callback.code) {
+    console.error(`[crewrouter-helper] 授权被拒绝或失败：${callback.error || '缺少 code'}`);
+    return 1;
+  }
+  if (callback.state !== state) {
     console.error('[crewrouter-helper] state 校验失败，放弃换取 token');
     return 1;
   }
+  return exchangeAuthorizationCode(base, callback, verifier, server.redirectUri);
+}
 
+function printBrowserUrl(url) {
+  if (process.env.CREWROUTER_NO_BROWSER === '1' || process.env.CR_REPORT_NO_BROWSER === '1') console.log(url);
+  else { openBrowser(url); console.log(`[crewrouter-helper] 若浏览器未自动打开，请手动访问：\n${url}`); }
+}
+
+function createCallbackServer() {
+  return new Promise((resolve, reject) => {
+    let callback = null;
+    let settled = false;
+    const server = http.createServer((req, res) => {
+      const requestUrl = new URL(req.url, 'http://127.0.0.1');
+      if (req.method !== 'GET' || requestUrl.pathname !== '/callback') {
+        res.writeHead(404); return res.end('Not found');
+      }
+      if (settled) { res.writeHead(410); return res.end('Callback already handled'); }
+      callback = {
+        code: requestUrl.searchParams.get('code') || '',
+        state: requestUrl.searchParams.get('state') || '',
+        error: requestUrl.searchParams.get('error') || '',
+      };
+      const body = Buffer.from(`<meta charset="utf-8"><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:80vh;">${callback.code ? '登录成功，请回到终端。' : '授权失败，请回终端重试。'}</body>`);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Length': body.length });
+      res.end(body);
+      settled = true;
+    });
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      resolve({ port, redirectUri: `http://127.0.0.1:${port}/callback`, callback: () => callback, close: () => server.close() });
+    });
+  });
+}
+
+async function waitForCallback(server) {
+  const deadline = Date.now() + 300000;
+  while (!server.callback() && Date.now() < deadline) await new Promise((r) => setTimeout(r, 250));
+  server.close();
+  if (!server.callback()) { console.error('[crewrouter-helper] 等待授权超时（5 分钟）'); return null; }
+  return server.callback();
+}
+
+async function exchangeAuthorizationCode(base, callback, verifier, redirectUri) {
   const out = await tokenRequest(base, {
-    grant_type: 'authorization_code',
-    code: gotCode,
-    client_id: OAUTH_CLIENT_ID,
-    redirect_uri: redirectUri,
-    code_verifier: verifier,
+    grant_type: 'authorization_code', code: callback.code, client_id: OAUTH_CLIENT_ID,
+    redirect_uri: redirectUri, code_verifier: verifier,
   });
   if (!out || !out.access_token || !out.refresh_token) {
-    console.error('[crewrouter-helper] 授权码换取 token 失败');
-    return 1;
+    console.error('[crewrouter-helper] 授权码换取 token 失败'); return 1;
   }
-
-  saveCfg({
-    url: base,
-    client_id: OAUTH_CLIENT_ID,
-    access_token: String(out.access_token),
-    refresh_token: String(out.refresh_token),
-    expires_at: Date.now() / 1000 + (Number(out.expires_in) || 86400),
-    scope: String(out.scope || OAUTH_SCOPE),
-  });
+  saveCfg({ url: base, client_id: OAUTH_CLIENT_ID, access_token: String(out.access_token),
+    refresh_token: String(out.refresh_token), expires_at: Date.now() / 1000 + (Number(out.expires_in) || 86400),
+    scope: String(out.scope || OAUTH_SCOPE) });
   console.log(`[crewrouter-helper] 登录成功，凭证已写入 ${CONFIG_PATH}（权限 600）`);
   return 0;
 }
