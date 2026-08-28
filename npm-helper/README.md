@@ -16,6 +16,12 @@ npx @bloret-crew/crewrouter-helper test
 # 要求 / Requires: Node.js >= 18；零第三方依赖 / zero third-party dependencies
 ```
 
+## 交互式 TUI
+
+在交互式终端直接运行 `crewrouter-helper`，即可打开菜单：查看连接状态、登录/配置服务、为 Claude Code / Qwen Code / Codex 写入上报 Hook，以及发送测试事件。已有客户端配置会被保留，重复配置不会重复添加 Hook。
+
+非交互环境仍显示原有帮助信息，适合脚本和 Hook 调用。
+
 ## 子命令 / Subcommands
 
 | 命令 / Command | 说明 / Description |

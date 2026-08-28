@@ -22,6 +22,7 @@ const { CONFIG_PATH } = require('../lib/config');
 const { getCredential, runLogin } = require('../lib/oauth');
 const { postJson } = require('../lib/http');
 const reporter = require('../lib/reporter');
+const { runTui } = require('../lib/tui');
 
 const PROG = 'crewrouter-helper';
 const EVENT_CHOICES = new Set(['session_start', 'session_end', 'tool_use']);
@@ -160,6 +161,7 @@ const HELP = `${PROG} —— 客户端事件统一上报器（Node.js 零依赖�
   ${PROG} login   [--url http://127.0.0.1:20003]      浏览器 OAuth PKCE 授权
   ${PROG} logout                                      删除本地凭证
   ${PROG} test    [--harness hermes]                  发测试事件验证链路
+  ${PROG}                                           交互式 TUI（终端菜单）
   ${PROG} --print                                    输出有效 access token（自动刷新）
 
 事件取值：session_start | session_end | tool_use
@@ -174,6 +176,11 @@ async function main() {
   const [, , cmd, ...rest] = process.argv;
   switch (cmd) {
     case undefined:
+      if (process.stdin.isTTY && process.stdout.isTTY) {
+        return runTui({ login: runLogin, test: () => cmdTest([]) });
+      }
+      console.log(HELP);
+      return 0;
     case '-h':
     case '--help':
     case 'help':
