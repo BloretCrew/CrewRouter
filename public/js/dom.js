@@ -132,6 +132,7 @@
       if (input.max) replacement.setAttribute('max', input.max);
       const value = input.value || input.min || 0;
       replacement.setAttribute('values', `${value},${value}`);
+      if (input.id) replacement.id = input.id;
       replacement.className = input.className;
       replacement.classList.remove('blora-input');
       input.replaceWith(replacement);
@@ -139,6 +140,26 @@
     if (!customElements.get('blora-select')) {
       scope.querySelectorAll('button').forEach((button) => button.classList.add('blora-button'));
       return;
+    }
+    const getChecked = (control) => control?.checked === true || control?.hasAttribute('checked');
+    const setChecked = (control, checked) => {
+      if (!control) return;
+      if ('checked' in control) control.checked = !!checked;
+      control.toggleAttribute('checked', !!checked);
+    };
+    const getValue = (control) => {
+      if (!control) return '';
+      if (control.tagName === 'BLORA-RANGE') return control.values?.[0] ?? control.getAttribute('values')?.split(',')[0] ?? '';
+      return control.value ?? control.getAttribute('value') ?? '';
+    };
+    global.getBloraChecked = getChecked;
+    global.setBloraChecked = setChecked;
+    global.getBloraValue = getValue;
+    global.getBloraCheckedControls = (selector, root = document) => [...root.querySelectorAll(selector)].filter(getChecked);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => upgradeBloraControls(document), { once: true });
+    } else {
+      upgradeBloraControls(document);
     }
     const normalizeOptions = (select) => {
       select.querySelectorAll(':scope > option').forEach((option) => {
@@ -187,6 +208,18 @@
     scope.querySelectorAll('blora-select').forEach((select) => select.classList.remove('select', 'form-input'));
     scope.querySelectorAll('table').forEach((table) => table.classList.add('blora-table'));
   }
+
+  function observeBloraControls() {
+    if (!window.MutationObserver || document.documentElement.dataset.bloraObserver) return;
+    document.documentElement.dataset.bloraObserver = '1';
+    new MutationObserver((records) => {
+      records.forEach((record) => record.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) upgradeBloraControls(node);
+      }));
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  observeBloraControls();
 
   function normalizeBloraMarkup(content) {
     return toHtmlString(content)

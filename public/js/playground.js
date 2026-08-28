@@ -109,9 +109,9 @@ class PlaygroundApp {
 
     if (caps.supportsThinking) {
       thinkingToggle.disabled = false;
-      thinkingLabel.textContent = thinkingToggle.checked ? t('已启用') : t('已禁用');
+      thinkingLabel.textContent = getBloraChecked(thinkingToggle) ? t('已启用') : t('已禁用');
     } else {
-      thinkingToggle.checked = true;
+      setBloraChecked(thinkingToggle, true);
       thinkingToggle.disabled = true;
       thinkingLabel.textContent = t('不支持');
     }
@@ -240,7 +240,7 @@ class PlaygroundApp {
           title,
           model,
           system_prompt: document.getElementById('pgSystemPrompt').value,
-          temperature: parseFloat(document.getElementById('pgTemperature').value),
+          temperature: parseFloat(getBloraValue(document.getElementById('pgTemperature'))),
           max_tokens: parseInt(document.getElementById('pgMaxTokens').value) || 4096,
         }),
       });
@@ -295,7 +295,8 @@ class PlaygroundApp {
         if (data.model) document.getElementById('pgModel').value = data.model;
         if (data.system_prompt !== undefined) document.getElementById('pgSystemPrompt').value = data.system_prompt;
         if (data.temperature !== undefined) {
-          document.getElementById('pgTemperature').value = data.temperature;
+          const temperature = document.getElementById('pgTemperature');
+          temperature.setAttribute('values', `${data.temperature},${data.temperature}`);
           document.getElementById('pgTempVal').textContent = data.temperature;
         }
         if (data.max_tokens !== undefined) document.getElementById('pgMaxTokens').value = data.max_tokens;
@@ -416,10 +417,10 @@ class PlaygroundApp {
 
     const model = document.getElementById('pgModel').value;
     const systemPrompt = document.getElementById('pgSystemPrompt').value.trim();
-    const temperature = parseFloat(document.getElementById('pgTemperature').value);
+    const temperature = parseFloat(getBloraValue(document.getElementById('pgTemperature')));
     const maxTokens = parseInt(document.getElementById('pgMaxTokens').value) || 4096;
-    const thinking = document.getElementById('pgThinkingToggle').checked;
-    const thinkingBudget = parseInt(document.getElementById('pgThinkingBudget').value) || 4096;
+    const thinking = getBloraChecked(document.getElementById('pgThinkingToggle'));
+    const thinkingBudget = parseInt(getBloraValue(document.getElementById('pgThinkingBudget'))) || 4096;
     const reasoningEffort = document.getElementById('pgReasoningEffort').value;
 
     if (!model) {
@@ -1099,17 +1100,17 @@ class PlaygroundApp {
     newChatBtn.addEventListener('click', () => this.newChat());
 
     tempSlider.addEventListener('input', () => {
-      document.getElementById('pgTempVal').textContent = tempSlider.value;
+      document.getElementById('pgTempVal').textContent = getBloraValue(tempSlider);
     });
 
     // Thinking toggle
     thinkingToggle.addEventListener('change', () => {
-      document.getElementById('pgThinkingLabel').textContent = thinkingToggle.checked ? t('已启用') : t('已禁用');
+      document.getElementById('pgThinkingLabel').textContent = getBloraChecked(thinkingToggle) ? t('已启用') : t('已禁用');
     });
 
     // Thinking budget slider
     thinkingBudget.addEventListener('input', () => {
-      document.getElementById('pgThinkingBudgetVal').textContent = thinkingBudget.value;
+      document.getElementById('pgThinkingBudgetVal').textContent = getBloraValue(thinkingBudget);
     });
 
     // Reply bar cancel

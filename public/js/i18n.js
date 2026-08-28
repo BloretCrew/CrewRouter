@@ -104,7 +104,8 @@
       var el = document.getElementById(id);
       if (!el || el.dataset.i18nWired) return;
       el.dataset.i18nWired = '1';
-      el.value = I18N.current();
+      if ('value' in el) el.value = I18N.current();
+      else el.setAttribute('value', I18N.current());
       el.addEventListener('change', function () {
         I18N.load(el.value);
         var other = document.getElementById(id === 'langToggle' ? 'langToggleMobile' : 'langToggle');

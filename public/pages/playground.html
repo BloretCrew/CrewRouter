@@ -1,18 +1,19 @@
 <!DOCTYPE html>
+
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Playground - CrewRouter</title>
-  <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="stylesheet" href="/blora/blora.css">
-  <link rel="stylesheet" href="/css/themes.css">
-  <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="/css/playground.css">
-  <script>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Playground - CrewRouter</title>
+<link href="/favicon.ico" rel="icon" sizes="any"/>
+<link href="/favicon-32.png" rel="icon" sizes="32x32" type="image/png"/>
+<link href="/favicon-16.png" rel="icon" sizes="16x16" type="image/png"/>
+<link href="/apple-touch-icon.png" rel="apple-touch-icon"/>
+<link href="/blora/blora.css" rel="stylesheet"/>
+<link href="/css/themes.css" rel="stylesheet"/>
+<link href="/css/main.css" rel="stylesheet"/>
+<link href="/css/playground.css" rel="stylesheet"/>
+<script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
       var resolved = theme;
@@ -22,193 +23,178 @@
       document.documentElement.classList.add(resolved);
     })();
   </script>
-  <script type="module" src="/blora/auto.js"></script>
+<script src="/blora/auto.js" type="module"></script>
 </head>
 <body class="blora-page blora-scope">
-<div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-      <option value="zh">中文</option>
-      <option value="en">EN</option>
-    </select></div>
-  <div class="pg-container">
-    <!-- 移动端顶栏 -->
-    <div class="pg-mobile-bar">
-      <a href="/console" class="pg-mobile-back">
-        <img src="https://img.bloret.net/SF/chevron.left?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="chevron.left" style="display:inline-block;vertical-align:middle;">
-      </a>
-      <span class="pg-mobile-title">Playground</span>
-      <button id="pgToggleSidebar" class="pg-mobile-menu">
-        <img src="https://img.bloret.net/SF/line.3.horizontal?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="line.3.horizontal" style="display:inline-block;vertical-align:middle;">
-      </button>
-    </div>
-
-    <!-- 遮罩 -->
-    <div id="pgOverlay" class="pg-overlay"></div>
-
-    <!-- 左侧：对话历史 -->
-    <aside class="pg-history-panel" id="pgHistoryPanel">
-      <div class="pg-history-header">
-        <div class="pg-history-header-top">
-          <a href="/console" class="pg-back-link">
-            <img src="https://img.bloret.net/SF/chevron.left?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="chevron.left" style="display:inline-block;vertical-align:middle;"><span data-i18n="返回控制台">
+<div style="position:absolute;top:10px;right:12px;z-index:99;"><select class="btn btn-icon" id="langToggle" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;" title="Language">
+<option value="zh">中文</option>
+<option value="en">EN</option>
+</select></div>
+<div class="pg-container">
+<!-- 移动端顶栏 -->
+<div class="pg-mobile-bar">
+<a class="pg-mobile-back" href="/console">
+<img alt="" class="sf-icon" data-sf-name="chevron.left" height="20" src="https://img.bloret.net/SF/chevron.left?color=white" style="display:inline-block;vertical-align:middle;" width="20"/>
+</a>
+<span class="pg-mobile-title">Playground</span>
+<button class="pg-mobile-menu" id="pgToggleSidebar">
+<img alt="" class="sf-icon" data-sf-name="line.3.horizontal" height="20" src="https://img.bloret.net/SF/line.3.horizontal?color=white" style="display:inline-block;vertical-align:middle;" width="20"/>
+</button>
+</div>
+<!-- 遮罩 -->
+<div class="pg-overlay" id="pgOverlay"></div>
+<!-- 左侧：对话历史 -->
+<aside class="pg-history-panel" id="pgHistoryPanel">
+<div class="pg-history-header">
+<div class="pg-history-header-top">
+<a class="pg-back-link" href="/console">
+<img alt="" class="sf-icon" data-sf-name="chevron.left" height="16" src="https://img.bloret.net/SF/chevron.left?color=white" style="display:inline-block;vertical-align:middle;" width="16"/><span data-i18n="返回控制台">
             返回控制台
           </span></a>
-        </div>
-        <div class="pg-history-header-row">
-          <span class="pg-history-title"><span data-i18n="对话历史">对话历史</span></span>
-          <button id="pgNewChatBtn" class="pg-history-new-btn" title="新对话" data-i18n-title="新对话">
-          <img src="https://img.bloret.net/SF/plus?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="plus" style="display:inline-block;vertical-align:middle;"><span data-i18n="新对话">
+</div>
+<div class="pg-history-header-row">
+<span class="pg-history-title"><span data-i18n="对话历史">对话历史</span></span>
+<button class="pg-history-new-btn" data-i18n-title="新对话" id="pgNewChatBtn" title="新对话">
+<img alt="" class="sf-icon" data-sf-name="plus" height="16" src="https://img.bloret.net/SF/plus?color=white" style="display:inline-block;vertical-align:middle;" width="16"/><span data-i18n="新对话">
           新对话
         </span></button>
-        </div>
-      </div>
-      <div class="pg-history-list" id="pgHistoryList">
-        <div class="pg-history-empty">
-          <img src="https://img.bloret.net/SF/message?color=white" alt="" width="32" height="32" class="sf-icon" data-sf-name="message" style="display:inline-block;vertical-align:middle;opacity:0.3;margin-bottom:8px;">
-          <span><span data-i18n="暂无对话记录">暂无对话记录</span></span>
-        </div>
-      </div>
-    </aside>
-
-    <!-- 中间：聊天区 -->
-    <main class="pg-main">
-      <div class="pg-messages" id="pgMessages">
-        <div class="pg-welcome">
-          <img src="https://img.bloret.net/SF/message?color=brand-blue" alt="" width="48" height="48" class="sf-icon" data-sf-name="message" style="display:inline-block;vertical-align:middle;margin-bottom:16px;opacity:0.6;">
-          <h2>Crant AI Playground</h2>
-          <p><span data-i18n="选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。">选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。</span></p>
-        </div>
-      </div>
-
-      <div class="pg-reply-bar" id="pgReplyBar" style="display:none;">
-        <img src="https://img.bloret.net/SF/chevron.left?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="chevron.left" style="display:inline-block;vertical-align:middle;">
-        <span class="pg-reply-preview" id="pgReplyPreview"></span>
-        <button id="pgCancelReply" class="pg-reply-cancel">
-          <img src="https://img.bloret.net/SF/xmark?color=white" alt="" width="12" height="12" class="sf-icon" data-sf-name="xmark" style="display:inline-block;vertical-align:middle;">
-        </button>
-      </div>
-      <div class="pg-input-area">
-        <div class="pg-input-wrapper">
-          <textarea id="pgInput" rows="1" placeholder="输入消息..." data-i18n-placeholder="输入消息..."></textarea>
-          <button id="pgSendBtn" class="pg-send-btn" title="发送" data-i18n-title="发送">
-            <img src="https://img.bloret.net/SF/paperplane?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="paperplane" style="display:inline-block;vertical-align:middle;">
-          </button>
-          <button id="pgStopBtn" class="pg-send-btn pg-stop-btn" title="停止" data-i18n-title="停止" style="display:none;">
-            <img src="https://img.bloret.net/SF/stop.circle?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="stop.circle" style="display:inline-block;vertical-align:middle;">
-          </button>
-        </div>
-        <div class="pg-input-footer">
-          <button id="pgClearBtn" class="pg-clear-btn"><span data-i18n="清空对话">清空对话</span></button>
-          <span class="pg-balance-badge" id="pgBalanceBadge"><span data-i18n="0 积分">0 积分</span></span>
-        </div>
-      </div>
-    </main>
-
-    <!-- 右侧：模型参数 -->
-    <aside class="pg-settings-panel" id="pgSettingsPanel">
-      <div class="pg-settings-scroll">
-        <div class="pg-setting-group">
-          <label><span data-i18n="模型">模型</span></label>
-          <select id="pgModel" class="select"></select>
-        </div>
-
-        <div class="pg-setting-group">
-          <label><span data-i18n="系统提示词">系统提示词</span></label>
-          <textarea id="pgSystemPrompt" class="textarea" rows="4" placeholder="你是一个有用的助手..." data-i18n-placeholder="你是一个有用的助手..."></textarea>
-        </div>
-
-        <div class="pg-setting-group">
-          <label>Temperature: <span id="pgTempVal">1.0</span></label>
-          <input type="range" id="pgTemperature" class="range-input" min="0" max="2" step="0.1" value="1.0">
-        </div>
-
-        <div class="pg-setting-group">
-          <label>Max Tokens</label>
-          <input type="number" id="pgMaxTokens" class="input" min="1" max="128000" value="4096">
-        </div>
-
-        <div class="pg-setting-group">
-          <label><span data-i18n="思考模式">思考模式</span></label>
-          <div class="pg-thinking-controls">
-            <label class="pg-toggle">
-              <input type="checkbox" id="pgThinkingToggle" checked>
-              <span class="pg-toggle-slider"></span>
-            </label>
-            <span class="pg-thinking-label" id="pgThinkingLabel"><span data-i18n="已启用">已启用</span></span>
-          </div>
-        </div>
-
-        <div class="pg-setting-group" id="pgThinkingBudgetGroup" style="display:none;">
-          <label><span data-i18n="思考强度:">思考强度: </span><span id="pgThinkingBudgetVal">4096</span></label>
-          <input type="range" id="pgThinkingBudget" class="range-input" min="1024" max="32768" step="1024" value="4096">
-        </div>
-
-        <div class="pg-setting-group" id="pgReasoningEffortGroup" style="display:none;">
-          <label><span data-i18n="推理强度">推理强度</span></label>
-          <select id="pgReasoningEffort" class="select">
-            <option value="low"><span data-i18n="低">低</span></option>
-            <option value="medium" selected><span data-i18n="中">中</span></option>
-            <option value="high"><span data-i18n="高">高</span></option>
-          </select>
-        </div>
-      </div>
-
-      <div class="pg-settings-footer">
-        <div class="pg-stat">
-          <span><span data-i18n="余额">余额</span></span>
-          <span id="pgBalance">¥0.00</span>
-        </div>
-        <div class="pg-stat">
-          <span><span data-i18n="本次消耗">本次消耗</span></span>
-          <span id="pgCost">¥0.00</span>
-        </div>
-        <div class="pg-stat">
-          <span>Tokens</span>
-          <span id="pgTokens">0</span>
-        </div>
-        <button id="pgHistoryToggleBtn" class="pg-history-toggle-btn" title="查看历史记录" data-i18n-title="查看历史记录">
-          <img src="https://img.bloret.net/SF/clock?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="clock" style="display:inline-block;vertical-align:middle;"><span data-i18n="历史记录">
+</div>
+</div>
+<div class="pg-history-list" id="pgHistoryList">
+<div class="pg-history-empty">
+<img alt="" class="sf-icon" data-sf-name="message" height="32" src="https://img.bloret.net/SF/message?color=white" style="display:inline-block;vertical-align:middle;opacity:0.3;margin-bottom:8px;" width="32"/>
+<span><span data-i18n="暂无对话记录">暂无对话记录</span></span>
+</div>
+</div>
+</aside>
+<!-- 中间：聊天区 -->
+<main class="pg-main">
+<div class="pg-messages" id="pgMessages">
+<div class="pg-welcome">
+<img alt="" class="sf-icon" data-sf-name="message" height="48" src="https://img.bloret.net/SF/message?color=brand-blue" style="display:inline-block;vertical-align:middle;margin-bottom:16px;opacity:0.6;" width="48"/>
+<h2>Crant AI Playground</h2>
+<p><span data-i18n="选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。">选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。</span></p>
+</div>
+</div>
+<div class="pg-reply-bar" id="pgReplyBar" style="display:none;">
+<img alt="" class="sf-icon" data-sf-name="chevron.left" height="14" src="https://img.bloret.net/SF/chevron.left?color=white" style="display:inline-block;vertical-align:middle;" width="14"/>
+<span class="pg-reply-preview" id="pgReplyPreview"></span>
+<button class="pg-reply-cancel" id="pgCancelReply">
+<img alt="" class="sf-icon" data-sf-name="xmark" height="12" src="https://img.bloret.net/SF/xmark?color=white" style="display:inline-block;vertical-align:middle;" width="12"/>
+</button>
+</div>
+<div class="pg-input-area">
+<div class="pg-input-wrapper">
+<textarea data-i18n-placeholder="输入消息..." id="pgInput" placeholder="输入消息..." rows="1"></textarea>
+<button class="pg-send-btn" data-i18n-title="发送" id="pgSendBtn" title="发送">
+<img alt="" class="sf-icon" data-sf-name="paperplane" height="20" src="https://img.bloret.net/SF/paperplane?color=white" style="display:inline-block;vertical-align:middle;" width="20"/>
+</button>
+<button class="pg-send-btn pg-stop-btn" data-i18n-title="停止" id="pgStopBtn" style="display:none;" title="停止">
+<img alt="" class="sf-icon" data-sf-name="stop.circle" height="20" src="https://img.bloret.net/SF/stop.circle?color=white" style="display:inline-block;vertical-align:middle;" width="20"/>
+</button>
+</div>
+<div class="pg-input-footer">
+<button class="pg-clear-btn" id="pgClearBtn"><span data-i18n="清空对话">清空对话</span></button>
+<span class="pg-balance-badge" id="pgBalanceBadge"><span data-i18n="0 积分">0 积分</span></span>
+</div>
+</div>
+</main>
+<!-- 右侧：模型参数 -->
+<aside class="pg-settings-panel" id="pgSettingsPanel">
+<div class="pg-settings-scroll">
+<div class="pg-setting-group">
+<label><span data-i18n="模型">模型</span></label>
+<select class="select" id="pgModel"></select>
+</div>
+<div class="pg-setting-group">
+<label><span data-i18n="系统提示词">系统提示词</span></label>
+<textarea class="textarea" data-i18n-placeholder="你是一个有用的助手..." id="pgSystemPrompt" placeholder="你是一个有用的助手..." rows="4"></textarea>
+</div>
+<div class="pg-setting-group">
+<label>Temperature: <span id="pgTempVal">1.0</span></label>
+<blora-range class="range-input" id="pgTemperature" max="2" min="0" step="0.1" values="1.0,1.0"></blora-range>
+</div>
+<div class="pg-setting-group">
+<label>Max Tokens</label>
+<input class="input" id="pgMaxTokens" max="128000" min="1" type="number" value="4096"/>
+</div>
+<div class="pg-setting-group">
+<label><span data-i18n="思考模式">思考模式</span></label>
+<div class="pg-thinking-controls">
+<label class="pg-toggle">
+<blora-switch checked="" id="pgThinkingToggle"></blora-switch>
+<span class="pg-toggle-slider"></span>
+</label>
+<span class="pg-thinking-label" id="pgThinkingLabel"><span data-i18n="已启用">已启用</span></span>
+</div>
+</div>
+<div class="pg-setting-group" id="pgThinkingBudgetGroup" style="display:none;">
+<label><span data-i18n="思考强度:">思考强度: </span><span id="pgThinkingBudgetVal">4096</span></label>
+<blora-range class="range-input" id="pgThinkingBudget" max="32768" min="1024" step="1024" values="4096,4096"></blora-range>
+</div>
+<div class="pg-setting-group" id="pgReasoningEffortGroup" style="display:none;">
+<label><span data-i18n="推理强度">推理强度</span></label>
+<select class="select" id="pgReasoningEffort">
+<option value="low"><span data-i18n="低">低</span></option>
+<option selected="" value="medium"><span data-i18n="中">中</span></option>
+<option value="high"><span data-i18n="高">高</span></option>
+</select>
+</div>
+</div>
+<div class="pg-settings-footer">
+<div class="pg-stat">
+<span><span data-i18n="余额">余额</span></span>
+<span id="pgBalance">¥0.00</span>
+</div>
+<div class="pg-stat">
+<span><span data-i18n="本次消耗">本次消耗</span></span>
+<span id="pgCost">¥0.00</span>
+</div>
+<div class="pg-stat">
+<span>Tokens</span>
+<span id="pgTokens">0</span>
+</div>
+<button class="pg-history-toggle-btn" data-i18n-title="查看历史记录" id="pgHistoryToggleBtn" title="查看历史记录">
+<img alt="" class="sf-icon" data-sf-name="clock" height="16" src="https://img.bloret.net/SF/clock?color=white" style="display:inline-block;vertical-align:middle;" width="16"/><span data-i18n="历史记录">
           历史记录
         </span></button>
-      </div>
-    </aside>
-
-    <!-- 右侧：历史记录面板 -->
-    <aside class="pg-history-detail-panel" id="pgHistoryDetailPanel" style="display:none;">
-      <div class="pg-history-detail-header">
-        <button id="pgHistoryBackBtn" class="pg-history-back-btn">
-          <img src="https://img.bloret.net/SF/chevron.left?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="chevron.left" style="display:inline-block;vertical-align:middle;"><span data-i18n="返回设置">
+</div>
+</aside>
+<!-- 右侧：历史记录面板 -->
+<aside class="pg-history-detail-panel" id="pgHistoryDetailPanel" style="display:none;">
+<div class="pg-history-detail-header">
+<button class="pg-history-back-btn" id="pgHistoryBackBtn">
+<img alt="" class="sf-icon" data-sf-name="chevron.left" height="16" src="https://img.bloret.net/SF/chevron.left?color=white" style="display:inline-block;vertical-align:middle;" width="16"/><span data-i18n="返回设置">
           返回设置
         </span></button>
-        <span class="pg-history-detail-title"><span data-i18n="历史记录">历史记录</span></span>
-      </div>
-      <div class="pg-history-detail-list" id="pgHistoryDetailList">
-        <div class="pg-history-detail-empty">
-          <img src="https://img.bloret.net/SF/clock?color=white" alt="" width="32" height="32" class="sf-icon" data-sf-name="clock" style="display:inline-block;vertical-align:middle;opacity:0.3;margin-bottom:8px;">
-          <span><span data-i18n="暂无历史记录">暂无历史记录</span></span>
-        </div>
-      </div>
-    </aside>
-
-    <!-- 历史记录详情弹窗 -->
-    <div class="pg-history-modal" id="pgHistoryModal" style="display:none;">
-      <div class="pg-history-modal-overlay" id="pgHistoryModalOverlay"></div>
-      <div class="pg-history-modal-content" id="pgHistoryModalContent">
-        <div class="pg-history-modal-header">
-          <h3 id="pgHistoryModalTitle"><span data-i18n="对话详情">对话详情</span></h3>
-          <button id="pgHistoryModalClose" class="pg-modal-close">
-            <img src="https://img.bloret.net/SF/xmark?color=white" alt="" width="18" height="18" class="sf-icon" data-sf-name="xmark" style="display:inline-block;vertical-align:middle;">
-          </button>
-        </div>
-        <div class="pg-history-modal-body" id="pgHistoryModalBody"></div>
-      </div>
-    </div>
-  </div>
-
-  <script src="/js/i18n.js?v=2"></script>
-  <script src="/js/theme.js?v=2"></script>
-  <script src="/js/dom.js?v=2"></script>
-  <script src="/js/dialog.js?v=2"></script>
-  <script src="/js/playground.js?v=2"></script>
+<span class="pg-history-detail-title"><span data-i18n="历史记录">历史记录</span></span>
+</div>
+<div class="pg-history-detail-list" id="pgHistoryDetailList">
+<div class="pg-history-detail-empty">
+<img alt="" class="sf-icon" data-sf-name="clock" height="32" src="https://img.bloret.net/SF/clock?color=white" style="display:inline-block;vertical-align:middle;opacity:0.3;margin-bottom:8px;" width="32"/>
+<span><span data-i18n="暂无历史记录">暂无历史记录</span></span>
+</div>
+</div>
+</aside>
+<!-- 历史记录详情弹窗 -->
+<div class="pg-history-modal" id="pgHistoryModal" style="display:none;">
+<div class="pg-history-modal-overlay" id="pgHistoryModalOverlay"></div>
+<div class="pg-history-modal-content" id="pgHistoryModalContent">
+<div class="pg-history-modal-header">
+<h3 id="pgHistoryModalTitle"><span data-i18n="对话详情">对话详情</span></h3>
+<button class="pg-modal-close" id="pgHistoryModalClose">
+<img alt="" class="sf-icon" data-sf-name="xmark" height="18" src="https://img.bloret.net/SF/xmark?color=white" style="display:inline-block;vertical-align:middle;" width="18"/>
+</button>
+</div>
+<div class="pg-history-modal-body" id="pgHistoryModalBody"></div>
+</div>
+</div>
+</div>
+<script src="/js/i18n.js?v=2"></script>
+<script src="/js/theme.js?v=2"></script>
+<script src="/js/dom.js?v=6"></script>
+<script src="/js/dialog.js?v=2"></script>
+<script src="/js/playground.js?v=2"></script>
 <script>
   // Page-level i18n: apply catalog to static DOM once ready.
   (function () {

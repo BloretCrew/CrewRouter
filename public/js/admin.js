@@ -1048,7 +1048,7 @@ class AdminApp {
 
     root.addEventListener('change', (e) => {
       const t = e.target;
-      if (!t || t.type !== 'checkbox') return;
+      if (!t || !['INPUT', 'BLORA-CHECKBOX', 'BLORA-SWITCH'].includes(t.tagName)) return;
       if (t.classList.contains('admin-models-provider-select-all')) {
         const providerKey = t.getAttribute('data-provider-key') || '';
         if (providerKey) this.toggleAdminModelProviderSelectAll(providerKey, t.checked);
@@ -2288,10 +2288,10 @@ class AdminApp {
       });
       this.renderModels();
     } else {
-      document.querySelectorAll('#adminModelsList tbody input[type="checkbox"]').forEach(cb => {
-        cb.checked = checked;
-        if (checked) this.selectedModels.add(cb.value);
-        else this.selectedModels.delete(cb.value);
+      document.querySelectorAll('#adminModelsList tbody blora-checkbox, #adminModelsList tbody blora-switch').forEach(cb => {
+        setBloraChecked(cb, checked);
+        if (checked) this.selectedModels.add(getBloraValue(cb));
+        else this.selectedModels.delete(getBloraValue(cb));
       });
     }
     this.updateBatchButtons();
@@ -3170,14 +3170,14 @@ class AdminApp {
 
   // ========== 供应商多 API Key 编辑 ==========
   _getProviderKeySelectMode() {
-    const checked = document.querySelector('input[name="providerKeySelectMode"]:checked');
-    return checked?.value === 'weight' ? 'weight' : 'order';
+    const checked = document.querySelector('blora-radio[name="providerKeySelectMode"][checked]');
+    return getBloraValue(checked) === 'weight' ? 'weight' : 'order';
   }
 
   _setProviderKeySelectMode(mode) {
     const m = mode === 'weight' ? 'weight' : 'order';
-    document.querySelectorAll('input[name="providerKeySelectMode"]').forEach(el => {
-      el.checked = el.value === m;
+    document.querySelectorAll('blora-radio[name="providerKeySelectMode"]').forEach(el => {
+      setBloraChecked(el, getBloraValue(el) === m);
     });
     this.onProviderKeySelectModeChange();
   }
@@ -3519,7 +3519,7 @@ class AdminApp {
     const pageIds = (this.providersData || []).map(p => String(p.id));
     const allPageSelected = pageIds.length > 0 && pageIds.every(pid => this.selectedProviders.has(pid));
     const selectAll = document.getElementById('providerSelectAllPage');
-    if (selectAll) selectAll.checked = allPageSelected;
+    if (selectAll) setBloraChecked(selectAll, allPageSelected);
   }
 
   toggleSelectAllProvidersOnPage(checked) {
@@ -3536,7 +3536,7 @@ class AdminApp {
       }
     }
     document.querySelectorAll('.provider-select-cb').forEach(cb => {
-      cb.checked = !!checked;
+      setBloraChecked(cb, !!checked);
     });
     this.updateProviderBatchBar();
   }
@@ -3544,7 +3544,7 @@ class AdminApp {
   clearProviderSelection() {
     this.selectedProviders.clear();
     if (this._selectedProviderNames) this._selectedProviderNames.clear();
-    document.querySelectorAll('.provider-select-cb').forEach(cb => { cb.checked = false; });
+    document.querySelectorAll('.provider-select-cb').forEach(cb => { setBloraChecked(cb, false); });
     const selectAll = document.getElementById('providerSelectAllPage');
     if (selectAll) selectAll.checked = false;
     this.updateProviderBatchBar();
@@ -3683,8 +3683,8 @@ class AdminApp {
 
     startBtn?.addEventListener('click', async () => {
       if (this._providerBatchSyncing) return;
-      const enableNew = !!document.getElementById('batchSyncEnableNew')?.checked;
-      const disableStale = !!document.getElementById('batchSyncDisableStale')?.checked;
+      const enableNew = getBloraChecked(document.getElementById('batchSyncEnableNew'));
+      const disableStale = getBloraChecked(document.getElementById('batchSyncDisableStale'));
       // 锁定选项
       ['batchSyncEnableNew', 'batchSyncDisableStale'].forEach(id => {
         const el = document.getElementById(id);
@@ -4389,14 +4389,14 @@ class AdminApp {
     const url = provider.proxy_url || '';
 
     const proxyEnabledEl = document.getElementById('providerProxyEnabled');
-    if (proxyEnabledEl) proxyEnabledEl.checked = enabled;
+    if (proxyEnabledEl) setBloraChecked(proxyEnabledEl, enabled);
 
     document.querySelectorAll('input[name="providerProxyMode"]').forEach(r => {
       r.checked = r.value === mode;
     });
 
     const useSystemEl = document.getElementById('providerProxyUseSystem');
-    if (useSystemEl) useSystemEl.checked = useSystem;
+    if (useSystemEl) setBloraChecked(useSystemEl, useSystem);
 
     const urlEl = document.getElementById('providerProxyUrl');
     if (urlEl) urlEl.value = url;
@@ -4406,10 +4406,10 @@ class AdminApp {
 
   // 供应商代理表单：收集
   _collectProviderProxyFromForm() {
-    const proxy_enabled = document.getElementById('providerProxyEnabled')?.checked || false;
+    const proxy_enabled = getBloraChecked(document.getElementById('providerProxyEnabled'));
     const modeRadio = document.querySelector('input[name="providerProxyMode"]:checked');
     const proxy_mode = modeRadio?.value === 'pool' ? 'pool' : 'single';
-    const proxy_use_system = document.getElementById('providerProxyUseSystem')?.checked || false;
+    const proxy_use_system = getBloraChecked(document.getElementById('providerProxyUseSystem'));
     const proxy_url = document.getElementById('providerProxyUrl')?.value?.trim() || '';
     return { proxy_enabled, proxy_mode, proxy_use_system, proxy_url };
   }
@@ -4486,7 +4486,7 @@ class AdminApp {
 
   async saveSystemProxy(e) {
     e.preventDefault();
-    const applyAll = document.getElementById('systemProxyEnabled')?.checked || false;
+    const applyAll = getBloraChecked(document.getElementById('systemProxyEnabled'));
     const url = document.getElementById('systemProxyUrl')?.value?.trim() || '';
     if (applyAll && !url) {
       alert(t('开启「为所有连接使用代理」时请填写代理地址'));
@@ -4534,7 +4534,7 @@ class AdminApp {
 
       // 系统单代理
       const sysEnabledEl = document.getElementById('systemProxyEnabled');
-      if (sysEnabledEl) sysEnabledEl.checked = !!settings['system_proxy_enabled'];
+      if (sysEnabledEl) setBloraChecked(sysEnabledEl, !!settings['system_proxy_enabled']);
       const sysUrlEl = document.getElementById('systemProxyUrl');
       if (sysUrlEl) sysUrlEl.value = settings['system_proxy_url'] || '';
     } catch (e) {
@@ -7576,7 +7576,7 @@ async function(ctx) {
     const errorType = (document.getElementById('errorLogTypeFilter')?.value || '').trim();
     const startDate = document.getElementById('errorLogStartDate')?.value || '';
     const endDate = document.getElementById('errorLogEndDate')?.value || '';
-    const finalOnly = document.getElementById('errorLogFinalOnly')?.checked;
+    const finalOnly = getBloraChecked(document.getElementById('errorLogFinalOnly'));
 
     const params = new URLSearchParams();
     if (userQ) {
@@ -7693,7 +7693,7 @@ async function(ctx) {
       if (el) el.value = '';
     }
     const finalOnly = document.getElementById('errorLogFinalOnly');
-    if (finalOnly) finalOnly.checked = true;
+    if (finalOnly) setBloraChecked(finalOnly, true);
     this.loadErrorLogs(1);
   }
 
@@ -8227,11 +8227,11 @@ async function(ctx) {
 
     // 登录状态上报开关（默认开启）
     const loginReportEl = document.getElementById('loginReportEnabled');
-    if (loginReportEl) settings['login_report_enabled'] = loginReportEl.checked;
+    if (loginReportEl) settings['login_report_enabled'] = getBloraChecked(loginReportEl);
 
     // 统计信息上报开关（默认开启）+ 上报粒度（默认 detailed）
     const statsReportEl = document.getElementById('statsReportEnabled');
-    if (statsReportEl) settings['stats_report_enabled'] = statsReportEl.checked;
+    if (statsReportEl) settings['stats_report_enabled'] = getBloraChecked(statsReportEl);
     const statsGranularityEl = document.getElementById('statsReportGranularity');
     if (statsGranularityEl) settings['stats_report_granularity'] = statsGranularityEl.value;
 
@@ -8286,7 +8286,7 @@ async function(ctx) {
         body: JSON.stringify({
           compress_days: values.CompressDays, compress_size_gb: values.CompressSizeGb,
           purge_days: values.PurgeDays, purge_size_gb: values.PurgeSizeGb,
-          agg_enabled: document.getElementById('retentionAggEnabled')?.checked === true,
+          agg_enabled: getBloraChecked(document.getElementById('retentionAggEnabled')),
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -8367,22 +8367,22 @@ async function(ctx) {
         document.getElementById('retentionCompressSizeGb').value = retention.compress_size_gb;
         document.getElementById('retentionPurgeDays').value = retention.purge_days;
         document.getElementById('retentionPurgeSizeGb').value = retention.purge_size_gb;
-        document.getElementById('retentionAggEnabled').checked = retention.agg_enabled !== false;
+        setBloraChecked(document.getElementById('retentionAggEnabled'), retention.agg_enabled !== false);
       }
 
       // 系统单代理
       const sysEnabledEl = document.getElementById('systemProxyEnabled');
-      if (sysEnabledEl) sysEnabledEl.checked = !!settings['system_proxy_enabled'];
+      if (sysEnabledEl) setBloraChecked(sysEnabledEl, !!settings['system_proxy_enabled']);
       const sysUrlEl = document.getElementById('systemProxyUrl');
       if (sysUrlEl) sysUrlEl.value = settings['system_proxy_url'] || '';
 
       // 登录状态上报开关（默认开启）
       const loginReportEl = document.getElementById('loginReportEnabled');
-      if (loginReportEl) loginReportEl.checked = settings['login_report_enabled'] !== false;
+      if (loginReportEl) setBloraChecked(loginReportEl, settings['login_report_enabled'] !== false);
 
       // 统计信息上报开关（默认开启）+ 上报粒度（默认 detailed）
       const statsReportEl = document.getElementById('statsReportEnabled');
-      if (statsReportEl) statsReportEl.checked = settings['stats_report_enabled'] !== false;
+      if (statsReportEl) setBloraChecked(statsReportEl, settings['stats_report_enabled'] !== false);
       const statsGranularityEl = document.getElementById('statsReportGranularity');
       if (statsGranularityEl) statsGranularityEl.value = settings['stats_report_granularity'] || 'detailed';
 
@@ -8468,7 +8468,7 @@ async function(ctx) {
   }
 
   async saveFeishuLoginSettings() {
-    const enabled = document.getElementById('feishuEnabled')?.checked === true;
+    const enabled = getBloraChecked(document.getElementById('feishuEnabled'));
     const appId = (document.getElementById('feishuAppId')?.value || '').trim();
     const appSecret = (document.getElementById('feishuAppSecret')?.value || '').trim();
     const tenantKey = (document.getElementById('feishuTenantKey')?.value || '').trim();

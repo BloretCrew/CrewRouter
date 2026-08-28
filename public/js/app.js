@@ -2991,7 +2991,7 @@ class ConsoleApp {
     const visible = document.querySelectorAll('#fusionPanelList .fusion-panel-item:not([style*="display: none"]) .fusion-panel-cb');
     const allChecked = Array.from(visible).every(cb => cb.checked);
     visible.forEach(cb => cb.checked = !allChecked);
-    const count = document.querySelectorAll('#fusionPanelList .fusion-panel-cb:checked').length;
+    const count = document.querySelectorAll('#fusionPanelList .fusion-panel-cb[checked]').length;
     document.getElementById('fusionPanelCount').textContent = `${count}${t('个模型已选')}`;
   }
 
@@ -3272,7 +3272,7 @@ class ConsoleApp {
     const schedule_on_time = document.getElementById('scheduleOnTime').value;
     const schedule_off_time = document.getElementById('scheduleOffTime').value;
     const schedule_timezone = document.getElementById('scheduleTimezone').value;
-    const schedule_days = Array.from(document.querySelectorAll('.schedule-day:checked')).map(cb => parseInt(cb.value));
+    const schedule_days = Array.from(document.querySelectorAll('.schedule-day[checked]')).map(cb => parseInt(cb.value));
 
     if (schedule_enabled && (!schedule_on_time || !schedule_off_time)) {
       alert(t('请设置开启和关闭时间'));
@@ -7501,10 +7501,10 @@ llm-deepseek:
       this._ccsApiKey = config.env.ANTHROPIC_AUTH_TOKEN;
 
       // 重置选项
-      document.getElementById('ccsShowBalance').checked = true;
-      document.getElementById('ccsShowGroupRules').checked = true;
-      document.getElementById('ccsShowTotalUsage').checked = true;
-      document.getElementById('ccsShowUsername').checked = true;
+      setBloraChecked(document.getElementById('ccsShowBalance'), true);
+      setBloraChecked(document.getElementById('ccsShowGroupRules'), true);
+      setBloraChecked(document.getElementById('ccsShowTotalUsage'), true);
+      setBloraChecked(document.getElementById('ccsShowUsername'), true);
       this._setCcsStyle('compact');
 
       this.rebuildUsageScript();
@@ -7526,10 +7526,10 @@ llm-deepseek:
   rebuildUsageScript() {
     if (!this._ccsBaseUrl || !this._ccsApiKey) return;
 
-    const showBalance = document.getElementById('ccsShowBalance').checked;
-    const showGroupRules = document.getElementById('ccsShowGroupRules').checked;
-    const showTotalUsage = document.getElementById('ccsShowTotalUsage').checked;
-    const showUsername = document.getElementById('ccsShowUsername').checked;
+    const showBalance = getBloraChecked(document.getElementById('ccsShowBalance'));
+    const showGroupRules = getBloraChecked(document.getElementById('ccsShowGroupRules'));
+    const showTotalUsage = getBloraChecked(document.getElementById('ccsShowTotalUsage'));
+    const showUsername = getBloraChecked(document.getElementById('ccsShowUsername'));
     const isBarStyle = (this._ccsStyle || 'compact') === 'bar';
     const barLen = parseInt(document.getElementById('ccsBarLength')?.value) || 12;
 
@@ -8385,7 +8385,7 @@ ${extractorBody}
   }
 
   updateBatchButtons() {
-    const checked = document.querySelectorAll('.provider-checkbox:checked');
+    const checked = document.querySelectorAll('.provider-checkbox[checked]');
     const batchBtn = document.getElementById('batchDeleteBtn');
     if (batchBtn) {
       batchBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
@@ -8393,7 +8393,7 @@ ${extractorBody}
   }
 
   async batchDeleteProviders() {
-    const checked = document.querySelectorAll('.provider-checkbox:checked');
+    const checked = document.querySelectorAll('.provider-checkbox[checked]');
     const ids = Array.from(checked).map(cb => cb.value);
 
     if (!ids.length) return;
