@@ -109,9 +109,9 @@ class PlaygroundApp {
 
     if (caps.supportsThinking) {
       thinkingToggle.disabled = false;
-      thinkingLabel.textContent = getBloraChecked(thinkingToggle) ? t('已启用') : t('已禁用');
+      thinkingLabel.textContent = thinkingToggle.checked ? t('已启用') : t('已禁用');
     } else {
-      setBloraChecked(thinkingToggle, true);
+      thinkingToggle.checked = true;
       thinkingToggle.disabled = true;
       thinkingLabel.textContent = t('不支持');
     }
@@ -240,7 +240,7 @@ class PlaygroundApp {
           title,
           model,
           system_prompt: document.getElementById('pgSystemPrompt').value,
-          temperature: parseFloat(getBloraValue(document.getElementById('pgTemperature'))),
+          temperature: parseFloat(document.getElementById('pgTemperature').value),
           max_tokens: parseInt(document.getElementById('pgMaxTokens').value) || 4096,
         }),
       });
@@ -295,8 +295,7 @@ class PlaygroundApp {
         if (data.model) document.getElementById('pgModel').value = data.model;
         if (data.system_prompt !== undefined) document.getElementById('pgSystemPrompt').value = data.system_prompt;
         if (data.temperature !== undefined) {
-          const temperature = document.getElementById('pgTemperature');
-          temperature.setAttribute('values', `${data.temperature},${data.temperature}`);
+          document.getElementById('pgTemperature').value = data.temperature;
           document.getElementById('pgTempVal').textContent = data.temperature;
         }
         if (data.max_tokens !== undefined) document.getElementById('pgMaxTokens').value = data.max_tokens;
@@ -417,10 +416,10 @@ class PlaygroundApp {
 
     const model = document.getElementById('pgModel').value;
     const systemPrompt = document.getElementById('pgSystemPrompt').value.trim();
-    const temperature = parseFloat(getBloraValue(document.getElementById('pgTemperature')));
+    const temperature = parseFloat(document.getElementById('pgTemperature').value);
     const maxTokens = parseInt(document.getElementById('pgMaxTokens').value) || 4096;
-    const thinking = getBloraChecked(document.getElementById('pgThinkingToggle'));
-    const thinkingBudget = parseInt(getBloraValue(document.getElementById('pgThinkingBudget'))) || 4096;
+    const thinking = document.getElementById('pgThinkingToggle').checked;
+    const thinkingBudget = parseInt(document.getElementById('pgThinkingBudget').value) || 4096;
     const reasoningEffort = document.getElementById('pgReasoningEffort').value;
 
     if (!model) {
@@ -1100,17 +1099,17 @@ class PlaygroundApp {
     newChatBtn.addEventListener('click', () => this.newChat());
 
     tempSlider.addEventListener('input', () => {
-      document.getElementById('pgTempVal').textContent = getBloraValue(tempSlider);
+      document.getElementById('pgTempVal').textContent = tempSlider.value;
     });
 
     // Thinking toggle
     thinkingToggle.addEventListener('change', () => {
-      document.getElementById('pgThinkingLabel').textContent = getBloraChecked(thinkingToggle) ? t('已启用') : t('已禁用');
+      document.getElementById('pgThinkingLabel').textContent = thinkingToggle.checked ? t('已启用') : t('已禁用');
     });
 
     // Thinking budget slider
     thinkingBudget.addEventListener('input', () => {
-      document.getElementById('pgThinkingBudgetVal').textContent = getBloraValue(thinkingBudget);
+      document.getElementById('pgThinkingBudgetVal').textContent = thinkingBudget.value;
     });
 
     // Reply bar cancel
@@ -1155,7 +1154,12 @@ class PlaygroundApp {
     }
 
     // History modal close
+    const modalClose = document.getElementById('pgHistoryModalClose');
+    const modalOverlay = document.getElementById('pgHistoryModalOverlay');
     const modal = document.getElementById('pgHistoryModal');
+
+    if (modalClose) modalClose.addEventListener('click', () => { modal.style.display = 'none'; });
+    if (modalOverlay) modalOverlay.addEventListener('click', () => { modal.style.display = 'none'; });
   }
 
   // ========== History ==========
@@ -1283,7 +1287,7 @@ class PlaygroundApp {
     html += '</div></div>';
 
     setHTML(body, html);
-    modal.show();
+    modal.style.display = 'flex';
   }
 
   escapeHtml(value) {

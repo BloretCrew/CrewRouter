@@ -312,9 +312,20 @@ class ConsoleApp {
     // Change password
     document.getElementById('changePasswordBtn')?.addEventListener('click', () => this.changePassword());
 
+    document.querySelectorAll('.modal-close').forEach(btn => {
+      btn.addEventListener('click', () => this.closeModals());
+    });
+
     // 统计上报授权弹窗按钮（首次进入控制台，仅管理员可见）
     document.getElementById('statsConsentAllow')?.addEventListener('click', () => this._setStatsConsent(true));
     document.getElementById('statsConsentReject')?.addEventListener('click', () => this._setStatsConsent(false));
+
+    // 点击遮罩空白处关闭弹窗（点到 .modal 本身，而非 .modal-content）
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) this.closeModals();
+      });
+    });
 
     // Model library filters
     this._ensureLibraryReorderControls();
@@ -505,9 +516,8 @@ class ConsoleApp {
   }
 
   getSFIcon(name, size) {
-    const iconName = name || 'questionmark.circle';
-    const iconSize = size || 18;
-    return `<img class="sf-icon" data-sf-name="${iconName}" src="https://img.bloret.net/SF/${iconName}?color=white" alt="${iconName}" width="${iconSize}" height="${iconSize}" style="display:inline-block;vertical-align:middle;">`;
+    const color = (window.themeManager?.resolvedTheme || 'dark') === 'dark' ? 'white' : 'black';
+    return `<img src="https://img.bloret.net/SF/${name}?color=${color}" alt="" width="${size || 18}" height="${size || 18}" class="sf-icon" data-sf-name="${name}" style="display:inline-block;vertical-align:middle;">`;
   }
 
   async loadApiKeys() {
@@ -745,7 +755,8 @@ class ConsoleApp {
               ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)">⠿</span>
             ${/^crewrouter$/i.test(String(key.name || '')) ? '' : `
             <label class="pg-toggle api-key-enable-toggle" title="${isEnabled ? t('点击禁用') : t('点击启用')}">
-              <blora-switch class="api-key-enable-toggle" value="on" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)"></blora-switch>
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)">
+              <span class="pg-toggle-slider"></span>
             </label>`}
             <div class="api-key-title-text">
               <div class="api-key-name-row">
@@ -846,7 +857,7 @@ class ConsoleApp {
     tip.id = 'apiKeyRouteQueueTip';
     tip.dataset.keyId = String(keyId);
     tip.className = 'api-key-route-queue-tip';
-    setHTML(tip, `
+    tip.innerHTML = `
       <div class="api-key-route-queue-tip-title">模型队列 · 按序回退</div>
       <ol class="api-key-route-queue-tip-list">
         ${queue.map((item, i) => {
@@ -859,7 +870,7 @@ class ConsoleApp {
           </li>`;
         }).join('')}
       </ol>
-    `);
+    `;
 
     tip.addEventListener('mouseenter', () => {
       if (this._routeQueueTipLeaveTimer) {
@@ -1813,8 +1824,8 @@ class ConsoleApp {
       return;
     }
 
-    const selected = document.querySelector('blora-radio[name="keyModelRadio"][checked]');
-    const modelId = selected ? selected.getAttribute('value') : null;
+    const selected = document.querySelector('input[name="keyModelRadio"]:checked');
+    const modelId = selected ? selected.value : null;
 
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/models`, {
@@ -2870,7 +2881,9 @@ class ConsoleApp {
             <div style="font-size:12px;color:var(--muted-foreground);">禁用后，请求 fusion 模型将回退到当前绑定模型</div>
           </div>
           <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
-            <blora-switch id="fusionEnabledToggle" value="on" ${fusionEnabled ? 'checked' : ''} label="启用 Fusion"></blora-switch>
+            <input type="checkbox" id="fusionEnabledToggle" ${fusionEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+            <span style="position:absolute;inset:0;background:${fusionEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
+            <span style="position:absolute;top:2px;${fusionEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
           </label>
         </div>
 
@@ -2890,7 +2903,7 @@ class ConsoleApp {
                   const checked = selectedPanels.has(m.id) ? 'checked' : '';
                   return `
                     <label class="fusion-panel-item" data-search="${(label + ' ' + m.id).toLowerCase()}" style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:4px;font-size:13px;">
-                      <blora-checkbox class="fusion-panel-cb" value="${m.id}" ${checked ? 'checked' : ''} label="${escapeHtml(label)}"></blora-checkbox>
+                      <input type="checkbox" class="fusion-panel-cb" value="${m.id}" ${checked}>
                       <span>${label}</span>
                     </label>
                   `;
@@ -2926,7 +2939,7 @@ class ConsoleApp {
       const toggleEl = document.getElementById('fusionEnabledToggle');
       if (toggleEl) {
         toggleEl.addEventListener('change', () => {
-          const on = getBloraChecked(toggleEl);
+          const on = toggleEl.checked;
           const body = document.getElementById('fusionConfigBody');
           if (body) { body.style.opacity = on ? '' : '0.4'; body.style.pointerEvents = on ? '' : 'none'; }
           // 更新滑块外观
@@ -2940,7 +2953,7 @@ class ConsoleApp {
       // 绑定 panel checkbox 变化事件
       container.querySelectorAll('.fusion-panel-cb').forEach(cb => {
         cb.addEventListener('change', () => {
-          const count = getBloraCheckedControls('.fusion-panel-cb', container).length;
+          const count = container.querySelectorAll('.fusion-panel-cb:checked').length;
           document.getElementById('fusionPanelCount').textContent = `${count}${t('个模型已选')}`;
         });
       });
@@ -2948,7 +2961,7 @@ class ConsoleApp {
       // 存储 keyId 并重写保存逻辑
       this._editingKeyModelsId = keyId;
       this._saveKeyModelsOverride = async () => {
-        const panelModels = getBloraCheckedControls('.fusion-panel-cb', container).map(cb => getBloraValue(cb));
+        const panelModels = Array.from(container.querySelectorAll('.fusion-panel-cb:checked')).map(cb => cb.value);
         const judgeModelId = document.getElementById('fusionJudgeSelect').value;
         const outerModelId = document.getElementById('fusionOuterSelect').value;
 
@@ -2956,7 +2969,7 @@ class ConsoleApp {
           const saveRes = await fetch(`/api/user/api-keys/${keyId}/fusion-config`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ panel_models: panelModels, judge_model_id: judgeModelId, outer_model_id: outerModelId, fusion_enabled: getBloraChecked(document.getElementById('fusionEnabledToggle')) })
+            body: JSON.stringify({ panel_models: panelModels, judge_model_id: judgeModelId, outer_model_id: outerModelId, fusion_enabled: document.getElementById('fusionEnabledToggle')?.checked ?? true })
           });
           if (saveRes.ok) {
             this.closeModals();
@@ -2985,9 +2998,9 @@ class ConsoleApp {
 
   _toggleAllFusionPanels() {
     const visible = document.querySelectorAll('#fusionPanelList .fusion-panel-item:not([style*="display: none"]) .fusion-panel-cb');
-    const allChecked = Array.from(visible).every(getBloraChecked);
-    visible.forEach(cb => setBloraChecked(cb, !allChecked));
-    const count = getBloraCheckedControls('.fusion-panel-cb', document.getElementById('fusionPanelList')).length;
+    const allChecked = Array.from(visible).every(cb => cb.checked);
+    visible.forEach(cb => cb.checked = !allChecked);
+    const count = document.querySelectorAll('#fusionPanelList .fusion-panel-cb:checked').length;
     document.getElementById('fusionPanelCount').textContent = `${count}${t('个模型已选')}`;
   }
 
@@ -3136,9 +3149,9 @@ class ConsoleApp {
     const warning = document.getElementById('keyOptionQuotaWarning');
     const swallow = document.getElementById('keyOptionSwallowImages');
     const commands = document.getElementById('keyOptionCrewRouterCommands');
-    if (warning) setBloraChecked(warning, key.quota_warning_enabled !== false);
-    if (swallow) setBloraChecked(swallow, key.swallow_images === true);
-    if (commands) setBloraChecked(commands, key.crewrouter_commands !== false);
+    if (warning) warning.checked = key.quota_warning_enabled !== false;
+    if (swallow) swallow.checked = key.swallow_images === true;
+    if (commands) commands.checked = key.crewrouter_commands !== false;
     this.showModal('keyOptionsModal');
   }
 
@@ -3146,9 +3159,9 @@ class ConsoleApp {
     const keyId = this._currentOptionsKeyId;
     if (!keyId) return;
     const settings = [
-      ['quota-warning', 'quota_warning_enabled', getBloraChecked(document.getElementById('keyOptionQuotaWarning'))],
-      ['swallow-images', 'swallow_images', getBloraChecked(document.getElementById('keyOptionSwallowImages'))],
-      ['crewrouter-commands', 'crewrouter_commands', getBloraChecked(document.getElementById('keyOptionCrewRouterCommands'))]
+      ['quota-warning', 'quota_warning_enabled', document.getElementById('keyOptionQuotaWarning')?.checked !== false],
+      ['swallow-images', 'swallow_images', document.getElementById('keyOptionSwallowImages')?.checked === true],
+      ['crewrouter-commands', 'crewrouter_commands', document.getElementById('keyOptionCrewRouterCommands')?.checked !== false]
     ];
     try {
       for (const [endpoint, field, value] of settings) {
@@ -3239,14 +3252,14 @@ class ConsoleApp {
       }
       const data = await res.json();
 
-      setBloraChecked(document.getElementById('scheduleEnabled'), data.schedule_enabled || false);
+      document.getElementById('scheduleEnabled').checked = data.schedule_enabled || false;
       document.getElementById('scheduleOnTime').value = data.schedule_on_time ? data.schedule_on_time.substring(0, 5) : '09:00';
       document.getElementById('scheduleOffTime').value = data.schedule_off_time ? data.schedule_off_time.substring(0, 5) : '18:00';
       document.getElementById('scheduleTimezone').value = data.schedule_timezone || 'Asia/Shanghai';
 
       const days = data.schedule_days || [0, 1, 2, 3, 4, 5, 6];
       document.querySelectorAll('.schedule-day').forEach(cb => {
-        setBloraChecked(cb, days.includes(parseInt(getBloraValue(cb))));
+        cb.checked = days.includes(parseInt(cb.value));
       });
 
       this._toggleScheduleFields();
@@ -3259,16 +3272,16 @@ class ConsoleApp {
   }
 
   _toggleScheduleFields() {
-    const enabled = getBloraChecked(document.getElementById('scheduleEnabled'));
+    const enabled = document.getElementById('scheduleEnabled').checked;
     document.getElementById('scheduleFields').style.display = enabled ? '' : 'none';
   }
 
   async saveKeySchedule() {
-    const schedule_enabled = getBloraChecked(document.getElementById('scheduleEnabled'));
+    const schedule_enabled = document.getElementById('scheduleEnabled').checked;
     const schedule_on_time = document.getElementById('scheduleOnTime').value;
     const schedule_off_time = document.getElementById('scheduleOffTime').value;
     const schedule_timezone = document.getElementById('scheduleTimezone').value;
-    const schedule_days = Array.from(document.querySelectorAll('.schedule-day[checked]')).map(cb => parseInt(cb.value));
+    const schedule_days = Array.from(document.querySelectorAll('.schedule-day:checked')).map(cb => parseInt(cb.value));
 
     if (schedule_enabled && (!schedule_on_time || !schedule_off_time)) {
       alert(t('请设置开启和关闭时间'));
@@ -3797,7 +3810,7 @@ class ConsoleApp {
   }
 
   closeModelTestModal() {
-    this.closeModal('modelTestModal');
+    document.getElementById('modelTestModal').style.display = 'none';
   }
 
   async testModel(modelId, buttonEl) {
@@ -4130,7 +4143,7 @@ class ConsoleApp {
   async _runBatchTest(modelIds, loadingMsg) {
     const modal = document.getElementById('modelTestModal');
     const body = document.getElementById('modelTestModalBody');
-    this.showModal('modelTestModal');
+    modal.style.display = 'flex';
     setHTML(body, `
       <div style="text-align:center;padding:40px 20px;">
         <div style="display:inline-block;width:36px;height:36px;border:3px solid #222;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:20px;"></div>
@@ -4165,9 +4178,9 @@ class ConsoleApp {
   _showModelTestResult(modelId, result) {
     const modal = document.getElementById('modelTestModal');
     const body = document.getElementById('modelTestModalBody');
-    const title = modal?.querySelector('[slot="header"] h3');
+    const title = modal?.querySelector('.modal-header h3');
     if (title) title.textContent = `${t('测试结果 [')}${result.model || t('模型测试')}]`;
-    this.showModal('modelTestModal');
+    modal.style.display = 'flex';
     this._renderTestResults([{ modelId, ...result }]);
   }
 
@@ -5251,7 +5264,7 @@ class ConsoleApp {
     this._setSummaryRegenDisabled(false);
     // 清空上一会话的顶部内联总结容器，避免串会话
     const inlineEl = document.getElementById('sessionSummaryInline');
-    if (inlineEl) { clearChildren(inlineEl); inlineEl.style.display = 'none'; delete inlineEl.dataset.built; }
+    if (inlineEl) { inlineEl.innerHTML = ''; inlineEl.style.display = 'none'; delete inlineEl.dataset.built; }
     // 总结按钮缓存状态：已知命中直接置为「查看总结」，否则异步探测一次避免重复查询
     this._applySummaryBtnText(this._detailSessionKey, this._summaryCachedKeys.has(this._detailSessionKey));
     this._renderInlineCachedSummary(this._detailSessionKey);
@@ -5417,8 +5430,7 @@ class ConsoleApp {
 
   /** 时间线内联 SF 小图标（12px，随文基线对齐） */
   _sfIcon(name, color) {
-    const iconName = name || 'questionmark.circle';
-    return `<img class="sf-icon" data-sf-name="${iconName}" src="https://img.bloret.net/SF/${iconName}?color=${color || 'white'}" alt="${iconName}" width="12" height="12" style="display:inline-block;vertical-align:middle;">`;
+    return `<img src="https://img.bloret.net/SF/${encodeURIComponent(name)}?color=${encodeURIComponent(color)}" alt="" class="sf-icon" data-sf-name="${escapeHtml(name)}" style="display:inline-block;vertical-align:-2px;width:12px;height:12px;">`;
   }
 
   /** 时间线单事件：文本 / 工具调用 / 工具结果 / 思考 */
@@ -5779,7 +5791,8 @@ class ConsoleApp {
       </div>
       <div class="model-library-item-actions">
         <label class="toggle-switch" onclick="event.stopPropagation()" title="${item.enabled ? t('点击停用') : t('点击启用')}">
-          <blora-switch value="on" ${item.enabled ? 'checked' : ''} onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)"></blora-switch>
+          <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)">
+          <span class="toggle-slider"></span>
         </label>
         <button type="button" class="btn btn-sm btn-secondary" onclick="app.showInjectPromptModal(${parseInt(item.id, 10)})">${t('编辑')}</button>
         <button type="button" class="btn btn-sm btn-secondary" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})">${t('删除')}</button>
@@ -5822,7 +5835,7 @@ class ConsoleApp {
         <p style="font-size:12px;color:var(--muted-foreground);margin:0 0 4px;">${t('不勾选任何 Key 时对所有 Key 全局生效；勾选后仅对所选 Key 生效')}</p>
         ${keys.map(k => `
           <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);">
-            <blora-checkbox class="inject-key-check" value="${escapeHtml(k.id)}" ${bound.has(String(k.id)) ? 'checked' : ''} label="${escapeHtml(k.name)}"></blora-checkbox>
+            <input type="checkbox" class="inject-key-check" value="${escapeHtml(k.id)}" ${bound.has(String(k.id)) ? 'checked' : ''}>
             <span>${escapeHtml(k.name)}${k.key_prefix ? `&nbsp;<code style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(k.key_prefix)}…</code>` : ''}</span>
           </label>`).join('')}
       `);
@@ -5851,7 +5864,7 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('保存失败'));
 
       // 绑定选择随条目一起保存
-      const keyIds = getBloraCheckedControls('.inject-key-check', document.getElementById('injectPromptKeyList')).map(cb => parseInt(getBloraValue(cb), 10));
+      const keyIds = [...document.querySelectorAll('#injectPromptKeyList .inject-key-check:checked')].map(cb => parseInt(cb.value, 10));
       await this.saveInjectPromptKeys(data.item?.id || id, keyIds);
 
       this.closeModals();
@@ -6269,7 +6282,7 @@ class ConsoleApp {
       const res = await fetch('/api/user/plugin-pref-optin');
       if (!res.ok) return;
       const data = await res.json();
-      setBloraChecked(toggle, data.optedIn === true);
+      toggle.checked = data.optedIn === true;
     } catch (error) { console.error(t('加载插件授权状态失败:'), error); }
   }
 
@@ -6285,7 +6298,7 @@ class ConsoleApp {
       if (status) { status.textContent = enabled ? t('已开启') : t('已关闭'); status.style.color = 'var(--success)'; }
     } catch (error) {
       const toggle = document.getElementById('pluginPrefOptin');
-      if (toggle) setBloraChecked(toggle, !enabled);
+      if (toggle) toggle.checked = !enabled;
       if (status) { status.textContent = error.message || t('保存失败'); status.style.color = 'var(--destructive)'; }
     }
     setTimeout(() => { if (status) status.textContent = ''; }, 3000);
@@ -6297,15 +6310,15 @@ class ConsoleApp {
       if (!res.ok) return;
       const data = await res.json();
       const enabled = document.getElementById('barkEnabled');
-      if (enabled) setBloraChecked(enabled, !!data.barkEnabled);
+      if (enabled) enabled.checked = !!data.barkEnabled;
       const key = document.getElementById('barkServerKey');
       if (key) key.value = data.barkServerKey || '';
       const endpoint = document.getElementById('barkEndpoint');
       if (endpoint) endpoint.value = data.barkEndpoint || 'https://api.day.app';
       const quota = document.getElementById('notifyQuota');
-      if (quota) setBloraChecked(quota, data.notifyQuota !== false);
+      if (quota) quota.checked = data.notifyQuota !== false;
       const errors = document.getElementById('notifyErrors');
-      if (errors) setBloraChecked(errors, data.notifyErrors !== false);
+      if (errors) errors.checked = data.notifyErrors !== false;
     } catch (error) { console.error(t('加载通知设置失败:'), error); }
   }
 
@@ -6316,11 +6329,11 @@ class ConsoleApp {
       const res = await fetch('/api/user/notification-settings', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          barkEnabled: getBloraChecked(document.getElementById('barkEnabled')),
+          barkEnabled: document.getElementById('barkEnabled')?.checked,
           barkServerKey: document.getElementById('barkServerKey')?.value,
           barkEndpoint: document.getElementById('barkEndpoint')?.value,
-          notifyQuota: getBloraChecked(document.getElementById('notifyQuota')),
-          notifyErrors: getBloraChecked(document.getElementById('notifyErrors')),
+          notifyQuota: document.getElementById('notifyQuota')?.checked,
+          notifyErrors: document.getElementById('notifyErrors')?.checked,
         })
       });
       const data = await res.json();
@@ -6351,9 +6364,9 @@ class ConsoleApp {
       const res = await fetch('/api/user/notifications?limit=50');
       if (!res.ok) throw new Error(t('加载失败'));
       const items = await res.json();
-      if (!items.length) { setHTML(list, '<div style="color:var(--muted-foreground);font-size:13px;padding:12px 0;">' + t('暂无通知') + '</div>'); return; }
-      setHTML(list, items.map(item => `<div style="padding:14px 0;border-bottom:1px solid var(--border);${item.read_at ? '' : 'background:color-mix(in srgb, var(--primary) 5%, transparent);'}"><div style="display:flex;gap:8px;align-items:center;"><strong>${escapeHtml(item.title)}</strong><span style="font-size:12px;color:var(--muted-foreground);">${this.formatRelativeTime(item.created_at)}</span><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px;" onclick="app.deleteNotification(${item.id})">${t('删除')}</button></div><div style="margin-top:6px;font-size:13px;color:var(--muted-foreground);white-space:pre-wrap;">${escapeHtml(item.body)}</div>${item.read_at ? '' : `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:12px;" onclick="app.markNotificationRead(${item.id})">标记已读</button>`}</div>`).join(''));
-    } catch (error) { setHTML(list, '<div style="color:var(--destructive);font-size:13px;">' + t('通知加载失败') + '</div>'); }
+      if (!items.length) { list.innerHTML = '<div style="color:var(--muted-foreground);font-size:13px;padding:12px 0;">' + t('暂无通知') + '</div>'; return; }
+      list.innerHTML = items.map(item => `<div style="padding:14px 0;border-bottom:1px solid var(--border);${item.read_at ? '' : 'background:color-mix(in srgb, var(--primary) 5%, transparent);'}"><div style="display:flex;gap:8px;align-items:center;"><strong>${escapeHtml(item.title)}</strong><span style="font-size:12px;color:var(--muted-foreground);">${this.formatRelativeTime(item.created_at)}</span><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px;" onclick="app.deleteNotification(${item.id})">${t('删除')}</button></div><div style="margin-top:6px;font-size:13px;color:var(--muted-foreground);white-space:pre-wrap;">${escapeHtml(item.body)}</div>${item.read_at ? '' : `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:12px;" onclick="app.markNotificationRead(${item.id})">标记已读</button>`}</div>`).join('');
+    } catch (error) { list.innerHTML = '<div style="color:var(--destructive);font-size:13px;">' + t('通知加载失败') + '</div>'; }
   }
 
   async markNotificationRead(id) { await fetch(`/api/user/notifications/${id}/read`, { method: 'PUT' }); await this.loadNotifications(); }
@@ -6367,10 +6380,10 @@ class ConsoleApp {
     try {
       const res = await fetch('/api/user/hook-notify-rules');
       const data = await res.json();
-      setBloraChecked(toggle, data.pushEnabled === true);
+      toggle.checked = data.pushEnabled === true;
       this._hookNotifySelection = data.selection || { harnesses: [], eventTypes: [] };
     } catch (error) {
-      setBloraChecked(toggle, false);
+      toggle.checked = false;
       this._hookNotifySelection = { harnesses: [], eventTypes: [] };
     }
   }
@@ -6382,21 +6395,21 @@ class ConsoleApp {
     const hWrap = document.getElementById('hookNotifyHarnessChecks');
     const eWrap = document.getElementById('hookNotifyEventChecks');
     if (!hWrap || !eWrap) return;
-    setHTML(hWrap, harnesses.map(h => {
+    hWrap.innerHTML = harnesses.map(h => {
       const on = sel.harnesses.includes(h) ? ' checked' : '';
-      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><blora-checkbox class="hn-harness" value="${h}" label="${h}" ${on}></blora-checkbox></label>`;
-    }).join(''));
-    setHTML(eWrap, events.map(([v, label]) => {
+      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-harness" value="${h}"${on}> ${h}</label>`;
+    }).join('');
+    eWrap.innerHTML = events.map(([v, label]) => {
       const on = sel.eventTypes.includes(v) ? ' checked' : '';
-      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><blora-checkbox class="hn-event" value="${v}" label="${t(label)}" ${on}></blora-checkbox></label>`;
-    }).join(''));
+      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-event" value="${v}"${on}> ${t(label)}</label>`;
+    }).join('');
     this.showModal('hookNotifySelectModal');
   }
 
   async saveHookNotifySelection() {
     try {
-      const harnesses = [...document.querySelectorAll('#hookNotifyHarnessChecks blora-checkbox[checked], #hookNotifyHarnessChecks blora-switch[checked]')].map(c => c.getAttribute('value') || 'on');
-      const eventTypes = [...document.querySelectorAll('#hookNotifyEventChecks blora-checkbox[checked], #hookNotifyEventChecks blora-switch[checked]')].map(c => c.getAttribute('value') || 'on');
+      const harnesses = [...document.querySelectorAll('#hookNotifyHarnessChecks .hn-harness:checked')].map(c => c.value);
+      const eventTypes = [...document.querySelectorAll('#hookNotifyEventChecks .hn-event:checked')].map(c => c.value);
       const res = await fetch('/api/user/hook-notify-rules/selection', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -6589,7 +6602,7 @@ class ConsoleApp {
   _updateTaskBar(state, payload = {}) {
     const bar = document.getElementById('modelLibraryTaskBar');
     if (!bar) return;
-    if (state === 'hidden') { bar.style.display = 'none'; clearChildren(bar); return; }
+    if (state === 'hidden') { bar.style.display = 'none'; bar.innerHTML = ''; return; }
     if (state === 'loading') {
       bar.style.display = '';
       if (payload.sessionKey) this._summaryTaskSessionKey = payload.sessionKey;
@@ -6674,7 +6687,7 @@ class ConsoleApp {
 
   _summaryPlainText(text) {
     const box = document.createElement('div');
-    setHTML(box, this._renderSafeMarkdown(String(text || '')));
+    box.innerHTML = this._renderSafeMarkdown(String(text || ''));
     return String(box.textContent || box.innerText || '').replace(/\n{3,}/g, '\n\n').trim();
   }
 
@@ -6730,7 +6743,7 @@ class ConsoleApp {
       this._renderSessionSummaryInline(sessionKey, text, 'done', null, this._summaryCacheTimeMap[sessionKey]);
     } else {
       const el = document.getElementById('sessionSummaryInline');
-      if (el) { clearChildren(el); el.style.display = 'none'; delete el.dataset.built; }
+      if (el) { el.innerHTML = ''; el.style.display = 'none'; delete el.dataset.built; }
     }
   }
 
@@ -6805,7 +6818,7 @@ class ConsoleApp {
       this.showToast(enabled ? t('事件通知已开启') : t('事件通知已关闭'), 'success');
     } catch (error) {
       const toggle = document.getElementById('hookNotifyPushEnabled');
-      if (toggle) setBloraChecked(toggle, !enabled);
+      if (toggle) toggle.checked = !enabled;
       this.showToast(error.message || t('保存失败'), 'error');
     }
   }
@@ -6820,12 +6833,12 @@ class ConsoleApp {
     const enabled = this.user.api_signature_enabled === true;
     const tpl = this.user.api_signature_template || DEFAULT_TEMPLATE;
 
-    setBloraChecked(toggle, enabled);
+    toggle.checked = enabled;
     template.value = tpl;
     group.style.display = enabled ? '' : 'none';
 
     toggle.onchange = () => {
-      group.style.display = getBloraChecked(toggle) ? '' : 'none';
+      group.style.display = toggle.checked ? '' : 'none';
       this._updateSignaturePreview();
     };
     template.oninput = () => this._updateSignaturePreview();
@@ -6868,13 +6881,13 @@ class ConsoleApp {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          api_signature_enabled: getBloraChecked(toggle),
+          api_signature_enabled: toggle.checked,
           api_signature_template: template.value
         })
       });
       const data = await res.json();
       if (data.success) {
-        this.user.api_signature_enabled = getBloraChecked(toggle);
+        this.user.api_signature_enabled = toggle.checked;
         this.user.api_signature_template = template.value;
         status.textContent = t('保存成功');
         status.style.color = 'var(--success)';
@@ -6894,7 +6907,7 @@ class ConsoleApp {
     const template = document.getElementById('apiSignatureTemplate');
     const toggle = document.getElementById('apiSignatureToggle');
     if (template) template.value = DEFAULT_TEMPLATE;
-    if (toggle) { setBloraChecked(toggle, true); toggle.dispatchEvent(new Event('change')); }
+    if (toggle) { toggle.checked = true; toggle.dispatchEvent(new Event('change')); }
     this._updateSignaturePreview();
   }
 
@@ -7125,7 +7138,7 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('退出失败'));
       this.showToast(t('已退出 Co-Key'), 'success');
       this.closeApiKeyMoreMenus();
-      this.closeModal('keyMembersModal');
+      this.hideModal('keyMembersModal');
       await this.loadApiKeys();
     } catch (error) {
       this.showToast(error.message || t('退出失败'), 'error');
@@ -7495,10 +7508,10 @@ llm-deepseek:
       this._ccsApiKey = config.env.ANTHROPIC_AUTH_TOKEN;
 
       // 重置选项
-      setBloraChecked(document.getElementById('ccsShowBalance'), true);
-      setBloraChecked(document.getElementById('ccsShowGroupRules'), true);
-      setBloraChecked(document.getElementById('ccsShowTotalUsage'), true);
-      setBloraChecked(document.getElementById('ccsShowUsername'), true);
+      document.getElementById('ccsShowBalance').checked = true;
+      document.getElementById('ccsShowGroupRules').checked = true;
+      document.getElementById('ccsShowTotalUsage').checked = true;
+      document.getElementById('ccsShowUsername').checked = true;
       this._setCcsStyle('compact');
 
       this.rebuildUsageScript();
@@ -7520,10 +7533,10 @@ llm-deepseek:
   rebuildUsageScript() {
     if (!this._ccsBaseUrl || !this._ccsApiKey) return;
 
-    const showBalance = getBloraChecked(document.getElementById('ccsShowBalance'));
-    const showGroupRules = getBloraChecked(document.getElementById('ccsShowGroupRules'));
-    const showTotalUsage = getBloraChecked(document.getElementById('ccsShowTotalUsage'));
-    const showUsername = getBloraChecked(document.getElementById('ccsShowUsername'));
+    const showBalance = document.getElementById('ccsShowBalance').checked;
+    const showGroupRules = document.getElementById('ccsShowGroupRules').checked;
+    const showTotalUsage = document.getElementById('ccsShowTotalUsage').checked;
+    const showUsername = document.getElementById('ccsShowUsername').checked;
     const isBarStyle = (this._ccsStyle || 'compact') === 'bar';
     const barLen = parseInt(document.getElementById('ccsBarLength')?.value) || 12;
 
@@ -7715,22 +7728,14 @@ ${extractorBody}
 
   showModal(id) {
     const modal = document.getElementById(id);
-    if (!modal) return;
-    if (typeof modal.show === 'function') modal.show();
-    else modal.setAttribute('open', '');
-  }
-
-  closeModal(id) {
-    const modal = document.getElementById(id);
-    if (!modal) return;
-    if (typeof modal.close === 'function') modal.close();
-    else modal.removeAttribute('open');
+    modal.style.display = 'flex';
+    modal.classList.add('active');
   }
 
   closeModals() {
-    document.querySelectorAll('blora-dialog[open]').forEach(modal => {
-      if (typeof modal.close === 'function') modal.close();
-      else modal.removeAttribute('open');
+    document.querySelectorAll('.modal').forEach(m => {
+      m.style.display = 'none';
+      m.classList.remove('active');
     });
     this._summaryModalSessionKey = null;
   }
@@ -8258,27 +8263,9 @@ ${extractorBody}
     const res = await fetch('/api/user/trace-sessions?unviewed=1');
     if (!res.ok) return;
     const reports = await res.json();
-    if (!reports.length) { box.style.display = 'none'; clearChildren(box); return; }
+    if (!reports.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
     box.style.display = 'block';
-    const title = document.createElement('div');
-    title.className = 'trace-reports-title';
-    title.textContent = t('未查看的跟踪报告');
-    const list = document.createElement('div');
-    list.className = 'trace-reports-list';
-    reports.forEach((report) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'blora-button trace-report-chip';
-      button.dataset.variant = 'secondary';
-      const id = document.createElement('strong'); id.textContent = report.public_id || '';
-      const name = document.createElement('span'); name.textContent = report.api_key_name || t('已删除 Key');
-      const count = document.createElement('span'); count.textContent = `${Number(report.summary?.requests || 0)} 项请求`;
-      button.append(id, name, count);
-      button.addEventListener('click', () => this.openTraceReport(report.public_id));
-      list.appendChild(button);
-    });
-    clearChildren(box);
-    box.append(title, list);
+    box.innerHTML = `<div class="trace-reports-title">${t('未查看的跟踪报告')}</div><div class="trace-reports-list">${reports.map(r => `<button class="trace-report-chip" onclick="app.openTraceReport('${escapeHtml(r.public_id)}')"><strong>${escapeHtml(r.public_id)}</strong><span>${escapeHtml(r.api_key_name || t('已删除 Key'))}</span><span>${Number(r.summary?.requests || 0)} 项请求</span></button>`).join('')}</div>`;
   }
 
   async openTraceReport(publicId) {
@@ -8307,16 +8294,11 @@ ${extractorBody}
       return `<span class="badge"${title} style="color:${meta.color};border:1px solid ${meta.color};">${escapeHtml(meta.label)}</span>`;
     };
     const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${renderSemantics(e.semantics)}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? t('成功') : t('失败')}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
-    const detail = document.createElement('blora-dialog');
-    detail.id = 'traceReportModal';
-    const header = document.createElement('div'); header.slot = 'header';
-    const heading = document.createElement('h3'); heading.textContent = `${t('跟踪报告')}${session.public_id || ''}`; header.appendChild(heading);
-    const body = document.createElement('div');
-    setHTML(body, `<p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="blora-button" data-variant="secondary" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="blora-button" data-variant="secondary" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table class="blora-table"><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div>`);
-    detail.append(header, body);
+    const detail = document.createElement('div');
+    detail.className = 'trace-report-modal';
+    detail.innerHTML = `${'<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>' + t('跟踪报告')}${escapeHtml(session.public_id)}${'</h3><button class="btn btn-secondary btn-sm" onclick="this.closest(\'.trace-report-modal\').remove()">' + t('关闭')}</button></div><p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div></div>`;
     document.body.appendChild(detail);
-    upgradeBloraControls(detail);
-    detail.show();
+    detail.addEventListener('click', e => { if (e.target === detail) detail.remove(); });
     this.loadTraceReports().catch(() => {});
   }
 
@@ -8345,7 +8327,7 @@ ${extractorBody}
         <table>
           <thead>
             <tr>
-              <th style="width:40px;"><blora-checkbox value="on" label="全选" onchange="app.toggleSelectAllProviders(this.checked)"></blora-checkbox></th>
+              <th style="width:40px;"><input type="checkbox" onchange="app.toggleSelectAllProviders(this.checked)"></th>
               <th>名称</th>
               <th>Base URL</th>
               <th>格式</th>
@@ -8357,7 +8339,7 @@ ${extractorBody}
           <tbody>
             ${providers.map(p => `
               <tr data-provider-id="${escapeHtml(p.id)}">
-                <td><blora-checkbox class="provider-checkbox" value="${escapeHtml(p.id)}" label="${escapeHtml(p.name)}" onchange="app.updateBatchButtons()"></blora-checkbox></td>
+                <td><input type="checkbox" class="provider-checkbox" value="${escapeHtml(p.id)}" onchange="app.updateBatchButtons()"></td>
                 <td>
                   <div style="font-weight:500;">${escapeHtml(p.name)}</div>
                   <div style="font-size:11px;color:var(--muted-foreground);font-family:monospace;">${escapeHtml(p.id)}</div>
@@ -8396,13 +8378,13 @@ ${extractorBody}
 
   toggleSelectAllProviders(checked) {
     document.querySelectorAll('.provider-checkbox').forEach(cb => {
-      setBloraChecked(cb, checked);
+      cb.checked = checked;
     });
     this.updateBatchButtons();
   }
 
   updateBatchButtons() {
-    const checked = getBloraCheckedControls('.provider-checkbox');
+    const checked = document.querySelectorAll('.provider-checkbox:checked');
     const batchBtn = document.getElementById('batchDeleteBtn');
     if (batchBtn) {
       batchBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
@@ -8410,8 +8392,8 @@ ${extractorBody}
   }
 
   async batchDeleteProviders() {
-    const checked = getBloraCheckedControls('.provider-checkbox');
-    const ids = Array.from(checked).map(cb => getBloraValue(cb));
+    const checked = document.querySelectorAll('.provider-checkbox:checked');
+    const ids = Array.from(checked).map(cb => cb.value);
 
     if (!ids.length) return;
     if (!await confirm(`${t('确定要删除选中的')}${ids.length}${t('个供应商吗？关联的模型也会被删除。')}`)) return;
@@ -8687,7 +8669,7 @@ ${extractorBody}
 
     setHTML(container, models.map((model, index) => `
       <div class="model-check-item" data-model-id="${model.id}" data-model-name="${model.name || ''}">
-        <blora-checkbox class="manage-model-checkbox" id="manageModel_${index}" value="${model.id}" label="${escapeHtml(model.name || model.id)}" onchange="app._updateManageModelsBatchBar()"></blora-checkbox>
+        <input type="checkbox" class="manage-model-checkbox" id="manageModel_${index}" value="${model.id}" onchange="app._updateManageModelsBatchBar()">
         <label for="manageModel_${index}" style="flex:1;cursor:pointer;">
           <span style="font-weight:500;">${escapeHtml(model.name || model.id)}</span>
           ${model.name && model.name !== model.id ? `<span style="font-size:12px;color:var(--muted-foreground);margin-left:8px;">${escapeHtml(model.id)}</span>` : ''}
@@ -8712,7 +8694,7 @@ ${extractorBody}
 
   toggleSelectAllManageModels(checked) {
     document.querySelectorAll('.manage-model-checkbox').forEach(cb => {
-      setBloraChecked(cb, checked);
+      cb.checked = checked;
     });
     this._updateManageModelsBatchBar();
   }
@@ -8738,8 +8720,8 @@ ${extractorBody}
   }
 
   async saveManagedModels() {
-    const checked = getBloraCheckedControls('.manage-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
+    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
+    const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) {
       this.closeModals();
@@ -8772,7 +8754,7 @@ ${extractorBody}
 
   // 批量操作函数
   _updateManageModelsBatchBar() {
-    const checked = getBloraCheckedControls('.manage-model-checkbox');
+    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
     const count = checked.length;
     const batchBar = document.getElementById('manageModelsBatchBar');
     const countEl = document.getElementById('manageModelsSelectedCount');
@@ -8786,8 +8768,8 @@ ${extractorBody}
   }
 
   async batchEnableModels(enabled) {
-    const checked = getBloraCheckedControls('.manage-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
+    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
+    const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) return;
 
@@ -8816,8 +8798,8 @@ ${extractorBody}
   }
 
   async batchDeleteManagedModels() {
-    const checked = getBloraCheckedControls('.manage-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
+    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
+    const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
@@ -8851,8 +8833,8 @@ ${extractorBody}
   }
 
   async executeBatchSetPrices() {
-    const checked = getBloraCheckedControls('.manage-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
+    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
+    const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) return;
 
@@ -8936,7 +8918,7 @@ ${extractorBody}
       <table>
         <thead>
           <tr>
-            <th style="width:40px;"><blora-checkbox value="on" label="全选" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></blora-checkbox></th>
+            <th style="width:40px;"><input type="checkbox" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></th>
             <th>模型名称</th>
             <th>上游模型ID</th>
             <th>供应商</th>
@@ -8949,7 +8931,7 @@ ${extractorBody}
         <tbody>
           ${models.map(m => `
             <tr data-model-id="${escapeHtml(m.id)}">
-              <td><blora-checkbox class="my-team-model-checkbox" value="${escapeHtml(m.id)}" label="${escapeHtml(m.name || m.id)}" onchange="app.updateMyModelsBatchButtons()"></blora-checkbox></td>
+              <td><input type="checkbox" class="my-team-model-checkbox" value="${escapeHtml(m.id)}" onchange="app.updateMyModelsBatchButtons()"></td>
               <td>
                 <div style="font-weight:500;">${escapeHtml(m.alias || m.name || m.id)}</div>
                 ${m.description ? `<div style="font-size:11px;color:var(--muted-foreground);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
@@ -8990,13 +8972,13 @@ ${extractorBody}
 
   toggleSelectAllMyTeamModels(checked) {
     document.querySelectorAll('.my-team-model-checkbox').forEach(cb => {
-      setBloraChecked(cb, checked);
+      cb.checked = checked;
     });
     this.updateMyModelsBatchButtons();
   }
 
   updateMyModelsBatchButtons() {
-    const checked = getBloraCheckedControls('.my-team-model-checkbox');
+    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
     const count = checked.length;
     const ids = ['batchEnableMyModelsBtn', 'batchDisableMyModelsBtn', 'batchEditMyModelsBtn', 'batchDeleteMyModelsBtn'];
     ids.forEach(id => {
@@ -9006,8 +8988,8 @@ ${extractorBody}
   }
 
   async batchDeleteMyTeamModels() {
-    const checked = getBloraCheckedControls('.my-team-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
+    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
+    const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？此操作不可撤销。')}`)) return;
 
@@ -9038,8 +9020,8 @@ ${extractorBody}
   }
 
   async _batchUpdateMyTeamModels(updates, action) {
-    const checked = getBloraCheckedControls('.my-team-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
+    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
+    const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要')}${action}${t('选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
 
@@ -9062,8 +9044,8 @@ ${extractorBody}
   }
 
   showBatchEditMyModelsModal() {
-    const checked = getBloraCheckedControls('.my-team-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
+    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
+    const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
 
     document.getElementById('batchEditMyModelsInfo').textContent = `${t('已选择')}${modelIds.length}${t('个模型')}`;
@@ -9072,7 +9054,7 @@ ${extractorBody}
     ['Enabled', 'Series', 'Desc', 'Alias', 'InputPrice', 'OutputPrice'].forEach(field => {
       const check = document.getElementById(`batchEditMyModels${field}Check`);
       const input = document.getElementById(`batchEditMyModels${field}`);
-      if (check) setBloraChecked(check, false);
+      if (check) check.checked = false;
       if (input) { input.value = ''; input.disabled = true; }
     });
 
@@ -9083,41 +9065,41 @@ ${extractorBody}
       const check = document.getElementById(`batchEditMyModels${field}Check`);
       const input = document.getElementById(`batchEditMyModels${field}`);
       if (check && input) {
-        check.onchange = () => { input.disabled = !getBloraChecked(check); };
+        check.onchange = () => { input.disabled = !check.checked; };
       }
     });
   }
 
   async saveBatchEditMyModels() {
-    const checked = getBloraCheckedControls('.my-team-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
+    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
+    const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
 
     const updates = {};
 
     const enabledCheck = document.getElementById('batchEditMyModelsEnabledCheck');
-    if (getBloraChecked(enabledCheck)) {
+    if (enabledCheck.checked) {
       updates.enabled = document.getElementById('batchEditMyModelsEnabled').value === 'true';
     }
     const seriesCheck = document.getElementById('batchEditMyModelsSeriesCheck');
-    if (getBloraChecked(seriesCheck)) {
+    if (seriesCheck.checked) {
       updates.series = document.getElementById('batchEditMyModelsSeries').value.trim();
     }
     const descCheck = document.getElementById('batchEditMyModelsDescCheck');
-    if (getBloraChecked(descCheck)) {
+    if (descCheck.checked) {
       updates.description = document.getElementById('batchEditMyModelsDesc').value.trim();
     }
     const aliasCheck = document.getElementById('batchEditMyModelsAliasCheck');
-    if (getBloraChecked(aliasCheck)) {
+    if (aliasCheck.checked) {
       updates.alias = document.getElementById('batchEditMyModelsAlias').value.trim();
     }
     const inputPriceCheck = document.getElementById('batchEditMyModelsInputPriceCheck');
-    if (getBloraChecked(inputPriceCheck)) {
+    if (inputPriceCheck.checked) {
       const val = document.getElementById('batchEditMyModelsInputPrice').value;
       if (val !== '') updates.input_price_per_1k_tokens = parseFloat(val);
     }
     const outputPriceCheck = document.getElementById('batchEditMyModelsOutputPriceCheck');
-    if (getBloraChecked(outputPriceCheck)) {
+    if (outputPriceCheck.checked) {
       const val = document.getElementById('batchEditMyModelsOutputPrice').value;
       if (val !== '') updates.output_price_per_1k_tokens = parseFloat(val);
     }
@@ -12624,11 +12606,11 @@ ${extractorBody}
 
   async confirmSelectKey() {
     console.log(t('[模型库] 确认选择 Key'));
-    const selected = document.querySelector('blora-radio[name="selectKeyRadio"][checked], input[name="selectKeyRadio"]:checked');
+    const selected = document.querySelector('input[name="selectKeyRadio"]:checked');
     console.log(t('[模型库] 选中的 Key:'), selected);
     if (!selected) { alert(t('请选择一个 API Key')); return; }
 
-    const keyId = parseInt(getBloraValue(selected));
+    const keyId = parseInt(selected.value);
     const modelId = this._selectingModelId;
     console.log(t('[模型库] 准备应用模型:'), { keyId, modelId });
 

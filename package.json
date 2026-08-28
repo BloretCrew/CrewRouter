@@ -18,7 +18,6 @@
     "docker:up:saas": "docker-compose -f docker-compose.saas.yml up -d"
   },
   "dependencies": {
-    "@bloret-crew/blora-design": "^2.0.0",
     "@fluentui/web-components": "^2.6.1",
     "@simplewebauthn/server": "^13.3.0",
     "axios": "^1.16.0",

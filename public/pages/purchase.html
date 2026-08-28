@@ -8,7 +8,6 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="stylesheet" href="/blora/blora.css">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
   <script>
@@ -113,13 +112,12 @@
       color: var(--destructive);
     }
   </style>
-  <script type="module" src="/blora/auto.js"></script>
 </head>
-<body class="blora-page blora-scope">
-<div style="position:absolute;top:10px;right:12px;z-index:99;"><blora-select id="langToggle" class="blora-button" data-size="icon" data-variant="secondary" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-      <blora-option value="zh">中文</blora-option>
-      <blora-option value="en">EN</blora-option>
-    </blora-select></div>
+<body>
+<div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
+      <option value="zh">中文</option>
+      <option value="en">EN</option>
+    </select></div>
   <div class="app-container">
     <aside class="sidebar">
       <div class="sidebar-header">
@@ -131,7 +129,7 @@
       <nav class="sidebar-nav">
         <div class="nav-section">
           <div class="nav-item" onclick="window.location.href='/console'">
-            <img src="https://img.bloret.net/SF/arrow.backward?color=white" alt="arrow.backward" width="16" height="16" class="sf-icon" data-sf-name="arrow.backward">
+            <img src="https://img.bloret.net/SF/arrow.backward?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.backward">
             <span><span data-i18n="返回控制台">返回控制台</span></span>
           </div>
         </div>
@@ -187,7 +185,7 @@
             <div class="purchase-info">
               <div class="purchase-name">${product.name}</div>
               ${product.description ? `<div class="purchase-desc">${product.description}</div>` : ''}
-              <button type="button" class="blora-button purchase-btn" onclick="handlePurchase()">立即购买</button>
+              <button class="purchase-btn" onclick="handlePurchase()">立即购买</button>
               <div id="purchaseStatus" class="purchase-status" style="display:none;"></div>
             </div>
           </div>

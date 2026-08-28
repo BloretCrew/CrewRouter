@@ -8,7 +8,6 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="stylesheet" href="/blora/blora.css">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
   <script>
@@ -21,13 +20,12 @@
       document.documentElement.classList.add(resolved);
     })();
   </script>
-  <script type="module" src="/blora/auto.js"></script>
 </head>
-<body class="blora-page blora-scope">
-<div style="position:absolute;top:10px;right:12px;z-index:99;"><blora-select id="langToggle" class="blora-button" data-size="icon" data-variant="secondary" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-      <blora-option value="zh">中文</blora-option>
-      <blora-option value="en">EN</blora-option>
-    </blora-select></div>
+<body>
+<div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
+      <option value="zh">中文</option>
+      <option value="en">EN</option>
+    </select></div>
   <div class="login-container">
     <div class="login-bg">
       <div class="grid"></div>
@@ -62,9 +60,9 @@
 
         <form id="bindForm" onsubmit="handleBind(event)">
           <div class="form-group">
-            <input type="password" id="password" placeholder="请输入该账号的密码" data-i18n-placeholder="请输入该账号的密码" class="blora-input" minlength="6" required>
+            <input type="password" id="password" placeholder="请输入该账号的密码" data-i18n-placeholder="请输入该账号的密码" class="input" minlength="6" required>
           </div>
-          <button type="submit" class="blora-button login-btn" id="submitBtn">
+          <button type="submit" class="login-btn" id="submitBtn">
             <span id="submitText"><span data-i18n="验证并绑定">验证并绑定</span></span>
           </button>
         </form>

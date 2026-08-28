@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>安装插件到 CrewRouter</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="stylesheet" href="/blora/blora.css">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
   <style>
@@ -25,9 +24,8 @@
     .pi-loading, .pi-err { text-align: center; padding: 40px 0; color: var(--muted-foreground, #6b7280); }
     .pi-err strong { display: block; margin-bottom: 8px; color: var(--destructive, #ef4444); }
   </style>
-  <script type="module" src="/blora/auto.js"></script>
 </head>
-<body class="blora-page blora-scope">
+<body>
   <div class="pi-wrap">
     <div id="pi-root" class="pi-card">
       <div class="pi-loading">正在获取插件信息…</div>
@@ -105,8 +103,8 @@
         html += '<div class="pi-section"><h3>行为</h3><ul>' + behaviorHtml(info.behavior) + '</ul></div>';
         html += '<div class="pi-warn">安装后将立即启用该插件，并每日从插件商店检查是否有更新（若有更新会提醒系统管理员）。</div>';
         html += '<div class="pi-actions">' +
-          '<button class="blora-button" data-variant="primary" id="piConfirm" type="button">确认安装</button>' +
-          '<button class="blora-button" data-variant="secondary" id="piCancel" type="button">取消</button>' +
+          '<button class="btn btn-primary" id="piConfirm">确认安装</button>' +
+          '<button class="btn btn-secondary" id="piCancel">取消</button>' +
         '</div>';
 
         root.innerHTML = html;
@@ -134,7 +132,7 @@
           if (res.ok) {
             root.innerHTML = '<div class="pi-err"><strong style="color:var(--primary,#2563eb);">安装成功</strong>' +
               esc(res.data.name || pluginId) + ' v' + esc(res.data.version || '') + ' 已启用。</div>' +
-              '<div class="pi-actions"><a class="blora-button" data-variant="primary" href="/admin">前往插件管理</a></div>';
+              '<div class="pi-actions"><a class="btn btn-primary" href="/admin">前往插件管理</a></div>';
           } else {
             throw new Error((res.data && res.data.error) || ('HTTP ' + res.status));
           }

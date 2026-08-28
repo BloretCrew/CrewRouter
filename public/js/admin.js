@@ -464,7 +464,20 @@ class AdminApp {
     // 计费模式切换：显示/隐藏每次请求价格
     document.querySelectorAll('input[name="billingMode"]').forEach(radio => {
       radio.addEventListener('change', () => {
-        document.getElementById('ratePriceGroup').style.display = getBloraValue(radio) === 'rate' && getBloraChecked(radio) ? '' : 'none';
+        document.getElementById('ratePriceGroup').style.display = radio.value === 'rate' && radio.checked ? '' : 'none';
+      });
+    });
+
+    // 模态框关闭按钮
+    const modalCloseButtons = document.querySelectorAll('.modal-close');
+    modalCloseButtons.forEach(btn => {
+      btn.addEventListener('click', () => this.closeModals());
+    });
+
+    // 点击遮罩空白处关闭弹窗（点到 .modal 本身，而非 .modal-content）
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) this.closeModals();
       });
     });
 
@@ -472,93 +485,26 @@ class AdminApp {
     const codeRefundable = document.getElementById('codeRefundable');
     if (codeRefundable) {
       codeRefundable.addEventListener('change', () => {
-        document.getElementById('codeFeeRateGroup').style.display = getBloraChecked(codeRefundable) ? 'block' : 'none';
+        document.getElementById('codeFeeRateGroup').style.display = codeRefundable.checked ? 'block' : 'none';
       });
     }
     const editCodeRefundable = document.getElementById('editCodeRefundable');
     if (editCodeRefundable) {
       editCodeRefundable.addEventListener('change', () => {
-        document.getElementById('editCodeFeeRateGroup').style.display = getBloraChecked(editCodeRefundable) ? 'block' : 'none';
+        document.getElementById('editCodeFeeRateGroup').style.display = editCodeRefundable.checked ? 'block' : 'none';
       });
     }
     const batchSetRefundable = document.getElementById('batchSetRefundable');
     if (batchSetRefundable) {
       batchSetRefundable.addEventListener('change', () => {
-        document.getElementById('batchSetFeeRateGroup').style.display = getBloraChecked(batchSetRefundable) ? 'block' : 'none';
+        document.getElementById('batchSetFeeRateGroup').style.display = batchSetRefundable.checked ? 'block' : 'none';
       });
     }
   }
 
-  showDynamicModal({ title, content = '', footer = '', width } = {}) {
-    const modal = document.createElement('blora-dialog');
-    modal.id = `adminDynamicModal-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    if (width) modal.style.setProperty('--blora-dialog-max-width', typeof width === 'number' ? `${width}px` : width);
-    const header = document.createElement('div');
-    header.slot = 'header';
-    const titleEl = document.createElement('h3');
-    titleEl.textContent = title || '';
-    header.appendChild(titleEl);
-    const body = document.createElement('div');
-    setHTML(body, content);
-    modal.append(header, body);
-    if (footer) {
-      const footerEl = document.createElement('div');
-      footerEl.slot = 'footer';
-      setHTML(footerEl, footer);
-      modal.appendChild(footerEl);
-    }
-    document.body.appendChild(modal);
-    upgradeBloraControls(modal);
-    modal.addEventListener('blora-close', () => modal.remove(), { once: true });
-    modal.show();
-    return { close: () => modal.close(), element: modal };
-  }
-
-  confirmModal(title, message, options = {}) {
-    return new Promise((resolve) => {
-      const footer = `<button type="button" class="blora-button" data-variant="secondary" data-admin-confirm-cancel>${escapeHtml(options.cancelText || t('取消'))}</button><button type="button" class="blora-button" data-variant="${options.danger ? 'danger' : 'primary'}" data-admin-confirm-ok>${escapeHtml(options.confirmText || t('确认'))}</button>`;
-      const modal = this.showDynamicModal({ title, content: `<p>${message || ''}</p>`, footer });
-      let settled = false;
-      const finish = (value) => { if (settled) return; settled = true; modal.close(); resolve(value); };
-      modal.element.querySelector('[data-admin-confirm-cancel]')?.addEventListener('click', () => finish(false));
-      modal.element.querySelector('[data-admin-confirm-ok]')?.addEventListener('click', () => finish(true));
-      modal.element.addEventListener('blora-close', () => finish(false), { once: true });
-    });
-  }
-
-  alertModal(title, message) {
-    return new Promise((resolve) => {
-      const modal = this.showDynamicModal({ title, content: `<p>${message || ''}</p>`, footer: `<button type="button" class="blora-button" data-variant="primary" data-admin-alert-ok>${escapeHtml(t('知道了'))}</button>` });
-      modal.element.querySelector('[data-admin-alert-ok]')?.addEventListener('click', () => { modal.close(); resolve(true); });
-    });
-  }
-
-  showModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-    if (typeof modal.show === 'function') modal.show();
-    else {
-      modal.style.display = 'flex';
-      modal.classList.add('active');
-    }
-    modal.dispatchEvent(new CustomEvent('admin-modal-open', { bubbles: true, detail: { id: modalId } }));
-  }
-
-  closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
-    if (typeof modal.close === 'function') modal.close();
-    else {
-      modal.style.display = 'none';
-      modal.classList.remove('active');
-    }
-    modal.dispatchEvent(new CustomEvent('admin-modal-close', { bubbles: true, detail: { id: modalId } }));
-  }
-
   closeModals() {
-    document.querySelectorAll('blora-dialog[open], .modal.active, .modal[style*="display: flex"]').forEach((modal) => {
-      if (typeof modal.close === 'function') modal.close();
-      else { modal.style.display = 'none'; modal.classList.remove('active'); }
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.style.display = 'none';
     });
   }
 
@@ -911,7 +857,8 @@ class AdminApp {
     // 加载用户组列表
     this.loadUserGroupsForSelect(user.group_id);
 
-    this.showModal('editUserModal');
+    document.getElementById('editUserModal').style.display = 'flex';
+    document.getElementById('editUserModal').classList.add('active');
   }
 
   async loadUserGroupsForSelect(selectedGroupId) {
@@ -1101,7 +1048,7 @@ class AdminApp {
 
     root.addEventListener('change', (e) => {
       const t = e.target;
-      if (!t || !['INPUT', 'BLORA-CHECKBOX', 'BLORA-SWITCH'].includes(t.tagName)) return;
+      if (!t || t.type !== 'checkbox') return;
       if (t.classList.contains('admin-models-provider-select-all')) {
         const providerKey = t.getAttribute('data-provider-key') || '';
         if (providerKey) this.toggleAdminModelProviderSelectAll(providerKey, t.checked);
@@ -1751,7 +1698,7 @@ class AdminApp {
     if (!body || !modal) return;
     if (title) title.textContent = `${modelName || modelId}${t('· 调用状态（近 24 小时）')}`;
     setHTML(body, pageLoadingHtml(t('加载中...'), { compact: true }));
-    this.showModal(modal.id);
+    modal.style.display = 'flex';
     try {
       const res = await fetch(`/api/admin/models/${encodeURIComponent(modelId)}/uptime?days=${this._uptimeDays}`);
       if (!res.ok) throw new Error(t('加载失败'));
@@ -1892,7 +1839,7 @@ class AdminApp {
                   </div>
                   <div class="model-library-provider-actions">
                     <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400;cursor:pointer;color:var(--muted-foreground);">
-                      <blora-checkbox class="admin-models-provider-select-all"
+                      <input type="checkbox" class="admin-models-provider-select-all"
                         data-provider-key="${keyAttr}"
                         ${allSelected ? 'checked' : ''}>
                       全选本页
@@ -2064,7 +2011,7 @@ class AdminApp {
     const selectedCount = models.filter(m => this.selectedModels.has(m.id)).length;
     const selectAll = el.querySelector('.admin-models-provider-select-all');
     if (selectAll) {
-      setBloraChecked(selectAll, models.length > 0 && selectedCount === models.length);
+      selectAll.checked = models.length > 0 && selectedCount === models.length;
       selectAll.indeterminate = !selectAll.checked && selectedCount > 0;
     }
     const title = el.querySelector('.model-library-provider-title');
@@ -2341,10 +2288,10 @@ class AdminApp {
       });
       this.renderModels();
     } else {
-      document.querySelectorAll('#adminModelsList tbody blora-checkbox, #adminModelsList tbody blora-switch').forEach(cb => {
-        setBloraChecked(cb, checked);
-        if (checked) this.selectedModels.add(getBloraValue(cb));
-        else this.selectedModels.delete(getBloraValue(cb));
+      document.querySelectorAll('#adminModelsList tbody input[type="checkbox"]').forEach(cb => {
+        cb.checked = checked;
+        if (checked) this.selectedModels.add(cb.value);
+        else this.selectedModels.delete(cb.value);
       });
     }
     this.updateBatchButtons();
@@ -2443,7 +2390,8 @@ class AdminApp {
     this.loadProviderOptions().then(() => {
       document.getElementById('modelProvider').value = '';
       this.onModelProviderChange();
-      this.showModal('addModelModal');
+      document.getElementById('addModelModal').style.display = 'flex';
+      document.getElementById('addModelModal').classList.add('active');
     });
   }
 
@@ -2470,7 +2418,8 @@ class AdminApp {
       this.loadModelOptions().then(() => {
         document.getElementById('modelThinkingModel').value = model.thinking_model_id || '';
         document.getElementById('modelNonThinkingModel').value = model.non_thinking_model_id || '';
-        this.showModal('addModelModal');
+        document.getElementById('addModelModal').style.display = 'flex';
+        document.getElementById('addModelModal').classList.add('active');
       });
     });
   }
@@ -3033,7 +2982,7 @@ class AdminApp {
     const selectAllBar = `
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:13px;">
         <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;">
-          <blora-checkbox id="providerSelectAllPage" value="on" label="全选本页" ${allPageSelected ? 'checked' : ''}
+          <input type="checkbox" class="checkbox" id="providerSelectAllPage" ${allPageSelected ? 'checked' : ''}
             onchange="adminApp.toggleSelectAllProvidersOnPage(this.checked)">
           <span>全选本页</span>
         </label>
@@ -3084,7 +3033,7 @@ class AdminApp {
     return `
       <div class="provider-row-actions">
         <label class="toggle-switch" title="${provider.enabled ? t('禁用供应商') : t('启用供应商')}" style="transform:scale(0.8);">
-          <blora-switch value="on" ${provider.enabled ? 'checked' : ''} label="${t('启用供应商')}" onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)"></blora-switch>
+          <input type="checkbox" ${provider.enabled ? 'checked' : ''} onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)">
           <span class="toggle-slider"></span>
         </label>
         <button class="btn btn-sm btn-secondary" title="${t('同步模型')}" onclick="adminApp.fetchProviderModels('${pid}')">同步模型</button>
@@ -3097,7 +3046,8 @@ class AdminApp {
             <div class="provider-more-item provider-more-item-toggle" role="menuitem">
               <span>额度查询</span>
               <label class="toggle-switch" style="transform:scale(0.75);" onclick="event.stopPropagation()">
-                <blora-switch value="on" ${quotaEnabled ? 'checked' : ''} label="${t('额度启用')}" onchange="adminApp.toggleProviderQuota('${pid}', this.checked)"></blora-switch>
+                <input type="checkbox" ${quotaEnabled ? 'checked' : ''} onchange="adminApp.toggleProviderQuota('${pid}', this.checked)">
+                <span class="toggle-slider"></span>
               </label>
             </div>
             <button type="button" class="provider-more-item" id="quota-btn-${pid}" onclick="adminApp.checkProviderQuota('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" ${!quotaEnabled ? 'disabled style="opacity:0.45;"' : ''} role="menuitem">查询额度</button>
@@ -3156,7 +3106,7 @@ class AdminApp {
                 ondragleave="adminApp.handleProviderDragLeave(event)"
                 ondrop="adminApp.handleProviderDrop(event, '${safePid}')">
               <td class="provider-select-cell">
-                <blora-checkbox class="provider-select-cb" data-provider-id="${escapeHtml(pid)}" value="${escapeHtml(pid)}" label="${escapeHtml(provider.name || pid)}"
+                <input type="checkbox" class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
                   ${selected ? 'checked' : ''}
                   onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)">
               </td>
@@ -3220,14 +3170,14 @@ class AdminApp {
 
   // ========== 供应商多 API Key 编辑 ==========
   _getProviderKeySelectMode() {
-    const checked = document.querySelector('blora-radio[name="providerKeySelectMode"][checked]');
-    return getBloraValue(checked) === 'weight' ? 'weight' : 'order';
+    const checked = document.querySelector('input[name="providerKeySelectMode"]:checked');
+    return checked?.value === 'weight' ? 'weight' : 'order';
   }
 
   _setProviderKeySelectMode(mode) {
     const m = mode === 'weight' ? 'weight' : 'order';
-    document.querySelectorAll('blora-radio[name="providerKeySelectMode"]').forEach(el => {
-      setBloraChecked(el, getBloraValue(el) === m);
+    document.querySelectorAll('input[name="providerKeySelectMode"]').forEach(el => {
+      el.checked = el.value === m;
     });
     this.onProviderKeySelectModeChange();
   }
@@ -3484,7 +3434,7 @@ class AdminApp {
                ondragleave="adminApp.handleProviderDragLeave(event)"
                ondrop="adminApp.handleProviderDrop(event, '${safePid}')">
             <label class="provider-card-select" title="${t('选择')}" onclick="event.stopPropagation()">
-              <blora-checkbox class="provider-select-cb" data-provider-id="${escapeHtml(pid)}" value="${escapeHtml(pid)}" label="${escapeHtml(provider.name || pid)}"
+              <input type="checkbox" class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
                 ${selected ? 'checked' : ''}
                 onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)">
             </label>
@@ -3569,7 +3519,7 @@ class AdminApp {
     const pageIds = (this.providersData || []).map(p => String(p.id));
     const allPageSelected = pageIds.length > 0 && pageIds.every(pid => this.selectedProviders.has(pid));
     const selectAll = document.getElementById('providerSelectAllPage');
-    if (selectAll) setBloraChecked(selectAll, allPageSelected);
+    if (selectAll) selectAll.checked = allPageSelected;
   }
 
   toggleSelectAllProvidersOnPage(checked) {
@@ -3586,7 +3536,7 @@ class AdminApp {
       }
     }
     document.querySelectorAll('.provider-select-cb').forEach(cb => {
-      setBloraChecked(cb, !!checked);
+      cb.checked = !!checked;
     });
     this.updateProviderBatchBar();
   }
@@ -3594,9 +3544,9 @@ class AdminApp {
   clearProviderSelection() {
     this.selectedProviders.clear();
     if (this._selectedProviderNames) this._selectedProviderNames.clear();
-    document.querySelectorAll('.provider-select-cb').forEach(cb => { setBloraChecked(cb, false); });
+    document.querySelectorAll('.provider-select-cb').forEach(cb => { cb.checked = false; });
     const selectAll = document.getElementById('providerSelectAllPage');
-    if (selectAll) setBloraChecked(selectAll, false);
+    if (selectAll) selectAll.checked = false;
     this.updateProviderBatchBar();
   }
 
@@ -3685,11 +3635,11 @@ class AdminApp {
       </p>
       <div class="batch-sync-options">
         <label>
-          <blora-checkbox id="batchSyncEnableNew" value="on" label="启用" checked></blora-checkbox>
+          <input type="checkbox" id="batchSyncEnableNew" class="checkbox" checked>
           <span>新增上游模型默认<strong>启用</strong></span>
         </label>
         <label>
-          <blora-checkbox id="batchSyncDisableStale" value="on" label="禁用失效模型"></blora-checkbox>
+          <input type="checkbox" id="batchSyncDisableStale" class="checkbox">
           <span>上游已下架的模型自动<strong>禁用</strong>（默认保留）</span>
         </label>
       </div>
@@ -3713,7 +3663,7 @@ class AdminApp {
       <button type="button" class="dialog-btn dialog-btn-primary" id="batchSyncStartBtn">开始同步</button>
     `;
 
-    const modal = this.showDynamicModal({
+    const modal = Dialog.showModal({
       title: t('批量同步模型'),
       content,
       footer,
@@ -3733,8 +3683,8 @@ class AdminApp {
 
     startBtn?.addEventListener('click', async () => {
       if (this._providerBatchSyncing) return;
-      const enableNew = getBloraChecked(document.getElementById('batchSyncEnableNew'));
-      const disableStale = getBloraChecked(document.getElementById('batchSyncDisableStale'));
+      const enableNew = !!document.getElementById('batchSyncEnableNew')?.checked;
+      const disableStale = !!document.getElementById('batchSyncDisableStale')?.checked;
       // 锁定选项
       ['batchSyncEnableNew', 'batchSyncDisableStale'].forEach(id => {
         const el = document.getElementById(id);
@@ -3909,7 +3859,7 @@ class AdminApp {
   async showAddProviderWizard() {
     const self = this;
     // Step 1: 显示供应商选择列表
-    const modal = this.showDynamicModal({
+    const modal = Dialog.showModal({
       title: t('添加供应商'),
       content: `
         <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 8px;">从常用列表选择，或自定义添加。完成后可立即同步模型。</p>
@@ -4033,7 +3983,7 @@ class AdminApp {
 
   showWizardStep2(provider) {
     const self = this;
-    const modal = this.showDynamicModal({
+    const modal = Dialog.showModal({
       title: `${t('配置')}${provider.name}`,
       content: `
         <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;">
@@ -4109,7 +4059,7 @@ class AdminApp {
   showProviderAddedSuccess(providerId, providerName) {
     const self = this;
     const name = providerName || t('供应商');
-    const modal = this.showDynamicModal({
+    const modal = Dialog.showModal({
       title: t('供应商已添加'),
       content: `
         <p style="font-size:14px;margin:0 0 8px;"><strong>${escapeHtml(name)}</strong> 已创建成功。</p>
@@ -4219,7 +4169,8 @@ class AdminApp {
     this.renderProviderTagAssignment([]);
     this._setProviderFormSectionsOpen({});
 
-    this.showModal('addProviderModal');
+    document.getElementById('addProviderModal').style.display = 'flex';
+    document.getElementById('addProviderModal').classList.add('active');
   }
 
   async lookupProviderInfo() {
@@ -4317,7 +4268,8 @@ class AdminApp {
     this.renderProviderTagAssignment(provider.tags || []);
     this._setProviderFormSectionsOpen({});
 
-    this.showModal('addProviderModal');
+    document.getElementById('addProviderModal').style.display = 'flex';
+    document.getElementById('addProviderModal').classList.add('active');
   }
 
   async saveProvider() {
@@ -4437,14 +4389,14 @@ class AdminApp {
     const url = provider.proxy_url || '';
 
     const proxyEnabledEl = document.getElementById('providerProxyEnabled');
-    if (proxyEnabledEl) setBloraChecked(proxyEnabledEl, enabled);
+    if (proxyEnabledEl) proxyEnabledEl.checked = enabled;
 
-    document.querySelectorAll('blora-radio[name="providerProxyMode"], input[name="providerProxyMode"]').forEach(r => {
-      setBloraChecked(r, getBloraValue(r) === mode);
+    document.querySelectorAll('input[name="providerProxyMode"]').forEach(r => {
+      r.checked = r.value === mode;
     });
 
     const useSystemEl = document.getElementById('providerProxyUseSystem');
-    if (useSystemEl) setBloraChecked(useSystemEl, useSystem);
+    if (useSystemEl) useSystemEl.checked = useSystem;
 
     const urlEl = document.getElementById('providerProxyUrl');
     if (urlEl) urlEl.value = url;
@@ -4454,24 +4406,24 @@ class AdminApp {
 
   // 供应商代理表单：收集
   _collectProviderProxyFromForm() {
-    const proxy_enabled = getBloraChecked(document.getElementById('providerProxyEnabled'));
-    const modeRadio = document.querySelector('blora-radio[name="providerProxyMode"][checked], input[name="providerProxyMode"]:checked');
-    const proxy_mode = getBloraValue(modeRadio) === 'pool' ? 'pool' : 'single';
-    const proxy_use_system = getBloraChecked(document.getElementById('providerProxyUseSystem'));
+    const proxy_enabled = document.getElementById('providerProxyEnabled')?.checked || false;
+    const modeRadio = document.querySelector('input[name="providerProxyMode"]:checked');
+    const proxy_mode = modeRadio?.value === 'pool' ? 'pool' : 'single';
+    const proxy_use_system = document.getElementById('providerProxyUseSystem')?.checked || false;
     const proxy_url = document.getElementById('providerProxyUrl')?.value?.trim() || '';
     return { proxy_enabled, proxy_mode, proxy_use_system, proxy_url };
   }
 
   toggleProviderProxyOptions() {
-    const enabled = getBloraChecked(document.getElementById('providerProxyEnabled'));
+    const enabled = document.getElementById('providerProxyEnabled')?.checked || false;
     const opts = document.getElementById('providerProxyOptions');
     if (opts) opts.style.display = enabled ? 'block' : 'none';
     if (enabled) this.toggleProviderProxyMode();
   }
 
   toggleProviderProxyMode() {
-    const modeRadio = document.querySelector('blora-radio[name="providerProxyMode"][checked], input[name="providerProxyMode"]:checked');
-    const mode = getBloraValue(modeRadio) === 'pool' ? 'pool' : 'single';
+    const modeRadio = document.querySelector('input[name="providerProxyMode"]:checked');
+    const mode = modeRadio?.value === 'pool' ? 'pool' : 'single';
     const single = document.getElementById('providerProxySingleOptions');
     const poolHint = document.getElementById('providerProxyPoolHint');
     if (single) single.style.display = mode === 'single' ? 'block' : 'none';
@@ -4480,7 +4432,7 @@ class AdminApp {
   }
 
   toggleProviderProxyUseSystem() {
-    const useSystem = getBloraChecked(document.getElementById('providerProxyUseSystem'));
+    const useSystem = document.getElementById('providerProxyUseSystem')?.checked || false;
     const urlGroup = document.getElementById('providerProxyUrlGroup');
     if (urlGroup) urlGroup.style.display = useSystem ? 'none' : 'block';
   }
@@ -4534,7 +4486,7 @@ class AdminApp {
 
   async saveSystemProxy(e) {
     e.preventDefault();
-    const applyAll = getBloraChecked(document.getElementById('systemProxyEnabled'));
+    const applyAll = document.getElementById('systemProxyEnabled')?.checked || false;
     const url = document.getElementById('systemProxyUrl')?.value?.trim() || '';
     if (applyAll && !url) {
       alert(t('开启「为所有连接使用代理」时请填写代理地址'));
@@ -4582,7 +4534,7 @@ class AdminApp {
 
       // 系统单代理
       const sysEnabledEl = document.getElementById('systemProxyEnabled');
-      if (sysEnabledEl) setBloraChecked(sysEnabledEl, !!settings['system_proxy_enabled']);
+      if (sysEnabledEl) sysEnabledEl.checked = !!settings['system_proxy_enabled'];
       const sysUrlEl = document.getElementById('systemProxyUrl');
       if (sysUrlEl) sysUrlEl.value = settings['system_proxy_url'] || '';
     } catch (e) {
@@ -4857,7 +4809,7 @@ class AdminApp {
     const overlay = document.createElement('div');
     overlay.id = 'scriptAiModelPickerOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:16px;';
-    setHTML(overlay, `
+    overlay.innerHTML = `
       <div role="dialog" aria-label="${t('选择 AI 辅助模型')}" style="background:var(--card,#fff);color:var(--foreground);border:1px solid var(--border);border-radius:14px;width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.25);">
         <div style="padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);">
           <div>
@@ -4877,9 +4829,8 @@ class AdminApp {
           <span style="font-size:12px;color:var(--muted-foreground);align-self:center;">当前：${escHtml(this._formatScriptAiModelLabel(selected))}</span>
         </div>
       </div>
-    `);
+    `;
     document.body.appendChild(overlay);
-    upgradeBloraControls(overlay);
 
     const close = () => overlay.remove();
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
@@ -4901,11 +4852,11 @@ class AdminApp {
         return hay.includes(q);
       });
       if (!filtered.length) {
-        setHTML(listEl, `<div style="padding:24px;text-align:center;color:var(--muted-foreground);font-size:13px;">${models.length ? t('无匹配模型') : t('暂无可用模型（需启用且供应商已配置 API Key）')}</div>`);
+        listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted-foreground);font-size:13px;">${models.length ? t('无匹配模型') : t('暂无可用模型（需启用且供应商已配置 API Key）')}</div>`;
         return;
       }
       const selectedId = selected?.id ? String(selected.id) : '';
-      setHTML(listEl, filtered.map(m => {
+      listEl.innerHTML = filtered.map(m => {
         const isActive = selectedId && String(m.id) === selectedId;
         const title = escHtml(m.name || m.id);
         const sub = escHtml([m.provider_name, m.upstream_model_id || m.id].filter(Boolean).join(' · '));
@@ -4916,7 +4867,7 @@ class AdminApp {
             <div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">${sub}</div>
           </button>
         `;
-      }).join(''));
+      }).join('');
 
       listEl.querySelectorAll('.script-ai-model-item').forEach(btn => {
         btn.onclick = () => {
@@ -4954,7 +4905,7 @@ class AdminApp {
       render();
       searchEl.focus();
     } catch (e) {
-      setHTML(listEl, `<div style="padding:24px;text-align:center;color:var(--destructive);font-size:13px;">${escHtml(e.message || t('加载失败'))}</div>`);
+      listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--destructive);font-size:13px;">${escHtml(e.message || t('加载失败'))}</div>`;
     }
   }
 
@@ -5000,7 +4951,7 @@ class AdminApp {
       </div>
     `;
 
-    const modal = this.showDynamicModal({
+    const modal = Dialog.showModal({
       title: t('脚本执行错误'),
       content: content,
       width: 600,
@@ -5530,7 +5481,7 @@ async function(ctx) {
   }
 
   async deleteProvider(id) {
-    const ok = await this.confirmModal(
+    const ok = await Dialog.confirm(
       t('删除供应商'),
        t('确定要删除此供应商吗？') + '<br><br><strong style="color:var(--destructive);">' + t('将同时删除该供应商下的全部模型') + '</strong>' + t('，并清理 Team 绑定、API Key 模型绑定等关联数据。此操作不可撤销。'),
       { confirmText: t('确认删除'), danger: true }
@@ -5578,7 +5529,8 @@ async function(ctx) {
     if (cleanupBtn) cleanupBtn.style.display = 'none';
     document.getElementById('selectAllFetchedModels').checked = false;
 
-    this.showModal('fetchModelsModal');
+    document.getElementById('fetchModelsModal').style.display = 'flex';
+    document.getElementById('fetchModelsModal').classList.add('active');
 
     try {
       const url = `/api/admin/providers/${providerId}/fetch-models`;
@@ -5687,7 +5639,7 @@ async function(ctx) {
 
     const preview = staleModels.slice(0, 8).map(m => escapeHtml(m.name || m.id)).join('、');
     const more = staleModels.length > 8 ? `${t('等')}${staleModels.length}${t('个')}` : '';
-    const ok = await this.confirmModal(
+    const ok = await Dialog.confirm(
       t('清理已下架模型'),
       `${t('将')}<strong style="color:var(--destructive);">${t('永久删除')}</strong>${t('本供应商下')} <strong>${staleModels.length}${'</strong>' + t('个上游已不存在的本地模型记录（含 Team / API Key 绑定等关联数据）。此操作不可撤销。')}<br><br>` +
         `${'<span style="font-size:13px;color:var(--muted-foreground);">' + t('预览：')}${preview}${more}</span>`,
@@ -5763,7 +5715,7 @@ async function(ctx) {
       return;
     }
 
-    const ok = await this.confirmModal(
+    const ok = await Dialog.confirm(
       t('清理所有已下架模型'),
        t('将依次从') + '<strong>' + t('每个供应商') + '</strong>' + t('拉取上游模型列表，对比后') + '<strong style="color:var(--destructive);">' + t('永久删除') + '</strong>' + t('本地已下架的模型记录（含 Team / API Key 绑定等关联数据）。') +
         '<br><br>' + t('拉取失败的供应商会') + '<strong>' + t('跳过') + '</strong>' + t('（不会误删）。此操作可能耗时较长，且不可撤销。') + ',',
@@ -5849,7 +5801,7 @@ async function(ctx) {
 
       return `
         <div class="model-check-item" data-model-id="${model.id}" data-model-name="${model.name || ''}" data-status="${statusClass}"${extraAttrs?.attrs || ''}>
-          <blora-checkbox class="fetched-model-checkbox" id="fetchedModel_${index}" value="${model.id}" label="${escapeHtml(model.name || model.id)}" ${isEnabled ? 'checked' : ''} onchange="adminApp.updateFetchedModelsCount()"></blora-checkbox>
+          <input type="checkbox" class="checkbox" id="fetchedModel_${index}" value="${model.id}" ${isEnabled ? 'checked' : ''} onchange="adminApp.updateFetchedModelsCount()">
           <label for="fetchedModel_${index}">
             <span class="model-name">${model.name || model.id}</span>
             ${model.name && model.name !== model.id ? `<span class="model-id">${model.id}</span>` : ''}
@@ -5962,31 +5914,31 @@ async function(ctx) {
     const items = document.querySelectorAll('#fetchedModelsList .model-check-item');
     items.forEach(item => {
       if (item.style.display !== 'none') {
-        const cb = item.querySelector('blora-checkbox, blora-switch');
-        if (cb) setBloraChecked(cb, checked);
+        const cb = item.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = checked;
       }
     });
     this.updateFetchedModelsCount();
   }
 
   updateFetchedModelsCount() {
-    const checked = getBloraCheckedControls('.fetched-model-checkbox', document.getElementById('fetchedModelsList')).length;
-    const total = document.querySelectorAll('#fetchedModelsList blora-checkbox, #fetchedModelsList blora-switch').length;
-    setBloraChecked(document.getElementById('selectAllFetchedModels'), checked > 0 && checked === total);
+    const checked = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]:checked').length;
+    const total = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]').length;
+    document.getElementById('selectAllFetchedModels').checked = checked > 0 && checked === total;
   }
 
   async saveFetchedModels() {
     const providerId = this.currentFetchProviderId;
-    const checkboxes = document.querySelectorAll('#fetchedModelsList blora-checkbox, #fetchedModelsList blora-switch');
+    const checkboxes = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]');
     const enabledModelIds = [];
     checkboxes.forEach(cb => {
-      if (getBloraChecked(cb)) {
-        enabledModelIds.push(getBloraValue(cb));
+      if (cb.checked) {
+        enabledModelIds.push(cb.value);
       }
     });
 
     if (enabledModelIds.length === 0) {
-      const ok = await this.confirmModal(
+      const ok = await Dialog.confirm(
         t('禁用全部模型？'),
          t('当前') + '<strong>' + t('没有任何模型被勾选') + '</strong>' + t('。保存后将') + '<strong style="color:var(--destructive);">' + t('禁用该供应商下所有已有模型') + '</strong>' + t('。确定继续吗？') + ',',
         { confirmText: t('确认禁用全部'), danger: true }
@@ -6056,7 +6008,8 @@ async function(ctx) {
     error.style.display = 'none';
     content.style.display = 'none';
     editor.style.display = 'none';
-    this.showModal(modal.id);
+    modal.style.display = 'flex';
+    modal.classList.add('active');
 
     // 切换按钮：显示结果模式
     document.getElementById('quotaEditBtn').style.display = '';
@@ -6270,7 +6223,9 @@ async function(ctx) {
       ? t('SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化')
       : t('Codex WHAM 使用导入的 OAuth Token 查询 ChatGPT Codex 的 5 小时与 7 天窗口，接口为非公开接口，字段可能变化');
     if (label) label.textContent = isGrok ? 'SuperGrok auth.json' : 'Codex auth.json';
-    if (authHint) setHTML(authHint, html`${t('文件通常位于')} <code>${isGrok ? '~/.grok/auth.json' : '~/.codex/auth.json'}</code>${t('，即 Linux/macOS 下的')}<code>${isGrok ? t('/home/你的用户名/.grok/auth.json') : t('/home/你的用户名/.codex/auth.json')}</code>${t('。Token 会保存到当前供应商，请勿上传给第三方。')}`);
+    if (authHint) authHint.innerHTML = isGrok
+      ? t('文件通常位于') + ' <code>~/.grok/auth.json</code>' + t('，即 Linux/macOS 下的') + '<code>' + t('/home/你的用户名/.grok/auth.json') + '</code>' + t('。Token 会保存到当前供应商，请勿上传给第三方。')
+      : t('文件通常位于') + ' <code>~/.codex/auth.json</code>' + t('，即 Linux/macOS 下的') + '<code>' + t('/home/你的用户名/.codex/auth.json') + '</code>' + t('。Token 会保存到当前供应商，请勿上传给第三方。');
     if (textarea) textarea.placeholder = isGrok ? '{"access_token":"...","user_id":"..."}' : '{"tokens":{"access_token":"...","refresh_token":"..."}}';
   }
 
@@ -6346,7 +6301,8 @@ async function(ctx) {
     document.getElementById('importPreview').style.display = 'none';
     clearChildren(document.getElementById('importPreviewContent'));
     
-    this.showModal('importOpenCodeModal');
+    document.getElementById('importOpenCodeModal').style.display = 'flex';
+    document.getElementById('importOpenCodeModal').classList.add('active');
   }
 
   handleConfigFileUpload(event) {
@@ -7620,7 +7576,7 @@ async function(ctx) {
     const errorType = (document.getElementById('errorLogTypeFilter')?.value || '').trim();
     const startDate = document.getElementById('errorLogStartDate')?.value || '';
     const endDate = document.getElementById('errorLogEndDate')?.value || '';
-    const finalOnly = getBloraChecked(document.getElementById('errorLogFinalOnly'));
+    const finalOnly = document.getElementById('errorLogFinalOnly')?.checked;
 
     const params = new URLSearchParams();
     if (userQ) {
@@ -7737,7 +7693,7 @@ async function(ctx) {
       if (el) el.value = '';
     }
     const finalOnly = document.getElementById('errorLogFinalOnly');
-    if (finalOnly) setBloraChecked(finalOnly, true);
+    if (finalOnly) finalOnly.checked = true;
     this.loadErrorLogs(1);
   }
 
@@ -7785,14 +7741,16 @@ async function(ctx) {
 
     const modal = document.getElementById('errorDetailModal');
     if (modal) {
-      this.showModal(modal.id);
+      modal.style.display = 'flex';
+      modal.classList.add('active');
     }
   }
 
   closeErrorDetailModal() {
     const modal = document.getElementById('errorDetailModal');
     if (modal) {
-      this.closeModal(modal.id);
+      modal.style.display = 'none';
+      modal.classList.remove('active');
     }
   }
 
@@ -8128,7 +8086,8 @@ async function(ctx) {
         const content = document.getElementById('usageDetailContent');
         if (modal && content) {
           setHTML(content, pageLoadingHtml(t('加载详情...'), { compact: true }));
-          this.showModal(modal.id);
+          modal.style.display = 'flex';
+          modal.classList.add('active');
         }
         const res = await fetch(`/api/admin/usage-logs/${log.id}`);
         if (!res.ok) throw new Error(`${t('加载详情失败 (')}${res.status})`);
@@ -8239,14 +8198,14 @@ async function(ctx) {
       });
     }
 
-    this.showModal('usageDetailModal');
+    document.getElementById('usageDetailModal').style.display = 'flex';
+    document.getElementById('usageDetailModal').classList.add('active');
   }
 
   async saveAdminSettings(e) {
     e.preventDefault();
 
-    const billingModeEl = document.querySelector('blora-radio[name="billingMode"][checked], input[name="billingMode"]:checked');
-    const billingMode = getBloraValue(billingModeEl) || 'token';
+    const billingMode = document.querySelector('input[name="billingMode"]:checked')?.value || 'token';
     let refreshSec = parseInt(document.getElementById('statsRefreshInterval')?.value, 10);
     if (!Number.isFinite(refreshSec)) refreshSec = 10;
     refreshSec = Math.min(300, Math.max(3, refreshSec));
@@ -8268,11 +8227,11 @@ async function(ctx) {
 
     // 登录状态上报开关（默认开启）
     const loginReportEl = document.getElementById('loginReportEnabled');
-    if (loginReportEl) settings['login_report_enabled'] = getBloraChecked(loginReportEl);
+    if (loginReportEl) settings['login_report_enabled'] = loginReportEl.checked;
 
     // 统计信息上报开关（默认开启）+ 上报粒度（默认 detailed）
     const statsReportEl = document.getElementById('statsReportEnabled');
-    if (statsReportEl) settings['stats_report_enabled'] = getBloraChecked(statsReportEl);
+    if (statsReportEl) settings['stats_report_enabled'] = statsReportEl.checked;
     const statsGranularityEl = document.getElementById('statsReportGranularity');
     if (statsGranularityEl) settings['stats_report_granularity'] = statsGranularityEl.value;
 
@@ -8327,7 +8286,7 @@ async function(ctx) {
         body: JSON.stringify({
           compress_days: values.CompressDays, compress_size_gb: values.CompressSizeGb,
           purge_days: values.PurgeDays, purge_size_gb: values.PurgeSizeGb,
-          agg_enabled: getBloraChecked(document.getElementById('retentionAggEnabled')),
+          agg_enabled: document.getElementById('retentionAggEnabled')?.checked === true,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -8386,7 +8345,7 @@ async function(ctx) {
       // 计费模式
       const billingMode = settings['billing_mode'] || 'token';
       const radio = document.querySelector(`input[name="billingMode"][value="${billingMode}"]`);
-      if (radio) setBloraChecked(radio, true);
+      if (radio) radio.checked = true;
       document.getElementById('ratePricePerRequest').value = settings['rate_price_per_request'] || 0.01;
       document.getElementById('ratePriceGroup').style.display = billingMode === 'rate' ? '' : 'none';
 
@@ -8408,22 +8367,22 @@ async function(ctx) {
         document.getElementById('retentionCompressSizeGb').value = retention.compress_size_gb;
         document.getElementById('retentionPurgeDays').value = retention.purge_days;
         document.getElementById('retentionPurgeSizeGb').value = retention.purge_size_gb;
-        setBloraChecked(document.getElementById('retentionAggEnabled'), retention.agg_enabled !== false);
+        document.getElementById('retentionAggEnabled').checked = retention.agg_enabled !== false;
       }
 
       // 系统单代理
       const sysEnabledEl = document.getElementById('systemProxyEnabled');
-      if (sysEnabledEl) setBloraChecked(sysEnabledEl, !!settings['system_proxy_enabled']);
+      if (sysEnabledEl) sysEnabledEl.checked = !!settings['system_proxy_enabled'];
       const sysUrlEl = document.getElementById('systemProxyUrl');
       if (sysUrlEl) sysUrlEl.value = settings['system_proxy_url'] || '';
 
       // 登录状态上报开关（默认开启）
       const loginReportEl = document.getElementById('loginReportEnabled');
-      if (loginReportEl) setBloraChecked(loginReportEl, settings['login_report_enabled'] !== false);
+      if (loginReportEl) loginReportEl.checked = settings['login_report_enabled'] !== false;
 
       // 统计信息上报开关（默认开启）+ 上报粒度（默认 detailed）
       const statsReportEl = document.getElementById('statsReportEnabled');
-      if (statsReportEl) setBloraChecked(statsReportEl, settings['stats_report_enabled'] !== false);
+      if (statsReportEl) statsReportEl.checked = settings['stats_report_enabled'] !== false;
       const statsGranularityEl = document.getElementById('statsReportGranularity');
       if (statsGranularityEl) statsGranularityEl.value = settings['stats_report_granularity'] || 'detailed';
 
@@ -8469,7 +8428,7 @@ async function(ctx) {
       const secretHint = document.getElementById('feishuSecretHint');
       const sourceEl = document.getElementById('feishuConfigSource');
 
-      if (enabledEl) setBloraChecked(enabledEl, !!data.enabled);
+      if (enabledEl) enabledEl.checked = !!data.enabled;
       if (appIdEl) appIdEl.value = data.appId || '';
       if (secretEl) secretEl.value = '';
       if (tenantEl) tenantEl.value = data.tenantKey || '';
@@ -8490,12 +8449,12 @@ async function(ctx) {
     const container = document.getElementById('modelListTags');
     if (!container) return;
     const modelList = this._modelList || [];
-    setHTML(container, modelList.map(m => `
+    container.innerHTML = modelList.map(m => `
       <span class="model-tag" data-model="${escapeHtml(m)}" style="display:inline-flex;align-items:center;gap:4px;background:var(--primary);color:#fff;padding:2px 10px;border-radius:12px;font-size:12px;">
         ${escapeHtml(m)}
         ${m !== 'fusion' ? '<span class="model-tag-remove" style="cursor:pointer;margin-left:2px;opacity:0.7;" title="删除">&times;</span>' : ''}
       </span>
-    `).join(''));
+    `).join('');
 
     // 绑定删除事件
     container.querySelectorAll('.model-tag-remove').forEach(btn => {
@@ -8509,7 +8468,7 @@ async function(ctx) {
   }
 
   async saveFeishuLoginSettings() {
-    const enabled = getBloraChecked(document.getElementById('feishuEnabled'));
+    const enabled = document.getElementById('feishuEnabled')?.checked === true;
     const appId = (document.getElementById('feishuAppId')?.value || '').trim();
     const appSecret = (document.getElementById('feishuAppSecret')?.value || '').trim();
     const tenantKey = (document.getElementById('feishuTenantKey')?.value || '').trim();
@@ -8595,7 +8554,8 @@ async function(ctx) {
     document.getElementById('batchSetInputPrice').value = '0.01';
     document.getElementById('batchSetOutputPrice').value = '0.01';
     document.getElementById('batchSetCachedOutputPrice').value = '0';
-    this.showModal('batchSetPricesModal');
+    document.getElementById('batchSetPricesModal').style.display = 'flex';
+    document.getElementById('batchSetPricesModal').classList.add('active');
   }
 
   async executeBatchSetPrices() {
@@ -8640,7 +8600,8 @@ async function(ctx) {
   showBatchJsonPricesModal() {
     document.getElementById('batchJsonPricesInput').value = '';
     document.getElementById('batchJsonPricesResult').style.display = 'none';
-    this.showModal('batchJsonPricesModal');
+    document.getElementById('batchJsonPricesModal').style.display = 'flex';
+    document.getElementById('batchJsonPricesModal').classList.add('active');
   }
 
   async exportModelsCsv() {
@@ -8845,7 +8806,8 @@ async function(ctx) {
   showBatchJsonRefPricesModal() {
     document.getElementById('batchJsonRefPricesInput').value = '';
     document.getElementById('batchJsonRefPricesResult').style.display = 'none';
-    this.showModal('batchJsonRefPricesModal');
+    document.getElementById('batchJsonRefPricesModal').style.display = 'flex';
+    document.getElementById('batchJsonRefPricesModal').classList.add('active');
   }
 
   async executeBatchJsonRefPrices() {
@@ -8913,7 +8875,8 @@ async function(ctx) {
     if (count === 0) return;
     document.getElementById('batchAdjustPricesCount').textContent = count;
     document.getElementById('batchAdjustPercentage').value = '10';
-    this.showModal('batchAdjustPricesModal');
+    document.getElementById('batchAdjustPricesModal').style.display = 'flex';
+    document.getElementById('batchAdjustPricesModal').classList.add('active');
   }
 
   async executeBatchAdjustPrices() {
@@ -8962,7 +8925,8 @@ async function(ctx) {
     document.getElementById('batchSetRateLimitCount').textContent = count;
     document.getElementById('batchRateLimitRpm').value = '0';
     document.getElementById('batchRateLimitTpm').value = '0';
-    this.showModal('batchSetRateLimitModal');
+    document.getElementById('batchSetRateLimitModal').style.display = 'flex';
+    document.getElementById('batchSetRateLimitModal').classList.add('active');
   }
 
   async executeBatchSetRateLimit() {
@@ -9020,7 +8984,8 @@ async function(ctx) {
     document.getElementById('batchEditDescStatus').style.display = 'none';
     document.getElementById('batchDescValue').placeholder = t('输入新的模型说明...');
     
-    this.showModal('batchEditDescModal');
+    document.getElementById('batchEditDescModal').style.display = 'flex';
+    document.getElementById('batchEditDescModal').classList.add('active');
   }
 
   toggleBatchDescMode() {
@@ -9121,7 +9086,8 @@ async function(ctx) {
     document.getElementById('batchSeriesValue').value = '';
     document.getElementById('batchSetSeriesStatus').style.display = 'none';
     
-    this.showModal('batchSetSeriesModal');
+    document.getElementById('batchSetSeriesModal').style.display = 'flex';
+    document.getElementById('batchSetSeriesModal').classList.add('active');
   }
 
   async executeBatchSetSeries() {
@@ -9166,7 +9132,8 @@ async function(ctx) {
 
   // 系列图标管理
   async showSeriesIconsModal() {
-    this.showModal('seriesIconsModal');
+    document.getElementById('seriesIconsModal').style.display = 'flex';
+    document.getElementById('seriesIconsModal').classList.add('active');
     await this.loadSeriesNames();
     await this.loadSeriesIcons();
   }
@@ -9279,7 +9246,8 @@ async function(ctx) {
     clearChildren(document.getElementById('batchAdjustByRefPreviewBody'));
     document.getElementById('batchAdjustByRefStatus').style.display = 'none';
     document.getElementById('batchAdjustByRefConfirmBtn').style.display = 'none';
-    this.showModal('batchAdjustByRefModal');
+    document.getElementById('batchAdjustByRefModal').style.display = 'flex';
+    document.getElementById('batchAdjustByRefModal').classList.add('active');
   }
 
   async previewBatchAdjustByRef() {
@@ -9541,7 +9509,7 @@ async function(ctx) {
       </div>
     `;
 
-    const modal = this.showDynamicModal({
+    const modal = Dialog.showModal({
       title: t('创建用户组'),
       content: content,
       footer: `<button class="btn btn-primary" id="confirmCreateUserGroup">${t('创建')}</button>`
@@ -9801,7 +9769,7 @@ async function(ctx) {
           </div>`
         : '<div class="empty-state">' + t('所有用户都已在此用户组中') + '</div>';
 
-      const modal = this.showDynamicModal({
+      const modal = Dialog.showModal({
         title: t('添加成员'),
         content: content,
         footer: `<button class="btn btn-primary" id="confirmAddGroupMembers">${t('添加')}</button>`
@@ -9817,13 +9785,13 @@ async function(ctx) {
             : available;
           setHTML(listEl, rows.map(u => `
             <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
-              <blora-checkbox value="${u.id}" class="group-member-checkbox" label="${escapeHtml(u.username || u.email || u.id)}" ${selected.has(u.id) ? 'checked' : ''}></blora-checkbox>
+              <input type="checkbox" value="${u.id}" class="group-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
               <span>${escapeHtml(u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
             </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.group-member-checkbox').forEach(cb => {
             cb.onchange = () => {
-              if (getBloraChecked(cb)) selected.add(parseInt(cb.value));
+              if (cb.checked) selected.add(parseInt(cb.value));
               else selected.delete(parseInt(cb.value));
             };
           });
@@ -9870,7 +9838,7 @@ async function(ctx) {
           </div>
         </div>
       `;
-      const modal = this.showDynamicModal({
+      const modal = Dialog.showModal({
         title: t('编辑用户组'),
         content: content,
         footer: `<button class="btn btn-primary" id="confirmEditGroup">${t('保存')}</button>`
@@ -10194,7 +10162,7 @@ async function(ctx) {
         </div>
       </div>
     `;
-    const modal = this.showDynamicModal({
+    const modal = Dialog.showModal({
       title: t('创建 Team'),
       content: content,
       footer: `<button class="btn btn-primary" id="confirmCreateTeam">${t('创建')}</button>`
@@ -10488,7 +10456,7 @@ async function(ctx) {
           </div>`
         : '<div class="empty-state">' + t('所有用户都已在此 Team 中') + '</div>';
 
-      const modal = this.showDynamicModal({
+      const modal = Dialog.showModal({
         title: t('添加成员'),
         content: content,
         footer: `<button class="btn btn-primary" id="confirmAddMembers">${t('添加')}</button>`
@@ -10504,14 +10472,14 @@ async function(ctx) {
             : available;
           setHTML(listEl, rows.map(u => `
             <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
-              <blora-checkbox value="${u.id}" class="team-member-checkbox" label="${escapeHtml(u.username || u.email || u.id)}" ${selected.has(u.id) ? 'checked' : ''}></blora-checkbox>
+              <input type="checkbox" value="${u.id}" class="team-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
               <span>${escapeHtml(u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
               ${u.team_name ? `<span class="badge">${escapeHtml(u.team_name)}</span>` : ''}
             </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.team-member-checkbox').forEach(cb => {
             cb.onchange = () => {
-              if (getBloraChecked(cb)) selected.add(parseInt(cb.value));
+              if (cb.checked) selected.add(parseInt(cb.value));
               else selected.delete(parseInt(cb.value));
             };
           });
@@ -10978,7 +10946,7 @@ async function(ctx) {
         </div>
       </div>
     `;
-    const modal = this.showDynamicModal({
+    const modal = Dialog.showModal({
       title: t('按名称批量启用/禁用'),
       content,
       footer: `<button class="btn btn-primary" id="confirmTeamModelBatchName">${t('执行')}</button>`
@@ -10995,7 +10963,7 @@ async function(ctx) {
     document.getElementById('confirmTeamModelBatchName').onclick = async () => {
       const namePattern = (document.getElementById('teamModelBatchNameInput')?.value || '').trim();
       if (!namePattern) { alert(t('请输入名称关键字')); return; }
-      const enabled = !getBloraChecked(document.getElementById('teamModelBatchNameDisable'));
+      const enabled = !document.getElementById('teamModelBatchNameDisable')?.checked;
       const action = enabled ? t('启用') : t('禁用');
       // 预估匹配数（本地）
       const q = namePattern.toLowerCase();
@@ -11035,7 +11003,7 @@ async function(ctx) {
           </div>
         </div>
       `;
-      const modal = this.showDynamicModal({
+      const modal = Dialog.showModal({
         title: t('编辑 Team'),
         content: content,
         footer: `<button class="btn btn-primary" id="confirmEditTeam">${t('保存')}</button>`
@@ -11043,7 +11011,7 @@ async function(ctx) {
       document.getElementById('confirmEditTeam').onclick = async () => {
         const name = document.getElementById('editTeamNameInput').value.trim();
         const description = document.getElementById('editTeamDescInput').value.trim();
-        const is_default = getBloraChecked(document.getElementById('editTeamDefaultInput'));
+        const is_default = document.getElementById('editTeamDefaultInput').checked;
         if (!name) { alert(t('名称不能为空')); return; }
         try {
           await fetch(`/api/admin/teams/${teamId}`, {
@@ -11092,7 +11060,7 @@ async function(ctx) {
   }
 
   closeTestResultModal() {
-    this.closeModal('adminTestResultModal');
+    document.getElementById('adminTestResultModal').style.display = 'none';
   }
 
   async testModel(modelId, buttonEl) {
@@ -11704,7 +11672,7 @@ async function(ctx) {
   }
 
   async deleteProviderTag(tagId) {
-    const ok = await this.confirmModal(t('删除标签'), t('确定删除此标签？供应商上已有的该标签也会被移除。'), { confirmText: t('删除'), danger: true });
+    const ok = await Dialog.confirm(t('删除标签'), t('确定删除此标签？供应商上已有的该标签也会被移除。'), { confirmText: t('删除'), danger: true });
     if (!ok) return;
     try {
       const res = await fetch(`/api/admin/provider-tags/${tagId}`, { method: 'DELETE' });
@@ -11926,8 +11894,9 @@ async function(ctx) {
     const modal = document.getElementById('adminPromptDetailModal');
     const body = document.getElementById('adminPromptDetailBody');
     if (!modal || !body) return;
-    setHTML(body, pageLoadingHtml(t('加载详情...'), { compact: true }));
-    this.showModal(modal.id);
+    body.innerHTML = pageLoadingHtml(t('加载详情...'), { compact: true });
+    modal.style.display = 'flex';
+    modal.classList.add('active');
 
     try {
       const res = await fetch(`/api/admin/custom-instructions/${encodeURIComponent(fingerprint)}`);
@@ -12133,7 +12102,7 @@ async function(ctx) {
       if (interactive) {
         if (data.hasUpdate) {
           if (typeof Dialog !== 'undefined') {
-            await this.alertModal(
+            await Dialog.alert(
               t('发现新版本'),
               `${t('最新版本 ')}<strong>v${escapeHtml(data.latestVersion)}${'</strong>' + t('，当前 v')}${escapeHtml(data.currentVersion)}${t('。可点击「一键更新」安装。')}`
             );
@@ -12142,7 +12111,7 @@ async function(ctx) {
           }
         } else {
           if (typeof Dialog !== 'undefined') {
-            await this.alertModal(t('已是最新'), `${t('当前版本 v')}${escapeHtml(data.currentVersion)}${t('已是最新。')}`);
+            await Dialog.alert(t('已是最新'), `${t('当前版本 v')}${escapeHtml(data.currentVersion)}${t('已是最新。')}`);
           } else {
             alert(`${t('已是最新版本 v')}${data.currentVersion}`);
           }
@@ -12154,7 +12123,7 @@ async function(ctx) {
       this.setUpdateProgress(true, err.message || t('检查失败'), 0);
       if (interactive) {
         if (typeof Dialog !== 'undefined') {
-          await this.alertModal(t('检查失败'), escapeHtml(err.message || t('网络错误')));
+          await Dialog.alert(t('检查失败'), escapeHtml(err.message || t('网络错误')));
         } else {
           alert(err.message || t('检查更新失败'));
         }
@@ -12242,7 +12211,7 @@ async function(ctx) {
       const fresh = await this.checkForUpdate(false);
       if (!fresh || !fresh.hasUpdate) {
         if (typeof Dialog !== 'undefined') {
-          await this.alertModal(t('无需更新'), t('当前已是最新版本。'));
+          await Dialog.alert(t('无需更新'), t('当前已是最新版本。'));
         } else {
           alert(t('当前已是最新版本'));
         }
@@ -12253,7 +12222,7 @@ async function(ctx) {
     if (this._updateInfo && this._updateInfo.canApply === false) {
       const msg = this._updateInfo.reason || t('当前环境不支持一键更新');
       if (typeof Dialog !== 'undefined') {
-        await this.alertModal(t('无法更新'), escapeHtml(msg));
+        await Dialog.alert(t('无法更新'), escapeHtml(msg));
       } else {
         alert(msg);
       }
@@ -12263,7 +12232,7 @@ async function(ctx) {
     const toVer = (this._updateInfo && this._updateInfo.latestVersion) || t('最新版');
     let confirmed = true;
     if (typeof Dialog !== 'undefined') {
-      confirmed = await this.confirmModal(
+      confirmed = await Dialog.confirm(
         t('确认一键更新'),
         `${t('将下载并安装 ')}<strong>v${escapeHtml(toVer)}</strong>${t('，服务会短暂中断并自动重启。')}${'<br><br>' + t('配置文件 config.json 与数据库不会被覆盖。是否继续？')}`,
         { confirmText: t('开始更新'), cancelText: t('取消') }
@@ -12316,7 +12285,7 @@ async function(ctx) {
         this._stopUpdateStatusPoll();
         this.setUpdateProgress(true, msg, 0);
         if (typeof Dialog !== 'undefined') {
-          await this.alertModal(t('更新失败'), escapeHtml(msg));
+          await Dialog.alert(t('更新失败'), escapeHtml(msg));
         } else {
           alert(msg);
         }
@@ -12377,7 +12346,7 @@ async function(ctx) {
         if (data && data.version) {
           this.setUpdateProgress(true, `${t('服务已恢复（v')}${data.version}）`, 100);
           if (typeof Dialog !== 'undefined') {
-            await this.alertModal(
+            await Dialog.alert(
               t('更新完成'),
               `${t('服务已重启。当前版本：')}<strong>v${escapeHtml(data.version)}</strong>`
             );
@@ -12399,7 +12368,7 @@ async function(ctx) {
 
     this.setUpdateProgress(true, t('等待超时：请手动刷新页面或检查服务是否已启动'), 0);
     if (typeof Dialog !== 'undefined') {
-      await this.alertModal(
+      await Dialog.alert(
         t('请手动确认'),
         t('服务可能已更新并重启，但页面未能自动连上。请刷新页面或检查进程状态。')
       );

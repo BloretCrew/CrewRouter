@@ -83,7 +83,7 @@
       const item = document.createElement('div');
       item.className = 'nav-item';
       item.setAttribute('data-page', p.pageId);
-      item.innerHTML = `<img src="https://img.bloret.net/SF/puzzlepiece?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="puzzlepiece" alt="puzzlepiece">
+      item.innerHTML = `<img src="https://img.bloret.net/SF/puzzlepiece?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="puzzlepiece">
         <span><span>${esc(p.title)}</span></span>`;
       item.addEventListener('click', () => {
         if (area === 'admin' && window.adminApp) adminApp.navigateTo(p.pageId);
@@ -271,7 +271,7 @@
   function unavailableBadge(selectedId) {
     if (!selectedId || findTheme(selectedId)) return '';
     return `<span style="font-size:12px;color:var(--destructive);margin-left:8px;">${esc(t('该主题的插件已停用，当前显示为默认样式'))}
-      <button class="btn btn-ghost btn-sm" style="padding:2px 8px;" onclick="window.CrewThemes.resetStale()" type="button">${esc(t('重置'))}</button></span>`;
+      <button class="btn btn-ghost btn-sm" style="padding:2px 8px;" onclick="window.CrewThemes.resetStale()">${esc(t('重置'))}</button></span>`;
   }
 
   function renderUserThemePicker(container) {
@@ -522,10 +522,10 @@
         </div>
         <div style="margin-top:10px;">${capsHtml}</div>
         <div class="mmut">
-          ${pl.storeUpdateAvailable && pl.storeSource ? `<button class="btn btn-ghost btn-sm" style="color:var(--primary);" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')" type="button">${esc(t('更新'))}</button>` : ''}
-          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')" type="button">${open ? esc(t('收起')) : esc(t('配置'))}</button>
-          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')" type="button">${esc(t('重载'))}</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--destructive);" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')" type="button">${esc(t('卸载'))}</button>
+          ${pl.storeUpdateAvailable && pl.storeSource ? `<button class="btn btn-ghost btn-sm" style="color:var(--primary);" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')">${esc(t('更新'))}</button>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--destructive);" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
         </div>
         ${detail}
       </div>`;
@@ -551,13 +551,13 @@
         <div class="msec">${esc(t('插件配置'))}(config)</div>
         <textarea data-plugin-cfg="${esc(pl.id)}" rows="5" style="width:100%;font-family:monospace;font-size:12px;background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:8px;padding:8px;">${cfgText}</textarea>
         <div style="margin-top:6px;display:flex;gap:8px;">
-          <button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')" type="button">${esc(t('保存配置'))}</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
           <div data-plugin-cfg-msg="${esc(pl.id)}" style="font-size:12px;align-self:center;"></div>
         </div>
         <div class="msec">${esc(t('插件数据'))}(plugin_data)</div>
         <div data-plugin-data="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p></div>
         ${pl.lastError ? `<div class="msec">${esc(t('最近错误'))}</div><div style="font-size:12px;color:var(--destructive);">⚠ ${esc(pl.lastError)}</div>
-          <div style="margin-top:4px;"><button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')" type="button">${esc(t('清除错误并重载'))}</button></div>` : ''}
+          <div style="margin-top:4px;"><button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')">${esc(t('清除错误并重载'))}</button></div>` : ''}
       </div>`;
   }
 
@@ -599,7 +599,7 @@
           <h2>${esc(t('插件管理'))}</h2>
           <p style="font-size:13px;color:var(--muted-foreground);margin:0;">${esc(t('安装方法：将插件目录放入服务器 plugins/ 目录，重启服务后在此启用。'))}</p>
         </div>
-        <div class="mmut" style="margin-top:0;"><button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.refresh()" type="button">${esc(t('刷新'))}</button></div>
+        <div class="mmut" style="margin-top:0;"><button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
       </div>
       <div class="mstat-grid">${stats}</div>
       <div class="msearch">
@@ -660,7 +660,7 @@
             <td style="font-family:monospace;">${esc(r.key)}</td>
             <td style="font-family:monospace;max-width:320px;">${esc(JSON.stringify(r.value))}</td>
             <td style="white-space:nowrap;">${esc(String(r.updatedAt || '').slice(0, 19).replace('T', ' '))}</td>
-            <td><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px;" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')" type="button">${esc(t('删除'))}</button></td>
+            <td><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px;" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')">${esc(t('删除'))}</button></td>
           </tr>`).join('')}
         </table>`;
       } catch (e) {

@@ -8,7 +8,6 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="stylesheet" href="/blora/blora.css">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
   <script>
@@ -110,16 +109,15 @@
     }
   </style>
   <script src="/js/i18n.js?v=2"></script>
-  <script type="module" src="/blora/auto.js"></script>
 </head>
-<body class="blora-page blora-scope">
-<div style="position:absolute;top:10px;right:12px;z-index:99;"><blora-select id="langToggle" class="blora-button" data-size="icon" data-variant="secondary" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-      <blora-option value="zh">中文</blora-option>
-      <blora-option value="en">EN</blora-option>
-    </blora-select></div>
+<body>
+<div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
+      <option value="zh">中文</option>
+      <option value="en">EN</option>
+    </select></div>
   <div class="setup-container">
     <div class="setup-header">
-      <h1><img class="sf-icon" data-sf-name="sparkles" src="https://img.bloret.net/SF/sparkles?color=white" alt="sparkles" width="28" height="28" style="display:inline-block;vertical-align:middle;"> CrewRouter</h1>
+      <h1>🚀 CrewRouter</h1>
       <p><span data-i18n="首次使用，请创建管理员账号">首次使用，请创建管理员账号</span></p>
     </div>
 
@@ -131,8 +129,8 @@
       <h2>选择账号系统模式</h2>
       <p class="step-desc" style="color:#ef4444;font-weight:600;">选择后不可修改，请谨慎选择。</p>
       <div style="display:grid;gap:12px;">
-        <button class="blora-button" data-variant="primary" onclick="setup.chooseMode('feishu')" type="button">飞书模式</button>
-        <button class="blora-button" data-variant="secondary" onclick="setup.chooseMode('passport')" data-variant="secondary" type="button">Bloret PassPort 模式</button>
+        <button class="btn btn-primary" onclick="setup.chooseMode('feishu')">飞书模式</button>
+        <button class="btn" onclick="setup.chooseMode('passport')">Bloret PassPort 模式</button>
       </div>
       <div class="setup-error" id="modeError"></div>
     </div>
@@ -143,28 +141,28 @@
       <div class="setup-form">
         <div class="form-group">
           <label for="adminUsername"><span data-i18n="用户名">用户名</span></label>
-          <input class="blora-input" type="text" id="adminUsername" placeholder="admin" autocomplete="username">
+          <input type="text" id="adminUsername" placeholder="admin" autocomplete="username">
         </div>
         <div class="form-group">
           <label for="adminEmail"><span data-i18n="邮箱（可选）">邮箱（可选）</span></label>
-          <input class="blora-input" type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email">
+          <input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email">
         </div>
         <div class="form-group">
           <label for="adminPassword"><span data-i18n="密码">密码</span></label>
-          <input class="blora-input" type="password" id="adminPassword" placeholder="至少 6 位" data-i18n-placeholder="至少 6 位" autocomplete="new-password">
+          <input type="password" id="adminPassword" placeholder="至少 6 位" data-i18n-placeholder="至少 6 位" autocomplete="new-password">
         </div>
       </div>
       <div class="setup-error" id="step1Error"></div>
       <div class="setup-actions">
-        <button class="blora-button" data-variant="primary" id="submitBtn" onclick="setup.submit()" type="button"><span data-i18n="完成初始化">完成初始化</span></button>
+        <button class="btn btn-primary" id="submitBtn" onclick="setup.submit()"><span data-i18n="完成初始化">完成初始化</span></button>
       </div>
     </div>
 
     <div class="setup-card" id="stepDone" style="display:none;">
       <div class="setup-success">
-        <h2><span data-i18n="设置完成！">设置完成！</span></h2>
+        <h2><span data-i18n="✅ 设置完成！">✅ 设置完成！</span></h2>
         <p><span data-i18n="管理员账号已创建，请登录开始使用">管理员账号已创建，请登录开始使用</span></p>
-        <button class="blora-button" data-variant="primary" onclick="window.location.href='/'" type="button"><span data-i18n="前往登录">前往登录</span></button>
+        <button class="btn btn-primary" onclick="window.location.href='/'"><span data-i18n="前往登录">前往登录</span></button>
       </div>
     </div>
 
@@ -172,7 +170,7 @@
       <div class="setup-success">
         <h2><span data-i18n="系统已初始化">系统已初始化</span></h2>
         <p><span data-i18n="无需重复配置，可直接登录">无需重复配置，可直接登录</span></p>
-        <button class="blora-button" data-variant="primary" onclick="window.location.href='/'" type="button"><span data-i18n="前往登录">前往登录</span></button>
+        <button class="btn btn-primary" onclick="window.location.href='/'"><span data-i18n="前往登录">前往登录</span></button>
       </div>
     </div>
   </div>

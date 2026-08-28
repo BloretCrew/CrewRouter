@@ -78,74 +78,6 @@
     window.location.href = AUTH + '/login?return_to=' + encodeURIComponent(returnTo);
   }
 
-  function base64UrlJson(value) {
-    return btoa(JSON.stringify(value)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  }
-
-  function openHelperLoginTargets() {
-    var params = new URLSearchParams(location.search);
-    var nonce = params.get('state') || '';
-    var redirectUri = params.get('redirect_uri') || '';
-    var clientId = params.get('client_id') || '';
-    var scope = params.get('scope') || '';
-    var challenge = params.get('code_challenge') || '';
-    var challengeMethod = params.get('code_challenge_method') || 'S256';
-    if (!nonce || !redirectUri || !clientId || !challenge) {
-      setBanner('err', t('登录参数不完整，请回终端重试'));
-      return;
-    }
-    if (!me.loggedIn) {
-      api('/me').then(function (data) {
-        me = data;
-        if (!me.loggedIn) {
-          setBanner('warn', t('请先登录官方商店，再选择 CrewRouter'));
-          login();
-          return null;
-        }
-        return api('/install-targets');
-      }).then(function (data) {
-        if (data) renderHelperLoginTargets(data, nonce, redirectUri, clientId, scope, challenge, challengeMethod);
-      }).catch(function (e) { setBanner('err', e.message || t('加载登录过的 CrewRouter 失败')); });
-      return;
-    }
-    renderHelperLoginTargets(null, nonce, redirectUri, clientId, scope, challenge, challengeMethod);
-  }
-
-  function renderHelperLoginTargets(initial, nonce, redirectUri, clientId, scope, challenge, challengeMethod) {
-    var targetPromise = initial ? Promise.resolve(initial) : api('/install-targets');
-    targetPromise.then(function (data) {
-      var targets = data.targets || [];
-      var html = '<div class="store-modal-mask" id="storeHelperLoginMask"><div class="store-modal">';
-      html += '<div class="store-modal__head"><h3>' + esc(t('选择要登录的 CrewRouter')) + '</h3></div>';
-      html += '<p style="color:var(--muted-foreground);font-size:13px;margin:0 0 14px;">' + esc(t('请选择你要登录的 CrewRouter，登录完成后会回到终端。')) + '</p>';
-      if (!targets.length) {
-        html += '<div class="store-empty">' + esc(t('未检测到你登录过的 CrewRouter')) + '</div>';
-      } else {
-        html += '<div class="store-modal__list">' + targets.map(function (tg) {
-          var targetState = base64UrlJson({ nonce: nonce, router_url: 'https://' + tg.domain });
-          var url = 'https://' + tg.domain + '/oauth/authorize?' + new URLSearchParams({
-            client_id: clientId, response_type: 'code', scope: scope,
-            redirect_uri: redirectUri, state: targetState,
-            code_challenge: challenge, code_challenge_method: challengeMethod
-          }).toString();
-          return '<a class="store-target store-target--ok" href="' + esc(url) + '">' +
-            '<div class="store-target__domain">' + esc(tg.domain) + '</div>' +
-            '<div class="store-target__meta">' + esc(fmtDate(tg.lastLogin)) + ' · ' + esc(String(tg.logins)) + ' ' + esc(t('次登录')) + '</div>' +
-          '</a>';
-        }).join('') + '</div>';
-      }
-      html += '</div></div>';
-      var wrap = document.createElement('div');
-      wrap.innerHTML = html;
-      document.body.appendChild(wrap.firstChild);
-      var mask = document.getElementById('storeHelperLoginMask');
-      if (!targets.length) setBanner('warn', t('未检测到你登录过的 CrewRouter，请先在某个 CrewRouter 登录一次。'));
-      if (mask) mask.addEventListener('click', function (e) { if (e.target === mask) mask.remove(); });
-    }).catch(function (e) {
-      setBanner('err', e.message || t('加载登录过的 CrewRouter 失败'));
-    });
-  }
-
   function starHtml(score) {
     var cls = ['', 'store-stars'];
     var html = '<span class="' + cls[1] + '">';
@@ -190,7 +122,7 @@
 
   function tagChips(tags) {
     return (tags || []).map(function (x) {
-      return '<span class="blora-button" data-size="sm" data-variant="secondary" style="cursor:pointer" data-tag="' + esc(x) + '">' + esc(x) + '</span>';
+      return '<span class="btn btn-sm btn-secondary" style="cursor:pointer" data-tag="' + esc(x) + '">' + esc(x) + '</span>';
     }).join('');
   }
 
@@ -231,12 +163,12 @@
     html += '<div class="store-toolbar">' +
       '<input type="search" id="storeSearch" placeholder="' + esc(t('搜索插件、作者、标签...')) + '" value="' + esc(q) + '">' +
       '<select id="storeSort" class="btn btn-sm">' +
-        '<blora-option value="updated"' + (sort === 'updated' || !sort ? ' selected' : '') + '>' + esc(t('最新更新')) + '</blora-option>' +
-        '<blora-option value="rating"' + (sort === 'rating' ? ' selected' : '') + '>' + esc(t('评分最高')) + '</blora-option>' +
-        '<blora-option value="installs"' + (sort === 'installs' ? ' selected' : '') + '>' + esc(t('安装最多')) + '</blora-option>' +
-      '</blora-select>' +
-      '<button class="blora-button" data-size="sm" data-variant="primary" id="storeSearchBtn" type="button">' + esc(t('搜索')) + '</button>' +
-      (tag ? '<button class="blora-button" data-size="sm" data-variant="secondary" data-active-tag="' + esc(tag) + '" type="button">#' + esc(tag) + ' ×</button>' : '') +
+        '<option value="updated"' + (sort === 'updated' || !sort ? ' selected' : '') + '>' + esc(t('最新更新')) + '</option>' +
+        '<option value="rating"' + (sort === 'rating' ? ' selected' : '') + '>' + esc(t('评分最高')) + '</option>' +
+        '<option value="installs"' + (sort === 'installs' ? ' selected' : '') + '>' + esc(t('安装最多')) + '</option>' +
+      '</select>' +
+      '<button class="btn btn-sm btn-primary" id="storeSearchBtn">' + esc(t('搜索')) + '</button>' +
+      (tag ? '<button class="btn btn-sm btn-secondary" data-active-tag="' + esc(tag) + '">#' + esc(tag) + ' ×</button>' : '') +
     '</div>';
 
     if (!plugins.length) {
@@ -292,7 +224,7 @@
         '<div class="store-rating-item__head"><strong>' + esc(r.username) + '</strong>' + starHtml(r.stars) + '<span>' + esc(fmtDate(r.updatedAt || r.createdAt)) + '</span></div>' +
         (r.comment ? '<div style="margin-top:6px;">' + esc(r.comment) + '</div>' : '') +
         (replies ? '<div style="margin-top:8px;">' + replies + '</div>' : '') +
-        '<div style="margin-top:8px;"><button class="blora-button" data-size="sm" data-variant="secondary" data-reply-user="' + esc(r.username) + '" type="button">' + esc(t('回复')) + '</button></div>' +
+        '<div style="margin-top:8px;"><button class="btn btn-sm btn-secondary" data-reply-user="' + esc(r.username) + '">' + esc(t('回复')) + '</button></div>' +
       '</div>';
     }).join('');
   }
@@ -323,8 +255,8 @@
             '<div class="store-card__body">' +
               '<div class="store-card__meta"><span>' + esc(t('标签')) + '</span></div>' +
               '<div class="store-card__tags">' + tagChips(p.tags) + '</div>' +
-              '<div class="store-card__actions"><button class="blora-button" data-variant="primary" id="installBtn" type="button">' + esc(t('安装')) + '</button>' +
-                '<button class="blora-button" data-variant="secondary" id="installToRouterBtn" type="button">' + esc(t('安装到 CrewRouter')) + '</button></div>' +
+              '<div class="store-card__actions"><button class="btn btn-primary" id="installBtn">' + esc(t('安装')) + '</button>' +
+                '<button class="btn btn-secondary" id="installToRouterBtn">' + esc(t('安装到 CrewRouter')) + '</button></div>' +
             '</div>' +
           '</div>' +
           '<div id="ratingBox"></div>' +
@@ -347,8 +279,8 @@
         box.innerHTML = '<div class="store-detail__section"><h3>' + esc(t('我要评分')) + '</h3>' +
           starPicker(p.myRating ? p.myRating.stars : 0, function () {}) +
           '<textarea id="ratingComment" placeholder="' + esc(t('写下你的评价（可选，最多 500 字）')) + '" style="width:100%;margin-top:8px;min-height:60px;"></textarea>' +
-          '<div style="margin-top:8px;display:flex;gap:8px;"><button class="blora-button" data-size="sm" data-variant="primary" id="ratingSubmitBtn" type="button">' + esc(t('提交评分')) + '</button>' +
-          (p.myRating ? '<button class="blora-button" data-size="sm" data-variant="secondary" id="ratingDeleteBtn" type="button">' + esc(t('删除评分')) + '</button>' : '') + '</div></div>';
+          '<div style="margin-top:8px;display:flex;gap:8px;"><button class="btn btn-sm btn-primary" id="ratingSubmitBtn">' + esc(t('提交评分')) + '</button>' +
+          (p.myRating ? '<button class="btn btn-sm btn-secondary" id="ratingDeleteBtn">' + esc(t('删除评分')) + '</button>' : '') + '</div></div>';
         var picked = p.myRating ? p.myRating.stars : 0;
         var root = box.querySelector('[data-star-picker]');
         pickerInit(box, function (n) { picked = root.dataset.value = n; root.dataset.value = String(n); });
@@ -380,7 +312,7 @@
       } else if (!me.config.configured) {
         box.innerHTML = '<div class="store-empty" style="padding:16px;">' + esc(t('PassPort 未配置，暂不能评分')) + '</div>';
       } else {
-        box.innerHTML = '<div class="store-empty" style="padding:16px;"><a class="blora-button" data-size="sm" data-variant="secondary" href="' + AUTH + '/login?return_to=' + encodeURIComponent(location.pathname + location.hash) + '">' + esc(t('登录后评分')) + '</a></div>';
+        box.innerHTML = '<div class="store-empty" style="padding:16px;"><a class="btn btn-sm btn-secondary" href="' + AUTH + '/login?return_to=' + encodeURIComponent(location.pathname + location.hash) + '">' + esc(t('登录后评分')) + '</a></div>';
       }
 
       loadRatingsInto(p.id);
@@ -435,7 +367,7 @@
           '<div class="form-help">' + esc(t('或粘贴 JSON 内容')) + '</div>' +
           '<textarea id="manifestJson" style="min-height:70px;" placeholder="{\&quot;name\&quot;: \&quot;...\&quot;}"></textarea>' +
         '</div>' +
-        '<button type="button" class="blora-button" data-size="sm" data-variant="secondary" id="manifestApply">' + esc(t('解析并填充')) + '</button>' +
+        '<button type="button" class="btn btn-sm btn-secondary" id="manifestApply">' + esc(t('解析并填充')) + '</button>' +
       '</div>' +
       '<div class="form-group"><label>' + esc(t('插件 id（唯一，英文/数字/._-）')) + '</label><input type="text" id="f_id" value="' + esc(d.id || '') + '" ' + (editId ? 'disabled' : '') + '><div class="form-help">' + esc(t('3–128 字符，仅字母数字与 ._-')) + '</div></div>' +
       '<div class="form-group"><label>' + esc(t('插件名称')) + '</label><input type="text" id="f_name" value="' + esc(d.name || '') + '"></div>' +
@@ -449,7 +381,7 @@
       '<div class="form-group"><label>' + esc(t('图标 url（可选）')) + '</label><input type="text" id="f_icon" value="' + esc(d.icon || '') + '"></div>' +
       '<div class="form-group"><label>' + esc(t('标签（逗号分隔）')) + '</label><input type="text" id="f_tags" value="' + esc((d.tags || []).join(',')) + '"></div>' +
       '<div class="form-group"><label>' + esc(t('权限（逗号分隔，如 gateway:observe, themes:register）')) + '</label><input type="text" id="f_permissions" value="' + esc((d.permissions || []).join(',')) + '"></div>' +
-      '<div class="form-actions"><button class="blora-button" data-variant="primary" id="submitBtn" type="button">' + esc(actionLabel) + '</button><a class="blora-button" data-variant="secondary" href="/store">' + esc(t('取消')) + '</a></div>' +
+      '<div class="form-actions"><button class="btn btn-primary" id="submitBtn">' + esc(actionLabel) + '</button><a class="btn btn-secondary" href="/store">' + esc(t('取消')) + '</a></div>' +
     '</div>';
   }
 
@@ -504,7 +436,7 @@
         return;
       }
       if (!me.loggedIn) {
-        html += '<div class="store-empty"><a class="blora-button" data-variant="primary" href="' + AUTH + '/login?return_to=' + encodeURIComponent('/store#/submit') + '">' + esc(t('登录后提交')) + '</a></div>';
+        html += '<div class="store-empty"><a class="btn btn-primary" href="' + AUTH + '/login?return_to=' + encodeURIComponent('/store#/submit') + '">' + esc(t('登录后提交')) + '</a></div>';
         viewBox.innerHTML = html;
         return;
       }
@@ -567,7 +499,7 @@
         return;
       }
       if (!me.loggedIn) {
-        viewBox.innerHTML = '<div class="store-empty"><a class="blora-button" data-variant="primary" href="' + AUTH + '/login?return_to=' + encodeURIComponent('/store#/mine') + '">' + esc(t('登录后查看')) + '</a></div>';
+        viewBox.innerHTML = '<div class="store-empty"><a class="btn btn-primary" href="' + AUTH + '/login?return_to=' + encodeURIComponent('/store#/mine') + '">' + esc(t('登录后查看')) + '</a></div>';
         return;
       }
       api('/plugins?scope=mine').then(function (data) {
@@ -580,10 +512,10 @@
             var draft = p.hasPendingUpdate ? ' · ' + t('待更新审核') : '';
             var reject = p.rejectReason ? ' · ' + esc(p.rejectReason) : '';
             return '<div class="store-admin-row">' +
-              '<div class="store-admin-row__meta"><div><strong>' + esc(p.name) + '</strong> <span class="blora-button" data-size="sm" data-variant="secondary">' + esc(statusText) + '</span>' + draft + reject + '</div>' +
+              '<div class="store-admin-row__meta"><div><strong>' + esc(p.name) + '</strong> <span class="btn btn-sm btn-secondary">' + esc(statusText) + '</span>' + draft + reject + '</div>' +
               '<div style="font-size:12px;color:var(--muted-foreground);margin-top:4px;">v' + esc(p.version) + ' · ' + esc(p.id) + ' · ' + esc(t('安装')) + ' ' + (p.installCount || 0) + '</div></div>' +
-              '<div class="store-admin-row__actions"><a class="blora-button" data-size="sm" data-variant="secondary" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + esc(t('查看')) + '</a>' +
-                '<a class="blora-button" data-size="sm" data-variant="primary" href="/store#/submit/' + encodeURIComponent(p.id) + '">' + esc(t('编辑')) + '</a>' +
+              '<div class="store-admin-row__actions"><a class="btn btn-sm btn-secondary" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + esc(t('查看')) + '</a>' +
+                '<a class="btn btn-sm btn-primary" href="/store#/submit/' + encodeURIComponent(p.id) + '">' + esc(t('编辑')) + '</a>' +
               '</div></div>';
           }).join('');
         }
@@ -609,10 +541,10 @@
         var html = '<div class="store-detail__title" style="margin:16px 0;">' + esc(t('审核')) + '</div>';
         html += '<div class="store-toolbar">' +
           '<select id="adminStatus" class="btn btn-sm">' +
-            '<blora-option value="pending"' + (statusFilter === 'pending' ? ' selected' : '') + '>' + esc(t('待审核')) + '</blora-option>' +
-            '<blora-option value="approved"' + (statusFilter === 'approved' ? ' selected' : '') + '>' + esc(t('已上架')) + '</blora-option>' +
-            '<blora-option value="rejected"' + (statusFilter === 'rejected' ? ' selected' : '') + '>' + esc(t('已拒绝')) + '</blora-option>' +
-            '<blora-option value="all"' + (statusFilter === 'all' ? ' selected' : '') + '>' + esc(t('全部')) + '</blora-option>' +
+            '<option value="pending"' + (statusFilter === 'pending' ? ' selected' : '') + '>' + esc(t('待审核')) + '</option>' +
+            '<option value="approved"' + (statusFilter === 'approved' ? ' selected' : '') + '>' + esc(t('已上架')) + '</option>' +
+            '<option value="rejected"' + (statusFilter === 'rejected' ? ' selected' : '') + '>' + esc(t('已拒绝')) + '</option>' +
+            '<option value="all"' + (statusFilter === 'all' ? ' selected' : '') + '>' + esc(t('全部')) + '</option>' +
           '</select></div>';
         if (!data.plugins.length) {
           html += '<div class="store-empty">' + esc(t('暂无插件')) + '</div>';
@@ -621,14 +553,14 @@
             var needsReview = p.status === 'pending' || p.hasPendingUpdate;
             var statusText = p.status === 'approved' ? t('已上架') : p.status === 'rejected' ? t('已拒绝') : t('待审核');
             return '<div class="store-admin-row">' +
-              '<div class="store-admin-row__meta"><div><strong>' + esc(p.name) + '</strong> <span class="blora-button" data-size="sm" data-variant="secondary">' + esc(statusText) + '</span> ' + (p.hasPendingUpdate ? t('待更新审核') : '') + '</div>' +
+              '<div class="store-admin-row__meta"><div><strong>' + esc(p.name) + '</strong> <span class="btn btn-sm btn-secondary">' + esc(statusText) + '</span> ' + (p.hasPendingUpdate ? t('待更新审核') : '') + '</div>' +
               '<div style="font-size:12px;color:var(--muted-foreground);margin-top:4px;">v' + esc(p.version) + ' · ' + esc(p.id) + ' · ' + esc(p.authorUsername || p.author) + ' · ' + esc(t('安装')) + ' ' + (p.installCount || 0) + '</div>' +
               (p.rejectReason ? '<div style="font-size:12px;color:var(--destructive);margin-top:4px;">' + esc(t('拒绝原因')) + '：' + esc(p.rejectReason) + '</div>' : '') +
               '</div>' +
               '<div class="store-admin-row__actions">' +
-                '<a class="blora-button" data-size="sm" data-variant="secondary" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + esc(t('查看')) + '</a>' +
-                (needsReview ? '<button class="blora-button" data-size="sm" data-variant="primary" data-approve="' + encodeURIComponent(p.id) + '" type="button">' + esc(t('通过')) + '</button>' +
-                  '<button class="blora-button" data-size="sm" data-variant="secondary" data-reject="' + encodeURIComponent(p.id) + '" type="button">' + esc(t('拒绝')) + '</button>' : '') +
+                '<a class="btn btn-sm btn-secondary" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + esc(t('查看')) + '</a>' +
+                (needsReview ? '<button class="btn btn-sm btn-primary" data-approve="' + encodeURIComponent(p.id) + '">' + esc(t('通过')) + '</button>' +
+                  '<button class="btn btn-sm btn-secondary" data-reject="' + encodeURIComponent(p.id) + '">' + esc(t('拒绝')) + '</button>' : '') +
               '</div></div>';
           }).join('');
         }
@@ -684,7 +616,7 @@
     api('/install-targets').then(function (data) {
       var targets = data.targets || [];
       var html = '<div class="store-modal-mask" id="storeInstallMask"><div class="store-modal">';
-      html += '<div class="store-modal__head"><h3>' + esc(t('安装到 CrewRouter')) + '</h3><button class="blora-button" data-size="sm" data-variant="secondary" id="storeModalClose" type="button">' + esc(t('关闭')) + '</button></div>';
+      html += '<div class="store-modal__head"><h3>' + esc(t('安装到 CrewRouter')) + '</h3><button class="btn btn-sm btn-secondary" id="storeModalClose">' + esc(t('关闭')) + '</button></div>';
       if (!targets.length) {
         html += '<div class="store-empty">' + esc(t('未检测到你登录过的 CrewRouter')) + '</div>';
       } else {
@@ -751,18 +683,6 @@
       window.location.href = AUTH + '/logout';
     });
     window.addEventListener('hashchange', route);
-
-    if (new URLSearchParams(location.search).get('helper_login') === '1') {
-      api('/me').then(function (mm) {
-        me = mm;
-        updateNav();
-        openHelperLoginTargets();
-      }).catch(function () {
-        setBanner('err', t('无法读取官方商店登录状态，请重试'));
-      });
-      return;
-    }
-
     api('/me').then(function (mm) {
       me = mm;
       updateNav();
