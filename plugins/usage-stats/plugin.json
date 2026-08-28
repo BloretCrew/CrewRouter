@@ -1,0 +1,11 @@
+{
+  "id": "usage-stats",
+  "name": "用量统计示例",
+  "version": "1.0.0",
+  "description": "示例插件：展示 usage:read 能力（用量/成本聚合，不含正文）",
+  "author": "bloret-crew",
+  "permissions": ["usage:read", "models:read", "meta:read"],
+  "pages": [
+    { "path": "/usage-stats", "title": "用量统计", "area": "settings", "entry": "page.html" }
+  ]
+}

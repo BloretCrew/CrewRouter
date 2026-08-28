@@ -27,6 +27,9 @@ const ACTIONS = {
   AUTH_SET_PASSWORD: 'auth.set_password',
   AUTH_CHANGE_PASSWORD: 'auth.change_password',
 
+  // 插件自有操作
+  PLUGIN_ACTION: 'plugin.action',
+
   // Co-Key 成员
   COKEY_MEMBER_ADD: 'cokey.member_add',
   COKEY_MEMBER_REMOVE: 'cokey.member_remove',

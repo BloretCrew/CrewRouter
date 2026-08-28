@@ -481,4 +481,5 @@ module.exports = {
   clearPluginCron,
   isLoaded: id => loaded.has(id),
   getLoadedManifest: id => loaded.get(id)?.manifest || null,
+  listLoadedIds: () => [...loaded.keys()],
 };

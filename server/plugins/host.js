@@ -45,6 +45,17 @@ const HOOK_TIMEOUT_MS = 2000;
 // ctx.fetch 单次请求超时（毫秒）
 const PLUGIN_FETCH_TIMEOUT_MS = 10000;
 
+// 已知权限集合：未知权限在 validateManifest 时仅 warning，不阻断加载（向后兼容）
+const KNOWN_PERMISSIONS = new Set([
+  // 既有权限
+  'storage', 'network', 'gateway:modify', 'pages:register', 'slots:register',
+  'routes:register', 'provider:register', 'apikey:modify', 'billing:modify',
+  'cron:register', 'themes:register',
+  // 三期新增能力（数据只读/受控出口）
+  'usage:read', 'models:read', 'preferences:read', 'audit:write',
+  'export:usage', 'meta:read', 'webhook:register', 'admin:view',
+]);
+
 /**
  * 校验清单结构，返回错误信息或 null
  */
@@ -56,6 +67,25 @@ function validateManifest(manifest) {
   if (!manifest.name) return 'plugin.json 缺少 name';
   const perms = manifest.permissions || [];
   if (!Array.isArray(perms)) return 'permissions 必须是数组';
+  // 未知权限只警告不阻断，保证旧插件（或超前版本插件）仍可加载
+  for (const p of perms) {
+    if (typeof p === 'string' && !KNOWN_PERMISSIONS.has(p)) {
+      Logger.warn(`[plugins] 插件 ${manifest.id} 声明了未知权限 "${p}"（将被忽略但不阻断加载）`);
+    }
+  }
+  // 出站 Webhook 声明（webhook:register 权限配套）
+  if (manifest.webhooks !== undefined) {
+    if (!Array.isArray(manifest.webhooks)) return 'webhooks 必须是数组';
+    for (const w of manifest.webhooks) {
+      if (!w || typeof w.url !== 'string' || !w.url.startsWith('https://')) return 'webhooks[].url 必须是 https URL';
+    }
+  }
+  if (manifest.allowedHosts !== undefined) {
+    if (!Array.isArray(manifest.allowedHosts)) return 'allowedHosts 必须是数组';
+    for (const h of manifest.allowedHosts) {
+      if (typeof h !== 'string' || !/^[a-z0-9.-]+$/i.test(h)) return 'allowedHosts[] 必须是合法域名';
+    }
+  }
   if (manifest.pages && !Array.isArray(manifest.pages)) return 'pages 必须是数组';
   if (manifest.slots && !Array.isArray(manifest.slots)) return 'slots 必须是数组';
   if (manifest.routes && !Array.isArray(manifest.routes)) return 'routes 必须是数组';
@@ -104,7 +134,7 @@ function buildStorage(pluginId, enabled) {
 function buildFetch(pluginId) {
   return async function pluginFetch(url, options = {}) {
     const { validateUrl } = require('../utils/url-validator');
-    const check = validateUrl(String(url), { allowPrivate: false });
+    const check = await validateUrl(String(url), { allowPrivate: false });
     if (!check.ok) {
       throw new Error(`[plugins:${pluginId}] fetch 目标被 SSRF 校验拒绝: ${check.error}`);
     }
@@ -180,6 +210,148 @@ function buildContext(plugin, hooksBus, logPrefix) {
 
   if (perms.has('storage')) ctx.storage = buildStorage(id);
   if (perms.has('network')) ctx.fetch = buildFetch(id);
+
+  // —— 三期开放能力（只读/受控）——
+  const dataRead = require('../utils/plugin-data-read');
+
+  // usage:read — 用量/成本聚合（不含正文）
+  if (perms.has('usage:read')) {
+    ctx.usage = {
+      summary: (opts = {}) => dataRead.usageSummary(opts),
+      models: (opts = {}) => dataRead.usageSummary({ ...opts, groupBy: 'model_id' }),
+    };
+  }
+
+  // models:read — 模型目录 + 健康度（只读）
+  if (perms.has('models:read')) {
+    ctx.models = {
+      list: () => dataRead.modelList(),
+      health: async (modelId) => {
+        const list = await dataRead.modelList();
+        return list.find(m => String(m.id) === String(modelId)) || null;
+      },
+    };
+  }
+
+  // preferences:read — 用户偏好（授权门控）
+  if (perms.has('preferences:read')) {
+    ctx.preferences = {
+      get: (req) => dataRead.getPreferences(req),
+      granted: async (req) => {
+        const r = await dataRead.getPreferences(req);
+        return r.granted;
+      },
+    };
+  }
+
+  // audit:write — 插件自有审计日志（只读自己的）
+  if (perms.has('audit:write')) {
+    const { logAction, ACTIONS } = require('../utils/audit-log');
+    ctx.audit = {
+      write: async (entry = {}) => {
+        await logAction({
+          userId: null,
+          username: `plugin:${id}`,
+          action: entry.action || ACTIONS.PLUGIN_ACTION || 'PLUGIN_ACTION',
+          resourceType: `plugin:${id}`,
+          description: String(entry.description || ''),
+          details: entry.details || {},
+          ip: null,
+          userAgent: null,
+          status: 200,
+        });
+      },
+      list: async (opts = {}) => {
+        const limit = Math.min(Math.max(parseInt(opts.limit, 10) || 20, 1), 100);
+        const r = await pool.query(
+          `SELECT id, action, description, details, created_at FROM audit_logs
+           WHERE resource_type = $1 ORDER BY id DESC LIMIT $2`,
+          [`plugin:${id}`, limit]
+        );
+        return r.rows;
+      },
+    };
+  }
+
+  // export:usage — 用量安全子集导出
+  if (perms.has('export:usage')) {
+    ctx.exportUsage = {
+      json: async (opts = {}) => {
+        const out = await dataRead.usageSummary(opts);
+        return { exportedAt: new Date().toISOString(), ...out };
+      },
+    };
+  }
+
+  // meta:read — 插件注册信息（只读）
+  if (perms.has('meta:read')) {
+    ctx.pluginMeta = dataRead.pluginMetaView(require('./registry'), id);
+  }
+
+  // admin:view — 管理面板只读视图
+  if (perms.has('admin:view')) {
+    ctx.adminView = {
+      plugins: async () => {
+        const registry = require('./registry');
+        const rows = await pool.query(
+          `SELECT id, name, version, enabled, error_count, last_error FROM plugins ORDER BY id`
+        );
+        return rows.rows.map(r => ({ ...r, configHidden: true }));
+      },
+    };
+  }
+
+  // webhook:register — 出站 Webhook（域白名单 + HTTPS + 复用 SSRF 校验）
+  if (perms.has('webhook:register')) {
+    const { validateUrl } = require('../utils/url-validator');
+    const allowedHosts = new Set((manifest.allowedHosts || []).map(h => h.toLowerCase()));
+    ctx.registerWebhook = async (hook = {}) => {
+      const url = String(hook.url || '');
+      if (!url.startsWith('https://')) throw new Error(`[plugins:${id}] webhook url 必须 https`);
+      const host = url.replace(/^https:\/\//, '').split(/[/?#]/)[0].toLowerCase();
+      if (allowedHosts.size && !allowedHosts.has(host)) {
+        throw new Error(`[plugins:${id}] webhook 目标域 ${host} 不在 allowedHosts 白名单`);
+      }
+      const check = validateUrl(url, { allowPrivate: false });
+      if (!check.ok) throw new Error(`[plugins:${id}] webhook 被 SSRF 校验拒绝: ${check.error}`);
+      await pool.query(
+        `CREATE TABLE IF NOT EXISTS plugin_webhooks (
+           id BIGSERIAL PRIMARY KEY, plugin_id TEXT NOT NULL, url TEXT NOT NULL,
+           events JSONB NOT NULL DEFAULT '[]'::jsonb, secret TEXT,
+           created_at TIMESTAMPTZ NOT NULL DEFAULT now())`
+      );
+      await pool.query(
+        `INSERT INTO plugin_webhooks (plugin_id, url, events, secret) VALUES ($1,$2,$3,$4)
+         ON CONFLICT DO NOTHING`,
+        [id, url, JSON.stringify(hook.events || []), hook.secret || null]
+      );
+      return { registered: true, host };
+    };
+    ctx.webhook = {
+      emit: async (eventName, payload = {}) => {
+        const r = await pool.query(
+          `SELECT id, url, secret FROM plugin_webhooks WHERE plugin_id = $1 AND (events @> $2::jsonb OR events = '[]'::jsonb)`,
+          [id, JSON.stringify([eventName])]
+        );
+        for (const w of r.rows) {
+          try {
+            const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: eventName, payload, ts: Date.now() }) };
+            if (w.secret) opts.headers['X-Webhook-Secret'] = w.secret;
+            const check = validateUrl(w.url, { allowPrivate: false });
+            if (check.ok) {
+              await Promise.race([
+                fetch(w.url, { ...opts, signal: AbortSignal.timeout(10000) }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('webhook 超时')), 10000)),
+              ]);
+            }
+          } catch (e) {
+            Logger.warn(`[plugins] ${id} webhook ${w.id} 投递失败: ${e.message}`);
+          }
+        }
+        return { delivered: r.rows.length };
+      },
+    };
+  }
 
   // 定时任务：清单 cron 字段 + cron:register 权限时，由 registry 调度（见 registry.schedulePluginCron）
   const registry = require('./registry');
