@@ -65,10 +65,10 @@ check('多条目回显 + exactText → 精确移除全剥', () => {
   assert.strictEqual(scrubInjectedEcho(text, { exactText: exact }), '结论先行。\n\n后续说明。');
 });
 
-check('多条目回显无 exactText → 锚点扫描剥至首个分隔符（已知限制）', () => {
+check('多条目回显无 exactText → 新格式按闭合标签完整剥离', () => {
   const text = '结论。\n' + assemble(['条目一', '条目二']);
   const out = scrubInjectedEcho(text);
-  assert.ok(out.includes('条目二'), '残留条目二为文档化限制');
+  assert.strictEqual(out, '结论。');
   assert.ok(!out.includes('# claudeMd'), 'claudeMd 标题块本身已被剥离');
 });
 
