@@ -6278,10 +6278,16 @@ class ConsoleApp {
     sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  loadSettings() {
+  async loadSettings() {
     this.showSettingsOverview();
     const version = document.getElementById('settingsVersionLabel');
-    if (version) version.textContent = window.CREWROUTER_VERSION || '-';
+    if (version) {
+      try {
+        const response = await fetch('/api/version');
+        const data = await response.json();
+        version.textContent = data.version ? `v${data.version}` : '-';
+      } catch (_) { version.textContent = '-'; }
+    }
     if (this.user) {
       document.getElementById('settingsAvatar').value = this.user.avatar || '';
       const preview = document.getElementById('settingsAvatarPreview');
