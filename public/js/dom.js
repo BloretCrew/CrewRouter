@@ -254,6 +254,11 @@
       .replace(/<\/option>/gi, '</blora-option>');
   }
 
+  function isAllowedInlineHandler(value) {
+    const code = String(value || '').trim();
+    return /^(?:(?:event|this)\.[A-Za-z_$][\w$]*\([^;]*\);\s*)*(?:(?:app|adminApp)\.[A-Za-z_$][\w$]*|(?:showDocPage|saveDocsContent|openDocsEditor)\s*\()/u.test(code);
+  }
+
   function sanitizeHtml(content) {
     const template = document.createElement('template');
     template.innerHTML = normalizeBloraMarkup(content);
@@ -262,7 +267,11 @@
     template.content.querySelectorAll('*').forEach((el) => {
       [...el.attributes].forEach((attr) => {
         const name = attr.name.toLowerCase();
-        if (name.startsWith('on') || (name === 'href' || name === 'src' || name === 'action') && !/^(https?:|mailto:|#|\/)/i.test(attr.value)) el.removeAttribute(attr.name);
+        if (name.startsWith('on') && !isAllowedInlineHandler(attr.value)) {
+          el.removeAttribute(attr.name);
+        } else if ((name === 'href' || name === 'src' || name === 'action') && !/^(https?:|mailto:|#|\/)/i.test(attr.value)) {
+          el.removeAttribute(attr.name);
+        }
       });
     });
     return template.innerHTML;
