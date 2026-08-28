@@ -101,6 +101,41 @@
       if (input.value) replacement.setAttribute('value', input.value);
       input.replaceWith(replacement);
     });
+    const enhanceToggle = (input, tagName) => {
+      const replacement = document.createElement(tagName);
+      [...input.attributes].forEach((attr) => {
+        if (attr.name === 'type' || attr.name === 'class') return;
+        replacement.setAttribute(attr.name, attr.value);
+      });
+      if (input.checked) replacement.setAttribute('checked', '');
+      if (input.value && input.value !== 'on') replacement.setAttribute('value', input.value);
+      const parentLabel = input.closest('label');
+      const labelText = input.getAttribute('aria-label') || parentLabel?.textContent?.trim() || '';
+      if (labelText) replacement.setAttribute('label', labelText);
+      if (input.className) replacement.className = input.className;
+      replacement.classList.remove('blora-input');
+      input.replaceWith(replacement);
+    };
+    const checkboxes = [];
+    const ranges = [];
+    if (scope.matches?.('input[type="checkbox"]')) checkboxes.push(scope);
+    if (scope.matches?.('input[type="range"]')) ranges.push(scope);
+    checkboxes.push(...scope.querySelectorAll('input[type="checkbox"]'));
+    ranges.push(...scope.querySelectorAll('input[type="range"]'));
+    checkboxes.forEach((input) => enhanceToggle(input, input.closest('label.pg-toggle') ? 'blora-switch' : 'blora-checkbox'));
+    ranges.forEach((input) => {
+      const replacement = document.createElement('blora-range');
+      [...input.attributes].forEach((attr) => {
+        if (!['type', 'class', 'value'].includes(attr.name)) replacement.setAttribute(attr.name, attr.value);
+      });
+      if (input.min) replacement.setAttribute('min', input.min);
+      if (input.max) replacement.setAttribute('max', input.max);
+      const value = input.value || input.min || 0;
+      replacement.setAttribute('values', `${value},${value}`);
+      replacement.className = input.className;
+      replacement.classList.remove('blora-input');
+      input.replaceWith(replacement);
+    });
     if (!customElements.get('blora-select')) {
       scope.querySelectorAll('button').forEach((button) => button.classList.add('blora-button'));
       return;
@@ -198,9 +233,10 @@
   function replaceChildrenHTML(el, content) {
     const node = resolveEl(el);
     if (!node) return null;
-    const frag = parseHTML(content);
+    const frag = parseHTML(normalizeBloraMarkup(content));
     clearChildren(node);
     node.appendChild(frag);
+    upgradeBloraControls(node);
     return node;
   }
 

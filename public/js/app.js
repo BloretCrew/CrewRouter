@@ -1815,8 +1815,8 @@ class ConsoleApp {
       return;
     }
 
-    const selected = document.querySelector('input[name="keyModelRadio"]:checked');
-    const modelId = selected ? selected.value : null;
+    const selected = document.querySelector('blora-radio[name="keyModelRadio"][checked]');
+    const modelId = selected ? selected.getAttribute('value') : null;
 
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/models`, {
@@ -6357,9 +6357,9 @@ class ConsoleApp {
       const res = await fetch('/api/user/notifications?limit=50');
       if (!res.ok) throw new Error(t('加载失败'));
       const items = await res.json();
-      if (!items.length) { list.innerHTML = '<div style="color:var(--muted-foreground);font-size:13px;padding:12px 0;">' + t('暂无通知') + '</div>'; return; }
-      list.innerHTML = items.map(item => `<div style="padding:14px 0;border-bottom:1px solid var(--border);${item.read_at ? '' : 'background:color-mix(in srgb, var(--primary) 5%, transparent);'}"><div style="display:flex;gap:8px;align-items:center;"><strong>${escapeHtml(item.title)}</strong><span style="font-size:12px;color:var(--muted-foreground);">${this.formatRelativeTime(item.created_at)}</span><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px;" onclick="app.deleteNotification(${item.id})">${t('删除')}</button></div><div style="margin-top:6px;font-size:13px;color:var(--muted-foreground);white-space:pre-wrap;">${escapeHtml(item.body)}</div>${item.read_at ? '' : `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:12px;" onclick="app.markNotificationRead(${item.id})">标记已读</button>`}</div>`).join('');
-    } catch (error) { list.innerHTML = '<div style="color:var(--destructive);font-size:13px;">' + t('通知加载失败') + '</div>'; }
+      if (!items.length) { setHTML(list, '<div style="color:var(--muted-foreground);font-size:13px;padding:12px 0;">' + t('暂无通知') + '</div>'); return; }
+      setHTML(list, items.map(item => `<div style="padding:14px 0;border-bottom:1px solid var(--border);${item.read_at ? '' : 'background:color-mix(in srgb, var(--primary) 5%, transparent);'}"><div style="display:flex;gap:8px;align-items:center;"><strong>${escapeHtml(item.title)}</strong><span style="font-size:12px;color:var(--muted-foreground);">${this.formatRelativeTime(item.created_at)}</span><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px;" onclick="app.deleteNotification(${item.id})">${t('删除')}</button></div><div style="margin-top:6px;font-size:13px;color:var(--muted-foreground);white-space:pre-wrap;">${escapeHtml(item.body)}</div>${item.read_at ? '' : `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:12px;" onclick="app.markNotificationRead(${item.id})">标记已读</button>`}</div>`).join(''));
+    } catch (error) { setHTML(list, '<div style="color:var(--destructive);font-size:13px;">' + t('通知加载失败') + '</div>'); }
   }
 
   async markNotificationRead(id) { await fetch(`/api/user/notifications/${id}/read`, { method: 'PUT' }); await this.loadNotifications(); }
@@ -6388,21 +6388,21 @@ class ConsoleApp {
     const hWrap = document.getElementById('hookNotifyHarnessChecks');
     const eWrap = document.getElementById('hookNotifyEventChecks');
     if (!hWrap || !eWrap) return;
-    hWrap.innerHTML = harnesses.map(h => {
+    setHTML(hWrap, harnesses.map(h => {
       const on = sel.harnesses.includes(h) ? ' checked' : '';
       return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-harness" value="${h}"${on}> ${h}</label>`;
-    }).join('');
-    eWrap.innerHTML = events.map(([v, label]) => {
+    }).join(''));
+    setHTML(eWrap, events.map(([v, label]) => {
       const on = sel.eventTypes.includes(v) ? ' checked' : '';
       return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-event" value="${v}"${on}> ${t(label)}</label>`;
-    }).join('');
+    }).join(''));
     this.showModal('hookNotifySelectModal');
   }
 
   async saveHookNotifySelection() {
     try {
-      const harnesses = [...document.querySelectorAll('#hookNotifyHarnessChecks .hn-harness:checked')].map(c => c.value);
-      const eventTypes = [...document.querySelectorAll('#hookNotifyEventChecks .hn-event:checked')].map(c => c.value);
+      const harnesses = [...document.querySelectorAll('#hookNotifyHarnessChecks blora-checkbox[checked], #hookNotifyHarnessChecks blora-switch[checked]')].map(c => c.getAttribute('value') || 'on');
+      const eventTypes = [...document.querySelectorAll('#hookNotifyEventChecks blora-checkbox[checked], #hookNotifyEventChecks blora-switch[checked]')].map(c => c.getAttribute('value') || 'on');
       const res = await fetch('/api/user/hook-notify-rules/selection', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
