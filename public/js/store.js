@@ -746,15 +746,23 @@
   }
 
   function boot() {
-    if (new URLSearchParams(location.search).get('helper_login') === '1') {
-      openHelperLoginTargets();
-      return;
-    }
     document.getElementById('storeLoginBtn').addEventListener('click', login);
     document.getElementById('storeLogoutBtn').addEventListener('click', function () {
       window.location.href = AUTH + '/logout';
     });
     window.addEventListener('hashchange', route);
+
+    if (new URLSearchParams(location.search).get('helper_login') === '1') {
+      api('/me').then(function (mm) {
+        me = mm;
+        updateNav();
+        openHelperLoginTargets();
+      }).catch(function () {
+        setBanner('err', t('无法读取官方商店登录状态，请重试'));
+      });
+      return;
+    }
+
     api('/me').then(function (mm) {
       me = mm;
       updateNav();
