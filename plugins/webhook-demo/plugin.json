@@ -1,0 +1,12 @@
+{
+  "id": "webhook-demo",
+  "name": "Webhook 出站示例",
+  "version": "1.0.0",
+  "description": "示例插件：演示 webhook:register 能力（域白名单 + HTTPS + secret 头 + 事件触发）",
+  "author": "bloret-crew",
+  "permissions": ["webhook:register", "cron:register", "network"],
+  "allowedHosts": ["hooks.example.com", "webhook.bloret.net"],
+  "cron": [
+    { "expr": "*/10 * * * *", "handler": "demoEmit" }
+  ]
+}

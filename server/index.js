@@ -2464,6 +2464,7 @@ if (isDemo) {
   app.use('/api/user', require('./routes/user'));
   app.use('/api/user', require('./routes/balance-alert'));
   app.use('/api/user', require('./routes/notifications'));
+  app.use('/api/user', require('./routes/plugin-pref-optin'));
   app.use('/api/user', require('./routes/hook-notify-rules'));
   // 用户级自定义提示词（每人仅见自己的；admin 全站视图走 /api/admin/custom-instructions）
   app.use('/api/user', require('./routes/user-custom-instructions'));

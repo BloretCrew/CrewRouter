@@ -4818,4 +4818,21 @@ router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// 用量安全子集导出（字段白名单聚合，绝不含 messages/response/request_params/凭证）
+router.get('/export-usage', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { usageSummary } = require('../utils/plugin-data-read');
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 7, 1), 90);
+    const groupBy = ['model_id', 'day'].includes(req.query.groupBy) ? req.query.groupBy : 'model_id';
+    const data = await usageSummary({ days, groupBy });
+    const payload = { exportedAt: new Date().toISOString(), days, groupBy, ...data };
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="usage-export-${days}d-${Date.now()}.json"`);
+    res.send(JSON.stringify(payload, null, 2));
+  } catch (error) {
+    Logger.error('[用量导出] 错误:', error);
+    res.status(500).json({ error: '导出失败' });
+  }
+});
+
 module.exports = router;

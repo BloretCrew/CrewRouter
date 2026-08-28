@@ -8044,6 +8044,40 @@ async function(ctx) {
     }
   }
 
+  // 用量聚合导出（export:usage 配套管理入口）：JSON 白名单字段，不含正文
+  async exportUsageAggregate() {
+    const btn = document.getElementById('usageAggregateExportBtn');
+    try {
+      const input = prompt(t('导出最近几天的用量聚合？（1-90 天）'), '7');
+      if (input === null) return;
+      const days = Math.min(Math.max(parseInt(input, 10) || 7, 1), 90);
+      if (btn) setButtonLoading(btn, t('导出中...'));
+      const res = await fetch(`/api/admin/export-usage?days=${days}&groupBy=model_id`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `${t('导出失败 (')}${res.status})`);
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get('Content-Disposition') || '';
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      const filename = match ? match[1] : `usage-export-${days}d-${Date.now()}.json`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      this.showToast?.(t('导出成功'), 'success');
+    } catch (error) {
+      console.error(t('导出用量聚合失败:'), error);
+      alert(error.message || t('导出失败'));
+    } finally {
+      if (btn) clearButtonLoading(btn, t('导出用量聚合'));
+    }
+  }
+
   async showUsageDetail(log) {
     // 列表接口不再携带 messages / response 大字段，点开详情时按 id 拉取
     if (log && log.id != null && (log.messages === undefined && log.response === undefined)) {

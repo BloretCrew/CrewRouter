@@ -1055,6 +1055,7 @@
               <button class="btn btn-primary" onclick="adminApp.loadUsageLogs(1)"><span data-i18n="查询">查询</span></button>
               <button class="btn btn-secondary" onclick="adminApp.clearUsageLogFilters()"><span data-i18n="清除">清除</span></button>
               <button class="btn btn-secondary" id="usageLogExportBtn" onclick="adminApp.exportUsageLogs()" title="按当前筛选条件导出 CSV（最多 5 万条）" data-i18n-title="按当前筛选条件导出 CSV（最多 5 万条）"><span data-i18n="导出 CSV">导出 CSV</span></button>
+              <button class="btn btn-secondary" id="usageAggregateExportBtn" onclick="adminApp.exportUsageAggregate()" title="导出最近 N 天的用量聚合 JSON（按模型分组，不含任何请求/响应正文）" data-i18n-title="导出最近 N 天的用量聚合 JSON（按模型分组，不含任何请求/响应正文）"><span data-i18n="导出用量聚合">导出用量聚合</span></button>
               <span id="usageLogCount" class="filter-info"></span>
             </div>
             <div id="usageLogsList" class="models-table">
@@ -2433,7 +2434,7 @@
   <script src="/js/theme.js?v=2"></script>
   <script src="/js/dom.js?v=2"></script>
   <script src="/js/dialog.js?v=2"></script>
-  <script src="/js/admin.js?v=14"></script>
+  <script src="/js/admin.js?v=15"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 移动端侧边栏切换

@@ -6270,7 +6270,38 @@ class ConsoleApp {
       this.loadNotificationSettings();
       this.loadHookNotifySettings();
       this.loadNotifications();
+      this.loadPluginPrefOptin();
     }
+  }
+
+  // 插件偏好授权（preferences:read opt-in）
+  async loadPluginPrefOptin() {
+    const toggle = document.getElementById('pluginPrefOptin');
+    if (!toggle) return;
+    try {
+      const res = await fetch('/api/user/plugin-pref-optin');
+      if (!res.ok) return;
+      const data = await res.json();
+      toggle.checked = data.optedIn === true;
+    } catch (error) { console.error(t('加载插件授权状态失败:'), error); }
+  }
+
+  async togglePluginPrefOptin(enabled) {
+    const status = document.getElementById('pluginPrefOptinStatus');
+    try {
+      const res = await fetch('/api/user/plugin-pref-optin', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !!enabled })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t('保存失败'));
+      if (status) { status.textContent = enabled ? t('已开启') : t('已关闭'); status.style.color = 'var(--success)'; }
+    } catch (error) {
+      const toggle = document.getElementById('pluginPrefOptin');
+      if (toggle) toggle.checked = !enabled;
+      if (status) { status.textContent = error.message || t('保存失败'); status.style.color = 'var(--destructive)'; }
+    }
+    setTimeout(() => { if (status) status.textContent = ''; }, 3000);
   }
 
   async loadNotificationSettings() {
