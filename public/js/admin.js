@@ -489,6 +489,50 @@ class AdminApp {
     }
   }
 
+  showDynamicModal({ title, content = '', footer = '', width } = {}) {
+    const modal = document.createElement('blora-dialog');
+    modal.id = `adminDynamicModal-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    if (width) modal.style.setProperty('--blora-dialog-max-width', typeof width === 'number' ? `${width}px` : width);
+    const header = document.createElement('div');
+    header.slot = 'header';
+    const titleEl = document.createElement('h3');
+    titleEl.textContent = title || '';
+    header.appendChild(titleEl);
+    const body = document.createElement('div');
+    setHTML(body, content);
+    modal.append(header, body);
+    if (footer) {
+      const footerEl = document.createElement('div');
+      footerEl.slot = 'footer';
+      setHTML(footerEl, footer);
+      modal.appendChild(footerEl);
+    }
+    document.body.appendChild(modal);
+    upgradeBloraControls(modal);
+    modal.addEventListener('blora-close', () => modal.remove(), { once: true });
+    modal.show();
+    return { close: () => modal.close(), element: modal };
+  }
+
+  confirmModal(title, message, options = {}) {
+    return new Promise((resolve) => {
+      const footer = `<button type="button" class="blora-button" data-variant="secondary" data-admin-confirm-cancel>${escapeHtml(options.cancelText || t('取消'))}</button><button type="button" class="blora-button" data-variant="${options.danger ? 'danger' : 'primary'}" data-admin-confirm-ok>${escapeHtml(options.confirmText || t('确认'))}</button>`;
+      const modal = this.showDynamicModal({ title, content: `<p>${message || ''}</p>`, footer });
+      let settled = false;
+      const finish = (value) => { if (settled) return; settled = true; modal.close(); resolve(value); };
+      modal.element.querySelector('[data-admin-confirm-cancel]')?.addEventListener('click', () => finish(false));
+      modal.element.querySelector('[data-admin-confirm-ok]')?.addEventListener('click', () => finish(true));
+      modal.element.addEventListener('blora-close', () => finish(false), { once: true });
+    });
+  }
+
+  alertModal(title, message) {
+    return new Promise((resolve) => {
+      const modal = this.showDynamicModal({ title, content: `<p>${message || ''}</p>`, footer: `<button type="button" class="blora-button" data-variant="primary" data-admin-alert-ok>${escapeHtml(t('知道了'))}</button>` });
+      modal.element.querySelector('[data-admin-alert-ok]')?.addEventListener('click', () => { modal.close(); resolve(true); });
+    });
+  }
+
   showModal(modalId) {
     const modal = document.getElementById(modalId);
     if (!modal) return;
@@ -3669,7 +3713,7 @@ class AdminApp {
       <button type="button" class="dialog-btn dialog-btn-primary" id="batchSyncStartBtn">开始同步</button>
     `;
 
-    const modal = Dialog.showModal({
+    const modal = this.showDynamicModal({
       title: t('批量同步模型'),
       content,
       footer,
@@ -3865,7 +3909,7 @@ class AdminApp {
   async showAddProviderWizard() {
     const self = this;
     // Step 1: 显示供应商选择列表
-    const modal = Dialog.showModal({
+    const modal = this.showDynamicModal({
       title: t('添加供应商'),
       content: `
         <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 8px;">从常用列表选择，或自定义添加。完成后可立即同步模型。</p>
@@ -3989,7 +4033,7 @@ class AdminApp {
 
   showWizardStep2(provider) {
     const self = this;
-    const modal = Dialog.showModal({
+    const modal = this.showDynamicModal({
       title: `${t('配置')}${provider.name}`,
       content: `
         <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;">
@@ -4065,7 +4109,7 @@ class AdminApp {
   showProviderAddedSuccess(providerId, providerName) {
     const self = this;
     const name = providerName || t('供应商');
-    const modal = Dialog.showModal({
+    const modal = this.showDynamicModal({
       title: t('供应商已添加'),
       content: `
         <p style="font-size:14px;margin:0 0 8px;"><strong>${escapeHtml(name)}</strong> 已创建成功。</p>
@@ -4956,7 +5000,7 @@ class AdminApp {
       </div>
     `;
 
-    const modal = Dialog.showModal({
+    const modal = this.showDynamicModal({
       title: t('脚本执行错误'),
       content: content,
       width: 600,
@@ -5486,7 +5530,7 @@ async function(ctx) {
   }
 
   async deleteProvider(id) {
-    const ok = await Dialog.confirm(
+    const ok = await this.confirmModal(
       t('删除供应商'),
        t('确定要删除此供应商吗？') + '<br><br><strong style="color:var(--destructive);">' + t('将同时删除该供应商下的全部模型') + '</strong>' + t('，并清理 Team 绑定、API Key 模型绑定等关联数据。此操作不可撤销。'),
       { confirmText: t('确认删除'), danger: true }
@@ -5643,7 +5687,7 @@ async function(ctx) {
 
     const preview = staleModels.slice(0, 8).map(m => escapeHtml(m.name || m.id)).join('、');
     const more = staleModels.length > 8 ? `${t('等')}${staleModels.length}${t('个')}` : '';
-    const ok = await Dialog.confirm(
+    const ok = await this.confirmModal(
       t('清理已下架模型'),
       `${t('将')}<strong style="color:var(--destructive);">${t('永久删除')}</strong>${t('本供应商下')} <strong>${staleModels.length}${'</strong>' + t('个上游已不存在的本地模型记录（含 Team / API Key 绑定等关联数据）。此操作不可撤销。')}<br><br>` +
         `${'<span style="font-size:13px;color:var(--muted-foreground);">' + t('预览：')}${preview}${more}</span>`,
@@ -5719,7 +5763,7 @@ async function(ctx) {
       return;
     }
 
-    const ok = await Dialog.confirm(
+    const ok = await this.confirmModal(
       t('清理所有已下架模型'),
        t('将依次从') + '<strong>' + t('每个供应商') + '</strong>' + t('拉取上游模型列表，对比后') + '<strong style="color:var(--destructive);">' + t('永久删除') + '</strong>' + t('本地已下架的模型记录（含 Team / API Key 绑定等关联数据）。') +
         '<br><br>' + t('拉取失败的供应商会') + '<strong>' + t('跳过') + '</strong>' + t('（不会误删）。此操作可能耗时较长，且不可撤销。') + ',',
@@ -5942,7 +5986,7 @@ async function(ctx) {
     });
 
     if (enabledModelIds.length === 0) {
-      const ok = await Dialog.confirm(
+      const ok = await this.confirmModal(
         t('禁用全部模型？'),
          t('当前') + '<strong>' + t('没有任何模型被勾选') + '</strong>' + t('。保存后将') + '<strong style="color:var(--destructive);">' + t('禁用该供应商下所有已有模型') + '</strong>' + t('。确定继续吗？') + ',',
         { confirmText: t('确认禁用全部'), danger: true }
@@ -9497,7 +9541,7 @@ async function(ctx) {
       </div>
     `;
 
-    const modal = Dialog.showModal({
+    const modal = this.showDynamicModal({
       title: t('创建用户组'),
       content: content,
       footer: `<button class="btn btn-primary" id="confirmCreateUserGroup">${t('创建')}</button>`
@@ -9757,7 +9801,7 @@ async function(ctx) {
           </div>`
         : '<div class="empty-state">' + t('所有用户都已在此用户组中') + '</div>';
 
-      const modal = Dialog.showModal({
+      const modal = this.showDynamicModal({
         title: t('添加成员'),
         content: content,
         footer: `<button class="btn btn-primary" id="confirmAddGroupMembers">${t('添加')}</button>`
@@ -9826,7 +9870,7 @@ async function(ctx) {
           </div>
         </div>
       `;
-      const modal = Dialog.showModal({
+      const modal = this.showDynamicModal({
         title: t('编辑用户组'),
         content: content,
         footer: `<button class="btn btn-primary" id="confirmEditGroup">${t('保存')}</button>`
@@ -10150,7 +10194,7 @@ async function(ctx) {
         </div>
       </div>
     `;
-    const modal = Dialog.showModal({
+    const modal = this.showDynamicModal({
       title: t('创建 Team'),
       content: content,
       footer: `<button class="btn btn-primary" id="confirmCreateTeam">${t('创建')}</button>`
@@ -10444,7 +10488,7 @@ async function(ctx) {
           </div>`
         : '<div class="empty-state">' + t('所有用户都已在此 Team 中') + '</div>';
 
-      const modal = Dialog.showModal({
+      const modal = this.showDynamicModal({
         title: t('添加成员'),
         content: content,
         footer: `<button class="btn btn-primary" id="confirmAddMembers">${t('添加')}</button>`
@@ -10934,7 +10978,7 @@ async function(ctx) {
         </div>
       </div>
     `;
-    const modal = Dialog.showModal({
+    const modal = this.showDynamicModal({
       title: t('按名称批量启用/禁用'),
       content,
       footer: `<button class="btn btn-primary" id="confirmTeamModelBatchName">${t('执行')}</button>`
@@ -10991,7 +11035,7 @@ async function(ctx) {
           </div>
         </div>
       `;
-      const modal = Dialog.showModal({
+      const modal = this.showDynamicModal({
         title: t('编辑 Team'),
         content: content,
         footer: `<button class="btn btn-primary" id="confirmEditTeam">${t('保存')}</button>`
@@ -11660,7 +11704,7 @@ async function(ctx) {
   }
 
   async deleteProviderTag(tagId) {
-    const ok = await Dialog.confirm(t('删除标签'), t('确定删除此标签？供应商上已有的该标签也会被移除。'), { confirmText: t('删除'), danger: true });
+    const ok = await this.confirmModal(t('删除标签'), t('确定删除此标签？供应商上已有的该标签也会被移除。'), { confirmText: t('删除'), danger: true });
     if (!ok) return;
     try {
       const res = await fetch(`/api/admin/provider-tags/${tagId}`, { method: 'DELETE' });
@@ -12089,7 +12133,7 @@ async function(ctx) {
       if (interactive) {
         if (data.hasUpdate) {
           if (typeof Dialog !== 'undefined') {
-            await Dialog.alert(
+            await this.alertModal(
               t('发现新版本'),
               `${t('最新版本 ')}<strong>v${escapeHtml(data.latestVersion)}${'</strong>' + t('，当前 v')}${escapeHtml(data.currentVersion)}${t('。可点击「一键更新」安装。')}`
             );
@@ -12098,7 +12142,7 @@ async function(ctx) {
           }
         } else {
           if (typeof Dialog !== 'undefined') {
-            await Dialog.alert(t('已是最新'), `${t('当前版本 v')}${escapeHtml(data.currentVersion)}${t('已是最新。')}`);
+            await this.alertModal(t('已是最新'), `${t('当前版本 v')}${escapeHtml(data.currentVersion)}${t('已是最新。')}`);
           } else {
             alert(`${t('已是最新版本 v')}${data.currentVersion}`);
           }
@@ -12110,7 +12154,7 @@ async function(ctx) {
       this.setUpdateProgress(true, err.message || t('检查失败'), 0);
       if (interactive) {
         if (typeof Dialog !== 'undefined') {
-          await Dialog.alert(t('检查失败'), escapeHtml(err.message || t('网络错误')));
+          await this.alertModal(t('检查失败'), escapeHtml(err.message || t('网络错误')));
         } else {
           alert(err.message || t('检查更新失败'));
         }
@@ -12198,7 +12242,7 @@ async function(ctx) {
       const fresh = await this.checkForUpdate(false);
       if (!fresh || !fresh.hasUpdate) {
         if (typeof Dialog !== 'undefined') {
-          await Dialog.alert(t('无需更新'), t('当前已是最新版本。'));
+          await this.alertModal(t('无需更新'), t('当前已是最新版本。'));
         } else {
           alert(t('当前已是最新版本'));
         }
@@ -12209,7 +12253,7 @@ async function(ctx) {
     if (this._updateInfo && this._updateInfo.canApply === false) {
       const msg = this._updateInfo.reason || t('当前环境不支持一键更新');
       if (typeof Dialog !== 'undefined') {
-        await Dialog.alert(t('无法更新'), escapeHtml(msg));
+        await this.alertModal(t('无法更新'), escapeHtml(msg));
       } else {
         alert(msg);
       }
@@ -12219,7 +12263,7 @@ async function(ctx) {
     const toVer = (this._updateInfo && this._updateInfo.latestVersion) || t('最新版');
     let confirmed = true;
     if (typeof Dialog !== 'undefined') {
-      confirmed = await Dialog.confirm(
+      confirmed = await this.confirmModal(
         t('确认一键更新'),
         `${t('将下载并安装 ')}<strong>v${escapeHtml(toVer)}</strong>${t('，服务会短暂中断并自动重启。')}${'<br><br>' + t('配置文件 config.json 与数据库不会被覆盖。是否继续？')}`,
         { confirmText: t('开始更新'), cancelText: t('取消') }
@@ -12272,7 +12316,7 @@ async function(ctx) {
         this._stopUpdateStatusPoll();
         this.setUpdateProgress(true, msg, 0);
         if (typeof Dialog !== 'undefined') {
-          await Dialog.alert(t('更新失败'), escapeHtml(msg));
+          await this.alertModal(t('更新失败'), escapeHtml(msg));
         } else {
           alert(msg);
         }
@@ -12333,7 +12377,7 @@ async function(ctx) {
         if (data && data.version) {
           this.setUpdateProgress(true, `${t('服务已恢复（v')}${data.version}）`, 100);
           if (typeof Dialog !== 'undefined') {
-            await Dialog.alert(
+            await this.alertModal(
               t('更新完成'),
               `${t('服务已重启。当前版本：')}<strong>v${escapeHtml(data.version)}</strong>`
             );
@@ -12355,7 +12399,7 @@ async function(ctx) {
 
     this.setUpdateProgress(true, t('等待超时：请手动刷新页面或检查服务是否已启动'), 0);
     if (typeof Dialog !== 'undefined') {
-      await Dialog.alert(
+      await this.alertModal(
         t('请手动确认'),
         t('服务可能已更新并重启，但页面未能自动连上。请刷新页面或检查进程状态。')
       );

@@ -1155,12 +1155,7 @@ class PlaygroundApp {
     }
 
     // History modal close
-    const modalClose = document.getElementById('pgHistoryModalClose');
-    const modalOverlay = document.getElementById('pgHistoryModalOverlay');
     const modal = document.getElementById('pgHistoryModal');
-
-    if (modalClose) modalClose.addEventListener('click', () => { modal.style.display = 'none'; });
-    if (modalOverlay) modalOverlay.addEventListener('click', () => { modal.style.display = 'none'; });
   }
 
   // ========== History ==========
@@ -1288,7 +1283,7 @@ class PlaygroundApp {
     html += '</div></div>';
 
     setHTML(body, html);
-    modal.style.display = 'flex';
+    modal.show();
   }
 
   escapeHtml(value) {
