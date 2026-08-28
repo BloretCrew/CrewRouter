@@ -3,6 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
+const { getAuthMode, setAuthMode } = require('../utils/auth-mode');
 
 /**
  * OOBE 仅保留一步：创建管理员。
@@ -17,7 +18,8 @@ router.get('/setup/status', async (req, res) => {
     const result = await pool.query("SELECT value FROM settings WHERE key = 'setup_complete'");
     const needsSetup = result.rows.length === 0;
     Logger.info(`[OOBE] status 查询: needsSetup=${needsSetup}`);
-    res.json({ needsSetup, dbReady: true });
+    const authModeResult = await pool.query("SELECT value FROM settings WHERE key = 'auth_mode'");
+    res.json({ needsSetup, dbReady: true, authMode: authModeResult.rows[0]?.value || null });
   } catch (error) {
     // settings 表不存在 = 数据库尚未初始化完成
     Logger.warn(`[OOBE] status 失败（数据库可能未就绪）: ${error.message}`);
@@ -42,6 +44,14 @@ async function requireSetupMode(req, res, next) {
     return res.status(503).json({ error: '数据库尚未就绪，请稍后重试' });
   }
 }
+
+// 首步：选择账号系统模式；setup_complete 写入后不可修改
+router.post('/setup/mode', requireSetupMode, async (req, res) => {
+  try {
+    const mode = await setAuthMode(req.body?.mode);
+    res.json({ success: true, authMode: mode });
+  } catch (error) { res.status(400).json({ error: error.message }); }
+});
 
 // 唯一步骤：创建管理员并完成 OOBE
 router.post('/setup/admin', requireSetupMode, async (req, res) => {

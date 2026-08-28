@@ -391,6 +391,29 @@ async function ensureModelsUpstreamIdColumn() {
   }
 }
 
+// ========== 自动迁移：账号模式、PassPort 用户与邀请 ==========
+async function ensureAuthModeTables() {
+  try {
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS passport_username VARCHAR(255) UNIQUE');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_users_passport_username ON users(passport_username)');
+    await pool.query(`CREATE TABLE IF NOT EXISTS auth_invites (
+      id BIGSERIAL PRIMARY KEY,
+      token_hash TEXT UNIQUE NOT NULL,
+      created_by INTEGER REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used BOOLEAN DEFAULT FALSE,
+      used_by INTEGER REFERENCES users(id),
+      used_at TIMESTAMPTZ
+    )`);
+    const setup = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");
+    const mode = await pool.query("SELECT 1 FROM settings WHERE key = 'auth_mode' LIMIT 1");
+    if (setup.rows.length && !mode.rows.length) {
+      await pool.query("INSERT INTO settings (key, value) VALUES ('auth_mode', 'feishu') ON CONFLICT (key) DO NOTHING");
+    }
+  } catch (err) { Logger.warn(`[迁移] auth_mode/passport 迁移跳过: ${err.message}`); }
+}
+
 // ========== 自动迁移：为 users 添加 2FA、GitHub、PassKey 字段 ==========
 async function ensureAuthEnhancements() {
   try {
@@ -2431,6 +2454,8 @@ if (isDemo) {
   // GitHub 登录路由（从旧 oauth.js 拆出，自有 OAuth 服务见 routes/oauth.js）
   app.use('/auth/github-legacy', require('./routes/oauth-github'));
   app.use('/auth', require('./routes/feishu'));
+  app.use('/auth', require('./routes/passport-auth'));
+  app.use('/api', require('./routes/auth-invites'));
   app.use('/api', require('./routes/api'));
   app.use('/api/admin', require('./routes/admin'));
   app.use('/api/admin', require('./routes/admin-custom-instructions'));
@@ -2572,6 +2597,7 @@ async function runPendingMigrations() {
     ensureModelsThinkingFields,
     ensureModelsForwardReasoningEffort,
     ensureModelsUpstreamIdColumn,
+    ensureAuthModeTables,
     ensureAuthEnhancements,
     ensureEmailVerification,
     ensureUsageRecordsFields,

@@ -125,6 +125,16 @@
       <div class="setup-loading"><div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="正在检查系统状态…">正在检查系统状态…</span></div></div></div>
     </div>
 
+    <div class="setup-card" id="stepMode" style="display:none;">
+      <h2>选择账号系统模式</h2>
+      <p class="step-desc" style="color:#ef4444;font-weight:600;">选择后不可修改，请谨慎选择。</p>
+      <div style="display:grid;gap:12px;">
+        <button class="btn btn-primary" onclick="setup.chooseMode('feishu')">飞书模式</button>
+        <button class="btn" onclick="setup.chooseMode('passport')">Bloret PassPort 模式</button>
+      </div>
+      <div class="setup-error" id="modeError"></div>
+    </div>
+
     <div class="setup-card" id="step1" style="display:none;">
       <h2><span data-i18n="创建管理员账号">创建管理员账号</span></h2>
       <p class="step-desc"><span data-i18n="数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。">数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。</span></p>
@@ -178,8 +188,12 @@
           console.log('[OOBE] status:', data);
           document.getElementById('stepLoading').style.display = 'none';
           if (data.needsSetup) {
-            document.getElementById('step1').style.display = 'block';
-            document.getElementById('adminUsername').focus();
+            if (data.authMode) {
+              document.getElementById('step1').style.display = 'block';
+              document.getElementById('adminUsername').focus();
+            } else {
+              document.getElementById('stepMode').style.display = 'block';
+            }
           } else {
             document.getElementById('stepReady').style.display = 'block';
           }
@@ -189,6 +203,19 @@
           el.innerHTML = '<div class="setup-error" style="display:block;text-align:left;">无法连接服务器或数据库尚未就绪，请确认服务已启动并完成数据库初始化后刷新本页。<br><small>' +
             (e && e.message ? e.message : '') + '</small></div>';
         }
+      },
+
+      async chooseMode(mode) {
+        const el = document.getElementById('modeError');
+        el.style.display = 'none';
+        try {
+          const res = await fetch('/api/setup/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || '模式选择失败');
+          document.getElementById('stepMode').style.display = 'none';
+          document.getElementById('step1').style.display = 'block';
+          document.getElementById('adminUsername').focus();
+        } catch (e) { el.textContent = e.message; el.style.display = 'block'; }
       },
 
       showError(msg) {

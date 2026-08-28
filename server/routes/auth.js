@@ -11,6 +11,16 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// 登录页按账号系统模式读取展示配置
+router.get('/status', async (req, res) => {
+  try {
+    const { getAuthMode } = require('../utils/auth-mode');
+    const mode = await getAuthMode();
+    const { isFeishuLoginAvailable } = require('../utils/feishu-config');
+    res.json({ authMode: mode, feishuEnabled: await isFeishuLoginAvailable() });
+  } catch (error) { res.status(503).json({ error: '认证状态暂不可用' }); }
+});
+
 // 登录
 router.post('/login', async (req, res) => {
   try {

@@ -144,6 +144,7 @@ class AdminApp {
   async init() {
     await this.loadUserInfo();
     if (!this.user) return;
+    this.initInvitePanel();
     this.bindEvents();
     this._bindHashRouting();
     // 预加载统计信息刷新间隔（失败则用默认 10s）
@@ -164,6 +165,27 @@ class AdminApp {
     this.checkUpdateBanner().catch((err) => {
       console.warn(t('[Update] 启动时检查更新失败:'), err);
     });
+  }
+
+  async initInvitePanel() {
+    try {
+      const status = await fetch('/auth/status').then(r => r.json());
+      if (status.authMode !== 'passport') return;
+      const section = document.getElementById('passportInvitesSection');
+      if (!section) return;
+      section.style.display = 'block';
+      const render = async () => {
+        const rows = await fetch('/api/auth-invites').then(r => r.json());
+        document.getElementById('inviteList').innerHTML = (Array.isArray(rows) ? rows : []).map(x => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">#${x.id} · ${x.status} · ${x.expires_at}${x.status === 'active' ? ` <button class="btn btn-sm" onclick="adminApp.revokeInvite(${x.id})">撤销</button>` : ''}</div>`).join('');
+      };
+      document.getElementById('generateInviteBtn')?.addEventListener('click', async () => {
+        const data = await fetch('/api/auth-invites', { method: 'POST' }).then(r => r.json());
+        document.getElementById('inviteResult').textContent = data.url || data.error || '';
+        render();
+      });
+      this.revokeInvite = async (id) => { await fetch(`/api/auth-invites/${id}/revoke`, { method: 'POST' }); render(); };
+      render();
+    } catch (_) {}
   }
 
   /** 支持的管理后台页面 id */

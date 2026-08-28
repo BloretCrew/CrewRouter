@@ -1179,6 +1179,12 @@
 
       <!-- 系统设置页面 -->
       <div id="adminSettingsPage" class="page">
+        <div class="content-section" id="passportInvitesSection" style="display:none;">
+          <h2>邀请链接</h2>
+          <button class="btn btn-primary" id="generateInviteBtn">生成邀请链接</button>
+          <div id="inviteResult" style="margin:12px 0;word-break:break-all;"></div>
+          <div id="inviteList"></div>
+        </div>
         <!-- 默认主题（插件主题，plugin-runtime.js 渲染选择器） -->
         <div class="content-section" style="margin-bottom:24px;">
           <h2><span data-i18n="默认主题">默认主题</span></h2>
@@ -2427,7 +2433,7 @@
   <script src="/js/theme.js?v=2"></script>
   <script src="/js/dom.js?v=2"></script>
   <script src="/js/dialog.js?v=2"></script>
-  <script src="/js/admin.js?v=13"></script>
+  <script src="/js/admin.js?v=14"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 移动端侧边栏切换

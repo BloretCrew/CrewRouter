@@ -131,7 +131,10 @@
           </button>
         </form>
 
-        <!-- 第三方登录（飞书：仅在后台启用且已配置时显示） -->
+        <!-- 第三方登录（按账号系统模式显示） -->
+        <div id="passportLoginSection" class="login-oauth" style="display: none;">
+          <a href="/auth/passport" class="login-btn login-btn-feishu"><span>使用 Bloret PassPort 登录</span></a>
+        </div>
         <div id="feishuLoginSection" class="login-oauth" style="display: none;">
           <a href="/auth/feishu" class="login-btn login-btn-feishu">
             <img src="https://img.bloret.net/img/1781924869641/fb4655afd7cf96acaa2f050c144979e7" alt="" width="20" height="20" style="border-radius:4px;">
@@ -154,6 +157,18 @@
 
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/theme.js?v=2"></script>
+  <script>
+    (async function () {
+      try {
+        const r = await fetch('/auth/status');
+        const d = await r.json();
+        const feishu = document.getElementById('feishuLoginSection');
+        const passport = document.getElementById('passportLoginSection');
+        if (d.authMode === 'passport') { if (passport) passport.style.display = 'block'; if (feishu) feishu.style.display = 'none'; }
+        else if (d.feishuEnabled && feishu) feishu.style.display = 'block';
+      } catch (_) {}
+    })();
+  </script>
   <script>
     let pending2FAUserId = null;
 

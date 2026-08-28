@@ -46,6 +46,11 @@ const DEFAULTS = {
     token: '',
     domain: '',
   },
+  passport: {
+    appId: '',
+    appSecret: '',
+    redirectCallbackHost: '',
+  },
   // 统计信息上报（自建实例向官方上报匿名聚合使用统计）
   statsReport: {
     enabled: true,                 // 配置级总开关，显式 false 强制关闭
@@ -97,6 +102,11 @@ const ENV_MAP = {
   CR_FEISHU_APP_ID:      'feishu.appId',
   CR_FEISHU_APP_SECRET:  'feishu.appSecret',
   CR_FEISHU_TENANT_KEY:  'feishu.tenantKey',
+
+  // PassPort OAuth
+  CR_PASSPORT_APP_ID:            'passport.appId',
+  CR_PASSPORT_APP_SECRET:        'passport.appSecret',
+  CR_PASSPORT_REDIRECT_CALLBACK_HOST: 'passport.redirectCallbackHost',
 
   // github oauth
   CR_GITHUB_CLIENT_ID:     'github.clientId',
