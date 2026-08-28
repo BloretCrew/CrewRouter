@@ -101,6 +101,9 @@ function validateManifest(manifest) {
     for (const th of manifest.themes) {
       if (!th || !th.id || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(th.id)) return 'themes[].id 缺失或不合法';
       if (!th.entry || typeof th.entry !== 'string' || th.entry.includes('..')) return `主题 ${th.id} 的 entry 必须是插件目录内的相对路径`;
+      if (th.js !== undefined && (typeof th.js !== 'string' || th.js.includes('..') || th.js.startsWith('/'))) {
+        return `主题 ${th.id} 的 js 必须是插件目录内的相对路径`;
+      }
     }
   }
   return null;

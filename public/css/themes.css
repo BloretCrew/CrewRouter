@@ -55,6 +55,42 @@
   --purple: #8b5cf6;
   --pink: #ec4899;
   --cyan: #06b6d4;
+
+  /* 高频语义色（JS 动态 UI / badge / 状态点可引用，主题可覆盖） */
+  --status-success: #16a34a;
+  --status-success-soft: #22c55e;
+  --status-warn: #d97706;
+  --status-warn-soft: #f5a524;
+  --status-warn-strong: #a16207;
+  --status-info: #2563eb;
+  --status-danger: #dc2626;
+  --status-neutral: #64748b;
+  --text-muted-soft: #94a3b8;
+  --on-accent: #ffffff;
+
+  /* 图表调色板（canvas 场景经 readCssVar() 读取） */
+  --chart-1: #0ea5e9;
+  --chart-2: #a855f7;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --chart-6: #06b6d4;
+  --chart-7: #ec4899;
+  --chart-8: #14b8a6;
+
+  /* 可用性监控状态色 */
+  --uptime-ok: #86efac;
+  --uptime-degraded: #facc15;
+  --uptime-outage: #f87171;
+
+  /* 提示条（alert banner） */
+  --alert-info-bg: #eff6ff;
+  --alert-info-fg: #1e40af;
+  --alert-info-border: #bfdbfe;
+  --alert-info-border-strong: #93c5fd;
+  --alert-error-bg: #fef2f2;
+  --alert-error-fg: #991b1b;
+  --alert-error-border: #fecaca;
 }
 
 /* ============================================
@@ -104,6 +140,42 @@
   --purple: #a78bfa;
   --pink: #f472b6;
   --cyan: #22d3ee;
+
+  /* 高频语义色（深色变体） */
+  --status-success: #4ade80;
+  --status-success-soft: #4ade80;
+  --status-warn: #fbbf24;
+  --status-warn-soft: #fbbf24;
+  --status-warn-strong: #fde68a;
+  --status-info: #60a5fa;
+  --status-danger: #f87171;
+  --status-neutral: #94a3b8;
+  --text-muted-soft: #94a3b8;
+  --on-accent: #ffffff;
+
+  /* 图表调色板（深色变体） */
+  --chart-1: #38bdf8;
+  --chart-2: #c084fc;
+  --chart-3: #34d399;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+  --chart-6: #22d3ee;
+  --chart-7: #f472b6;
+  --chart-8: #2dd4bf;
+
+  /* 可用性监控状态色（深色变体） */
+  --uptime-ok: #166534;
+  --uptime-degraded: #854d0e;
+  --uptime-outage: #991b1b;
+
+  /* 提示条（alert banner，深色变体） */
+  --alert-info-bg: rgba(59, 130, 246, 0.12);
+  --alert-info-fg: #93c5fd;
+  --alert-info-border: rgba(59, 130, 246, 0.3);
+  --alert-info-border-strong: rgba(59, 130, 246, 0.5);
+  --alert-error-bg: rgba(239, 68, 68, 0.12);
+  --alert-error-fg: #fca5a5;
+  --alert-error-border: rgba(239, 68, 68, 0.3);
 }
 
 /* ============================================

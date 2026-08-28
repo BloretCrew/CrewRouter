@@ -425,6 +425,7 @@ function getRuntimeManifest() {
           id: `${id}/${th.id}`,
           name: th.name || th.id,
           url: `/plugins/${id}/${String(th.entry).replace(/^\/+/, '')}?v=${encodeURIComponent(p.manifest.version || '')}`,
+          ...(th.js ? { jsUrl: `/plugins/${id}/${String(th.js).replace(/^\/+/, '')}?v=${encodeURIComponent(p.manifest.version || '')}` } : {}),
         }))
       : [];
     out.push({

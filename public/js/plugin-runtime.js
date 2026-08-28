@@ -197,19 +197,52 @@
     return state.themes.find(t => t.id === id) || null;
   }
 
+  // 当前挂在 <html> 上的主题 class（切换/取消时移除）
+  let activeThemeClass = '';
+
+  function applyThemeClass(themeId) {
+    if (activeThemeClass) {
+      document.documentElement.classList.remove(activeThemeClass);
+      activeThemeClass = '';
+    }
+    if (themeId) {
+      const cls = `theme-${String(themeId).replace(/[^a-zA-Z0-9_-]/g, '-').replace(/\//g, '__')}`;
+      document.documentElement.classList.add(cls);
+      activeThemeClass = cls;
+    }
+  }
+
+  function applyThemeScript(theme) {
+    const old = document.getElementById('crPluginThemeScript');
+    if (old) old.remove();
+    if (!theme || !theme.jsUrl) return;
+    const script = document.createElement('script');
+    script.id = 'crPluginThemeScript';
+    script.src = theme.jsUrl;
+    document.head.appendChild(script);
+  }
+
   function applyThemeStyle(themeId) {
     const el = document.getElementById('crPluginThemeStyle');
     const theme = themeId ? findTheme(themeId) : null;
     if (!theme) {
       if (el) el.remove();
+      applyThemeScript(null);
+      applyThemeClass('');
       return;
     }
+    applyThemeClass(theme.id);
+    applyThemeScript(theme);
     // 仅注入样式表，不改任何行为；重复应用先移除旧节点
     if (el && el.href === theme.url) return;
     if (el) el.remove();
     const link = document.createElement('link');
     link.id = 'crPluginThemeStyle';
     link.rel = 'stylesheet';
+    // 防闪烁：先用 print 媒体加载（不渲染、不阻塞），加载完成后再切换为 all，
+    // 避免样式表未就绪时短暂闪回默认主题
+    link.media = 'print';
+    link.onload = () => { link.media = 'all'; };
     link.href = theme.url;
     document.head.appendChild(link);
   }
@@ -355,7 +388,7 @@
     state.area = area;
     for (const p of plugins) {
       for (const th of p.themes || []) {
-        state.themes.push({ id: th.id, name: th.name, url: th.url, pluginId: p.id });
+        state.themes.push({ id: th.id, name: th.name, url: th.url, jsUrl: th.jsUrl || '', pluginId: p.id });
       }
       for (const pg of p.pages || []) {
         if ((pg.area || 'console') !== area) continue;
@@ -424,16 +457,16 @@
     .mstat .v{font-size:22px;font-weight:700;line-height:1.1;}
     .mstat .l{font-size:12px;color:var(--muted-foreground);margin-top:2px;}
     .mstat.err .v{color:var(--destructive);}
-    .mstat.warn .v{color:#d97706;}
+    .mstat.warn .v{color:var(--status-warn,#d97706);}
     .mcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
     .mhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .mtitle{font-size:15px;font-weight:600;}
     .mtag{font-size:11px;color:var(--muted-foreground);font-family:monospace;background:var(--muted);padding:1px 7px;border-radius:6px;}
     .mdesc{font-size:13px;color:var(--muted-foreground);margin:6px 0 0;}
     .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--muted);color:var(--muted-foreground);margin-right:6px;border:1px solid transparent;}
-    .chip.on{background:rgba(22,163,74,.12);color:#16a34a;}
+    .chip.on{background:color-mix(in srgb,var(--status-success,#16a34a) 12%,transparent);color:var(--status-success,#16a34a);}
     .chip.off{color:var(--muted-foreground);}
-    .chip.warn{background:rgba(217,119,6,.12);color:#d97706;}
+    .chip.warn{background:color-mix(in srgb,var(--status-warn,#d97706) 12%,transparent);color:var(--status-warn,#d97706);}
     .chip.perm{font-family:monospace;background:var(--muted);cursor:help;}
     .chip.cap{background:var(--brand-blue-bg);color:var(--brand-blue);}
     .msec{font-size:12px;color:var(--muted-foreground);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.04em;}

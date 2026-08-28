@@ -268,7 +268,19 @@
     inlineLoadingHtml,
     setButtonLoading,
     clearButtonLoading,
+    readCssVar,
   };
+
+  /**
+   * 读取 :root CSS 变量值（供 canvas / Chart.js 等无法解析 var() 的场景）。
+   * 使用：readCssVar('--chart-1') 或 readCssVar('--chart-1', '#0ea5e9')（兜底）。
+   */
+  function readCssVar(name, fallback) {
+    if (!name) return fallback || '';
+    const n = name.startsWith('--') ? name : `--${name}`;
+    const v = getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    return v || (fallback || '');
+  }
 
   // 全局导出（兼容现有非模块脚本）
   global.Dom = api;
@@ -285,6 +297,7 @@
   global.inlineLoadingHtml = inlineLoadingHtml;
   global.setButtonLoading = setButtonLoading;
   global.clearButtonLoading = clearButtonLoading;
+  global.readCssVar = readCssVar;
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;

@@ -43,7 +43,7 @@
     { "method": "get", "path": "/usage", "auth": "user", "handler": "usage" }
   ],
   "themes": [
-    { "id": "all-capabilities-theme", "name": "全能力示例主题", "entry": "theme.css" }
+    { "id": "all-capabilities-theme", "name": "全能力示例主题", "entry": "theme.css", "js": "theme.js" }
   ],
   "cron": [
     { "expr": "*/15 * * * *", "handler": "heartbeat" }
