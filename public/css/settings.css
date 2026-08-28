@@ -9,6 +9,7 @@
 .settings-link-button { display:inline-flex; align-items:center; gap:5px; padding:5px 9px; border:1px solid var(--border); border-radius:7px; color:var(--foreground); background:var(--card); font-size:12px; text-decoration:none; transition:background .15s,border-color .15s; }
 .settings-link-button:hover { background:var(--accent); border-color:var(--ring); }
 .settings-link-button img { width:15px; height:15px; border-radius:4px; object-fit:cover; }
+.settings-link-icon { width:15px; height:15px; border-radius:0; object-fit:contain; opacity:.86; }
 .settings-link-symbol { width:15px; text-align:center; color:var(--muted-foreground); font-size:14px; }
 .settings-version-icon { display:none; }
 .settings-overview-hint { margin:20px 0 12px; color:var(--muted-foreground); font-size:13px; }
