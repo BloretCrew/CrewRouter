@@ -8,6 +8,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/blora/blora.css">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
   <script>
@@ -76,8 +77,9 @@
     }
     .oc-loading { text-align: center; padding: 36px 0; color: var(--muted-foreground, #6b7280); font-size: 13.5px; }
   </style>
+  <script type="module" src="/blora/auto.js"></script>
 </head>
-<body>
+<body class="blora-page blora-scope">
   <div style="position:absolute;top:10px;right:12px;z-index:99;">
     <select id="langToggle" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;border:1px solid var(--border,#e5e7eb);border-radius:6px;background:var(--card,#fff);color:var(--foreground,#111827);">
       <option value="zh">中文</option>

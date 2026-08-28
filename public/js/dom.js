@@ -81,10 +81,44 @@
   }
 
   /** 唯一推荐的 HTML 写入入口（替代 el.innerHTML = ...） */
+  function upgradeBloraControls(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    if (!customElements.get('blora-select')) return;
+    const selects = [];
+    if (scope.matches?.('select:not(blora-select)')) selects.push(scope);
+    selects.push(...scope.querySelectorAll('select:not(blora-select)'));
+    selects.forEach((select) => {
+      const replacement = document.createElement('blora-select');
+      [...select.attributes].forEach((attr) => replacement.setAttribute(attr.name, attr.value));
+      [...select.options].forEach((option) => {
+        const item = document.createElement('blora-option');
+        [...option.attributes].forEach((attr) => item.setAttribute(attr.name, attr.value));
+        item.textContent = option.textContent;
+        replacement.appendChild(item);
+      });
+      if (select.value) replacement.setAttribute('value', select.value);
+      select.replaceWith(replacement);
+    });
+    scope.querySelectorAll('button').forEach((button) => {
+      button.classList.add('blora-button');
+      if (!button.type) button.type = 'button';
+      if (button.classList.contains('btn-primary')) button.dataset.variant = 'primary';
+      else if (button.classList.contains('btn-danger')) button.dataset.variant = 'danger';
+      else if (button.classList.contains('btn-ghost')) button.dataset.variant = 'ghost';
+      else if (button.classList.contains('btn-secondary')) button.dataset.variant = 'secondary';
+      if (button.classList.contains('btn-sm')) button.dataset.size = 'sm';
+      if (button.classList.contains('btn-icon')) button.dataset.size = 'icon';
+    });
+    scope.querySelectorAll('input').forEach((input) => input.classList.add('blora-input'));
+    scope.querySelectorAll('textarea').forEach((textarea) => textarea.classList.add('blora-textarea'));
+    scope.querySelectorAll('table').forEach((table) => table.classList.add('blora-table'));
+  }
+
   function setHTML(el, content) {
     const node = resolveEl(el);
     if (!node) return null;
     node.innerHTML = toHtmlString(content);
+    upgradeBloraControls(node);
     return node;
   }
 
@@ -288,6 +322,7 @@
   global.html = html;
   global.raw = raw;
   global.setHTML = setHTML;
+  global.upgradeBloraControls = upgradeBloraControls;
   global.appendHTML = appendHTML;
   global.setText = setText;
   global.clearChildren = clearChildren;

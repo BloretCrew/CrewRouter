@@ -8,6 +8,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/blora/blora.css">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
   <script src="/js/i18n.js?v=2"></script>
@@ -22,8 +23,9 @@
       document.documentElement.classList.add(resolved);
     })();
   </script>
+  <script type="module" src="/blora/auto.js"></script>
 </head>
-<body>
+<body class="blora-page blora-scope">
   <!-- 移动端顶部导航栏 -->
   <div class="mobile-topbar">
     <button class="mobile-hamburger" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单">
@@ -35,7 +37,7 @@
       <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">
     </div>
     <div class="mobile-topbar-title" id="mobilePageTitle"><span data-i18n="统计信息">统计信息</span></div>
-    <button id="themeToggleMobile" class="btn btn-icon" title="切换主题" data-i18n-title="切换主题" style="width:32px;height:32px;">
+    <button id="themeToggleMobile" class="btn btn-icon" title="切换主题" data-i18n-title="切换主题" style="width:32px;height:32px;" data-variant="secondary" type="button">
       <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
       </svg>
@@ -130,7 +132,7 @@
           <img id="userAvatar" src="" alt="头像" data-i18n-title="头像" class="avatar">
           <span id="username"></span>
         </div>
-        <button id="logoutBtn" class="btn btn-icon" title="登出" data-i18n-title="登出">
+        <button id="logoutBtn" class="btn btn-icon" title="登出" data-i18n-title="登出" data-variant="secondary" type="button">
           <img src="https://img.bloret.net/SF/arrow.right.square?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.right.square" style="display:inline-block;vertical-align:middle;">
         </button>
       </div>
@@ -145,7 +147,7 @@
           <option value="zh">中文</option>
           <option value="en">EN</option>
     </select>
-          <button id="themeToggle" class="btn btn-icon" title="切换主题" data-i18n-title="切换主题">
+          <button id="themeToggle" class="btn btn-icon" title="切换主题" data-i18n-title="切换主题" data-variant="secondary" type="button">
             <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="5"/>
               <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -185,7 +187,7 @@
               <input type="text" id="adminTeamsStickySearch" class="model-search-input" placeholder="搜索 Team 名称或描述..." data-i18n-placeholder="搜索 Team 名称或描述..." autocomplete="off" oninput="adminApp.onAdminTeamFilterInput(this.value, 'sticky')">
             </div>
             <span id="adminTeamsStickyCount" class="filter-info"></span>
-            <button type="button" class="btn btn-primary btn-sm" onclick="adminApp.showCreateTeamModal()" title="创建 Team" data-i18n-title="创建 Team"><span data-i18n="创建 Team">创建 Team</span></button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="adminApp.showCreateTeamModal()" title="创建 Team" data-i18n-title="创建 Team" data-variant="primary" data-size="sm"><span data-i18n="创建 Team">创建 Team</span></button>
           </div>
         </div>
 
@@ -205,9 +207,9 @@
               <option value="enabled"><span data-i18n="本 Team 已启用">本 Team 已启用</span></option>
               <option value="disabled"><span data-i18n="本 Team 未启用">本 Team 未启用</span></option>
             </select>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearTeamModelFilters()"><span data-i18n="清除">清除</span></button>
-            <button type="button" class="btn btn-sm btn-primary" onclick="adminApp.batchToggleFilteredTeamModels(true)" title="启用当前筛选结果" data-i18n-title="启用当前筛选结果"><span data-i18n="启用筛选">启用筛选</span></button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.batchToggleFilteredTeamModels(false)" title="禁用当前筛选结果" data-i18n-title="禁用当前筛选结果"><span data-i18n="禁用筛选">禁用筛选</span></button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearTeamModelFilters()" data-variant="secondary" data-size="sm"><span data-i18n="清除">清除</span></button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="adminApp.batchToggleFilteredTeamModels(true)" title="启用当前筛选结果" data-i18n-title="启用当前筛选结果" data-variant="primary" data-size="sm"><span data-i18n="启用筛选">启用筛选</span></button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.batchToggleFilteredTeamModels(false)" title="禁用当前筛选结果" data-i18n-title="禁用当前筛选结果" data-variant="secondary" data-size="sm"><span data-i18n="禁用筛选">禁用筛选</span></button>
             <span id="adminTeamModelsStickyCount" class="filter-info"></span>
           </div>
         </div>
@@ -217,7 +219,7 @@
           <div id="teamStatsCards" class="admin-stat-cards"></div>
           <div class="admin-page-header">
             <div class="section-actions">
-              <button id="createTeamBtn" class="btn btn-primary"><span data-i18n="创建 Team">创建 Team</span></button>
+              <button id="createTeamBtn" class="btn btn-primary" data-variant="primary" type="button"><span data-i18n="创建 Team">创建 Team</span></button>
             </div>
           </div>
           <div class="admin-filter-bar" id="adminTeamsFilters">
@@ -236,10 +238,10 @@
           <div class="section-header">
             <h2 id="teamDetailTitle"><span data-i18n="Team 详情">Team 详情</span></h2>
             <div class="section-actions">
-              <button id="setDefaultTeamBtn" class="btn btn-sm btn-warning"><span data-i18n="设为默认">设为默认</span></button>
-              <button id="setFrontierTeamBtn" class="btn btn-sm" style="border:1px solid var(--purple);color:var(--purple);"><span data-i18n="设为前沿">设为前沿</span></button>
-              <button id="editTeamBtn" class="btn btn-secondary"><span data-i18n="编辑">编辑</span></button>
-              <button id="deleteTeamBtn" class="btn btn-danger"><span data-i18n="删除">删除</span></button>
+              <button id="setDefaultTeamBtn" class="btn btn-sm btn-warning" data-variant="secondary" data-size="sm" type="button"><span data-i18n="设为默认">设为默认</span></button>
+              <button id="setFrontierTeamBtn" class="btn btn-sm" style="border:1px solid var(--purple);color:var(--purple);" data-variant="secondary" data-size="sm" type="button"><span data-i18n="设为前沿">设为前沿</span></button>
+              <button id="editTeamBtn" class="btn btn-secondary" data-variant="secondary" type="button"><span data-i18n="编辑">编辑</span></button>
+              <button id="deleteTeamBtn" class="btn btn-danger" data-variant="danger" type="button"><span data-i18n="删除">删除</span></button>
             </div>
           </div>
 
@@ -250,7 +252,7 @@
                 <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
                 <span><span data-i18n="成员管理">成员管理</span></span>
               </h3>
-              <button type="button" id="addTeamMemberBtn" class="btn btn-primary btn-sm" onclick="event.stopPropagation();" title="添加成员" data-i18n-title="添加成员"><span data-i18n="添加成员">添加成员</span></button>
+              <button type="button" id="addTeamMemberBtn" class="btn btn-primary btn-sm" onclick="event.stopPropagation();" title="添加成员" data-i18n-title="添加成员" data-variant="primary" data-size="sm"><span data-i18n="添加成员">添加成员</span></button>
             </div>
             <div class="team-detail-section-body" id="teamMembersSectionBody">
               <div class="admin-filter-bar">
@@ -270,11 +272,11 @@
                 <span><span data-i18n="模型权限">模型权限</span></span>
               </h3>
               <div class="section-actions team-detail-section-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;" onclick="event.stopPropagation();">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="adminApp.expandAllTeamModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商"><span data-i18n="展开全部">展开全部</span></button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="adminApp.collapseAllTeamModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商"><span data-i18n="折叠全部">折叠全部</span></button>
-                <button type="button" class="btn btn-primary btn-sm" onclick="adminApp.batchEnableTeamModelsByName()" title="按名称关键字批量启用" data-i18n-title="按名称关键字批量启用"><span data-i18n="按名称批量启用">按名称批量启用</span></button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="adminApp.batchToggleFilteredTeamModels(true)" title="启用当前筛选结果中的全部模型" data-i18n-title="启用当前筛选结果中的全部模型"><span data-i18n="启用筛选结果">启用筛选结果</span></button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.batchToggleFilteredTeamModels(false)" title="禁用当前筛选结果中的全部模型" data-i18n-title="禁用当前筛选结果中的全部模型"><span data-i18n="禁用筛选结果">禁用筛选结果</span></button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="adminApp.expandAllTeamModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商" data-variant="secondary" data-size="sm"><span data-i18n="展开全部">展开全部</span></button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="adminApp.collapseAllTeamModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商" data-variant="secondary" data-size="sm"><span data-i18n="折叠全部">折叠全部</span></button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="adminApp.batchEnableTeamModelsByName()" title="按名称关键字批量启用" data-i18n-title="按名称关键字批量启用" data-variant="primary" data-size="sm"><span data-i18n="按名称批量启用">按名称批量启用</span></button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="adminApp.batchToggleFilteredTeamModels(true)" title="启用当前筛选结果中的全部模型" data-i18n-title="启用当前筛选结果中的全部模型" data-variant="primary" data-size="sm"><span data-i18n="启用筛选结果">启用筛选结果</span></button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.batchToggleFilteredTeamModels(false)" title="禁用当前筛选结果中的全部模型" data-i18n-title="禁用当前筛选结果中的全部模型" data-variant="secondary" data-size="sm"><span data-i18n="禁用筛选结果">禁用筛选结果</span></button>
               </div>
             </div>
             <div class="team-detail-section-body" id="teamModelsSectionBody">
@@ -292,7 +294,7 @@
                   <option value="enabled"><span data-i18n="本 Team 已启用">本 Team 已启用</span></option>
                   <option value="disabled"><span data-i18n="本 Team 未启用">本 Team 未启用</span></option>
                 </select>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearTeamModelFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearTeamModelFilters()" data-variant="secondary" data-size="sm"><span data-i18n="清除筛选">清除筛选</span></button>
                 <span id="teamModelListCount" class="filter-info"></span>
               </div>
               <!-- 模型权限悬浮顶栏哨兵 -->
@@ -312,7 +314,7 @@
           <div id="userGroupStatsCards" class="admin-stat-cards"></div>
           <div class="admin-page-header">
             <div class="section-actions">
-              <button id="createUserGroupBtn" class="btn btn-primary"><span data-i18n="创建用户组">创建用户组</span></button>
+              <button id="createUserGroupBtn" class="btn btn-primary" data-variant="primary" type="button"><span data-i18n="创建用户组">创建用户组</span></button>
             </div>
           </div>
           <div class="admin-filter-bar">
@@ -329,8 +331,8 @@
           <div class="section-header">
             <h2 id="userGroupDetailTitle"><span data-i18n="用户组详情">用户组详情</span></h2>
             <div class="section-actions">
-              <button id="editUserGroupBtn" class="btn btn-secondary"><span data-i18n="编辑">编辑</span></button>
-              <button id="deleteUserGroupBtn" class="btn btn-danger"><span data-i18n="删除">删除</span></button>
+              <button id="editUserGroupBtn" class="btn btn-secondary" data-variant="secondary" type="button"><span data-i18n="编辑">编辑</span></button>
+              <button id="deleteUserGroupBtn" class="btn btn-danger" data-variant="danger" type="button"><span data-i18n="删除">删除</span></button>
             </div>
           </div>
 
@@ -349,7 +351,7 @@
           <div class="content-section">
             <div class="section-header">
               <h3><span data-i18n="组内成员">组内成员</span></h3>
-              <button id="addUserGroupMemberBtn" class="btn btn-primary btn-sm"><span data-i18n="添加成员">添加成员</span></button>
+              <button id="addUserGroupMemberBtn" class="btn btn-primary btn-sm" data-variant="primary" data-size="sm" type="button"><span data-i18n="添加成员">添加成员</span></button>
             </div>
             <div class="admin-filter-bar">
               <input type="text" id="userGroupMemberSearchInput" class="input" placeholder="搜索成员用户名或邮箱..." data-i18n-placeholder="搜索成员用户名或邮箱..." oninput="adminApp.filterUserGroupMembers()">
@@ -378,10 +380,10 @@
               <option value="enabled"><span data-i18n="已启用">已启用</span></option>
               <option value="disabled"><span data-i18n="已禁用">已禁用</span></option>
             </select>
-            <button type="button" id="adminModelsStickyMoreBtn" class="btn btn-secondary btn-sm model-library-sticky-more-btn" onclick="adminApp.toggleAdminModelsStickyMore()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
+            <button type="button" id="adminModelsStickyMoreBtn" class="btn btn-secondary btn-sm model-library-sticky-more-btn" onclick="adminApp.toggleAdminModelsStickyMore()" title="更多筛选" data-i18n-title="更多筛选" data-variant="secondary" data-size="sm"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="adminApp.showAddModelModal()" title="添加模型" data-i18n-title="添加模型"><span data-i18n="添加模型">添加模型</span></button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="adminApp.showAddModelModal()" title="添加模型" data-i18n-title="添加模型" data-variant="primary" data-size="sm"><span data-i18n="添加模型">添加模型</span></button>
           </div>
           <div id="adminModelsStickyAdvanced" class="model-library-sticky-advanced" style="display:none;" aria-hidden="true">
             <select id="adminModelsStickySeries" class="select model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'sticky')">
@@ -393,9 +395,9 @@
               <option value="fail"><span data-i18n="测试失败">测试失败</span></option>
               <option value="untested"><span data-i18n="未测试">未测试</span></option>
             </select>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearModelFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商"><span data-i18n="展开">展开</span></button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商"><span data-i18n="折叠">折叠</span></button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearModelFilters()" data-variant="secondary" data-size="sm"><span data-i18n="清除筛选">清除筛选</span></button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商" data-variant="secondary" data-size="sm"><span data-i18n="展开">展开</span></button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商" data-variant="secondary" data-size="sm"><span data-i18n="折叠">折叠</span></button>
             <span id="adminModelsStickyCount" class="filter-info"></span>
           </div>
         </div>
@@ -408,7 +410,7 @@
             </div>
             <div class="model-library-header-actions" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
               <div id="batchActionsGroup" class="admin-action-dropdown" style="display:none;">
-                <button class="btn btn-secondary btn-sm" onclick="adminApp.toggleBatchDropdown(event)"><span data-i18n="批量操作">
+                <button class="btn btn-secondary btn-sm" onclick="adminApp.toggleBatchDropdown(event)" data-variant="secondary" data-size="sm" type="button"><span data-i18n="批量操作">
                   批量操作 </span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:4px;"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
                 <div class="dropdown-menu" id="batchDropdownMenu">
@@ -427,7 +429,7 @@
                 </div>
               </div>
               <div class="model-test-batch-btn expand-dropdown" id="adminTestDropdown" style="display:inline-block;position:relative;">
-                <button class="btn btn-secondary btn-sm" onclick="adminApp.toggleTestDropdown(event)">
+                <button class="btn btn-secondary btn-sm" onclick="adminApp.toggleTestDropdown(event)" data-variant="secondary" data-size="sm" type="button">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span data-i18n="一键测试">
                   一键测试
                   </span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="m6 9 6 6 6-6"/></svg>
@@ -437,10 +439,10 @@
                   <div class="dropdown-item" onclick="adminApp.testSelectedModels()"><span data-i18n="测试选中模型">测试选中模型</span></div>
                 </div>
               </div>
-              <button class="btn btn-secondary btn-sm" onclick="adminApp.showBatchJsonPricesModal()"><span data-i18n="JSON 定价">JSON 定价</span></button>
-              <button class="btn btn-secondary btn-sm" onclick="adminApp.exportModelsCsv()"><span data-i18n="导出 CSV">导出 CSV</span></button>
-              <button class="btn btn-secondary btn-sm" onclick="adminApp.showSeriesIconsModal()"><span data-i18n="系列图标">系列图标</span></button>
-              <button id="addModelBtn" class="btn btn-primary btn-sm"><span data-i18n="添加模型">添加模型</span></button>
+              <button class="btn btn-secondary btn-sm" onclick="adminApp.showBatchJsonPricesModal()" data-variant="secondary" data-size="sm" type="button"><span data-i18n="JSON 定价">JSON 定价</span></button>
+              <button class="btn btn-secondary btn-sm" onclick="adminApp.exportModelsCsv()" data-variant="secondary" data-size="sm" type="button"><span data-i18n="导出 CSV">导出 CSV</span></button>
+              <button class="btn btn-secondary btn-sm" onclick="adminApp.showSeriesIconsModal()" data-variant="secondary" data-size="sm" type="button"><span data-i18n="系列图标">系列图标</span></button>
+              <button id="addModelBtn" class="btn btn-primary btn-sm" data-variant="primary" data-size="sm" type="button"><span data-i18n="添加模型">添加模型</span></button>
             </div>
           </div>
           <div id="modelStatsCards" class="admin-stat-cards"></div>
@@ -468,9 +470,9 @@
                 <option value="fail"><span data-i18n="测试失败">测试失败</span></option>
                 <option value="untested"><span data-i18n="未测试">未测试</span></option>
               </select>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearModelFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商"><span data-i18n="展开">展开</span></button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商"><span data-i18n="折叠">折叠</span></button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearModelFilters()" data-variant="secondary" data-size="sm"><span data-i18n="清除筛选">清除筛选</span></button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商" data-variant="secondary" data-size="sm"><span data-i18n="展开">展开</span></button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商" data-variant="secondary" data-size="sm"><span data-i18n="折叠">折叠</span></button>
               <span id="modelCount" class="filter-info"></span>
             </div>
           </div>
@@ -501,10 +503,10 @@
               <option value="global"><span data-i18n="全局供应商">全局供应商</span></option>
               <option value="user"><span data-i18n="用户供应商">用户供应商</span></option>
             </select>
-            <button type="button" id="adminProvidersStickyMoreBtn" class="btn btn-secondary btn-sm model-library-sticky-more-btn" onclick="adminApp.toggleAdminProvidersStickyMore()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
+            <button type="button" id="adminProvidersStickyMoreBtn" class="btn btn-secondary btn-sm model-library-sticky-more-btn" onclick="adminApp.toggleAdminProvidersStickyMore()" title="更多筛选" data-i18n-title="更多筛选" data-variant="secondary" data-size="sm"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="adminApp.showAddProviderWizard()" title="添加供应商" data-i18n-title="添加供应商"><span data-i18n="添加供应商">添加供应商</span></button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="adminApp.showAddProviderWizard()" title="添加供应商" data-i18n-title="添加供应商" data-variant="primary" data-size="sm"><span data-i18n="添加供应商">添加供应商</span></button>
           </div>
           <!-- 标签常驻：支持拖拽到供应商卡片分配 -->
           <div class="page-sticky-tag-row" aria-label="供应商标签" data-i18n-title="供应商标签">
@@ -517,7 +519,7 @@
               <option value="fixed"><span data-i18n="固定密钥">固定密钥</span></option>
               <option value="script"><span data-i18n="脚本模式">脚本模式</span></option>
             </select>
-            <button type="button" id="adminProvidersStickyClearBtn" class="btn btn-sm btn-secondary" style="display:none;" onclick="adminApp.clearProviderFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
+            <button type="button" id="adminProvidersStickyClearBtn" class="btn btn-sm btn-secondary" style="display:none;" onclick="adminApp.clearProviderFilters()" data-variant="secondary" data-size="sm"><span data-i18n="清除筛选">清除筛选</span></button>
             <span id="adminProvidersStickyCount" class="filter-info"></span>
           </div>
         </div>
@@ -532,9 +534,9 @@
           <div id="providerStatsCards" class="admin-stat-cards"></div>
           <div class="admin-page-header">
             <div class="section-actions provider-toolbar">
-              <button id="importOpenCodeBtn" class="btn btn-secondary"><span data-i18n="导入配置">导入配置</span></button>
+              <button id="importOpenCodeBtn" class="btn btn-secondary" data-variant="secondary" type="button"><span data-i18n="导入配置">导入配置</span></button>
               <div class="provider-more-menu" id="providerMoreMenu">
-                <button type="button" class="btn btn-secondary" id="providerMoreMenuBtn" onclick="adminApp.toggleProviderMoreMenu(event)" title="更多操作" data-i18n-title="更多操作" aria-haspopup="true" aria-expanded="false"><span data-i18n="更多">
+                <button type="button" class="btn btn-secondary" id="providerMoreMenuBtn" onclick="adminApp.toggleProviderMoreMenu(event)" title="更多操作" data-i18n-title="更多操作" aria-haspopup="true" aria-expanded="false" data-variant="secondary"><span data-i18n="更多">
                   更多
                   </span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:4px;"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
@@ -567,16 +569,16 @@
               </div>
               <div id="providerBatchBar" class="provider-batch-bar" style="display:none;">
                 <span id="providerSelectedCount" class="provider-batch-count"><span data-i18n="已选 0 个">已选 0 个</span></span>
-                <button type="button" class="btn btn-sm btn-primary" onclick="adminApp.batchSyncSelectedProviders()"><span data-i18n="批量同步模型">批量同步模型</span></button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearProviderSelection()"><span data-i18n="清除选择">清除选择</span></button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="adminApp.batchSyncSelectedProviders()" data-variant="primary" data-size="sm"><span data-i18n="批量同步模型">批量同步模型</span></button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearProviderSelection()" data-variant="secondary" data-size="sm"><span data-i18n="清除选择">清除选择</span></button>
               </div>
-              <button type="button" id="cleanupAllStaleModelsBtn" class="btn btn-secondary" onclick="adminApp.cleanupAllStaleModels()" title="对比各供应商上游列表，删除本地已下架模型记录" data-i18n-title="对比各供应商上游列表，删除本地已下架模型记录"><span data-i18n="清理所有已下架模型">清理所有已下架模型</span></button>
-              <button id="addProviderBtn" class="btn btn-primary"><span data-i18n="添加供应商">添加供应商</span></button>
+              <button type="button" id="cleanupAllStaleModelsBtn" class="btn btn-secondary" onclick="adminApp.cleanupAllStaleModels()" title="对比各供应商上游列表，删除本地已下架模型记录" data-i18n-title="对比各供应商上游列表，删除本地已下架模型记录" data-variant="secondary"><span data-i18n="清理所有已下架模型">清理所有已下架模型</span></button>
+              <button id="addProviderBtn" class="btn btn-primary" data-variant="primary" type="button"><span data-i18n="添加供应商">添加供应商</span></button>
               <div class="provider-view-toggle">
-                <button class="btn btn-sm btn-secondary" id="providerViewTableBtn" onclick="adminApp.setProviderView('table')" title="表格视图" data-i18n-title="表格视图" style="padding:6px 8px;">
+                <button class="btn btn-sm btn-secondary" id="providerViewTableBtn" onclick="adminApp.setProviderView('table')" title="表格视图" data-i18n-title="表格视图" style="padding:6px 8px;" data-variant="secondary" data-size="sm" type="button">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                 </button>
-                <button class="btn btn-sm btn-secondary" id="providerViewCardBtn" onclick="adminApp.setProviderView('card')" title="卡片视图" data-i18n-title="卡片视图" style="padding:6px 8px;">
+                <button class="btn btn-sm btn-secondary" id="providerViewCardBtn" onclick="adminApp.setProviderView('card')" title="卡片视图" data-i18n-title="卡片视图" style="padding:6px 8px;" data-variant="secondary" data-size="sm" type="button">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                 </button>
               </div>
@@ -600,7 +602,7 @@
               <option value="script"><span data-i18n="脚本模式">脚本模式</span></option>
             </select>
             <span id="providerCount" class="filter-info"></span>
-            <button type="button" id="clearProviderFiltersBtn" class="btn btn-sm btn-secondary" style="display:none;" onclick="adminApp.clearProviderFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
+            <button type="button" id="clearProviderFiltersBtn" class="btn btn-sm btn-secondary" style="display:none;" onclick="adminApp.clearProviderFilters()" data-variant="secondary" data-size="sm"><span data-i18n="清除筛选">清除筛选</span></button>
           </div>
           <!-- 供应商标签管理栏（拖拽到供应商分配，点击筛选） -->
           <div id="providerTagBar" class="key-tag-bar provider-tag-bar" style="display:flex;margin-bottom:12px;">
@@ -623,8 +625,8 @@
               <span class="provider-tag-color-dot color-dot" data-color="#14b8a6" style="background:#14b8a6;" onclick="adminApp.selectProviderTagColor(this)"></span>
             </div>
             <div style="display:flex;gap:6px;justify-content:flex-end;">
-              <button class="btn btn-sm btn-secondary" onclick="adminApp.hideCreateProviderTagPopover()" style="font-size:12px;"><span data-i18n="取消">取消</span></button>
-              <button class="btn btn-sm btn-primary" id="providerTagPopoverSubmit" onclick="adminApp.saveProviderTag()" style="font-size:12px;"><span data-i18n="创建">创建</span></button>
+              <button class="btn btn-sm btn-secondary" onclick="adminApp.hideCreateProviderTagPopover()" style="font-size:12px;" data-variant="secondary" data-size="sm" type="button"><span data-i18n="取消">取消</span></button>
+              <button class="btn btn-sm btn-primary" id="providerTagPopoverSubmit" onclick="adminApp.saveProviderTag()" style="font-size:12px;" data-variant="primary" data-size="sm" type="button"><span data-i18n="创建">创建</span></button>
             </div>
           </div>
           <div id="adminProvidersList" class="models-table">
@@ -847,7 +849,7 @@
               <label><span data-i18n="供应商">供应商</span><select id="multiStatsProvider" class="input"><option value=""><span data-i18n="全部供应商">全部供应商</span></option></select></label>
               <label><span data-i18n="客户端">客户端</span><select id="multiStatsSource" class="input"><option value=""><span data-i18n="全部客户端">全部客户端</span></option></select></label>
               <label><span data-i18n="项目">项目</span><select id="multiStatsProject" class="input"><option value=""><span data-i18n="全部项目">全部项目</span></option></select></label>
-              <div class="multi-stats-filter-actions"><button class="btn btn-primary btn-sm" onclick="adminApp.loadMultiStats()"><span data-i18n="查询">查询</span></button><button class="btn btn-ghost btn-sm" onclick="adminApp.resetMultiStatsFilters()"><span data-i18n="重置">重置</span></button></div>
+              <div class="multi-stats-filter-actions"><button class="btn btn-primary btn-sm" onclick="adminApp.loadMultiStats()" data-variant="primary" data-size="sm" type="button"><span data-i18n="查询">查询</span></button><button class="btn btn-ghost btn-sm" onclick="adminApp.resetMultiStatsFilters()" data-variant="ghost" data-size="sm" type="button"><span data-i18n="重置">重置</span></button></div>
             </div>
             <div id="adminStatsMultiSummary" class="stats-overview-grid multi-stats-summary"></div>
             <div class="responsive-grid-2 multi-stats-chart-row">
@@ -986,7 +988,7 @@
               </select>
               <input id="messageStatsWorkspaceFilter" class="input" placeholder="工作区路径（可选）" data-i18n-placeholder="工作区路径（可选）" style="min-width:220px;">
               <select id="messageStatsBlockFilter" class="input" style="min-width:150px;"><option value=""><span data-i18n="全部区块">全部区块</span></option><option value="user_info">user_info</option><option value="git_status">git_status</option><option value="jj_status">jj_status</option><option value="project_layout">project_layout</option><option value="environment_context">environment_context</option><option value="system-reminder">system-reminder</option></select>
-              <button class="btn btn-primary" onclick="adminApp.loadMessageStats()"><span data-i18n="查询">查询</span></button>
+              <button class="btn btn-primary" onclick="adminApp.loadMessageStats()" data-variant="primary" type="button"><span data-i18n="查询">查询</span></button>
             </div>
             <div id="messageStatsSummary" class="stats-overview-grid" style="margin-bottom:20px;"></div>
             <div class="responsive-grid-2" style="margin-bottom:20px;"><div class="chart-card"><h4><span data-i18n="项目活跃趋势">项目活跃趋势</span></h4><div class="chart-container"><canvas id="messageStatsDailyChart"></canvas></div></div><div class="chart-card"><h4><span data-i18n="项目结构区块">项目结构区块</span></h4><div id="messageStatsBlockTable"></div></div></div>
@@ -1052,19 +1054,19 @@
               </select>
               <input type="date" id="usageLogStartDate" class="input" title="开始日期" data-i18n-title="开始日期">
               <input type="date" id="usageLogEndDate" class="input" title="结束日期" data-i18n-title="结束日期">
-              <button class="btn btn-primary" onclick="adminApp.loadUsageLogs(1)"><span data-i18n="查询">查询</span></button>
-              <button class="btn btn-secondary" onclick="adminApp.clearUsageLogFilters()"><span data-i18n="清除">清除</span></button>
-              <button class="btn btn-secondary" id="usageLogExportBtn" onclick="adminApp.exportUsageLogs()" title="按当前筛选条件导出 CSV（最多 5 万条）" data-i18n-title="按当前筛选条件导出 CSV（最多 5 万条）"><span data-i18n="导出 CSV">导出 CSV</span></button>
-              <button class="btn btn-secondary" id="usageAggregateExportBtn" onclick="adminApp.exportUsageAggregate()" title="导出最近 N 天的用量聚合 JSON（按模型分组，不含任何请求/响应正文）" data-i18n-title="导出最近 N 天的用量聚合 JSON（按模型分组，不含任何请求/响应正文）"><span data-i18n="导出用量聚合">导出用量聚合</span></button>
+              <button class="btn btn-primary" onclick="adminApp.loadUsageLogs(1)" data-variant="primary" type="button"><span data-i18n="查询">查询</span></button>
+              <button class="btn btn-secondary" onclick="adminApp.clearUsageLogFilters()" data-variant="secondary" type="button"><span data-i18n="清除">清除</span></button>
+              <button class="btn btn-secondary" id="usageLogExportBtn" onclick="adminApp.exportUsageLogs()" title="按当前筛选条件导出 CSV（最多 5 万条）" data-i18n-title="按当前筛选条件导出 CSV（最多 5 万条）" data-variant="secondary" type="button"><span data-i18n="导出 CSV">导出 CSV</span></button>
+              <button class="btn btn-secondary" id="usageAggregateExportBtn" onclick="adminApp.exportUsageAggregate()" title="导出最近 N 天的用量聚合 JSON（按模型分组，不含任何请求/响应正文）" data-i18n-title="导出最近 N 天的用量聚合 JSON（按模型分组，不含任何请求/响应正文）" data-variant="secondary" type="button"><span data-i18n="导出用量聚合">导出用量聚合</span></button>
               <span id="usageLogCount" class="filter-info"></span>
             </div>
             <div id="usageLogsList" class="models-table">
               <!-- API 调用记录将通过JS动态加载 -->
             </div>
             <div style="display: flex; justify-content: center; gap: 8px; margin-top: 16px;">
-              <button id="usageLogPrevBtn" class="btn btn-secondary" onclick="adminApp.loadUsageLogs(adminApp.usageLogPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
+              <button id="usageLogPrevBtn" class="btn btn-secondary" onclick="adminApp.loadUsageLogs(adminApp.usageLogPage - 1)" disabled data-variant="secondary" type="button"><span data-i18n="上一页">上一页</span></button>
               <span id="usageLogPageInfo" style="padding: 8px 12px; color: var(--muted-foreground);"></span>
-              <button id="usageLogNextBtn" class="btn btn-secondary" onclick="adminApp.loadUsageLogs(adminApp.usageLogPage + 1)"><span data-i18n="下一页">下一页</span></button>
+              <button id="usageLogNextBtn" class="btn btn-secondary" onclick="adminApp.loadUsageLogs(adminApp.usageLogPage + 1)" data-variant="secondary" type="button"><span data-i18n="下一页">下一页</span></button>
             </div>
           </div>
     </div>
@@ -1079,7 +1081,7 @@
               <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="查看近期 API 调用失败记录，便于排查上游故障与用户问题">查看近期 API 调用失败记录，便于排查上游故障与用户问题</span></p>
             </div>
             <div class="section-actions">
-              <button type="button" class="btn btn-secondary" onclick="adminApp.loadErrorLogs()"><span data-i18n="刷新">刷新</span></button>
+              <button type="button" class="btn btn-secondary" onclick="adminApp.loadErrorLogs()" data-variant="secondary"><span data-i18n="刷新">刷新</span></button>
             </div>
           </div>
           <div class="admin-filter-bar" style="margin-bottom:16px;">
@@ -1094,8 +1096,8 @@
               <input type="checkbox" id="errorLogFinalOnly" checked><span data-i18n="仅最终错误">
               仅最终错误
             </span></label>
-            <button class="btn btn-primary" onclick="adminApp.loadErrorLogs(1)"><span data-i18n="查询">查询</span></button>
-            <button class="btn btn-secondary" onclick="adminApp.clearErrorLogFilters()"><span data-i18n="清除">清除</span></button>
+            <button class="btn btn-primary" onclick="adminApp.loadErrorLogs(1)" data-variant="primary" type="button"><span data-i18n="查询">查询</span></button>
+            <button class="btn btn-secondary" onclick="adminApp.clearErrorLogFilters()" data-variant="secondary" type="button"><span data-i18n="清除">清除</span></button>
             <span id="errorLogCount" class="filter-info"></span>
           </div>
           <p id="errorLogRetentionHint" style="font-size:12px;color:var(--muted-foreground);margin:0 0 12px;"></p>
@@ -1103,9 +1105,9 @@
             <div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
           </div>
           <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-            <button id="errorLogPrevBtn" class="btn btn-secondary" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
+            <button id="errorLogPrevBtn" class="btn btn-secondary" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage - 1)" disabled data-variant="secondary" type="button"><span data-i18n="上一页">上一页</span></button>
             <span id="errorLogPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-            <button id="errorLogNextBtn" class="btn btn-secondary" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage + 1)"><span data-i18n="下一页">下一页</span></button>
+            <button id="errorLogNextBtn" class="btn btn-secondary" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage + 1)" data-variant="secondary" type="button"><span data-i18n="下一页">下一页</span></button>
           </div>
         </div>
       </div>
@@ -1129,7 +1131,7 @@
                 <option value="product"><span data-i18n="商品">商品</span></option>
                 <option value="redemption_code"><span data-i18n="兑换码">兑换码</span></option>
               </select>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.loadAdminAuditLogs(1)"><span data-i18n="刷新">刷新</span></button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.loadAdminAuditLogs(1)" data-variant="secondary" data-size="sm"><span data-i18n="刷新">刷新</span></button>
             </div>
           </div>
           <div id="adminAuditLogsList" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -1163,17 +1165,17 @@
               <option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></option>
               <option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></option>
             </select>
-            <button type="button" class="btn btn-primary" onclick="adminApp.loadAdminCustomPrompts(1)"><span data-i18n="查询">查询</span></button>
-            <button type="button" class="btn btn-secondary" onclick="adminApp.clearAdminPromptFilters()"><span data-i18n="清除">清除</span></button>
+            <button type="button" class="btn btn-primary" onclick="adminApp.loadAdminCustomPrompts(1)" data-variant="primary"><span data-i18n="查询">查询</span></button>
+            <button type="button" class="btn btn-secondary" onclick="adminApp.clearAdminPromptFilters()" data-variant="secondary"><span data-i18n="清除">清除</span></button>
             <span id="adminPromptCount" class="filter-info"></span>
           </div>
           <div id="adminPromptsList" class="models-table">
             <!-- 提示词列表由 JS 动态加载 -->
           </div>
           <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-            <button id="adminPromptPrevBtn" class="btn btn-secondary" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
+            <button id="adminPromptPrevBtn" class="btn btn-secondary" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage - 1)" disabled data-variant="secondary" type="button"><span data-i18n="上一页">上一页</span></button>
             <span id="adminPromptPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-            <button id="adminPromptNextBtn" class="btn btn-secondary" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage + 1)"><span data-i18n="下一页">下一页</span></button>
+            <button id="adminPromptNextBtn" class="btn btn-secondary" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage + 1)" data-variant="secondary" type="button"><span data-i18n="下一页">下一页</span></button>
           </div>
         </div>
       </div>
@@ -1182,7 +1184,7 @@
       <div id="adminSettingsPage" class="page">
         <div class="content-section" id="passportInvitesSection" style="display:none;">
           <h2>邀请链接</h2>
-          <button class="btn btn-primary" id="generateInviteBtn">生成邀请链接</button>
+          <button class="btn btn-primary" id="generateInviteBtn" data-variant="primary" type="button">生成邀请链接</button>
           <div id="inviteResult" style="margin:12px 0;word-break:break-all;"></div>
           <div id="inviteList"></div>
         </div>
@@ -1226,8 +1228,8 @@
             </div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn btn-secondary" id="updateCheckBtn" onclick="adminApp.checkForUpdate(true)"><span data-i18n="检查更新">检查更新</span></button>
-            <button type="button" class="btn btn-primary" id="updateApplyBtn" onclick="adminApp.applyUpdate()" disabled><span data-i18n="一键更新">一键更新</span></button>
+            <button type="button" class="btn btn-secondary" id="updateCheckBtn" onclick="adminApp.checkForUpdate(true)" data-variant="secondary"><span data-i18n="检查更新">检查更新</span></button>
+            <button type="button" class="btn btn-primary" id="updateApplyBtn" onclick="adminApp.applyUpdate()" disabled data-variant="primary"><span data-i18n="一键更新">一键更新</span></button>
           </div>
         </div>
 
@@ -1254,11 +1256,11 @@
             </div>
             <div id="retentionConfigMessage" style="font-size:13px;margin-bottom:12px;"></div>
             <div class="form-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button type="submit" class="btn btn-primary" id="retentionSaveBtn"><span data-i18n="保存保留配置">保存保留配置</span></button>
-              <button type="button" class="btn btn-secondary" id="retentionRunCompressPreviewBtn"><span data-i18n="预览压缩（dry-run）">预览压缩（dry-run）</span></button>
-              <button type="button" class="btn btn-secondary" id="retentionRunPurgePreviewBtn"><span data-i18n="预览清除（dry-run）">预览清除（dry-run）</span></button>
-              <button type="button" class="btn btn-primary" id="retentionRunCompressBtn"><span data-i18n="立即执行压缩">立即执行压缩</span></button>
-              <button type="button" class="btn btn-primary" id="retentionRunPurgeBtn"><span data-i18n="立即执行清除">立即执行清除</span></button>
+              <button type="submit" class="btn btn-primary" id="retentionSaveBtn" data-variant="primary"><span data-i18n="保存保留配置">保存保留配置</span></button>
+              <button type="button" class="btn btn-secondary" id="retentionRunCompressPreviewBtn" data-variant="secondary"><span data-i18n="预览压缩（dry-run）">预览压缩（dry-run）</span></button>
+              <button type="button" class="btn btn-secondary" id="retentionRunPurgePreviewBtn" data-variant="secondary"><span data-i18n="预览清除（dry-run）">预览清除（dry-run）</span></button>
+              <button type="button" class="btn btn-primary" id="retentionRunCompressBtn" data-variant="primary"><span data-i18n="立即执行压缩">立即执行压缩</span></button>
+              <button type="button" class="btn btn-primary" id="retentionRunPurgeBtn" data-variant="primary"><span data-i18n="立即执行清除">立即执行清除</span></button>
             </div>
           </form>
         </div>
@@ -1328,7 +1330,7 @@
                 <div id="modelListTags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:32px;align-items:center;"></div>
                 <div style="display:flex;gap:8px;">
                   <input type="text" id="modelListInput" class="input" placeholder="输入模型 ID，如 claude-fable-5" data-i18n-placeholder="输入模型 ID，如 claude-fable-5" style="flex:1;">
-                  <button type="button" class="btn btn-secondary" id="modelListAddBtn"><span data-i18n="添加">添加</span></button>
+                  <button type="button" class="btn btn-secondary" id="modelListAddBtn" data-variant="secondary"><span data-i18n="添加">添加</span></button>
                 </div>
                 <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="fusion 固定保留，不可删除；至少保留一个非 fusion 的模型 ID；可自由添加/删除其他模型。">
                   fusion 固定保留，不可删除；至少保留一个非 fusion 的模型 ID；可自由添加/删除其他模型。
@@ -1336,7 +1338,7 @@
               </div>
             </div>
             <div class="form-actions">
-              <button type="submit" class="btn btn-primary"><span data-i18n="保存设置">保存设置</span></button>
+              <button type="submit" class="btn btn-primary" data-variant="primary"><span data-i18n="保存设置">保存设置</span></button>
             </div>
           </form>
 
@@ -1374,13 +1376,13 @@
               <label><span data-i18n="OAuth 回调地址">OAuth 回调地址</span></label>
               <div style="display:flex;gap:8px;align-items:center;">
                 <input type="text" id="feishuRedirectUri" class="input" readonly style="font-family:monospace;flex:1;background:var(--muted);">
-                <button type="button" class="btn btn-secondary" id="feishuCopyRedirectBtn" onclick="adminApp.copyFeishuRedirectUri()"><span data-i18n="复制">复制</span></button>
+                <button type="button" class="btn btn-secondary" id="feishuCopyRedirectBtn" onclick="adminApp.copyFeishuRedirectUri()" data-variant="secondary"><span data-i18n="复制">复制</span></button>
               </div>
               <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="请将此地址配置到飞书开放平台应用的重定向 URL 中">请将此地址配置到飞书开放平台应用的重定向 URL 中</span></small>
             </div>
             <div id="feishuConfigSource" style="font-size:12px;color:var(--muted-foreground);margin-bottom:12px;"></div>
             <div class="form-actions">
-              <button type="button" class="btn btn-primary" id="feishuSaveBtn" onclick="adminApp.saveFeishuLoginSettings()"><span data-i18n="保存飞书配置">保存飞书配置</span></button>
+              <button type="button" class="btn btn-primary" id="feishuSaveBtn" onclick="adminApp.saveFeishuLoginSettings()" data-variant="primary"><span data-i18n="保存飞书配置">保存飞书配置</span></button>
             </div>
           </form>
         </div>
@@ -1403,7 +1405,7 @@
               <small style="color:var(--muted-foreground);font-size:12px;display:block;margin-top:6px;"><span data-i18n="开启后，所有供应商的上游请求均走上方代理。关闭时，仅在供应商管理中单独启用代理的供应商会走代理（可填自定义地址或引用本页代理地址）。">开启后，所有供应商的上游请求均走上方代理。关闭时，仅在供应商管理中单独启用代理的供应商会走代理（可填自定义地址或引用本页代理地址）。</span></small>
             </div>
             <div class="form-actions">
-              <button type="submit" class="btn btn-primary"><span data-i18n="保存代理设置">保存代理设置</span></button>
+              <button type="submit" class="btn btn-primary" data-variant="primary"><span data-i18n="保存代理设置">保存代理设置</span></button>
             </div>
           </form>
         </div>
@@ -1433,20 +1435,20 @@
               <div id="globalProxyPoolList" style="margin-bottom:8px;"></div>
               <div style="display:flex;gap:8px;">
                 <input type="text" id="globalNewProxyUrl" class="input" placeholder="http://proxy:8080 或 socks5://proxy:1080" data-i18n-placeholder="http://proxy:8080 或 socks5://proxy:1080" style="font-family:monospace;flex:1;">
-                <button type="button" class="btn btn-secondary" onclick="adminApp.addGlobalProxy()"><span data-i18n="添加">添加</span></button>
+                <button type="button" class="btn btn-secondary" onclick="adminApp.addGlobalProxy()" data-variant="secondary"><span data-i18n="添加">添加</span></button>
               </div>
               <div style="display:flex;gap:8px;margin-top:8px;">
                 <input type="text" id="globalImportProxyUrl" class="input" placeholder="从 URL 导入（txt 文件，每行一个代理）" data-i18n-placeholder="从 URL 导入（txt 文件，每行一个代理）" style="font-family:monospace;flex:1;">
-                <button type="button" class="btn btn-secondary" onclick="adminApp.importGlobalProxies()"><span data-i18n="导入">导入</span></button>
+                <button type="button" class="btn btn-secondary" onclick="adminApp.importGlobalProxies()" data-variant="secondary"><span data-i18n="导入">导入</span></button>
               </div>
               <div style="display:flex;gap:8px;margin-top:8px;">
                 <textarea id="globalBatchProxyInput" class="input" rows="2" placeholder="批量粘贴代理（每行一个）" data-i18n-placeholder="批量粘贴代理（每行一个）" style="font-family:monospace;flex:1;resize:vertical;"></textarea>
-                <button type="button" class="btn btn-secondary" onclick="adminApp.batchAddGlobalProxies()" style="align-self:flex-end;"><span data-i18n="批量添加">批量添加</span></button>
+                <button type="button" class="btn btn-secondary" onclick="adminApp.batchAddGlobalProxies()" style="align-self:flex-end;" data-variant="secondary"><span data-i18n="批量添加">批量添加</span></button>
               </div>
             </div>
 
             <div class="form-actions">
-              <button type="submit" class="btn btn-primary"><span data-i18n="保存代理池设置">保存代理池设置</span></button>
+              <button type="submit" class="btn btn-primary" data-variant="primary"><span data-i18n="保存代理池设置">保存代理池设置</span></button>
             </div>
           </form>
         </div>
@@ -1506,7 +1508,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button id="saveUserBtn" class="btn btn-primary"><span data-i18n="保存">保存</span></button>
+        <button id="saveUserBtn" class="btn btn-primary" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
   </div>
@@ -1607,21 +1609,21 @@
             <label for="modelTestUserAgent"><span data-i18n="测试 User-Agent">测试 User-Agent</span></label>
             <input type="text" id="modelTestUserAgent" class="input" maxlength="500" placeholder="例如：claude-cli/2.0.0 (external, cli)" data-i18n-placeholder="例如：claude-cli/2.0.0 (external, cli)" autocomplete="off">
             <div class="test-ua-presets" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','claude-cli/2.0.0 (external, cli)')">Claude Code</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','codex_cli_rs/0.42.0 (Mac OS; arm64) terminal')">Codex</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','grok-shell/1.2.3 (linux; x86_64)')">Grok</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','opencode/latest/cli')">OpenCode</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','QwenCode/1.0.0 (linux; x64)')">Qwen Code</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','hermes-cli/0.9.0')">Hermes</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','openclaw/2026.3.22')">OpenClaw</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','deepseek-harness/0.1.0 (+https://github.com/deepseek-ai/deepseek-harness)')">DeepSeek</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','')"><span data-i18n="清空">清空</span></button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','claude-cli/2.0.0 (external, cli)')" data-variant="secondary" data-size="sm">Claude Code</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','codex_cli_rs/0.42.0 (Mac OS; arm64) terminal')" data-variant="secondary" data-size="sm">Codex</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','grok-shell/1.2.3 (linux; x86_64)')" data-variant="secondary" data-size="sm">Grok</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','opencode/latest/cli')" data-variant="secondary" data-size="sm">OpenCode</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','QwenCode/1.0.0 (linux; x64)')" data-variant="secondary" data-size="sm">Qwen Code</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','hermes-cli/0.9.0')" data-variant="secondary" data-size="sm">Hermes</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','openclaw/2026.3.22')" data-variant="secondary" data-size="sm">OpenClaw</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','deepseek-harness/0.1.0 (+https://github.com/deepseek-ai/deepseek-harness)')" data-variant="secondary" data-size="sm">DeepSeek</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('modelTestUserAgent','')" data-variant="secondary" data-size="sm"><span data-i18n="清空">清空</span></button>
             </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button id="saveModelBtn" class="btn btn-primary"><span data-i18n="保存">保存</span></button>
+        <button id="saveModelBtn" class="btn btn-primary" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
   </div>
@@ -1642,7 +1644,7 @@
             <label for="providerName"><span data-i18n="供应商名称">供应商名称</span></label>
             <div style="display:flex;gap:8px;">
               <input type="text" id="providerName" class="input" placeholder="例如：OpenAI" data-i18n-placeholder="例如：OpenAI" style="flex:1;">
-              <button type="button" id="lookupProviderBtn" class="btn btn-secondary"><span data-i18n="从 models.dev 查询">从 models.dev 查询</span></button>
+              <button type="button" id="lookupProviderBtn" class="btn btn-secondary" data-variant="secondary"><span data-i18n="从 models.dev 查询">从 models.dev 查询</span></button>
             </div>
             <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="同一供应商可重复添加。点击查询可按名称自动填充 Base URL 等信息。">同一供应商可重复添加。点击查询可按名称自动填充 Base URL 等信息。</span></small>
           </div>
@@ -1665,7 +1667,7 @@
               </div>
             </div>
             <div id="providerApiKeysList" class="provider-api-keys-list"></div>
-            <button type="button" class="btn btn-sm btn-secondary" id="addProviderApiKeyBtn" onclick="adminApp.addProviderApiKeyRow()" style="margin-top:8px;"><span data-i18n="+ 添加 Key">
+            <button type="button" class="btn btn-sm btn-secondary" id="addProviderApiKeyBtn" onclick="adminApp.addProviderApiKeyRow()" style="margin-top:8px;" data-variant="secondary" data-size="sm"><span data-i18n="+ 添加 Key">
               + 添加 Key
             </span></button>
             <small style="color:var(--muted-foreground);margin-top:6px;display:block;line-height:1.5;">
@@ -1712,7 +1714,7 @@
                 <summary><span data-i18n="📖 脚本开发文档（点击展开）">📖 脚本开发文档（点击展开）</span></summary>
                 <div style="margin-top:12px;padding:12px;background:var(--background);border:1px solid var(--border);border-radius:10px;">
                   <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.copyKeyScriptDoc()" style="font-size:12px;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.copyKeyScriptDoc()" style="font-size:12px;" data-variant="secondary" data-size="sm">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-i18n="复制文档">
                       复制文档
                     </span></button>
@@ -1741,10 +1743,10 @@
                     </span></div>
                     <div style="margin-bottom:6px;"><strong style="color:var(--foreground);"><span data-i18n="💡 快速示例：">💡 快速示例：</span></strong></div>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-                      <button type="button" class="btn btn-sm" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" onclick="adminApp.fillKeyScriptExample('oauth2')">OAuth2 Client Credentials</button>
-                      <button type="button" class="btn btn-sm" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" onclick="adminApp.fillKeyScriptExample('jwt')"><span data-i18n="JWT 签名获取">JWT 签名获取</span></button>
-                      <button type="button" class="btn btn-sm" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" onclick="adminApp.fillKeyScriptExample('login')"><span data-i18n="账密登录获取 Token">账密登录获取 Token</span></button>
-                      <button type="button" class="btn btn-sm" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" onclick="adminApp.fillKeyScriptExample('custom')"><span data-i18n="自定义 HTTP 请求">自定义 HTTP 请求</span></button>
+                      <button type="button" class="btn btn-sm" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" onclick="adminApp.fillKeyScriptExample('oauth2')" data-variant="secondary" data-size="sm">OAuth2 Client Credentials</button>
+                      <button type="button" class="btn btn-sm" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" onclick="adminApp.fillKeyScriptExample('jwt')" data-variant="secondary" data-size="sm"><span data-i18n="JWT 签名获取">JWT 签名获取</span></button>
+                      <button type="button" class="btn btn-sm" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" onclick="adminApp.fillKeyScriptExample('login')" data-variant="secondary" data-size="sm"><span data-i18n="账密登录获取 Token">账密登录获取 Token</span></button>
+                      <button type="button" class="btn btn-sm" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--muted);" onclick="adminApp.fillKeyScriptExample('custom')" data-variant="secondary" data-size="sm"><span data-i18n="自定义 HTTP 请求">自定义 HTTP 请求</span></button>
                     </div>
                   </div>
                 </div>
@@ -1833,7 +1835,7 @@
               <p id="providerQuotaAuthHint" style="color:var(--muted-foreground);font-size:12px;margin:0 0 8px;"><span data-i18n="文件通常位于">文件通常位于 </span><code>~/.codex/auth.json</code><span data-i18n="，即 Linux/macOS 下的">，即 Linux/macOS 下的 </span><code><span data-i18n="/home/你的用户名/.codex/auth.json">/home/你的用户名/.codex/auth.json</span></code><span data-i18n="。Token 会保存到当前供应商，请勿上传给第三方。">。Token 会保存到当前供应商，请勿上传给第三方。</span></p>
               <textarea id="providerCodexConfigText" class="textarea textarea-mono" rows="6" placeholder='{"tokens":{"access_token":"...","refresh_token":"..."}}'></textarea>
               <input type="file" id="providerCodexConfigFile" class="input" accept=".json,.jsonc" style="margin-top:8px;color:var(--muted-foreground);">
-              <button type="button" id="bindCodexQuotaBtn" class="btn btn-secondary" style="margin-top:8px;"><span data-i18n="导入并绑定到当前供应商">导入并绑定到当前供应商</span></button>
+              <button type="button" id="bindCodexQuotaBtn" class="btn btn-secondary" style="margin-top:8px;" data-variant="secondary"><span data-i18n="导入并绑定到当前供应商">导入并绑定到当前供应商</span></button>
             </div>
             <div class="form-group">
               <label for="providerNotes"><span data-i18n="备注">备注</span></label>
@@ -1896,15 +1898,15 @@
               <label for="providerTestUserAgent"><span data-i18n="测试 User-Agent">测试 User-Agent</span></label>
               <input type="text" id="providerTestUserAgent" class="input" maxlength="500" placeholder="例如：claude-cli/2.0.0 (external, cli)" data-i18n-placeholder="例如：claude-cli/2.0.0 (external, cli)" autocomplete="off">
               <div class="test-ua-presets" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','claude-cli/2.0.0 (external, cli)')">Claude Code</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','codex_cli_rs/0.42.0 (Mac OS; arm64) terminal')">Codex</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','grok-shell/1.2.3 (linux; x86_64)')">Grok</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','opencode/latest/cli')">OpenCode</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','QwenCode/1.0.0 (linux; x64)')">Qwen Code</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','hermes-cli/0.9.0')">Hermes</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','openclaw/2026.3.22')">OpenClaw</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','deepseek-harness/0.1.0 (+https://github.com/deepseek-ai/deepseek-harness)')">DeepSeek</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','')"><span data-i18n="清空">清空</span></button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','claude-cli/2.0.0 (external, cli)')" data-variant="secondary" data-size="sm">Claude Code</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','codex_cli_rs/0.42.0 (Mac OS; arm64) terminal')" data-variant="secondary" data-size="sm">Codex</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','grok-shell/1.2.3 (linux; x86_64)')" data-variant="secondary" data-size="sm">Grok</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','opencode/latest/cli')" data-variant="secondary" data-size="sm">OpenCode</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','QwenCode/1.0.0 (linux; x64)')" data-variant="secondary" data-size="sm">Qwen Code</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','hermes-cli/0.9.0')" data-variant="secondary" data-size="sm">Hermes</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','openclaw/2026.3.22')" data-variant="secondary" data-size="sm">OpenClaw</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','deepseek-harness/0.1.0 (+https://github.com/deepseek-ai/deepseek-harness)')" data-variant="secondary" data-size="sm">DeepSeek</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.applyTestUserAgentPreset('providerTestUserAgent','')" data-variant="secondary" data-size="sm"><span data-i18n="清空">清空</span></button>
               </div>
               <small style="color:var(--muted-foreground);margin-top:6px;display:block;"><span data-i18n="测试该供应商下任意模型时，将使用此 User-Agent 请求上游。留空则不发送自定义 UA。不影响正式业务转发。">
                 测试该供应商下任意模型时，将使用此 User-Agent 请求上游。留空则不发送自定义 UA。不影响正式业务转发。
@@ -1955,7 +1957,7 @@
         </details>
       </div>
       <div class="modal-footer">
-        <button id="saveProviderBtn" class="btn btn-primary"><span data-i18n="保存">保存</span></button>
+        <button id="saveProviderBtn" class="btn btn-primary" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
   </div>
@@ -2002,7 +2004,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button id="confirmImportOpenCodeBtn" class="btn btn-primary"><span data-i18n="导入">导入</span></button>
+        <button id="confirmImportOpenCodeBtn" class="btn btn-primary" data-variant="primary" type="button"><span data-i18n="导入">导入</span></button>
       </div>
     </div>
   </div>
@@ -2025,10 +2027,10 @@
               <input type="text" id="fetchedModelsSearch" class="input" placeholder="搜索模型名称..." data-i18n-placeholder="搜索模型名称..." style="flex:1;" oninput="adminApp.filterFetchedModels()">
             </div>
             <div id="fetchedModelsTabs" style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;">
-              <button class="btn btn-sm btn-primary" data-filter="all" onclick="adminApp.setFetchedModelsFilter('all')"><span data-i18n="全部">全部</span></button>
-              <button class="btn btn-sm btn-secondary" data-filter="enabled" onclick="adminApp.setFetchedModelsFilter('enabled')"><span data-i18n="已启用">已启用</span></button>
-              <button class="btn btn-sm btn-secondary" data-filter="disabled" onclick="adminApp.setFetchedModelsFilter('disabled')"><span data-i18n="未启用">未启用</span></button>
-              <button class="btn btn-sm btn-secondary" data-filter="stale" onclick="adminApp.setFetchedModelsFilter('stale')"><span data-i18n="已失效">已失效</span></button>
+              <button class="btn btn-sm btn-primary" data-filter="all" onclick="adminApp.setFetchedModelsFilter('all')" data-variant="primary" data-size="sm" type="button"><span data-i18n="全部">全部</span></button>
+              <button class="btn btn-sm btn-secondary" data-filter="enabled" onclick="adminApp.setFetchedModelsFilter('enabled')" data-variant="secondary" data-size="sm" type="button"><span data-i18n="已启用">已启用</span></button>
+              <button class="btn btn-sm btn-secondary" data-filter="disabled" onclick="adminApp.setFetchedModelsFilter('disabled')" data-variant="secondary" data-size="sm" type="button"><span data-i18n="未启用">未启用</span></button>
+              <button class="btn btn-sm btn-secondary" data-filter="stale" onclick="adminApp.setFetchedModelsFilter('stale')" data-variant="secondary" data-size="sm" type="button"><span data-i18n="已失效">已失效</span></button>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
@@ -2042,9 +2044,9 @@
         </div>
       </div>
       <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <button type="button" id="cleanupStaleModelsBtn" class="btn btn-secondary" style="display:none;color:var(--destructive);" onclick="adminApp.cleanupStaleModelsInFetchModal()" title="删除上游已不存在的本地模型记录" data-i18n-title="删除上游已不存在的本地模型记录"><span data-i18n="清理已下架模型">清理已下架模型</span></button>
+        <button type="button" id="cleanupStaleModelsBtn" class="btn btn-secondary" style="display:none;color:var(--destructive);" onclick="adminApp.cleanupStaleModelsInFetchModal()" title="删除上游已不存在的本地模型记录" data-i18n-title="删除上游已不存在的本地模型记录" data-variant="secondary"><span data-i18n="清理已下架模型">清理已下架模型</span></button>
         <div style="display:flex;gap:8px;margin-left:auto;">
-          <button id="saveFetchedModelsBtn" class="btn btn-primary" style="display:none;" onclick="adminApp.saveFetchedModels()"><span data-i18n="保存">保存</span></button>
+          <button id="saveFetchedModelsBtn" class="btn btn-primary" style="display:none;" onclick="adminApp.saveFetchedModels()" data-variant="primary" type="button"><span data-i18n="保存">保存</span></button>
         </div>
       </div>
     </div>
@@ -2070,7 +2072,7 @@
 
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="adminApp.executeBatchSetPrices()"><span data-i18n="确认设置">确认设置</span></button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchSetPrices()" data-variant="primary" type="button"><span data-i18n="确认设置">确认设置</span></button>
       </div>
     </div>
   </div>
@@ -2096,7 +2098,7 @@
         <div id="batchJsonPricesResult" style="margin-top:8px;font-size:12px;display:none;"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="adminApp.executeBatchJsonPrices()"><span data-i18n="应用价格">应用价格</span></button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchJsonPrices()" data-variant="primary" type="button"><span data-i18n="应用价格">应用价格</span></button>
       </div>
     </div>
   </div>
@@ -2122,7 +2124,7 @@
         <div id="batchJsonRefPricesResult" style="margin-top:8px;font-size:12px;display:none;"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="adminApp.executeBatchJsonRefPrices()"><span data-i18n="应用参考价">应用参考价</span></button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchJsonRefPrices()" data-variant="primary" type="button"><span data-i18n="应用参考价">应用参考价</span></button>
       </div>
     </div>
   </div>
@@ -2142,7 +2144,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="adminApp.executeBatchAdjustPrices()"><span data-i18n="确认调整">确认调整</span></button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchAdjustPrices()" data-variant="primary" type="button"><span data-i18n="确认调整">确认调整</span></button>
       </div>
     </div>
   </div>
@@ -2166,7 +2168,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="adminApp.executeBatchSetRateLimit()"><span data-i18n="确认设置">确认设置</span></button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchSetRateLimit()" data-variant="primary" type="button"><span data-i18n="确认设置">确认设置</span></button>
       </div>
     </div>
   </div>
@@ -2197,7 +2199,7 @@
         <div id="batchEditDescStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="adminApp.executeBatchEditDesc()"><span data-i18n="确认修改">确认修改</span></button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchEditDesc()" data-variant="primary" type="button"><span data-i18n="确认修改">确认修改</span></button>
       </div>
     </div>
   </div>
@@ -2221,7 +2223,7 @@
         <div id="batchSetSeriesStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="adminApp.executeBatchSetSeries()"><span data-i18n="确认设置">确认设置</span></button>
+        <button class="btn btn-primary" onclick="adminApp.executeBatchSetSeries()" data-variant="primary" type="button"><span data-i18n="确认设置">确认设置</span></button>
       </div>
     </div>
   </div>
@@ -2240,7 +2242,7 @@
             <option value=""><span data-i18n="选择系列...">选择系列...</span></option>
           </select>
           <input type="text" id="newSeriesIconUrl" class="input" placeholder="图标 URL" data-i18n-placeholder="图标 URL" style="flex:2;">
-          <button class="btn btn-primary" onclick="adminApp.addSeriesIcon()"><span data-i18n="添加">添加</span></button>
+          <button class="btn btn-primary" onclick="adminApp.addSeriesIcon()" data-variant="primary" type="button"><span data-i18n="添加">添加</span></button>
         </div>
         <div id="seriesIconsList" style="max-height:400px;overflow-y:auto;"></div>
         <div id="seriesIconsStatus" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px;"></div>
@@ -2290,8 +2292,8 @@
         <div id="batchAdjustByRefStatus" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px;"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="adminApp.previewBatchAdjustByRef()"><span data-i18n="预览">预览</span></button>
-        <button id="batchAdjustByRefConfirmBtn" class="btn btn-primary" style="display:none;" onclick="adminApp.executeBatchAdjustByRef()"><span data-i18n="确认执行">确认执行</span></button>
+        <button class="btn btn-secondary" onclick="adminApp.previewBatchAdjustByRef()" data-variant="secondary" type="button"><span data-i18n="预览">预览</span></button>
+        <button id="batchAdjustByRefConfirmBtn" class="btn btn-primary" style="display:none;" onclick="adminApp.executeBatchAdjustByRef()" data-variant="primary" type="button"><span data-i18n="确认执行">确认执行</span></button>
       </div>
     </div>
   </div>
@@ -2358,7 +2360,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
               <span style="font-size:14px;font-weight:600;"><span data-i18n="查询脚本">查询脚本</span></span>
               <div style="display:flex;gap:6px;">
-                <button class="btn btn-sm btn-secondary" onclick="adminApp.resetQuotaScript()"><span data-i18n="恢复默认">恢复默认</span></button>
+                <button class="btn btn-sm btn-secondary" onclick="adminApp.resetQuotaScript()" data-variant="secondary" data-size="sm" type="button"><span data-i18n="恢复默认">恢复默认</span></button>
               </div>
             </div>
             <p style="font-size:12px;color:var(--muted-foreground);margin-bottom:12px;"><span data-i18n="脚本格式与 cc-switch 一致，包含">
@@ -2369,9 +2371,9 @@
         </div>
       </div>
       <div class="modal-footer" id="quotaModalFooter">
-        <button class="btn btn-secondary" id="quotaEditBtn" onclick="adminApp.editQuotaScript()"><span data-i18n="编辑脚本">编辑脚本</span></button>
-<button class="btn btn-primary" id="quotaSaveBtn" style="display:none;" onclick="adminApp.saveQuotaScript()"><span data-i18n="保存并查询">保存并查询</span></button>
-        <button class="btn btn-secondary" id="quotaCancelEditBtn" style="display:none;" onclick="adminApp.checkProviderQuota(adminApp._quotaProviderId)"><span data-i18n="取消">取消</span></button>
+        <button class="btn btn-secondary" id="quotaEditBtn" onclick="adminApp.editQuotaScript()" data-variant="secondary" type="button"><span data-i18n="编辑脚本">编辑脚本</span></button>
+<button class="btn btn-primary" id="quotaSaveBtn" style="display:none;" onclick="adminApp.saveQuotaScript()" data-variant="primary" type="button"><span data-i18n="保存并查询">保存并查询</span></button>
+        <button class="btn btn-secondary" id="quotaCancelEditBtn" style="display:none;" onclick="adminApp.checkProviderQuota(adminApp._quotaProviderId)" data-variant="secondary" type="button"><span data-i18n="取消">取消</span></button>
       </div>
     </div>
   </div>

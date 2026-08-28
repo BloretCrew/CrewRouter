@@ -8,6 +8,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/blora/blora.css">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
   <link rel="stylesheet" href="/css/store.css?v=1">
@@ -21,8 +22,9 @@
       document.documentElement.classList.add(resolved);
     })();
   </script>
+  <script type="module" src="/blora/auto.js"></script>
 </head>
-<body>
+<body class="blora-page blora-scope">
 <div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
       <option value="zh">中文</option>
       <option value="en">EN</option>
@@ -45,8 +47,8 @@
         <a class="store-nav__link" href="/data"><span data-i18n="统计">统计</span></a>
         <span class="store-nav__spacer"></span>
         <span class="store-nav__user" id="storeUserBox" style="display:none;"></span>
-        <button class="btn btn-sm btn-secondary" id="storeLoginBtn"><span data-i18n="登录">登录</span></button>
-        <button class="btn btn-sm btn-outline" id="storeLogoutBtn" style="display:none;"><span data-i18n="登出">登出</span></button>
+        <button class="btn btn-sm btn-secondary" id="storeLoginBtn" data-variant="secondary" data-size="sm" type="button"><span data-i18n="登录">登录</span></button>
+        <button class="btn btn-sm btn-outline" id="storeLogoutBtn" style="display:none;" data-variant="secondary" data-size="sm" type="button"><span data-i18n="登出">登出</span></button>
       </nav>
     </header>
 

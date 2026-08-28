@@ -191,6 +191,7 @@ class ConsoleApp {
   }
 
   async init() {
+    upgradeBloraControls(document);
     await this.loadUserInfo();
     if (!this.user) return;
     this.bindEvents();
@@ -312,20 +313,9 @@ class ConsoleApp {
     // Change password
     document.getElementById('changePasswordBtn')?.addEventListener('click', () => this.changePassword());
 
-    document.querySelectorAll('.modal-close').forEach(btn => {
-      btn.addEventListener('click', () => this.closeModals());
-    });
-
     // 统计上报授权弹窗按钮（首次进入控制台，仅管理员可见）
     document.getElementById('statsConsentAllow')?.addEventListener('click', () => this._setStatsConsent(true));
     document.getElementById('statsConsentReject')?.addEventListener('click', () => this._setStatsConsent(false));
-
-    // 点击遮罩空白处关闭弹窗（点到 .modal 本身，而非 .modal-content）
-    document.querySelectorAll('.modal').forEach(modal => {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) this.closeModals();
-      });
-    });
 
     // Model library filters
     this._ensureLibraryReorderControls();
@@ -7728,14 +7718,22 @@ ${extractorBody}
 
   showModal(id) {
     const modal = document.getElementById(id);
-    modal.style.display = 'flex';
-    modal.classList.add('active');
+    if (!modal) return;
+    if (typeof modal.show === 'function') modal.show();
+    else modal.setAttribute('open', '');
+  }
+
+  closeModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    if (typeof modal.close === 'function') modal.close();
+    else modal.removeAttribute('open');
   }
 
   closeModals() {
-    document.querySelectorAll('.modal').forEach(m => {
-      m.style.display = 'none';
-      m.classList.remove('active');
+    document.querySelectorAll('blora-dialog[open]').forEach(modal => {
+      if (typeof modal.close === 'function') modal.close();
+      else modal.removeAttribute('open');
     });
     this._summaryModalSessionKey = null;
   }
