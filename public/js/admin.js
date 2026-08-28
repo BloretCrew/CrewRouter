@@ -464,7 +464,7 @@ class AdminApp {
     // 计费模式切换：显示/隐藏每次请求价格
     document.querySelectorAll('input[name="billingMode"]').forEach(radio => {
       radio.addEventListener('change', () => {
-        document.getElementById('ratePriceGroup').style.display = radio.value === 'rate' && radio.checked ? '' : 'none';
+        document.getElementById('ratePriceGroup').style.display = getBloraValue(radio) === 'rate' && getBloraChecked(radio) ? '' : 'none';
       });
     });
 
@@ -485,19 +485,19 @@ class AdminApp {
     const codeRefundable = document.getElementById('codeRefundable');
     if (codeRefundable) {
       codeRefundable.addEventListener('change', () => {
-        document.getElementById('codeFeeRateGroup').style.display = codeRefundable.checked ? 'block' : 'none';
+        document.getElementById('codeFeeRateGroup').style.display = getBloraChecked(codeRefundable) ? 'block' : 'none';
       });
     }
     const editCodeRefundable = document.getElementById('editCodeRefundable');
     if (editCodeRefundable) {
       editCodeRefundable.addEventListener('change', () => {
-        document.getElementById('editCodeFeeRateGroup').style.display = editCodeRefundable.checked ? 'block' : 'none';
+        document.getElementById('editCodeFeeRateGroup').style.display = getBloraChecked(editCodeRefundable) ? 'block' : 'none';
       });
     }
     const batchSetRefundable = document.getElementById('batchSetRefundable');
     if (batchSetRefundable) {
       batchSetRefundable.addEventListener('change', () => {
-        document.getElementById('batchSetFeeRateGroup').style.display = batchSetRefundable.checked ? 'block' : 'none';
+        document.getElementById('batchSetFeeRateGroup').style.display = getBloraChecked(batchSetRefundable) ? 'block' : 'none';
       });
     }
   }
@@ -1839,7 +1839,7 @@ class AdminApp {
                   </div>
                   <div class="model-library-provider-actions">
                     <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400;cursor:pointer;color:var(--muted-foreground);">
-                      <input type="checkbox" class="admin-models-provider-select-all"
+                      <blora-checkbox class="admin-models-provider-select-all"
                         data-provider-key="${keyAttr}"
                         ${allSelected ? 'checked' : ''}>
                       全选本页
@@ -2011,7 +2011,7 @@ class AdminApp {
     const selectedCount = models.filter(m => this.selectedModels.has(m.id)).length;
     const selectAll = el.querySelector('.admin-models-provider-select-all');
     if (selectAll) {
-      selectAll.checked = models.length > 0 && selectedCount === models.length;
+      setBloraChecked(selectAll, models.length > 0 && selectedCount === models.length);
       selectAll.indeterminate = !selectAll.checked && selectedCount > 0;
     }
     const title = el.querySelector('.model-library-provider-title');
@@ -2982,7 +2982,7 @@ class AdminApp {
     const selectAllBar = `
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:13px;">
         <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;">
-          <input type="checkbox" class="checkbox" id="providerSelectAllPage" ${allPageSelected ? 'checked' : ''}
+          <blora-checkbox id="providerSelectAllPage" value="on" label="全选本页" ${allPageSelected ? 'checked' : ''}
             onchange="adminApp.toggleSelectAllProvidersOnPage(this.checked)">
           <span>全选本页</span>
         </label>
@@ -3033,7 +3033,7 @@ class AdminApp {
     return `
       <div class="provider-row-actions">
         <label class="toggle-switch" title="${provider.enabled ? t('禁用供应商') : t('启用供应商')}" style="transform:scale(0.8);">
-          <input type="checkbox" ${provider.enabled ? 'checked' : ''} onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)">
+          <blora-switch value="on" ${provider.enabled ? 'checked' : ''} label="${t('启用供应商')}" onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)"></blora-switch>
           <span class="toggle-slider"></span>
         </label>
         <button class="btn btn-sm btn-secondary" title="${t('同步模型')}" onclick="adminApp.fetchProviderModels('${pid}')">同步模型</button>
@@ -3046,8 +3046,7 @@ class AdminApp {
             <div class="provider-more-item provider-more-item-toggle" role="menuitem">
               <span>额度查询</span>
               <label class="toggle-switch" style="transform:scale(0.75);" onclick="event.stopPropagation()">
-                <input type="checkbox" ${quotaEnabled ? 'checked' : ''} onchange="adminApp.toggleProviderQuota('${pid}', this.checked)">
-                <span class="toggle-slider"></span>
+                <blora-switch value="on" ${quotaEnabled ? 'checked' : ''} label="${t('额度启用')}" onchange="adminApp.toggleProviderQuota('${pid}', this.checked)"></blora-switch>
               </label>
             </div>
             <button type="button" class="provider-more-item" id="quota-btn-${pid}" onclick="adminApp.checkProviderQuota('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" ${!quotaEnabled ? 'disabled style="opacity:0.45;"' : ''} role="menuitem">查询额度</button>
@@ -3106,7 +3105,7 @@ class AdminApp {
                 ondragleave="adminApp.handleProviderDragLeave(event)"
                 ondrop="adminApp.handleProviderDrop(event, '${safePid}')">
               <td class="provider-select-cell">
-                <input type="checkbox" class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
+                <blora-checkbox class="provider-select-cb" data-provider-id="${escapeHtml(pid)}" value="${escapeHtml(pid)}" label="${escapeHtml(provider.name || pid)}"
                   ${selected ? 'checked' : ''}
                   onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)">
               </td>
@@ -3434,7 +3433,7 @@ class AdminApp {
                ondragleave="adminApp.handleProviderDragLeave(event)"
                ondrop="adminApp.handleProviderDrop(event, '${safePid}')">
             <label class="provider-card-select" title="${t('选择')}" onclick="event.stopPropagation()">
-              <input type="checkbox" class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
+              <blora-checkbox class="provider-select-cb" data-provider-id="${escapeHtml(pid)}" value="${escapeHtml(pid)}" label="${escapeHtml(provider.name || pid)}"
                 ${selected ? 'checked' : ''}
                 onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)">
             </label>
@@ -3546,7 +3545,7 @@ class AdminApp {
     if (this._selectedProviderNames) this._selectedProviderNames.clear();
     document.querySelectorAll('.provider-select-cb').forEach(cb => { setBloraChecked(cb, false); });
     const selectAll = document.getElementById('providerSelectAllPage');
-    if (selectAll) selectAll.checked = false;
+    if (selectAll) setBloraChecked(selectAll, false);
     this.updateProviderBatchBar();
   }
 
@@ -3635,11 +3634,11 @@ class AdminApp {
       </p>
       <div class="batch-sync-options">
         <label>
-          <input type="checkbox" id="batchSyncEnableNew" class="checkbox" checked>
+          <blora-checkbox id="batchSyncEnableNew" value="on" label="启用" checked></blora-checkbox>
           <span>新增上游模型默认<strong>启用</strong></span>
         </label>
         <label>
-          <input type="checkbox" id="batchSyncDisableStale" class="checkbox">
+          <blora-checkbox id="batchSyncDisableStale" value="on" label="禁用失效模型"></blora-checkbox>
           <span>上游已下架的模型自动<strong>禁用</strong>（默认保留）</span>
         </label>
       </div>
@@ -4391,8 +4390,8 @@ class AdminApp {
     const proxyEnabledEl = document.getElementById('providerProxyEnabled');
     if (proxyEnabledEl) setBloraChecked(proxyEnabledEl, enabled);
 
-    document.querySelectorAll('input[name="providerProxyMode"]').forEach(r => {
-      r.checked = r.value === mode;
+    document.querySelectorAll('blora-radio[name="providerProxyMode"], input[name="providerProxyMode"]').forEach(r => {
+      setBloraChecked(r, getBloraValue(r) === mode);
     });
 
     const useSystemEl = document.getElementById('providerProxyUseSystem');
@@ -4407,23 +4406,23 @@ class AdminApp {
   // 供应商代理表单：收集
   _collectProviderProxyFromForm() {
     const proxy_enabled = getBloraChecked(document.getElementById('providerProxyEnabled'));
-    const modeRadio = document.querySelector('input[name="providerProxyMode"]:checked');
-    const proxy_mode = modeRadio?.value === 'pool' ? 'pool' : 'single';
+    const modeRadio = document.querySelector('blora-radio[name="providerProxyMode"][checked], input[name="providerProxyMode"]:checked');
+    const proxy_mode = getBloraValue(modeRadio) === 'pool' ? 'pool' : 'single';
     const proxy_use_system = getBloraChecked(document.getElementById('providerProxyUseSystem'));
     const proxy_url = document.getElementById('providerProxyUrl')?.value?.trim() || '';
     return { proxy_enabled, proxy_mode, proxy_use_system, proxy_url };
   }
 
   toggleProviderProxyOptions() {
-    const enabled = document.getElementById('providerProxyEnabled')?.checked || false;
+    const enabled = getBloraChecked(document.getElementById('providerProxyEnabled'));
     const opts = document.getElementById('providerProxyOptions');
     if (opts) opts.style.display = enabled ? 'block' : 'none';
     if (enabled) this.toggleProviderProxyMode();
   }
 
   toggleProviderProxyMode() {
-    const modeRadio = document.querySelector('input[name="providerProxyMode"]:checked');
-    const mode = modeRadio?.value === 'pool' ? 'pool' : 'single';
+    const modeRadio = document.querySelector('blora-radio[name="providerProxyMode"][checked], input[name="providerProxyMode"]:checked');
+    const mode = getBloraValue(modeRadio) === 'pool' ? 'pool' : 'single';
     const single = document.getElementById('providerProxySingleOptions');
     const poolHint = document.getElementById('providerProxyPoolHint');
     if (single) single.style.display = mode === 'single' ? 'block' : 'none';
@@ -4432,7 +4431,7 @@ class AdminApp {
   }
 
   toggleProviderProxyUseSystem() {
-    const useSystem = document.getElementById('providerProxyUseSystem')?.checked || false;
+    const useSystem = getBloraChecked(document.getElementById('providerProxyUseSystem'));
     const urlGroup = document.getElementById('providerProxyUrlGroup');
     if (urlGroup) urlGroup.style.display = useSystem ? 'none' : 'block';
   }
@@ -4809,7 +4808,7 @@ class AdminApp {
     const overlay = document.createElement('div');
     overlay.id = 'scriptAiModelPickerOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:16px;';
-    overlay.innerHTML = `
+    setHTML(overlay, `
       <div role="dialog" aria-label="${t('选择 AI 辅助模型')}" style="background:var(--card,#fff);color:var(--foreground);border:1px solid var(--border);border-radius:14px;width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.25);">
         <div style="padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);">
           <div>
@@ -4829,8 +4828,9 @@ class AdminApp {
           <span style="font-size:12px;color:var(--muted-foreground);align-self:center;">当前：${escHtml(this._formatScriptAiModelLabel(selected))}</span>
         </div>
       </div>
-    `;
+    `);
     document.body.appendChild(overlay);
+    upgradeBloraControls(overlay);
 
     const close = () => overlay.remove();
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
@@ -4852,11 +4852,11 @@ class AdminApp {
         return hay.includes(q);
       });
       if (!filtered.length) {
-        listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted-foreground);font-size:13px;">${models.length ? t('无匹配模型') : t('暂无可用模型（需启用且供应商已配置 API Key）')}</div>`;
+        setHTML(listEl, `<div style="padding:24px;text-align:center;color:var(--muted-foreground);font-size:13px;">${models.length ? t('无匹配模型') : t('暂无可用模型（需启用且供应商已配置 API Key）')}</div>`);
         return;
       }
       const selectedId = selected?.id ? String(selected.id) : '';
-      listEl.innerHTML = filtered.map(m => {
+      setHTML(listEl, filtered.map(m => {
         const isActive = selectedId && String(m.id) === selectedId;
         const title = escHtml(m.name || m.id);
         const sub = escHtml([m.provider_name, m.upstream_model_id || m.id].filter(Boolean).join(' · '));
@@ -4867,7 +4867,7 @@ class AdminApp {
             <div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">${sub}</div>
           </button>
         `;
-      }).join('');
+      }).join(''));
 
       listEl.querySelectorAll('.script-ai-model-item').forEach(btn => {
         btn.onclick = () => {
@@ -4905,7 +4905,7 @@ class AdminApp {
       render();
       searchEl.focus();
     } catch (e) {
-      listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--destructive);font-size:13px;">${escHtml(e.message || t('加载失败'))}</div>`;
+      setHTML(listEl, `<div style="padding:24px;text-align:center;color:var(--destructive);font-size:13px;">${escHtml(e.message || t('加载失败'))}</div>`);
     }
   }
 
@@ -5801,7 +5801,7 @@ async function(ctx) {
 
       return `
         <div class="model-check-item" data-model-id="${model.id}" data-model-name="${model.name || ''}" data-status="${statusClass}"${extraAttrs?.attrs || ''}>
-          <input type="checkbox" class="checkbox" id="fetchedModel_${index}" value="${model.id}" ${isEnabled ? 'checked' : ''} onchange="adminApp.updateFetchedModelsCount()">
+          <blora-checkbox class="fetched-model-checkbox" id="fetchedModel_${index}" value="${model.id}" label="${escapeHtml(model.name || model.id)}" ${isEnabled ? 'checked' : ''} onchange="adminApp.updateFetchedModelsCount()"></blora-checkbox>
           <label for="fetchedModel_${index}">
             <span class="model-name">${model.name || model.id}</span>
             ${model.name && model.name !== model.id ? `<span class="model-id">${model.id}</span>` : ''}
@@ -5914,7 +5914,7 @@ async function(ctx) {
     const items = document.querySelectorAll('#fetchedModelsList .model-check-item');
     items.forEach(item => {
       if (item.style.display !== 'none') {
-        const cb = item.querySelector('input[type="checkbox"]');
+        const cb = item.querySelector('blora-checkbox, blora-switch');
         if (cb) setBloraChecked(cb, checked);
       }
     });
@@ -5924,7 +5924,7 @@ async function(ctx) {
   updateFetchedModelsCount() {
     const checked = getBloraCheckedControls('.fetched-model-checkbox', document.getElementById('fetchedModelsList')).length;
     const total = document.querySelectorAll('#fetchedModelsList blora-checkbox, #fetchedModelsList blora-switch').length;
-    document.getElementById('selectAllFetchedModels').checked = checked > 0 && checked === total;
+    setBloraChecked(document.getElementById('selectAllFetchedModels'), checked > 0 && checked === total);
   }
 
   async saveFetchedModels() {
@@ -5933,7 +5933,7 @@ async function(ctx) {
     const enabledModelIds = [];
     checkboxes.forEach(cb => {
       if (getBloraChecked(cb)) {
-        enabledModelIds.push(cb.value);
+        enabledModelIds.push(getBloraValue(cb));
       }
     });
 
@@ -8205,7 +8205,8 @@ async function(ctx) {
   async saveAdminSettings(e) {
     e.preventDefault();
 
-    const billingMode = document.querySelector('input[name="billingMode"]:checked')?.value || 'token';
+    const billingModeEl = document.querySelector('blora-radio[name="billingMode"][checked], input[name="billingMode"]:checked');
+    const billingMode = getBloraValue(billingModeEl) || 'token';
     let refreshSec = parseInt(document.getElementById('statsRefreshInterval')?.value, 10);
     if (!Number.isFinite(refreshSec)) refreshSec = 10;
     refreshSec = Math.min(300, Math.max(3, refreshSec));
@@ -8345,7 +8346,7 @@ async function(ctx) {
       // 计费模式
       const billingMode = settings['billing_mode'] || 'token';
       const radio = document.querySelector(`input[name="billingMode"][value="${billingMode}"]`);
-      if (radio) radio.checked = true;
+      if (radio) setBloraChecked(radio, true);
       document.getElementById('ratePricePerRequest').value = settings['rate_price_per_request'] || 0.01;
       document.getElementById('ratePriceGroup').style.display = billingMode === 'rate' ? '' : 'none';
 
@@ -8428,7 +8429,7 @@ async function(ctx) {
       const secretHint = document.getElementById('feishuSecretHint');
       const sourceEl = document.getElementById('feishuConfigSource');
 
-      if (enabledEl) enabledEl.checked = !!data.enabled;
+      if (enabledEl) setBloraChecked(enabledEl, !!data.enabled);
       if (appIdEl) appIdEl.value = data.appId || '';
       if (secretEl) secretEl.value = '';
       if (tenantEl) tenantEl.value = data.tenantKey || '';
@@ -9785,7 +9786,7 @@ async function(ctx) {
             : available;
           setHTML(listEl, rows.map(u => `
             <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
-              <input type="checkbox" value="${u.id}" class="group-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
+              <blora-checkbox value="${u.id}" class="group-member-checkbox" label="${escapeHtml(u.username || u.email || u.id)}" ${selected.has(u.id) ? 'checked' : ''}></blora-checkbox>
               <span>${escapeHtml(u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
             </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
@@ -10472,7 +10473,7 @@ async function(ctx) {
             : available;
           setHTML(listEl, rows.map(u => `
             <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
-              <input type="checkbox" value="${u.id}" class="team-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
+              <blora-checkbox value="${u.id}" class="team-member-checkbox" label="${escapeHtml(u.username || u.email || u.id)}" ${selected.has(u.id) ? 'checked' : ''}></blora-checkbox>
               <span>${escapeHtml(u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
               ${u.team_name ? `<span class="badge">${escapeHtml(u.team_name)}</span>` : ''}
@@ -10963,7 +10964,7 @@ async function(ctx) {
     document.getElementById('confirmTeamModelBatchName').onclick = async () => {
       const namePattern = (document.getElementById('teamModelBatchNameInput')?.value || '').trim();
       if (!namePattern) { alert(t('请输入名称关键字')); return; }
-      const enabled = !document.getElementById('teamModelBatchNameDisable')?.checked;
+      const enabled = !getBloraChecked(document.getElementById('teamModelBatchNameDisable'));
       const action = enabled ? t('启用') : t('禁用');
       // 预估匹配数（本地）
       const q = namePattern.toLowerCase();
@@ -11011,7 +11012,7 @@ async function(ctx) {
       document.getElementById('confirmEditTeam').onclick = async () => {
         const name = document.getElementById('editTeamNameInput').value.trim();
         const description = document.getElementById('editTeamDescInput').value.trim();
-        const is_default = document.getElementById('editTeamDefaultInput').checked;
+        const is_default = getBloraChecked(document.getElementById('editTeamDefaultInput'));
         if (!name) { alert(t('名称不能为空')); return; }
         try {
           await fetch(`/api/admin/teams/${teamId}`, {

@@ -746,8 +746,7 @@ class ConsoleApp {
               ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)">⠿</span>
             ${/^crewrouter$/i.test(String(key.name || '')) ? '' : `
             <label class="pg-toggle api-key-enable-toggle" title="${isEnabled ? t('点击禁用') : t('点击启用')}">
-              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)">
-              <span class="pg-toggle-slider"></span>
+              <blora-switch class="api-key-enable-toggle" value="on" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)"></blora-switch>
             </label>`}
             <div class="api-key-title-text">
               <div class="api-key-name-row">
@@ -2872,9 +2871,7 @@ class ConsoleApp {
             <div style="font-size:12px;color:var(--muted-foreground);">禁用后，请求 fusion 模型将回退到当前绑定模型</div>
           </div>
           <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
-            <input type="checkbox" id="fusionEnabledToggle" ${fusionEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-            <span style="position:absolute;inset:0;background:${fusionEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
-            <span style="position:absolute;top:2px;${fusionEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+            <blora-switch id="fusionEnabledToggle" value="on" ${fusionEnabled ? 'checked' : ''} label="启用 Fusion"></blora-switch>
           </label>
         </div>
 
@@ -2894,7 +2891,7 @@ class ConsoleApp {
                   const checked = selectedPanels.has(m.id) ? 'checked' : '';
                   return `
                     <label class="fusion-panel-item" data-search="${(label + ' ' + m.id).toLowerCase()}" style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:4px;font-size:13px;">
-                      <input type="checkbox" class="fusion-panel-cb" value="${m.id}" ${checked}>
+                      <blora-checkbox class="fusion-panel-cb" value="${m.id}" ${checked ? 'checked' : ''} label="${escapeHtml(label)}"></blora-checkbox>
                       <span>${label}</span>
                     </label>
                   `;
@@ -2930,7 +2927,7 @@ class ConsoleApp {
       const toggleEl = document.getElementById('fusionEnabledToggle');
       if (toggleEl) {
         toggleEl.addEventListener('change', () => {
-          const on = toggleEl.checked;
+          const on = getBloraChecked(toggleEl);
           const body = document.getElementById('fusionConfigBody');
           if (body) { body.style.opacity = on ? '' : '0.4'; body.style.pointerEvents = on ? '' : 'none'; }
           // 更新滑块外观
@@ -2944,7 +2941,7 @@ class ConsoleApp {
       // 绑定 panel checkbox 变化事件
       container.querySelectorAll('.fusion-panel-cb').forEach(cb => {
         cb.addEventListener('change', () => {
-          const count = container.querySelectorAll('.fusion-panel-cb:checked').length;
+          const count = getBloraCheckedControls('.fusion-panel-cb', container).length;
           document.getElementById('fusionPanelCount').textContent = `${count}${t('个模型已选')}`;
         });
       });
@@ -3150,9 +3147,9 @@ class ConsoleApp {
     const keyId = this._currentOptionsKeyId;
     if (!keyId) return;
     const settings = [
-      ['quota-warning', 'quota_warning_enabled', document.getElementById('keyOptionQuotaWarning')?.checked !== false],
-      ['swallow-images', 'swallow_images', document.getElementById('keyOptionSwallowImages')?.checked === true],
-      ['crewrouter-commands', 'crewrouter_commands', document.getElementById('keyOptionCrewRouterCommands')?.checked !== false]
+      ['quota-warning', 'quota_warning_enabled', getBloraChecked(document.getElementById('keyOptionQuotaWarning'))],
+      ['swallow-images', 'swallow_images', getBloraChecked(document.getElementById('keyOptionSwallowImages'))],
+      ['crewrouter-commands', 'crewrouter_commands', getBloraChecked(document.getElementById('keyOptionCrewRouterCommands'))]
     ];
     try {
       for (const [endpoint, field, value] of settings) {
@@ -5784,8 +5781,7 @@ class ConsoleApp {
       </div>
       <div class="model-library-item-actions">
         <label class="toggle-switch" onclick="event.stopPropagation()" title="${item.enabled ? t('点击停用') : t('点击启用')}">
-          <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)">
-          <span class="toggle-slider"></span>
+          <blora-switch value="on" ${item.enabled ? 'checked' : ''} onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)"></blora-switch>
         </label>
         <button type="button" class="btn btn-sm btn-secondary" onclick="app.showInjectPromptModal(${parseInt(item.id, 10)})">${t('编辑')}</button>
         <button type="button" class="btn btn-sm btn-secondary" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})">${t('删除')}</button>
@@ -5828,7 +5824,7 @@ class ConsoleApp {
         <p style="font-size:12px;color:var(--muted-foreground);margin:0 0 4px;">${t('不勾选任何 Key 时对所有 Key 全局生效；勾选后仅对所选 Key 生效')}</p>
         ${keys.map(k => `
           <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);">
-            <input type="checkbox" class="inject-key-check" value="${escapeHtml(k.id)}" ${bound.has(String(k.id)) ? 'checked' : ''}>
+            <blora-checkbox class="inject-key-check" value="${escapeHtml(k.id)}" ${bound.has(String(k.id)) ? 'checked' : ''} label="${escapeHtml(k.name)}"></blora-checkbox>
             <span>${escapeHtml(k.name)}${k.key_prefix ? `&nbsp;<code style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(k.key_prefix)}…</code>` : ''}</span>
           </label>`).join('')}
       `);
@@ -6275,7 +6271,7 @@ class ConsoleApp {
       const res = await fetch('/api/user/plugin-pref-optin');
       if (!res.ok) return;
       const data = await res.json();
-      toggle.checked = data.optedIn === true;
+      setBloraChecked(toggle, data.optedIn === true);
     } catch (error) { console.error(t('加载插件授权状态失败:'), error); }
   }
 
@@ -6291,7 +6287,7 @@ class ConsoleApp {
       if (status) { status.textContent = enabled ? t('已开启') : t('已关闭'); status.style.color = 'var(--success)'; }
     } catch (error) {
       const toggle = document.getElementById('pluginPrefOptin');
-      if (toggle) toggle.checked = !enabled;
+      if (toggle) setBloraChecked(toggle, !enabled);
       if (status) { status.textContent = error.message || t('保存失败'); status.style.color = 'var(--destructive)'; }
     }
     setTimeout(() => { if (status) status.textContent = ''; }, 3000);
@@ -6303,15 +6299,15 @@ class ConsoleApp {
       if (!res.ok) return;
       const data = await res.json();
       const enabled = document.getElementById('barkEnabled');
-      if (enabled) enabled.checked = !!data.barkEnabled;
+      if (enabled) setBloraChecked(enabled, !!data.barkEnabled);
       const key = document.getElementById('barkServerKey');
       if (key) key.value = data.barkServerKey || '';
       const endpoint = document.getElementById('barkEndpoint');
       if (endpoint) endpoint.value = data.barkEndpoint || 'https://api.day.app';
       const quota = document.getElementById('notifyQuota');
-      if (quota) quota.checked = data.notifyQuota !== false;
+      if (quota) setBloraChecked(quota, data.notifyQuota !== false);
       const errors = document.getElementById('notifyErrors');
-      if (errors) errors.checked = data.notifyErrors !== false;
+      if (errors) setBloraChecked(errors, data.notifyErrors !== false);
     } catch (error) { console.error(t('加载通知设置失败:'), error); }
   }
 
@@ -6322,11 +6318,11 @@ class ConsoleApp {
       const res = await fetch('/api/user/notification-settings', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          barkEnabled: document.getElementById('barkEnabled')?.checked,
+          barkEnabled: getBloraChecked(document.getElementById('barkEnabled')),
           barkServerKey: document.getElementById('barkServerKey')?.value,
           barkEndpoint: document.getElementById('barkEndpoint')?.value,
-          notifyQuota: document.getElementById('notifyQuota')?.checked,
-          notifyErrors: document.getElementById('notifyErrors')?.checked,
+          notifyQuota: getBloraChecked(document.getElementById('notifyQuota')),
+          notifyErrors: getBloraChecked(document.getElementById('notifyErrors')),
         })
       });
       const data = await res.json();
@@ -6373,10 +6369,10 @@ class ConsoleApp {
     try {
       const res = await fetch('/api/user/hook-notify-rules');
       const data = await res.json();
-      toggle.checked = data.pushEnabled === true;
+      setBloraChecked(toggle, data.pushEnabled === true);
       this._hookNotifySelection = data.selection || { harnesses: [], eventTypes: [] };
     } catch (error) {
-      toggle.checked = false;
+      setBloraChecked(toggle, false);
       this._hookNotifySelection = { harnesses: [], eventTypes: [] };
     }
   }
@@ -6390,11 +6386,11 @@ class ConsoleApp {
     if (!hWrap || !eWrap) return;
     setHTML(hWrap, harnesses.map(h => {
       const on = sel.harnesses.includes(h) ? ' checked' : '';
-      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-harness" value="${h}"${on}> ${h}</label>`;
+      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><blora-checkbox class="hn-harness" value="${h}" label="${h}" ${on}></blora-checkbox></label>`;
     }).join(''));
     setHTML(eWrap, events.map(([v, label]) => {
       const on = sel.eventTypes.includes(v) ? ' checked' : '';
-      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-event" value="${v}"${on}> ${t(label)}</label>`;
+      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><blora-checkbox class="hn-event" value="${v}" label="${t(label)}" ${on}></blora-checkbox></label>`;
     }).join(''));
     this.showModal('hookNotifySelectModal');
   }
@@ -6811,7 +6807,7 @@ class ConsoleApp {
       this.showToast(enabled ? t('事件通知已开启') : t('事件通知已关闭'), 'success');
     } catch (error) {
       const toggle = document.getElementById('hookNotifyPushEnabled');
-      if (toggle) toggle.checked = !enabled;
+      if (toggle) setBloraChecked(toggle, !enabled);
       this.showToast(error.message || t('保存失败'), 'error');
     }
   }
@@ -6826,12 +6822,12 @@ class ConsoleApp {
     const enabled = this.user.api_signature_enabled === true;
     const tpl = this.user.api_signature_template || DEFAULT_TEMPLATE;
 
-    toggle.checked = enabled;
+    setBloraChecked(toggle, enabled);
     template.value = tpl;
     group.style.display = enabled ? '' : 'none';
 
     toggle.onchange = () => {
-      group.style.display = toggle.checked ? '' : 'none';
+      group.style.display = getBloraChecked(toggle) ? '' : 'none';
       this._updateSignaturePreview();
     };
     template.oninput = () => this._updateSignaturePreview();
@@ -6874,13 +6870,13 @@ class ConsoleApp {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          api_signature_enabled: toggle.checked,
+          api_signature_enabled: getBloraChecked(toggle),
           api_signature_template: template.value
         })
       });
       const data = await res.json();
       if (data.success) {
-        this.user.api_signature_enabled = toggle.checked;
+        this.user.api_signature_enabled = getBloraChecked(toggle);
         this.user.api_signature_template = template.value;
         status.textContent = t('保存成功');
         status.style.color = 'var(--success)';
@@ -6900,7 +6896,7 @@ class ConsoleApp {
     const template = document.getElementById('apiSignatureTemplate');
     const toggle = document.getElementById('apiSignatureToggle');
     if (template) template.value = DEFAULT_TEMPLATE;
-    if (toggle) { toggle.checked = true; toggle.dispatchEvent(new Event('change')); }
+    if (toggle) { setBloraChecked(toggle, true); toggle.dispatchEvent(new Event('change')); }
     this._updateSignaturePreview();
   }
 
@@ -8328,7 +8324,7 @@ ${extractorBody}
         <table>
           <thead>
             <tr>
-              <th style="width:40px;"><input type="checkbox" onchange="app.toggleSelectAllProviders(this.checked)"></th>
+              <th style="width:40px;"><blora-checkbox value="on" label="全选" onchange="app.toggleSelectAllProviders(this.checked)"></blora-checkbox></th>
               <th>名称</th>
               <th>Base URL</th>
               <th>格式</th>
@@ -8340,7 +8336,7 @@ ${extractorBody}
           <tbody>
             ${providers.map(p => `
               <tr data-provider-id="${escapeHtml(p.id)}">
-                <td><input type="checkbox" class="provider-checkbox" value="${escapeHtml(p.id)}" onchange="app.updateBatchButtons()"></td>
+                <td><blora-checkbox class="provider-checkbox" value="${escapeHtml(p.id)}" label="${escapeHtml(p.name)}" onchange="app.updateBatchButtons()"></blora-checkbox></td>
                 <td>
                   <div style="font-weight:500;">${escapeHtml(p.name)}</div>
                   <div style="font-size:11px;color:var(--muted-foreground);font-family:monospace;">${escapeHtml(p.id)}</div>
@@ -8379,13 +8375,13 @@ ${extractorBody}
 
   toggleSelectAllProviders(checked) {
     document.querySelectorAll('.provider-checkbox').forEach(cb => {
-      cb.checked = checked;
+      setBloraChecked(cb, checked);
     });
     this.updateBatchButtons();
   }
 
   updateBatchButtons() {
-    const checked = document.querySelectorAll('.provider-checkbox[checked]');
+    const checked = getBloraCheckedControls('.provider-checkbox');
     const batchBtn = document.getElementById('batchDeleteBtn');
     if (batchBtn) {
       batchBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
@@ -8393,8 +8389,8 @@ ${extractorBody}
   }
 
   async batchDeleteProviders() {
-    const checked = document.querySelectorAll('.provider-checkbox[checked]');
-    const ids = Array.from(checked).map(cb => cb.value);
+    const checked = getBloraCheckedControls('.provider-checkbox');
+    const ids = Array.from(checked).map(cb => getBloraValue(cb));
 
     if (!ids.length) return;
     if (!await confirm(`${t('确定要删除选中的')}${ids.length}${t('个供应商吗？关联的模型也会被删除。')}`)) return;
@@ -8670,7 +8666,7 @@ ${extractorBody}
 
     setHTML(container, models.map((model, index) => `
       <div class="model-check-item" data-model-id="${model.id}" data-model-name="${model.name || ''}">
-        <input type="checkbox" class="manage-model-checkbox" id="manageModel_${index}" value="${model.id}" onchange="app._updateManageModelsBatchBar()">
+        <blora-checkbox class="manage-model-checkbox" id="manageModel_${index}" value="${model.id}" label="${escapeHtml(model.name || model.id)}" onchange="app._updateManageModelsBatchBar()"></blora-checkbox>
         <label for="manageModel_${index}" style="flex:1;cursor:pointer;">
           <span style="font-weight:500;">${escapeHtml(model.name || model.id)}</span>
           ${model.name && model.name !== model.id ? `<span style="font-size:12px;color:var(--muted-foreground);margin-left:8px;">${escapeHtml(model.id)}</span>` : ''}
@@ -8695,7 +8691,7 @@ ${extractorBody}
 
   toggleSelectAllManageModels(checked) {
     document.querySelectorAll('.manage-model-checkbox').forEach(cb => {
-      cb.checked = checked;
+      setBloraChecked(cb, checked);
     });
     this._updateManageModelsBatchBar();
   }
@@ -8722,7 +8718,7 @@ ${extractorBody}
 
   async saveManagedModels() {
     const checked = getBloraCheckedControls('.manage-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
 
     if (!modelIds.length) {
       this.closeModals();
@@ -8770,7 +8766,7 @@ ${extractorBody}
 
   async batchEnableModels(enabled) {
     const checked = getBloraCheckedControls('.manage-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
 
     if (!modelIds.length) return;
 
@@ -8800,7 +8796,7 @@ ${extractorBody}
 
   async batchDeleteManagedModels() {
     const checked = getBloraCheckedControls('.manage-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
 
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
@@ -8835,7 +8831,7 @@ ${extractorBody}
 
   async executeBatchSetPrices() {
     const checked = getBloraCheckedControls('.manage-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
 
     if (!modelIds.length) return;
 
@@ -8919,7 +8915,7 @@ ${extractorBody}
       <table>
         <thead>
           <tr>
-            <th style="width:40px;"><input type="checkbox" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></th>
+            <th style="width:40px;"><blora-checkbox value="on" label="全选" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></blora-checkbox></th>
             <th>模型名称</th>
             <th>上游模型ID</th>
             <th>供应商</th>
@@ -8932,7 +8928,7 @@ ${extractorBody}
         <tbody>
           ${models.map(m => `
             <tr data-model-id="${escapeHtml(m.id)}">
-              <td><input type="checkbox" class="my-team-model-checkbox" value="${escapeHtml(m.id)}" onchange="app.updateMyModelsBatchButtons()"></td>
+              <td><blora-checkbox class="my-team-model-checkbox" value="${escapeHtml(m.id)}" label="${escapeHtml(m.name || m.id)}" onchange="app.updateMyModelsBatchButtons()"></blora-checkbox></td>
               <td>
                 <div style="font-weight:500;">${escapeHtml(m.alias || m.name || m.id)}</div>
                 ${m.description ? `<div style="font-size:11px;color:var(--muted-foreground);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
@@ -8973,7 +8969,7 @@ ${extractorBody}
 
   toggleSelectAllMyTeamModels(checked) {
     document.querySelectorAll('.my-team-model-checkbox').forEach(cb => {
-      cb.checked = checked;
+      setBloraChecked(cb, checked);
     });
     this.updateMyModelsBatchButtons();
   }
@@ -8990,7 +8986,7 @@ ${extractorBody}
 
   async batchDeleteMyTeamModels() {
     const checked = getBloraCheckedControls('.my-team-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？此操作不可撤销。')}`)) return;
 
@@ -9022,7 +9018,7 @@ ${extractorBody}
 
   async _batchUpdateMyTeamModels(updates, action) {
     const checked = getBloraCheckedControls('.my-team-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要')}${action}${t('选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
 
@@ -9046,7 +9042,7 @@ ${extractorBody}
 
   showBatchEditMyModelsModal() {
     const checked = getBloraCheckedControls('.my-team-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
     if (!modelIds.length) return;
 
     document.getElementById('batchEditMyModelsInfo').textContent = `${t('已选择')}${modelIds.length}${t('个模型')}`;
@@ -9055,7 +9051,7 @@ ${extractorBody}
     ['Enabled', 'Series', 'Desc', 'Alias', 'InputPrice', 'OutputPrice'].forEach(field => {
       const check = document.getElementById(`batchEditMyModels${field}Check`);
       const input = document.getElementById(`batchEditMyModels${field}`);
-      if (check) check.checked = false;
+      if (check) setBloraChecked(check, false);
       if (input) { input.value = ''; input.disabled = true; }
     });
 
@@ -9066,41 +9062,41 @@ ${extractorBody}
       const check = document.getElementById(`batchEditMyModels${field}Check`);
       const input = document.getElementById(`batchEditMyModels${field}`);
       if (check && input) {
-        check.onchange = () => { input.disabled = !check.checked; };
+        check.onchange = () => { input.disabled = !getBloraChecked(check); };
       }
     });
   }
 
   async saveBatchEditMyModels() {
     const checked = getBloraCheckedControls('.my-team-model-checkbox');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const modelIds = Array.from(checked).map(cb => getBloraValue(cb));
     if (!modelIds.length) return;
 
     const updates = {};
 
     const enabledCheck = document.getElementById('batchEditMyModelsEnabledCheck');
-    if (enabledCheck.checked) {
+    if (getBloraChecked(enabledCheck)) {
       updates.enabled = document.getElementById('batchEditMyModelsEnabled').value === 'true';
     }
     const seriesCheck = document.getElementById('batchEditMyModelsSeriesCheck');
-    if (seriesCheck.checked) {
+    if (getBloraChecked(seriesCheck)) {
       updates.series = document.getElementById('batchEditMyModelsSeries').value.trim();
     }
     const descCheck = document.getElementById('batchEditMyModelsDescCheck');
-    if (descCheck.checked) {
+    if (getBloraChecked(descCheck)) {
       updates.description = document.getElementById('batchEditMyModelsDesc').value.trim();
     }
     const aliasCheck = document.getElementById('batchEditMyModelsAliasCheck');
-    if (aliasCheck.checked) {
+    if (getBloraChecked(aliasCheck)) {
       updates.alias = document.getElementById('batchEditMyModelsAlias').value.trim();
     }
     const inputPriceCheck = document.getElementById('batchEditMyModelsInputPriceCheck');
-    if (inputPriceCheck.checked) {
+    if (getBloraChecked(inputPriceCheck)) {
       const val = document.getElementById('batchEditMyModelsInputPrice').value;
       if (val !== '') updates.input_price_per_1k_tokens = parseFloat(val);
     }
     const outputPriceCheck = document.getElementById('batchEditMyModelsOutputPriceCheck');
-    if (outputPriceCheck.checked) {
+    if (getBloraChecked(outputPriceCheck)) {
       const val = document.getElementById('batchEditMyModelsOutputPrice').value;
       if (val !== '') updates.output_price_per_1k_tokens = parseFloat(val);
     }
