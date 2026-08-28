@@ -847,7 +847,7 @@ class ConsoleApp {
     tip.id = 'apiKeyRouteQueueTip';
     tip.dataset.keyId = String(keyId);
     tip.className = 'api-key-route-queue-tip';
-    tip.innerHTML = `
+    setHTML(tip, `
       <div class="api-key-route-queue-tip-title">模型队列 · 按序回退</div>
       <ol class="api-key-route-queue-tip-list">
         ${queue.map((item, i) => {
@@ -860,7 +860,7 @@ class ConsoleApp {
           </li>`;
         }).join('')}
       </ol>
-    `;
+    `);
 
     tip.addEventListener('mouseenter', () => {
       if (this._routeQueueTipLeaveTimer) {
@@ -6591,7 +6591,7 @@ class ConsoleApp {
   _updateTaskBar(state, payload = {}) {
     const bar = document.getElementById('modelLibraryTaskBar');
     if (!bar) return;
-    if (state === 'hidden') { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+    if (state === 'hidden') { bar.style.display = 'none'; clearChildren(bar); return; }
     if (state === 'loading') {
       bar.style.display = '';
       if (payload.sessionKey) this._summaryTaskSessionKey = payload.sessionKey;
@@ -6676,7 +6676,7 @@ class ConsoleApp {
 
   _summaryPlainText(text) {
     const box = document.createElement('div');
-    box.innerHTML = this._renderSafeMarkdown(String(text || ''));
+    setHTML(box, this._renderSafeMarkdown(String(text || '')));
     return String(box.textContent || box.innerText || '').replace(/\n{3,}/g, '\n\n').trim();
   }
 
@@ -8260,9 +8260,27 @@ ${extractorBody}
     const res = await fetch('/api/user/trace-sessions?unviewed=1');
     if (!res.ok) return;
     const reports = await res.json();
-    if (!reports.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    if (!reports.length) { box.style.display = 'none'; clearChildren(box); return; }
     box.style.display = 'block';
-    box.innerHTML = `<div class="trace-reports-title">${t('未查看的跟踪报告')}</div><div class="trace-reports-list">${reports.map(r => `<button class="trace-report-chip" onclick="app.openTraceReport('${escapeHtml(r.public_id)}')"><strong>${escapeHtml(r.public_id)}</strong><span>${escapeHtml(r.api_key_name || t('已删除 Key'))}</span><span>${Number(r.summary?.requests || 0)} 项请求</span></button>`).join('')}</div>`;
+    const title = document.createElement('div');
+    title.className = 'trace-reports-title';
+    title.textContent = t('未查看的跟踪报告');
+    const list = document.createElement('div');
+    list.className = 'trace-reports-list';
+    reports.forEach((report) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'blora-button trace-report-chip';
+      button.dataset.variant = 'secondary';
+      const id = document.createElement('strong'); id.textContent = report.public_id || '';
+      const name = document.createElement('span'); name.textContent = report.api_key_name || t('已删除 Key');
+      const count = document.createElement('span'); count.textContent = `${Number(report.summary?.requests || 0)} 项请求`;
+      button.append(id, name, count);
+      button.addEventListener('click', () => this.openTraceReport(report.public_id));
+      list.appendChild(button);
+    });
+    clearChildren(box);
+    box.append(title, list);
   }
 
   async openTraceReport(publicId) {
@@ -8291,11 +8309,16 @@ ${extractorBody}
       return `<span class="badge"${title} style="color:${meta.color};border:1px solid ${meta.color};">${escapeHtml(meta.label)}</span>`;
     };
     const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${renderSemantics(e.semantics)}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? t('成功') : t('失败')}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
-    const detail = document.createElement('div');
-    detail.className = 'trace-report-modal';
-    detail.innerHTML = `${'<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>' + t('跟踪报告')}${escapeHtml(session.public_id)}${'</h3><button class="btn btn-secondary btn-sm" onclick="this.closest(\'.trace-report-modal\').remove()">' + t('关闭')}</button></div><p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div></div>`;
+    const detail = document.createElement('blora-dialog');
+    detail.id = 'traceReportModal';
+    const header = document.createElement('div'); header.slot = 'header';
+    const heading = document.createElement('h3'); heading.textContent = `${t('跟踪报告')}${session.public_id || ''}`; header.appendChild(heading);
+    const body = document.createElement('div');
+    setHTML(body, `<p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="blora-button" data-variant="secondary" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="blora-button" data-variant="secondary" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table class="blora-table"><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div>`);
+    detail.append(header, body);
     document.body.appendChild(detail);
-    detail.addEventListener('click', e => { if (e.target === detail) detail.remove(); });
+    upgradeBloraControls(detail);
+    detail.show();
     this.loadTraceReports().catch(() => {});
   }
 

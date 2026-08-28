@@ -8490,12 +8490,12 @@ async function(ctx) {
     const container = document.getElementById('modelListTags');
     if (!container) return;
     const modelList = this._modelList || [];
-    container.innerHTML = modelList.map(m => `
+    setHTML(container, modelList.map(m => `
       <span class="model-tag" data-model="${escapeHtml(m)}" style="display:inline-flex;align-items:center;gap:4px;background:var(--primary);color:#fff;padding:2px 10px;border-radius:12px;font-size:12px;">
         ${escapeHtml(m)}
         ${m !== 'fusion' ? '<span class="model-tag-remove" style="cursor:pointer;margin-left:2px;opacity:0.7;" title="删除">&times;</span>' : ''}
       </span>
-    `).join('');
+    `).join(''));
 
     // 绑定删除事件
     container.querySelectorAll('.model-tag-remove').forEach(btn => {
