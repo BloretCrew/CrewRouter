@@ -105,8 +105,8 @@
         html += '<div class="pi-section"><h3>行为</h3><ul>' + behaviorHtml(info.behavior) + '</ul></div>';
         html += '<div class="pi-warn">安装后将立即启用该插件，并每日从插件商店检查是否有更新（若有更新会提醒系统管理员）。</div>';
         html += '<div class="pi-actions">' +
-          '<button class="btn btn-primary" id="piConfirm" data-variant="primary" type="button">确认安装</button>' +
-          '<button class="btn btn-secondary" id="piCancel" data-variant="secondary" type="button">取消</button>' +
+          '<button class="blora-button" data-variant="primary" id="piConfirm" type="button">确认安装</button>' +
+          '<button class="blora-button" data-variant="secondary" id="piCancel" type="button">取消</button>' +
         '</div>';
 
         root.innerHTML = html;
@@ -134,7 +134,7 @@
           if (res.ok) {
             root.innerHTML = '<div class="pi-err"><strong style="color:var(--primary,#2563eb);">安装成功</strong>' +
               esc(res.data.name || pluginId) + ' v' + esc(res.data.version || '') + ' 已启用。</div>' +
-              '<div class="pi-actions"><a class="btn btn-primary" href="/admin">前往插件管理</a></div>';
+              '<div class="pi-actions"><a class="blora-button" data-variant="primary" href="/admin">前往插件管理</a></div>';
           } else {
             throw new Error((res.data && res.data.error) || ('HTTP ' + res.status));
           }

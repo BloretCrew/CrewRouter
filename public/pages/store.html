@@ -25,10 +25,10 @@
   <script type="module" src="/blora/auto.js"></script>
 </head>
 <body class="blora-page blora-scope">
-<div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-      <option value="zh">中文</option>
-      <option value="en">EN</option>
-    </select></div>
+<div style="position:absolute;top:10px;right:12px;z-index:99;"><blora-select id="langToggle" class="blora-button" data-size="icon" data-variant="secondary" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
+      <blora-option value="zh">中文</blora-option>
+      <blora-option value="en">EN</blora-option>
+    </blora-select></div>
 
   <div class="store-shell">
     <header class="store-header">
@@ -47,8 +47,8 @@
         <a class="store-nav__link" href="/data"><span data-i18n="统计">统计</span></a>
         <span class="store-nav__spacer"></span>
         <span class="store-nav__user" id="storeUserBox" style="display:none;"></span>
-        <button class="btn btn-sm btn-secondary" id="storeLoginBtn" data-variant="secondary" data-size="sm" type="button"><span data-i18n="登录">登录</span></button>
-        <button class="btn btn-sm btn-outline" id="storeLogoutBtn" style="display:none;" data-variant="secondary" data-size="sm" type="button"><span data-i18n="登出">登出</span></button>
+        <button class="blora-button" data-size="sm" data-variant="secondary" id="storeLoginBtn" data-size="sm" type="button"><span data-i18n="登录">登录</span></button>
+        <button class="blora-button" data-size="sm" data-variant="secondary" id="storeLogoutBtn" style="display:none;" data-size="sm" type="button"><span data-i18n="登出">登出</span></button>
       </nav>
     </header>
 
@@ -61,7 +61,7 @@
 
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/theme.js?v=2"></script>
-  <script src="/js/store.js?v=2"></script>
+  <script src="/js/store.js?v=3"></script>
   <script>
     (function () {
       function apply() { if (window.I18N) I18N.applyDom(); }

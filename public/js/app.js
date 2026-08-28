@@ -506,9 +506,9 @@ class ConsoleApp {
   }
 
   getSFIcon(name, size) {
-    const iconName = name === 'gear' ? 'settings' : name === 'plus' ? 'plus' : name === 'trash' ? 'trash-2' : 'circle-help';
-    const icon = window.Blora?.createBloraIcon?.(iconName, size || 18);
-    return icon ? icon.outerHTML : '';
+    const iconName = name || 'questionmark.circle';
+    const iconSize = size || 18;
+    return `<img class="sf-icon" data-sf-name="${iconName}" src="https://img.bloret.net/SF/${iconName}?color=white" alt="${iconName}" width="${iconSize}" height="${iconSize}" style="display:inline-block;vertical-align:middle;">`;
   }
 
   async loadApiKeys() {
@@ -5418,9 +5418,8 @@ class ConsoleApp {
 
   /** 时间线内联 SF 小图标（12px，随文基线对齐） */
   _sfIcon(name, color) {
-    const iconName = name === 'folder.fill' ? 'folder' : name === 'text.bubble' ? 'message-circle' : 'circle-help';
-    const icon = window.Blora?.createBloraIcon?.(iconName, 12);
-    return icon ? icon.outerHTML : '';
+    const iconName = name || 'questionmark.circle';
+    return `<img class="sf-icon" data-sf-name="${iconName}" src="https://img.bloret.net/SF/${iconName}?color=${color || 'white'}" alt="${iconName}" width="12" height="12" style="display:inline-block;vertical-align:middle;">`;
   }
 
   /** 时间线单事件：文本 / 工具调用 / 工具结果 / 思考 */
