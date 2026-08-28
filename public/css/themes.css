@@ -58,9 +58,9 @@
 
   /* 高频语义色（JS 动态 UI / badge / 状态点可引用，主题可覆盖） */
   --status-success: #16a34a;
-  --status-success-soft: #22c55e;
+  --status-success-soft: #ecfdf5;
   --status-warn: #d97706;
-  --status-warn-soft: #f5a524;
+  --status-warn-soft: #fffbeb;
   --status-warn-strong: #a16207;
   --status-info: #2563eb;
   --status-danger: #dc2626;
@@ -144,9 +144,9 @@
 
   /* 高频语义色（深色变体） */
   --status-success: #4ade80;
-  --status-success-soft: #4ade80;
+  --status-success-soft: rgba(74, 222, 128, 0.15);
   --status-warn: #fbbf24;
-  --status-warn-soft: #fbbf24;
+  --status-warn-soft: rgba(251, 191, 36, 0.15);
   --status-warn-strong: #fde68a;
   --status-info: #60a5fa;
   --status-danger: #f87171;
@@ -716,13 +716,13 @@ pre {
 }
 
 .badge-violet {
-  background: color-mix(in srgb, var(--chart-2) 10%, transparent);
+  background: color-mix(in srgb, var(--purple) 10%, transparent);
   color: var(--purple);
   border: 1px solid color-mix(in srgb, var(--purple) 30%, transparent);
 }
 
 .dark .badge-violet {
-  background: color-mix(in srgb, var(--chart-2) 15%, transparent);
+  background: color-mix(in srgb, var(--purple) 15%, transparent);
   color: var(--purple);
   border-color: color-mix(in srgb, var(--purple) 30%, transparent);
 }
@@ -3278,11 +3278,11 @@ pre {
 }
 
 .trend-up {
-  color: #10b981;
+  color: var(--status-success);
 }
 
 .trend-down {
-  color: #ef4444;
+  color: var(--status-danger);
 }
 
 .trend-neutral {
@@ -3290,11 +3290,11 @@ pre {
 }
 
 .trend-up-text {
-  color: #10b981;
+  color: var(--status-success);
 }
 
 .trend-down-text {
-  color: #ef4444;
+  color: var(--status-danger);
 }
 
 /* ============================================
@@ -3326,7 +3326,7 @@ pre {
 .cache-hit-percent {
   font-size: 24px;
   font-weight: 700;
-  color: #10b981;
+  color: var(--status-success);
 }
 
 .cache-hit-bar-container {
@@ -3340,7 +3340,7 @@ pre {
 .cache-hit-bar {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #10b981, #059669);
+  background: linear-gradient(90deg, var(--status-success), var(--status-success));
   border-radius: 5px;
   transition: width 0.6s ease;
 }
