@@ -1,0 +1,51 @@
+{
+  "id": "all-capabilities",
+  "name": "全能力示例",
+  "version": "1.0.0",
+  "author": "CrewRouter",
+  "description": "总示例插件：演示插件系统全部 20 项权限与全部钩子，作为其他插件的完整模板。加载后日志会逐项标注每个能力「可用/被拒」。",
+  "permissions": [
+    "storage",
+    "network",
+    "gateway:modify",
+    "billing:modify",
+    "apikey:modify",
+    "provider:register",
+    "stats:record",
+    "pages:register",
+    "slots:register",
+    "routes:register",
+    "cron:register",
+    "themes:register",
+    "usage:read",
+    "models:read",
+    "preferences:read",
+    "audit:write",
+    "export:usage",
+    "meta:read",
+    "webhook:register",
+    "admin:view"
+  ],
+  "allowedHosts": ["webhook.bloret.net", "hooks.example.com"],
+  "pages": [
+    {
+      "path": "/settings/all-capabilities",
+      "title": "全能力示例",
+      "area": "settings",
+      "entry": "page.html"
+    }
+  ],
+  "slots": [
+    { "page": "dashboard", "position": "top", "render": "renderDashboardCard" }
+  ],
+  "routes": [
+    { "method": "get", "path": "/ping", "auth": "user", "handler": "ping" },
+    { "method": "get", "path": "/usage", "auth": "user", "handler": "usage" }
+  ],
+  "themes": [
+    { "id": "all-capabilities-theme", "name": "全能力示例主题", "entry": "theme.css" }
+  ],
+  "cron": [
+    { "expr": "*/15 * * * *", "handler": "heartbeat" }
+  ]
+}

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全能力示例 - CrewRouter 插件</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 24px; background: #0f1115; color: #e5e7eb; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .sub { color: #9ca3af; font-size: 13px; margin-bottom: 20px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    .badge { font-size: 12px; font-family: ui-monospace, monospace; padding: 4px 10px; border-radius: 999px; border: 1px solid #374151; background: #1f2430; }
+    .badge.on { background: rgba(22,163,74,.15); color: #4ade80; border-color: transparent; }
+    .card { background: #171b23; border: 1px solid #2a3140; border-radius: 12px; padding: 16px; }
+    button { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    pre { margin-top: 12px; background: #0b0d11; border: 1px solid #2a3140; border-radius: 8px; padding: 12px; font-size: 12px; overflow: auto; max-height: 420px; white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>🧩 全能力示例（all-capabilities）</h1>
+  <div class="sub">演示插件系统全部 20 项权限与全部钩子。后端能力验证结果见服务日志。</div>
+
+  <div class="badges" id="badges"></div>
+
+  <div class="card">
+    <button id="loadUsage">GET /usage</button>
+    <pre id="usageOut">（点击按钮拉取 /api/plugins/all-capabilities/usage）</pre>
+  </div>
+
+  <script>
+    (function () {
+      var caps = [
+        'storage', 'network', 'gateway:modify', 'billing:modify', 'apikey:modify',
+        'provider:register', 'stats:record', 'pages:register', 'slots:register',
+        'routes:register', 'cron:register', 'themes:register', 'usage:read',
+        'models:read', 'preferences:read', 'audit:write', 'export:usage',
+        'meta:read', 'webhook:register', 'admin:view'
+      ];
+      document.getElementById('badges').innerHTML = caps.map(function (c) {
+        return '<span class="badge on">' + c + '</span>';
+      }).join('');
+
+      document.getElementById('loadUsage').addEventListener('click', async function () {
+        var out = document.getElementById('usageOut');
+        out.textContent = '加载中...';
+        try {
+          var r = await fetch('/api/plugins/all-capabilities/usage', { credentials: 'same-origin' });
+          var data = await r.json();
+          out.textContent = JSON.stringify(data, null, 2);
+        } catch (e) {
+          out.textContent = '请求失败: ' + e.message;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

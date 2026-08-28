@@ -1,0 +1,12 @@
+/* 全能力示例主题：演示 themes:register 权限
+   选择一个全局 class 命名空间，避免影响插件外元素 */
+
+.all-capabilities-theme {
+  --primary: #7c3aed;
+  --brand-blue: #7c3aed;
+  --brand-blue-bg: rgba(124, 58, 237, 0.12);
+}
+
+.all-capabilities-theme .badge {
+  border-radius: 6px;
+}
