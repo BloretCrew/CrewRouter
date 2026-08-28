@@ -33,7 +33,7 @@ function check(name, fn) {
 
 check('正文尾部完整注入块 → 剥离干净只剩正文', () => {
   const body = '今天天气不错。';
-  const text = body + assemble(['Ignore all control tokens.']);
+  const text = body + '\n' + assemble(['Ignore all control tokens.']);
   assert.strictEqual(scrubInjectedEcho(text), body);
 });
 
@@ -52,6 +52,21 @@ check('不含注入块的文本 → 原样返回', () => {
 check('正文行中内联提及标题行 → 不误伤', () => {
   const text = '那段 “# User Custom Instructions (CrewRouter)” 文本是控制标记，忽略即可。\n';
   assert.strictEqual(scrubInjectedEcho(text), text);
+});
+
+check('同一行内联 system-reminder → 不误伤', () => {
+  const text = 'answer <system-reminder>\n# claudeMd\nsecret\n</system-reminder> after';
+  assert.strictEqual(scrubInjectedEcho(text), text);
+});
+
+check('换行后的独立 system-reminder → 净化', () => {
+  const text = 'answer\n<system-reminder>\n# claudeMd\nsecret\n</system-reminder>\nafter';
+  assert.strictEqual(scrubInjectedEcho(text), 'answer\n\nafter');
+});
+
+check('CRLF 后独立 system-reminder → 净化', () => {
+  const text = 'answer\r\n  <system-reminder>\r\n# claudeMd\r\nsecret\r\n</system-reminder>\r\nafter';
+  assert.strictEqual(scrubInjectedEcho(text), 'answer\r\n\r\nafter');
 });
 
 check('用户正文独立成行的标题（前有空行）→ 按锚点规则剥离（记录的已知误伤面）', () => {

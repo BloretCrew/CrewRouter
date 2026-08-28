@@ -6,7 +6,7 @@ const INJECT_HEADER_TITLE = '# User Custom Instructions (CrewRouter)';
 function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 // 新格式必须以标签/独立标题开始，允许正文后单换行；不匹配普通内联文字。
-const SYSTEM_REMINDER_RE = /(^|(?<![A-Za-z0-9_]))[ \t]*<system-reminder>[\s\S]*?#\s*claudeMd\b[\s\S]*?<\/system-reminder>[ \t]*/gi;
+const SYSTEM_REMINDER_RE = /(^|\n|\r\n)[ \t]*<system-reminder>[\s\S]*?#\s*claudeMd\b[\s\S]*?<\/system-reminder>[ \t]*/gi;
 const CLAUDE_SECTION_RE = /(^|\n|\r\n)[ \t]*#\s*claudeMd\b[ \t]*\r?\n[\s\S]*?(?=\n[ \t]*#\s+currentDate\b|\n[ \t]*<\/system-reminder>|$)/gi;
 const LEGACY_HEADER_RE = new RegExp('(^|\\n\\n|\\r\\n\\r\\n)[ \\t]*' + escapeRegExp(INJECT_HEADER_TITLE) + '[ \\t]*\\r?\\n[\\s\\S]*?(?=\\n\\n---\\n\\n|$)', 'g');
 const LEGACY_FULL_RE = new RegExp('(^|\\n|\\r\\n)' + escapeRegExp(INJECT_MITIGATION_PREFIX) + '[^\\n]*\\r?\\n(?:[ \\t]*\\r?\\n)+[ \\t]*' + escapeRegExp(INJECT_HEADER_TITLE) + '[ \\t]*\\r?\\n[\\s\\S]*?(?=\\n\\n---\\n\\n|$)', 'g');
@@ -36,7 +36,7 @@ function scrubInjectedEcho(text, options = {}) {
   for (const candidate of exactCandidates(options.exactText || '')) {
     if (out.includes(candidate)) { out = out.split(candidate).join(''); changed = true; }
   }
-  for (const re of [SYSTEM_REMINDER_RE, CLAUDE_SECTION_RE, LEGACY_FULL_RE, LEGACY_HEADER_RE]) {
+  for (const re of [SYSTEM_REMINDER_RE, LEGACY_FULL_RE, LEGACY_HEADER_RE]) {
     re.lastIndex = 0;
     if (re.test(out)) { re.lastIndex = 0; out = out.replace(re, (_, boundary) => boundary); changed = true; }
     re.lastIndex = 0;
