@@ -31,7 +31,17 @@ router.put('/api-keys/:id', (req, res) => {
 
 // API 密钥用量
 router.get('/api-keys/:id/usage', (req, res) => {
-  res.json([]);
+  const key = data.apiKeys().find(k => String(k.id) === String(req.params.id));
+  if (!key) return res.status(404).json({ error: '密钥不存在' });
+  const stats = data.stats({ days: 14 }).daily;
+  const ratio = key.id === 1 ? 0.64 : 0.36;
+  res.json(stats.map((item, index) => ({
+    date: item.date,
+    requests: Math.max(1, Math.floor(item.requests * ratio + (index % 3))),
+    tokens: Math.max(1, Math.floor(item.tokens * ratio)),
+    cost: parseFloat((item.cost * ratio).toFixed(6)),
+    model_name: key.current_model_name || '未绑定模型'
+  })));
 });
 
 // API 密钥模型绑定（有序队列）
@@ -76,7 +86,18 @@ router.put('/api-keys/:id/models', (req, res) => {
 
 // Fusion 配置
 router.get('/api-keys/:id/fusion-config', (req, res) => {
-  res.json({ enabled: false, panels: [] });
+  const key = data.apiKeys().find(k => String(k.id) === String(req.params.id));
+  if (!key) return res.status(404).json({ error: '密钥不存在' });
+  const queueIds = Array.isArray(key.model_queue) ? key.model_queue.map(m => String(m.model_id || m.id || m)) : [];
+  const fallbackIds = ['gpt-4.1', 'deepseek-chat', 'claude-sonnet-4-20250514'];
+  const validIds = [...new Set([...queueIds, ...fallbackIds])].filter(id => data.myTeamModels().some(m => String(m.id) === id));
+  const panelModels = validIds.slice(0, 3);
+  return res.json({
+    panel_models: panelModels,
+    judge_model_id: panelModels[0] || 'gpt-4.1',
+    outer_model_id: panelModels[1] || panelModels[0] || 'gpt-4.1',
+    fusion_enabled: true
+  });
 });
 
 router.put('/api-keys/:id/fusion-config', (req, res) => {
@@ -85,7 +106,9 @@ router.put('/api-keys/:id/fusion-config', (req, res) => {
 
 // 签名配置
 router.get('/api-keys/:id/signature', (req, res) => {
-  res.json({ signature_enabled: false, signature_template: '' });
+  const key = data.apiKeys().find(k => String(k.id) === String(req.params.id));
+  if (!key) return res.status(404).json({ error: '密钥不存在' });
+  res.json({ signature_enabled: key.signature_enabled === true, signature_template: '{model} · {tokens} · 缓存命中 {cache_hit}%' });
 });
 
 router.put('/api-keys/:id/signature', (req, res) => {
@@ -108,7 +131,15 @@ router.put('/api-keys/:id/crewrouter-commands', (req, res) => {
 
 // 调度配置
 router.get('/api-keys/:id/schedule', (req, res) => {
-  res.json({ schedule_enabled: false, schedule_on_time: null, schedule_off_time: null, schedule_days: null, schedule_timezone: null });
+  const key = data.apiKeys().find(k => String(k.id) === String(req.params.id));
+  if (!key) return res.status(404).json({ error: '密钥不存在' });
+  res.json({
+    schedule_enabled: key.schedule_enabled === true,
+    schedule_on_time: key.schedule_on_time || '09:00',
+    schedule_off_time: key.schedule_off_time || '18:00',
+    schedule_days: key.schedule_days || [1, 2, 3, 4, 5],
+    schedule_timezone: key.schedule_timezone || 'Asia/Shanghai'
+  });
 });
 
 router.put('/api-keys/:id/schedule', (req, res) => {
@@ -117,12 +148,27 @@ router.put('/api-keys/:id/schedule', (req, res) => {
 
 // Key 配置
 router.get('/api-keys/:id/config', (req, res) => {
-  res.json({ custom_model_name: '', current_model_id: null });
+  const key = data.apiKeys().find(k => String(k.id) === String(req.params.id));
+  if (!key) return res.status(404).json({ error: '密钥不存在' });
+  res.json({
+    env: {
+      ANTHROPIC_BASE_URL: 'https://demo.crewrouter.com/v1',
+      ANTHROPIC_AUTH_TOKEN: key.key_value,
+      ANTHROPIC_MODEL: key.current_model_id || 'gpt-4.1'
+    },
+    custom_model_name: key.custom_model_name || '',
+    current_model_id: key.current_model_id || null
+  });
 });
 
 // 使用统计
 router.get('/usage', (req, res) => {
-  res.json([]);
+  res.json(data.stats({ days: 30 }).daily.map(item => ({
+    date: item.date,
+    total_tokens: item.tokens,
+    total_cost: item.cost,
+    total_requests: item.requests
+  })));
 });
 
 // 详细统计（区分管理后台和用户控制台）
@@ -146,12 +192,17 @@ router.get('/balance', (req, res) => {
 
 // 兑换码余额
 router.get('/code-balances', (req, res) => {
-  res.json([]);
+  res.json(data.codeBalances());
+});
+
+// 管理员查看用户可退款兑换码余额
+router.get('/users/:id/code-balances', (req, res) => {
+  res.json(data.codeBalances());
 });
 
 // 产品
 router.get('/products', (req, res) => {
-  res.json([]);
+  res.json(data.adminProducts().filter(product => product.is_active));
 });
 
 // 头像上传（演示模式返回成功）
@@ -171,7 +222,7 @@ router.post('/redeem', (req, res) => {
 
 // 文档内容
 router.get('/docs-content', (req, res) => {
-  res.json({ content: '' });
+  res.json({ content: `# CrewRouter 演示站\n\n这是一个用于体验 CrewRouter 多模型路由、API Key 管理和插件商店流程的演示环境。\n\n## 快速开始\n\n1. 在「模型库」查看可用模型并收藏或绑定到 API Key。\n2. 在「API Key 与用量」创建密钥、设置模型队列，并查看每日用量。\n3. 使用兼容 OpenAI Chat Completions 的地址调用已绑定模型。\n\n## API 地址\n\n- Chat Completions：\`/v1/chat/completions\`\n- 模型列表：\`/v1/models\`\n- 用户统计：\`/api/user/stats\`\n\n演示数据为固定样例，不会连接真实上游，也不会产生实际扣费。插件商店中的商品和兑换码仅用于展示购买流程。` });
 });
 
 // 模型库
@@ -186,9 +237,50 @@ router.get('/model-library', (req, res) => {
 
 // 模型库全局搜索（demo）
 router.get('/model-library/search', (req, res) => {
+  const page = Math.max(parseInt(req.query.page || '1', 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit || '30', 10) || 30, 1), 50);
+  const q = String(req.query.q || '').trim().toLowerCase();
+  const provider = String(req.query.provider || '').trim();
+  const series = String(req.query.series || '').trim();
+  const test = String(req.query.test || '').trim();
+  const tag = String(req.query.tag || '').trim();
+  const sort = String(req.query.sort || 'default');
+  const library = data.modelLibrary();
+  let models = [];
+  for (const team of library.teams || []) {
+    for (const providerData of team.providers || []) {
+      for (const model of providerData.models || []) {
+        models.push({
+          ...model,
+          team_id: team.team_id,
+          team_name: team.team_name,
+          is_personal: team.is_personal,
+          is_default: team.is_default,
+          provider_id: providerData.provider_id,
+          provider_name: providerData.provider_name,
+          provider_enabled: providerData.provider_enabled,
+          tags: providerData.tags || []
+        });
+      }
+    }
+  }
+  if (q) models = models.filter(m => [m.name, m.description, m.alias, m.series, m.upstream_model_id, m.provider_name].some(v => String(v || '').toLowerCase().includes(q)));
+  if (provider && provider !== 'all') models = models.filter(m => String(m.provider || m.provider_id) === provider);
+  if (series && series !== 'all') models = models.filter(m => String(m.series) === series);
+  if (test === 'pass') models = models.filter(m => m.test_ok === true);
+  if (test === 'fail') models = models.filter(m => m.test_ok === false);
+  if (test === 'untested') models = models.filter(m => m.test_ok !== true && m.test_ok !== false);
+  if (tag && tag !== 'all') models = models.filter(m => (m.tags || []).some(t => String(t.id) === tag || String(t.name) === tag));
+  if (sort === 'name_asc') models.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  if (sort === 'name_desc') models.sort((a, b) => String(b.name).localeCompare(String(a.name)));
+  if (sort === 'price_asc') models.sort((a, b) => (a.input_price_per_1k_tokens || 0) - (b.input_price_per_1k_tokens || 0));
+  if (sort === 'price_desc') models.sort((a, b) => (b.input_price_per_1k_tokens || 0) - (a.input_price_per_1k_tokens || 0));
+  const total = models.length;
+  const offset = (page - 1) * limit;
+  const pageModels = models.slice(offset, offset + limit);
   res.json({
-    models: [],
-    pagination: { page: 1, limit: 30, total: 0, total_pages: 1, has_prev: false, has_next: false }
+    models: pageModels,
+    pagination: { page, limit, total, total_pages: Math.ceil(total / limit) || 1, has_prev: page > 1, has_next: offset + pageModels.length < total }
   });
 });
 
@@ -332,6 +424,17 @@ router.get('/team/:teamId/provider/:providerId/models', (req, res) => {
     models: [],
     pagination: { page, limit, total: 0, total_pages: 1, has_prev: false, has_next: false }
   });
+});
+
+// 自定义供应商模型
+router.get('/providers/:providerId/models', (req, res) => {
+  const provider = data.myProviders().find(p => String(p.id) === String(req.params.providerId));
+  if (!provider) return res.status(404).json({ error: '供应商不存在' });
+  const models = data.myTeamModels().filter(model =>
+    (provider.id === 'team-openai' && model.provider === 'openai') ||
+    (provider.id === 'local-gateway' && ['deepseek', 'openai'].includes(model.provider))
+  ).slice(0, provider.model_count);
+  res.json(models.map(model => ({ ...model, provider: provider.id, provider_name: provider.name })));
 });
 
 // 模型测试（演示模式返回成功）

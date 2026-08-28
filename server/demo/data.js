@@ -97,7 +97,43 @@ const DEMO_KEY_TAGS = [
   { id: 2, name: '测试', color: '#3b82f6', sort_order: 1 }
 ];
 
-const DEMO_PROVIDER_TAGS = [];
+const DEMO_PROVIDER_TAGS = [
+  { id: 1, name: '主力供应商', color: '#8b5cf6', sort_order: 0 },
+  { id: 2, name: '高性价比', color: '#f59e0b', sort_order: 1 },
+  { id: 3, name: '推理模型', color: '#06b6d4', sort_order: 2 }
+];
+
+const DEMO_CUSTOM_PROVIDERS = [
+  {
+    id: 'team-openai', name: '团队 OpenAI', base_url: 'https://api.openai.com/v1', format: 'openai',
+    enabled: true, notes: '团队共享的 OpenAI 兼容接口', created_at: '2025-02-12T09:30:00Z',
+    model_count: 3, tags: [DEMO_PROVIDER_TAGS[0]]
+  },
+  {
+    id: 'local-gateway', name: '本地推理网关', base_url: 'http://127.0.0.1:8317/v1', format: 'openai',
+    enabled: true, notes: '用于开发和测试的本地代理', created_at: '2025-03-08T14:20:00Z',
+    model_count: 2, tags: [DEMO_PROVIDER_TAGS[1], DEMO_PROVIDER_TAGS[2]]
+  }
+];
+
+const DEMO_PRODUCTS = [
+  { id: 1, name: '体验积分包', description: '适合快速体验 CrewRouter 全部功能的入门礼包', price: 9.9, image_url: '', link: '', is_active: true, sort_order: 0, created_at: '2025-01-10T00:00:00Z', updated_at: '2025-01-10T00:00:00Z' },
+  { id: 2, name: '开发者月度包', description: '为个人开发者准备的月度积分补给', price: 49.9, image_url: '', link: '', is_active: true, sort_order: 1, created_at: '2025-01-12T00:00:00Z', updated_at: '2025-01-12T00:00:00Z' },
+  { id: 3, name: '团队协作包', description: '适合多人共享与高频调用的团队积分包', price: 199, image_url: '', link: '', is_active: true, sort_order: 2, created_at: '2025-01-15T00:00:00Z', updated_at: '2025-01-15T00:00:00Z' },
+  { id: 4, name: '历史体验包', description: '已下架的历史商品，仅供后台查看', price: 19.9, image_url: '', link: '', is_active: false, sort_order: 3, created_at: '2025-01-05T00:00:00Z', updated_at: '2025-01-05T00:00:00Z' }
+];
+
+const DEMO_REDEMPTION_CODES = [
+  { id: 1, code: 'DEMO-START-100', amount: 100, max_uses: 1, used_count: 1, expires_at: '2026-12-31T23:59:59Z', batch_name: '演示新手批次', created_by: 1, refundable: true, fee_rate: 0.05, created_at: '2025-02-01T00:00:00Z' },
+  { id: 2, code: 'DEMO-TEAM-500', amount: 500, max_uses: 5, used_count: 2, expires_at: '2027-01-31T23:59:59Z', batch_name: '演示团队批次', created_by: 1, refundable: true, fee_rate: 0.1, created_at: '2025-02-10T00:00:00Z' },
+  { id: 3, code: 'DEMO-WELCOME-50', amount: 50, max_uses: 1, used_count: 0, expires_at: '2026-10-31T23:59:59Z', batch_name: '欢迎体验批次', created_by: 1, refundable: false, fee_rate: 0, created_at: '2025-02-18T00:00:00Z' },
+  { id: 4, code: 'DEMO-EXPIRED-20', amount: 20, max_uses: 1, used_count: 1, expires_at: '2025-01-31T23:59:59Z', batch_name: '历史演示批次', created_by: 1, refundable: true, fee_rate: 0.02, created_at: '2025-01-01T00:00:00Z' }
+];
+
+const DEMO_CODE_BALANCES = [
+  { amount: 95, fee_rate: 0.05, code: 'DEMO-START-100', code_amount: 100, net_amount: 90.48 },
+  { amount: 220, fee_rate: 0.1, code: 'DEMO-TEAM-500', code_amount: 500, net_amount: 200 }
+];
 
 // ========== 生成统计数据 ==========
 
@@ -206,7 +242,12 @@ const DEMO_LEADERBOARD = {
   currentUserRank: 3
 };
 
-const DEMO_STARRED = [];
+const DEMO_STARRED = [
+  { model_id: 'gpt-4.1', team_id: 1 },
+  { model_id: 'claude-sonnet-4-20250514', team_id: 1 },
+  { model_id: 'deepseek-chat', team_id: 1 },
+  { model_id: 'o4-mini', team_id: 1 }
+];
 
 // ========== 导出方法 ==========
 
@@ -232,6 +273,11 @@ module.exports = {
             provider_name: provider.name,
             provider_notes: provider.notes || '',
             provider_enabled: provider.enabled,
+            tags: DEMO_PROVIDER_TAGS.filter(tag =>
+              (provider.id === 'openai' && tag.id === 1) ||
+              (provider.id === 'deepseek' && (tag.id === 2 || tag.id === 3)) ||
+              (provider.id === 'anthropic' && tag.id === 3)
+            ).map(tag => ({ ...tag })),
             model_count: models.length,
             series_count: [...new Set(models.map(m => m.series).filter(Boolean))].length,
             test_tested_count: models.length,
@@ -261,7 +307,7 @@ module.exports = {
   },
 
   myProviders() {
-    return []; // 用户未创建自定义供应商
+    return DEMO_CUSTOM_PROVIDERS.map(provider => ({ ...provider, tags: provider.tags.map(tag => ({ ...tag })) }));
   },
 
   myTeamModels() {
@@ -443,11 +489,15 @@ module.exports = {
   },
 
   adminProducts() {
-    return [];
+    return DEMO_PRODUCTS.map(product => ({ ...product }));
   },
 
   adminRedemptionCodes() {
-    return [];
+    return DEMO_REDEMPTION_CODES.map(code => ({ ...code }));
+  },
+
+  codeBalances() {
+    return DEMO_CODE_BALANCES.map(balance => ({ ...balance }));
   },
 
   usageLogs(page, limit) {
