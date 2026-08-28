@@ -2875,14 +2875,14 @@ class ConsoleApp {
       const providerEntries = Object.entries(byProvider);
 
       setHTML(container, `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 12px;background:var(--bg-secondary,#f5f5f5);border-radius:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 12px;background:var(--secondary);border-radius:8px;">
           <div>
             <div style="font-size:14px;font-weight:500;">启用 Fusion</div>
             <div style="font-size:12px;color:var(--muted-foreground);">禁用后，请求 fusion 模型将回退到当前绑定模型</div>
           </div>
           <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
             <input type="checkbox" id="fusionEnabledToggle" ${fusionEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-            <span style="position:absolute;inset:0;background:${fusionEnabled ? 'var(--primary,#2563eb)' : 'var(--border,#ccc)'};border-radius:12px;transition:background 0.2s;"></span>
+            <span style="position:absolute;inset:0;background:${fusionEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
             <span style="position:absolute;top:2px;${fusionEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
           </label>
         </div>
@@ -2929,7 +2929,7 @@ class ConsoleApp {
           </div>
         </div>
 
-        <div style="font-size:12px;color:var(--muted-foreground);background:var(--bg-secondary,#f5f5f5);padding:10px;border-radius:8px;">
+        <div style="font-size:12px;color:var(--muted-foreground);background:var(--secondary);padding:10px;border-radius:8px;">
           💡 <strong>Fusion</strong> 会将请求同时发送给多个 Panel 模型，由 Judge 模型分析差异后，由合成模型生成最终回答。留空则使用系统默认配置。
         </div>
         </div>
@@ -2945,7 +2945,7 @@ class ConsoleApp {
           // 更新滑块外观
           const track = toggleEl.nextElementSibling;
           const knob = track?.nextElementSibling;
-          if (track) track.style.background = on ? 'var(--primary,#2563eb)' : 'var(--border,#ccc)';
+          if (track) track.style.background = on ? 'var(--primary)' : 'var(--border)';
           if (knob) { knob.style.left = on ? '' : '2px'; knob.style.right = on ? '2px' : ''; }
         });
       }
@@ -3438,7 +3438,7 @@ class ConsoleApp {
       setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="project-work-stat"><span>${label}</span><strong>${value}</strong><small>${sub}</small></div>`).join(''));
       setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)}${t('次 ·')}${fmtTok(p.tokens)}${t('Token · 最近')}${date(p.last_activity)}</small></span><span class="project-work-arrow">→</span></button>`).join(''));
       setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)}${t(')" title="' + t('复制工作区路径') + '">')}${escapeHtml(p.workspace_path)}${'</button></div></div><div class="project-work-project-metrics"><div><span>' + t('请求')}</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmtTok(p.tokens)}${'</strong></div><div><span>' + t('活跃')}</span><strong>${fmt(p.active_days)}${t('天')}</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || t('未标记客户端')}</span><span>${money(p.cost)}${t('积分')}</span></div></article>`).join(''));
-      if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('AI 请求'), data: (data.daily || []).map(r => r.requests), borderColor: '#0f766e', backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: t('活跃项目'), data: (data.daily || []).map(r => r.projects), borderColor: 'var(--warning)', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
+      if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('AI 请求'), data: (data.daily || []).map(r => r.requests), borderColor: readCssVar('--chart-6', '#0f766e'), backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: t('活跃项目'), data: (data.daily || []).map(r => r.projects), borderColor: 'var(--warning)', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
     } catch (error) {
       console.error(error);
       if (statusEl) statusEl.textContent = t('同步失败');
@@ -4211,7 +4211,7 @@ class ConsoleApp {
         </div>
       </div>
       <div class="model-test-summary-bar">
-        <div class="model-test-summary-bar-fill" style="width:${passPct}%;${failed > 0 ? 'background:linear-gradient(90deg,var(--success),' + (passPct > 50 ? '#eab308' : 'var(--destructive)') + ')' : ''}"></div>
+        <div class="model-test-summary-bar-fill" style="width:${passPct}%;${failed > 0 ? 'background:linear-gradient(90deg,var(--success),' + (passPct > 50 ? 'var(--status-warn)' : 'var(--destructive)') + ')' : ''}"></div>
       </div>
     `;
 
@@ -4537,7 +4537,7 @@ class ConsoleApp {
   _getChartColors() {
     const style = getComputedStyle(document.documentElement);
     return {
-      text: style.getPropertyValue('--muted-foreground').trim() || '#94a3b8',
+      text: style.getPropertyValue('--muted-foreground').trim() || readCssVar('--text-muted-soft', '#94a3b8'),
       border: style.getPropertyValue('--border').trim() || 'rgba(148,163,184,0.1)'
     };
   }
@@ -4656,7 +4656,7 @@ class ConsoleApp {
     });
     const requests = top.map(m => parseInt(m.requests || 0));
     const costs = top.map(m => parseFloat(m.cost || 0));
-    const colors = ['var(--info)', 'var(--purple)', 'var(--success)', 'var(--warning)', 'var(--danger)', 'var(--cyan)', 'var(--pink)', '#14b8a6'];
+    const colors = [readCssVar('--status-info', '#2563eb'), readCssVar('--chart-2', '#a855f7'), readCssVar('--status-success', '#16a34a'), readCssVar('--status-warn', '#d97706'), readCssVar('--status-danger', '#dc2626'), readCssVar('--cyan', '#06b6d4'), readCssVar('--pink', '#ec4899'), readCssVar('--chart-8', '#14b8a6')];
     const c = this._getChartColors();
     const doughnutOpts = {
       responsive: true, maintainAspectRatio: false,
@@ -4678,7 +4678,7 @@ class ConsoleApp {
     if (!d || !d.byApiKey || d.byApiKey.length === 0 || typeof Chart === 'undefined') return;
     const labels = d.byApiKey.map(k => k.key_name || k.key_prefix || 'Key');
     const requests = d.byApiKey.map(k => parseInt(k.requests || 0));
-    const colors = ['var(--info)', 'var(--purple)', 'var(--success)', 'var(--warning)', 'var(--danger)', 'var(--cyan)', 'var(--pink)', '#14b8a6'];
+    const colors = [readCssVar('--status-info', '#2563eb'), readCssVar('--chart-2', '#a855f7'), readCssVar('--status-success', '#16a34a'), readCssVar('--status-warn', '#d97706'), readCssVar('--status-danger', '#dc2626'), readCssVar('--cyan', '#06b6d4'), readCssVar('--pink', '#ec4899'), readCssVar('--chart-8', '#14b8a6')];
     const c = this._getChartColors();
 
     this._upsertChart('_uApiKeyChart', document.getElementById('userApiKeyChart'), 'bar', {
@@ -4983,7 +4983,7 @@ class ConsoleApp {
     const map = {
       grok: {
         label: 'Grok',
-        color: '#a855f7',
+        color: 'var(--chart-2)',
         icon: 'https://img.bloret.net/img/1783646659585/b5f2e4758d401fa16e43dd9d58278c5c'
       },
       codex: {
@@ -5003,7 +5003,7 @@ class ConsoleApp {
       },
       qwen_code: {
         label: 'Qwen Code',
-        color: '#6366f1',
+        color: 'var(--chart-2)',
         icon: 'https://img.bloret.net/img/1783300468869/0e65783456053817af53fe8e72836b5d'
       },
       hermes: {
@@ -5013,12 +5013,12 @@ class ConsoleApp {
       },
       openclaw: {
         label: 'OpenClaw',
-        color: '#0ea5e9',
+        color: 'var(--chart-1)',
         icon: 'https://img.bloret.net/img/1783300468566/b085d548a9a6683cc47d4dc104e93d7a'
       },
       deepseek_harness: {
         label: 'DeepSeek Harness',
-        color: '#4d6bfe',
+        color: 'var(--brand-blue)',
         icon: 'https://img.bloret.net/img/1786632261665/ef60a8b9b5a3da93259ffb7b024fd80f'
       },
       unknown: { label: t('未知/其他'), color: 'var(--muted-foreground)', icon: '' }
@@ -5778,7 +5778,7 @@ class ConsoleApp {
       ? ''
       : (boundCount > 0
         ? `<span class="model-item-badge" style="background:rgba(59,130,246,.12);color:var(--primary);">${t('{n} 个 Key', { n: boundCount })}</span>`
-        : `<span class="model-item-badge" style="background:rgba(34,197,94,.12);color:#16a34a;">${t('全局生效')}</span>`);
+        : `<span class="model-item-badge" style="background:rgba(34,197,94,.12);color:var(--status-success);">${t('全局生效')}</span>`);
     const disabledBadge = item.enabled ? '' : `<span class="model-item-badge series">${t('已停用')}</span>`;
     return `
     <div class="model-library-item ${item.enabled ? '' : 'model-hidden'}" data-inject-id="${escapeHtml(item.id)}" style="cursor:default;">
@@ -8277,13 +8277,13 @@ ${extractorBody}
     const semanticsMeta = {
       primary: { label: '主对话', color: 'var(--muted-foreground)' },
       subagent: { label: '子代理', color: 'var(--primary)' },
-      title: { label: '标题', color: '#8b5cf6' },
-      compaction: { label: '压缩', color: '#f97316' },
-      retry: { label: '重试', color: '#ca8a04' },
-      plan: { label: '计划', color: '#16a34a' },
-      review: { label: '评审', color: '#dc2626' },
+      title: { label: '标题', color: 'var(--purple)' },
+      compaction: { label: '压缩', color: 'var(--warning)' },
+      retry: { label: '重试', color: 'var(--status-warn)' },
+      plan: { label: '计划', color: 'var(--status-success)' },
+      review: { label: '评审', color: 'var(--status-danger)' },
       heartbeat: { label: '心跳', color: 'var(--muted-foreground)' },
-      other_automation: { label: '其他自动', color: '#475569' },
+      other_automation: { label: '其他自动', color: 'var(--text-muted-soft)' },
       unknown: { label: '未知', color: 'var(--muted-foreground)' },
     };
     const renderSemantics = semantics => {

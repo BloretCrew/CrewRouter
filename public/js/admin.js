@@ -804,7 +804,7 @@ class AdminApp {
             <tr>
               <td><strong>${escapeHtml(user.username)}</strong></td>
               <td style="color:var(--muted-foreground);font-size:12px;">${escapeHtml(user.email) || '-'}</td>
-              <td>${user.email_verified ? '<span style="color:#16a34a;font-size:12px;">' + t('✓ 已验证') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('✗ 未验证') + '</span>'}</td>
+              <td>${user.email_verified ? '<span style="color:var(--status-success);font-size:12px;">' + t('✓ 已验证') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('✗ 未验证') + '</span>'}</td>
               <td style="font-variant-numeric:tabular-nums;">${parseFloat(user.balance || 0).toFixed(0)}</td>
               <td>${user.is_admin ? '<span style="background:rgba(139,92,246,0.1);color:var(--purple);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;">' + t('管理员') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('普通用户') + '</span>'}</td>
               <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
@@ -3645,7 +3645,7 @@ class AdminApp {
       </div>
       <div id="batchSyncProgressMeta" style="font-size:13px;color:var(--muted-foreground);margin-top:4px;">准备就绪，点击开始</div>
       <div style="margin-top:8px;height:6px;background:var(--muted);border-radius:3px;overflow:hidden;">
-        <div id="batchSyncProgressBar" style="height:100%;width:0%;background:var(--brand-blue,#1456f0);transition:width .25s;"></div>
+        <div id="batchSyncProgressBar" style="height:100%;width:0%;background:var(--brand-blue);transition:width .25s;"></div>
       </div>
       <div class="batch-sync-progress-list" id="batchSyncProgressList">
         ${items.map((it, i) => `
@@ -6068,7 +6068,7 @@ async function(ctx) {
       } else if (pct >= 70) {
         bar.style.background = 'var(--warning)';
       } else {
-        bar.style.background = 'var(--brand-blue, #1456f0)';
+        bar.style.background = 'var(--brand-blue)';
       }
 
       document.getElementById('quotaPct').textContent = `${pct}%`;
@@ -6495,7 +6495,7 @@ async function(ctx) {
       [t('客户端'), s.active_sources || 0], [t('平均延迟'), s.avg_latency == null ? '-' : `${Math.round(Number(s.avg_latency))}ms`]
     ];
     const summaryEl = document.getElementById('adminStatsMultiSummary');
-    if (summaryEl) setHTML(summaryEl, cards.map(([label, value]) => `<div class="stats-overview-card" style="background:linear-gradient(135deg,#0f766e,#115e59);"><div class="stats-overview-content"><span class="stats-overview-label">${label}</span><span class="stats-overview-value">${value}</span></div></div>`).join(''));
+    if (summaryEl) setHTML(summaryEl, cards.map(([label, value]) => `<div class="stats-overview-card" style="background:linear-gradient(135deg,var(--chart-6),var(--chart-6));"><div class="stats-overview-content"><span class="stats-overview-label">${label}</span><span class="stats-overview-value">${value}</span></div></div>`).join(''));
     this.renderMultiStatsChart(data.dimensions || {});
     const relation = data.relationships || {};
     const relationLabel = (item) => `${escapeHtml(item.left || t('未知'))} → ${escapeHtml(item.right || t('未知'))} <strong>${Number(item.requests || 0).toLocaleString()}</strong>`;
@@ -6516,10 +6516,10 @@ async function(ctx) {
     const labels = rows.map(row => row.name || t('未知模型'));
     const values = rows.map(row => Number(row.requests || 0));
     const style = getComputedStyle(document.documentElement);
-    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || '#94a3b8';
+    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || readCssVar('--text-muted-soft', '#94a3b8');
     this._upsertChart('_multiDimensionChart', document.getElementById('multiDimensionChart'), 'bar', {
       labels,
-      datasets: [{ label: t('请求数'), data: values, backgroundColor: '#14b8a6', borderRadius: 6, barThickness: 16 }]
+      datasets: [{ label: t('请求数'), data: values, backgroundColor: readCssVar('--chart-8', '#14b8a6'), borderRadius: 6, barThickness: 16 }]
     }, {
       responsive: true,
       maintainAspectRatio: false,
@@ -6665,21 +6665,21 @@ async function(ctx) {
     const sumCards = document.getElementById('adminSourceSummaryCards');
     if (sumCards) {
       setHTML(sumCards, `
-        <div class="stats-overview-card" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">
+        <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--chart-1),var(--chart-1));">
           <div class="stats-overview-content">
             <span class="stats-overview-label">识别率</span>
             <span class="stats-overview-value">${((ss.identified_rate || 0) * 100).toFixed(1)}%</span>
             <span class="stats-overview-sub">已知 ${(ss.known_requests || 0).toLocaleString()} / 共 ${(ss.total_requests || 0).toLocaleString()}</span>
           </div>
         </div>
-        <div class="stats-overview-card" style="background:linear-gradient(135deg,#a855f7,#7c3aed);">
+        <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--chart-2),var(--chart-2));">
           <div class="stats-overview-content">
             <span class="stats-overview-label">活跃客户端</span>
             <span class="stats-overview-value">${ss.active_sources || 0}</span>
             <span class="stats-overview-sub">不含未知/其他</span>
           </div>
         </div>
-        <div class="stats-overview-card" style="background:linear-gradient(135deg,#64748b,#475569);">
+        <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--status-neutral),var(--text-muted-soft));">
           <div class="stats-overview-content">
             <span class="stats-overview-label">未知请求</span>
             <span class="stats-overview-value">${(ss.unknown_requests || 0).toLocaleString()}</span>
@@ -6893,7 +6893,7 @@ async function(ctx) {
     const anomalyPoints = usage.map(u => u.suspected_compaction_boundary ? 6 : 0);
 
     const style = getComputedStyle(document.documentElement);
-    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || '#94a3b8';
+    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || readCssVar('--text-muted-soft', '#94a3b8');
     const borderSubtle = style.getPropertyValue('--border').trim() || 'rgba(148,163,184,0.1)';
 
     const commonOptions = () => ({
@@ -6980,7 +6980,7 @@ async function(ctx) {
     const anomalyPoints = usage.map(u => u.suspected_compaction_boundary ? 6 : 0);
 
     const style = getComputedStyle(document.documentElement);
-    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || '#94a3b8';
+    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || readCssVar('--text-muted-soft', '#94a3b8');
     const borderSubtle = style.getPropertyValue('--border').trim() || 'rgba(148,163,184,0.1)';
 
     const barOptions = () => ({
@@ -7023,7 +7023,7 @@ async function(ctx) {
     if (typeof Chart === 'undefined') return;
 
     const style = getComputedStyle(document.documentElement);
-    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || '#94a3b8';
+    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || readCssVar('--text-muted-soft', '#94a3b8');
 
     const topModels = this.stats.byModel.slice(0, 8);
     const modelLabels = topModels.map(m => {
@@ -7038,7 +7038,7 @@ async function(ctx) {
       return req > 0 ? Math.round(tok / req) : 0;
     });
 
-    const colors = ['var(--info)', 'var(--purple)', 'var(--success)', 'var(--warning)', 'var(--danger)', 'var(--cyan)', 'var(--pink)', '#14b8a6'];
+    const colors = [readCssVar('--status-info', '#2563eb'), readCssVar('--chart-2', '#a855f7'), readCssVar('--status-success', '#16a34a'), readCssVar('--status-warn', '#d97706'), readCssVar('--status-danger', '#dc2626'), readCssVar('--cyan', '#06b6d4'), readCssVar('--pink', '#ec4899'), readCssVar('--chart-8', '#14b8a6')];
 
     const doughnutOptions = () => ({
       responsive: true,
@@ -7091,7 +7091,7 @@ async function(ctx) {
     if (typeof Chart === 'undefined') return;
 
     const style = getComputedStyle(document.documentElement);
-    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || '#94a3b8';
+    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || readCssVar('--text-muted-soft', '#94a3b8');
 
     const providers = this.stats.byProvider.slice(0, 8);
     const providerLabels = providers.map(p => p.provider || t('未知'));
@@ -7104,7 +7104,7 @@ async function(ctx) {
       return req > 0 ? Math.round(tok / req) : 0;
     });
 
-    const colors = ['var(--info)', 'var(--purple)', 'var(--success)', 'var(--warning)', 'var(--danger)', 'var(--cyan)', 'var(--pink)', '#14b8a6'];
+    const colors = [readCssVar('--status-info', '#2563eb'), readCssVar('--chart-2', '#a855f7'), readCssVar('--status-success', '#16a34a'), readCssVar('--status-warn', '#d97706'), readCssVar('--status-danger', '#dc2626'), readCssVar('--cyan', '#06b6d4'), readCssVar('--pink', '#ec4899'), readCssVar('--chart-8', '#14b8a6')];
 
     const doughnutOptions = () => ({
       responsive: true,
@@ -7404,9 +7404,9 @@ async function(ctx) {
       { key: 'byTeam', label: 'Team', requests: 'teamRequestsChart', reqStore: '_teamReqChart', name: 'team_name' },
       { key: 'byGroup', label: t('用户组'), requests: 'groupRequestsChart', reqStore: '_groupReqChart', name: 'group_name' }
     ];
-    const colors = ['var(--info)', 'var(--purple)', 'var(--success)', 'var(--warning)', 'var(--danger)', 'var(--cyan)', 'var(--pink)', '#14b8a6', '#f97316', '#64748b'];
+    const colors = [readCssVar('--status-info', '#2563eb'), readCssVar('--chart-2', '#a855f7'), readCssVar('--status-success', '#16a34a'), readCssVar('--status-warn', '#d97706'), readCssVar('--status-danger', '#dc2626'), readCssVar('--cyan', '#06b6d4'), readCssVar('--pink', '#ec4899'), readCssVar('--chart-8', '#14b8a6'), readCssVar('--warning', '#f59e0b'), readCssVar('--status-neutral', '#64748b')];
     const style = getComputedStyle(document.documentElement);
-    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || '#94a3b8';
+    const textSecondary = style.getPropertyValue('--muted-foreground').trim() || readCssVar('--text-muted-soft', '#94a3b8');
     const options = {
       responsive: true,
       maintainAspectRatio: false,
@@ -7461,7 +7461,7 @@ async function(ctx) {
       const requests = rows.reduce((sum, row) => sum + Number(row.requests || 0), 0);
       const tokens = rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0);
       const cost = rows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
-      return `<div class="stats-overview-card" style="background:linear-gradient(135deg,#334155,#1e293b);"><div class="stats-overview-content"><span class="stats-overview-label">${label}${t('数量')}</span><span class="stats-overview-value">${rows.length}</span><span class="stats-overview-sub">${requests.toLocaleString()}${t('次 ·')}${this._formatBigNumber(tokens)} Token · ${cost.toFixed(2)}${t('积分')}</span></div></div>`;
+      return `<div class="stats-overview-card" style="background:linear-gradient(135deg,var(--status-neutral),var(--text-muted-soft));"><div class="stats-overview-content"><span class="stats-overview-label">${label}${t('数量')}</span><span class="stats-overview-value">${rows.length}</span><span class="stats-overview-sub">${requests.toLocaleString()}${t('次 ·')}${this._formatBigNumber(tokens)} Token · ${cost.toFixed(2)}${t('积分')}</span></div></div>`;
     }).join('');
     const summaryEl = document.getElementById('memberStatsSummary');
     if (summaryEl) setHTML(summaryEl, summary);
@@ -7779,14 +7779,14 @@ async function(ctx) {
   _usageRequestSourceMeta(source) {
     const s = String(source || 'unknown').toLowerCase();
     const map = {
-      grok: { label: 'Grok', color: '#a855f7' },
+      grok: { label: 'Grok', color: 'var(--chart-2)' },
       codex: { label: 'Codex', color: 'var(--success)' },
       claude_code: { label: 'Claude Code', color: 'var(--warning)' },
       opencode: { label: 'OpenCode', color: 'var(--info)' },
-      qwen_code: { label: 'Qwen Code', color: '#6366f1' },
+      qwen_code: { label: 'Qwen Code', color: 'var(--chart-2)' },
       hermes: { label: 'Hermes', color: 'var(--pink)' },
-      openclaw: { label: 'OpenClaw', color: '#0ea5e9' },
-      deepseek_harness: { label: 'DeepSeek Harness', color: '#4d6bfe' },
+      openclaw: { label: 'OpenClaw', color: 'var(--chart-1)' },
+      deepseek_harness: { label: 'DeepSeek Harness', color: 'var(--brand-blue)' },
       unknown: { label: t('未知/其他'), color: 'var(--muted-foreground)' }
     };
     return map[s] || map.unknown;
@@ -7801,7 +7801,7 @@ async function(ctx) {
   _customInstructionsBadge(count) {
     const n = parseInt(count || 0, 10);
     if (!(n > 0)) return '';
-    return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;margin-left:6px;background:color-mix(in srgb, var(--success) 15%, transparent);color:#16a34a;" title="${n} ${t('个自定义提示词文件')}">📄 ${n}</span>`;
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;margin-left:6px;background:color-mix(in srgb, var(--success) 15%, transparent);color:var(--status-success);" title="${n} ${t('个自定义提示词文件')}">📄 ${n}</span>`;
   }
 
   /** 详情「自定义提示词」区块 HTML（从 log.plugin_meta.customInstructions 渲染） */
@@ -8292,10 +8292,10 @@ async function(ctx) {
       const data = await response.json().catch(() => ({}));
       const message = document.getElementById('retentionConfigMessage');
       if (!response.ok) throw new Error(t(data.code || '') || data.error || t('保存失败'));
-      if (message) { message.textContent = t('数据保留配置已保存'); message.style.color = 'var(--success, #16a34a)'; }
+      if (message) { message.textContent = t('数据保留配置已保存'); message.style.color = 'var(--status-success)'; }
     } catch (error) {
       const message = document.getElementById('retentionConfigMessage');
-      if (message) { message.textContent = error.message; message.style.color = 'var(--destructive, #dc2626)'; }
+      if (message) { message.textContent = error.message; message.style.color = 'var(--status-danger)'; }
     } finally { if (btn) btn.disabled = false; }
   }
 
@@ -12014,7 +12014,7 @@ async function(ctx) {
       banner = document.createElement('div');
       banner.id = 'updateAvailableBanner';
       banner.style.cssText =
-        'background:#eff6ff;color:#1e40af;padding:10px 16px;font-size:13px;border-bottom:1px solid #93c5fd;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;';
+        'background:var(--alert-info-bg);color:var(--alert-info-fg);padding:10px 16px;font-size:13px;border-bottom:1px solid var(--alert-info-border-strong);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;';
       const main = document.querySelector('.main-content') || document.body;
       const header = main.querySelector('.content-header');
       if (header && header.nextSibling) {
@@ -12149,7 +12149,7 @@ async function(ctx) {
     if (curEl) curEl.textContent = data.currentVersion ? `v${data.currentVersion}` : '-';
     if (latEl) {
       latEl.textContent = data.latestVersion ? `v${data.latestVersion}` : '-';
-      latEl.style.color = data.hasUpdate ? '#2563eb' : '';
+      latEl.style.color = data.hasUpdate ? 'var(--status-info)' : '';
     }
     if (statusEl) {
       if (data.phase === 'error') {
@@ -12157,10 +12157,10 @@ async function(ctx) {
         statusEl.style.color = 'var(--danger)';
       } else if (data.hasUpdate) {
         statusEl.textContent = t('有可用更新');
-        statusEl.style.color = '#2563eb';
+        statusEl.style.color = 'var(--status-info)';
       } else if (data.latestVersion) {
         statusEl.textContent = t('已是最新');
-        statusEl.style.color = '#16a34a';
+        statusEl.style.color = 'var(--status-success)';
       } else {
         statusEl.textContent = t('未检查');
         statusEl.style.color = '';
@@ -12195,13 +12195,13 @@ async function(ctx) {
     if (bar && progress != null) bar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
     // 错误样式
     if (show && progress === 0 && text && /失败|错误/.test(text)) {
-      box.style.background = '#fef2f2';
-      box.style.color = '#991b1b';
-      box.style.borderColor = '#fecaca';
+      box.style.background = 'var(--alert-error-bg)';
+      box.style.color = 'var(--alert-error-fg)';
+      box.style.borderColor = 'var(--alert-error-border)';
     } else if (show) {
-      box.style.background = '#eff6ff';
-      box.style.color = '#1e40af';
-      box.style.borderColor = '#bfdbfe';
+      box.style.background = 'var(--alert-info-bg)';
+      box.style.color = 'var(--alert-info-fg)';
+      box.style.borderColor = 'var(--alert-info-border)';
     }
   }
 

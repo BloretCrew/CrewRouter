@@ -359,7 +359,7 @@
     var d = draft || {};
     var actionLabel = editId ? t('保存修改') : t('提交插件');
     return '<div class="store-form">' +
-      '<div class="store-form__upload" style="border:1px dashed var(--border,#d1d5db);border-radius:10px;padding:12px 14px;margin-bottom:14px;">' +
+      '<div class="store-form__upload" style="border:1px dashed var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;">' +
         '<div style="font-size:13px;font-weight:600;margin-bottom:8px;">🧩 ' + esc(t('从 plugin.json 快速填充')) + '</div>' +
         '<div class="form-group">' +
           '<label>' + esc(t('选择 plugin.json 文件')) + '</label>' +
