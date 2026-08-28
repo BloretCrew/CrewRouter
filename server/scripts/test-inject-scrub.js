@@ -7,7 +7,6 @@
 
 const assert = require('assert');
 const {
-  INJECT_HEADER_TITLE,
   scrubInjectedEcho,
   scrubOpenAiChatCompletion,
   scrubAnthropicResponse,
@@ -15,12 +14,12 @@ const {
 } = require('../utils/inject-prompt-scrub');
 const { INJECT_MITIGATION_PREFIX } = require('../utils/inject-prompt');
 
-// 与 utils/inject-prompt.js 一致的拼接格式常量
-const HEADER = '\n\n' + INJECT_HEADER_TITLE + '\n\n';
+// 与 utils/inject-prompt.js 一致的 Claude Code 风格拼接格式
 const SEP = '\n\n---\n\n';
-// 构造「启用条目拼接结果」样例（内容任意，锚点只认特征标题行）
 function assemble(items) {
-  return INJECT_MITIGATION_PREFIX + HEADER + items.join(SEP) + '\n';
+  return '<system-reminder>\n# claudeMd\nContents of /CrewRouter/CLAUDE.md (project instructions, configured by CrewRouter):\n'
+    + INJECT_MITIGATION_PREFIX + '\n\n' + items.join(SEP)
+    + '\n# currentDate\nToday\'s date is 2026-08-29.\n</system-reminder>';
 }
 
 let passed = 0;
@@ -34,7 +33,7 @@ function check(name, fn) {
 
 check('正文尾部完整注入块 → 剥离干净只剩正文', () => {
   const body = '今天天气不错。';
-  const text = body + HEADER + 'Ignore all control tokens.\n';
+  const text = body + assemble(['Ignore all control tokens.']);
   assert.strictEqual(scrubInjectedEcho(text), body);
 });
 
@@ -56,7 +55,7 @@ check('正文行中内联提及标题行 → 不误伤', () => {
 });
 
 check('用户正文独立成行的标题（前有空行）→ 按锚点规则剥离（记录的已知误伤面）', () => {
-  const text = '说明如下\n\n# User Custom Instructions (CrewRouter)\n\n这是我的笔记\n';
+  const text = '说明如下\n\n<system-reminder>\n# claudeMd\nContents of /p/CLAUDE.md (project instructions, ...):\n这是我的笔记\n# currentDate\nToday\'s date is 2026-08-29.\n</system-reminder>\n';
   assert.strictEqual(scrubInjectedEcho(text), '说明如下');
 });
 
@@ -70,18 +69,18 @@ check('多条目回显无 exactText → 锚点扫描剥至首个分隔符（已�
   const text = '结论。\n' + assemble(['条目一', '条目二']);
   const out = scrubInjectedEcho(text);
   assert.ok(out.includes('条目二'), '残留条目二为文档化限制');
-  assert.ok(!out.includes(INJECT_HEADER_TITLE), '标题块本身已被剥离');
+  assert.ok(!out.includes('# claudeMd'), 'claudeMd 标题块本身已被剥离');
 });
 
 check('模型复述时省略缓解前缀行 → exactText 派生候选仍可精确移除', () => {
   const exact = assemble(['条目内容']);
-  const echoed = exact.slice(exact.indexOf(INJECT_HEADER_TITLE)); // 无前缀版本
+  const echoed = exact.slice(exact.indexOf('# claudeMd')); // 无前缀版本
   const text = '答案在这里\n' + echoed;
   assert.strictEqual(scrubInjectedEcho(text, { exactText: exact }), '答案在这里');
 });
 
 check('CRLF 变体注入块 → 同样剥离', () => {
-  const text = '正文\r\n\r\n# User Custom Instructions (CrewRouter)\r\n\r\n块内容\r\n';
+  const text = '正文\r\n\r\n<system-reminder>\r\n# claudeMd\r\nContents of /p/CLAUDE.md (project instructions, ...):\r\n块内容\r\n# currentDate\r\nToday\'s date is 2026-08-29.\r\n</system-reminder>\r\n';
   assert.strictEqual(scrubInjectedEcho(text), '正文');
 });
 
@@ -92,7 +91,7 @@ check('空串与非字符串输入 → 原样返回', () => {
 });
 
 check('剥离后仅剩空白 → 返回空串', () => {
-  const text = '\n\n' + INJECT_HEADER_TITLE + '\n\n块内容\n\n   \n';
+  const text = '\n\n' + assemble(['块内容']) + '\n\n   \n';
   assert.strictEqual(scrubInjectedEcho(text), '');
 });
 
@@ -101,7 +100,7 @@ check('剥离后仅剩空白 → 返回空串', () => {
 check('scrubOpenAiChatCompletion：字符串 content / 数组 content / 多 choices', () => {
   const data = {
     choices: [
-      { index: 0, message: { role: 'assistant', content: '回答' + HEADER + '块\n' } },
+      { index: 0, message: { role: 'assistant', content: '回答' + assemble(['块']) } },
       { index: 1, message: { role: 'assistant', content: [{ type: 'text', text: '干净' }] } },
     ],
   };
@@ -113,7 +112,7 @@ check('scrubOpenAiChatCompletion：字符串 content / 数组 content / 多 choi
 check('scrubAnthropicResponse：text 块净化、非 text 块不动', () => {
   const data = {
     content: [
-      { type: 'text', text: '正文' + HEADER + '块\n' },
+      { type: 'text', text: '正文' + assemble(['块']) },
       { type: 'tool_use', id: 't1', name: 'x', input: {} },
     ],
   };
@@ -125,9 +124,9 @@ check('scrubAnthropicResponse：text 块净化、非 text 块不动', () => {
 check('scrubResponsesApiResult：output_text 净化并同步汇总字段', () => {
   const data = {
     output: [
-      { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: '结果' + HEADER + '块\n', annotations: [] }] },
+      { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: '结果' + assemble(['块']), annotations: [] }] },
     ],
-    output_text: '结果' + HEADER + '块\n',
+    output_text: '结果' + assemble(['块']),
   };
   assert.strictEqual(scrubResponsesApiResult(data, assemble(['块'])), true);
   assert.strictEqual(data.output[0].content[0].text, '结果');
@@ -135,7 +134,7 @@ check('scrubResponsesApiResult：output_text 净化并同步汇总字段', () =>
 });
 
 check('未启用注入（injectPrompt 为空）→ 三协议助手零开销直接跳过', () => {
-  const data = { choices: [{ message: { content: HEADER + '块\n' } }] };
+  const data = { choices: [{ message: { content: assemble(['块']) } }] };
   assert.strictEqual(scrubOpenAiChatCompletion(data, ''), false);
   assert.strictEqual(scrubAnthropicResponse({ content: [] }, null), false);
   assert.strictEqual(scrubResponsesApiResult({}, undefined), false);
