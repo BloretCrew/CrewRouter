@@ -2699,5 +2699,7 @@
   "无匹配结果": "No matching results",
   "个匹配会话": "matching sessions",
   "条命中": "hits",
-  "命中请求数": "Matched requests"
+  "命中请求数": "Matched requests",
+  "新模型自动加入前沿 Team": "Automatically add new models to Frontier teams",
+  "默认关闭。开启后，新建、导入、同步或批量启用的模型会自动补充到前沿 Team；关闭不会删除已有 Team/模型映射。": "Off by default. When enabled, newly created, imported, synchronized, or batch-enabled models are added to Frontier teams. Turning it off does not remove existing team/model mappings."
 }

@@ -745,6 +745,11 @@ async function initDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await client.query(
+      `INSERT INTO settings (key, value)
+       VALUES ('autoAddNewModelsToFrontier', 'false'::jsonb)
+       ON CONFLICT (key) DO NOTHING`
+    );
     Logger.info('[数据库初始化] 表 settings 已就绪');
 
     // DeepSeek 账号表

@@ -32,6 +32,7 @@ const {
 const { parseGrokAuthConfig } = require('../utils/grok-usage');
 const { normalizeTestUserAgent } = require('../utils/model-test');
 const { encryptSecret, decryptSecret } = require('../utils/secret-crypto');
+const { addModelsToFrontierTeams: addModelsToFrontierTeamsIfEnabled } = require('../utils/frontier-auto-add');
 const { getRetentionConfig, invalidateRetentionConfigCache } = require('../utils/usage-agg');
 const { runCompressOnce } = require('../utils/usage-compress');
 const { runPurgeOnce } = require('../utils/usage-purge');
@@ -44,35 +45,13 @@ const {
 } = require('../utils/provider-quota');
 
 /**
- * 将新模型自动挂载到所有「前沿 Team」，默认 enabled=TRUE。
- * 仅 INSERT 缺失映射；已有映射（含管理员手动禁用）不覆盖。
+ * 按系统开关将模型挂载到所有前沿 Team；仅补缺失映射。
  * @param {string|string[]} modelIds
  * @returns {Promise<number>} 新插入的映射行数
  */
 async function addModelsToFrontierTeams(modelIds) {
-  const ids = Array.isArray(modelIds)
-    ? [...new Set(modelIds.filter(Boolean).map(String))]
-    : (modelIds ? [String(modelIds)] : []);
-  if (ids.length === 0) return 0;
-
-  const frontier = await pool.query('SELECT id FROM teams WHERE is_frontier = TRUE');
-  if (frontier.rows.length === 0) return 0;
-
-  let added = 0;
-  for (const team of frontier.rows) {
-    // 批量插入，避免逐条往返
-    const result = await pool.query(
-      `INSERT INTO team_models (team_id, model_id, enabled)
-       SELECT $1, x.model_id, TRUE
-       FROM unnest($2::text[]) AS x(model_id)
-       ON CONFLICT (team_id, model_id) DO NOTHING`,
-      [team.id, ids]
-    );
-    added += result.rowCount || 0;
-  }
-  if (added > 0) {
-    Logger.info(`[前沿Team] 已为 ${frontier.rows.length} 个前沿 Team 自动启用 ${ids.length} 个模型中的新映射 ${added} 条`);
-  }
+  const added = await addModelsToFrontierTeamsIfEnabled(pool, modelIds);
+  if (added > 0) Logger.info(`[前沿Team] 自动新增 ${added} 条模型映射`);
   return added;
 }
 
@@ -626,6 +605,13 @@ router.post('/models/batch-update', requireAuth, requireAdmin, async (req, res) 
   }
   try {
     await pool.query('UPDATE models SET enabled = $1 WHERE id = ANY($2)', [enabled, ids]);
+    if (enabled === true) {
+      try {
+        await addModelsToFrontierTeams(ids);
+      } catch (e) {
+        Logger.warn('[批量启用模型] 自动添加到前沿Team失败:', e.message);
+      }
+    }
     Logger.info(`[模型] 批量${enabled ? '启用' : '禁用'}了 ${ids.length} 个模型`);
     res.json({ success: true, updated: ids.length });
   } catch (error) {
@@ -3165,6 +3151,7 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
         settings[row.key] = row.value;
       }
     });
+    settings.autoAddNewModelsToFrontier = settings.autoAddNewModelsToFrontier === true;
     // 敏感配置脱敏：飞书密钥勿经通用设置接口泄露
     if (settings.feishu_login && typeof settings.feishu_login === 'object') {
       settings.feishu_login = {
@@ -3204,6 +3191,9 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
         return res.status(400).json({ error: '设置不能为空' });
       }
       for (const [key, value] of entries) {
+        if (key === 'autoAddNewModelsToFrontier' && typeof value !== 'boolean') {
+          return res.status(400).json({ error: 'autoAddNewModelsToFrontier 必须是布尔值' });
+        }
         // model_list 校验：必须保留至少一个非 fusion 模型（除非只配了 fusion）
         if (key === 'model_list' && Array.isArray(value)) {
           const nonFusionModels = value.filter(m => m !== 'fusion');
@@ -3224,6 +3214,9 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
     const { key, value } = body;
     if (!key) {
       return res.status(400).json({ error: '设置键不能为空' });
+    }
+    if (key === 'autoAddNewModelsToFrontier' && typeof value !== 'boolean') {
+      return res.status(400).json({ error: 'autoAddNewModelsToFrontier 必须是布尔值' });
     }
     // model_list 校验：必须保留至少一个非 fusion 模型（除非只配了 fusion）
     if (key === 'model_list' && Array.isArray(value)) {

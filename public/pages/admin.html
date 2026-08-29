@@ -1330,6 +1330,13 @@
               <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="用户每次 API 调用扣除的固定金额">用户每次 API 调用扣除的固定金额</span></small>
             </div>
             <div class="form-group">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="autoAddNewModelsToFrontier" style="width:16px;height:16px;">
+                <span style="font-weight:600;"><span data-i18n="新模型自动加入前沿 Team">新模型自动加入前沿 Team</span></span>
+              </label>
+              <small style="color:var(--muted-foreground);font-size:12px;display:block;margin-top:6px;"><span data-i18n="默认关闭。开启后，新建、导入、同步或批量启用的模型会自动补充到前沿 Team；关闭不会删除已有 Team/模型映射。">默认关闭。开启后，新建、导入、同步或批量启用的模型会自动补充到前沿 Team；关闭不会删除已有 Team/模型映射。</span></small>
+            </div>
+            <div class="form-group">
               <label for="statsRefreshInterval"><span data-i18n="统计信息刷新间隔（秒）">统计信息刷新间隔（秒）</span></label>
               <input type="number" id="statsRefreshInterval" class="input" value="10" min="3" max="300" step="1">
               <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="管理后台「统计信息」页自动刷新间隔，默认 10 秒，范围 3–300 秒">管理后台「统计信息」页自动刷新间隔，默认 10 秒，范围 3–300 秒</span></small>

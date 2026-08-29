@@ -11,6 +11,7 @@
     "test:usage-accuracy": "node server/scripts/test-usage-accuracy.js",
     "test:quota-usage": "node server/scripts/test-quota-usage.js",
     "test:fusion-synthesis-prompt": "node server/scripts/test-fusion-synthesis-prompt.js",
+    "test:frontier-auto-add": "node server/scripts/test-frontier-auto-add.js",
     "build": "node deploy/build/build-release.js release",
     "build:saas": "node deploy/build/build-release.js saas",
     "docker:build": "docker build -f deploy/docker/Dockerfile -t crewrouter/crewrouter:latest .",
