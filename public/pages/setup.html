@@ -135,6 +135,14 @@
       <div class="setup-error" id="modeError"></div>
     </div>
 
+    <div class="setup-card" id="stepPassport" style="display:none;">
+      <div class="setup-success">
+        <h2>PassPort 首次授权</h2>
+        <p>请使用管理员身份完成 Bloret PassPort 授权，授权成功后将自动创建管理员账号并进入控制台。</p>
+        <a class="btn btn-primary" href="/auth/passport">前往 PassPort 授权</a>
+      </div>
+    </div>
+
     <div class="setup-card" id="step1" style="display:none;">
       <h2><span data-i18n="创建管理员账号">创建管理员账号</span></h2>
       <p class="step-desc"><span data-i18n="数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。">数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。</span></p>
@@ -188,7 +196,9 @@
           console.log('[OOBE] status:', data);
           document.getElementById('stepLoading').style.display = 'none';
           if (data.needsSetup) {
-            if (data.authMode) {
+            if (data.authMode === 'passport') {
+              document.getElementById('stepPassport').style.display = 'block';
+            } else if (data.authMode === 'feishu') {
               document.getElementById('step1').style.display = 'block';
               document.getElementById('adminUsername').focus();
             } else {
@@ -213,8 +223,12 @@
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.error || '模式选择失败');
           document.getElementById('stepMode').style.display = 'none';
-          document.getElementById('step1').style.display = 'block';
-          document.getElementById('adminUsername').focus();
+          if (mode === 'passport') {
+            document.getElementById('stepPassport').style.display = 'block';
+          } else {
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('adminUsername').focus();
+          }
         } catch (e) { el.textContent = e.message; el.style.display = 'block'; }
       },
 

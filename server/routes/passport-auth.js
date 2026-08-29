@@ -90,10 +90,15 @@ router.get('/passport/callback', async (req, res) => {
       let result = await client.query('SELECT * FROM users WHERE passport_username = $1 FOR UPDATE', [passportUsername]);
       let user = result.rows[0];
       if (!user) {
-        const inviteToken = inviteForUser;
-        const inviteHash = crypto.createHash('sha256').update(inviteToken).digest('hex');
-        const inviteResult = await client.query(`SELECT * FROM auth_invites WHERE token_hash = $1 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP FOR UPDATE`, [inviteHash]);
-        if (!inviteResult.rows.length) { await client.query('ROLLBACK'); return res.status(403).send('该登录需要有效邀请链接，请使用管理员提供的邀请链接访问。'); }
+        const adminCount = await client.query('SELECT COUNT(*)::int AS count FROM users WHERE is_admin = TRUE');
+        const isFirstAdmin = adminCount.rows[0].count === 0;
+        let inviteResult = null;
+        if (!isFirstAdmin) {
+          const inviteToken = inviteForUser;
+          const inviteHash = crypto.createHash('sha256').update(inviteToken).digest('hex');
+          inviteResult = await client.query(`SELECT * FROM auth_invites WHERE token_hash = $1 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP FOR UPDATE`, [inviteHash]);
+          if (!inviteResult.rows.length) { await client.query('ROLLBACK'); return res.status(403).send('该登录需要有效邀请链接，请使用管理员提供的邀请链接访问。'); }
+        }
         const nickname = String(data.nickname || passportUsername).trim().slice(0, 255) || passportUsername;
         let username = nickname;
         for (let suffix = 0; suffix < 1000; suffix++) {
@@ -102,14 +107,22 @@ router.get('/passport/callback', async (req, res) => {
           if (!collision.rows.length) { username = candidate; break; }
           if (suffix === 999) throw new Error('无法生成唯一用户名');
         }
-        const adminCount = await client.query('SELECT COUNT(*)::int AS count FROM users WHERE is_admin = TRUE');
         const email = data.email ? String(data.email).trim().slice(0, 255) : null;
         const emailCheck = email ? await client.query('SELECT 1 FROM users WHERE LOWER(email) = LOWER($1)', [email]) : { rows: [] };
-        const inserted = await client.query(`INSERT INTO users (username, passport_username, email, avatar, is_admin, email_verified, balance) VALUES ($1, $2, $3, $4, $5, TRUE, 10) RETURNING *`, [username, passportUsername, emailCheck.rows.length ? null : email, String(data.avatar || '').slice(0, 500) || null, adminCount.rows[0].count === 0]);
+        const inserted = await client.query(`INSERT INTO users (username, passport_username, email, avatar, is_admin, email_verified, balance) VALUES ($1, $2, $3, $4, $5, TRUE, 10) RETURNING *`, [username, passportUsername, emailCheck.rows.length ? null : email, String(data.avatar || '').slice(0, 500) || null, isFirstAdmin]);
         user = inserted.rows[0];
-        const consumed = await client.query('UPDATE auth_invites SET used = TRUE, used_by = $1, used_at = CURRENT_TIMESTAMP WHERE id = $2 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP RETURNING id', [user.id, inviteResult.rows[0].id]);
-        if (!consumed.rows.length) throw new Error('邀请已被使用或已过期');
+        if (inviteResult) {
+          const consumed = await client.query('UPDATE auth_invites SET used = TRUE, used_by = $1, used_at = CURRENT_TIMESTAMP WHERE id = $2 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP RETURNING id', [user.id, inviteResult.rows[0].id]);
+          if (!consumed.rows.length) throw new Error('邀请已被使用或已过期');
+        }
         await seedPassportUser(client, user, username);
+        if (isFirstAdmin) {
+          await client.query(
+            "INSERT INTO settings (key, value) VALUES ('setup_complete', $1::jsonb) ON CONFLICT (key) DO NOTHING",
+            [JSON.stringify({ completed_at: new Date().toISOString(), method: 'passport-authorized' })]
+          );
+          Logger.info(`[OOBE] PassPort 管理员授权完成: ${passportUsername}`);
+        }
       }
       await client.query('COMMIT');
       req.session.user = sessionUser(user);

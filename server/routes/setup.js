@@ -6,7 +6,7 @@ const Logger = require('../logger');
 const { getAuthMode, setAuthMode, decodeMode } = require('../utils/auth-mode');
 
 /**
- * OOBE 仅保留一步：创建管理员。
+ * OOBE：飞书模式创建管理员；PassPort 模式由首次管理员授权完成初始化。
  * 供应商 / 模型 / Team 等在管理后台配置，避免多步向导与 schema 竞态。
  * 数据库建表与迁移必须在服务启动时完成（见 server/index.js startServer）。
  */
@@ -54,7 +54,7 @@ router.post('/setup/mode', requireSetupMode, async (req, res) => {
   } catch (error) { res.status(400).json({ error: error.message }); }
 });
 
-// 唯一步骤：创建管理员并完成 OOBE
+// 飞书模式：创建管理员并完成 OOBE
 router.post('/setup/admin', requireSetupMode, async (req, res) => {
   const { username, email, password } = req.body;
   const selectedMode = await getAuthMode();
