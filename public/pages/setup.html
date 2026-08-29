@@ -216,29 +216,42 @@
       },
 
       async startPassportAuth() {
+        const errorEl = document.getElementById('modeError');
+        errorEl.style.display = 'none';
         try {
-          const response = await fetch('/auth/passport/redirect-uri');
-          const data = await response.json();
+          const response = await fetch('/auth/passport/redirect-uri', { credentials: 'same-origin' });
+          const data = await response.json().catch(() => ({}));
           if (response.ok && data.redirectUri) {
-            window.location.href = '/auth/passport';
+            const origin = new URL(data.redirectUri).origin;
+            window.location.href = `/auth/passport?redirect_origin=${encodeURIComponent(origin)}`;
             return;
           }
         } catch (_) {}
 
-        const currentOrigin = window.location.origin;
         const answer = window.prompt(
           `无法自动确认 PassPort 登记的公网地址。\n请确认或输入实际公网地址（例如 https://example.com）。`,
-          currentOrigin
+          window.location.origin
         );
         if (answer === null) return;
-        const origin = answer.trim().replace(/\/$/, '');
-        if (!/^https:\/\/[^/]+$/.test(origin)) {
-          const el = document.getElementById('modeError');
-          el.textContent = '请输入完整的 HTTPS 公网地址，例如 https://example.com';
-          el.style.display = 'block';
+        let origin;
+        try {
+          const parsed = new URL(answer.trim());
+          if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash) throw new Error();
+          origin = parsed.origin;
+        } catch (_) {
+          errorEl.textContent = '请输入完整的 HTTPS 公网地址，例如 https://example.com';
+          errorEl.style.display = 'block';
           return;
         }
-        window.location.href = `/auth/passport?redirect_origin=${encodeURIComponent(origin)}`;
+        try {
+          const response = await fetch(`/auth/passport/redirect-uri?redirect_origin=${encodeURIComponent(origin)}`, { credentials: 'same-origin' });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.redirectUri) throw new Error(data.error || '公网地址无法使用');
+          window.location.href = `/auth/passport?redirect_origin=${encodeURIComponent(origin)}`;
+        } catch (error) {
+          errorEl.textContent = error.message || '无法确认公网地址，请检查后重试';
+          errorEl.style.display = 'block';
+        }
       },
 
       async chooseMode(mode) {
