@@ -5262,6 +5262,7 @@ class ConsoleApp {
     this._detailMsgPage = 0;
     this._detailLoaded = 0;
     this._detailTotal = 0;
+    this._renderedEventSigs = [];
     // 切换会话时的状态隔离：清空上一会话的总结状态与分页指纹，避免串会话
     this._summaryPending = false;
     this._sessionSummaryText = '';
@@ -6601,17 +6602,15 @@ class ConsoleApp {
         this._sessionSummaryText = acc;
         this._setSummaryRegenDisabled(false);
         this._applySummaryBtnText(reqKey, true);
+        this._renderSessionSummaryInline(reqKey, acc, 'done', null, this._summaryCacheTimeMap[reqKey]);
       }
       if (this._summarySeq === reqSeq) {
         this._summaryTaskSessionKey = reqKey;
         this._summaryTaskText = acc;
         this._setSummaryRegenDisabled(false);
+        this._updateTaskBar('done', { summary: acc, sessionKey: reqKey });
+        this.showToast(t('总结已生成'), 'success');
       }
-      if (this._detailSessionKey === reqKey) {
-        this._renderSessionSummaryInline(reqKey, acc, 'done', null, this._summaryCacheTimeMap[reqKey]);
-      }
-      this.showToast(t('总结已生成'), 'success');
-      if (this._summarySeq === reqSeq) this._updateTaskBar('done', { summary: acc, sessionKey: reqKey });
       return;
     } catch (error) {
       const summaryError = error.message || t('总结生成失败');
@@ -6620,7 +6619,7 @@ class ConsoleApp {
         this._renderSessionSummaryInline(reqKey, '', 'error', summaryError);
 
         const live = document.getElementById('sessionSummaryBody');
-        if (live && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
+        if (this._summaryModalSessionKey === reqKey && live && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
           setHTML(live, `<span style="color:var(--danger);">${escapeHtml(summaryError)}</span>`);
         }
       }
