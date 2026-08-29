@@ -229,17 +229,13 @@
         } catch (_) {}
 
         const answer = window.prompt(
-          `无法自动确认 PassPort 登记的公网地址。\n请确认或输入实际公网地址（例如 https://example.com）。`,
+          `无法自动确认当前地址。\n请确认或输入 PassPort 接受的回调地址（例如 https://example.com）。`,
           window.location.origin
         );
         if (answer === null) return;
-        let origin;
-        try {
-          const parsed = new URL(answer.trim());
-          if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash) throw new Error();
-          origin = parsed.origin;
-        } catch (_) {
-          errorEl.textContent = '请输入完整的 HTTPS 公网地址，例如 https://example.com';
+        const origin = answer.trim().replace(/\/$/, '');
+        if (!origin) {
+          errorEl.textContent = '请输入回调地址';
           errorEl.style.display = 'block';
           return;
         }
