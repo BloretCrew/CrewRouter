@@ -80,7 +80,8 @@ router.get('/passport', async (req, res) => {
     req.session.passportInvite = invite;
     saveSession(req, res, (err) => {
       if (err) return res.status(500).send('登录状态保存失败，请重试。');
-      const params = new URLSearchParams({ app_id: passport.appId, redirect_uri: redirectUri, state });
+      // PassPort 会在内部再次拼接授权路径，redirect_uri 需要额外编码一次，避免 :// 被解析成 /。
+      const params = new URLSearchParams({ app_id: passport.appId, redirect_uri: encodeURIComponent(redirectUri), state });
       res.redirect(`${baseUrl}/app/oauth?${params}`);
     });
   } catch (err) { Logger.error('[PassPort] OAuth 入口失败:', err.message); res.status(500).send(`PassPort 授权入口配置错误：${err.message}`); }
