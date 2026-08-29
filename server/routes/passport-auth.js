@@ -11,13 +11,22 @@ const passport = config.passport || {};
 const baseUrl = String(passport.baseUrl || 'https://passport.bloret.net').replace(/\/$/, '');
 
 function getRedirectUri(req) {
+  const requestedOrigin = String(req.query.redirect_origin || '').trim().replace(/\/$/, '');
+  if (requestedOrigin) {
+    const parsed = new URL(requestedOrigin);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.pathname !== '/' || parsed.search || parsed.hash) {
+      throw new Error('公网地址必须是完整的 HTTPS origin');
+    }
+    return `${parsed.origin}/auth/passport/callback`;
+  }
+
   const protocol = String(req.protocol || '').toLowerCase();
   const forwardedHost = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
   const host = forwardedHost || String(req.get('host') || '').trim();
   const validHost = /^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}(?::\d{1,5})?$/.test(host)
     || /^(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/.test(host)
     || /^(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?$/.test(host);
-  if (!validHost) throw new Error('无法安全确定当前域名');
+  if (!validHost) throw new Error('无法安全确定当前域名，请在授权入口中确认公网地址');
   if (protocol !== 'https:' && !(protocol === 'http:' && /^(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/.test(host))) {
     throw new Error('PassPort 回调地址必须使用 HTTPS');
   }

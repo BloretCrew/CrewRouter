@@ -139,7 +139,7 @@
       <div class="setup-success">
         <h2>PassPort 首次授权</h2>
         <p>请使用管理员身份完成 Bloret PassPort 授权，授权成功后将自动创建管理员账号并进入控制台。</p>
-        <a class="btn btn-primary" href="/auth/passport">前往 PassPort 授权</a>
+        <button class="btn btn-primary" type="button" onclick="setup.startPassportAuth()">前往 PassPort 授权</button>
       </div>
     </div>
 
@@ -213,6 +213,23 @@
           el.innerHTML = '<div class="setup-error" style="display:block;text-align:left;">无法连接服务器或数据库尚未就绪，请确认服务已启动并完成数据库初始化后刷新本页。<br><small>' +
             (e && e.message ? e.message : '') + '</small></div>';
         }
+      },
+
+      async startPassportAuth() {
+        const currentOrigin = window.location.origin;
+        const answer = window.prompt(
+          `请确认 PassPort 登记的公网地址。\n如果当前地址不确定，请输入实际公网地址（例如 https://example.com）。`,
+          currentOrigin
+        );
+        if (answer === null) return;
+        const origin = answer.trim().replace(/\/$/, '');
+        if (!/^https:\/\/[^/]+$/.test(origin)) {
+          const el = document.getElementById('modeError');
+          el.textContent = '请输入完整的 HTTPS 公网地址，例如 https://example.com';
+          el.style.display = 'block';
+          return;
+        }
+        window.location.href = `/auth/passport?redirect_origin=${encodeURIComponent(origin)}`;
       },
 
       async chooseMode(mode) {
