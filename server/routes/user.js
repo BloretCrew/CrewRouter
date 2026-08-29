@@ -3666,8 +3666,11 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
 
     // 尝试获取模型列表并自动添加
     try {
-      const modelsEndpoint = models_url || (format === 'anthropic' ? '/v1/models' : '/v1/models');
-      const modelsRes = await fetch(`${base_url.replace(/\/+$/, '')}${modelsEndpoint}`, {
+      const { upstreamUrl } = require('../utils/url-validator');
+      const modelsUrl = models_url
+        ? (models_url.startsWith('http') ? models_url : `${base_url.replace(/\/+$/, '')}${models_url.startsWith('/') ? '' : '/'}${models_url}`)
+        : upstreamUrl(base_url, '/models');
+      const modelsRes = await fetch(modelsUrl, {
         headers: { 'Authorization': `Bearer ${api_key}` }
       });
 
@@ -3787,10 +3790,9 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
     }
 
     const candidates = [];
-    if (/\/v1\/?$/.test(baseUrl)) {
-      candidates.push(`${baseUrl}/models`);
-    } else {
-      candidates.push(`${baseUrl}/v1/models`);
+    const { upstreamUrl } = require('../utils/url-validator');
+    candidates.push(upstreamUrl(baseUrl, '/models'));
+    if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(baseUrl)) {
       candidates.push(`${baseUrl}/models`);
     }
 
@@ -3979,10 +3981,9 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
       .replace(/\/+$/, '');
 
     // 自动推断路径
-    if (/\/v1\/?$/.test(cleanBaseUrl)) {
-      candidateUrls.push(`${cleanBaseUrl}/models`);
-    } else {
-      candidateUrls.push(`${cleanBaseUrl}/v1/models`);
+    const { upstreamUrl } = require('../utils/url-validator');
+    candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models'));
+    if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(cleanBaseUrl)) {
       candidateUrls.push(`${cleanBaseUrl}/models`);
     }
 

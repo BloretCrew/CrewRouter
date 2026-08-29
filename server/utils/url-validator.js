@@ -191,12 +191,13 @@ function cleanBaseUrl(base) {
 }
 
 /**
- * 拼接上游 API 端点。endpoint 不含 /v1 前缀（如 '/chat/completions'）；
- * base_url 已以 /v1 结尾时直接拼，否则补上 /v1。
+ * 拼接上游 API 端点。endpoint 不含版本前缀（如 '/chat/completions'）；
+ * base_url 已以版本段结尾时直接拼，否则补上 /v1。
  */
 function upstreamUrl(base, endpoint) {
   const clean = cleanBaseUrl(base);
-  return /\/v1$/i.test(clean) ? clean + endpoint : `${clean}/v1${endpoint}`;
+  const hasVersionSuffix = /\/v\d+(?:[a-z]+\d*)?$/i.test(clean);
+  return hasVersionSuffix ? clean + endpoint : `${clean}/v1${endpoint}`;
 }
 
 module.exports = {

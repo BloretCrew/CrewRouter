@@ -76,25 +76,24 @@ class BaseProviderAdapter {
   async buildUrl(model) {
     const baseUrl = this.provider.base_url.replace(/\/$/, '');
     const format = this.getApiFormat();
+    const { upstreamUrl } = require('../utils/url-validator');
 
-    let path;
+    let fullUrl;
     switch (format) {
       case 'anthropic':
-        path = '/v1/messages';
+        fullUrl = upstreamUrl(baseUrl, '/messages');
         break;
       case 'gemini':
-        path = `/v1beta/models/${model}:generateContent`;
+        fullUrl = `${baseUrl}/v1beta/models/${model}:generateContent`;
         break;
       case 'responses':
-        path = '/v1/responses';
+        fullUrl = upstreamUrl(baseUrl, '/responses');
         break;
       case 'openai':
       default:
-        path = '/v1/chat/completions';
+        fullUrl = upstreamUrl(baseUrl, '/chat/completions');
         break;
     }
-
-    const fullUrl = `${baseUrl}${path}`;
 
     // SSRF 防护：校验 URL 合法性
     const { validateUrl } = require('../utils/url-validator');

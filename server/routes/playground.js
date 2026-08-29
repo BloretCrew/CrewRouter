@@ -207,9 +207,8 @@ router.post('/chat', requireAuth, async (req, res) => {
       }
       if (systemMsg) upstreamBody.system = systemMsg.content;
     } else {
-      const baseUrl = provider.base_url.replace(/\/$/, '');
-      const chatPath = (baseUrl.endsWith('/v1') || baseUrl.endsWith('/api')) ? '/chat/completions' : '/v1/chat/completions';
-      url = `${baseUrl}${chatPath}`;
+      const { upstreamUrl } = require('../utils/url-validator');
+      url = upstreamUrl(provider.base_url, '/chat/completions');
     }
 
     // 多 Key：顺序 / 权重尝试，失败后 fallback

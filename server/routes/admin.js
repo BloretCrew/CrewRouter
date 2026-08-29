@@ -2441,12 +2441,9 @@ router.get('/providers/:id/ping', requireAuth, requireAdmin, async (req, res) =>
       headers['Authorization'] = `Bearer ${primaryKey}`;
     }
 
-    // 尝试 /v1/models 和 /models 两个路径
-    const candidates = [];
-    if (/\/v1\/?$/.test(baseUrl)) {
-      candidates.push(`${baseUrl}/models`);
-    } else {
-      candidates.push(`${baseUrl}/v1/models`);
+    // 尝试推断的模型路径，并为无版本 Base URL 保留 /models 回退
+    const candidates = [upstreamUrl(baseUrl, '/models')];
+    if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(baseUrl)) {
       candidates.push(`${baseUrl}/models`);
     }
 
@@ -2524,10 +2521,8 @@ async function fetchUpstreamModelsForProvider(provider) {
     .replace(/\/(chat\/completions|completions|messages|responses|embeddings)\/?$/, '')
     .replace(/\/+$/, '');
 
-  if (/\/v1\/?$/.test(cleanBaseUrl)) {
-    candidateUrls.push(`${cleanBaseUrl}/models`);
-  } else {
-    candidateUrls.push(`${cleanBaseUrl}/v1/models`);
+  candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models'));
+  if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(cleanBaseUrl)) {
     candidateUrls.push(`${cleanBaseUrl}/models`);
   }
   const uniqueUrls = [...new Set(candidateUrls)];
@@ -3722,7 +3717,7 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
 
       // 尝试获取模型列表
       try {
-        const modelsUrl = /\/v1$/.test(baseUrl) ? `${baseUrl}/models` : `${baseUrl}/v1/models`;
+        const modelsUrl = upstreamUrl(baseUrl, '/models');
         const modelsRes = await fetch(modelsUrl, {
           headers: { 'Authorization': `Bearer ${apiKey}` }
         });
