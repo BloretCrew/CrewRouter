@@ -11,6 +11,7 @@ const { runPanels } = require('./panel-runner');
 const { runJudge } = require('./judge-analyzer');
 const { synthesize } = require('./synthesizer');
 const Logger = require('../logger');
+const { decryptSecret } = require('../utils/secret-crypto');
 const { pool } = require('../models/database');
 const { upstreamUrl } = require('../utils/url-validator');
 const proxyPool = require('../proxy-pool');
@@ -64,6 +65,7 @@ async function getProviderForRequest(providerId) {
   try {
     const provider = await pool.query('SELECT * FROM providers WHERE id = $1 AND enabled = TRUE', [providerId]);
     if (!provider.rows[0]) return null;
+    provider.rows[0].api_key = decryptSecret(provider.rows[0].api_key);
 
     const group = provider.rows[0].grp;
     if (!group) return provider.rows[0];
@@ -74,6 +76,7 @@ async function getProviderForRequest(providerId) {
     );
 
     if (groupResult.rows.length <= 1) return provider.rows[0];
+    for (const candidate of groupResult.rows) candidate.api_key = decryptSecret(candidate.api_key);
 
     const candidates = groupResult.rows;
     const selected = candidates[Math.floor(Math.random() * candidates.length)];

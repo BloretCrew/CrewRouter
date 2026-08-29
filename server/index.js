@@ -17,6 +17,7 @@ const { pool } = require('./models/database');
 const Logger = require('./logger');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const { encryptSecret } = require('./utils/secret-crypto');
 
 // 静态资源路径兼容：开发模式下 server/index.js 在 server/ 目录，
 // __dirname 为 .../server/，public/ 在上层；
@@ -586,6 +587,7 @@ async function clearDefaultPasswords123456() {
     if (flag.rows.length > 0) return;
 
     const bcrypt = require('bcryptjs');
+const { encryptSecret } = require('./utils/secret-crypto');
     const users = await pool.query(
       `SELECT id, username, password_hash, feishu_open_id
        FROM users
@@ -1724,6 +1726,31 @@ async function ensureApiKeySignatureColumns() {
   }
 }
 
+// ========== 自动迁移：供应商 API Key 加密存储 ==========
+async function ensureProviderKeyEncryption() {
+  try {
+    const result = await pool.query('SELECT id, api_key, api_keys FROM providers FOR UPDATE');
+    for (const row of result.rows) {
+      const apiKey = encryptSecret(row.api_key);
+      let apiKeys = row.api_keys;
+      if (Array.isArray(apiKeys)) {
+        apiKeys = apiKeys.map((entry) => {
+          if (typeof entry === 'string') return encryptSecret(entry);
+          if (!entry || typeof entry !== 'object') return entry;
+          return { ...entry, key: entry.key ? encryptSecret(entry.key) : entry.key };
+        });
+      }
+      const serialized = apiKeys == null ? null : JSON.stringify(apiKeys);
+      if (apiKey !== row.api_key || serialized !== (row.api_keys == null ? null : JSON.stringify(row.api_keys))) {
+        await pool.query('UPDATE providers SET api_key = $1, api_keys = $2::jsonb WHERE id = $3', [apiKey, serialized, row.id]);
+      }
+    }
+    Logger.info('[迁移] providers API Key 已加密存储');
+  } catch (err) {
+    Logger.warn(`[迁移] providers API Key 加密迁移跳过: ${err.message}`);
+  }
+}
+
 // ========== 自动迁移：供应商多 API Key（固定密钥列表 + 选择模式） ==========
 async function ensureProviderMultiApiKeyColumns() {
   try {
@@ -2649,6 +2676,7 @@ async function runPendingMigrations() {
     ensureApiKeySignatureColumns,
     ensureInjectPromptsTable,
     ensureProviderMultiApiKeyColumns,
+    ensureProviderKeyEncryption,
     ensureApiKeyEnabledColumns,
     ensureApiKeySwallowImages,
     ensureApiKeyCrewRouterCommands,

@@ -80,6 +80,7 @@ const { extractAttribution, classifyCompaction } = require('../utils/attribution
 const { classifyRequestSemantics } = require('../utils/request-semantics');
 const { createStreamScrubber } = require('../utils/inject-prompt-stream');
 const crypto = require('crypto');
+const { decryptSecret } = require('../utils/secret-crypto');
 
 // 非流式：上游整段响应（headers+body）超时。30s 对免费/慢模型过短，易误杀。
 const UPSTREAM_TIMEOUT = 180000; // 3 分钟
@@ -529,7 +530,9 @@ function invalidateApiKeyCacheByKeyId(keyId) {
 
 async function getProvider(providerId) {
   const result = await pool.query('SELECT * FROM providers WHERE id = $1 AND enabled = TRUE', [providerId]);
-  return result.rows[0] || null;
+  const provider = result.rows[0] || null;
+  if (provider) provider.api_key = decryptSecret(provider.api_key);
+  return provider;
 }
 
 // 获取供应商（支持同组负载均衡）
@@ -547,6 +550,7 @@ async function getProviderForRequest(providerId) {
   );
 
   if (groupResult.rows.length <= 1) return applyProviderSelect(provider);
+  for (const candidate of groupResult.rows) candidate.api_key = decryptSecret(candidate.api_key);
 
   // 默认随机选择；插件 provider:select 钩子可过滤/排序候选供应商
   let candidates = groupResult.rows;

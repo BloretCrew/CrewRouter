@@ -31,6 +31,7 @@ const {
 } = require('../utils/provider-keys');
 const { parseGrokAuthConfig } = require('../utils/grok-usage');
 const { normalizeTestUserAgent } = require('../utils/model-test');
+const { encryptSecret } = require('../utils/secret-crypto');
 const { getRetentionConfig, invalidateRetentionConfigCache } = require('../utils/usage-agg');
 const { runCompressOnce } = require('../utils/usage-compress');
 const { runPurgeOnce } = require('../utils/usage-purge');
@@ -2037,12 +2038,16 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
       const er = await pool.query('SELECT api_key, api_keys FROM providers WHERE id = $1', [id]);
       existing = er.rows[0] || null;
     }
-    const finalApiKey = storage
-      ? storage.api_key
+    const encryptedStorage = storage && {
+      api_key: encryptSecret(storage.api_key),
+      api_keys: storage.api_keys?.map((entry) => ({ ...entry, key: encryptSecret(entry.key) })) || null
+    };
+    const finalApiKey = encryptedStorage
+      ? encryptedStorage.api_key
       : (api_key || existing?.api_key || '');
-    const finalApiKeys = storage
-      ? (storage.api_keys ? JSON.stringify(storage.api_keys) : null)
-      : (existing?.api_keys != null ? JSON.stringify(normalizeProviderKeyEntries(existing)) : (finalApiKey ? JSON.stringify([{ key: finalApiKey, weight: 1 }]) : null));
+    const finalApiKeys = encryptedStorage
+      ? (encryptedStorage.api_keys ? JSON.stringify(encryptedStorage.api_keys) : null)
+      : (existing?.api_keys != null ? JSON.stringify(normalizeProviderKeyEntries(existing).map((entry) => ({ ...entry, key: encryptSecret(entry.key) }))) : (finalApiKey ? JSON.stringify([{ key: finalApiKey, weight: 1 }]) : null));
 
     await pool.query(`
       INSERT INTO providers (id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
@@ -3683,7 +3688,7 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
         INSERT INTO providers (id, name, base_url, api_key, format, enabled)
         VALUES ($1, $2, $3, $4, 'openai', TRUE)
         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, base_url = EXCLUDED.base_url, api_key = EXCLUDED.api_key
-      `, [effectiveProviderId, providerName, baseUrl, apiKey]);
+      `, [effectiveProviderId, providerName, baseUrl, encryptSecret(apiKey)]);
 
       if (existing.rows.length > 0) updated++; else created++;
 
@@ -3756,7 +3761,7 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
         INSERT INTO providers (id, name, base_url, api_key, format, enabled)
         VALUES ($1, $2, $3, $4, 'openai', TRUE)
         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, base_url = EXCLUDED.base_url, api_key = EXCLUDED.api_key
-      `, [effectiveProviderId, providerName, baseUrl, keys[0]]);
+      `, [effectiveProviderId, providerName, baseUrl, encryptSecret(keys[0])]);
 
       if (existing.rows.length > 0) updated++; else created++;
     }

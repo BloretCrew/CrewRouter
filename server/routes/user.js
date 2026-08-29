@@ -10,6 +10,7 @@ const { invalidateApiKeyCacheByKeyId } = require('./api');
 const { shanghaiDateRange, formatShanghaiDateTime } = require('../utils/timezone');
 const { buildUserUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs-filter');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
+const { encryptSecret, decryptSecret } = require('../utils/secret-crypto');
 const {
   HARNESS_SOURCES,
   isHarnessSource,
@@ -3641,7 +3642,7 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
 
     // 动态构建 INSERT 语句
     const insertCols = ['id', 'name', 'base_url', 'api_key', 'format', 'enabled'];
-    const insertValues = [providerId, name, base_url.replace(/\/+$/, ''), api_key, format || 'openai', true];
+    const insertValues = [providerId, name, base_url.replace(/\/+$/, ''), encryptSecret(api_key), format || 'openai', true];
 
     if (colNames.includes('models_url')) {
       insertCols.push('models_url');
@@ -3765,6 +3766,7 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
       return res.status(404).json({ error: '供应商不存在' });
     }
     const provider = providerResult.rows[0];
+    provider.api_key = decryptSecret(provider.api_key);
 
     // 检查权限：自己的供应商 或 全局已启用的供应商
     const isOwner = provider.created_by === req.session.user.id;
@@ -3861,7 +3863,7 @@ router.put('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_
     }
     if (api_key) {
       updates.push(`api_key = $${paramIndex++}`);
-      values.push(api_key);
+      values.push(encryptSecret(api_key));
     }
     if (format) {
       updates.push(`format = $${paramIndex++}`);

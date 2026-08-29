@@ -17,6 +17,7 @@
 const Logger = require('./logger');
 const { pool } = require('./models/database');
 const { safeExecuteKeyScript } = require('./utils/sandbox');
+const { encryptSecret, decryptSecret } = require('./utils/secret-crypto');
 
 /**
  * 从语法错误信息中提取出错行号，并展示对应代码片段
@@ -129,6 +130,7 @@ async function refreshProviderKey(providerId) {
     return { success: false, error: '供应商不存在' };
   }
   const provider = result.rows[0];
+  provider.api_key = decryptSecret(provider.api_key);
 
   if (provider.key_mode !== 'script') {
     return { success: false, error: '供应商非脚本模式' };
@@ -149,7 +151,7 @@ async function refreshProviderKey(providerId) {
         key_last_refresh_at = NOW(),
         key_last_error = NULL
       WHERE id = $3`,
-      [key, expiresAt, providerId]
+      [encryptSecret(key), expiresAt, providerId]
     );
 
     // 更新内存缓存
@@ -238,6 +240,7 @@ function scheduleRefresh(providerId, intervalSeconds) {
  */
 async function ensureFreshKey(provider) {
   const providerId = provider.id;
+  provider.api_key = decryptSecret(provider.api_key);
   const cached = keyCache.get(providerId);
 
   // 缓存中有未过期的密钥
@@ -297,6 +300,7 @@ async function initAll() {
     Logger.info(`[KeyRefresher] 初始化: 发现 ${result.rows.length} 个脚本模式供应商`);
 
     for (const provider of result.rows) {
+      provider.api_key = decryptSecret(provider.api_key);
       // 检查是否有未过期的密钥
       const cached = keyCache.get(provider.id);
       if (cached?.key && cached.expiresAt > Date.now()) {

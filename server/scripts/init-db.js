@@ -355,6 +355,13 @@ async function initDatabase() {
       }
     }
 
+    // 兼容旧表：将历史明文供应商 Key 加密存储
+    const providerKeys = await client.query("SELECT id, api_key, api_keys FROM providers WHERE api_key IS NOT NULL AND api_key <> ''");
+    for (const row of providerKeys.rows) {
+      const encrypted = encryptSecret(row.api_key);
+      if (encrypted !== row.api_key) await client.query('UPDATE providers SET api_key = $1 WHERE id = $2', [encrypted, row.id]);
+    }
+
     // CrewRouter Team 系统表
     await client.query(`
       CREATE TABLE IF NOT EXISTS teams (
@@ -792,7 +799,7 @@ async function initDatabase() {
         INSERT INTO providers (id, name, base_url, api_key, format, enabled)
         VALUES ($1, $2, $3, $4, $5, TRUE)
         ON CONFLICT (id) DO NOTHING
-      `, [provider.id, provider.name, provider.baseUrl, provider.apiKey || '', provider.format || 'openai']);
+      `, [provider.id, provider.name, provider.baseUrl, encryptSecret(provider.apiKey || ''), provider.format || 'openai']);
     }
     Logger.info('[数据库初始化] 供应商数据已同步');
 
