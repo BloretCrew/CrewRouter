@@ -469,7 +469,6 @@ async function initDatabase() {
     // 兼容旧表：补齐缺失列（CREATE IF NOT EXISTS 不会改已有表结构）
     const apiKeyColumns = [
       { name: 'key_value', type: 'VARCHAR(255) UNIQUE' },
-      { name: 'key_hash', type: 'VARCHAR(255)' },
       { name: 'key_prefix', type: 'VARCHAR(20)' },
       { name: 'is_system', type: 'BOOLEAN DEFAULT FALSE' },
       { name: 'enabled', type: 'BOOLEAN DEFAULT TRUE' },
@@ -499,23 +498,6 @@ async function initDatabase() {
         await client.query(`ALTER TABLE api_keys ADD COLUMN ${col.name} ${col.type}`);
         Logger.info(`[数据库初始化] 已为 api_keys 表添加 ${col.name} 列`);
       }
-    }
-    // 旧表安全迁移：先补可空 hash，回填后再清空明文并建立约束。
-    await client.query('ALTER TABLE api_keys ALTER COLUMN key_value DROP NOT NULL').catch(() => {});
-    const hashColumn = await client.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'api_keys' AND column_name = 'key_hash'`);
-    if (hashColumn.rows.length > 0) {
-      const legacyKeys = await client.query('SELECT id, key_value FROM api_keys WHERE key_value IS NOT NULL AND (key_hash IS NULL OR key_hash = \'\') FOR UPDATE');
-      const seenHashes = new Set();
-      for (const row of legacyKeys.rows) {
-        const hash = require('../utils/key-hash').sha256Hex(row.key_value);
-        if (seenHashes.has(hash)) throw new Error(`api_keys 存在重复 key_hash: ${hash.slice(0, 8)}`);
-        seenHashes.add(hash);
-        await client.query('UPDATE api_keys SET key_hash = $1, key_value = NULL WHERE id = $2', [hash, row.id]);
-      }
-      const duplicates = await client.query(`SELECT key_hash FROM api_keys WHERE key_hash IS NOT NULL GROUP BY key_hash HAVING COUNT(*) > 1`);
-      if (duplicates.rows.length > 0) throw new Error('api_keys 存在重复 key_hash，未建立约束');
-      await client.query('ALTER TABLE api_keys ALTER COLUMN key_hash SET NOT NULL');
-      await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash)');
     }
     Logger.info('[数据库初始化] 表 api_keys 已就绪');
 
@@ -734,12 +716,14 @@ async function initDatabase() {
       { name: 'response', type: 'TEXT' },
       { name: 'history_hidden', type: 'BOOLEAN DEFAULT FALSE' }
     ];
+    // 注意: 不能靠 try/catch 吞 42701 —— 事务内任何语句报错都会使整个事务进入
+    // aborted 状态，后续语句全部报 25P02。必须用 IF NOT EXISTS 避免报错。
     for (const col of usageColumnsToAdd) {
-      try {
-        await client.query(`ALTER TABLE usage_records ADD COLUMN ${col.name} ${col.type}`);
+      const res = await client.query(
+        `ALTER TABLE usage_records ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`
+      );
+      if (res && res.command) {
         Logger.info(`[数据库初始化] 已为 usage_records 表添加 ${col.name} 列`);
-      } catch (e) {
-        if (e.code !== '42701') throw e; // 42701 = column already exists
       }
     }
 

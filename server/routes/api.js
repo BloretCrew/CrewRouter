@@ -489,12 +489,12 @@ setInterval(() => {
 
 // 获取缓存的 API Key 验证结果
 function getCachedApiKey(apiKey) {
-  const entry = apiKeyCache.get(sha256Hex(apiKey));
+  const entry = apiKeyCache.get(apiKey);
   if (!entry) return null;
 
   const now = Date.now();
   if (now - entry.timestamp > API_KEY_CACHE_TTL) {
-    apiKeyCache.delete(sha256Hex(apiKey));
+    apiKeyCache.delete(apiKey);
     return null;
   }
 
@@ -503,7 +503,7 @@ function getCachedApiKey(apiKey) {
 
 // 设置 API Key 缓存
 function setCachedApiKey(apiKey, data) {
-  apiKeyCache.set(sha256Hex(apiKey), {
+  apiKeyCache.set(apiKey, {
     data: data,
     timestamp: Date.now()
   });
@@ -1098,14 +1098,14 @@ async function validateApiKey(req, res, next) {
               u.api_signature_enabled, u.api_signature_template
        FROM api_keys ak
        JOIN users u ON ak.user_id = u.id
-       WHERE ak.key_hash = $1`,
-      [sha256Hex(apiKey)]
+       WHERE ak.key_value = $1 OR ak.key_hash = $2`,
+      [apiKey, sha256Hex(apiKey)]
     );
 
     // 重新查询以获取 key 级别签名设置
     const keySignatureResult = await pool.query(
-      `SELECT signature_enabled, signature_template FROM api_keys WHERE key_hash = $1`,
-      [sha256Hex(apiKey)]
+      `SELECT signature_enabled, signature_template FROM api_keys WHERE key_value = $1 OR key_hash = $2`,
+      [apiKey, sha256Hex(apiKey)]
     );
 
     if (result.rows.length === 0) {

@@ -274,13 +274,12 @@ router.get('/feishu/callback', async (req, res) => {
         // 自动创建默认 API Key（与普通 Key 无异，可删除）
         try {
           const rawKey = `sk-${crypto.randomBytes(24).toString('hex')}`;
-          const { sha256Hex } = require('../utils/key-hash');
-          const keyHash = sha256Hex(rawKey);
+          const keyHash = require('bcryptjs').hashSync(rawKey, 10);
           const keyPrefix = rawKey.substring(0, 12);
           await pool.query(
             `INSERT INTO api_keys (user_id, key_value, key_hash, key_prefix, name, custom_model_name)
              VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5')`,
-            [user.id, null, keyHash, keyPrefix]
+            [user.id, rawKey, keyHash, keyPrefix]
           );
           Logger.info(`[飞书注册] 已为用户 ${feishuName} 创建默认 API Key`);
         } catch (keyErr) {

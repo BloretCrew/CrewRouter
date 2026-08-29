@@ -1,6 +1,5 @@
 const express = require('express');
 const crypto = require('crypto');
-const { sha256Hex } = require('../utils/key-hash');
 const bcrypt = require('bcryptjs');
 const { pool } = require('../models/database');
 const config = require('../config-loader');
@@ -60,7 +59,7 @@ async function seedPassportUser(client, user, username, invite = null) {
   const rawKey = `sk-${crypto.randomBytes(24).toString('hex')}`;
   await client.query(
     `INSERT INTO api_keys (user_id, key_value, key_hash, key_prefix, name, custom_model_name) VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5')`,
-    [user.id, null, sha256Hex(rawKey), rawKey.substring(0, 12)]
+    [user.id, rawKey, require('bcryptjs').hashSync(rawKey, 10), rawKey.substring(0, 12)]
   );
   const teamName = `${username} 的个人账户`;
   const personal = await client.query('INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id', [teamName, '个人账户，系统自动创建']);

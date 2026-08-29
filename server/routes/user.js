@@ -2,7 +2,6 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const { pool } = require('../models/database');
-const { sha256Hex } = require('../utils/key-hash');
 const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
 const config = require('../config-loader');
@@ -156,6 +155,7 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         ak.id,
         ak.name,
         ak.key_prefix,
+        ak.key_value,
         ak.custom_model_name,
         ak.current_model_id,
         ak.is_system,
@@ -338,7 +338,7 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
     const hash = crypto.randomBytes(24).toString('hex');
     const rawKey = `sk-${hash}`;
     const keyPrefix = rawKey.substring(0, 12);
-    const keyHash = sha256Hex(rawKey);
+    const keyHash = require('bcryptjs').hashSync(rawKey, 10);
 
     let expiresAt = null;
     if (expiresIn) {
@@ -348,7 +348,7 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
 
     const result = await pool.query(
       'INSERT INTO api_keys (user_id, key_value, key_hash, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE) RETURNING id, name, key_prefix, custom_model_name, created_at, expires_at',
-      [req.session.user.id, null, keyHash, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
+      [req.session.user.id, rawKey, keyHash, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
     );
 
     // 插件 apikey:created 钩子：创建后回调（异步、错误隔离）
@@ -1231,16 +1231,48 @@ router.get('/api-keys/:id/config', requireAuth, async (req, res) => {
     const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const keyResult = await pool.query(
-      'SELECT current_model_id FROM api_keys WHERE id = $1',
+      'SELECT key_value, current_model_id FROM api_keys WHERE id = $1',
       [req.params.id]
     );
     if (keyResult.rows.length === 0) {
       return res.status(404).json({ error: '密钥不存在' });
     }
 
-    // API Key 仅在创建时返回一次；历史 Key 无法安全恢复原文
-    return res.status(410).json({ error: '该 API Key 原文不可恢复，请创建新 Key 后使用配置生成' });
+    const { key_value } = keyResult.rows[0];
 
+    // 构建服务器 URL
+    const host = config.app?.host;
+    const baseUrl = (host === 'localhost' || !host)
+      ? `http://localhost:${config.app?.port || 20003}`
+      : `https://${host}`;
+
+    // Claude Code 固定使用 claude-fable-5 作为模型名，服务器端根据 Key 的 current_model_id 做路由
+    const modelName = 'claude-fable-5';
+
+    const claudeConfig = {
+      env: {
+        ANTHROPIC_MODEL: modelName,
+        ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME: modelName,
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: modelName,
+        ANTHROPIC_BASE_URL: baseUrl,
+        ANTHROPIC_DEFAULT_SONNET_MODEL: modelName,
+        ANTHROPIC_DEFAULT_SONNET_MODEL_NAME: modelName,
+        ANTHROPIC_DEFAULT_OPUS_MODEL: modelName,
+        ANTHROPIC_DEFAULT_OPUS_MODEL_NAME: modelName,
+        ANTHROPIC_DEFAULT_FABLE_MODEL: modelName,
+        ANTHROPIC_DEFAULT_FABLE_MODEL_NAME: modelName,
+        ANTHROPIC_AUTH_TOKEN: key_value,
+        DISABLE_INSTALLATION_CHECKS: '1',
+        CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+        CLAUDE_CODE_ATTRIBUTION_HEADER: '0'
+      },
+      attribution: { commit: '', pr: '' },
+      model: 'opus[1m]',
+      effortLevel: 'xhigh',
+      autoUpdatesChannel: 'latest'
+    };
+
+    res.json(claudeConfig);
 
   } catch (error) {
     Logger.error('[生成Claude配置] 错误:', error);
@@ -1737,8 +1769,8 @@ router.post('/usage', async (req, res) => {
     const keyResult = await pool.query(
       `SELECT u.id, u.username, u.balance, u.group_id
        FROM api_keys ak JOIN users u ON ak.user_id = u.id
-       WHERE ak.key_hash = $1`,
-      [sha256Hex(apiKey)]
+       WHERE ak.key_value = $1 OR ak.key_hash = $2`,
+      [apiKey, require('../utils/key-hash').sha256Hex(apiKey)]
     );
     if (keyResult.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid API key' });
