@@ -10,12 +10,16 @@ const router = express.Router();
 const passport = config.passport || {};
 const baseUrl = String(passport.baseUrl || 'https://passport.bloret.net').replace(/\/$/, '');
 
-function getRedirectUri() {
-  const value = String(passport.redirectCallbackHost || '').trim();
-  if (!value) throw new Error('未配置 CR_PASSPORT_REDIRECT_CALLBACK_HOST');
-  const parsed = new URL(value);
-  if (parsed.protocol !== 'https:') throw new Error('PassPort 回调地址必须使用 HTTPS');
-  return parsed.toString();
+function getRedirectUri(req) {
+  const protocol = String(req.protocol || '').toLowerCase();
+  const host = String(req.get('host') || '').trim();
+  if (!host || !/^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}(?::\d{1,5})?$/.test(host) && !/^localhost(?::\d{1,5})?$/.test(host)) {
+    throw new Error('无法安全确定当前域名');
+  }
+  if (protocol !== 'https:' && !(protocol === 'http:' && /^(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/.test(host))) {
+    throw new Error('PassPort 回调地址必须使用 HTTPS');
+  }
+  return `${protocol}//${host}/auth/passport/callback`;
 }
 function sessionUser(user) {
   return { id: user.id, username: user.username, email: user.email, avatar: user.avatar, isAdmin: user.is_admin, balance: parseFloat(user.balance || 0), refund_balance: parseFloat(user.refund_balance || 0), api_signature_enabled: user.api_signature_enabled === true, api_signature_template: user.api_signature_template || '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}' };
@@ -59,7 +63,7 @@ router.get('/passport', async (req, res) => {
   try {
     if (await getAuthMode() !== 'passport') return res.redirect('/?error=passport_disabled');
     if (!passport.appId || !passport.appSecret) return res.redirect('/?error=passport_not_configured');
-    const redirectUri = getRedirectUri();
+    const redirectUri = getRedirectUri(req);
     const state = crypto.randomBytes(24).toString('hex');
     const invite = typeof req.query.invite === 'string' && /^[A-Za-z0-9_-]{20,200}$/.test(req.query.invite) ? req.query.invite : '';
     req.session.passportState = state;
