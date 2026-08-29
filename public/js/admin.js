@@ -779,6 +779,19 @@ class AdminApp {
     }
   }
 
+  async generateInviteFromUsers() {
+    try {
+      const response = await fetch('/api/auth-invites', { method: 'POST', credentials: 'same-origin' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
+      const message = `${data.url}\n有效期至：${new Date(data.expires_at).toLocaleString()}`;
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(data.url);
+      alert(`邀请链接已生成并复制：\n\n${message}`);
+    } catch (error) {
+      alert(error.message || '生成邀请链接失败');
+    }
+  }
+
   _renderUsersTable() {
     const container = document.getElementById('usersList');
     const users = this._usersData || [];

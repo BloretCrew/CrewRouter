@@ -7,17 +7,16 @@ const config = require('../config-loader');
 const router = express.Router();
 
 function getPublicOrigin(req) {
-  const configured = config.app?.publicOrigin || config.passport?.redirectCallbackHost;
+  const configured = config.app?.publicOrigin;
   if (configured) {
     const url = new URL(configured);
-    if (url.protocol !== 'https:') throw new Error('公开 origin 必须使用 HTTPS');
     return url.origin;
   }
-  const host = String(req.get('host') || '');
-  if (!/^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}(?::\d{1,5})?$/.test(host) && !/^localhost(?::\d{1,5})?$/.test(host)) {
-    throw new Error('无法安全确定公开 origin');
-  }
-  return `https://${host}`;
+  const forwardedProto = String(req.get('x-forwarded-proto') || '').split(',')[0].trim();
+  const protocol = forwardedProto || req.protocol || 'http';
+  const host = String(req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim();
+  if (!host) throw new Error('无法安全确定公开 origin');
+  return `${protocol}://${host}`;
 }
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 

@@ -168,6 +168,7 @@
           <div id="userStatsCards" class="admin-stat-cards"></div>
           <div class="admin-filter-bar">
             <input type="text" id="userSearchInput" class="input" placeholder="搜索用户名或邮箱..." data-i18n-placeholder="搜索用户名或邮箱..." oninput="adminApp.filterUsers(this.value)">
+            <button class="btn btn-primary" type="button" onclick="adminApp.generateInviteFromUsers()">生成邀请链接</button>
           </div>
           <div id="usersList" class="users-table">
             <!-- 用户列表将通过JS动态加载 -->
