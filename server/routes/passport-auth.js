@@ -95,8 +95,11 @@ router.get('/passport/callback', async (req, res) => {
   const sessionState = req.session.passportState;
   const setupState = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");
   const isInitialSetup = setupState.rows.length === 0;
-  // PassPort 首次授权可能不回传 state，初始化阶段允许无 state 回调；已有系统仍校验会话状态。
-  if (state && state !== sessionState || (!state && !sessionState && !isInitialSetup) || (!state && sessionState && !isInitialSetup)) {
+  // PassPort 完成授权后可能只回传 code。首次初始化允许无 state；已完成初始化后，有 state 则必须匹配。
+  if (state && sessionState && state !== sessionState) {
+    return res.status(400).send('PassPort 登录状态无效，请返回重试。');
+  }
+  if (!isInitialSetup && !code) {
     return res.status(400).send('PassPort 登录状态无效，请返回重试。');
   }
   const invite = req.session.passportInvite;
