@@ -1771,6 +1771,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 通知设置 -->
+        <form id="notificationSettingsForm" onsubmit="return false;"></form>
         <div class="content-section settings-section settings-category-notifications" style="margin-top:24px;">
           <div class="section-header">
             <div>
@@ -1783,7 +1784,7 @@ data: [DONE]</code></pre>
               <div><label style="margin:0;"><span data-i18n="启用 Bark 通知">启用 Bark 通知</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="Bark 是 iOS 推送工具，请填写 Server Key。">Bark 是 iOS 推送工具，请填写 Server Key。</span></small></div>
               <label class="pg-toggle"><input type="checkbox" id="barkEnabled"><span class="pg-toggle-slider"></span></label>
             </div>
-            <div class="form-group"><label for="barkServerKey">Bark Server Key</label><input id="barkServerKey" class="input" type="password" placeholder="请输入 Bark Server Key" data-i18n-placeholder="请输入 Bark Server Key" autocomplete="off"></div>
+            <div class="form-group"><label for="barkServerKey">Bark Server Key</label><input id="barkServerKey" class="input" type="password" placeholder="请输入 Bark Server Key" data-i18n-placeholder="请输入 Bark Server Key" autocomplete="off" form="notificationSettingsForm"></div>
             <div class="form-group"><label for="barkEndpoint"><span data-i18n="Bark 服务地址">Bark 服务地址</span></label><input id="barkEndpoint" class="input" value="https://api.day.app" placeholder="https://api.day.app"><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="使用自建 Bark 服务时可修改。">使用自建 Bark 服务时可修改。</span></small></div>
             <div style="display:flex;gap:20px;flex-wrap:wrap;margin:12px 0 16px;">
               <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="notifyQuota"><span data-i18n="额度不足通知"> 额度不足通知</span></label>
@@ -1838,6 +1839,7 @@ data: [DONE]</code></pre>
           <h2><span data-i18n="安全设置">安全设置</span></h2>
           
           <!-- 2FA 设置 -->
+          <form id="twoFactorForm" onsubmit="return false;"></form>
           <div style="margin-bottom:24px;padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
               <div>
@@ -1873,7 +1875,7 @@ data: [DONE]</code></pre>
             <div id="twoFactorDisable" style="display:none;">
               <p style="margin-bottom:12px;font-size:14px;"><span data-i18n="您已启用双重认证。如需关闭，请验证密码：">您已启用双重认证。如需关闭，请验证密码：</span></p>
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <input type="password" id="tfaDisablePassword" class="input" placeholder="输入当前密码" data-i18n-placeholder="输入当前密码" style="width:200px;">
+                <input type="password" id="tfaDisablePassword" class="input" placeholder="输入当前密码" data-i18n-placeholder="输入当前密码" autocomplete="current-password" form="twoFactorForm" style="width:200px;">
                 <button class="btn btn-secondary" onclick="app.disable2FA()" style="color:var(--destructive);border-color:var(--destructive);"><span data-i18n="关闭 2FA">关闭 2FA</span></button>
               </div>
               <div id="tfaDisableStatus" style="margin-top:8px;font-size:13px;"></div>
@@ -1903,15 +1905,15 @@ data: [DONE]</code></pre>
           <form id="changePasswordForm" class="settings-form" onsubmit="return false;">
             <div class="form-group">
               <label for="currentPassword"><span data-i18n="当前密码">当前密码</span></label>
-              <input type="password" id="currentPassword" class="input" placeholder="请输入当前密码" data-i18n-placeholder="请输入当前密码" style="max-width:400px;">
+              <input type="password" id="currentPassword" class="input" placeholder="请输入当前密码" data-i18n-placeholder="请输入当前密码" autocomplete="current-password" style="max-width:400px;">
             </div>
             <div class="form-group">
               <label for="newPassword"><span data-i18n="新密码">新密码</span></label>
-              <input type="password" id="newPassword" class="input" placeholder="请输入新密码（至少6位）" data-i18n-placeholder="请输入新密码（至少6位）" style="max-width:400px;">
+              <input type="password" id="newPassword" class="input" placeholder="请输入新密码（至少6位）" data-i18n-placeholder="请输入新密码（至少6位）" autocomplete="new-password" style="max-width:400px;">
             </div>
             <div class="form-group">
               <label for="confirmNewPassword"><span data-i18n="确认新密码">确认新密码</span></label>
-              <input type="password" id="confirmNewPassword" class="input" placeholder="请再次输入新密码" data-i18n-placeholder="请再次输入新密码" style="max-width:400px;">
+              <input type="password" id="confirmNewPassword" class="input" placeholder="请再次输入新密码" data-i18n-placeholder="请再次输入新密码" autocomplete="new-password" style="max-width:400px;">
             </div>
             <div id="changePasswordStatus" style="font-size:13px;margin-top:8px;"></div>
             <button type="button" id="changePasswordBtn" class="btn btn-primary" style="margin-top:12px;padding:8px 24px;border-radius:8px;"><span data-i18n="修改密码">修改密码</span></button>
@@ -2223,6 +2225,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 步骤 2: 输入配置 -->
+        <form id="providerForm" onsubmit="return false;"></form>
         <div id="providerStep2" class="provider-step" style="display:none;">
           <div style="margin-bottom:16px;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:4px;"><span data-i18n="步骤 2/2">步骤 2/2</span></div>
@@ -2248,7 +2251,7 @@ data: [DONE]</code></pre>
           </div>
           <div class="form-group">
             <label for="providerApiKey">API Key <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;"><span data-i18n="（可留空，保存后稍后补全）">（可留空，保存后稍后补全）</span></span></label>
-            <input type="password" id="providerApiKey" class="input" placeholder="sk-xxx（可选）" data-i18n-placeholder="sk-xxx（可选）">
+            <input type="password" id="providerApiKey" class="input" placeholder="sk-xxx（可选）" data-i18n-placeholder="sk-xxx（可选）" autocomplete="new-password" form="providerForm">
           </div>
           <div style="display:flex;gap:8px;margin-top:16px;">
             <button class="btn btn-secondary" onclick="app.showProviderStep(1)"><span data-i18n="← 返回">← 返回</span></button>
@@ -2260,6 +2263,7 @@ data: [DONE]</code></pre>
   </div>
 
   <!-- 编辑供应商模态框 -->
+  <form id="editProviderForm" onsubmit="return false;"></form>
   <div id="editProviderModal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width:500px;">
       <div class="modal-header">
@@ -2279,7 +2283,7 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="editProviderApiKey">API Key <span style="font-size:12px;color:var(--muted-foreground);"><span data-i18n="（留空则不更新）">（留空则不更新）</span></span></label>
-          <input type="password" id="editProviderApiKey" class="input" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新">
+          <input type="password" id="editProviderApiKey" class="input" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新" autocomplete="new-password" form="editProviderForm">
         </div>
         <div class="form-group">
           <label for="editProviderFormat"><span data-i18n="API 格式">API 格式</span></label>

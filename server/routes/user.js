@@ -1552,7 +1552,7 @@ router.get('/stats', requireAuth, async (req, res) => {
     }
 
     res.json({
-      daily: typeof dailyRowsFinal !== 'undefined' ? dailyRowsFinal : dailyResult,
+      daily: typeof dailyRowsFinal !== 'undefined' ? dailyRowsFinal : dailyResult.rows,
       byModel: modelResult.rows,
       hourly: hourlyResult.rows,
       byApiKey: apiKeyResult.rows,

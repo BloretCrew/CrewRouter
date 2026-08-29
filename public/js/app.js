@@ -4302,7 +4302,8 @@ class ConsoleApp {
     const totalCached = parseInt(s.total_cached_tokens || 0);
     const totalCost = parseFloat(s.total_cost || 0);
     const avgLatency = parseFloat(s.avg_latency || 0);
-    const days = d.daily ? d.daily.length : 1;
+    const daily = Array.isArray(d.daily) ? d.daily : [];
+    const days = daily.length || 1;
 
     document.getElementById('statsTotalRequests').textContent = totalReqs.toLocaleString();
     document.getElementById('statsTotalTokens').textContent = this._formatBigNumber(totalTokens);
@@ -4348,8 +4349,8 @@ class ConsoleApp {
     };
     const today = shParts(new Date());
     const yesterday = shParts(new Date(Date.now() - 86400000));
-    const todayData = d.daily.find(r => r.date === today);
-    const yesterdayData = d.daily.find(r => r.date === yesterday);
+    const todayData = daily.find(r => r.date === today);
+    const yesterdayData = daily.find(r => r.date === yesterday);
 
     document.getElementById('todayRequests').textContent = todayData ? parseInt(todayData.requests).toLocaleString() : '0';
     document.getElementById('todayTokens').textContent = todayData ? this._formatBigNumber(parseInt(todayData.tokens)) : '0';
@@ -4479,9 +4480,9 @@ class ConsoleApp {
 
     // 费用趋势（最近 7 天 vs 前 7 天）
     const costTrendContainer = document.getElementById('costTrendList');
-    if (costTrendContainer && d.daily && d.daily.length >= 14) {
-      const recent7 = d.daily.slice(-7);
-      const prev7 = d.daily.slice(-14, -7);
+    if (costTrendContainer && daily.length >= 14) {
+      const recent7 = daily.slice(-7);
+      const prev7 = daily.slice(-14, -7);
       const recent7Cost = recent7.reduce((sum, r) => sum + parseFloat(r.cost || 0), 0);
       const prev7Cost = prev7.reduce((sum, r) => sum + parseFloat(r.cost || 0), 0);
       const change = prev7Cost > 0 ? ((recent7Cost - prev7Cost) / prev7Cost * 100).toFixed(1) : 0;
@@ -4513,7 +4514,8 @@ class ConsoleApp {
       const totalTokens = parseInt(s.total_tokens || 0);
       const totalCost = parseFloat(s.total_cost || 0);
       const avgLatency = parseFloat(s.avg_latency || 0);
-      const days = d.daily ? d.daily.length : 1;
+      const daily = Array.isArray(d.daily) ? d.daily : [];
+      const days = daily.length || 1;
 
       setHTML(keyMetricsContainer, `
         <div class="stats-insight-item">
