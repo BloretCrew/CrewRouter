@@ -6,6 +6,36 @@ const Logger = require('../logger');
 const { ACTIONS, logAction } = require('../utils/audit-log');
 const { reportLoginEvent, reportLogoutEvent } = require('../utils/login-reporter');
 
+const loginRateLimits = new Map();
+const LOGIN_LIMIT = 10;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+function consumeLoginAttempt(key) {
+  const now = Date.now();
+  const current = loginRateLimits.get(key);
+  if (!current || now - current.startedAt >= LOGIN_WINDOW_MS) {
+    loginRateLimits.set(key, { startedAt: now, count: 1 });
+    return true;
+  }
+  if (current.count >= LOGIN_LIMIT) return false;
+  current.count += 1;
+  return true;
+}
+
+function regenerateSession(req) {
+  return new Promise((resolve, reject) => {
+    if (typeof req.session.regenerate !== 'function') return resolve();
+    req.session.regenerate(err => err ? reject(err) : resolve());
+  });
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, item] of loginRateLimits) {
+    if (now - item.startedAt >= LOGIN_WINDOW_MS) loginRateLimits.delete(key);
+  }
+}, LOGIN_WINDOW_MS).unref?.();
+
 // 邮箱格式验证
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -29,6 +59,11 @@ router.post('/login', async (req, res) => {
 
     if (!loginValue || !password) {
       return res.status(400).json({ error: '请提供用户名或邮箱和密码' });
+    }
+
+    const rateKey = `${req.ip || 'unknown'}:${String(loginValue).toLowerCase().trim()}`;
+    if (!consumeLoginAttempt(rateKey)) {
+      return res.status(429).json({ error: '登录尝试过于频繁，请稍后再试' });
     }
 
     // 统一转小写，不区分大小写
@@ -68,6 +103,7 @@ router.post('/login', async (req, res) => {
     }
 
     // 设置会话
+    await regenerateSession(req);
     req.session.user = {
       id: user.id,
       username: user.username,
@@ -124,6 +160,9 @@ router.post('/login/2fa', async (req, res) => {
     if (!userId || !code) {
       return res.status(400).json({ error: '缺少必要参数' });
     }
+    if (!consumeLoginAttempt(`${req.ip || 'unknown'}:2fa:${userId}`)) {
+      return res.status(429).json({ error: '验证尝试过于频繁，请稍后再试' });
+    }
 
     // 查找用户
     const result = await pool.query('SELECT * FROM users WHERE id = $1 AND two_factor_enabled = TRUE', [userId]);
@@ -158,6 +197,7 @@ router.post('/login/2fa', async (req, res) => {
     }
 
     // 设置会话
+    await regenerateSession(req);
     req.session.user = {
       id: user.id,
       username: user.username,

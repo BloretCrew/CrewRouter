@@ -56,6 +56,7 @@ function extractErrorLine(errMsg, scriptBody) {
 
 // 内存缓存：providerId → { key, expiresAt, lastRefreshAt, lastError, timer }
 const keyCache = new Map();
+const refreshInFlight = new Map();
 
 // 默认刷新间隔（秒）
 const DEFAULT_REFRESH_INTERVAL = 3600;
@@ -84,7 +85,7 @@ async function executeKeyScript(provider) {
     providerId: provider.id,
     providerName: provider.name || '',
     currentKey: provider.api_key || '',
-    // 注入安全的 fetch 封装，不影响全局
+    fetch: async (...args) => fetch(...args),
   };
 
   let result;
@@ -123,7 +124,7 @@ function normalizeScriptResult(result) {
  * @param {string} providerId
  * @returns {object} { success, key, expiresAt, error }
  */
-async function refreshProviderKey(providerId) {
+async function refreshProviderKeyInternal(providerId) {
   // 从数据库获取最新供应商数据
   const result = await pool.query('SELECT * FROM providers WHERE id = $1', [providerId]);
   if (result.rows.length === 0) {
@@ -198,6 +199,18 @@ async function refreshProviderKey(providerId) {
 
     Logger.error(`[KeyRefresher] 密钥刷新失败: provider=${providerId}, 耗时=${elapsed}ms, 错误=${errorMsg}`);
     return { success: false, error: errorMsg };
+  }
+}
+
+async function refreshProviderKey(providerId) {
+  const current = refreshInFlight.get(providerId);
+  if (current) return current;
+  const promise = refreshProviderKeyInternal(providerId);
+  refreshInFlight.set(providerId, promise);
+  try {
+    return await promise;
+  } finally {
+    if (refreshInFlight.get(providerId) === promise) refreshInFlight.delete(providerId);
   }
 }
 
@@ -328,7 +341,7 @@ async function initAll() {
       }
 
       // 无可用密钥，立即刷新
-      refreshProviderKey(provider.id);
+      await refreshProviderKey(provider.id);
     }
   } catch (err) {
     Logger.error(`[KeyRefresher] 初始化失败: ${err.message}`);

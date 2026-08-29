@@ -380,6 +380,9 @@ async function settleBalance(userId, preConsumeId, actualCost, estimatedCost) {
  * @returns {Promise<{ok: boolean, error?: string}>}
  */
 async function refundBalance(userId, amount) {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { ok: false, error: '退款金额必须是大于 0 的有限数字' };
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

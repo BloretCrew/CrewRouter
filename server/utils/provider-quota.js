@@ -24,6 +24,7 @@ const SCHEDULER_TICK_MS = 60 * 1000;
 
 let schedulerTimer = null;
 let schedulerRunning = false;
+const quotaInFlight = new Map();
 
 function normalizeQuotaScheduleInterval(value) {
   const n = parseInt(value, 10);
@@ -136,7 +137,7 @@ async function persistOauthTokens(providerId, { accessToken, refreshToken, expir
 /**
  * @returns {{ ok: boolean, status: number, error?: string, quota?: object, provider?: object }}
  */
-async function queryProviderQuota(provider) {
+async function queryProviderQuotaInternal(provider) {
   const meta = { id: provider.id, name: provider.name };
 
   if (provider.quota_mode === 'ark_inference' || provider.quota_mode === 'ark_afp') {
@@ -276,6 +277,20 @@ async function queryProviderQuota(provider) {
   } catch (execError) {
     Logger.error(`[查询供应商额度] extractor 执行失败: ${execError.message}`);
     return { ok: false, status: 500, error: 'extractor 执行失败: ' + execError.message, provider: meta };
+  }
+}
+
+async function queryProviderQuota(provider) {
+  const providerId = provider?.id;
+  if (!providerId) return queryProviderQuotaInternal(provider);
+  const current = quotaInFlight.get(providerId);
+  if (current) return current;
+  const promise = queryProviderQuotaInternal(provider);
+  quotaInFlight.set(providerId, promise);
+  try {
+    return await promise;
+  } finally {
+    if (quotaInFlight.get(providerId) === promise) quotaInFlight.delete(providerId);
   }
 }
 
