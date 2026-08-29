@@ -2773,6 +2773,11 @@ async function handleChatCompletion(req, res) {
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[用量记录] 错误:', err);
+        if (err.billingFailure) {
+          if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+          res.destroy(err);
+          return;
+        }
       }
     }
     return;
@@ -2964,6 +2969,11 @@ async function handleFusionRequest(req, res, format = 'openai') {
         recordQuotaData(req.apiUser.userId, 'fusion', totalTokens, totalWeightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Fusion] 用量记录错误:', err);
+        if (err.billingFailure) {
+          if (!res.headersSent) return sendFusionError(500, 'server_error', 'Billing failed; request was not charged.');
+          res.destroy(err);
+          return;
+        }
       }
     }
 
@@ -3375,6 +3385,11 @@ async function handleAnthropicMessage(req, res) {
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Anthropic 用量记录] 错误:', err);
+        if (err.billingFailure) {
+          if (!res.headersSent) return res.status(500).json({ type: 'error', error: { type: 'api_error', message: 'Billing failed; request was not charged.' } });
+          res.destroy(err);
+          return;
+        }
       }
     }
     return;
@@ -5442,6 +5457,11 @@ async function handleResponses(req, res) {
               recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
             } catch (err) {
               Logger.error('[Responses/Passthru] 用量记录错误:', err);
+              if (err.billingFailure) {
+                if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+                res.destroy(err);
+                return;
+              }
             }
           }
           return res.json(responseData);
@@ -5547,6 +5567,11 @@ async function handleResponses(req, res) {
             recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
           } catch (err) {
             Logger.error('[Responses] 用量记录错误:', err);
+            if (err.billingFailure) {
+              if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+              res.destroy(err);
+              return;
+            }
           }
         }
         return;
@@ -5742,6 +5767,11 @@ async function handleResponses(req, res) {
           recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
         } catch (err) {
           Logger.warn(`[Responses/Passthru] 计费/用量记录失败: ${err.message}`);
+          if (err.billingFailure) {
+            if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+            res.destroy(err);
+            return;
+          }
         }
       }
       return;
@@ -5808,6 +5838,11 @@ async function handleResponses(req, res) {
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Responses/Passthru] 用量记录错误:', err);
+        if (err.billingFailure) {
+          if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+          res.destroy(err);
+          return;
+        }
       }
     }
 
@@ -5984,6 +6019,11 @@ async function handleResponses(req, res) {
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Responses] 用量记录错误:', err);
+        if (err.billingFailure) {
+          if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+          res.destroy(err);
+          return;
+        }
       }
     }
   } catch (error) {

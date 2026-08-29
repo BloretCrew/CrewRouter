@@ -477,6 +477,7 @@ async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValu
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
     Logger.error(`[recordUsageAndDeduct] 错误: userId=${userId}, error=${error.message}`);
+    error.billingFailure = true;
     throw error;
   } finally {
     client.release();

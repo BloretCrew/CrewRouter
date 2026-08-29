@@ -3,7 +3,7 @@ const { pool } = require('../models/database');
 const { ensureOAuthTables } = require('../routes/oauth');
 const { sha256Hex } = require('./key-hash');
 
-const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const TOKEN_TTL_MS = 5 * 60 * 1000;
 const tokenCache = new Map();
 const pendingTokens = new Map();
 
@@ -33,8 +33,18 @@ async function getInternalAccessToken(userId) {
   if (!key.rows[0]) throw new Error('未找到 CrewRouter 密钥');
   const apiKeyId = key.rows[0].id;
   const cached = tokenCache.get(apiKeyId);
-  if (cached && cached.expiresAt > Date.now()) return cached.token;
-  tokenCache.delete(apiKeyId);
+  if (cached && cached.expiresAt > Date.now()) {
+    const valid = await pool.query(
+      `SELECT 1 FROM oauth_tokens
+       WHERE token_hash = $1 AND api_key_id = $2 AND kind = 'access'
+         AND revoked = FALSE AND expires_at > now()`,
+      [sha256Hex(cached.token), apiKeyId]
+    );
+    if (valid.rows[0]) return cached.token;
+    tokenCache.delete(apiKeyId);
+  } else {
+    tokenCache.delete(apiKeyId);
+  }
   if (pendingTokens.has(apiKeyId)) return pendingTokens.get(apiKeyId);
 
   const pending = issueInternalToken(userId, apiKeyId)
