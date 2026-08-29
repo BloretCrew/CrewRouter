@@ -168,18 +168,15 @@ class AdminApp {
   }
 
   async initInvitePanel() {
-    try {
-      const status = await fetch('/auth/status').then(r => r.json());
-      const section = document.getElementById('passportInvitesSection');
-      if (section && status.authMode === 'passport') section.style.display = 'block';
-    } catch (_) {}
+    const section = document.getElementById('passportInvitesSection');
+    if (section) section.style.display = '';
   }
 
   /** 支持的管理后台页面 id */
   _adminPageIds() {
     return new Set([
       'adminStats', 'adminUsers', 'adminModels', 'adminProviders',
-      'adminSettings', 'adminTeams', 'adminUserGroups', 'adminInvites',
+      'adminSettings', 'adminTeams', 'adminUserGroups',
       'adminErrorLogs',
       'adminAuditLogs'
     ]);
@@ -518,7 +515,6 @@ class AdminApp {
       'adminSettings': t('系统设置'),
       'adminTeams': t('Team 管理'),
       'adminUserGroups': t('用户组管理'),
-      'adminInvites': t('邀请链接'),
       'adminAuditLogs': t('操作日志'),
       'adminPrompts': t('提示词'),
       'adminPlugins': t('插件管理')
@@ -659,9 +655,6 @@ class AdminApp {
       case 'adminUserGroups':
         await this.loadUserGroups();
         break;
-      case 'adminInvites':
-        await this.loadInvites();
-        break;
       case 'adminErrorLogs':
         await this.loadErrorLogs(1);
         break;
@@ -776,18 +769,23 @@ class AdminApp {
       return;
     }
     const statusLabel = { active: '有效', used: '已用完', expired: '已过期' };
-    list.innerHTML = `<table><thead><tr><th>ID</th><th>人数</th><th>有效期</th><th>Team</th><th>用户组</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows.map((row) => {
+    const fmt = (value) => value ? new Date(value).toLocaleString() : '-';
+    list.innerHTML = `<table><thead><tr><th>ID</th><th>状态</th><th>使用人数</th><th>有效期</th><th>Team</th><th>用户组</th><th>创建人</th><th>创建时间</th><th>最近使用</th><th>操作</th></tr></thead><tbody>${rows.map((row) => {
       const status = statusLabel[row.status] || row.status;
-      const actions = row.status === 'active'
-        ? `<button class="btn btn-sm" type="button" onclick="adminApp.revokeInvite(${row.id})">撤销</button>`
-        : '-';
+      const actions = [
+        this._inviteUrlMap?.[row.id] ? `<button class="btn btn-sm" type="button" onclick="adminApp.copyInviteUrl(${row.id})">复制链接</button>` : '',
+        row.status === 'active' ? `<button class="btn btn-sm" type="button" onclick="adminApp.revokeInvite(${row.id})">撤销</button>` : '',
+      ].filter(Boolean).join(' ');
       return `<tr>
         <td>#${row.id}</td>
+        <td>${escapeHtml(status)}</td>
         <td>${Number(row.used_count || 0)} / ${Number(row.max_uses || 1)}</td>
-        <td>${row.expires_at ? new Date(row.expires_at).toLocaleString() : '-'}</td>
+        <td>${fmt(row.expires_at)}</td>
         <td>${escapeHtml(row.team_name || '未指定')}</td>
         <td>${escapeHtml(row.group_name || '未指定')}</td>
-        <td>${escapeHtml(status)}</td>
+        <td>${escapeHtml(row.created_by_name || '-')}</td>
+        <td>${fmt(row.created_at)}</td>
+        <td>${fmt(row.used_at)}</td>
         <td>${actions}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
@@ -802,8 +800,8 @@ class AdminApp {
     const groupOptions = (Array.isArray(groups) ? groups : []).map((g) => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
     const content = `
       <div class="setup-form" style="display:grid;gap:12px;">
-        <div class="form-group"><label>可使用人数</label><input id="inviteMaxUses" class="input" type="number" min="1" max="10000" value="1"></div>
-        <div class="form-group"><label>有效天数</label><input id="inviteDays" class="input" type="number" min="1" max="365" value="7"></div>
+        <div class="form-group"><label>使用人数 *</label><input id="inviteMaxUses" class="input" type="number" min="1" max="10000" value="1" required></div>
+        <div class="form-group"><label>有效天数 *</label><input id="inviteDays" class="input" type="number" min="1" max="365" value="7" required></div>
         <div class="form-group"><label>加入 Team</label><select id="inviteTeamId" class="input"><option value="">不指定</option>${teamOptions}</select></div>
         <div class="form-group"><label>加入用户组</label><select id="inviteGroupId" class="input"><option value="">不指定</option>${groupOptions}</select></div>
       </div>`;
@@ -811,9 +809,13 @@ class AdminApp {
       ? Dialog.showModal({ title: '生成邀请链接', content, confirmText: '生成', cancelText: t('取消') })
       : null;
     const confirm = async () => {
+      const maxUses = parseInt(document.getElementById('inviteMaxUses')?.value || '', 10);
+      const days = parseInt(document.getElementById('inviteDays')?.value || '', 10);
+      if (!Number.isInteger(maxUses) || maxUses < 1) throw new Error('请填写使用人数');
+      if (!Number.isInteger(days) || days < 1) throw new Error('请填写有效天数');
       const payload = {
-        maxUses: parseInt(document.getElementById('inviteMaxUses')?.value || '1', 10),
-        days: parseInt(document.getElementById('inviteDays')?.value || '7', 10),
+        maxUses,
+        days,
         teamId: document.getElementById('inviteTeamId')?.value || '',
         groupId: document.getElementById('inviteGroupId')?.value || '',
       };
@@ -822,10 +824,12 @@ class AdminApp {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      this._inviteUrlMap = this._inviteUrlMap || {};
+      if (data.id && data.url) this._inviteUrlMap[data.id] = data.url;
       if (navigator.clipboard?.writeText && data.url) await navigator.clipboard.writeText(data.url);
       const result = document.getElementById('inviteResult');
-      if (result) result.textContent = data.url || '';
-      alert(`邀请链接已生成并复制：\n\n${data.url}\n人数：${data.max_uses}\n有效期至：${new Date(data.expires_at).toLocaleString()}`);
+      if (result) result.innerHTML = `<div><strong>最新邀请链接</strong></div><div>${escapeHtml(data.url || '')}</div><div style="margin-top:6px;color:var(--muted-foreground);font-size:12px;">人数 ${data.max_uses} · ${data.days || ''} 天 · 有效期至 ${new Date(data.expires_at).toLocaleString()}</div>`;
+      alert(`邀请链接已生成并复制：\n\n${data.url}\n使用人数：${data.max_uses}\n有效天数：${days}\n有效期至：${new Date(data.expires_at).toLocaleString()}`);
       await this.loadInvites();
     };
     if (modal?.then) {
@@ -833,7 +837,17 @@ class AdminApp {
       if (ok) await confirm().catch((err) => alert(err.message || '生成邀请链接失败'));
       return;
     }
-    if (window.confirm('按默认设置生成邀请链接？')) await confirm().catch((err) => alert(err.message || '生成邀请链接失败'));
+    if (window.confirm('确认按表单中的使用人数和有效天数生成邀请链接？')) await confirm().catch((err) => alert(err.message || '生成邀请链接失败'));
+  }
+
+  copyInviteUrl(id) {
+    const url = this._inviteUrlMap?.[id];
+    if (!url) {
+      alert('完整链接仅在本次生成后可复制，请重新生成。');
+      return;
+    }
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).catch(() => {});
+    alert(url);
   }
 
   async revokeInvite(id) {
@@ -8416,6 +8430,7 @@ async function(ctx) {
     if (detail) detail.hidden = false;
     if (title) title.textContent = document.querySelector(`[data-admin-settings-category="${category}"] strong`)?.textContent || '';
     document.querySelectorAll('.admin-settings-section').forEach(item => { item.hidden = !sections.includes(item); });
+    if (category === 'auth') this.loadInvites();
     sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 

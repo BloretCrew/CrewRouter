@@ -75,10 +75,6 @@
             <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.2" style="display:inline-block;vertical-align:middle;">
             <span><span data-i18n="用户组管理">用户组管理</span></span>
           </div>
-          <div class="nav-item" data-page="adminInvites">
-            <img src="https://img.bloret.net/SF/link?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="link" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="邀请链接">邀请链接</span></span>
-          </div>
           <div class="nav-item" data-page="adminModels">
             <img src="https://img.bloret.net/SF/cpu?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="cpu" style="display:inline-block;vertical-align:middle;">
             <span><span data-i18n="模型管理">模型管理</span></span>
@@ -178,18 +174,6 @@
             <!-- 用户列表将通过JS动态加载 -->
           </div>
     </div>
-      </div>
-
-      <div id="adminInvitesPage" class="page">
-        <div class="content-section">
-          <h2><span data-i18n="邀请链接">邀请链接</span></h2>
-          <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 16px;">可设置使用人数、有效期，并指定加入的 Team 和用户组。</p>
-          <div class="admin-filter-bar">
-            <button class="btn btn-primary" type="button" onclick="adminApp.openInviteDialog()">生成邀请链接</button>
-          </div>
-          <div id="inviteResult" style="margin:12px 0;word-break:break-all;"></div>
-          <div id="inviteList" class="users-table"></div>
-        </div>
       </div>
 
       <!-- Team 管理页面 -->
@@ -1227,10 +1211,14 @@
           <div id="adminSettingsDetailTitle" class="settings-detail-title"></div>
         </div>
 
-        <div class="content-section admin-settings-section admin-settings-category-auth" id="passportInvitesSection" style="display:none;">
+        <div class="content-section admin-settings-section admin-settings-category-auth" id="passportInvitesSection">
           <h2>邀请链接</h2>
-          <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 12px;">完整的邀请链接管理已移至「邀请链接」页面。</p>
-          <button class="btn btn-primary" type="button" onclick="adminApp.navigateTo('adminInvites')">前往管理</button>
+          <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 12px;">生成时可设置使用人数、有效天数，以及加入的 Team 和用户组。</p>
+          <div class="admin-filter-bar">
+            <button class="btn btn-primary" type="button" onclick="adminApp.openInviteDialog()">生成邀请链接</button>
+          </div>
+          <div id="inviteResult" style="margin:12px 0;word-break:break-all;"></div>
+          <div id="inviteList" class="users-table"></div>
         </div>
         <!-- 默认主题（插件主题，plugin-runtime.js 渲染选择器） -->
         <div class="content-section admin-settings-section admin-settings-category-appearance" style="margin-bottom:24px;">

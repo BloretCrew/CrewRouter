@@ -85,6 +85,8 @@ router.get('/auth-invites', requireAdmin, async (req, res) => {
     const result = await pool.query(`
       SELECT i.id, i.created_by, i.created_at, i.expires_at, i.used, i.used_by, i.used_at,
              i.max_uses, i.used_count, i.team_id, i.group_id,
+             creator.username AS created_by_name,
+             used_user.username AS used_by_name,
              t.name AS team_name, g.name AS group_name,
              CASE
                WHEN i.expires_at <= CURRENT_TIMESTAMP THEN 'expired'
@@ -92,6 +94,8 @@ router.get('/auth-invites', requireAdmin, async (req, res) => {
                ELSE 'active'
              END AS status
       FROM auth_invites i
+      LEFT JOIN users creator ON creator.id = i.created_by
+      LEFT JOIN users used_user ON used_user.id = i.used_by
       LEFT JOIN teams t ON t.id = i.team_id
       LEFT JOIN user_groups g ON g.id = i.group_id
       ORDER BY i.created_at DESC
