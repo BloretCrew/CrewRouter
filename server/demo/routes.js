@@ -31,7 +31,8 @@ router.put('/api-keys/:id', (req, res) => {
 
 // API 密钥用量
 router.get('/api-keys/:id/usage', (req, res) => {
-  res.json([]);
+  const id = String(req.params.id);
+  res.json(data.usageLogs(1, 50).logs.filter(log => String(log.api_key_id) === id));
 });
 
 // API 密钥模型绑定（有序队列）
@@ -122,8 +123,12 @@ router.get('/api-keys/:id/config', (req, res) => {
 
 // 使用统计
 router.get('/usage', (req, res) => {
-  res.json([]);
+  res.json(data.usageLogs(1, 50).logs);
 });
+
+// 项目工作与消息结构统计
+router.get('/project-stats', (req, res) => res.json(data.projectStats()));
+router.get('/message-stats', (req, res) => res.json(data.messageStats()));
 
 // 详细统计（区分管理后台和用户控制台）
 router.get('/stats', (req, res) => {
@@ -139,6 +144,16 @@ router.get('/stats/filters', (req, res) => {
   res.json(data.statsFilters());
 });
 
+router.get('/stats/multi/filters', (req, res) => {
+  const filters = data.statsFilters();
+  res.json({ users: data.adminUsers().map(u => ({ id: u.id, name: u.username })), teams: data.adminTeams().map(t => ({ id: t.id, name: t.name })), groups: data.adminGroups().map(g => ({ id: g.id, name: g.name })), models: filters.models.map(m => ({ id: m.model_id, name: m.name })), providers: filters.providers.map(p => ({ id: p.provider_id, name: p.name })), sources: ['codex', 'claude_code', 'opencode', 'qwen_code'].map(id => ({ id, name: id })), projects: [{ id: '/workspace/crewrouter', name: '/workspace/crewrouter' }, { id: '/workspace/plugin-lab', name: '/workspace/plugin-lab' }] });
+});
+
+router.get('/stats/multi', (req, res) => {
+  const stats = data.adminStats();
+  res.json({ summary: { requests: 12400, tokens: 5250000, cost: 18.64 }, rows: stats.byModel.map(item => ({ ...item, request_source: 'codex', workspace_path: '/workspace/crewrouter', user_name: 'Demo User', team_name: 'Demo Team', group_name: '标准组' })) });
+});
+
 // 余额
 router.get('/balance', (req, res) => {
   res.json(data.balance());
@@ -146,12 +161,12 @@ router.get('/balance', (req, res) => {
 
 // 兑换码余额
 router.get('/code-balances', (req, res) => {
-  res.json([]);
+  res.json(data.codeBalances());
 });
 
 // 产品
 router.get('/products', (req, res) => {
-  res.json([]);
+  res.json(data.products());
 });
 
 // 头像上传（演示模式返回成功）
@@ -171,7 +186,7 @@ router.post('/redeem', (req, res) => {
 
 // 文档内容
 router.get('/docs-content', (req, res) => {
-  res.json({ content: '' });
+  res.json(data.docsContent());
 });
 
 // 模型库
@@ -186,9 +201,15 @@ router.get('/model-library', (req, res) => {
 
 // 模型库全局搜索（demo）
 router.get('/model-library/search', (req, res) => {
+  const q = String(req.query.q || req.query.search || '').trim().toLowerCase();
+  const all = data.myTeamModels();
+  const models = q ? all.filter(m => [m.id, m.name, m.alias, m.series, m.description].some(v => String(v || '').toLowerCase().includes(q))) : all;
+  const page = Math.max(parseInt(req.query.page || '1', 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit || '30', 10) || 30, 1), 100);
+  const start = (page - 1) * limit;
   res.json({
-    models: [],
-    pagination: { page: 1, limit: 30, total: 0, total_pages: 1, has_prev: false, has_next: false }
+    models: models.slice(start, start + limit),
+    pagination: { page, limit, total: models.length, total_pages: Math.ceil(models.length / limit) || 1, has_prev: page > 1, has_next: start + limit < models.length }
   });
 });
 
@@ -343,6 +364,26 @@ router.post('/models/test-batch', (req, res) => {
   res.json({ success: true, results: [] });
 });
 
+// Playground 与对话在 demo 中使用固定响应，既可展示历史，也可完成基本交互
+router.get('/thinking-capabilities', (req, res) => {
+  const capabilities = {};
+  for (const model of data.myTeamModels()) {
+    capabilities[model.id] = { supportsThinking: /^(deepseek-|claude-|o4)/.test(model.id), supportsThinkingBudget: /^(claude-|o4)/.test(model.id) };
+  }
+  res.json(capabilities);
+});
+
+router.get('/history', (req, res) => {
+  const records = data.usageLogs(1, 50).logs.slice(0, 8).map(log => ({ id: log.id, model: log.model_id, promptTokens: log.prompt_tokens, completionTokens: log.completion_tokens, totalTokens: log.tokens_used, cost: log.cost, reasoningContent: '演示思考过程：先拆解问题，再给出清晰答案。', requestParams: { temperature: 0.7, thinking: true }, finishReason: 'stop', response: `这是 Playground 的演示回复 #${log.id}。`, messages: [{ role: 'user', content: `演示问题 #${log.id}` }], createdAt: log.created_at }));
+  res.json({ total: records.length, limit: records.length, offset: 0, records });
+});
+
+router.get('/history/:id', (req, res) => {
+  const log = data.usageLogDetail(parseInt(req.params.id, 10));
+  if (!log) return res.status(404).json({ error: '记录不存在' });
+  res.json({ id: log.id, model: log.model_id, promptTokens: log.prompt_tokens, completionTokens: log.completion_tokens, totalTokens: log.tokens_used, cost: log.cost, reasoningContent: '演示思考过程：先拆解问题，再给出清晰答案。', requestParams: { temperature: 0.7, thinking: true }, finishReason: 'stop', response: `这是 Playground 的演示回复 #${log.id}。`, messages: [{ role: 'user', content: `演示问题 #${log.id}` }], createdAt: log.created_at });
+});
+
 // 演示：模型调用可用率（默认近 24 小时按 15 分钟；days>1 按日）
 const DEMO_SLOT_MS = 15 * 60 * 1000;
 const DEMO_SLOT_COUNT = 96; // 24h / 15m
@@ -447,6 +488,15 @@ router.get('/models/:id/uptime', (req, res) => {
 });
 
 // 全局使用记录
+router.get('/usage-logs', (req, res) => res.json(data.usageLogs(parseInt(req.query.page, 10) || 1, parseInt(req.query.limit, 10) || 50)));
+router.get('/usage-logs/:id', (req, res) => {
+  const log = data.usageLogDetail(parseInt(req.params.id, 10));
+  if (!log) return res.status(404).json({ error: '记录不存在' });
+  res.json({ log });
+});
+router.get('/error-logs', (req, res) => res.json({ logs: data.usageLogs(1, 12).logs.map((log, i) => ({ ...log, status_code: i % 4 === 0 ? 429 : 500, error_type: i % 4 === 0 ? 'rate_limit' : 'upstream_error', error_message: i % 4 === 0 ? '演示：上游限流，已切换备用 Key' : '演示：上游服务短暂不可用', is_final: i % 4 !== 0 })), total: 12, page: 1, limit: 50, retention_days: 14 }));
+router.get('/audit-logs', (req, res) => res.json({ logs: [{ id: 1, action: 'api_key.create', description: '创建了「生产环境 Key」', username: 'Demo User', created_at: new Date(Date.now() - 3600000).toISOString() }, { id: 2, action: 'model.test', description: '测试模型 GPT-4.1 成功', username: 'Demo User', created_at: new Date(Date.now() - 7200000).toISOString() }], total: 2, page: 1, limit: 50 }));
+
 router.post('/usage', (req, res) => {
   res.json({ success: true });
 });
@@ -495,7 +545,7 @@ router.delete('/providers/:id', (req, res) => {
 
 // 统计
 router.get('/stats', (req, res) => {
-  res.json(data.adminStats());
+  res.json(req.baseUrl === '/api/admin' ? data.adminStats() : data.stats(req.query));
 });
 
 // 设置

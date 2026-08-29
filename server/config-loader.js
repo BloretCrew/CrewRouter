@@ -91,7 +91,7 @@ const ENV_MAP = {
   CR_APP_HOST:           'app.host',
   CR_APP_PUBLIC_ORIGIN:  'app.publicOrigin',
   CR_SESSION_SECRET:     'app.sessionSecret',
-  CR_DEMO:               'app.demo',
+  CR_DEMO:               'demo',
 
   // database
   CR_DB_HOST:            'database.host',

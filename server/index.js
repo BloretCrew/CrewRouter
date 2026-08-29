@@ -2426,8 +2426,11 @@ if (isDemo) {
 // 路由
 if (isDemo) {
   // 演示模式：挂载演示路由，拦截所有 API 和认证请求
+  app.use('/api/user', require('./demo/extra'));
   app.use('/api/user', require('./demo/routes'));
   app.use('/api/admin', require('./demo/routes'));
+  app.use('/api/playground', require('./demo/playground'));
+  app.use('/api/conversations', require('./demo/conversations'));
   app.use('/auth', require('./demo/auth'));
   app.use('/api/setup', (req, res, next) => {
     if (req.path === '/status' || req.originalUrl === '/api/setup/status') {
@@ -2446,7 +2449,7 @@ if (isDemo) {
   // 登录状态上报接收端：其他自建 CrewRouter 实例上报用户登录/退出事件
   app.use('/api/login-report', require('./routes/login-report'));
   // 统计信息上报接收端：其他自建 CrewRouter 实例上报匿名聚合使用统计
-  app.use('/api/stats-report', require('./routes/stats-report'));
+  app.use('/api/stats-report', require('./demo/stats-report'));
 } else {
   app.use('/api', require('./routes/setup'));
   app.use('/api/i18n', require('./routes/i18n'));
