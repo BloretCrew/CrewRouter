@@ -80,9 +80,12 @@ router.get('/passport', async (req, res) => {
     req.session.passportInvite = invite;
     saveSession(req, res, (err) => {
       if (err) return res.status(500).send('登录状态保存失败，请重试。');
+      // PassPort 登录成功后会把 redirect_uri 再拼到 /app/ 后面。
+      // 未编码的 http:// 会被解析成 /app/http//host/...，因此协议分隔符改成 %3A%2F%2F。
+      const encodedRedirectUri = redirectUri.replace(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\//, '$1%3A%2F%2F');
       const params = new URLSearchParams({
         app_id: passport.appId,
-        redirect_uri: redirectUri,
+        redirect_uri: encodedRedirectUri,
         state,
       });
       res.redirect(`${baseUrl}/app/oauth?${params.toString()}`);
