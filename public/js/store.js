@@ -90,7 +90,8 @@
   }
 
   function starPicker(initial, onPick) {
-    var html = '<span class="store-stars" data-star-picker="1">';
+    initial = Number(initial) || 0;
+    var html = '<span class="store-stars" data-star-picker="1" data-value="' + initial + '">';
     for (var i = 1; i <= 5; i++) {
       html += '<span class="star' + (i <= initial ? ' on' : '') + '" data-star="' + i + '">★</span>';
     }
@@ -117,7 +118,7 @@
       var cur = root.dataset.value ? Number(root.dataset.value) : 0;
       highlight(cur);
     });
-    root.dataset.value = String(initial || 0);
+    root.dataset.value = root.dataset.value || '0';
   }
 
   function tagChips(tags) {
