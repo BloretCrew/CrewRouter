@@ -85,6 +85,7 @@ const { decryptSecret } = require('../utils/secret-crypto');
 // 非流式：上游整段响应（headers+body）超时。30s 对免费/慢模型过短，易误杀。
 const UPSTREAM_TIMEOUT = 180000; // 3 分钟
 const UPSTREAM_STREAM_TIMEOUT = 300000; // 流式请求超时 5 分钟
+const MAX_UPSTREAM_ATTEMPTS = 12;
 
 function isUpstreamTimeoutError(err) {
   if (!err) return false;
@@ -157,7 +158,17 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
   const affinityKey = hookCtx?.affinityKey || null;
   let proxyInfo = currentProxyInfo;
   let lastError = null;
-  const attempts = Math.max(1, parseInt(maxRetries, 10) || 1);
+  const attempts = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(1, parseInt(maxRetries, 10) || 1));
+  const requestContext = hookCtx?.requestContext || provider?._requestContext;
+  const consumeAttempt = () => {
+    if (!requestContext) return;
+    requestContext.upstreamAttempts = (requestContext.upstreamAttempts || 0) + 1;
+    if (requestContext.upstreamAttempts > MAX_UPSTREAM_ATTEMPTS) {
+      const err = new Error(`Upstream request attempt limit exceeded (${MAX_UPSTREAM_ATTEMPTS})`);
+      err.code = 'upstream_attempt_limit';
+      throw err;
+    }
+  };
 
   // 插件 gateway:beforeUpstream 钩子：首次构造请求选项时执行一次，
   // 得到的覆盖值（url / headers / bodyText）在后续代理重试中持续生效
@@ -201,6 +212,7 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
     const fetchOpts = applyUpstreamOverride(makeFetchOpts(proxyInfo));
 
     try {
+      consumeAttempt();
       response = await proxyPool.proxyFetch(fetchOpts.url, fetchOpts);
       lastError = null;
     } catch (err) {
@@ -259,14 +271,13 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
 
 /**
  * 是否可对 Key 模型队列做失败回退（换下一个模型重试）
- * - 网络/5xx/429/4xx → 均可回退（不同模型/供应商对协议与鉴权的宽松度不同，
- *   一个模型拒绝的请求换模型后可能成功，故 4xx 也参与回退）
+ * - 网络/5xx/429 → 可回退；4xx 通常表示客户端请求或鉴权错误，不切换模型/Key
  */
 function isRetryableUpstreamStatus(status) {
   if (status == null) return true;
   const code = Number(status);
   if (!Number.isFinite(code)) return true;
-  if (code >= 400) return true;
+  if (code >= 500) return true;
   return false;
 }
 
@@ -411,7 +422,7 @@ async function runWithProviderKeyFallback(provider, res, outerSuppress, runOnce)
   const keys = await resolveApiKeyAttempts(provider);
   if (keys.length === 0) {
     // 无 Key 也尝试一次（部分上游可能不需鉴权）
-    return runOnce({ ...provider, api_key: '' }, {
+    return runOnce({ ...provider, api_key: '', _requestContext: res.req?._upstreamAttemptContext }, {
       suppressErrorResponse: !!outerSuppress,
       keyIndex: 0,
       keyTotal: 1,
@@ -425,7 +436,7 @@ async function runWithProviderKeyFallback(provider, res, outerSuppress, runOnce)
     const hasMoreKeys = i < keys.length - 1;
     const suppressErrorResponse = !!outerSuppress || hasMoreKeys;
     const apiKey = keys[i];
-    const providerWithKey = { ...provider, api_key: apiKey };
+    const providerWithKey = { ...provider, api_key: apiKey, _requestContext: provider._requestContext || res.req?._upstreamAttemptContext };
     try {
       lastResult = await runOnce(providerWithKey, {
         suppressErrorResponse,
@@ -1025,7 +1036,7 @@ function normalizeMessageRole(role) {
 
 // 验证API密钥中间件（带缓存优化；按路径返回 OpenAI/Anthropic 标准错误形）
 async function validateApiKey(req, res, next) {
-  let apiKey = req.headers['x-api-key'] || req.query.api_key;
+  let apiKey = req.headers['x-api-key'];
   // 支持 Authorization: Bearer xxx 格式
   if (!apiKey && req.headers.authorization) {
     const auth = req.headers.authorization;
@@ -1309,7 +1320,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   // 代理池支持：获取代理 agent 和重试次数
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
@@ -1721,7 +1732,7 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
 
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   const upstreamBody = ResponsesUpstream.chatToResponsesBody({ ...body, stream: !!stream }, model);
@@ -1840,7 +1851,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   // 代理池支持：获取代理 agent 和重试次数
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
@@ -2436,6 +2447,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 router.post('/chat/completions', oauthBearer, handleChatCompletion);
 
 async function handleChatCompletion(req, res) {
+  req._upstreamAttemptContext = { upstreamAttempts: 0 };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -2500,9 +2512,9 @@ async function handleChatCompletion(req, res) {
       lastError = {
         status: 404,
         body: { error: { message: `Model '${queueModelId}' not found`, type: 'not_found_error' } },
-        retryable: true
+        retryable: false
       };
-      if (hasMore) continue;
+      if (hasMore && lastError.retryable) continue;
       return res.status(404).json(lastError.body);
     }
 
@@ -2619,16 +2631,16 @@ async function handleChatCompletion(req, res) {
       const rpmCheck = checkRateLimit(rpmKey, effectiveRpm, 0, 0);
       if (rpmCheck.limited) {
         Logger.warn(`[Chat] 速率限制 attempt=${i + 1}/${modelQueue.length}: ${rpmCheck.reason}, user=${req.apiUser.username}, model=${model}`);
-        lastError = { status: 429, body: { error: { message: rpmCheck.reason, type: 'rate_limit_error' } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { error: { message: rpmCheck.reason, type: 'rate_limit_error' } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
       const tpmKey = `tpm:${req.apiUser.userId}:${model}`;
       const tpmCheck = checkRateLimit(tpmKey, 0, effectiveTpm, Math.ceil(estimatedTokens));
       if (tpmCheck.limited) {
         Logger.warn(`[Chat] 速率限制 attempt=${i + 1}/${modelQueue.length}: ${tpmCheck.reason}, user=${req.apiUser.username}, model=${model}`);
-        lastError = { status: 429, body: { error: { message: tpmCheck.reason, type: 'rate_limit_error' } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { error: { message: tpmCheck.reason, type: 'rate_limit_error' } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
     }
@@ -2637,7 +2649,7 @@ async function handleChatCompletion(req, res) {
     if (!provider) {
       Logger.warn(`[Chat] 供应商未配置 attempt=${i + 1}/${modelQueue.length}: ${modelConfig.provider}`);
       lastError = { status: 500, body: { error: { message: 'Provider not configured', type: 'server_error' } }, retryable: true };
-      if (hasMore) continue;
+      if (hasMore && lastError.retryable) continue;
       return res.status(500).json(lastError.body);
     }
 
@@ -2821,6 +2833,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
         tools,
         tool_choice,
         response_format,
+        requestContext: req._upstreamAttemptContext,
         apiKeyFusionConfig: {
           panel_models: req.apiUser.fusionPanelModels || [],
           judge_model_id: req.apiUser.fusionJudgeModelId || '',
@@ -3064,6 +3077,7 @@ router.get('/models', oauthBearer, async (req, res) => {
 router.post('/messages', oauthBearer, handleAnthropicMessage);
 
 async function handleAnthropicMessage(req, res) {
+  req._upstreamAttemptContext = { upstreamAttempts: 0 };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -3153,9 +3167,9 @@ async function handleAnthropicMessage(req, res) {
       lastError = {
         status: 404,
         body: { type: 'error', error: { type: 'not_found_error', message: `Model '${queueModelId}' not found` } },
-        retryable: true
+        retryable: false
       };
-      if (hasMore) continue;
+      if (hasMore && lastError.retryable) continue;
       return res.status(404).json(lastError.body);
     }
 
@@ -3256,16 +3270,16 @@ async function handleAnthropicMessage(req, res) {
       const rpmCheck = checkRateLimit(rpmKey, effectiveRpm, 0, 0);
       if (rpmCheck.limited) {
         Logger.warn(`[Anthropic] 速率限制 attempt=${i + 1}/${modelQueue.length}: ${rpmCheck.reason}, model=${model}`);
-        lastError = { status: 429, body: { type: 'error', error: { type: 'rate_limit_error', message: rpmCheck.reason } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { type: 'error', error: { type: 'rate_limit_error', message: rpmCheck.reason } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
       const tpmKey = `tpm:${req.apiUser.userId}:${model}`;
       const tpmCheck = checkRateLimit(tpmKey, 0, effectiveTpm, Math.ceil(estimatedTokens));
       if (tpmCheck.limited) {
         Logger.warn(`[Anthropic] 速率限制 attempt=${i + 1}/${modelQueue.length}: ${tpmCheck.reason}, model=${model}`);
-        lastError = { status: 429, body: { type: 'error', error: { type: 'rate_limit_error', message: tpmCheck.reason } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { type: 'error', error: { type: 'rate_limit_error', message: tpmCheck.reason } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
     }
@@ -3274,7 +3288,7 @@ async function handleAnthropicMessage(req, res) {
     if (!provider) {
       Logger.warn(`[Anthropic] 供应商未配置 attempt=${i + 1}/${modelQueue.length}: ${modelConfig.provider}`);
       lastError = { status: 500, body: { type: 'error', error: { type: 'api_error', message: 'Provider not configured' } }, retryable: true };
-      if (hasMore) continue;
+      if (hasMore && lastError.retryable) continue;
       return res.status(500).json(lastError.body);
     }
 
@@ -3600,7 +3614,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   const msgCount = body.messages?.length || 0;
@@ -3979,7 +3993,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
@@ -4361,7 +4375,7 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
@@ -5020,7 +5034,7 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   Logger.info(`[Responses/OpenAI] 非流式请求: provider=${provider.id}(${provider.name}), model=${model}, proxy=${currentProxyInfo?.proxyUrl || 'none'}`);
@@ -5159,7 +5173,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   Logger.info(`[Responses/Anthropic] 非流式请求: provider=${provider.id}(${provider.name}), model=${model}, proxy=${currentProxyInfo?.proxyUrl || 'none'}`);
@@ -5251,6 +5265,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
 router.post('/responses', oauthBearer, handleResponses);
 
 async function handleResponses(req, res) {
+  req._upstreamAttemptContext = { upstreamAttempts: 0 };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -5315,8 +5330,8 @@ async function handleResponses(req, res) {
     const cfg = await getModelConfig(queueModelId);
     if (!cfg) {
       Logger.warn(`[Responses] 队列模型未找到 attempt=${i + 1}/${modelQueue.length}: ${queueModelId}`);
-      lastError = { status: 404, body: { error: { message: `Model '${queueModelId}' not found`, type: 'not_found_error' } }, retryable: true };
-      if (hasMore) continue;
+      lastError = { status: 404, body: { error: { message: `Model '${queueModelId}' not found`, type: 'not_found_error' } }, retryable: false };
+      if (hasMore && lastError.retryable) continue;
       return res.status(404).json(lastError.body);
     }
 
@@ -5333,15 +5348,15 @@ async function handleResponses(req, res) {
       const rpmKey = `rpm:${req.apiUser.userId}:${upModel}`;
       const rpmCheck = checkRateLimit(rpmKey, effectiveRpm, 0, 0);
       if (rpmCheck.limited) {
-        lastError = { status: 429, body: { error: { message: rpmCheck.reason, type: 'rate_limit_error' } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { error: { message: rpmCheck.reason, type: 'rate_limit_error' } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
       const tpmKey = `tpm:${req.apiUser.userId}:${upModel}`;
       const tpmCheck = checkRateLimit(tpmKey, 0, effectiveTpm, Math.ceil(estimatedTokens));
       if (tpmCheck.limited) {
-        lastError = { status: 429, body: { error: { message: tpmCheck.reason, type: 'rate_limit_error' } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { error: { message: tpmCheck.reason, type: 'rate_limit_error' } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
     }
@@ -5349,7 +5364,7 @@ async function handleResponses(req, res) {
     const prov = await getProviderForRequest(cfg.provider);
     if (!prov) {
       lastError = { status: 500, body: { error: { message: 'Provider not configured', type: 'server_error' } }, retryable: true };
-      if (hasMore) continue;
+      if (hasMore && lastError.retryable) continue;
       return res.status(500).json(lastError.body);
     }
 
@@ -5590,7 +5605,7 @@ async function handleResponses(req, res) {
           status: lastError.status, error, latencyMs: Date.now() - liveCallStart, isFinal: !willRetry
         });
         if (res.headersSent) return;
-        if (hasMore) continue;
+        if (hasMore && lastError.retryable) continue;
         return res.status(lastError.status).json(lastError.body);
       }
     }

@@ -1758,7 +1758,7 @@ router.get('/balance', requireAuth, async (req, res) => {
 router.post('/usage', async (req, res) => {
   try {
     // 从 Bearer token 提取 API Key
-    let apiKey = req.headers['x-api-key'] || req.query?.api_key;
+    let apiKey = req.headers['x-api-key'];
     if (!apiKey && req.headers.authorization?.startsWith('Bearer ')) {
       apiKey = req.headers.authorization.slice(7);
     }

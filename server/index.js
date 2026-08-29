@@ -2207,9 +2207,15 @@ const app = express();
 // 信任反向代理（Nginx/Cloudflare等）
 app.set('trust proxy', 1);
 
-// 中间件 — 请求体大小限制设为 50MB（兼容多文件/图片/长文档的请求）
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// 网关请求体限制为 1MB，避免在认证和上游转发前读入过大请求。
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
+app.use((err, req, res, next) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ error: { message: 'Request body exceeds the 1MB limit', type: 'invalid_request_error', code: 'request_too_large' } });
+  }
+  return next(err);
+});
 
 // 会话配置
 if (isDemo) {
@@ -2302,7 +2308,7 @@ app.use((req, res, next) => {
     } else if (req.session?.user?.username) {
       user = req.session.user.username;
     } else {
-      let apiKey = req.headers['x-api-key'] || req.query?.api_key;
+      let apiKey = req.headers['x-api-key'];
       if (!apiKey && req.headers.authorization?.startsWith('Bearer ')) {
         apiKey = req.headers.authorization.slice(7);
       }
@@ -2320,7 +2326,7 @@ app.use((req, res, next) => {
         : ` — ${res._logBody.error.message || JSON.stringify(res._logBody.error)}`;
     }
 
-    Logger.request(req.method, req.originalUrl, res.statusCode, user, duration, ip, errorMsg);
+    Logger.request(req.method, req.path, res.statusCode, user, duration, ip, errorMsg);
   });
   next();
 });

@@ -73,7 +73,7 @@ class BaseProviderAdapter {
    * @returns {string} 完整的请求 URL
    * @throws {Error} 如果 URL 无效或指向内网地址
    */
-  buildUrl(model) {
+  async buildUrl(model) {
     const baseUrl = this.provider.base_url.replace(/\/$/, '');
     const format = this.getApiFormat();
 
@@ -98,7 +98,7 @@ class BaseProviderAdapter {
 
     // SSRF 防护：校验 URL 合法性
     const { validateUrl } = require('../utils/url-validator');
-    const result = validateUrl(fullUrl, { allowPrivate: false });
+    const result = await validateUrl(fullUrl, { allowPrivate: false });
     if (!result.ok) {
       throw new Error(`[SSRF] URL 校验失败: ${result.error} (base_url: ${baseUrl})`);
     }
@@ -111,7 +111,7 @@ class BaseProviderAdapter {
    * @param {string} model - 模型 ID
    * @returns {string} 完整的请求 URL
    */
-  buildStreamUrl(model) {
+  async buildStreamUrl(model) {
     return this.buildUrl(model);
   }
 

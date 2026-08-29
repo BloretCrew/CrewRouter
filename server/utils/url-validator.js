@@ -6,6 +6,7 @@
 
 const { URL } = require('url');
 const net = require('net');
+const dns = require('dns').promises;
 
 // 内网 IP 范围和特殊用途 IP
 const PRIVATE_RANGES = [
@@ -104,7 +105,7 @@ function isBlockedHost(hostname) {
  * @returns {{ ok: boolean, error?: string, url?: URL }}
  */
 async function validateUrl(urlStr, options = {}) {
-  const { allowPrivate = false } = options;
+  const { allowPrivate = false, resolveDNS = true } = options;
 
   if (!urlStr || typeof urlStr !== 'string') {
     return { ok: false, error: 'URL 不能为空' };
@@ -131,6 +132,21 @@ async function validateUrl(urlStr, options = {}) {
     // 检查 IP 形式的 URL 中的地址
     if (net.isIPv4(url.hostname) && isPrivateIPv4(url.hostname)) {
       return { ok: false, error: `不允许请求内网 IP: ${url.hostname}` };
+    }
+
+    // 解析域名并检查所有地址，防止 DNS rebinding/解析到内网地址。
+    if (resolveDNS && !net.isIP(url.hostname)) {
+      let addresses;
+      try {
+        addresses = await dns.lookup(url.hostname, { all: true, verbatim: true });
+      } catch (err) {
+        return { ok: false, error: `域名 DNS 解析失败: ${url.hostname}` };
+      }
+      if (!addresses.length || addresses.some(({ address }) => net.isIPv4(address)
+        ? isPrivateIPv4(address)
+        : isBlockedIPv6(address))) {
+        return { ok: false, error: `域名解析到不允许的内网地址: ${url.hostname}` };
+      }
     }
   }
 

@@ -125,9 +125,9 @@ async function callModel(modelId, messages, options = {}) {
     const providerWithKey = { ...provider, api_key: keys[ki] };
     try {
       if (provider.format === 'anthropic') {
-        return await callAnthropicModel(baseUrl, providerWithKey, requestBody);
+        return await callAnthropicModel(baseUrl, providerWithKey, requestBody, options.requestContext);
       }
-      return await callOpenAIModel(baseUrl, providerWithKey, requestBody);
+      return await callOpenAIModel(baseUrl, providerWithKey, requestBody, options.requestContext);
     } catch (err) {
       lastErr = err;
       if (ki < keys.length - 1) {
@@ -140,7 +140,7 @@ async function callModel(modelId, messages, options = {}) {
 }
 
 // 调用 OpenAI 格式模型
-async function callOpenAIModel(baseUrl, provider, body) {
+async function callOpenAIModel(baseUrl, provider, body, requestContext = null) {
   const url = `${upstreamUrl(baseUrl, '/chat/completions')}`;
   const headers = {
     'Content-Type': 'application/json',
@@ -151,6 +151,10 @@ async function callOpenAIModel(baseUrl, provider, body) {
   const startTime = Date.now();
 
   const proxyInfo = await proxyPool.getProxyAgent(provider);
+  if (requestContext) {
+    requestContext.upstreamAttempts = (requestContext.upstreamAttempts || 0) + 1;
+    if (requestContext.upstreamAttempts > 12) throw new Error('Upstream request attempt limit exceeded (12)');
+  }
   const response = await proxyPool.proxyFetch(url, {
     method: 'POST',
     headers,
@@ -181,7 +185,7 @@ async function callOpenAIModel(baseUrl, provider, body) {
 }
 
 // 调用 Anthropic 格式模型
-async function callAnthropicModel(baseUrl, provider, body) {
+async function callAnthropicModel(baseUrl, provider, body, requestContext = null) {
   const url = `${upstreamUrl(baseUrl, '/messages')}`;
   const headers = {
     'Content-Type': 'application/json',
@@ -231,6 +235,10 @@ async function callAnthropicModel(baseUrl, provider, body) {
   const startTime = Date.now();
 
   const proxyInfo = await proxyPool.getProxyAgent(provider);
+  if (requestContext) {
+    requestContext.upstreamAttempts = (requestContext.upstreamAttempts || 0) + 1;
+    if (requestContext.upstreamAttempts > 12) throw new Error('Upstream request attempt limit exceeded (12)');
+  }
   const response = await proxyPool.proxyFetch(url, {
     method: 'POST',
     headers,
@@ -341,6 +349,8 @@ async function processFusion(body, req, options = {}) {
   const startTime = Date.now();
   const { messages, temperature, max_tokens, fusion_preset, tools, tool_choice, response_format } = body;
   const { res, format = 'openai' } = options;
+  const requestContext = options.requestContext || { upstreamAttempts: 0 };
+  const budgetedCallModel = (modelId, messages, callOptions = {}) => callModel(modelId, messages, { ...callOptions, requestContext });
 
   Logger.info(`[Fusion] 开始处理: preset=${fusion_preset || 'default'}, messages=${messages?.length}, format=${format}, stream=${options.stream}, hasRes=${!!res}`);
 
@@ -440,7 +450,7 @@ async function processFusion(body, req, options = {}) {
     tools,
     tool_choice,
     response_format,
-    callModel
+    callModel: budgetedCallModel
   });
 
   const panelSuccess = panelResults.filter(r => r.success).length;
@@ -460,7 +470,7 @@ async function processFusion(body, req, options = {}) {
   }
 
   const judgeResult = await runJudge(fusionConfig, messages, panelResults, {
-    callModel
+    callModel: budgetedCallModel
   });
 
   Logger.info(`[Fusion] Judge 完成: 共识=${judgeResult.consensus?.length || 0}, 矛盾=${judgeResult.contradictions?.length || 0}, 盲点=${judgeResult.blind_spots?.length || 0}`);
@@ -482,7 +492,7 @@ async function processFusion(body, req, options = {}) {
     res: options.res,
     format,
     anthropicBlockIndex,
-    callModel,
+    callModel: budgetedCallModel,
     getModelConfig,
     getProviderForRequest,
     tools,
