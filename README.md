@@ -20,7 +20,7 @@
 
 **团队级 AI 模型统一网关** · OpenAI / Anthropic 双协议 · 自托管
 
-[演示控制台](https://router.crantai.com/) · [部署指南](docs/deployment.md) · [架构说明](docs/ARCHITECTURE.md) · [API 文档](docs/API.md)
+[演示控制台](https://crewrouter.bloret.net/) · [部署指南](docs/deployment.md) · [架构说明](docs/ARCHITECTURE.md) · [API 文档](docs/API.md)
 
 </div>
 
@@ -201,4 +201,5 @@ npm start          # 开发可用 npm run dev
 
 ## 相关链接
 
-[Bloret Crew](https://github.com/BloretCrew) · [Bloret Launcher](https://github.com/BloretCrew/Bloret-Launcher) · [演示站](https://router.crantai.com/)
+[CrewRouter - Github](https://github.com/BloretCrew/CrewRouter) [CrewRouter](https://crewrouter.bloret.net/) [QQ Discuss](https://qm.qq.com/q/kEt8fb41wc)
+
