@@ -15,6 +15,7 @@ const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
 const config = require('../config-loader');
 const { expandSessionMessages } = require('../utils/usage-compress');
+const { getInternalAccessToken } = require('../utils/internal-oauth');
 
 const DEFAULT_DAYS = 7;
 const MAX_DAYS = 90;
@@ -711,17 +712,14 @@ function buildDetailRecords(rawRows) {
 
 // 内部推理：本地网关 + 服务端持有的第一个可用 key
 async function callInternalLLM(promptText, userId) {
-  // 用该用户自己的 CrewRouter 密钥调用本地网关——计费/注入/归因等规则与普通请求一致
-  const keyRow = await pool.query(
-    "SELECT id, key_value FROM api_keys WHERE user_id = $1 AND enabled = TRUE AND name ILIKE 'crewrouter' ORDER BY id ASC LIMIT 1",
-    [userId]);
-  if (!keyRow.rows[0]) throw new Error('未找到 CrewRouter 密钥');
+  // 用 OAuth access token 调用本地网关，避免读取 API Key 原文
+  const accessToken = await getInternalAccessToken(userId);
   const port = config.port || 20003;
   const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${keyRow.rows[0].key_value}`,
+      'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
       messages: [{ role: 'user', content: promptText }],
@@ -749,16 +747,13 @@ function readWebStream(bodyStream) {
 
 // 内部推理（流式）：本地网关 + 服务端持有的第一个可用 key，逐段产出内容增量
 async function* streamInternalLLM(promptText, userId) {
-  const keyRow = await pool.query(
-    "SELECT id, key_value FROM api_keys WHERE user_id = $1 AND enabled = TRUE AND name ILIKE 'crewrouter' ORDER BY id ASC LIMIT 1",
-    [userId]);
-  if (!keyRow.rows[0]) throw new Error('未找到 CrewRouter 密钥');
+  const accessToken = await getInternalAccessToken(userId);
   const port = config.port || 20003;
   const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${keyRow.rows[0].key_value}`,
+      'Authorization': `Bearer ${accessToken}`,
       'Accept': 'text/event-stream',
     },
     body: JSON.stringify({

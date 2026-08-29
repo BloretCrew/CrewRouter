@@ -16,6 +16,7 @@ if (!isDemo) {
 const { pool } = require('./models/database');
 const Logger = require('./logger');
 const crypto = require('crypto');
+const { sha256Hex } = require('./utils/key-hash');
 const bcrypt = require('bcryptjs');
 
 // 静态资源路径兼容：开发模式下 server/index.js 在 server/ 目录，
@@ -726,6 +727,8 @@ async function ensureBalanceAlertSettings() {
 async function ensureTraceSessionTables() {
   try {
     await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS active_trace_session_id INTEGER`);
+    await pool.query(`ALTER TABLE api_keys ALTER COLUMN key_value DROP NOT NULL`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash)`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS trace_sessions (
         id SERIAL PRIMARY KEY,
@@ -2237,17 +2240,17 @@ const KEY_CACHE_TTL = 60_000; // 1 分钟缓存
 // 解析 API Key 对应的用户名（带缓存）
 async function resolveApiKeyUser(apiKey) {
   if (isDemo) return 'Demo User';
-  const cached = apiKeyUserCache.get(apiKey);
+  const cached = apiKeyUserCache.get(sha256Hex(apiKey));
   if (cached && Date.now() - cached.ts < KEY_CACHE_TTL) {
     return cached.username;
   }
   try {
     const r = await pool.query(
-      'SELECT u.username FROM api_keys ak JOIN users u ON ak.user_id = u.id WHERE ak.key_value = $1',
-      [apiKey]
+      'SELECT u.username FROM api_keys ak JOIN users u ON ak.user_id = u.id WHERE ak.key_hash = $1',
+      [sha256Hex(apiKey)]
     );
     const name = r.rows[0]?.username || 'Unknown';
-    apiKeyUserCache.set(apiKey, { username: name, ts: Date.now() });
+    apiKeyUserCache.set(sha256Hex(apiKey), { username: name, ts: Date.now() });
     return name;
   } catch {
     return null;

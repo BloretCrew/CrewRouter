@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const { pool } = require('../models/database');
+const { sha256Hex } = require('../utils/key-hash');
 const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
 const config = require('../config-loader');
@@ -155,7 +156,6 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         ak.id,
         ak.name,
         ak.key_prefix,
-        ak.key_value,
         ak.custom_model_name,
         ak.current_model_id,
         ak.is_system,
@@ -338,7 +338,7 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
     const hash = crypto.randomBytes(24).toString('hex');
     const rawKey = `sk-${hash}`;
     const keyPrefix = rawKey.substring(0, 12);
-    const keyHash = require('bcryptjs').hashSync(rawKey, 10);
+    const keyHash = sha256Hex(rawKey);
 
     let expiresAt = null;
     if (expiresIn) {
@@ -348,7 +348,7 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
 
     const result = await pool.query(
       'INSERT INTO api_keys (user_id, key_value, key_hash, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE) RETURNING id, name, key_prefix, custom_model_name, created_at, expires_at',
-      [req.session.user.id, rawKey, keyHash, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
+      [req.session.user.id, null, keyHash, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
     );
 
     // 插件 apikey:created 钩子：创建后回调（异步、错误隔离）
@@ -1768,8 +1768,8 @@ router.post('/usage', async (req, res) => {
     const keyResult = await pool.query(
       `SELECT u.id, u.username, u.balance, u.group_id
        FROM api_keys ak JOIN users u ON ak.user_id = u.id
-       WHERE ak.key_value = $1`,
-      [apiKey]
+       WHERE ak.key_hash = $1`,
+      [sha256Hex(apiKey)]
     );
     if (keyResult.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid API key' });

@@ -332,11 +332,15 @@ async function settleBalance(userId, preConsumeId, actualCost, estimatedCost) {
 
     // 更新预扣记录状态
     if (preConsumeId) {
-      await client.query(
+      const result = await client.query(
         `UPDATE balance_preconsumes SET status = 'settled', actual_amount = $1, settled_at = CURRENT_TIMESTAMP
-         WHERE id = $2 AND user_id = $3`,
+         WHERE id = $2 AND user_id = $3 AND status = 'pending'`,
         [actualCost, preConsumeId, userId]
       );
+      if (result.rowCount !== 1) {
+        await client.query('ROLLBACK');
+        return { ok: true, delta: 0, alreadySettled: true };
+      }
     }
 
     const delta = actualCost - estimatedCost;
@@ -412,36 +416,38 @@ async function refundBalance(userId, amount) {
  * @param {number} points - 需扣除的积分
  * @returns {Promise<{ok: boolean, remaining?: number, error?: string}>}
  */
-async function deductPoints(userId, points) {
+async function deductPoints(userId, points, existingClient = null) {
   if (points <= 0) return { ok: true };
-  const client = await pool.connect();
+  const client = existingClient || await pool.connect();
   try {
-    await client.query('BEGIN');
+    if (!existingClient) await client.query('BEGIN');
     const result = await client.query(
       'SELECT balance FROM users WHERE id = $1 FOR UPDATE',
       [userId]
     );
     if (result.rows.length === 0) {
-      await client.query('ROLLBACK');
+      if (!existingClient) await client.query('ROLLBACK');
       return { ok: false, error: '用户不存在' };
     }
     const currentPoints = parseFloat(result.rows[0].balance || 0);
     if (currentPoints < points) {
-      await client.query('ROLLBACK');
+      if (!existingClient) await client.query('ROLLBACK');
       return { ok: false, remaining: points - currentPoints, error: '积分不足' };
     }
     await client.query(
       'UPDATE users SET balance = balance - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [points, userId]
     );
-    await client.query('COMMIT');
+    if (!existingClient) await client.query('COMMIT');
     return { ok: true };
   } catch (err) {
-    try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
+    if (!existingClient) {
+      try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
+    }
     Logger.error(`[deductPoints] 错误: userId=${userId}, points=${points}, error=${err.message}`);
     return { ok: false, error: err.message };
   } finally {
-    client.release();
+    if (!existingClient) client.release();
   }
 }
 
@@ -457,4 +463,24 @@ async function getUserPoints(userId) {
   }
 }
 
-module.exports = { deductBalance, checkBalance, preConsumeBalance, settleBalance, refundBalance, deductPoints, getUserPoints };
+async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValues, userId, pointsToDeduct = 0 }) {
+  const client = await dbPool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(usageQuery, usageValues);
+    if (pointsToDeduct > 0) {
+      const result = await deductPoints(userId, pointsToDeduct, client);
+      if (!result.ok) throw new Error(result.error || '积分扣除失败');
+    }
+    await client.query('COMMIT');
+    return { ok: true };
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
+    Logger.error(`[recordUsageAndDeduct] 错误: userId=${userId}, error=${error.message}`);
+    return { ok: false, error: error.message };
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { deductBalance, checkBalance, preConsumeBalance, settleBalance, refundBalance, deductPoints, getUserPoints, recordUsageAndDeduct };

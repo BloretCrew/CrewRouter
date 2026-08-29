@@ -793,7 +793,7 @@ class ConsoleApp {
         <div class="api-key-prefix">
           <code class="api-key-value" data-visible="false" data-fullkey="${escapeHtml(fullKey)}"
                 onclick="app.toggleKeyVisibility(this)" title="${t('点击显示/隐藏完整密钥')}">${escapeHtml(maskedKey)}</code>
-          <div class="api-key-secret-actions">
+          ${fullKey ? `<div class="api-key-secret-actions">
             <button type="button" class="copy-btn" onclick="app.toggleKeyVisibility(this.closest('.api-key-prefix').querySelector('.api-key-value'))" title="${t('显示/隐藏')}">
               ${this.getSFIcon('eye', 14)}
             </button>
@@ -801,7 +801,7 @@ class ConsoleApp {
               ${this.getSFIcon('document.on.document', 14)}
               <span>复制</span>
             </button>
-          </div>
+          </div>` : ''}
         </div>
 
         <div class="api-key-footer">

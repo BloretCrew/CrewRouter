@@ -44,6 +44,8 @@ const {
   scrubResponsesApiResult,
 } = require('../utils/inject-prompt-scrub');
 const { checkQuotaRules } = require('../utils/points-deduct');
+const { recordUsageAndDeduct } = require('../utils/balance');
+const { sha256Hex } = require('../utils/key-hash');
 const {
   getQuotaInfo,
   getGroupName,
@@ -487,12 +489,12 @@ setInterval(() => {
 
 // 获取缓存的 API Key 验证结果
 function getCachedApiKey(apiKey) {
-  const entry = apiKeyCache.get(apiKey);
+  const entry = apiKeyCache.get(sha256Hex(apiKey));
   if (!entry) return null;
 
   const now = Date.now();
   if (now - entry.timestamp > API_KEY_CACHE_TTL) {
-    apiKeyCache.delete(apiKey);
+    apiKeyCache.delete(sha256Hex(apiKey));
     return null;
   }
 
@@ -501,7 +503,7 @@ function getCachedApiKey(apiKey) {
 
 // 设置 API Key 缓存
 function setCachedApiKey(apiKey, data) {
-  apiKeyCache.set(apiKey, {
+  apiKeyCache.set(sha256Hex(apiKey), {
     data: data,
     timestamp: Date.now()
   });
@@ -1096,14 +1098,14 @@ async function validateApiKey(req, res, next) {
               u.api_signature_enabled, u.api_signature_template
        FROM api_keys ak
        JOIN users u ON ak.user_id = u.id
-       WHERE ak.key_value = $1`,
-      [apiKey]
+       WHERE ak.key_hash = $1`,
+      [sha256Hex(apiKey)]
     );
 
     // 重新查询以获取 key 级别签名设置
     const keySignatureResult = await pool.query(
-      `SELECT signature_enabled, signature_template FROM api_keys WHERE key_value = $1`,
-      [apiKey]
+      `SELECT signature_enabled, signature_template FROM api_keys WHERE key_hash = $1`,
+      [sha256Hex(apiKey)]
     );
 
     if (result.rows.length === 0) {
@@ -2759,21 +2761,14 @@ async function handleChatCompletion(req, res) {
 
         const localModelId = modelConfig.id || userRequestedModel;
         const latencyMs = Date.now() - liveCallStart;
-        await pool.query(
-          `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-          [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta]
-        );
-        if (pointsToDeduct > 0) {
-          const { deductPoints } = require('../utils/balance');
-          await deductPoints(req.apiUser.userId, pointsToDeduct);
-        }
+           pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[用量记录] 错误:', err);
@@ -2945,17 +2940,14 @@ async function handleFusionRequest(req, res, format = 'openai') {
           apiKeyId: req.apiUser.keyId,
         }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
-        await pool.query(
-          `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-          [req.apiUser.userId, req.apiUser.keyId, totalTokens,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`, usageValues: [req.apiUser.userId, req.apiUser.keyId, totalTokens,
            fusionPromptTokens, fusionCompletionTokens,
            totalWeightedTokens, null, 'fusion',
            JSON.stringify(messages), result.content || null, pointsToDeduct,
            Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta]
-        );
+           pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
 
         // 记录 Fusion 专用用量
         await pool.query(
@@ -2967,11 +2959,6 @@ async function handleFusionRequest(req, res, format = 'openai') {
            JSON.stringify(result.judgeResult || {}),
            result.content || null, totalTokens, pointsToDeduct, result.fusion?.total_latency || 0]
         );
-
-        if (pointsToDeduct > 0) {
-          const { deductPoints } = require('../utils/balance');
-          await deductPoints(req.apiUser.userId, pointsToDeduct);
-        }
         recordQuotaData(req.apiUser.userId, 'fusion', totalTokens, totalWeightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Fusion] 用量记录错误:', err);
@@ -3374,21 +3361,14 @@ async function handleAnthropicMessage(req, res) {
 
         const localModelId = modelConfig.id || queueModelId;
         const latencyMs = Date.now() - liveCallStart;
-        await pool.query(
-          `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-          [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta]
-        );
-        if (pointsToDeduct > 0) {
-          const { deductPoints } = require('../utils/balance');
-          await deductPoints(req.apiUser.userId, pointsToDeduct);
-        }
+           pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Anthropic 用量记录] 错误:', err);
@@ -5447,21 +5427,14 @@ async function handleResponses(req, res) {
                 apiKeyId: req.apiUser.keyId,
               }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
               const localModelId = modelConfig.id || model;
-              await pool.query(
-                `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+              await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
                  cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-                [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                  promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
                  provider?.id || null, 'responses',
                  typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
                  null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-                 pluginMeta]
-              );
-              if (pointsToDeduct > 0) {
-                const { deductPoints } = require('../utils/balance');
-                await deductPoints(req.apiUser.userId, pointsToDeduct);
-              }
+                 pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
               recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
             } catch (err) {
               Logger.error('[Responses/Passthru] 用量记录错误:', err);
@@ -5557,22 +5530,15 @@ async function handleResponses(req, res) {
             }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
             const localModelId = modelConfig.id || model;
             const latencyMs = Date.now() - liveCallStart;
-            await pool.query(
-              `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+            await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
                cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-              [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                result.promptTokens || 0, result.completionTokens || 0,
                result.cachedTokens || 0, weightedTokens,
                provider?.id || null, 'responses',
                typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
                latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-               pluginMeta]
-            );
-            if (pointsToDeduct > 0) {
-              const { deductPoints } = require('../utils/balance');
-              await deductPoints(req.apiUser.userId, pointsToDeduct);
-            }
+               pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
             recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
           } catch (err) {
             Logger.error('[Responses] 用量记录错误:', err);
@@ -5758,22 +5724,15 @@ async function handleResponses(req, res) {
           const requestParams = usageEstimated
             ? { estimated: true, estimate_method: 'output_chars/4', prompt_tokens_policy: 'zero_when_unknown' }
             : { estimated: false };
-          await pool.query(
-            `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+          await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
              cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_params, request_source, user_agent, plugin_meta)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-            [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
              promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
              provider?.id || null, 'responses',
              typeof input === 'string' ? input : JSON.stringify(input), totalContent || null, pointsToDeduct,
              Date.now() - liveCallStart, clientIp(req), JSON.stringify(requestParams),
              clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-             pluginMeta]
-          );
-          if (pointsToDeduct > 0) {
-            const { deductPoints } = require('../utils/balance');
-            await deductPoints(req.apiUser.userId, pointsToDeduct);
-          }
+             pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
           recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
         } catch (err) {
           Logger.warn(`[Responses/Passthru] 计费/用量记录失败: ${err.message}`);
@@ -5831,21 +5790,14 @@ async function handleResponses(req, res) {
         }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
         const localModelId = modelConfig.id || model;
-        await pool.query(
-          `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-          [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            promptTokens, completionTokens, cachedTokens, weightedTokens,
            provider?.id || null, 'responses',
            typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
            null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta]
-        );
-        if (pointsToDeduct > 0) {
-          const { deductPoints } = require('../utils/balance');
-          await deductPoints(req.apiUser.userId, pointsToDeduct);
-        }
+           pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Responses/Passthru] 用量记录错误:', err);
@@ -6012,22 +5964,15 @@ async function handleResponses(req, res) {
 
         const localModelId = modelConfig.id || model;
         const latencyMs = typeof liveCallStart === 'number' ? Date.now() - liveCallStart : null;
-        await pool.query(
-          `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-          [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'responses',
            typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta]
-        );
-        if (pointsToDeduct > 0) {
-          const { deductPoints } = require('../utils/balance');
-          await deductPoints(req.apiUser.userId, pointsToDeduct);
-        }
+           pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Responses] 用量记录错误:', err);
