@@ -61,3 +61,8 @@
 3. init-db 对已有数据的旧表补 `key_hash NOT NULL UNIQUE` 不具备安全迁移流程。
 
 已执行 `node server/scripts/test-financial-usage-static.js`，结果通过；关键 JS 文件语法检查通过。由于当前环境未连接数据库且缺少可用 `pg`/测试库，未能实测迁移、吊销、并发及端到端流式/非流式响应。
+## 本轮修复响应
+
+- Issue 1：8 个计费局部 catch 对 billingFailure 返回 HTTP 500（未发 header）或销毁流连接（已发 header），不再继续成功响应；静态测试覆盖 8 个外围 catch。
+- Issue 3：缓存命中前低成本查询 oauth_tokens，感知 revoked/expired；缓存 TTL 缩短至 5 分钟，并发签发继续合并。
+- Issue 5：init-db 对旧表采用可空补列、hash 回填、重复检查、清空明文、最后设置约束和唯一索引，初始化整体事务回滚。

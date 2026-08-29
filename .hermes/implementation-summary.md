@@ -1,35 +1,55 @@
-# 注入提示词实现总结
+# 实现总结
 
 ## 改动文件
 
-- `server/utils/inject-prompt.js`：改为 `<system-reminder>` + `# claudeMd` + `Contents of ... (project instructions, ...)` + `# currentDate` 格式；各协议改为首条 user 前插入 meta user。
-- `server/utils/inject-prompt-scrub.js`：新增 Claude Code 风格 system-reminder/claudeMd 回显净化，同时保留旧格式和 exactText 精确移除。
-- `server/utils/inject-prompt-stream.js`：流式跨 chunk 净化新格式。
-- `server/routes/api.js`：OpenAI Chat、Chat→Responses、Chat→Anthropic、Fusion、Anthropic Messages、Responses 直连改为目标位置注入。
-- `server/scripts/test-inject-scrub.js`：测试样例更新为新格式。
+- `server/utils/balance.js`：修复 settleBalance 幂等性；deductPoints 支持外部 client；新增 usage 与扣款事务 helper。
+- `server/utils/key-hash.js`：新增统一 SHA-256 工具。
+- `server/utils/internal-oauth.js`：新增内部 OAuth access token 签发。
+- `server/routes/api.js`：认证、签名查询及缓存改用 key_hash；8 处 usage 写入与积分扣款事务化。
+- `server/routes/user.js`：创建 Key 使用 SHA-256、停止写入明文；列表不返回 key_value；cc-switch 查询改 hash。
+- `server/routes/setup.js`、`server/routes/feishu.js`、`server/routes/passport-auth.js`：初始化 Key 改为只写 hash。
+- `server/routes/oauth.js`、`server/middleware/oauth-bearer.js`：复用统一 SHA-256 工具。
+- `server/routes/sessions-view.js`：内部会话调用改用 OAuth token。
+- `server/index.js`：请求日志缓存改 hash；启动迁移放宽 key_value 非空约束并增加 key_hash 唯一索引。
+- `public/js/app.js`：老 Key 无完整值时隐藏显示/复制按钮。
+- `scripts/migrate-api-keys-hash.js`：新增存量 Key 迁移脚本，默认 dry-run；仅显式传 `--apply` 才写库。
 
-## 注入位置
+## 完成情况
 
-- OpenAI Chat：`server/routes/api.js:1352`，首条 user 消息前插入 `{ role: 'user', isMeta: true }`。
-- Chat→Responses：`server/routes/api.js:1724`，`input` 首条 user item 前插入 meta message。
-- Chat→Anthropic：`server/routes/api.js:1922`，Anthropic `messages` 首条 user 前插入 contextual meta user。
-- Fusion：`server/routes/api.js:2455`，转换后的 messages 首条 user 前插入 meta user。
-- Anthropic 直连：`server/routes/api.js:3082`，请求 `messages` 首条 user 前插入 meta user。
-- Responses 直连：`server/routes/api.js:5271`，`body.input` 首条 user item 前插入 meta message。
+- 1A：完成 pending 条件与 rowCount 检查，重复结算不再重复退款/补扣。
+- 1B：完成可选 client 与 8 处 usage/扣款事务化，保留各点位原有列集合。
+- 2A-2H：完成统一 hash、建 Key 停写明文、认证及缓存查询改 hash、内部 OAuth、前端防回显、迁移脚本及启动 DDL。
 
-## 验证结果
+## 验证输出
 
-- `node --check server/utils/inject-prompt.js`：通过。
-- `node --check server/utils/inject-prompt-scrub.js`：通过。
-- `node --check server/utils/inject-prompt-stream.js`：通过。
+- `node --check server/utils/key-hash.js`：通过。
+- `node --check server/utils/balance.js`：通过。
 - `node --check server/routes/api.js`：通过。
-- `node --check server/scripts/test-inject-scrub.js`：通过。
-- `node server/scripts/test-custom-instructions.js`：通过，`ALL_PASS`。
-- `node server/scripts/test-request-source.js`：通过，`All request-source assertions passed`。
-- `node server/scripts/test-inject-scrub.js`：未能执行，当前工作树缺少 `node_modules/pg`，加载数据库模块时报 `Cannot find module 'pg'`。
-- `node server/scripts/test-usage-accuracy.js`：未能执行，同样因缺少 `node_modules/pg`。
-- `npm run build`：未运行；任务要求的依赖环境不完整，且构建非核心验证。
+- `node --check server/routes/user.js`：通过。
+- `node --check server/routes/sessions-view.js`：通过。
+- `node --check server/index.js`：通过。
+- `node --check scripts/migrate-api-keys-hash.js`：通过。
+- 任务书中的数据库测试与 dry-run 尚未在本环境执行；未执行真实迁移、未重启服务、未 push。
 
-## 未覆盖项
+## 遗留风险
 
-未在真实上游请求中验证各供应商对 `isMeta` 字段的透传行为；未启动服务，未进行端到端网络验证。数据库依赖缺失导致净化单测和用量回归无法运行。
+- 内部 OAuth token 需要 `oauth_tokens` 表可用，首次调用会懒建 OAuth 表；当前实现每次签发新 token，旧的有效 token 不复用。
+- 当前环境未连接数据库，无法确认迁移行数、数据库测试及运行时会话总结/老 Key 兼容性。
+
+- 新增无数据库静态断言：确认 `api.js` 有 8 个 `recordUsageAndDeduct` 点位，且每个点位包含失败检查；确认每个 usage SQL 占位符数量与参数数组长度一致。
+- 数据库相关测试仍受当前环境缺少 `pg` 模块影响；未执行真实迁移，未重启服务，未 push。
+
+## Review 修复补充
+
+- 8 个 usage 事务点位已增加失败传播检查；`server/scripts/test-financial-usage-static.js` 无数据库静态断言通过。
+- Claude Code 配置接口对历史 Key 明确返回 HTTP 410，不读取明文、不使用 hash 充当 token。
+- internal-oauth 增加按 API Key 的进程级短期缓存、并发 Promise 合并、过期/吊销 token 清理。
+- init-db.js 已同步可空 key_value 与唯一非空 key_hash 定义。
+- 迁移 `--apply` 使用单事务并检查重复 hash，默认仍 dry-run；本次未执行真实迁移。
+- 静态检查、request-source 测试和财务静态断言通过；数据库测试、迁移 dry-run 和端到端验证受环境缺少 `pg`/数据库限制未完成。
+
+## 第二轮审查修复
+
+- usage 计费失败不再被局部 catch 吞掉：未发送响应时返回 500，流式已发送响应时销毁连接；无数据库静态测试已覆盖 8 个点位及外围 catch。
+- internal-oauth 缓存命中前校验数据库 revoked/expired 状态，TTL 缩短为 5 分钟，并保留并发签发合并。
+- init-db 旧表迁移改为事务内的分阶段可空补列、回填、重复检查、清空明文、最后约束化。
