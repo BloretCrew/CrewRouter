@@ -406,6 +406,11 @@ async function ensureAuthModeTables() {
       used_by INTEGER REFERENCES users(id),
       used_at TIMESTAMPTZ
     )`);
+    await pool.query('ALTER TABLE auth_invites ADD COLUMN IF NOT EXISTS max_uses INTEGER NOT NULL DEFAULT 1');
+    await pool.query('ALTER TABLE auth_invites ADD COLUMN IF NOT EXISTS used_count INTEGER NOT NULL DEFAULT 0');
+    await pool.query('ALTER TABLE auth_invites ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL');
+    await pool.query('ALTER TABLE auth_invites ADD COLUMN IF NOT EXISTS group_id INTEGER REFERENCES user_groups(id) ON DELETE SET NULL');
+    await pool.query(`UPDATE auth_invites SET used_count = 1 WHERE used = TRUE AND used_count = 0`);
     const setup = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");
     const mode = await pool.query("SELECT 1 FROM settings WHERE key = 'auth_mode' LIMIT 1");
     if (setup.rows.length && !mode.rows.length) {

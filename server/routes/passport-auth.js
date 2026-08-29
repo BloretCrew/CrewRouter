@@ -55,17 +55,24 @@ async function verifyPassport(code) {
   } finally { clearTimeout(timer); }
 }
 
-async function seedPassportUser(client, user, username) {
+async function seedPassportUser(client, user, username, invite = null) {
   const rawKey = `sk-${crypto.randomBytes(24).toString('hex')}`;
   await client.query(
     `INSERT INTO api_keys (user_id, key_value, key_hash, key_prefix, name, custom_model_name) VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5')`,
     [user.id, rawKey, bcrypt.hashSync(rawKey, 10), rawKey.substring(0, 12)]
   );
   const teamName = `${username} 的个人账户`;
-  const team = await client.query('INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id', [teamName, '个人账户，系统自动创建']);
-  await client.query('INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2)', [user.id, team.rows[0].id]);
-  const group = await client.query('SELECT id FROM user_groups WHERE is_default = TRUE LIMIT 1');
-  if (group.rows.length) await client.query('UPDATE users SET group_id = $1 WHERE id = $2', [group.rows[0].id, user.id]);
+  const personal = await client.query('INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id', [teamName, '个人账户，系统自动创建']);
+  await client.query('INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [user.id, personal.rows[0].id]);
+  if (invite?.team_id) {
+    await client.query('INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [user.id, invite.team_id]);
+  }
+  if (invite?.group_id) {
+    await client.query('UPDATE users SET group_id = $1 WHERE id = $2', [invite.group_id, user.id]);
+  } else {
+    const group = await client.query('SELECT id FROM user_groups WHERE is_default = TRUE LIMIT 1');
+    if (group.rows.length) await client.query('UPDATE users SET group_id = $1 WHERE id = $2', [group.rows[0].id, user.id]);
+  }
   await require('../utils/inject-prompt').seedDefaultPrompt(user.id, client);
 }
 
@@ -119,12 +126,11 @@ router.get('/passport/callback', async (req, res) => {
       if (!user) {
         const adminCount = await client.query('SELECT COUNT(*)::int AS count FROM users WHERE is_admin = TRUE');
         const isFirstAdmin = adminCount.rows[0].count === 0;
-        let inviteResult = null;
+        let inviteRow = null;
         if (!isFirstAdmin) {
-          const inviteToken = inviteForUser;
-          const inviteHash = crypto.createHash('sha256').update(inviteToken).digest('hex');
-          inviteResult = await client.query(`SELECT * FROM auth_invites WHERE token_hash = $1 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP FOR UPDATE`, [inviteHash]);
-          if (!inviteResult.rows.length) { await client.query('ROLLBACK'); return res.status(403).send('该登录需要有效邀请链接，请使用管理员提供的邀请链接访问。'); }
+          const { validateInvite } = require('./auth-invites');
+          inviteRow = await validateInvite(inviteForUser, client);
+          if (!inviteRow) { await client.query('ROLLBACK'); return res.status(403).send('该登录需要有效邀请链接，请使用管理员提供的邀请链接访问。'); }
         }
         const nickname = String(data.nickname || passportUsername).trim().slice(0, 255) || passportUsername;
         let username = nickname;
@@ -138,11 +144,12 @@ router.get('/passport/callback', async (req, res) => {
         const emailCheck = email ? await client.query('SELECT 1 FROM users WHERE LOWER(email) = LOWER($1)', [email]) : { rows: [] };
         const inserted = await client.query(`INSERT INTO users (username, passport_username, email, avatar, is_admin, email_verified, balance) VALUES ($1, $2, $3, $4, $5, TRUE, 10) RETURNING *`, [username, passportUsername, emailCheck.rows.length ? null : email, String(data.avatar || '').slice(0, 500) || null, isFirstAdmin]);
         user = inserted.rows[0];
-        if (inviteResult) {
-          const consumed = await client.query('UPDATE auth_invites SET used = TRUE, used_by = $1, used_at = CURRENT_TIMESTAMP WHERE id = $2 AND used = FALSE AND expires_at > CURRENT_TIMESTAMP RETURNING id', [user.id, inviteResult.rows[0].id]);
-          if (!consumed.rows.length) throw new Error('邀请已被使用或已过期');
+        if (inviteRow) {
+          const { consumeInvite } = require('./auth-invites');
+          const consumed = await consumeInvite(inviteRow, user.id, client);
+          if (!consumed) throw new Error('邀请已被使用或已过期');
         }
-        await seedPassportUser(client, user, username);
+        await seedPassportUser(client, user, username, inviteRow);
         if (isFirstAdmin) {
           await client.query(
             "INSERT INTO settings (key, value) VALUES ('setup_complete', $1::jsonb) ON CONFLICT (key) DO NOTHING",
@@ -154,7 +161,11 @@ router.get('/passport/callback', async (req, res) => {
       await client.query('COMMIT');
       req.session.user = sessionUser(user);
       req.session.user.passportUsername = passportUsername;
-      saveSession(req, res, (err) => err ? res.status(500).send('登录会话保存失败，请重试。') : res.redirect('/console'));
+      saveSession(req, res, (err) => {
+        if (err) return res.status(500).send('登录会话保存失败，请重试。');
+        try { require('../utils/login-reporter').reportLoginEvent(req); } catch (_) {}
+        res.redirect('/console');
+      });
     } catch (err) { await client.query('ROLLBACK').catch(() => {}); throw err; } finally { client.release(); }
   } catch (err) { Logger.error('[PassPort] 回调失败:', err.message); res.status(502).send('PassPort 登录失败，请稍后重试。'); }
 });

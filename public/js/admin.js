@@ -170,41 +170,8 @@ class AdminApp {
   async initInvitePanel() {
     try {
       const status = await fetch('/auth/status').then(r => r.json());
-      if (status.authMode !== 'passport') return;
       const section = document.getElementById('passportInvitesSection');
-      if (!section) return;
-      section.style.display = 'block';
-      const request = async (url, options) => {
-        const response = await fetch(url, options);
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
-        return data;
-      };
-      const showError = (err) => { document.getElementById('inviteResult').textContent = err.message || String(err); };
-      const render = async () => {
-        try {
-          const rows = await request('/api/auth-invites');
-          const list = document.getElementById('inviteList');
-          list.replaceChildren();
-          (Array.isArray(rows) ? rows : []).forEach((x) => {
-            const row = document.createElement('div'); row.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border)';
-            row.textContent = `#${x.id} · ${['active', 'used', 'expired'].includes(x.status) ? x.status : 'unknown'} · ${new Date(x.expires_at).toLocaleString()}`;
-            if (x.status === 'active') { const btn = document.createElement('button'); btn.className = 'btn btn-sm'; btn.textContent = '撤销'; btn.onclick = () => this.revokeInvite(x.id); row.append(' ', btn); }
-            list.appendChild(row);
-          });
-        } catch (err) { showError(err); }
-      };
-      document.getElementById('generateInviteBtn')?.addEventListener('click', async () => {
-        try {
-          const data = await request('/api/auth-invites', { method: 'POST' });
-          const result = document.getElementById('inviteResult'); result.replaceChildren();
-          const text = document.createElement('span'); text.textContent = data.url || ''; result.appendChild(text);
-          if (data.url) { const btn = document.createElement('button'); btn.className = 'btn btn-sm'; btn.textContent = '复制'; btn.onclick = () => navigator.clipboard.writeText(data.url).catch(showError); result.append(' ', btn); }
-          await render();
-        } catch (err) { showError(err); }
-      });
-      this.revokeInvite = async (id) => { try { await request(`/api/auth-invites/${id}/revoke`, { method: 'POST' }); await render(); } catch (err) { showError(err); } };
-      render();
+      if (section && status.authMode === 'passport') section.style.display = 'block';
     } catch (_) {}
   }
 
@@ -212,7 +179,7 @@ class AdminApp {
   _adminPageIds() {
     return new Set([
       'adminStats', 'adminUsers', 'adminModels', 'adminProviders',
-      'adminSettings', 'adminTeams', 'adminUserGroups',
+      'adminSettings', 'adminTeams', 'adminUserGroups', 'adminInvites',
       'adminErrorLogs',
       'adminAuditLogs'
     ]);
@@ -551,6 +518,7 @@ class AdminApp {
       'adminSettings': t('系统设置'),
       'adminTeams': t('Team 管理'),
       'adminUserGroups': t('用户组管理'),
+      'adminInvites': t('邀请链接'),
       'adminAuditLogs': t('操作日志'),
       'adminPrompts': t('提示词'),
       'adminPlugins': t('插件管理')
@@ -691,6 +659,9 @@ class AdminApp {
       case 'adminUserGroups':
         await this.loadUserGroups();
         break;
+      case 'adminInvites':
+        await this.loadInvites();
+        break;
       case 'adminErrorLogs':
         await this.loadErrorLogs(1);
         break;
@@ -779,16 +750,98 @@ class AdminApp {
     }
   }
 
-  async generateInviteFromUsers() {
+  async _inviteRequest(url, options) {
+    const response = await fetch(url, { credentials: 'same-origin', ...options });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
+    return data;
+  }
+
+  async loadInvites() {
+    const list = document.getElementById('inviteList');
+    if (!list) return;
     try {
-      const response = await fetch('/api/auth-invites', { method: 'POST', credentials: 'same-origin' });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
-      const message = `${data.url}\n有效期至：${new Date(data.expires_at).toLocaleString()}`;
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(data.url);
-      alert(`邀请链接已生成并复制：\n\n${message}`);
+      const rows = await this._inviteRequest('/api/auth-invites');
+      this._renderInviteList(Array.isArray(rows) ? rows : []);
     } catch (error) {
-      alert(error.message || '生成邀请链接失败');
+      list.innerHTML = `<p style="color:var(--destructive);">${escapeHtml(error.message || t('加载邀请链接失败'))}</p>`;
+    }
+  }
+
+  _renderInviteList(rows) {
+    const list = document.getElementById('inviteList');
+    if (!list) return;
+    if (!rows.length) {
+      list.innerHTML = `<p style="color:var(--muted-foreground);padding:24px;text-align:center;">暂无邀请链接</p>`;
+      return;
+    }
+    const statusLabel = { active: '有效', used: '已用完', expired: '已过期' };
+    list.innerHTML = `<table><thead><tr><th>ID</th><th>人数</th><th>有效期</th><th>Team</th><th>用户组</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows.map((row) => {
+      const status = statusLabel[row.status] || row.status;
+      const actions = row.status === 'active'
+        ? `<button class="btn btn-sm" type="button" onclick="adminApp.revokeInvite(${row.id})">撤销</button>`
+        : '-';
+      return `<tr>
+        <td>#${row.id}</td>
+        <td>${Number(row.used_count || 0)} / ${Number(row.max_uses || 1)}</td>
+        <td>${row.expires_at ? new Date(row.expires_at).toLocaleString() : '-'}</td>
+        <td>${escapeHtml(row.team_name || '未指定')}</td>
+        <td>${escapeHtml(row.group_name || '未指定')}</td>
+        <td>${escapeHtml(status)}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+  }
+
+  async openInviteDialog() {
+    const [teams, groups] = await Promise.all([
+      fetch('/api/admin/teams').then((r) => r.json()).catch(() => []),
+      fetch('/api/admin/user-groups').then((r) => r.json()).catch(() => []),
+    ]);
+    const teamOptions = (Array.isArray(teams) ? teams : []).map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    const groupOptions = (Array.isArray(groups) ? groups : []).map((g) => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    const content = `
+      <div class="setup-form" style="display:grid;gap:12px;">
+        <div class="form-group"><label>可使用人数</label><input id="inviteMaxUses" class="input" type="number" min="1" max="10000" value="1"></div>
+        <div class="form-group"><label>有效天数</label><input id="inviteDays" class="input" type="number" min="1" max="365" value="7"></div>
+        <div class="form-group"><label>加入 Team</label><select id="inviteTeamId" class="input"><option value="">不指定</option>${teamOptions}</select></div>
+        <div class="form-group"><label>加入用户组</label><select id="inviteGroupId" class="input"><option value="">不指定</option>${groupOptions}</select></div>
+      </div>`;
+    const modal = (window.Dialog && Dialog.showModal)
+      ? Dialog.showModal({ title: '生成邀请链接', content, confirmText: '生成', cancelText: t('取消') })
+      : null;
+    const confirm = async () => {
+      const payload = {
+        maxUses: parseInt(document.getElementById('inviteMaxUses')?.value || '1', 10),
+        days: parseInt(document.getElementById('inviteDays')?.value || '7', 10),
+        teamId: document.getElementById('inviteTeamId')?.value || '',
+        groupId: document.getElementById('inviteGroupId')?.value || '',
+      };
+      const data = await this._inviteRequest('/api/auth-invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (navigator.clipboard?.writeText && data.url) await navigator.clipboard.writeText(data.url);
+      const result = document.getElementById('inviteResult');
+      if (result) result.textContent = data.url || '';
+      alert(`邀请链接已生成并复制：\n\n${data.url}\n人数：${data.max_uses}\n有效期至：${new Date(data.expires_at).toLocaleString()}`);
+      await this.loadInvites();
+    };
+    if (modal?.then) {
+      const ok = await modal;
+      if (ok) await confirm().catch((err) => alert(err.message || '生成邀请链接失败'));
+      return;
+    }
+    if (window.confirm('按默认设置生成邀请链接？')) await confirm().catch((err) => alert(err.message || '生成邀请链接失败'));
+  }
+
+  async revokeInvite(id) {
+    try {
+      await this._inviteRequest(`/api/auth-invites/${id}/revoke`, { method: 'POST' });
+      await this.loadInvites();
+    } catch (error) {
+      alert(error.message || '撤销邀请失败');
     }
   }
 
