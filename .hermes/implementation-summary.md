@@ -29,15 +29,16 @@
 - `node --check server/routes/sessions-view.js`：通过。
 - `node --check server/index.js`：通过。
 - `node --check scripts/migrate-api-keys-hash.js`：通过。
-- 任务书中的数据库测试与 dry-run 尚未在本环境执行；未执行真实迁移、未重启服务、未 push。
+- `node server/scripts/test-usage-accuracy.js`：通过，全部 17 项断言通过。
+- `node scripts/migrate-api-keys-hash.js --dry-run`：通过，打印 41 行待迁移计划。
+- 未执行真实迁移、未重启服务、未 push。
 
 ## 遗留风险
 
-- 内部 OAuth token 需要 `oauth_tokens` 表可用，首次调用会懒建 OAuth 表；当前实现每次签发新 token，旧的有效 token 不复用。
-- 当前环境未连接数据库，无法确认迁移行数、数据库测试及运行时会话总结/老 Key 兼容性。
+- 当前环境未完成重启后的真实 HTTP 认证、会话总结和余额一致性验证。
+- `--apply` 真实迁移尚未执行，执行前仍需确认已备份 `/root/backup/api_keys_*.sql`。
 
 - 新增无数据库静态断言：确认 `api.js` 有 8 个 `recordUsageAndDeduct` 点位，且每个点位包含失败检查；确认每个 usage SQL 占位符数量与参数数组长度一致。
-- 数据库相关测试仍受当前环境缺少 `pg` 模块影响；未执行真实迁移，未重启服务，未 push。
 
 ## Review 修复补充
 
