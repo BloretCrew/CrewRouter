@@ -201,5 +201,5 @@ npm start          # 开发可用 npm run dev
 
 ## 相关链接
 
-[CrewRouter - Github](https://github.com/BloretCrew/CrewRouter) [CrewRouter](https://crewrouter.bloret.net/) [QQ Discuss](https://qm.qq.com/q/kEt8fb41wc)
+[CrewRouter - Github](https://github.com/BloretCrew/CrewRouter) [CrewRouter](https://crewrouter.bloret.net/) [QQ Discuss](https://qm.qq.com/q/kEt8fb41wc) [LinuxDo](https://linux.do/)
 
