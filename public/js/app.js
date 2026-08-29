@@ -4390,6 +4390,7 @@ class ConsoleApp {
   _renderOverviewInsights() {
     const d = this._statsData;
     if (!d) return;
+    const daily = Array.isArray(d.daily) ? d.daily : [];
 
     // 最常用模型 Top 3
     const topModelsContainer = document.getElementById('topModelsList');

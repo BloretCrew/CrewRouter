@@ -1771,7 +1771,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 通知设置 -->
-        <form id="notificationSettingsForm" onsubmit="return false;"></form>
+        <form id="notificationSettingsForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
         <div class="content-section settings-section settings-category-notifications" style="margin-top:24px;">
           <div class="section-header">
             <div>
@@ -1839,7 +1839,7 @@ data: [DONE]</code></pre>
           <h2><span data-i18n="安全设置">安全设置</span></h2>
           
           <!-- 2FA 设置 -->
-          <form id="twoFactorForm" onsubmit="return false;"></form>
+          <form id="twoFactorForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
           <div style="margin-bottom:24px;padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
               <div>
@@ -1903,6 +1903,7 @@ data: [DONE]</code></pre>
         <div class="content-section" style="margin-top:24px;">
           <h2><span data-i18n="修改密码">修改密码</span></h2>
           <form id="changePasswordForm" class="settings-form" onsubmit="return false;">
+            <input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;">
             <div class="form-group">
               <label for="currentPassword"><span data-i18n="当前密码">当前密码</span></label>
               <input type="password" id="currentPassword" class="input" placeholder="请输入当前密码" data-i18n-placeholder="请输入当前密码" autocomplete="current-password" style="max-width:400px;">
@@ -2225,7 +2226,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 步骤 2: 输入配置 -->
-        <form id="providerForm" onsubmit="return false;"></form>
+        <form id="providerForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
         <div id="providerStep2" class="provider-step" style="display:none;">
           <div style="margin-bottom:16px;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:4px;"><span data-i18n="步骤 2/2">步骤 2/2</span></div>
@@ -2263,7 +2264,7 @@ data: [DONE]</code></pre>
   </div>
 
   <!-- 编辑供应商模态框 -->
-  <form id="editProviderForm" onsubmit="return false;"></form>
+  <form id="editProviderForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
   <div id="editProviderModal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width:500px;">
       <div class="modal-header">
