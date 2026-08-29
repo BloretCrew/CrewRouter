@@ -11,6 +11,7 @@ const { shanghaiDateRange, formatShanghaiDateTime } = require('../utils/timezone
 const { buildUserUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs-filter');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
 const { encryptSecret, decryptSecret } = require('../utils/secret-crypto');
+const { validateUrl, upstreamUrl, cleanBaseUrl: normalizeUpstreamBaseUrl } = require('../utils/url-validator');
 const {
   HARNESS_SOURCES,
   isHarnessSource,
@@ -3642,8 +3643,13 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
     const colNames = colCheck.rows.map(r => r.column_name);
 
     // 动态构建 INSERT 语句
+    const encryptedApiKey = encryptSecret(api_key);
     const insertCols = ['id', 'name', 'base_url', 'api_key', 'format', 'enabled'];
-    const insertValues = [providerId, name, base_url.replace(/\/+$/, ''), encryptSecret(api_key), format || 'openai', true];
+    const insertValues = [providerId, name, base_url.replace(/\/+$/, ''), encryptedApiKey, format || 'openai', true];
+    if (colNames.includes('api_keys') && encryptedApiKey) {
+      insertCols.push('api_keys');
+      insertValues.push(JSON.stringify([{ key: encryptedApiKey, weight: 1, enabled: true }]));
+    }
 
     if (colNames.includes('models_url')) {
       insertCols.push('models_url');
@@ -3666,12 +3672,14 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
 
     // 尝试获取模型列表并自动添加
     try {
-      const { upstreamUrl } = require('../utils/url-validator');
       const modelsUrl = models_url
         ? (models_url.startsWith('http') ? models_url : `${base_url.replace(/\/+$/, '')}${models_url.startsWith('/') ? '' : '/'}${models_url}`)
         : upstreamUrl(base_url, '/models');
+      const urlCheck = await validateUrl(modelsUrl, { allowPrivate: false });
+      if (!urlCheck.ok) throw new Error(`模型列表 URL 校验失败: ${urlCheck.error}`);
       const modelsRes = await fetch(modelsUrl, {
-        headers: { 'Authorization': `Bearer ${api_key}` }
+        headers: { 'Authorization': `Bearer ${api_key}` },
+        redirect: 'manual'
       });
 
       if (modelsRes.ok) {
@@ -3790,7 +3798,6 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
     }
 
     const candidates = [];
-    const { upstreamUrl } = require('../utils/url-validator');
     candidates.push(upstreamUrl(baseUrl, '/models'));
     if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(baseUrl)) {
       candidates.push(`${baseUrl}/models`);
@@ -3799,7 +3806,9 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
     for (const url of candidates) {
       const start = Date.now();
       try {
-        const resp = await fetch(url, { headers, signal: AbortSignal.timeout(5000) });
+        const urlCheck = await validateUrl(url, { allowPrivate: false });
+        if (!urlCheck.ok) continue;
+        const resp = await fetch(url, { headers, signal: AbortSignal.timeout(5000), redirect: 'manual' });
         const latency = Date.now() - start;
         if (resp.ok) return res.json({ ok: true, latency_ms: latency, url });
         if (resp.status === 401 || resp.status === 403) {
@@ -3810,7 +3819,11 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
 
     const start = Date.now();
     try {
-      const resp = await fetch(baseUrl, { headers, signal: AbortSignal.timeout(5000), redirect: 'follow' });
+      const urlCheck = await validateUrl(baseUrl, { allowPrivate: false });
+      if (!urlCheck.ok) {
+        return res.json({ ok: false, latency_ms: null, error: `Base URL 校验失败: ${urlCheck.error}` });
+      }
+      const resp = await fetch(baseUrl, { headers, signal: AbortSignal.timeout(5000), redirect: 'manual' });
       const latency = Date.now() - start;
       return res.json({ ok: true, latency_ms: latency, url: baseUrl, note: `HTTP ${resp.status}` });
     } catch (e) {
@@ -3865,8 +3878,11 @@ router.put('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_
       values.push(base_url.replace(/\/+$/, ''));
     }
     if (api_key) {
+      const encryptedApiKey = encryptSecret(api_key);
       updates.push(`api_key = $${paramIndex++}`);
-      values.push(encryptSecret(api_key));
+      values.push(encryptedApiKey);
+      updates.push(`api_keys = $${paramIndex++}::jsonb`);
+      values.push(JSON.stringify([{ key: encryptedApiKey, weight: 1, enabled: true }]));
     }
     if (format) {
       updates.push(`format = $${paramIndex++}`);
@@ -3962,7 +3978,7 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
     // 获取模型列表 - 尝试多个地址
     const baseUrl = provider.base_url?.replace(/\/+$/, '');
     const customModelsUrl = provider.models_url?.replace(/\/+$/, '') || '';
-    const apiKey = provider.api_key || '';
+    const apiKey = decryptSecret(provider.api_key) || '';
 
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) {
@@ -3976,12 +3992,11 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
     }
 
     // 从 base_url 推断 API 根路径
-    const cleanBaseUrl = baseUrl
-      .replace(/\/(chat\/completions|completions|messages|responses|embeddings)\/?$/, '')
+    const cleanBaseUrl = normalizeUpstreamBaseUrl(baseUrl)
+      .replace(/\/(completions|embeddings)\/?$/i, '')
       .replace(/\/+$/, '');
 
     // 自动推断路径
-    const { upstreamUrl } = require('../utils/url-validator');
     candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models'));
     if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(cleanBaseUrl)) {
       candidateUrls.push(`${cleanBaseUrl}/models`);
@@ -3996,7 +4011,12 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
     for (const modelsUrl of uniqueUrls) {
       Logger.info(`[用户刷新模型] 尝试: ${modelsUrl}`);
       try {
-        const response = await fetch(modelsUrl, { headers, signal: AbortSignal.timeout(15000) });
+        const urlCheck = await validateUrl(modelsUrl, { allowPrivate: false });
+        if (!urlCheck.ok) {
+          Logger.warn(`[用户刷新模型] SSRF 校验拒绝: ${modelsUrl} - ${urlCheck.error}`);
+          continue;
+        }
+        const response = await fetch(modelsUrl, { headers, signal: AbortSignal.timeout(15000), redirect: 'manual' });
         if (!response.ok) continue;
 
         const data = await response.json();

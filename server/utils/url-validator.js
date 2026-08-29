@@ -24,16 +24,6 @@ const PRIVATE_RANGES = [
   { start: '198.18.0.0', end: '198.19.255.255' },
 ];
 
-// IPv6 特殊地址
-const IPV6_BLOCKED_PREFIXES = [
-  '::1',           // 本地回环
-  '::',            // 未指定
-  'fe80::',        // 链路本地
-  'fc00::',        // 唯一本地地址
-  'fd00::',        // 唯一本地地址
-  'ff00::',        // 组播
-  '0:0:0:0:0:ffff:', // IPv4 映射地址（需额外检查嵌入的 IPv4）
-];
 
 /**
  * 将 IP 字符串转换为数字（用于范围比较）
@@ -59,11 +49,47 @@ function isPrivateIPv4(ip) {
 }
 
 /**
+ * 将 IPv6 地址展开为 8 个 16 位分组。
+ */
+function parseIPv6(ip) {
+  let value = String(ip || '').toLowerCase().replace(/^\[|\]$/g, '').split('%')[0];
+  if (!net.isIPv6(value)) return null;
+
+  const ipv4Match = value.match(/(?:^|:)(\d+\.\d+\.\d+\.\d+)$/);
+  if (ipv4Match) {
+    const ipv4 = ipToNumber(ipv4Match[1]);
+    if (ipv4 === null) return null;
+    value = value.slice(0, -ipv4Match[1].length) + `${(ipv4 >>> 16).toString(16)}:${(ipv4 & 0xffff).toString(16)}`;
+  }
+
+  const halves = value.split('::');
+  if (halves.length > 2) return null;
+  const left = halves[0] ? halves[0].split(':') : [];
+  const right = halves[1] ? halves[1].split(':') : [];
+  const missing = 8 - left.length - right.length;
+  if (missing < 0 || (halves.length === 1 && missing !== 0)) return null;
+  const groups = [...left, ...Array(missing).fill('0'), ...right].map(part => parseInt(part || '0', 16));
+  return groups.length === 8 && groups.every(group => Number.isInteger(group) && group >= 0 && group <= 0xffff)
+    ? groups
+    : null;
+}
+
+/**
  * 检查 IPv6 地址是否在禁止范围
  */
 function isBlockedIPv6(ip) {
-  const lower = ip.toLowerCase();
-  return IPV6_BLOCKED_PREFIXES.some(prefix => lower.startsWith(prefix));
+  const groups = parseIPv6(ip);
+  if (!groups) return true;
+  if (groups.every(group => group === 0)) return true; // ::/128
+  if (groups.slice(0, 7).every(group => group === 0) && groups[7] === 1) return true; // ::1/128
+  if ((groups[0] & 0xfe00) === 0xfc00) return true; // fc00::/7
+  if ((groups[0] & 0xffc0) === 0xfe80) return true; // fe80::/10
+  if ((groups[0] & 0xff00) === 0xff00) return true; // ff00::/8
+  if (groups.slice(0, 5).every(group => group === 0) && groups[5] === 0xffff) {
+    const mapped = `${groups[6] >>> 8}.${groups[6] & 0xff}.${groups[7] >>> 8}.${groups[7] & 0xff}`;
+    return isPrivateIPv4(mapped);
+  }
+  return false;
 }
 
 /**
@@ -72,13 +98,14 @@ function isBlockedIPv6(ip) {
 function isBlockedHost(hostname) {
   // 排除 DNS 解析失败
   if (!hostname) return true;
+  const normalizedHost = String(hostname).replace(/^\[|\]$/g, '');
 
   // 检查是否为 IP 地址
-  if (net.isIPv4(hostname)) {
-    return isPrivateIPv4(hostname);
+  if (net.isIPv4(normalizedHost)) {
+    return isPrivateIPv4(normalizedHost);
   }
-  if (net.isIPv6(hostname)) {
-    return isBlockedIPv6(hostname);
+  if (net.isIPv6(normalizedHost)) {
+    return isBlockedIPv6(normalizedHost);
   }
 
   // 检查是否为本地主机名
@@ -88,7 +115,7 @@ function isBlockedHost(hostname) {
     '0.0.0.0',
     'broadcasthost',
   ];
-  if (localHosts.includes(hostname.toLowerCase())) {
+  if (localHosts.includes(normalizedHost.toLowerCase())) {
     return true;
   }
 
@@ -129,16 +156,21 @@ async function validateUrl(urlStr, options = {}) {
       return { ok: false, error: `不允许请求内网地址: ${url.hostname}` };
     }
 
+    const normalizedHost = url.hostname.replace(/^\[|\]$/g, '');
+
     // 检查 IP 形式的 URL 中的地址
-    if (net.isIPv4(url.hostname) && isPrivateIPv4(url.hostname)) {
+    if (net.isIPv4(normalizedHost) && isPrivateIPv4(normalizedHost)) {
       return { ok: false, error: `不允许请求内网 IP: ${url.hostname}` };
     }
+    if (net.isIPv6(normalizedHost) && isBlockedIPv6(normalizedHost)) {
+      return { ok: false, error: `不允许请求内网 IPv6: ${url.hostname}` };
+    }
 
-    // 解析域名并检查所有地址，防止 DNS rebinding/解析到内网地址。
-    if (resolveDNS && !net.isIP(url.hostname)) {
+    // 解析域名并检查所有地址。请求仍按域名连接，无法完全消除 DNS rebinding。
+    if (resolveDNS && !net.isIP(normalizedHost)) {
       let addresses;
       try {
-        addresses = await dns.lookup(url.hostname, { all: true, verbatim: true });
+        addresses = await dns.lookup(normalizedHost, { all: true, verbatim: true });
       } catch (err) {
         return { ok: false, error: `域名 DNS 解析失败: ${url.hostname}` };
       }
@@ -181,23 +213,24 @@ async function buildSafeUrl(baseUrl, path = '', options = {}) {
  */
 function cleanBaseUrl(base) {
   return String(base || '')
-    .replace(/\/$/, '')
-    .replace(/\/v1\/chat\/completions$/i, '')
-    .replace(/\/v1\/messages$/i, '')
-    .replace(/\/v1\/responses$/i, '')
-    .replace(/\/chat\/completions$/i, '')
-    .replace(/\/messages$/i, '')
-    .replace(/\/responses$/i, '');
+    .replace(/\/+$/, '')
+    .replace(/\/v1\/chat\/completions\/*$/i, '')
+    .replace(/\/v1\/messages\/*$/i, '')
+    .replace(/\/v1\/responses\/*$/i, '')
+    .replace(/\/chat\/completions\/*$/i, '')
+    .replace(/\/messages\/*$/i, '')
+    .replace(/\/responses\/*$/i, '');
 }
 
 /**
  * 拼接上游 API 端点。endpoint 不含版本前缀（如 '/chat/completions'）；
- * base_url 已以版本段结尾时直接拼，否则补上 /v1。
+ * base_url 已以版本段结尾时直接拼，否则补上 defaultVersion。
  */
-function upstreamUrl(base, endpoint) {
+function upstreamUrl(base, endpoint, defaultVersion = '/v1') {
   const clean = cleanBaseUrl(base);
   const hasVersionSuffix = /\/v\d+(?:[a-z]+\d*)?$/i.test(clean);
-  return hasVersionSuffix ? clean + endpoint : `${clean}/v1${endpoint}`;
+  const version = `/${String(defaultVersion || 'v1').replace(/^\/+|\/+$/g, '')}`;
+  return hasVersionSuffix ? clean + endpoint : `${clean}${version}${endpoint}`;
 }
 
 module.exports = {
@@ -207,5 +240,6 @@ module.exports = {
   upstreamUrl,
   isBlockedHost,
   isPrivateIPv4,
+  isBlockedIPv6,
   PRIVATE_RANGES,
 };

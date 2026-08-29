@@ -195,9 +195,10 @@ router.post('/chat', requireAuth, async (req, res) => {
       }
     }
 
+    const { upstreamUrl, validateUrl } = require('../utils/url-validator');
     let url;
     if (provider.format === 'anthropic') {
-      url = `${provider.base_url}/messages`;
+      url = upstreamUrl(provider.base_url, '/messages');
       const systemMsg = messages.find(m => m.role === 'system');
       const nonSystem = messages.filter(m => m.role !== 'system');
       upstreamBody.messages = nonSystem;
@@ -207,8 +208,12 @@ router.post('/chat', requireAuth, async (req, res) => {
       }
       if (systemMsg) upstreamBody.system = systemMsg.content;
     } else {
-      const { upstreamUrl } = require('../utils/url-validator');
       url = upstreamUrl(provider.base_url, '/chat/completions');
+    }
+
+    const urlCheck = await validateUrl(url, { allowPrivate: false });
+    if (!urlCheck.ok) {
+      return res.status(400).json({ error: `供应商 URL 校验失败: ${urlCheck.error}` });
     }
 
     // 多 Key：顺序 / 权重尝试，失败后 fallback
@@ -233,7 +238,8 @@ router.post('/chat', requireAuth, async (req, res) => {
           method: 'POST',
           headers,
           body: JSON.stringify(upstreamBody),
-          signal: AbortSignal.timeout(isStream ? UPSTREAM_STREAM_TIMEOUT : UPSTREAM_TIMEOUT)
+          signal: AbortSignal.timeout(isStream ? UPSTREAM_STREAM_TIMEOUT : UPSTREAM_TIMEOUT),
+          redirect: 'manual'
         });
       } catch (fetchErr) {
         lastErrText = fetchErr.message || 'fetch failed';

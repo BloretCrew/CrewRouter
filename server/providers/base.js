@@ -84,7 +84,7 @@ class BaseProviderAdapter {
         fullUrl = upstreamUrl(baseUrl, '/messages');
         break;
       case 'gemini':
-        fullUrl = `${baseUrl}/v1beta/models/${model}:generateContent`;
+        fullUrl = upstreamUrl(baseUrl, `/models/${encodeURIComponent(model)}:generateContent`, '/v1beta');
         break;
       case 'responses':
         fullUrl = upstreamUrl(baseUrl, '/responses');
