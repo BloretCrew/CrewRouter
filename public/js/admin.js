@@ -263,6 +263,13 @@ class AdminApp {
     }
   }
 
+  async logout() {
+    try {
+      await fetch('/auth/logout', { credentials: 'same-origin' });
+    } catch (e) {}
+    window.location.href = '/';
+  }
+
   bindEvents() {
     // 导航点击
     const navItems = document.querySelectorAll('.nav-item[data-page]');
