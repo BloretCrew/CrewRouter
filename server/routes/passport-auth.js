@@ -88,7 +88,13 @@ router.get('/passport', async (req, res) => {
 
 router.get('/passport/callback', async (req, res) => {
   const { code, state } = req.query;
-  if (!state || state !== req.session.passportState) return res.status(400).send('PassPort 登录状态无效，请返回重试。');
+  const sessionState = req.session.passportState;
+  const setupState = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");
+  const isInitialSetup = setupState.rows.length === 0;
+  // PassPort 首次授权可能不回传 state，初始化阶段允许无 state 回调；已有系统仍校验会话状态。
+  if (state && state !== sessionState || (!state && !sessionState && !isInitialSetup) || (!state && sessionState && !isInitialSetup)) {
+    return res.status(400).send('PassPort 登录状态无效，请返回重试。');
+  }
   const invite = req.session.passportInvite;
   delete req.session.passportState;
   delete req.session.passportInvite;
