@@ -36,7 +36,8 @@ router.get('/passport/redirect-uri', (req, res) => {
   try {
     res.json({ redirectUri: getRedirectUri(req) });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    // 内网主机名无法作为公网回调地址时，由前端询问用户实际域名。
+    res.json({ requiresConfirmation: true, error: err.message });
   }
 });
 

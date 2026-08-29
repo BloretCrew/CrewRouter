@@ -221,7 +221,7 @@
         try {
           const response = await fetch('/auth/passport/redirect-uri', { credentials: 'same-origin' });
           const data = await response.json().catch(() => ({}));
-          if (response.ok && data.redirectUri) {
+          if (data.redirectUri) {
             const origin = new URL(data.redirectUri).origin;
             window.location.href = `/auth/passport?redirect_origin=${encodeURIComponent(origin)}`;
             return;
