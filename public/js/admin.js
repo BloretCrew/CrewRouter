@@ -805,39 +805,37 @@ class AdminApp {
         <div class="form-group"><label>加入 Team</label><select id="inviteTeamId" class="input"><option value="">不指定</option>${teamOptions}</select></div>
         <div class="form-group"><label>加入用户组</label><select id="inviteGroupId" class="input"><option value="">不指定</option>${groupOptions}</select></div>
       </div>`;
-    const modal = (window.Dialog && Dialog.showModal)
-      ? Dialog.showModal({ title: '生成邀请链接', content, confirmText: '生成', cancelText: t('取消') })
-      : null;
-    const confirm = async () => {
-      const maxUses = parseInt(document.getElementById('inviteMaxUses')?.value || '', 10);
-      const days = parseInt(document.getElementById('inviteDays')?.value || '', 10);
-      if (!Number.isInteger(maxUses) || maxUses < 1) throw new Error('请填写使用人数');
-      if (!Number.isInteger(days) || days < 1) throw new Error('请填写有效天数');
-      const payload = {
-        maxUses,
-        days,
-        teamId: document.getElementById('inviteTeamId')?.value || '',
-        groupId: document.getElementById('inviteGroupId')?.value || '',
-      };
-      const data = await this._inviteRequest('/api/auth-invites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      this._inviteUrlMap = this._inviteUrlMap || {};
-      if (data.id && data.url) this._inviteUrlMap[data.id] = data.url;
-      if (navigator.clipboard?.writeText && data.url) await navigator.clipboard.writeText(data.url);
-      const result = document.getElementById('inviteResult');
-      if (result) result.innerHTML = `<div><strong>最新邀请链接</strong></div><div>${escapeHtml(data.url || '')}</div><div style="margin-top:6px;color:var(--muted-foreground);font-size:12px;">人数 ${data.max_uses} · ${data.days || ''} 天 · 有效期至 ${new Date(data.expires_at).toLocaleString()}</div>`;
-      alert(`邀请链接已生成并复制：\n\n${data.url}\n使用人数：${data.max_uses}\n有效天数：${days}\n有效期至：${new Date(data.expires_at).toLocaleString()}`);
-      await this.loadInvites();
-    };
-    if (modal?.then) {
-      const ok = await modal;
-      if (ok) await confirm().catch((err) => alert(err.message || '生成邀请链接失败'));
-      return;
-    }
-    if (window.confirm('确认按表单中的使用人数和有效天数生成邀请链接？')) await confirm().catch((err) => alert(err.message || '生成邀请链接失败'));
+    const footer = `<button type="button" class="dialog-btn dialog-btn-primary" id="inviteGenerateBtn">生成</button>`;
+    const modal = Dialog.showModal({ title: '生成邀请链接', content, footer, width: 480 });
+    document.getElementById('inviteGenerateBtn')?.addEventListener('click', async () => {
+      try {
+        const maxUses = parseInt(document.getElementById('inviteMaxUses')?.value || '', 10);
+        const days = parseInt(document.getElementById('inviteDays')?.value || '', 10);
+        if (!Number.isInteger(maxUses) || maxUses < 1) throw new Error('请填写使用人数');
+        if (!Number.isInteger(days) || days < 1) throw new Error('请填写有效天数');
+        const payload = {
+          maxUses,
+          days,
+          teamId: document.getElementById('inviteTeamId')?.value || '',
+          groupId: document.getElementById('inviteGroupId')?.value || '',
+        };
+        const data = await this._inviteRequest('/api/auth-invites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        this._inviteUrlMap = this._inviteUrlMap || {};
+        if (data.id && data.url) this._inviteUrlMap[data.id] = data.url;
+        if (navigator.clipboard?.writeText && data.url) await navigator.clipboard.writeText(data.url);
+        const result = document.getElementById('inviteResult');
+        if (result) result.innerHTML = `<div><strong>最新邀请链接</strong></div><div>${escapeHtml(data.url || '')}</div><div style="margin-top:6px;color:var(--muted-foreground);font-size:12px;">人数 ${data.max_uses} · ${days} 天 · 有效期至 ${new Date(data.expires_at).toLocaleString()}</div>`;
+        modal?.close?.();
+        alert(`邀请链接已生成并复制：\n\n${data.url}\n使用人数：${data.max_uses}\n有效天数：${days}\n有效期至：${new Date(data.expires_at).toLocaleString()}`);
+        await this.loadInvites();
+      } catch (err) {
+        alert(err.message || '生成邀请链接失败');
+      }
+    });
   }
 
   copyInviteUrl(id) {
