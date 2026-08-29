@@ -430,7 +430,7 @@ async function ensureAuthModeTables() {
     if (setup.rows.length && !mode.rows.length) {
       await pool.query("INSERT INTO settings (key, value) VALUES ('auth_mode', $1::jsonb) ON CONFLICT (key) DO NOTHING", [JSON.stringify('feishu')]);
     }
-  } catch (err) { Logger.warn(`[迁移] auth_mode/passport 迁移跳过: ${err.message}`); }
+  } catch (err) { Logger.error(`[迁移] auth_mode/passport 迁移跳过: ${err.message}`); throw err; }
 }
 
 // ========== 自动迁移：为 users 添加 2FA、GitHub、PassKey 字段 ==========
@@ -783,7 +783,7 @@ async function ensureTraceSessionTables() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_trace_sessions_user ON trace_sessions(user_id, started_at DESC)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_trace_events_session ON trace_events(session_id, created_at)`);
     Logger.info('[迁移] 跟踪记录表已就绪');
-  } catch (err) { Logger.warn(`[迁移] 跟踪记录表迁移跳过: ${err.message}`); }
+  } catch (err) { Logger.error(`[迁移] 跟踪记录表迁移跳过: ${err.message}`); throw err; }
 }
 
 // 添加 usage_records 扩展字段
