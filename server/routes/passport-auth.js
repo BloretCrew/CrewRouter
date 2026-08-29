@@ -80,9 +80,11 @@ router.get('/passport', async (req, res) => {
     req.session.passportInvite = invite;
     saveSession(req, res, (err) => {
       if (err) return res.status(500).send('登录状态保存失败，请重试。');
-      // PassPort 会在内部再次拼接授权路径，redirect_uri 需要额外编码一次，避免 :// 被解析成 /。
-      const params = new URLSearchParams({ app_id: passport.appId, redirect_uri: encodeURIComponent(redirectUri), state });
-      res.redirect(`${baseUrl}/app/oauth?${params}`);
+      // PassPort 会把 redirect_uri 作为 /app/oauth/ 后的路径段处理。
+      // 协议中的 :// 会被解析成 /，因此路径里改用 http/ 或 https/ 形式。
+      const pathRedirectUri = redirectUri.replace(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\//, '$1/');
+      const params = new URLSearchParams({ app_id: passport.appId, state });
+      res.redirect(`${baseUrl}/app/oauth/${encodeURIComponent(pathRedirectUri)}?${params}`);
     });
   } catch (err) { Logger.error('[PassPort] OAuth 入口失败:', err.message); res.status(500).send(`PassPort 授权入口配置错误：${err.message}`); }
 });
