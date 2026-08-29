@@ -2761,7 +2761,7 @@ async function handleChatCompletion(req, res) {
 
         const localModelId = modelConfig.id || userRequestedModel;
         const latencyMs = Date.now() - liveCallStart;
-        await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
@@ -2769,6 +2769,7 @@ async function handleChatCompletion(req, res) {
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[用量记录] 错误:', err);
@@ -2940,7 +2941,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
           apiKeyId: req.apiUser.keyId,
         }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
-        await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`, usageValues: [req.apiUser.userId, req.apiUser.keyId, totalTokens,
            fusionPromptTokens, fusionCompletionTokens,
@@ -2948,6 +2949,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
            JSON.stringify(messages), result.content || null, pointsToDeduct,
            Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
 
         // 记录 Fusion 专用用量
         await pool.query(
@@ -3361,7 +3363,7 @@ async function handleAnthropicMessage(req, res) {
 
         const localModelId = modelConfig.id || queueModelId;
         const latencyMs = Date.now() - liveCallStart;
-        await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
@@ -3369,6 +3371,7 @@ async function handleAnthropicMessage(req, res) {
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Anthropic 用量记录] 错误:', err);
@@ -5427,7 +5430,7 @@ async function handleResponses(req, res) {
                 apiKeyId: req.apiUser.keyId,
               }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
               const localModelId = modelConfig.id || model;
-              await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+              const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
                  cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                  promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
@@ -5435,6 +5438,7 @@ async function handleResponses(req, res) {
                  typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
                  null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
                  pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
               recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
             } catch (err) {
               Logger.error('[Responses/Passthru] 用量记录错误:', err);
@@ -5530,7 +5534,7 @@ async function handleResponses(req, res) {
             }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
             const localModelId = modelConfig.id || model;
             const latencyMs = Date.now() - liveCallStart;
-            await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+            const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
                cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                result.promptTokens || 0, result.completionTokens || 0,
@@ -5539,6 +5543,7 @@ async function handleResponses(req, res) {
                typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
                latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
                pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
             recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
           } catch (err) {
             Logger.error('[Responses] 用量记录错误:', err);
@@ -5724,7 +5729,7 @@ async function handleResponses(req, res) {
           const requestParams = usageEstimated
             ? { estimated: true, estimate_method: 'output_chars/4', prompt_tokens_policy: 'zero_when_unknown' }
             : { estimated: false };
-          await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+          const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
              cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_params, request_source, user_agent, plugin_meta)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
              promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
@@ -5733,6 +5738,7 @@ async function handleResponses(req, res) {
              Date.now() - liveCallStart, clientIp(req), JSON.stringify(requestParams),
              clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
              pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
           recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
         } catch (err) {
           Logger.warn(`[Responses/Passthru] 计费/用量记录失败: ${err.message}`);
@@ -5790,7 +5796,7 @@ async function handleResponses(req, res) {
         }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
         const localModelId = modelConfig.id || model;
-        await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            promptTokens, completionTokens, cachedTokens, weightedTokens,
@@ -5798,6 +5804,7 @@ async function handleResponses(req, res) {
            typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
            null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Responses/Passthru] 用量记录错误:', err);
@@ -5964,7 +5971,7 @@ async function handleResponses(req, res) {
 
         const localModelId = modelConfig.id || model;
         const latencyMs = typeof liveCallStart === 'number' ? Date.now() - liveCallStart : null;
-        await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
@@ -5973,6 +5980,7 @@ async function handleResponses(req, res) {
            typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
         Logger.error('[Responses] 用量记录错误:', err);

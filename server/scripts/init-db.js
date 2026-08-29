@@ -438,8 +438,8 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS api_keys (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        key_value VARCHAR(255) UNIQUE NOT NULL,
-        key_hash VARCHAR(255) NOT NULL,
+        key_value VARCHAR(255) UNIQUE,
+        key_hash VARCHAR(255) NOT NULL UNIQUE,
         key_prefix VARCHAR(20),
         name VARCHAR(255),
         last_used_at TIMESTAMP,
@@ -468,6 +468,7 @@ async function initDatabase() {
     // 兼容旧表：补齐缺失列（CREATE IF NOT EXISTS 不会改已有表结构）
     const apiKeyColumns = [
       { name: 'key_value', type: 'VARCHAR(255) UNIQUE' },
+      { name: 'key_hash', type: 'VARCHAR(255) NOT NULL UNIQUE' },
       { name: 'key_prefix', type: 'VARCHAR(20)' },
       { name: 'is_system', type: 'BOOLEAN DEFAULT FALSE' },
       { name: 'enabled', type: 'BOOLEAN DEFAULT TRUE' },
