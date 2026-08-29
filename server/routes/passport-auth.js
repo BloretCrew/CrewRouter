@@ -12,10 +12,12 @@ const baseUrl = String(passport.baseUrl || 'https://passport.bloret.net').replac
 
 function getRedirectUri(req) {
   const protocol = String(req.protocol || '').toLowerCase();
-  const host = String(req.get('host') || '').trim();
-  if (!host || !/^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}(?::\d{1,5})?$/.test(host) && !/^localhost(?::\d{1,5})?$/.test(host)) {
-    throw new Error('无法安全确定当前域名');
-  }
+  const forwardedHost = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
+  const host = forwardedHost || String(req.get('host') || '').trim();
+  const validHost = /^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}(?::\d{1,5})?$/.test(host)
+    || /^(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/.test(host)
+    || /^(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?$/.test(host);
+  if (!validHost) throw new Error('无法安全确定当前域名');
   if (protocol !== 'https:' && !(protocol === 'http:' && /^(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/.test(host))) {
     throw new Error('PassPort 回调地址必须使用 HTTPS');
   }
@@ -73,7 +75,7 @@ router.get('/passport', async (req, res) => {
       const params = new URLSearchParams({ app_id: passport.appId, redirect_uri: redirectUri, state });
       res.redirect(`${baseUrl}/app/oauth?${params}`);
     });
-  } catch (err) { Logger.error('[PassPort] OAuth 入口失败:', err.message); res.redirect('/?error=passport_not_configured'); }
+  } catch (err) { Logger.error('[PassPort] OAuth 入口失败:', err.message); res.status(500).send(`PassPort 授权入口配置错误：${err.message}`); }
 });
 
 router.get('/passport/callback', async (req, res) => {
