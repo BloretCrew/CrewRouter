@@ -891,7 +891,7 @@ router.get('/api-keys/:id/fusion-config', requireAuth, async (req, res) => {
     const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const keyResult = await pool.query(
-      'SELECT fusion_panel_models, fusion_judge_model_id, fusion_outer_model_id, fusion_enabled FROM api_keys WHERE id = $1',
+      'SELECT fusion_panel_models, fusion_judge_model_id, fusion_outer_model_id, fusion_enabled, fusion_synthesis_prompt_enabled FROM api_keys WHERE id = $1',
       [req.params.id]
     );
     if (keyResult.rows.length === 0) {
@@ -903,7 +903,8 @@ router.get('/api-keys/:id/fusion-config', requireAuth, async (req, res) => {
       panel_models: key.fusion_panel_models || [],
       judge_model_id: key.fusion_judge_model_id || '',
       outer_model_id: key.fusion_outer_model_id || '',
-      fusion_enabled: key.fusion_enabled !== false
+      fusion_enabled: key.fusion_enabled !== false,
+      fusion_synthesis_prompt_enabled: key.fusion_synthesis_prompt_enabled !== false
     });
   } catch (error) {
     Logger.error('[获取Fusion配置] 错误:', error);
@@ -921,10 +922,11 @@ router.put('/api-keys/:id/fusion-config', requireAuth, auditMiddleware(ACTIONS.A
     judge_model_id: req.body?.judge_model_id,
     outer_model_id: req.body?.outer_model_id,
     fusion_enabled: req.body?.fusion_enabled,
+    fusion_synthesis_prompt_enabled: req.body?.fusion_synthesis_prompt_enabled,
   }),
 }), async (req, res) => {
   try {
-    const { panel_models, judge_model_id, outer_model_id, fusion_enabled } = req.body;
+    const { panel_models, judge_model_id, outer_model_id, fusion_enabled, fusion_synthesis_prompt_enabled } = req.body;
 
     const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
@@ -957,12 +959,22 @@ router.put('/api-keys/:id/fusion-config', requireAuth, auditMiddleware(ACTIONS.A
     }
 
     await pool.query(
-      `UPDATE api_keys SET fusion_panel_models = $1, fusion_judge_model_id = $2, fusion_outer_model_id = $3, fusion_enabled = $4 WHERE id = $5`,
-      [JSON.stringify(normalizedPanelModels), normalizedJudgeModel, normalizedOuterModel, fusion_enabled !== false, req.params.id]
+      `UPDATE api_keys
+       SET fusion_panel_models = $1, fusion_judge_model_id = $2, fusion_outer_model_id = $3,
+           fusion_enabled = $4, fusion_synthesis_prompt_enabled = $5
+       WHERE id = $6`,
+      [
+        JSON.stringify(normalizedPanelModels),
+        normalizedJudgeModel,
+        normalizedOuterModel,
+        fusion_enabled !== false,
+        fusion_synthesis_prompt_enabled !== false,
+        req.params.id
+      ]
     );
 
     invalidateApiKeyCacheByKeyId(parseInt(req.params.id));
-    Logger.info(`[Fusion] 更新 API Key ${req.params.id} 的 Fusion 配置: enabled=${fusion_enabled !== false}, panel=${normalizedPanelModels.length}, judge=${normalizedJudgeModel}, outer=${normalizedOuterModel}`);
+    Logger.info(`[Fusion] 更新 API Key ${req.params.id} 的 Fusion 配置: enabled=${fusion_enabled !== false}, synthesisPrompt=${fusion_synthesis_prompt_enabled !== false}, panel=${normalizedPanelModels.length}, judge=${normalizedJudgeModel}, outer=${normalizedOuterModel}`);
     res.json({ success: true });
   } catch (error) {
     Logger.error('[更新Fusion配置] 错误:', error);

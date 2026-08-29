@@ -1173,6 +1173,7 @@ async function validateApiKey(req, res, next) {
       fusionJudgeModelId: keyData.fusion_judge_model_id || '',
       fusionOuterModelId: keyData.fusion_outer_model_id || '',
       fusionEnabled: keyData.fusion_enabled !== false,
+      fusionSynthesisPromptEnabled: keyData.fusion_synthesis_prompt_enabled !== false,
       // 优先使用 key 级别签名设置，回退到用户级别设置
       signatureEnabled: keySignatureResult.rows[0]?.signature_enabled !== null
         ? keySignatureResult.rows[0].signature_enabled
@@ -2838,7 +2839,8 @@ async function handleFusionRequest(req, res, format = 'openai') {
         apiKeyFusionConfig: {
           panel_models: req.apiUser.fusionPanelModels || [],
           judge_model_id: req.apiUser.fusionJudgeModelId || '',
-          outer_model_id: req.apiUser.fusionOuterModelId || ''
+          outer_model_id: req.apiUser.fusionOuterModelId || '',
+          synthesis_prompt_enabled: req.apiUser.fusionSynthesisPromptEnabled !== false
         }
       }
     );

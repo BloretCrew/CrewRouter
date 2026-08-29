@@ -2869,6 +2869,7 @@ class ConsoleApp {
       const currentJudge = config.judge_model_id || '';
       const currentOuter = config.outer_model_id || '';
       const fusionEnabled = config.fusion_enabled !== false;
+      const synthesisPromptEnabled = config.fusion_synthesis_prompt_enabled !== false;
 
       // 按供应商分组
       const byProvider = {};
@@ -2893,6 +2894,17 @@ class ConsoleApp {
         </div>
 
         <div id="fusionConfigBody" style="${fusionEnabled ? '' : 'opacity:0.4;pointer-events:none;'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;">
+          <div style="padding-right:16px;">
+            <div style="font-size:14px;font-weight:500;">${t('启用 Fusion 综合提示')}</div>
+            <div id="fusionSynthesisPromptRisk" style="font-size:12px;color:${synthesisPromptEnabled ? 'var(--muted-foreground)' : 'var(--destructive)'};">${synthesisPromptEnabled ? t('开启时，Panel 仅作为不可信结构化参考，不会拼入 system prompt。') : t('关闭后会保留原始 Panel 内容，但内容未经净化，存在提示注入风险。')}</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex:none;">
+            <input type="checkbox" id="fusionSynthesisPromptToggle" ${synthesisPromptEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+            <span style="position:absolute;inset:0;background:${synthesisPromptEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
+            <span style="position:absolute;top:2px;${synthesisPromptEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+          </label>
+        </div>
         <div style="margin-bottom:16px;">
           <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:8px;">Panel 模型（多选，并行调用）</div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -2955,6 +2967,24 @@ class ConsoleApp {
         });
       }
 
+      const synthesisToggleEl = document.getElementById('fusionSynthesisPromptToggle');
+      if (synthesisToggleEl) {
+        synthesisToggleEl.addEventListener('change', () => {
+          const on = synthesisToggleEl.checked;
+          const track = synthesisToggleEl.nextElementSibling;
+          const knob = track?.nextElementSibling;
+          const risk = document.getElementById('fusionSynthesisPromptRisk');
+          if (track) track.style.background = on ? 'var(--primary)' : 'var(--border)';
+          if (knob) { knob.style.left = on ? '' : '2px'; knob.style.right = on ? '2px' : ''; }
+          if (risk) {
+            risk.textContent = on
+              ? t('开启时，Panel 仅作为不可信结构化参考，不会拼入 system prompt。')
+              : t('关闭后会保留原始 Panel 内容，但内容未经净化，存在提示注入风险。');
+            risk.style.color = on ? 'var(--muted-foreground)' : 'var(--destructive)';
+          }
+        });
+      }
+
       // 绑定 panel checkbox 变化事件
       container.querySelectorAll('.fusion-panel-cb').forEach(cb => {
         cb.addEventListener('change', () => {
@@ -2974,7 +3004,13 @@ class ConsoleApp {
           const saveRes = await fetch(`/api/user/api-keys/${keyId}/fusion-config`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ panel_models: panelModels, judge_model_id: judgeModelId, outer_model_id: outerModelId, fusion_enabled: document.getElementById('fusionEnabledToggle')?.checked ?? true })
+            body: JSON.stringify({
+              panel_models: panelModels,
+              judge_model_id: judgeModelId,
+              outer_model_id: outerModelId,
+              fusion_enabled: document.getElementById('fusionEnabledToggle')?.checked ?? true,
+              fusion_synthesis_prompt_enabled: document.getElementById('fusionSynthesisPromptToggle')?.checked ?? true
+            })
           });
           if (saveRes.ok) {
             this.closeModals();

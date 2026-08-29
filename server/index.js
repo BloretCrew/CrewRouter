@@ -1651,13 +1651,14 @@ async function ensureApiKeyFusionConfig() {
   }
 }
 
-// ========== 自动迁移：为 api_keys 添加 fusion_enabled 字段 ==========
+// ========== 自动迁移：为 api_keys 添加 Fusion 开关字段 ==========
 async function ensureApiKeyFusionEnabled() {
   try {
     await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS fusion_enabled BOOLEAN DEFAULT TRUE`);
-    Logger.info('[迁移] api_keys 表 fusion_enabled 字段已就绪');
+    await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS fusion_synthesis_prompt_enabled BOOLEAN DEFAULT TRUE`);
+    Logger.info('[迁移] api_keys 表 Fusion 开关字段已就绪');
   } catch (err) {
-    Logger.error(`[迁移] api_keys fusion_enabled 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] api_keys Fusion 开关字段迁移跳过: ${err.message}`);
     throw err;
   }
 }

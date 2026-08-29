@@ -355,6 +355,8 @@ async function processFusion(body, req, options = {}) {
   // 1. 获取 Fusion 配置（优先使用 API Key 级别配置，其次使用 preset）
   let fusionConfig;
   const apiKeyCfg = options.apiKeyFusionConfig;
+  const synthesisPromptEnabled = apiKeyCfg?.synthesis_prompt_enabled !== false;
+  requestContext.fusionSynthesisPromptEnabled = synthesisPromptEnabled;
 
   if (apiKeyCfg && apiKeyCfg.panel_models && apiKeyCfg.panel_models.length > 0 && apiKeyCfg.judge_model_id && apiKeyCfg.outer_model_id) {
     // 使用 API Key 级别的配置
@@ -492,7 +494,8 @@ async function processFusion(body, req, options = {}) {
     getProviderForRequest,
     tools,
     tool_choice,
-    response_format
+    response_format,
+    synthesisPromptEnabled
   });
 
   const totalLatency = Date.now() - startTime;
