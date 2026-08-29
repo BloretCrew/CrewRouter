@@ -1,6 +1,7 @@
 const { Pool } = require('pg');
 const config = require('../config-loader');
 const Logger = require('../logger');
+const { encryptSecret } = require('../utils/secret-crypto');
 
 async function ensureDatabase() {
   const adminPool = new Pool({

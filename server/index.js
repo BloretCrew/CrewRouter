@@ -1437,7 +1437,6 @@ async function ensureReservedResources() {
       } catch (e) {
         // 名称冲突等错误忽略
         Logger.error(`[迁移] 为用户 ${user.username} 创建个人账户 Team 跳过: ${e.message}`);
-    throw err;
       }
     }
     if (usersWithoutTeam.rows.length > 0) {
