@@ -216,9 +216,18 @@
       },
 
       async startPassportAuth() {
+        try {
+          const response = await fetch('/auth/passport/redirect-uri');
+          const data = await response.json();
+          if (response.ok && data.redirectUri) {
+            window.location.href = '/auth/passport';
+            return;
+          }
+        } catch (_) {}
+
         const currentOrigin = window.location.origin;
         const answer = window.prompt(
-          `请确认 PassPort 登记的公网地址。\n如果当前地址不确定，请输入实际公网地址（例如 https://example.com）。`,
+          `无法自动确认 PassPort 登记的公网地址。\n请确认或输入实际公网地址（例如 https://example.com）。`,
           currentOrigin
         );
         if (answer === null) return;
