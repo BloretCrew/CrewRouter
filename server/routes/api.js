@@ -81,6 +81,7 @@ const { classifyRequestSemantics } = require('../utils/request-semantics');
 const { createStreamScrubber } = require('../utils/inject-prompt-stream');
 const crypto = require('crypto');
 const { decryptSecret } = require('../utils/secret-crypto');
+const { validateBeforeUpstreamRewrite } = require('../utils/before-upstream-policy');
 
 // 非流式：上游整段响应（headers+body）超时。30s 对免费/慢模型过短，易误杀。
 const UPSTREAM_TIMEOUT = 180000; // 3 分钟
@@ -105,7 +106,7 @@ function isUpstreamTimeoutError(err) {
  */
 function buildUpstreamExceptionError(error, format = 'openai') {
   const isTimeout = isUpstreamTimeoutError(error);
-  const status = error?.code === 'fusion_upstream_limit' ? 429 : (isTimeout ? 504 : 502);
+  const status = Number.isInteger(error?.status) ? error.status : (error?.code === 'fusion_upstream_limit' ? 429 : (isTimeout ? 504 : 502));
   const code = error?.code === 'fusion_upstream_limit' ? 'fusion_upstream_limit' : (isTimeout ? 'upstream_timeout' : (error?.code || 'upstream_error'));
   let message = error?.message || 'unknown error';
   if (isTimeout && /aborted/i.test(message) && !/timeout/i.test(message)) {
@@ -126,7 +127,7 @@ function buildUpstreamExceptionError(error, format = 'openai') {
           message
         }
       },
-      retryable: true
+      retryable: status >= 500
     };
   }
   return {
@@ -138,7 +139,7 @@ function buildUpstreamExceptionError(error, format = 'openai') {
         code
       }
     },
-    retryable: true
+    retryable: status >= 500
   };
 }
 
@@ -176,18 +177,23 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
   if (hookCtx && pluginHooks.hasSubscribers('gateway:beforeUpstream')) {
     try {
       const probe = makeFetchOpts(proxyInfo);
-      const payload = {
+      const originalPayload = {
         url: probe.url,
         headers: probe.headers && typeof probe.headers === 'object' ? { ...probe.headers } : {},
         bodyText: typeof probe.body === 'string' ? probe.body : '',
       };
+      const payload = { ...originalPayload, headers: { ...originalPayload.headers } };
       const out = await pluginHooks.apply('gateway:beforeUpstream', payload, {
         provider: provider ? { id: provider.id, name: provider.name, format: provider.format || 'openai' } : null,
         model: hookCtx.model,
         requestType: hookCtx.requestType || logPrefix,
       });
-      if (out && typeof out === 'object') upstreamOverride = out;
+      if (out && typeof out === 'object') {
+        const checked = await validateBeforeUpstreamRewrite(originalPayload, out);
+        upstreamOverride = checked.override;
+      }
     } catch (err) {
+      if (err?.code && String(err.code).startsWith('plugin_')) throw err;
       Logger.warn(`[plugins] beforeUpstream 钩子失败（已忽略）: ${err.message}`);
     }
   }
@@ -197,14 +203,9 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
     if (!upstreamOverride) return fetchOpts;
     if (typeof upstreamOverride.url === 'string' && upstreamOverride.url) fetchOpts.url = upstreamOverride.url;
     if (upstreamOverride.headers && typeof upstreamOverride.headers === 'object') {
-      const base = fetchOpts.headers && typeof fetchOpts.headers === 'object' ? fetchOpts.headers : {};
-      for (const [k, v] of Object.entries(upstreamOverride.headers)) {
-        if (v === null || v === undefined) delete base[k];
-        else base[k] = v;
-      }
-      fetchOpts.headers = base;
+      fetchOpts.headers = { ...upstreamOverride.headers };
     }
-    if (typeof upstreamOverride.bodyText === 'string' && upstreamOverride.bodyText) fetchOpts.body = upstreamOverride.bodyText;
+    if (typeof upstreamOverride.bodyText === 'string') fetchOpts.body = upstreamOverride.bodyText;
     return fetchOpts;
   };
 
