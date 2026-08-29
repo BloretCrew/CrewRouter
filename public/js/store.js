@@ -89,11 +89,11 @@
     return html;
   }
 
-  function starPicker(initial, onPick) {
-    initial = Number(initial) || 0;
-    var html = '<span class="store-stars" data-star-picker="1" data-value="' + initial + '">';
+  function starPicker(initialScore, onPick) {
+    var score = Number(initialScore) || 0;
+    var html = '<span class="store-stars" data-star-picker="1" data-value="' + score + '">';
     for (var i = 1; i <= 5; i++) {
-      html += '<span class="star' + (i <= initial ? ' on' : '') + '" data-star="' + i + '">★</span>';
+      html += '<span class="star' + (i <= score ? ' on' : '') + '" data-star="' + i + '">★</span>';
     }
     html += '</span>';
     return html;

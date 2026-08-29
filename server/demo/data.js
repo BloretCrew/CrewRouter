@@ -321,20 +321,6 @@ module.exports = {
     return DEMO_LEADERBOARD;
   },
 
-  projectStats() {
-    const now = new Date();
-    const projects = [
-      { workspace_path: '/workspace/crewrouter', requests: 1280, tokens: 3850000, cost: 12.4, active_days: 18, last_activity: now.toISOString(), sources: { codex: 540, claude_code: 420, opencode: 320 } },
-      { workspace_path: '/workspace/plugin-lab', requests: 760, tokens: 2140000, cost: 6.8, active_days: 12, last_activity: new Date(now - 86400000).toISOString(), sources: { qwen_code: 410, codex: 350 } },
-      { workspace_path: '/workspace/analytics-dashboard', requests: 430, tokens: 980000, cost: 3.1, active_days: 8, last_activity: new Date(now - 3 * 86400000).toISOString(), sources: { hermes: 240, openclaw: 190 } },
-    ];
-    return { summary: { requests: 2470, tokens: 6970000, cost: 22.3, projects: 3, active_days: 24, last_activity: now.toISOString(), analysis_status: { pending_requests: 0, last_scanned_at: now.toISOString() } }, projects, daily: Array.from({ length: 14 }, (_, i) => ({ date: new Date(now - (13 - i) * 86400000).toISOString().slice(0, 10), requests: 100 + i * 17, tokens: 250000 + i * 21000, cost: 0.8 + i * 0.07, projects: 2 + (i % 2) })) };
-  },
-
-  messageStats() {
-    return { summary: { analyzed_requests: 36, active_days: 12, avg_daily_requests: 3, total_tokens: 1260000, git_rate: 0.72, analysis_status: { pending_requests: 0 } }, by_workspace: [{ workspace_path: '/workspace/crewrouter', requests: 24 }], by_block: [{ block: 'workspace', requests: 19, occurrences: 32 }, { block: 'git', requests: 15, occurrences: 21 }], by_source: [{ request_source: 'codex', requests: 16, messages: 64, characters: 18500, tokens: 680000 }, { request_source: 'claude_code', requests: 12, messages: 48, characters: 14200, tokens: 420000 }, { request_source: 'opencode', requests: 8, messages: 32, characters: 9600, tokens: 160000 }], daily: Array.from({ length: 14 }, (_, i) => ({ date: new Date(Date.now() - (13 - i) * 86400000).toISOString().slice(0, 10), requests: 1 + i, tokens: 50000 + i * 7000 })) };
-  },
-
   balance() {
     const group = DEMO_GROUPS.find(g => g.id === DEMO_USER.group_id);
     const rules = DEMO_GROUP_RULES.filter(r => r.group_id === group?.id).map(r => ({
