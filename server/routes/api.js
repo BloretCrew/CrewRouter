@@ -212,7 +212,6 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
     const fetchOpts = applyUpstreamOverride(makeFetchOpts(proxyInfo));
 
     try {
-      consumeAttempt();
       response = await proxyPool.proxyFetch(fetchOpts.url, { ...fetchOpts, requestContext });
       lastError = null;
     } catch (err) {
@@ -5666,7 +5665,8 @@ async function handleResponses(req, res) {
       const upstreamResp = await proxyPool.proxyFetch(url, {
         method: 'POST', headers, body: JSON.stringify(upstreamBody),
         signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
-        agent: currentProxyInfo?.agent
+        agent: currentProxyInfo?.agent,
+        requestContext: req._upstreamAttemptContext
       });
       if (!upstreamResp.ok) {
         const err = await upstreamResp.text();
@@ -5801,7 +5801,8 @@ async function handleResponses(req, res) {
     const upstreamResp = await proxyPool.proxyFetch(url, {
       method: 'POST', headers, body: JSON.stringify(upstreamBody),
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
-      agent: currentProxyInfo?.agent
+      agent: currentProxyInfo?.agent,
+      requestContext: req._upstreamAttemptContext
     });
     const responseData = await upstreamResp.json();
     if (!upstreamResp.ok) {
@@ -5921,7 +5922,8 @@ async function handleResponses(req, res) {
         const response = await proxyPool.proxyFetch(url, {
           method: 'POST', headers, body: JSON.stringify(upstreamBody),
           signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
-          agent: currentProxyInfo?.agent
+          agent: currentProxyInfo?.agent,
+          requestContext: req._upstreamAttemptContext
         });
         if (!response.ok) {
           const err = await response.text();
@@ -5950,7 +5952,8 @@ async function handleResponses(req, res) {
         const response = await proxyPool.proxyFetch(url, {
           method: 'POST', headers, body: JSON.stringify(chatBody),
           signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
-          agent: currentProxyInfo?.agent
+          agent: currentProxyInfo?.agent,
+          requestContext: req._upstreamAttemptContext
         });
         if (!response.ok) {
           const err = await response.text();

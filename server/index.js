@@ -17,7 +17,11 @@ const { pool } = require('./models/database');
 const Logger = require('./logger');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { encryptSecret } = require('./utils/secret-crypto');
+const { encryptSecret, assertEncryptionKeyConfigured } = require('./utils/secret-crypto');
+
+if (!isDemo && (process.env.NODE_ENV === 'production' || process.env.CR_ENV === 'production')) {
+  assertEncryptionKeyConfigured();
+}
 
 // 静态资源路径兼容：开发模式下 server/index.js 在 server/ 目录，
 // __dirname 为 .../server/，public/ 在上层；
@@ -1784,8 +1788,10 @@ async function ensureApiKeySignatureColumns() {
 
 // ========== 自动迁移：供应商 API Key 加密存储 ==========
 async function ensureProviderKeyEncryption() {
+  const client = await pool.connect();
   try {
-    const result = await pool.query('SELECT id, api_key, api_keys FROM providers FOR UPDATE');
+    await client.query('BEGIN');
+    const result = await client.query('SELECT id, api_key, api_keys FROM providers FOR UPDATE');
     for (const row of result.rows) {
       const apiKey = encryptSecret(row.api_key);
       let apiKeys = row.api_keys;
@@ -1798,12 +1804,17 @@ async function ensureProviderKeyEncryption() {
       }
       const serialized = apiKeys == null ? null : JSON.stringify(apiKeys);
       if (apiKey !== row.api_key || serialized !== (row.api_keys == null ? null : JSON.stringify(row.api_keys))) {
-        await pool.query('UPDATE providers SET api_key = $1, api_keys = $2::jsonb WHERE id = $3', [apiKey, serialized, row.id]);
+        await client.query('UPDATE providers SET api_key = $1, api_keys = $2::jsonb WHERE id = $3', [apiKey, serialized, row.id]);
       }
     }
+    await client.query('COMMIT');
     Logger.info('[迁移] providers API Key 已加密存储');
   } catch (err) {
-    Logger.warn(`[迁移] providers API Key 加密迁移跳过: ${err.message}`);
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    Logger.error(`[迁移] providers API Key 加密迁移失败: ${err.message}`);
+    throw err;
+  } finally {
+    client.release();
   }
 }
 
@@ -2281,16 +2292,18 @@ const app = express();
 // 信任反向代理（Nginx/Cloudflare等）
 app.set('trust proxy', 1);
 
-// 全局解析器保留 50MB；网关路由在挂载前再执行 1MB 限制。
+// 网关先执行 1MB 流式限制，再由全局 50MB parser 解析其他请求。
+const GATEWAY_BODY_LIMIT = 1024 * 1024;
+const gatewayBodyLimit = express.json({ limit: GATEWAY_BODY_LIMIT });
+app.use((req, res, next) => {
+  const pathName = req.path || '';
+  const isGateway = pathName.startsWith('/v1/')
+    || /^\/api\/(chat|messages|responses|models)(\/|$)/.test(pathName);
+  if (!isGateway) return next();
+  return gatewayBodyLimit(req, res, next);
+});
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-const gatewayBodyLimit = (req, res, next) => {
-  const length = Number(req.headers['content-length']);
-  if (Number.isFinite(length) && length > 1024 * 1024) {
-    return res.status(413).json({ error: { message: 'Request body exceeds the 1MB gateway limit', type: 'invalid_request_error', code: 'request_too_large' } });
-  }
-  next();
-};
 app.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') {
     return res.status(413).json({ error: { message: 'Request body exceeds the 1MB limit', type: 'invalid_request_error', code: 'request_too_large' } });
@@ -2584,7 +2597,7 @@ if (isDemo) {
   app.use('/auth', require('./routes/feishu'));
   app.use('/auth', require('./routes/passport-auth'));
   app.use('/api', require('./routes/auth-invites'));
-  app.use('/api', gatewayBodyLimit, require('./routes/api'));
+  app.use('/api', require('./routes/api'));
   app.use('/api/admin', require('./routes/admin'));
   app.use('/api/admin', require('./routes/admin-custom-instructions'));
   app.use('/api/admin/update', require('./routes/update'));
@@ -2612,7 +2625,7 @@ if (isDemo) {
 
   // OpenAI 兼容路由（根路径，供 SDK 直接使用）
   const apiRoutes = require('./routes/api');
-  app.use('/v1', gatewayBodyLimit, apiRoutes);
+  app.use('/v1', apiRoutes);
 
   // 插件系统：管理 API、运行时清单、插件自有 API 与静态资源
   const { createPluginsRoutes } = require('./routes/plugins');

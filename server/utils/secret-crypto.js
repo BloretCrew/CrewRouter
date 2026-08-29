@@ -13,6 +13,13 @@ function configuredMasterKey() {
     || config.masterKey;
 }
 
+function assertEncryptionKeyConfigured() {
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.CR_ENV === 'production';
+  if (isProduction && !configuredMasterKey()) {
+    throw new Error('生产环境必须配置 gateway.masterKey 或 CRW_MASTER_KEY');
+  }
+}
+
 function getEncryptionKey() {
   const configured = configuredMasterKey();
   if (configured) return crypto.createHash('sha256').update(String(configured)).digest();
@@ -60,4 +67,4 @@ function decryptSecret(value) {
   return Buffer.concat([decipher.update(Buffer.from(parts[2], encoding)), decipher.final()]).toString('utf8');
 }
 
-module.exports = { PREFIX, LEGACY_PREFIX, isEncrypted, encryptSecret, decryptSecret };
+module.exports = { PREFIX, LEGACY_PREFIX, isEncrypted, encryptSecret, decryptSecret, assertEncryptionKeyConfigured };

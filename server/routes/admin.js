@@ -31,7 +31,7 @@ const {
 } = require('../utils/provider-keys');
 const { parseGrokAuthConfig } = require('../utils/grok-usage');
 const { normalizeTestUserAgent } = require('../utils/model-test');
-const { encryptSecret } = require('../utils/secret-crypto');
+const { encryptSecret, decryptSecret } = require('../utils/secret-crypto');
 const { getRetentionConfig, invalidateRetentionConfigCache } = require('../utils/usage-agg');
 const { runCompressOnce } = require('../utils/usage-compress');
 const { runPurgeOnce } = require('../utils/usage-purge');
@@ -3991,7 +3991,7 @@ async function findAvailableProviders() {
   try {
     const result = await pool.query(`
       SELECT m.id AS model_id, m.name AS model_name, m.upstream_model_id,
-             p.id AS provider_id, p.name AS provider_name, p.base_url, p.api_key, p.format
+             p.id AS provider_id, p.name AS provider_name, p.base_url, p.api_key, p.api_keys, p.format
       FROM models m
       JOIN providers p ON m.provider = p.id
       WHERE m.enabled = TRUE AND p.enabled = TRUE AND p.api_key IS NOT NULL AND p.api_key != ''
@@ -4005,7 +4005,7 @@ async function findAvailableProviders() {
         id: r.provider_id,
         name: r.provider_name || r.provider_id,
         base_url: r.base_url,
-        api_key: r.api_key,
+        api_key: getPrimaryApiKey({ api_key: decryptSecret(r.api_key), api_keys: r.api_keys }),
         format: r.format || 'openai'
       }
     }));

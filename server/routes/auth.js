@@ -199,6 +199,9 @@ router.post('/login/2fa', async (req, res) => {
       return res.status(401).json({ error: '验证码错误' });
     }
 
+    // 2FA 成功后清除该 IP/用户的失败计数。
+    loginRateLimits.delete(`${req.ip || 'unknown'}:2fa:${userId}`);
+
     // 设置会话
     await regenerateSession(req);
     req.session.user = {

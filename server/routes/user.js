@@ -506,6 +506,7 @@ router.delete('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_DELE
     await client.query('UPDATE usage_records SET api_key_id = NULL WHERE api_key_id = $1', [req.params.id]);
     await client.query('DELETE FROM api_keys WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
     await client.query('COMMIT');
+    invalidateApiKeyCacheByKeyId(Number(req.params.id));
     res.json({ success: true });
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (_) {}

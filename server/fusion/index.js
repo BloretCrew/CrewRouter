@@ -152,10 +152,6 @@ async function callOpenAIModel(baseUrl, provider, body, requestContext = null) {
   const startTime = Date.now();
 
   const proxyInfo = await proxyPool.getProxyAgent(provider);
-  if (requestContext) {
-    requestContext.upstreamAttempts = (requestContext.upstreamAttempts || 0) + 1;
-    if (requestContext.upstreamAttempts > 12) throw new Error('Upstream request attempt limit exceeded (12)');
-  }
   const response = await proxyPool.proxyFetch(url, {
     method: 'POST',
     headers,
@@ -237,10 +233,6 @@ async function callAnthropicModel(baseUrl, provider, body, requestContext = null
   const startTime = Date.now();
 
   const proxyInfo = await proxyPool.getProxyAgent(provider);
-  if (requestContext) {
-    requestContext.upstreamAttempts = (requestContext.upstreamAttempts || 0) + 1;
-    if (requestContext.upstreamAttempts > 12) throw new Error('Upstream request attempt limit exceeded (12)');
-  }
   const response = await proxyPool.proxyFetch(url, {
     method: 'POST',
     headers,
