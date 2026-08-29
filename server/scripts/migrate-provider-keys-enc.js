@@ -12,7 +12,10 @@ async function main() {
   });
   const client = await pool.connect();
   try {
+    const apply = process.argv.includes('--apply');
     await client.query('BEGIN');
+    await client.query('ALTER TABLE providers ADD COLUMN IF NOT EXISTS api_keys JSONB');
+    await client.query('ALTER TABLE providers ADD COLUMN IF NOT EXISTS api_key TEXT');
     const result = await client.query('SELECT id, api_key, api_keys FROM providers FOR UPDATE');
     let updated = 0;
     for (const row of result.rows) {
@@ -27,12 +30,19 @@ async function main() {
       }
       const apiKeysJson = apiKeys == null ? null : JSON.stringify(apiKeys);
       if (apiKey !== row.api_key || apiKeysJson !== (row.api_keys == null ? null : JSON.stringify(row.api_keys))) {
-        await client.query('UPDATE providers SET api_key = $1, api_keys = $2::jsonb WHERE id = $3', [apiKey, apiKeysJson, row.id]);
+        if (apply) {
+          await client.query('UPDATE providers SET api_key = $1, api_keys = $2::jsonb WHERE id = $3', [apiKey, apiKeysJson, row.id]);
+        }
         updated++;
       }
     }
-    await client.query('COMMIT');
-    console.log(`已加密 ${updated} 个供应商的 API Key`);
+    if (apply) {
+      await client.query('COMMIT');
+      console.log(`已加密 ${updated} 个供应商的 API Key`);
+    } else {
+      await client.query('ROLLBACK');
+      console.log(`dry-run：将加密 ${updated} 个供应商的 API Key；使用 --apply 写入`);
+    }
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

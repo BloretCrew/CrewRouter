@@ -2072,7 +2072,7 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
     };
     const finalApiKey = encryptedStorage
       ? encryptedStorage.api_key
-      : (api_key || existing?.api_key || '');
+      : (existing?.api_key || '');
     const finalApiKeys = encryptedStorage
       ? (encryptedStorage.api_keys ? JSON.stringify(encryptedStorage.api_keys) : null)
       : (existing?.api_keys != null ? JSON.stringify(normalizeProviderKeyEntries(existing).map((entry) => ({ ...entry, key: encryptSecret(entry.key) }))) : (finalApiKey ? JSON.stringify([{ key: finalApiKey, weight: 1 }]) : null));

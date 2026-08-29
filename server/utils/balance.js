@@ -419,13 +419,14 @@ async function refundBalance(userId, amount) {
  * @param {number} points - 需扣除的积分
  * @returns {Promise<{ok: boolean, remaining?: number, error?: string}>}
  */
-async function deductPoints(userId, points, existingClient = null) {
+async function deductPoints(userId, points, existingClient = null, quota = {}) {
+  const requestedPoints = points;
   if (points <= 0) return { ok: true };
   const client = existingClient || await pool.connect();
   try {
     if (!existingClient) await client.query('BEGIN');
     const result = await client.query(
-      'SELECT balance FROM users WHERE id = $1 FOR UPDATE',
+      'SELECT balance, group_id FROM users WHERE id = $1 FOR UPDATE',
       [userId]
     );
     if (result.rows.length === 0) {
@@ -433,6 +434,19 @@ async function deductPoints(userId, points, existingClient = null) {
       return { ok: false, error: '用户不存在' };
     }
     const currentPoints = parseFloat(result.rows[0].balance || 0);
+    if (quota.groupId != null || quota.weightedTokens != null || quota.pointsCost != null) {
+      const { calculatePointsToDeduct } = require('./points-deduct');
+      points = await calculatePointsToDeduct({
+        userId,
+        groupId: quota.groupId == null ? result.rows[0].group_id : quota.groupId,
+        weightedTokens: quota.weightedTokens || 0,
+        pointsCost: quota.pointsCost == null ? requestedPoints : quota.pointsCost
+      }, { client });
+      if (points <= 0) {
+        if (!existingClient) await client.query('COMMIT');
+        return { ok: true, pointsToDeduct: 0 };
+      }
+    }
     if (currentPoints < points) {
       if (!existingClient) await client.query('ROLLBACK');
       return { ok: false, remaining: points - currentPoints, error: '积分不足' };
@@ -466,17 +480,22 @@ async function getUserPoints(userId) {
   }
 }
 
-async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValues, userId, pointsToDeduct = 0 }) {
+async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValues, userId, pointsToDeduct = 0, groupId = null, weightedTokens = 0, pointsCost = null }) {
   const client = await dbPool.connect();
   try {
     await client.query('BEGIN');
     await client.query(usageQuery, usageValues);
-    if (pointsToDeduct > 0) {
-      const result = await deductPoints(userId, pointsToDeduct, client);
+    let charge = pointsToDeduct;
+    if (groupId != null || pointsCost != null) {
+      const { calculatePointsToDeduct } = require('./points-deduct');
+      charge = await calculatePointsToDeduct({ userId, groupId, weightedTokens, pointsCost: pointsCost == null ? pointsToDeduct : pointsCost }, { client });
+    }
+    if (charge > 0) {
+      const result = await deductPoints(userId, charge, client, { groupId, weightedTokens, pointsCost });
       if (!result.ok) throw new Error(result.error || '积分扣除失败');
     }
     await client.query('COMMIT');
-    return { ok: true };
+    return { ok: true, pointsToDeduct: charge };
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
     Logger.error(`[recordUsageAndDeduct] 错误: userId=${userId}, error=${error.message}`);

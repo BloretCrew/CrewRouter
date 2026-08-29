@@ -7,7 +7,7 @@ const { ACTIONS, logAction } = require('../utils/audit-log');
 const { reportLoginEvent, reportLogoutEvent } = require('../utils/login-reporter');
 
 const loginRateLimits = new Map();
-const LOGIN_LIMIT = 10;
+const LOGIN_LIMIT = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 function consumeLoginAttempt(key) {
@@ -91,6 +91,9 @@ router.post('/login', async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ error: '用户名/邮箱或密码错误' });
     }
+
+    // 登录成功后清除该账号/IP 的失败计数
+    loginRateLimits.delete(rateKey);
 
     // 检查是否启用了 2FA
     if (user.two_factor_enabled) {

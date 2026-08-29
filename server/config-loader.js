@@ -64,6 +64,7 @@ const DEFAULTS = {
   demo: false,
   gateway: {
     fourth_cache_breakpoint: false,
+    masterKey: '',
   },
 };
 
@@ -93,6 +94,8 @@ const ENV_MAP = {
   CR_SESSION_SECRET:     'app.sessionSecret',
   CR_DEMO:               'demo',
   CR_PROVIDER_KEY_ENCRYPTION_KEY: 'providerKeyEncryptionKey',
+  CRW_MASTER_KEY:          'gateway.masterKey',
+  CR_MASTER_KEY:           'gateway.masterKey',
 
   // database
   CR_DB_HOST:            'database.host',

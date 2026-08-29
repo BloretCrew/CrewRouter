@@ -86,7 +86,8 @@
     }
   },
   "gateway": {
-    "fourth_cache_breakpoint": false
+    "fourth_cache_breakpoint": false,
+    "masterKey": "set-a-random-secret-in-production"
   },
   "store": {
     "seedDemo": true,

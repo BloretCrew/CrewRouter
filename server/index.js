@@ -2281,9 +2281,16 @@ const app = express();
 // 信任反向代理（Nginx/Cloudflare等）
 app.set('trust proxy', 1);
 
-// 网关请求体限制为 1MB，避免在认证和上游转发前读入过大请求。
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ limit: '1mb', extended: true }));
+// 全局解析器保留 50MB；网关路由在挂载前再执行 1MB 限制。
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+const gatewayBodyLimit = (req, res, next) => {
+  const length = Number(req.headers['content-length']);
+  if (Number.isFinite(length) && length > 1024 * 1024) {
+    return res.status(413).json({ error: { message: 'Request body exceeds the 1MB gateway limit', type: 'invalid_request_error', code: 'request_too_large' } });
+  }
+  next();
+};
 app.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') {
     return res.status(413).json({ error: { message: 'Request body exceeds the 1MB limit', type: 'invalid_request_error', code: 'request_too_large' } });
@@ -2340,6 +2347,12 @@ if (isDemo) {
 // 请求日志中间件
 const apiKeyUserCache = new Map(); // key -> { username, ts }
 const KEY_CACHE_TTL = 60_000; // 1 分钟缓存
+setInterval(() => {
+  const cutoff = Date.now() - KEY_CACHE_TTL;
+  for (const [key, item] of apiKeyUserCache) {
+    if (!item || item.ts < cutoff) apiKeyUserCache.delete(key);
+  }
+}, KEY_CACHE_TTL).unref?.();
 
 // 解析 API Key 对应的用户名（带缓存）
 async function resolveApiKeyUser(apiKey) {
@@ -2571,7 +2584,7 @@ if (isDemo) {
   app.use('/auth', require('./routes/feishu'));
   app.use('/auth', require('./routes/passport-auth'));
   app.use('/api', require('./routes/auth-invites'));
-  app.use('/api', require('./routes/api'));
+  app.use('/api', gatewayBodyLimit, require('./routes/api'));
   app.use('/api/admin', require('./routes/admin'));
   app.use('/api/admin', require('./routes/admin-custom-instructions'));
   app.use('/api/admin/update', require('./routes/update'));
@@ -2599,7 +2612,7 @@ if (isDemo) {
 
   // OpenAI 兼容路由（根路径，供 SDK 直接使用）
   const apiRoutes = require('./routes/api');
-  app.use('/v1', apiRoutes);
+  app.use('/v1', gatewayBodyLimit, apiRoutes);
 
   // 插件系统：管理 API、运行时清单、插件自有 API 与静态资源
   const { createPluginsRoutes } = require('./routes/plugins');

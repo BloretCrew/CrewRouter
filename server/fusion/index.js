@@ -129,6 +129,7 @@ async function callModel(modelId, messages, options = {}) {
       }
       return await callOpenAIModel(baseUrl, providerWithKey, requestBody, options.requestContext);
     } catch (err) {
+      if (err.code === 'fusion_upstream_limit') throw err;
       lastErr = err;
       if (ki < keys.length - 1) {
         Logger.warn(`[Fusion] Key ${ki + 1}/${keys.length} 失败，切换下一 Key: ${err.message}`);
@@ -160,7 +161,8 @@ async function callOpenAIModel(baseUrl, provider, body, requestContext = null) {
     headers,
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(120000), // 2 分钟超时
-    agent: proxyInfo?.agent
+    agent: proxyInfo?.agent,
+    requestContext
   });
 
   const data = await response.json();
@@ -244,7 +246,8 @@ async function callAnthropicModel(baseUrl, provider, body, requestContext = null
     headers,
     body: JSON.stringify(anthropicBody),
     signal: AbortSignal.timeout(120000),
-    agent: proxyInfo?.agent
+    agent: proxyInfo?.agent,
+    requestContext
   });
 
   const data = await response.json();

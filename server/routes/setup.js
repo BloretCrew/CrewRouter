@@ -116,9 +116,9 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
       const keyHash = require('bcryptjs').hashSync(rawKey, 10);
       const keyPrefix = rawKey.substring(0, 12);
       await client.query(
-        `INSERT INTO api_keys (user_id, key_value, key_hash, key_prefix, name, custom_model_name)
-         VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5')`,
-        [adminId, rawKey, keyHash, keyPrefix]
+        `INSERT INTO api_keys (user_id, key_hash, key_prefix, name, custom_model_name)
+         VALUES ($1, $2, $3, 'CrewRouter', 'claude-fable-5')`,
+        [adminId, require('../utils/key-hash').sha256Hex(rawKey), keyPrefix]
       );
       await client.query('RELEASE SAVEPOINT sp_default_key');
       Logger.info('[OOBE] 已为管理员创建默认 API Key');

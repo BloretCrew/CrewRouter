@@ -105,8 +105,8 @@ function isUpstreamTimeoutError(err) {
  */
 function buildUpstreamExceptionError(error, format = 'openai') {
   const isTimeout = isUpstreamTimeoutError(error);
-  const status = isTimeout ? 504 : 502;
-  const code = isTimeout ? 'upstream_timeout' : (error?.code || 'upstream_error');
+  const status = error?.code === 'fusion_upstream_limit' ? 429 : (isTimeout ? 504 : 502);
+  const code = error?.code === 'fusion_upstream_limit' ? 'fusion_upstream_limit' : (isTimeout ? 'upstream_timeout' : (error?.code || 'upstream_error'));
   let message = error?.message || 'unknown error';
   if (isTimeout && /aborted/i.test(message) && !/timeout/i.test(message)) {
     message = `Upstream request timed out (${UPSTREAM_TIMEOUT}ms)`;
@@ -122,7 +122,7 @@ function buildUpstreamExceptionError(error, format = 'openai') {
       body: {
         type: 'error',
         error: {
-          type: isTimeout ? 'timeout_error' : 'api_error',
+          type: error?.code === 'fusion_upstream_limit' ? 'rate_limit_error' : (isTimeout ? 'timeout_error' : 'api_error'),
           message
         }
       },
@@ -134,7 +134,7 @@ function buildUpstreamExceptionError(error, format = 'openai') {
     body: {
       error: {
         message,
-        type: isTimeout ? 'timeout_error' : 'server_error',
+        type: error?.code === 'fusion_upstream_limit' ? 'rate_limit_error' : (isTimeout ? 'timeout_error' : 'server_error'),
         code
       }
     },
@@ -213,7 +213,7 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
 
     try {
       consumeAttempt();
-      response = await proxyPool.proxyFetch(fetchOpts.url, fetchOpts);
+      response = await proxyPool.proxyFetch(fetchOpts.url, { ...fetchOpts, requestContext });
       lastError = null;
     } catch (err) {
       lastError = err;
@@ -2784,7 +2784,7 @@ async function handleChatCompletion(req, res) {
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
@@ -2970,7 +2970,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
            totalWeightedTokens, null, 'fusion',
            JSON.stringify(messages), result.content || null, pointsToDeduct,
            Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
 
         // 记录 Fusion 专用用量
@@ -3398,7 +3398,7 @@ async function handleAnthropicMessage(req, res) {
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
@@ -5415,7 +5415,8 @@ async function handleResponses(req, res) {
           const upstreamResp = await proxyPool.proxyFetch(url, {
             method: 'POST', headers, body: JSON.stringify(upstreamBody),
             signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
-            agent: currentProxyInfo?.agent
+            agent: currentProxyInfo?.agent,
+            requestContext: req._upstreamAttemptContext
           });
           const responseData = await upstreamResp.json();
           if (!upstreamResp.ok) {
@@ -5471,7 +5472,7 @@ async function handleResponses(req, res) {
                  provider?.id || null, 'responses',
                  typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
                  null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-                 pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+                 pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
               recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
             } catch (err) {
@@ -5581,7 +5582,7 @@ async function handleResponses(req, res) {
                provider?.id || null, 'responses',
                typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
                latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-               pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+               pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
             recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
           } catch (err) {
@@ -5781,7 +5782,7 @@ async function handleResponses(req, res) {
              typeof input === 'string' ? input : JSON.stringify(input), totalContent || null, pointsToDeduct,
              Date.now() - liveCallStart, clientIp(req), JSON.stringify(requestParams),
              clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-             pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+             pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
           recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
         } catch (err) {
@@ -5852,7 +5853,7 @@ async function handleResponses(req, res) {
            provider?.id || null, 'responses',
            typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
            null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
@@ -6033,7 +6034,7 @@ async function handleResponses(req, res) {
            provider?.id || null, 'responses',
            typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, pointsToDeduct });
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {

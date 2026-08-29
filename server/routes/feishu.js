@@ -188,10 +188,15 @@ router.get('/feishu/callback', async (req, res) => {
     if (byOpenId.rows.length > 0) {
       user = byOpenId.rows[0];
       // 更新头像和邮箱
-      await pool.query(
-        'UPDATE users SET avatar = COALESCE($1, avatar), email = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-        [avatar, normalizedEmail, user.id]
-      );
+      try {
+        await pool.query(
+          'UPDATE users SET avatar = COALESCE($1, avatar), email = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+          [avatar, normalizedEmail, user.id]
+        );
+      } catch (error) {
+        if (error.code !== '23505') throw error;
+        Logger.warn(`[飞书登录] 邮箱已被其他用户占用，保留原邮箱: ${user.username}`);
+      }
       Logger.info(`[飞书登录] 已有用户登录: ${user.username} (id=${user.id})`);
     } else {
       // 按邮箱查找（可能通过其他方式注册过）
@@ -225,11 +230,19 @@ router.get('/feishu/callback', async (req, res) => {
         }
 
         // 用户名不存在，创建新用户
-        const newUser = await pool.query(
-          `INSERT INTO users (username, email, feishu_open_id, avatar, email_verified, balance)
-           VALUES ($1, $2, $3, $4, TRUE, 10) RETURNING *`,
-          [feishuName, normalizedEmail, feishuOpenId, avatar]
-        );
+        let newUser;
+        try {
+          newUser = await pool.query(
+            `INSERT INTO users (username, email, feishu_open_id, avatar, email_verified, balance)
+             VALUES ($1, $2, $3, $4, TRUE, 10) RETURNING *`,
+            [feishuName, normalizedEmail, feishuOpenId, avatar]
+          );
+        } catch (error) {
+          if (error.code !== '23505') throw error;
+          const raced = await pool.query('SELECT * FROM users WHERE feishu_open_id = $1 OR LOWER(email) = $2 LIMIT 1', [feishuOpenId, normalizedEmail]);
+          if (!raced.rows.length) throw error;
+          newUser = raced;
+        }
         user = newUser.rows[0];
         Logger.info(`[飞书注册] 新用户注册: ${feishuName} (email=${normalizedEmail}, id=${user.id})`);
 
@@ -277,9 +290,9 @@ router.get('/feishu/callback', async (req, res) => {
           const keyHash = require('bcryptjs').hashSync(rawKey, 10);
           const keyPrefix = rawKey.substring(0, 12);
           await pool.query(
-            `INSERT INTO api_keys (user_id, key_value, key_hash, key_prefix, name, custom_model_name)
-             VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5')`,
-            [user.id, rawKey, keyHash, keyPrefix]
+            `INSERT INTO api_keys (user_id, key_hash, key_prefix, name, custom_model_name)
+             VALUES ($1, $2, $3, 'CrewRouter', 'claude-fable-5')`,
+            [user.id, keyHash, keyPrefix]
           );
           Logger.info(`[飞书注册] 已为用户 ${feishuName} 创建默认 API Key`);
         } catch (keyErr) {

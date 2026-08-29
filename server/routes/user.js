@@ -156,7 +156,6 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         ak.id,
         ak.name,
         ak.key_prefix,
-        ak.key_value,
         ak.custom_model_name,
         ak.current_model_id,
         ak.is_system,
@@ -339,7 +338,7 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
     const hash = crypto.randomBytes(24).toString('hex');
     const rawKey = `sk-${hash}`;
     const keyPrefix = rawKey.substring(0, 12);
-    const keyHash = require('bcryptjs').hashSync(rawKey, 10);
+    const keyHash = require('../utils/key-hash').sha256Hex(rawKey);
 
     let expiresAt = null;
     if (expiresIn) {
@@ -348,8 +347,8 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
     }
 
     const result = await pool.query(
-      'INSERT INTO api_keys (user_id, key_value, key_hash, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE) RETURNING id, name, key_prefix, custom_model_name, created_at, expires_at',
-      [req.session.user.id, rawKey, keyHash, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
+      'INSERT INTO api_keys (user_id, key_hash, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled) VALUES ($1, $2, $3, $4, $5, $6, TRUE) RETURNING id, name, key_prefix, custom_model_name, created_at, expires_at',
+      [req.session.user.id, keyHash, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
     );
 
     // 插件 apikey:created 钩子：创建后回调（异步、错误隔离）
@@ -1232,14 +1231,14 @@ router.get('/api-keys/:id/config', requireAuth, async (req, res) => {
     const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const keyResult = await pool.query(
-      'SELECT key_value, current_model_id FROM api_keys WHERE id = $1',
+      'SELECT key_hash, current_model_id FROM api_keys WHERE id = $1',
       [req.params.id]
     );
     if (keyResult.rows.length === 0) {
       return res.status(404).json({ error: '密钥不存在' });
     }
 
-    const { key_value } = keyResult.rows[0];
+    return res.status(410).json({ error: '旧 API Key 明文已废弃，请重新生成 Key' });
 
     // 构建服务器 URL
     const host = config.app?.host;
@@ -2022,6 +2021,7 @@ router.put('/settings', requireAuth, auditMiddleware(ACTIONS.USER_SETTINGS, {
     res.json({ success: true });
   } catch (error) {
     Logger.error('[更新用户设置] 错误:', error);
+    if (error.code === '23505') return res.status(400).json({ error: '该邮箱已被其他用户使用' });
     res.status(500).json({ error: '服务器错误' });
   }
 });

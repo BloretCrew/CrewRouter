@@ -382,6 +382,14 @@ function createProxyAgent(proxyUrl) {
  */
 async function proxyFetch(url, options = {}) {
   const isHttps = url.startsWith('https://');
+  if (options.requestContext) {
+    options.requestContext.proxyRequests = (options.requestContext.proxyRequests || 0) + 1;
+    if (options.requestContext.proxyRequests > 12) {
+      const error = new Error('Fusion upstream request limit exceeded (12)');
+      error.code = 'fusion_upstream_limit';
+      throw error;
+    }
+  }
   const method = (options.method || 'GET').toLowerCase();
 
   const axiosConfig = {
