@@ -48,8 +48,8 @@ const DEFAULTS = {
     domain: '',
   },
   passport: {
-    appId: '',
-    appSecret: '',
+    appId: 'bp_2da5d6465574c0a2',
+    appSecret: 'bs_ba686f4608efd552f087ad3c09226167f278853fc031bf62',
     redirectCallbackHost: '',
   },
   // 统计信息上报（自建实例向官方上报匿名聚合使用统计）
@@ -205,6 +205,10 @@ function loadConfig() {
   const withDefaults = deepMerge(DEFAULTS, fileConfig);
   const envOverlay = buildEnvOverlay();
   const final = deepMerge(withDefaults, envOverlay);
+
+  // 空配置文件字段不应覆盖内置的 PassPort 应用凭据。
+  if (!final.passport?.appId) final.passport.appId = DEFAULTS.passport.appId;
+  if (!final.passport?.appSecret) final.passport.appSecret = DEFAULTS.passport.appSecret;
 
   // 确保嵌套对象有默认值
   if (!final.database) final.database = DEFAULTS.database;
