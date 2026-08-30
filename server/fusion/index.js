@@ -100,6 +100,11 @@ async function callModel(modelId, messages, options = {}) {
   if (!provider) {
     throw new Error(`模型 ${modelId} 的供应商未配置`);
   }
+  if (!['openai', 'anthropic'].includes(provider.format || 'openai')) {
+    const error = new Error(`Fusion 暂不支持供应商协议: ${provider.format || 'unknown'}`);
+    error.code = 'unsupported_provider_format';
+    throw error;
+  }
 
   const upstreamModelId = modelConfig.upstream_model_id || modelConfig.id;
   const { temperature = 0.7, max_tokens = 4096, tools, tool_choice, response_format } = options;

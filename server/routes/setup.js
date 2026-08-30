@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { getAuthMode, setAuthMode, decodeMode } = require('../utils/auth-mode');
+const { normalizeEmail } = require('../utils/user-identity');
 
 /**
  * OOBE：飞书模式创建管理员；PassPort 模式由首次管理员授权完成初始化。
@@ -57,6 +58,8 @@ router.post('/setup/mode', requireSetupMode, async (req, res) => {
 // 飞书模式：创建管理员并完成 OOBE
 router.post('/setup/admin', requireSetupMode, async (req, res) => {
   const { username, email, password } = req.body;
+  let normalizedEmail;
+  try { normalizedEmail = normalizeEmail(email); } catch (error) { return res.status(400).json({ error: error.message }); }
   const selectedMode = await getAuthMode();
   if (!selectedMode || !['feishu', 'passport'].includes(selectedMode)) {
     return res.status(400).json({ error: '请先选择账号系统模式' });
@@ -81,7 +84,7 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
       `INSERT INTO users (username, email, password_hash, is_admin, email_verified, balance)
        VALUES ($1, $2, $3, TRUE, TRUE, 999)
        RETURNING id, username, email, is_admin`,
-      [username.trim(), email || null, passwordHash]
+      [username.trim(), normalizedEmail, passwordHash]
     );
 
     Logger.info(`[OOBE] 管理员账号已创建: ${username}`);

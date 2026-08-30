@@ -113,7 +113,8 @@ async function checkBalanceAlert(userId, currentBalance) {
     }
 
     const details = ALERT_MESSAGES[ALERT_TYPES.BALANCE_LOW].details(threshold, balance.toFixed(4));
-    await sendAlertEmail(user, ALERT_TYPES.BALANCE_LOW, details);
+    const emailResult = await sendAlertEmail(user, ALERT_TYPES.BALANCE_LOW, details);
+    if (!emailResult?.success) return false;
     await recordAlert(userId, ALERT_TYPES.BALANCE_LOW, ALERT_MESSAGES[ALERT_TYPES.BALANCE_LOW].message, details);
     await notifyUser(userId, NOTIFICATION_TYPES.QUOTA_INSUFFICIENT, details, { alertType: ALERT_TYPES.BALANCE_LOW });
 
@@ -147,7 +148,8 @@ async function checkDailyUsageAlert(userId, dailyUsage) {
     }
 
     const details = ALERT_MESSAGES[ALERT_TYPES.DAILY_USAGE_HIGH].details(threshold, usage.toFixed(4));
-    await sendAlertEmail(user, ALERT_TYPES.DAILY_USAGE_HIGH, details);
+    const emailResult = await sendAlertEmail(user, ALERT_TYPES.DAILY_USAGE_HIGH, details);
+    if (!emailResult?.success) return false;
     await recordAlert(userId, ALERT_TYPES.DAILY_USAGE_HIGH, ALERT_MESSAGES[ALERT_TYPES.DAILY_USAGE_HIGH].message, details);
 
     return true;

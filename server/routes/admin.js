@@ -21,6 +21,7 @@ const { buildUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs
 const { aggregateMessageStats, analyzeMessages } = require('../utils/message-analysis');
 const { getMessageAnalysisStatus } = require('../utils/message-analysis-store');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
+const { normalizeEmail } = require('../utils/user-identity');
 const {
   normalizeProviderKeyEntries,
   getPrimaryApiKey,
@@ -150,8 +151,14 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
         await client.query('ROLLBACK');
         return res.status(404).json({ error: '用户不存在' });
       }
-      if (email !== undefined && email) {
-        const normalizedEmail = email.toLowerCase().trim();
+      let normalizedEmail;
+      if (email !== undefined) {
+        try { normalizedEmail = normalizeEmail(email); } catch (error) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: error.message });
+        }
+      }
+      if (normalizedEmail) {
         const existingUser = await client.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2', [normalizedEmail, userId]);
         if (existingUser.rows.length > 0) {
           await client.query('ROLLBACK');
@@ -164,7 +171,7 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
 
     if (email !== undefined) {
       sets.push(`email = $${idx++}`);
-      params.push(email ? email.toLowerCase().trim() : null);
+      params.push(normalizedEmail);
     }
     if (email_verified !== undefined) {
       sets.push(`email_verified = $${idx++}`);
@@ -241,6 +248,7 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
       client.release();
     }
   } catch (error) {
+    if (error?.code === '23505') return res.status(409).json({ error: '邮箱或用户标识已被其他用户使用' });
     Logger.error('[更新用户状态] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }

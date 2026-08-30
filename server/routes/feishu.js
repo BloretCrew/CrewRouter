@@ -176,7 +176,8 @@ router.get('/feishu/callback', async (req, res) => {
     // 4. 查找或创建用户
     const feishuOpenId = userInfo.open_id;
     const email = userInfo.email || `${feishuOpenId}@feishu.local`;
-    const normalizedEmail = email.toLowerCase().trim();
+    let normalizedEmail;
+    try { normalizedEmail = normalizeEmail(email); } catch (error) { return res.redirect('/?error=invalid_email'); }
     const avatar = userInfo.avatar_url || null;
 
     Logger.info(`[飞书回调] 查找用户: feishu_open_id=${feishuOpenId}, email=${normalizedEmail}`);

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../models/database');
 const config = require('../config-loader');
 const Logger = require('../logger');
+const { normalizeEmail } = require('../utils/user-identity');
 const { getAuthMode } = require('../utils/auth-mode');
 
 const router = express.Router();
@@ -140,7 +141,7 @@ router.get('/passport/callback', async (req, res) => {
           if (!collision.rows.length) { username = candidate; break; }
           if (suffix === 999) throw new Error('无法生成唯一用户名');
         }
-        const email = data.email ? String(data.email).trim().slice(0, 255) : null;
+        const email = normalizeEmail(data.email);
         const emailCheck = email ? await client.query('SELECT 1 FROM users WHERE LOWER(email) = LOWER($1)', [email]) : { rows: [] };
         const inserted = await client.query(`INSERT INTO users (username, passport_username, email, avatar, is_admin, email_verified, balance) VALUES ($1, $2, $3, $4, $5, TRUE, 10) RETURNING *`, [username, passportUsername, emailCheck.rows.length ? null : email, String(data.avatar || '').slice(0, 500) || null, isFirstAdmin]);
         user = inserted.rows[0];

@@ -211,6 +211,7 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
   };
 
   for (let retry = 0; retry < attempts; retry++) {
+    consumeAttempt();
     const fetchOpts = applyUpstreamOverride(makeFetchOpts(proxyInfo));
 
     try {
@@ -5291,6 +5292,16 @@ async function handleResponses(req, res) {
   const body = req.body;
   let { model, input, stream, temperature, max_output_tokens, top_p, tools, tool_choice, text, reasoning } = body;
 
+  // 未实现 Gemini 原生协议时必须显式拒绝，不能落入 OpenAI 兼容分支。
+  const configuredProviderFormats = await pool.query(
+    `SELECT DISTINCT p.format FROM models m JOIN providers p ON p.id = m.provider
+     WHERE m.id = $1 OR m.alias = $1 OR m.upstream_model_id = $1`,
+    [model]
+  );
+  if (configuredProviderFormats.rows.some(row => row.format === 'gemini')) {
+    return res.status(501).json({ error: { type: 'unsupported_provider_format', code: 'gemini_not_supported', message: 'Gemini provider protocol is not supported by this gateway yet.' } });
+  }
+
   // 注入提示词：放入 Responses input 首条 user 前的 meta user；无配置时请求保持原样
   if (req.apiUser.injectPrompt) {
     body.input = responsesAppend(body.input, req.apiUser.injectPrompt);
@@ -5298,6 +5309,9 @@ async function handleResponses(req, res) {
 
   // Fusion 模型检测
   if (model === 'fusion' || model?.startsWith('fusion')) {
+    if (!req.apiUser.fusionEnabled) {
+      return res.status(403).json({ error: { type: 'fusion_disabled', code: 'fusion_disabled', message: 'Fusion is disabled for this API key.' } });
+    }
     // 将 Responses API input 转为 messages 格式供 Fusion 使用
     const messages = convertResponsesInputToMessages(body);
     req.body = { ...req.body, messages, max_tokens: max_output_tokens };
