@@ -86,10 +86,14 @@ async function rejectsCode(promise, code) {
     validateBeforeUpstreamRewrite(original, { ...original, headers: { ...original.headers, Host: 'evil.example' } }),
     'plugin_header_forbidden'
   );
-  await rejectsCode(
-    validateBeforeUpstreamRewrite(original, { ...original, headers: { ...original.headers, Cookie: 'session=secret' } }),
-    'plugin_header_forbidden'
-  );
+  const crossOriginCredentials = await validateBeforeUpstreamRewrite(original, {
+    ...original,
+    url: 'https://other.example/v1/chat/completions',
+    headers: { ...original.headers, Cookie: 'session=secret' },
+  }, {
+    validateUrl: async url => ({ ok: true, url: new URL(url) }),
+  });
+  assert.strictEqual(crossOriginCredentials.override.headers.cookie, undefined);
 
   const crossOrigin = await validateBeforeUpstreamRewrite(original, {
     ...original,
