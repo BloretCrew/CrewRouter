@@ -267,7 +267,7 @@ function buildContext(plugin, hooksBus, logPrefix) {
       list: async (opts = {}) => {
         const limit = Math.min(Math.max(parseInt(opts.limit, 10) || 20, 1), 100);
         const r = await pool.query(
-          `SELECT id, action, description, details, created_at FROM audit_logs
+          `SELECT id, action, description, details, created_at FROM operation_logs
            WHERE resource_type = $1 ORDER BY id DESC LIMIT $2`,
           [`plugin:${id}`, limit]
         );
