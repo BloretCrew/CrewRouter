@@ -12,6 +12,7 @@ const { recordLiveCallTest } = require('../utils/model-test');
 const { calculatePointsToDeduct } = require('../utils/points-deduct');
 const { clientMetaFromReq } = require('../utils/request-source');
 const { notifyUser, NOTIFICATION_TYPES } = require('../utils/notifications');
+const { selectHealthyWeighted } = require('../utils/provider-selector');
 
 const UPSTREAM_TIMEOUT = 60000;
 const UPSTREAM_STREAM_TIMEOUT = 300000; // 流式请求超时 5 分钟
@@ -154,7 +155,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       );
       if (groupResult.rows.length > 1) {
         const candidates = groupResult.rows;
-        provider = candidates[Math.floor(Math.random() * candidates.length)];
+        provider = selectHealthyWeighted(candidates, `provider:${provider.grp}`);
         Logger.info(`[Playground] 供应商组 "${provider.grp}": 从 ${candidates.length} 个中选择 ${provider.id}`);
       }
     }
@@ -195,9 +196,10 @@ router.post('/chat', requireAuth, async (req, res) => {
       }
     }
 
+    const { upstreamUrl, validateUrl } = require('../utils/url-validator');
     let url;
     if (provider.format === 'anthropic') {
-      url = `${provider.base_url}/messages`;
+      url = upstreamUrl(provider.base_url, '/messages');
       const systemMsg = messages.find(m => m.role === 'system');
       const nonSystem = messages.filter(m => m.role !== 'system');
       upstreamBody.messages = nonSystem;
@@ -207,9 +209,12 @@ router.post('/chat', requireAuth, async (req, res) => {
       }
       if (systemMsg) upstreamBody.system = systemMsg.content;
     } else {
-      const baseUrl = provider.base_url.replace(/\/$/, '');
-      const chatPath = (baseUrl.endsWith('/v1') || baseUrl.endsWith('/api')) ? '/chat/completions' : '/v1/chat/completions';
-      url = `${baseUrl}${chatPath}`;
+      url = upstreamUrl(provider.base_url, '/chat/completions');
+    }
+
+    const urlCheck = await validateUrl(url, { allowPrivate: false });
+    if (!urlCheck.ok) {
+      return res.status(400).json({ error: `供应商 URL 校验失败: ${urlCheck.error}` });
     }
 
     // 多 Key：顺序 / 权重尝试，失败后 fallback
@@ -234,7 +239,8 @@ router.post('/chat', requireAuth, async (req, res) => {
           method: 'POST',
           headers,
           body: JSON.stringify(upstreamBody),
-          signal: AbortSignal.timeout(isStream ? UPSTREAM_STREAM_TIMEOUT : UPSTREAM_TIMEOUT)
+          signal: AbortSignal.timeout(isStream ? UPSTREAM_STREAM_TIMEOUT : UPSTREAM_TIMEOUT),
+          redirect: 'manual'
         });
       } catch (fetchErr) {
         lastErrText = fetchErr.message || 'fetch failed';

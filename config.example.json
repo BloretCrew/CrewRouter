@@ -20,9 +20,9 @@
     "tenantKey": "your-feishu-tenant-key"
   },
   "passport": {
-    "appId": "your-passport-app-id",
-    "appSecret": "your-passport-app-secret",
-    "redirectCallbackHost": "https://router.example.com/auth/passport/callback"
+    "appId": "bp_2da5d6465574c0a2",
+    "appSecret": "bs_ba686f4608efd552f087ad3c09226167f278853fc031bf62",
+    "redirectCallbackHost": ""
   },
   "initialProviders": [
     {
@@ -86,7 +86,8 @@
     }
   },
   "gateway": {
-    "fourth_cache_breakpoint": false
+    "fourth_cache_breakpoint": false,
+    "masterKey": "set-a-random-secret-in-production"
   },
   "store": {
     "seedDemo": true,

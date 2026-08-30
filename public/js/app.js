@@ -300,6 +300,11 @@ class ConsoleApp {
       item.addEventListener('click', () => this.navigateTo(item.dataset.page));
     });
 
+    document.querySelectorAll('[data-settings-category]').forEach(item => {
+      item.addEventListener('click', () => this.showSettingsCategory(item.dataset.settingsCategory));
+    });
+    document.getElementById('settingsBackButton')?.addEventListener('click', () => this.showSettingsOverview());
+
     document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
     document.getElementById('createApiKeyBtn')?.addEventListener('click', () => this.showModal('createApiKeyModal'));
     document.getElementById('confirmCreateApiKey')?.addEventListener('click', () => this.createApiKey());
@@ -788,7 +793,7 @@ class ConsoleApp {
         <div class="api-key-prefix">
           <code class="api-key-value" data-visible="false" data-fullkey="${escapeHtml(fullKey)}"
                 onclick="app.toggleKeyVisibility(this)" title="${t('点击显示/隐藏完整密钥')}">${escapeHtml(maskedKey)}</code>
-          <div class="api-key-secret-actions">
+          ${fullKey ? `<div class="api-key-secret-actions">
             <button type="button" class="copy-btn" onclick="app.toggleKeyVisibility(this.closest('.api-key-prefix').querySelector('.api-key-value'))" title="${t('显示/隐藏')}">
               ${this.getSFIcon('eye', 14)}
             </button>
@@ -796,7 +801,7 @@ class ConsoleApp {
               ${this.getSFIcon('document.on.document', 14)}
               <span>复制</span>
             </button>
-          </div>
+          </div>` : ''}
         </div>
 
         <div class="api-key-footer">
@@ -2180,9 +2185,7 @@ class ConsoleApp {
             ${team.models.map(model => this._renderModelLibraryItem(model, team, ctx.currentModel, model.provider_enabled === false, {
               mode: 'keyPicker',
               onClick: `app.selectKeyModelFromPicker('${this._jsString(model.model_id || model.id)}','${this._jsString(model.name || model.alias || model.upstream_model_id || '')}')`,
-              subtitle: model.provider_name
-                ? `<span class="model-search-provider-tag">${escapeHtml(model.provider_name)}</span>`
-                : ''
+              subtitle: ''
             })).join('')}
           </div>
         </div>
@@ -2275,7 +2278,7 @@ class ConsoleApp {
         <div class="model-library-provider-header" onclick="app.toggleKeyModelPickerProvider(${teamIndex}, ${providerIndex})">
           <div class="model-library-provider-title">
             <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-            <span class="provider-name">${escapeHtml(provider.provider_name)}</span>
+            ${renderProviderNameTag(provider.provider_name)}
             ${this._renderProviderTestSummary(provider)}
             ${(provider.tags || []).map(t =>
               `<span class="model-item-badge" style="background:${t.color}18;color:${t.color};border:1px solid ${t.color}44;">${escapeHtml(t.name)}</span>`
@@ -2864,6 +2867,7 @@ class ConsoleApp {
       const currentJudge = config.judge_model_id || '';
       const currentOuter = config.outer_model_id || '';
       const fusionEnabled = config.fusion_enabled !== false;
+      const synthesisPromptEnabled = config.fusion_synthesis_prompt_enabled !== false;
 
       // 按供应商分组
       const byProvider = {};
@@ -2888,6 +2892,17 @@ class ConsoleApp {
         </div>
 
         <div id="fusionConfigBody" style="${fusionEnabled ? '' : 'opacity:0.4;pointer-events:none;'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;">
+          <div style="padding-right:16px;">
+            <div style="font-size:14px;font-weight:500;">${t('启用 Fusion 综合提示')}</div>
+            <div id="fusionSynthesisPromptRisk" style="font-size:12px;color:${synthesisPromptEnabled ? 'var(--muted-foreground)' : 'var(--destructive)'};">${synthesisPromptEnabled ? t('开启时，Panel 仅作为不可信结构化参考，不会拼入 system prompt。') : t('关闭后会保留原始 Panel 内容，但内容未经净化，存在提示注入风险。')}</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex:none;">
+            <input type="checkbox" id="fusionSynthesisPromptToggle" ${synthesisPromptEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+            <span style="position:absolute;inset:0;background:${synthesisPromptEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
+            <span style="position:absolute;top:2px;${synthesisPromptEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+          </label>
+        </div>
         <div style="margin-bottom:16px;">
           <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:8px;">Panel 模型（多选，并行调用）</div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -2950,6 +2965,24 @@ class ConsoleApp {
         });
       }
 
+      const synthesisToggleEl = document.getElementById('fusionSynthesisPromptToggle');
+      if (synthesisToggleEl) {
+        synthesisToggleEl.addEventListener('change', () => {
+          const on = synthesisToggleEl.checked;
+          const track = synthesisToggleEl.nextElementSibling;
+          const knob = track?.nextElementSibling;
+          const risk = document.getElementById('fusionSynthesisPromptRisk');
+          if (track) track.style.background = on ? 'var(--primary)' : 'var(--border)';
+          if (knob) { knob.style.left = on ? '' : '2px'; knob.style.right = on ? '2px' : ''; }
+          if (risk) {
+            risk.textContent = on
+              ? t('开启时，Panel 仅作为不可信结构化参考，不会拼入 system prompt。')
+              : t('关闭后会保留原始 Panel 内容，但内容未经净化，存在提示注入风险。');
+            risk.style.color = on ? 'var(--muted-foreground)' : 'var(--destructive)';
+          }
+        });
+      }
+
       // 绑定 panel checkbox 变化事件
       container.querySelectorAll('.fusion-panel-cb').forEach(cb => {
         cb.addEventListener('change', () => {
@@ -2969,7 +3002,13 @@ class ConsoleApp {
           const saveRes = await fetch(`/api/user/api-keys/${keyId}/fusion-config`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ panel_models: panelModels, judge_model_id: judgeModelId, outer_model_id: outerModelId, fusion_enabled: document.getElementById('fusionEnabledToggle')?.checked ?? true })
+            body: JSON.stringify({
+              panel_models: panelModels,
+              judge_model_id: judgeModelId,
+              outer_model_id: outerModelId,
+              fusion_enabled: document.getElementById('fusionEnabledToggle')?.checked ?? true,
+              fusion_synthesis_prompt_enabled: document.getElementById('fusionSynthesisPromptToggle')?.checked ?? true
+            })
           });
           if (saveRes.ok) {
             this.closeModals();
@@ -3379,7 +3418,7 @@ class ConsoleApp {
             ${models.map(m => `
               <tr>
                 <td><code>${escapeHtml(m.alias || m.upstream_model_id || m.name || m.id)}</code></td>
-                <td>${escapeHtml(m.provider_name || m.provider || '-')}</td>
+                <td>${renderProviderNameTag(m.provider_name || m.provider) || '<span class="model-provider-missing">-</span>'}</td>
                 <td>¥${Number(m.input_price_per_1k_tokens || 0).toFixed(4)}</td>
                 <td>¥${Number(m.output_price_per_1k_tokens || 0).toFixed(4)}</td>
               </tr>
@@ -4217,9 +4256,9 @@ class ConsoleApp {
 
     const rowsHtml = results.map(r => {
       if (r.ok) {
-        const providerLabel = r.provider_url
-          ? `${escapeHtml(r.provider)} <span style="font-size:10px;color:var(--muted-foreground);">(${escapeHtml(r.provider_url)})</span>`
-          : escapeHtml(r.provider || '');
+        const providerLabel = r.provider
+          ? `${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}`
+          : '';
         return `
           <div class="model-test-row">
             <div class="model-test-row-icon model-test-result-pass">&#10003;</div>
@@ -4246,7 +4285,7 @@ class ConsoleApp {
       } else {
         const modelLabel = r.model || r.modelId || t('未知模型');
         const providerLabel = r.provider
-          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${escapeHtml(r.provider)}${r.provider_url ? ' (' + escapeHtml(r.provider_url) + ')' : ''}</div>`
+          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
           : '';
         return `
           <div class="model-test-row">
@@ -4297,7 +4336,8 @@ class ConsoleApp {
     const totalCached = parseInt(s.total_cached_tokens || 0);
     const totalCost = parseFloat(s.total_cost || 0);
     const avgLatency = parseFloat(s.avg_latency || 0);
-    const days = d.daily ? d.daily.length : 1;
+    const daily = Array.isArray(d.daily) ? d.daily : [];
+    const days = daily.length || 1;
 
     document.getElementById('statsTotalRequests').textContent = totalReqs.toLocaleString();
     document.getElementById('statsTotalTokens').textContent = this._formatBigNumber(totalTokens);
@@ -4343,8 +4383,8 @@ class ConsoleApp {
     };
     const today = shParts(new Date());
     const yesterday = shParts(new Date(Date.now() - 86400000));
-    const todayData = d.daily.find(r => r.date === today);
-    const yesterdayData = d.daily.find(r => r.date === yesterday);
+    const todayData = daily.find(r => r.date === today);
+    const yesterdayData = daily.find(r => r.date === yesterday);
 
     document.getElementById('todayRequests').textContent = todayData ? parseInt(todayData.requests).toLocaleString() : '0';
     document.getElementById('todayTokens').textContent = todayData ? this._formatBigNumber(parseInt(todayData.tokens)) : '0';
@@ -4384,6 +4424,7 @@ class ConsoleApp {
   _renderOverviewInsights() {
     const d = this._statsData;
     if (!d) return;
+    const daily = Array.isArray(d.daily) ? d.daily : [];
 
     // 最常用模型 Top 3
     const topModelsContainer = document.getElementById('topModelsList');
@@ -4474,9 +4515,9 @@ class ConsoleApp {
 
     // 费用趋势（最近 7 天 vs 前 7 天）
     const costTrendContainer = document.getElementById('costTrendList');
-    if (costTrendContainer && d.daily && d.daily.length >= 14) {
-      const recent7 = d.daily.slice(-7);
-      const prev7 = d.daily.slice(-14, -7);
+    if (costTrendContainer && daily.length >= 14) {
+      const recent7 = daily.slice(-7);
+      const prev7 = daily.slice(-14, -7);
       const recent7Cost = recent7.reduce((sum, r) => sum + parseFloat(r.cost || 0), 0);
       const prev7Cost = prev7.reduce((sum, r) => sum + parseFloat(r.cost || 0), 0);
       const change = prev7Cost > 0 ? ((recent7Cost - prev7Cost) / prev7Cost * 100).toFixed(1) : 0;
@@ -4508,7 +4549,8 @@ class ConsoleApp {
       const totalTokens = parseInt(s.total_tokens || 0);
       const totalCost = parseFloat(s.total_cost || 0);
       const avgLatency = parseFloat(s.avg_latency || 0);
-      const days = d.daily ? d.daily.length : 1;
+      const daily = Array.isArray(d.daily) ? d.daily : [];
+      const days = daily.length || 1;
 
       setHTML(keyMetricsContainer, `
         <div class="stats-insight-item">
@@ -5254,6 +5296,7 @@ class ConsoleApp {
     this._detailMsgPage = 0;
     this._detailLoaded = 0;
     this._detailTotal = 0;
+    this._renderedEventSigs = [];
     // 切换会话时的状态隔离：清空上一会话的总结状态与分页指纹，避免串会话
     this._summaryPending = false;
     this._sessionSummaryText = '';
@@ -6126,7 +6169,7 @@ class ConsoleApp {
       [t('调用时间'), escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))],
       [t('模型'), escapeHtml(modelLabel)],
       [t('系列'), escapeHtml(log.series || '-')],
-      [t('供应商'), escapeHtml(log.provider_name || '-')],
+      [t('供应商'), renderProviderNameTag(log.provider_name) || '<span class="model-provider-missing">-</span>'],
       [t('请求类型'), escapeHtml(log.request_type || '-')],
       [t('客户端'), this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
       ['API Key', `<code style="font-size:12px;">${escapeHtml(log.key_prefix || '-')}****</code>${log.key_name ? ` <span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}`],
@@ -6252,7 +6295,37 @@ class ConsoleApp {
     }
   }
 
-  loadSettings() {
+  showSettingsOverview() {
+    const overview = document.getElementById('settingsOverview');
+    const detail = document.getElementById('settingsDetail');
+    if (overview) overview.hidden = false;
+    if (detail) detail.hidden = true;
+    document.querySelectorAll('.settings-section').forEach(section => { section.hidden = true; });
+  }
+
+  showSettingsCategory(category) {
+    const overview = document.getElementById('settingsOverview');
+    const detail = document.getElementById('settingsDetail');
+    const title = document.getElementById('settingsDetailTitle');
+    const sections = [...document.querySelectorAll(`.settings-category-${category}`)];
+    if (!sections.length) return;
+    if (overview) overview.hidden = true;
+    if (detail) detail.hidden = false;
+    if (title) title.textContent = document.querySelector(`[data-settings-category="${category}"] strong`)?.textContent || '';
+    document.querySelectorAll('.settings-section').forEach(item => { item.hidden = !sections.includes(item); });
+    sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async loadSettings() {
+    this.showSettingsOverview();
+    const version = document.getElementById('settingsVersionLabel');
+    if (version) {
+      try {
+        const response = await fetch('/api/version');
+        const data = await response.json();
+        version.textContent = data.version ? `v${data.version}` : '-';
+      } catch (_) { version.textContent = '-'; }
+    }
     if (this.user) {
       document.getElementById('settingsAvatar').value = this.user.avatar || '';
       const preview = document.getElementById('settingsAvatarPreview');
@@ -6371,7 +6444,7 @@ class ConsoleApp {
 
   async markNotificationRead(id) { await fetch(`/api/user/notifications/${id}/read`, { method: 'PUT' }); await this.loadNotifications(); }
   async deleteNotification(id) { await fetch(`/api/user/notifications/${id}`, { method: 'DELETE' }); await this.loadNotifications(); }
-  async clearNotifications() { if (!confirm(t('确定清空全部通知吗？'))) return; await fetch('/api/user/notifications', { method: 'DELETE' }); await this.loadNotifications(); }
+  async clearNotifications() { await fetch('/api/user/notifications', { method: 'DELETE' }); await this.loadNotifications(); }
 
   // ========== 事件通知（简化：仅总开关） ==========
   async loadHookNotifySettings() {
@@ -6563,17 +6636,15 @@ class ConsoleApp {
         this._sessionSummaryText = acc;
         this._setSummaryRegenDisabled(false);
         this._applySummaryBtnText(reqKey, true);
+        this._renderSessionSummaryInline(reqKey, acc, 'done', null, this._summaryCacheTimeMap[reqKey]);
       }
       if (this._summarySeq === reqSeq) {
         this._summaryTaskSessionKey = reqKey;
         this._summaryTaskText = acc;
         this._setSummaryRegenDisabled(false);
+        this._updateTaskBar('done', { summary: acc, sessionKey: reqKey });
+        this.showToast(t('总结已生成'), 'success');
       }
-      if (this._detailSessionKey === reqKey) {
-        this._renderSessionSummaryInline(reqKey, acc, 'done', null, this._summaryCacheTimeMap[reqKey]);
-      }
-      this.showToast(t('总结已生成'), 'success');
-      if (this._summarySeq === reqSeq) this._updateTaskBar('done', { summary: acc, sessionKey: reqKey });
       return;
     } catch (error) {
       const summaryError = error.message || t('总结生成失败');
@@ -6582,7 +6653,7 @@ class ConsoleApp {
         this._renderSessionSummaryInline(reqKey, '', 'error', summaryError);
 
         const live = document.getElementById('sessionSummaryBody');
-        if (live && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
+        if (this._summaryModalSessionKey === reqKey && live && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
           setHTML(live, `<span style="color:var(--danger);">${escapeHtml(summaryError)}</span>`);
         }
       }
@@ -8937,7 +9008,7 @@ ${extractorBody}
                 ${m.description ? `<div style="font-size:11px;color:var(--muted-foreground);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
               </td>
               <td><code style="font-size:12px;color:var(--muted-foreground);">${escapeHtml(m.upstream_model_id || m.name || m.id)}</code></td>
-              <td><span style="font-size:13px;">${escapeHtml(m.provider_name || m.provider || '-')}</span></td>
+              <td>${renderProviderNameTag(m.provider_name || m.provider) || '<span class="model-provider-missing">-</span>'}</td>
               <td>${m.series ? `<span style="font-size:11px;background:var(--muted);padding:2px 6px;border-radius:4px;">${escapeHtml(m.series)}</span>` : '<span style="color:var(--muted-foreground);font-size:12px;">-</span>'}</td>
               <td style="font-size:13px;">×${parseFloat(m.model_multiplier || 1.0).toFixed(2)}</td>
               <td>${m.enabled !== false
@@ -9367,9 +9438,7 @@ ${extractorBody}
       const items = team.models.map(model => {
         const isDisabled = model.provider_enabled === false;
         return this._renderModelLibraryItem(model, team, currentModel, isDisabled, {
-          subtitle: model.provider_name
-            ? `<span class="model-search-provider-tag">${escapeHtml(model.provider_name)}</span>`
-            : ''
+          subtitle: ''
         });
       }).join('');
       return `
@@ -9954,10 +10023,7 @@ ${extractorBody}
         is_personal: model.is_personal
       };
       const isDisabled = model.provider_enabled === false;
-      const subtitle = [
-        model.team_name ? `<span class="model-search-provider-tag">${escapeHtml(model.team_name)}</span>` : '',
-        model.provider_name ? `<span class="model-search-provider-tag">${escapeHtml(model.provider_name)}</span>` : ''
-      ].join('');
+      const subtitle = model.team_name ? `<span class="model-item-badge series">${escapeHtml(model.team_name)}</span>` : '';
       return this._renderModelLibraryItem(model, team, currentModel, isDisabled, { subtitle });
     }).join('');
 
@@ -10649,7 +10715,7 @@ ${extractorBody}
               <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
                 <div class="model-library-provider-title">
                   <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                  <span class="provider-name">${escapeHtml(provider.provider_name)}</span>
+                  ${renderProviderNameTag(provider.provider_name)}
                   ${this._renderProviderTestSummary(provider)}
                   ${(provider.tags || []).map(t =>
                     `<span class="model-item-badge" style="background:${t.color}18;color:${t.color};border:1px solid ${t.color}44;">${escapeHtml(t.name)}</span>`
@@ -10714,6 +10780,9 @@ ${extractorBody}
     const providerId = model.provider_id || model.provider || '';
     const teamId = team?.team_id || model.team_id || '';
     const onClick = options.onClick || `app.selectModel('${this._jsString(modelId)}')`;
+    const providerTagHtml = options.showProvider === false
+      ? ''
+      : renderProviderNameTag(model.provider_name || model.provider);
     const subtitleHtml = options.subtitle || '';
 
     const testOk = model.test_ok;
@@ -10771,6 +10840,7 @@ ${extractorBody}
           <span>${escapeHtml(model.name)}</span>
           ${testBadgeHtml}
           <div class="model-item-badges">
+            ${providerTagHtml}
             ${subtitleHtml}
             ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
             ${isOwner ? '<span class="model-item-badge owner">' + t('我的') + '</span>' : ''}
@@ -11685,7 +11755,7 @@ ${extractorBody}
             onclick="app.selectLibraryKey(${key.id}, event)"
             title="${t('再次点击打开菜单')}">${keyName}</button>
           <span class="binding-arrow">→</span>
-          ${providerName ? `<span class="binding-provider-name">${escapeHtml(providerName)}</span><span class="binding-arrow">→</span>` : ''}
+          ${providerName ? `${renderProviderNameTag(providerName)}<span class="binding-arrow">→</span>` : ''}
           <span class="binding-model-name">${escapeHtml(modelName)}</span>
           ${testCapsule}
         </div>

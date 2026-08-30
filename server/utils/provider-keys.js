@@ -5,6 +5,8 @@
  * - 权重模式：首次按权重随机，失败后按权重降序 fallback（剔除已失败项）
  */
 
+const { decryptSecret } = require('./secret-crypto');
+
 function parseApiKeysRaw(raw) {
   if (raw == null || raw === '') return null;
   if (Array.isArray(raw)) return raw;
@@ -46,11 +48,11 @@ function normalizeProviderKeyEntries(provider) {
     const entries = fromJson
       .map((item) => {
         if (typeof item === 'string') {
-          const key = String(item || '').trim();
+          const key = decryptSecret(String(item || '').trim());
           return key ? { key, weight: 1, enabled: true } : null;
         }
         if (item && typeof item === 'object') {
-          const key = String(item.key || item.api_key || '').trim();
+          const key = decryptSecret(String(item.key || item.api_key || '').trim());
           if (!key) return null;
           return { key, weight: normalizeWeight(item.weight), enabled: item.enabled !== false };
         }
@@ -59,7 +61,7 @@ function normalizeProviderKeyEntries(provider) {
       .filter(Boolean);
     if (entries.length > 0) return entries;
   }
-  const single = String(provider.api_key || '').trim();
+  const single = decryptSecret(String(provider.api_key || '').trim());
   return single ? [{ key: single, weight: 1, enabled: true }] : [];
 }
 
@@ -147,11 +149,11 @@ function normalizeKeysInput(apiKeys, fallbackApiKey) {
     const entries = apiKeys
       .map((item) => {
         if (typeof item === 'string') {
-          const key = String(item || '').trim();
+          const key = decryptSecret(String(item || '').trim());
           return key ? { key, weight: 1, enabled: true } : null;
         }
         if (item && typeof item === 'object') {
-          const key = String(item.key || item.api_key || '').trim();
+          const key = decryptSecret(String(item.key || item.api_key || '').trim());
           if (!key) return null;
           return { key, weight: normalizeWeight(item.weight), enabled: item.enabled !== false };
         }

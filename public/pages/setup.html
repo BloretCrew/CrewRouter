@@ -129,10 +129,18 @@
       <h2>选择账号系统模式</h2>
       <p class="step-desc" style="color:#ef4444;font-weight:600;">选择后不可修改，请谨慎选择。</p>
       <div style="display:grid;gap:12px;">
+        <button class="btn btn-primary" onclick="setup.chooseMode('passport')">Bloret PassPort 模式</button>
         <button class="btn btn-primary" onclick="setup.chooseMode('feishu')">飞书模式</button>
-        <button class="btn" onclick="setup.chooseMode('passport')">Bloret PassPort 模式</button>
       </div>
       <div class="setup-error" id="modeError"></div>
+    </div>
+
+    <div class="setup-card" id="stepPassport" style="display:none;">
+      <div class="setup-success">
+        <h2>PassPort 首次授权</h2>
+        <p>请使用管理员身份完成 Bloret PassPort 授权，授权成功后将自动创建管理员账号并进入控制台。</p>
+        <button class="btn btn-primary" type="button" onclick="setup.startPassportAuth()">前往 PassPort 授权</button>
+      </div>
     </div>
 
     <div class="setup-card" id="step1" style="display:none;">
@@ -188,7 +196,9 @@
           console.log('[OOBE] status:', data);
           document.getElementById('stepLoading').style.display = 'none';
           if (data.needsSetup) {
-            if (data.authMode) {
+            if (data.authMode === 'passport') {
+              document.getElementById('stepPassport').style.display = 'block';
+            } else if (data.authMode === 'feishu') {
               document.getElementById('step1').style.display = 'block';
               document.getElementById('adminUsername').focus();
             } else {
@@ -205,6 +215,41 @@
         }
       },
 
+      async startPassportAuth() {
+        const errorEl = document.getElementById('modeError');
+        errorEl.style.display = 'none';
+        try {
+          const response = await fetch('/auth/passport/redirect-uri', { credentials: 'same-origin' });
+          const data = await response.json().catch(() => ({}));
+          if (data.redirectUri) {
+            const origin = new URL(data.redirectUri).origin;
+            window.location.href = `/auth/passport?redirect_origin=${encodeURIComponent(origin)}`;
+            return;
+          }
+        } catch (_) {}
+
+        const answer = window.prompt(
+          `无法自动确认当前地址。\n请确认或输入 PassPort 接受的回调地址（例如 https://example.com）。`,
+          window.location.origin
+        );
+        if (answer === null) return;
+        const origin = answer.trim().replace(/\/$/, '');
+        if (!origin) {
+          errorEl.textContent = '请输入回调地址';
+          errorEl.style.display = 'block';
+          return;
+        }
+        try {
+          const response = await fetch(`/auth/passport/redirect-uri?redirect_origin=${encodeURIComponent(origin)}`, { credentials: 'same-origin' });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.redirectUri) throw new Error(data.error || '公网地址无法使用');
+          window.location.href = `/auth/passport?redirect_origin=${encodeURIComponent(origin)}`;
+        } catch (error) {
+          errorEl.textContent = error.message || '无法确认公网地址，请检查后重试';
+          errorEl.style.display = 'block';
+        }
+      },
+
       async chooseMode(mode) {
         const el = document.getElementById('modeError');
         el.style.display = 'none';
@@ -213,8 +258,12 @@
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.error || '模式选择失败');
           document.getElementById('stepMode').style.display = 'none';
-          document.getElementById('step1').style.display = 'block';
-          document.getElementById('adminUsername').focus();
+          if (mode === 'passport') {
+            document.getElementById('stepPassport').style.display = 'block';
+          } else {
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('adminUsername').focus();
+          }
         } catch (e) { el.textContent = e.message; el.style.display = 'block'; }
       },
 

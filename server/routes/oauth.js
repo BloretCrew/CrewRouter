@@ -67,9 +67,7 @@ const PUBLIC_DIR = (() => {
 })();
 
 // ---------- 工具 ----------
-function sha256Hex(s) {
-  return crypto.createHash('sha256').update(s).digest('hex');
-}
+const { sha256Hex } = require('../utils/key-hash');
 
 function randomToken() {
   return OAUTH_TOKEN_PREFIX + crypto.randomBytes(32).toString('base64url');

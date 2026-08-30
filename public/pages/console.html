@@ -9,8 +9,9 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/themes.css">
-  <link rel="stylesheet" href="/css/main.css?v=24">
+  <link rel="stylesheet" href="/css/main.css?v=25">
   <link rel="stylesheet" href="/css/project-work.css?v=1">
+  <link rel="stylesheet" href="/css/settings.css?v=1">
   <script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
@@ -1691,8 +1692,50 @@ data: [DONE]</code></pre>
 
       <!-- 用户设置页面 -->
       <div id="settingsPage" class="page">
-        <div class="content-section">
-          <h2><span data-i18n="用户设置">用户设置</span></h2>
+        <div id="settingsOverview" class="settings-overview">
+          <div class="settings-version-card">
+            <img class="settings-brand-icon" src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="CrewRouter">
+            <div class="settings-version-info">
+              <strong>CrewRouter</strong>
+              <span id="settingsVersionLabel">-</span>
+              <div class="settings-link-list">
+                <a href="https://crewrouter.bloret.net/" target="_blank" rel="noopener" class="settings-link-button"><img class="settings-link-icon sf-icon" src="https://img.bloret.net/SF/globe?color=black" alt="" data-sf-name="globe">Website</a>
+                <a href="https://github.com/BloretCrew/CrewRouter" target="_blank" rel="noopener" class="settings-link-button"><img class="settings-link-icon" src="https://img.bloret.net/img/1787928611714/4aa14a030498aaa1900006568a1f5163" alt="">Github</a>
+                <a href="https://www.npmjs.com/package/@bloret-crew/crewrouter-helper" target="_blank" rel="noopener" class="settings-link-button"><img class="settings-link-icon sf-icon" src="https://img.bloret.net/SF/cube?color=black" alt="" data-sf-name="cube">CrewRouterHelper</a>
+                <a href="https://qm.qq.com/q/kEt8fb41wc" target="_blank" rel="noopener" class="settings-link-button"><img src="https://img.bloret.net/img/1787927888716/0e4652ca34221ddf50433f4127aa9f68" alt="">QQ Discuss</a>
+              </div>
+            </div>
+          </div>
+          <p class="settings-overview-hint"><span data-i18n="选择一个类别以管理相关设置">选择一个类别以管理相关设置</span></p>
+          <div class="settings-category-grid">
+            <button type="button" class="settings-category-card" data-settings-category="profile">
+              <img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/person.crop.circle?color=black" alt="" data-sf-name="person.crop.circle"><span><strong><span data-i18n="个人资料">个人资料</span></strong><small><span data-i18n="头像与界面主题">头像与界面主题</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+            <button type="button" class="settings-category-card" data-settings-category="notifications">
+              <img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/bell?color=black" alt="" data-sf-name="bell"><span><strong><span data-i18n="通知">通知</span></strong><small><span data-i18n="站内通知与 Bark 推送">站内通知与 Bark 推送</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+            <button type="button" class="settings-category-card" data-settings-category="security">
+              <img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/lock.shield?color=black" alt="" data-sf-name="lock.shield"><span><strong><span data-i18n="安全">安全</span></strong><small><span data-i18n="双重认证、通行密钥与密码">双重认证、通行密钥与密码</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+            <button type="button" class="settings-category-card" data-settings-category="signature">
+              <img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/signature?color=black" alt="" data-sf-name="signature"><span><strong><span data-i18n="API 签名">API 签名</span></strong><small><span data-i18n="自定义 API 回复签名">自定义 API 回复签名</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+            <button type="button" class="settings-category-card" data-settings-category="plugins">
+              <img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/puzzlepiece.extension?color=black" alt="" data-sf-name="puzzlepiece.extension"><span><strong><span data-i18n="插件">插件</span></strong><small><span data-i18n="插件数据授权">插件数据授权</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+            <button type="button" class="settings-category-card" data-settings-category="events">
+              <img class="settings-category-icon sf-icon" src="https://img.bloret.net/SF/list.bullet?color=black" alt="" data-sf-name="list.bullet"><span><strong><span data-i18n="事件通知">事件通知</span></strong><small><span data-i18n="客户端事件推送偏好">客户端事件推送偏好</span></small></span><span class="settings-category-arrow">›</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="settingsDetail" class="settings-detail" hidden>
+          <button type="button" id="settingsBackButton" class="settings-back-button">‹ <span data-i18n="返回设置">返回设置</span></button>
+          <div id="settingsDetailTitle" class="settings-detail-title"></div>
+        </div>
+
+        <div class="content-section settings-section settings-category-profile">
+          <h2><span data-i18n="个人资料">个人资料</span></h2>
           <form id="settingsForm" class="settings-form">
             <div class="form-group">
               <label><span data-i18n="头像">头像</span></label>
@@ -1715,7 +1758,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 界面主题（插件主题，plugin-runtime.js 渲染选择器） -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-profile" style="margin-top:24px;">
           <div class="section-header">
             <div>
               <h2><span data-i18n="界面主题">界面主题</span></h2>
@@ -1728,7 +1771,8 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 通知设置 -->
-        <div class="content-section" style="margin-top:24px;">
+        <form id="notificationSettingsForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
+        <div class="content-section settings-section settings-category-notifications" style="margin-top:24px;">
           <div class="section-header">
             <div>
               <h2><span data-i18n="通知设置">通知设置</span></h2>
@@ -1740,7 +1784,7 @@ data: [DONE]</code></pre>
               <div><label style="margin:0;"><span data-i18n="启用 Bark 通知">启用 Bark 通知</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="Bark 是 iOS 推送工具，请填写 Server Key。">Bark 是 iOS 推送工具，请填写 Server Key。</span></small></div>
               <label class="pg-toggle"><input type="checkbox" id="barkEnabled"><span class="pg-toggle-slider"></span></label>
             </div>
-            <div class="form-group"><label for="barkServerKey">Bark Server Key</label><input id="barkServerKey" class="input" type="password" placeholder="请输入 Bark Server Key" data-i18n-placeholder="请输入 Bark Server Key" autocomplete="off"></div>
+            <div class="form-group"><label for="barkServerKey">Bark Server Key</label><input id="barkServerKey" class="input" type="password" placeholder="请输入 Bark Server Key" data-i18n-placeholder="请输入 Bark Server Key" autocomplete="off" form="notificationSettingsForm"></div>
             <div class="form-group"><label for="barkEndpoint"><span data-i18n="Bark 服务地址">Bark 服务地址</span></label><input id="barkEndpoint" class="input" value="https://api.day.app" placeholder="https://api.day.app"><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="使用自建 Bark 服务时可修改。">使用自建 Bark 服务时可修改。</span></small></div>
             <div style="display:flex;gap:20px;flex-wrap:wrap;margin:12px 0 16px;">
               <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="notifyQuota"><span data-i18n="额度不足通知"> 额度不足通知</span></label>
@@ -1751,7 +1795,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 插件数据授权 -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-plugins" style="margin-top:24px;">
           <div class="section-header">
             <div>
               <h2><span data-i18n="插件授权">插件授权</span></h2>
@@ -1773,7 +1817,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 事件通知（hook 上报事件推送开关） -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-events" style="margin-top:24px;">
           <div class="section-header">
             <div>
               <h2><span data-i18n="事件通知">事件通知</span></h2>
@@ -1791,10 +1835,11 @@ data: [DONE]</code></pre>
 
 
         <!-- 安全设置 -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-security" style="margin-top:24px;">
           <h2><span data-i18n="安全设置">安全设置</span></h2>
           
           <!-- 2FA 设置 -->
+          <form id="twoFactorForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
           <div style="margin-bottom:24px;padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:12px;flex-wrap:wrap;">
               <div>
@@ -1830,7 +1875,7 @@ data: [DONE]</code></pre>
             <div id="twoFactorDisable" style="display:none;">
               <p style="margin-bottom:12px;font-size:14px;"><span data-i18n="您已启用双重认证。如需关闭，请验证密码：">您已启用双重认证。如需关闭，请验证密码：</span></p>
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <input type="password" id="tfaDisablePassword" class="input" placeholder="输入当前密码" data-i18n-placeholder="输入当前密码" style="width:200px;">
+                <input type="password" id="tfaDisablePassword" class="input" placeholder="输入当前密码" data-i18n-placeholder="输入当前密码" autocomplete="current-password" form="twoFactorForm" style="width:200px;">
                 <button class="btn btn-secondary" onclick="app.disable2FA()" style="color:var(--destructive);border-color:var(--destructive);"><span data-i18n="关闭 2FA">关闭 2FA</span></button>
               </div>
               <div id="tfaDisableStatus" style="margin-top:8px;font-size:13px;"></div>
@@ -1858,17 +1903,18 @@ data: [DONE]</code></pre>
         <div class="content-section" style="margin-top:24px;">
           <h2><span data-i18n="修改密码">修改密码</span></h2>
           <form id="changePasswordForm" class="settings-form" onsubmit="return false;">
+            <input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;">
             <div class="form-group">
               <label for="currentPassword"><span data-i18n="当前密码">当前密码</span></label>
-              <input type="password" id="currentPassword" class="input" placeholder="请输入当前密码" data-i18n-placeholder="请输入当前密码" style="max-width:400px;">
+              <input type="password" id="currentPassword" class="input" placeholder="请输入当前密码" data-i18n-placeholder="请输入当前密码" autocomplete="current-password" style="max-width:400px;">
             </div>
             <div class="form-group">
               <label for="newPassword"><span data-i18n="新密码">新密码</span></label>
-              <input type="password" id="newPassword" class="input" placeholder="请输入新密码（至少6位）" data-i18n-placeholder="请输入新密码（至少6位）" style="max-width:400px;">
+              <input type="password" id="newPassword" class="input" placeholder="请输入新密码（至少6位）" data-i18n-placeholder="请输入新密码（至少6位）" autocomplete="new-password" style="max-width:400px;">
             </div>
             <div class="form-group">
               <label for="confirmNewPassword"><span data-i18n="确认新密码">确认新密码</span></label>
-              <input type="password" id="confirmNewPassword" class="input" placeholder="请再次输入新密码" data-i18n-placeholder="请再次输入新密码" style="max-width:400px;">
+              <input type="password" id="confirmNewPassword" class="input" placeholder="请再次输入新密码" data-i18n-placeholder="请再次输入新密码" autocomplete="new-password" style="max-width:400px;">
             </div>
             <div id="changePasswordStatus" style="font-size:13px;margin-top:8px;"></div>
             <button type="button" id="changePasswordBtn" class="btn btn-primary" style="margin-top:12px;padding:8px 24px;border-radius:8px;"><span data-i18n="修改密码">修改密码</span></button>
@@ -1876,7 +1922,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- API 签名设置 -->
-        <div class="content-section" style="margin-top:24px;">
+        <div class="content-section settings-section settings-category-signature" style="margin-top:24px;">
           <h2><span data-i18n="API 签名设置">API 签名设置</span></h2>
           <div style="padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -2180,6 +2226,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 步骤 2: 输入配置 -->
+        <form id="providerForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
         <div id="providerStep2" class="provider-step" style="display:none;">
           <div style="margin-bottom:16px;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:4px;"><span data-i18n="步骤 2/2">步骤 2/2</span></div>
@@ -2205,7 +2252,7 @@ data: [DONE]</code></pre>
           </div>
           <div class="form-group">
             <label for="providerApiKey">API Key <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;"><span data-i18n="（可留空，保存后稍后补全）">（可留空，保存后稍后补全）</span></span></label>
-            <input type="password" id="providerApiKey" class="input" placeholder="sk-xxx（可选）" data-i18n-placeholder="sk-xxx（可选）">
+            <input type="password" id="providerApiKey" class="input" placeholder="sk-xxx（可选）" data-i18n-placeholder="sk-xxx（可选）" autocomplete="new-password" form="providerForm">
           </div>
           <div style="display:flex;gap:8px;margin-top:16px;">
             <button class="btn btn-secondary" onclick="app.showProviderStep(1)"><span data-i18n="← 返回">← 返回</span></button>
@@ -2217,6 +2264,7 @@ data: [DONE]</code></pre>
   </div>
 
   <!-- 编辑供应商模态框 -->
+  <form id="editProviderForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
   <div id="editProviderModal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width:500px;">
       <div class="modal-header">
@@ -2236,7 +2284,7 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="editProviderApiKey">API Key <span style="font-size:12px;color:var(--muted-foreground);"><span data-i18n="（留空则不更新）">（留空则不更新）</span></span></label>
-          <input type="password" id="editProviderApiKey" class="input" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新">
+          <input type="password" id="editProviderApiKey" class="input" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新" autocomplete="new-password" form="editProviderForm">
         </div>
         <div class="form-group">
           <label for="editProviderFormat"><span data-i18n="API 格式">API 格式</span></label>
@@ -2666,11 +2714,11 @@ data: [DONE]</code></pre>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="/js/theme.js?v=2"></script>
   <script src="/js/i18n.js?v=2"></script>
-  <script src="/js/dom.js?v=2"></script>
+  <script src="/js/dom.js?v=3"></script>
   <script src="/js/dialog.js?v=2"></script>
   <script src="/js/session-tool-groups.js?v=2"></script>
   <script src="/js/vendor/marked.min.js"></script>
-  <script src="/js/app.js?v=53"></script>
+  <script src="/js/app.js?v=54"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

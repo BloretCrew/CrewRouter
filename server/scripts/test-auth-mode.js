@@ -8,4 +8,5 @@ assert.strictEqual(typeof authMode.getAuthMode, 'function');
 assert.strictEqual(typeof authMode.setAuthMode, 'function');
 assert.strictEqual(typeof authMode.isAuthModeFrozen, 'function');
 assert.strictEqual(typeof invites.validateInvite, 'function');
+assert.strictEqual(typeof invites.consumeInvite, 'function');
 console.log('auth-mode utility, invite validator, and admin bootstrap contracts passed');

@@ -15,6 +15,7 @@ const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
 const config = require('../config-loader');
 const { expandSessionMessages } = require('../utils/usage-compress');
+const { getInternalAccessToken } = require('../utils/internal-oauth');
 
 const DEFAULT_DAYS = 7;
 const MAX_DAYS = 90;
@@ -312,11 +313,13 @@ router.get('/sessions', requireAuth, async (req, res) => {
           ${sourceFilter}
         GROUP BY 1
       )
-      SELECT session_key, last_record_id, first_seen, last_seen, request_count,
-             total_tokens, total_cached_tokens, harness, models,
+      SELECT agg.session_key, agg.last_record_id, agg.first_seen, agg.last_seen, agg.request_count,
+             agg.total_tokens, agg.total_cached_tokens, agg.harness, agg.models,
+             ss.created_at AS summary_created_at,
              COUNT(*) OVER ()::int AS grand_total
       FROM agg
-      ORDER BY last_seen DESC
+      LEFT JOIN session_summaries ss ON ss.user_id = $1 AND ss.session_key = agg.session_key
+      ORDER BY agg.last_seen DESC
       OFFSET ${offset} LIMIT ${pageSize}
     `, params);
 
@@ -423,9 +426,9 @@ router.get('/sessions', requireAuth, async (req, res) => {
         lastToolName: meta.lastToolName || null,
         cwd: meta.cwd || null,
         summary: summaries.get(row.session_key)?.summary || null,
-        summaryCreatedAt: summaries.get(row.session_key)?.created_at || null,
         lastMessagePreview: meta.lastMessagePreview || null,
         pressureLevel: pressureLevel(Number(row.total_tokens || 0)),
+        summaryCreatedAt: row.summary_created_at || summaries.get(row.session_key)?.created_at || null,
       };
     });
 
@@ -709,17 +712,14 @@ function buildDetailRecords(rawRows) {
 
 // 内部推理：本地网关 + 服务端持有的第一个可用 key
 async function callInternalLLM(promptText, userId) {
-  // 用该用户自己的 CrewRouter 密钥调用本地网关——计费/注入/归因等规则与普通请求一致
-  const keyRow = await pool.query(
-    "SELECT id, key_value FROM api_keys WHERE user_id = $1 AND enabled = TRUE AND name ILIKE 'crewrouter' ORDER BY id ASC LIMIT 1",
-    [userId]);
-  if (!keyRow.rows[0]) throw new Error('未找到 CrewRouter 密钥');
+  // 用 OAuth access token 调用本地网关，避免读取 API Key 原文
+  const accessToken = await getInternalAccessToken(userId);
   const port = config.port || 20003;
   const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${keyRow.rows[0].key_value}`,
+      'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
       messages: [{ role: 'user', content: promptText }],
@@ -747,16 +747,13 @@ function readWebStream(bodyStream) {
 
 // 内部推理（流式）：本地网关 + 服务端持有的第一个可用 key，逐段产出内容增量
 async function* streamInternalLLM(promptText, userId) {
-  const keyRow = await pool.query(
-    "SELECT id, key_value FROM api_keys WHERE user_id = $1 AND enabled = TRUE AND name ILIKE 'crewrouter' ORDER BY id ASC LIMIT 1",
-    [userId]);
-  if (!keyRow.rows[0]) throw new Error('未找到 CrewRouter 密钥');
+  const accessToken = await getInternalAccessToken(userId);
   const port = config.port || 20003;
   const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${keyRow.rows[0].key_value}`,
+      'Authorization': `Bearer ${accessToken}`,
       'Accept': 'text/event-stream',
     },
     body: JSON.stringify({
@@ -804,55 +801,6 @@ async function* streamInternalLLM(promptText, userId) {
   for (const value of consumeLine('')) { if (value === 'done') return; yield value; }
 }
 
-// 流式变体：SSE 解析 + onDelta 回调（保留用户密钥计费链路）
-async function callInternalLLMStream(promptText, userId, onDelta) {
-  const keyRow = await pool.query(
-    "SELECT id, key_value FROM api_keys WHERE user_id = $1 AND enabled = TRUE AND name ILIKE 'crewrouter' ORDER BY id ASC LIMIT 1",
-    [userId]);
-  if (!keyRow.rows[0]) throw new Error('未找到 CrewRouter 密钥');
-  const port = config.port || 20003;
-  const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${keyRow.rows[0].key_value}`,
-    },
-    body: JSON.stringify({
-      messages: [{ role: 'user', content: promptText }],
-      max_tokens: 1200,
-      stream: true,
-    }),
-    signal: AbortSignal.timeout(180000),
-  });
-  if (!res.ok) {
-    const j = await res.json().catch(() => ({}));
-    throw new Error(j.error?.message || `上游 ${res.status}`);
-  }
-  let full = '';
-  let buffer = '';
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-    for (const line of lines) {
-      const t = line.trim();
-      if (!t.startsWith('data:')) continue;
-      const dataStr = t.slice(5).trim();
-      if (dataStr === '[DONE]') continue;
-      try {
-        const j = JSON.parse(dataStr);
-        const delta = j.choices?.[0]?.delta?.content || '';
-        if (delta) { full += delta; onDelta(delta); }
-      } catch (_) {}
-    }
-  }
-  return full;
-}
-
 // 组装会话全文（截断保护）；工具结果只保留最近 5 条，错误优先保留
 function buildSessionDigest(records) {
   const parts = [];
@@ -871,7 +819,7 @@ function buildSessionDigest(records) {
   const recentTools = toolResults.slice(-5);
   const errorTools = recentTools.filter(e => e.is_error);
   const normalTools = recentTools.filter(e => !e.is_error);
-  const selectedTools = errorTools.slice(0, 5).concat(normalTools.slice(0, Math.max(0, 5 - errorTools.length)));
+  const selectedTools = errorTools.concat(normalTools).slice(0, 5);
   for (const e of selectedTools) {
     const result = cleanDisplayText(String(e.resultPreview || '')).slice(0, LIMIT_TOOL_RESULT);
     if (result) parts.push(`[工具结果${e.is_error ? '·错误' : ''}] ${String(e.name || 'unknown').slice(0, 100)}: ${result}`);
@@ -937,7 +885,11 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
       }
       if (!summary) return res.status(502).json({ error: '模型未返回内容' });
       await persistSummary(summary);
-      return res.json({ sessionKey, summary, createdAt: new Date().toISOString() });
+      const saved = await pool.query(
+        'SELECT created_at FROM session_summaries WHERE user_id = $1 AND session_key = $2',
+        [uid, sessionKey]
+      );
+      return res.json({ sessionKey, summary, createdAt: saved.rows[0]?.created_at || null });
     }
 
     // 流式：先发 SSE 头，再逐段转发增量，最后 done（含完整文案并落库）

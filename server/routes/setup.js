@@ -4,9 +4,10 @@ const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { getAuthMode, setAuthMode, decodeMode } = require('../utils/auth-mode');
+const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 
 /**
- * OOBE 仅保留一步：创建管理员。
+ * OOBE：飞书模式创建管理员；PassPort 模式由首次管理员授权完成初始化。
  * 供应商 / 模型 / Team 等在管理后台配置，避免多步向导与 schema 竞态。
  * 数据库建表与迁移必须在服务启动时完成（见 server/index.js startServer）。
  */
@@ -54,9 +55,11 @@ router.post('/setup/mode', requireSetupMode, async (req, res) => {
   } catch (error) { res.status(400).json({ error: error.message }); }
 });
 
-// 唯一步骤：创建管理员并完成 OOBE
+// 飞书模式：创建管理员并完成 OOBE
 router.post('/setup/admin', requireSetupMode, async (req, res) => {
   const { username, email, password } = req.body;
+  let normalizedEmail;
+  try { normalizedEmail = normalizeEmail(email); } catch (error) { return res.status(400).json({ error: error.message }); }
   const selectedMode = await getAuthMode();
   if (!selectedMode || !['feishu', 'passport'].includes(selectedMode)) {
     return res.status(400).json({ error: '请先选择账号系统模式' });
@@ -81,7 +84,7 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
       `INSERT INTO users (username, email, password_hash, is_admin, email_verified, balance)
        VALUES ($1, $2, $3, TRUE, TRUE, 999)
        RETURNING id, username, email, is_admin`,
-      [username.trim(), email || null, passwordHash]
+      [username.trim(), normalizedEmail, passwordHash]
     );
 
     Logger.info(`[OOBE] 管理员账号已创建: ${username}`);
@@ -113,12 +116,11 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
     await client.query('SAVEPOINT sp_default_key');
     try {
       const rawKey = `sk-${crypto.randomBytes(24).toString('hex')}`;
-      const keyHash = bcrypt.hashSync(rawKey, 10);
       const keyPrefix = rawKey.substring(0, 12);
       await client.query(
-        `INSERT INTO api_keys (user_id, key_value, key_hash, key_prefix, name, custom_model_name)
+        `INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, custom_model_name)
          VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5')`,
-        [adminId, rawKey, keyHash, keyPrefix]
+        [adminId, require('../utils/key-hash').sha256Hex(rawKey), rawKey, keyPrefix]
       );
       await client.query('RELEASE SAVEPOINT sp_default_key');
       Logger.info('[OOBE] 已为管理员创建默认 API Key');
@@ -163,8 +165,8 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
     try {
       await client.query('ROLLBACK');
     } catch (_) { /* ignore */ }
-    if (error.code === '23505') {
-      return res.status(400).json({ error: '用户名或邮箱已存在' });
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ error: '用户名或邮箱已存在' });
     }
     Logger.error('[OOBE] 创建管理员失败:', error);
     res.status(500).json({ error: '服务器错误: ' + (error.message || '未知') });

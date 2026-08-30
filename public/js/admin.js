@@ -168,44 +168,8 @@ class AdminApp {
   }
 
   async initInvitePanel() {
-    try {
-      const status = await fetch('/auth/status').then(r => r.json());
-      if (status.authMode !== 'passport') return;
-      const section = document.getElementById('passportInvitesSection');
-      if (!section) return;
-      section.style.display = 'block';
-      const request = async (url, options) => {
-        const response = await fetch(url, options);
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
-        return data;
-      };
-      const showError = (err) => { document.getElementById('inviteResult').textContent = err.message || String(err); };
-      const render = async () => {
-        try {
-          const rows = await request('/api/auth-invites');
-          const list = document.getElementById('inviteList');
-          list.replaceChildren();
-          (Array.isArray(rows) ? rows : []).forEach((x) => {
-            const row = document.createElement('div'); row.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--border)';
-            row.textContent = `#${x.id} · ${['active', 'used', 'expired'].includes(x.status) ? x.status : 'unknown'} · ${new Date(x.expires_at).toLocaleString()}`;
-            if (x.status === 'active') { const btn = document.createElement('button'); btn.className = 'btn btn-sm'; btn.textContent = '撤销'; btn.onclick = () => this.revokeInvite(x.id); row.append(' ', btn); }
-            list.appendChild(row);
-          });
-        } catch (err) { showError(err); }
-      };
-      document.getElementById('generateInviteBtn')?.addEventListener('click', async () => {
-        try {
-          const data = await request('/api/auth-invites', { method: 'POST' });
-          const result = document.getElementById('inviteResult'); result.replaceChildren();
-          const text = document.createElement('span'); text.textContent = data.url || ''; result.appendChild(text);
-          if (data.url) { const btn = document.createElement('button'); btn.className = 'btn btn-sm'; btn.textContent = '复制'; btn.onclick = () => navigator.clipboard.writeText(data.url).catch(showError); result.append(' ', btn); }
-          await render();
-        } catch (err) { showError(err); }
-      });
-      this.revokeInvite = async (id) => { try { await request(`/api/auth-invites/${id}/revoke`, { method: 'POST' }); await render(); } catch (err) { showError(err); } };
-      render();
-    } catch (_) {}
+    const section = document.getElementById('passportInvitesSection');
+    if (section) section.style.display = '';
   }
 
   /** 支持的管理后台页面 id */
@@ -299,6 +263,13 @@ class AdminApp {
     }
   }
 
+  async logout() {
+    try {
+      await fetch('/auth/logout', { credentials: 'same-origin' });
+    } catch (e) {}
+    window.location.href = '/';
+  }
+
   bindEvents() {
     // 导航点击
     const navItems = document.querySelectorAll('.nav-item[data-page]');
@@ -308,6 +279,11 @@ class AdminApp {
         this.navigateTo(page);
       });
     });
+
+    document.querySelectorAll('[data-admin-settings-category]').forEach(item => {
+      item.addEventListener('click', () => this.showAdminSettingsCategory(item.dataset.adminSettingsCategory));
+    });
+    document.getElementById('adminSettingsBackButton')?.addEventListener('click', () => this.showAdminSettingsOverview());
 
     // 登出按钮
     const logoutBtn = document.getElementById('logoutBtn');
@@ -771,6 +747,120 @@ class AdminApp {
     } catch (error) {
       console.error(t('加载用户列表失败:'), error);
       setHTML(document.getElementById('usersList'), `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载用户列表失败'))}</p>`);
+    }
+  }
+
+  async _inviteRequest(url, options) {
+    const response = await fetch(url, { credentials: 'same-origin', ...options });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
+    return data;
+  }
+
+  async loadInvites() {
+    const list = document.getElementById('inviteList');
+    if (!list) return;
+    try {
+      const rows = await this._inviteRequest('/api/auth-invites');
+      this._renderInviteList(Array.isArray(rows) ? rows : []);
+    } catch (error) {
+      list.innerHTML = `<p style="color:var(--destructive);">${escapeHtml(error.message || t('加载邀请链接失败'))}</p>`;
+    }
+  }
+
+  _renderInviteList(rows) {
+    const list = document.getElementById('inviteList');
+    if (!list) return;
+    if (!rows.length) {
+      list.innerHTML = `<p style="color:var(--muted-foreground);padding:24px;text-align:center;">暂无邀请链接</p>`;
+      return;
+    }
+    const statusLabel = { active: '有效', used: '已用完', expired: '已过期' };
+    const fmt = (value) => value ? new Date(value).toLocaleString() : '-';
+    list.innerHTML = `<table><thead><tr><th>ID</th><th>状态</th><th>使用人数</th><th>有效期</th><th>Team</th><th>用户组</th><th>创建人</th><th>创建时间</th><th>最近使用</th><th>操作</th></tr></thead><tbody>${rows.map((row) => {
+      const status = statusLabel[row.status] || row.status;
+      const actions = [
+        this._inviteUrlMap?.[row.id] ? `<button class="btn btn-sm" type="button" onclick="adminApp.copyInviteUrl(${row.id})">复制链接</button>` : '',
+        row.status === 'active' ? `<button class="btn btn-sm" type="button" onclick="adminApp.revokeInvite(${row.id})">撤销</button>` : '',
+      ].filter(Boolean).join(' ');
+      return `<tr>
+        <td>#${row.id}</td>
+        <td>${escapeHtml(status)}</td>
+        <td>${Number(row.used_count || 0)} / ${Number(row.max_uses || 1)}</td>
+        <td>${fmt(row.expires_at)}</td>
+        <td>${escapeHtml(row.team_name || '未指定')}</td>
+        <td>${escapeHtml(row.group_name || '未指定')}</td>
+        <td>${escapeHtml(row.created_by_name || '-')}</td>
+        <td>${fmt(row.created_at)}</td>
+        <td>${fmt(row.used_at)}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+  }
+
+  async openInviteDialog() {
+    const [teams, groups] = await Promise.all([
+      fetch('/api/admin/teams').then((r) => r.json()).catch(() => []),
+      fetch('/api/admin/user-groups').then((r) => r.json()).catch(() => []),
+    ]);
+    const teamOptions = (Array.isArray(teams) ? teams : []).map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    const groupOptions = (Array.isArray(groups) ? groups : []).map((g) => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    const content = `
+      <div class="setup-form" style="display:grid;gap:12px;">
+        <div class="form-group"><label>使用人数 *</label><input id="inviteMaxUses" class="input" type="number" min="1" max="10000" value="1" required></div>
+        <div class="form-group"><label>有效天数 *</label><input id="inviteDays" class="input" type="number" min="1" max="365" value="7" required></div>
+        <div class="form-group"><label>加入 Team</label><select id="inviteTeamId" class="input"><option value="">不指定</option>${teamOptions}</select></div>
+        <div class="form-group"><label>加入用户组</label><select id="inviteGroupId" class="input"><option value="">不指定</option>${groupOptions}</select></div>
+      </div>`;
+    const footer = `<button type="button" class="dialog-btn dialog-btn-primary" id="inviteGenerateBtn">生成</button>`;
+    const modal = Dialog.showModal({ title: '生成邀请链接', content, footer, width: 480 });
+    document.getElementById('inviteGenerateBtn')?.addEventListener('click', async () => {
+      try {
+        const maxUses = parseInt(document.getElementById('inviteMaxUses')?.value || '', 10);
+        const days = parseInt(document.getElementById('inviteDays')?.value || '', 10);
+        if (!Number.isInteger(maxUses) || maxUses < 1) throw new Error('请填写使用人数');
+        if (!Number.isInteger(days) || days < 1) throw new Error('请填写有效天数');
+        const payload = {
+          maxUses,
+          days,
+          teamId: document.getElementById('inviteTeamId')?.value || '',
+          groupId: document.getElementById('inviteGroupId')?.value || '',
+        };
+        const data = await this._inviteRequest('/api/auth-invites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        this._inviteUrlMap = this._inviteUrlMap || {};
+        if (data.id && data.url) this._inviteUrlMap[data.id] = data.url;
+        if (navigator.clipboard?.writeText && data.url) await navigator.clipboard.writeText(data.url);
+        const result = document.getElementById('inviteResult');
+        if (result) result.innerHTML = `<div><strong>最新邀请链接</strong></div><div>${escapeHtml(data.url || '')}</div><div style="margin-top:6px;color:var(--muted-foreground);font-size:12px;">人数 ${data.max_uses} · ${days} 天 · 有效期至 ${new Date(data.expires_at).toLocaleString()}</div>`;
+        modal?.close?.();
+        alert(`邀请链接已生成并复制：\n\n${data.url}\n使用人数：${data.max_uses}\n有效天数：${days}\n有效期至：${new Date(data.expires_at).toLocaleString()}`);
+        await this.loadInvites();
+      } catch (err) {
+        alert(err.message || '生成邀请链接失败');
+      }
+    });
+  }
+
+  copyInviteUrl(id) {
+    const url = this._inviteUrlMap?.[id];
+    if (!url) {
+      alert('完整链接仅在本次生成后可复制，请重新生成。');
+      return;
+    }
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).catch(() => {});
+    alert(url);
+  }
+
+  async revokeInvite(id) {
+    try {
+      await this._inviteRequest(`/api/auth-invites/${id}/revoke`, { method: 'POST' });
+      await this.loadInvites();
+    } catch (error) {
+      alert(error.message || '撤销邀请失败');
     }
   }
 
@@ -1526,6 +1616,7 @@ class AdminApp {
             <span title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
             ${testBadgeHtml}
             <div class="model-item-badges">
+              ${renderProviderNameTag(model.provider_name || model.provider)}
               ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
               ${isDisabled
                 ? '<span class="model-item-badge" style="background:rgba(239,68,68,0.1);color:var(--destructive);">' + t('已禁用') + '</span>'
@@ -1834,7 +1925,7 @@ class AdminApp {
                 <div class="model-library-provider-header" style="cursor:pointer;">
                   <div class="model-library-provider-title">
                     <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                    <span class="provider-name">${escapeHtml(p.name || key)}</span>
+                    ${renderProviderNameTag(p.name || key)}
                     ${selectedCount > 0 ? `${'<span class="model-item-badge owner">' + t('已选')}${selectedCount}</span>` : ''}
                   </div>
                   <div class="model-library-provider-actions">
@@ -2215,7 +2306,7 @@ class AdminApp {
           <div class="admin-card-body">
             <div class="admin-card-row">
               <span class="admin-card-row-label">供应商</span>
-              <span class="admin-card-row-value">${escapeHtml(model.provider_name || model.provider || '-')}</span>
+              <span class="admin-card-row-value">${renderProviderNameTag(model.provider_name || model.provider) || '<span class="model-provider-missing">-</span>'}</span>
             </div>
             ${model.alias ? `${'<div class="admin-card-row"><span class="admin-card-row-label">' + t('别名')}</span><span class="admin-card-row-value">${escapeHtml(model.alias)}</span></div>` : ''}
             ${model.series ? `${'<div class="admin-card-row"><span class="admin-card-row-label">' + t('系列')}</span><span class="admin-card-row-value"><span class="series-badge">${escapeHtml(model.series)}</span></span></div>` : ''}
@@ -4785,14 +4876,16 @@ class AdminApp {
 
   _formatScriptAiModelLabel(model) {
     if (!model || !model.id) return t('自动选择（按系统可用模型）');
-    const name = model.name || model.id;
-    return model.provider_name ? `${model.provider_name} → ${name}` : name;
+    const name = escapeHtml(model.name || model.id);
+    return model.provider_name
+      ? `${renderProviderNameTag(model.provider_name)}<span class="script-ai-model-label-arrow">→</span>${name}`
+      : name;
   }
 
   _updateScriptAiModelLabel() {
     const el = document.getElementById('scriptAiModelLabel');
     if (!el) return;
-    el.textContent = this._formatScriptAiModelLabel(this._scriptAiModel || this._getScriptAiModel());
+    setHTML(el, this._formatScriptAiModelLabel(this._scriptAiModel || this._getScriptAiModel()));
   }
 
   /**
@@ -4826,7 +4919,7 @@ class AdminApp {
         </div>
         <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
           <button type="button" class="btn btn-secondary btn-sm" id="scriptAiModelClear">使用自动选择</button>
-          <span style="font-size:12px;color:var(--muted-foreground);align-self:center;">当前：${escHtml(this._formatScriptAiModelLabel(selected))}</span>
+          <span style="font-size:12px;color:var(--muted-foreground);align-self:center;">当前：${this._formatScriptAiModelLabel(selected)}</span>
         </div>
       </div>
     `;
@@ -4859,7 +4952,7 @@ class AdminApp {
       listEl.innerHTML = filtered.map(m => {
         const isActive = selectedId && String(m.id) === selectedId;
         const title = escHtml(m.name || m.id);
-        const sub = escHtml([m.provider_name, m.upstream_model_id || m.id].filter(Boolean).join(' · '));
+        const sub = `${renderProviderNameTag(m.provider_name)}${m.upstream_model_id || m.id ? `<span class="script-ai-model-id">${escHtml(m.upstream_model_id || m.id)}</span>` : ''}`;
         return `
           <button type="button" class="script-ai-model-item" data-model-id="${escHtml(m.id)}"
             style="display:block;width:100%;text-align:left;padding:10px 12px;margin:4px 0;border-radius:10px;border:1px solid ${isActive ? 'var(--primary,var(--info))' : 'var(--border)'};background:${isActive ? 'rgba(59,130,246,0.08)' : 'transparent'};cursor:pointer;color:inherit;">
@@ -4932,7 +5025,7 @@ class AdminApp {
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:12px;border:1px solid var(--border);border-radius:8px;background:var(--card);">
           <div style="min-width:0;flex:1;">
             <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:2px;">AI 辅助模型</div>
-            <div id="scriptAiModelLabel" style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(this._formatScriptAiModelLabel(this._scriptAiModel))}</div>
+            <div id="scriptAiModelLabel" style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._formatScriptAiModelLabel(this._scriptAiModel)}</div>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" id="scriptAiSelectModelBtn">选择模型</button>
         </div>
@@ -6537,7 +6630,7 @@ async function(ctx) {
     if (!el) return;
     if (!rows.length) { setHTML(el, '<p class="stats-insight-empty">' + t('当前筛选条件下暂无组合数据') + '</p>'); return; }
     const sourceLabel = (source) => this._usageRequestSourceMeta(source).label;
-    setHTML(el, `<div style="overflow:auto;"><table><thead><tr><th>${t('成员')}</th><th>Team</th><th>用户组</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.group_name || t('未分配用户组'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${escapeHtml(row.provider_name || t('未知供应商'))}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
+    setHTML(el, `<div style="overflow:auto;"><table><thead><tr><th>${t('成员')}</th><th>Team</th><th>用户组</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.group_name || t('未分配用户组'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${renderProviderNameTag(row.provider_name) || '<span class="model-provider-missing">' + t('未知供应商') + '</span>'}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
   }
 
   async loadStats() {
@@ -7304,7 +7397,7 @@ async function(ctx) {
                 : '-';
               return `
                 <tr>
-                  <td style="font-size:13px;">${escapeHtml(p.provider || t('未知'))}</td>
+                  <td style="font-size:13px;">${renderProviderNameTag(p.provider) || '<span class="model-provider-missing">' + t('未知') + '</span>'}</td>
                   <td>${(p.requests || 0).toLocaleString()}</td>
                   <td>${reqPercent}%</td>
                   <td title="${(p.tokens || 0).toLocaleString()}">${this._formatBigNumber(p.tokens || 0)}</td>
@@ -7666,7 +7759,7 @@ async function(ctx) {
                 <td style="white-space:nowrap;">${new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</td>
                 <td>${escapeHtml(log.username || String(log.user_id || '-'))}</td>
                 <td>${escapeHtml(log.model_name || log.model_id || '-')}${finalTag}</td>
-                <td>${escapeHtml(log.provider_name || log.provider_id || '-')}</td>
+                <td>${renderProviderNameTag(log.provider_name || log.provider_id) || '<span class="model-provider-missing">-</span>'}</td>
                 <td>${statusBadge(log.status_code)}</td>
                 <td style="font-size:12px;">${escapeHtml(log.error_type || '-')}</td>
                 <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(msg)}">${escapeHtml(shortMsg || '-')}</td>
@@ -7707,7 +7800,7 @@ async function(ctx) {
       [t('模型'), escapeHtml(log.model_name || log.model_id || '-')],
       [t('系列'), escapeHtml(log.series || '-')],
       [t('上游模型 ID'), escapeHtml(log.upstream_model_id || log.model_id || '-')],
-      [t('供应商'), escapeHtml(log.provider_name || log.provider_id || '-')],
+      [t('供应商'), renderProviderNameTag(log.provider_name || log.provider_id) || '<span class="model-provider-missing">-</span>'],
       [t('请求类型'), escapeHtml(log.request_type || '-')],
       [t('状态码'), log.status_code != null ? String(log.status_code) : '-'],
       [t('错误类型'), escapeHtml(log.error_type || '-')],
@@ -7939,7 +8032,7 @@ async function(ctx) {
                   ${keyHint}
                 </td>
                 <td class="cell-clip-sm" title="${escapeHtml(providerLabel)}">
-                  <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;background:var(--muted);color:var(--foreground);">${escapeHtml(providerLabel)}</span>
+                  ${renderProviderNameTag(providerLabel) || '<span class="model-provider-missing">-</span>'}
                 </td>
                 <td>${this._usageRequestTypeBadge(log.request_type)}</td>
                 <td>${this._usageRequestSourceBadge(log.request_source)}${this._customInstructionsBadge(log.custom_instruction_count)}</td>
@@ -8122,7 +8215,7 @@ async function(ctx) {
       [t('模型'), escapeHtml(modelLabel)],
       [t('系列'), escapeHtml(log.series || '-')],
       [t('上游模型 ID'), escapeHtml(log.upstream_model_id || log.model_id || '-')],
-      [t('供应商'), escapeHtml(providerLabel)],
+      [t('供应商'), renderProviderNameTag(providerLabel) || '<span class="model-provider-missing">-</span>'],
       [t('请求类型'), this._usageRequestTypeBadge(log.request_type) + (typeMeta.label !== '-' && log.request_type ? ` <span style="color:var(--muted-foreground);font-size:12px;">(${escapeHtml(String(log.request_type))})</span>` : '')],
       [t('客户端'), this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
       ['API Key', log.key_prefix
@@ -8222,7 +8315,8 @@ async function(ctx) {
       'billing_mode': billingMode,
       'rate_price_per_request': parseFloat(document.getElementById('ratePricePerRequest').value) || 0,
       'stats_refresh_interval_sec': refreshSec,
-      'model_list': modelList
+      'model_list': modelList,
+      'autoAddNewModelsToFrontier': document.getElementById('autoAddNewModelsToFrontier')?.checked === true
     };
 
     // 登录状态上报开关（默认开启）
@@ -8327,7 +8421,33 @@ async function(ctx) {
     throw new Error(t('任务执行超时'));
   }
 
+  showAdminSettingsOverview() {
+    const overview = document.getElementById('adminSettingsOverview');
+    const detail = document.getElementById('adminSettingsDetail');
+    if (overview) overview.hidden = false;
+    if (detail) detail.hidden = true;
+    document.querySelectorAll('.admin-settings-section').forEach(section => { section.hidden = true; });
+  }
+
+  showAdminSettingsCategory(category) {
+    const overview = document.getElementById('adminSettingsOverview');
+    const detail = document.getElementById('adminSettingsDetail');
+    const title = document.getElementById('adminSettingsDetailTitle');
+    const sections = [...document.querySelectorAll(`.admin-settings-category-${category}`)];
+    if (!sections.length) return;
+    if (overview) overview.hidden = true;
+    if (detail) detail.hidden = false;
+    if (title) title.textContent = document.querySelector(`[data-admin-settings-category="${category}"] strong`)?.textContent || '';
+    document.querySelectorAll('.admin-settings-section').forEach(item => { item.hidden = !sections.includes(item); });
+    if (category === 'auth') this.loadInvites();
+    sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   async loadSettings() {
+    this.showAdminSettingsOverview();
+    const version = document.getElementById('adminSettingsVersionLabel');
+    const currentVersion = document.getElementById('updateCurrentVersion')?.textContent;
+    if (version) version.textContent = currentVersion && currentVersion !== '-' ? currentVersion : '-';
     try {
       const response = await fetch('/api/admin/settings');
       if (!response.ok) return;
@@ -8375,6 +8495,10 @@ async function(ctx) {
       if (sysEnabledEl) sysEnabledEl.checked = !!settings['system_proxy_enabled'];
       const sysUrlEl = document.getElementById('systemProxyUrl');
       if (sysUrlEl) sysUrlEl.value = settings['system_proxy_url'] || '';
+
+      // 新模型自动加入前沿 Team（默认关闭）
+      const autoAddFrontierEl = document.getElementById('autoAddNewModelsToFrontier');
+      if (autoAddFrontierEl) autoAddFrontierEl.checked = settings['autoAddNewModelsToFrontier'] === true;
 
       // 登录状态上报开关（默认开启）
       const loginReportEl = document.getElementById('loginReportEnabled');
@@ -10625,6 +10749,7 @@ async function(ctx) {
             ${m.icon_url ? `<img src="${escapeHtml(m.icon_url)}" onerror="this.style.display='none'" alt="">` : ''}
             <span title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
                         <div class="model-item-badges">
+              ${renderProviderNameTag(m.provider_name || m.provider)}
               ${m.series ? `<span class="model-item-badge series">${escapeHtml(m.series)}</span>` : ''}
               ${isDisabled ? '<span class="model-item-badge" style="background:rgba(148,163,184,0.15);color:var(--muted-foreground);">' + t('未启用') + '</span>' : '<span class="model-item-badge" style="background:rgba(16,185,129,0.1);color:var(--success);">' + t('已启用') + '</span>'}
               ${isProviderDisabled ? '<span class="model-item-badge" style="background:rgba(239,68,68,0.1);color:var(--destructive);">' + t('供应商禁用') + '</span>' : ''}
@@ -10766,7 +10891,7 @@ async function(ctx) {
                 <div class="model-library-provider-header" onclick="adminApp.toggleTeamModelProvider('${safeCollapsedKey}')">
                   <div class="model-library-provider-title">
                     <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                    <span class="provider-name">${escapeHtml(group.label)}</span>
+                    ${renderProviderNameTag(group.label)}
                     ${!group.providerEnabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('供应商已禁用') + '</span>' : ''}
                   </div>
                   <div class="model-library-provider-actions" onclick="event.stopPropagation()">
@@ -11266,9 +11391,9 @@ async function(ctx) {
 
     const rowsHtml = results.map(r => {
       if (r.ok) {
-        const providerLabel = r.provider_url
-          ? `${escapeHtml(r.provider)} <span style="font-size:10px;color:var(--muted-foreground);">(${escapeHtml(r.provider_url)})</span>`
-          : escapeHtml(r.provider || '');
+        const providerLabel = r.provider
+          ? `${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}`
+          : '';
         return `
           <div class="model-test-row">
             <div class="model-test-row-icon model-test-result-pass">&#10003;</div>
@@ -11295,7 +11420,7 @@ async function(ctx) {
       } else {
         const modelLabel = r.model || r.modelId || t('未知模型');
         const providerLabel = r.provider
-          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${escapeHtml(r.provider)}${r.provider_url ? ' (' + escapeHtml(r.provider_url) + ')' : ''}</div>`
+          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
           : '';
         return `
           <div class="model-test-row">
@@ -12147,6 +12272,8 @@ async function(ctx) {
     const applyBtn = document.getElementById('updateApplyBtn');
 
     if (curEl) curEl.textContent = data.currentVersion ? `v${data.currentVersion}` : '-';
+    const settingsVersion = document.getElementById('adminSettingsVersionLabel');
+    if (settingsVersion && data.currentVersion) settingsVersion.textContent = `v${data.currentVersion}`;
     if (latEl) {
       latEl.textContent = data.latestVersion ? `v${data.latestVersion}` : '-';
       latEl.style.color = data.hasUpdate ? 'var(--status-info)' : '';

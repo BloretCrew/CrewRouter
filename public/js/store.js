@@ -157,10 +157,11 @@
     return html;
   }
 
-  function starPicker(initial, onPick) {
-    var html = '<span class="store-stars" data-star-picker="1">';
+  function starPicker(initialScore, onPick) {
+    var score = Number(initialScore) || 0;
+    var html = '<span class="store-stars" data-star-picker="1" data-value="' + score + '">';
     for (var i = 1; i <= 5; i++) {
-      html += '<span class="star' + (i <= initial ? ' on' : '') + '" data-star="' + i + '">★</span>';
+      html += '<span class="star' + (i <= score ? ' on' : '') + '" data-star="' + i + '">★</span>';
     }
     html += '</span>';
     return html;
@@ -185,7 +186,7 @@
       var cur = root.dataset.value ? Number(root.dataset.value) : 0;
       highlight(cur);
     });
-    root.dataset.value = String(initial || 0);
+    root.dataset.value = root.dataset.value || '0';
   }
 
   function tagChips(tags) {
@@ -269,19 +270,6 @@
     });
   }
 
-  function installHandler(id, btn) {
-    btn.disabled = true;
-    api('/plugins/' + encodeURIComponent(id) + '/install-link').then(function (data) {
-      api('/plugins/' + encodeURIComponent(id) + '/install-click').catch(function () {});
-      if (data.install_url) {
-        window.location.href = data.install_url;
-        setBanner('ok', t('已生成安装链接：') + ' ' + data.install_url);
-      }
-    }).catch(function (e) {
-      setBanner('err', e.message);
-    }).finally(function () { btn.disabled = false; });
-  }
-
   function ratingListHtml(ratings) {
     if (!ratings || !ratings.length) return '<div class="store-empty" style="padding:20px;">' + esc(t('暂无评分')) + '</div>';
     return ratings.map(function (r) {
@@ -304,31 +292,41 @@
       if (p.myRating) {
         html += '<div class="store-banner store-banner--ok">' + esc(t('我的评分：')) + ' ' + p.myRating.stars + '★</div>';
       }
-      html += '<a class="back-link" href="/store" style="display:inline-flex;gap:6px;margin:16px 0;color:var(--muted-foreground);text-decoration:none;">← ' + esc(t('返回商店')) + '</a>';
+      html += '<a class="store-back" href="/store">← ' + esc(t('返回商店')) + '</a>';
+      var ratingLabel = p.ratingCount
+        ? ((p.ratingAvg || 0).toFixed(1) + ' · ' + p.ratingCount)
+        : t('暂无评分');
       html += '<div class="store-detail__head">' +
-        '<div class="store-detail__icon">' + (p.icon ? '<img src="' + esc(p.icon) + '" style="width:72px;height:72px;border-radius:16px;object-fit:cover;">' : '🧩') + '</div>' +
-        '<div><div class="store-detail__title">' + esc(p.name) + '</div>' +
-        '<div class="store-detail__byline">v' + esc(p.version) + ' · ' + esc(p.authorUsername || p.author) + '</div>' +
-        '<div class="store-detail__stats"><span>' + esc(t('安装')) + ' ' + (p.installCount || 0) + '</span><span>' + esc(t('评分')) + ' ' + (p.ratingCount || 0) + '</span></div>' +
+        '<div class="store-detail__icon">' + (p.icon ? '<img src="' + esc(p.icon) + '" alt="">' : '🧩') + '</div>' +
+        '<div class="store-detail__head-main">' +
+          '<div class="store-detail__title">' + esc(p.name) + '</div>' +
+          (p.description ? '<p class="store-detail__lead">' + esc(p.description) + '</p>' : '') +
+          '<div class="store-detail__byline">v' + esc(p.version) + ' · ' + esc(p.authorUsername || p.author) + '</div>' +
+          '<div class="store-detail__stats">' +
+            '<span>' + starHtml(Math.round(p.ratingAvg || 0)) + ' ' + esc(ratingLabel) + '</span>' +
+            '<span>' + esc(t('安装')) + ' ' + (p.installCount || 0) + '</span>' +
+          '</div>' +
         '</div></div>';
       html += '<div class="store-detail__body">' +
         '<div class="store-detail__left">' +
-          '<div class="store-detail__section"><h3>' + esc(t('简介')) + '</h3><div>' + esc(p.longDescription || p.description || '') + '</div></div>' +
+          '<div class="store-detail__section"><h3>' + esc(t('简介')) + '</h3><div class="store-detail__prose">' + esc(p.longDescription || p.description || t('暂无简介')) + '</div></div>' +
           (p.screenshots && p.screenshots.length ? '<div class="store-detail__section"><h3>' + esc(t('截图')) + '</h3><div class="store-shots">' + p.screenshots.map(function (s) { return '<img src="' + esc(s.url) + '" alt="">'; }).join('') + '</div></div>' : '') +
-          '<div class="store-detail__section"><h3>' + esc(t('权限')) + '</h3><div class="store-related">' + tagChips(p.permissions) + '</div></div>' +
+          '<div class="store-detail__section"><h3>' + esc(t('权限')) + '</h3><div class="store-related">' + (p.permissions && p.permissions.length ? tagChips(p.permissions) : '<span class="store-muted">' + esc(t('未声明额外权限')) + '</span>') + '</div></div>' +
           '<div class="store-detail__section"><h3>' + esc(t('评分')) + '</h3>' + ratingListHtml([]) + '</div>' +
         '</div>' +
-        '<div class="store-detail__side">' +
-          '<div class="store-card" style="display:block;">' +
-            '<div class="store-card__body">' +
-              '<div class="store-card__meta"><span>' + esc(t('标签')) + '</span></div>' +
-              '<div class="store-card__tags">' + tagChips(p.tags) + '</div>' +
-              '<div class="store-card__actions"><button class="btn btn-primary" id="installBtn">' + esc(t('安装')) + '</button>' +
-                '<button class="btn btn-secondary" id="installToRouterBtn">' + esc(t('安装到 CrewRouter')) + '</button></div>' +
+        '<aside class="store-detail__side">' +
+          '<div class="store-side-card">' +
+            '<button class="btn btn-primary" id="installToRouterBtn">' + esc(t('安装到 CrewRouter')) + '</button>' +
+            (p.url ? '<a class="btn btn-secondary" href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(t('主页')) + '</a>' : '') +
+            '<div class="store-side-card__meta">' +
+              '<div><span>' + esc(t('版本')) + '</span><strong>' + esc(p.version) + '</strong></div>' +
+              '<div><span>' + esc(t('作者')) + '</span><strong>' + esc(p.authorUsername || p.author || '—') + '</strong></div>' +
+              '<div><span>' + esc(t('安装')) + '</span><strong>' + (p.installCount || 0) + '</strong></div>' +
             '</div>' +
+            (p.tags && p.tags.length ? '<div class="store-card__meta">' + esc(t('标签')) + '</div><div class="store-card__tags">' + tagChips(p.tags) + '</div>' : '') +
           '</div>' +
           '<div id="ratingBox"></div>' +
-        '</div>' +
+        '</aside>' +
       '</div>';
 
       if (p.related && p.related.length) {
@@ -336,8 +334,6 @@
       }
 
       viewBox.innerHTML = html;
-      var installBtn = document.getElementById('installBtn');
-      if (installBtn) installBtn.addEventListener('click', function () { installHandler(p.id, installBtn); });
       var installRouterBtn = document.getElementById('installToRouterBtn');
       if (installRouterBtn) installRouterBtn.addEventListener('click', function () { openInstallTargetsModal(p.id); });
 

@@ -1,5 +1,5 @@
-const config = require('../config-loader');
+const configCenter = require('../config-center');
 
-const isDemo = config.demo === true;
+const isDemo = configCenter.get('demo', false) === true;
 
 module.exports = { isDemo };

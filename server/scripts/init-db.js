@@ -1,6 +1,7 @@
 const { Pool } = require('pg');
 const config = require('../config-loader');
 const Logger = require('../logger');
+const { encryptSecret } = require('../utils/secret-crypto');
 
 async function ensureDatabase() {
   const adminPool = new Pool({
@@ -56,6 +57,7 @@ async function initDatabase() {
   Logger.info('[数据库初始化] 已连接到目标数据库，开始创建表...');
 
   try {
+    await client.query('BEGIN');
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -85,6 +87,8 @@ async function initDatabase() {
       { name: 'group_id', type: 'INTEGER' },
       { name: 'team_id', type: 'INTEGER' },
       { name: 'refund_balance', type: 'DECIMAL(10, 4) DEFAULT 0' },
+      { name: 'github_id', type: 'VARCHAR(255)' },
+      { name: 'feishu_open_id', type: 'VARCHAR(255)' },
       { name: 'api_signature_enabled', type: 'BOOLEAN DEFAULT FALSE' },
       { name: 'api_signature_template', type: "TEXT DEFAULT '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}'" },
     ];
@@ -113,6 +117,29 @@ async function initDatabase() {
     // 注意：不要再给无密码用户批量写入默认密码 123456。
     // 飞书注册用户应保持 password_hash 为空，登录后强制走 /set-password。
 
+    // 先按 trim/lower 语义清理历史邮箱重复值，再规范化保留值；保留最早创建的账号。
+    await client.query(`
+      WITH ranked AS (
+        SELECT id, LOWER(BTRIM(email)) AS normalized_email,
+               ROW_NUMBER() OVER (PARTITION BY LOWER(BTRIM(email)) ORDER BY id) AS row_number
+        FROM users
+        WHERE email IS NOT NULL AND BTRIM(email) <> ''
+      )
+      UPDATE users u SET email = NULL
+      FROM ranked r
+      WHERE u.id = r.id AND r.row_number > 1
+    `);
+    await client.query(`
+      UPDATE users
+      SET email = LOWER(BTRIM(email))
+      WHERE email IS NOT NULL AND BTRIM(email) <> ''
+    `);
+    await client.query(`UPDATE users SET email = NULL WHERE email IS NOT NULL AND BTRIM(email) = ''`);
+
+    // 第三方身份索引允许 NULL/空值，但对有效身份值提供数据库级并发唯一性。
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_github_id_unique ON users (github_id) WHERE github_id IS NOT NULL`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_feishu_open_id_unique ON users (feishu_open_id) WHERE feishu_open_id IS NOT NULL`);
+
     // 兼容旧表：确保 email 列有 UNIQUE 约束
     const emailUniqueCheck = await client.query(`
       SELECT tc.constraint_name
@@ -121,16 +148,12 @@ async function initDatabase() {
       WHERE tc.table_name = 'users' AND kcu.column_name = 'email' AND tc.constraint_type = 'UNIQUE'
     `);
     if (emailUniqueCheck.rows.length === 0) {
-      // 先清理重复的 email（保留第一个）
-      await client.query(`
-        UPDATE users SET email = NULL
-        WHERE id NOT IN (
-          SELECT MIN(id) FROM users WHERE email IS NOT NULL GROUP BY email
-        ) AND email IS NOT NULL
-      `);
       await client.query(`ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE (email)`);
       Logger.info('[数据库初始化] 已为 users 表 email 列添加 UNIQUE 约束');
     }
+
+    // 业务按 trim/lower 规范化邮箱；部分唯一索引允许多个 NULL，并在冲突时阻止启动。清理历史重复值后再创建索引。
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique ON users (LOWER(email)) WHERE email IS NOT NULL`);
 
     // 兼容旧表：为 users 添加速率限制列
     const userRateColCheck = await client.query(`
@@ -354,6 +377,13 @@ async function initDatabase() {
       }
     }
 
+    // 兼容旧表：将历史明文供应商 Key 加密存储
+    const providerKeys = await client.query("SELECT id, api_key, api_keys FROM providers WHERE api_key IS NOT NULL AND api_key <> ''");
+    for (const row of providerKeys.rows) {
+      const encrypted = encryptSecret(row.api_key);
+      if (encrypted !== row.api_key) await client.query('UPDATE providers SET api_key = $1 WHERE id = $2', [encrypted, row.id]);
+    }
+
     // CrewRouter Team 系统表
     await client.query(`
       CREATE TABLE IF NOT EXISTS teams (
@@ -438,8 +468,8 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS api_keys (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        key_value VARCHAR(255) UNIQUE NOT NULL,
-        key_hash VARCHAR(255) NOT NULL,
+        key_value VARCHAR(255) UNIQUE,
+        key_hash VARCHAR(255) NOT NULL UNIQUE,
         key_prefix VARCHAR(20),
         name VARCHAR(255),
         last_used_at TIMESTAMP,
@@ -455,6 +485,7 @@ async function initDatabase() {
         schedule_days INTEGER[] DEFAULT '{0,1,2,3,4,5,6}',
         schedule_timezone VARCHAR(50) DEFAULT 'Asia/Shanghai',
         fusion_enabled BOOLEAN DEFAULT TRUE,
+        fusion_synthesis_prompt_enabled BOOLEAN DEFAULT TRUE,
         fusion_panel_models JSONB DEFAULT '[]'::jsonb,
         fusion_judge_model_id VARCHAR(100) DEFAULT '',
         fusion_outer_model_id VARCHAR(100) DEFAULT '',
@@ -479,6 +510,7 @@ async function initDatabase() {
       { name: 'schedule_days', type: "INTEGER[] DEFAULT '{0,1,2,3,4,5,6}'" },
       { name: 'schedule_timezone', type: "VARCHAR(50) DEFAULT 'Asia/Shanghai'" },
       { name: 'fusion_enabled', type: 'BOOLEAN DEFAULT TRUE' },
+      { name: 'fusion_synthesis_prompt_enabled', type: 'BOOLEAN DEFAULT TRUE' },
       { name: 'fusion_panel_models', type: "JSONB DEFAULT '[]'::jsonb" },
       { name: 'fusion_judge_model_id', type: "VARCHAR(100) DEFAULT ''" },
       { name: 'fusion_outer_model_id', type: "VARCHAR(100) DEFAULT ''" },
@@ -537,6 +569,7 @@ async function initDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_op_logs_resource ON operation_logs(resource_type, resource_id)`);
     Logger.info('[数据库初始化] 表 operation_logs 已就绪');
 
+    // Outbox schema is maintained as a manual migration and is intentionally not applied here.
 
     // API Key 模型队列（有序失败回退）
     await client.query(`
@@ -715,12 +748,14 @@ async function initDatabase() {
       { name: 'response', type: 'TEXT' },
       { name: 'history_hidden', type: 'BOOLEAN DEFAULT FALSE' }
     ];
+    // 注意: 不能靠 try/catch 吞 42701 —— 事务内任何语句报错都会使整个事务进入
+    // aborted 状态，后续语句全部报 25P02。必须用 IF NOT EXISTS 避免报错。
     for (const col of usageColumnsToAdd) {
-      try {
-        await client.query(`ALTER TABLE usage_records ADD COLUMN ${col.name} ${col.type}`);
+      const res = await client.query(
+        `ALTER TABLE usage_records ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`
+      );
+      if (res && res.command) {
         Logger.info(`[数据库初始化] 已为 usage_records 表添加 ${col.name} 列`);
-      } catch (e) {
-        if (e.code !== '42701') throw e; // 42701 = column already exists
       }
     }
 
@@ -732,6 +767,11 @@ async function initDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await client.query(
+      `INSERT INTO settings (key, value)
+       VALUES ('autoAddNewModelsToFrontier', 'false'::jsonb)
+       ON CONFLICT (key) DO NOTHING`
+    );
     Logger.info('[数据库初始化] 表 settings 已就绪');
 
     // DeepSeek 账号表
@@ -789,7 +829,7 @@ async function initDatabase() {
         INSERT INTO providers (id, name, base_url, api_key, format, enabled)
         VALUES ($1, $2, $3, $4, $5, TRUE)
         ON CONFLICT (id) DO NOTHING
-      `, [provider.id, provider.name, provider.baseUrl, provider.apiKey || '', provider.format || 'openai']);
+      `, [provider.id, provider.name, provider.baseUrl, encryptSecret(provider.apiKey || ''), provider.format || 'openai']);
     }
     Logger.info('[数据库初始化] 供应商数据已同步');
 
@@ -805,8 +845,10 @@ async function initDatabase() {
     }
     Logger.info('[数据库初始化] 模型数据已同步');
 
+    await client.query('COMMIT');
     Logger.success('[数据库初始化] 完成!');
   } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
     Logger.error('[数据库初始化] 错误:', error.message);
     process.exit(1);
   } finally {

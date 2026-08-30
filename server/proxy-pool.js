@@ -339,7 +339,8 @@ function selectBestProxy(proxies, providerId, affinityKey = null) {
 
   // 如果有可用的，随机选择一个
   if (available.length > 0) {
-    const selected = available[Math.floor(Math.random() * available.length)];
+    const { selectHealthyWeighted } = require('./utils/provider-selector');
+    const selected = selectHealthyWeighted(available.map(item => ({ ...item, weight: item.proxy.weight || 1 })), `proxy:${providerId}`);
     if (affinityKey) rememberAffinity(affinityRouteKey(providerId, affinityKey), selected.index);
     return selected.proxy;
   }
@@ -382,6 +383,14 @@ function createProxyAgent(proxyUrl) {
  */
 async function proxyFetch(url, options = {}) {
   const isHttps = url.startsWith('https://');
+  if (options.requestContext) {
+    options.requestContext.upstreamAttempts = (options.requestContext.upstreamAttempts || 0) + 1;
+    if (options.requestContext.upstreamAttempts > 12) {
+      const error = new Error('Upstream request attempt limit exceeded (12)');
+      error.code = 'upstream_attempt_limit';
+      throw error;
+    }
+  }
   const method = (options.method || 'GET').toLowerCase();
 
   const axiosConfig = {

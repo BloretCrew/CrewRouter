@@ -4,12 +4,15 @@ const router = express.Router();
 const { pool } = require('../models/database');
 const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
+const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const config = require('../config-loader');
 const { fetchProvidersIndex, lookupProvider } = require('../provider-lookup');
 const { invalidateApiKeyCacheByKeyId } = require('./api');
 const { shanghaiDateRange, formatShanghaiDateTime } = require('../utils/timezone');
 const { buildUserUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs-filter');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
+const { encryptSecret, decryptSecret } = require('../utils/secret-crypto');
+const { validateUrl, upstreamUrl, cleanBaseUrl: normalizeUpstreamBaseUrl } = require('../utils/url-validator');
 const {
   HARNESS_SOURCES,
   isHarnessSource,
@@ -338,7 +341,7 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
     const hash = crypto.randomBytes(24).toString('hex');
     const rawKey = `sk-${hash}`;
     const keyPrefix = rawKey.substring(0, 12);
-    const keyHash = require('bcryptjs').hashSync(rawKey, 10);
+    const keyHash = require('../utils/key-hash').sha256Hex(rawKey);
 
     let expiresAt = null;
     if (expiresIn) {
@@ -347,8 +350,8 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
     }
 
     const result = await pool.query(
-      'INSERT INTO api_keys (user_id, key_value, key_hash, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE) RETURNING id, name, key_prefix, custom_model_name, created_at, expires_at',
-      [req.session.user.id, rawKey, keyHash, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
+      'INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE) RETURNING id, name, key_prefix, key_value, custom_model_name, created_at, expires_at',
+      [req.session.user.id, keyHash, rawKey, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
     );
 
     // 插件 apikey:created 钩子：创建后回调（异步、错误隔离）
@@ -506,6 +509,7 @@ router.delete('/api-keys/:id', requireAuth, auditMiddleware(ACTIONS.API_KEY_DELE
     await client.query('UPDATE usage_records SET api_key_id = NULL WHERE api_key_id = $1', [req.params.id]);
     await client.query('DELETE FROM api_keys WHERE id = $1 AND user_id = $2', [req.params.id, req.session.user.id]);
     await client.query('COMMIT');
+    invalidateApiKeyCacheByKeyId(Number(req.params.id));
     res.json({ success: true });
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (_) {}
@@ -888,7 +892,7 @@ router.get('/api-keys/:id/fusion-config', requireAuth, async (req, res) => {
     const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const keyResult = await pool.query(
-      'SELECT fusion_panel_models, fusion_judge_model_id, fusion_outer_model_id, fusion_enabled FROM api_keys WHERE id = $1',
+      'SELECT fusion_panel_models, fusion_judge_model_id, fusion_outer_model_id, fusion_enabled, fusion_synthesis_prompt_enabled FROM api_keys WHERE id = $1',
       [req.params.id]
     );
     if (keyResult.rows.length === 0) {
@@ -900,7 +904,8 @@ router.get('/api-keys/:id/fusion-config', requireAuth, async (req, res) => {
       panel_models: key.fusion_panel_models || [],
       judge_model_id: key.fusion_judge_model_id || '',
       outer_model_id: key.fusion_outer_model_id || '',
-      fusion_enabled: key.fusion_enabled !== false
+      fusion_enabled: key.fusion_enabled !== false,
+      fusion_synthesis_prompt_enabled: key.fusion_synthesis_prompt_enabled !== false
     });
   } catch (error) {
     Logger.error('[获取Fusion配置] 错误:', error);
@@ -918,10 +923,11 @@ router.put('/api-keys/:id/fusion-config', requireAuth, auditMiddleware(ACTIONS.A
     judge_model_id: req.body?.judge_model_id,
     outer_model_id: req.body?.outer_model_id,
     fusion_enabled: req.body?.fusion_enabled,
+    fusion_synthesis_prompt_enabled: req.body?.fusion_synthesis_prompt_enabled,
   }),
 }), async (req, res) => {
   try {
-    const { panel_models, judge_model_id, outer_model_id, fusion_enabled } = req.body;
+    const { panel_models, judge_model_id, outer_model_id, fusion_enabled, fusion_synthesis_prompt_enabled } = req.body;
 
     const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
@@ -954,12 +960,22 @@ router.put('/api-keys/:id/fusion-config', requireAuth, auditMiddleware(ACTIONS.A
     }
 
     await pool.query(
-      `UPDATE api_keys SET fusion_panel_models = $1, fusion_judge_model_id = $2, fusion_outer_model_id = $3, fusion_enabled = $4 WHERE id = $5`,
-      [JSON.stringify(normalizedPanelModels), normalizedJudgeModel, normalizedOuterModel, fusion_enabled !== false, req.params.id]
+      `UPDATE api_keys
+       SET fusion_panel_models = $1, fusion_judge_model_id = $2, fusion_outer_model_id = $3,
+           fusion_enabled = $4, fusion_synthesis_prompt_enabled = $5
+       WHERE id = $6`,
+      [
+        JSON.stringify(normalizedPanelModels),
+        normalizedJudgeModel,
+        normalizedOuterModel,
+        fusion_enabled !== false,
+        fusion_synthesis_prompt_enabled !== false,
+        req.params.id
+      ]
     );
 
     invalidateApiKeyCacheByKeyId(parseInt(req.params.id));
-    Logger.info(`[Fusion] 更新 API Key ${req.params.id} 的 Fusion 配置: enabled=${fusion_enabled !== false}, panel=${normalizedPanelModels.length}, judge=${normalizedJudgeModel}, outer=${normalizedOuterModel}`);
+    Logger.info(`[Fusion] 更新 API Key ${req.params.id} 的 Fusion 配置: enabled=${fusion_enabled !== false}, synthesisPrompt=${fusion_synthesis_prompt_enabled !== false}, panel=${normalizedPanelModels.length}, judge=${normalizedJudgeModel}, outer=${normalizedOuterModel}`);
     res.json({ success: true });
   } catch (error) {
     Logger.error('[更新Fusion配置] 错误:', error);
@@ -1237,8 +1253,10 @@ router.get('/api-keys/:id/config', requireAuth, async (req, res) => {
     if (keyResult.rows.length === 0) {
       return res.status(404).json({ error: '密钥不存在' });
     }
-
-    const { key_value } = keyResult.rows[0];
+    const key_value = keyResult.rows[0].key_value;
+    if (!key_value) {
+      return res.status(410).json({ error: '该 Key 无明文记录（哈希化时代的旧 Key），请重新生成 Key' });
+    }
 
     // 构建服务器 URL
     const host = config.app?.host;
@@ -1273,6 +1291,7 @@ router.get('/api-keys/:id/config', requireAuth, async (req, res) => {
     };
 
     res.json(claudeConfig);
+
   } catch (error) {
     Logger.error('[生成Claude配置] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -1552,7 +1571,7 @@ router.get('/stats', requireAuth, async (req, res) => {
     }
 
     res.json({
-      daily: typeof dailyRowsFinal !== 'undefined' ? dailyRowsFinal : dailyResult,
+      daily: typeof dailyRowsFinal !== 'undefined' ? dailyRowsFinal : dailyResult.rows,
       byModel: modelResult.rows,
       hourly: hourlyResult.rows,
       byApiKey: apiKeyResult.rows,
@@ -1756,7 +1775,7 @@ router.get('/balance', requireAuth, async (req, res) => {
 router.post('/usage', async (req, res) => {
   try {
     // 从 Bearer token 提取 API Key
-    let apiKey = req.headers['x-api-key'] || req.query?.api_key;
+    let apiKey = req.headers['x-api-key'];
     if (!apiKey && req.headers.authorization?.startsWith('Bearer ')) {
       apiKey = req.headers.authorization.slice(7);
     }
@@ -1768,8 +1787,8 @@ router.post('/usage', async (req, res) => {
     const keyResult = await pool.query(
       `SELECT u.id, u.username, u.balance, u.group_id
        FROM api_keys ak JOIN users u ON ak.user_id = u.id
-       WHERE ak.key_value = $1`,
-      [apiKey]
+       WHERE ak.key_value = $1 OR ak.key_hash = $2`,
+      [apiKey, require('../utils/key-hash').sha256Hex(apiKey)]
     );
     if (keyResult.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid API key' });
@@ -1801,7 +1820,7 @@ router.post('/usage', async (req, res) => {
               used = r.rows[0]?.cnt || 0;
             } else if (rule.rule_type === 'tokens') {
               const r = await pool.query(
-                'SELECT COALESCE(SUM(tokens_used), 0)::bigint AS cnt FROM usage_records WHERE user_id = $1 AND created_at > NOW() - INTERVAL \'1 hour\' * $2',
+                'SELECT COALESCE(SUM(weighted_tokens), 0)::bigint AS cnt FROM usage_records WHERE user_id = $1 AND created_at > NOW() - INTERVAL \'1 hour\' * $2',
                 [user.id, hours]
               );
               used = parseInt(r.rows[0]?.cnt || 0);
@@ -1978,7 +1997,7 @@ router.put('/settings', requireAuth, auditMiddleware(ACTIONS.USER_SETTINGS, {
 
   try {
     // 邮箱统一转小写
-    const normalizedEmail = email ? email.toLowerCase().trim() : email;
+    const normalizedEmail = normalizeEmail(email);
 
     // Build dynamic UPDATE — only set fields that were provided
     const sets = [];
@@ -2020,6 +2039,7 @@ router.put('/settings', requireAuth, auditMiddleware(ACTIONS.USER_SETTINGS, {
     res.json({ success: true });
   } catch (error) {
     Logger.error('[更新用户设置] 错误:', error);
+    if (isUniqueViolation(error)) return res.status(409).json({ error: '该邮箱已被其他用户使用' });
     res.status(500).json({ error: '服务器错误' });
   }
 });
@@ -3545,18 +3565,16 @@ router.put('/current-model', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE
       return res.status(400).json({ error: '该供应商已禁用，无法选择此模型' });
     }
 
-    // 验证用户的 Team 有权使用该模型
-    const userResult = await pool.query('SELECT team_id FROM users WHERE id = $1', [req.session.user.id]);
-    const teamId = userResult.rows[0]?.team_id;
-
-    if (teamId) {
-      const tmCheck = await pool.query(
-        'SELECT 1 FROM team_models WHERE team_id = $1 AND model_id = $2 AND enabled = TRUE',
-        [teamId, modelId]
-      );
-      if (tmCheck.rows.length === 0) {
-        return res.status(403).json({ error: '您的 Team 无权使用该模型' });
-      }
+    // user_teams 是 Team 权限唯一来源；users.team_id 仅作兼容投影。
+    const tmCheck = await pool.query(
+      `SELECT 1 FROM user_teams ut
+       JOIN team_models tm ON tm.team_id = ut.team_id
+       WHERE ut.user_id = $1 AND tm.model_id = $2 AND tm.enabled = TRUE
+       LIMIT 1`,
+      [req.session.user.id, modelId]
+    );
+    if (tmCheck.rows.length === 0) {
+      return res.status(403).json({ error: '您所属的 Team 无权使用该模型' });
     }
 
     // 更新所有该用户的 API Key 的 current_model_id
@@ -3639,8 +3657,13 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
     const colNames = colCheck.rows.map(r => r.column_name);
 
     // 动态构建 INSERT 语句
+    const encryptedApiKey = encryptSecret(api_key);
     const insertCols = ['id', 'name', 'base_url', 'api_key', 'format', 'enabled'];
-    const insertValues = [providerId, name, base_url.replace(/\/+$/, ''), api_key, format || 'openai', true];
+    const insertValues = [providerId, name, base_url.replace(/\/+$/, ''), encryptedApiKey, format || 'openai', true];
+    if (colNames.includes('api_keys') && encryptedApiKey) {
+      insertCols.push('api_keys');
+      insertValues.push(JSON.stringify([{ key: encryptedApiKey, weight: 1, enabled: true }]));
+    }
 
     if (colNames.includes('models_url')) {
       insertCols.push('models_url');
@@ -3663,9 +3686,14 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
 
     // 尝试获取模型列表并自动添加
     try {
-      const modelsEndpoint = models_url || (format === 'anthropic' ? '/v1/models' : '/v1/models');
-      const modelsRes = await fetch(`${base_url.replace(/\/+$/, '')}${modelsEndpoint}`, {
-        headers: { 'Authorization': `Bearer ${api_key}` }
+      const modelsUrl = models_url
+        ? (models_url.startsWith('http') ? models_url : `${base_url.replace(/\/+$/, '')}${models_url.startsWith('/') ? '' : '/'}${models_url}`)
+        : upstreamUrl(base_url, '/models');
+      const urlCheck = await validateUrl(modelsUrl, { allowPrivate: false });
+      if (!urlCheck.ok) throw new Error(`模型列表 URL 校验失败: ${urlCheck.error}`);
+      const modelsRes = await fetch(modelsUrl, {
+        headers: { 'Authorization': `Bearer ${api_key}` },
+        redirect: 'manual'
       });
 
       if (modelsRes.ok) {
@@ -3764,6 +3792,7 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
       return res.status(404).json({ error: '供应商不存在' });
     }
     const provider = providerResult.rows[0];
+    provider.api_key = decryptSecret(provider.api_key);
 
     // 检查权限：自己的供应商 或 全局已启用的供应商
     const isOwner = provider.created_by === req.session.user.id;
@@ -3783,17 +3812,17 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
     }
 
     const candidates = [];
-    if (/\/v1\/?$/.test(baseUrl)) {
-      candidates.push(`${baseUrl}/models`);
-    } else {
-      candidates.push(`${baseUrl}/v1/models`);
+    candidates.push(upstreamUrl(baseUrl, '/models'));
+    if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(baseUrl)) {
       candidates.push(`${baseUrl}/models`);
     }
 
     for (const url of candidates) {
       const start = Date.now();
       try {
-        const resp = await fetch(url, { headers, signal: AbortSignal.timeout(5000) });
+        const urlCheck = await validateUrl(url, { allowPrivate: false });
+        if (!urlCheck.ok) continue;
+        const resp = await fetch(url, { headers, signal: AbortSignal.timeout(5000), redirect: 'manual' });
         const latency = Date.now() - start;
         if (resp.ok) return res.json({ ok: true, latency_ms: latency, url });
         if (resp.status === 401 || resp.status === 403) {
@@ -3804,7 +3833,11 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
 
     const start = Date.now();
     try {
-      const resp = await fetch(baseUrl, { headers, signal: AbortSignal.timeout(5000), redirect: 'follow' });
+      const urlCheck = await validateUrl(baseUrl, { allowPrivate: false });
+      if (!urlCheck.ok) {
+        return res.json({ ok: false, latency_ms: null, error: `Base URL 校验失败: ${urlCheck.error}` });
+      }
+      const resp = await fetch(baseUrl, { headers, signal: AbortSignal.timeout(5000), redirect: 'manual' });
       const latency = Date.now() - start;
       return res.json({ ok: true, latency_ms: latency, url: baseUrl, note: `HTTP ${resp.status}` });
     } catch (e) {
@@ -3859,8 +3892,11 @@ router.put('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_
       values.push(base_url.replace(/\/+$/, ''));
     }
     if (api_key) {
+      const encryptedApiKey = encryptSecret(api_key);
       updates.push(`api_key = $${paramIndex++}`);
-      values.push(api_key);
+      values.push(encryptedApiKey);
+      updates.push(`api_keys = $${paramIndex++}::jsonb`);
+      values.push(JSON.stringify([{ key: encryptedApiKey, weight: 1, enabled: true }]));
     }
     if (format) {
       updates.push(`format = $${paramIndex++}`);
@@ -3956,7 +3992,7 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
     // 获取模型列表 - 尝试多个地址
     const baseUrl = provider.base_url?.replace(/\/+$/, '');
     const customModelsUrl = provider.models_url?.replace(/\/+$/, '') || '';
-    const apiKey = provider.api_key || '';
+    const apiKey = decryptSecret(provider.api_key) || '';
 
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) {
@@ -3970,15 +4006,13 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
     }
 
     // 从 base_url 推断 API 根路径
-    const cleanBaseUrl = baseUrl
-      .replace(/\/(chat\/completions|completions|messages|responses|embeddings)\/?$/, '')
+    const cleanBaseUrl = normalizeUpstreamBaseUrl(baseUrl)
+      .replace(/\/(completions|embeddings)\/?$/i, '')
       .replace(/\/+$/, '');
 
     // 自动推断路径
-    if (/\/v1\/?$/.test(cleanBaseUrl)) {
-      candidateUrls.push(`${cleanBaseUrl}/models`);
-    } else {
-      candidateUrls.push(`${cleanBaseUrl}/v1/models`);
+    candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models'));
+    if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(cleanBaseUrl)) {
       candidateUrls.push(`${cleanBaseUrl}/models`);
     }
 
@@ -3991,7 +4025,12 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
     for (const modelsUrl of uniqueUrls) {
       Logger.info(`[用户刷新模型] 尝试: ${modelsUrl}`);
       try {
-        const response = await fetch(modelsUrl, { headers, signal: AbortSignal.timeout(15000) });
+        const urlCheck = await validateUrl(modelsUrl, { allowPrivate: false });
+        if (!urlCheck.ok) {
+          Logger.warn(`[用户刷新模型] SSRF 校验拒绝: ${modelsUrl} - ${urlCheck.error}`);
+          continue;
+        }
+        const response = await fetch(modelsUrl, { headers, signal: AbortSignal.timeout(15000), redirect: 'manual' });
         if (!response.ok) continue;
 
         const data = await response.json();

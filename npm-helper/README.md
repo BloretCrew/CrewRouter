@@ -1,10 +1,8 @@
 # crewrouter-helper（@bloret-crew/crewrouter-helper）
 
-CrewRouter 客户端事件统一上报器 —— Node.js 零依赖 CLI，是 Python 版
-`cr-report.py` / `cr-login` 的一一对应移植：所有 AI 客户端共用这一个程序。
+CrewRouter 客户端事件统一上报器 —— Node.js 零依赖 CLI，所有 AI 客户端共用这一个程序。
 
-A unified event reporter for CrewRouter — a zero-dependency Node.js CLI,
-a one-to-one port of the Python `cr-report.py` / `cr-login` scripts.
+CrewRouter is a unified event reporting tool for the client – ​​a Node.js-based CLI with zero dependencies, shared by all AI clients.
 
 ## 安装 / Install
 
@@ -15,6 +13,12 @@ npx @bloret-crew/crewrouter-helper test
 
 # 要求 / Requires: Node.js >= 18；零第三方依赖 / zero third-party dependencies
 ```
+
+## 交互式 TUI
+
+在交互式终端直接运行 `crewrouter-helper`，即可打开菜单：查看连接状态、登录/配置服务、为 Claude Code / Qwen Code / Codex 写入上报 Hook，以及发送测试事件。菜单使用方向键选择、Enter 确认，`q` 或 Esc 返回；同时支持 `j/k` 作为备用导航键。客户端配置会保留已有内容，重复配置不会重复添加 Hook。当前包保持 Node.js 18+ 零依赖设计。
+
+客户端配置入口会自动写入：Claude Code 的 `~/.claude/settings.json`、Qwen Code 的 `~/.qwen/settings.json`、Codex 的 `~/.codex/config.toml`。非交互环境仍显示原有帮助信息，适合脚本和 Hook 调用。
 
 ## 子命令 / Subcommands
 
@@ -138,4 +142,8 @@ errors go to stderr with a non-zero exit.)
 
 ## License
 
-MIT
+GNU General Public License v3.0 only (GPL-3.0-only)
+
+## Links
+
+[CrewRouter - Github](https://github.com/BloretCrew/CrewRouter) [CrewRouter](https://crewrouter.bloret.net/) [QQ Discuss](https://qm.qq.com/q/kEt8fb41wc)

@@ -11,9 +11,13 @@ const { runPanels } = require('./panel-runner');
 const { runJudge } = require('./judge-analyzer');
 const { synthesize } = require('./synthesizer');
 const Logger = require('../logger');
+const { decryptSecret } = require('../utils/secret-crypto');
+const { buildAuthHeaders } = require('../utils/request-policy');
 const { pool } = require('../models/database');
 const { upstreamUrl } = require('../utils/url-validator');
+const { combineAbortSignals } = require('../utils/request-lifecycle');
 const proxyPool = require('../proxy-pool');
+const { selectHealthyWeighted } = require('../utils/provider-selector');
 const {
   buildChatCompletionChunk,
   getOrCreateStreamMeta
@@ -64,6 +68,7 @@ async function getProviderForRequest(providerId) {
   try {
     const provider = await pool.query('SELECT * FROM providers WHERE id = $1 AND enabled = TRUE', [providerId]);
     if (!provider.rows[0]) return null;
+    provider.rows[0].api_key = decryptSecret(provider.rows[0].api_key);
 
     const group = provider.rows[0].grp;
     if (!group) return provider.rows[0];
@@ -74,9 +79,10 @@ async function getProviderForRequest(providerId) {
     );
 
     if (groupResult.rows.length <= 1) return provider.rows[0];
+    for (const candidate of groupResult.rows) candidate.api_key = decryptSecret(candidate.api_key);
 
     const candidates = groupResult.rows;
-    const selected = candidates[Math.floor(Math.random() * candidates.length)];
+    const selected = selectHealthyWeighted(candidates, `provider:${group}`);
     Logger.info(`[Fusion] 负载均衡: 供应商组 "${group}" 从 ${candidates.length} 个中选择 ${selected.id}`);
     return selected;
   } catch (err) {
@@ -96,9 +102,14 @@ async function callModel(modelId, messages, options = {}) {
   if (!provider) {
     throw new Error(`模型 ${modelId} 的供应商未配置`);
   }
+  if (!['openai', 'anthropic'].includes(provider.format || 'openai')) {
+    const error = new Error(`Fusion 暂不支持供应商协议: ${provider.format || 'unknown'}`);
+    error.code = 'unsupported_provider_format';
+    throw error;
+  }
 
   const upstreamModelId = modelConfig.upstream_model_id || modelConfig.id;
-  const { temperature = 0.7, max_tokens = 4096, tools, tool_choice, response_format } = options;
+  const { temperature = 0.7, max_tokens = 4096, tools, tool_choice, response_format, signal } = options;
 
   // 构建请求体
   const requestBody = {
@@ -122,10 +133,11 @@ async function callModel(modelId, messages, options = {}) {
     const providerWithKey = { ...provider, api_key: keys[ki] };
     try {
       if (provider.format === 'anthropic') {
-        return await callAnthropicModel(baseUrl, providerWithKey, requestBody);
+        return await callAnthropicModel(baseUrl, providerWithKey, requestBody, options.requestContext, signal);
       }
-      return await callOpenAIModel(baseUrl, providerWithKey, requestBody);
+      return await callOpenAIModel(baseUrl, providerWithKey, requestBody, options.requestContext, signal);
     } catch (err) {
+      if (err.code === 'fusion_upstream_limit') throw err;
       lastErr = err;
       if (ki < keys.length - 1) {
         Logger.warn(`[Fusion] Key ${ki + 1}/${keys.length} 失败，切换下一 Key: ${err.message}`);
@@ -137,11 +149,11 @@ async function callModel(modelId, messages, options = {}) {
 }
 
 // 调用 OpenAI 格式模型
-async function callOpenAIModel(baseUrl, provider, body) {
+async function callOpenAIModel(baseUrl, provider, body, requestContext = null, signal = null) {
   const url = `${upstreamUrl(baseUrl, '/chat/completions')}`;
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${provider.api_key || ''}`
+    ...buildAuthHeaders('openai', provider.api_key)
   };
 
   Logger.info(`[Fusion] OpenAI 调用开始: url=${url}, model=${body.model}, stream=false`);
@@ -152,8 +164,9 @@ async function callOpenAIModel(baseUrl, provider, body) {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(120000), // 2 分钟超时
-    agent: proxyInfo?.agent
+    signal: combineAbortSignals(signal, AbortSignal.timeout(120000)), // 2 分钟超时
+    agent: proxyInfo?.agent,
+    requestContext
   });
 
   const data = await response.json();
@@ -178,12 +191,11 @@ async function callOpenAIModel(baseUrl, provider, body) {
 }
 
 // 调用 Anthropic 格式模型
-async function callAnthropicModel(baseUrl, provider, body) {
+async function callAnthropicModel(baseUrl, provider, body, requestContext = null, signal = null) {
   const url = `${upstreamUrl(baseUrl, '/messages')}`;
   const headers = {
     'Content-Type': 'application/json',
-    'anthropic-version': '2023-06-01',
-    'x-api-key': provider.api_key || ''
+    ...buildAuthHeaders('anthropic', provider.api_key)
   };
 
   // 转换 OpenAI 格式到 Anthropic 格式
@@ -232,8 +244,9 @@ async function callAnthropicModel(baseUrl, provider, body) {
     method: 'POST',
     headers,
     body: JSON.stringify(anthropicBody),
-    signal: AbortSignal.timeout(120000),
-    agent: proxyInfo?.agent
+    signal: combineAbortSignals(signal, AbortSignal.timeout(120000)),
+    agent: proxyInfo?.agent,
+    requestContext
   });
 
   const data = await response.json();
@@ -338,6 +351,19 @@ async function processFusion(body, req, options = {}) {
   const startTime = Date.now();
   const { messages, temperature, max_tokens, fusion_preset, tools, tool_choice, response_format } = body;
   const { res, format = 'openai' } = options;
+  const requestContext = options.requestContext || { upstreamAttempts: 0 };
+  const signal = options.signal || requestContext.signal;
+  const throwIfAborted = () => {
+    if (signal?.aborted) {
+      const err = new Error('Client disconnected');
+      err.name = 'AbortError';
+      throw err;
+    }
+  };
+  const budgetedCallModel = (modelId, messages, callOptions = {}) => {
+    throwIfAborted();
+    return callModel(modelId, messages, { ...callOptions, requestContext, signal });
+  };
 
   Logger.info(`[Fusion] 开始处理: preset=${fusion_preset || 'default'}, messages=${messages?.length}, format=${format}, stream=${options.stream}, hasRes=${!!res}`);
 
@@ -347,6 +373,8 @@ async function processFusion(body, req, options = {}) {
   // 1. 获取 Fusion 配置（优先使用 API Key 级别配置，其次使用 preset）
   let fusionConfig;
   const apiKeyCfg = options.apiKeyFusionConfig;
+  const synthesisPromptEnabled = apiKeyCfg?.synthesis_prompt_enabled !== false;
+  requestContext.fusionSynthesisPromptEnabled = synthesisPromptEnabled;
 
   if (apiKeyCfg && apiKeyCfg.panel_models && apiKeyCfg.panel_models.length > 0 && apiKeyCfg.judge_model_id && apiKeyCfg.outer_model_id) {
     // 使用 API Key 级别的配置
@@ -437,9 +465,11 @@ async function processFusion(body, req, options = {}) {
     tools,
     tool_choice,
     response_format,
-    callModel
+    callModel: budgetedCallModel,
+    signal
   });
 
+  throwIfAborted();
   const panelSuccess = panelResults.filter(r => r.success).length;
   Logger.info(`[Fusion] Panel 完成: ${panelSuccess}/${panelResults.length} 成功`);
 
@@ -456,9 +486,11 @@ async function processFusion(body, req, options = {}) {
     sendFusionStatus(res, `🔍 **正在使用 ${fusionConfig.judge_model_id} 进行 Judge 分析...**\n`, format);
   }
 
+  throwIfAborted();
   const judgeResult = await runJudge(fusionConfig, messages, panelResults, {
-    callModel
+    callModel: budgetedCallModel
   });
+  throwIfAborted();
 
   Logger.info(`[Fusion] Judge 完成: 共识=${judgeResult.consensus?.length || 0}, 矛盾=${judgeResult.contradictions?.length || 0}, 盲点=${judgeResult.blind_spots?.length || 0}`);
 
@@ -479,12 +511,14 @@ async function processFusion(body, req, options = {}) {
     res: options.res,
     format,
     anthropicBlockIndex,
-    callModel,
+    callModel: budgetedCallModel,
     getModelConfig,
     getProviderForRequest,
     tools,
     tool_choice,
-    response_format
+    response_format,
+    synthesisPromptEnabled,
+    signal
   });
 
   const totalLatency = Date.now() - startTime;

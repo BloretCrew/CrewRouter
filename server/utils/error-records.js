@@ -52,7 +52,8 @@ function clientIp(req) {
   if (typeof realIp === 'string' && realIp.trim()) {
     return realIp.trim().slice(0, 45);
   }
-  return (req.ip || req.socket?.remoteAddress || null);
+  const ip = req.ip || req.socket?.remoteAddress || null;
+  return typeof ip === 'string' && ip.startsWith('::ffff:') ? ip.slice(7) : ip;
 }
 
 /**

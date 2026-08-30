@@ -6,6 +6,37 @@ const Logger = require('../logger');
 const { ACTIONS, logAction } = require('../utils/audit-log');
 const { reportLoginEvent, reportLogoutEvent } = require('../utils/login-reporter');
 
+const loginRateLimits = new Map();
+const LOGIN_LIMIT = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+function consumeLoginAttempt(key) {
+  const now = Date.now();
+  const current = loginRateLimits.get(key);
+  if (!current || now - current.startedAt >= LOGIN_WINDOW_MS) {
+    loginRateLimits.set(key, { startedAt: now, count: 1 });
+    return true;
+  }
+  if (current.count >= LOGIN_LIMIT) return false;
+  current.count += 1;
+  return true;
+}
+
+function regenerateSession(req) {
+  return new Promise((resolve, reject) => {
+    if (typeof req.session.regenerate !== 'function') return resolve();
+    req.session.regenerate(err => err ? reject(err) : resolve());
+  });
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, item] of loginRateLimits) {
+    if (now - item.startedAt >= LOGIN_WINDOW_MS) loginRateLimits.delete(key);
+  }
+}, LOGIN_WINDOW_MS).unref?.();
+
+// 密码注册/设置/修改路径只更新 password_hash，不写入 users.email；邮箱写入由用户设置、管理员和第三方注册路径处理。
 // 邮箱格式验证
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -29,6 +60,11 @@ router.post('/login', async (req, res) => {
 
     if (!loginValue || !password) {
       return res.status(400).json({ error: '请提供用户名或邮箱和密码' });
+    }
+
+    const rateKey = `${req.ip || 'unknown'}:${String(loginValue).toLowerCase().trim()}`;
+    if (!consumeLoginAttempt(rateKey)) {
+      return res.status(429).json({ error: '登录尝试过于频繁，请稍后再试' });
     }
 
     // 统一转小写，不区分大小写
@@ -57,6 +93,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: '用户名/邮箱或密码错误' });
     }
 
+    // 登录成功后清除该账号/IP 的失败计数
+    loginRateLimits.delete(rateKey);
+
     // 检查是否启用了 2FA
     if (user.two_factor_enabled) {
       // 返回需要 2FA 验证的提示，携带用户 ID 用于后续验证
@@ -68,6 +107,7 @@ router.post('/login', async (req, res) => {
     }
 
     // 设置会话
+    await regenerateSession(req);
     req.session.user = {
       id: user.id,
       username: user.username,
@@ -124,6 +164,9 @@ router.post('/login/2fa', async (req, res) => {
     if (!userId || !code) {
       return res.status(400).json({ error: '缺少必要参数' });
     }
+    if (!consumeLoginAttempt(`${req.ip || 'unknown'}:2fa:${userId}`)) {
+      return res.status(429).json({ error: '验证尝试过于频繁，请稍后再试' });
+    }
 
     // 查找用户
     const result = await pool.query('SELECT * FROM users WHERE id = $1 AND two_factor_enabled = TRUE', [userId]);
@@ -157,7 +200,11 @@ router.post('/login/2fa', async (req, res) => {
       return res.status(401).json({ error: '验证码错误' });
     }
 
+    // 2FA 成功后清除该 IP/用户的失败计数。
+    loginRateLimits.delete(`${req.ip || 'unknown'}:2fa:${userId}`);
+
     // 设置会话
+    await regenerateSession(req);
     req.session.user = {
       id: user.id,
       username: user.username,

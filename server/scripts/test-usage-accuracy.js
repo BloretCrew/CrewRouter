@@ -126,6 +126,15 @@ async function main() {
   assert.ok(apiSrc.includes('[Responses/Passthru] 计费/用量记录失败'));
   ok('api responses passthru has estimated + insert path');
 
+  // 配额内 cost=0 落库：INSERT 前置实扣值（realDeduct），锁内重查有偏差时由 balance 回填最终值
+  const balanceSrc = fs.readFileSync(path.join(__dirname, '../utils/balance.js'), 'utf8');
+  const preDeductCalls = apiSrc.split('pointsCost: pointsToDeduct, pointsToDeduct: realDeduct })').length - 1;
+  assert.strictEqual(preDeductCalls, 8, 'all recordUsageAndDeduct callers pass pre-decided realDeduct');
+  assert.strictEqual((apiSrc.match(/const realDeduct = await calculatePointsToDeduct\(/g) || []).length, 8);
+  assert.ok(balanceSrc.includes('UPDATE usage_records SET cost = $1 WHERE id = $2'));
+  assert.ok(balanceSrc.includes('return { ok: true, pointsToDeduct: points }'));
+  ok('api billing inserts pre-decided realDeduct with in-lock cost backfill');
+
   // Fusion 分项汇总
   assert.ok(apiSrc.includes('fusionPromptTokens'));
   assert.ok(apiSrc.includes('accumulateUsage'));

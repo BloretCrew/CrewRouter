@@ -73,32 +73,31 @@ class BaseProviderAdapter {
    * @returns {string} 完整的请求 URL
    * @throws {Error} 如果 URL 无效或指向内网地址
    */
-  buildUrl(model) {
+  async buildUrl(model) {
     const baseUrl = this.provider.base_url.replace(/\/$/, '');
     const format = this.getApiFormat();
+    const { upstreamUrl } = require('../utils/url-validator');
 
-    let path;
+    let fullUrl;
     switch (format) {
       case 'anthropic':
-        path = '/v1/messages';
+        fullUrl = upstreamUrl(baseUrl, '/messages');
         break;
       case 'gemini':
-        path = `/v1beta/models/${model}:generateContent`;
+        fullUrl = upstreamUrl(baseUrl, `/models/${encodeURIComponent(model)}:generateContent`, '/v1beta');
         break;
       case 'responses':
-        path = '/v1/responses';
+        fullUrl = upstreamUrl(baseUrl, '/responses');
         break;
       case 'openai':
       default:
-        path = '/v1/chat/completions';
+        fullUrl = upstreamUrl(baseUrl, '/chat/completions');
         break;
     }
 
-    const fullUrl = `${baseUrl}${path}`;
-
     // SSRF 防护：校验 URL 合法性
     const { validateUrl } = require('../utils/url-validator');
-    const result = validateUrl(fullUrl, { allowPrivate: false });
+    const result = await validateUrl(fullUrl, { allowPrivate: false });
     if (!result.ok) {
       throw new Error(`[SSRF] URL 校验失败: ${result.error} (base_url: ${baseUrl})`);
     }
@@ -111,7 +110,7 @@ class BaseProviderAdapter {
    * @param {string} model - 模型 ID
    * @returns {string} 完整的请求 URL
    */
-  buildStreamUrl(model) {
+  async buildStreamUrl(model) {
     return this.buildUrl(model);
   }
 
@@ -120,26 +119,8 @@ class BaseProviderAdapter {
    * @returns {object} 认证头对象
    */
   getAuthHeaders() {
-    const format = this.getApiFormat();
-    const apiKey = this.provider.api_key;
-
-    switch (format) {
-      case 'anthropic':
-        return {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
-        };
-      case 'gemini':
-        return {
-          'x-goog-api-key': apiKey
-        };
-      case 'openai':
-      case 'responses':
-      default:
-        return {
-          'Authorization': `Bearer ${apiKey}`
-        };
-    }
+    const { buildAuthHeaders } = require('../utils/request-policy');
+    return buildAuthHeaders(this.getApiFormat(), this.provider.api_key);
   }
 
   /**

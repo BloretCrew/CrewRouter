@@ -21,6 +21,7 @@ const { buildUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs
 const { aggregateMessageStats, analyzeMessages } = require('../utils/message-analysis');
 const { getMessageAnalysisStatus } = require('../utils/message-analysis-store');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
+const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const {
   normalizeProviderKeyEntries,
   getPrimaryApiKey,
@@ -31,6 +32,8 @@ const {
 } = require('../utils/provider-keys');
 const { parseGrokAuthConfig } = require('../utils/grok-usage');
 const { normalizeTestUserAgent } = require('../utils/model-test');
+const { encryptSecret, decryptSecret } = require('../utils/secret-crypto');
+const { addModelsToFrontierTeams: addModelsToFrontierTeamsIfEnabled } = require('../utils/frontier-auto-add');
 const { getRetentionConfig, invalidateRetentionConfigCache } = require('../utils/usage-agg');
 const { runCompressOnce } = require('../utils/usage-compress');
 const { runPurgeOnce } = require('../utils/usage-purge');
@@ -43,35 +46,13 @@ const {
 } = require('../utils/provider-quota');
 
 /**
- * 将新模型自动挂载到所有「前沿 Team」，默认 enabled=TRUE。
- * 仅 INSERT 缺失映射；已有映射（含管理员手动禁用）不覆盖。
+ * 按系统开关将模型挂载到所有前沿 Team；仅补缺失映射。
  * @param {string|string[]} modelIds
  * @returns {Promise<number>} 新插入的映射行数
  */
 async function addModelsToFrontierTeams(modelIds) {
-  const ids = Array.isArray(modelIds)
-    ? [...new Set(modelIds.filter(Boolean).map(String))]
-    : (modelIds ? [String(modelIds)] : []);
-  if (ids.length === 0) return 0;
-
-  const frontier = await pool.query('SELECT id FROM teams WHERE is_frontier = TRUE');
-  if (frontier.rows.length === 0) return 0;
-
-  let added = 0;
-  for (const team of frontier.rows) {
-    // 批量插入，避免逐条往返
-    const result = await pool.query(
-      `INSERT INTO team_models (team_id, model_id, enabled)
-       SELECT $1, x.model_id, TRUE
-       FROM unnest($2::text[]) AS x(model_id)
-       ON CONFLICT (team_id, model_id) DO NOTHING`,
-      [team.id, ids]
-    );
-    added += result.rowCount || 0;
-  }
-  if (added > 0) {
-    Logger.info(`[前沿Team] 已为 ${frontier.rows.length} 个前沿 Team 自动启用 ${ids.length} 个模型中的新映射 ${added} 条`);
-  }
+  const added = await addModelsToFrontierTeamsIfEnabled(pool, modelIds);
+  if (added > 0) Logger.info(`[前沿Team] 自动新增 ${added} 条模型映射`);
   return added;
 }
 
@@ -157,24 +138,33 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
   if (balance !== undefined && (typeof balance !== 'number' || isNaN(balance) || balance < 0 || balance >= 1000000)) {
     return res.status(400).json({ error: '余额必须是 0 到 999999.9999 之间的数字' });
   }
-
-  // 如果修改邮箱，检查是否已被其他用户使用
-  if (email !== undefined && email) {
-    const normalizedEmail = email.toLowerCase().trim();
-    const existingUser = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2', [normalizedEmail, userId]);
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: '该邮箱已被其他用户使用' });
-    }
+  if (refundBalance !== undefined && (typeof refundBalance !== 'number' || !Number.isFinite(refundBalance) || refundBalance < 0 || refundBalance >= 1000000)) {
+    return res.status(400).json({ error: '可退款余额必须是 0 到 999999.9999 之间的数字' });
   }
 
   try {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const target = await client.query('SELECT id, is_admin FROM users WHERE id = $1 FOR UPDATE', [userId]);
+      if (target.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: '用户不存在' });
+      }
+      let normalizedEmail;
+      if (email !== undefined) {
+        try { normalizedEmail = normalizeEmail(email); } catch (error) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: error.message });
+        }
+      }
     const sets = [];
     const params = [userId];
     let idx = 2;
 
     if (email !== undefined) {
       sets.push(`email = $${idx++}`);
-      params.push(email ? email.toLowerCase().trim() : null);
+      params.push(normalizedEmail);
     }
     if (email_verified !== undefined) {
       sets.push(`email_verified = $${idx++}`);
@@ -183,12 +173,12 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
     if (isAdmin !== undefined) {
       // 取消管理员前，确保系统至少保留一名管理员
       if (!isAdmin) {
-        const target = await pool.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
+        const target = await client.query('SELECT is_admin FROM users WHERE id = $1', [userId]);
         if (target.rows.length === 0) {
           return res.status(404).json({ error: '用户不存在' });
         }
         if (target.rows[0].is_admin) {
-          const adminCount = await pool.query(
+          const adminCount = await client.query(
             'SELECT COUNT(*)::int AS count FROM users WHERE is_admin = TRUE AND id != $1',
             [userId]
           );
@@ -234,15 +224,24 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
     }
 
     sets.push('updated_at = CURRENT_TIMESTAMP');
-    const result = await pool.query(
+    const result = await client.query(
       `UPDATE users SET ${sets.join(', ')} WHERE id = $1`,
       params
     );
     if (result.rowCount === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: '用户不存在' });
     }
+    await client.query('COMMIT');
     res.json({ success: true });
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
+    if (isUniqueViolation(error)) return res.status(409).json({ error: '邮箱或用户标识已被其他用户使用' });
     Logger.error('[更新用户状态] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
@@ -263,22 +262,32 @@ router.post('/users/:id/refund', requireAuth, requireAdmin, auditMiddleware(ACTI
   }
 
   try {
-    // 获取用户当前可退款余额
-    const userResult = await pool.query('SELECT refund_balance FROM users WHERE id = $1', [userId]);
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: '用户不存在' });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // 获取用户当前可退款余额
+      const userResult = await client.query('SELECT refund_balance FROM users WHERE id = $1 FOR UPDATE', [userId]);
+      if (userResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: '用户不存在' });
+      }
+
+      const userRefundBalance = parseFloat(userResult.rows[0].refund_balance || 0);
+      if (refundAmount > userRefundBalance) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: `退款金额不能超过可退款余额 ¥${userRefundBalance.toFixed(4)}` });
+      }
+
+      await client.query('UPDATE users SET refund_balance = refund_balance - $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [userId, refundAmount]);
+      await client.query('COMMIT');
+      Logger.info(`[退款] 管理员退款: userId=${userId}, amount=${refundAmount}`);
+      res.json({ success: true, newRefundBalance: userRefundBalance - refundAmount });
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
     }
-
-    const userRefundBalance = parseFloat(userResult.rows[0].refund_balance || 0);
-    if (refundAmount > userRefundBalance) {
-      return res.status(400).json({ error: `退款金额不能超过可退款余额 ¥${userRefundBalance.toFixed(4)}` });
-    }
-
-    // 扣除可退款余额
-    await pool.query('UPDATE users SET refund_balance = refund_balance - $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [userId, refundAmount]);
-
-    Logger.info(`[退款] 管理员退款: userId=${userId}, amount=${refundAmount}`);
-    res.json({ success: true, newRefundBalance: userRefundBalance - refundAmount });
   } catch (error) {
     Logger.error('[退款] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -597,6 +606,13 @@ router.post('/models/batch-update', requireAuth, requireAdmin, async (req, res) 
   }
   try {
     await pool.query('UPDATE models SET enabled = $1 WHERE id = ANY($2)', [enabled, ids]);
+    if (enabled === true) {
+      try {
+        await addModelsToFrontierTeams(ids);
+      } catch (e) {
+        Logger.warn('[批量启用模型] 自动添加到前沿Team失败:', e.message);
+      }
+    }
     Logger.info(`[模型] 批量${enabled ? '启用' : '禁用'}了 ${ids.length} 个模型`);
     res.json({ success: true, updated: ids.length });
   } catch (error) {
@@ -2037,12 +2053,16 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
       const er = await pool.query('SELECT api_key, api_keys FROM providers WHERE id = $1', [id]);
       existing = er.rows[0] || null;
     }
-    const finalApiKey = storage
-      ? storage.api_key
-      : (api_key || existing?.api_key || '');
-    const finalApiKeys = storage
-      ? (storage.api_keys ? JSON.stringify(storage.api_keys) : null)
-      : (existing?.api_keys != null ? JSON.stringify(normalizeProviderKeyEntries(existing)) : (finalApiKey ? JSON.stringify([{ key: finalApiKey, weight: 1 }]) : null));
+    const encryptedStorage = storage && {
+      api_key: encryptSecret(storage.api_key),
+      api_keys: storage.api_keys?.map((entry) => ({ ...entry, key: encryptSecret(entry.key) })) || null
+    };
+    const finalApiKey = encryptedStorage
+      ? encryptedStorage.api_key
+      : (existing?.api_key || '');
+    const finalApiKeys = encryptedStorage
+      ? (encryptedStorage.api_keys ? JSON.stringify(encryptedStorage.api_keys) : null)
+      : (existing?.api_keys != null ? JSON.stringify(normalizeProviderKeyEntries(existing).map((entry) => ({ ...entry, key: encryptSecret(entry.key) }))) : (finalApiKey ? JSON.stringify([{ key: finalApiKey, weight: 1 }]) : null));
 
     await pool.query(`
       INSERT INTO providers (id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
@@ -2408,12 +2428,9 @@ router.get('/providers/:id/ping', requireAuth, requireAdmin, async (req, res) =>
       headers['Authorization'] = `Bearer ${primaryKey}`;
     }
 
-    // 尝试 /v1/models 和 /models 两个路径
-    const candidates = [];
-    if (/\/v1\/?$/.test(baseUrl)) {
-      candidates.push(`${baseUrl}/models`);
-    } else {
-      candidates.push(`${baseUrl}/v1/models`);
+    // 尝试推断的模型路径，并为无版本 Base URL 保留 /models 回退
+    const candidates = [upstreamUrl(baseUrl, '/models')];
+    if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(baseUrl)) {
       candidates.push(`${baseUrl}/models`);
     }
 
@@ -2491,10 +2508,8 @@ async function fetchUpstreamModelsForProvider(provider) {
     .replace(/\/(chat\/completions|completions|messages|responses|embeddings)\/?$/, '')
     .replace(/\/+$/, '');
 
-  if (/\/v1\/?$/.test(cleanBaseUrl)) {
-    candidateUrls.push(`${cleanBaseUrl}/models`);
-  } else {
-    candidateUrls.push(`${cleanBaseUrl}/v1/models`);
+  candidateUrls.push(upstreamUrl(cleanBaseUrl, '/models'));
+  if (!/\/v\d+(?:[a-z]+\d*)?\/?$/i.test(cleanBaseUrl)) {
     candidateUrls.push(`${cleanBaseUrl}/models`);
   }
   const uniqueUrls = [...new Set(candidateUrls)];
@@ -3137,6 +3152,7 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
         settings[row.key] = row.value;
       }
     });
+    settings.autoAddNewModelsToFrontier = settings.autoAddNewModelsToFrontier === true;
     // 敏感配置脱敏：飞书密钥勿经通用设置接口泄露
     if (settings.feishu_login && typeof settings.feishu_login === 'object') {
       settings.feishu_login = {
@@ -3176,6 +3192,9 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
         return res.status(400).json({ error: '设置不能为空' });
       }
       for (const [key, value] of entries) {
+        if (key === 'autoAddNewModelsToFrontier' && typeof value !== 'boolean') {
+          return res.status(400).json({ error: 'autoAddNewModelsToFrontier 必须是布尔值' });
+        }
         // model_list 校验：必须保留至少一个非 fusion 模型（除非只配了 fusion）
         if (key === 'model_list' && Array.isArray(value)) {
           const nonFusionModels = value.filter(m => m !== 'fusion');
@@ -3196,6 +3215,9 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
     const { key, value } = body;
     if (!key) {
       return res.status(400).json({ error: '设置键不能为空' });
+    }
+    if (key === 'autoAddNewModelsToFrontier' && typeof value !== 'boolean') {
+      return res.status(400).json({ error: 'autoAddNewModelsToFrontier 必须是布尔值' });
     }
     // model_list 校验：必须保留至少一个非 fusion 模型（除非只配了 fusion）
     if (key === 'model_list' && Array.isArray(value)) {
@@ -3683,13 +3705,13 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
         INSERT INTO providers (id, name, base_url, api_key, format, enabled)
         VALUES ($1, $2, $3, $4, 'openai', TRUE)
         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, base_url = EXCLUDED.base_url, api_key = EXCLUDED.api_key
-      `, [effectiveProviderId, providerName, baseUrl, apiKey]);
+      `, [effectiveProviderId, providerName, baseUrl, encryptSecret(apiKey)]);
 
       if (existing.rows.length > 0) updated++; else created++;
 
       // 尝试获取模型列表
       try {
-        const modelsUrl = /\/v1$/.test(baseUrl) ? `${baseUrl}/models` : `${baseUrl}/v1/models`;
+        const modelsUrl = upstreamUrl(baseUrl, '/models');
         const modelsRes = await fetch(modelsUrl, {
           headers: { 'Authorization': `Bearer ${apiKey}` }
         });
@@ -3756,7 +3778,7 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
         INSERT INTO providers (id, name, base_url, api_key, format, enabled)
         VALUES ($1, $2, $3, $4, 'openai', TRUE)
         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, base_url = EXCLUDED.base_url, api_key = EXCLUDED.api_key
-      `, [effectiveProviderId, providerName, baseUrl, keys[0]]);
+      `, [effectiveProviderId, providerName, baseUrl, encryptSecret(keys[0])]);
 
       if (existing.rows.length > 0) updated++; else created++;
     }
@@ -3958,7 +3980,7 @@ async function findAvailableProviders() {
   try {
     const result = await pool.query(`
       SELECT m.id AS model_id, m.name AS model_name, m.upstream_model_id,
-             p.id AS provider_id, p.name AS provider_name, p.base_url, p.api_key, p.format
+             p.id AS provider_id, p.name AS provider_name, p.base_url, p.api_key, p.api_keys, p.format
       FROM models m
       JOIN providers p ON m.provider = p.id
       WHERE m.enabled = TRUE AND p.enabled = TRUE AND p.api_key IS NOT NULL AND p.api_key != ''
@@ -3972,7 +3994,7 @@ async function findAvailableProviders() {
         id: r.provider_id,
         name: r.provider_name || r.provider_id,
         base_url: r.base_url,
-        api_key: r.api_key,
+        api_key: getPrimaryApiKey({ api_key: decryptSecret(r.api_key), api_keys: r.api_keys }),
         format: r.format || 'openai'
       }
     }));

@@ -61,8 +61,9 @@ async function listQuotaProxies(provider) {
 }
 
 async function sendOnce(url, init, agent) {
+  const requestContext = init.requestContext;
   if (agent) {
-    return proxyPool.proxyFetch(url, { ...init, agent });
+    return proxyPool.proxyFetch(url, { ...init, agent, requestContext });
   }
   return fetch(url, init);
 }
@@ -72,6 +73,7 @@ async function sendOnce(url, init, agent) {
  * 若已配置供应商/系统代理则先走代理，避免空等超时。
  */
 async function quotaRequest(url, init, provider = {}) {
+  const requestContext = init.requestContext || null;
   const proxies = await listQuotaProxies(provider);
   const preferProxy = isLikelyBlockedOfficialHost(url) && proxies.length > 0;
   const attempts = preferProxy
@@ -81,7 +83,7 @@ async function quotaRequest(url, init, provider = {}) {
   let lastError;
   for (const agent of attempts) {
     try {
-      return await sendOnce(url, init, agent);
+      return await sendOnce(url, { ...init, requestContext }, agent);
     } catch (err) {
       lastError = err;
       if (!isNetworkError(err)) throw err;

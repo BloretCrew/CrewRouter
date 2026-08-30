@@ -1,67 +1,45 @@
-# CrewRouterHelper —— CrewRouter 客户端事件上报
+# CrewRouterHelper
 
-八个客户端共用一个上报器 [`cr-report.py`](./cr-report.py)（单文件 Python，零依赖）。
+零依赖 npm CLI，用于将 Grok/Claude 风格 Hooks 事件安全上报到 CrewRouter，并检查 Grok Hook 安置状态。Python `cr-report.py` 仍保留为兼容入口。
 
-## 一次性配置
+## 安装与使用
 
 ```bash
-mkdir -p ~/.config ~/.local/bin
-cp cr-report.py ~/.local/bin/cr-report.py && chmod +x ~/.local/bin/cr-report.py
-cat > ~/.config/cr-report.json <<'EOF'
-{ "url": "http://127.0.0.1:20003", "key": "你的 CrewRouter API Key" }
-EOF
-chmod 600 ~/.config/cr-report.json
-~/.local/bin/cr-report.py test   # 应输出 HTTP 200 {"ok":true}
+npm install -g crewrouter-helper
+cr-report login --url http://127.0.0.1:20003
+cr-report hooks install
+cr-report status
+cr-report test --harness grok
 ```
 
-## 各客户端接入（原生 hook，无需兼容层）
+`login` 使用 PKCE 浏览器授权；凭证写入 `~/.config/cr-report.json` 并设置为 600。也兼容旧版配置中的 `key` 字段。`logout` 只删除本地凭证。
 
-### Claude Code（`~/.claude/settings.json`）
-```json
-{
-  "hooks": {
-    "SessionStart": [{"hooks": [{"type": "command",
-      "command": "~/.local/bin/cr-report.py hook --harness claude_code"}]}],
-    "SessionEnd":   [{"hooks": [{"type": "command",
-      "command": "~/.local/bin/cr-report.py hook --harness claude_code"}]}],
-    "PostToolUse":  [{"hooks": [{"type": "command",
-      "command": "~/.local/bin/cr-report.py hook --harness claude_code"}]}]
-  }
-}
-```
-事件类型从 stdin 的 `hook_event_name` 自动推断，三段命令完全相同。
+## Grok Hooks
 
-### Qwen Code（`~/.qwen/settings.json`）
-同上，`--harness qwen_code`。Qwen hooks 与 Claude 格式一致。
+`hooks install` 仅原子写入 `~/.grok/hooks/crewrouter-helper.json`，不会修改 `orca-status.json`、`bark-notify.json` 或任何其他 Hook，也不会将密钥写入 Hook JSON。卸载使用 `cr-report hooks uninstall`，重复安装和卸载均幂等。
 
-### Codex（`~/.codex/config.toml`，v0.124+ 需 `codex_hooks = true`）
-```toml
-[hooks.PostToolUse]
-command = "~/.local/bin/cr-report.py hook --harness codex"
-```
+Hook 命令通过当前 npm CLI 的可靠绝对路径执行，并原样读取 stdin：
 
-### Grok（无 hook → watch 模式常驻）
-Linux/macOS 可用 `nohup`：
 ```bash
-nohup ~/.local/bin/cr-report.py watch --harness grok >/dev/null 2>&1 &
+printf '%s\n' '{"hookEventName":"PostToolUse","sessionId":"demo","toolName":"Bash"}' | cr-report hook --harness grok
+cr-report emit --harness hermes --event session_start --session demo
 ```
-Windows 请使用“任务计划程序”创建登录时启动任务，程序填写 `py`，参数填写
-`C:\\path\\cr-report.py watch --harness grok`；或将同一命令加入用户启动文件夹的快捷方式。
-路径由 Python `pathlib` 按当前用户目录解析，Windows watch 未实测。
 
-tail `~/.grok/sessions/**/updates.jsonl`：新会话目录 → session_start，
-tool_call 行 → tool_use。状态存 `~/.cache/cr-report-grok-state.json`。
+支持 `hookEventName`/`hook_event_name`、`sessionId`/`session_id`、`toolName`/`tool_name`、`toolInput`/`tool_input`、`cwd`/`workspaceRoot`，以及 SessionStart、SessionEnd、PreToolUse、PostToolUse、PostToolUseFailure、PermissionDenied、Stop、StopFailure、Notification、SubagentStart、SubagentStop、PreCompact、PostCompact。未知事件跳过且退出 0；网络和配置异常 fail-open。
 
-### Hermes / OpenClaw / DeepSeek Harness
-直接在会话启动处调用：
+## status / tui / watch
+
+`status` 是只读非交互扫描，`tui` 提供零依赖终端展示：Hook 文件有效性、事件列表、CLI 可执行性、凭证是否配置/临期、服务端地址、旧 watch 兼容状态和检查时间。不会显示 token/API key。旧 Python `watch` 仍可用，但不要与原生 Grok Hook 同时运行，以免重复上报。
+
+## Python 兼容入口
+
+原有 `cr-report.py`、`install-grok-hooks.py`、`cr-login` 和 `codex-cr` 保留。Python 入口适用于既有 Claude/Qwen/Codex/Hermes/OpenClaw 集成；npm CLI 是新的主入口。
+
+## 开发检查
+
 ```bash
-cr-report.py emit --harness hermes --event session_start --session "$SESSION_ID"
+npm test
+npm pack --dry-run
 ```
 
-## 设计约定
-
-- **静默失败**：任何错误（配置缺失、网络失败、JSON 解析失败）都退出 0，
-  绝不阻塞客户端工具执行。
-- 密钥只存在 `~/.config/cr-report.json` 一处，客户端配置文件里不含密钥。
-- 服务端校验 harness 必须是 8 种标准标识之一
-  （claude_code / codex / grok / opencode / qwen_code / hermes / openclaw / deepseek_harness）。
+本包不包含依赖、缓存、临时文件或凭证；项目不会自动 publish 或 push。

@@ -17,6 +17,9 @@ router.use((req, res, next) => {
     }).catch(() => {});
   });
   req._traceStartedAt = Date.now();
+  req._requestLifecycle = createRequestLifecycle(req, res);
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle.signal };
+  res.once('finish', () => req._requestLifecycle.dispose());
   next();
 });
 const { pool } = require('../models/database');
@@ -43,7 +46,9 @@ const {
   scrubAnthropicResponse,
   scrubResponsesApiResult,
 } = require('../utils/inject-prompt-scrub');
-const { checkQuotaRules } = require('../utils/points-deduct');
+const { checkQuotaRules, calculatePointsToDeduct } = require('../utils/points-deduct');
+const { recordUsageAndDeduct } = require('../utils/balance');
+const { sha256Hex } = require('../utils/key-hash');
 const {
   getQuotaInfo,
   getGroupName,
@@ -78,10 +83,22 @@ const { extractAttribution, classifyCompaction } = require('../utils/attribution
 const { classifyRequestSemantics } = require('../utils/request-semantics');
 const { createStreamScrubber } = require('../utils/inject-prompt-stream');
 const crypto = require('crypto');
+const { decryptSecret } = require('../utils/secret-crypto');
+const { validateBeforeUpstreamRewrite } = require('../utils/before-upstream-policy');
+const { selectHealthyWeighted } = require('../utils/provider-selector');
+const { createRequestLifecycle, combineAbortSignals } = require('../utils/request-lifecycle');
+const protocolBridge = require('../protocol/bridge');
+
+function bridgeRequest(dialect, body, options = {}) {
+  const ir = protocolBridge.decodeRequest(dialect, body || {});
+  return protocolBridge.encodeRequest(dialect, ir, options);
+}
+
 
 // 非流式：上游整段响应（headers+body）超时。30s 对免费/慢模型过短，易误杀。
 const UPSTREAM_TIMEOUT = 180000; // 3 分钟
 const UPSTREAM_STREAM_TIMEOUT = 300000; // 流式请求超时 5 分钟
+const MAX_UPSTREAM_ATTEMPTS = 12;
 
 function isUpstreamTimeoutError(err) {
   if (!err) return false;
@@ -101,8 +118,8 @@ function isUpstreamTimeoutError(err) {
  */
 function buildUpstreamExceptionError(error, format = 'openai') {
   const isTimeout = isUpstreamTimeoutError(error);
-  const status = isTimeout ? 504 : 502;
-  const code = isTimeout ? 'upstream_timeout' : (error?.code || 'upstream_error');
+  const status = Number.isInteger(error?.status) ? error.status : (error?.code === 'fusion_upstream_limit' ? 429 : (isTimeout ? 504 : 502));
+  const code = error?.code === 'fusion_upstream_limit' ? 'fusion_upstream_limit' : (isTimeout ? 'upstream_timeout' : (error?.code || 'upstream_error'));
   let message = error?.message || 'unknown error';
   if (isTimeout && /aborted/i.test(message) && !/timeout/i.test(message)) {
     message = `Upstream request timed out (${UPSTREAM_TIMEOUT}ms)`;
@@ -118,11 +135,11 @@ function buildUpstreamExceptionError(error, format = 'openai') {
       body: {
         type: 'error',
         error: {
-          type: isTimeout ? 'timeout_error' : 'api_error',
+          type: error?.code === 'fusion_upstream_limit' ? 'rate_limit_error' : (isTimeout ? 'timeout_error' : 'api_error'),
           message
         }
       },
-      retryable: true
+      retryable: status >= 500
     };
   }
   return {
@@ -130,11 +147,11 @@ function buildUpstreamExceptionError(error, format = 'openai') {
     body: {
       error: {
         message,
-        type: isTimeout ? 'timeout_error' : 'server_error',
+        type: error?.code === 'fusion_upstream_limit' ? 'rate_limit_error' : (isTimeout ? 'timeout_error' : 'server_error'),
         code
       }
     },
-    retryable: true
+    retryable: status >= 500
   };
 }
 
@@ -150,11 +167,29 @@ function buildUpstreamExceptionError(error, format = 'openai') {
  * @returns {Promise<{response: object, currentProxyInfo: object|null}>}
  */
 async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, maxRetries, logPrefix, hookCtx = null) {
+  const signal = combineAbortSignals(hookCtx?.signal, hookCtx?.requestContext?.signal, provider?._requestLifecycle?.signal);
+  const throwIfAborted = () => {
+    if (signal?.aborted) {
+      const err = new Error('Client disconnected');
+      err.name = 'AbortError';
+      throw err;
+    }
+  };
   let response;
   const affinityKey = hookCtx?.affinityKey || null;
   let proxyInfo = currentProxyInfo;
   let lastError = null;
-  const attempts = Math.max(1, parseInt(maxRetries, 10) || 1);
+  const attempts = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(1, parseInt(maxRetries, 10) || 1));
+  const requestContext = hookCtx?.requestContext || provider?._requestContext;
+  const consumeAttempt = () => {
+    if (!requestContext) return;
+    requestContext.upstreamAttempts = (requestContext.upstreamAttempts || 0) + 1;
+    if (requestContext.upstreamAttempts > MAX_UPSTREAM_ATTEMPTS) {
+      const err = new Error(`Upstream request attempt limit exceeded (${MAX_UPSTREAM_ATTEMPTS})`);
+      err.code = 'upstream_attempt_limit';
+      throw err;
+    }
+  };
 
   // 插件 gateway:beforeUpstream 钩子：首次构造请求选项时执行一次，
   // 得到的覆盖值（url / headers / bodyText）在后续代理重试中持续生效
@@ -162,18 +197,29 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
   if (hookCtx && pluginHooks.hasSubscribers('gateway:beforeUpstream')) {
     try {
       const probe = makeFetchOpts(proxyInfo);
-      const payload = {
+      const originalPayload = {
         url: probe.url,
         headers: probe.headers && typeof probe.headers === 'object' ? { ...probe.headers } : {},
         bodyText: typeof probe.body === 'string' ? probe.body : '',
+        model: hookCtx.model,
+        provider: provider?.id || null,
+        providerId: provider?.id || null,
       };
+      const payload = { ...originalPayload, headers: { ...originalPayload.headers } };
       const out = await pluginHooks.apply('gateway:beforeUpstream', payload, {
         provider: provider ? { id: provider.id, name: provider.name, format: provider.format || 'openai' } : null,
         model: hookCtx.model,
         requestType: hookCtx.requestType || logPrefix,
       });
-      if (out && typeof out === 'object') upstreamOverride = out;
+      if (out && typeof out === 'object') {
+        const checked = await validateBeforeUpstreamRewrite(originalPayload, out, {
+          authorizedModel: hookCtx.model,
+          authorizedProviderId: provider?.id || null,
+        });
+        upstreamOverride = checked.override;
+      }
     } catch (err) {
+      if (err?.code && String(err.code).startsWith('plugin_')) throw err;
       Logger.warn(`[plugins] beforeUpstream 钩子失败（已忽略）: ${err.message}`);
     }
   }
@@ -183,22 +229,20 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
     if (!upstreamOverride) return fetchOpts;
     if (typeof upstreamOverride.url === 'string' && upstreamOverride.url) fetchOpts.url = upstreamOverride.url;
     if (upstreamOverride.headers && typeof upstreamOverride.headers === 'object') {
-      const base = fetchOpts.headers && typeof fetchOpts.headers === 'object' ? fetchOpts.headers : {};
-      for (const [k, v] of Object.entries(upstreamOverride.headers)) {
-        if (v === null || v === undefined) delete base[k];
-        else base[k] = v;
-      }
-      fetchOpts.headers = base;
+      fetchOpts.headers = { ...upstreamOverride.headers };
     }
-    if (typeof upstreamOverride.bodyText === 'string' && upstreamOverride.bodyText) fetchOpts.body = upstreamOverride.bodyText;
+    if (typeof upstreamOverride.bodyText === 'string') fetchOpts.body = upstreamOverride.bodyText;
     return fetchOpts;
   };
 
   for (let retry = 0; retry < attempts; retry++) {
+    throwIfAborted();
+    consumeAttempt();
     const fetchOpts = applyUpstreamOverride(makeFetchOpts(proxyInfo));
+    if (signal) fetchOpts.signal = combineAbortSignals(fetchOpts.signal, signal);
 
     try {
-      response = await proxyPool.proxyFetch(fetchOpts.url, fetchOpts);
+      response = await proxyPool.proxyFetch(fetchOpts.url, { ...fetchOpts, requestContext });
       lastError = null;
     } catch (err) {
       lastError = err;
@@ -256,14 +300,13 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
 
 /**
  * 是否可对 Key 模型队列做失败回退（换下一个模型重试）
- * - 网络/5xx/429/4xx → 均可回退（不同模型/供应商对协议与鉴权的宽松度不同，
- *   一个模型拒绝的请求换模型后可能成功，故 4xx 也参与回退）
+ * - 网络/5xx/429 → 可回退；4xx 通常表示客户端请求或鉴权错误，不切换模型/Key
  */
 function isRetryableUpstreamStatus(status) {
   if (status == null) return true;
   const code = Number(status);
   if (!Number.isFinite(code)) return true;
-  if (code >= 400) return true;
+  if (code >= 500) return true;
   return false;
 }
 
@@ -408,7 +451,7 @@ async function runWithProviderKeyFallback(provider, res, outerSuppress, runOnce)
   const keys = await resolveApiKeyAttempts(provider);
   if (keys.length === 0) {
     // 无 Key 也尝试一次（部分上游可能不需鉴权）
-    return runOnce({ ...provider, api_key: '' }, {
+    return runOnce({ ...provider, api_key: '', _requestContext: res.req?._upstreamAttemptContext }, {
       suppressErrorResponse: !!outerSuppress,
       keyIndex: 0,
       keyTotal: 1,
@@ -422,7 +465,7 @@ async function runWithProviderKeyFallback(provider, res, outerSuppress, runOnce)
     const hasMoreKeys = i < keys.length - 1;
     const suppressErrorResponse = !!outerSuppress || hasMoreKeys;
     const apiKey = keys[i];
-    const providerWithKey = { ...provider, api_key: apiKey };
+    const providerWithKey = { ...provider, api_key: apiKey, _requestContext: provider._requestContext || res.req?._upstreamAttemptContext };
     try {
       lastResult = await runOnce(providerWithKey, {
         suppressErrorResponse,
@@ -527,7 +570,9 @@ function invalidateApiKeyCacheByKeyId(keyId) {
 
 async function getProvider(providerId) {
   const result = await pool.query('SELECT * FROM providers WHERE id = $1 AND enabled = TRUE', [providerId]);
-  return result.rows[0] || null;
+  const provider = result.rows[0] || null;
+  if (provider) provider.api_key = decryptSecret(provider.api_key);
+  return provider;
 }
 
 // 获取供应商（支持同组负载均衡）
@@ -545,6 +590,7 @@ async function getProviderForRequest(providerId) {
   );
 
   if (groupResult.rows.length <= 1) return applyProviderSelect(provider);
+  for (const candidate of groupResult.rows) candidate.api_key = decryptSecret(candidate.api_key);
 
   // 默认随机选择；插件 provider:select 钩子可过滤/排序候选供应商
   let candidates = groupResult.rows;
@@ -558,7 +604,7 @@ async function getProviderForRequest(providerId) {
       Logger.warn(`[provider:select] 钩子异常: ${err.message}`);
     }
   }
-  const selected = candidates[Math.floor(Math.random() * candidates.length)];
+  const selected = selectHealthyWeighted(candidates, `provider:${group}`);
   Logger.info(`[负载均衡] 供应商组 "${group}": 从 ${candidates.length} 个中选择 ${selected?.id || selected?.provider_id || '?'}`);
   return selected || null;
 }
@@ -1019,7 +1065,7 @@ function normalizeMessageRole(role) {
 
 // 验证API密钥中间件（带缓存优化；按路径返回 OpenAI/Anthropic 标准错误形）
 async function validateApiKey(req, res, next) {
-  let apiKey = req.headers['x-api-key'] || req.query.api_key;
+  let apiKey = req.headers['x-api-key'];
   // 支持 Authorization: Bearer xxx 格式
   if (!apiKey && req.headers.authorization) {
     const auth = req.headers.authorization;
@@ -1096,14 +1142,14 @@ async function validateApiKey(req, res, next) {
               u.api_signature_enabled, u.api_signature_template
        FROM api_keys ak
        JOIN users u ON ak.user_id = u.id
-       WHERE ak.key_value = $1`,
-      [apiKey]
+       WHERE ak.key_value = $1 OR ak.key_hash = $2`,
+      [apiKey, sha256Hex(apiKey)]
     );
 
     // 重新查询以获取 key 级别签名设置
     const keySignatureResult = await pool.query(
-      `SELECT signature_enabled, signature_template FROM api_keys WHERE key_value = $1`,
-      [apiKey]
+      `SELECT signature_enabled, signature_template FROM api_keys WHERE key_value = $1 OR key_hash = $2`,
+      [apiKey, sha256Hex(apiKey)]
     );
 
     if (result.rows.length === 0) {
@@ -1157,6 +1203,7 @@ async function validateApiKey(req, res, next) {
       fusionJudgeModelId: keyData.fusion_judge_model_id || '',
       fusionOuterModelId: keyData.fusion_outer_model_id || '',
       fusionEnabled: keyData.fusion_enabled !== false,
+      fusionSynthesisPromptEnabled: keyData.fusion_synthesis_prompt_enabled !== false,
       // 优先使用 key 级别签名设置，回退到用户级别设置
       signatureEnabled: keySignatureResult.rows[0]?.signature_enabled !== null
         ? keySignatureResult.rows[0].signature_enabled
@@ -1303,7 +1350,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   // 代理池支持：获取代理 agent 和重试次数
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
@@ -1715,7 +1762,7 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
 
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   const upstreamBody = ResponsesUpstream.chatToResponsesBody({ ...body, stream: !!stream }, model);
@@ -1834,7 +1881,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   // 代理池支持：获取代理 agent 和重试次数
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
@@ -2430,6 +2477,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 router.post('/chat/completions', oauthBearer, handleChatCompletion);
 
 async function handleChatCompletion(req, res) {
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -2494,9 +2542,9 @@ async function handleChatCompletion(req, res) {
       lastError = {
         status: 404,
         body: { error: { message: `Model '${queueModelId}' not found`, type: 'not_found_error' } },
-        retryable: true
+        retryable: false
       };
-      if (hasMore) continue;
+      if (hasMore && lastError.retryable) continue;
       return res.status(404).json(lastError.body);
     }
 
@@ -2613,16 +2661,16 @@ async function handleChatCompletion(req, res) {
       const rpmCheck = checkRateLimit(rpmKey, effectiveRpm, 0, 0);
       if (rpmCheck.limited) {
         Logger.warn(`[Chat] 速率限制 attempt=${i + 1}/${modelQueue.length}: ${rpmCheck.reason}, user=${req.apiUser.username}, model=${model}`);
-        lastError = { status: 429, body: { error: { message: rpmCheck.reason, type: 'rate_limit_error' } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { error: { message: rpmCheck.reason, type: 'rate_limit_error' } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
       const tpmKey = `tpm:${req.apiUser.userId}:${model}`;
       const tpmCheck = checkRateLimit(tpmKey, 0, effectiveTpm, Math.ceil(estimatedTokens));
       if (tpmCheck.limited) {
         Logger.warn(`[Chat] 速率限制 attempt=${i + 1}/${modelQueue.length}: ${tpmCheck.reason}, user=${req.apiUser.username}, model=${model}`);
-        lastError = { status: 429, body: { error: { message: tpmCheck.reason, type: 'rate_limit_error' } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { error: { message: tpmCheck.reason, type: 'rate_limit_error' } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
     }
@@ -2631,14 +2679,14 @@ async function handleChatCompletion(req, res) {
     if (!provider) {
       Logger.warn(`[Chat] 供应商未配置 attempt=${i + 1}/${modelQueue.length}: ${modelConfig.provider}`);
       lastError = { status: 500, body: { error: { message: 'Provider not configured', type: 'server_error' } }, retryable: true };
-      if (hasMore) continue;
+      if (hasMore && lastError.retryable) continue;
       return res.status(500).json(lastError.body);
     }
 
     let result;
     let providerWithKey = provider;
 
-    const body = { messages, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, stop };
+    let body = { messages, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, stop };
 
     if (tools !== undefined) body.tools = tools;
     if (tool_choice !== undefined) body.tool_choice = tool_choice;
@@ -2653,6 +2701,7 @@ async function handleChatCompletion(req, res) {
     if (modelConfig.forward_reasoning_effort && req.body.reasoning_effort !== undefined) {
       body.reasoning_effort = req.body.reasoning_effort;
     }
+    body = bridgeRequest('openai', body, { quirks: protocolBridge.getDialectCapability('openai').quirks });
 
     req.apiUser._inputPrice = modelConfig.input_price_per_1k_tokens || 0;
     req.apiUser._outputPrice = modelConfig.output_price_per_1k_tokens || 0;
@@ -2665,6 +2714,12 @@ async function handleChatCompletion(req, res) {
       result = await runWithProviderKeyFallback(provider, res, suppressErrorResponse, async (pwk, keyOpts) => {
         providerWithKey = pwk;
         const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
+        if (provider.format === 'gemini') {
+          const error = new Error('Gemini provider protocol is not supported by this gateway yet.');
+          error.code = 'unsupported_provider_format';
+          error.status = 501;
+          throw error;
+        }
         if (provider.format === 'responses') {
           return proxyChatToResponses(pwk, model, body, !!stream, res, req, proxyOpts);
         }
@@ -2748,6 +2803,8 @@ async function handleChatCompletion(req, res) {
           provider: provider?.id || null,
           requestType: 'chat',
         });
+        // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+        const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct });
         // stats:record 钩子可附加统计维度（写入 usage_records.plugin_meta）
         const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
@@ -2759,24 +2816,23 @@ async function handleChatCompletion(req, res) {
 
         const localModelId = modelConfig.id || userRequestedModel;
         const latencyMs = Date.now() - liveCallStart;
-        await pool.query(
-          `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-          [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
-           provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
+           provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta]
-        );
-        if (pointsToDeduct > 0) {
-          const { deductPoints } = require('../utils/balance');
-          await deductPoints(req.apiUser.userId, pointsToDeduct);
-        }
-        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[用量记录] 错误:', err);
+        if (err.billingFailure) {
+          if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+          res.destroy(err);
+          return;
+        }
       }
     }
     return;
@@ -2816,10 +2872,13 @@ async function handleFusionRequest(req, res, format = 'openai') {
         tools,
         tool_choice,
         response_format,
+        requestContext: req._upstreamAttemptContext,
+        signal: req._requestLifecycle?.signal,
         apiKeyFusionConfig: {
           panel_models: req.apiUser.fusionPanelModels || [],
           judge_model_id: req.apiUser.fusionJudgeModelId || '',
-          outer_model_id: req.apiUser.fusionOuterModelId || ''
+          outer_model_id: req.apiUser.fusionOuterModelId || '',
+          synthesis_prompt_enabled: req.apiUser.fusionSynthesisPromptEnabled !== false
         }
       }
     );
@@ -2937,6 +2996,8 @@ async function handleFusionRequest(req, res, format = 'openai') {
           provider: null,
           requestType: 'fusion',
         });
+        // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+        const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: totalWeightedTokens, pointsCost: pointsToDeduct });
         const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: 'fusion',
@@ -2945,17 +3006,15 @@ async function handleFusionRequest(req, res, format = 'openai') {
           apiKeyId: req.apiUser.keyId,
         }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
-        await pool.query(
-          `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-          [req.apiUser.userId, req.apiUser.keyId, totalTokens,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id`, usageValues: [req.apiUser.userId, req.apiUser.keyId, totalTokens,
            fusionPromptTokens, fusionCompletionTokens,
            totalWeightedTokens, null, 'fusion',
-           JSON.stringify(messages), result.content || null, pointsToDeduct,
+           JSON.stringify(messages), result.content || null, realDeduct,
            Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta]
-        );
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: totalWeightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
 
         // 记录 Fusion 专用用量
         await pool.query(
@@ -2967,14 +3026,14 @@ async function handleFusionRequest(req, res, format = 'openai') {
            JSON.stringify(result.judgeResult || {}),
            result.content || null, totalTokens, pointsToDeduct, result.fusion?.total_latency || 0]
         );
-
-        if (pointsToDeduct > 0) {
-          const { deductPoints } = require('../utils/balance');
-          await deductPoints(req.apiUser.userId, pointsToDeduct);
-        }
-        recordQuotaData(req.apiUser.userId, 'fusion', totalTokens, totalWeightedTokens, pointsToDeduct);
+        recordQuotaData(req.apiUser.userId, 'fusion', totalTokens, totalWeightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Fusion] 用量记录错误:', err);
+        if (err.billingFailure) {
+          if (!res.headersSent) return sendFusionError(500, 'server_error', 'Billing failed; request was not charged.');
+          res.destroy(err);
+          return;
+        }
       }
     }
 
@@ -3061,6 +3120,7 @@ router.get('/models', oauthBearer, async (req, res) => {
 router.post('/messages', oauthBearer, handleAnthropicMessage);
 
 async function handleAnthropicMessage(req, res) {
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -3150,9 +3210,9 @@ async function handleAnthropicMessage(req, res) {
       lastError = {
         status: 404,
         body: { type: 'error', error: { type: 'not_found_error', message: `Model '${queueModelId}' not found` } },
-        retryable: true
+        retryable: false
       };
-      if (hasMore) continue;
+      if (hasMore && lastError.retryable) continue;
       return res.status(404).json(lastError.body);
     }
 
@@ -3253,16 +3313,16 @@ async function handleAnthropicMessage(req, res) {
       const rpmCheck = checkRateLimit(rpmKey, effectiveRpm, 0, 0);
       if (rpmCheck.limited) {
         Logger.warn(`[Anthropic] 速率限制 attempt=${i + 1}/${modelQueue.length}: ${rpmCheck.reason}, model=${model}`);
-        lastError = { status: 429, body: { type: 'error', error: { type: 'rate_limit_error', message: rpmCheck.reason } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { type: 'error', error: { type: 'rate_limit_error', message: rpmCheck.reason } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
       const tpmKey = `tpm:${req.apiUser.userId}:${model}`;
       const tpmCheck = checkRateLimit(tpmKey, 0, effectiveTpm, Math.ceil(estimatedTokens));
       if (tpmCheck.limited) {
         Logger.warn(`[Anthropic] 速率限制 attempt=${i + 1}/${modelQueue.length}: ${tpmCheck.reason}, model=${model}`);
-        lastError = { status: 429, body: { type: 'error', error: { type: 'rate_limit_error', message: tpmCheck.reason } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { type: 'error', error: { type: 'rate_limit_error', message: tpmCheck.reason } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
     }
@@ -3271,7 +3331,7 @@ async function handleAnthropicMessage(req, res) {
     if (!provider) {
       Logger.warn(`[Anthropic] 供应商未配置 attempt=${i + 1}/${modelQueue.length}: ${modelConfig.provider}`);
       lastError = { status: 500, body: { type: 'error', error: { type: 'api_error', message: 'Provider not configured' } }, retryable: true };
-      if (hasMore) continue;
+      if (hasMore && lastError.retryable) continue;
       return res.status(500).json(lastError.body);
     }
 
@@ -3287,6 +3347,12 @@ async function handleAnthropicMessage(req, res) {
       result = await runWithProviderKeyFallback(provider, res, suppressErrorResponse, async (pwk, keyOpts) => {
         providerWithKey = pwk;
         const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
+        if (provider.format === 'gemini' || provider.format === 'responses') {
+          const error = new Error(`Provider format ${provider.format} is unsupported for Anthropic Messages.`);
+          error.code = 'unsupported_provider_format';
+          error.status = 501;
+          throw error;
+        }
         if (provider.format === 'anthropic') {
           return proxyAnthropicToAnthropic(pwk, model, anthropicBody, !!stream, res, req, proxyOpts);
         }
@@ -3364,6 +3430,8 @@ async function handleAnthropicMessage(req, res) {
           provider: provider?.id || null,
           requestType: 'chat',
         });
+        // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+        const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct });
         const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: modelConfig.id || queueModelId,
@@ -3374,24 +3442,23 @@ async function handleAnthropicMessage(req, res) {
 
         const localModelId = modelConfig.id || queueModelId;
         const latencyMs = Date.now() - liveCallStart;
-        await pool.query(
-          `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-          [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
-           provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
+           provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta]
-        );
-        if (pointsToDeduct > 0) {
-          const { deductPoints } = require('../utils/balance');
-          await deductPoints(req.apiUser.userId, pointsToDeduct);
-        }
-        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Anthropic 用量记录] 错误:', err);
+        if (err.billingFailure) {
+          if (!res.headersSent) return res.status(500).json({ type: 'error', error: { type: 'api_error', message: 'Billing failed; request was not charged.' } });
+          res.destroy(err);
+          return;
+        }
       }
     }
     return;
@@ -3404,108 +3471,8 @@ async function handleAnthropicMessage(req, res) {
 
 // 将 Anthropic 格式请求转换为 OpenAI 格式
 function convertAnthropicToOpenAI(body) {
-  const systemMessage = body.system;
-  const messages = [];
-
-  if (systemMessage) {
-    const sysContent = typeof systemMessage === 'string' ? systemMessage :
-      Array.isArray(systemMessage) ? systemMessage.map(b => b.text || '').join('\n') : '';
-    messages.push({ role: 'system', content: sysContent });
-  }
-
-  for (const msg of body.messages) {
-    if (typeof msg.content === 'string') {
-      messages.push({ role: msg.role, content: msg.content });
-    } else if (Array.isArray(msg.content)) {
-      const textParts = msg.content.filter(b => b.type === 'text').map(b => b.text);
-      const toolUseParts = msg.content.filter(b => b.type === 'tool_use');
-      const toolResultParts = msg.content.filter(b => b.type === 'tool_result');
-      const imageParts = msg.content.filter(b => b.type === 'image');
-
-      if (toolUseParts.length > 0 && msg.role === 'assistant') {
-        // Assistant 消息中的 tool_use 块 → OpenAI tool_calls
-        const text = textParts.join('\n');
-        const toolCalls = toolUseParts.map(tc => ({
-          id: tc.id,
-          type: 'function',
-          function: {
-            name: tc.name,
-            arguments: JSON.stringify(tc.input || {})
-          }
-        }));
-        const openaiMsg = { role: 'assistant', content: text || null };
-        if (toolCalls.length > 0) {
-          openaiMsg.tool_calls = toolCalls;
-          // 保留文本（若有），否则 content 为 null
-          openaiMsg.content = text || null;
-        }
-        // thinking 块 → reasoning_content
-        const thinkingParts = msg.content.filter(b => b.type === 'thinking');
-        if (thinkingParts.length > 0) {
-          openaiMsg.reasoning_content = thinkingParts.map(t => t.thinking || '').join('');
-        }
-        messages.push(openaiMsg);
-      } else if (toolResultParts.length > 0) {
-        // tool_result 块 → OpenAI role: 'tool' 消息
-        for (const tr of toolResultParts) {
-          const trContent = typeof tr.content === 'string' ? tr.content
-            : Array.isArray(tr.content) ? tr.content.map(c => typeof c === 'string' ? c : (c.text || '')).join('\n')
-            : String(tr.content || '');
-          messages.push({
-            role: 'tool',
-            tool_call_id: tr.tool_use_id,
-            content: trContent
-          });
-        }
-      } else if (imageParts.length > 0) {
-        // 包含图片 → 构建 OpenAI 多模态 content 数组
-        const content = [];
-        for (const part of msg.content) {
-          if (part.type === 'text') {
-            content.push({ type: 'text', text: part.text });
-          } else if (part.type === 'image') {
-            if (part.source?.type === 'base64') {
-              content.push({
-                type: 'image_url',
-                image_url: { url: `data:${part.source.media_type || 'image/jpeg'};base64,${part.source.data}` }
-              });
-            } else if (part.source?.type === 'url') {
-              content.push({ type: 'image_url', image_url: { url: part.source.url } });
-            }
-          }
-        }
-        messages.push({ role: msg.role, content });
-      } else {
-        // 纯文本消息
-        messages.push({ role: msg.role, content: textParts.join('\n') });
-      }
-    }
-  }
-
-  const openaiBody = { messages, model: body.model };
-  if (body.max_tokens !== undefined) openaiBody.max_tokens = body.max_tokens;
-  if (body.temperature !== undefined) openaiBody.temperature = body.temperature;
-  if (body.top_p !== undefined) openaiBody.top_p = body.top_p;
-  if (body.stop_sequences) openaiBody.stop = body.stop_sequences;
-  if (body.stream !== undefined) openaiBody.stream = body.stream;
-  if (body.tools) {
-    openaiBody.tools = body.tools.map(t => ({
-      type: 'function',
-      function: {
-        name: t.name,
-        description: t.description,
-        parameters: t.input_schema
-      }
-    }));
-  }
-  if (body.tool_choice) {
-    if (body.tool_choice.type === 'auto') openaiBody.tool_choice = 'auto';
-    else if (body.tool_choice.type === 'any') openaiBody.tool_choice = 'required';
-    else if (body.tool_choice.type === 'tool') openaiBody.tool_choice = { type: 'function', function: { name: body.tool_choice.name } };
-    else if (body.tool_choice.type === 'none') openaiBody.tool_choice = 'none';
-  }
-
-  return openaiBody;
+  const ir = protocolBridge.decodeRequest('anthropic', body);
+  return protocolBridge.encodeRequest('openai', ir);
 }
 
 // 将 OpenAI 格式响应转换为 Anthropic 格式
@@ -3594,11 +3561,12 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
   if (body.container) upstreamBody.container = body.container;
   if (body.inference_geo) upstreamBody.inference_geo = body.inference_geo;
   addFourthCacheBreakpoint(upstreamBody, body.system);
+  Object.assign(upstreamBody, bridgeRequest('anthropic', upstreamBody, { quirks: protocolBridge.getDialectCapability('anthropic').quirks }));
 
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   const msgCount = body.messages?.length || 0;
@@ -3977,7 +3945,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
@@ -4359,7 +4327,7 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   // 预加载签名注入所需的数据（性能优化：减少重复数据库查询）
@@ -5018,7 +4986,7 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   Logger.info(`[Responses/OpenAI] 非流式请求: provider=${provider.id}(${provider.name}), model=${model}, proxy=${currentProxyInfo?.proxyUrl || 'none'}`);
@@ -5157,7 +5125,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
   const proxyList = await proxyPool.getProxies(provider);
-  const maxRetries = Math.min(proxyList.length || 1, 3);
+  const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
   Logger.info(`[Responses/Anthropic] 非流式请求: provider=${provider.id}(${provider.name}), model=${model}, proxy=${currentProxyInfo?.proxyUrl || 'none'}`);
@@ -5249,6 +5217,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
 router.post('/responses', oauthBearer, handleResponses);
 
 async function handleResponses(req, res) {
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -5272,6 +5241,9 @@ async function handleResponses(req, res) {
 
   // Fusion 模型检测
   if (model === 'fusion' || model?.startsWith('fusion')) {
+    if (!req.apiUser.fusionEnabled) {
+      return res.status(403).json({ error: { type: 'fusion_disabled', code: 'fusion_disabled', message: 'Fusion is disabled for this API key.' } });
+    }
     // 将 Responses API input 转为 messages 格式供 Fusion 使用
     const messages = convertResponsesInputToMessages(body);
     req.body = { ...req.body, messages, max_tokens: max_output_tokens };
@@ -5313,8 +5285,8 @@ async function handleResponses(req, res) {
     const cfg = await getModelConfig(queueModelId);
     if (!cfg) {
       Logger.warn(`[Responses] 队列模型未找到 attempt=${i + 1}/${modelQueue.length}: ${queueModelId}`);
-      lastError = { status: 404, body: { error: { message: `Model '${queueModelId}' not found`, type: 'not_found_error' } }, retryable: true };
-      if (hasMore) continue;
+      lastError = { status: 404, body: { error: { message: `Model '${queueModelId}' not found`, type: 'not_found_error' } }, retryable: false };
+      if (hasMore && lastError.retryable) continue;
       return res.status(404).json(lastError.body);
     }
 
@@ -5331,15 +5303,15 @@ async function handleResponses(req, res) {
       const rpmKey = `rpm:${req.apiUser.userId}:${upModel}`;
       const rpmCheck = checkRateLimit(rpmKey, effectiveRpm, 0, 0);
       if (rpmCheck.limited) {
-        lastError = { status: 429, body: { error: { message: rpmCheck.reason, type: 'rate_limit_error' } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { error: { message: rpmCheck.reason, type: 'rate_limit_error' } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
       const tpmKey = `tpm:${req.apiUser.userId}:${upModel}`;
       const tpmCheck = checkRateLimit(tpmKey, 0, effectiveTpm, Math.ceil(estimatedTokens));
       if (tpmCheck.limited) {
-        lastError = { status: 429, body: { error: { message: tpmCheck.reason, type: 'rate_limit_error' } }, retryable: true };
-        if (hasMore) continue;
+        lastError = { status: 429, body: { error: { message: tpmCheck.reason, type: 'rate_limit_error' } }, retryable: false };
+        if (hasMore && lastError.retryable) continue;
         return res.status(429).json(lastError.body);
       }
     }
@@ -5347,7 +5319,7 @@ async function handleResponses(req, res) {
     const prov = await getProviderForRequest(cfg.provider);
     if (!prov) {
       lastError = { status: 500, body: { error: { message: 'Provider not configured', type: 'server_error' } }, retryable: true };
-      if (hasMore) continue;
+      if (hasMore && lastError.retryable) continue;
       return res.status(500).json(lastError.body);
     }
 
@@ -5379,14 +5351,17 @@ async function handleResponses(req, res) {
 
     // 非流式：在此循环内直接尝试上游并支持回退
     if (!stream) {
-      // === Responses 格式供应商直接透传（非流式）===
+        // === Responses 格式供应商直接透传（非流式）===
+      if (provider.format === 'gemini') {
+        return res.status(501).json({ error: { type: 'unsupported_provider_format', code: 'gemini_not_supported', message: 'Gemini provider protocol is not supported by this gateway yet.' } });
+      }
       if (provider.format === 'responses') {
         const baseUrl = cleanBaseUrl(provider.base_url);
         const url = upstreamUrl(baseUrl, '/responses');
         const headers = buildUpstreamHeaders(providerWithKey, req, { 'Content-Type': 'application/json' });
         if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
         // 原样透传客户端请求，仅覆盖 model；不强制注入 max_output_tokens，交由上游/客户端决定。
-        const upstreamBody = { ...body, model: upstreamModel };
+        const upstreamBody = protocolBridge.encodeRequest('responses', protocolBridge.decodeRequest('responses', { ...body, model: upstreamModel }), { quirks: protocolBridge.getDialectCapability('responses').quirks });
         if (!modelConfig.forward_reasoning_effort) {
           delete upstreamBody.reasoning;
           delete upstreamBody.reasoning_effort;
@@ -5398,7 +5373,8 @@ async function handleResponses(req, res) {
           const upstreamResp = await proxyPool.proxyFetch(url, {
             method: 'POST', headers, body: JSON.stringify(upstreamBody),
             signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
-            agent: currentProxyInfo?.agent
+            agent: currentProxyInfo?.agent,
+            requestContext: req._upstreamAttemptContext
           });
           const responseData = await upstreamResp.json();
           if (!upstreamResp.ok) {
@@ -5439,6 +5415,8 @@ async function handleResponses(req, res) {
                 provider: provider?.id || null,
                 requestType: 'responses',
               });
+              // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+              const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct });
               const pluginMeta = await buildUsagePluginMeta({
                 userId: req.apiUser.userId,
                 model: modelConfig.id || model,
@@ -5447,24 +5425,23 @@ async function handleResponses(req, res) {
                 apiKeyId: req.apiUser.keyId,
               }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
               const localModelId = modelConfig.id || model;
-              await pool.query(
-                `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+              const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
                  cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-                [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                  promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
                  provider?.id || null, 'responses',
-                 typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
+                 typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
                  null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-                 pluginMeta]
-              );
-              if (pointsToDeduct > 0) {
-                const { deductPoints } = require('../utils/balance');
-                await deductPoints(req.apiUser.userId, pointsToDeduct);
-              }
-              recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
+                 pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+              recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
             } catch (err) {
               Logger.error('[Responses/Passthru] 用量记录错误:', err);
+              if (err.billingFailure) {
+                if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+                res.destroy(err);
+                return;
+              }
             }
           }
           return res.json(responseData);
@@ -5483,6 +5460,9 @@ async function handleResponses(req, res) {
       }
 
       // 非流式：OpenAI / Anthropic 转换（多 Key fallback）
+      if (provider.format === 'gemini') {
+        return res.status(501).json({ error: { type: 'unsupported_provider_format', code: 'gemini_not_supported', message: 'Gemini provider protocol is not supported by this gateway yet.' } });
+      }
       const liveCallStart = Date.now();
       try {
         let result;
@@ -5548,6 +5528,8 @@ async function handleResponses(req, res) {
               provider: provider?.id || null,
               requestType: 'responses',
             });
+            // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+            const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct });
             const pluginMeta = await buildUsagePluginMeta({
               userId: req.apiUser.userId,
               model: modelConfig.id || model,
@@ -5557,25 +5539,24 @@ async function handleResponses(req, res) {
             }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
             const localModelId = modelConfig.id || model;
             const latencyMs = Date.now() - liveCallStart;
-            await pool.query(
-              `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+            const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
                cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-              [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                result.promptTokens || 0, result.completionTokens || 0,
                result.cachedTokens || 0, weightedTokens,
                provider?.id || null, 'responses',
-               typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
+               typeof input === 'string' ? input : JSON.stringify(input), result.content || null, realDeduct,
                latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-               pluginMeta]
-            );
-            if (pointsToDeduct > 0) {
-              const { deductPoints } = require('../utils/balance');
-              await deductPoints(req.apiUser.userId, pointsToDeduct);
-            }
-            recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
+               pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+            recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
           } catch (err) {
             Logger.error('[Responses] 用量记录错误:', err);
+            if (err.billingFailure) {
+              if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+              res.destroy(err);
+              return;
+            }
           }
         }
         return;
@@ -5590,7 +5571,7 @@ async function handleResponses(req, res) {
           status: lastError.status, error, latencyMs: Date.now() - liveCallStart, isFinal: !willRetry
         });
         if (res.headersSent) return;
-        if (hasMore) continue;
+        if (hasMore && lastError.retryable) continue;
         return res.status(lastError.status).json(lastError.body);
       }
     }
@@ -5626,10 +5607,7 @@ async function handleResponses(req, res) {
     });
     if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
 
-    const upstreamBody = {
-      ...body,
-      model: upstreamModel,
-    };
+    const upstreamBody = protocolBridge.encodeRequest('responses', protocolBridge.decodeRequest('responses', { ...body, model: upstreamModel }), { quirks: protocolBridge.getDialectCapability('responses').quirks });
     // 未开启透传时去掉 reasoning / reasoning_effort，避免误传给上游
     if (!modelConfig.forward_reasoning_effort) {
       delete upstreamBody.reasoning;
@@ -5650,7 +5628,8 @@ async function handleResponses(req, res) {
       const upstreamResp = await proxyPool.proxyFetch(url, {
         method: 'POST', headers, body: JSON.stringify(upstreamBody),
         signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
-        agent: currentProxyInfo?.agent
+        agent: currentProxyInfo?.agent,
+        requestContext: req._upstreamAttemptContext
       });
       if (!upstreamResp.ok) {
         const err = await upstreamResp.text();
@@ -5748,6 +5727,8 @@ async function handleResponses(req, res) {
             provider: provider?.id || null,
             requestType: 'responses',
           });
+          // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+          const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct });
           const pluginMeta = await buildUsagePluginMeta({
             userId: req.apiUser.userId,
             model: modelConfig.id || model,
@@ -5758,25 +5739,24 @@ async function handleResponses(req, res) {
           const requestParams = usageEstimated
             ? { estimated: true, estimate_method: 'output_chars/4', prompt_tokens_policy: 'zero_when_unknown' }
             : { estimated: false };
-          await pool.query(
-            `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+          const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
              cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_params, request_source, user_agent, plugin_meta)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-            [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
              promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
              provider?.id || null, 'responses',
-             typeof input === 'string' ? input : JSON.stringify(input), totalContent || null, pointsToDeduct,
+             typeof input === 'string' ? input : JSON.stringify(input), totalContent || null, realDeduct,
              Date.now() - liveCallStart, clientIp(req), JSON.stringify(requestParams),
              clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-             pluginMeta]
-          );
-          if (pointsToDeduct > 0) {
-            const { deductPoints } = require('../utils/balance');
-            await deductPoints(req.apiUser.userId, pointsToDeduct);
-          }
-          recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
+             pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+          recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
         } catch (err) {
           Logger.warn(`[Responses/Passthru] 计费/用量记录失败: ${err.message}`);
+          if (err.billingFailure) {
+            if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+            res.destroy(err);
+            return;
+          }
         }
       }
       return;
@@ -5786,7 +5766,8 @@ async function handleResponses(req, res) {
     const upstreamResp = await proxyPool.proxyFetch(url, {
       method: 'POST', headers, body: JSON.stringify(upstreamBody),
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
-      agent: currentProxyInfo?.agent
+      agent: currentProxyInfo?.agent,
+      requestContext: req._upstreamAttemptContext
     });
     const responseData = await upstreamResp.json();
     if (!upstreamResp.ok) {
@@ -5822,6 +5803,8 @@ async function handleResponses(req, res) {
           provider: provider?.id || null,
           requestType: 'responses',
         });
+        // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+        const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct });
         const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: modelConfig.id || model,
@@ -5831,24 +5814,23 @@ async function handleResponses(req, res) {
         }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
         const localModelId = modelConfig.id || model;
-        await pool.query(
-          `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-          [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            promptTokens, completionTokens, cachedTokens, weightedTokens,
            provider?.id || null, 'responses',
-           typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
+           typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
            null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta]
-        );
-        if (pointsToDeduct > 0) {
-          const { deductPoints } = require('../utils/balance');
-          await deductPoints(req.apiUser.userId, pointsToDeduct);
-        }
-        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Responses/Passthru] 用量记录错误:', err);
+        if (err.billingFailure) {
+          if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+          res.destroy(err);
+          return;
+        }
       }
     }
 
@@ -5889,25 +5871,12 @@ async function handleResponses(req, res) {
 
         const systemMessage = messages.find(m => m.role === 'system');
         const nonSystemMessages = messages.filter(m => m.role !== 'system');
-        const upstreamBody = {
-          model: upstreamModel, max_tokens: max_output_tokens || 4096,
-          messages: nonSystemMessages.map(m => ({ role: m.role, content: m.content })),
-          stream: true
-        };
-        if (systemMessage) upstreamBody.system = systemMessage.content;
-        if (temperature !== undefined) upstreamBody.temperature = temperature;
-        if (top_p !== undefined) upstreamBody.top_p = top_p;
-        if (chatBody.stop) upstreamBody.stop_sequences = Array.isArray(chatBody.stop) ? chatBody.stop : [chatBody.stop];
-        if (chatTools) {
-          upstreamBody.tools = chatTools.map(t => ({
-            name: t.function?.name, description: t.function?.description, input_schema: t.function?.parameters
-          }));
-        }
-
+        const upstreamBody = protocolBridge.encodeRequest('anthropic', protocolBridge.decodeRequest('openai', chatBody), { quirks: protocolBridge.getDialectCapability('anthropic').quirks });
         const response = await proxyPool.proxyFetch(url, {
           method: 'POST', headers, body: JSON.stringify(upstreamBody),
           signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
-          agent: currentProxyInfo?.agent
+          agent: currentProxyInfo?.agent,
+          requestContext: req._upstreamAttemptContext
         });
         if (!response.ok) {
           const err = await response.text();
@@ -5936,7 +5905,8 @@ async function handleResponses(req, res) {
         const response = await proxyPool.proxyFetch(url, {
           method: 'POST', headers, body: JSON.stringify(chatBody),
           signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
-          agent: currentProxyInfo?.agent
+          agent: currentProxyInfo?.agent,
+          requestContext: req._upstreamAttemptContext
         });
         if (!response.ok) {
           const err = await response.text();
@@ -6002,6 +5972,8 @@ async function handleResponses(req, res) {
           provider: provider?.id || null,
           requestType: 'responses',
         });
+        // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+        const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct });
         const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: modelConfig.id || model,
@@ -6012,25 +5984,24 @@ async function handleResponses(req, res) {
 
         const localModelId = modelConfig.id || model;
         const latencyMs = typeof liveCallStart === 'number' ? Date.now() - liveCallStart : null;
-        await pool.query(
-          `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
+        const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
            cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
-          [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'responses',
-           typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
+           typeof input === 'string' ? input : JSON.stringify(input), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta]
-        );
-        if (pointsToDeduct > 0) {
-          const { deductPoints } = require('../utils/balance');
-          await deductPoints(req.apiUser.userId, pointsToDeduct);
-        }
-        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+        if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Responses] 用量记录错误:', err);
+        if (err.billingFailure) {
+          if (!res.headersSent) return res.status(500).json({ error: { message: 'Billing failed; request was not charged.', type: 'server_error' } });
+          res.destroy(err);
+          return;
+        }
       }
     }
   } catch (error) {

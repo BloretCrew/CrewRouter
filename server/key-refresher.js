@@ -17,6 +17,7 @@
 const Logger = require('./logger');
 const { pool } = require('./models/database');
 const { safeExecuteKeyScript } = require('./utils/sandbox');
+const { encryptSecret, decryptSecret } = require('./utils/secret-crypto');
 
 /**
  * 从语法错误信息中提取出错行号，并展示对应代码片段
@@ -55,6 +56,7 @@ function extractErrorLine(errMsg, scriptBody) {
 
 // 内存缓存：providerId → { key, expiresAt, lastRefreshAt, lastError, timer }
 const keyCache = new Map();
+const refreshInFlight = new Map();
 
 // 默认刷新间隔（秒）
 const DEFAULT_REFRESH_INTERVAL = 3600;
@@ -83,7 +85,7 @@ async function executeKeyScript(provider) {
     providerId: provider.id,
     providerName: provider.name || '',
     currentKey: provider.api_key || '',
-    // 注入安全的 fetch 封装，不影响全局
+    fetch: async (...args) => fetch(...args),
   };
 
   let result;
@@ -122,13 +124,14 @@ function normalizeScriptResult(result) {
  * @param {string} providerId
  * @returns {object} { success, key, expiresAt, error }
  */
-async function refreshProviderKey(providerId) {
+async function refreshProviderKeyInternal(providerId) {
   // 从数据库获取最新供应商数据
   const result = await pool.query('SELECT * FROM providers WHERE id = $1', [providerId]);
   if (result.rows.length === 0) {
     return { success: false, error: '供应商不存在' };
   }
   const provider = result.rows[0];
+  provider.api_key = decryptSecret(provider.api_key);
 
   if (provider.key_mode !== 'script') {
     return { success: false, error: '供应商非脚本模式' };
@@ -149,7 +152,7 @@ async function refreshProviderKey(providerId) {
         key_last_refresh_at = NOW(),
         key_last_error = NULL
       WHERE id = $3`,
-      [key, expiresAt, providerId]
+      [encryptSecret(key), expiresAt, providerId]
     );
 
     // 更新内存缓存
@@ -199,6 +202,18 @@ async function refreshProviderKey(providerId) {
   }
 }
 
+async function refreshProviderKey(providerId) {
+  const current = refreshInFlight.get(providerId);
+  if (current) return current;
+  const promise = refreshProviderKeyInternal(providerId);
+  refreshInFlight.set(providerId, promise);
+  try {
+    return await promise;
+  } finally {
+    if (refreshInFlight.get(providerId) === promise) refreshInFlight.delete(providerId);
+  }
+}
+
 /**
  * 调度下一次刷新
  */
@@ -238,6 +253,7 @@ function scheduleRefresh(providerId, intervalSeconds) {
  */
 async function ensureFreshKey(provider) {
   const providerId = provider.id;
+  provider.api_key = decryptSecret(provider.api_key);
   const cached = keyCache.get(providerId);
 
   // 缓存中有未过期的密钥
@@ -297,6 +313,7 @@ async function initAll() {
     Logger.info(`[KeyRefresher] 初始化: 发现 ${result.rows.length} 个脚本模式供应商`);
 
     for (const provider of result.rows) {
+      provider.api_key = decryptSecret(provider.api_key);
       // 检查是否有未过期的密钥
       const cached = keyCache.get(provider.id);
       if (cached?.key && cached.expiresAt > Date.now()) {
@@ -324,7 +341,7 @@ async function initAll() {
       }
 
       // 无可用密钥，立即刷新
-      refreshProviderKey(provider.id);
+      await refreshProviderKey(provider.id);
     }
   } catch (err) {
     Logger.error(`[KeyRefresher] 初始化失败: ${err.message}`);

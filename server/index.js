@@ -17,6 +17,11 @@ const { pool } = require('./models/database');
 const Logger = require('./logger');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const { encryptSecret, assertEncryptionKeyConfigured } = require('./utils/secret-crypto');
+
+if (!isDemo && (process.env.NODE_ENV === 'production' || process.env.CR_ENV === 'production')) {
+  assertEncryptionKeyConfigured();
+}
 
 // 静态资源路径兼容：开发模式下 server/index.js 在 server/ 目录，
 // __dirname 为 .../server/，public/ 在上层；
@@ -107,7 +112,8 @@ async function ensureRedemptionCodesTable() {
       await pool.query(`ALTER TABLE redemption_codes ADD COLUMN fee_rate DECIMAL(5, 4) DEFAULT 0`);
     }
   } catch (err) {
-    Logger.warn(`[迁移] redemption_codes 表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] redemption_codes 表创建跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -136,7 +142,8 @@ async function ensureBalanceAndRedemptionUseTable() {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_rcu_code_user ON redemption_code_uses(code_id, user_id)`);
   } catch (err) {
-    Logger.warn(`[迁移] balance/refund 表迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] balance/refund 表迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -191,13 +198,14 @@ async function ensureUserCodeBalancesTable() {
         // 如果还有剩余（没有对应兑换码记录），用 fee_rate=0 兜底
         if (remaining > 0) {
           // 找一个可退款的兑换码兜底，或跳过
-          Logger.warn(`[迁移] 用户 ${user.id} 有 ¥${remaining.toFixed(4)} 退款余额无法匹配兑换码`);
+          Logger.error(`[迁移] 用户 ${user.id} 有 ¥${remaining.toFixed(4)} 退款余额无法匹配兑换码`);
         }
       }
       Logger.info('[迁移] 已将 refund_balance 拆分到 user_code_balances');
     }
   } catch (err) {
-    Logger.warn(`[迁移] user_code_balances 表迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] user_code_balances 表迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -243,7 +251,8 @@ async function ensureConversationsTable() {
       Logger.info('[迁移] 已为 conversation_messages 表添加 meta 列');
     }
   } catch (err) {
-    Logger.warn(`[迁移] conversations 表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] conversations 表创建跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -259,7 +268,8 @@ async function ensureProvidersGrpColumn() {
       Logger.info('[迁移] 已为 providers 表添加 grp 列');
     }
   } catch (err) {
-    Logger.warn(`[迁移] providers.grp 列添加跳过: ${err.message}`);
+    Logger.error(`[迁移] providers.grp 列添加跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -275,7 +285,8 @@ async function ensureProvidersModelsUrlColumn() {
       Logger.info('[迁移] 已为 providers 表添加 models_url 列');
     }
   } catch (err) {
-    Logger.warn(`[迁移] providers.models_url 列添加跳过: ${err.message}`);
+    Logger.error(`[迁移] providers.models_url 列添加跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -291,7 +302,8 @@ async function ensureModelsSeriesColumn() {
       Logger.info('[迁移] 已为 models 表添加 series 列');
     }
   } catch (err) {
-    Logger.warn(`[迁移] models.series 列添加跳过: ${err.message}`);
+    Logger.error(`[迁移] models.series 列添加跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -307,7 +319,8 @@ async function ensureSeriesTable() {
     `);
     Logger.info('[迁移] series 表已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] series 表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] series 表创建跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -323,7 +336,8 @@ async function ensureModelsAliasColumn() {
       Logger.info('[迁移] 已为 models 表添加 alias 列');
     }
   } catch (err) {
-    Logger.warn(`[迁移] models.alias 列添加跳过: ${err.message}`);
+    Logger.error(`[迁移] models.alias 列添加跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -341,7 +355,8 @@ async function ensureModelsPricingFields() {
       Logger.info('[迁移] 已为 models 表添加多维定价字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] models 多维定价字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] models 多维定价字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -356,7 +371,8 @@ async function ensureModelsThinkingFields() {
       Logger.info('[迁移] 已为 models 表添加思考模式路由字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] models 思考模式路由字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] models 思考模式路由字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -370,7 +386,8 @@ async function ensureModelsForwardReasoningEffort() {
       Logger.info('[迁移] 已为 models 表添加 forward_reasoning_effort 字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] models forward_reasoning_effort 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] models forward_reasoning_effort 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -387,7 +404,8 @@ async function ensureModelsUpstreamIdColumn() {
       Logger.info('[迁移] 已为 models 表添加 upstream_model_id 列并迁移数据');
     }
   } catch (err) {
-    Logger.warn(`[迁移] models.upstream_model_id 列添加跳过: ${err.message}`);
+    Logger.error(`[迁移] models.upstream_model_id 列添加跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -406,12 +424,17 @@ async function ensureAuthModeTables() {
       used_by INTEGER REFERENCES users(id),
       used_at TIMESTAMPTZ
     )`);
+    await pool.query('ALTER TABLE auth_invites ADD COLUMN IF NOT EXISTS max_uses INTEGER NOT NULL DEFAULT 1');
+    await pool.query('ALTER TABLE auth_invites ADD COLUMN IF NOT EXISTS used_count INTEGER NOT NULL DEFAULT 0');
+    await pool.query('ALTER TABLE auth_invites ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL');
+    await pool.query('ALTER TABLE auth_invites ADD COLUMN IF NOT EXISTS group_id INTEGER REFERENCES user_groups(id) ON DELETE SET NULL');
+    await pool.query(`UPDATE auth_invites SET used_count = 1 WHERE used = TRUE AND used_count = 0`);
     const setup = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");
     const mode = await pool.query("SELECT 1 FROM settings WHERE key = 'auth_mode' LIMIT 1");
     if (setup.rows.length && !mode.rows.length) {
       await pool.query("INSERT INTO settings (key, value) VALUES ('auth_mode', $1::jsonb) ON CONFLICT (key) DO NOTHING", [JSON.stringify('feishu')]);
     }
-  } catch (err) { Logger.warn(`[迁移] auth_mode/passport 迁移跳过: ${err.message}`); }
+  } catch (err) { Logger.error(`[迁移] auth_mode/passport 迁移跳过: ${err.message}`); throw err; }
 }
 
 // ========== 自动迁移：为 users 添加 2FA、GitHub、PassKey 字段 ==========
@@ -428,6 +451,9 @@ async function ensureAuthEnhancements() {
       await pool.query(`ALTER TABLE users ADD COLUMN temp_totp_secret JSONB`);
       Logger.info('[迁移] 已为 users 表添加 2FA 相关字段');
     }
+
+    // 邮箱写入统一使用 normalizeEmail；唯一索引与 LOWER(email) 语义一致并允许多个 NULL。冲突时让迁移失败并阻止启动。
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique ON users (LOWER(email)) WHERE email IS NOT NULL`);
 
     // 添加 GitHub ID 字段
     const githubCol = await pool.query(`
@@ -446,9 +472,12 @@ async function ensureAuthEnhancements() {
     `);
     if (feishuCol.rows.length === 0) {
       await pool.query(`ALTER TABLE users ADD COLUMN feishu_open_id VARCHAR(255)`);
-      await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_feishu_open_id ON users(feishu_open_id)`);
       Logger.info('[迁移] 已为 users 表添加 feishu_open_id 字段');
     }
+
+    // 第三方身份必须由数据库原子约束保证唯一，避免并发绑定到多个用户。
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_github_id_unique ON users (github_id) WHERE github_id IS NOT NULL`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_feishu_open_id_unique ON users (feishu_open_id) WHERE feishu_open_id IS NOT NULL`);
 
     // 添加 PassKeys 字段
     const passkeysCol = await pool.query(`
@@ -463,7 +492,8 @@ async function ensureAuthEnhancements() {
     // 清除历史「默认密码 123456」：视为未设置，强制用户自行设密
     await clearDefaultPasswords123456();
   } catch (err) {
-    Logger.warn(`[迁移] 2FA/GitHub/PassKey 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] 2FA/GitHub/PassKey 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -505,7 +535,8 @@ async function migrateUsageModelIdToLocalId() {
     );
     Logger.info(`[迁移] usage_records.model_id 上游名 → 本地 id，更新 ${r.rowCount} 行`);
   } catch (err) {
-    Logger.warn(`[迁移] usage model_id 回填跳过: ${err.message}`);
+    Logger.error(`[迁移] usage model_id 回填跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -564,7 +595,8 @@ async function migrateUtcWallTimestampsToShanghai() {
     );
     Logger.info('[迁移] UTC 墙钟时间对齐上海完成');
   } catch (err) {
-    Logger.warn(`[迁移] UTC 墙钟对齐跳过: ${err.message}`);
+    Logger.error(`[迁移] UTC 墙钟对齐跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -581,6 +613,7 @@ async function clearDefaultPasswords123456() {
     if (flag.rows.length > 0) return;
 
     const bcrypt = require('bcryptjs');
+const { encryptSecret } = require('./utils/secret-crypto');
     const users = await pool.query(
       `SELECT id, username, password_hash, feishu_open_id
        FROM users
@@ -608,7 +641,8 @@ async function clearDefaultPasswords123456() {
     );
     Logger.info(`[迁移] 默认密码 123456 清理完成，共 ${cleared} 个账号`);
   } catch (err) {
-    Logger.warn(`[迁移] 清理默认密码跳过: ${err.message}`);
+    Logger.error(`[迁移] 清理默认密码跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -624,7 +658,8 @@ async function ensureEmailVerification() {
       Logger.info('[迁移] 已为 users 表添加 email_verified 字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] 邮箱验证字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] 邮箱验证字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -656,7 +691,8 @@ async function ensureNotificationSettings() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_user_notifications_user_created ON user_notifications(user_id, created_at DESC)');
     Logger.info('[迁移] Bark 通知与用户通知表已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] Bark 通知迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] Bark 通知迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -680,7 +716,8 @@ async function ensureHookNotifyRules() {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_hook_notify_rules_user ON hook_notify_rules(user_id, enabled)');
     Logger.info('[迁移] hook 事件通知规则表已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] hook 通知规则表迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] hook 通知规则表迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -713,7 +750,8 @@ async function ensureBalanceAlertSettings() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_balance_alerts_user ON balance_alerts(user_id, alert_type, sent_at)`);
     Logger.info('[迁移] 表 balance_alerts 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] 额度预警字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] 额度预警字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -755,7 +793,7 @@ async function ensureTraceSessionTables() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_trace_sessions_user ON trace_sessions(user_id, started_at DESC)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_trace_events_session ON trace_events(session_id, created_at)`);
     Logger.info('[迁移] 跟踪记录表已就绪');
-  } catch (err) { Logger.warn(`[迁移] 跟踪记录表迁移跳过: ${err.message}`); }
+  } catch (err) { Logger.error(`[迁移] 跟踪记录表迁移跳过: ${err.message}`); throw err; }
 }
 
 // 添加 usage_records 扩展字段
@@ -807,7 +845,8 @@ async function ensureUsageRecordsFields() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_usage_records_request_type_created ON usage_records (request_type, created_at DESC)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_usage_records_request_source_created ON usage_records (request_source, created_at DESC)`);
   } catch (err) {
-    Logger.warn(`[迁移] usage_records 扩展字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] usage_records 扩展字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -817,7 +856,8 @@ async function ensureUsageCompressColumns() {
     await require('./utils/usage-compress').ensureUsageCompressColumns();
     Logger.info('[迁移] usage_records 增量压缩列已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] usage_records 压缩列迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] usage_records 压缩列迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -854,7 +894,8 @@ async function ensureUsageMessageAnalysisTable() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_uma_workspace ON usage_message_analysis(workspace_path)`);
     Logger.info('[迁移] 表 usage_message_analysis 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] usage_message_analysis 表迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] usage_message_analysis 表迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -869,7 +910,8 @@ async function backfillUsageRecords() {
       Logger.info(`[迁移] 已回填 ${result.rowCount} 条历史记录的 prompt_tokens`);
     }
   } catch (err) {
-    Logger.warn(`[迁移] usage_records 回填跳过: ${err.message}`);
+    Logger.error(`[迁移] usage_records 回填跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -901,7 +943,8 @@ async function ensureProductsTable() {
     }
     Logger.info('[迁移] 表 products 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] products 表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] products 表创建跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -950,7 +993,8 @@ async function ensureQuotaDataTable() {
     }
     Logger.info('[迁移] 表 quota_data 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] quota_data 表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] quota_data 表创建跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1055,7 +1099,8 @@ async function ensureTeamsTables() {
       Logger.info('[迁移] 已为 api_keys 表添加 custom_model_name 和 current_model_id 字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] CrewRouter Team 系统迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] CrewRouter Team 系统迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1097,7 +1142,8 @@ async function ensureUserModelLibraryOrderTables() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_mlo_model_user_team_provider_order ON user_model_library_model_orders(user_id, team_id, provider_id, sort_order)`);
     Logger.info('[迁移] 用户模型库排序表已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] 用户模型库排序表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] 用户模型库排序表创建跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1127,7 +1173,8 @@ async function ensureUserModelLibraryHiddenTables() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_mlh_model_user_team_provider ON user_model_library_hidden_models(user_id, team_id, provider_id)`);
     Logger.info('[迁移] 用户模型库隐藏偏好表已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] 用户模型库隐藏偏好表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] 用户模型库隐藏偏好表创建跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1147,7 +1194,8 @@ async function ensureUserModelLibraryStarredTables() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_mls_user_created ON user_model_library_starred_models(user_id, created_at DESC)`);
     Logger.info('[迁移] 用户模型库星标表已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] 用户模型库星标表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] 用户模型库星标表创建跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1171,7 +1219,8 @@ async function ensureApiKeyModelsTable() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_akm_key_order ON api_key_models(api_key_id, sort_order)`);
     Logger.info('[迁移] 表 api_key_models 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] API Key 模型映射迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] API Key 模型映射迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1193,7 +1242,8 @@ async function ensureApiKeyHarnessModelsTable() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_akhm_model ON api_key_harness_models(model_id)`);
     Logger.info('[迁移] 表 api_key_harness_models 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] API Key Harness 模型绑定迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] API Key Harness 模型绑定迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1211,7 +1261,8 @@ async function ensureApiKeyMembersTable() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_key_members_user ON api_key_members(user_id, api_key_id)`);
     Logger.info('[迁移] 表 api_key_members 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] Co-Key 成员表迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] Co-Key 成员表迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1242,7 +1293,8 @@ async function ensureOperationLogsTable() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_op_logs_resource ON operation_logs(resource_type, resource_id)`);
     Logger.info('[迁移] 表 operation_logs 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] 操作日志表迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] 操作日志表迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1276,7 +1328,8 @@ async function ensureKeyTagsTables() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_key_tags_tag ON api_key_tags(tag_id)`);
     Logger.info('[迁移] 表 api_key_tags 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] API Key 标签系统迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] API Key 标签系统迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1324,7 +1377,8 @@ async function ensureUserGroupsTables() {
     await pool.query(`ALTER TABLE user_groups ADD COLUMN IF NOT EXISTS is_default BOOLEAN DEFAULT FALSE`);
     Logger.info('[迁移] user_groups.is_default 字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] 用户组系统迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] 用户组系统迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1351,7 +1405,8 @@ async function ensureReservedResources() {
         Logger.info(`[迁移] 已将 ${cleared.rowCount} 个系统保留 Key 降为普通 Key（可删除）`);
       }
     } catch (e) {
-      Logger.warn(`[迁移] 清除 is_system 标记跳过: ${e.message}`);
+      Logger.error(`[迁移] 清除 is_system 标记跳过: ${e.message}`);
+    throw err;
     }
 
     // 为 teams 添加 is_personal 字段
@@ -1387,14 +1442,15 @@ async function ensureReservedResources() {
         Logger.info(`[迁移] 已为用户 ${user.username} 创建个人账户 Team`);
       } catch (e) {
         // 名称冲突等错误忽略
-        Logger.warn(`[迁移] 为用户 ${user.username} 创建个人账户 Team 跳过: ${e.message}`);
+        Logger.error(`[迁移] 为用户 ${user.username} 创建个人账户 Team 跳过: ${e.message}`);
       }
     }
     if (usersWithoutTeam.rows.length > 0) {
       Logger.info(`[迁移] 共为 ${usersWithoutTeam.rows.length} 个用户补建了个人账户 Team`);
     }
   } catch (err) {
-    Logger.warn(`[迁移] 个人账户/兼容字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] 个人账户/兼容字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1410,7 +1466,8 @@ async function ensureProviderQuotaScript() {
       Logger.info('[迁移] 已为 providers 表添加 quota_script 字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] quota_script 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] quota_script 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1421,7 +1478,8 @@ async function ensureProviderGrokOAuthColumns() {
     await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS oauth_client_id VARCHAR(200)`);
     Logger.info('[迁移] providers Grok OIDC 字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] providers Grok OIDC 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] providers Grok OIDC 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1437,7 +1495,8 @@ async function ensureProviderQuotaMode() {
       Logger.info('[迁移] 已为 providers 表添加 quota_mode 字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] quota_mode 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] quota_mode 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1453,7 +1512,8 @@ async function ensureProviderQuotaEnabled() {
       Logger.info('[迁移] 已为 providers 表添加 quota_enabled 字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] quota_enabled 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] quota_enabled 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1468,7 +1528,8 @@ async function ensureProviderArkUsageColumns() {
     await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_usage_params JSONB DEFAULT '{}'::jsonb`);
     Logger.info('[迁移] providers 火山方舟额度字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] 火山方舟额度字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] 火山方舟额度字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1484,7 +1545,8 @@ async function ensureProviderNotes() {
       Logger.info('[迁移] 已为 providers 表添加 notes 字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] notes 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] notes 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1494,7 +1556,8 @@ async function ensureProviderTestUserAgent() {
     await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS test_user_agent TEXT DEFAULT ''`);
     Logger.info('[迁移] providers.test_user_agent 字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] providers.test_user_agent 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] providers.test_user_agent 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1509,7 +1572,8 @@ async function ensureProviderQuotaSchedule() {
     await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_last_error TEXT`);
     Logger.info('[迁移] providers 额度定时查询字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] providers 额度定时查询字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] providers 额度定时查询字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1525,7 +1589,8 @@ async function ensureModelCreatedBy() {
       Logger.info('[迁移] 已为 models 表添加 created_by 字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] created_by 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] created_by 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1541,7 +1606,8 @@ async function ensureProviderApiKeyLength() {
       Logger.info('[迁移] 已将 providers.api_key 字段类型扩展为 TEXT');
     }
   } catch (err) {
-    Logger.warn(`[迁移] providers.api_key 字段类型扩展跳过: ${err.message}`);
+    Logger.error(`[迁移] providers.api_key 字段类型扩展跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1566,7 +1632,8 @@ async function ensureProviderKeyScript() {
         Logger.info(`[迁移] 已为 providers 表添加 ${col.name} 字段`);
       }
     } catch (err) {
-      Logger.warn(`[迁移] ${col.name} 字段迁移跳过: ${err.message}`);
+      Logger.error(`[迁移] ${col.name} 字段迁移跳过: ${err.message}`);
+    throw err;
     }
   }
 }
@@ -1585,17 +1652,20 @@ async function ensureApiKeyFusionConfig() {
       Logger.info('[迁移] 已为 api_keys 表添加 Fusion 配置字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] api_keys Fusion 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] api_keys Fusion 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
-// ========== 自动迁移：为 api_keys 添加 fusion_enabled 字段 ==========
+// ========== 自动迁移：为 api_keys 添加 Fusion 开关字段 ==========
 async function ensureApiKeyFusionEnabled() {
   try {
     await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS fusion_enabled BOOLEAN DEFAULT TRUE`);
-    Logger.info('[迁移] api_keys 表 fusion_enabled 字段已就绪');
+    await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS fusion_synthesis_prompt_enabled BOOLEAN DEFAULT TRUE`);
+    Logger.info('[迁移] api_keys 表 Fusion 开关字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] api_keys fusion_enabled 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] api_keys Fusion 开关字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1681,7 +1751,8 @@ async function ensureFusionTables() {
       Logger.info('[迁移] 已插入默认 Fusion 配置');
     }
   } catch (err) {
-    Logger.warn(`[迁移] Fusion 表迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] Fusion 表迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 // ========== 自动迁移：为 users 添加 API 签名设置字段 ==========
@@ -1692,7 +1763,8 @@ async function ensureApiSignatureColumns() {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS api_signature_template TEXT DEFAULT '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}'`);
     Logger.info('[迁移] users 表 API 签名字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] users API 签名字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] users API 签名字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1715,7 +1787,40 @@ async function ensureApiKeySignatureColumns() {
     }
     Logger.info('[迁移] api_keys 表独立签名字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] api_keys 签名字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] api_keys 签名字段迁移跳过: ${err.message}`);
+    throw err;
+  }
+}
+
+// ========== 自动迁移：供应商 API Key 加密存储 ==========
+async function ensureProviderKeyEncryption() {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query('SELECT id, api_key, api_keys FROM providers FOR UPDATE');
+    for (const row of result.rows) {
+      const apiKey = encryptSecret(row.api_key);
+      let apiKeys = row.api_keys;
+      if (Array.isArray(apiKeys)) {
+        apiKeys = apiKeys.map((entry) => {
+          if (typeof entry === 'string') return encryptSecret(entry);
+          if (!entry || typeof entry !== 'object') return entry;
+          return { ...entry, key: entry.key ? encryptSecret(entry.key) : entry.key };
+        });
+      }
+      const serialized = apiKeys == null ? null : JSON.stringify(apiKeys);
+      if (apiKey !== row.api_key || serialized !== (row.api_keys == null ? null : JSON.stringify(row.api_keys))) {
+        await client.query('UPDATE providers SET api_key = $1, api_keys = $2::jsonb WHERE id = $3', [apiKey, serialized, row.id]);
+      }
+    }
+    await client.query('COMMIT');
+    Logger.info('[迁移] providers API Key 已加密存储');
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    Logger.error(`[迁移] providers API Key 加密迁移失败: ${err.message}`);
+    throw err;
+  } finally {
+    client.release();
   }
 }
 
@@ -1734,7 +1839,8 @@ async function ensureProviderMultiApiKeyColumns() {
     `);
     Logger.info('[迁移] providers 多 API Key 字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] providers 多 API Key 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] providers 多 API Key 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1749,7 +1855,8 @@ async function ensureApiKeyEnabledColumns() {
     await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS schedule_timezone VARCHAR(50) DEFAULT 'Asia/Shanghai'`);
     Logger.info('[迁移] api_keys 表启用/调度字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] api_keys 启用/调度字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] api_keys 启用/调度字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1759,7 +1866,8 @@ async function ensureApiKeySwallowImages() {
     await pool.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS swallow_images BOOLEAN DEFAULT FALSE`);
     Logger.info('[迁移] api_keys 表 swallow_images 字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] api_keys swallow_images 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] api_keys swallow_images 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1769,7 +1877,8 @@ async function ensureApiKeyCrewRouterCommands() {
     await pool.query(`ALTER TABLE api_keys ALTER COLUMN crewrouter_commands SET DEFAULT TRUE`);
     Logger.info('[迁移] api_keys 表 crewrouter_commands 字段已就绪（默认开启，新建 Key 默认允许）');
   } catch (err) {
-    Logger.warn(`[迁移] api_keys crewrouter_commands 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] api_keys crewrouter_commands 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1806,7 +1915,8 @@ async function ensureApiKeyUserOrders() {
     `);
     Logger.info('[迁移] api_key_user_orders 表已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] api_key_user_orders 迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] api_key_user_orders 迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1827,7 +1937,8 @@ async function ensureApiKeySortOrder() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_api_keys_user_sort ON api_keys(user_id, sort_order)`);
     Logger.info('[迁移] api_keys 表 sort_order 字段已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] api_keys sort_order 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] api_keys sort_order 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1859,7 +1970,8 @@ async function ensureUsageRecordsApiKeyOnDeleteSetNull() {
     `);
     Logger.info('[迁移] usage_records.api_key_id 已改为 ON DELETE SET NULL');
   } catch (err) {
-    Logger.warn(`[迁移] usage_records api_key_id 外键迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] usage_records api_key_id 外键迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1890,7 +2002,8 @@ async function ensureProviderProxyPool() {
       Logger.info('[迁移] 已为 providers 表添加 proxy_use_system 字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] providers 代理池字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] providers 代理池字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -1908,7 +2021,8 @@ async function ensureProviderHeaderFields() {
       Logger.info('[迁移] 已为 providers 表添加 forward_headers 字段');
     }
   } catch (err) {
-    Logger.warn(`[迁移] providers header 转发字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] providers header 转发字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -2010,7 +2124,8 @@ async function ensureWeightedTokensColumns() {
     `);
     Logger.info('[迁移] 已将模型基础价格统一设为 1.0（倍率模式）');
   } catch (err) {
-    Logger.warn(`[迁移] weighted_tokens 字段迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] weighted_tokens 字段迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -2030,7 +2145,8 @@ async function ensureModelTestResultsTable() {
     `);
     Logger.info('[迁移] 表 model_test_results 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] model_test_results 表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] model_test_results 表创建跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -2049,7 +2165,8 @@ async function ensureModelUptimeDailyTable() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_model_uptime_day ON model_uptime_daily(day)`);
     Logger.info('[迁移] 表 model_uptime_daily 已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] model_uptime_daily 表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] model_uptime_daily 表创建跳过: ${err.message}`);
+    throw err;
   }
 
   try {
@@ -2066,14 +2183,16 @@ async function ensureModelUptimeDailyTable() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_model_uptime_hour ON model_uptime_hourly(hour)`);
     Logger.info('[迁移] 表 model_uptime_hourly 已就绪（15 分钟槽，保留 24h）');
   } catch (err) {
-    Logger.warn(`[迁移] model_uptime_hourly 表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] model_uptime_hourly 表创建跳过: ${err.message}`);
+    throw err;
   }
 
   try {
     const { startUptimeCleanup } = require('./utils/model-uptime');
     startUptimeCleanup();
   } catch (err) {
-    Logger.warn(`[迁移] model uptime 清理任务启动跳过: ${err.message}`);
+    Logger.error(`[迁移] model uptime 清理任务启动跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -2124,7 +2243,8 @@ async function ensurePluginsTables() {
       ADD COLUMN IF NOT EXISTS store_latest JSONB`);
     Logger.info('[迁移] 插件表（plugins / plugin_data）已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] 插件表创建跳过: ${err.message}`);
+    Logger.error(`[迁移] 插件表创建跳过: ${err.message}`);
+    throw err;
   }
 
   // 供应商上游转发 UA（区别于连通性测试用的 test_user_agent）
@@ -2138,7 +2258,8 @@ async function ensurePluginsTables() {
       Logger.info('[迁移] 已为 providers 表添加 request_user_agent 列');
     }
   } catch (err) {
-    Logger.warn(`[迁移] providers.request_user_agent 列添加跳过: ${err.message}`);
+    Logger.error(`[迁移] providers.request_user_agent 列添加跳过: ${err.message}`);
+    throw err;
   }
 
   // 用量记录的插件附加元数据（stats:record 钩子写入）
@@ -2152,7 +2273,8 @@ async function ensurePluginsTables() {
       Logger.info('[迁移] 已为 usage_records 表添加 plugin_meta 列');
     }
   } catch (err) {
-    Logger.warn(`[迁移] usage_records.plugin_meta 列添加跳过: ${err.message}`);
+    Logger.error(`[迁移] usage_records.plugin_meta 列添加跳过: ${err.message}`);
+    throw err;
   }
 
   // 用户个人主题选择（'' 表示跟随站点默认）
@@ -2166,7 +2288,8 @@ async function ensurePluginsTables() {
       Logger.info('[迁移] 已为 users 表添加 theme_id 列');
     }
   } catch (err) {
-    Logger.warn(`[迁移] users.theme_id 列添加跳过: ${err.message}`);
+    Logger.error(`[迁移] users.theme_id 列添加跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -2175,9 +2298,25 @@ const app = express();
 // 信任反向代理（Nginx/Cloudflare等）
 app.set('trust proxy', 1);
 
-// 中间件 — 请求体大小限制设为 50MB（兼容多文件/图片/长文档的请求）
+// 网关先执行请求体限制，再由全局 50MB parser 解析其他请求。
+// 编码工具（Claude Code/Codex 等）长上下文请求常达数 MB，限制必须与全局一致，过低会误杀正常请求。
+const GATEWAY_BODY_LIMIT = '50mb';
+const gatewayBodyLimit = express.json({ limit: GATEWAY_BODY_LIMIT });
+app.use((req, res, next) => {
+  const pathName = req.path || '';
+  const isGateway = pathName.startsWith('/v1/')
+    || /^\/api\/(chat|messages|responses|models)(\/|$)/.test(pathName);
+  if (!isGateway) return next();
+  return gatewayBodyLimit(req, res, next);
+});
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use((err, req, res, next) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ error: { message: 'Request body exceeds the 50MB limit', type: 'invalid_request_error', code: 'request_too_large' } });
+  }
+  return next(err);
+});
 
 // 会话配置
 if (isDemo) {
@@ -2228,6 +2367,12 @@ if (isDemo) {
 // 请求日志中间件
 const apiKeyUserCache = new Map(); // key -> { username, ts }
 const KEY_CACHE_TTL = 60_000; // 1 分钟缓存
+setInterval(() => {
+  const cutoff = Date.now() - KEY_CACHE_TTL;
+  for (const [key, item] of apiKeyUserCache) {
+    if (!item || item.ts < cutoff) apiKeyUserCache.delete(key);
+  }
+}, KEY_CACHE_TTL).unref?.();
 
 // 解析 API Key 对应的用户名（带缓存）
 async function resolveApiKeyUser(apiKey) {
@@ -2238,8 +2383,8 @@ async function resolveApiKeyUser(apiKey) {
   }
   try {
     const r = await pool.query(
-      'SELECT u.username FROM api_keys ak JOIN users u ON ak.user_id = u.id WHERE ak.key_value = $1',
-      [apiKey]
+      'SELECT u.username FROM api_keys ak JOIN users u ON ak.user_id = u.id WHERE ak.key_value = $1 OR ak.key_hash = $2',
+      [apiKey, sha256Hex(apiKey)]
     );
     const name = r.rows[0]?.username || 'Unknown';
     apiKeyUserCache.set(apiKey, { username: name, ts: Date.now() });
@@ -2270,7 +2415,7 @@ app.use((req, res, next) => {
     } else if (req.session?.user?.username) {
       user = req.session.user.username;
     } else {
-      let apiKey = req.headers['x-api-key'] || req.query?.api_key;
+      let apiKey = req.headers['x-api-key'];
       if (!apiKey && req.headers.authorization?.startsWith('Bearer ')) {
         apiKey = req.headers.authorization.slice(7);
       }
@@ -2288,7 +2433,7 @@ app.use((req, res, next) => {
         : ` — ${res._logBody.error.message || JSON.stringify(res._logBody.error)}`;
     }
 
-    Logger.request(req.method, req.originalUrl, res.statusCode, user, duration, ip, errorMsg);
+    Logger.request(req.method, req.path, res.statusCode, user, duration, ip, errorMsg);
   });
   next();
 });
@@ -2426,8 +2571,11 @@ if (isDemo) {
 // 路由
 if (isDemo) {
   // 演示模式：挂载演示路由，拦截所有 API 和认证请求
+  app.use('/api/user', require('./demo/extra'));
   app.use('/api/user', require('./demo/routes'));
   app.use('/api/admin', require('./demo/routes'));
+  app.use('/api/playground', require('./demo/playground'));
+  app.use('/api/conversations', require('./demo/conversations'));
   app.use('/auth', require('./demo/auth'));
   app.use('/api/setup', (req, res, next) => {
     if (req.path === '/status' || req.originalUrl === '/api/setup/status') {
@@ -2445,7 +2593,7 @@ if (isDemo) {
   app.use('/api/i18n', require('./routes/i18n'));
   // 登录状态上报接收端：其他自建 CrewRouter 实例上报用户登录/退出事件
   app.use('/api/login-report', require('./routes/login-report'));
-  // 统计信息上报接收端：其他自建 CrewRouter 实例上报匿名聚合使用统计
+  // 统计信息上报接收端：落库真实上报，/data 页读 overview（不再使用假数据）
   app.use('/api/stats-report', require('./routes/stats-report'));
 } else {
   app.use('/api', require('./routes/setup'));
@@ -2572,7 +2720,8 @@ async function ensureInjectPromptsTable() {
     `);
     Logger.info('[迁移] inject_prompts 注入提示词表已就绪');
   } catch (err) {
-    Logger.warn(`[迁移] inject_prompts 表迁移跳过: ${err.message}`);
+    Logger.error(`[迁移] inject_prompts 表迁移跳过: ${err.message}`);
+    throw err;
   }
 }
 
@@ -2598,6 +2747,8 @@ async function runPendingMigrations() {
     ensureModelsThinkingFields,
     ensureModelsForwardReasoningEffort,
     ensureModelsUpstreamIdColumn,
+    // user_groups 需先于 ensureAuthModeTables（auth_invites.group_id 外键引用）
+    ensureUserGroupsTables,
     ensureAuthModeTables,
     ensureAuthEnhancements,
     ensureEmailVerification,
@@ -2621,7 +2772,6 @@ async function runPendingMigrations() {
     ensureApiKeyMembersTable,
     ensureOperationLogsTable,
     ensureKeyTagsTables,
-    ensureUserGroupsTables,
     ensureReservedResources,
     ensureProviderQuotaScript,
     ensureProviderGrokOAuthColumns,
@@ -2641,6 +2791,7 @@ async function runPendingMigrations() {
     ensureApiKeySignatureColumns,
     ensureInjectPromptsTable,
     ensureProviderMultiApiKeyColumns,
+    ensureProviderKeyEncryption,
     ensureApiKeyEnabledColumns,
     ensureApiKeySwallowImages,
     ensureApiKeyCrewRouterCommands,
@@ -2660,14 +2811,9 @@ async function runPendingMigrations() {
     migrateUsageModelIdToLocalId,
   ];
 
-  // 顺序执行，避免并行 DDL 争用；各 ensure 内部已 try/catch
+  // 顺序执行，避免并行 DDL 争用；任一迁移失败都拒绝启动
   for (const fn of migrations) {
-    try {
-      await fn();
-    } catch (err) {
-      Logger.warn(`[启动] 迁移 ${fn.name} 异常: ${err.message}`);
-      if (fn === ensureSessionSummariesTable) throw err;
-    }
+    await fn();
   }
 
   // 清理历史上「供应商已删、模型残留」的孤立数据

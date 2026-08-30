@@ -10,7 +10,7 @@ cr-report —— CrewRouter 客户端事件统一上报器
        cr-report.py hook --harness claude_code
   2) emit 模式（Hermes / OpenClaw 等可直接执行命令的环境）：
        cr-report.py emit --harness hermes --event session_start --session <id>
-  3) watch 模式（Grok 等无 hook 的客户端）：
+  3) watch 模式（旧版 Grok 兜底）：
        常驻 tail ~/.grok/sessions/**/updates.jsonl，增量解析为事件
        cr-report.py watch --harness grok
   4) test：发一条假事件验证链路
@@ -66,18 +66,71 @@ OAUTH_CLIENT_ID = "crewrouter-helper"
 OAUTH_SCOPE = "events:report"
 REFRESH_AHEAD_SEC = 60  # 过期前 60s 触发自动刷新
 
-# stdin JSON 的 hook_event_name -> 上报事件
+# Grok 的配置事件名是 PascalCase，stdin 中也可能是 snake_case/camelCase。
 EVENT_MAP = {
-    "SessionStart": "session_start",
-    "SessionEnd": "session_end",
-    "UserPromptSubmit": "prompt_submit",
-    "PreToolUse": "tool_use",
-    "PostToolUse": "tool_use",
-    "Notification": "notification",
-    "Stop": "response_stop",
-    "SubagentStop": "subagent_stop",
-    "PreCompact": "pre_compact",
+    "sessionstart": "session_start",
+    "session_start": "session_start",
+    "sessionend": "session_end",
+    "session_end": "session_end",
+    "userpromptsubmit": "prompt_submit",
+    "user_prompt_submit": "prompt_submit",
+    "pretooluse": "tool_use",
+    "pre_tool_use": "tool_use",
+    "posttooluse": "tool_use",
+    "post_tool_use": "tool_use",
+    "posttoolusefailure": "tool_use_failure",
+    "post_tool_use_failure": "tool_use_failure",
+    "permissiondenied": "permission_denied",
+    "permission_denied": "permission_denied",
+    "stop": "response_stop",
+    "stopfailure": "response_stop_failure",
+    "stop_failure": "response_stop_failure",
+    "notification": "notification",
+    "subagentstart": "subagent_start",
+    "subagent_start": "subagent_start",
+    "subagentstop": "subagent_stop",
+    "subagent_stop": "subagent_stop",
+    "subagentend": "subagent_stop",
+    "subagent_end": "subagent_stop",
+    "precompact": "pre_compact",
+    "pre_compact": "pre_compact",
+    "postcompact": "post_compact",
+    "post_compact": "post_compact",
 }
+
+
+def _first(detail, *names):
+    return next((detail.get(name) for name in names
+                 if detail.get(name) is not None), None)
+
+
+def map_hook_event(detail, explicit_event=None):
+    """纯函数：将显式或 Grok hook 事件名映射为服务端事件，未知返回 None。"""
+    if explicit_event:
+        return explicit_event if explicit_event in set(EVENT_MAP.values()) else None
+    raw = _first(detail or {}, "hook_event_name", "hookEventName")
+    if not isinstance(raw, str):
+        return None
+    key = raw.strip()
+    return EVENT_MAP.get(key) or EVENT_MAP.get(key.lower())
+
+
+def _safe_detail(detail):
+    """只保留低敏元数据，避免把命令全文、上下文或凭证送到服务端。"""
+    if not isinstance(detail, dict):
+        return {}
+    out = {}
+    for key in ("hook_event_name", "hookEventName", "source", "reason", "message",
+                "error", "notificationType", "subagentType"):
+        value = _first(detail, key)
+        if isinstance(value, (str, int, float, bool)):
+            out[key] = str(value)[:512] if isinstance(value, str) else value
+    tool_input = _first(detail, "tool_input", "toolInput")
+    if isinstance(tool_input, dict):
+        out["tool_input_keys"] = sorted(str(k)[:64] for k in tool_input)[:64]
+    elif tool_input is not None:
+        out["tool_input_type"] = type(tool_input).__name__[:64]
+    return out
 
 
 def _load_cfg():
@@ -239,26 +292,19 @@ def cmd_hook(args):
     except Exception:
         detail = {"raw": raw[:512]}
 
-    event = args.event
+    event = map_hook_event(detail, args.event)
     if not event:
-        hen = detail.get("hook_event_name") or detail.get("hookEventName") or ""
-        event = EVENT_MAP.get(hen)
-    if not event:
-        # 无法判定事件类型时按工具调用处理（hook 场景下最常见）
-        event = "tool_use" if (detail.get("tool_name") or detail.get("toolName")) else None
-    if args.event == "session_start" or (not event and args.event is None):
-        event = event or "session_start"
+        # 未知事件明确跳过；Hook 必须 fail-open，不能伪装成 session_start。
+        return 0
 
     payload = {
         "harness": args.harness,
-        "event": event or "session_start",
-        "session_id": detail.get("session_id") or detail.get("sessionId"),
-        "tool_name": detail.get("tool_name") or detail.get("toolName"),
-        "cwd": detail.get("cwd") or os.getcwd(),
+        "event": event,
+        "session_id": str(_first(detail, "session_id", "sessionId") or "")[:128] or None,
+        "tool_name": str(_first(detail, "tool_name", "toolName") or "")[:128] or None,
+        "cwd": str(_first(detail, "cwd", "workspaceRoot") or os.getcwd())[:512],
         "ts": int(time.time()),
-        "detail": {k: v for k, v in detail.items()
-                   if k in ("hook_event_name", "source", "reason",
-                            "tool_input", "message")},
+        "detail": _safe_detail(detail),
     }
     if url and key:
         post_event(url, key, payload)

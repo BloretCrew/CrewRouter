@@ -15,6 +15,7 @@
 
 const CACHE_HIT_DISCOUNT = 0.1;
 const PER_MILLION = 1000000;
+const { moneyToApiNumber, moneyToString } = require('./money');
 
 /**
  * Calculate weighted tokens and points cost for a single API request.
@@ -43,7 +44,7 @@ function calculateCost(modelConfig, tokenUsage) {
   );
 
   // 1 积分 = 1,000,000 加权 token
-  const pointsCost = Math.max(weightedTokens / PER_MILLION, 0);
+  const pointsCost = moneyToApiNumber(moneyToString(Math.max(weightedTokens / PER_MILLION, 0)));
 
   return {
     cost: pointsCost,

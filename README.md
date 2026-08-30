@@ -20,7 +20,7 @@
 
 **团队级 AI 模型统一网关** · OpenAI / Anthropic 双协议 · 自托管
 
-[演示控制台](https://router.crantai.com/) · [部署指南](docs/deployment.md) · [架构说明](docs/ARCHITECTURE.md) · [API 文档](docs/API.md)
+[演示控制台](https://crewrouter.bloret.net/) · [部署指南](docs/deployment.md) · [架构说明](docs/ARCHITECTURE.md) · [API 文档](docs/API.md)
 
 </div>
 
@@ -49,12 +49,21 @@ CrewRouter 把多家上游模型供应商收成 **一个 OpenAI / Anthropic 兼�
 - [x] **Playground** — 控制台内交互调试与会话历史
 - [x] **开箱向导** — 首次启动 OOBE 完成数据库与管理员配置
 - [x] **深浅色主题** — 跟随系统或手动切换
+- [x] **插件系统** — 沙箱插件框架：网关钩子、页面/插槽/路由扩展、主题插件，全能力面覆盖
+- [x] **插件商店** — 浏览、评分、一键安装、更新检测（demo 模式 / 自托管可配置源）
+- [x] **全站国际化** — 中英双语，译文托管实时拉取
+- [x] **注入提示词** — 按 key/全局条目化，Claude Code 风格注入，响应自动净化
+- [x] **客户端事件上报** — CrewRouterHelper 上报 + 实时活动看板
+- [x] **OAuth 2.0 授权服务** — PKCE 授权码、刷新令牌与 AI 客户端授权
+- [x] **模型库增强** — 收藏、全局搜索、Key 拖拽排序、队列回退
+- [x] **自定义提示词指纹** — 调用记录标记 CLAUDE.md/AGENTS.md 等
+- [x] **会话总结** — 会话标签、生成总结
 
 ## 兼容的客户端
 
 只需更换 `base_url`，无需改业务代码：
 
-Claude Code · Claude Desktop · Codex · OpenCode · OpenClaw · Hermes Agent · Grok Build · DeepSeek Harness · Kilo Code · Cline · Cherry Studio · Qwen Code · Cursor · 以及一切走 OpenAI / Anthropic 协议的工具
+Claude Code · Claude Desktop · Codex · OpenCode · OpenClaw · Hermes Agent · Grok Build · DeepSeek Harness · Kilo Code · Cline · Cherry Studio · Qwen Code · Cursor · 以及一切走 OpenAI / Anthropic 协议的工具，以及安装了对应插件的任意客户端
 
 ```bash
 # 只需更换 base_url
@@ -170,7 +179,8 @@ npm start          # 开发可用 npm run dev
 
 - **运行时** Node.js · Express
 - **数据** PostgreSQL
-- **前端** 原生 HTML / CSS / JS（控制台、管理后台、Playground、Showcase）
+- **前端** 原生 HTML / CSS / JS（控制台、管理后台、Playground、Showcase），含 i18n 与插件运行时
+- **服务端** OAuth 授权服务与插件商店
 - **安全** Session、TOTP、WebAuthn、OAuth、SSRF 校验
 
 ## 开源许可
@@ -183,12 +193,15 @@ npm start          # 开发可用 npm run dev
 
 ## 星标历史
 
+<a href="https://www.star-history.com/?repos=BloretCrew%2FCrewRouter&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=BloretCrew/CrewRouter&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=BloretCrew/CrewRouter&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=BloretCrew/CrewRouter&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=BloretCrew/CrewRouter&type=date&theme=dark&legend=top-left&sealed_token=gDkqatDM5Ka6TX7FpWQMrcOXfNeET4bgBmkENnA7yEBWsOIy2qQqiWZwxph9Ef7FB14DjI78qHbm8FgyMZbeYnv5aVqd__pUj32lYzFtF-4yZ8kSe4ce9xeKhuzIxfi0UD771HT8j-BywaTEI2IprhWPnprvfdiYImjrIGHQ_IOYdVc2qx9KROMEJzEG" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=BloretCrew/CrewRouter&type=date&legend=top-left&sealed_token=gDkqatDM5Ka6TX7FpWQMrcOXfNeET4bgBmkENnA7yEBWsOIy2qQqiWZwxph9Ef7FB14DjI78qHbm8FgyMZbeYnv5aVqd__pUj32lYzFtF-4yZ8kSe4ce9xeKhuzIxfi0UD771HT8j-BywaTEI2IprhWPnprvfdiYImjrIGHQ_IOYdVc2qx9KROMEJzEG" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=BloretCrew/CrewRouter&type=date&legend=top-left&sealed_token=gDkqatDM5Ka6TX7FpWQMrcOXfNeET4bgBmkENnA7yEBWsOIy2qQqiWZwxph9Ef7FB14DjI78qHbm8FgyMZbeYnv5aVqd__pUj32lYzFtF-4yZ8kSe4ce9xeKhuzIxfi0UD771HT8j-BywaTEI2IprhWPnprvfdiYImjrIGHQ_IOYdVc2qx9KROMEJzEG" />
  </picture>
+</a>
 
 ## 相关链接
 
-[Bloret Crew](https://github.com/BloretCrew) · [Bloret Launcher](https://github.com/BloretCrew/Bloret-Launcher) · [演示站](https://router.crantai.com/)
+[CrewRouter - Github](https://github.com/BloretCrew/CrewRouter) [CrewRouter](https://crewrouter.bloret.net/) [QQ Discuss](https://qm.qq.com/q/kEt8fb41wc) [LinuxDo](https://linux.do/)
+

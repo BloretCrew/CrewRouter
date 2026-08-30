@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "SessionEnd": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "PreToolUse": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "PostToolUse": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "PostToolUseFailure": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "PermissionDenied": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "StopFailure": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "Notification": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "SubagentStart": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "SubagentStop": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "PreCompact": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}],
+    "PostCompact": [{"hooks": [{"type": "command", "command": "/usr/local/bin/cr-report.py hook --harness grok", "timeout": 5}]}]
+  }
+}

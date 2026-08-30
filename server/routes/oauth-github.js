@@ -5,6 +5,7 @@ const { pool } = require('../models/database');
 const Logger = require('../logger');
 const config = require('../config-loader');
 const { reportLoginEvent } = require('../utils/login-reporter');
+const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 
 // GitHub OAuth 配置
 const GITHUB_CLIENT_ID = config.github?.clientId || '';
@@ -113,13 +114,22 @@ router.get('/github/callback', async (req, res) => {
         }
       }
 
-      // 如果有邮箱，检查是否已注册
-      if (githubEmail) {
-        const emailUser = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [githubEmail]);
+      // GitHub 路径不写入 users.email，仅用归一化邮箱查找已有账号并写入 github_id。
+      let normalizedEmail;
+      try { normalizedEmail = normalizeEmail(githubEmail); } catch (error) {
+        return res.redirect('/?error=invalid_email');
+      }
+      if (normalizedEmail) {
+        const emailUser = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedEmail]);
         if (emailUser.rows.length > 0) {
           // 邮箱已注册，绑定 GitHub 并登录
           const user = emailUser.rows[0];
-          await pool.query('UPDATE users SET github_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [githubId, user.id]);
+          try {
+            await pool.query('UPDATE users SET github_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [githubId, user.id]);
+          } catch (error) {
+            if (!isUniqueViolation(error)) throw error;
+            return res.redirect('/?error=github_conflict');
+          }
 
           req.session.user = {
             id: user.id,

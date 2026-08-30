@@ -5,6 +5,7 @@ const Logger = require('../logger');
 const quotaBuffer = new Map();
 const userIndex = new Map(); // userId -> Set of buffer keys (performance optimization)
 const FLUSH_INTERVAL = 60000; // 1 minute
+let flushPromise = null;
 
 /**
  * Record usage to the quota_data aggregation table.
@@ -51,29 +52,37 @@ function recordQuotaData(userId, modelName, tokensUsed, weightedTokens, cost) {
  * Flush buffered quota data to database.
  */
 async function flushQuotaData() {
-  if (quotaBuffer.size === 0) return;
-
+  if (flushPromise) return flushPromise;
+  if (quotaBuffer.size === 0) return { flushed: 0 };
   const entries = Array.from(quotaBuffer.values());
   quotaBuffer.clear();
-  userIndex.clear(); // 清空用户索引
-
-  try {
-    for (const entry of entries) {
-      await pool.query(`
-        INSERT INTO quota_data (user_id, model_name, created_at, token_used, weighted_tokens, count, quota)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ON CONFLICT (user_id, model_name, created_at) DO UPDATE SET
-          token_used = quota_data.token_used + EXCLUDED.token_used,
-          weighted_tokens = quota_data.weighted_tokens + EXCLUDED.weighted_tokens,
-          count = quota_data.count + EXCLUDED.count,
-          quota = quota_data.quota + EXCLUDED.quota
-      `, [entry.user_id, entry.model_name, entry.created_at, entry.token_used,
-          entry.weighted_tokens || entry.token_used, entry.count, entry.quota]);
-    }
-    Logger.info(`[QuotaData] 已刷新 ${entries.length} 条聚合记录`);
-  } catch (err) {
-    Logger.error(`[QuotaData] 刷新失败: ${err.message}`);
-  }
+  userIndex.clear();
+  flushPromise = (async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const entry of entries) {
+        await client.query(`
+          INSERT INTO quota_data (user_id, model_name, created_at, token_used, weighted_tokens, count, quota)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ON CONFLICT (user_id, model_name, created_at) DO UPDATE SET
+            token_used = quota_data.token_used + EXCLUDED.token_used,
+            weighted_tokens = quota_data.weighted_tokens + EXCLUDED.weighted_tokens,
+            count = quota_data.count + EXCLUDED.count,
+            quota = quota_data.quota + EXCLUDED.quota
+        `, [entry.user_id, entry.model_name, entry.created_at, entry.token_used, entry.weighted_tokens || entry.token_used, entry.count, entry.quota]);
+      }
+      await client.query('COMMIT');
+      Logger.info(`[QuotaData] 已刷新 ${entries.length} 条聚合记录`);
+      return { flushed: entries.length };
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      for (const entry of entries) recordQuotaData(entry.user_id, entry.model_name, entry.token_used, entry.weighted_tokens, entry.quota);
+      Logger.error(`[QuotaData] 刷新失败，已将 ${entries.length} 条记录放回缓冲区: ${err.message}`);
+      throw err;
+    } finally { client.release(); }
+  })();
+  try { return await flushPromise; } finally { flushPromise = null; }
 }
 
 // Periodic flush

@@ -25,6 +25,11 @@
       .replace(/'/g, '&#39;');
   }
 
+  function renderProviderNameTag(providerName) {
+    const name = String(providerName ?? '').trim();
+    return name ? `<span class="model-provider-tag">${escapeHtml(name)}</span>` : '';
+  }
+
   /** 已信任的 HTML 片段（不会被二次 escape） */
   class SafeHTML {
     constructor(html) {
@@ -253,6 +258,7 @@
 
   const api = {
     escapeHtml,
+    renderProviderNameTag,
     SafeHTML,
     raw,
     html,
@@ -285,6 +291,7 @@
   // 全局导出（兼容现有非模块脚本）
   global.Dom = api;
   global.escapeHtml = escapeHtml;
+  global.renderProviderNameTag = renderProviderNameTag;
   global.html = html;
   global.raw = raw;
   global.setHTML = setHTML;

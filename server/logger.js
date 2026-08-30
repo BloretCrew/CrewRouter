@@ -19,8 +19,24 @@ function timestamp() {
   return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+function sanitizeUrl(value) {
+  if (typeof value !== 'string') return value;
+  try {
+    const parsed = new URL(value, 'http://localhost');
+    parsed.search = '';
+    return parsed.href.replace(/^http:\/\/localhost/, '');
+  } catch {
+    return value.replace(/[?][^\s]*/g, '');
+  }
+}
+
+// 仅绝对 URL 才做脱敏；普通日志消息（中文等）交给 URL 解析器会被百分号编码成乱码
+function looksLikeAbsoluteUrl(value) {
+  return typeof value === 'string' && !/\s/.test(value) && /^https?:\/\//i.test(value);
+}
+
 function formatArgs(args) {
-  return args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+  return args.map(a => (typeof a === 'object' ? JSON.stringify(a) : (looksLikeAbsoluteUrl(a) ? sanitizeUrl(String(a)) : String(a)))).join(' ');
 }
 
 const Logger = {
@@ -71,10 +87,11 @@ const Logger = {
     if (user !== 'Guest') uColor = '\x1b[35m';
 
     const errStr = errorMsg ? ('\x1b[31m' + errorMsg + '\x1b[0m') : '';
-    const consoleLine = mColor + method + '\x1b[0m ' + url + ' ' + sColor + status + '\x1b[0m ' + uColor + '[' + user + ']\x1b[0m \x1b[36m' + duration + 'ms\x1b[0m \x1b[90m[' + ip + ']\x1b[0m' + errStr;
+    const safeUrl = sanitizeUrl(url);
+    const consoleLine = mColor + method + '\x1b[0m ' + safeUrl + ' ' + sColor + status + '\x1b[0m ' + uColor + '[' + user + ']\x1b[0m \x1b[36m' + duration + 'ms\x1b[0m \x1b[90m[' + ip + ']\x1b[0m' + errStr;
     console.log(consoleLine);
 
-    const fileLine = '[' + timestamp() + '] [REQUEST] ' + method + ' ' + url + ' ' + status + ' [' + user + '] ' + duration + 'ms [' + ip + ']' + errorMsg;
+    const fileLine = '[' + timestamp() + '] [REQUEST] ' + method + ' ' + safeUrl + ' ' + status + ' [' + user + '] ' + duration + 'ms [' + ip + ']' + errorMsg;
     writeToFile(fileLine);
   }
 };

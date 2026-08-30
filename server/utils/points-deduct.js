@@ -4,6 +4,7 @@
 
 const { pool } = require('../models/database');
 const { getUserQuotaBuffer } = require('./quota-data');
+const { moneyToApiNumber, moneyToString } = require('./money');
 
 /**
  * 检查用户组额度规则
@@ -11,10 +12,11 @@ const { getUserQuotaBuffer } = require('./quota-data');
  * @param {number|null} groupId
  * @returns {Promise<Array|null>}
  */
-async function checkQuotaRules(userId, groupId) {
+async function checkQuotaRules(userId, groupId, client = null) {
   if (!groupId) return null;
+  const db = client || pool;
 
-  const rulesResult = await pool.query(
+  const rulesResult = await db.query(
     'SELECT rule_type, rule_value, duration_hours FROM user_group_rules WHERE group_id = $1',
     [groupId]
   );
@@ -27,13 +29,13 @@ async function checkQuotaRules(userId, groupId) {
 
     let used = 0;
     if (rule_type === 'requests') {
-      const r = await pool.query(
+      const r = await db.query(
         'SELECT COALESCE(SUM(count), 0) AS total FROM quota_data WHERE user_id = $1 AND created_at >= $2',
         [userId, since]
       );
       used = parseInt(r.rows[0].total, 10) || 0;
     } else if (rule_type === 'tokens') {
-      const r = await pool.query(
+      const r = await db.query(
         'SELECT COALESCE(SUM(weighted_tokens), 0) AS total FROM quota_data WHERE user_id = $1 AND created_at >= $2',
         [userId, since]
       );
@@ -76,12 +78,12 @@ async function calculatePointsToDeduct(
   { userId, groupId, weightedTokens, pointsCost },
   deps = {}
 ) {
-  if (!groupId) return pointsCost;
+  if (!groupId) return moneyToApiNumber(moneyToString(pointsCost));
   const check = deps.checkQuotaRules || checkQuotaRules;
-  const rules = await check(userId, groupId);
-  if (!rules) return pointsCost;
+  const rules = await check(userId, groupId, deps.client);
+  if (!rules) return moneyToApiNumber(moneyToString(pointsCost));
   if (rules.some(r => !r.exceeded)) return 0;
-  return Math.max(0, (weightedTokens || 0) / 1000000);
+  return moneyToApiNumber(moneyToString(Math.max(0, (weightedTokens || 0) / 1000000)));
 }
 
 module.exports = {

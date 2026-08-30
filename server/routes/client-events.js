@@ -24,7 +24,11 @@ const { createNotification, sendBark } = require('../utils/notifications');
 const router = express.Router();
 
 const HARNESS_SET = new Set(HARNESS_SOURCES);
-const EVENT_TYPES = new Set(['session_start', 'session_end', 'prompt_submit', 'tool_use', 'notification', 'response_stop', 'subagent_stop', 'pre_compact']);
+const EVENT_TYPES = new Set([
+  'session_start', 'session_end', 'prompt_submit', 'tool_use', 'tool_use_failure',
+  'permission_denied', 'notification', 'response_stop', 'response_stop_failure',
+  'subagent_start', 'subagent_stop', 'pre_compact', 'post_compact',
+]);
 
 // ---------- 事件推送（订阅规则命中 → 站内通知 + Bark） ----------
 // 频控：同 (userId, harness, sessionId, event) 60 秒内只推一次（内存即可，重启清零可接受）
@@ -119,6 +123,16 @@ function strOrNull(v, maxLen = 512) {
   return v.length > maxLen ? v.slice(0, maxLen) : v;
 }
 
+function safeDetail(detail, maxBytes = 8192) {
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return {};
+  const serialized = JSON.stringify(detail);
+  if (Buffer.byteLength(serialized, 'utf8') <= maxBytes) return detail;
+  return {
+    truncated: true,
+    preview: serialized.slice(0, maxBytes - 64),
+  };
+}
+
 // ---------- 上报 ----------
 // 双鉴权：Bearer crh_ 前缀走自有 OAuth access token，其余回落 API Key 校验
 router.post('/', oauthBearer, async (req, res) => {
@@ -135,12 +149,8 @@ router.post('/', oauthBearer, async (req, res) => {
 
   try {
     await ensureTable();
-    let payload = {};
-    if (body.detail && typeof body.detail === 'object' && !Array.isArray(body.detail)) {
-      // 控制体积：hook 原始输入可能很大（如 Bash 命令全文），截断保护
-      const s = JSON.stringify(body.detail);
-      payload = JSON.parse(s.length > 8192 ? s.slice(0, 8192) : s);
-    }
+    // 控制体积：hook 原始输入可能很大（如 Bash 命令全文），截断保护。
+    const payload = safeDetail(body.detail);
     await pool.query(
       `INSERT INTO client_events (api_key_id, user_id, harness, event, session_id, tool_name, cwd, ts, payload)
        VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, now()), $9)`,
