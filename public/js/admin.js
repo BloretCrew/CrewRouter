@@ -8032,7 +8032,7 @@ async function(ctx) {
                   ${keyHint}
                 </td>
                 <td class="cell-clip-sm" title="${escapeHtml(providerLabel)}">
-                  <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;background:var(--muted);color:var(--foreground);">${escapeHtml(providerLabel)}</span>
+                  ${renderProviderNameTag(providerLabel) || '<span class="model-provider-missing">-</span>'}
                 </td>
                 <td>${this._usageRequestTypeBadge(log.request_type)}</td>
                 <td>${this._usageRequestSourceBadge(log.request_source)}${this._customInstructionsBadge(log.custom_instruction_count)}</td>
@@ -8215,7 +8215,7 @@ async function(ctx) {
       [t('模型'), escapeHtml(modelLabel)],
       [t('系列'), escapeHtml(log.series || '-')],
       [t('上游模型 ID'), escapeHtml(log.upstream_model_id || log.model_id || '-')],
-      [t('供应商'), escapeHtml(providerLabel)],
+      [t('供应商'), renderProviderNameTag(providerLabel) || '<span class="model-provider-missing">-</span>'],
       [t('请求类型'), this._usageRequestTypeBadge(log.request_type) + (typeMeta.label !== '-' && log.request_type ? ` <span style="color:var(--muted-foreground);font-size:12px;">(${escapeHtml(String(log.request_type))})</span>` : '')],
       [t('客户端'), this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
       ['API Key', log.key_prefix
@@ -11391,9 +11391,9 @@ async function(ctx) {
 
     const rowsHtml = results.map(r => {
       if (r.ok) {
-        const providerLabel = r.provider_url
-          ? `${escapeHtml(r.provider)} <span style="font-size:10px;color:var(--muted-foreground);">(${escapeHtml(r.provider_url)})</span>`
-          : escapeHtml(r.provider || '');
+        const providerLabel = r.provider
+          ? `${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}`
+          : '';
         return `
           <div class="model-test-row">
             <div class="model-test-row-icon model-test-result-pass">&#10003;</div>
@@ -11420,7 +11420,7 @@ async function(ctx) {
       } else {
         const modelLabel = r.model || r.modelId || t('未知模型');
         const providerLabel = r.provider
-          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${escapeHtml(r.provider)}${r.provider_url ? ' (' + escapeHtml(r.provider_url) + ')' : ''}</div>`
+          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
           : '';
         return `
           <div class="model-test-row">
