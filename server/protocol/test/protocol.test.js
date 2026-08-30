@@ -67,12 +67,31 @@ test('unknown fields pass through only when encoding the same dialect', () => {
   assert.equal(anthropic.vendor_top, undefined);
 });
 
-test('unsupported detected dialects explicitly reject', () => {
+test('Responses codec handles input, output and stream deltas', () => {
   assert.equal(transforms.detectResponseFormat({ output: [] }), 'responses');
-  const unsupported = transforms.getTransform('responses', 'anthropic');
-  assert.equal(unsupported.capability.status, protocol.Capability.REJECT);
-  assert.throws(() => unsupported.request({ output: [] }), error => error.code === protocol.Reject.DIALECT_NOT_IMPLEMENTED);
-  assert.equal(transforms.hasTransform('responses', 'anthropic'), false);
+  const bridge = transforms.getTransform('responses', 'anthropic');
+  assert.equal(bridge.capability.status, protocol.Capability.DEGRADE);
+  const request = bridge.request({ model: 'm', input: [{ role: 'user', content: [{ type: 'input_text', text: 'hi' }] }], max_output_tokens: 12, vendor_flag: true });
+  assert.equal(request.messages[0].content[0].text, 'hi');
+  assert.equal(request.max_tokens, 12);
+  const response = protocol.codecs.responses.decodeResponse({ id: 'r1', model: 'm', output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'ok' }] }], status: 'completed', usage: { input_tokens: 2, output_tokens: 1 } });
+  assert.equal(response.message.blocks[0].text, 'ok');
+  assert.equal(response.usage.inputTokens, 2);
+  assert.equal(protocol.codecs.responses.decodeStreamEvent({ type: 'response.output_text.delta', delta: 'x', item_id: 'i' }).delta.blocks[0].text, 'x');
+  assert.equal(transforms.hasTransform('responses', 'anthropic'), true);
+});
+
+test('Gemini codec maps contents, tools, response and stream chunks', () => {
+  assert.equal(transforms.detectResponseFormat({ candidates: [] }), 'gemini');
+  const ir = protocol.codecs.gemini.decodeRequest({ contents: [{ role: 'user', parts: [{ text: 'hello' }] }], generationConfig: { maxOutputTokens: 20 }, unknown: { keep: true } });
+  assert.equal(ir.messages[0].blocks[0].text, 'hello');
+  assert.equal(ir.parameters.maxTokens, 20);
+  const roundTrip = protocol.codecs.gemini.encodeRequest(ir);
+  assert.deepEqual(roundTrip.unknown, { keep: true });
+  const response = protocol.codecs.gemini.decodeResponse({ responseId: 'g1', modelVersion: 'gemini', candidates: [{ content: { role: 'model', parts: [{ text: 'answer' }] }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 2 } });
+  assert.equal(response.message.role, 'assistant');
+  assert.equal(response.message.blocks[0].text, 'answer');
+  assert.equal(protocol.codecs.gemini.decodeStreamEvent({ candidates: [{ content: { role: 'model', parts: [{ text: 'd' }] } }] }).delta.blocks[0].text, 'd');
 });
 
 test('phase one feature compatibility excludes the api hot path', () => {

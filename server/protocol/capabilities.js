@@ -37,20 +37,20 @@ const ProviderQuirks = Object.freeze({
     reasoning_effort: Capability.DEGRADE
   }),
   responses: Object.freeze({
-    max_completion_tokens: Capability.REJECT,
-    temperature: Capability.REJECT,
-    system: Capability.REJECT,
-    developer: Capability.REJECT,
-    stream_usage: Capability.REJECT,
-    reasoning_effort: Capability.REJECT
+    max_completion_tokens: Capability.DEGRADE,
+    temperature: Capability.SUPPORTED,
+    system: Capability.SUPPORTED,
+    developer: Capability.SUPPORTED,
+    stream_usage: Capability.DEGRADE,
+    reasoning_effort: Capability.DEGRADE
   }),
   gemini: Object.freeze({
-    max_completion_tokens: Capability.REJECT,
-    temperature: Capability.REJECT,
-    system: Capability.REJECT,
-    developer: Capability.REJECT,
-    stream_usage: Capability.REJECT,
-    reasoning_effort: Capability.REJECT
+    max_completion_tokens: Capability.DEGRADE,
+    temperature: Capability.SUPPORTED,
+    system: Capability.SUPPORTED,
+    developer: Capability.DEGRADE,
+    stream_usage: Capability.DEGRADE,
+    reasoning_effort: Capability.DEGRADE
   })
 });
 
@@ -69,9 +69,6 @@ function getDialectCapability(dialect) {
   const quirks = ProviderQuirks[dialect];
   if (!quirks) {
     return { dialect, status: Capability.REJECT, reason: Reject.UNKNOWN_DIALECT, quirks: null };
-  }
-  if (dialect === 'responses' || dialect === 'gemini') {
-    return { dialect, status: Capability.REJECT, reason: Reject.DIALECT_NOT_IMPLEMENTED, quirks };
   }
   return { dialect, status: Capability.SUPPORTED, reason: null, quirks };
 }
