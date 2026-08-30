@@ -1804,7 +1804,7 @@ router.post('/usage', async (req, res) => {
               used = r.rows[0]?.cnt || 0;
             } else if (rule.rule_type === 'tokens') {
               const r = await pool.query(
-                'SELECT COALESCE(SUM(tokens_used), 0)::bigint AS cnt FROM usage_records WHERE user_id = $1 AND created_at > NOW() - INTERVAL \'1 hour\' * $2',
+                'SELECT COALESCE(SUM(weighted_tokens), 0)::bigint AS cnt FROM usage_records WHERE user_id = $1 AND created_at > NOW() - INTERVAL \'1 hour\' * $2',
                 [user.id, hours]
               );
               used = parseInt(r.rows[0]?.cnt || 0);

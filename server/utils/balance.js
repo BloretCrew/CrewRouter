@@ -489,7 +489,7 @@ async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValu
   const client = await dbPool.connect();
   try {
     await client.query('BEGIN');
-    await client.query(usageQuery, usageValues);
+    const inserted = await client.query(usageQuery, usageValues);
     // deductPoints 已在事务内持有用户行锁，并会基于锁内最新 quota 决策实际扣款。
     const result = await deductPoints(userId, pointsToDeduct, client, {
       groupId,
@@ -497,8 +497,13 @@ async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValu
       pointsCost: pointsCost == null ? pointsToDeduct : pointsCost
     });
     if (!result.ok) throw new Error(result.error || '积分扣除失败');
+    const actualDeduct = result.pointsToDeduct ?? pointsToDeduct;
+    // cost 统一记实扣值：配额未超限时理论计费为正但实扣为 0，避免统计展示虚高
+    if (inserted.rows[0]?.id != null && Number(pointsToDeduct) !== Number(actualDeduct)) {
+      await client.query('UPDATE usage_records SET cost = $1 WHERE id = $2', [actualDeduct, inserted.rows[0].id]);
+    }
     await client.query('COMMIT');
-    return { ok: true, pointsToDeduct: result.pointsToDeduct ?? pointsToDeduct };
+    return { ok: true, pointsToDeduct: actualDeduct };
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
     Logger.error(`[recordUsageAndDeduct] 错误: userId=${userId}, error=${error.message}`);
