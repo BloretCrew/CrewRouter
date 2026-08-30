@@ -569,6 +569,7 @@ async function initDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_op_logs_resource ON operation_logs(resource_type, resource_id)`);
     Logger.info('[数据库初始化] 表 operation_logs 已就绪');
 
+    // Outbox schema is maintained as a manual migration and is intentionally not applied here.
 
     // API Key 模型队列（有序失败回退）
     await client.query(`

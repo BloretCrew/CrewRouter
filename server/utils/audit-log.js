@@ -14,6 +14,9 @@
  */
 const { pool } = require('../models/database');
 const Logger = require('../logger');
+const { enqueueOperationLogEvent } = require('./outbox');
+
+const OUTBOX_ENABLED = process.env.OUTBOX_ENABLED === 'true';
 
 /**
  * 操作类型枚举（用于 operation_logs.action）
@@ -146,6 +149,13 @@ async function logAction({
         Number.isFinite(durationMs) ? durationMs : null,
       ]
     );
+
+    if (OUTBOX_ENABLED) {
+      enqueueOperationLogEvent({
+        userId, username, isAdmin, action, resourceType, resourceId,
+        description, details, ip, userAgent, status, durationMs,
+      }).catch((err) => Logger.warn(`[操作日志] outbox 入队失败: ${err.message}`));
+    }
   } catch (err) {
     Logger.warn(`[操作日志] 写入失败: ${err.message}`);
   }
