@@ -17,7 +17,9 @@
     "docker:build": "docker build -f deploy/docker/Dockerfile -t crewrouter/crewrouter:latest .",
     "docker:build:saas": "docker build -f deploy/docker/Dockerfile.saas -t crewrouter/crewrouter-saas:latest .",
     "docker:up": "docker-compose -f docker-compose.yml up -d",
-    "docker:up:saas": "docker-compose -f docker-compose.saas.yml up -d"
+    "docker:up:saas": "docker-compose -f docker-compose.saas.yml up -d",
+    "test:money-precision": "node server/scripts/test-money-precision.js",
+    "money-precision:migrate": "node scripts/migrate-money-precision.js"
   },
   "dependencies": {
     "@fluentui/web-components": "^2.6.1",

@@ -185,13 +185,11 @@ router.post('/teams/:id/members', requireAuth, requireAdmin, auditMiddleware(ACT
       added += result.rowCount;
     }
 
-    // 兼容旧代码：同步更新 users.team_id（只设置第一个 Team）
-    if (userIds.length > 0) {
-      await pool.query(
-        'UPDATE users SET team_id = $1 WHERE id = $2 AND team_id IS NULL',
-        [teamId, userIds[0]]
-      );
-    }
+    // users.team_id 仅作兼容投影；批量成员均同步到有效主 Team。
+    await pool.query(
+      'UPDATE users SET team_id = $1 WHERE id = ANY($2::int[]) AND team_id IS NULL',
+      [teamId, userIds.map(id => parseInt(id, 10)).filter(Number.isInteger)]
+    );
 
     res.json({ success: true, added });
   } catch (error) {
@@ -216,9 +214,13 @@ router.delete('/teams/:id/members/:userId', requireAuth, requireAdmin, auditMidd
     if (teamCheck.rows[0].is_personal) {
       return res.status(403).json({ error: '个人账户 Team 不可移除成员' });
     }
+    const userId = parseInt(req.params.userId, 10);
+    const teamId = parseInt(req.params.id, 10);
+    await pool.query('DELETE FROM user_teams WHERE user_id = $1 AND team_id = $2', [userId, teamId]);
     await pool.query(
-      'DELETE FROM user_teams WHERE user_id = $1 AND team_id = $2',
-      [req.params.userId, req.params.id]
+      `UPDATE users u SET team_id = COALESCE((SELECT ut.team_id FROM user_teams ut WHERE ut.user_id = u.id ORDER BY ut.created_at ASC LIMIT 1), NULL)
+       WHERE u.id = $1 AND u.team_id = $2`,
+      [userId, teamId]
     );
     res.json({ success: true });
   } catch (error) {

@@ -82,6 +82,7 @@ const { createStreamScrubber } = require('../utils/inject-prompt-stream');
 const crypto = require('crypto');
 const { decryptSecret } = require('../utils/secret-crypto');
 const { validateBeforeUpstreamRewrite } = require('../utils/before-upstream-policy');
+const { selectHealthyWeighted } = require('../utils/provider-selector');
 
 // 非流式：上游整段响应（headers+body）超时。30s 对免费/慢模型过短，易误杀。
 const UPSTREAM_TIMEOUT = 180000; // 3 分钟
@@ -575,7 +576,7 @@ async function getProviderForRequest(providerId) {
       Logger.warn(`[provider:select] 钩子异常: ${err.message}`);
     }
   }
-  const selected = candidates[Math.floor(Math.random() * candidates.length)];
+  const selected = selectHealthyWeighted(candidates, `provider:${group}`);
   Logger.info(`[负载均衡] 供应商组 "${group}": 从 ${candidates.length} 个中选择 ${selected?.id || selected?.provider_id || '?'}`);
   return selected || null;
 }
@@ -2789,7 +2790,7 @@ async function handleChatCompletion(req, res) {
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
-        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
+        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[用量记录] 错误:', err);
         if (err.billingFailure) {
@@ -2989,7 +2990,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
            JSON.stringify(result.judgeResult || {}),
            result.content || null, totalTokens, pointsToDeduct, result.fusion?.total_latency || 0]
         );
-        recordQuotaData(req.apiUser.userId, 'fusion', totalTokens, totalWeightedTokens, pointsToDeduct);
+        recordQuotaData(req.apiUser.userId, 'fusion', totalTokens, totalWeightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Fusion] 用量记录错误:', err);
         if (err.billingFailure) {
@@ -3408,7 +3409,7 @@ async function handleAnthropicMessage(req, res) {
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
-        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
+        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Anthropic 用量记录] 错误:', err);
         if (err.billingFailure) {
@@ -5484,7 +5485,7 @@ async function handleResponses(req, res) {
                  null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
                  pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
-              recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
+              recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
             } catch (err) {
               Logger.error('[Responses/Passthru] 用量记录错误:', err);
               if (err.billingFailure) {
@@ -5596,7 +5597,7 @@ async function handleResponses(req, res) {
                latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
                pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
-            recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
+            recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
           } catch (err) {
             Logger.error('[Responses] 用量记录错误:', err);
             if (err.billingFailure) {
@@ -5799,7 +5800,7 @@ async function handleResponses(req, res) {
              clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
              pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
-          recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
+          recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
         } catch (err) {
           Logger.warn(`[Responses/Passthru] 计费/用量记录失败: ${err.message}`);
           if (err.billingFailure) {
@@ -5873,7 +5874,7 @@ async function handleResponses(req, res) {
            null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
-        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
+        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Responses/Passthru] 用量记录错误:', err);
         if (err.billingFailure) {
@@ -6058,7 +6059,7 @@ async function handleResponses(req, res) {
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
-        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
+        recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Responses] 用量记录错误:', err);
         if (err.billingFailure) {

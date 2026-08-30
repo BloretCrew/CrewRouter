@@ -15,6 +15,7 @@ const { decryptSecret } = require('../utils/secret-crypto');
 const { pool } = require('../models/database');
 const { upstreamUrl } = require('../utils/url-validator');
 const proxyPool = require('../proxy-pool');
+const { selectHealthyWeighted } = require('../utils/provider-selector');
 const {
   buildChatCompletionChunk,
   getOrCreateStreamMeta
@@ -79,7 +80,7 @@ async function getProviderForRequest(providerId) {
     for (const candidate of groupResult.rows) candidate.api_key = decryptSecret(candidate.api_key);
 
     const candidates = groupResult.rows;
-    const selected = candidates[Math.floor(Math.random() * candidates.length)];
+    const selected = selectHealthyWeighted(candidates, `provider:${group}`);
     Logger.info(`[Fusion] 负载均衡: 供应商组 "${group}" 从 ${candidates.length} 个中选择 ${selected.id}`);
     return selected;
   } catch (err) {

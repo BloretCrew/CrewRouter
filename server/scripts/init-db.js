@@ -134,6 +134,9 @@ async function initDatabase() {
       Logger.info('[数据库初始化] 已为 users 表 email 列添加 UNIQUE 约束');
     }
 
+    // 业务按 trim/lower 规范化邮箱；部分唯一索引允许多个 NULL，并在冲突时阻止启动。
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique ON users (LOWER(email)) WHERE email IS NOT NULL`);
+
     // 兼容旧表：为 users 添加速率限制列
     const userRateColCheck = await client.query(`
       SELECT column_name FROM information_schema.columns

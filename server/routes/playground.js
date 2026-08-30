@@ -12,6 +12,7 @@ const { recordLiveCallTest } = require('../utils/model-test');
 const { calculatePointsToDeduct } = require('../utils/points-deduct');
 const { clientMetaFromReq } = require('../utils/request-source');
 const { notifyUser, NOTIFICATION_TYPES } = require('../utils/notifications');
+const { selectHealthyWeighted } = require('../utils/provider-selector');
 
 const UPSTREAM_TIMEOUT = 60000;
 const UPSTREAM_STREAM_TIMEOUT = 300000; // 流式请求超时 5 分钟
@@ -154,7 +155,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       );
       if (groupResult.rows.length > 1) {
         const candidates = groupResult.rows;
-        provider = candidates[Math.floor(Math.random() * candidates.length)];
+        provider = selectHealthyWeighted(candidates, `provider:${provider.grp}`);
         Logger.info(`[Playground] 供应商组 "${provider.grp}": 从 ${candidates.length} 个中选择 ${provider.id}`);
       }
     }

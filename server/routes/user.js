@@ -4,6 +4,7 @@ const router = express.Router();
 const { pool } = require('../models/database');
 const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
+const { normalizeEmail } = require('../utils/user-identity');
 const config = require('../config-loader');
 const { fetchProvidersIndex, lookupProvider } = require('../provider-lookup');
 const { invalidateApiKeyCacheByKeyId } = require('./api');
@@ -1996,7 +1997,7 @@ router.put('/settings', requireAuth, auditMiddleware(ACTIONS.USER_SETTINGS, {
 
   try {
     // 邮箱统一转小写
-    const normalizedEmail = email ? email.toLowerCase().trim() : email;
+    const normalizedEmail = normalizeEmail(email);
 
     // Build dynamic UPDATE — only set fields that were provided
     const sets = [];
@@ -3564,18 +3565,16 @@ router.put('/current-model', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE
       return res.status(400).json({ error: '该供应商已禁用，无法选择此模型' });
     }
 
-    // 验证用户的 Team 有权使用该模型
-    const userResult = await pool.query('SELECT team_id FROM users WHERE id = $1', [req.session.user.id]);
-    const teamId = userResult.rows[0]?.team_id;
-
-    if (teamId) {
-      const tmCheck = await pool.query(
-        'SELECT 1 FROM team_models WHERE team_id = $1 AND model_id = $2 AND enabled = TRUE',
-        [teamId, modelId]
-      );
-      if (tmCheck.rows.length === 0) {
-        return res.status(403).json({ error: '您的 Team 无权使用该模型' });
-      }
+    // user_teams 是 Team 权限唯一来源；users.team_id 仅作兼容投影。
+    const tmCheck = await pool.query(
+      `SELECT 1 FROM user_teams ut
+       JOIN team_models tm ON tm.team_id = ut.team_id
+       WHERE ut.user_id = $1 AND tm.model_id = $2 AND tm.enabled = TRUE
+       LIMIT 1`,
+      [req.session.user.id, modelId]
+    );
+    if (tmCheck.rows.length === 0) {
+      return res.status(403).json({ error: '您所属的 Team 无权使用该模型' });
     }
 
     // 更新所有该用户的 API Key 的 current_model_id

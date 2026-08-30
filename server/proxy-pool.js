@@ -339,7 +339,8 @@ function selectBestProxy(proxies, providerId, affinityKey = null) {
 
   // 如果有可用的，随机选择一个
   if (available.length > 0) {
-    const selected = available[Math.floor(Math.random() * available.length)];
+    const { selectHealthyWeighted } = require('./utils/provider-selector');
+    const selected = selectHealthyWeighted(available.map(item => ({ ...item, weight: item.proxy.weight || 1 })), `proxy:${providerId}`);
     if (affinityKey) rememberAffinity(affinityRouteKey(providerId, affinityKey), selected.index);
     return selected.proxy;
   }
