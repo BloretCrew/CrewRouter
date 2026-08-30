@@ -466,6 +466,7 @@ async function deductPoints(userId, points, existingClient = null, quota = {}) {
       }
     }
     const normalizedPoints = moneyToString(points);
+    points = moneyToApiNumber(normalizedPoints);
     if (compareMoney(currentPoints, normalizedPoints) < 0) {
       if (!existingClient) await client.query('ROLLBACK');
       return { ok: false, remaining: moneyToApiNumber(subtractMoney(normalizedPoints, currentPoints)), error: '积分不足' };
@@ -476,7 +477,7 @@ async function deductPoints(userId, points, existingClient = null, quota = {}) {
     );
     if (!existingClient) await client.query('COMMIT');
     // 返回锁内最终实扣值，供调用方回填 usage_records.cost
-    return { ok: true, pointsToDeduct: moneyToApiNumber(normalizedPoints) };
+    return { ok: true, pointsToDeduct: points };
   } catch (err) {
     if (!existingClient) {
       try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
