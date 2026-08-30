@@ -2739,6 +2739,8 @@ async function runPendingMigrations() {
     ensureModelsThinkingFields,
     ensureModelsForwardReasoningEffort,
     ensureModelsUpstreamIdColumn,
+    // user_groups 需先于 ensureAuthModeTables（auth_invites.group_id 外键引用）
+    ensureUserGroupsTables,
     ensureAuthModeTables,
     ensureAuthEnhancements,
     ensureEmailVerification,
@@ -2762,7 +2764,6 @@ async function runPendingMigrations() {
     ensureApiKeyMembersTable,
     ensureOperationLogsTable,
     ensureKeyTagsTables,
-    ensureUserGroupsTables,
     ensureReservedResources,
     ensureProviderQuotaScript,
     ensureProviderGrokOAuthColumns,

@@ -157,6 +157,7 @@ router.get('/api-keys', requireAuth, async (req, res) => {
         ak.id,
         ak.name,
         ak.key_prefix,
+        ak.key_value,
         ak.custom_model_name,
         ak.current_model_id,
         ak.is_system,
@@ -348,8 +349,8 @@ router.post('/api-keys', requireAuth, auditMiddleware(ACTIONS.API_KEY_CREATE, {
     }
 
     const result = await pool.query(
-      'INSERT INTO api_keys (user_id, key_hash, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled) VALUES ($1, $2, $3, $4, $5, $6, TRUE) RETURNING id, name, key_prefix, custom_model_name, created_at, expires_at',
-      [req.session.user.id, keyHash, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
+      'INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, expires_at, custom_model_name, quota_warning_enabled) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE) RETURNING id, name, key_prefix, key_value, custom_model_name, created_at, expires_at',
+      [req.session.user.id, keyHash, rawKey, keyPrefix, name || 'API Key', expiresAt, customModelName || 'claude-fable-5']
     );
 
     // 插件 apikey:created 钩子：创建后回调（异步、错误隔离）
@@ -1233,14 +1234,16 @@ router.get('/api-keys/:id/config', requireAuth, async (req, res) => {
     const access = await getApiKeyAccess(pool, req.params.id, req.session.user.id);
     if (!access) return res.status(404).json({ error: '密钥不存在' });
     const keyResult = await pool.query(
-      'SELECT key_hash, current_model_id FROM api_keys WHERE id = $1',
+      'SELECT key_value, current_model_id FROM api_keys WHERE id = $1',
       [req.params.id]
     );
     if (keyResult.rows.length === 0) {
       return res.status(404).json({ error: '密钥不存在' });
     }
-
-    return res.status(410).json({ error: '旧 API Key 明文已废弃，请重新生成 Key' });
+    const key_value = keyResult.rows[0].key_value;
+    if (!key_value) {
+      return res.status(410).json({ error: '该 Key 无明文记录（哈希化时代的旧 Key），请重新生成 Key' });
+    }
 
     // 构建服务器 URL
     const host = config.app?.host;
