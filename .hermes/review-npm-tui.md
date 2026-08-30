@@ -92,29 +92,29 @@
 
 ## 修复响应
 
-BUG-1：fixed。新增 OAuth access token 临期刷新、原子配置写回和文件锁，并在上报前使用刷新后的 token。
+- **Status: fixed** — BUG-1：新增 OAuth access token 临期刷新、原子配置写回和文件锁，并在上报前使用刷新后的 token。
 
-BUG-2：fixed。status 通过 `ps` 检测实际 watch 命令行，并结合 state 文件陈旧时间区分运行、陈旧和未运行。
+- **Status: fixed** — BUG-2：status 通过 `ps` 检测实际 watch 命令行，并结合 state 文件陈旧时间区分运行、陈旧和未运行。
 
-BUG-3：fixed。Hook 结构逐事件校验，统一支持 OK/WARN/MISSING/ERROR，凭证和服务端状态也纳入统一优先级。
+- **Status: fixed** — BUG-3：Hook 结构逐事件校验，统一支持 OK/WARN/MISSING/ERROR，凭证和服务端状态也纳入统一优先级。
 
-BUG-4：fixed。安装命令使用 shell quoting，状态扫描支持带引号路径、单命令路径并核对所有事件命令一致性。
+- **Status: fixed** — BUG-4：安装命令使用 shell quoting，状态扫描支持带引号路径、单命令路径并核对所有事件命令一致性。
 
-BUG-5：fixed。仅 hook/emit/watch 保持 fail-open；login、test、install、参数错误均返回非零。
+- **Status: fixed** — BUG-5：仅 hook/emit/watch 保持 fail-open；login、test、install、参数错误均返回非零。
 
-BUG-6：fixed。补充完整帮助、命令选项、必填参数、未知参数、重复参数和 `--key=value` 校验。
+- **Status: fixed** — BUG-6：补充完整帮助、命令选项、必填参数、未知参数、重复参数和 `--key=value` 校验。
 
-BUG-7：fixed。detail 文本增加凭证、Authorization、URL 查询参数和敏感命令脱敏，限制文本长度。
+- **Status: fixed** — BUG-7：detail 文本增加凭证、Authorization、URL 查询参数和敏感命令脱敏，限制文本长度。
 
-BUG-8：fixed。status/tui 异步执行 1.5 秒服务端只读检查，区分配置缺失、不可达/超时和可达。
+- **Status: fixed** — BUG-8：status/tui 异步执行 1.5 秒服务端只读检查，区分配置缺失、不可达/超时和可达。
 
-BUG-9：fixed。login 严格限制回调路径和 GET 方法，使用 finally 清理 timer/server，token 请求设置 10 秒超时。
+- **Status: fixed** — BUG-9：login 严格限制回调路径和 GET 方法，使用 finally 清理 timer/server，token 请求设置 10 秒超时。
 
-BUG-10：fixed。补充 Node 测试覆盖脱敏、凭证状态、路径解析、Hook 缺失和 watch 检测；完整验收命令已重新运行。
+- **Status: fixed** — BUG-10：补充 Node 测试覆盖脱敏、凭证状态、路径解析、Hook 缺失和 watch 检测；完整验收命令已重新运行。
 
-BUG-11：fixed。非 TTY tui 一次性输出并退出，只有 TTY 才进入常驻模式。
+- **Status: fixed** — BUG-11：非 TTY tui 一次性输出并退出，只有 TTY 才进入常驻模式。
 
-BUG-12：fixed。清理未使用导入并修复登录 URL 换行和帮助文案。
+- **Status: fixed** — BUG-12：清理未使用导入并修复登录 URL 换行和帮助文案。
 
 ## 已验证项目
 
