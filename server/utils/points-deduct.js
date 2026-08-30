@@ -4,6 +4,7 @@
 
 const { pool } = require('../models/database');
 const { getUserQuotaBuffer } = require('./quota-data');
+const { moneyToApiNumber, moneyToString } = require('./money');
 
 /**
  * 检查用户组额度规则
@@ -77,12 +78,12 @@ async function calculatePointsToDeduct(
   { userId, groupId, weightedTokens, pointsCost },
   deps = {}
 ) {
-  if (!groupId) return pointsCost;
+  if (!groupId) return moneyToApiNumber(moneyToString(pointsCost));
   const check = deps.checkQuotaRules || checkQuotaRules;
   const rules = await check(userId, groupId, deps.client);
-  if (!rules) return pointsCost;
+  if (!rules) return moneyToApiNumber(moneyToString(pointsCost));
   if (rules.some(r => !r.exceeded)) return 0;
-  return Math.max(0, (weightedTokens || 0) / 1000000);
+  return moneyToApiNumber(moneyToString(Math.max(0, (weightedTokens || 0) / 1000000)));
 }
 
 module.exports = {

@@ -1,5 +1,12 @@
 const { pool } = require('../models/database');
 const Logger = require('../logger');
+const {
+  addMoney,
+  compareMoney,
+  moneyToApiNumber,
+  moneyToString,
+  subtractMoney,
+} = require('./money');
 
 // 延迟加载避免循环依赖
 let invalidateUserApiKeyCache = null;
@@ -80,21 +87,21 @@ async function executeDeduct(q, userId, cost) {
   );
   if (result.rows.length === 0) return { ok: false, error: '用户不存在' };
 
-  let remaining = cost;
-  let regularBalance = parseFloat(result.rows[0].balance || 0);
+  let remaining = moneyToString(cost);
+  const regularBalance = moneyToString(result.rows[0].balance || 0);
 
   // 先扣非退款余额
-  const regularDeduct = Math.min(regularBalance, remaining);
-  if (regularDeduct > 0) {
+  const regularDeduct = compareMoney(regularBalance, remaining) < 0 ? regularBalance : remaining;
+  if (compareMoney(regularDeduct, 0) > 0) {
     await q.query(
       'UPDATE users SET balance = balance - $1 WHERE id = $2',
       [regularDeduct, userId]
     );
-    remaining -= regularDeduct;
+    remaining = subtractMoney(remaining, regularDeduct);
   }
 
   // 再扣兑换码余额（退款余额），按 fee_rate 降序
-  if (remaining > 0) {
+  if (compareMoney(remaining, 0) > 0) {
     const codeBalances = await q.query(
       `SELECT id, amount FROM user_code_balances
        WHERE user_id = $1 AND amount > 0
@@ -102,14 +109,14 @@ async function executeDeduct(q, userId, cost) {
       [userId]
     );
     for (const row of codeBalances.rows) {
-      if (remaining <= 0) break;
-      const available = parseFloat(row.amount);
-      const deduct = Math.min(available, remaining);
+      if (compareMoney(remaining, 0) <= 0) break;
+      const available = moneyToString(row.amount);
+      const deduct = compareMoney(available, remaining) < 0 ? available : remaining;
       await q.query(
         'UPDATE user_code_balances SET amount = amount - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
         [deduct, row.id]
       );
-      remaining -= deduct;
+      remaining = subtractMoney(remaining, deduct);
     }
 
     // 同步 users.refund_balance
@@ -119,12 +126,12 @@ async function executeDeduct(q, userId, cost) {
     );
     await q.query(
       'UPDATE users SET refund_balance = $1 WHERE id = $2',
-      [parseFloat(newRefund.rows[0].total), userId]
+      [moneyToString(newRefund.rows[0].total), userId]
     );
   }
 
-  if (remaining > 0) {
-    return { ok: false, remaining, error: '余额不足' };
+  if (compareMoney(remaining, 0) > 0) {
+    return { ok: false, remaining: moneyToApiNumber(remaining), error: '余额不足' };
   }
 
   await q.query(
@@ -257,35 +264,36 @@ async function preConsumeBalance(userId, estimatedCost) {
     }
 
     const row = result.rows[0];
-    const totalBalance = parseFloat(row.balance || 0) + parseFloat(row.refund_balance || 0);
-    if (totalBalance < estimatedCost) {
+    const estimated = moneyToString(estimatedCost);
+    const totalBalance = addMoney(row.balance || 0, row.refund_balance || 0);
+    if (compareMoney(totalBalance, estimated) < 0) {
       await client.query('ROLLBACK');
       return { ok: false, error: '余额不足' };
     }
 
-    let remaining = estimatedCost;
-    let regularBalance = parseFloat(row.balance || 0);
+    let remaining = estimated;
+    const regularBalance = moneyToString(row.balance || 0);
 
-    const regularDeduct = Math.min(regularBalance, remaining);
-    if (regularDeduct > 0) {
+    const regularDeduct = compareMoney(regularBalance, remaining) < 0 ? regularBalance : remaining;
+    if (compareMoney(regularDeduct, 0) > 0) {
       await client.query('UPDATE users SET balance = balance - $1 WHERE id = $2', [regularDeduct, userId]);
-      remaining -= regularDeduct;
+      remaining = subtractMoney(remaining, regularDeduct);
     }
 
-    if (remaining > 0) {
+    if (compareMoney(remaining, 0) > 0) {
       const codeBalances = await client.query(
         `SELECT id, amount FROM user_code_balances WHERE user_id = $1 AND amount > 0 ORDER BY fee_rate DESC`,
         [userId]
       );
       for (const codeRow of codeBalances.rows) {
-        if (remaining <= 0) break;
-        const available = parseFloat(codeRow.amount);
-        const deduct = Math.min(available, remaining);
+        if (compareMoney(remaining, 0) <= 0) break;
+        const available = moneyToString(codeRow.amount);
+        const deduct = compareMoney(available, remaining) < 0 ? available : remaining;
         await client.query(
           'UPDATE user_code_balances SET amount = amount - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
           [deduct, codeRow.id]
         );
-        remaining -= deduct;
+        remaining = subtractMoney(remaining, deduct);
       }
       const newRefund = await client.query(
         'SELECT COALESCE(SUM(amount), 0) AS total FROM user_code_balances WHERE user_id = $1',
@@ -293,7 +301,7 @@ async function preConsumeBalance(userId, estimatedCost) {
       );
       await client.query(
         'UPDATE users SET refund_balance = $1 WHERE id = $2',
-        [parseFloat(newRefund.rows[0].total), userId]
+        [moneyToString(newRefund.rows[0].total), userId]
       );
     }
 
@@ -302,7 +310,7 @@ async function preConsumeBalance(userId, estimatedCost) {
     await client.query(
       `INSERT INTO balance_preconsumes (id, user_id, amount, status, created_at)
        VALUES ($1, $2, $3, 'pending', CURRENT_TIMESTAMP)`,
-      [preConsumeId, userId, estimatedCost]
+      [preConsumeId, userId, estimated]
     );
 
     await client.query('COMMIT');
@@ -343,18 +351,20 @@ async function settleBalance(userId, preConsumeId, actualCost, estimatedCost) {
       }
     }
 
-    const delta = actualCost - estimatedCost;
+    const actual = moneyToString(actualCost);
+    const estimated = moneyToString(estimatedCost);
+    const delta = subtractMoney(actual, estimated);
 
-    if (delta > 0) {
+    if (compareMoney(delta, 0) > 0) {
       // 实际费用更高：补扣差额
       const deductResult = await executeDeduct(client, userId, delta);
       if (!deductResult.ok) {
         await client.query('ROLLBACK');
         return { ok: false, error: deductResult.error };
       }
-    } else if (delta < 0) {
+    } else if (compareMoney(delta, 0) < 0) {
       // 实际费用更低：退还差额
-      const refundAmount = Math.abs(delta);
+      const refundAmount = subtractMoney('0', delta);
       await client.query(
         'UPDATE users SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
         [refundAmount, userId]
@@ -362,7 +372,7 @@ async function settleBalance(userId, preConsumeId, actualCost, estimatedCost) {
     }
 
     await client.query('COMMIT');
-    return { ok: true, delta };
+    return { ok: true, delta: moneyToApiNumber(delta) };
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
     Logger.error(`[settleBalance] 错误: userId=${userId}, error=${err.message}`);
@@ -380,7 +390,10 @@ async function settleBalance(userId, preConsumeId, actualCost, estimatedCost) {
  * @returns {Promise<{ok: boolean, error?: string}>}
  */
 async function refundBalance(userId, amount) {
-  if (!Number.isFinite(amount) || amount <= 0) {
+  const normalizedAmount = (() => {
+    try { return moneyToString(amount); } catch (_) { return null; }
+  })();
+  if (normalizedAmount === null || compareMoney(normalizedAmount, 0) <= 0) {
     return { ok: false, error: '退款金额必须是大于 0 的有限数字' };
   }
   const client = await pool.connect();
@@ -398,7 +411,7 @@ async function refundBalance(userId, amount) {
 
     await client.query(
       'UPDATE users SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [amount, userId]
+      [normalizedAmount, userId]
     );
 
     await client.query('COMMIT');
@@ -420,9 +433,9 @@ async function refundBalance(userId, amount) {
  * @returns {Promise<{ok: boolean, remaining?: number, error?: string}>}
  */
 async function deductPoints(userId, points, existingClient = null, quota = {}) {
-  const requestedPoints = points;
+  const requestedPoints = moneyToString(points);
   const hasQuotaDecision = quota.groupId != null || quota.weightedTokens != null || quota.pointsCost != null;
-  if (points <= 0 && !hasQuotaDecision) return { ok: true, pointsToDeduct: 0 };
+  if (compareMoney(requestedPoints, 0) <= 0 && !hasQuotaDecision) return { ok: true, pointsToDeduct: 0 };
   const client = existingClient || await pool.connect();
   try {
     if (!existingClient) await client.query('BEGIN');
@@ -434,7 +447,7 @@ async function deductPoints(userId, points, existingClient = null, quota = {}) {
       if (!existingClient) await client.query('ROLLBACK');
       return { ok: false, error: '用户不存在' };
     }
-    let currentPoints = parseFloat(result.rows[0].balance || 0);
+    let currentPoints = moneyToString(result.rows[0].balance || 0);
     if (hasQuotaDecision) {
       const { calculatePointsToDeduct } = require('./points-deduct');
       // 用户行已 FOR UPDATE；在锁内查询 quota，避免并发请求依据旧额度重复消费。
@@ -445,24 +458,25 @@ async function deductPoints(userId, points, existingClient = null, quota = {}) {
         pointsCost: quota.pointsCost == null ? requestedPoints : quota.pointsCost
       }, { client });
       const refreshed = await client.query('SELECT balance FROM users WHERE id = $1 FOR UPDATE', [userId]);
-      currentPoints = parseFloat(refreshed.rows[0]?.balance || 0);
+      currentPoints = moneyToString(refreshed.rows[0]?.balance || 0);
 
-      if (points <= 0) {
+      if (compareMoney(points, 0) <= 0) {
         if (!existingClient) await client.query('COMMIT');
         return { ok: true, pointsToDeduct: 0 };
       }
     }
-    if (currentPoints < points) {
+    const normalizedPoints = moneyToString(points);
+    if (compareMoney(currentPoints, normalizedPoints) < 0) {
       if (!existingClient) await client.query('ROLLBACK');
-      return { ok: false, remaining: points - currentPoints, error: '积分不足' };
+      return { ok: false, remaining: moneyToApiNumber(subtractMoney(normalizedPoints, currentPoints)), error: '积分不足' };
     }
     await client.query(
       'UPDATE users SET balance = balance - $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [points, userId]
+      [normalizedPoints, userId]
     );
     if (!existingClient) await client.query('COMMIT');
     // 返回锁内最终实扣值，供调用方回填 usage_records.cost
-    return { ok: true, pointsToDeduct: points };
+    return { ok: true, pointsToDeduct: moneyToApiNumber(normalizedPoints) };
   } catch (err) {
     if (!existingClient) {
       try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }

@@ -20,6 +20,9 @@ assert.strictEqual(subtractMoney('1000000000000.000001', '0.000001'), '100000000
 assert.strictEqual(addMoney('1.234567', '0.100001'), '1.334568');
 assert.strictEqual(compareMoney('0.300000', 0.1 + 0.2), 0);
 assert.strictEqual(moneyToApiNumber('0.100000'), 0.1);
+assert.strictEqual(addMoney('0.1', '0.000001'), '0.100001');
+assert.strictEqual(subtractMoney('100000000000000000000000.000000', '0.000001'), '99999999999999999999999.999999');
+assert.strictEqual(compareMoney('0.000001', 0.000001), 0);
 
 // 退款：预扣 0.3，实际 0.1，应精确退回 0.2。
 const refund = subtractMoney('0.300000', '0.100000');
