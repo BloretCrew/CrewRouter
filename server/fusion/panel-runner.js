@@ -11,7 +11,7 @@ const Logger = require('../logger');
 
 // 并行执行 Panel 模型
 async function runPanels(fusionConfig, messages, options = {}) {
-  const { temperature, max_tokens, callModel, tools, tool_choice, response_format } = options;
+  const { temperature, max_tokens, callModel, tools, tool_choice, response_format, signal } = options;
   const panelModels = fusionConfig.panel_models || [];
   const maxPanelCount = fusionConfig.max_panel_count || 8;
 
@@ -26,12 +26,14 @@ async function runPanels(fusionConfig, messages, options = {}) {
     try {
       Logger.info(`[Panel] 调用模型 ${index + 1}/${modelsToRun.length}: ${modelId}`);
 
+      if (signal?.aborted) throw new Error('Client disconnected');
       const result = await callModel(modelId, messages, {
         temperature,
         max_tokens,
         tools,
         tool_choice,
-        response_format
+        response_format,
+        signal
       });
 
       const latency = Date.now() - panelStart;

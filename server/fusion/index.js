@@ -12,8 +12,10 @@ const { runJudge } = require('./judge-analyzer');
 const { synthesize } = require('./synthesizer');
 const Logger = require('../logger');
 const { decryptSecret } = require('../utils/secret-crypto');
+const { buildAuthHeaders } = require('../utils/request-policy');
 const { pool } = require('../models/database');
 const { upstreamUrl } = require('../utils/url-validator');
+const { combineAbortSignals } = require('../utils/request-lifecycle');
 const proxyPool = require('../proxy-pool');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
 const {
@@ -107,7 +109,7 @@ async function callModel(modelId, messages, options = {}) {
   }
 
   const upstreamModelId = modelConfig.upstream_model_id || modelConfig.id;
-  const { temperature = 0.7, max_tokens = 4096, tools, tool_choice, response_format } = options;
+  const { temperature = 0.7, max_tokens = 4096, tools, tool_choice, response_format, signal } = options;
 
   // 构建请求体
   const requestBody = {
@@ -131,9 +133,9 @@ async function callModel(modelId, messages, options = {}) {
     const providerWithKey = { ...provider, api_key: keys[ki] };
     try {
       if (provider.format === 'anthropic') {
-        return await callAnthropicModel(baseUrl, providerWithKey, requestBody, options.requestContext);
+        return await callAnthropicModel(baseUrl, providerWithKey, requestBody, options.requestContext, signal);
       }
-      return await callOpenAIModel(baseUrl, providerWithKey, requestBody, options.requestContext);
+      return await callOpenAIModel(baseUrl, providerWithKey, requestBody, options.requestContext, signal);
     } catch (err) {
       if (err.code === 'fusion_upstream_limit') throw err;
       lastErr = err;
@@ -147,11 +149,11 @@ async function callModel(modelId, messages, options = {}) {
 }
 
 // 调用 OpenAI 格式模型
-async function callOpenAIModel(baseUrl, provider, body, requestContext = null) {
+async function callOpenAIModel(baseUrl, provider, body, requestContext = null, signal = null) {
   const url = `${upstreamUrl(baseUrl, '/chat/completions')}`;
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${provider.api_key || ''}`
+    ...buildAuthHeaders('openai', provider.api_key)
   };
 
   Logger.info(`[Fusion] OpenAI 调用开始: url=${url}, model=${body.model}, stream=false`);
@@ -162,7 +164,7 @@ async function callOpenAIModel(baseUrl, provider, body, requestContext = null) {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(120000), // 2 分钟超时
+    signal: combineAbortSignals(signal, AbortSignal.timeout(120000)), // 2 分钟超时
     agent: proxyInfo?.agent,
     requestContext
   });
@@ -189,12 +191,11 @@ async function callOpenAIModel(baseUrl, provider, body, requestContext = null) {
 }
 
 // 调用 Anthropic 格式模型
-async function callAnthropicModel(baseUrl, provider, body, requestContext = null) {
+async function callAnthropicModel(baseUrl, provider, body, requestContext = null, signal = null) {
   const url = `${upstreamUrl(baseUrl, '/messages')}`;
   const headers = {
     'Content-Type': 'application/json',
-    'anthropic-version': '2023-06-01',
-    'x-api-key': provider.api_key || ''
+    ...buildAuthHeaders('anthropic', provider.api_key)
   };
 
   // 转换 OpenAI 格式到 Anthropic 格式
@@ -243,7 +244,7 @@ async function callAnthropicModel(baseUrl, provider, body, requestContext = null
     method: 'POST',
     headers,
     body: JSON.stringify(anthropicBody),
-    signal: AbortSignal.timeout(120000),
+    signal: combineAbortSignals(signal, AbortSignal.timeout(120000)),
     agent: proxyInfo?.agent,
     requestContext
   });
@@ -351,7 +352,18 @@ async function processFusion(body, req, options = {}) {
   const { messages, temperature, max_tokens, fusion_preset, tools, tool_choice, response_format } = body;
   const { res, format = 'openai' } = options;
   const requestContext = options.requestContext || { upstreamAttempts: 0 };
-  const budgetedCallModel = (modelId, messages, callOptions = {}) => callModel(modelId, messages, { ...callOptions, requestContext });
+  const signal = options.signal || requestContext.signal;
+  const throwIfAborted = () => {
+    if (signal?.aborted) {
+      const err = new Error('Client disconnected');
+      err.name = 'AbortError';
+      throw err;
+    }
+  };
+  const budgetedCallModel = (modelId, messages, callOptions = {}) => {
+    throwIfAborted();
+    return callModel(modelId, messages, { ...callOptions, requestContext, signal });
+  };
 
   Logger.info(`[Fusion] 开始处理: preset=${fusion_preset || 'default'}, messages=${messages?.length}, format=${format}, stream=${options.stream}, hasRes=${!!res}`);
 
@@ -453,9 +465,11 @@ async function processFusion(body, req, options = {}) {
     tools,
     tool_choice,
     response_format,
-    callModel: budgetedCallModel
+    callModel: budgetedCallModel,
+    signal
   });
 
+  throwIfAborted();
   const panelSuccess = panelResults.filter(r => r.success).length;
   Logger.info(`[Fusion] Panel 完成: ${panelSuccess}/${panelResults.length} 成功`);
 
@@ -472,9 +486,11 @@ async function processFusion(body, req, options = {}) {
     sendFusionStatus(res, `🔍 **正在使用 ${fusionConfig.judge_model_id} 进行 Judge 分析...**\n`, format);
   }
 
+  throwIfAborted();
   const judgeResult = await runJudge(fusionConfig, messages, panelResults, {
     callModel: budgetedCallModel
   });
+  throwIfAborted();
 
   Logger.info(`[Fusion] Judge 完成: 共识=${judgeResult.consensus?.length || 0}, 矛盾=${judgeResult.contradictions?.length || 0}, 盲点=${judgeResult.blind_spots?.length || 0}`);
 
@@ -501,7 +517,8 @@ async function processFusion(body, req, options = {}) {
     tools,
     tool_choice,
     response_format,
-    synthesisPromptEnabled
+    synthesisPromptEnabled,
+    signal
   });
 
   const totalLatency = Date.now() - startTime;

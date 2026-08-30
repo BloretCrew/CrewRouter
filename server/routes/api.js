@@ -17,6 +17,9 @@ router.use((req, res, next) => {
     }).catch(() => {});
   });
   req._traceStartedAt = Date.now();
+  req._requestLifecycle = createRequestLifecycle(req, res);
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle.signal };
+  res.once('finish', () => req._requestLifecycle.dispose());
   next();
 });
 const { pool } = require('../models/database');
@@ -83,6 +86,7 @@ const crypto = require('crypto');
 const { decryptSecret } = require('../utils/secret-crypto');
 const { validateBeforeUpstreamRewrite } = require('../utils/before-upstream-policy');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
+const { createRequestLifecycle, combineAbortSignals } = require('../utils/request-lifecycle');
 
 // 非流式：上游整段响应（headers+body）超时。30s 对免费/慢模型过短，易误杀。
 const UPSTREAM_TIMEOUT = 180000; // 3 分钟
@@ -156,6 +160,14 @@ function buildUpstreamExceptionError(error, format = 'openai') {
  * @returns {Promise<{response: object, currentProxyInfo: object|null}>}
  */
 async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, maxRetries, logPrefix, hookCtx = null) {
+  const signal = combineAbortSignals(hookCtx?.signal, hookCtx?.requestContext?.signal, provider?._requestLifecycle?.signal);
+  const throwIfAborted = () => {
+    if (signal?.aborted) {
+      const err = new Error('Client disconnected');
+      err.name = 'AbortError';
+      throw err;
+    }
+  };
   let response;
   const affinityKey = hookCtx?.affinityKey || null;
   let proxyInfo = currentProxyInfo;
@@ -217,8 +229,10 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
   };
 
   for (let retry = 0; retry < attempts; retry++) {
+    throwIfAborted();
     consumeAttempt();
     const fetchOpts = applyUpstreamOverride(makeFetchOpts(proxyInfo));
+    if (signal) fetchOpts.signal = combineAbortSignals(fetchOpts.signal, signal);
 
     try {
       response = await proxyPool.proxyFetch(fetchOpts.url, { ...fetchOpts, requestContext });
@@ -2456,7 +2470,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 router.post('/chat/completions', oauthBearer, handleChatCompletion);
 
 async function handleChatCompletion(req, res) {
-  req._upstreamAttemptContext = { upstreamAttempts: 0 };
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -2845,6 +2859,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
         tool_choice,
         response_format,
         requestContext: req._upstreamAttemptContext,
+        signal: req._requestLifecycle?.signal,
         apiKeyFusionConfig: {
           panel_models: req.apiUser.fusionPanelModels || [],
           judge_model_id: req.apiUser.fusionJudgeModelId || '',
@@ -3091,7 +3106,7 @@ router.get('/models', oauthBearer, async (req, res) => {
 router.post('/messages', oauthBearer, handleAnthropicMessage);
 
 async function handleAnthropicMessage(req, res) {
-  req._upstreamAttemptContext = { upstreamAttempts: 0 };
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -5281,7 +5296,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
 router.post('/responses', oauthBearer, handleResponses);
 
 async function handleResponses(req, res) {
-  req._upstreamAttemptContext = { upstreamAttempts: 0 };
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 

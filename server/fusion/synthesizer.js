@@ -8,6 +8,7 @@
  */
 
 const Logger = require('../logger');
+const { buildAuthHeaders } = require('../utils/request-policy');
 const { upstreamUrl } = require('../utils/url-validator');
 const {
   ensureChatCompletionChunk,
@@ -240,7 +241,7 @@ async function streamOpenAISynthesis(baseUrl, provider, model, messages, res, op
   const url = `${upstreamUrl(baseUrl, '/chat/completions')}`;
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${provider.api_key || ''}`
+    ...buildAuthHeaders('openai', provider.api_key)
   };
 
   const body = {
@@ -351,7 +352,7 @@ async function streamOpenAIToAnthropicSynthesis(baseUrl, provider, model, messag
   const url = `${upstreamUrl(baseUrl, '/chat/completions')}`;
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${provider.api_key || ''}`
+    ...buildAuthHeaders('openai', provider.api_key)
   };
 
   const body = {
