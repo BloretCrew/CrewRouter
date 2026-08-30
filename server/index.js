@@ -2298,8 +2298,9 @@ const app = express();
 // 信任反向代理（Nginx/Cloudflare等）
 app.set('trust proxy', 1);
 
-// 网关先执行 1MB 流式限制，再由全局 50MB parser 解析其他请求。
-const GATEWAY_BODY_LIMIT = 1024 * 1024;
+// 网关先执行请求体限制，再由全局 50MB parser 解析其他请求。
+// 编码工具（Claude Code/Codex 等）长上下文请求常达数 MB，限制必须与全局一致，过低会误杀正常请求。
+const GATEWAY_BODY_LIMIT = '50mb';
 const gatewayBodyLimit = express.json({ limit: GATEWAY_BODY_LIMIT });
 app.use((req, res, next) => {
   const pathName = req.path || '';
@@ -2312,7 +2313,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') {
-    return res.status(413).json({ error: { message: 'Request body exceeds the 1MB limit', type: 'invalid_request_error', code: 'request_too_large' } });
+    return res.status(413).json({ error: { message: 'Request body exceeds the 50MB limit', type: 'invalid_request_error', code: 'request_too_large' } });
   }
   return next(err);
 });
