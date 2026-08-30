@@ -4,7 +4,7 @@
   "description": "CrewRouter client event reporter and Grok hook helper",
   "main": "src/index.js",
   "bin": { "cr-report": "bin/cr-report.js" },
-  "files": ["bin", "src", "README.md", "LICENSE"],
+  "files": ["bin", "src", "README.md", "test"],
   "scripts": { "test": "node --test test/*.test.js" },
   "engines": { "node": ">=16" },
   "license": "MIT"
