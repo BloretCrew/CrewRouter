@@ -119,26 +119,8 @@ class BaseProviderAdapter {
    * @returns {object} 认证头对象
    */
   getAuthHeaders() {
-    const format = this.getApiFormat();
-    const apiKey = this.provider.api_key;
-
-    switch (format) {
-      case 'anthropic':
-        return {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
-        };
-      case 'gemini':
-        return {
-          'x-goog-api-key': apiKey
-        };
-      case 'openai':
-      case 'responses':
-      default:
-        return {
-          'Authorization': `Bearer ${apiKey}`
-        };
-    }
+    const { buildAuthHeaders } = require('../utils/request-policy');
+    return buildAuthHeaders(this.getApiFormat(), this.provider.api_key);
   }
 
   /**

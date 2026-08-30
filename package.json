@@ -23,7 +23,10 @@
     "docker:up:saas": "docker-compose -f docker-compose.saas.yml up -d",
     "test:money-precision": "node server/scripts/test-money-precision.js",
     "test:task5a-static": "node server/scripts/test-task5a-static.js",
+    "test:request-policy": "node server/scripts/test-request-policy.js",
+    "test:config-center": "node server/scripts/test-config-center.js",
     "test:email-toctou-static": "node server/scripts/test-email-toctou-static.js",
+    "test:outbox": "node server/scripts/test-outbox.js",
     "money-precision:migrate": "node scripts/migrate-money-precision.js"
   },
   "dependencies": {
