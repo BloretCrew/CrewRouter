@@ -10,6 +10,9 @@ assert.strictEqual(identity.normalizeEmail('  User@Example.COM '), 'user@example
 assert.strictEqual(identity.normalizeEmail(undefined), undefined);
 assert.strictEqual(identity.normalizeEmail(null), null);
 assert.strictEqual(identity.normalizeEmail('   '), null);
+for (const value of [123, true, {}, [], 10n]) {
+  assert.throws(() => identity.normalizeEmail(value), error => error.code === 'invalid_email' && error instanceof TypeError);
+}
 assert.throws(() => identity.normalizeEmail('invalid'), error => error.code === 'invalid_email');
 assert.strictEqual(identity.isUniqueViolation({ code: '23505' }), true);
 assert.strictEqual(identity.isUniqueViolation({ code: '23503' }), false);
@@ -35,7 +38,15 @@ const migration = read('index.js');
 for (const source of [init, migration]) {
   assert.match(source, /CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique/);
   assert.match(source, /ON users \(LOWER\(email\)\) WHERE email IS NOT NULL/);
+  assert.match(source, /CREATE UNIQUE INDEX IF NOT EXISTS users_github_id_unique/);
+  assert.match(source, /ON users \(github_id\) WHERE github_id IS NOT NULL/);
+  assert.match(source, /CREATE UNIQUE INDEX IF NOT EXISTS users_feishu_open_id_unique/);
+  assert.match(source, /ON users \(feishu_open_id\) WHERE feishu_open_id IS NOT NULL/);
 }
+assert.match(init, /LOWER\(BTRIM\(email\)\)[\s\S]*?ROW_NUMBER\(\) OVER \(PARTITION BY LOWER\(BTRIM\(email\)\) ORDER BY id\)/);
+assert.match(init, /SET email = LOWER\(BTRIM\(email\)\)/);
+assert.match(init, /SET email = NULL WHERE email IS NOT NULL AND BTRIM\(email\) = ''/);
+assert.ok(init.indexOf('LOWER(BTRIM(email))') < init.indexOf('users_email_lower_unique'), 'init-db must clean and normalize historical emails before creating the unique index');
 const passport = read('routes/passport-auth.js');
 const feishu = read('routes/feishu.js');
 assert.ok(!/emailCheck|SELECT 1 FROM users WHERE LOWER\(email\)/.test(passport), 'Passport must not pre-check email before INSERT');

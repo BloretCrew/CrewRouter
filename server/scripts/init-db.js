@@ -87,6 +87,8 @@ async function initDatabase() {
       { name: 'group_id', type: 'INTEGER' },
       { name: 'team_id', type: 'INTEGER' },
       { name: 'refund_balance', type: 'DECIMAL(10, 4) DEFAULT 0' },
+      { name: 'github_id', type: 'VARCHAR(255)' },
+      { name: 'feishu_open_id', type: 'VARCHAR(255)' },
       { name: 'api_signature_enabled', type: 'BOOLEAN DEFAULT FALSE' },
       { name: 'api_signature_template', type: "TEXT DEFAULT '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}'" },
     ];
@@ -115,6 +117,29 @@ async function initDatabase() {
     // 注意：不要再给无密码用户批量写入默认密码 123456。
     // 飞书注册用户应保持 password_hash 为空，登录后强制走 /set-password。
 
+    // 先按 trim/lower 语义清理历史邮箱重复值，再规范化保留值；保留最早创建的账号。
+    await client.query(`
+      WITH ranked AS (
+        SELECT id, LOWER(BTRIM(email)) AS normalized_email,
+               ROW_NUMBER() OVER (PARTITION BY LOWER(BTRIM(email)) ORDER BY id) AS row_number
+        FROM users
+        WHERE email IS NOT NULL AND BTRIM(email) <> ''
+      )
+      UPDATE users u SET email = NULL
+      FROM ranked r
+      WHERE u.id = r.id AND r.row_number > 1
+    `);
+    await client.query(`
+      UPDATE users
+      SET email = LOWER(BTRIM(email))
+      WHERE email IS NOT NULL AND BTRIM(email) <> ''
+    `);
+    await client.query(`UPDATE users SET email = NULL WHERE email IS NOT NULL AND BTRIM(email) = ''`);
+
+    // 第三方身份索引允许 NULL/空值，但对有效身份值提供数据库级并发唯一性。
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_github_id_unique ON users (github_id) WHERE github_id IS NOT NULL`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_feishu_open_id_unique ON users (feishu_open_id) WHERE feishu_open_id IS NOT NULL`);
+
     // 兼容旧表：确保 email 列有 UNIQUE 约束
     const emailUniqueCheck = await client.query(`
       SELECT tc.constraint_name
@@ -123,13 +148,6 @@ async function initDatabase() {
       WHERE tc.table_name = 'users' AND kcu.column_name = 'email' AND tc.constraint_type = 'UNIQUE'
     `);
     if (emailUniqueCheck.rows.length === 0) {
-      // 先清理重复的 email（保留第一个）
-      await client.query(`
-        UPDATE users SET email = NULL
-        WHERE id NOT IN (
-          SELECT MIN(id) FROM users WHERE email IS NOT NULL GROUP BY LOWER(email)
-        ) AND email IS NOT NULL
-      `);
       await client.query(`ALTER TABLE users ADD CONSTRAINT users_email_unique UNIQUE (email)`);
       Logger.info('[数据库初始化] 已为 users 表 email 列添加 UNIQUE 约束');
     }

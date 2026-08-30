@@ -472,9 +472,12 @@ async function ensureAuthEnhancements() {
     `);
     if (feishuCol.rows.length === 0) {
       await pool.query(`ALTER TABLE users ADD COLUMN feishu_open_id VARCHAR(255)`);
-      await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_feishu_open_id ON users(feishu_open_id)`);
       Logger.info('[迁移] 已为 users 表添加 feishu_open_id 字段');
     }
+
+    // 第三方身份必须由数据库原子约束保证唯一，避免并发绑定到多个用户。
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_github_id_unique ON users (github_id) WHERE github_id IS NOT NULL`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_feishu_open_id_unique ON users (feishu_open_id) WHERE feishu_open_id IS NOT NULL`);
 
     // 添加 PassKeys 字段
     const passkeysCol = await pool.query(`
