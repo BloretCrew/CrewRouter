@@ -41,6 +41,20 @@ async function rejectsCode(promise, code) {
     }),
     'plugin_model_unauthorized'
   );
+  await rejectsCode(
+    validateBeforeUpstreamRewrite({ ...original, model: 'allowed-model', providerId: 'provider-a' }, {
+      ...original,
+      model: 'unauthorized-model',
+    }),
+    'plugin_model_unauthorized'
+  );
+  await rejectsCode(
+    validateBeforeUpstreamRewrite({ ...original, model: 'allowed-model', providerId: 'provider-a' }, {
+      ...original,
+      providerId: 'provider-b',
+    }),
+    'plugin_provider_unauthorized'
+  );
 
   await rejectsCode(
     validateBeforeUpstreamRewrite(original, { ...original, bodyText: '{not-json' }),
@@ -62,7 +76,7 @@ async function rejectsCode(promise, code) {
     },
   });
   assert.strictEqual(urlChecks, 0);
-  assert.deepStrictEqual(headersOnly.changed, { url: false, headers: true, bodyText: false });
+  assert.deepStrictEqual(headersOnly.changed, { url: false, headers: true, bodyText: false, model: false, provider: false });
   assert.strictEqual(headersOnly.override.bodyText, undefined);
   assert.strictEqual(headersOnly.override.url, undefined);
   assert.strictEqual(headersOnly.override.headers.authorization, 'Bearer provider-secret');

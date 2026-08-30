@@ -182,6 +182,9 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
         url: probe.url,
         headers: probe.headers && typeof probe.headers === 'object' ? { ...probe.headers } : {},
         bodyText: typeof probe.body === 'string' ? probe.body : '',
+        model: hookCtx.model,
+        provider: provider?.id || null,
+        providerId: provider?.id || null,
       };
       const payload = { ...originalPayload, headers: { ...originalPayload.headers } };
       const out = await pluginHooks.apply('gateway:beforeUpstream', payload, {
@@ -190,7 +193,10 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
         requestType: hookCtx.requestType || logPrefix,
       });
       if (out && typeof out === 'object') {
-        const checked = await validateBeforeUpstreamRewrite(originalPayload, out);
+        const checked = await validateBeforeUpstreamRewrite(originalPayload, out, {
+          authorizedModel: hookCtx.model,
+          authorizedProviderId: provider?.id || null,
+        });
         upstreamOverride = checked.override;
       }
     } catch (err) {

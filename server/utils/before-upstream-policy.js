@@ -45,19 +45,34 @@ function sameOrigin(left, right) {
   }
 }
 
+/**
+ * 校验插件对一次上游请求的改写。此处只做安全重查，不触发配额、限流或计费副作用。
+ */
 async function validateBeforeUpstreamRewrite(original, rewritten, options = {}) {
   const result = rewritten && typeof rewritten === 'object' ? rewritten : {};
   const effective = {
     url: Object.prototype.hasOwnProperty.call(result, 'url') ? result.url : original.url,
     headers: Object.prototype.hasOwnProperty.call(result, 'headers') ? result.headers : original.headers,
     bodyText: Object.prototype.hasOwnProperty.call(result, 'bodyText') ? result.bodyText : original.bodyText,
+    model: Object.prototype.hasOwnProperty.call(result, 'model') ? result.model : original.model,
+    provider: Object.prototype.hasOwnProperty.call(result, 'provider') ? result.provider : original.provider,
+    providerId: Object.prototype.hasOwnProperty.call(result, 'providerId') ? result.providerId : original.providerId,
   };
   const override = {};
   const changed = {
     url: effective.url !== original.url,
     headers: !headersEqual(effective.headers, original.headers),
     bodyText: effective.bodyText !== original.bodyText,
+    model: effective.model !== original.model,
+    provider: effective.provider !== original.provider || effective.providerId !== original.providerId,
   };
+
+  if (changed.model || (options.authorizedModel !== undefined && effective.model !== options.authorizedModel)) {
+    throw policyError('beforeUpstream model is not authorized', 'plugin_model_unauthorized');
+  }
+  if (changed.provider || (options.authorizedProviderId !== undefined && effective.providerId !== options.authorizedProviderId)) {
+    throw policyError('beforeUpstream provider is not authorized', 'plugin_provider_unauthorized');
+  }
 
   if (changed.url) {
     if (typeof effective.url !== 'string' || !effective.url) {
@@ -100,7 +115,10 @@ async function validateBeforeUpstreamRewrite(original, rewritten, options = {}) 
       throw policyError('Original upstream body is invalid JSON', 'upstream_body_invalid');
     }
     if (body.model !== originalBody.model) {
-      throw policyError('beforeUpstream cannot change the authorized model', 'plugin_model_unauthorized');
+      throw policyError('beforeUpstream body model is not authorized', 'plugin_model_unauthorized');
+    }
+    if (options.authorizedModel !== undefined && body.model !== options.authorizedModel) {
+      throw policyError('beforeUpstream body model is not authorized', 'plugin_model_unauthorized');
     }
     override.bodyText = effective.bodyText;
   }
