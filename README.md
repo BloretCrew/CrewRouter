@@ -193,13 +193,15 @@ npm start          # 开发可用 npm run dev
 
 ## 星标历史
 
+<a href="https://www.star-history.com/?repos=BloretCrew%2FCrewRouter&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=BloretCrew/CrewRouter&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=BloretCrew/CrewRouter&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=BloretCrew/CrewRouter&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=BloretCrew/CrewRouter&type=date&theme=dark&legend=top-left&sealed_token=gDkqatDM5Ka6TX7FpWQMrcOXfNeET4bgBmkENnA7yEBWsOIy2qQqiWZwxph9Ef7FB14DjI78qHbm8FgyMZbeYnv5aVqd__pUj32lYzFtF-4yZ8kSe4ce9xeKhuzIxfi0UD771HT8j-BywaTEI2IprhWPnprvfdiYImjrIGHQ_IOYdVc2qx9KROMEJzEG" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=BloretCrew/CrewRouter&type=date&legend=top-left&sealed_token=gDkqatDM5Ka6TX7FpWQMrcOXfNeET4bgBmkENnA7yEBWsOIy2qQqiWZwxph9Ef7FB14DjI78qHbm8FgyMZbeYnv5aVqd__pUj32lYzFtF-4yZ8kSe4ce9xeKhuzIxfi0UD771HT8j-BywaTEI2IprhWPnprvfdiYImjrIGHQ_IOYdVc2qx9KROMEJzEG" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=BloretCrew/CrewRouter&type=date&legend=top-left&sealed_token=gDkqatDM5Ka6TX7FpWQMrcOXfNeET4bgBmkENnA7yEBWsOIy2qQqiWZwxph9Ef7FB14DjI78qHbm8FgyMZbeYnv5aVqd__pUj32lYzFtF-4yZ8kSe4ce9xeKhuzIxfi0UD771HT8j-BywaTEI2IprhWPnprvfdiYImjrIGHQ_IOYdVc2qx9KROMEJzEG" />
  </picture>
+</a>
 
 ## 相关链接
 
-[CrewRouter - Github](https://github.com/BloretCrew/CrewRouter) [CrewRouter](https://crewrouter.bloret.net/) [QQ Discuss](https://qm.qq.com/q/kEt8fb41wc)
+[CrewRouter - Github](https://github.com/BloretCrew/CrewRouter) [CrewRouter](https://crewrouter.bloret.net/) [QQ Discuss](https://qm.qq.com/q/kEt8fb41wc) [LinuxDo](https://linux.do/)
 
