@@ -40,17 +40,30 @@ chmod 600 ~/.config/cr-report.json
 command = "~/.local/bin/cr-report.py hook --harness codex"
 ```
 
-### Grok（无 hook → watch 模式常驻）
-Linux/macOS 可用 `nohup`：
+### Grok（新版优先原生 Hooks）
+Grok 1.x 支持全局 JSON Hooks。安装器只写入 CrewRouter 专用文件，不会覆盖 Orca/Bark 或其他 Hook：
+```bash
+cd CrewRouterHelper
+python3 install-grok-hooks.py install
+python3 install-grok-hooks.py install --cr-report ~/.local/bin/cr-report.py
+python3 cr-report.py hook --harness grok <<'EOF'
+{"hookEventName":"PostToolUse","sessionId":"test","toolName":"Bash","cwd":"/tmp"}
+EOF
+```
+Hook 配置在 `~/.grok/hooks/crewrouter-helper.json`，凭证仍只在
+`~/.config/cr-report.json`，不会写入 JSON。卸载只删除该文件：
+```bash
+python3 install-grok-hooks.py uninstall
+```
+全局 Hook 无需项目授权；项目级 `.grok/hooks/` 需要信任，且各层配置会合并。
+安装后可在 Grok `/hooks`（或 `Ctrl+L` 的 Hooks 页）确认已加载。
+
+旧版 Grok 或禁用 Hooks 时仍可用 watch 兜底（不要与原生 Hook 同时启用，避免重复上报）：
 ```bash
 nohup ~/.local/bin/cr-report.py watch --harness grok >/dev/null 2>&1 &
 ```
-Windows 请使用“任务计划程序”创建登录时启动任务，程序填写 `py`，参数填写
-`C:\\path\\cr-report.py watch --harness grok`；或将同一命令加入用户启动文件夹的快捷方式。
-路径由 Python `pathlib` 按当前用户目录解析，Windows watch 未实测。
-
-tail `~/.grok/sessions/**/updates.jsonl`：新会话目录 → session_start，
-tool_call 行 → tool_use。状态存 `~/.cache/cr-report-grok-state.json`。
+watch 只旁路推断新会话和 `tool_call`，可能漏事件，不能阻止工具调用；不会默认启动。
+状态存 `~/.cache/cr-report-grok-state.json`。
 
 ### Hermes / OpenClaw / DeepSeek Harness
 直接在会话启动处调用：
