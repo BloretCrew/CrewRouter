@@ -9,6 +9,7 @@
     "init-db": "node server/scripts/init-db.js",
     "test:sessions-pagination": "node server/scripts/test-sessions-pagination.js",
     "test:usage-accuracy": "node server/scripts/test-usage-accuracy.js",
+    "test:before-upstream-policy": "node server/scripts/test-before-upstream-policy.js",
     "test:quota-usage": "node server/scripts/test-quota-usage.js",
     "test:reliability-closure": "node server/scripts/test-reliability-closure-static.js",
     "audit:team-consistency": "node server/scripts/audit-team-consistency.js --dry-run",

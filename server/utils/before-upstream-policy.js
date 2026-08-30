@@ -8,6 +8,18 @@ const CROSS_ORIGIN_CREDENTIAL_HEADERS = new Set([
   'x-api-key',
   'api-key',
   'proxy-authorization',
+  'cookie',
+  'x-goog-api-key',
+  'x-azure-api-key',
+]);
+const FORBIDDEN_TRANSPORT_HEADERS = new Set([
+  'connection',
+  'content-length',
+  'host',
+  'keep-alive',
+  'proxy-connection',
+  'transfer-encoding',
+  'upgrade',
 ]);
 
 function policyError(message, code) {
@@ -24,9 +36,17 @@ function normalizeHeaders(headers) {
 
   const normalized = {};
   for (const [name, value] of Object.entries(headers)) {
-    const lower = String(name).toLowerCase();
+    const lower = String(name).toLowerCase().trim();
     if (!lower) continue;
-    if (value !== null && value !== undefined) normalized[lower] = value;
+    if (FORBIDDEN_TRANSPORT_HEADERS.has(lower)) {
+      throw policyError(`beforeUpstream header is not allowed: ${lower}`, 'plugin_header_forbidden');
+    }
+    if (value !== null && value !== undefined) {
+      if (Array.isArray(value) || (typeof value !== 'string' && typeof value !== 'number')) {
+        throw policyError(`beforeUpstream header value is invalid: ${lower}`, 'plugin_header_invalid');
+      }
+      normalized[lower] = String(value);
+    }
   }
   return normalized;
 }
@@ -90,7 +110,9 @@ async function validateBeforeUpstreamRewrite(original, rewritten, options = {}) 
     if (typeof effective.bodyText !== 'string') {
       throw policyError('beforeUpstream bodyText must be a JSON string', 'plugin_body_invalid');
     }
-    const maxBodyBytes = options.maxBodyBytes || DEFAULT_MAX_BODY_BYTES;
+    const maxBodyBytes = options.maxBodyBytes === undefined
+      ? DEFAULT_MAX_BODY_BYTES
+      : options.maxBodyBytes;
     if (Buffer.byteLength(effective.bodyText, 'utf8') > maxBodyBytes) {
       throw policyError(`beforeUpstream body exceeds the ${maxBodyBytes}-byte limit`, 'plugin_body_too_large');
     }
