@@ -43,7 +43,7 @@ const {
   scrubAnthropicResponse,
   scrubResponsesApiResult,
 } = require('../utils/inject-prompt-scrub');
-const { checkQuotaRules } = require('../utils/points-deduct');
+const { checkQuotaRules, calculatePointsToDeduct } = require('../utils/points-deduct');
 const { recordUsageAndDeduct } = require('../utils/balance');
 const { sha256Hex } = require('../utils/key-hash');
 const {
@@ -2765,6 +2765,8 @@ async function handleChatCompletion(req, res) {
           provider: provider?.id || null,
           requestType: 'chat',
         });
+        // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+        const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct });
         // stats:record 钩子可附加统计维度（写入 usage_records.plugin_meta）
         const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
@@ -2781,9 +2783,9 @@ async function handleChatCompletion(req, res) {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
-           provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
+           provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
@@ -2954,6 +2956,8 @@ async function handleFusionRequest(req, res, format = 'openai') {
           provider: null,
           requestType: 'fusion',
         });
+        // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+        const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: totalWeightedTokens, pointsCost: pointsToDeduct });
         const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: 'fusion',
@@ -2967,9 +2971,9 @@ async function handleFusionRequest(req, res, format = 'openai') {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id`, usageValues: [req.apiUser.userId, req.apiUser.keyId, totalTokens,
            fusionPromptTokens, fusionCompletionTokens,
            totalWeightedTokens, null, 'fusion',
-           JSON.stringify(messages), result.content || null, pointsToDeduct,
+           JSON.stringify(messages), result.content || null, realDeduct,
            Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: totalWeightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
 
         // 记录 Fusion 专用用量
@@ -3380,6 +3384,8 @@ async function handleAnthropicMessage(req, res) {
           provider: provider?.id || null,
           requestType: 'chat',
         });
+        // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+        const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct });
         const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: modelConfig.id || queueModelId,
@@ -3395,9 +3401,9 @@ async function handleAnthropicMessage(req, res) {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
-           provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, pointsToDeduct,
+           provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
@@ -5456,6 +5462,8 @@ async function handleResponses(req, res) {
                 provider: provider?.id || null,
                 requestType: 'responses',
               });
+              // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+              const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct });
               const pluginMeta = await buildUsagePluginMeta({
                 userId: req.apiUser.userId,
                 model: modelConfig.id || model,
@@ -5469,9 +5477,9 @@ async function handleResponses(req, res) {
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                  promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
                  provider?.id || null, 'responses',
-                 typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
+                 typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
                  null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-                 pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
+                 pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
               recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
             } catch (err) {
@@ -5564,6 +5572,8 @@ async function handleResponses(req, res) {
               provider: provider?.id || null,
               requestType: 'responses',
             });
+            // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+            const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct });
             const pluginMeta = await buildUsagePluginMeta({
               userId: req.apiUser.userId,
               model: modelConfig.id || model,
@@ -5579,9 +5589,9 @@ async function handleResponses(req, res) {
                result.promptTokens || 0, result.completionTokens || 0,
                result.cachedTokens || 0, weightedTokens,
                provider?.id || null, 'responses',
-               typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
+               typeof input === 'string' ? input : JSON.stringify(input), result.content || null, realDeduct,
                latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-               pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
+               pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
             recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
           } catch (err) {
@@ -5764,6 +5774,8 @@ async function handleResponses(req, res) {
             provider: provider?.id || null,
             requestType: 'responses',
           });
+          // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+          const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct });
           const pluginMeta = await buildUsagePluginMeta({
             userId: req.apiUser.userId,
             model: modelConfig.id || model,
@@ -5779,10 +5791,10 @@ async function handleResponses(req, res) {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
              promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
              provider?.id || null, 'responses',
-             typeof input === 'string' ? input : JSON.stringify(input), totalContent || null, pointsToDeduct,
+             typeof input === 'string' ? input : JSON.stringify(input), totalContent || null, realDeduct,
              Date.now() - liveCallStart, clientIp(req), JSON.stringify(requestParams),
              clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-             pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
+             pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
           recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, pointsToDeduct);
         } catch (err) {
@@ -5838,6 +5850,8 @@ async function handleResponses(req, res) {
           provider: provider?.id || null,
           requestType: 'responses',
         });
+        // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+        const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct });
         const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: modelConfig.id || model,
@@ -5852,9 +5866,9 @@ async function handleResponses(req, res) {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            promptTokens, completionTokens, cachedTokens, weightedTokens,
            provider?.id || null, 'responses',
-           typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, pointsToDeduct,
+           typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
            null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {
@@ -6019,6 +6033,8 @@ async function handleResponses(req, res) {
           provider: provider?.id || null,
           requestType: 'responses',
         });
+        // 前置配额决策：usage_records.cost 写实扣值（任一配额有余量 → 0；全部耗尽 → 加权 token 费用）
+        const realDeduct = await calculatePointsToDeduct({ userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct });
         const pluginMeta = await buildUsagePluginMeta({
           userId: req.apiUser.userId,
           model: modelConfig.id || model,
@@ -6035,9 +6051,9 @@ async function handleResponses(req, res) {
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'responses',
-           typeof input === 'string' ? input : JSON.stringify(input), result.content || null, pointsToDeduct,
+           typeof input === 'string' ? input : JSON.stringify(input), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: typeof weightedTokens !== 'undefined' ? weightedTokens : 0, pointsCost: pointsToDeduct, pointsToDeduct });
+           pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, pointsToDeduct);
       } catch (err) {

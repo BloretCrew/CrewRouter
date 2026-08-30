@@ -461,7 +461,8 @@ async function deductPoints(userId, points, existingClient = null, quota = {}) {
       [points, userId]
     );
     if (!existingClient) await client.query('COMMIT');
-    return { ok: true };
+    // 返回锁内最终实扣值，供调用方回填 usage_records.cost
+    return { ok: true, pointsToDeduct: points };
   } catch (err) {
     if (!existingClient) {
       try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
