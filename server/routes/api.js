@@ -87,6 +87,13 @@ const { decryptSecret } = require('../utils/secret-crypto');
 const { validateBeforeUpstreamRewrite } = require('../utils/before-upstream-policy');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
 const { createRequestLifecycle, combineAbortSignals } = require('../utils/request-lifecycle');
+const protocolBridge = require('../protocol/bridge');
+
+function bridgeRequest(dialect, body, options = {}) {
+  const ir = protocolBridge.decodeRequest(dialect, body || {});
+  return protocolBridge.encodeRequest(dialect, ir, options);
+}
+
 
 // 非流式：上游整段响应（headers+body）超时。30s 对免费/慢模型过短，易误杀。
 const UPSTREAM_TIMEOUT = 180000; // 3 分钟
@@ -1758,7 +1765,7 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
   const maxRetries = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(proxyList.length || 1, 1));
   let currentProxyInfo = proxyInfo;
 
-  const upstreamBody = ResponsesUpstream.chatToResponsesBody({ ...body, stream: !!stream }, model);
+  const upstreamBody = protocolBridge.encodeRequest('responses', protocolBridge.decodeRequest('openai', { ...body, model, stream: !!stream }), { quirks: protocolBridge.getDialectCapability('responses').quirks });
   // 注入提示词：放入 Responses input 首条 user 前的 meta user
   if (req.apiUser?.injectPrompt) {
     upstreamBody.input = responsesAppend(upstreamBody.input, req.apiUser.injectPrompt);
@@ -2679,7 +2686,7 @@ async function handleChatCompletion(req, res) {
     let result;
     let providerWithKey = provider;
 
-    const body = { messages, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, stop };
+    let body = { messages, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, stop };
 
     if (tools !== undefined) body.tools = tools;
     if (tool_choice !== undefined) body.tool_choice = tool_choice;
@@ -2694,6 +2701,7 @@ async function handleChatCompletion(req, res) {
     if (modelConfig.forward_reasoning_effort && req.body.reasoning_effort !== undefined) {
       body.reasoning_effort = req.body.reasoning_effort;
     }
+    body = bridgeRequest('openai', body, { quirks: protocolBridge.getDialectCapability('openai').quirks });
 
     req.apiUser._inputPrice = modelConfig.input_price_per_1k_tokens || 0;
     req.apiUser._outputPrice = modelConfig.output_price_per_1k_tokens || 0;
@@ -2706,6 +2714,12 @@ async function handleChatCompletion(req, res) {
       result = await runWithProviderKeyFallback(provider, res, suppressErrorResponse, async (pwk, keyOpts) => {
         providerWithKey = pwk;
         const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
+        if (provider.format === 'gemini') {
+          const error = new Error('Gemini provider protocol is not supported by this gateway yet.');
+          error.code = 'unsupported_provider_format';
+          error.status = 501;
+          throw error;
+        }
         if (provider.format === 'responses') {
           return proxyChatToResponses(pwk, model, body, !!stream, res, req, proxyOpts);
         }
@@ -3333,6 +3347,12 @@ async function handleAnthropicMessage(req, res) {
       result = await runWithProviderKeyFallback(provider, res, suppressErrorResponse, async (pwk, keyOpts) => {
         providerWithKey = pwk;
         const proxyOpts = { suppressErrorResponse: keyOpts.suppressErrorResponse };
+        if (provider.format === 'gemini' || provider.format === 'responses') {
+          const error = new Error(`Provider format ${provider.format} is unsupported for Anthropic Messages.`);
+          error.code = 'unsupported_provider_format';
+          error.status = 501;
+          throw error;
+        }
         if (provider.format === 'anthropic') {
           return proxyAnthropicToAnthropic(pwk, model, anthropicBody, !!stream, res, req, proxyOpts);
         }
@@ -3451,8 +3471,8 @@ async function handleAnthropicMessage(req, res) {
 
 // 将 Anthropic 格式请求转换为 OpenAI 格式
 function convertAnthropicToOpenAI(body) {
-  const systemMessage = body.system;
-  const messages = [];
+  const ir = protocolBridge.decodeRequest('anthropic', body);
+  return protocolBridge.encodeRequest('openai', ir);
 
   if (systemMessage) {
     const sysContent = typeof systemMessage === 'string' ? systemMessage :
@@ -3641,6 +3661,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
   if (body.container) upstreamBody.container = body.container;
   if (body.inference_geo) upstreamBody.inference_geo = body.inference_geo;
   addFourthCacheBreakpoint(upstreamBody, body.system);
+  Object.assign(upstreamBody, bridgeRequest('anthropic', upstreamBody, { quirks: protocolBridge.getDialectCapability('anthropic').quirks }));
 
   // 代理池支持
   const proxyInfo = await proxyPool.getProxyAgent(provider, affinityKeyForRequest(req, req.body));
@@ -5440,14 +5461,17 @@ async function handleResponses(req, res) {
 
     // 非流式：在此循环内直接尝试上游并支持回退
     if (!stream) {
-      // === Responses 格式供应商直接透传（非流式）===
+        // === Responses 格式供应商直接透传（非流式）===
+      if (provider.format === 'gemini') {
+        return res.status(501).json({ error: { type: 'unsupported_provider_format', code: 'gemini_not_supported', message: 'Gemini provider protocol is not supported by this gateway yet.' } });
+      }
       if (provider.format === 'responses') {
         const baseUrl = cleanBaseUrl(provider.base_url);
         const url = upstreamUrl(baseUrl, '/responses');
         const headers = buildUpstreamHeaders(providerWithKey, req, { 'Content-Type': 'application/json' });
         if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
         // 原样透传客户端请求，仅覆盖 model；不强制注入 max_output_tokens，交由上游/客户端决定。
-        const upstreamBody = { ...body, model: upstreamModel };
+        const upstreamBody = protocolBridge.encodeRequest('responses', protocolBridge.decodeRequest('responses', { ...body, model: upstreamModel }), { quirks: protocolBridge.getDialectCapability('responses').quirks });
         if (!modelConfig.forward_reasoning_effort) {
           delete upstreamBody.reasoning;
           delete upstreamBody.reasoning_effort;
@@ -5546,6 +5570,9 @@ async function handleResponses(req, res) {
       }
 
       // 非流式：OpenAI / Anthropic 转换（多 Key fallback）
+      if (provider.format === 'gemini') {
+        return res.status(501).json({ error: { type: 'unsupported_provider_format', code: 'gemini_not_supported', message: 'Gemini provider protocol is not supported by this gateway yet.' } });
+      }
       const liveCallStart = Date.now();
       try {
         let result;
@@ -5690,10 +5717,7 @@ async function handleResponses(req, res) {
     });
     if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
 
-    const upstreamBody = {
-      ...body,
-      model: upstreamModel,
-    };
+    const upstreamBody = protocolBridge.encodeRequest('responses', protocolBridge.decodeRequest('responses', { ...body, model: upstreamModel }), { quirks: protocolBridge.getDialectCapability('responses').quirks });
     // 未开启透传时去掉 reasoning / reasoning_effort，避免误传给上游
     if (!modelConfig.forward_reasoning_effort) {
       delete upstreamBody.reasoning;
@@ -5957,21 +5981,7 @@ async function handleResponses(req, res) {
 
         const systemMessage = messages.find(m => m.role === 'system');
         const nonSystemMessages = messages.filter(m => m.role !== 'system');
-        const upstreamBody = {
-          model: upstreamModel, max_tokens: max_output_tokens || 4096,
-          messages: nonSystemMessages.map(m => ({ role: m.role, content: m.content })),
-          stream: true
-        };
-        if (systemMessage) upstreamBody.system = systemMessage.content;
-        if (temperature !== undefined) upstreamBody.temperature = temperature;
-        if (top_p !== undefined) upstreamBody.top_p = top_p;
-        if (chatBody.stop) upstreamBody.stop_sequences = Array.isArray(chatBody.stop) ? chatBody.stop : [chatBody.stop];
-        if (chatTools) {
-          upstreamBody.tools = chatTools.map(t => ({
-            name: t.function?.name, description: t.function?.description, input_schema: t.function?.parameters
-          }));
-        }
-
+        const upstreamBody = protocolBridge.encodeRequest('anthropic', protocolBridge.decodeRequest('openai', chatBody), { quirks: protocolBridge.getDialectCapability('anthropic').quirks });
         const response = await proxyPool.proxyFetch(url, {
           method: 'POST', headers, body: JSON.stringify(upstreamBody),
           signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
