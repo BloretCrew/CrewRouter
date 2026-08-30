@@ -30,8 +30,13 @@ function sanitizeUrl(value) {
   }
 }
 
+// 仅绝对 URL 才做脱敏；普通日志消息（中文等）交给 URL 解析器会被百分号编码成乱码
+function looksLikeAbsoluteUrl(value) {
+  return typeof value === 'string' && !/\s/.test(value) && /^https?:\/\//i.test(value);
+}
+
 function formatArgs(args) {
-  return args.map(a => (typeof a === 'object' ? JSON.stringify(a) : sanitizeUrl(String(a)))).join(' ');
+  return args.map(a => (typeof a === 'object' ? JSON.stringify(a) : (looksLikeAbsoluteUrl(a) ? sanitizeUrl(String(a)) : String(a)))).join(' ');
 }
 
 const Logger = {
