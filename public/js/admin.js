@@ -1146,11 +1146,6 @@ class AdminApp {
     });
   }
 
-  _renderProviderNameTag(providerName) {
-    const name = String(providerName ?? '').trim();
-    return name ? `<span class="model-provider-tag">${escapeHtml(name)}</span>` : '';
-  }
-
   _adminModelProviderKey(m) {
     return String(m.provider || m.provider_id || m.provider_name || 'unknown');
   }
@@ -1621,7 +1616,7 @@ class AdminApp {
             <span title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
             ${testBadgeHtml}
             <div class="model-item-badges">
-              ${this._renderProviderNameTag(model.provider_name || model.provider)}
+              ${renderProviderNameTag(model.provider_name || model.provider)}
               ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
               ${isDisabled
                 ? '<span class="model-item-badge" style="background:rgba(239,68,68,0.1);color:var(--destructive);">' + t('已禁用') + '</span>'
@@ -1930,7 +1925,7 @@ class AdminApp {
                 <div class="model-library-provider-header" style="cursor:pointer;">
                   <div class="model-library-provider-title">
                     <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                    ${this._renderProviderNameTag(p.name || key)}
+                    ${renderProviderNameTag(p.name || key)}
                     ${selectedCount > 0 ? `${'<span class="model-item-badge owner">' + t('已选')}${selectedCount}</span>` : ''}
                   </div>
                   <div class="model-library-provider-actions">
@@ -2311,7 +2306,7 @@ class AdminApp {
           <div class="admin-card-body">
             <div class="admin-card-row">
               <span class="admin-card-row-label">供应商</span>
-              <span class="admin-card-row-value">${this._renderProviderNameTag(model.provider_name || model.provider) || '<span class="model-provider-missing">-</span>'}</span>
+              <span class="admin-card-row-value">${renderProviderNameTag(model.provider_name || model.provider) || '<span class="model-provider-missing">-</span>'}</span>
             </div>
             ${model.alias ? `${'<div class="admin-card-row"><span class="admin-card-row-label">' + t('别名')}</span><span class="admin-card-row-value">${escapeHtml(model.alias)}</span></div>` : ''}
             ${model.series ? `${'<div class="admin-card-row"><span class="admin-card-row-label">' + t('系列')}</span><span class="admin-card-row-value"><span class="series-badge">${escapeHtml(model.series)}</span></span></div>` : ''}
@@ -4881,14 +4876,16 @@ class AdminApp {
 
   _formatScriptAiModelLabel(model) {
     if (!model || !model.id) return t('自动选择（按系统可用模型）');
-    const name = model.name || model.id;
-    return model.provider_name ? `${model.provider_name} → ${name}` : name;
+    const name = escapeHtml(model.name || model.id);
+    return model.provider_name
+      ? `${renderProviderNameTag(model.provider_name)}<span class="script-ai-model-label-arrow">→</span>${name}`
+      : name;
   }
 
   _updateScriptAiModelLabel() {
     const el = document.getElementById('scriptAiModelLabel');
     if (!el) return;
-    el.textContent = this._formatScriptAiModelLabel(this._scriptAiModel || this._getScriptAiModel());
+    setHTML(el, this._formatScriptAiModelLabel(this._scriptAiModel || this._getScriptAiModel()));
   }
 
   /**
@@ -4922,7 +4919,7 @@ class AdminApp {
         </div>
         <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
           <button type="button" class="btn btn-secondary btn-sm" id="scriptAiModelClear">使用自动选择</button>
-          <span style="font-size:12px;color:var(--muted-foreground);align-self:center;">当前：${escHtml(this._formatScriptAiModelLabel(selected))}</span>
+          <span style="font-size:12px;color:var(--muted-foreground);align-self:center;">当前：${this._formatScriptAiModelLabel(selected)}</span>
         </div>
       </div>
     `;
@@ -4955,7 +4952,7 @@ class AdminApp {
       listEl.innerHTML = filtered.map(m => {
         const isActive = selectedId && String(m.id) === selectedId;
         const title = escHtml(m.name || m.id);
-        const sub = `${this._renderProviderNameTag(m.provider_name)}${m.upstream_model_id || m.id ? `<span class="script-ai-model-id">${escHtml(m.upstream_model_id || m.id)}</span>` : ''}`;
+        const sub = `${renderProviderNameTag(m.provider_name)}${m.upstream_model_id || m.id ? `<span class="script-ai-model-id">${escHtml(m.upstream_model_id || m.id)}</span>` : ''}`;
         return `
           <button type="button" class="script-ai-model-item" data-model-id="${escHtml(m.id)}"
             style="display:block;width:100%;text-align:left;padding:10px 12px;margin:4px 0;border-radius:10px;border:1px solid ${isActive ? 'var(--primary,var(--info))' : 'var(--border)'};background:${isActive ? 'rgba(59,130,246,0.08)' : 'transparent'};cursor:pointer;color:inherit;">
@@ -5028,7 +5025,7 @@ class AdminApp {
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:12px;border:1px solid var(--border);border-radius:8px;background:var(--card);">
           <div style="min-width:0;flex:1;">
             <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:2px;">AI 辅助模型</div>
-            <div id="scriptAiModelLabel" style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(this._formatScriptAiModelLabel(this._scriptAiModel))}</div>
+            <div id="scriptAiModelLabel" style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._formatScriptAiModelLabel(this._scriptAiModel)}</div>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" id="scriptAiSelectModelBtn">选择模型</button>
         </div>
@@ -6633,7 +6630,7 @@ async function(ctx) {
     if (!el) return;
     if (!rows.length) { setHTML(el, '<p class="stats-insight-empty">' + t('当前筛选条件下暂无组合数据') + '</p>'); return; }
     const sourceLabel = (source) => this._usageRequestSourceMeta(source).label;
-    setHTML(el, `<div style="overflow:auto;"><table><thead><tr><th>${t('成员')}</th><th>Team</th><th>用户组</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.group_name || t('未分配用户组'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${this._renderProviderNameTag(row.provider_name) || '<span class="model-provider-missing">' + t('未知供应商') + '</span>'}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
+    setHTML(el, `<div style="overflow:auto;"><table><thead><tr><th>${t('成员')}</th><th>Team</th><th>用户组</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.group_name || t('未分配用户组'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${renderProviderNameTag(row.provider_name) || '<span class="model-provider-missing">' + t('未知供应商') + '</span>'}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
   }
 
   async loadStats() {
@@ -7400,7 +7397,7 @@ async function(ctx) {
                 : '-';
               return `
                 <tr>
-                  <td style="font-size:13px;">${escapeHtml(p.provider || t('未知'))}</td>
+                  <td style="font-size:13px;">${renderProviderNameTag(p.provider) || '<span class="model-provider-missing">' + t('未知') + '</span>'}</td>
                   <td>${(p.requests || 0).toLocaleString()}</td>
                   <td>${reqPercent}%</td>
                   <td title="${(p.tokens || 0).toLocaleString()}">${this._formatBigNumber(p.tokens || 0)}</td>
@@ -7762,7 +7759,7 @@ async function(ctx) {
                 <td style="white-space:nowrap;">${new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</td>
                 <td>${escapeHtml(log.username || String(log.user_id || '-'))}</td>
                 <td>${escapeHtml(log.model_name || log.model_id || '-')}${finalTag}</td>
-                <td>${this._renderProviderNameTag(log.provider_name || log.provider_id) || '<span class="model-provider-missing">-</span>'}</td>
+                <td>${renderProviderNameTag(log.provider_name || log.provider_id) || '<span class="model-provider-missing">-</span>'}</td>
                 <td>${statusBadge(log.status_code)}</td>
                 <td style="font-size:12px;">${escapeHtml(log.error_type || '-')}</td>
                 <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(msg)}">${escapeHtml(shortMsg || '-')}</td>
@@ -7803,7 +7800,7 @@ async function(ctx) {
       [t('模型'), escapeHtml(log.model_name || log.model_id || '-')],
       [t('系列'), escapeHtml(log.series || '-')],
       [t('上游模型 ID'), escapeHtml(log.upstream_model_id || log.model_id || '-')],
-      [t('供应商'), this._renderProviderNameTag(log.provider_name || log.provider_id) || '<span class="model-provider-missing">-</span>'],
+      [t('供应商'), renderProviderNameTag(log.provider_name || log.provider_id) || '<span class="model-provider-missing">-</span>'],
       [t('请求类型'), escapeHtml(log.request_type || '-')],
       [t('状态码'), log.status_code != null ? String(log.status_code) : '-'],
       [t('错误类型'), escapeHtml(log.error_type || '-')],
@@ -10752,7 +10749,7 @@ async function(ctx) {
             ${m.icon_url ? `<img src="${escapeHtml(m.icon_url)}" onerror="this.style.display='none'" alt="">` : ''}
             <span title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
                         <div class="model-item-badges">
-              ${this._renderProviderNameTag(m.provider_name || m.provider)}
+              ${renderProviderNameTag(m.provider_name || m.provider)}
               ${m.series ? `<span class="model-item-badge series">${escapeHtml(m.series)}</span>` : ''}
               ${isDisabled ? '<span class="model-item-badge" style="background:rgba(148,163,184,0.15);color:var(--muted-foreground);">' + t('未启用') + '</span>' : '<span class="model-item-badge" style="background:rgba(16,185,129,0.1);color:var(--success);">' + t('已启用') + '</span>'}
               ${isProviderDisabled ? '<span class="model-item-badge" style="background:rgba(239,68,68,0.1);color:var(--destructive);">' + t('供应商禁用') + '</span>' : ''}
@@ -10894,7 +10891,7 @@ async function(ctx) {
                 <div class="model-library-provider-header" onclick="adminApp.toggleTeamModelProvider('${safeCollapsedKey}')">
                   <div class="model-library-provider-title">
                     <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                    ${this._renderProviderNameTag(group.label)}
+                    ${renderProviderNameTag(group.label)}
                     ${!group.providerEnabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('供应商已禁用') + '</span>' : ''}
                   </div>
                   <div class="model-library-provider-actions" onclick="event.stopPropagation()">

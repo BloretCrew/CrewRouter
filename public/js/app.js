@@ -2278,7 +2278,7 @@ class ConsoleApp {
         <div class="model-library-provider-header" onclick="app.toggleKeyModelPickerProvider(${teamIndex}, ${providerIndex})">
           <div class="model-library-provider-title">
             <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-            ${this._renderProviderNameTag(provider.provider_name)}
+            ${renderProviderNameTag(provider.provider_name)}
             ${this._renderProviderTestSummary(provider)}
             ${(provider.tags || []).map(t =>
               `<span class="model-item-badge" style="background:${t.color}18;color:${t.color};border:1px solid ${t.color}44;">${escapeHtml(t.name)}</span>`
@@ -3418,7 +3418,7 @@ class ConsoleApp {
             ${models.map(m => `
               <tr>
                 <td><code>${escapeHtml(m.alias || m.upstream_model_id || m.name || m.id)}</code></td>
-                <td>${this._renderProviderNameTag(m.provider_name || m.provider) || '<span class="model-provider-missing">-</span>'}</td>
+                <td>${renderProviderNameTag(m.provider_name || m.provider) || '<span class="model-provider-missing">-</span>'}</td>
                 <td>¥${Number(m.input_price_per_1k_tokens || 0).toFixed(4)}</td>
                 <td>¥${Number(m.output_price_per_1k_tokens || 0).toFixed(4)}</td>
               </tr>
@@ -4256,9 +4256,9 @@ class ConsoleApp {
 
     const rowsHtml = results.map(r => {
       if (r.ok) {
-        const providerLabel = r.provider_url
-          ? `${escapeHtml(r.provider)} <span style="font-size:10px;color:var(--muted-foreground);">(${escapeHtml(r.provider_url)})</span>`
-          : escapeHtml(r.provider || '');
+        const providerLabel = r.provider
+          ? `${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}`
+          : '';
         return `
           <div class="model-test-row">
             <div class="model-test-row-icon model-test-result-pass">&#10003;</div>
@@ -4285,7 +4285,7 @@ class ConsoleApp {
       } else {
         const modelLabel = r.model || r.modelId || t('未知模型');
         const providerLabel = r.provider
-          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${escapeHtml(r.provider)}${r.provider_url ? ' (' + escapeHtml(r.provider_url) + ')' : ''}</div>`
+          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
           : '';
         return `
           <div class="model-test-row">
@@ -6169,7 +6169,7 @@ class ConsoleApp {
       [t('调用时间'), escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))],
       [t('模型'), escapeHtml(modelLabel)],
       [t('系列'), escapeHtml(log.series || '-')],
-      [t('供应商'), this._renderProviderNameTag(log.provider_name) || '<span class="model-provider-missing">-</span>'],
+      [t('供应商'), renderProviderNameTag(log.provider_name) || '<span class="model-provider-missing">-</span>'],
       [t('请求类型'), escapeHtml(log.request_type || '-')],
       [t('客户端'), this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
       ['API Key', `<code style="font-size:12px;">${escapeHtml(log.key_prefix || '-')}****</code>${log.key_name ? ` <span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}`],
@@ -9008,7 +9008,7 @@ ${extractorBody}
                 ${m.description ? `<div style="font-size:11px;color:var(--muted-foreground);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
               </td>
               <td><code style="font-size:12px;color:var(--muted-foreground);">${escapeHtml(m.upstream_model_id || m.name || m.id)}</code></td>
-              <td>${this._renderProviderNameTag(m.provider_name || m.provider) || '<span class="model-provider-missing">-</span>'}</td>
+              <td>${renderProviderNameTag(m.provider_name || m.provider) || '<span class="model-provider-missing">-</span>'}</td>
               <td>${m.series ? `<span style="font-size:11px;background:var(--muted);padding:2px 6px;border-radius:4px;">${escapeHtml(m.series)}</span>` : '<span style="color:var(--muted-foreground);font-size:12px;">-</span>'}</td>
               <td style="font-size:13px;">×${parseFloat(m.model_multiplier || 1.0).toFixed(2)}</td>
               <td>${m.enabled !== false
@@ -10715,7 +10715,7 @@ ${extractorBody}
               <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
                 <div class="model-library-provider-title">
                   <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                  ${this._renderProviderNameTag(provider.provider_name)}
+                  ${renderProviderNameTag(provider.provider_name)}
                   ${this._renderProviderTestSummary(provider)}
                   ${(provider.tags || []).map(t =>
                     `<span class="model-item-badge" style="background:${t.color}18;color:${t.color};border:1px solid ${t.color}44;">${escapeHtml(t.name)}</span>`
@@ -10754,11 +10754,6 @@ ${extractorBody}
     }).join(''));
   }
 
-  _renderProviderNameTag(providerName) {
-    const name = String(providerName ?? '').trim();
-    return name ? `<span class="model-provider-tag">${escapeHtml(name)}</span>` : '';
-  }
-
   // 渲染单个模型库条目（供 renderModelLibrary 与按需加载复用）
   _renderModelLibraryItem(model, team, currentModel, isProviderDisabled, options = {}) {
     if (!model) return '';
@@ -10787,7 +10782,7 @@ ${extractorBody}
     const onClick = options.onClick || `app.selectModel('${this._jsString(modelId)}')`;
     const providerTagHtml = options.showProvider === false
       ? ''
-      : this._renderProviderNameTag(model.provider_name || model.provider);
+      : renderProviderNameTag(model.provider_name || model.provider);
     const subtitleHtml = options.subtitle || '';
 
     const testOk = model.test_ok;
@@ -11760,7 +11755,7 @@ ${extractorBody}
             onclick="app.selectLibraryKey(${key.id}, event)"
             title="${t('再次点击打开菜单')}">${keyName}</button>
           <span class="binding-arrow">→</span>
-          ${providerName ? `${this._renderProviderNameTag(providerName)}<span class="binding-arrow">→</span>` : ''}
+          ${providerName ? `${renderProviderNameTag(providerName)}<span class="binding-arrow">→</span>` : ''}
           <span class="binding-model-name">${escapeHtml(modelName)}</span>
           ${testCapsule}
         </div>
