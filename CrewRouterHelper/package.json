@@ -1,0 +1,11 @@
+{
+  "name": "crewrouter-helper",
+  "version": "1.0.0",
+  "description": "CrewRouter client event reporter and Grok hook helper",
+  "main": "src/index.js",
+  "bin": { "cr-report": "bin/cr-report.js" },
+  "files": ["bin", "src", "README.md", "LICENSE"],
+  "scripts": { "test": "node --test test/*.test.js" },
+  "engines": { "node": ">=16" },
+  "license": "MIT"
+}

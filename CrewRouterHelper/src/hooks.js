@@ -1,0 +1,11 @@
+'use strict';
+const fs = require('fs'); const os = require('os'); const path = require('path');
+const EVENTS = ['SessionStart','SessionEnd','PreToolUse','PostToolUse','PostToolUseFailure','PermissionDenied','Stop','StopFailure','Notification','SubagentStart','SubagentStop','PreCompact','PostCompact'];
+function grokHome() { return process.env.GROK_HOME || path.join(os.homedir(), '.grok'); }
+function hookPath() { return path.join(grokHome(), 'hooks', 'crewrouter-helper.json'); }
+function hookConfig(command) { return { hooks: Object.fromEntries(EVENTS.map((event) => [event, [{ hooks: [{ type: 'command', command, timeout: 5 }] }]])) }; }
+function install(command) { const dir = path.dirname(hookPath()); fs.mkdirSync(dir, { recursive: true }); const tmp = path.join(dir, `.${path.basename(hookPath())}.${process.pid}.tmp`); fs.writeFileSync(tmp, `${JSON.stringify(hookConfig(command), null, 2)}\n`, { mode: 0o600 }); fs.chmodSync(tmp, 0o600); fs.renameSync(tmp, hookPath()); return hookPath(); }
+function uninstall() { try { fs.unlinkSync(hookPath()); return true; } catch (err) { if (err.code === 'ENOENT') return false; throw err; } }
+function scanHooks(command) { const file = hookPath(); const result = { path: file, exists: fs.existsSync(file), valid: false, events: [], command: null, commandExecutable: false }; if (!result.exists) return result; try { const data = JSON.parse(fs.readFileSync(file, 'utf8')); result.events = Object.keys(data.hooks || {}); const nested = result.events.map((e) => data.hooks[e]?.[0]?.hooks?.[0]).find(Boolean); result.command = nested?.command || null; result.valid = result.events.length > 0; if (result.command) { const match = result.command.match(/^([^\s]+)\s/); result.commandExecutable = Boolean(match && fs.existsSync(match[1]) && (() => { try { return (fs.statSync(match[1]).mode & 0o111) !== 0; } catch { return false; } })()); } } catch { result.valid = false; } return result; }
+function watchState() { const state = path.join(os.homedir(), '.cache', 'cr-report-grok-state.json'); try { return { running: false, statePath: state, present: fs.existsSync(state) }; } catch { return { running: false, statePath: state, present: false }; } }
+module.exports = { EVENTS, grokHome, hookPath, hookConfig, install, uninstall, scanHooks, watchState };
