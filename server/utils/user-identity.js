@@ -1,5 +1,6 @@
 'use strict';
 
+// undefined means "not provided"; null and blank strings clear the nullable email column.
 function normalizeEmail(value) {
   if (value === undefined) return undefined;
   if (value === null || String(value).trim() === '') return null;

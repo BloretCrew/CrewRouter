@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { getAuthMode, setAuthMode, decodeMode } = require('../utils/auth-mode');
-const { normalizeEmail } = require('../utils/user-identity');
+const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 
 /**
  * OOBE：飞书模式创建管理员；PassPort 模式由首次管理员授权完成初始化。
@@ -165,8 +165,8 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
     try {
       await client.query('ROLLBACK');
     } catch (_) { /* ignore */ }
-    if (error.code === '23505') {
-      return res.status(400).json({ error: '用户名或邮箱已存在' });
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ error: '用户名或邮箱已存在' });
     }
     Logger.error('[OOBE] 创建管理员失败:', error);
     res.status(500).json({ error: '服务器错误: ' + (error.message || '未知') });

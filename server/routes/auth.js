@@ -36,6 +36,7 @@ setInterval(() => {
   }
 }, LOGIN_WINDOW_MS).unref?.();
 
+// 密码注册/设置/修改路径只更新 password_hash，不写入 users.email；邮箱写入由用户设置、管理员和第三方注册路径处理。
 // 邮箱格式验证
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

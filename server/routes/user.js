@@ -4,7 +4,7 @@ const router = express.Router();
 const { pool } = require('../models/database');
 const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
-const { normalizeEmail } = require('../utils/user-identity');
+const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const config = require('../config-loader');
 const { fetchProvidersIndex, lookupProvider } = require('../provider-lookup');
 const { invalidateApiKeyCacheByKeyId } = require('./api');
@@ -2039,7 +2039,7 @@ router.put('/settings', requireAuth, auditMiddleware(ACTIONS.USER_SETTINGS, {
     res.json({ success: true });
   } catch (error) {
     Logger.error('[更新用户设置] 错误:', error);
-    if (error.code === '23505') return res.status(400).json({ error: '该邮箱已被其他用户使用' });
+    if (isUniqueViolation(error)) return res.status(409).json({ error: '该邮箱已被其他用户使用' });
     res.status(500).json({ error: '服务器错误' });
   }
 });

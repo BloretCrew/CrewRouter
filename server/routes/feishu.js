@@ -12,6 +12,7 @@ const {
   setCachedAppAccessToken,
 } = require('../utils/feishu-config');
 const { reportLoginEvent } = require('../utils/login-reporter');
+const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 
 async function getAppAccessToken() {
   const cached = getCachedAppAccessToken();
@@ -195,8 +196,9 @@ router.get('/feishu/callback', async (req, res) => {
           [avatar, normalizedEmail, user.id]
         );
       } catch (error) {
-        if (error.code !== '23505') throw error;
-        Logger.warn(`[飞书登录] 邮箱已被其他用户占用，保留原邮箱: ${user.username}`);
+        if (!isUniqueViolation(error)) throw error;
+        Logger.warn(`[飞书登录] 邮箱已被其他用户占用，登录失败: ${user.username}`);
+        return res.redirect('/?error=email_conflict');
       }
       Logger.info(`[飞书登录] 已有用户登录: ${user.username} (id=${user.id})`);
     } else {
@@ -205,10 +207,15 @@ router.get('/feishu/callback', async (req, res) => {
       Logger.info(`[飞书回调] 按邮箱查询: ${byEmail.rows.length} 条记录`);
       if (byEmail.rows.length > 0) {
         user = byEmail.rows[0];
-        await pool.query(
-          'UPDATE users SET feishu_open_id = $1, avatar = COALESCE($2, avatar), updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-          [feishuOpenId, avatar, user.id]
-        );
+        try {
+          await pool.query(
+            'UPDATE users SET feishu_open_id = $1, avatar = COALESCE($2, avatar), updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+            [feishuOpenId, avatar, user.id]
+          );
+        } catch (error) {
+          if (!isUniqueViolation(error)) throw error;
+          return res.redirect('/?error=feishu_conflict');
+        }
         Logger.info(`[飞书登录] 已有用户绑定飞书: ${user.username} (id=${user.id})`);
       } else {
         // 按飞书用户名查找
@@ -239,10 +246,9 @@ router.get('/feishu/callback', async (req, res) => {
             [feishuName, normalizedEmail, feishuOpenId, avatar]
           );
         } catch (error) {
-          if (error.code !== '23505') throw error;
-          const raced = await pool.query('SELECT * FROM users WHERE feishu_open_id = $1 OR LOWER(email) = $2 LIMIT 1', [feishuOpenId, normalizedEmail]);
-          if (!raced.rows.length) throw error;
-          newUser = raced;
+          if (!isUniqueViolation(error)) throw error;
+          Logger.warn(`[飞书登录] 并发创建邮箱或飞书账号冲突: ${normalizedEmail}`);
+          return res.redirect('/?error=email_conflict');
         }
         user = newUser.rows[0];
         Logger.info(`[飞书注册] 新用户注册: ${feishuName} (email=${normalizedEmail}, id=${user.id})`);
@@ -404,10 +410,15 @@ router.post('/feishu/bind', async (req, res) => {
     }
 
     // 密码正确，绑定飞书
-    await pool.query(
-      'UPDATE users SET feishu_open_id = $1, avatar = COALESCE($2, avatar), updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-      [pending.feishuOpenId, pending.avatar, user.id]
-    );
+    try {
+      await pool.query(
+        'UPDATE users SET feishu_open_id = $1, avatar = COALESCE($2, avatar), updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+        [pending.feishuOpenId, pending.avatar, user.id]
+      );
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+      return res.status(409).json({ error: '飞书账号或邮箱已被其他用户绑定' });
+    }
 
     Logger.info(`[飞书绑定] 绑定成功: ${user.username} (id=${user.id})`);
 

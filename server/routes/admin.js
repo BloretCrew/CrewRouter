@@ -21,7 +21,7 @@ const { buildUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs
 const { aggregateMessageStats, analyzeMessages } = require('../utils/message-analysis');
 const { getMessageAnalysisStatus } = require('../utils/message-analysis-store');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
-const { normalizeEmail } = require('../utils/user-identity');
+const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const {
   normalizeProviderKeyEntries,
   getPrimaryApiKey,
@@ -158,13 +158,6 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
           return res.status(400).json({ error: error.message });
         }
       }
-      if (normalizedEmail) {
-        const existingUser = await client.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2', [normalizedEmail, userId]);
-        if (existingUser.rows.length > 0) {
-          await client.query('ROLLBACK');
-          return res.status(400).json({ error: '该邮箱已被其他用户使用' });
-        }
-      }
     const sets = [];
     const params = [userId];
     let idx = 2;
@@ -248,7 +241,7 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
       client.release();
     }
   } catch (error) {
-    if (error?.code === '23505') return res.status(409).json({ error: '邮箱或用户标识已被其他用户使用' });
+    if (isUniqueViolation(error)) return res.status(409).json({ error: '邮箱或用户标识已被其他用户使用' });
     Logger.error('[更新用户状态] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }

@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../models/database');
 const config = require('../config-loader');
 const Logger = require('../logger');
-const { normalizeEmail } = require('../utils/user-identity');
+const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const { getAuthMode } = require('../utils/auth-mode');
 
 const router = express.Router();
@@ -142,8 +142,15 @@ router.get('/passport/callback', async (req, res) => {
           if (suffix === 999) throw new Error('无法生成唯一用户名');
         }
         const email = normalizeEmail(data.email);
-        const emailCheck = email ? await client.query('SELECT 1 FROM users WHERE LOWER(email) = LOWER($1)', [email]) : { rows: [] };
-        const inserted = await client.query(`INSERT INTO users (username, passport_username, email, avatar, is_admin, email_verified, balance) VALUES ($1, $2, $3, $4, $5, TRUE, 10) RETURNING *`, [username, passportUsername, emailCheck.rows.length ? null : email, String(data.avatar || '').slice(0, 500) || null, isFirstAdmin]);
+        let inserted;
+        try {
+          inserted = await client.query(`INSERT INTO users (username, passport_username, email, avatar, is_admin, email_verified, balance) VALUES ($1, $2, $3, $4, $5, TRUE, 10) RETURNING *`, [username, passportUsername, email, String(data.avatar || '').slice(0, 500) || null, isFirstAdmin]);
+        } catch (error) {
+          if (isUniqueViolation(error)) {
+            throw Object.assign(new Error('该邮箱或用户标识已被其他用户使用'), { code: 'EMAIL_OR_ID_CONFLICT' });
+          }
+          throw error;
+        }
         user = inserted.rows[0];
         if (inviteRow) {
           const { consumeInvite } = require('./auth-invites');
@@ -168,7 +175,12 @@ router.get('/passport/callback', async (req, res) => {
         res.redirect('/console');
       });
     } catch (err) { await client.query('ROLLBACK').catch(() => {}); throw err; } finally { client.release(); }
-  } catch (err) { Logger.error('[PassPort] 回调失败:', err.message); res.status(502).send('PassPort 登录失败，请稍后重试。'); }
+  } catch (err) {
+    Logger.error('[PassPort] 回调失败:', err.message);
+    if (err.code === 'invalid_email') return res.status(400).send('PassPort 返回的邮箱格式无效。');
+    if (err.code === 'EMAIL_OR_ID_CONFLICT') return res.status(409).send('邮箱或账号标识已被其他用户使用，请重试。');
+    res.status(502).send('PassPort 登录失败，请稍后重试。');
+  }
 });
 
 module.exports = router;

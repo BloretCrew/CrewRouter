@@ -10,6 +10,7 @@ const {
 } = require('../utils/PassKey');
 const Logger = require('../logger');
 
+// PassKey 仅更新 passkeys，不创建或修改 users.email；邮箱归一化由实际邮箱写入路径处理。
 function buildSessionUser(user) {
   return {
     id: user.id,

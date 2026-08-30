@@ -452,7 +452,7 @@ async function ensureAuthEnhancements() {
       Logger.info('[迁移] 已为 users 表添加 2FA 相关字段');
     }
 
-    // 邮箱唯一性必须与登录使用的 LOWER(email) 语义一致；冲突时让迁移失败并阻止启动。
+    // 邮箱写入统一使用 normalizeEmail；唯一索引与 LOWER(email) 语义一致并允许多个 NULL。冲突时让迁移失败并阻止启动。
     await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique ON users (LOWER(email)) WHERE email IS NOT NULL`);
 
     // 添加 GitHub ID 字段
