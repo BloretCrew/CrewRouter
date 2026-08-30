@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const { cleanBaseUrl, upstreamUrl, isBlockedIPv6 } = require('../utils/url-validator');
+const { cleanBaseUrl, upstreamUrl, isBlockedIPv6, isPrivateIPv4 } = require('../utils/url-validator');
 
 const cases = [
   ['https://api.openai.com', '/chat/completions', 'https://api.openai.com/v1/chat/completions'],
@@ -40,4 +40,11 @@ for (const ip of blockedIPv6) {
 }
 assert.strictEqual(isBlockedIPv6('2001:4860:4860::8888'), false);
 
-console.log(`upstreamUrl/IPv6: ${cases.length + blockedIPv6.length + 4} assertions passed`);
+// 198.18.0.0/15 是 RFC 2544 基准测试网段，Fake-IP 代理用它做公网域名占位，不属于私网
+assert.strictEqual(isPrivateIPv4('198.18.0.25'), false);
+assert.strictEqual(isPrivateIPv4('198.19.255.255'), false);
+assert.strictEqual(isPrivateIPv4('10.0.0.1'), true);
+assert.strictEqual(isPrivateIPv4('192.168.1.1'), true);
+assert.strictEqual(isPrivateIPv4('169.254.169.254'), true);
+
+console.log(`upstreamUrl/IPv6: ${cases.length + blockedIPv6.length + 9} assertions passed`);
