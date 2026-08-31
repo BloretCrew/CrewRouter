@@ -768,6 +768,11 @@ async function ensureTraceSessionTables() {
         api_key_id INTEGER REFERENCES api_keys(id) ON DELETE SET NULL,
         request_source VARCHAR(32) DEFAULT 'unknown',
         user_agent VARCHAR(500),
+        logical_session_key TEXT,
+        client_session_id TEXT,
+        parent_session_key TEXT,
+        session_id_source TEXT,
+        session_confidence TEXT,
         status VARCHAR(20) NOT NULL DEFAULT 'recording',
         started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         ended_at TIMESTAMP,
@@ -788,9 +793,21 @@ async function ensureTraceSessionTables() {
         model_id VARCHAR(255), provider_id VARCHAR(100),
         tokens_used BIGINT DEFAULT 0, prompt_tokens BIGINT DEFAULT 0, completion_tokens BIGINT DEFAULT 0,
         cached_tokens BIGINT DEFAULT 0, weighted_tokens BIGINT DEFAULT 0, cost NUMERIC(18,6) DEFAULT 0,
-        latency_ms INTEGER, messages JSONB, response TEXT, reasoning_content TEXT, request_params JSONB, finish_reason VARCHAR(50)
+        latency_ms INTEGER, messages JSONB, response TEXT, reasoning_content TEXT, request_params JSONB, finish_reason VARCHAR(50),
+        logical_session_key TEXT, client_session_id TEXT, parent_session_key TEXT, session_id_source TEXT, session_confidence TEXT
       )
     `);
+    await pool.query(`ALTER TABLE trace_sessions ADD COLUMN IF NOT EXISTS logical_session_key TEXT`);
+    await pool.query(`ALTER TABLE trace_sessions ADD COLUMN IF NOT EXISTS client_session_id TEXT`);
+    await pool.query(`ALTER TABLE trace_sessions ADD COLUMN IF NOT EXISTS parent_session_key TEXT`);
+    await pool.query(`ALTER TABLE trace_sessions ADD COLUMN IF NOT EXISTS session_id_source TEXT`);
+    await pool.query(`ALTER TABLE trace_sessions ADD COLUMN IF NOT EXISTS session_confidence TEXT`);
+    await pool.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS logical_session_key TEXT`);
+    await pool.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS client_session_id TEXT`);
+    await pool.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS parent_session_key TEXT`);
+    await pool.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS session_id_source TEXT`);
+    await pool.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS session_confidence TEXT`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_trace_sessions_logical ON trace_sessions(user_id, api_key_id, logical_session_key)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_trace_sessions_user ON trace_sessions(user_id, started_at DESC)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_trace_events_session ON trace_events(session_id, created_at)`);
     Logger.info('[迁移] 跟踪记录表已就绪');

@@ -5,6 +5,7 @@ const Logger = require('../logger');
 const { logAction, ACTIONS } = require('./audit-log');
 const { HARNESS_SOURCES, isHarnessSource, sourceLabel, clientMetaFromReq } = require('./request-source');
 const { startSession, endSession, getActiveSession, recordEvent } = require('./trace-session');
+const { extractRequestIdentity } = require('./session-identity');
 
 const TRIGGER_RE = /@(?:crewrouter|cr)\b/i;
 const USER_QUERY_RE = /<user_query\b[^>]*>([\s\S]*?)<\/user_query>/i;
@@ -318,7 +319,7 @@ register({
   aliases: ['开始记录', '开始跟踪', 'start recording', 'start trace'],
   async run({ req, apiUser }) {
     const meta = clientMetaFromReq(req);
-    const session = await startSession({ userId: apiUser.userId, keyId: apiUser.keyId, source: meta.requestSource, userAgent: meta.userAgent });
+    const session = await startSession({ userId: apiUser.userId, keyId: apiUser.keyId, source: meta.requestSource, userAgent: meta.userAgent, identity: extractRequestIdentity(req, { requestSource: meta.requestSource }) });
     return composeReply(`开始跟踪记录，ID: ${session.public_id}`, '跟踪记录仅对当前 Key 生效。结束记录后，请打开控制台模型库查看报告。', apiUser);
   },
 });
@@ -327,7 +328,8 @@ register({
   id: 'end_trace',
   aliases: ['结束记录', '停止记录', '结束跟踪', 'stop recording', 'end trace'],
   async run({ req, apiUser }) {
-    const session = await endSession(apiUser.keyId);
+    const meta = clientMetaFromReq(req);
+    const session = await endSession(apiUser.keyId, extractRequestIdentity(req, { requestSource: meta.requestSource }));
     if (!session) return composeReply('当前没有进行中的跟踪记录', '请先发送：@CrewRouter 开始记录', apiUser);
     const summary = session.summary || {};
     return composeReply(`跟踪记录完成，ID: ${session.public_id}`, `共记录 ${summary.requests || 0} 项请求，消耗 ${summary.tokens || 0} tokens。请打开控制台查看报告。`, apiUser);

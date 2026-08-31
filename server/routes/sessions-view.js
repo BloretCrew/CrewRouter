@@ -37,6 +37,45 @@ const LIMIT_TOOL_RESULT = 800;
 const LIMIT_THINKING = 300;
 const MAX_EVENTS_PER_RECORD = 120;
 
+async function ensureClientEventsTable() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS client_events (
+    id BIGSERIAL PRIMARY KEY, user_id INTEGER, harness TEXT NOT NULL, event TEXT NOT NULL,
+    session_id TEXT, tool_name TEXT, cwd TEXT, ts TIMESTAMPTZ NOT NULL DEFAULT now(), payload JSONB DEFAULT '{}'::jsonb,
+    logical_session_id TEXT, parent_session_id TEXT, session_id_source TEXT, session_confidence TEXT
+  )`);
+}
+
+function clientEventToTimeline(row) {
+  const payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
+  const detail = payload.detail && typeof payload.detail === 'object' ? payload.detail : payload;
+  const text = detail.text || detail.message || detail.preview || null;
+  const typeMap = {
+    tool_use: 'tool_call',
+    tool_use_failure: 'tool_result',
+    permission_denied: 'tool_result',
+    prompt_submit: 'text',
+    notification: 'text',
+    response_stop: 'response_stop',
+    response_stop_failure: 'response_stop',
+    session_start: 'session_start',
+    session_end: 'session_end',
+    pre_compact: 'compact',
+    post_compact: 'compact',
+    subagent_start: 'subagent',
+    subagent_stop: 'subagent',
+  };
+  const type = typeMap[row.event] || 'client_event';
+  const event = { type, clientEvent: true, event: row.event, harness: row.harness };
+  if (row.tool_name || detail.tool_name || detail.name) event.name = row.tool_name || detail.tool_name || detail.name;
+  if (type === 'tool_call') event.argsPreview = truncStr(safeStringify(detail.input ?? detail.args ?? detail), LIMIT_TOOL_ARGS);
+  if (type === 'tool_result') { event.is_error = row.event !== 'tool_use_failure' ? false : true; event.resultPreview = truncStr(String(text || detail.result || ''), LIMIT_TOOL_RESULT); }
+  if (type === 'text') { event.role = row.event === 'prompt_submit' ? 'user' : 'system'; event.text = truncStr(String(text || row.event), LIMIT_TEXT); }
+  if (type === 'compact') event.text = row.event;
+  if (type === 'subagent') event.text = `${row.event}${row.session_id ? `: ${row.session_id}` : ''}`;
+  if (type === 'client_event' || type === 'response_stop') event.text = row.event;
+  return event;
+}
+
 /** 会话键表达式：优先集中式身份键，再兼容旧归因；缺失身份按记录隔离。 */
 const SESSION_KEY_SQL = `COALESCE(
   NULLIF(u.plugin_meta->'session_identity'->>'logicalSessionKey', ''),
@@ -289,6 +328,7 @@ router.get('/sessions', requireAuth, async (req, res) => {
   const { page, pageSize, offset } = pageParams(req.query, DEFAULT_PAGE_SIZE);
 
   try {
+    await ensureClientEventsTable();
     const params = [userId, days];
     let sourceFilter = '';
     if (source) {
@@ -297,29 +337,33 @@ router.get('/sessions', requireAuth, async (req, res) => {
     }
 
     const aggregated = await pool.query(`
-      WITH agg AS (
-        SELECT
-          ${SESSION_KEY_SQL} AS session_key,
+      WITH usage_agg AS (
+        SELECT ${SESSION_KEY_SQL} AS session_key,
           (array_agg(u.id ORDER BY u.created_at DESC))[1] AS last_record_id,
-          MIN(u.created_at) AS first_seen,
-          MAX(u.created_at) AS last_seen,
-          COUNT(*)::int AS request_count,
-          COALESCE(SUM(u.tokens_used), 0)::bigint AS total_tokens,
+          MIN(u.created_at) AS first_seen, MAX(u.created_at) AS last_seen,
+          COUNT(*)::int AS request_count, COALESCE(SUM(u.tokens_used), 0)::bigint AS total_tokens,
           COALESCE(SUM(u.cached_tokens), 0)::bigint AS total_cached_tokens,
           mode() WITHIN GROUP (ORDER BY COALESCE(u.request_source, 'unknown')) AS harness,
           array_agg(DISTINCT u.model_id) FILTER (WHERE u.model_id IS NOT NULL AND u.model_id <> '') AS models
-        FROM usage_records u
-        WHERE u.user_id = $1
-          AND u.created_at >= NOW() - ($2::int * INTERVAL '1 day')
-          ${sourceFilter}
+        FROM usage_records u WHERE u.user_id = $1
+          AND u.created_at >= NOW() - ($2::int * INTERVAL '1 day') ${sourceFilter}
         GROUP BY 1
+      ), client_agg AS (
+        SELECT logical_session_id AS session_key, NULL::int AS last_record_id,
+          MIN(ts) AS first_seen, MAX(ts) AS last_seen, 0::int AS request_count,
+          0::bigint AS total_tokens, 0::bigint AS total_cached_tokens,
+          mode() WITHIN GROUP (ORDER BY harness) AS harness, NULL::text[] AS models
+        FROM client_events WHERE user_id = $1 AND ts >= NOW() - ($2::int * INTERVAL '1 day')
+          AND logical_session_id IS NOT NULL
+        GROUP BY logical_session_id
+      ), agg AS (
+        SELECT * FROM usage_agg UNION ALL
+        SELECT c.* FROM client_agg c WHERE NOT EXISTS (SELECT 1 FROM usage_agg u WHERE u.session_key = c.session_key)
       )
       SELECT agg.session_key, agg.last_record_id, agg.first_seen, agg.last_seen, agg.request_count,
-             agg.total_tokens, agg.total_cached_tokens, agg.harness, agg.models,
-             ss.created_at AS summary_created_at,
-             COUNT(*) OVER ()::int AS grand_total
-      FROM agg
-      LEFT JOIN session_summaries ss ON ss.user_id = $1 AND ss.session_key = agg.session_key
+        agg.total_tokens, agg.total_cached_tokens, agg.harness, agg.models,
+        ss.created_at AS summary_created_at, COUNT(*) OVER ()::int AS grand_total
+      FROM agg LEFT JOIN session_summaries ss ON ss.user_id = $1 AND ss.session_key = agg.session_key
       ORDER BY agg.last_seen DESC, agg.session_key ASC
       OFFSET ${offset} LIMIT ${pageSize}
     `, params);
@@ -627,10 +671,49 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
     }
 
     const records = buildDetailRecords(rawDetailRows);
+    // 客户端 hook 事件与 usage 记录使用同一 logical_session_id 汇合，不能只在独立看板展示。
+    await ensureClientEventsTable();
+    const rawFirst = rawDetailRows[0]?.created_at || null;
+    const rawLast = rawDetailRows[rawDetailRows.length - 1]?.created_at || null;
+    const clientBounds = rawFirst && rawLast
+      ? 'AND ts >= $3::timestamptz AND ts <= $4::timestamptz'
+      : '';
+    const clientParams = rawFirst && rawLast
+      ? [userId, sessionKey, rawFirst, rawLast]
+      : [userId, sessionKey];
+    const clientResult = await pool.query(
+      `SELECT id, harness, event, session_id, tool_name, cwd, ts, payload
+         FROM client_events
+        WHERE user_id = $1 AND logical_session_id = $2
+          AND ts >= NOW() - INTERVAL '90 days' ${clientBounds}
+        ORDER BY ts ASC, id ASC`,
+      clientParams
+    );
+    const clientCountResult = await pool.query(
+      `SELECT COUNT(*)::int AS count FROM client_events
+        WHERE user_id = $1 AND logical_session_id = $2 AND ts >= NOW() - INTERVAL '90 days'`,
+      [userId, sessionKey]
+    );
+    for (const row of clientResult.rows) {
+      records.push({
+        id: `client-${row.id}`,
+        ts: row.ts,
+        model: null,
+        tokens: 0,
+        cachedTokens: 0,
+        latencyMs: null,
+        harness: row.harness || 'unknown',
+        eventsCount: 1,
+        userFingerprint: null,
+        events: [clientEventToTimeline(row)],
+        eventsTruncated: false,
+      });
+    }
+    records.sort((a, b) => new Date(a.ts) - new Date(b.ts) || String(a.id).localeCompare(String(b.id)));
     const lastRecord = rawDetailRows[0];
     const nextCursor = buildDetailNextCursor(hasMore, lastRecord);
 
-    res.json({ sessionKey, page, pageSize, total, records, nextCursor });
+    res.json({ sessionKey, page, pageSize, total: total + Number(clientCountResult.rows[0]?.count || 0), records, nextCursor });
   } catch (error) {
     Logger.error('[会话详情] 查询错误:', error);
     res.status(500).json({ error: '服务器错误' });

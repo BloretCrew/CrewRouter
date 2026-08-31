@@ -595,7 +595,9 @@ async function initDatabase() {
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         api_key_id INTEGER REFERENCES api_keys(id) ON DELETE SET NULL,
         request_source VARCHAR(32) DEFAULT 'unknown', user_agent VARCHAR(500),
-        status VARCHAR(20) NOT NULL DEFAULT 'recording', started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status VARCHAR(20) NOT NULL DEFAULT 'recording', logical_session_key TEXT, client_session_id TEXT,
+        parent_session_key TEXT, session_id_source TEXT, session_confidence TEXT,
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         ended_at TIMESTAMP, viewed_at TIMESTAMP, summary JSONB NOT NULL DEFAULT '{}'::jsonb
       );
       CREATE TABLE IF NOT EXISTS trace_events (
@@ -606,7 +608,8 @@ async function initDatabase() {
         http_status INTEGER, error TEXT, request_type VARCHAR(50), request_source VARCHAR(32), user_agent VARCHAR(500), ip_address VARCHAR(45),
         model_id VARCHAR(255), provider_id VARCHAR(100), tokens_used BIGINT DEFAULT 0, prompt_tokens BIGINT DEFAULT 0,
         completion_tokens BIGINT DEFAULT 0, cached_tokens BIGINT DEFAULT 0, weighted_tokens BIGINT DEFAULT 0, cost NUMERIC(18,6) DEFAULT 0,
-        latency_ms INTEGER, messages JSONB, response TEXT, reasoning_content TEXT, request_params JSONB, finish_reason VARCHAR(50)
+        latency_ms INTEGER, messages JSONB, response TEXT, reasoning_content TEXT, request_params JSONB, finish_reason VARCHAR(50),
+        logical_session_key TEXT, client_session_id TEXT, parent_session_key TEXT, session_id_source TEXT, session_confidence TEXT
       );
       CREATE TABLE IF NOT EXISTS usage_records (
         id SERIAL PRIMARY KEY,
@@ -632,6 +635,16 @@ async function initDatabase() {
     `);
     await client.query(`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS active_trace_session_id INTEGER`);
     await client.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS usage_record_id INTEGER`);
+    await client.query(`ALTER TABLE trace_sessions ADD COLUMN IF NOT EXISTS logical_session_key TEXT`);
+    await client.query(`ALTER TABLE trace_sessions ADD COLUMN IF NOT EXISTS client_session_id TEXT`);
+    await client.query(`ALTER TABLE trace_sessions ADD COLUMN IF NOT EXISTS parent_session_key TEXT`);
+    await client.query(`ALTER TABLE trace_sessions ADD COLUMN IF NOT EXISTS session_id_source TEXT`);
+    await client.query(`ALTER TABLE trace_sessions ADD COLUMN IF NOT EXISTS session_confidence TEXT`);
+    await client.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS logical_session_key TEXT`);
+    await client.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS client_session_id TEXT`);
+    await client.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS parent_session_key TEXT`);
+    await client.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS session_id_source TEXT`);
+    await client.query(`ALTER TABLE trace_events ADD COLUMN IF NOT EXISTS session_confidence TEXT`);
     await client.query(`ALTER TABLE usage_records ADD COLUMN IF NOT EXISTS request_source VARCHAR(32) DEFAULT 'unknown'`);
     await client.query(`ALTER TABLE usage_records ADD COLUMN IF NOT EXISTS user_agent VARCHAR(500)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_usage_records_user_created ON usage_records (user_id, created_at DESC)`);
