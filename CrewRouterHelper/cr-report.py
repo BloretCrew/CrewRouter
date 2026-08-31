@@ -38,6 +38,7 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+import uuid
 import urllib.error
 from pathlib import Path
 
@@ -298,6 +299,7 @@ def cmd_hook(args):
         return 0
 
     payload = {
+        "event_id": str(_first(detail, "event_id", "eventId") or uuid.uuid4().hex),
         "harness": args.harness,
         "event": event,
         "session_id": str(_first(detail, "session_id", "sessionId") or "")[:128] or None,
@@ -314,6 +316,7 @@ def cmd_hook(args):
 def cmd_emit(args):
     url, key = load_config()
     payload = {
+        "event_id": uuid.uuid4().hex,
         "harness": args.harness,
         "event": args.event,
         "session_id": args.session,

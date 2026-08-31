@@ -16,4 +16,8 @@ assert.ok(source.includes("Buffer.byteLength(serialized, 'utf8') <= maxBytes"));
 assert.ok(source.includes("res.status(400).json({ ok: false, error: 'invalid harness' })"));
 assert.ok(source.includes("res.status(400).json({ ok: false, error: 'invalid event' })"));
 assert.ok(source.includes('res.json({ ok: true })'));
+assert.ok(source.includes("payload->>'event_id'"));
+assert.ok(source.includes('duplicate: true'));
+assert.ok(source.includes('const eventId = strOrNull(body.event_id'));
+console.log('event_id idempotency contract assertions passed.');
 console.log(`All ${grokEvents.length} client-event contract assertions passed.`);

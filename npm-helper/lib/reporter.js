@@ -9,6 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const { GROK_SESSIONS_DIR, STATE_PATH } = require('./config');
 const { postJson } = require('./http');
+const crypto = require('crypto');
+function eventId(value) { return typeof value === 'string' && /^[A-Za-z0-9_-]{16,128}$/.test(value) ? value : crypto.randomBytes(16).toString('hex'); }
 
 // stdin JSON 的 hook_event_name -> 上报事件
 const EVENT_MAP = {
@@ -36,6 +38,7 @@ function buildHookPayload(harness, forcedEvent, detail) {
   const filteredDetail = {};
   for (const k of HOOK_DETAIL_KEYS) if (k in detail) filteredDetail[k] = detail[k];
   return {
+    event_id: eventId(detail.event_id || detail.eventId),
     harness,
     event,
     session_id: detail.session_id || detail.sessionId || null,

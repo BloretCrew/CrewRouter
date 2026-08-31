@@ -151,6 +151,18 @@ router.post('/', oauthBearer, async (req, res) => {
     await ensureTable();
     // 控制体积：hook 原始输入可能很大（如 Bash 命令全文），截断保护。
     const payload = safeDetail(body.detail);
+    const eventId = strOrNull(body.event_id, 128);
+    // 旧客户端没有 event_id；新客户端用 user/harness/event_id 在应用层去重。
+    if (eventId) {
+      const existing = await pool.query(
+        `SELECT 1 FROM client_events
+          WHERE user_id IS NOT DISTINCT FROM $1 AND harness = $2
+            AND payload->>'event_id' = $3 LIMIT 1`,
+        [req.apiUser?.userId || null, harness, eventId]
+      );
+      if (existing.rows.length) return res.json({ ok: true, duplicate: true });
+      payload.event_id = eventId;
+    }
     await pool.query(
       `INSERT INTO client_events (api_key_id, user_id, harness, event, session_id, tool_name, cwd, ts, payload)
        VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, now()), $9)`,

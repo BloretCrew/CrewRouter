@@ -25,6 +25,8 @@ const { getCredential, runLogin } = require('../lib/oauth');
 const { postJson } = require('../lib/http');
 const reporter = require('../lib/reporter');
 const { runTui } = require('../lib/tui');
+const crypto = require('crypto');
+function eventId(value) { return typeof value === 'string' && /^[A-Za-z0-9_-]{16,128}$/.test(value) ? value : crypto.randomBytes(16).toString('hex'); }
 
 const PROG = 'crewrouter-helper';
 const EVENT_CHOICES = new Set(['session_start', 'session_end', 'tool_use']);
@@ -54,7 +56,7 @@ function parseFlags(argv, valueFlags) {
 // hook 模式铁律：任何错误静默 exit 0，绝不阻塞宿主客户端
 async function cmdHook(argv) {
   try {
-    const flags = parseFlags(argv, new Set(['--harness', '--event']));
+    const flags = parseFlags(argv, new Set(['--harness', '--event', '--event-id']));
     const harness = flags['--harness'];
     if (!harness) return 0;
     let raw = '';
@@ -76,7 +78,7 @@ async function cmdHook(argv) {
 }
 
 async function cmdEmit(argv) {
-  const flags = parseFlags(argv, new Set(['--harness', '--event', '--session', '--tool', '--cwd']));
+  const flags = parseFlags(argv, new Set(['--harness', '--event', '--event-id', '--session', '--tool', '--cwd']));
   const harness = flags['--harness'];
   const event = flags['--event'];
   if (!harness || !event || !EVENT_CHOICES.has(event)) {
@@ -89,6 +91,7 @@ async function cmdEmit(argv) {
   const cred = await getCredential();
   if (cred) {
     await reporter.postEvent(cred, {
+      event_id: eventId(flags['--event-id']),
       harness: String(harness),
       event,
       session_id: flags['--session'] || null,
@@ -108,6 +111,7 @@ async function cmdTest(argv) {
     return 1;
   }
   const payload = {
+    event_id: eventId(),
     harness: String(flags['--harness'] || 'hermes'),
     event: 'session_start',
     session_id: `${PROG}-test-${nowSec()}`,
@@ -157,8 +161,8 @@ async function cmdPrint() {
 const HELP = `${PROG} —— 客户端事件统一上报器（Node.js 零依赖）
 
 用法：
-  ${PROG} hook    --harness <id> [--event <type>]     读 stdin Claude 风格 hook JSON 转发
-  ${PROG} emit    --harness <id> --event <t> [--session <id>] [--tool <n>] [--cwd <dir>]
+  ${PROG} hook    --harness <id> [--event <type>] [--event-id <id>] 读 stdin Claude 风格 hook JSON 转发
+  ${PROG} emit    --harness <id> --event <t> [--event-id <id>] [--session <id>] [--tool <n>] [--cwd <dir>]
   ${PROG} watch   [--harness grok] [--interval 5]     tail ~/.grok/sessions/**/updates.jsonl
   ${PROG} login   [--url http://127.0.0.1:20003]      浏览器 OAuth PKCE 授权
   ${PROG} logout                                      删除本地凭证
