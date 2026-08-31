@@ -2487,7 +2487,7 @@ app.get('/api/updates/latest', (req, res) => {
     Logger.info(
       `[updates] 下载 latest.zip: path=${LATEST_UPDATE_ZIP}, size=${stat.size}, ip=${req.ip || '-'}`
     );
-    res.download(LATEST_UPDATE_ZIP, 'latest.zip', (err) => {
+    res.download(LATEST_UPDATE_ZIP, 'CrewRouter-Server.zip', (err) => {
       if (err) {
         if (res.headersSent) {
           Logger.error(`[updates] 传输 latest.zip 中断: ${err.message}`);
