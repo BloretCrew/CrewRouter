@@ -158,7 +158,7 @@ router.post('/', oauthBearer, async (req, res) => {
     // 旧客户端没有 event_id；新客户端用 user/harness/event_id 在应用层去重。
     if (eventId) {
       const existing = await pool.query(
-        'SELECT id FROM client_events WHERE user_id = $1 AND harness = $2 AND payload->>\'event_id\' = $3 LIMIT 1',
+        "SELECT id FROM client_events WHERE user_id = $1 AND harness = $2 AND payload->>'event_id' = $3 LIMIT 1",
         [userId, harness, eventId]
       );
       if (existing.rows.length) return res.json({ ok: true, duplicate: true });
