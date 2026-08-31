@@ -274,6 +274,10 @@
           }
           if (!res.ok) throw new Error(data.error || 'edition 选择失败');
           document.getElementById('stepEdition').style.display = 'none';
+          if (data.existingInstallation || data.setupComplete) {
+            document.getElementById('stepReady').style.display = 'block';
+            return;
+          }
           document.getElementById('stepMode').style.display = 'block';
         } catch (e) { el.textContent = e.message; el.style.display = 'block'; }
       },

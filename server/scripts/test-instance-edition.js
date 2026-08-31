@@ -20,5 +20,8 @@ assert.deepStrictEqual(metadata('personal').edition, 'personal');
   let passed = false;
   await requireTeamEdition('team')({}, teamResponse, () => { passed = true; });
   assert.strictEqual(passed, true);
+  const setupSource = require('fs').readFileSync(require('path').join(__dirname, '../../public/pages/setup.html'), 'utf8');
+  assert.match(setupSource, /data\.existingInstallation \|\| data\.setupComplete/);
+  assert.match(setupSource, /stepReady.*style\.display = 'block'/s);
   console.log('instance edition validation tests passed');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

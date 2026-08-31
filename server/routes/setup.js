@@ -71,12 +71,14 @@ router.post('/setup/edition', requireEditionSetup, async (req, res) => {
   const requested = normalizeEdition(req.body?.edition);
   if (!requested) return res.status(400).json({ error: 'edition 只能是 personal 或 team', type: 'edition_invalid' });
   try {
+    const setupState = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");
+    const existingInstallation = setupState.rows.length > 0;
     const legacy = await inspectLegacyData(pool);
     if (legacy.hasLegacyData && req.body?.confirmExisting !== true) {
       return res.status(409).json({ error: '检测到历史安装数据。请确认兼容迁移，不会删除或转换现有数据。', type: 'existing_installation_confirmation_required' });
     }
     const edition = await initializeEdition(pool, requested, { confirmLegacy: legacy.hasLegacyData && req.body?.confirmExisting === true });
-    res.json({ success: true, ...metadata(edition) });
+    res.json({ success: true, existingInstallation, setupComplete: existingInstallation, ...metadata(edition) });
   } catch (error) {
     const status = error.code === 'EDITION_CONFLICT' ? 409 : 400;
     res.status(status).json({ error: error.message, type: error.code === 'EDITION_CONFLICT' ? 'edition_conflict' : 'edition_invalid' });
