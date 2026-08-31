@@ -1,63 +1,81 @@
-# 代码审查结果
+# CrewRouterHelper 审查结果
 
-审查对象：`75adbec feat: 完成任务一财务事务与任务二 API Key 哈希化` 及当前工作树相关调用方。
+审查基线：`origin/main..HEAD`（`ed7ca44`）
+审查范围：CrewRouterHelper CLI、凭证/profile、Hook、日志、TUI、兼容性与测试。
 
-### Issue 1 -- Severity: bug
-- **File:** `/data/CrewRouter/server/utils/balance.js:463-486`，以及 `/data/CrewRouter/server/routes/api.js:2764,2943,3364,5430,5533,5727,5793,5967`
-- **Description:** `recordUsageAndDeduct` 在 INSERT 或扣款失败时会回滚并返回 `{ ok: false }`，但 8 个调用点只 `await` 该返回值，没有检查 `ok` 或抛出错误。于是事务失败时请求仍可能成功返回，而 usage 和扣款都没有落库，形成漏计费；该 helper 的原子性只保证了“同一事务内的一致回滚”，没有保证调用方对失败结果采取失败策略。
-- **Suggestion:** 调用点检查返回值，至少在 `!result.ok` 时记录明确错误并按现有错误语义阻止成功响应；或让 helper 失败时直接抛出并由外层统一处理。若业务明确允许响应成功但异步对账，则应增加可靠重试/补偿，而不能静默丢失。
-- **Status:** fixed
-- **Response:** 已修复：helper 失败会标记 billingFailure 并抛出；8 个局部 catch 在未发送响应时返回 500，在流式已发送响应时销毁连接，阻止客户端将请求视为成功。
+## Issues
 
-### Issue 2 -- Severity: bug
-- **File:** `/data/CrewRouter/server/routes/user.js:1228-1267`
-- **Description:** API Key 创建已改为只保存 SHA-256，`key_value` 写入 `NULL`；但 Claude Code 配置接口仍直接读取 `key_value` 并将其作为 `ANTHROPIC_AUTH_TOKEN` 返回。因此新建 Key 以及迁移后的旧 Key 调用 `/api-keys/:id/config` 时得到空 token，配置下载/生成功能失效。该接口是当前仍会读取明文列的实际调用方，也与“旧 Key 不回显”后的数据形态不兼容。
-- **Suggestion:** 不要从数据库恢复 token 原文。按产品要求改为一次性创建响应中的 raw key 生成配置，或明确移除/禁用该旧配置接口并让前端使用创建时一次性返回的 key；不得尝试用哈希值充当 Bearer token。
-- **Status:** fixed
-- **Response:** 已修复：Claude Code 配置接口不再读取或返回 key_value，也不使用 key_hash 作为 Bearer。历史 Key 原文不可恢复时明确返回 HTTP 410；前端已有错误处理，会提示创建新 Key。
+### Issue 1
+- severity: bug
+- 文件:行号: `CrewRouterHelper/src/status.js:2`、`CrewRouterHelper/src/doctor.js:9`
+- 描述: `status` 和 `doctor` 对服务端探测直接使用 `cfg.access_token || cfg.key`，没有调用 `getAccessToken()`。已过期但带有 `refresh_token` 的 OAuth profile 会被判定为服务端不可达/HTTP 401，而不会刷新 token；这使诊断结果错误，也可能导致用户误以为 Hook 或服务配置损坏。
+- 建议: 服务端探测统一通过当前 profile 的 token 获取流程（含刷新和锁），或明确把“凭证可刷新”和“当前探测未认证”分开显示；补充过期 OAuth 的诊断测试。
+- Status: open
 
-### Issue 3 -- Severity: bug
-- **File:** `/data/CrewRouter/server/utils/internal-oauth.js:6-20`
-- **Description:** `getInternalAccessToken` 每次调用都生成并插入新的 access token，没有按 `api_key_id` 查找并复用仍有效的 token。会话总结的流式/非流式调用以及重复触发会持续制造 token 行，偏离任务书要求的有效 token 复用；长期运行会造成无界增长，且吊销/管理界面会出现大量内部授权记录。
-- **Suggestion:** 在同一数据库连接上按 `api_key_id`、`kind='access'`、`revoked=false`、`expires_at > now()` 查找最近有效 token；命中时返回无法逆推出的原文问题需要配套处理（例如签发时安全保存可复用凭证不符合只存 hash 约束），因此应重新评估需求：若坚持只存 hash，则改为进程级短期 token 缓存并在缓存失效后重新签发，或接受每次签发但清理内部旧 token，并补充明确的生命周期策略。
-- **Status:** fixed
-- **Response:** 已修复：缓存命中前查询 oauth_tokens 校验 revoked/expired，TTL 缩短为 5 分钟，并用 pending Promise 合并并发签发；数据库仍只保存 token_hash。
+### Issue 2
+- severity: bug
+- 文件:行号: `CrewRouterHelper/src/profiles.js:7-8`、`CrewRouterHelper/bin/cr-report.js:20`
+- 描述: profile 数据已经引入，但 `login` 始终把新 OAuth 凭证写到顶层配置，未写入 `current_profile` 对应的 profile。已有多个 profile 时，登录会覆盖顶层 active 凭证而保留旧 profile 凭证，造成当前 profile 与登录目标 URL/凭证不一致；后续 `profile use` 又可能把旧凭证恢复到顶层。
+- 建议: 登录前解析/选择目标 profile，并把 URL、token、过期时间等完整写入该 profile，再用统一的 profile 切换保存逻辑同步 active 字段；增加“已有多个 profile 后 login”的隔离回归测试。
+- Status: open
 
-### Issue 4 -- Severity: suggestion
-- **File:** `/data/CrewRouter/server/middleware/oauth-bearer.js:10-17,42-53`
-- **Description:** 该中间件仍自行引入 `crypto` 并定义本地 `sha256Hex`，没有复用任务书要求的新建统一工具 `/data/CrewRouter/server/utils/key-hash.js`；`routes/oauth.js` 已使用统一工具。当前输出兼容，但统一入口被绕过，后续哈希输入规范或工具行为调整时会产生分叉风险。
-- **Suggestion:** 改为 `const { sha256Hex } = require('../utils/key-hash')` 并删除本地实现；同时补充 OAuth bearer 与 API key 哈希认证的兼容测试。
-- **Status:** wontfix
-- **Response:** 按任务书红线标记为 wontfix：任务书明确要求“不动 server/middleware/oauth-bearer.js 现有逻辑”，因此不修改该文件。
+### Issue 3
+- severity: bug
+- 文件:行号: `CrewRouterHelper/bin/cr-report.js:15-16`
+- 描述: 新解析器允许重复选项和任意多余位置参数，且未校验必需参数。比如 `emit --harness grok` 会进入 `api.report` 并返回成功退出路径，`profile use` 缺少名称会在后续产生不清晰错误；`--json` 等选项在不支持的命令上虽部分受限，但 `status --since/--remote` 被接受后完全忽略。相比基线解析器的重复选项/必需参数校验，这是 CLI 回归，容易导致错误命令静默执行。
+- 建议: 保留重复选项检测；为每个子命令声明必需参数和位置参数数量；拒绝未知/多余位置参数；删除未实现的选项或实现其语义，并为错误输入断言非零退出码。
+- Status: open
 
-### Issue 5 -- Severity: suggestion
-- **File:** `/data/CrewRouter/server/scripts/init-db.js:440-442,469-497`；`/data/CrewRouter/server/index.js:727-732`
-- **Description:** 启动迁移确实在 `initDatabase()` 之后执行，且 `ALTER COLUMN key_value DROP NOT NULL` 与唯一索引是幂等形式；但 `init-db.js` 的空库定义仍声明 `key_value VARCHAR(255) UNIQUE NOT NULL`。这不会阻止当前启动流程最终迁移，但会让“初始化 DDL”和最终 schema 短暂不一致，并依赖后续迁移顺序；若以后单独运行 init-db 或迁移中途失败，仍会得到不符合只存 hash 目标的 NOT NULL 定义。
-- **Suggestion:** 保持启动迁移作为兼容既有库的兜底，同时将空库定义改为 `key_value VARCHAR(255) UNIQUE`（或不再声明该列的 NOT NULL），并确保 `key_hash` 的定义和唯一约束在初始化路径也一致。
-- **Status:** fixed
-- **Response:** 已修复：旧表先以可空 hash 列补列，回填并校验重复 hash、清空明文，最后设置 NOT NULL 和唯一索引；init-db 全流程使用事务，启动迁移继续作为兜底。
+### Issue 4
+- severity: bug
+- 文件:行号: `CrewRouterHelper/src/backup.js:8`
+- 描述: `hooks restore` 只检查 JSON 是对象且存在 `hooks` 字段，不复用 `scanHooks` 的事件、hook 类型、timeout、命令路径等校验。用户可通过 `restore /任意路径` 恢复任意带 `hooks` 字段的恶意配置，之后原生 Hook 会执行其中的任意 command；恢复过程还没有确认目标文件属于受控 backups 目录（命令行虽要求 `--yes`，但这不是内容安全边界）。
+- 建议: 默认仅允许受控 backups 目录内、符合命名规则的备份；恢复前严格校验完整 Hook schema 和命令路径，拒绝不一致/不可执行命令；对受控目录使用 realpath 校验，防止符号链接绕过。
+- Status: open
 
-### Issue 6 -- Severity: suggestion
-- **File:** `/data/CrewRouter/scripts/migrate-api-keys-hash.js:7-18`
-- **Description:** 脚本默认 dry-run 的行为正确（只有显式 `--apply` 写库），但 `--apply` 模式逐行单独 UPDATE，没有事务；中途失败会留下部分 key 已清空、部分 key 未迁移的混合状态。由于认证查询已经只查 `key_hash`，部分迁移状态会直接导致未处理旧 key 认证失败。
-- **Suggestion:** `--apply` 使用单一数据库事务（或分批事务并明确恢复策略），在提交前校验待迁移行数/重复 hash，并在失败时整体回滚；dry-run 可继续只读打印。
-- **Status:** fixed
-- **Response:** 已修复：--apply 使用单一数据库事务，迁移前及事务内校验重复 hash，并在任意失败时整体回滚；默认仍为 dry-run，未执行真实迁移。
+### Issue 5
+- severity: bug
+- 文件:行号: `CrewRouterHelper/src/hooks.js:5`、`CrewRouterHelper/src/hooks.js:7`
+- 描述: Windows 分支把 JS CLI 路径直接生成为 `"...\\cr-report.js" hook ...`。Windows 原生通常不能把 `.js` 文件作为可执行命令直接启动（依赖文件关联或 shell 行为），而 Hook 执行器未必经过可用的 `cmd` 文件关联；因此 `hooks install` 在 Windows 上可能安装成功但事件全部执行失败。与此同时 `watchState` 仍固定使用 `~/.cache/cr-report-grok-state.json`，与 README 声称的 `%LOCALAPPDATA%` 路径不一致。
+- 建议: Windows Hook 命令显式使用 `process.execPath` 加 CLI 脚本路径并正确转义参数；缓存状态路径统一走平台缓存目录函数；增加 Windows 路径/命令生成测试（至少静态测试）。
+- Status: open
 
-### Issue 7 -- Severity: nit
-- **File:** `/data/CrewRouter/.hermes/implementation-summary.md`；验证记录
-- **Description:** 任务书要求的行为验证并未全部完成：`test-request-source.js` 实测通过，但 `test-usage-accuracy.js` 因环境缺少 `pg` 失败，dry-run、真实数据库迁移、重启后的老 key/会话总结/配置流程也未实测。摘要已说明部分未执行，但“2A-2H 完成”表述容易被理解为运行时已验证。
-- **Suggestion:** 保持实现摘要中的未验证项明确，并在具备数据库依赖和测试库后补跑 `test-usage-accuracy.js`、迁移 dry-run 及端到端认证/会话总结测试。
-- **Status:** fixed
-- **Response:** 已修复：implementation-summary 已区分静态检查、无数据库测试通过和数据库/端到端未验证项；补充了静态 8 点位计数/失败传播断言。
+### Issue 6
+- severity: bug
+- 文件:行号: `CrewRouterHelper/bin/cr-report.js:25`
+- 描述: `logs --follow` 只在启动时对日志文件调用 `fs.watch`。日志不存在时监听立即失败且被静默吞掉，后续第一次上报创建日志文件也不会被监听，因此该功能在“尚无日志”的正常初始状态下不会跟随任何事件；日志轮转后也不会重新绑定新文件。
+- 建议: 监听日志目录并过滤目标文件，或在文件创建/轮转时重建 watcher；非 TTY 下明确拒绝/降级 `--follow` 并返回可诊断提示；补充空日志文件和轮转测试。
+- Status: open
 
-### Issue 8 -- Severity: nit
-- **File:** `/data/CrewRouter/server/routes/api.js:2764-5975`
-- **Description:** 已发现 8 处 usage INSERT，列集合分别保留了原有差异（包括 `request_params` 和 `plugin_meta`），这一点符合任务书；但事务 helper 以动态 SQL 字符串和位置参数承载列集合，缺少自动化断言，后续新增点位容易漏传 `userId` 或 `pointsToDeduct`。
-- **Suggestion:** 增加不连接真实数据库的 helper 参数/SQL 列数测试，至少断言 8 个点位的占位符数量与值数组长度一致，并断言 helper 返回失败时调用方不会继续成功完成计费流程。
-- **Status:** fixed
+### Issue 7
+- severity: suggestion
+- 文件:行号: `CrewRouterHelper/src/tui.js:4`
+- 描述: TUI 为每次按键注册异步 `keypress` 回调，但退出时没有移除监听器；刷新、测试或安装操作也没有防并发锁，快速按键会并发执行多个扫描/写入操作。异常发生在 handler 或 `render` 内时，`runTui` 的 finally 只能恢复 raw mode，不能保证用户得到可控的错误处理。
+- 建议: 保存并移除 keypress listener，增加 busy 状态/队列，使用 `try/finally` 处理每个动作并在 TTY 恢复失败时兜底；覆盖 Ctrl-C、handler 抛错、快速连按和 Windows TTY 场景。
+- Status: open
 
-## 结论
+### Issue 8
+- severity: suggestion
+- 文件:行号: `CrewRouterHelper/bin/cr-report.js:21`、`CrewRouterHelper/src/config.js:3`
+- 描述: 顶层 `logout` 直接删除整个配置文件，会同时删除所有 profile 的凭证，而不是只注销当前 profile；在多 profile 场景下这是破坏性且缺少确认的行为，也使“凭证隔离”难以符合用户预期。该行为还删除了 profile 元数据和服务地址。
+- 建议: 将 logout 设计为清除当前 profile 的凭证并保留其他 profile；若确需删除整个配置，改名为 purge 并要求 `--yes`，同时在帮助和测试中明确。
+- Status: open
 
-发现 3 个功能性问题、3 个改进建议和 2 个验证/可维护性提示。其中 Issue 1（事务失败被静默吞掉）和 Issue 2（配置接口仍依赖已清空的明文 key）会直接造成财务漏计费或现有功能失效，建议在合并前优先修复。未修改源代码。
-- **Response:** 已修复：helper 失败直接抛出，8 个调用点均显式检查返回值；增加无数据库静态断言，校验 8 个 usage 点位及占位符/参数数组数量。
+### Issue 9
+- severity: suggestion
+- 文件:行号: `CrewRouterHelper/src/logs.js:5`、`CrewRouterHelper/src/reporter.js:5`
+- 描述: 日志脱敏只覆盖有限的 `key/token/secret/password` 赋值格式以及 URL。网络库错误文本和未来新增字段可能包含查询参数、Authorization 值或其他敏感信息；当前 `writeLog` 只清理 `entry.error`，且日志轮转文件没有显式再次设置权限。现有测试仅验证两种字符串，不能证明 CLI 日志和轮转备份不泄露。
+- 建议: 日志采用白名单字段而非记录原始错误文本；对 header、URL 查询/片段、常见 JWT/API-key 形态做统一脱敏；轮转文件创建后强制 0600，并增加写入、轮转、CLI 输出和错误路径测试。
+- Status: open
+
+### Issue 10
+- severity: suggestion
+- 文件:行号: `CrewRouterHelper/test/helper.test.js:1-38`、`CrewRouterHelper/package.json:8`
+- 描述: 测试仅覆盖 7 个纯函数/扫描场景，没有覆盖本次新增的 CLI 子命令解析、profile 迁移/切换/删除、OAuth 刷新隔离、备份恢复安全校验、日志 follow/clear、TUI raw mode/非TTY、Windows 分支或旧命令回归。并且从仓库根目录执行 `npm test` 失败（根 package 没有该 script），只有手动进入 CrewRouterHelper 才能运行测试，交付检查容易误判。
+- 建议: 为 CLI 建立隔离临时 HOME/配置的端到端测试，覆盖成功和错误退出码；补齐上述平台/安全场景；在根级测试入口或文档中明确可执行的测试命令，并让 CI 实际执行 Helper 测试。
+- Status: open
+
+## 验证记录
+
+- `node --test CrewRouterHelper/test/*.test.js`：7 项通过。
+- `npm test`（仓库根目录）：失败，提示 `Missing script: "test"`。
