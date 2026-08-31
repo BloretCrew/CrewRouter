@@ -1,22 +1,51 @@
+# CrewRouterHelper 提交评审
 
-## 最终复审（目标提交 `d4ace2b`）
+评审提交：`5bfd014316151ba41617c1b6bf22b3f7f5d52415` 相对 `main`
 
-### 原问题复核
+## Issues
 
-- Issue 1（冲突覆盖）：**fixed（但仍受新 Issue 5 影响）**。目标不存在或无法通过识别时不会写入；普通冲突文件的 dry-run/真实安装边界已有保护，且测试检查了目标、备份目录和 Orca/Bark 文件快照。
-- Issue 2（帮助）：**fixed**。帮助已公开 `hooks install [--dry-run]`，并说明只读计划及成功退出码。
-- Issue 3（测试覆盖）：**fixed（但关键识别边界仍有遗漏，见新 Issue 5）**。新增进程级测试覆盖了未知选项、冲突退出码、已有 Helper 配置和 Linux 下不可执行文件、目录、符号链接等情况。
-- Issue 4（入口身份校验）：**修复不充分，见新 Issue 5**。本提交增加了普通文件、非符号链接、Linux 可执行权限及 realpath 检查，但没有把完整命令行与当前 `installCommand()` 生成的命令严格相等比较。
-
-### 新 Issues
-
-### Issue 5
+### 1
 - Severity: bug
-- File: `/data/CrewRouter/CrewRouterHelper/src/hooks.js:9`
-- Description: `isControlledCommand()` 只比较 `commandPath()` 解析出的入口 realpath，并分别检查命令以 `hook --harness grok` 结尾；它没有校验入口前后的完整参数串。因此，同一真实入口的伪造命令仍会被标记为 Helper 配置。例如，在当前 Linux 工作树中构造完整 13 事件配置，把命令改为 `'<当前 cr-report.js>' --unexpected-arg hook --harness grok`，`installPlan()` 返回 `helper: true, conflict: false, will_write: true`，尽管该配置并非 `installCommand()` 生成的受控命令，安装会备份并覆盖它。该问题同样适用于 Windows 语义：realpath/lstat 只能确认入口文件身份，不能确认 `.exe`/脚本入口后的参数没有被篡改；当前测试也只覆盖了不同入口路径，未覆盖同入口加额外参数。
-- Suggestion: 对现有每个 Hook 的命令与 `expectedCommand` 做完整、平台正确的规范化后精确比较，或至少严格解析并拒绝除预期入口和 `hook --harness grok` 外的任何参数；不要仅依赖首 token realpath 和后缀匹配。增加 Linux/Windows 语义的同入口额外参数负例，并断言 dry-run 报冲突、真实安装不创建备份且目标字节/权限不变。
+- File: `CrewRouterHelper/bin/cr-report.js:39`
+- Description: CLI 已在 `VALID` 和帮助文本中声明 `repair`，但 `main()` 没有把 `repair` 分派给 `fixDoctor()`（末尾 extras 列表也没有 `repair`）。因此 `cr-report repair --dry-run` 通过参数校验后直接结束，不输出修复计划，也不执行 Repair；该任务要求的 Repair 实际上只是 CLI 表面接入。
+- Suggestion: 在 `main()` 中为 `repair` 调用 `api.fixDoctor(process.argv[1], { apply: Boolean(o.yes) && !o['dry-run'], yes: Boolean(o.yes) })`（或等价的明确分派），并覆盖无参数、`--dry-run`、`--yes` 三种路径。
 - Status: open
 
-### 复审结论
+### 2
+- Severity: bug
+- File: `CrewRouterHelper/bin/cr-report.js:37`; `server/routes/client-events.js:188-193`
+- Description: `remote status|capabilities|recent-events` 使用 `api.requestJson()` 携带 Bearer token，但服务端三个只读端点都挂在 `requireAuth` 上，只接受浏览器 session，不接受 `oauthBearer`/API Key。由 CLI 发起的远程调用会得到 401，因而这些远程命令无法工作。与此同时，`requireAuth` 不设置 `req.apiUser`，即使通过浏览器 session 访问 `recent-events`，查询条件也固定为 `user_id = NULL`，正常用户看不到自己的事件。
+- Suggestion: 为远程 API 端点使用与事件上报一致的 Bearer 鉴权（或显式同时支持 session 和 Bearer），并从 session 用户填充用户 ID；查询应始终绑定当前认证用户。补充带 OAuth/API Key 和 session 的路由测试。
+- Status: open
 
-已运行 `cd CrewRouterHelper && npm test`：16/16 通过；所有现有测试并未发现其它回归。但独立边界复测确认 `isControlledCommand()` 可被“同一 CLI 入口 + 额外参数”绕过，因此不能确认 Issue 1-4 均已修复，当前仍有 Issue 5 开放。未修改源代码；本轮审查文件已追加更新。Windows 原生、真实 OAuth 和远程链路仍未在本环境验证。
+### 3
+- Severity: bug
+- File: `CrewRouterHelper/bin/cr-report.js:28,39`; `CrewRouterHelper/src/doctor.js:5`
+- Description: `doctor --fix` 仍以 `apply: !o['dry-run']` 调用 Repair。没有 `--dry-run` 时它会进入实际修复分支，并因为缺少 `--yes` 抛出错误，而不是按要求默认返回只读 dry-run 计划；只有显式 `--dry-run` 才是计划模式，显式 `--yes` 才真正修改。该行为既不符合“兼容的 doctor --fix 默认 dry-run”，也使默认命令不是安全的可重复检查。
+- Suggestion: 将 `doctor --fix` 的默认 `apply` 设为 false，只有同时显式提供 `--yes` 且未提供 `--dry-run` 时才 apply；默认输出与 `repair --dry-run` 一致的计划和变更标记。
+- Status: open
+
+### 4
+- Severity: bug
+- File: `CrewRouterHelper/src/recordings.js:23`; `CrewRouterHelper/bin/cr-report.js:37`
+- Description: `events replay FILE` 的 `read()` 会把 schema 无效、重复或过期记录加入 `rows`，仅把问题写进 `diagnostics`；当使用 `--remote` 时 CLI 仍遍历全部 `rows` 并调用 `api.report()`。因此损坏/过期/重复录制会被实际远程重放，且重放请求携带录制格式的 `schema_version`/`recorded_at`，没有在发送前完成严格 schema 校验或去重。
+- Suggestion: 将无效记录排除出可回放集合；远程回放前验证统一事件 schema、明确处理过期事件和重复事件（默认拒绝或要求显式确认），并报告成功/失败数量，而不是只输出诊断信息后照发。
+- Status: open
+
+### 5
+- Severity: suggestion
+- File: `CrewRouterHelper/bin/cr-report.js:37`; `CrewRouterHelper/src/config.js:15`
+- Description: 远程命令直接输出 `requestJson()` 返回的完整 JSON body（`body: r.body && {...r.body}`），而 `requestJson()` 会读取并解析响应正文。当前服务端新增接口返回的是最小字段，但 CLI 没有响应字段白名单；配置指向任意受控/被篡改服务时，远端可将错误详情或敏感字段原样显示。网络层也没有响应体大小上限。
+- Suggestion: 远程命令只输出固定的状态和经过白名单过滤的 capabilities/recent-events 字段；对响应正文设置字节上限，超限即中止，错误只显示通用分类和 HTTP 状态，不显示原始正文。
+- Status: open
+
+## 执行的命令与结论
+
+- `cd /tmp/CrewRouterHelper && npm test`（目标提交快照）：通过，16/16。
+- `node server/scripts/test-client-events.js`：通过，12 项契约断言。
+- `node server/scripts/test-task5a-static.js`：通过。
+- `node --check server/routes/client-events.js`：通过。
+- `node --check CrewRouterHelper/bin/cr-report.js` 及 `CrewRouterHelper/src/*.js`：通过。
+- 关键 CLI smoke：`repair --dry-run` 返回 0 但无任何输出，确认未分派；`events replay` 缺少文件时报 ENOENT；`remote nonsense` 正确拒绝未知子命令；其余无配置命令受环境配置影响，未发现语法错误。
+
+结论：既有 Helper 测试和服务端静态契约均通过，但新增 Repair/远程接口存在功能性阻断，且 doctor 默认修复语义、录制回放校验和远程响应泄露边界不满足任务要求。Issues 共 5 项，均为 `open`。
