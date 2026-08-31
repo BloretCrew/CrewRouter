@@ -185,8 +185,9 @@ router.post('/', oauthBearer, async (req, res) => {
 });
 
 // ---------- 客户端能力与最近事件（只读、最小字段） ----------
-router.get('/capabilities', requireAuth, (req, res) => res.json({ helper: { event_schema: 1, events: Array.from(EVENT_TYPES) }, server: { event_schema: 1, remote_tests: true } }));
-router.get('/recent-events', requireAuth, async (req, res) => {
+function clientEventsAuth(req, res, next) { if (req.session?.user) { req.apiUser = req.apiUser || { userId: req.session.user.id }; return next(); } return oauthBearer(req, res, next); }
+router.get('/capabilities', clientEventsAuth, (req, res) => res.json({ helper: { event_schema: 1, events: Array.from(EVENT_TYPES) }, server: { event_schema: 1, remote_tests: true } }));
+router.get('/recent-events', clientEventsAuth, async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
   try { await ensureTable(); const result = await pool.query('SELECT harness, event, session_id, ts FROM client_events WHERE user_id = $1 ORDER BY ts DESC LIMIT $2', [req.apiUser?.userId || null, limit]);
     res.json({ events: result.rows.map(row => ({ harness: row.harness, event: row.event, session: row.session_id ? String(row.session_id).slice(0, 24) : null, time: row.ts })) });
@@ -194,7 +195,7 @@ router.get('/recent-events', requireAuth, async (req, res) => {
 });
 
 // ---------- 看板：最近窗口内各 harness 活跃度 ----------
-router.get('/live', requireAuth, async (req, res) => {
+router.get('/live', clientEventsAuth, async (req, res) => {
   const windowSec = Math.min(Math.max(parseInt(req.query.window, 10) || 300, 30), 86400);
   try {
     await ensureTable();
@@ -205,17 +206,17 @@ router.get('/live', requireAuth, async (req, res) => {
               COUNT(*) AS total_events,
               MAX(ts) AS last_event_at
          FROM client_events
-        WHERE ts > now() - ($1 || ' seconds')::interval
+        WHERE user_id = $2 AND ts > now() - ($1 || ' seconds')::interval
         GROUP BY harness`,
-      [windowSec]
+      [windowSec, req.apiUser.userId]
     );
     const sessions = await pool.query(
       `SELECT DISTINCT ON (session_id)
               harness, session_id, cwd, tool_name, ts
          FROM client_events
-        WHERE ts > now() - ($1 || ' seconds')::interval AND session_id IS NOT NULL
+        WHERE user_id = $2 AND ts > now() - ($1 || ' seconds')::interval AND session_id IS NOT NULL
         ORDER BY session_id, ts DESC`,
-      [windowSec]
+      [windowSec, req.apiUser.userId]
     );
     res.json({
       window: windowSec,
