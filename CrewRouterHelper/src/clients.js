@@ -35,7 +35,11 @@ function setup(name = 'grok', options = {}) {
   const info = inspect(name, options);
   if (name !== 'grok') return { ...info, action: 'manual', confirmation_required: false, manual_steps: [`确认 ${info.config_path} 是否存在并阅读 ${name} 的 Hook 配置文档`, `将事件上报命令配置为 cr-report hook --harness ${name}`, '执行 cr-report test --harness ' + name + ' 验证；本工具不会自动修改该文件'] };
   const plan = installPlan(options.command || process.argv[1]);
-  return { ...info, action: options.confirmed ? 'install' : 'plan', confirmation_required: !options.confirmed, install_plan: plan };
+  if (!options.confirmed) return { ...info, action: 'plan', confirmation_required: true, install_plan: plan };
+  if (plan.conflict) throw new Error('检测到现有 Hook 冲突，拒绝覆盖');
+  install(path.resolve(options.command || process.argv[1]));
+  const verified = inspect(name, options);
+  return { ...verified, action: 'install', confirmation_required: false, install_plan: plan, verification: verified.helper_installed ? 'passed' : 'failed' };
 }
 function change(name, action, dryRun = false, yes = false) {
   const info = inspect(name);

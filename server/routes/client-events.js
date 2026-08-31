@@ -155,35 +155,47 @@ router.post('/', oauthBearer, async (req, res) => {
     if (body.machine_name) payload.machine_name = strOrNull(body.machine_name, 64);
     if (Number.isFinite(Number(body.latency_ms))) payload.latency_ms = Math.max(0, Math.min(600000, Number(body.latency_ms)));
     const eventId = strOrNull(body.event_id, 128);
-    // 旧客户端没有 event_id；新客户端用 user/harness/event_id 在应用层去重。
+    const userId = req.apiUser?.userId || null;
+    const isRemoteTest = body.remote_test === true;
+    let inserted = true;
+    if (eventId) payload.event_id = eventId;
+    if (isRemoteTest) payload.remote_test = true;
     if (eventId) {
-      const existing = await pool.query(
-        "SELECT id FROM client_events WHERE user_id = $1 AND harness = $2 AND payload->>'event_id' = $3 LIMIT 1",
-        [userId, harness, eventId]
+      // No production DDL is required: transaction-scoped advisory locking
+      // serializes the legacy JSONB idempotency key before SELECT/INSERT.
+      const conn = await pool.connect();
+      try {
+        await conn.query('BEGIN');
+        await conn.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`client-events:${userId || ''}:${harness}:${eventId}`]);
+        const existing = await conn.query(
+          "SELECT id FROM client_events WHERE user_id = $1 AND harness = $2 AND payload->>'event_id' = $3 LIMIT 1",
+          [userId, harness, eventId]
+        );
+        if (existing.rows.length) inserted = false;
+        else await conn.query(
+          `INSERT INTO client_events (api_key_id, user_id, harness, event, session_id, tool_name, cwd, ts, payload)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, now()), $9)`,
+          [req.apiUser?.keyId || null, userId, harness, event, strOrNull(body.session_id, 128), strOrNull(body.tool_name, 128), strOrNull(body.cwd, 512), typeof body.ts === 'number' ? new Date(body.ts < 1e12 ? body.ts * 1000 : body.ts) : null, JSON.stringify(payload)]
+        );
+        await conn.query('COMMIT');
+      } catch (err) {
+        try { await conn.query('ROLLBACK'); } catch {}
+        throw err;
+      } finally { conn.release(); }
+    } else {
+      await pool.query(
+        `INSERT INTO client_events (api_key_id, user_id, harness, event, session_id, tool_name, cwd, ts, payload)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, now()), $9)`,
+        [req.apiUser?.keyId || null, userId, harness, event, strOrNull(body.session_id, 128), strOrNull(body.tool_name, 128), strOrNull(body.cwd, 512), typeof body.ts === 'number' ? new Date(body.ts < 1e12 ? body.ts * 1000 : body.ts) : null, JSON.stringify(payload)]
       );
-      if (existing.rows.length) return res.json({ ok: true, duplicate: true });
-      payload.event_id = eventId;
     }
-    await pool.query(
-      `INSERT INTO client_events (api_key_id, user_id, harness, event, session_id, tool_name, cwd, ts, payload)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, now()), $9)`,
-      [
-        req.apiUser?.keyId || null,
-        req.apiUser?.userId || null,
-        harness,
-        event,
-        strOrNull(body.session_id, 128),
-        strOrNull(body.tool_name, 128),
-        strOrNull(body.cwd, 512),
-        typeof body.ts === 'number' ? new Date(body.ts < 1e12 ? body.ts * 1000 : body.ts) : null,
-        JSON.stringify(payload),
-      ]
-    );
+    if (!inserted) return res.json({ ok: true, duplicate: true });
   } catch (err) {
     Logger.error('[客户端事件] 落库失败:', err.message);
+    if (body.event_id) return res.status(500).json({ ok: false, error: 'event persistence failed' });
   }
   // 订阅规则推送：异步执行，失败只记日志，绝不阻塞客户端上报应答
-  if (req.apiUser?.userId) {
+  if (req.apiUser?.userId && body.remote_test !== true) {
     notifyHookEvent({
       userId: req.apiUser.userId,
       harness,
@@ -193,7 +205,7 @@ router.post('/', oauthBearer, async (req, res) => {
       cwd: strOrNull(body.cwd, 512),
     }).catch(err => Logger.warn(`[客户端事件] 事件推送失败: ${err.message}`));
   }
-  // 无论落库成败都对客户端返回 ok，避免阻塞其工具流
+  // 无 event_id 的旧客户端仍保持 fail-open；幂等事件的错误已明确报告。
   res.json({ ok: true });
 });
 
@@ -219,7 +231,7 @@ router.get('/live', clientEventsAuth, async (req, res) => {
               COUNT(*) FILTER (WHERE event IN ('tool_use_failure','response_stop_failure')) AS failure_count,
               COUNT(*) AS total_events,
               MAX(ts) AS last_event_at,
-              AVG(NULLIF((payload->>'latency_ms')::numeric, 0)) AS avg_latency_ms
+              AVG(CASE WHEN payload->>'latency_ms' ~ '^[0-9]+(\\.[0-9]+)?$' THEN NULLIF((payload->>'latency_ms')::numeric, 0) END) AS avg_latency_ms
          FROM client_events
         WHERE user_id = $2 AND ts > now() - ($1 || ' seconds')::interval
         GROUP BY harness`,

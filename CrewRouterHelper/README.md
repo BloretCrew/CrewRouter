@@ -48,7 +48,7 @@ cr-report migrate --yes
 cr-report rollback BACKUP_ID --yes
 ```
 
-迁移会把旧单配置/profile 和旧 Python Hook 路径转换为当前 CLI；写入前创建受控备份，失败时尝试恢复。`rollback` 仅恢复 Helper 自己创建且经过路径校验的备份。以上命令均不连接数据库、不执行生产 DDL。
+迁移会把旧单配置/profile 和旧 Python Hook 路径转换为当前 CLI；写入前创建受控备份，恢复前校验 manifest、允许文件路径和 SHA-256，失败时回滚并显式报错。`backup` 与 `rollback` 统一使用迁移备份目录；`rollback` 仅恢复 Helper 自己创建且经过路径校验的备份。以上命令均不连接数据库、不执行生产 DDL。
 
 ## 失败队列与幂等
 
@@ -74,7 +74,7 @@ cr-report queue prune --yes
 
 ## status / heartbeat / TUI / remote
 
-`status` 是只读扫描；`heartbeat --json` 汇总本地 CLI、Hook、配置以及可选远程 URL、DNS、TCP/TLS、HTTP、认证和事件权限检查；`tui` 提供零依赖终端展示。`remote status|capabilities|recent-events` 只显示脱敏摘要，`remote test --event a,b,c` 发送有限的远程测试事件并只报告状态。
+`status` 是只读扫描；`heartbeat --json` 汇总本地 CLI、Hook、配置以及可选远程 URL、DNS、TCP/TLS、HTTP、认证和事件权限检查；`tui` 提供零依赖终端展示。`remote status|capabilities|recent-events` 只显示脱敏摘要，`remote test --event a,b,c` 发送有限的远程测试事件；请求带有服务端识别的测试标记，不进入正常通知链，并只报告状态。
 
 ## Python 兼容入口
 

@@ -17,7 +17,7 @@ async function remoteTest(events, timeout = 1200) {
     const type = eventMap[requested] || requested;
     const started = Date.now();
     if (!eventMap[requested] && !['session_start','tool_use','response_stop','tool_use_failure','subagent_start','subagent_stop'].includes(type)) return { type: requested, status: null, latency_ms: 0, level: 'FAILED', error: 'invalid_event' };
-    const payload = { harness: 'grok', event: type, session_id: 'cr-report-test', tool_name: 'cr-report', event_id: eventId() };
+    const payload = { harness: 'grok', event: type, session_id: 'cr-report-test', tool_name: 'cr-report', event_id: eventId(), remote_test: true };
     try {
       const r = await requestJson(`${url}/api/client-events`, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(payload) }, timeout, 1024);
       return { type, status: Number(r.statusCode) || null, latency_ms: Date.now() - started, level: r.statusCode >= 200 && r.statusCode < 300 ? 'READY' : r.statusCode === 401 || r.statusCode === 403 ? 'WARN' : 'FAILED' };
