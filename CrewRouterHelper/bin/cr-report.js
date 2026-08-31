@@ -9,7 +9,8 @@ const HELP = `用法: cr-report <命令> [选项]
   hook|emit|watch|status|doctor|tui|login|logout|test
   auth status|use-oauth|use-key|logout
   profile list|add NAME URL|use NAME|remove NAME|test NAME
-  hooks install|uninstall|test|list|backup|restore
+  hooks install [--dry-run]|uninstall|test|list|backup|restore
+  hooks install --dry-run：只读检查目标路径、冲突和备份计划（成功退出 0）
   logs [--follow|--clear|--yes|--json]
   setup [--dry-run|--non-interactive]
   queue [retry|clear|prune] [--yes|--json]
