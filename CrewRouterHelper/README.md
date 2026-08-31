@@ -27,6 +27,25 @@ cr-report emit --harness hermes --event session_start --session demo
 
 支持 `hookEventName`/`hook_event_name`、`sessionId`/`session_id`、`toolName`/`tool_name`、`toolInput`/`tool_input`、`cwd`/`workspaceRoot`，以及 SessionStart、SessionEnd、PreToolUse、PostToolUse、PostToolUseFailure、PermissionDenied、Stop、StopFailure、Notification、SubagentStart、SubagentStop、PreCompact、PostCompact。未知事件跳过且退出 0；网络和配置异常 fail-open。
 
+## doctor、auth、profile、hooks 和 logs
+
+```bash
+cr-report doctor --json
+cr-report auth status
+cr-report auth use-key --key 'cr-sk-...'
+cr-report auth use-oauth
+cr-report profile add local http://127.0.0.1:20003
+cr-report profile list && cr-report profile use local
+cr-report hooks test
+cr-report hooks list
+cr-report hooks backup
+cr-report hooks restore --yes
+cr-report logs --json
+cr-report logs --clear --yes
+```
+
+命令不会显示凭证；`hooks test` 默认只在内存中做 dry-run，`--remote` 才发送测试事件。Profile 凭证相互隔离，删除需要 `--yes` 且不能删除当前 profile。Windows 使用 `%USERPROFILE%\\.grok\\hooks`、`%LOCALAPPDATA%` 缓存目录，安装后运行 `cr-report doctor` 检查。
+
 ## status / tui / watch
 
 `status` 是只读非交互扫描，`tui` 提供零依赖终端展示：Hook 文件有效性、事件列表、CLI 可执行性、凭证是否配置/临期、服务端地址、旧 watch 兼容状态和检查时间。不会显示 token/API key。旧 Python `watch` 仍可用，但不要与原生 Grok Hook 同时运行，以免重复上报。
