@@ -18,7 +18,7 @@ const Logger = require('./logger');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { encryptSecret, assertEncryptionKeyConfigured } = require('./utils/secret-crypto');
-const { resolveEdition, initializeEdition } = require('./utils/instance-edition');
+const { resolveEdition, initializeEdition, inspectLegacyData } = require('./utils/instance-edition');
 
 if (!isDemo && (process.env.NODE_ENV === 'production' || process.env.CR_ENV === 'production')) {
   assertEncryptionKeyConfigured();
@@ -2746,7 +2746,13 @@ async function ensureInstanceEdition() {
   const { pool: db } = require('./models/database');
   instanceEdition = await resolveEdition(db, config.edition);
   if (!instanceEdition && config.edition) {
-    instanceEdition = await initializeEdition(db, config.edition);
+    const legacy = await inspectLegacyData(db);
+    if (legacy.hasLegacyData) {
+      const error = new Error('检测到历史安装数据且未初始化 edition；不能由 config/env 自动选择。请管理员登录 /setup 并明确确认兼容迁移');
+      error.code = 'EDITION_LEGACY_CONFIRMATION_REQUIRED';
+      throw error;
+    }
+    instanceEdition = await initializeEdition(db, config.edition, { confirmLegacy: true });
   }
   return instanceEdition;
 }

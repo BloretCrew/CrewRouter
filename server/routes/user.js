@@ -14,7 +14,7 @@ const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
 const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-edition');
 
 const requireTeamCapability = requireTeamEdition(() => loadPersistedEdition(pool));
-router.use(['/api-keys/:id/members', '/api-keys/:id/members/:userId(\\d+)', '/api-keys/:id/members/me', '/project-stats'], requireTeamCapability);
+router.use(['/api-keys/:id/members', '/api-keys/:id/members/:userId(\\d+)', '/api-keys/:id/members/me', '/project-stats', '/audit-logs'], requireTeamCapability);
 const { encryptSecret, decryptSecret } = require('../utils/secret-crypto');
 const { validateUrl, upstreamUrl, cleanBaseUrl: normalizeUpstreamBaseUrl } = require('../utils/url-validator');
 const {

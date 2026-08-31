@@ -5,7 +5,8 @@ const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { getAuthMode, setAuthMode, decodeMode } = require('../utils/auth-mode');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
-const { normalizeEdition, initializeEdition, loadPersistedEdition, metadata } = require('../utils/instance-edition');
+const { normalizeEdition, initializeEdition, loadPersistedEdition, metadata, inspectLegacyData } = require('../utils/instance-edition');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 /**
  * OOBE：飞书模式创建管理员；PassPort 模式由首次管理员授权完成初始化。
@@ -53,6 +54,12 @@ async function requireSetupMode(req, res, next) {
 async function requireEditionSetup(req, res, next) {
   try {
     if (await loadPersistedEdition(pool)) return res.status(403).json({ error: '实例 edition 已初始化，无法修改', type: 'edition_immutable' });
+    const setup = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");
+    if (setup.rows.length > 0) {
+      if (!req.session?.user) return res.status(401).json({ error: '旧实例 edition 迁移需要管理员登录', type: 'admin_auth_required' });
+      await requireAdmin(req, res, () => next());
+      return;
+    }
     next();
   } catch (error) {
     res.status(503).json({ error: '数据库尚未就绪，请稍后重试', type: 'edition_unavailable' });
@@ -63,14 +70,12 @@ async function requireEditionSetup(req, res, next) {
 router.post('/setup/edition', requireEditionSetup, async (req, res) => {
   const requested = normalizeEdition(req.body?.edition);
   if (!requested) return res.status(400).json({ error: 'edition 只能是 personal 或 team', type: 'edition_invalid' });
-  if (req.body?.confirmExisting !== true) {
-    const existing = await pool.query('SELECT (SELECT COUNT(*) FROM teams)::int AS teams, (SELECT COUNT(*) FROM user_teams)::int AS memberships');
-    if (Number(existing.rows[0]?.teams || 0) > 0 || Number(existing.rows[0]?.memberships || 0) > 0) {
-      return res.status(409).json({ error: '检测到现有 Team 数据。请确认兼容迁移，不会删除或转换现有数据。', type: 'existing_installation_confirmation_required' });
-    }
-  }
   try {
-    const edition = await initializeEdition(pool, requested);
+    const legacy = await inspectLegacyData(pool);
+    if (legacy.hasLegacyData && req.body?.confirmExisting !== true) {
+      return res.status(409).json({ error: '检测到历史安装数据。请确认兼容迁移，不会删除或转换现有数据。', type: 'existing_installation_confirmation_required' });
+    }
+    const edition = await initializeEdition(pool, requested, { confirmLegacy: legacy.hasLegacyData && req.body?.confirmExisting === true });
     res.json({ success: true, ...metadata(edition) });
   } catch (error) {
     const status = error.code === 'EDITION_CONFLICT' ? 409 : 400;

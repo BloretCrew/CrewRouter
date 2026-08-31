@@ -197,8 +197,10 @@ class ConsoleApp {
     try {
       const instanceRes = await fetch('/api/instance');
       this.instance = instanceRes.ok ? await instanceRes.json() : null;
-      if (this.instance?.capabilities?.teamAdmin === false) {
-        document.querySelectorAll('[data-team-only], [href*="adminTeams"], [href*="adminUserGroups"]').forEach((el) => { el.style.display = 'none'; });
+      if (this.instance?.capabilities) {
+        document.querySelectorAll('[data-capability]').forEach((el) => {
+          if (this.instance.capabilities[el.dataset.capability] === false) el.style.display = 'none';
+        });
       }
     } catch (_) { /* backend remains authoritative */ }
     this.bindEvents();
@@ -392,6 +394,11 @@ class ConsoleApp {
   async navigateTo(page, options = {}) {
     // 旧入口重定向到合并页
     let targetPage = page;
+    const capability = targetPage === 'projectWork' ? 'projects' : (targetPage === 'auditLogs' ? 'auditLogs' : null);
+    if (capability && this.instance?.capabilities?.[capability] === false) {
+      targetPage = 'modelLibrary';
+      if (!options.skipHash) this._writeConsoleHash(targetPage);
+    }
     let upstreamTab = options.upstreamTab || null;
     const docPage = options.docPage || null;
     if (page === 'myProviders') {

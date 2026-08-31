@@ -147,9 +147,11 @@ class AdminApp {
     try {
       const instanceRes = await fetch('/api/instance');
       const instance = instanceRes.ok ? await instanceRes.json() : null;
-      if (instance?.capabilities?.teamAdmin === false) {
-        document.querySelectorAll('[data-page="adminTeams"], [data-page="adminUserGroups"], [data-page="adminAuditLogs"]').forEach((el) => { el.style.display = 'none'; });
-        if (location.hash.startsWith('#adminTeams') || location.hash === '#adminUserGroups') location.hash = '#adminStats';
+      if (instance?.capabilities) {
+        document.querySelectorAll('[data-capability]').forEach((el) => {
+          if (instance.capabilities[el.dataset.capability] === false) el.style.display = 'none';
+        });
+        if (instance.capabilities.teamAdmin === false && (location.hash.startsWith('#adminTeams') || location.hash === '#adminUserGroups' || location.hash === '#adminAuditLogs')) location.hash = '#adminStats';
       }
     } catch (_) { /* backend remains authoritative */ }
     this.initInvitePanel();

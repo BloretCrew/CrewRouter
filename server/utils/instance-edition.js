@@ -47,7 +47,19 @@ async function loadPersistedEdition(db) {
   return edition;
 }
 
-async function initializeEdition(db, requested) {
+async function inspectLegacyData(db) {
+  const result = await db.query(`SELECT
+    (SELECT COUNT(*)::int FROM users) AS users,
+    (SELECT COUNT(*)::int FROM teams) AS teams,
+    (SELECT COUNT(*)::int FROM user_teams) AS memberships,
+    (SELECT COUNT(*)::int FROM api_key_members) AS shared_key_members,
+    (SELECT COUNT(*)::int FROM auth_invites) AS invites`);
+  const row = result.rows[0] || {};
+  const signals = Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value || 0)]));
+  return { ...signals, hasLegacyData: Object.values(signals).some((value) => value > 0) };
+}
+
+async function initializeEdition(db, requested, options = {}) {
   const candidate = normalizeEdition(requested);
   if (!candidate) throw editionError('edition 只能是 personal 或 team');
   const client = typeof db.connect === 'function' ? await db.connect() : db;
@@ -60,6 +72,10 @@ async function initializeEdition(db, requested) {
       throw editionError(`实例已固定为 ${current}，不能改为 ${candidate}`, 'EDITION_CONFLICT');
     }
     if (!current) {
+      const legacy = await inspectLegacyData(client);
+      if (legacy.hasLegacyData && options.confirmLegacy !== true) {
+        throw editionError('检测到历史安装数据，不能自动选择 edition；请由已认证管理员通过迁移流程明确确认', 'EDITION_LEGACY_CONFIRMATION_REQUIRED');
+      }
       await client.query(
         `INSERT INTO instance_settings (singleton_key, edition) VALUES ('instance', $1)
          ON CONFLICT (singleton_key) DO NOTHING`, [candidate]
@@ -111,5 +127,6 @@ module.exports = {
   loadPersistedEdition,
   initializeEdition,
   resolveEdition,
+  inspectLegacyData,
   requireTeamEdition,
 };
