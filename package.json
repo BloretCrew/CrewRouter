@@ -8,6 +8,8 @@
     "dev": "nodemon server/index.js",
     "init-db": "node server/scripts/init-db.js",
     "test:sessions-pagination": "node server/scripts/test-sessions-pagination.js",
+    "test:session-identity": "node server/scripts/test-session-identity.js",
+    "test:session-classification": "node server/scripts/test-session-classification-static.js",
     "test:usage-accuracy": "node server/scripts/test-usage-accuracy.js",
     "test:before-upstream-policy": "node server/scripts/test-before-upstream-policy.js",
     "test:quota-usage": "node server/scripts/test-quota-usage.js",

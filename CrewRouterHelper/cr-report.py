@@ -302,9 +302,13 @@ def cmd_hook(args):
         "event_id": str(_first(detail, "event_id", "eventId") or uuid.uuid4().hex),
         "harness": args.harness,
         "event": event,
-        "session_id": str(_first(detail, "session_id", "sessionId") or "")[:128] or None,
+        "session_id": str(_first(detail, "session_id", "sessionId", "conversation_id", "conversationId", "thread_id", "threadId") or "")[:128] or None,
+        "parent_session_id": str(_first(detail, "parent_session_id", "parentSessionId", "parent_thread_id", "parentThreadId") or "")[:128] or None,
+        "subagent_id": str(_first(detail, "subagent_id", "subagentId", "parent_subagent_id") or "")[:128] or None,
         "tool_name": str(_first(detail, "tool_name", "toolName") or "")[:128] or None,
-        "cwd": str(_first(detail, "cwd", "workspaceRoot") or os.getcwd())[:512],
+        "cwd": str(_first(detail, "cwd", "workspaceRoot", "worktree") or os.getcwd())[:512],
+        "project": str(_first(detail, "project", "project_id", "projectId") or "")[:512] or None,
+        "event_type": str(_first(detail, "hook_event_name", "hookEventName") or "")[:64] or None,
         "ts": int(time.time()),
         "detail": _safe_detail(detail),
     }
@@ -320,8 +324,12 @@ def cmd_emit(args):
         "harness": args.harness,
         "event": args.event,
         "session_id": args.session,
+        "parent_session_id": getattr(args, "parent_session", None),
+        "subagent_id": getattr(args, "subagent", None),
         "tool_name": args.tool,
         "cwd": args.cwd or os.getcwd(),
+        "project": getattr(args, "project", None),
+        "event_type": args.event,
         "ts": int(time.time()),
     }
     if url and key:
@@ -600,6 +608,9 @@ def main():
     p_emit.add_argument("--event", required=True,
                         choices=["session_start", "session_end", "tool_use"])
     p_emit.add_argument("--session", default=None)
+    p_emit.add_argument("--parent-session", default=None)
+    p_emit.add_argument("--subagent", default=None)
+    p_emit.add_argument("--project", default=None)
     p_emit.add_argument("--tool", default=None)
     p_emit.add_argument("--cwd", default=None)
     p_emit.set_defaults(fn=cmd_emit)

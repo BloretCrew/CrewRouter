@@ -748,6 +748,9 @@ function sourceBadgeColor(value) {
  * @param {object} [metadata]
  */
 function clientMetaFromReq(req, metadata = {}) {
+  if (!metadata || Object.keys(metadata).length === 0) {
+    if (req && req._clientMetaSnapshot) return req._clientMetaSnapshot;
+  }
   const headers = req?.headers || {};
   // 支持直接传 headers 对象（旧测试）
   const isPlainHeaders =
@@ -756,10 +759,12 @@ function clientMetaFromReq(req, metadata = {}) {
   const body = metadata.body !== undefined ? metadata.body : req?.body;
   const uaRaw = header(hdrs, 'user-agent');
   const userAgent = uaRaw ? uaRaw.slice(0, 500) : null;
-  return {
+  const result = {
     requestSource: detectRequestSource(hdrs, metadata, body),
     userAgent,
   };
+  if (req && req.headers && (!metadata || Object.keys(metadata).length === 0)) req._clientMetaSnapshot = result;
+  return result;
 }
 
 module.exports = {

@@ -16,7 +16,8 @@
 const express = require('express');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
-const { HARNESS_SOURCES } = require('../utils/request-source');
+const { HARNESS_SOURCES, normalizeRequestSource } = require('../utils/request-source');
+const { extractEventIdentity } = require('../utils/session-identity');
 const { oauthBearer } = require('../middleware/oauth-bearer');
 const { requireAuth } = require('../middleware/auth');
 const { createNotification, sendBark } = require('../utils/notifications');
@@ -110,11 +111,20 @@ async function ensureTable() {
       tool_name TEXT,
       cwd TEXT,
       ts TIMESTAMPTZ NOT NULL DEFAULT now(),
-      payload JSONB DEFAULT '{}'::jsonb
+      payload JSONB DEFAULT '{}'::jsonb,
+      logical_session_id TEXT,
+      parent_session_id TEXT,
+      session_id_source TEXT,
+      session_confidence TEXT
     )
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_client_events_ts ON client_events (ts DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_client_events_session ON client_events (session_id)`);
+  await pool.query('ALTER TABLE client_events ADD COLUMN IF NOT EXISTS logical_session_id TEXT');
+  await pool.query('ALTER TABLE client_events ADD COLUMN IF NOT EXISTS parent_session_id TEXT');
+  await pool.query('ALTER TABLE client_events ADD COLUMN IF NOT EXISTS session_id_source TEXT');
+  await pool.query('ALTER TABLE client_events ADD COLUMN IF NOT EXISTS session_confidence TEXT');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_client_events_logical_session ON client_events (user_id, logical_session_id, ts)');
   tableReady = true;
 }
 
@@ -137,8 +147,9 @@ function safeDetail(detail, maxBytes = 8192) {
 // 双鉴权：Bearer crh_ 前缀走自有 OAuth access token，其余回落 API Key 校验
 router.post('/', oauthBearer, async (req, res) => {
   const body = req.body || {};
-  const harness = strOrNull(body.harness, 64);
+  const harness = normalizeRequestSource(body.harness);
   const event = strOrNull(body.event, 32);
+  const identity = extractEventIdentity(body);
 
   if (!harness || !HARNESS_SET.has(harness)) {
     return res.status(400).json({ ok: false, error: 'invalid harness' });
@@ -173,9 +184,9 @@ router.post('/', oauthBearer, async (req, res) => {
         );
         if (existing.rows.length) inserted = false;
         else await conn.query(
-          `INSERT INTO client_events (api_key_id, user_id, harness, event, session_id, tool_name, cwd, ts, payload)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, now()), $9)`,
-          [req.apiUser?.keyId || null, userId, harness, event, strOrNull(body.session_id, 128), strOrNull(body.tool_name, 128), strOrNull(body.cwd, 512), typeof body.ts === 'number' ? new Date(body.ts < 1e12 ? body.ts * 1000 : body.ts) : null, JSON.stringify(payload)]
+          `INSERT INTO client_events (api_key_id, user_id, harness, event, session_id, tool_name, cwd, ts, payload, logical_session_id, parent_session_id, session_id_source, session_confidence)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, now()), $9, $10, $11, $12, $13)`,
+          [req.apiUser?.keyId || null, userId, harness, event, identity.sessionId, strOrNull(body.tool_name, 128), strOrNull(body.cwd, 512), typeof body.ts === 'number' ? new Date(body.ts < 1e12 ? body.ts * 1000 : body.ts) : null, JSON.stringify(payload), identity.logicalSessionKey, identity.parentSessionKey, identity.sessionIdSource, identity.confidence]
         );
         await conn.query('COMMIT');
       } catch (err) {
@@ -184,9 +195,9 @@ router.post('/', oauthBearer, async (req, res) => {
       } finally { conn.release(); }
     } else {
       await pool.query(
-        `INSERT INTO client_events (api_key_id, user_id, harness, event, session_id, tool_name, cwd, ts, payload)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, now()), $9)`,
-        [req.apiUser?.keyId || null, userId, harness, event, strOrNull(body.session_id, 128), strOrNull(body.tool_name, 128), strOrNull(body.cwd, 512), typeof body.ts === 'number' ? new Date(body.ts < 1e12 ? body.ts * 1000 : body.ts) : null, JSON.stringify(payload)]
+        `INSERT INTO client_events (api_key_id, user_id, harness, event, session_id, tool_name, cwd, ts, payload, logical_session_id, parent_session_id, session_id_source, session_confidence)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, now()), $9, $10, $11, $12, $13)`,
+        [req.apiUser?.keyId || null, userId, harness, event, identity.sessionId, strOrNull(body.tool_name, 128), strOrNull(body.cwd, 512), typeof body.ts === 'number' ? new Date(body.ts < 1e12 ? body.ts * 1000 : body.ts) : null, JSON.stringify(payload), identity.logicalSessionKey, identity.parentSessionKey, identity.sessionIdSource, identity.confidence]
       );
     }
     if (!inserted) return res.json({ ok: true, duplicate: true });
@@ -200,7 +211,7 @@ router.post('/', oauthBearer, async (req, res) => {
       userId: req.apiUser.userId,
       harness,
       event,
-      sessionId: strOrNull(body.session_id, 128),
+      sessionId: identity.sessionId,
       toolName: strOrNull(body.tool_name, 128),
       cwd: strOrNull(body.cwd, 512),
     }).catch(err => Logger.warn(`[客户端事件] 事件推送失败: ${err.message}`));
@@ -226,7 +237,7 @@ router.get('/live', clientEventsAuth, async (req, res) => {
     await ensureTable();
     const agg = await pool.query(
       `SELECT harness,
-              COUNT(DISTINCT session_id) AS active_sessions,
+              COUNT(DISTINCT logical_session_id) AS active_sessions,
               COUNT(*) FILTER (WHERE event = 'tool_use') AS tool_calls,
               COUNT(*) FILTER (WHERE event IN ('tool_use_failure','response_stop_failure')) AS failure_count,
               COUNT(*) AS total_events,
@@ -238,18 +249,18 @@ router.get('/live', clientEventsAuth, async (req, res) => {
       [windowSec, req.apiUser.userId]
     );
     const sessions = await pool.query(
-      `SELECT DISTINCT ON (session_id)
-              harness, session_id, cwd, tool_name, ts, payload->>'machine_id' AS machine_id, payload->>'machine_name' AS machine_name
+      `SELECT DISTINCT ON (logical_session_id)
+              harness, session_id, logical_session_id, cwd, tool_name, ts, payload->>'machine_id' AS machine_id, payload->>'machine_name' AS machine_name
          FROM client_events
-        WHERE user_id = $2 AND ts > now() - ($1 || ' seconds')::interval AND session_id IS NOT NULL
-        ORDER BY session_id, ts DESC`,
+        WHERE user_id = $2 AND ts > now() - ($1 || ' seconds')::interval AND logical_session_id IS NOT NULL
+        ORDER BY logical_session_id, ts DESC`,
       [windowSec, req.apiUser.userId]
     );
     res.json({
       window: windowSec,
       sources: agg.rows.map(row => ({ ...row, failure_count: Number(row.failure_count) || 0, avg_latency_ms: Number(row.avg_latency_ms) || 0, suspected_offline: row.last_event_at ? (Date.now() - new Date(row.last_event_at).getTime() > Math.max(windowSec * 1000, 120000)) : true })),
       machines: sessions.rows.reduce((out, row) => { const id = row.machine_id || `${row.harness}:unknown`; if (!out[id]) out[id] = { id, name: row.machine_name || '未命名机器', harness: row.harness, last_event_at: row.ts, last_session: row.session_id, failure_count: 0, latency_ms: 0, suspected_offline: Date.now() - new Date(row.ts).getTime() > Math.max(windowSec * 1000, 120000) }; return out; }, {}),
-      sessions: sessions.rows,
+      sessions: sessions.rows.map(row => ({ ...row, session_id: row.logical_session_id || row.session_id })),
     });
   } catch (err) {
     Logger.error('[客户端事件] live 查询失败:', err.message);

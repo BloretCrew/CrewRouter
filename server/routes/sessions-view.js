@@ -37,10 +37,11 @@ const LIMIT_TOOL_RESULT = 800;
 const LIMIT_THINKING = 300;
 const MAX_EVENTS_PER_RECORD = 120;
 
-/** 会话键表达式：优先归因 sessionId，否则回退「key + 小时窗」启发式分桶 */
+/** 会话键表达式：优先集中式身份键，再兼容旧归因；缺失身份按记录隔离。 */
 const SESSION_KEY_SQL = `COALESCE(
+  NULLIF(u.plugin_meta->'session_identity'->>'logicalSessionKey', ''),
   NULLIF(u.plugin_meta->'attribution'->>'sessionId', ''),
-  'bucket-' || md5(COALESCE(u.api_key_id::text, 'none') || '|' || to_char(date_trunc('hour', u.created_at), 'YYYY-MM-DD"T"HH24:MI'))
+  'unknown-v2:' || md5(COALESCE(u.id::text, 'unknown'))
 )`;
 
 function daysParam(value) {
@@ -319,7 +320,7 @@ router.get('/sessions', requireAuth, async (req, res) => {
              COUNT(*) OVER ()::int AS grand_total
       FROM agg
       LEFT JOIN session_summaries ss ON ss.user_id = $1 AND ss.session_key = agg.session_key
-      ORDER BY agg.last_seen DESC
+      ORDER BY agg.last_seen DESC, agg.session_key ASC
       OFFSET ${offset} LIMIT ${pageSize}
     `, params);
 
@@ -526,7 +527,10 @@ router.get('/sessions/search', requireAuth, async (req, res) => {
     }
 
     // 最近活跃的会话优先，最多返回 20 个会话
-    const all = [...sessions.values()].sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
+    const all = [...sessions.values()].sort((a, b) => {
+      const timeDiff = new Date(b.lastSeen) - new Date(a.lastSeen);
+      return timeDiff || a.sessionKey.localeCompare(b.sessionKey);
+    });
     res.json({
       q,
       days,

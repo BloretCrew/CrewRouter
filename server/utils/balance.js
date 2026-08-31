@@ -519,7 +519,7 @@ async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValu
       await client.query('UPDATE usage_records SET cost = $1 WHERE id = $2', [actualDeduct, inserted.rows[0].id]);
     }
     await client.query('COMMIT');
-    return { ok: true, pointsToDeduct: actualDeduct };
+    return { ok: true, id: inserted.rows[0]?.id || null, pointsToDeduct: actualDeduct };
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
     Logger.error(`[recordUsageAndDeduct] 错误: userId=${userId}, error=${error.message}`);

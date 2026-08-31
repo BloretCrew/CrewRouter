@@ -10,6 +10,9 @@ router.use((req, res, next) => {
       ok: res.statusCode < 400,
       httpStatus: res.statusCode,
       requestType: req.path.includes('responses') ? 'responses' : (req.path.includes('messages') ? 'anthropic' : 'chat'),
+      usageRecordId: req._usageRecordId || null,
+      requestSource: req._clientMetaSnapshot?.requestSource,
+      userAgent: req._clientMetaSnapshot?.userAgent,
       messages: req.body?.messages || req.body?.input || req.body,
       response: null,
       latencyMs: req._traceStartedAt ? Date.now() - req._traceStartedAt : null,
@@ -17,6 +20,7 @@ router.use((req, res, next) => {
     }).catch(() => {});
   });
   req._traceStartedAt = Date.now();
+  req._clientMetaSnapshot = clientMetaFromReq(req);
   req._requestLifecycle = createRequestLifecycle(req, res);
   req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle.signal };
   res.once('finish', () => req._requestLifecycle.dispose());
@@ -80,6 +84,7 @@ const {
 } = require('../utils/provider-keys');
 const ResponsesUpstream = require('../utils/responses-upstream');
 const { extractAttribution, classifyCompaction } = require('../utils/attribution');
+const { extractRequestIdentity } = require('../utils/session-identity');
 const { classifyRequestSemantics } = require('../utils/request-semantics');
 const { createStreamScrubber } = require('../utils/inject-prompt-stream');
 const crypto = require('crypto');
@@ -649,6 +654,7 @@ async function buildUsagePluginMeta(ctxMeta, messages, system, req) {
   const attribution = req ? extractAttribution(req) : null;
   const isCompaction = req ? classifyCompaction(req.body) : false;
   const requestSource = req ? clientMetaFromReq(req).requestSource : null;
+  const identity = req ? extractRequestIdentity(req, { requestSource, attribution }) : null;
   const requestSemantics = req
     ? classifyRequestSemantics({ body: req.body, headers: req.headers, requestSource, url: req.originalUrl || req.url })
     : null;
@@ -656,9 +662,12 @@ async function buildUsagePluginMeta(ctxMeta, messages, system, req) {
   const withAttribution = (hasAttribution || isCompaction)
     ? { ...(pluginMeta || {}), attribution: { ...(attribution || {}), isCompaction } }
     : pluginMeta;
-  const withSemantics = requestSemantics
-    ? { ...(withAttribution || {}), request_semantics: requestSemantics }
+  const withIdentity = identity
+    ? { ...(withAttribution || {}), session_identity: identity }
     : withAttribution;
+  const withSemantics = requestSemantics
+    ? { ...(withIdentity || {}), request_semantics: requestSemantics }
+    : withIdentity;
   if (messages == null) return withSemantics;
   const res = extractCustomInstructions(messages, system, { requestSource });
   if (res.skipped === 'size') {
@@ -2825,6 +2834,7 @@ async function handleChatCompletion(req, res) {
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[用量记录] 错误:', err);
@@ -3015,6 +3025,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
            Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: totalWeightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        req._usageRecordId = usageResult.id || null;
 
         // 记录 Fusion 专用用量
         await pool.query(
@@ -3451,6 +3462,7 @@ async function handleAnthropicMessage(req, res) {
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Anthropic 用量记录] 错误:', err);
@@ -5444,6 +5456,7 @@ async function handleResponses(req, res) {
                  null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
                  pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        req._usageRecordId = usageResult.id || null;
               recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
             } catch (err) {
               Logger.error('[Responses/Passthru] 用量记录错误:', err);
@@ -5559,6 +5572,7 @@ async function handleResponses(req, res) {
                latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
                pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        req._usageRecordId = usageResult.id || null;
             recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
           } catch (err) {
             Logger.error('[Responses] 用量记录错误:', err);
@@ -5759,6 +5773,7 @@ async function handleResponses(req, res) {
              clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
              pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        req._usageRecordId = usageResult.id || null;
           recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
         } catch (err) {
           Logger.warn(`[Responses/Passthru] 计费/用量记录失败: ${err.message}`);
@@ -5833,6 +5848,7 @@ async function handleResponses(req, res) {
            null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Responses/Passthru] 用量记录错误:', err);
@@ -6004,6 +6020,7 @@ async function handleResponses(req, res) {
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
            pluginMeta], userId: req.apiUser.userId, groupId: req.apiUser.groupId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
+        req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
       } catch (err) {
         Logger.error('[Responses] 用量记录错误:', err);

@@ -60,11 +60,30 @@ function extractAttribution(req = {}) {
   let subagent = null;
   let sessionId = null;
 
+  const explicitSession = [
+    ['body.session_id', body.session_id],
+    ['body.sessionId', body.sessionId],
+    ['body.client_session_id', body.client_session_id],
+    ['body.clientSessionId', body.clientSessionId],
+    ['body.conversation_id', body.conversation_id],
+    ['body.conversationId', body.conversationId],
+    ['body.thread_id', body.thread_id],
+    ['body.threadId', body.threadId],
+  ];
   const metadataUserId = body.metadata?.user_id;
   const anthropicMeta = parseJson(metadataUserId);
   if (anthropicMeta) {
     sessionId = addSignal(signals, 'anthropic.metadata.user_id.session_id', anthropicMeta.session_id);
     addSignal(signals, 'anthropic.metadata.user_id.account_uuid', anthropicMeta.account_uuid);
+  }
+  if (!sessionId) {
+    for (const [kind, value] of explicitSession) {
+      const selected = addSignal(signals, kind, value);
+      if (selected) {
+        sessionId = selected;
+        break;
+      }
+    }
   }
 
   const clientMetadata = body.client_metadata && typeof body.client_metadata === 'object'

@@ -80,6 +80,8 @@ cr-report queue prune --yes
 
 原有 `cr-report.py`、`install-grok-hooks.py`、`cr-login` 和 `codex-cr` 保留。Python 入口适用于既有 Claude/Qwen/Codex/Hermes/OpenClaw 集成；npm CLI 是新的主入口。
 
+Python 事件上报保留客户端会话身份：Hook 从 `session_id`/`sessionId`（兼容 `conversation_id`、`thread_id`）读取，并透传 `parent_session_id`、`subagent_id`、`cwd`/`workspaceRoot` 和项目字段；Hermes/OpenClaw 等 emit 集成可使用 `--parent-session`、`--subagent`、`--project`。没有明确 session id 时服务端将事件标为 unknown，不会并入最近会话。
+
 ## 测试与未验证外部环境
 
 本包测试分为：Helper Node 单元测试（`node --test test/*.test.js`）、根目录静态契约测试、CLI 命令验收和 JavaScript 语法检查。远程 Router 的真实 OAuth、网络、TLS、数据库连接、Hook 宿主实际回调，以及生产部署环境未在本地验收中验证；需要在目标环境使用脱敏凭证和非生产数据单独验证。

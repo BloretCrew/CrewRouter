@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { clientMetaFromReq } = require('./request-source');
+const { extractRequestIdentity } = require('./session-identity');
 
 const MAX_TEXT = 100000;
 function clamp(value, max = MAX_TEXT) {
@@ -56,6 +57,7 @@ async function recordEvent(req, payload = {}) {
     const session = await getActiveSession(keyId);
     if (!session) return null;
     const meta = clientMetaFromReq(req || {});
+    const identity = req ? extractRequestIdentity(req, { requestSource: meta.requestSource }) : null;
     const r = await pool.query(`INSERT INTO trace_events (session_id,usage_record_id,ok,http_status,error,request_type,request_source,user_agent,ip_address,model_id,provider_id,tokens_used,prompt_tokens,completion_tokens,cached_tokens,weighted_tokens,cost,latency_ms,messages,response,reasoning_content,request_params,finish_reason) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23) RETURNING id`, [session.id,payload.usageRecordId || null,payload.ok !== false,payload.httpStatus ?? null,clamp(payload.error,10000),payload.requestType || 'chat',payload.requestSource || meta.requestSource,payload.userAgent || meta.userAgent,payload.ipAddress || null,payload.modelId || null,payload.providerId || null,Number(payload.tokensUsed || 0),Number(payload.promptTokens || 0),Number(payload.completionTokens || 0),Number(payload.cachedTokens || 0),Number(payload.weightedTokens || 0),Number(payload.cost || 0),payload.latencyMs == null ? null : Math.round(payload.latencyMs),json(payload.messages),clamp(payload.response),clamp(payload.reasoningContent),json(payload.requestParams),payload.finishReason || null]);
     return r.rows[0];
   } catch (e) { Logger.warn(`[跟踪记录] 写入失败: ${e.message}`); return null; }
