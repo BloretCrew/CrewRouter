@@ -1,38 +1,10 @@
 'use strict';
-const fs = require('fs');
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const api = require('../src');
-test('maps Grok and Claude event field names', () => {
-  assert.equal(api.mapHookEvent({ hookEventName: 'PostToolUse' }), 'tool_use');
-  assert.equal(api.mapHookEvent({ hook_event_name: 'session_start' }), 'session_start');
-  assert.equal(api.mapHookEvent({ hookEventName: 'Unknown' }), null);
-});
-test('normalizes compatible fields without sensitive values', () => {
-  const p = api.normalizeHook({ sessionId: 's', toolName: 'Bash', workspaceRoot: '/tmp', toolInput: { command: 'secret' }, hookEventName: 'PreToolUse' });
-  assert.equal(p.session_id, 's'); assert.equal(p.tool_name, 'Bash'); assert.equal(p.event, 'tool_use');
-  assert.deepEqual(p.detail.tool_input_keys, ['command']); assert.equal(p.detail.tool_input, undefined);
-});
-test('redacts credentials and commands', () => {
-  const safe = api.safeDetail({ message: 'Authorization: Bearer abc123 token=xyz', error: 'curl https://x.test/?token=secret' });
-  assert.match(safe.message, /REDACTED/); assert.doesNotMatch(safe.message, /abc123|xyz/); assert.doesNotMatch(safe.error, /secret/);
-});
-test('scans invalid or missing hooks', () => {
-  const old = process.env.GROK_HOME; process.env.GROK_HOME = `/tmp/crewrouter-helper-test-missing-${process.pid}`;
-  try { fs.rmSync(process.env.GROK_HOME, { recursive: true, force: true }); } catch {}
-  const status = api.scanHooks('/missing/cr-report'); assert.equal(status.exists, false); assert.equal(status.level, 'MISSING');
-  if (old === undefined) delete process.env.GROK_HOME; else process.env.GROK_HOME = old;
-});
-test('quotes and parses paths containing spaces', () => {
-  const command = api.shellQuote('/tmp/my cli/cr-report'); assert.equal(api.commandPath(command + ' hook --harness grok'), '/tmp/my cli/cr-report');
-});
-test('credential status detects expired credentials', () => {
-  assert.equal(api.credentialStatus({ access_token: 'x', expires_at: 1 }).level, 'ERROR');
-  assert.equal(api.credentialStatus({ access_token: 'x', refresh_token: 'r', expires_at: 1 }).level, 'WARN');
-});
-
-test('watch detection distinguishes absent state', () => {
-  const old = process.env.HOME; process.env.HOME = '/tmp/crewrouter-helper-watch-test';
-  assert.equal(api.watchState().running, false);
-  if (old === undefined) delete process.env.HOME; else process.env.HOME = old;
-});
+const fs = require('fs'); const os = require('os'); const path = require('path'); const test = require('node:test'); const assert = require('node:assert/strict'); const api = require('../src');
+function env(name, value) { const old = process.env[name]; if (value === undefined) delete process.env[name]; else process.env[name] = value; return () => { if (old === undefined) delete process.env[name]; else process.env[name] = old; }; }
+test('maps and safely normalizes Hook events', () => { assert.equal(api.mapHookEvent({ hookEventName: 'PostToolUse' }), 'tool_use'); assert.equal(api.mapHookEvent({ hook_event_name: 'session_start' }), 'session_start'); const p = api.normalizeHook({ sessionId: 's', toolName: 'Bash', toolInput: { command: 'secret' }, hookEventName: 'PreToolUse' }); assert.equal(p.event, 'tool_use'); assert.deepEqual(p.detail.tool_input_keys, ['command']); assert.equal(p.detail.tool_input, undefined); });
+test('redacts credentials, URLs and JWTs', () => { const safe = api.clean('Authorization: Bearer abc token=xyz https://x.test/?token=secret eyJabcdefghijk.foo.bar'); assert.doesNotMatch(safe, /abc|xyz|secret|eyJabcdefghijk/); });
+test('profiles are isolated and URL validated', () => { const restore = env('CR_REPORT_CONFIG', path.join(os.tmpdir(), `cr-profile-${process.pid}.json`)); try { fs.rmSync(api.configPath(), { force: true }); api.saveConfig({ profiles: { default: { url: 'http://a', key: 'a-secret' }, other: { url: 'http://b', key: 'b-secret' } }, current_profile: 'default', ...{ url:'http://a', key:'a-secret' } }); api.use('other'); assert.equal(api.loadConfig().key, 'b-secret'); assert.throws(() => api.remove('other', true)); api.remove('default', true); assert.ok(api.loadConfig().profiles.other); assert.throws(() => api.validUrl('file:///tmp/x')); } finally { fs.rmSync(api.configPath(), { force: true }); restore(); } });
+test('expired OAuth refreshes through profile lock', async () => { const restore = env('CR_REPORT_CONFIG', path.join(os.tmpdir(), `cr-oauth-${process.pid}.json`)); const server = require('http').createServer((req,res) => { if (req.url === '/oauth/token') { let body=''; req.on('data', c => body += c); req.on('end', () => { assert.match(body, /refresh_token=old/); res.setHeader('content-type','application/json'); res.end(JSON.stringify({ access_token:'new', refresh_token:'new-refresh', expires_in:3600 })); }); } else { assert.equal(req.headers.authorization, 'Bearer new'); res.setHeader('content-type','application/json'); res.end('{}'); } }); await new Promise(r => server.listen(0, r)); try { const port=server.address().port; api.saveConfig({ profiles:{default:{url:`http://127.0.0.1:${port}`,access_token:'old',refresh_token:'old',expires_at:1}},current_profile:'default' }); assert.equal(await api.getAccessToken(), 'new'); const status=await api.scanStatus('/missing'); assert.equal(status.service.level,'OK'); } finally { server.close(); fs.rmSync(api.configPath(), {force:true}); restore(); } });
+test('hook backup restore rejects uncontrolled and invalid files', () => { const gh = env('GROK_HOME', path.join(os.tmpdir(), `cr-hooks-${process.pid}`)); try { fs.rmSync(process.env.GROK_HOME, {recursive:true,force:true}); const cli=path.resolve(__dirname,'../bin/cr-report.js'); api.install(cli); const b=api.backup(); assert.equal(fs.statSync(b).mode & 0o077, 0); assert.throws(() => api.restore('/tmp/evil.json')); fs.writeFileSync(b, JSON.stringify({hooks:{Bad:[]}})); assert.throws(() => api.restore(b)); } finally { fs.rmSync(process.env.GROK_HOME,{recursive:true,force:true}); gh(); } });
+test('logs rotate with private permissions and safe whitelist', () => { const restore=env('CR_REPORT_LOG',path.join(os.tmpdir(),`cr-logs-${process.pid}`,'events.log')); try { fs.rmSync(path.dirname(api.logPath()),{recursive:true,force:true}); api.writeLog({event:'unknown',profile:'x secret',ok:false,error:'Authorization: Bearer abc'}); const rows=api.readLogs(); assert.equal(rows[0].event,'other'); assert.doesNotMatch(JSON.stringify(rows),/abc/); assert.equal(fs.statSync(api.logPath()).mode & 0o077,0); } finally { fs.rmSync(path.dirname(api.logPath()),{recursive:true,force:true}); restore(); } });
+test('shell quoting and platform cache path are portable', () => { assert.equal(api.commandPath(api.shellQuote('/tmp/my cli/cr-report') + ' hook --harness grok'), '/tmp/my cli/cr-report'); assert.match(api.watchState().statePath, /cr-report/); });

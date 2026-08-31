@@ -61,4 +61,4 @@ npm test
 npm pack --dry-run
 ```
 
-本包不包含依赖、缓存、临时文件或凭证；项目不会自动 publish 或 push。
+本包不包含依赖、缓存、临时文件或凭证；项目不会自动 publish 或 push。测试入口为 `cd CrewRouterHelper && npm test`；仓库根目录没有覆盖全仓库的默认 test script。

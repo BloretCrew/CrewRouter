@@ -1,6 +1,5 @@
 'use strict';
 const fs = require('fs');
-const path = require('path');
 const { loadConfig, saveConfig, configPath } = require('./config');
 function validUrl(value) { let u; try { u = new URL(String(value)); } catch { throw new Error('URL 无效'); } if (!['http:', 'https:'].includes(u.protocol) || u.username || u.password) throw new Error('URL 必须使用 http/https 且不能包含用户凭证'); return u.toString().replace(/\/$/, ''); }
 function safeName(name) { if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(String(name))) throw new Error('profile 名称无效'); return String(name); }
