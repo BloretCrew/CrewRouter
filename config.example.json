@@ -1,4 +1,5 @@
 {
+  "edition": "personal",
   "app": {
     "name": "CrewRouter",
     "port": 20003,

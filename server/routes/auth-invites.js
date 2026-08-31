@@ -5,6 +5,8 @@ const { requireAdmin } = require('../middleware/auth');
 const config = require('../config-loader');
 
 const router = express.Router();
+const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-edition');
+router.use(requireTeamEdition(() => loadPersistedEdition(pool)));
 
 function getPublicOrigin(req) {
   const configured = config.app?.publicOrigin;

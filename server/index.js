@@ -18,6 +18,7 @@ const Logger = require('./logger');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { encryptSecret, assertEncryptionKeyConfigured } = require('./utils/secret-crypto');
+const { resolveEdition, initializeEdition } = require('./utils/instance-edition');
 
 if (!isDemo && (process.env.NODE_ENV === 'production' || process.env.CR_ENV === 'production')) {
   assertEncryptionKeyConfigured();
@@ -2460,6 +2461,17 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// Public bootstrap metadata contains no secrets and is also used by OOBE.
+app.get('/api/instance', async (req, res) => {
+  try {
+    const { metadata } = require('./utils/instance-edition');
+    const edition = isDemo ? 'team' : (instanceEdition || await ensureInstanceEdition());
+    res.json(metadata(edition));
+  } catch (error) {
+    res.status(503).json({ error: error.message, type: error.code === 'EDITION_CONFLICT' ? 'edition_conflict' : 'edition_unavailable' });
+  }
+});
+
 // 最新更新包下载（返回 updates/latest.zip；无需认证）
 app.get('/api/updates/latest', (req, res) => {
   try {
@@ -2727,6 +2739,17 @@ async function ensureInjectPromptsTable() {
 
 // 启动服务器
 const PORT = config.app.port || 20002;
+let instanceEdition = null;
+
+async function ensureInstanceEdition() {
+  if (isDemo) return null;
+  const { pool: db } = require('./models/database');
+  instanceEdition = await resolveEdition(db, config.edition);
+  if (!instanceEdition && config.edition) {
+    instanceEdition = await initializeEdition(db, config.edition);
+  }
+  return instanceEdition;
+}
 
 // 首次启动自动建表：连接新数据库时自动创建所有表和默认数据
 // 已有表则跳过（init-db.js 内部用 CREATE TABLE IF NOT EXISTS）
@@ -2750,6 +2773,14 @@ async function runPendingMigrations() {
     // user_groups 需先于 ensureAuthModeTables（auth_invites.group_id 外键引用）
     ensureUserGroupsTables,
     ensureAuthModeTables,
+    async function ensureInstanceSettingsTable() {
+      await pool.query(`CREATE TABLE IF NOT EXISTS instance_settings (
+        singleton_key VARCHAR(32) PRIMARY KEY CHECK (singleton_key = 'instance'),
+        edition VARCHAR(16) NOT NULL CHECK (edition IN ('personal', 'team')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`);
+    },
     ensureAuthEnhancements,
     ensureEmailVerification,
     ensureUsageRecordsFields,
@@ -2840,6 +2871,7 @@ async function startServer() {
       const { initDatabase } = require('./scripts/init-db');
       await initDatabase();
       await runPendingMigrations();
+      await ensureInstanceEdition();
       // 插件系统：表结构就绪后扫描并加载已启用插件
       try {
         await require('./plugins/registry').init();

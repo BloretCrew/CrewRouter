@@ -21,6 +21,10 @@ const { buildUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs
 const { aggregateMessageStats, analyzeMessages } = require('../utils/message-analysis');
 const { getMessageAnalysisStatus } = require('../utils/message-analysis-store');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
+const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-edition');
+
+const requireTeamAdminEdition = requireTeamEdition(() => loadPersistedEdition(pool));
+router.use(['/user-groups', '/user-groups/:id', '/user-group-rules/:id', '/audit-logs'], requireTeamAdminEdition);
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const {
   normalizeProviderKeyEntries,

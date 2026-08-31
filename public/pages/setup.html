@@ -125,6 +125,16 @@
       <div class="setup-loading"><div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="正在检查系统状态…">正在检查系统状态…</span></div></div></div>
     </div>
 
+    <div class="setup-card" id="stepEdition" style="display:none;">
+      <h2>选择安装版本 / Choose edition</h2>
+      <p class="step-desc" style="color:#ef4444;font-weight:600;">安装后不可修改，请谨慎选择。 / This choice is permanent.</p>
+      <div style="display:grid;gap:12px;">
+        <button class="btn btn-primary" type="button" onclick="setup.chooseEdition('personal')">Personal Edition（个人版）</button>
+        <button class="btn btn-primary" type="button" onclick="setup.chooseEdition('team')">Team Edition（团队版）</button>
+      </div>
+      <div class="setup-error" id="editionError"></div>
+    </div>
+
     <div class="setup-card" id="stepMode" style="display:none;">
       <h2>选择账号系统模式</h2>
       <p class="step-desc" style="color:#ef4444;font-weight:600;">选择后不可修改，请谨慎选择。</p>
@@ -196,7 +206,9 @@
           console.log('[OOBE] status:', data);
           document.getElementById('stepLoading').style.display = 'none';
           if (data.needsSetup) {
-            if (data.authMode === 'passport') {
+            if (!data.edition) {
+              document.getElementById('stepEdition').style.display = 'block';
+            } else if (data.authMode === 'passport') {
               document.getElementById('stepPassport').style.display = 'block';
             } else if (data.authMode === 'feishu') {
               document.getElementById('step1').style.display = 'block';
@@ -248,6 +260,22 @@
           errorEl.textContent = error.message || '无法确认公网地址，请检查后重试';
           errorEl.style.display = 'block';
         }
+      },
+
+      async chooseEdition(edition) {
+        const el = document.getElementById('editionError');
+        el.style.display = 'none';
+        try {
+          let res = await fetch('/api/setup/edition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ edition }) });
+          let data = await res.json().catch(() => ({}));
+          if (!res.ok && data.type === 'existing_installation_confirmation_required' && window.confirm(data.error + '\n\n继续后 edition 将永久固定，但不会删除或转换现有数据。')) {
+            res = await fetch('/api/setup/edition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ edition, confirmExisting: true }) });
+            data = await res.json().catch(() => ({}));
+          }
+          if (!res.ok) throw new Error(data.error || 'edition 选择失败');
+          document.getElementById('stepEdition').style.display = 'none';
+          document.getElementById('stepMode').style.display = 'block';
+        } catch (e) { el.textContent = e.message; el.style.display = 'block'; }
       },
 
       async chooseMode(mode) {

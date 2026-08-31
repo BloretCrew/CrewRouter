@@ -144,6 +144,14 @@ class AdminApp {
   async init() {
     await this.loadUserInfo();
     if (!this.user) return;
+    try {
+      const instanceRes = await fetch('/api/instance');
+      const instance = instanceRes.ok ? await instanceRes.json() : null;
+      if (instance?.capabilities?.teamAdmin === false) {
+        document.querySelectorAll('[data-page="adminTeams"], [data-page="adminUserGroups"], [data-page="adminAuditLogs"]').forEach((el) => { el.style.display = 'none'; });
+        if (location.hash.startsWith('#adminTeams') || location.hash === '#adminUserGroups') location.hash = '#adminStats';
+      }
+    } catch (_) { /* backend remains authoritative */ }
     this.initInvitePanel();
     this.bindEvents();
     this._bindHashRouting();

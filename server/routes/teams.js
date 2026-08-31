@@ -5,6 +5,13 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const Logger = require('../logger');
 const { invalidateApiKeyCacheByKeyId } = require('./api');
 const { ACTIONS, auditMiddleware } = require('../utils/audit-log');
+const { requireTeamEdition } = require('../utils/instance-edition');
+
+// Team surfaces are unavailable in Personal Edition. Existing auth and admin checks remain intact.
+router.use(requireTeamEdition(async () => {
+  const { loadPersistedEdition } = require('../utils/instance-edition');
+  return loadPersistedEdition(pool);
+}));
 
 // ==================== Team CRUD ====================
 

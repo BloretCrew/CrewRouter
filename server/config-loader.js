@@ -91,6 +91,7 @@ const ENV_MAP = {
   CR_APP_PORT:           'app.port',
   CR_APP_HOST:           'app.host',
   CR_APP_PUBLIC_ORIGIN:  'app.publicOrigin',
+  CR_EDITION:             'edition',
   CR_SESSION_SECRET:     'app.sessionSecret',
   CR_DEMO:               'demo',
   CR_PROVIDER_KEY_ENCRYPTION_KEY: 'providerKeyEncryptionKey',

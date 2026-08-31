@@ -11,6 +11,10 @@ const { invalidateApiKeyCacheByKeyId } = require('./api');
 const { shanghaiDateRange, formatShanghaiDateTime } = require('../utils/timezone');
 const { buildUserUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs-filter');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
+const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-edition');
+
+const requireTeamCapability = requireTeamEdition(() => loadPersistedEdition(pool));
+router.use(['/api-keys/:id/members', '/api-keys/:id/members/:userId(\\d+)', '/api-keys/:id/members/me', '/project-stats'], requireTeamCapability);
 const { encryptSecret, decryptSecret } = require('../utils/secret-crypto');
 const { validateUrl, upstreamUrl, cleanBaseUrl: normalizeUpstreamBaseUrl } = require('../utils/url-validator');
 const {

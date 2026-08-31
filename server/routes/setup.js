@@ -5,6 +5,7 @@ const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { getAuthMode, setAuthMode, decodeMode } = require('../utils/auth-mode');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
+const { normalizeEdition, initializeEdition, loadPersistedEdition, metadata } = require('../utils/instance-edition');
 
 /**
  * OOBE：飞书模式创建管理员；PassPort 模式由首次管理员授权完成初始化。
@@ -21,7 +22,8 @@ router.get('/setup/status', async (req, res) => {
     Logger.info(`[OOBE] status 查询: needsSetup=${needsSetup}`);
     const authModeResult = await pool.query("SELECT value FROM settings WHERE key = 'auth_mode'");
     const authMode = authModeResult.rows[0] ? decodeMode(authModeResult.rows[0].value) : null;
-    res.json({ needsSetup, dbReady: true, authMode });
+    const edition = await loadPersistedEdition(pool);
+    res.json({ needsSetup: needsSetup || !edition, needsEdition: !edition, dbReady: true, authMode, ...(edition ? metadata(edition) : { edition: null, capabilities: null }) });
   } catch (error) {
     // settings 表不存在 = 数据库尚未初始化完成
     Logger.warn(`[OOBE] status 失败（数据库可能未就绪）: ${error.message}`);
@@ -46,6 +48,35 @@ async function requireSetupMode(req, res, next) {
     return res.status(503).json({ error: '数据库尚未就绪，请稍后重试' });
   }
 }
+
+// Edition 迁移可在旧实例 setup_complete 后执行，但只能显式选择一次。
+async function requireEditionSetup(req, res, next) {
+  try {
+    if (await loadPersistedEdition(pool)) return res.status(403).json({ error: '实例 edition 已初始化，无法修改', type: 'edition_immutable' });
+    next();
+  } catch (error) {
+    res.status(503).json({ error: '数据库尚未就绪，请稍后重试', type: 'edition_unavailable' });
+  }
+}
+
+// 首步：选择安装 edition；实例初始化后不可修改
+router.post('/setup/edition', requireEditionSetup, async (req, res) => {
+  const requested = normalizeEdition(req.body?.edition);
+  if (!requested) return res.status(400).json({ error: 'edition 只能是 personal 或 team', type: 'edition_invalid' });
+  if (req.body?.confirmExisting !== true) {
+    const existing = await pool.query('SELECT (SELECT COUNT(*) FROM teams)::int AS teams, (SELECT COUNT(*) FROM user_teams)::int AS memberships');
+    if (Number(existing.rows[0]?.teams || 0) > 0 || Number(existing.rows[0]?.memberships || 0) > 0) {
+      return res.status(409).json({ error: '检测到现有 Team 数据。请确认兼容迁移，不会删除或转换现有数据。', type: 'existing_installation_confirmation_required' });
+    }
+  }
+  try {
+    const edition = await initializeEdition(pool, requested);
+    res.json({ success: true, ...metadata(edition) });
+  } catch (error) {
+    const status = error.code === 'EDITION_CONFLICT' ? 409 : 400;
+    res.status(status).json({ error: error.message, type: error.code === 'EDITION_CONFLICT' ? 'edition_conflict' : 'edition_invalid' });
+  }
+});
 
 // 首步：选择账号系统模式；setup_complete 写入后不可修改
 router.post('/setup/mode', requireSetupMode, async (req, res) => {
@@ -160,7 +191,8 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
     Logger.info('[OOBE] 初始化完成（仅管理员一步）');
 
     await client.query('COMMIT');
-    res.json({ success: true, user: result.rows[0] });
+    const edition = await loadPersistedEdition(pool);
+    res.json({ success: true, user: result.rows[0], ...(edition ? metadata(edition) : {}) });
   } catch (error) {
     try {
       await client.query('ROLLBACK');

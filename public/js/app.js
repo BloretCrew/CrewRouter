@@ -47,6 +47,7 @@ function formatDisplayName(format) {
 class ConsoleApp {
   constructor() {
     this.user = null;
+    this.instance = null;
     this.currentPage = 'modelLibrary';
     this._libraryData = null;
     this._libraryCurrentModel = null;
@@ -193,6 +194,13 @@ class ConsoleApp {
   async init() {
     await this.loadUserInfo();
     if (!this.user) return;
+    try {
+      const instanceRes = await fetch('/api/instance');
+      this.instance = instanceRes.ok ? await instanceRes.json() : null;
+      if (this.instance?.capabilities?.teamAdmin === false) {
+        document.querySelectorAll('[data-team-only], [href*="adminTeams"], [href*="adminUserGroups"]').forEach((el) => { el.style.display = 'none'; });
+      }
+    } catch (_) { /* backend remains authoritative */ }
     this.bindEvents();
     this._bindHashRouting();
     // 从 URL hash 恢复页面（刷新后保持原位置）
