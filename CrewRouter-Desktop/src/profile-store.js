@@ -41,7 +41,7 @@ class ProfileStore {
     const next = this._normalize({ schemaVersion: SCHEMA_VERSION, activeProfileId: candidate.id, profiles: [candidate] });
     if (!next.profiles.length) throw new Error('profile 无效');
     if (index < 0) state.profiles.push(next.profiles[0]); else state.profiles[index] = next.profiles[0];
-    if (!state.activeProfileId) state.activeProfileId = profile.id;
+    state.activeProfileId = profile.id;
     return this.save(state);
   }
 

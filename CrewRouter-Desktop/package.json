@@ -9,7 +9,7 @@
     "start": "electron .",
     "dev": "NODE_ENV=development electron .",
     "test": "node --test test/*.test.js",
-    "syntax": "node --check src/url-policy.js && node --check src/profile-store.js && node --check src/connection-manager.js && node --check src/redirect-flow.js && node --check src/server-manager.js && node --check src/main.js && node --check src/preload.js && node --check src/renderer/renderer.js && node --check scripts/stage-server.js",
+    "syntax": "node --check src/url-policy.js && node --check src/profile-store.js && node --check src/connection-manager.js && node --check src/redirect-flow.js && node --check src/server-manager.js && node --check src/main.js && node --check src/preload.js && node --check src/renderer/renderer.js && node --check scripts/stage-server.js && node --check scripts/test-local-server.js && node --check test/core.test.js && node --check test/main.test.js && node --check test/server-manager.test.js",
     "test:local-server": "node scripts/test-local-server.js",
     "stage:server": "node scripts/stage-server.js",
     "pack": "electron-builder --linux AppImage",

@@ -9,13 +9,26 @@ npm install
 CREWROUTER_SERVER_ROOT=/path/to/CrewRouter npm start
 ```
 
-Local 模式使用动态回环端口、独立 `userData` 日志，并通过 `/api/version` 与 `/api/instance` 等待服务就绪。服务端仍需要 PostgreSQL；Desktop 不修改父项目配置，也不会触碰生产端口。可通过 `CREWROUTER_SERVER_ROOT` 指向父项目，打包后则从 `resources/server` 查找 staged release。
+Local 模式使用 `LocalServerManager` 在 `app.getPath('userData')` 下创建隔离的 runtime/config、data、logs，清理继承的 CR 配置/数据库环境变量并选择动态回环端口；退出时只停止本实例持有的子进程。服务端仍需要 PostgreSQL；Desktop 不修改父项目配置，也不会触碰生产端口。可通过 `CREWROUTER_SERVER_ROOT` 指向父项目，打包后则从 `resources/server` 查找 staged release。就绪检查依次验证 `/api/version`、`/api/setup/status` 和 `/api/instance`。
 
 ## Remote 与 Demo 转向
 
 在连接页输入 `http(s)` 地址。Desktop 请求 `/api/instance` 自动识别 `personal` 或 `team`，edition/capabilities 以服务器为权威。远程页面自身负责登录，Desktop 不伪造 OAuth、不交换或保存 Token/API Key。
 
-可选地设置 `CREWROUTER_DEMO_URL` 并由外部入口发起 `crewrouter://connect?serverUrl=https%3A%2F%2F...` 转向。Desktop 仅校验协议和目标地址；不接受凭据 URL。生产远程目标禁止本机/内网地址，开发 localhost 需显式使用连接页并自行调整实现策略。
+可选地设置 `CREWROUTER_DEMO_URL`，应用会生成带一次性、短时效 state 的转向地址；外部 `crewrouter://connect` 或 `crewrouter://oauth/callback` 回调必须携带由当前进程创建的 state，缺失、过期、未知和重放都会拒绝。Desktop 仅校验有限格式和目标地址；不接受凭据或敏感 query。生产远程目标统一经过 `url-policy` 的 DNS/内网校验。
+
+## 验证
+
+安装依赖后，按以下顺序运行：
+
+```bash
+npm test
+npm run syntax
+npm run test:local-server
+npm run build
+```
+
+`npm test` 覆盖 URL policy、RedirectFlow、ProfileStore、ConnectionManager、LocalServerManager，以及无需 Electron 的主进程入口。`test:local-server` 需要父项目依赖、PostgreSQL 和 `CREWROUTER_SERVER_ROOT=/data/CrewRouter`，会使用临时 userData、动态非生产端口并在结束时停止服务。未安装依赖时 `npm run build` 会因缺少 `electron-builder` 失败；当前环境未进行 Electron GUI/E2E 或跨平台打包验证。
 
 ## 打包与交付
 

@@ -12,7 +12,7 @@ const { LocalServerManager } = require('../src/server-manager');
   const manager = new LocalServerManager({ mode: 'development', serverRoot: root, userData, demo: true, startupTimeoutMs: 30000 });
   try {
     const status = await manager.start();
-    if (!status.ready || !status.version || !status.edition) throw new Error('Local server did not provide complete health metadata');
+    if (!status.ready || !status.version || !status.edition || !status.setup || typeof status.setup.needsSetup !== 'boolean') throw new Error('Local server did not provide complete health metadata');
     console.log(JSON.stringify(status));
   } finally {
     await manager.stop();

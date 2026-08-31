@@ -16,6 +16,8 @@ test('URL policy blocks private targets and redacts secrets', async () => {
   assert.equal((await validateRemoteUrl('http://127.0.0.1:1234')).ok, false);
   assert.equal((await validateRemoteUrl('http://localhost:1234')).ok, false);
   assert.equal((await validateRemoteUrl('http://127.0.0.1:1234', { allowLocalhost: true })).ok, true);
+  assert.equal((await validateRemoteUrl('http://user:pass@example.com')).ok, false);
+  assert.equal((await validateRemoteUrl('https://example.com/?access_token=secret')).ok, false);
   assert.equal((await validateRemoteUrl('file:///tmp/x')).ok, false);
   assert.match(redactUrl('https://example.com/cb?access_token=abc&state=xyz'), /access_token=%5BREDACTED%5D/);
   assert.doesNotMatch(redactUrl('https://example.com/cb?access_token=abc&state=xyz'), /abc|xyz/);

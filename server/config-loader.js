@@ -12,6 +12,8 @@ const path = require('path');
 // - 开发：server/config-loader.js → 项目根 config.json
 // - 构建后：dist/server.js → dist/config.json（与 server.js 同级）
 function resolveConfigPath() {
+  const configuredPath = process.env.CR_CONFIG_PATH || process.env.CR_CONFIG;
+  if (configuredPath) return path.resolve(configuredPath);
   const candidates = [
     path.join(__dirname, 'config.json'),           // dist/ 同级
     path.join(__dirname, '..', 'config.json'),     // 开发时 server/../config.json

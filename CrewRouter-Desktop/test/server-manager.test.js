@@ -40,7 +40,7 @@ test('redact removes credentials from log output', () => {
 test('manager polls both health endpoints and does not expose env secrets', async () => {
   const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'cr-manager-'));
   const entry = path.join(dir, 'child.js');
-  await fsp.writeFile(entry, `const http=require('http'); const s=http.createServer((q,r)=>{if(q.url==='/api/version')r.end(JSON.stringify({version:'test'}));else if(q.url==='/api/instance')r.end(JSON.stringify({edition:'personal',secret:'no'}));else r.statusCode=404,r.end();}); s.listen(process.env.CR_APP_PORT,process.env.CR_APP_HOST);`);
+  await fsp.writeFile(entry, `const http=require('http'); const s=http.createServer((q,r)=>{if(q.url==='/api/version')r.end(JSON.stringify({version:'test'}));else if(q.url==='/api/setup/status')r.end(JSON.stringify({needsSetup:false}));else if(q.url==='/api/instance')r.end(JSON.stringify({edition:'personal',secret:'no'}));else r.statusCode=404,r.end();}); s.listen(process.env.CR_APP_PORT,process.env.CR_APP_HOST);`);
   process.env.CR_APP_PORT = '20003';
   const manager = new LocalServerManager({ serverEntry: entry, userData: dir, startupTimeoutMs: 3000, pollIntervalMs: 20, env: { CR_SESSION_SECRET: 'hidden' } });
   const status = await manager.start();

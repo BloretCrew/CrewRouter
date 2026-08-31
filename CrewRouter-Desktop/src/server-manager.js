@@ -128,7 +128,10 @@ class LocalServerManager {
       if (exitError || (child && child.exitCode !== null)) throw (exitError || new Error(`Local server exited before becoming ready (code ${child.exitCode})`));
       try {
         const version = await requestJson(`${this.status.baseUrl}/api/version`, this.options.requestTimeoutMs, this.options.request || http);
+        const setup = await requestJson(`${this.status.baseUrl}/api/setup/status`, this.options.requestTimeoutMs, this.options.request || http);
         const instance = await requestJson(`${this.status.baseUrl}/api/instance`, this.options.requestTimeoutMs, this.options.request || http);
+        if (!setup.body || typeof setup.body !== 'object' || typeof setup.body.needsSetup !== 'boolean') throw new Error('Setup status is invalid');
+        this.status.setup = { needsSetup: setup.body.needsSetup };
         this.status.version = version.body.version || null;
         this.status.edition = instance.body.edition || null;
         this.status.ready = true;
