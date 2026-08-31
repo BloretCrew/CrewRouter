@@ -151,14 +151,15 @@ router.post('/', oauthBearer, async (req, res) => {
     await ensureTable();
     // 控制体积：hook 原始输入可能很大（如 Bash 命令全文），截断保护。
     const payload = safeDetail(body.detail);
+    if (body.machine_id) payload.machine_id = strOrNull(body.machine_id, 32);
+    if (body.machine_name) payload.machine_name = strOrNull(body.machine_name, 64);
+    if (Number.isFinite(Number(body.latency_ms))) payload.latency_ms = Math.max(0, Math.min(600000, Number(body.latency_ms)));
     const eventId = strOrNull(body.event_id, 128);
     // 旧客户端没有 event_id；新客户端用 user/harness/event_id 在应用层去重。
     if (eventId) {
       const existing = await pool.query(
-        `SELECT 1 FROM client_events
-          WHERE user_id IS NOT DISTINCT FROM $1 AND harness = $2
-            AND payload->>'event_id' = $3 LIMIT 1`,
-        [req.apiUser?.userId || null, harness, eventId]
+        'SELECT id FROM client_events WHERE user_id = $1 AND harness = $2 AND payload->>\'event_id\' = $3 LIMIT 1',
+        [userId, harness, eventId]
       );
       if (existing.rows.length) return res.json({ ok: true, duplicate: true });
       payload.event_id = eventId;
@@ -215,8 +216,10 @@ router.get('/live', clientEventsAuth, async (req, res) => {
       `SELECT harness,
               COUNT(DISTINCT session_id) AS active_sessions,
               COUNT(*) FILTER (WHERE event = 'tool_use') AS tool_calls,
+              COUNT(*) FILTER (WHERE event IN ('tool_use_failure','response_stop_failure')) AS failure_count,
               COUNT(*) AS total_events,
-              MAX(ts) AS last_event_at
+              MAX(ts) AS last_event_at,
+              AVG(NULLIF((payload->>'latency_ms')::numeric, 0)) AS avg_latency_ms
          FROM client_events
         WHERE user_id = $2 AND ts > now() - ($1 || ' seconds')::interval
         GROUP BY harness`,
@@ -224,7 +227,7 @@ router.get('/live', clientEventsAuth, async (req, res) => {
     );
     const sessions = await pool.query(
       `SELECT DISTINCT ON (session_id)
-              harness, session_id, cwd, tool_name, ts
+              harness, session_id, cwd, tool_name, ts, payload->>'machine_id' AS machine_id, payload->>'machine_name' AS machine_name
          FROM client_events
         WHERE user_id = $2 AND ts > now() - ($1 || ' seconds')::interval AND session_id IS NOT NULL
         ORDER BY session_id, ts DESC`,
@@ -232,7 +235,8 @@ router.get('/live', clientEventsAuth, async (req, res) => {
     );
     res.json({
       window: windowSec,
-      sources: agg.rows,
+      sources: agg.rows.map(row => ({ ...row, failure_count: Number(row.failure_count) || 0, avg_latency_ms: Number(row.avg_latency_ms) || 0, suspected_offline: row.last_event_at ? (Date.now() - new Date(row.last_event_at).getTime() > Math.max(windowSec * 1000, 120000)) : true })),
+      machines: sessions.rows.reduce((out, row) => { const id = row.machine_id || `${row.harness}:unknown`; if (!out[id]) out[id] = { id, name: row.machine_name || '未命名机器', harness: row.harness, last_event_at: row.ts, last_session: row.session_id, failure_count: 0, latency_ms: 0, suspected_offline: Date.now() - new Date(row.ts).getTime() > Math.max(windowSec * 1000, 120000) }; return out; }, {}),
       sessions: sessions.rows,
     });
   } catch (err) {

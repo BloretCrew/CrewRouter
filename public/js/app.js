@@ -3596,6 +3596,7 @@ class ConsoleApp {
       const data = await res.json();
       const sources = Array.isArray(data.sources) ? data.sources : [];
       const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+      const machines = data.machines && typeof data.machines === 'object' ? Object.values(data.machines) : [];
       // 无任何数据（还没客户端上报过）就隐藏整块
       const totalEvents = sources.reduce((a, s) => a + (Number(s.total_events) || 0), 0);
       if (totalEvents === 0) {
@@ -3630,6 +3631,7 @@ class ConsoleApp {
         </div>`;
       });
       setHTML(document.getElementById('liveActivityRows'), rows.join(''));
+      setHTML(document.getElementById('liveActivityMachines'), machines.slice(0, 8).map(machine => `<div class="live-activity-sess"><span class="live-activity-harness">${escapeHtml(machine.name || '未命名机器')}</span><span>${escapeHtml(machine.harness || '-')}</span><span>${escapeHtml(machine.last_session || '-')}</span><span class="live-activity-last">${machine.suspected_offline ? escapeHtml(t('疑似离线')) : escapeHtml(t('在线'))}</span></div>`).join(''));
       setHTML(document.getElementById('liveActivitySessions'),
         sessLines.join('') || `<div class="live-activity-empty">${t('最近 5 分钟没有活跃会话')}</div>`);
     } catch (_e) {
