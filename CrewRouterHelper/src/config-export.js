@@ -1,0 +1,12 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const { loadConfig, saveConfig, configPath } = require('./config');
+const { validUrl } = require('./profiles');
+const SECRET = /key|token|password|cookie|secret|credential|authorization/i;
+function sanitize(value) { if (Array.isArray(value)) return value.map(sanitize); if (!value || typeof value !== 'object') return value; const out = {}; for (const [k, v] of Object.entries(value)) if (!SECRET.test(k)) out[k] = sanitize(v); return out; }
+function exportConfig(target) { const cfg = loadConfig() || {}; const data = { schema_version: 1, helper_version: require('../package.json').version, current_profile: cfg.current_profile || 'default', url: cfg.url ? mask(cfg.url) : undefined, profiles: Object.fromEntries(Object.entries(cfg.profiles || {}).map(([name, profile]) => [name, sanitize({ url: profile.url ? mask(profile.url) : undefined })])) }; if (target) { const file = path.resolve(target); const tmp = `${file}.${process.pid}.${Date.now()}.tmp`; fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`, { mode: 0o600 }); fs.chmodSync(tmp, 0o600); fs.renameSync(tmp, file); return file; } return data; }
+function mask(value) { try { const u = new URL(value); return `${u.protocol}//${u.host}${u.pathname === '/' ? '' : u.pathname}`; } catch { return null; } }
+function importConfig(file, dryRun = false) { const target = path.resolve(file); const data = JSON.parse(fs.readFileSync(target, 'utf8')); if (!data || data.schema_version !== 1 || (data.url && !validUrl(data.url))) throw new Error('配置 schema 或 URL 无效'); const profiles = {}; for (const [name, profile] of Object.entries(data.profiles || {})) { if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(name) || !profile?.url) throw new Error('配置 profile 无效'); profiles[name] = { url: validUrl(profile.url) }; } const next = { profiles, current_profile: data.current_profile || 'default' }; if (data.url) next.url = validUrl(data.url); if (!dryRun) saveConfig(next); return { dryRun, config: sanitize(next) }; }
+function showConfig() { return sanitize(loadConfig() || {}); }
+module.exports = { sanitize, exportConfig, importConfig, showConfig, configPath };

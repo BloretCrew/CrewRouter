@@ -27,6 +27,24 @@ cr-report emit --harness hermes --event session_start --session demo
 
 支持 `hookEventName`/`hook_event_name`、`sessionId`/`session_id`、`toolName`/`tool_name`、`toolInput`/`tool_input`、`cwd`/`workspaceRoot`，以及 SessionStart、SessionEnd、PreToolUse、PostToolUse、PostToolUseFailure、PermissionDenied、Stop、StopFailure、Notification、SubagentStart、SubagentStop、PreCompact、PostCompact。未知事件跳过且退出 0；网络和配置异常 fail-open。
 
+## setup、doctor、queue、config、clients 和版本诊断
+
+```bash
+cr-report setup --dry-run
+cr-report doctor --fix --dry-run
+cr-report queue
+cr-report queue retry
+cr-report queue prune --yes
+cr-report config show
+cr-report config export --dry-run
+cr-report clients list
+cr-report clients inspect claude
+cr-report version && cr-report compatibility
+cr-report update --check
+```
+
+Setup 和 doctor 默认只检查；任何修复或清理都需要显式确认。失败事件会以脱敏 JSONL 写入用户缓存目录，Hook 不等待重试且始终 fail-open。
+
 ## doctor、auth、profile、hooks 和 logs
 
 ```bash
