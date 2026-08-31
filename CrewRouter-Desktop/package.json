@@ -1,0 +1,12 @@
+{
+  "name": "crewrouter-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CrewRouter Desktop core connection modules",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "node --test",
+    "syntax": "node --check src/url-policy.js && node --check src/profile-store.js && node --check src/connection-manager.js && node --check src/redirect-flow.js"
+  },
+  "engines": { "node": ">=16" }
+}

@@ -1,0 +1,9 @@
+Phase 1 核心模块摘要
+
+- url-policy.js：仅允许 HTTP/HTTPS；远程模式拒绝 localhost、回环、私有/链路本地/保留地址及 DNS 解析到内网的域名；开发模式必须显式 allowLocalhost；提供 query 中 token/secret/key/code/auth/session/state 等字段和 URL 凭据脱敏。
+- profile-store.js：schemaVersion=1 的 JSON profile 存储，原子写入、0600 权限，多 profile、activeProfile 切换；JSON 损坏或 schema 不兼容时恢复空状态。
+- connection-manager.js：调用 /api/instance，解析 personal/team、capabilities、protocolVersion；仅保存非敏感连接元数据，连接失败保留原 profile。
+- redirect-flow.js：支持 crewrouter://connect、crewrouter://oauth/callback 及 HTTP 回调解析；state 使用随机值、过期后失效且消费即删除，目标 serverUrl/redirect/url 经过 URL policy 校验。
+- test/core.test.js：覆盖 URL 安全、脱敏、state 一次性/过期、profile 损坏恢复/切换、instance 响应解析和连接元数据保存。
+
+本阶段不接管 token，不把 token 放入 URL，也不实现假 OAuth；远程页面由目标 CrewRouter 自身完成登录。
