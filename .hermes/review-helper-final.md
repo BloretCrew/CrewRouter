@@ -31,7 +31,8 @@
 - **Evidence:** `clients.js` 导出 `inspect`/`list`，`queue.js` 导出 `inspect`，`recordings.js` 导出 `list`；`index.js` 最后展开 clients、recordings。目标提交实测 `queue inspect --json` 失败，`profile list` 返回空数组。
 - **Impact:** CLI 参数和帮助看似一致但核心声明命令不可用；队列检查、profile 管理均发生功能回归。
 - **Recommendation:** 避免通过无命名空间对象展开聚合同名导出；为 CLI 使用显式模块引用或重命名导出（例如 `queueInspect`、`listProfiles`、`listRecordings`），并增加 `queue inspect --json`、`profile list` 的进程级回归测试。
-- **Status:** open
+- **Status:** fixed
+- **Response:** 已将队列、profile、客户端和录制列表/检查导出改为显式命名；CLI 的 `queue inspect` 使用 `queueInspect()`，`profile list` 使用 `profileList()`，录制列表使用 `recordingsList()`，并保留原有兼容导出。新增进程级 smoke 与单元测试。
 
 ### Issue 2 — `record()` 生成的重复事件绕过去重
 
@@ -40,7 +41,8 @@
 - **Description:** `record()` 对每个输入事件调用 `safe()`，总是写入当前时间的 `recorded_at`。`read()` 的去重键却是 `JSON.stringify(x)` 的完整行。于是同一个 parsed event 输入两次时，两个输出行的 `recorded_at` 通常不同，完整 JSON 不同，`seen` 无法识别为重复；`events replay --remote` 会把两条都发送。当前新增测试只手工写入了没有 `recorded_at` 的相同对象，因此没有覆盖实际 `record()` 输出路径。
 - **Impact:** 用户按任务书使用 `events record` 后再 replay，重复事件仍可能重复上报，与“回放排除重复记录”的安全语义不符；也会造成服务端看板重复计数/通知频控压力。
 - **Recommendation:** 使用稳定业务字段构造去重键（至少 `harness,event,session_id,tool_name,ts,detail`，不要包含 `recorded_at`），或在 `record()` 阶段去重；新增“同一输入经 `record()` 写盘后 `read()` 只有一行”的测试。
-- **Status:** open
+- **Status:** fixed
+- **Response:** 新增稳定业务字段去重键，仅使用 harness、event、session_id、tool_name、ts、detail，不包含动态 `recorded_at`。新增测试验证相同输入经 `record()` 写盘后 `read()` 只保留一条，合法不同事件仍保留。
 
 ## 重点审查结果
 
@@ -72,3 +74,7 @@
 - 未执行真人浏览器 OAuth PKCE 流程、有效远程 OAuth/API key 事件 E2E、跨用户真实数据库隔离测试。
 - 未执行交互式真人 TTY 操作；非 TTY TUI 测试已在 npm 测试中通过。
 - 本轮未修改数据库、未修改源代码、未 push/publish。
+
+## 本轮实现总结
+
+已修复两个开放 bug：消除 `src/index.js` 同名导出覆盖并更新 CLI 显式调用；录制事件改用稳定业务字段去重。新增回归测试，未修改无关文件、数据库、watch 或远程发布配置。`npm test` 20/20 通过，queue inspect/profile list smoke 通过，Helper 与服务端相关 JavaScript 语法检查通过，client-events、request-source、task5a 静态脚本通过；usage-accuracy 脚本在当前环境因缺少 `pg` 模块无法运行。
