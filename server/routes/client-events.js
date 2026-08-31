@@ -184,6 +184,15 @@ router.post('/', oauthBearer, async (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- 客户端能力与最近事件（只读、最小字段） ----------
+router.get('/capabilities', requireAuth, (req, res) => res.json({ helper: { event_schema: 1, events: Array.from(EVENT_TYPES) }, server: { event_schema: 1, remote_tests: true } }));
+router.get('/recent-events', requireAuth, async (req, res) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+  try { await ensureTable(); const result = await pool.query('SELECT harness, event, session_id, ts FROM client_events WHERE user_id = $1 ORDER BY ts DESC LIMIT $2', [req.apiUser?.userId || null, limit]);
+    res.json({ events: result.rows.map(row => ({ harness: row.harness, event: row.event, session: row.session_id ? String(row.session_id).slice(0, 24) : null, time: row.ts })) });
+  } catch (err) { Logger.error('[客户端事件] recent 查询失败:', err.message); res.status(500).json({ error: 'query failed' }); }
+});
+
 // ---------- 看板：最近窗口内各 harness 活跃度 ----------
 router.get('/live', requireAuth, async (req, res) => {
   const windowSec = Math.min(Math.max(parseInt(req.query.window, 10) || 300, 30), 86400);

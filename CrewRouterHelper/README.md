@@ -72,6 +72,30 @@ cr-report logs --clear --yes
 
 原有 `cr-report.py`、`install-grok-hooks.py`、`cr-login` 和 `codex-cr` 保留。Python 入口适用于既有 Claude/Qwen/Codex/Hermes/OpenClaw 集成；npm CLI 是新的主入口。
 
+## Doctor、Repair、事件与运维命令
+
+`doctor` 始终只读；`repair` 和兼容的 `doctor --fix` 默认 dry-run，实际修复必须显式 `--yes`。修复仅处理 Helper 自己的 Hook 和权限，并在写入前备份。网络检查分解为 URL、DNS、TCP、TLS、HTTP、凭证和事件权限，使用短超时且不显示响应正文。
+
+```bash
+cr-report repair --dry-run
+cr-report repair --yes --json
+cr-report events record --output sample.jsonl < parsed-events.jsonl
+cr-report events replay sample.jsonl
+cr-report events replay sample.jsonl --remote
+cr-report events list
+cr-report remote status|capabilities|recent-events
+cr-report queue inspect --json
+cr-report queue retry --id ID|--all
+cr-report queue dead-letter --yes
+cr-report filter show
+cr-report filter set --events session_start,tool_use --tools Bash*
+cr-report machine status
+cr-report machine rename laptop
+cr-report metrics --format json|prometheus
+```
+
+录制只接受已解析事件，保存在用户缓存的 600 文件中并限制容量；回放默认本地，不访问网络。队列重试超过上限会进入死信，清理/迁移操作需要确认。客户端 `inspect`/`setup` 默认仅检查，只有 Grok Helper Hook 支持安全自动管理，其余客户端必须手动配置。
+
 ## 开发检查
 
 ```bash
