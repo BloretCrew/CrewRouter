@@ -1,0 +1,12 @@
+* { box-sizing: border-box; }
+:root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; background: #10131a; color: #eef2ff; }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at top, #202a40, #10131a 60%); }
+.card { width: min(680px, calc(100vw - 40px)); padding: 36px; border: 1px solid #34405c; border-radius: 18px; background: #171d2aee; box-shadow: 0 20px 80px #0008; }
+h1 { margin: 0 0 8px; font-size: 28px; } p { color: #aab5ce; line-height: 1.5; }
+label { display: block; margin-top: 22px; color: #c8d1e8; font-size: 14px; }
+input { width: 100%; margin-top: 8px; padding: 12px 14px; border: 1px solid #465472; border-radius: 8px; background: #0e131d; color: inherit; font-size: 15px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+button { padding: 11px 16px; border: 0; border-radius: 8px; background: #557cff; color: white; cursor: pointer; font-weight: 600; } button.secondary { background: #303b55; }
+button:disabled { opacity: .5; cursor: wait; }
+#status { min-height: 24px; margin-top: 20px; color: #ffcc7a; } .error { color: #ff8f9c !important; }
+small { color: #7f8aa3; }

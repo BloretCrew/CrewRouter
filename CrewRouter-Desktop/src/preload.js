@@ -1,0 +1,17 @@
+'use strict';
+
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('crewrouterDesktop', Object.freeze({
+  getStatus: () => ipcRenderer.invoke('desktop:get-status'),
+  chooseMode: (mode) => ipcRenderer.invoke('desktop:choose-mode', mode),
+  connectRemote: (url) => ipcRenderer.invoke('desktop:connect-remote', url),
+  openExternal: (url) => ipcRenderer.invoke('desktop:open-external', url),
+  restartLocal: () => ipcRenderer.invoke('desktop:restart-local'),
+  quit: () => ipcRenderer.invoke('desktop:quit'),
+  onStatus: (callback) => {
+    const listener = (_event, status) => callback(status);
+    ipcRenderer.on('desktop:status', listener);
+    return () => ipcRenderer.removeListener('desktop:status', listener);
+  }
+}));

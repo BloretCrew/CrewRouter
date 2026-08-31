@@ -7,23 +7,28 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron .",
+    "dev": "NODE_ENV=development electron .",
     "test": "node --test test/*.test.js",
-    "syntax": "node --check src/url-policy.js && node --check src/profile-store.js && node --check src/connection-manager.js && node --check src/redirect-flow.js && node --check src/server-manager.js && node --check src/main.js && node --check src/preload.js",
+    "syntax": "node --check src/url-policy.js && node --check src/profile-store.js && node --check src/connection-manager.js && node --check src/redirect-flow.js && node --check src/server-manager.js && node --check src/main.js && node --check src/preload.js && node --check src/renderer/renderer.js && node --check scripts/stage-server.js",
     "test:local-server": "node scripts/test-local-server.js",
     "stage:server": "node scripts/stage-server.js",
-    "pack": "electron-builder --linux AppImage"
+    "pack": "electron-builder --linux AppImage",
+    "build": "npm run pack"
   },
   "engines": { "node": ">=16" },
   "devDependencies": {
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron": "^31.7.7",
+    "electron-builder": "^25.1.8"
   },
   "build": {
     "appId": "com.crewrouter.desktop",
     "productName": "CrewRouter Desktop",
-    "files": ["src/**/*", "package.json", "README.md"],
-    "linux": { "target": ["AppImage"] },
-    "extraResources": [{ "from": "resources/server", "to": "server", "filter": ["**/*"] }]
+    "asar": true,
+    "directories": { "output": "dist" },
+    "files": ["src/**/*", "scripts/**/*", "package.json", "README.md"],
+    "extraResources": [{ "from": "staging/server", "to": "server", "filter": ["**/*", "!node_modules/**"] }],
+    "linux": { "target": ["AppImage"], "category": "Network" },
+    "win": { "target": ["nsis"], "extraResources": [{ "from": "staging/server", "to": "server" }] },
+    "mac": { "target": ["dmg"], "extendInfo": { "CFBundleURLTypes": [{ "CFBundleURLSchemes": ["crewrouter"] }] } }
   }
 }

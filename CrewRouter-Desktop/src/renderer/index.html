@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CrewRouter Desktop</title><link rel="stylesheet" href="styles.css"></head>
+<body><main class="card"><h1>CrewRouter Desktop</h1><p id="intro">选择本地运行，或连接已有的 Personal/Team Server。</p>
+<label for="remote-url">远程服务器地址</label><input id="remote-url" type="url" placeholder="https://crewrouter.example.com" autocomplete="url">
+<div class="actions"><button id="local">启动本地服务</button><button id="remote" class="secondary">连接远程服务</button><button id="quit" class="secondary">退出</button></div>
+<div id="status" role="status"></div><small>远程页面由目标服务器提供并负责登录；Desktop 不接管 OAuth、Token 或 API Key。</small></main><script src="renderer.js"></script></body></html>
