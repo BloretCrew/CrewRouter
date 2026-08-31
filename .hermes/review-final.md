@@ -1,68 +1,64 @@
-# 第二轮独立代码审查结论
+# CrewRouterHelper 最终复审
 
-审查对象：当前工作树最新提交 `af8a9c0` 及其全部最新改动；对照 `/data/CrewRouter/.hermes/review.md` 中 Issue 1-8 逐项复核。
-
-## Issue 1
-- **Severity:** bug
-- **Status:** open
-- **File:** `/root/.grok/worktrees/data-crewrouter/subagent-01a04d3a-1436-7951-8063-5062c888ba77/server/routes/api.js:2764-2778,2944-2968,3366-3380,5433-5450,5537-5551,5732-5746,5799-5812,5974-5988`
-- **Description:** `recordUsageAndDeduct` 现在在事务失败时抛异常，8 个调用点也确实执行了 `if (!usageResult.ok) throw ...`；但这并没有传播到响应层。8 个调用点都位于会吞掉异常的局部 `try/catch` 中，catch 只记录日志，随后仍继续原有成功流程：非流式路径继续 `res.json(...)`/`return`，流式路径则已完成上游流输出后正常结束。因此数据库 INSERT 或扣款失败时，请求仍可被客户端视为成功，usage/扣款仍然可能静默缺失。静态测试只验证了检查语句存在及其位于 `recordQuotaData` 前面，未验证外围 catch 是否阻断成功响应，故不能证明原问题已修复。对于已发送 header 的流式响应，确实不能回退为 HTTP 错误，但至少应发送协议级错误/终止标记并记录可靠补偿；对于尚未发送响应的非流式路径，应让异常到达外层错误处理并返回失败状态。
-- **Suggestion:** 将计费失败从这些局部 catch 继续向上抛出，或在 catch 中明确设置失败响应/阻止成功响应；流式场景实现可被客户端识别的错误事件并配套可靠重试/补偿队列，避免已产生上游结果却永久漏计费。同步增强测试，注入 usage INSERT/扣款失败，分别断言流式和非流式响应行为。
-
-## Issue 2
-- **Severity:** suggestion
-- **Status:** fixed
-- **File:** `/root/.grok/worktrees/data-crewrouter/subagent-01a04d3a-1436-7951-8063-5062c888ba77/server/routes/user.js:1228-1244`; `/root/.grok/worktrees/data-crewrouter/subagent-01a04d3a-1436-7951-8063-5062c888ba77/public/js/app.js:7333-7340,7463-7465,7537-7542`
-- **Description:** 服务端不再从数据库恢复或返回 token 原文，对不可恢复的 Key 返回 HTTP 410；前端调用统一检查 `!res.ok`，并读取错误 JSON 后提示用户。因此 HTTP 410 在当前调用方式下不会被当作成功配置处理，也不会产生空 token 配置。该问题的接口兼容性修复真实有效，但功能上历史 Key/新建 Key 在离开创建响应后均不能通过该接口重新生成配置，这是只存 hash 方案下的明确产品限制。
-
-## Issue 3
-- **Severity:** bug
-- **Status:** open
-- **File:** `/root/.grok/worktrees/data-crewrouter/subagent-01a04d3a-1436-7951-8063-5062c888ba77/server/utils/internal-oauth.js:6-43`
-- **Description:** 进程级缓存和 pending Promise 合并能避免同进程并发重复签发，也会淘汰本地 TTL 过期项；但缓存命中完全绕过数据库的吊销状态检查。若该内部 access token 被 `/oauth/revoke`、管理端吊销，或被其它实例吊销，`getInternalAccessToken` 在本地缓存尚未过期时仍返回同一个已吊销 token，调用方会持续拿到无效凭证，直到 24 小时 TTL 到期。`issueInternalToken` 仅在重新签发时删除已吊销/过期行，不能修复缓存命中期间的吊销。多进程部署还会各自缓存并签发 token，pending 合并只在单进程有效。
-- **Suggestion:** 缓存命中时以低成本查询/版本标记确认 token 仍未吊销未过期，或在内部调用收到 401 `token has been revoked` 时立即删除对应缓存并重试一次；若要求多进程合并，应把复用/签发放入数据库事务并使用 advisory lock/唯一约束，不能只依赖进程内 Map。必要时缩短缓存 TTL，并补充吊销后立即重新获取及多实例行为测试。
-
-## Issue 4
-- **Severity:** suggestion
-- **Status:** wontfix
-- **File:** `/root/.grok/worktrees/data-crewrouter/subagent-01a04d3a-1436-7951-8063-5062c888ba77/server/middleware/oauth-bearer.js:10-17,42-53`
-- **Description:** 本地 SHA-256 实现未复用统一工具，但任务书明确要求不修改该中间件；当前 hash 结果兼容，未发现新的功能性问题。
-
-## Issue 5
-- **Severity:** bug
-- **Status:** open
-- **File:** `/root/.grok/worktrees/data-crewrouter/subagent-01a04d3a-1436-7951-8063-5062c888ba77/server/scripts/init-db.js:468-498`
-- **Description:** 新增的旧表兼容分支把缺失的 `key_hash` 定义为 `VARCHAR(255) NOT NULL UNIQUE`，但该分支直接对已存在的 `api_keys` 表执行 `ALTER TABLE ... ADD COLUMN key_hash ...`。如果历史表已有数据，PostgreSQL 新增 NOT NULL 列没有默认值会因现有行包含 NULL 而失败；同时直接创建 UNIQUE 约束还可能因历史数据/已有 hash 冲突失败。该初始化路径没有先从 `key_value` 回填 hash、处理重复值、再加 NOT NULL/唯一约束，也没有事务回滚保护。因此“空库 DDL 一致”已修复，但“兼容旧表补列”并不安全，可能令 init-db 在升级库上失败。
-- **Suggestion:** 对旧表采用分阶段迁移：先以可空方式 ADD COLUMN，按原始 `key_value` 回填 SHA-256，校验并处理重复 hash，再删除/清空明文，最后设置 NOT NULL 并创建唯一索引；整个迁移放入事务，并对已存在列分别检查约束而不是在 ADD COLUMN 类型字符串中直接附加约束。若迁移脚本负责该转换，则 init-db 应调用/复用同一套安全迁移逻辑。
-
-## Issue 6
-- **Severity:** suggestion
-- **Status:** fixed
-- **File:** `/root/.grok/worktrees/data-crewrouter/subagent-01a04d3a-1436-7951-8063-5062c888ba77/scripts/migrate-api-keys-hash.js:7-45`
-- **Description:** `--apply` 现在在单一事务中重新锁定待迁移行，重复 hash 会抛错并整体回滚；更新语句也只处理仍有明文的行。dry-run 默认只读。未发现原问题所述的部分提交漏洞。脚本仍缺少真实数据库运行验证，但这属于验证覆盖不足而非已证实的新逻辑 bug。
-
-## Issue 7
-- **Severity:** nit
-- **Status:** fixed
-- **File:** `/root/.grok/worktrees/data-crewrouter/subagent-01a04d3a-1436-7951-8063-5062c888ba77/.hermes/implementation-summary.md:39-50`; `/root/.grok/worktrees/data-crewrouter/subagent-01a04d3a-1436-7951-8063-5062c888ba77/server/scripts/test-financial-usage-static.js:1-19`
-- **Description:** 摘要已明确区分静态检查通过与数据库/端到端未验证。静态脚本实际运行通过，并确认 8 个调用点、参数占位符数量和失败检查存在；但其正则/字符串位置断言不能证明运行时响应流程正确，尤其不能覆盖 Issue 1 的外围 catch 吞错行为。因此原“验证记录表述不清”已修复，测试覆盖边界仍作为 Issue 1 的一部分保留。
-
-## Issue 8
-- **Severity:** suggestion
-- **Status:** fixed
-- **File:** `/root/.grok/worktrees/data-crewrouter/subagent-01a04d3a-1436-7951-8063-5062c888ba77/server/scripts/test-financial-usage-static.js:3-18`
-- **Description:** 静态测试确实覆盖 8 个 `recordUsageAndDeduct` 点位、`userId`/`pointsToDeduct` 参数、SQL 占位符与值数组数量，以及 `usageResult.ok` 检查顺序。未发现该测试本身会漏掉这几类静态结构变化；但它不能替代请求级失败传播测试。
+审查基线：当前工作树 `HEAD` `5722376515ced5917ff08fa987a958916d4ade11`（`fix: close Helper review findings`）。
+审查范围：读取 `.hermes/review.md` 中上一轮 10 个问题，复核当前 HEAD 全部 CrewRouterHelper 修改，并检查整体任务书完成度及回归风险。
 
 ## 结论
 
-本轮发现 **3 个 open issue**：
-1. usage 失败仍被 8 个局部 catch 吞掉，非流式仍可能成功返回，流式缺少可识别错误/补偿路径；
-2. internal-oauth 进程缓存不感知 token 吊销，吊销后最长 24 小时持续返回无效 token；
-3. init-db 对已有数据的旧表补 `key_hash NOT NULL UNIQUE` 不具备安全迁移流程。
+整体任务书**未完成**。上一轮 10 个问题中，Issue 1、2、5、7、8、9 的主要修复已落地；Issue 3 的 CLI 校验已明显改善；但 Issue 4、6、10 仍未正确解决，并发现 profile test 的 OAuth/隔离回归风险。因此仍有开放问题，不能判定为通过。
 
-已执行 `node server/scripts/test-financial-usage-static.js`，结果通过；关键 JS 文件语法检查通过。由于当前环境未连接数据库且缺少可用 `pg`/测试库，未能实测迁移、吊销、并发及端到端流式/非流式响应。
-## 本轮修复响应
+## 已确认解决
 
-- Issue 1：8 个计费局部 catch 对 billingFailure 返回 HTTP 500（未发 header）或销毁流连接（已发 header），不再继续成功响应；静态测试覆盖 8 个外围 catch。
-- Issue 3：缓存命中前低成本查询 oauth_tokens，感知 revoked/expired；缓存 TTL 缩短至 5 分钟，并发签发继续合并。
-- Issue 5：init-db 对旧表采用可空补列、hash 回填、重复检查、清空明文、最后设置约束和唯一索引，初始化整体事务回滚。
+- **Issue 1：已解决（主要路径）**。`status`/`doctor` 的服务探测经 `probe()` 调用 `getAccessToken()`，过期 OAuth 会走刷新与锁；现有测试验证了过期 profile 刷新后服务探测使用新 token。
+- **Issue 2：已解决（登录写入当前 profile）**。`login` 读取 `profilesData()`，把 URL、OAuth token、过期时间和 scope 写入当前 profile，并同步 active 顶层字段。
+- **Issue 3：部分解决**。已增加重复选项、未知选项、必需参数、子命令和多余位置参数校验；手工验证 `emit --harness grok`、`profile use`、`status --since 1` 均返回退出码 1。仍缺少系统化 CLI E2E 测试，见 Issue 10。
+- **Issue 5：已解决（静态实现检查）**。Windows 安装命令使用 `process.execPath` 加脚本路径，缓存路径统一经平台函数；当前 Linux 测试无法运行 Windows 分支。
+- **Issue 7：已解决（主要生命周期路径）**。TUI 保存并移除 keypress listener，动作有 busy 锁和 try/catch/finally，退出时恢复 raw mode；Windows/TTY 场景仍缺测试，见 Issue 10。
+- **Issue 8：已解决**。顶层 `logout` 仅清除当前 profile 的凭证并保留 profile 元数据及其他 profile。
+- **Issue 9：主要风险已缓解**。日志采用白名单字段，清理 Authorization/Bearer、凭证赋值、URL 查询/片段和 JWT，轮转文件及当前日志均强制 0600；覆盖仍不完整，见 Issue 10。
+
+## Issues
+
+### Issue 1（原 Issue 4）
+- severity: **bug / high**
+- 文件:行号: `CrewRouterHelper/src/backup.js:7`
+- 描述: `restore()` 只校验每个事件的 `entries[event]?.[0]?.hooks?.[0]`，没有校验事件数组和 `hooks` 数组必须恰好只有一个元素，也没有校验数组中其余 Hook。攻击者可在受控、命名合法的备份中保留首个合法命令并追加第二个任意 `command`，恢复后原生 Hook 可能执行追加命令。当前 schema 检查因此仍不是完整 Hook schema 校验。
+- 建议: 对根对象、事件集合、每个事件数组、每个 hooks 数组以及元素字段做严格 allow-list/精确长度校验；校验所有 command 均相同、均为预期 CLI 命令且路径属于可执行的受控 CLI；使用 realpath 对目标文件和备份目录做完整边界校验。
+- Status: open
+
+### Issue 2（原 Issue 6）
+- severity: **bug / medium**
+- 文件:行号: `CrewRouterHelper/bin/cr-report.js:25`
+- 描述: `logs --follow` 仍只对启动时存在的日志文件调用 `fs.watch(api.logPath())`。日志不存在时 watcher 创建失败且异常被静默吞掉；随后首次上报创建日志、日志轮转或文件替换都不会重新绑定，因此正常的“尚无日志”初始状态无法跟随事件。
+- 建议: 监听日志目录并按 basename 过滤目标文件，在创建/rename/轮转时重新绑定；在非 TTY 或不可监听时明确返回可诊断错误/降级提示；补充空日志、首次创建和轮转测试。
+- Status: open
+
+### Issue 3（新增）
+- severity: **bug / medium**
+- 文件:行号: `CrewRouterHelper/bin/cr-report.js:23`
+- 描述: `profile test NAME` 直接使用 `p.access_token || p.key` 请求服务，没有调用 `getAccessToken(NAME)`。指定 profile 的过期 OAuth 不会刷新，可能使用过期 token 得到 401；同时与通用 profile token 获取流程不一致，profile test 不能可靠验证该 profile 当前可用性。
+- 建议: 使用指定 profile 的统一 token 获取/刷新流程（`getAccessToken(name)`），并基于该 profile 的 URL 发起探测；补充过期 OAuth profile test 及多 profile 隔离测试。
+- Status: open
+
+### Issue 4（原 Issue 10）
+- severity: **suggestion / medium**
+- 文件:行号: `CrewRouterHelper/test/helper.test.js:4-10`、`CrewRouterHelper/package.json:8`
+- 描述: 测试文件仍只有 7 项，且本轮通过压缩/替换删除了原有多个独立回归断言。没有覆盖 CLI 解析成功/失败退出码、登录写入 profile、profile test 的 OAuth 刷新、备份多 Hook 注入、日志 follow 创建/轮转、TUI 异常与按键并发、Windows 命令生成等关键场景。根目录执行 `npm test` 仍因根 package 没有该 script 失败；只有 `cd CrewRouterHelper && npm test` 可运行。
+- 建议: 增加隔离 HOME/config/log 的 CLI E2E 测试和安全负例，恢复并扩展基础单元测试；至少加入备份多余 Hook、follow 文件创建/轮转、指定 profile 刷新、TUI/Windows 静态覆盖；在 CI 或根级入口实际执行 Helper 测试，避免根目录检查误判。
+- Status: open
+
+## 验证记录
+
+- `node --test CrewRouterHelper/test/*.test.js`：7 项通过。
+- `cd CrewRouterHelper && npm test`：7 项通过。
+- `python3 CrewRouterHelper/test-grok-hooks.py`：通过，`All Grok hook assertions passed.`
+- `cd CrewRouterHelper && npm pack --dry-run`：通过，包内容 17 个文件，包含 bin/src/test/README/package.json。
+- CLI 负例手工验证：
+  - `emit --harness grok`：退出码 1，报告缺少 `--event`。
+  - `profile use`：退出码 1，报告缺少 NAME。
+  - `status --since 1`：退出码 1，报告不支持该选项。
+- `npm test`（仓库根目录）：失败，`Missing script: "test"`；这是当前仓库事实，README 已说明测试应在 `CrewRouterHelper` 目录执行。
+
+## 审查边界
+
+本次未修改任何源代码；仅生成本审查报告。Linux 环境未实际执行 Windows 分支、交互式 TTY 和真实 OAuth 浏览器登录流程，相关结论来自静态审查与现有测试覆盖。
