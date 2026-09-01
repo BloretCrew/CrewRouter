@@ -198,7 +198,6 @@ class ConsoleApp {
       this.instance = window.CrewRouterEditionBadge
         ? await window.CrewRouterEditionBadge.load()
         : null;
-      if (window.CrewRouterEditionBadge) window.CrewRouterEditionBadge.mount(this.instance);
       if (this.instance?.capabilities) {
         document.querySelectorAll('[data-capability]').forEach((el) => {
           if (this.instance.capabilities[el.dataset.capability] === false) el.style.display = 'none';

@@ -14,8 +14,10 @@
     var elements = document.querySelectorAll(selector || '[data-edition-badge]');
     var label = resolveEditionBadge(instance);
     elements.forEach(function (element) {
+      if (element.dataset.editionBadgeValue === label && element.hidden === !label) return;
       element.textContent = label;
       element.hidden = !label;
+      element.dataset.editionBadgeValue = label;
     });
     return label;
   }
@@ -30,11 +32,12 @@
     return instancePromise;
   }
 
-  root.CrewRouterEditionBadge = {
-    resolve: resolveEditionBadge,
-    mount: mount,
-    load: load,
-  };
+  function refresh(instance) {
+    instancePromise = Promise.resolve(instance);
+    return mount(instance);
+  }
+
+  root.CrewRouterEditionBadge = { resolve: resolveEditionBadge, mount: mount, load: load, refresh: refresh };
 
   function autoMount() {
     if (!document.querySelector('[data-edition-badge]')) return;

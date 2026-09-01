@@ -7,9 +7,11 @@
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <style>
     body { font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", sans-serif); background: var(--background, #f9fafb); color: var(--foreground, #111827); margin: 0; }
     .pi-wrap { max-width: 640px; margin: 0 auto; padding: 40px 16px; }
+    .pi-brand { margin-bottom: 12px; font-size: 17px; font-weight: 700; }
     .pi-card { background: var(--background, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 14px; padding: 22px; box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
     .pi-title { font-size: 19px; font-weight: 700; margin: 0 0 4px; }
     .pi-byline { font-size: 13px; color: var(--muted-foreground, #6b7280); margin-bottom: 14px; }
@@ -24,9 +26,11 @@
     .pi-loading, .pi-err { text-align: center; padding: 40px 0; color: var(--muted-foreground, #6b7280); }
     .pi-err strong { display: block; margin-bottom: 8px; color: var(--destructive, #ef4444); }
   </style>
+  <script src="/js/edition-badge.js?v=1"></script>
 </head>
 <body>
   <div class="pi-wrap">
+    <div class="pi-brand">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></div>
     <div id="pi-root" class="pi-card">
       <div class="pi-loading">正在获取插件信息…</div>
     </div>

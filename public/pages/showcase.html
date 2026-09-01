@@ -9,6 +9,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/themes.css">
+  <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
@@ -374,13 +375,14 @@
     }
   </style>
   <script src="/js/i18n.js?v=2"></script>
+  <script src="/js/edition-badge.js?v=1"></script>
 </head>
 <body>
   <!-- Navigation -->
   <nav class="showcase-nav" id="showcaseNav">
     <div class="nav-brand">
       <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">
-      <span>CrewRouter</span>
+      <span>CrewRouter</span><span class="brand-edition-badge" data-edition-badge hidden></span>
     </div>
     <div class="nav-links">
       <a href="#features"><span data-i18n="功能">功能</span></a>

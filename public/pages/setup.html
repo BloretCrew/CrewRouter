@@ -275,6 +275,7 @@
             data = await res.json().catch(() => ({}));
           }
           if (!res.ok) throw new Error(data.error || 'edition 选择失败');
+          if (window.CrewRouterEditionBadge) window.CrewRouterEditionBadge.refresh(data);
           document.getElementById('stepEdition').style.display = 'none';
           if (data.existingInstallation || data.setupComplete) {
             document.getElementById('stepReady').style.display = 'block';
