@@ -28,6 +28,7 @@
     "test:request-policy": "node server/scripts/test-request-policy.js",
     "test:config-center": "node server/scripts/test-config-center.js",
     "test:instance-edition": "node server/scripts/test-instance-edition.js && node server/scripts/test-instance-edition-persistence.js",
+    "test:edition-badge": "node server/scripts/test-edition-badge.js",
     "test:email-toctou-static": "node server/scripts/test-email-toctou-static.js",
     "test:outbox": "node server/scripts/test-outbox.js",
     "money-precision:migrate": "node scripts/migrate-money-precision.js"

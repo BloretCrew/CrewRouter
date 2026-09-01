@@ -28,7 +28,7 @@
 
 ## Personal / Team Edition
 
-安装首次打开 `/setup` 时必须选择 `personal` 或 `team`，选择会写入实例数据库并永久固定，界面和 `CR_EDITION` 不能修改已初始化的版本。无人值守安装可在首次启动前设置 `CR_EDITION=personal` 或 `CR_EDITION=team`；已有实例若没有 edition 记录，需明确完成一次选择，含团队数据的旧库不会被自动标记为 Personal。Personal 版保留核心网关、个人 Key、用量和 Playground，团队管理接口返回 `team_edition_required`；Team 版保留现有团队管理能力。Edition 不是许可或安全边界，后端授权检查始终有效。
+安装首次打开 `/setup` 时必须选择 `personal` 或 `team`，选择会写入实例数据库并永久固定，界面和 `CR_EDITION` 不能修改已初始化的版本。无人值守安装可在首次启动前设置 `CR_EDITION=personal` 或 `CR_EDITION=team`；已有实例若没有 edition 记录，需明确完成一次选择，含团队数据的旧库不会被自动标记为 Personal。Personal 版保留核心网关、个人 Key、用量和 Playground，团队管理接口返回 `team_edition_required`；Team 版保留现有团队管理能力。Edition 不是许可或安全边界，后端授权检查始终有效。正式页面品牌区的 `LOCAL` / `PERSONAL` / `TEAM` badge 仅展示实例状态：Desktop 本地运行时显示 `LOCAL`，服务端依据实例 edition 显示 `PERSONAL` 或 `TEAM`；它不是运行时切换控件。本地 runtime 与服务端 edition 是两个不同维度，`runtime=desktop-local` 优先于 edition。
 
 ## 隔离开发测试
 

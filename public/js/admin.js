@@ -145,8 +145,10 @@ class AdminApp {
     await this.loadUserInfo();
     if (!this.user) return;
     try {
-      const instanceRes = await fetch('/api/instance');
-      const instance = instanceRes.ok ? await instanceRes.json() : null;
+      const instance = window.CrewRouterEditionBadge
+        ? await window.CrewRouterEditionBadge.load()
+        : null;
+      if (window.CrewRouterEditionBadge) window.CrewRouterEditionBadge.mount(instance);
       if (instance?.capabilities) {
         document.querySelectorAll('[data-capability]').forEach((el) => {
           if (instance.capabilities[el.dataset.capability] === false) el.style.display = 'none';

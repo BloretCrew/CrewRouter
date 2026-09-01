@@ -10,6 +10,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
@@ -109,6 +110,7 @@
     }
   </style>
   <script src="/js/i18n.js?v=2"></script>
+  <script src="/js/edition-badge.js?v=1"></script>
 </head>
 <body>
 <div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
@@ -117,7 +119,7 @@
     </select></div>
   <div class="setup-container">
     <div class="setup-header">
-      <h1>🚀 CrewRouter</h1>
+      <h1>🚀 CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
       <p><span data-i18n="首次使用，请创建管理员账号">首次使用，请创建管理员账号</span></p>
     </div>
 

@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
   <link rel="stylesheet" href="/css/playground.css">
+  <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
@@ -33,7 +34,7 @@
       <a href="/console" class="pg-mobile-back">
         <img src="https://img.bloret.net/SF/chevron.left?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="chevron.left" style="display:inline-block;vertical-align:middle;">
       </a>
-      <span class="pg-mobile-title">Playground</span>
+      <span class="pg-mobile-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></span>
       <button id="pgToggleSidebar" class="pg-mobile-menu">
         <img src="https://img.bloret.net/SF/line.3.horizontal?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="line.3.horizontal" style="display:inline-block;vertical-align:middle;">
       </button>
@@ -206,6 +207,7 @@
   <script src="/js/theme.js?v=2"></script>
   <script src="/js/dom.js?v=3"></script>
   <script src="/js/dialog.js?v=2"></script>
+  <script src="/js/edition-badge.js?v=1"></script>
   <script src="/js/playground.js?v=2"></script>
 <script>
   // Page-level i18n: apply catalog to static DOM once ready.

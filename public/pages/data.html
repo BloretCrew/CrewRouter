@@ -9,6 +9,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/css/themes.css">
+  <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <script>
     (function () {
       var theme = localStorage.getItem('theme') || 'system';
@@ -88,12 +89,13 @@
       .data-main { padding: 20px 14px 40px; }
     }
   </style>
+  <script src="/js/edition-badge.js?v=1"></script>
 </head>
 <body>
   <nav class="data-nav">
     <a class="data-brand" href="/data">
       <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="CrewRouter">
-      <span>CrewRouter</span>
+      <span>CrewRouter</span><span class="brand-edition-badge" data-edition-badge hidden></span>
     </a>
     <span class="data-nav__spacer"></span>
     <a class="data-nav__link" href="/store"><span data-i18n="插件商店">插件商店</span></a>
