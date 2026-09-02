@@ -2,11 +2,12 @@
   display: inline-flex;
   align-items: center;
   min-height: 18px;
+  box-sizing: border-box;
   padding: 2px 6px;
-  border: 1px solid var(--brand-blue);
-  border-radius: 5px;
-  background: var(--brand-blue-bg, #edf4ff);
-  color: var(--brand-blue);
+  border: 1px solid #000;
+  border-radius: 2px;
+  background: #000;
+  color: #fff;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: .08em;
@@ -30,7 +31,9 @@
   .data-nav__link { flex-shrink: 0; }
 }
 
+/* themes.css applies the dark class to the document root. */
 .dark .brand-edition-badge {
-  background: var(--secondary, #1f2937);
-  border-color: var(--brand-blue);
+  border-color: #fff;
+  background: #fff;
+  color: #000;
 }

@@ -14,6 +14,12 @@ for (const page of pages) {
   assert(html.includes('/js/edition-badge.js'), `${page} must include badge script`);
 }
 
+const css = fs.readFileSync(path.join(publicDir, 'css', 'edition-badge.css'), 'utf8');
+assert.match(css, /background:\s*#000/);
+assert.match(css, /color:\s*#fff/);
+assert.match(css, /\.dark \.brand-edition-badge[\s\S]*background:\s*#fff[\s\S]*color:\s*#000/);
+assert.doesNotMatch(css, /brand-blue|blue/i);
+
 const source = fs.readFileSync(path.join(publicDir, 'js/edition-badge.js'), 'utf8');
 let ready;
 const elements = [{ textContent: '', hidden: true, dataset: {} }];
