@@ -16,6 +16,9 @@ test('main module can be required without Electron installed', () => {
 test('main uses the official CrewRouter demo by default', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'main.js'), 'utf8');
   assert.match(source, /process\.env\.CREWROUTER_DEMO_URL \|\| 'https:\/\/crewrouter\.bloret\.net'/);
+  assert.match(source, /async function connectCustomRemote/);
+  assert.match(source, /desktop:connect-custom-remote/);
+  assert.match(source, /if \(active\.mode === 'local'\) return startLocal\(active\.displayName\)/);
 });
 
 test('main status exposes an explicit connect state', () => {

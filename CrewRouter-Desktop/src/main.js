@@ -57,23 +57,21 @@ async function connect(url, { local = false, name = local ? '本地 CrewRouter' 
   return currentStatus();
 }
 
-async function startRemoteRedirect(rawUrl) {
-  if (!DEMO_URL) fail('未配置官方 Demo 转向地址（CREWROUTER_DEMO_URL），不会绕过 Demo 直接连接。');
+async function startRemoteRedirect() {
+  if (!DEMO_URL) fail('未配置官方 Demo 转向地址（CREWROUTER_DEMO_URL）。');
   const demo = await validateRemoteUrl(DEMO_URL);
   if (!demo.ok) fail(`官方 Demo 地址无效：${demo.error}`);
-  let targetUrl = '';
-  let targetOrigin = null;
-  if (rawUrl) {
-    const target = await validateRemoteUrl(rawUrl);
-    if (!target.ok) fail(target.error);
-    targetUrl = target.url.toString();
-    targetOrigin = target.url.origin;
-  }
-  const metadata = { source: 'demo', ...(targetUrl ? { serverUrl: targetUrl, targetOrigin } : {}) };
-  const redirect = redirectFlow.buildDemoUrl(demo.url.toString(), { target: targetUrl, metadata });
-  sendStatus({ message: '正在打开官方 Demo 转向入口…', redirect: true, target: targetOrigin });
+  const redirect = redirectFlow.buildDemoUrl(demo.url.toString(), { metadata: { source: 'demo' } });
+  sendStatus({ message: '正在打开官方 Demo 转向入口…', redirect: true, target: null });
   await electron.shell.openExternal(redirect.url);
-  return { ...currentStatus(), mode: 'redirecting', target: targetOrigin };
+  return { ...currentStatus(), mode: 'redirecting', target: null };
+}
+
+async function connectCustomRemote(rawUrl) {
+  const target = await validateRemoteUrl(rawUrl);
+  if (!target.ok) fail(target.error);
+  sendStatus({ message: '正在直接连接自定义服务器…', target: target.url.origin });
+  return connect(target.url.toString(), { name: '自定义服务器' });
 }
 
 function localProfileStore() { return state.connection?.store; }
@@ -144,10 +142,19 @@ function registerIpc() {
   ipcMain.handle('desktop:get-status', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return currentStatus(); });
   ipcMain.handle('desktop:choose-mode', async (event, requested) => { if (!isRendererFrame(event) || requested !== 'local') fail('不支持的模式'); return startLocal(); });
   ipcMain.handle('desktop:setup-local-profile', async (event, displayName) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); const result = validateLocalDisplayName(displayName); if (!result.ok) fail(result.error); return startLocal(result.value); });
-  ipcMain.handle('desktop:connect-remote', async (event, url) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return startRemoteRedirect(url); });
+  ipcMain.handle('desktop:connect-remote', async (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return startRemoteRedirect(); });
+  ipcMain.handle('desktop:connect-custom-remote', async (event, url) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return connectCustomRemote(url); });
   ipcMain.handle('desktop:open-external', async (event, url) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return openSafeExternal(url); });
   ipcMain.handle('desktop:list-profiles', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return state.connection.listProfiles(); });
-  ipcMain.handle('desktop:switch-profile', async (event, id) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); const profile = state.connection.activeProfile(); if (!profile || profile.id !== id) state.connection.switchProfile(id); const active = state.connection.activeProfile(); return connect(active.url, { name: active.name }); });
+  ipcMain.handle('desktop:switch-profile', async (event, id) => {
+    if (!isRendererFrame(event)) fail('IPC 来源不可信');
+    const profile = state.connection.activeProfile();
+    if (!profile || profile.id !== id) state.connection.switchProfile(id);
+    const active = state.connection.activeProfile();
+    if (!active) fail('profile 不存在');
+    if (active.mode === 'local') return startLocal(active.displayName);
+    return connect(active.url, { name: active.name });
+  });
   ipcMain.handle('desktop:restart-local', async (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return startLocal(); });
   ipcMain.handle('desktop:quit', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); electron.app.quit(); });
 }

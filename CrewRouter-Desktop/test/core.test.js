@@ -16,6 +16,7 @@ test('URL policy blocks private targets and redacts secrets', async () => {
   assert.equal((await validateRemoteUrl('http://127.0.0.1:1234')).ok, false);
   assert.equal((await validateRemoteUrl('http://localhost:1234')).ok, false);
   assert.equal((await validateRemoteUrl('http://127.0.0.1:1234', { allowLocalhost: true })).ok, true);
+  assert.equal((await validateRemoteUrl('http://example.invalid', { allowLocalhost: true })).ok, false);
   assert.equal((await validateRemoteUrl('http://user:pass@example.com')).ok, false);
   assert.equal((await validateRemoteUrl('https://example.com/?access_token=secret')).ok, false);
   assert.equal((await validateRemoteUrl('file:///tmp/x')).ok, false);
@@ -39,7 +40,7 @@ test('redirect callback binds one safe target and rejects replay or credentials'
   assert.equal(callback.serverUrl, 'http://127.0.0.1:20001/');
   assert.throws(() => flow.parseCallback(`crewrouter://connect/?state=${state}`), /无效/);
   const second = flow.createState({ serverUrl: 'http://127.0.0.1:20001', targetOrigin: 'http://127.0.0.1:20001' });
-  await assert.rejects(() => flow.parseCallback(`crewrouter://connect/?state=${second}&serverUrl=https%3A%2F%2Fother.example`, { allowLocalhost: true }), /不一致|DNS/);
+  await assert.rejects(() => flow.parseCallback(`crewrouter://connect/?state=${second}&serverUrl=https%3A%2F%2Fother.example`, { allowLocalhost: true }), /不一致|DNS|内网/);
   const third = flow.createState({ serverUrl: 'http://127.0.0.1:20001' });
   assert.throws(() => flow.parseCallback(`crewrouter://connect/?state=${third}&code=secret`, { allowLocalhost: true }), /凭据/);
 });

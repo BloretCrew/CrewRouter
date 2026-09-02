@@ -86,7 +86,9 @@ test('renderer guards repeated actions and renders server metadata/errors', () =
   assert.match(js, /status\.edition/);
   assert.match(js, /status\.auth/);
   assert.match(js, /status\.auth\.methods/);
-  assert.match(js, /正在通过官方 Demo 转向入口连接/);
+  assert.match(js, /正在打开官方 Demo 转向入口/);
+  assert.match(js, /正在直接连接自定义服务器/);
+  assert.match(js, /connectCustomRemote/);
   assert.match(js, /setStatus\(error\?\.message/);
 });
 

@@ -85,7 +85,7 @@ formEl.addEventListener('submit', async (event) => {
   if (!url) { setUrlError('请输入远程服务器地址。'); setStatus('需要服务器地址才能连接。', 'error'); urlEl.focus(); return; }
   let parsed; try { parsed = new URL(url); } catch { setUrlError('请输入有效的 URL。'); setStatus('地址格式不正确。', 'error'); urlEl.focus(); return; }
   if (!['http:', 'https:'].includes(parsed.protocol)) { setUrlError('仅支持 http:// 或 https:// 地址。'); setStatus('地址格式不正确。', 'error'); urlEl.focus(); return; }
-  busy(true); setStatus('正在通过官方 Demo 转向入口连接…'); try { await api.connectRemote(url); } catch (error) { showError(error); }
+  busy(true); setStatus('正在直接连接自定义服务器…'); try { await api.connectCustomRemote(url); } catch (error) { showError(error); }
 });
 quitButton.addEventListener('click', () => { if (!isBusy) api.quit(); });
 api.onStatus(describeStatus); api.getStatus().then(describeStatus).catch(showError);

@@ -43,7 +43,7 @@ async function validateRemoteUrl(input, options = {}) {
   const explicitLocal = allowLocalhost && (isLocalHost(host) || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0');
   if (local && !explicitLocal) return { ok: false, error: '远程 URL 禁止 localhost 或内网地址' };
   if (requirePort && !url.port) return { ok: false, error: '必须指定端口' };
-  if (!allowLocalhost && resolveDns && !net.isIP(host)) {
+  if (resolveDns && !explicitLocal && !net.isIP(host)) {
     let records;
     try { records = await dns.lookup(host, { all: true, verbatim: true }); } catch { return { ok: false, error: '域名 DNS 解析失败' }; }
     if (!records.length || records.some(({ address }) => isPrivateHost(address))) return { ok: false, error: '域名解析到内网地址' };
