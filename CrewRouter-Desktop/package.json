@@ -15,6 +15,7 @@
     "test:local-server": "node scripts/test-local-server.js",
     "test:packaged-server": "node scripts/test-local-server.js --packaged",
     "test:electron:local-username": "node scripts/run-electron-acceptance.js",
+    "test:electron:real-pages": "node scripts/run-real-page-acceptance.js",
     "validate:server-bundle": "node scripts/validate-server-bundle.js",
     "stage:server": "node scripts/stage-server.js",
     "pack": "npm run stage:server && npm run validate:server-bundle && electron-builder",
