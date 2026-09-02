@@ -24,11 +24,20 @@ async function issueInternalToken(userId, apiKeyId) {
   return token;
 }
 
-async function getInternalAccessToken(userId) {
+async function getInternalAccessToken(userId, requestedApiKeyId = null) {
   await ensureOAuthTables();
   const key = await pool.query(
-    "SELECT id FROM api_keys WHERE user_id = $1 AND enabled = TRUE AND name ILIKE 'crewrouter' ORDER BY id ASC LIMIT 1",
-    [userId]
+    requestedApiKeyId
+      ? `SELECT ak.id
+           FROM api_keys ak
+          WHERE ak.id = $1 AND ak.enabled = TRUE
+            AND (ak.user_id = $2 OR EXISTS (
+              SELECT 1 FROM api_key_members member
+               WHERE member.api_key_id = ak.id AND member.user_id = $2
+            ))
+          LIMIT 1`
+      : "SELECT id FROM api_keys WHERE user_id = $1 AND enabled = TRUE AND name ILIKE 'crewrouter' ORDER BY id ASC LIMIT 1",
+    requestedApiKeyId ? [requestedApiKeyId, userId] : [userId]
   );
   if (!key.rows[0]) throw new Error('未找到 CrewRouter 密钥');
   const apiKeyId = key.rows[0].id;

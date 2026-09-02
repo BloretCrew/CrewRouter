@@ -16,6 +16,7 @@ const Logger = require('../logger');
 const config = require('../config-loader');
 const { expandSessionMessages } = require('../utils/usage-compress');
 const { getInternalAccessToken } = require('../utils/internal-oauth');
+const { resolveSummaryApiKeyId } = require('../utils/model-selection');
 
 const DEFAULT_DAYS = 7;
 const MAX_DAYS = 90;
@@ -798,9 +799,9 @@ function buildDetailRecords(rawRows) {
 // ========== 会话总结 ==========
 
 // 内部推理：本地网关 + 服务端持有的第一个可用 key
-async function callInternalLLM(promptText, userId) {
+async function callInternalLLM(promptText, userId, apiKeyId = null) {
   // 用 OAuth access token 调用本地网关，避免读取 API Key 原文
-  const accessToken = await getInternalAccessToken(userId);
+  const accessToken = await getInternalAccessToken(userId, apiKeyId);
   const port = config.port || 20003;
   const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
     method: 'POST',
@@ -833,8 +834,8 @@ function readWebStream(bodyStream) {
 }
 
 // 内部推理（流式）：本地网关 + 服务端持有的第一个可用 key，逐段产出内容增量
-async function* streamInternalLLM(promptText, userId) {
-  const accessToken = await getInternalAccessToken(userId);
+async function* streamInternalLLM(promptText, userId, apiKeyId = null) {
+  const accessToken = await getInternalAccessToken(userId, apiKeyId);
   const port = config.port || 20003;
   const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
     method: 'POST',
@@ -933,10 +934,12 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
     if (!own.rows[0].n) return res.status(404).json({ error: '会话不存在' });
     // 按会话键表达式读取，兼容显式 sessionId 与 bucket-* 会话
     const recRes = await pool.query(
-      `SELECT id, messages, response, reasoning_content, created_at FROM usage_records u
+      `SELECT id, api_key_id, messages, response, reasoning_content, created_at FROM usage_records u
         WHERE u.user_id = $1 AND ${summaryWhere}
         ORDER BY created_at ASC, id ASC LIMIT 1000`,
       [uid, sessionKey]);
+    const summaryApiKeyId = resolveSummaryApiKeyId(recRes.rows);
+    if (!summaryApiKeyId) return res.status(400).json({ error: '会话没有可用的 API Key' });
     const allEvents = [];
     for (const row of recRes.rows) {
       for (const e of parseMessagesToEvents(row.messages)) allEvents.push(e);
@@ -965,7 +968,7 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
       // 非流式：整体返回 JSON（兼容旧客户端）
       let summary;
       try {
-        summary = await callInternalLLM(prompt, uid);
+        summary = await callInternalLLM(prompt, uid, summaryApiKeyId);
       } catch (err) {
         Logger.error('[会话总结] 推理失败:', err.message);
         return res.status(502).json({ error: err.message || '总结生成失败' });
@@ -991,7 +994,7 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
     };
     let full = '';
     try {
-      for await (const delta of streamInternalLLM(prompt, uid)) {
+      for await (const delta of streamInternalLLM(prompt, uid, summaryApiKeyId)) {
         full += delta;
         writeEvent({ type: 'delta', text: delta });
       }
