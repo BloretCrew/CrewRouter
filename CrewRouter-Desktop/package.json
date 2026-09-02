@@ -7,6 +7,7 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
+    "test": "node --test test/*.test.js",
     "dev": "NODE_ENV=development electron .",
     "prepare:renderer": "node scripts/prepare-blora-assets.js",
     "test": "node --test test/*.test.js",
@@ -58,6 +59,12 @@
       ],
       "category": "Network"
     },
+    "protocols": [
+      {
+        "name": "CrewRouter Desktop Link",
+        "schemes": ["crewrouter"]
+      }
+    ],
     "win": {
       "target": [
         "nsis"

@@ -10,15 +10,15 @@ const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'crewrouter-electron-acce
 const output = path.join(root, '.hermes', 'screenshots');
 const sourceElectron = path.join(root, 'node_modules', '.bin', 'electron');
 const packagedElectron = path.join(root, 'dist', 'linux-unpacked', 'crewrouter-desktop');
-const electron = fs.existsSync(packagedElectron) ? packagedElectron : sourceElectron;
-const packaged = electron === packagedElectron;
+// 使用正式源码 main 运行验收；打包 Server 由 test:packaged-server 单独验证。
+const electron = sourceElectron;
 const electronArgs = ['--disable-gpu', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : [])];
 
 function run(phase) {
   const env = { ...process.env, CREWROUTER_ACCEPTANCE_USER_DATA: userData, CREWROUTER_ACCEPTANCE_PHASE: phase, CREWROUTER_ACCEPTANCE_OUTPUT: output };
   delete env.CREWROUTER_SERVER_ROOT;
   delete env.CREWROUTER_PACKAGED_SERVER_ROOT;
-  const args = packaged ? [...electronArgs, '--require', path.join(root, 'scripts', 'capture-local-username.js')] : [...electronArgs, 'scripts/capture-local-username.js'];
+  const args = [...electronArgs, 'scripts/capture-local-username.js'];
   const result = spawnSync('xvfb-run', ['-a', electron, ...args], {
     cwd: root,
     env,

@@ -65,9 +65,9 @@
       </div>
       <p class="remote-description">Personal / Team 由目标服务器自动识别，登录由目标服务器负责。</p>
       <div class="mode-options remote-options">
-        <button id="official-remote" class="blora-card mode-option" type="button">
+        <button id="official-remote" class="blora-card mode-option" type="button" aria-controls="official-remote-step">
           <span class="mode-option__icon" aria-hidden="true">↗</span>
-          <span class="mode-option__copy"><strong>通过官方站连接</strong><small>打开 crewrouter.bloret.net，由官方 Demo 负责转向</small></span>
+          <span class="mode-option__copy"><strong>通过官方站连接</strong><small>先验证目标服务器，再打开 crewrouter.bloret.net 负责转向</small></span>
           <span class="mode-option__arrow" aria-hidden="true">→</span>
         </button>
         <button id="custom-remote" class="blora-card mode-option" type="button" aria-controls="remote-step">
@@ -76,6 +76,21 @@
           <span class="mode-option__arrow" aria-hidden="true">→</span>
         </button>
       </div>
+    </section>
+
+    <section id="official-remote-step" class="remote-step" aria-labelledby="official-remote-heading" hidden>
+      <div class="step-heading-row">
+        <div><p class="blora-eyebrow">第三步</p><h2 id="official-remote-heading">输入目标服务器</h2></div>
+        <button id="official-back" class="blora-text-button" type="button">返回</button>
+      </div>
+      <p class="remote-description">Desktop 只验证公开实例信息并把目标 origin 绑定到一次性 state，不接触登录凭据。</p>
+      <form id="official-remote-form" novalidate>
+        <label class="blora-label" for="official-remote-url">目标服务器地址</label>
+        <input id="official-remote-url" class="blora-input" type="url" inputmode="url" placeholder="https://server.example.com" autocomplete="url" aria-describedby="official-url-hint official-url-error" aria-invalid="false">
+        <p id="official-url-hint" class="blora-input-hint">验证通过后将在系统浏览器打开官方 Demo 转向入口。</p>
+        <p id="official-url-error" class="blora-field-error" role="alert"></p>
+        <button id="official-continue" class="blora-button" data-variant="primary" data-block type="submit"><span>打开官方站</span><span class="blora-button-arrow" aria-hidden="true">↗</span></button>
+      </form>
     </section>
 
     <section id="remote-step" class="remote-step" aria-labelledby="remote-heading" hidden>

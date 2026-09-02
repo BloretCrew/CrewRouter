@@ -45,7 +45,7 @@ test('redirect callback binds one safe target and rejects replay or credentials'
   assert.throws(() => flow.parseCallback(`crewrouter://connect/?state=${third}&code=secret`, { allowLocalhost: true }), /凭据/);
 });
 
-test('Demo URL construction supports configured templates without inventing an endpoint', () => {
+test('Demo URL construction carries a validated target without inventing an endpoint', () => {
   const flow = new RedirectFlow();
   const result = flow.buildDemoUrl('https://demo.example/redirect?next={target}', { target: 'https://target.example', metadata: { serverUrl: 'https://target.example' } });
   const url = new URL(result.url);

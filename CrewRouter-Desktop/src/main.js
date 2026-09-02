@@ -57,12 +57,16 @@ async function connect(url, { local = false, name = local ? '本地 CrewRouter' 
   return currentStatus();
 }
 
-async function startRemoteRedirect() {
+async function startRemoteRedirect(rawTarget) {
   if (!DEMO_URL) fail('未配置官方 Demo 转向地址（CREWROUTER_DEMO_URL）。');
+  const target = await validateRemoteUrl(rawTarget);
+  if (!target.ok) fail(`目标服务器地址无效：${target.error}`);
+  const inspected = await state.connection.inspect(target.url.toString());
   const demo = await validateRemoteUrl(DEMO_URL);
   if (!demo.ok) fail(`官方 Demo 地址无效：${demo.error}`);
-  const redirect = redirectFlow.buildDemoUrl(demo.url.toString(), { metadata: { source: 'demo' } });
-  sendStatus({ message: '正在打开官方 Demo 转向入口…', redirect: true, target: null });
+  const metadata = { source: 'demo', serverUrl: inspected.url, targetOrigin: new URL(inspected.url).origin, runtime: inspected.runtime, edition: inspected.edition };
+  const redirect = redirectFlow.buildDemoUrl(demo.url.toString(), { metadata, target: inspected.url });
+  sendStatus({ message: '正在打开官方 Demo 转向入口…', redirect: true, target: metadata.targetOrigin });
   await electron.shell.openExternal(redirect.url);
   return { ...currentStatus(), mode: 'redirecting', target: null };
 }
@@ -142,7 +146,7 @@ function registerIpc() {
   ipcMain.handle('desktop:get-status', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return currentStatus(); });
   ipcMain.handle('desktop:choose-mode', async (event, requested) => { if (!isRendererFrame(event) || requested !== 'local') fail('不支持的模式'); return startLocal(); });
   ipcMain.handle('desktop:setup-local-profile', async (event, displayName) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); const result = validateLocalDisplayName(displayName); if (!result.ok) fail(result.error); return startLocal(result.value); });
-  ipcMain.handle('desktop:connect-remote', async (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return startRemoteRedirect(); });
+  ipcMain.handle('desktop:connect-remote', async (event, url) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return startRemoteRedirect(url); });
   ipcMain.handle('desktop:connect-custom-remote', async (event, url) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return connectCustomRemote(url); });
   ipcMain.handle('desktop:open-external', async (event, url) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return openSafeExternal(url); });
   ipcMain.handle('desktop:list-profiles', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return state.connection.listProfiles(); });

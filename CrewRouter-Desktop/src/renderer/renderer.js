@@ -23,6 +23,11 @@ const localContinue = document.getElementById('local-continue');
 const remoteChoice = document.getElementById('remote-choice');
 const remoteChoiceStep = document.getElementById('remote-choice-step');
 const officialRemote = document.getElementById('official-remote');
+const officialRemoteStep = document.getElementById('official-remote-step');
+const officialRemoteForm = document.getElementById('official-remote-form');
+const officialRemoteUrl = document.getElementById('official-remote-url');
+const officialUrlError = document.getElementById('official-url-error');
+const officialBack = document.getElementById('official-back');
 const customRemote = document.getElementById('custom-remote');
 const remoteStep = document.getElementById('remote-step');
 const modeStep = document.getElementById('mode-step');
@@ -34,7 +39,7 @@ let isBusy = false;
 function setStatus(message, state = 'idle') { statusEl.textContent = message; feedbackEl.dataset.state = state; }
 function busy(value) {
   isBusy = value;
-  [localButton, localContinue, remoteChoice, officialRemote, customRemote, choiceBackButton, backButton, remoteButton, quitButton].forEach((button) => {
+  [localButton, localContinue, remoteChoice, officialRemote, officialBack, customRemote, choiceBackButton, backButton, remoteButton, quitButton].forEach((button) => {
     if (button) button.disabled = value;
   });
   [localButton, localContinue, remoteChoice, officialRemote, customRemote, remoteButton].forEach((button) => {
@@ -44,10 +49,11 @@ function busy(value) {
 function setUrlError(message = '') { urlErrorEl.textContent = message; urlEl.setAttribute('aria-invalid', message ? 'true' : 'false'); }
 function showError(error) { busy(false); setStatus(error?.message || '连接失败，请检查地址后重试。', 'error'); }
 function showLocalProfileStep() { modeStep.hidden = true; remoteChoiceStep.hidden = true; remoteStep.hidden = true; localProfileStep.hidden = false; setStatus('请输入用户名'); localUsername.focus(); }
-function showRemoteChoiceStep() { modeStep.hidden = true; localProfileStep.hidden = true; remoteStep.hidden = true; remoteChoiceStep.hidden = false; setStatus('请选择远程连接方式'); officialRemote.focus(); }
-function showRemoteStep() { modeStep.hidden = true; remoteChoiceStep.hidden = true; remoteStep.hidden = false; setStatus('请输入服务器地址'); urlEl.focus(); }
-function showModeStep() { remoteStep.hidden = true; remoteChoiceStep.hidden = true; localProfileStep.hidden = true; modeStep.hidden = false; setUrlError(); setStatus('请选择一个连接方式'); remoteChoice.focus(); }
-function showChoiceStep() { remoteStep.hidden = true; modeStep.hidden = true; remoteChoiceStep.hidden = false; setUrlError(); setStatus('请选择远程连接方式'); officialRemote.focus(); }
+function showRemoteChoiceStep() { modeStep.hidden = true; localProfileStep.hidden = true; remoteStep.hidden = true; officialRemoteStep.hidden = true; remoteChoiceStep.hidden = false; setStatus('请选择远程连接方式'); officialRemote.focus(); }
+function showOfficialRemoteStep() { modeStep.hidden = true; localProfileStep.hidden = true; remoteChoiceStep.hidden = true; remoteStep.hidden = true; officialRemoteStep.hidden = false; setStatus('请输入目标服务器'); officialRemoteUrl.focus(); }
+function showRemoteStep() { modeStep.hidden = true; remoteChoiceStep.hidden = true; officialRemoteStep.hidden = true; remoteStep.hidden = false; setStatus('请输入服务器地址'); urlEl.focus(); }
+function showModeStep() { remoteStep.hidden = true; remoteChoiceStep.hidden = true; officialRemoteStep.hidden = true; localProfileStep.hidden = true; modeStep.hidden = false; setUrlError(); setStatus('请选择一个连接方式'); remoteChoice.focus(); }
+function showChoiceStep() { remoteStep.hidden = true; officialRemoteStep.hidden = true; modeStep.hidden = true; remoteChoiceStep.hidden = false; setUrlError(); setStatus('请选择远程连接方式'); officialRemote.focus(); }
 function describeStatus(status) {
   if (!status) return;
   if (status.error) return showError(new Error(status.error));
@@ -70,15 +76,21 @@ localProfileForm.addEventListener('submit', async (event) => {
   busy(true); setStatus('正在启动本地服务…'); try { await api.setupLocalProfile(displayName); } catch (error) { showError(error); }
 });
 remoteChoice.addEventListener('click', () => { if (!isBusy) showRemoteChoiceStep(); });
-officialRemote.addEventListener('click', async () => {
-  if (isBusy) return;
-  busy(true);
-  setStatus('正在打开官方 Demo 转向入口…');
-  try { await api.connectRemote(); } catch (error) { showError(error); }
+officialRemote.addEventListener('click', () => { if (!isBusy) showOfficialRemoteStep(); });
+officialBack.addEventListener('click', () => { if (!isBusy) showRemoteChoiceStep(); });
+officialRemoteForm.addEventListener('submit', async (event) => {
+  event.preventDefault(); if (isBusy) return;
+  officialUrlError.textContent = '';
+  const url = officialRemoteUrl.value.trim();
+  if (!url) { officialUrlError.textContent = '请输入目标服务器地址。'; setStatus('需要目标服务器地址才能继续。', 'error'); officialRemoteUrl.focus(); return; }
+  let parsed; try { parsed = new URL(url); } catch { officialUrlError.textContent = '请输入有效的 URL。'; setStatus('地址格式不正确。', 'error'); officialRemoteUrl.focus(); return; }
+  if (!['http:', 'https:'].includes(parsed.protocol)) { officialUrlError.textContent = '仅支持 http:// 或 https:// 地址。'; setStatus('地址格式不正确。', 'error'); officialRemoteUrl.focus(); return; }
+  busy(true); setStatus('正在验证目标并打开官方 Demo…');
+  try { await api.connectRemote(url); } catch (error) { showError(error); }
 });
 customRemote.addEventListener('click', () => { if (!isBusy) showRemoteStep(); });
 choiceBackButton.addEventListener('click', () => { if (!isBusy) showModeStep(); });
-backButton.addEventListener('click', () => { if (!isBusy) showChoiceStep(); });
+backButton.addEventListener('click', () => { if (!isBusy) showRemoteChoiceStep(); });
 formEl.addEventListener('submit', async (event) => {
   event.preventDefault(); if (isBusy) return;
   const url = urlEl.value.trim(); setUrlError();
