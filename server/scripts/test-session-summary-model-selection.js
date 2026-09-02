@@ -54,4 +54,9 @@ assert.strictEqual(
   '没有可用 API Key 时应明确返回空值'
 );
 
+const sessionsViewSource = require('fs').readFileSync(require('path').join(__dirname, '..', 'routes', 'sessions-view.js'), 'utf8');
+assert.match(sessionsViewSource, /resolveSummaryModelId\(summaryApiKeyId\)/);
+assert.match(sessionsViewSource, /model: modelId/);
+assert.match(sessionsViewSource, /\[uid, sessionKey, summary, summaryModelId\]/);
+
 console.log('PASS session summary model selection regression');

@@ -798,8 +798,23 @@ function buildDetailRecords(rawRows) {
 
 // ========== 会话总结 ==========
 
-// 内部推理：本地网关 + 服务端持有的第一个可用 key
-async function callInternalLLM(promptText, userId, apiKeyId = null) {
+// 总结固定使用当前会话最后一条记录所属 Key 的默认绑定模型。
+async function resolveSummaryModelId(apiKeyId) {
+  if (!apiKeyId) return null;
+  const queued = await pool.query(
+    `SELECT akm.model_id FROM api_key_models akm
+      JOIN models m ON m.id = akm.model_id
+     WHERE akm.api_key_id = $1 AND akm.enabled IS DISTINCT FROM FALSE
+     ORDER BY akm.sort_order ASC, akm.id ASC LIMIT 1`,
+    [apiKeyId]
+  );
+  if (queued.rows[0]?.model_id) return String(queued.rows[0].model_id);
+  const current = await pool.query('SELECT current_model_id FROM api_keys WHERE id = $1 AND enabled = TRUE LIMIT 1', [apiKeyId]);
+  return current.rows[0]?.current_model_id ? String(current.rows[0].current_model_id) : null;
+}
+
+// 内部推理：本地网关 + 当前会话 Key 的绑定模型
+async function callInternalLLM(promptText, userId, apiKeyId = null, modelId = null) {
   // 用 OAuth access token 调用本地网关，避免读取 API Key 原文
   const accessToken = await getInternalAccessToken(userId, apiKeyId);
   const port = config.app?.port || 20003;
@@ -810,6 +825,7 @@ async function callInternalLLM(promptText, userId, apiKeyId = null) {
       'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify({
+      model: modelId,
       messages: [{ role: 'user', content: promptText }],
       max_tokens: 1200,
     }),
@@ -834,7 +850,7 @@ function readWebStream(bodyStream) {
 }
 
 // 内部推理（流式）：本地网关 + 服务端持有的第一个可用 key，逐段产出内容增量
-async function* streamInternalLLM(promptText, userId, apiKeyId = null) {
+async function* streamInternalLLM(promptText, userId, apiKeyId = null, modelId = null) {
   const accessToken = await getInternalAccessToken(userId, apiKeyId);
   const port = config.app?.port || 20003;
   const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
@@ -845,6 +861,7 @@ async function* streamInternalLLM(promptText, userId, apiKeyId = null) {
       'Accept': 'text/event-stream',
     },
     body: JSON.stringify({
+      model: modelId,
       messages: [{ role: 'user', content: promptText }],
       max_tokens: 1200,
       stream: true,
@@ -940,6 +957,8 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
       [uid, sessionKey]);
     const summaryApiKeyId = resolveSummaryApiKeyId(recRes.rows);
     if (!summaryApiKeyId) return res.status(400).json({ error: '会话没有可用的 API Key' });
+    const summaryModelId = await resolveSummaryModelId(summaryApiKeyId);
+    if (!summaryModelId) return res.status(400).json({ error: '当前会话 API Key 没有可用模型绑定' });
     const allEvents = [];
     for (const row of recRes.rows) {
       for (const e of parseMessagesToEvents(row.messages)) allEvents.push(e);
@@ -961,14 +980,14 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
        VALUES ($1,$2,$3,$4)
        ON CONFLICT (user_id, session_key)
        DO UPDATE SET summary = EXCLUDED.summary, model = EXCLUDED.model, created_at = CURRENT_TIMESTAMP`,
-      [uid, sessionKey, summary, summaryApiKeyId ? String(summaryApiKeyId) : 'internal']
+      [uid, sessionKey, summary, summaryModelId]
     );
     const wantStream = req.query.stream === '1' || (req.headers.accept || '').includes('text/event-stream');
     if (!wantStream) {
       // 非流式：整体返回 JSON（兼容旧客户端）
       let summary;
       try {
-        summary = await callInternalLLM(prompt, uid, summaryApiKeyId);
+        summary = await callInternalLLM(prompt, uid, summaryApiKeyId, summaryModelId);
       } catch (err) {
         Logger.error('[会话总结] 推理失败:', err.message);
         return res.status(502).json({ error: err.message || '总结生成失败' });
@@ -994,7 +1013,7 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
     };
     let full = '';
     try {
-      for await (const delta of streamInternalLLM(prompt, uid, summaryApiKeyId)) {
+      for await (const delta of streamInternalLLM(prompt, uid, summaryApiKeyId, summaryModelId)) {
         full += delta;
         writeEvent({ type: 'delta', text: delta });
       }

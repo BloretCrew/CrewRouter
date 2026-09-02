@@ -2391,20 +2391,35 @@ async function ensureDesktopLocalPrincipal() {
   const displayName = typeof process.env.CR_LOCAL_DISPLAY_NAME === 'string' && process.env.CR_LOCAL_DISPLAY_NAME.trim()
     ? process.env.CR_LOCAL_DISPLAY_NAME.trim().slice(0, 255)
     : 'desktop-local';
-  const result = await db.query("SELECT * FROM users WHERE username = 'desktop-local' LIMIT 1");
-  if (result.rows.length) {
-    const current = result.rows[0];
-    if (displayName !== 'desktop-local' && current.username !== displayName) {
-      await db.query('UPDATE users SET username = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [displayName, current.id]);
-      current.username = displayName;
-    }
-    return current;
-  }
-  const inserted = await db.query(
-    `INSERT INTO users (username, email, is_admin, email_verified, balance) VALUES ($1, NULL, TRUE, TRUE, 0) RETURNING *`,
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('crewrouter-desktop-local-principal'))");
+    const result = await client.query(
+    "SELECT * FROM users WHERE username = 'desktop-local' OR username = $1 ORDER BY CASE WHEN username = $1 THEN 0 ELSE 1 END, id ASC LIMIT 1",
     [displayName]
   );
-  return inserted.rows[0];
+    if (result.rows.length) {
+      const current = result.rows[0];
+      if (current.username !== displayName) {
+        await client.query('UPDATE users SET username = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [displayName, current.id]);
+        current.username = displayName;
+      }
+      await client.query('COMMIT');
+      return current;
+    }
+    const inserted = await client.query(
+      `INSERT INTO users (username, email, is_admin, email_verified, balance) VALUES ($1, NULL, TRUE, TRUE, 0) RETURNING *`,
+      [displayName]
+    );
+    await client.query('COMMIT');
+    return inserted.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 if (isDesktopLocal) {
@@ -2585,6 +2600,11 @@ app.get('/api/updates/latest', (req, res) => {
 });
 
 // 页面路由
+app.get('/showcase', (req, res) => {
+  if (!isDemo) return res.status(404).json({ error: 'not_found' });
+  return res.sendFile(path.join(PUBLIC_DIR, 'pages/showcase.html'));
+});
+
 app.get('/', (req, res) => {
   if (isDemo) {
     return res.sendFile(path.join(PUBLIC_DIR, 'pages/showcase.html'));
@@ -2606,6 +2626,10 @@ app.get('/feishu-bind', (req, res) => {
 
 app.get('/set-password', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'pages/set-password.html'));
+});
+
+app.get('/oauth-consent', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'pages/oauth-consent.html'));
 });
 
 app.get('/admin', (req, res) => {
