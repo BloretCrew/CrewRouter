@@ -1,0 +1,100 @@
+/* Group adjacent controls so they share one outline. Not a daisyUI Join clone.
+   Button welding rules live in button.css (.blora-button-group + .blora-join
+   share the same selectors) so the two containers stay in sync. */
+
+.blora-join {
+  --blora-join-height: calc(1em + 2 * 0.75em + 2px);
+
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+}
+
+/* Non-button children (inputs, etc.) still weld here; .blora-button rules
+   live in button.css and load earlier, so scope these to exclude buttons */
+.blora-join > *:not(.blora-button) {
+  position: relative;
+  margin-inline-start: -1px;
+  border-radius: 0;
+}
+
+.blora-join > .blora-input {
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: var(--blora-join-height);
+  padding-block: 0;
+  line-height: 1;
+}
+
+.blora-join > *:not(.blora-button):first-child {
+  margin-inline-start: 0;
+  border-start-start-radius: var(--blora-radius-lg);
+  border-end-start-radius: var(--blora-radius-lg);
+}
+
+.blora-join > *:not(.blora-button):last-child {
+  border-start-end-radius: var(--blora-radius-lg);
+  border-end-end-radius: var(--blora-radius-lg);
+}
+
+.blora-join > *:not(.blora-button):only-child {
+  border-radius: var(--blora-radius-lg);
+}
+
+.blora-join > *:not(.blora-button):hover,
+.blora-join > *:not(.blora-button):focus,
+.blora-join > *:not(.blora-button):focus-within,
+.blora-join > *:not(.blora-button):focus-visible {
+  z-index: var(--blora-z-sticky);
+}
+
+.blora-join[data-orientation="vertical"] {
+  flex-direction: column;
+}
+
+.blora-join[data-orientation="vertical"] > *:not(.blora-button) {
+  margin-inline-start: 0;
+  margin-block-start: -1px;
+}
+
+.blora-join[data-orientation="vertical"] > *:not(.blora-button):first-child {
+  margin-block-start: 0;
+  border-radius: var(--blora-radius-lg) var(--blora-radius-lg) 0 0;
+}
+
+.blora-join[data-orientation="vertical"] > *:not(.blora-button):last-child {
+  border-radius: 0 0 var(--blora-radius-lg) var(--blora-radius-lg);
+}
+
+.blora-join[data-orientation="vertical"] > *:not(.blora-button):only-child {
+  border-radius: var(--blora-radius-lg);
+}
+
+@supports (corner-shape: superellipse(1.2)) {
+  .blora-join > .blora-input {
+    corner-shape: square;
+  }
+
+  .blora-join > :first-child.blora-input {
+    corner-shape: superellipse(1.2) square square superellipse(1.2);
+  }
+
+  .blora-join > :last-child.blora-input {
+    corner-shape: square superellipse(1.2) superellipse(1.2) square;
+  }
+
+  .blora-join > :only-child.blora-input {
+    corner-shape: superellipse(1.2);
+  }
+
+  .blora-join[data-orientation="vertical"] > :first-child.blora-input {
+    corner-shape: superellipse(1.2) superellipse(1.2) square square;
+  }
+
+  .blora-join[data-orientation="vertical"] > :last-child.blora-input {
+    corner-shape: square square superellipse(1.2) superellipse(1.2);
+  }
+}

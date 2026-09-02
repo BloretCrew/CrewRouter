@@ -1,0 +1,37 @@
+/* Blora Design 2.0 - otp component */
+
+blora-otp {
+  display: inline-block;
+}
+
+.blora-otp {
+  display: inline-flex;
+  gap: var(--blora-space-2);
+  max-width: 100%;
+}
+
+.blora-otp__input {
+  width: 2.5em;
+  height: 3em;
+  text-align: center;
+  font-size: var(--blora-text-xl);
+  font-family: var(--blora-font-mono);
+  color: var(--blora-color-text-emphasis);
+  background: var(--blora-color-surface-default);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  outline: none;
+  transition:
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-otp__input:focus {
+  border-color: var(--blora-color-action-primary-default);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--blora-color-action-primary-default) 20%, transparent);
+}
+
+.blora-otp__input::placeholder {
+  color: var(--blora-color-text-subtle);
+}

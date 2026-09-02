@@ -1,0 +1,54 @@
+/* =========================================================================
+   Blora Design 2.0 - Result component
+   Visual baseline: legacy/v1/blora.css lines 2095-2102
+   ========================================================================= */
+
+.blora-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blora-space-3);
+  padding: var(--blora-space-9) var(--blora-space-5);
+  text-align: center;
+}
+
+.blora-result__icon {
+  font-size: 3.5em;
+}
+
+.blora-result[data-variant="success"] .blora-result__icon {
+  color: var(--blora-color-status-success);
+}
+
+.blora-result[data-variant="warning"] .blora-result__icon {
+  color: var(--blora-color-status-warning);
+}
+
+.blora-result[data-variant="error"] .blora-result__icon {
+  color: var(--blora-color-status-danger);
+}
+
+.blora-result[data-variant="info"] .blora-result__icon {
+  color: var(--blora-color-status-info);
+}
+
+.blora-result__title {
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-xl);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-result__desc {
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-muted);
+}
+
+@media (max-width: 560px) {
+  .blora-result {
+    padding: var(--blora-space-7) var(--blora-space-4);
+  }
+}
+
+blora-result {
+  display: block;
+}

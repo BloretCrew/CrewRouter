@@ -1,0 +1,418 @@
+/* Blora Design 2.0 - speed-dial (v1 parity, data-open) */
+
+blora-speed-dial {
+  display: inline-block;
+}
+
+.blora-speed-dial {
+  --blora-sd-gap: var(--blora-space-3);
+  --blora-sd-r: 7rem;
+  --blora-sd-trigger-size: 3.25rem;
+  --blora-sd-action-size: 2.75rem;
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--blora-sd-trigger-size);
+  height: var(--blora-sd-trigger-size);
+  vertical-align: bottom;
+  z-index: var(--blora-z-base);
+}
+
+.blora-speed-dial:focus-within {
+  z-index: var(--blora-z-dropdown);
+}
+
+.blora-speed-dial[data-open] {
+  z-index: var(--blora-z-sticky);
+}
+
+.blora-speed-dial__trigger,
+.blora-speed-dial__close,
+.blora-speed-dial__main {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: var(--blora-z-dropdown);
+  width: var(--blora-sd-trigger-size);
+  height: var(--blora-sd-trigger-size);
+  min-width: var(--blora-sd-trigger-size);
+  min-height: var(--blora-sd-trigger-size);
+  padding: 0;
+  border-radius: 50%;
+
+  --blora-button-radius: 50%;
+  --blora-button-corner: round;
+
+  corner-shape: round;
+  aspect-ratio: 1;
+  box-shadow: var(--blora-shadow-3);
+  transition:
+    transform var(--blora-duration-base) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    visibility 0s linear 0s,
+    box-shadow var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-speed-dial__trigger svg,
+.blora-speed-dial__close svg,
+.blora-speed-dial__main svg {
+  /* FAB uses 22px on a 56px disc; trigger is 3.25rem so 1.375rem matches. */
+  width: 1.375rem;
+  height: 1.375rem;
+  inline-size: 1.375rem;
+  block-size: 1.375rem;
+  transition: transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-speed-dial__trigger:hover,
+.blora-speed-dial__close:hover,
+.blora-speed-dial__main:hover {
+  transform: scale(1.08);
+}
+
+.blora-speed-dial__close,
+.blora-speed-dial__main {
+  z-index: var(--blora-z-sticky);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.86);
+  transition:
+    transform var(--blora-duration-base) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    visibility 0s linear var(--blora-duration-base),
+    box-shadow var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-speed-dial[data-open] .blora-speed-dial__close,
+.blora-speed-dial[data-open] .blora-speed-dial__main {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: scale(1);
+  transition-delay: 0s;
+}
+
+.blora-speed-dial:has(.blora-speed-dial__close)[data-open] .blora-speed-dial__trigger,
+.blora-speed-dial:has(.blora-speed-dial__main)[data-open] .blora-speed-dial__trigger {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.86);
+  transition:
+    transform var(--blora-duration-base) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    visibility 0s linear var(--blora-duration-base);
+}
+
+.blora-speed-dial:not(:has(.blora-speed-dial__close, .blora-speed-dial__main))[data-open]
+  .blora-speed-dial__trigger
+  svg {
+  transform: rotate(45deg);
+}
+
+/* Offset so smaller action icons share the trigger center axis */
+.blora-speed-dial__actions {
+  --blora-sd-axis-offset: calc((var(--blora-sd-trigger-size) - var(--blora-sd-action-size)) / 2);
+
+  position: absolute;
+  right: var(--blora-sd-axis-offset);
+  bottom: calc(100% + var(--blora-sd-gap));
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: var(--blora-sd-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    visibility 0s linear var(--blora-duration-base);
+}
+
+.blora-speed-dial[data-open] .blora-speed-dial__actions {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.blora-speed-dial__item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--blora-space-2);
+  opacity: 0;
+  transform: translateY(0.5rem) scale(0.72);
+  transition:
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-speed-dial__actions > .blora-speed-dial__action {
+  opacity: 0;
+  transform: translateY(0.5rem) scale(0.72);
+  transition:
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-base) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-speed-dial[data-open] .blora-speed-dial__item,
+.blora-speed-dial[data-open] .blora-speed-dial__actions > .blora-speed-dial__action {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.blora-speed-dial[data-open] .blora-speed-dial__item:nth-child(1),
+.blora-speed-dial[data-open] .blora-speed-dial__actions > .blora-speed-dial__action:nth-child(1) {
+  transition-delay: 0.02s;
+}
+
+.blora-speed-dial[data-open] .blora-speed-dial__item:nth-child(2),
+.blora-speed-dial[data-open] .blora-speed-dial__actions > .blora-speed-dial__action:nth-child(2) {
+  transition-delay: 0.05s;
+}
+
+.blora-speed-dial[data-open] .blora-speed-dial__item:nth-child(3),
+.blora-speed-dial[data-open] .blora-speed-dial__actions > .blora-speed-dial__action:nth-child(3) {
+  transition-delay: 0.08s;
+}
+
+.blora-speed-dial[data-open] .blora-speed-dial__item:nth-child(4),
+.blora-speed-dial[data-open] .blora-speed-dial__actions > .blora-speed-dial__action:nth-child(4) {
+  transition-delay: 0.11s;
+}
+
+.blora-speed-dial__label {
+  display: inline-flex;
+  align-items: center;
+  max-width: 10rem;
+  padding: 0.35em 0.7em;
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-emphasis);
+  font-size: var(--blora-text-xs);
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  box-shadow: var(--blora-shadow-2);
+  border: var(--blora-border-subtle);
+  pointer-events: none;
+  user-select: none;
+}
+
+.blora-speed-dial__action {
+  white-space: nowrap;
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-speed-dial__action.blora-button[data-size="icon"] {
+  width: var(--blora-sd-action-size);
+  height: var(--blora-sd-action-size);
+  min-width: var(--blora-sd-action-size);
+  min-height: var(--blora-sd-action-size);
+  padding: 0;
+  border-radius: 50%;
+
+  --blora-button-radius: 50%;
+  --blora-button-corner: round;
+
+  corner-shape: round;
+  aspect-ratio: 1;
+}
+
+.blora-speed-dial__action.blora-button[data-size="icon"] svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+}
+
+/* Horizontal left — action centers share trigger vertical midline */
+.blora-speed-dial--left .blora-speed-dial__actions {
+  right: calc(100% + var(--blora-sd-gap));
+  bottom: var(--blora-sd-axis-offset, 0);
+  flex-direction: row-reverse;
+  align-items: center;
+}
+
+.blora-speed-dial--left .blora-speed-dial__item {
+  flex-direction: row-reverse;
+}
+
+.blora-speed-dial--left[data-open] .blora-speed-dial__item,
+.blora-speed-dial--left[data-open] .blora-speed-dial__actions > .blora-speed-dial__action {
+  transform: translateX(0) scale(1);
+}
+
+.blora-speed-dial--left .blora-speed-dial__item,
+.blora-speed-dial--left .blora-speed-dial__actions > .blora-speed-dial__action {
+  transform: translateX(0.5rem) scale(0.72);
+}
+
+/* Flower / fan — v1 quarter-arc (90° up → 180° left), anchor bottom-right of trigger */
+.blora-speed-dial--flower,
+.blora-speed-dial--radial {
+  --blora-sd-r: 7rem;
+}
+
+.blora-speed-dial--flower .blora-speed-dial__actions,
+.blora-speed-dial--radial .blora-speed-dial__actions {
+  inset: auto calc(var(--blora-sd-trigger-size) / 2) calc(var(--blora-sd-trigger-size) / 2) auto;
+  width: 0;
+  height: 0;
+  display: block;
+  gap: 0;
+  padding: 0;
+  transform: none;
+  flex-direction: unset;
+}
+
+.blora-speed-dial--flower .blora-speed-dial__item,
+.blora-speed-dial--radial .blora-speed-dial__item,
+.blora-speed-dial--flower .blora-speed-dial__actions > .blora-speed-dial__action,
+.blora-speed-dial--radial .blora-speed-dial__actions > .blora-speed-dial__action {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+
+  /* closed: tucked on trigger center */
+  transform: translate(50%, 50%) scale(0.4);
+  opacity: 0;
+  transition:
+    transform var(--blora-duration-base) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+/* 4 slots on quarter arc: 90° (up) → 180° (left) */
+.blora-speed-dial--flower[data-open] .blora-speed-dial__item:nth-child(1),
+.blora-speed-dial--flower[data-open]
+  .blora-speed-dial__actions
+  > .blora-speed-dial__action:nth-child(1),
+.blora-speed-dial--radial[data-open] .blora-speed-dial__item:nth-child(1),
+.blora-speed-dial--radial[data-open]
+  .blora-speed-dial__actions
+  > .blora-speed-dial__action:nth-child(1) {
+  transform: translate(50%, calc(50% - var(--blora-sd-r))) scale(1);
+  opacity: 1;
+}
+
+.blora-speed-dial--flower[data-open] .blora-speed-dial__item:nth-child(2),
+.blora-speed-dial--flower[data-open]
+  .blora-speed-dial__actions
+  > .blora-speed-dial__action:nth-child(2),
+.blora-speed-dial--radial[data-open] .blora-speed-dial__item:nth-child(2),
+.blora-speed-dial--radial[data-open]
+  .blora-speed-dial__actions
+  > .blora-speed-dial__action:nth-child(2) {
+  transform: translate(calc(50% - var(--blora-sd-r) * 0.5), calc(50% - var(--blora-sd-r) * 0.866))
+    scale(1);
+  opacity: 1;
+}
+
+.blora-speed-dial--flower[data-open] .blora-speed-dial__item:nth-child(3),
+.blora-speed-dial--flower[data-open]
+  .blora-speed-dial__actions
+  > .blora-speed-dial__action:nth-child(3),
+.blora-speed-dial--radial[data-open] .blora-speed-dial__item:nth-child(3),
+.blora-speed-dial--radial[data-open]
+  .blora-speed-dial__actions
+  > .blora-speed-dial__action:nth-child(3) {
+  transform: translate(calc(50% - var(--blora-sd-r) * 0.866), calc(50% - var(--blora-sd-r) * 0.5))
+    scale(1);
+  opacity: 1;
+}
+
+.blora-speed-dial--flower[data-open] .blora-speed-dial__item:nth-child(4),
+.blora-speed-dial--flower[data-open]
+  .blora-speed-dial__actions
+  > .blora-speed-dial__action:nth-child(4),
+.blora-speed-dial--radial[data-open] .blora-speed-dial__item:nth-child(4),
+.blora-speed-dial--radial[data-open]
+  .blora-speed-dial__actions
+  > .blora-speed-dial__action:nth-child(4) {
+  transform: translate(calc(50% - var(--blora-sd-r)), 50%) scale(1);
+  opacity: 1;
+}
+
+/* 3 actions: even arc 90 / 135 / 180 */
+.blora-speed-dial--flower:has(.blora-speed-dial__actions > :nth-child(3):last-child)[data-open]
+  .blora-speed-dial__item:nth-child(2),
+.blora-speed-dial--flower:has(.blora-speed-dial__actions > :nth-child(3):last-child)[data-open]
+  .blora-speed-dial__actions
+  > .blora-speed-dial__action:nth-child(2) {
+  transform: translate(calc(50% - var(--blora-sd-r) * 0.707), calc(50% - var(--blora-sd-r) * 0.707))
+    scale(1);
+}
+
+.blora-speed-dial--flower:has(.blora-speed-dial__actions > :nth-child(3):last-child)[data-open]
+  .blora-speed-dial__item:nth-child(3),
+.blora-speed-dial--flower:has(.blora-speed-dial__actions > :nth-child(3):last-child)[data-open]
+  .blora-speed-dial__actions
+  > .blora-speed-dial__action:nth-child(3) {
+  transform: translate(calc(50% - var(--blora-sd-r)), 50%) scale(1);
+}
+
+.blora-speed-dial--flower .blora-speed-dial__label,
+.blora-speed-dial--radial .blora-speed-dial__label {
+  display: none;
+}
+
+.blora-speed-dial--flower .blora-speed-dial__item,
+.blora-speed-dial--radial .blora-speed-dial__item {
+  width: var(--blora-sd-action-size);
+  height: var(--blora-sd-action-size);
+  justify-content: center;
+}
+
+/* Open flower: actions must receive clicks */
+.blora-speed-dial--flower[data-open] .blora-speed-dial__actions,
+.blora-speed-dial--radial[data-open] .blora-speed-dial__actions {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Showcase stage — v1: dial anchored bottom-right of a tall card */
+.blora-speed-dial-stage {
+  position: relative;
+  min-height: 18.5rem;
+  padding: var(--blora-space-4);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+  overflow: visible;
+}
+
+.blora-speed-dial-stage__label {
+  position: absolute;
+  top: var(--blora-space-3);
+  left: var(--blora-space-3);
+  margin: 0;
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.blora-speed-dial-stage > blora-speed-dial {
+  position: absolute;
+  right: var(--blora-space-4);
+  bottom: var(--blora-space-4);
+}
+
+.blora-speed-dial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17.5rem, 1fr));
+  gap: var(--blora-space-5);
+  overflow: visible;
+}

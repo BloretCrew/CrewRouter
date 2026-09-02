@@ -802,7 +802,7 @@ function buildDetailRecords(rawRows) {
 async function callInternalLLM(promptText, userId, apiKeyId = null) {
   // 用 OAuth access token 调用本地网关，避免读取 API Key 原文
   const accessToken = await getInternalAccessToken(userId, apiKeyId);
-  const port = config.port || 20003;
+  const port = config.app?.port || 20003;
   const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
     method: 'POST',
     headers: {
@@ -836,7 +836,7 @@ function readWebStream(bodyStream) {
 // 内部推理（流式）：本地网关 + 服务端持有的第一个可用 key，逐段产出内容增量
 async function* streamInternalLLM(promptText, userId, apiKeyId = null) {
   const accessToken = await getInternalAccessToken(userId, apiKeyId);
-  const port = config.port || 20003;
+  const port = config.app?.port || 20003;
   const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
     method: 'POST',
     headers: {
@@ -961,7 +961,7 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
        VALUES ($1,$2,$3,$4)
        ON CONFLICT (user_id, session_key)
        DO UPDATE SET summary = EXCLUDED.summary, model = EXCLUDED.model, created_at = CURRENT_TIMESTAMP`,
-      [uid, sessionKey, summary, 'internal']
+      [uid, sessionKey, summary, summaryApiKeyId ? String(summaryApiKeyId) : 'internal']
     );
     const wantStream = req.query.stream === '1' || (req.headers.accept || '').includes('text/event-stream');
     if (!wantStream) {

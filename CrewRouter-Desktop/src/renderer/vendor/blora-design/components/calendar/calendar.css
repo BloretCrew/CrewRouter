@@ -1,0 +1,280 @@
+/* Blora Design 2.0 - calendar component */
+
+blora-calendar {
+  display: block;
+  width: 100%;
+  max-width: 30rem;
+}
+
+.blora-calendar {
+  min-width: 0;
+  max-width: 100%;
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  padding: var(--blora-space-4);
+  container-type: inline-size;
+}
+
+/* Header: [navs] | [title] | [今天] — three columns so controls share one baseline */
+.blora-calendar__header,
+.blora-calendar__head {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, auto) minmax(0, 1fr) minmax(4.5rem, auto);
+  align-items: center;
+  column-gap: var(--blora-space-2);
+  margin-bottom: var(--blora-space-4);
+  min-width: 0;
+}
+
+.blora-calendar__navs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  justify-self: start;
+  flex: none;
+}
+
+.blora-calendar__title {
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-lg);
+  color: var(--blora-color-text-emphasis);
+  font-weight: 600;
+  justify-self: center;
+  text-align: center;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.blora-calendar__today.blora-button {
+  place-self: center end;
+
+  /* Align with 2em nav hits without overriding global button metrics hard */
+  min-height: 2em;
+  box-sizing: border-box;
+}
+
+.blora-calendar__nav {
+  width: 2em;
+  height: 2em;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--blora-color-text-muted);
+  border-radius: var(--blora-radius-sm);
+  cursor: pointer;
+  font-size: var(--blora-text-lg);
+  flex: none;
+  transition:
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-calendar__nav:hover {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-action-primary-default);
+}
+
+@container (max-width: 22rem) {
+  .blora-calendar__title {
+    font-size: var(--blora-text-base);
+  }
+
+  .blora-calendar__header,
+  .blora-calendar__head {
+    column-gap: var(--blora-space-1);
+  }
+}
+
+/* Weekday header row */
+.blora-calendar__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: var(--blora-space-2);
+}
+
+.blora-calendar__weekday {
+  text-align: center;
+  font-size: var(--blora-text-xs);
+  font-weight: 500;
+  color: var(--blora-color-text-subtle);
+  padding: 0.4em 0;
+}
+
+/* Day grid */
+.blora-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.blora-calendar__day {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: var(--blora-radius-sm);
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  cursor: pointer;
+  transition:
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard);
+  user-select: none;
+}
+
+.blora-calendar__day:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-calendar__day--other {
+  color: var(--blora-color-text-disabled);
+}
+
+.blora-calendar__day--today {
+  font-weight: 700;
+  color: var(--blora-color-action-primary-default);
+  position: relative;
+}
+
+/* v1: today cue is a small primary dot under the number */
+.blora-calendar__day--today::after {
+  content: "";
+  position: absolute;
+  bottom: 0.2em;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0.3em;
+  height: 0.3em;
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+}
+
+/* v1 selected: hollow outline (not solid fill) — matches legacy inset ring */
+.blora-calendar__day--selected {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--blora-color-action-primary-default) !important;
+  font-weight: 700;
+  border: none;
+  box-shadow: inset 0 0 0 2px var(--blora-color-action-primary-default);
+}
+
+.blora-calendar__day--selected:hover {
+  background: var(--blora-color-surface-raised) !important;
+  background-color: var(--blora-color-surface-raised) !important;
+  color: var(--blora-color-action-primary-default) !important;
+}
+
+/* Selected wins over today solid cues */
+.blora-calendar__day--selected.blora-calendar__day--today::after {
+  display: none;
+}
+
+/* v1-compatible cell classes used by interactive controller */
+.blora-calendar__cell {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: var(--blora-radius-sm);
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  cursor: pointer;
+  transition:
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard);
+  user-select: none;
+  position: relative;
+}
+
+.blora-calendar__cell:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-calendar__cell[data-other] {
+  color: var(--blora-color-text-disabled);
+}
+
+.blora-calendar__cell[data-today] {
+  font-weight: 700;
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-calendar__cell[data-today]::after {
+  content: "";
+  position: absolute;
+  bottom: 0.2em;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0.3em;
+  height: 0.3em;
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+}
+
+/*
+ * v1 hollow outline: primary text + 2px inset ring, NEVER solid fill.
+ * High specificity + !important so stale/layer rules cannot repaint solid.
+ */
+.blora-calendar .blora-calendar__cell[data-selected],
+.blora-calendar .blora-calendar__cell[data-selected][data-today],
+.blora-calendar__cell[data-selected] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  color: var(--blora-color-action-primary-default) !important;
+  font-weight: 700;
+  border: none;
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--blora-color-action-primary-default);
+}
+
+.blora-calendar .blora-calendar__cell[data-selected]:hover,
+.blora-calendar__cell[data-selected]:hover {
+  background: var(--blora-color-surface-raised) !important;
+  background-color: var(--blora-color-surface-raised) !important;
+  color: var(--blora-color-action-primary-default) !important;
+  box-shadow: inset 0 0 0 2px var(--blora-color-action-primary-default);
+}
+
+.blora-calendar__cell[data-selected][data-today]::after {
+  display: none !important;
+  content: none !important;
+}
+
+.blora-calendar__cell--month,
+.blora-calendar__cell--year {
+  aspect-ratio: unset;
+  padding: 0.7em 0;
+}
+
+.blora-calendar__grid--months {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.blora-calendar__grid--years {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.blora-calendar__dow {
+  text-align: center;
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+  padding: 0.4em 0;
+}
+
+.blora-calendar__title {
+  cursor: pointer;
+  padding: 0.2em 0.45em;
+  border-radius: var(--blora-radius-sm);
+}
+
+.blora-calendar__title:hover {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-action-primary-default);
+}

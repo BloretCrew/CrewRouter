@@ -27,6 +27,8 @@ function resolveConfigPath() {
 
 // 默认配置
 const DEFAULTS = {
+  runtime: 'server',
+  auth: { required: true, methods: ['password', 'feishu'] },
   app: {
     name: 'CrewRouter',
     port: 20003,
@@ -93,8 +95,11 @@ const ENV_MAP = {
   CR_APP_PORT:           'app.port',
   CR_APP_HOST:           'app.host',
   CR_APP_PUBLIC_ORIGIN:  'app.publicOrigin',
+  CR_RUNTIME:             'runtime',
   CR_EDITION:             'edition',
   CR_SESSION_SECRET:     'app.sessionSecret',
+  CR_AUTH_REQUIRED:       'auth.required',
+  CR_AUTH_METHODS:        'auth.methods',
   CR_DEMO:               'demo',
   CR_PROVIDER_KEY_ENCRYPTION_KEY: 'providerKeyEncryptionKey',
   CRW_MASTER_KEY:          'gateway.masterKey',

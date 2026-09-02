@@ -1,0 +1,210 @@
+/* Blora Design 2.0 - timepicker component
+   Single-frame dual wheel, center selection, infinite loop,
+   progressive edge fade (stronger toward top/bottom). */
+
+blora-timepicker {
+  display: block;
+}
+
+.blora-timepicker {
+  --blora-tp-item: 36px;
+
+  /* 5 rows: selected + 2 above + 2 below */
+  --blora-tp-visible: 5;
+
+  position: relative;
+}
+
+.blora-timepicker .blora-input {
+  padding-inline-end: 2.4em;
+  cursor: text;
+}
+
+.blora-timepicker .blora-input::-webkit-calendar-picker-indicator {
+  display: none !important;
+  appearance: none;
+}
+
+.blora-timepicker__btn {
+  position: absolute;
+  right: 0.5em;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.8em;
+  height: 1.8em;
+  display: grid;
+  place-items: center;
+  color: var(--blora-color-text-subtle);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--blora-radius-sm);
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-timepicker__btn:hover {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-timepicker__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--blora-z-dropdown);
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  padding: var(--blora-space-2);
+  width: min(11.5rem, calc(100vw - 2 * var(--blora-space-3)));
+  max-height: calc(100dvh - 2 * var(--blora-space-3));
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-timepicker__panel[data-open] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* Shared outer frame for both columns */
+.blora-timepicker__wheel {
+  position: relative;
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-default);
+  overflow: hidden;
+}
+
+/* Progressive edge fade overlays — strength ramps toward the edge, not a hard cut */
+.blora-timepicker__wheel::before,
+.blora-timepicker__wheel::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: calc(var(--blora-tp-item) * 2.2);
+  z-index: var(--blora-z-dropdown);
+  pointer-events: none;
+}
+
+.blora-timepicker__wheel::before {
+  top: 0;
+  /* stylelint-disable-next-line color-no-hex -- mask/fade stops need absolute black stops */
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--blora-color-surface-default) 92%, transparent) 0%,
+    color-mix(in srgb, var(--blora-color-surface-default) 55%, transparent) 35%,
+    color-mix(in srgb, var(--blora-color-surface-default) 18%, transparent) 70%,
+    transparent 100%
+  );
+}
+
+.blora-timepicker__wheel::after {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--blora-color-surface-default) 92%, transparent) 0%,
+    color-mix(in srgb, var(--blora-color-surface-default) 55%, transparent) 35%,
+    color-mix(in srgb, var(--blora-color-surface-default) 18%, transparent) 70%,
+    transparent 100%
+  );
+}
+
+/* Center selection band (shared) */
+.blora-timepicker__highlight {
+  position: absolute;
+  left: var(--blora-space-1);
+  right: var(--blora-space-1);
+  top: 50%;
+  height: var(--blora-tp-item);
+  transform: translateY(-50%);
+  border-radius: var(--blora-radius-sm);
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 14%, transparent);
+  pointer-events: none;
+  z-index: var(--blora-z-base);
+}
+
+.blora-timepicker__cols {
+  position: relative;
+  z-index: var(--blora-z-sticky);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  height: calc(var(--blora-tp-item) * var(--blora-tp-visible));
+}
+
+.blora-timepicker__scroll {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+
+  /* Pad so first/last can center — content still fills the viewport while scrolling */
+  padding-block: calc(var(--blora-tp-item) * ((var(--blora-tp-visible) - 1) / 2));
+}
+
+.blora-timepicker__scroll.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+}
+
+.blora-timepicker__scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.blora-timepicker__item {
+  box-sizing: border-box;
+  height: var(--blora-tp-item);
+  display: grid;
+  place-items: center;
+  font-family: var(--blora-font-mono);
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-muted);
+  scroll-snap-align: center;
+  cursor: inherit;
+  user-select: none;
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-timepicker__item:hover {
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-timepicker__item[data-selected] {
+  color: var(--blora-color-action-primary-default);
+  font-weight: 700;
+}
+
+.blora-timepicker__sep {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  font-size: var(--blora-text-lg);
+  font-family: var(--blora-font-mono);
+  font-weight: 600;
+  color: var(--blora-color-text-subtle);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  z-index: var(--blora-z-dropdown);
+}
+
+.blora-timepicker__panel .blora-datepicker__foot {
+  margin-top: var(--blora-space-2);
+  padding-top: var(--blora-space-2);
+}

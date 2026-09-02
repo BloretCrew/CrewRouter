@@ -1,0 +1,46 @@
+/* Visual baseline: legacy/v1/blora.css hero (lines 2862–2871). */
+
+.blora-hero {
+  --blora-hero-min-height: 24rem;
+
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--blora-hero-min-height);
+  padding: var(--blora-space-9) var(--blora-space-6);
+  color: var(--blora-color-text-primary);
+  background: var(--blora-color-surface-canvas);
+}
+
+.blora-hero__content {
+  width: min(100%, 52rem);
+}
+
+.blora-hero[data-align="center"],
+.blora-hero--center {
+  justify-content: center;
+  text-align: center;
+}
+
+.blora-hero[data-align="center"] .blora-hero__content,
+.blora-hero--center .blora-hero__content {
+  margin-inline: auto;
+}
+
+.blora-hero[data-variant="surface"],
+.blora-hero--surface {
+  background: var(--blora-color-surface-default);
+}
+
+.blora-hero[data-size="compact"],
+.blora-hero--compact {
+  --blora-hero-min-height: 16rem;
+}
+
+@media (max-width: 560px) {
+  .blora-hero {
+    min-height: 20rem;
+    padding-inline: var(--blora-space-4);
+  }
+}

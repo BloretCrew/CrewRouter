@@ -1,0 +1,69 @@
+/* Blora Design 2.0 - chat component (beta, migrated from v1) */
+
+.blora-chat {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--blora-space-3);
+  align-items: end;
+  width: min(100%, 42rem);
+  min-width: 0;
+}
+
+.blora-chat__avatar {
+  align-self: end;
+}
+
+.blora-chat__content {
+  min-width: 0;
+  max-width: 100%;
+  justify-self: start;
+}
+
+.blora-chat__meta {
+  display: flex;
+  gap: var(--blora-space-2);
+  margin-bottom: var(--blora-space-1);
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-xs);
+}
+
+.blora-chat__bubble {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.65rem 0.9rem;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg) var(--blora-radius-lg) var(--blora-radius-lg)
+    var(--blora-radius-xs);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-emphasis);
+  overflow-wrap: anywhere;
+}
+
+.blora-chat--end {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.blora-chat--end .blora-chat__avatar {
+  grid-column: 2;
+}
+
+.blora-chat--end .blora-chat__content {
+  grid-row: 1;
+  justify-self: end;
+}
+
+.blora-chat--end .blora-chat__meta {
+  justify-content: flex-end;
+}
+
+.blora-chat--end .blora-chat__bubble {
+  border-radius: var(--blora-radius-lg) var(--blora-radius-lg) var(--blora-radius-xs)
+    var(--blora-radius-lg);
+  background: var(--blora-color-action-primary-default);
+  border-color: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+}
+
+blora-chat {
+  display: block;
+}

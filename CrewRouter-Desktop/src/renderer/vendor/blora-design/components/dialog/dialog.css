@@ -1,0 +1,251 @@
+/* =========================================================================
+   Blora Design 2.0 - Dialog component
+   Spec §12: Overlay system, §12.4: Dialog acceptance criteria
+   ========================================================================= */
+
+/* Document stylesheet: hide before the CE stamps its shadow tree.
+   `:host { display: none }` only applies after upgrade/render.
+   Discrete display/overlay transitions so first open and close both play. */
+blora-dialog {
+  transition-property: overlay, display;
+  transition-duration: var(--blora-duration-base);
+  transition-timing-function: var(--blora-easing-standard);
+  transition-behavior: allow-discrete;
+}
+
+blora-dialog:not([open]) {
+  display: none;
+}
+
+:host {
+  display: none;
+  opacity: 0;
+  transition-property: overlay, display, opacity;
+  transition-duration: var(--blora-duration-base);
+  transition-timing-function: var(--blora-easing-standard);
+  transition-behavior: allow-discrete;
+}
+
+/* Fill the viewport / top layer. Beat UA popover `fit-content` + `margin: auto`
+   so the mask always covers the navbar, regardless of page scroll. */
+:host([open]),
+:host(:popover-open) {
+  display: block;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  overflow: visible;
+  background: transparent;
+  z-index: var(--blora-z-modal);
+  opacity: 1;
+}
+
+@starting-style {
+  :host([open]),
+  :host(:popover-open) {
+    opacity: 0;
+  }
+}
+
+.blora-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: max(var(--blora-space-5), env(safe-area-inset-top, 0px))
+    max(var(--blora-space-5), env(safe-area-inset-inline-end, 0px))
+    max(var(--blora-space-5), env(safe-area-inset-bottom, 0px))
+    max(var(--blora-space-5), env(safe-area-inset-inline-start, 0px));
+  border: 0;
+  background: transparent;
+  z-index: var(--blora-z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.blora-dialog__mask {
+  position: absolute;
+  inset: 0;
+  background: var(--blora-color-overlay-modal);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+:host([open]) .blora-dialog__mask,
+:host(:popover-open) .blora-dialog__mask {
+  opacity: 1;
+}
+
+@starting-style {
+  :host([open]) .blora-dialog__mask,
+  :host(:popover-open) .blora-dialog__mask {
+    opacity: 0;
+  }
+}
+
+.blora-dialog__panel {
+  position: relative;
+  min-width: 0;
+  background: var(--blora-color-surface-default);
+  border-radius: var(--blora-radius-xl);
+  box-shadow: var(--blora-shadow-4);
+  max-width: var(--blora-dialog-max-width, 520px);
+  width: 100%;
+  max-height: calc(100dvh - 2 * var(--blora-space-5));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  opacity: 0;
+  transform: scale(0.94) translateY(8px);
+  transition:
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+:host([open]) .blora-dialog__panel,
+:host(:popover-open) .blora-dialog__panel {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-overshoot);
+}
+
+@starting-style {
+  :host([open]) .blora-dialog__panel,
+  :host(:popover-open) .blora-dialog__panel {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+}
+
+:host([size="sm"]) .blora-dialog__panel {
+  --blora-dialog-max-width: 400px;
+}
+
+:host([size="lg"]) .blora-dialog__panel {
+  --blora-dialog-max-width: 800px;
+}
+
+.blora-dialog__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--blora-space-5) var(--blora-space-6);
+}
+
+.blora-dialog__header::after {
+  position: absolute;
+  inset-inline: var(--blora-space-6);
+  inset-block-end: 0;
+  border-block-end: var(--blora-border-subtle);
+  content: "";
+  pointer-events: none;
+}
+
+.blora-dialog__title {
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-xl);
+  color: var(--blora-color-text-primary);
+  margin: 0;
+}
+
+.blora-dialog__close-button {
+  color: var(--blora-color-text-subtle);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3em;
+  border-radius: var(--blora-radius-sm);
+  border: none;
+  background: none;
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background-color var(--blora-duration-fast) var(--blora-easing-standard);
+
+  &:hover {
+    color: var(--blora-color-text-primary);
+    background: var(--blora-color-surface-raised);
+  }
+}
+
+.blora-dialog__body {
+  padding: var(--blora-space-6);
+  color: var(--blora-color-text-emphasis);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-dialog__footer {
+  position: relative;
+  padding: var(--blora-space-4) var(--blora-space-6);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--blora-space-2);
+}
+
+.blora-dialog__footer[hidden] {
+  display: none;
+}
+
+.blora-dialog__footer::before {
+  position: absolute;
+  inset-inline: var(--blora-space-6);
+  inset-block-start: 0;
+  border-block-start: var(--blora-border-subtle);
+  content: "";
+  pointer-events: none;
+}
+
+/* -- Responsive: stay centered; tighten padding on small viewports -- */
+@media (max-width: 560px) {
+  .blora-dialog__backdrop {
+    align-items: center;
+    justify-content: center;
+    padding: max(var(--blora-space-4), env(safe-area-inset-top, 0px))
+      max(var(--blora-space-3), env(safe-area-inset-inline-end, 0px))
+      max(var(--blora-space-4), env(safe-area-inset-bottom, 0px))
+      max(var(--blora-space-3), env(safe-area-inset-inline-start, 0px));
+  }
+
+  .blora-dialog__panel {
+    max-height: min(calc(100dvh - 2 * var(--blora-space-5)), 90dvh);
+    border-radius: var(--blora-radius-xl);
+    margin-inline: auto;
+  }
+
+  .blora-dialog__header,
+  .blora-dialog__body {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-dialog__footer {
+    padding: var(--blora-space-3) var(--blora-space-4);
+    flex-wrap: wrap;
+  }
+
+  .blora-dialog__footer .blora-button {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host,
+  .blora-dialog__mask,
+  .blora-dialog__panel {
+    transition-duration: 0.01ms !important;
+  }
+}

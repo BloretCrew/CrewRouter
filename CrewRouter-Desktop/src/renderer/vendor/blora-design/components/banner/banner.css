@@ -1,0 +1,131 @@
+/* =========================================================================
+   Blora Design 2.0 - Banner component
+   Visual baseline: legacy/v1/blora.css lines 2178-2190
+   ========================================================================= */
+
+.blora-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-4);
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--blora-space-5) var(--blora-space-6);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-banner-background);
+  color: var(--blora-color-banner-foreground);
+  position: relative;
+  overflow: hidden;
+  container-type: inline-size;
+  container-name: blora-banner;
+}
+
+/* Decorative radial gradient */
+.blora-banner::before {
+  content: "";
+  position: absolute;
+  inset-inline-end: -20%;
+  top: -50%;
+  width: 60%;
+  height: 200%;
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--blora-color-action-primary-default) 25%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+.blora-banner__body {
+  flex: 1 1 12rem;
+  min-width: 0;
+  z-index: var(--blora-z-base);
+  writing-mode: horizontal-tb;
+}
+
+.blora-banner__title {
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-xl);
+  margin-bottom: var(--blora-space-1);
+  text-wrap: balance;
+  writing-mode: horizontal-tb;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-height: 1.3;
+}
+
+.blora-banner__desc {
+  font-size: var(--blora-text-sm);
+  opacity: 0.85;
+  writing-mode: horizontal-tb;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-height: 1.45;
+}
+
+.blora-banner__actions {
+  z-index: var(--blora-z-base);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--blora-space-2);
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+/* Narrow host (Storybook canvas / phone): stack, don't one-char wrap titles */
+@container blora-banner (max-width: 420px) {
+  .blora-banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--blora-space-4) var(--blora-space-5);
+  }
+
+  .blora-banner__body {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .blora-banner__title {
+    font-size: var(--blora-text-lg);
+  }
+
+  .blora-banner__actions {
+    width: 100%;
+  }
+
+  .blora-banner__actions .blora-button {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .blora-banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--blora-space-4) var(--blora-space-5);
+  }
+
+  .blora-banner__title {
+    font-size: var(--blora-text-lg);
+  }
+}
+
+/* Buttons inside banner need light colors on the dark background.
+   Set color directly (not just the custom property) for reliability. */
+.blora-banner .blora-button[data-variant="outline"] {
+  color: var(--blora-color-banner-foreground);
+
+  --blora-button-fg: var(--blora-color-banner-foreground);
+  --blora-button-bg: transparent;
+  --blora-button-bd: color-mix(in srgb, var(--blora-color-banner-foreground) 35%, transparent);
+}
+
+.blora-banner .blora-button[data-variant="outline"]:hover {
+  --blora-button-bg: color-mix(in srgb, var(--blora-color-banner-foreground) 10%, transparent);
+  --blora-button-bd: color-mix(in srgb, var(--blora-color-banner-foreground) 55%, transparent);
+}
+
+blora-banner {
+  display: block;
+}

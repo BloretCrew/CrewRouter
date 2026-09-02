@@ -1,0 +1,55 @@
+/* =========================================================================
+   Blora Design 2.0 - List component
+   Visual baseline: legacy/v1/blora.css lines 1955-1962
+   ========================================================================= */
+
+.blora-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.blora-list__item {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  min-width: 0;
+  padding: var(--blora-space-3) var(--blora-space-4);
+  border-bottom: 1px solid var(--blora-color-border-subtle);
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-list__item:last-child {
+  border-bottom: none;
+}
+
+.blora-list__item:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-list[data-hover] .blora-list__item {
+  cursor: pointer;
+}
+
+.blora-list__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.blora-list__title {
+  font-size: var(--blora-text-sm);
+  font-weight: 500;
+  color: var(--blora-color-text-secondary);
+}
+
+.blora-list__desc {
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-muted);
+  margin-top: 0.15em;
+}
+
+@media (max-width: 560px) {
+  .blora-list__item {
+    align-items: flex-start;
+    padding-inline: var(--blora-space-3);
+  }
+}

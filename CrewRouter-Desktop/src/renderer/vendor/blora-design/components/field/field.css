@@ -1,0 +1,307 @@
+/* =========================================================================
+   Blora Design 2.0 - Field component
+   Spec §11.4: Field is a composition pattern, not a custom element
+   ========================================================================= */
+
+blora-field {
+  display: block;
+  min-width: 0;
+}
+
+.blora-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-2);
+  margin-bottom: var(--blora-space-5);
+  position: relative;
+  min-width: 0;
+}
+
+.blora-field__label {
+  font-size: var(--blora-text-sm);
+  font-weight: 500;
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-field__label[data-required]::after {
+  content: " *";
+  color: var(--blora-color-status-danger);
+}
+
+.blora-field__help {
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-muted);
+}
+
+.blora-field__error {
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-status-danger);
+}
+
+.blora-field__error:empty,
+.blora-field__error[hidden] {
+  display: none;
+}
+
+/* Invalid state */
+.blora-field[data-state="invalid"] .blora-input,
+.blora-field[data-state="invalid"] .blora-textarea {
+  border-color: var(--blora-color-status-danger);
+}
+
+.blora-field[data-state="invalid"] .blora-input:focus,
+.blora-field[data-state="invalid"] .blora-textarea:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blora-color-status-danger) 18%, transparent);
+}
+
+/* Valid state */
+.blora-field[data-state="valid"] .blora-input,
+.blora-field[data-state="valid"] .blora-textarea {
+  border-color: color-mix(
+    in srgb,
+    var(--blora-color-status-success) 70%,
+    var(--blora-color-border-subtle)
+  );
+}
+
+/* Horizontal layout */
+.blora-form[data-layout="horizontal"] .blora-field,
+.blora-field[data-layout="horizontal"] {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--blora-space-4);
+}
+
+.blora-form[data-layout="horizontal"] .blora-field__label,
+.blora-field[data-layout="horizontal"] .blora-field__label {
+  flex: 0 0 7.5rem;
+  padding-top: 0.65em;
+  margin: 0;
+}
+
+.blora-form[data-layout="horizontal"] .blora-field > :not(.blora-field__label),
+.blora-field[data-layout="horizontal"] > :not(.blora-field__label) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Inline layout */
+.blora-form[data-layout="inline"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--blora-space-3) var(--blora-space-4);
+}
+
+.blora-form[data-layout="inline"] .blora-field {
+  margin-bottom: 0;
+  flex: 1 1 11rem;
+  min-width: 0;
+}
+
+/* Input group (prefix/suffix) */
+.blora-input-group {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.blora-input-group > * {
+  min-width: 0;
+}
+
+.blora-input-group .blora-input {
+  border-radius: 0;
+}
+
+.blora-input-group .blora-input:first-child {
+  border-radius: var(--blora-radius-lg) 0 0 var(--blora-radius-lg);
+}
+
+.blora-input-group .blora-input:last-child {
+  border-radius: 0 var(--blora-radius-lg) var(--blora-radius-lg) 0;
+}
+
+.blora-input-group__addon {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.85em;
+  background: var(--blora-color-surface-sunken);
+  color: var(--blora-color-text-muted);
+  border: 1px solid var(--blora-color-border-subtle);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-input-group__addon:first-child {
+  border-radius: var(--blora-radius-lg) 0 0 var(--blora-radius-lg);
+  border-inline-end: none;
+}
+
+.blora-input-group__addon:last-child {
+  border-radius: 0 var(--blora-radius-lg) var(--blora-radius-lg) 0;
+  border-inline-start: none;
+}
+
+@supports (corner-shape: superellipse(1.2)) {
+  .blora-input-group .blora-input:first-child,
+  .blora-input-group__addon:first-child {
+    corner-shape: superellipse(1.2) square square superellipse(1.2);
+  }
+
+  .blora-input-group .blora-input:last-child,
+  .blora-input-group__addon:last-child {
+    corner-shape: square superellipse(1.2) superellipse(1.2) square;
+  }
+}
+
+/* Char counter (created by createFieldController) */
+.blora-field__counter {
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+  font-family: var(--blora-font-mono);
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-field__counter[data-over-limit] {
+  color: var(--blora-color-status-danger);
+  font-weight: 600;
+}
+
+/* Search */
+.blora-search {
+  position: relative;
+}
+
+.blora-search .blora-input {
+  padding-inline: 2.4em;
+}
+
+.blora-search__icon {
+  position: absolute;
+  inset-inline-start: 0.6em;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  color: var(--blora-color-text-subtle);
+  border-radius: var(--blora-radius-sm);
+  pointer-events: none;
+}
+
+.blora-search:focus-within .blora-search__icon {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-search__clear {
+  position: absolute;
+  inset-inline-end: 0.6em;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  color: var(--blora-color-text-subtle);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-search__clear:hover {
+  color: var(--blora-color-action-primary-default);
+}
+
+/* Char limit overflow highlight (v1 blora-limit) */
+.blora-limit {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.blora-limit > .blora-input,
+.blora-limit > .blora-textarea {
+  padding-right: max(4.25rem, 0.85em);
+}
+
+.blora-limit__mirror {
+  position: absolute;
+  inset: 0 4.25rem 0 0;
+  z-index: var(--blora-z-base);
+  display: none;
+  padding: 0.6em 0 0.6em 0.85em;
+  color: var(--blora-color-text-primary);
+  font-family: inherit;
+  font-size: var(--blora-text-sm);
+  line-height: 1.5;
+  white-space: pre;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.blora-limit__mirror-inner {
+  display: inline-block;
+  min-width: 100%;
+}
+
+.blora-limit__overflow {
+  color: var(--blora-color-status-danger);
+  background: color-mix(in srgb, var(--blora-color-status-danger) 10%, transparent);
+  border-radius: var(--blora-radius-sm);
+}
+
+.blora-limit__count {
+  position: absolute;
+  top: 50%;
+  right: 0.85em;
+  z-index: var(--blora-z-dropdown);
+  transform: translateY(-50%);
+  color: var(--blora-color-text-subtle);
+  background: var(--blora-color-surface-default);
+  font-family: var(--blora-font-mono);
+  font-size: var(--blora-text-xs);
+  line-height: 1;
+  padding-left: var(--blora-space-2);
+  pointer-events: none;
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-limit[data-over-limit] > .blora-input,
+.blora-limit[data-over-limit] > .blora-textarea {
+  color: transparent;
+  border-color: var(--blora-color-status-danger);
+  caret-color: var(--blora-color-text-primary);
+  -webkit-text-fill-color: transparent;
+}
+
+.blora-limit[data-over-limit] > .blora-input::placeholder,
+.blora-limit[data-over-limit] > .blora-textarea::placeholder {
+  -webkit-text-fill-color: var(--blora-color-text-disabled);
+}
+
+.blora-limit[data-over-limit] .blora-limit__mirror {
+  display: block;
+}
+
+.blora-limit[data-over-limit] .blora-limit__count {
+  color: var(--blora-color-status-danger);
+}
+
+.blora-limit[data-over-limit] > .blora-input:focus,
+.blora-limit[data-over-limit] > .blora-textarea:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blora-color-status-danger) 18%, transparent);
+}
+
+.blora-limit--textarea .blora-limit__count {
+  top: 0.85em;
+  transform: none;
+}
+
+.blora-limit--textarea .blora-limit__mirror {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

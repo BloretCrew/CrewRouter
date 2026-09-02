@@ -1,0 +1,79 @@
+/* =========================================================================
+   Blora Design 2.0 - Input component
+   Spec §11.1: Native element with stable class, no JS required
+   ========================================================================= */
+
+.blora-input {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  padding: 0.6em 0.85em;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-secondary);
+  background: var(--blora-color-surface-default);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  font-family: var(--blora-font-sans);
+  transition:
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-fast) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-input::placeholder {
+  color: var(--blora-color-text-disabled);
+}
+
+.blora-input[data-size="sm"] {
+  padding: 0.4em 0.7em;
+  font-size: var(--blora-text-xs);
+  border-radius: var(--blora-radius-md);
+}
+
+.blora-input:hover {
+  border-color: var(--blora-color-text-subtle);
+}
+
+.blora-input:focus {
+  outline: none;
+  border-color: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-focus-ring-default);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-input:disabled {
+  background: var(--blora-color-surface-sunken);
+  color: var(--blora-color-text-disabled);
+  cursor: not-allowed;
+}
+
+/* Error state */
+.blora-input[aria-invalid="true"] {
+  border-color: var(--blora-color-status-danger);
+}
+
+.blora-input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blora-color-status-danger) 18%, transparent);
+}
+
+/* Number input: hide native spin buttons */
+.blora-input[type="number"]::-webkit-inner-spin-button,
+.blora-input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.blora-input[type="number"] {
+  appearance: textfield;
+}
+
+/* Hide native search cancel button */
+.blora-input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+
+@supports (corner-shape: superellipse(1.2)) {
+  .blora-input {
+    corner-shape: superellipse(1.2);
+  }
+}

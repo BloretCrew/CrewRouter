@@ -1,0 +1,92 @@
+/* Blora Design 2.0 - slider component */
+
+blora-slider {
+  display: block;
+}
+
+.blora-slider {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+}
+
+.blora-slider__input {
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(
+    to right,
+    var(--blora-color-action-primary-default) 0%,
+    var(--blora-color-action-primary-default) var(--blora-slider-fill, 42%),
+    var(--blora-color-border-subtle) var(--blora-slider-fill, 42%),
+    var(--blora-color-border-subtle) 100%
+  );
+  border-radius: var(--blora-radius-full);
+  outline: none;
+  cursor: pointer;
+}
+
+.blora-slider__input::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+  border: 2px solid var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-2);
+  cursor: pointer;
+  transition: transform var(--blora-duration-fast) var(--blora-easing-overshoot);
+}
+
+.blora-slider__input::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.blora-slider__input::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+  border: 2px solid var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-2);
+  cursor: pointer;
+}
+
+.blora-slider__input::-moz-range-track {
+  height: 6px;
+  border-radius: var(--blora-radius-full);
+  background: var(--blora-color-border-subtle);
+}
+
+.blora-slider__value {
+  font-family: var(--blora-font-mono);
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  min-width: 3ch;
+  text-align: end;
+}
+
+.blora-slider {
+  position: relative;
+}
+
+.blora-slider__tip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  padding: 0.2em 0.5em;
+  background: var(--blora-color-text-emphasis);
+  color: var(--blora-color-text-on-accent);
+  font-family: var(--blora-font-mono);
+  font-size: var(--blora-text-xs);
+  border-radius: var(--blora-radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--blora-duration-fast) var(--blora-easing-standard);
+  z-index: var(--blora-z-sticky);
+}
+
+.blora-slider__tip[data-show] {
+  opacity: 1;
+}

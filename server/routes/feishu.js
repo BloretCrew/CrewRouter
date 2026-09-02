@@ -56,6 +56,12 @@ router.get('/feishu/status', async (req, res) => {
 // 飞书登录入口
 router.get('/feishu', async (req, res) => {
   try {
+    const { metadata } = require('../utils/instance-edition');
+    const edition = require('../config-loader').edition || 'personal';
+    const mode = await require('../utils/auth-mode').getAuthMode();
+    if (!metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: mode }).auth.methods.includes('feishu')) {
+      return res.status(403).json({ error: '当前实例不支持飞书登录', type: 'auth_method_disabled' });
+    }
     const cfg = await getFeishuConfig();
     if (!cfg.enabled || !cfg.appId) {
       Logger.warn(`[飞书登录] 未启用或未配置: enabled=${cfg.enabled}, hasAppId=${!!cfg.appId}, source=${cfg.source}`);

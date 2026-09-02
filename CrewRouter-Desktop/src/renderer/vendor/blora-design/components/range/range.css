@@ -1,0 +1,94 @@
+/* Blora Design 2.0 - range component (beta, migrated from v1) */
+
+blora-range {
+  display: block;
+}
+
+.blora-range__tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  padding: 0.2em 0.5em;
+  background: var(--blora-color-text-emphasis);
+  color: var(--blora-color-text-on-accent);
+  font-family: var(--blora-font-mono);
+  font-size: var(--blora-text-xs);
+  border-radius: var(--blora-radius-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--blora-duration-fast) var(--blora-easing-standard);
+  z-index: var(--blora-z-sticky);
+}
+
+.blora-range__tip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--blora-color-text-emphasis);
+}
+
+.blora-range__tip[data-show] {
+  opacity: 1;
+}
+
+.blora-range {
+  position: relative;
+  height: 24px;
+  margin-bottom: 1.5em;
+
+  --blora-range-track-size: 6px;
+  --blora-range-thumb-size: 18px;
+}
+
+.blora-range__track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: var(--blora-range-track-size);
+  transform: translateY(-50%);
+  background: var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-full);
+}
+
+.blora-range__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--blora-color-action-primary-default);
+  border-radius: var(--blora-radius-full);
+}
+
+.blora-range__thumb {
+  position: absolute;
+  top: 50%;
+  width: var(--blora-range-thumb-size);
+  height: var(--blora-range-thumb-size);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+  border: 2px solid var(--blora-color-text-on-accent);
+  box-shadow: var(--blora-shadow-2);
+  cursor: grab;
+  touch-action: none;
+}
+
+.blora-range__thumb:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.blora-range__value {
+  position: absolute;
+  bottom: -1.5em;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--blora-font-mono);
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+  white-space: nowrap;
+}

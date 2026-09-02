@@ -1,0 +1,44 @@
+.blora-media {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: var(--blora-color-surface-sunken);
+  border-radius: var(--blora-radius-lg);
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-media[data-ratio="square"] {
+  aspect-ratio: 1;
+}
+
+.blora-media[data-ratio="video"] {
+  aspect-ratio: 16 / 9;
+}
+
+.blora-media[data-ratio="wide"] {
+  aspect-ratio: 21 / 9;
+}
+
+.blora-media[data-ratio="portrait"] {
+  aspect-ratio: 3 / 4;
+}
+
+.blora-media > :is(img, video, iframe, canvas) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  place-self: stretch stretch;
+  border: 0;
+  object-fit: cover;
+}
+
+.blora-media[data-fit="contain"] > :is(img, video, canvas) {
+  object-fit: contain;
+}

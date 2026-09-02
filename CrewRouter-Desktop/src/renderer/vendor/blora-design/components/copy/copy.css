@@ -1,0 +1,58 @@
+/* Blora Design 2.0 - Copy (v1 typo-copy style + check feedback) */
+
+blora-copy {
+  display: inline-block;
+}
+
+.blora-copy,
+.blora-typo-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  max-width: 100%;
+}
+
+.blora-copy code,
+.blora-typo-copy code,
+.blora-copy .blora-code {
+  font-family: var(--blora-font-mono);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-copy__btn,
+.blora-typo-copy__btn,
+.blora-copy__reveal-btn {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--blora-color-text-subtle);
+  cursor: pointer;
+  padding: 0.15em;
+  border-radius: var(--blora-radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-copy__btn:hover,
+.blora-typo-copy__btn:hover,
+.blora-copy__reveal-btn:hover {
+  color: var(--blora-color-action-primary-default);
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 12%, transparent);
+}
+
+.blora-copy__btn svg,
+.blora-typo-copy__btn svg,
+.blora-copy__reveal-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.blora-copy[data-copied] .blora-copy__btn,
+.blora-typo-copy[data-copied] .blora-typo-copy__btn {
+  color: var(--blora-color-status-success);
+}

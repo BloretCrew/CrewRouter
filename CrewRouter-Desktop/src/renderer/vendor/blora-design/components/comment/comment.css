@@ -1,0 +1,65 @@
+/* Blora Design 2.0 - comment layout shell */
+
+.blora-comment {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--blora-space-3);
+}
+
+.blora-comment:has(> .blora-comment__avatar) {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.blora-comment + .blora-comment {
+  margin-top: var(--blora-space-5);
+}
+
+.blora-comment__main {
+  min-width: 0;
+}
+
+.blora-comment__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35em 0.75em;
+  margin-bottom: 0.25em;
+}
+
+.blora-comment__author {
+  font-weight: 600;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-comment__time {
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+  font-family: var(--blora-font-mono);
+}
+
+.blora-comment__body {
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  line-height: 1.55;
+}
+
+.blora-comment__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-3);
+  margin-top: 0.45em;
+}
+
+.blora-comment__nested {
+  margin-top: var(--blora-space-4);
+  padding-inline-start: var(--blora-space-5);
+  border-inline-start: 2px solid var(--blora-color-border-subtle);
+  display: grid;
+  gap: var(--blora-space-4);
+}
+
+blora-comment {
+  display: block;
+}

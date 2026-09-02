@@ -1,0 +1,478 @@
+/* Blora Design 2.0 - mockup component (beta, migrated from v1) */
+
+.blora-mockup {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-mockup__dots {
+  flex: none;
+  flex-shrink: 0;
+  display: block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  opacity: 0.32;
+  background: currentcolor;
+  color: var(--blora-color-text-emphasis);
+  box-shadow:
+    1.35em 0,
+    2.7em 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.blora-mockup__dots::before,
+.blora-mockup__dots::after,
+.blora-mockup__dots span {
+  display: none;
+  content: none;
+}
+
+.blora-mockup__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  width: 100%;
+  min-height: 2rem;
+  padding: 0.5rem 0.85rem;
+  border-bottom: var(--blora-border-subtle);
+  background: var(--blora-color-surface-raised);
+  box-sizing: border-box;
+}
+
+.blora-mockup__title {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: var(--blora-text-xs);
+  font-weight: 500;
+  color: var(--blora-color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.blora-mockup__body {
+  min-height: 10rem;
+  padding: var(--blora-space-5);
+  background: var(--blora-color-surface-default);
+  box-sizing: border-box;
+}
+
+.blora-mockup__body--center {
+  display: grid;
+  place-content: center;
+  text-align: center;
+  min-height: 14rem;
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-mockup--browser,
+.blora-browser-mockup {
+  display: flex;
+  flex-direction: column;
+  overflow: auto hidden;
+}
+
+.blora-mockup--browser .blora-mockup__toolbar,
+.blora-browser-mockup .blora-mockup__toolbar {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  margin-block: 0.55rem;
+  padding: 0 0.9rem 0 0.85rem;
+  min-height: 0;
+  border-bottom: 0;
+  background: transparent;
+  gap: 0;
+}
+
+.blora-mockup--browser .blora-mockup__toolbar:not(:has(.blora-mockup__dots))::before,
+.blora-browser-mockup .blora-mockup__toolbar:not(:has(.blora-mockup__dots))::before {
+  content: "";
+  flex: none;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-inline-end: 3.4rem;
+  border-radius: 50%;
+  opacity: 0.32;
+  background: currentcolor;
+  box-shadow:
+    1.35em 0,
+    2.7em 0;
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-mockup--browser .blora-mockup__dots,
+.blora-browser-mockup .blora-mockup__dots {
+  margin-inline-end: 3.4rem;
+  flex: none;
+}
+
+.blora-mockup--window .blora-mockup__dots,
+.blora-window-mockup .blora-mockup__dots {
+  margin-inline-end: 0;
+  position: relative;
+  z-index: var(--blora-z-base);
+}
+
+.blora-mockup__address,
+.blora-browser-mockup__address {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 1.75rem;
+  margin-inline: auto;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: var(--blora-radius-sm);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-muted);
+  font-size: 0.75rem;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+  box-shadow: none;
+}
+
+.blora-mockup__address > svg,
+.blora-browser-mockup__address > svg {
+  flex: none;
+  opacity: 0.5;
+}
+
+.blora-mockup--browser .blora-mockup__body,
+.blora-browser-mockup .blora-mockup__body {
+  border-top: var(--blora-border-subtle);
+}
+
+.blora-mockup--code,
+.blora-code-mockup {
+  border: 0;
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-code-background);
+  color: var(--blora-color-code-foreground);
+  box-shadow: none;
+  padding-block: 1rem;
+  padding-inline: 0;
+  font-size: 0.875rem;
+  direction: ltr;
+  overflow: auto hidden;
+}
+
+.blora-mockup--code::before,
+.blora-code-mockup::before {
+  content: "";
+  display: block;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin: 0 0 0.75rem 1rem;
+  border-radius: 50%;
+  opacity: 0.3;
+  background: currentcolor;
+  box-shadow:
+    1.35em 0,
+    2.7em 0;
+  color: inherit;
+}
+
+.blora-mockup--code .blora-mockup__toolbar,
+.blora-code-mockup .blora-mockup__toolbar {
+  display: none;
+}
+
+.blora-mockup__line,
+.blora-code-mockup__line {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: 0 1.25rem 0 0;
+  font-family: var(--blora-font-mono);
+  font-size: inherit;
+  line-height: 1.7;
+  color: inherit;
+  background: transparent;
+  white-space: pre;
+  border: 0;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.blora-mockup__line::before,
+.blora-code-mockup__line::before {
+  content: "";
+  display: inline-block;
+  width: 2rem;
+  margin-inline-end: 2ch;
+  text-align: end;
+  opacity: 0.5;
+  color: inherit;
+  user-select: none;
+}
+
+.blora-mockup__line[data-prefix]::before,
+.blora-code-mockup__line[data-prefix]::before {
+  content: attr(data-prefix);
+}
+
+.blora-mockup__line code,
+.blora-code-mockup__line code {
+  font: inherit;
+  color: inherit;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.blora-mockup__line--muted {
+  opacity: 0.65;
+}
+
+.blora-mockup__line--success {
+  color: color-mix(
+    in srgb,
+    var(--blora-color-status-success-soft) 85%,
+    var(--blora-color-code-foreground)
+  );
+}
+
+.blora-mockup__line--warning {
+  color: color-mix(
+    in srgb,
+    var(--blora-color-status-warning) 60%,
+    var(--blora-color-code-foreground)
+  );
+}
+
+.blora-mockup__line--danger {
+  color: color-mix(
+    in srgb,
+    var(--blora-color-status-danger) 60%,
+    var(--blora-color-code-foreground)
+  );
+}
+
+.blora-mockup__line--info {
+  color: color-mix(
+    in srgb,
+    var(--blora-color-status-info-soft) 80%,
+    var(--blora-color-code-foreground)
+  );
+}
+
+.blora-mockup__line--highlight {
+  background: color-mix(in srgb, var(--blora-color-status-warning) 32%, transparent);
+  color: var(--blora-color-code-foreground);
+}
+
+.blora-mockup--window,
+.blora-window-mockup {
+  display: flex;
+  flex-direction: column;
+  padding-top: 0;
+  overflow: hidden;
+}
+
+.blora-mockup--window .blora-mockup__toolbar,
+.blora-window-mockup .blora-mockup__toolbar {
+  position: relative;
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  min-height: 1.85rem;
+  border-bottom: var(--blora-border-subtle);
+  background: color-mix(
+    in srgb,
+    var(--blora-color-surface-raised) 88%,
+    var(--blora-color-surface-default)
+  );
+  gap: 0;
+}
+
+.blora-mockup--window .blora-mockup__title,
+.blora-window-mockup .blora-mockup__title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  flex: none;
+  width: auto;
+  max-width: calc(100% - 5.5rem);
+  pointer-events: none;
+}
+
+.blora-mockup--window:not(:has(.blora-mockup__toolbar))::before,
+.blora-window-mockup:not(:has(.blora-mockup__toolbar))::before {
+  content: "";
+  display: block;
+  flex-shrink: 0;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin: 0.55rem 0 0.45rem 0.75rem;
+  border-radius: 50%;
+  opacity: 0.32;
+  background: currentcolor;
+  box-shadow:
+    1.35em 0,
+    2.7em 0;
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-mockup--window .blora-mockup__body,
+.blora-window-mockup .blora-mockup__body {
+  border-top: 0;
+}
+
+.blora-mockup--phone,
+.blora-phone-mockup {
+  --blora-phone-rim: var(--blora-color-text-subtle);
+  --blora-phone-max: 15.5rem;
+  --blora-phone-radius: calc(65 * var(--blora-phone-max) / 462);
+  --blora-phone-screen-radius: calc(54 * var(--blora-phone-max) / 462);
+  --blora-phone-island-radius: calc(17 * var(--blora-phone-max) / 462);
+  --blora-phone-radius-se: calc(90 * var(--blora-phone-max) / 462);
+  --blora-phone-screen-radius-se: calc(101 * var(--blora-phone-max) / 462);
+
+  display: inline-grid;
+  justify-items: center;
+  width: 100%;
+  max-width: min(100%, var(--blora-phone-max));
+  aspect-ratio: 462 / 978;
+  padding: var(--blora-space-1);
+  border: 2px solid var(--blora-phone-rim);
+  border-radius: var(--blora-phone-radius);
+  background: var(--blora-color-text-primary);
+  box-shadow: none;
+  overflow: hidden;
+  vertical-align: top;
+  color: var(--blora-color-text-emphasis);
+}
+
+@supports (corner-shape: superellipse(1.45)) {
+  .blora-mockup--phone,
+  .blora-phone-mockup {
+    corner-shape: superellipse(1.45);
+    border-radius: var(--blora-phone-radius-se);
+  }
+}
+
+.blora-mockup--phone::before,
+.blora-phone-mockup::before,
+.blora-mockup--phone::after,
+.blora-phone-mockup::after {
+  content: none;
+  display: none;
+}
+
+.blora-mockup__camera,
+.blora-phone-mockup__camera {
+  grid-area: 1 / 1;
+  z-index: var(--blora-z-base);
+  width: 28%;
+  height: 3.7%;
+  margin-top: 3%;
+  border-radius: var(--blora-phone-island-radius);
+  background: var(--blora-color-text-primary);
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.blora-mockup__display,
+.blora-phone-mockup__screen {
+  grid-area: 1 / 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--blora-phone-screen-radius);
+  background: var(--blora-color-surface-canvas);
+  color: var(--blora-color-text-emphasis);
+}
+
+@supports (corner-shape: superellipse(1.87)) {
+  .blora-mockup__display,
+  .blora-phone-mockup__screen {
+    corner-shape: superellipse(1.87);
+    border-radius: var(--blora-phone-screen-radius-se);
+  }
+}
+
+.blora-mockup__display > img,
+.blora-phone-mockup__screen > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.blora-mockup__display-body,
+.blora-phone-mockup__body {
+  box-sizing: border-box;
+  height: 100%;
+
+  /* Clear the dynamic island (~3% + 3.7% + breathing room) */
+  padding: 11% var(--blora-space-3) var(--blora-space-4);
+  overflow: auto;
+}
+
+.blora-mockup__display--center,
+.blora-mockup__display.blora-mockup__body--center {
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: var(--blora-space-5) var(--blora-space-4);
+}
+
+.blora-mockup__home {
+  position: absolute;
+  left: 50%;
+  bottom: 0.5rem;
+  z-index: var(--blora-z-base);
+  width: 34%;
+  height: 0.25rem;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: color-mix(in srgb, currentcolor 22%, transparent);
+  pointer-events: none;
+}
+
+.blora-mockup--phone-silver,
+.blora-phone-mockup--silver {
+  --blora-phone-rim: var(--blora-color-border-subtle);
+}
+
+.blora-mockup--phone-accent,
+.blora-phone-mockup--accent {
+  --blora-phone-rim: color-mix(
+    in srgb,
+    var(--blora-color-action-primary-default) 55%,
+    var(--blora-color-action-primary-default)
+  );
+}
+
+.blora-mockup--flush {
+  box-shadow: none;
+}
+
+.blora-mockup--elevated {
+  box-shadow: var(--blora-shadow-2);
+}
+
+blora-mockup {
+  display: block;
+}

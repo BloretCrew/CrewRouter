@@ -1,0 +1,122 @@
+/* Tree Select — v1 panel styles with v2 tokens (new surface; see pending-visual-review) */
+
+blora-tree-select {
+  display: block;
+  width: 100%;
+  max-width: 22rem;
+}
+
+.blora-treeselect {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  width: 100%;
+  max-width: 22rem;
+  height: fit-content;
+  min-width: 0;
+}
+
+.blora-treeselect > .blora-label {
+  margin-bottom: var(--blora-space-2);
+}
+
+.blora-treeselect__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: var(--blora-z-dropdown);
+  max-height: 16rem;
+  overflow: auto;
+  padding: var(--blora-space-2);
+  background: var(--blora-color-surface-default);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-treeselect[data-open] .blora-treeselect__panel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.blora-treeselect__node {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  padding: 0.4em 0.55em;
+  border-radius: var(--blora-radius-sm);
+  cursor: pointer;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-treeselect__node:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-treeselect__node[data-selected] {
+  background: var(
+    --blora-color-action-primary-tint,
+    color-mix(in srgb, var(--blora-color-action-primary-default) 12%, transparent)
+  );
+  color: var(--blora-color-action-primary-default);
+  font-weight: 500;
+}
+
+.blora-treeselect__node[data-disabled] {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Match .blora-tree__toggle size/weight (12×12 chevron SVG) */
+.blora-treeselect__toggle {
+  width: 1.25em;
+  height: 1.25em;
+  min-width: 12px;
+  min-height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: var(--blora-color-text-subtle);
+  transition: transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-treeselect__toggle svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+}
+
+.blora-treeselect__toggle[data-open] {
+  transform: rotate(90deg);
+}
+
+.blora-treeselect__children {
+  display: grid;
+  grid-template-rows: 0fr;
+  padding-inline-start: 1.1em;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--blora-duration-base) var(--blora-easing-standard),
+    opacity var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-treeselect__children > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.blora-treeselect__children[data-open] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}

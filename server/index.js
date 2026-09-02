@@ -6,8 +6,10 @@ const session = require('express-session');
 const path = require('path');
 const config = require('./config-loader');
 
-// 演示模式：使用内存会话、跳过数据库初始化
-const isDemo = config.demo === true;
+// Demo 是独立运行形态；Desktop Local 使用完整服务端和本地认证上下文。
+const runtime = config.runtime || 'server';
+const isDesktopLocal = runtime === 'desktop-local';
+const isDemo = config.demo === true && !isDesktopLocal;
 
 let PgSession;
 if (!isDemo) {
@@ -2382,6 +2384,43 @@ if (isDemo) {
   });
 }
 
+// Desktop Local 使用显式、仅本实例可用的本地 principal；不把缺失 session 当作管理员。
+async function ensureDesktopLocalPrincipal() {
+  if (!isDesktopLocal) return;
+  const { pool: db } = require('./models/database');
+  const displayName = typeof process.env.CR_LOCAL_DISPLAY_NAME === 'string' && process.env.CR_LOCAL_DISPLAY_NAME.trim()
+    ? process.env.CR_LOCAL_DISPLAY_NAME.trim().slice(0, 255)
+    : 'desktop-local';
+  const result = await db.query("SELECT * FROM users WHERE username = 'desktop-local' LIMIT 1");
+  if (result.rows.length) {
+    const current = result.rows[0];
+    if (displayName !== 'desktop-local' && current.username !== displayName) {
+      await db.query('UPDATE users SET username = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [displayName, current.id]);
+      current.username = displayName;
+    }
+    return current;
+  }
+  const inserted = await db.query(
+    `INSERT INTO users (username, email, is_admin, email_verified, balance) VALUES ($1, NULL, TRUE, TRUE, 0) RETURNING *`,
+    [displayName]
+  );
+  return inserted.rows[0];
+}
+
+if (isDesktopLocal) {
+  app.use(async (req, res, next) => {
+    if (!req.session.user && req.ip && (req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1')) {
+      try {
+        const principal = await ensureDesktopLocalPrincipal();
+        req.session.user = { id: principal.id, username: principal.username, email: principal.email, isAdmin: true, local: true, needsPasswordSetup: false };
+        req.session.save((error) => error ? next(error) : next());
+      } catch (error) { next(error); }
+      return;
+    }
+    next();
+  });
+}
+
 // 请求日志中间件
 const apiKeyUserCache = new Map(); // key -> { username, ts }
 const KEY_CACHE_TTL = 60_000; // 1 分钟缓存
@@ -2483,7 +2522,8 @@ app.get('/api/instance', async (req, res) => {
   try {
     const { metadata } = require('./utils/instance-edition');
     const edition = isDemo ? 'team' : (instanceEdition || await ensureInstanceEdition());
-    res.json(metadata(edition));
+    const authMode = isDesktopLocal ? 'local' : await require('./utils/auth-mode').getAuthMode();
+    res.json(metadata(edition, { runtime, authMode }));
   } catch (error) {
     res.status(503).json({ error: error.message, type: error.code === 'EDITION_CONFLICT' ? 'edition_conflict' : 'edition_unavailable' });
   }

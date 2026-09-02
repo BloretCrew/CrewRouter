@@ -1,0 +1,79 @@
+/* Blora Design 2.0 - megamenu component */
+
+blora-megamenu {
+  display: inline-block;
+}
+
+.blora-megamenu {
+  position: relative;
+}
+
+.blora-megamenu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blora-space-1);
+}
+
+.blora-megamenu__panel {
+  position: absolute;
+  top: calc(100% + var(--blora-space-3));
+  left: 0;
+  z-index: var(--blora-z-dropdown);
+  width: min(32rem, calc(100vw - 2 * var(--blora-space-5)));
+  padding: var(--blora-space-5);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-3);
+  display: none;
+  opacity: 0;
+  transform: translateY(-0.4rem) translateX(var(--blora-megamenu-offset, 0));
+  transition-property: opacity, transform, display;
+  transition-duration: var(--blora-duration-base);
+  transition-timing-function: var(--blora-easing-standard);
+  transition-behavior: allow-discrete;
+}
+
+.blora-megamenu[data-open] .blora-megamenu__panel {
+  display: block;
+  opacity: 1;
+  transform: translateY(0) translateX(var(--blora-megamenu-offset, 0));
+}
+
+@starting-style {
+  .blora-megamenu[data-open] .blora-megamenu__panel {
+    opacity: 0;
+    transform: translateY(-0.4rem) translateX(var(--blora-megamenu-offset, 0));
+  }
+}
+
+.blora-megamenu__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--blora-space-5);
+}
+
+.blora-megamenu__title {
+  margin-bottom: var(--blora-space-2);
+  color: var(--blora-color-text-emphasis);
+  font-weight: 600;
+  font-size: var(--blora-text-sm);
+}
+
+.blora-megamenu__link {
+  display: block;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--blora-radius-sm);
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+  text-decoration: none;
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-megamenu__link:hover,
+.blora-megamenu__link:focus-visible {
+  color: var(--blora-color-action-primary-default);
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 8%, transparent);
+}

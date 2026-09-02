@@ -1,0 +1,113 @@
+/* Blora Design 2.0 - cascader component */
+
+blora-cascader {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+}
+
+.blora-cascader {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.blora-cascader__trigger {
+  display: block;
+  width: 100%;
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blora-cascader__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: var(--blora-z-dropdown);
+  display: none;
+  flex-direction: row;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition-property: opacity, transform, display;
+  transition-duration: var(--blora-duration-fast);
+  transition-timing-function: var(--blora-easing-standard);
+  transition-behavior: allow-discrete;
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-md);
+  box-shadow: var(--blora-shadow-3);
+  overflow: auto;
+  max-height: min(280px, 70dvh);
+  max-width: min(100%, calc(100vw - 2rem));
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 560px) {
+  .blora-cascader__column {
+    min-width: min(140px, 42vw);
+  }
+}
+
+.blora-cascader__panel[data-open] {
+  display: flex;
+  opacity: 1;
+  transform: none;
+}
+
+@starting-style {
+  .blora-cascader__panel[data-open] {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.blora-cascader__column {
+  min-width: 140px;
+  max-height: 280px;
+  overflow-y: auto;
+  border-inline-end: 1px solid var(--blora-color-border-subtle);
+  padding: var(--blora-space-2);
+  flex: none;
+}
+
+.blora-cascader__column:last-child {
+  border-inline-end: 0;
+}
+
+.blora-cascader__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blora-space-2);
+  padding: 0.4em 0.6em;
+  border-radius: var(--blora-radius-sm);
+  cursor: pointer;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  white-space: nowrap;
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-cascader__option:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-cascader__option--active {
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 10%, transparent);
+  color: var(--blora-color-action-primary-default);
+  font-weight: 500;
+}
+
+.blora-cascader__arrow {
+  color: var(--blora-color-text-subtle);
+  font-size: 1.1em;
+}
+
+.blora-cascader__result {
+  display: block;
+  margin-top: var(--blora-space-2);
+}

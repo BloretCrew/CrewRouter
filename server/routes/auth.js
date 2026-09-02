@@ -45,16 +45,24 @@ function isValidEmail(email) {
 // 登录页按账号系统模式读取展示配置
 router.get('/status', async (req, res) => {
   try {
+    const { metadata } = require('../utils/instance-edition');
     const { getAuthMode } = require('../utils/auth-mode');
     const mode = await getAuthMode();
     const { isFeishuLoginAvailable } = require('../utils/feishu-config');
-    res.json({ authMode: mode, feishuEnabled: await isFeishuLoginAvailable() });
+    const edition = require('../config-loader').edition || 'personal';
+    const instance = metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: mode });
+    res.json({ auth: instance.auth, authMode: mode, feishuEnabled: instance.auth.methods.includes('feishu') && await isFeishuLoginAvailable() });
   } catch (error) { res.status(503).json({ error: '认证状态暂不可用' }); }
 });
 
 // 登录
 router.post('/login', async (req, res) => {
   try {
+    const { metadata } = require('../utils/instance-edition');
+    const edition = require('../config-loader').edition || 'personal';
+    if (metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: await require('../utils/auth-mode').getAuthMode() }).auth.methods.includes('password') === false) {
+      return res.status(403).json({ error: '当前实例不支持密码登录', type: 'auth_method_disabled' });
+    }
     const { login, email, password } = req.body;
     const loginValue = login || email;
 
@@ -286,7 +294,9 @@ router.get('/me', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(401).json({ error: '未登录' });
     }
-    const needsPasswordSetup = isPasswordMissing(result.rows[0].password_hash);
+    const needsPasswordSetup = process.env.CR_RUNTIME === 'desktop-local'
+      ? false
+      : isPasswordMissing(result.rows[0].password_hash);
     // 同步 session 标记
     if (req.session.user.needsPasswordSetup !== needsPasswordSetup) {
       req.session.user.needsPasswordSetup = needsPasswordSetup;

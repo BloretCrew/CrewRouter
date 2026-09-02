@@ -1,0 +1,45 @@
+/* =========================================================================
+   Blora Design 2.0 - Empty state component
+   Visual baseline: legacy/v1/blora.css lines 2089-2092
+   ========================================================================= */
+
+.blora-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blora-space-3);
+  padding: var(--blora-space-9) var(--blora-space-5);
+  text-align: center;
+  color: var(--blora-color-text-muted);
+}
+
+.blora-empty__icon {
+  font-size: 3em;
+  color: var(--blora-color-text-disabled);
+  opacity: 0.6;
+}
+
+.blora-empty__title {
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-lg);
+  color: var(--blora-color-text-muted);
+}
+
+.blora-empty__desc {
+  font-size: var(--blora-text-sm);
+}
+
+.blora-empty > .blora-button {
+  align-self: center;
+}
+
+@media (max-width: 560px) {
+  .blora-empty {
+    padding: var(--blora-space-7) var(--blora-space-4);
+  }
+}
+
+blora-empty {
+  display: block;
+}

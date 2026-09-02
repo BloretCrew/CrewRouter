@@ -1,0 +1,159 @@
+/* Blora Design 2.0 - mentions component (beta, migrated from v1) */
+
+blora-mentions {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+}
+
+.blora-mentions {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  width: 100%;
+  height: fit-content;
+  min-width: 0;
+}
+
+.blora-mentions {
+  max-width: 28rem;
+}
+
+.blora-mentions > .blora-label {
+  margin-bottom: var(--blora-space-2);
+}
+
+.blora-mentions__menu {
+  /* Controller portals to body + sets fixed left/top at the @ caret */
+  position: fixed;
+  z-index: var(--blora-z-dropdown);
+  min-width: 10rem;
+  max-width: min(22rem, calc(100vw - 1rem));
+  max-height: 14rem;
+  overflow: auto;
+  margin: 0;
+  padding: var(--blora-space-2);
+  list-style: none;
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  display: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition-property: opacity, transform, display;
+  transition-duration: var(--blora-duration-fast);
+  transition-timing-function: var(--blora-easing-standard);
+  transition-behavior: allow-discrete;
+
+  /* Park off-screen until positioned — fixed+no coords = top-left ghost */
+  left: -9999px;
+  top: -9999px;
+  inset: auto;
+  pointer-events: none;
+}
+
+.blora-mentions__menu[data-open] {
+  display: block;
+  pointer-events: auto;
+  opacity: 1;
+  transform: none;
+}
+
+@starting-style {
+  .blora-mentions__menu[data-open] {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.blora-mentions__menu--rich {
+  min-width: 16rem;
+
+  /* Extra end padding so right-aligned tags aren't clipped by radius */
+  padding: var(--blora-space-2);
+  padding-inline-end: var(--blora-space-3);
+  box-sizing: border-box;
+}
+
+.blora-mentions__option {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  padding: 0.45em 0.55em;
+  border-radius: var(--blora-radius-sm);
+  cursor: pointer;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.blora-mentions__option:hover,
+.blora-mentions__option[data-active] {
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 10%, transparent);
+  color: var(--blora-color-action-primary-default);
+}
+
+/* Rich row: avatar | name (shrink only when needed) | tag (end) */
+.blora-mentions__option .blora-avatar {
+  flex: none;
+  box-shadow: none;
+  font-size: 0.72em;
+  letter-spacing: -0.02em;
+}
+
+.blora-mentions__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1em;
+
+  /* Grow to fill space between avatar and tag; shrink only under pressure */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.blora-mentions__name {
+  font-weight: 500;
+  color: inherit;
+  line-height: 1.3;
+
+  /* Adaptive ellipsis: only when flex item is actually constrained */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/*
+ * Tag: prefer full text; shrink/ellipsis only after name has already
+ * compressed. margin-inline-start:auto keeps it flush to the row end.
+ */
+.blora-mentions__option > .blora-mentions__tag.blora-tag {
+  flex: 0 1 auto;
+  margin-inline-start: auto;
+
+  /* Cap long tags but leave room so short ones never look cut by the menu */
+  max-width: min(11rem, 48%);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.12em 0.55em;
+  font-size: 0.7rem;
+  line-height: 1.25;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.blora-mentions__menu--rich .blora-mentions__option {
+  gap: var(--blora-space-2);
+}
+
+.blora-mentions__menu--rich .blora-mentions__meta {
+  flex: 1 1 auto;
+  min-width: 0;
+}

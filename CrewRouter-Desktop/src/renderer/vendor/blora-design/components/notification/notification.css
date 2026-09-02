@@ -1,0 +1,302 @@
+/* =========================================================================
+   Blora Design 2.0 - Notification component (card with close button)
+   Visual baseline: legacy/v1/blora.css lines 2202-2210
+
+   Conceptual distinction (Ant-style):
+   - Message: light pill (static or top-center service) — see message.css
+   - Notification: card with icon, title, description, close + placements
+   ========================================================================= */
+
+.blora-notification {
+  display: flex;
+
+  /* Same as alert: center icon/close against full body (title + desc) */
+  align-items: center;
+  gap: var(--blora-space-3);
+  width: min(360px, 100%);
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--blora-space-4) var(--blora-space-5);
+  background: var(--blora-color-surface-default);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  font-size: var(--blora-text-sm);
+  line-height: var(--blora-leading-normal);
+}
+
+.blora-notification__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: inherit;
+}
+
+.blora-notification__icon svg {
+  display: block;
+  width: 1.3em;
+  height: 1.3em;
+  flex: none;
+}
+
+/* Ensure body content can shrink */
+.blora-notification > :not(.blora-notification__icon, .blora-notification__close) {
+  min-width: 0;
+}
+
+.blora-notification__title {
+  font-weight: 600;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-primary);
+  line-height: inherit;
+}
+
+.blora-notification__desc {
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-muted);
+  margin-top: 0.2em;
+  line-height: var(--blora-leading-normal);
+}
+
+.blora-notification__close {
+  color: var(--blora-color-text-subtle);
+  cursor: pointer;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border: none;
+  background: none;
+  padding: 0;
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-notification__close:hover {
+  color: var(--blora-color-text-primary);
+}
+
+.blora-notification__close svg {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+/* Variants - color the icon */
+.blora-notification[data-variant="success"] .blora-notification__icon {
+  color: var(--blora-color-status-success);
+}
+
+.blora-notification[data-variant="warning"] .blora-notification__icon {
+  color: var(--blora-color-status-warning);
+}
+
+.blora-notification[data-variant="danger"] .blora-notification__icon {
+  color: var(--blora-color-status-danger);
+}
+
+.blora-notification[data-variant="info"] .blora-notification__icon {
+  color: var(--blora-color-status-info);
+}
+
+.blora-notification__body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Multi-placement stacks */
+.blora-notify-container {
+  position: fixed;
+  z-index: var(--blora-z-top);
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-2);
+  pointer-events: none;
+  max-width: min(360px, calc(100vw - 2 * var(--blora-space-4)));
+}
+
+.blora-notify-container--top-right {
+  top: max(var(--blora-space-5), env(safe-area-inset-top, 0px));
+  right: max(var(--blora-space-4), env(safe-area-inset-right, 0px));
+}
+
+.blora-notify-container--top-left {
+  top: max(var(--blora-space-5), env(safe-area-inset-top, 0px));
+  left: max(var(--blora-space-4), env(safe-area-inset-left, 0px));
+}
+
+.blora-notify-container--bottom-right {
+  bottom: max(var(--blora-space-5), env(safe-area-inset-bottom, 0px));
+  right: max(var(--blora-space-4), env(safe-area-inset-right, 0px));
+}
+
+.blora-notify-container--bottom-left {
+  bottom: max(var(--blora-space-5), env(safe-area-inset-bottom, 0px));
+  left: max(var(--blora-space-4), env(safe-area-inset-left, 0px));
+}
+
+.blora-notify-container > .blora-notification {
+  pointer-events: auto;
+
+  /* Default (top-right): from outer corner */
+  animation: blora-notify-in-tr var(--blora-duration-base) var(--blora-easing-overshoot);
+}
+
+/* -- Enter / leave per placement (slide from that corner, not one global direction) -- */
+
+.blora-notify-container--top-right > .blora-notification,
+.blora-notify-container[data-placement="top-right"] > .blora-notification {
+  animation-name: blora-notify-in-tr;
+}
+
+.blora-notify-container--top-left > .blora-notification,
+.blora-notify-container[data-placement="top-left"] > .blora-notification {
+  animation-name: blora-notify-in-tl;
+}
+
+.blora-notify-container--bottom-right > .blora-notification,
+.blora-notify-container[data-placement="bottom-right"] > .blora-notification {
+  animation-name: blora-notify-in-br;
+}
+
+.blora-notify-container--bottom-left > .blora-notification,
+.blora-notify-container[data-placement="bottom-left"] > .blora-notification {
+  animation-name: blora-notify-in-bl;
+}
+
+.blora-notify-container--top-right > .blora-notification.is-leaving,
+.blora-notify-container[data-placement="top-right"] > .blora-notification.is-leaving {
+  animation: blora-notify-out-tr var(--blora-duration-fast) var(--blora-easing-standard) forwards;
+}
+
+.blora-notify-container--top-left > .blora-notification.is-leaving,
+.blora-notify-container[data-placement="top-left"] > .blora-notification.is-leaving {
+  animation: blora-notify-out-tl var(--blora-duration-fast) var(--blora-easing-standard) forwards;
+}
+
+.blora-notify-container--bottom-right > .blora-notification.is-leaving,
+.blora-notify-container[data-placement="bottom-right"] > .blora-notification.is-leaving {
+  animation: blora-notify-out-br var(--blora-duration-fast) var(--blora-easing-standard) forwards;
+}
+
+.blora-notify-container--bottom-left > .blora-notification.is-leaving,
+.blora-notify-container[data-placement="bottom-left"] > .blora-notification.is-leaving {
+  animation: blora-notify-out-bl var(--blora-duration-fast) var(--blora-easing-standard) forwards;
+}
+
+/* Static cards (Storybook / in-page, not in notify stack) — fade only */
+:where(body, .blora-scope, .blora-stack) > .blora-notification.is-leaving {
+  opacity: 0;
+  transition: opacity var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+/* Offset ~12px horizontal + 6px vertical toward the placement corner */
+@keyframes blora-notify-in-tr {
+  from {
+    opacity: 0;
+    transform: translate(0.75rem, -0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes blora-notify-out-tr {
+  from {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(0.75rem, -0.35rem);
+  }
+}
+
+@keyframes blora-notify-in-tl {
+  from {
+    opacity: 0;
+    transform: translate(-0.75rem, -0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes blora-notify-out-tl {
+  from {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-0.75rem, -0.35rem);
+  }
+}
+
+@keyframes blora-notify-in-br {
+  from {
+    opacity: 0;
+    transform: translate(0.75rem, 0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes blora-notify-out-br {
+  from {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(0.75rem, 0.35rem);
+  }
+}
+
+@keyframes blora-notify-in-bl {
+  from {
+    opacity: 0;
+    transform: translate(-0.75rem, 0.35rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes blora-notify-out-bl {
+  from {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-0.75rem, 0.35rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blora-notify-container > .blora-notification {
+    animation: none;
+  }
+
+  .blora-notify-container > .blora-notification.is-leaving {
+    animation: none;
+    opacity: 0;
+    transition: opacity var(--blora-duration-fast) var(--blora-easing-standard);
+  }
+}

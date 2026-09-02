@@ -1,0 +1,53 @@
+.blora-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+}
+
+.blora-filter__item {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.blora-filter__item > input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+}
+
+.blora-filter__label,
+.blora-filter__reset {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding-inline: var(--blora-space-3);
+  color: var(--blora-color-text-secondary);
+  background: var(--blora-color-surface-raised);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-full);
+  font: inherit;
+}
+
+.blora-filter__item > input:checked + .blora-filter__label {
+  color: var(--blora-color-text-on-accent);
+  background: var(--blora-color-action-primary-default);
+  border-color: var(--blora-color-action-primary-default);
+}
+
+.blora-filter__item > input:focus-visible + .blora-filter__label {
+  outline: 2px solid var(--blora-color-action-primary-default);
+  outline-offset: 2px;
+}
+
+.blora-filter__reset {
+  display: none;
+  color: var(--blora-color-action-primary-default);
+  cursor: pointer;
+}
+
+.blora-filter:has(input:checked) .blora-filter__reset {
+  display: inline-flex;
+}

@@ -1,0 +1,178 @@
+/* Blora Design 2.0 - Tooltip */
+
+blora-tooltip {
+  display: inline-block;
+}
+
+.blora-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.blora-tooltip__bubble {
+  --blora-float-shift-x: 0px;
+  --blora-float-shift-y: 0px;
+
+  position: absolute;
+  inset-block-end: calc(100% + 0.5em);
+  inset-inline-start: 50%;
+  width: max-content;
+  max-width: min(20rem, calc(100vw - 2 * var(--blora-space-3)));
+  transform: translateX(calc(-50% + var(--blora-float-shift-x)))
+    translateY(calc(4px + var(--blora-float-shift-y)));
+  padding: 0.4em 0.8em;
+  background: var(--blora-color-tooltip-background);
+  color: var(--blora-color-tooltip-foreground);
+  font-size: var(--blora-text-xs);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-sm);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+  z-index: var(--blora-z-dropdown);
+  box-shadow: var(--blora-shadow-3);
+}
+
+.blora-tooltip__bubble::before,
+.blora-tooltip__bubble::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  border: solid transparent;
+}
+
+.blora-tooltip__bubble::before {
+  border-width: 6px;
+  border-block-start-color: var(--blora-color-border-subtle);
+}
+
+.blora-tooltip__bubble::after {
+  border-width: 5px;
+  border-block-start-color: var(--blora-color-tooltip-background);
+  margin-block-start: -1px;
+}
+
+.blora-tooltip:hover .blora-tooltip__bubble,
+.blora-tooltip:focus-within .blora-tooltip__bubble {
+  opacity: 1;
+  transform: translateX(calc(-50% + var(--blora-float-shift-x)))
+    translateY(var(--blora-float-shift-y));
+}
+
+.blora-tooltip[data-placement="bottom"] .blora-tooltip__bubble {
+  inset-block: calc(100% + 0.5em) auto;
+  transform: translateX(calc(-50% + var(--blora-float-shift-x)))
+    translateY(calc(-4px + var(--blora-float-shift-y)));
+}
+
+.blora-tooltip[data-placement="bottom"] .blora-tooltip__bubble::before,
+.blora-tooltip[data-placement="bottom"] .blora-tooltip__bubble::after {
+  inset-block: auto 100%;
+  border-block-start-color: transparent;
+}
+
+.blora-tooltip[data-placement="bottom"] .blora-tooltip__bubble::before {
+  border-block-end-color: var(--blora-color-border-subtle);
+}
+
+.blora-tooltip[data-placement="bottom"] .blora-tooltip__bubble::after {
+  border-block-end-color: var(--blora-color-tooltip-background);
+  margin-block: 0;
+  margin-block-end: -1px;
+}
+
+.blora-tooltip[data-placement="bottom"]:hover .blora-tooltip__bubble,
+.blora-tooltip[data-placement="bottom"]:focus-within .blora-tooltip__bubble {
+  transform: translateX(calc(-50% + var(--blora-float-shift-x)))
+    translateY(var(--blora-float-shift-y));
+}
+
+.blora-tooltip[data-placement="start"] .blora-tooltip__bubble,
+.blora-tooltip[data-placement="left"] .blora-tooltip__bubble {
+  inset-block: 50% auto;
+  inset-inline: auto calc(100% + 0.5em);
+  transform: translateX(calc(4px + var(--blora-float-shift-x)))
+    translateY(calc(-50% + var(--blora-float-shift-y)));
+}
+
+.blora-tooltip[data-placement="end"] .blora-tooltip__bubble,
+.blora-tooltip[data-placement="right"] .blora-tooltip__bubble {
+  inset-block: 50% auto;
+  inset-inline: calc(100% + 0.5em) auto;
+  transform: translateX(calc(-4px + var(--blora-float-shift-x)))
+    translateY(calc(-50% + var(--blora-float-shift-y)));
+}
+
+.blora-tooltip[data-placement="start"] .blora-tooltip__bubble::before,
+.blora-tooltip[data-placement="start"] .blora-tooltip__bubble::after,
+.blora-tooltip[data-placement="end"] .blora-tooltip__bubble::before,
+.blora-tooltip[data-placement="end"] .blora-tooltip__bubble::after,
+.blora-tooltip[data-placement="left"] .blora-tooltip__bubble::before,
+.blora-tooltip[data-placement="left"] .blora-tooltip__bubble::after,
+.blora-tooltip[data-placement="right"] .blora-tooltip__bubble::before,
+.blora-tooltip[data-placement="right"] .blora-tooltip__bubble::after {
+  inset-block: 50% auto;
+  transform: translateY(-50%);
+  border-block-start-color: transparent;
+  margin: 0;
+}
+
+.blora-tooltip[data-placement="start"] .blora-tooltip__bubble::before,
+.blora-tooltip[data-placement="left"] .blora-tooltip__bubble::before {
+  inset-inline-start: 100%;
+  border-inline-start-color: var(--blora-color-border-subtle);
+}
+
+.blora-tooltip[data-placement="start"] .blora-tooltip__bubble::after,
+.blora-tooltip[data-placement="left"] .blora-tooltip__bubble::after {
+  inset-inline-start: 100%;
+  border-inline-start-color: var(--blora-color-tooltip-background);
+  margin-inline-start: -1px;
+}
+
+.blora-tooltip[data-placement="end"] .blora-tooltip__bubble::before,
+.blora-tooltip[data-placement="right"] .blora-tooltip__bubble::before {
+  inset-inline: auto 100%;
+  border-inline-end-color: var(--blora-color-border-subtle);
+}
+
+.blora-tooltip[data-placement="end"] .blora-tooltip__bubble::after,
+.blora-tooltip[data-placement="right"] .blora-tooltip__bubble::after {
+  inset-inline: auto 100%;
+  border-inline-end-color: var(--blora-color-tooltip-background);
+  margin-inline-end: -1px;
+}
+
+.blora-tooltip[data-placement="start"]:hover .blora-tooltip__bubble,
+.blora-tooltip[data-placement="start"]:focus-within .blora-tooltip__bubble,
+.blora-tooltip[data-placement="left"]:hover .blora-tooltip__bubble,
+.blora-tooltip[data-placement="left"]:focus-within .blora-tooltip__bubble {
+  transform: translateX(var(--blora-float-shift-x))
+    translateY(calc(-50% + var(--blora-float-shift-y)));
+}
+
+.blora-tooltip[data-placement="end"]:hover .blora-tooltip__bubble,
+.blora-tooltip[data-placement="end"]:focus-within .blora-tooltip__bubble,
+.blora-tooltip[data-placement="right"]:hover .blora-tooltip__bubble,
+.blora-tooltip[data-placement="right"]:focus-within .blora-tooltip__bubble {
+  transform: translateX(var(--blora-float-shift-x))
+    translateY(calc(-50% + var(--blora-float-shift-y)));
+}
+
+.blora-tooltip[data-placement="left"] .blora-tooltip__bubble {
+  right: calc(100% + 0.5em);
+  left: auto;
+  inset-inline: auto;
+}
+
+.blora-tooltip[data-placement="right"] .blora-tooltip__bubble {
+  left: calc(100% + 0.5em);
+  right: auto;
+  inset-inline: auto;
+}

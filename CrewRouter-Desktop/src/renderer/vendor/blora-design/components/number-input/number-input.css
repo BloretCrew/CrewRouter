@@ -1,0 +1,73 @@
+blora-number-input {
+  display: block;
+}
+
+.blora-number-input {
+  display: grid;
+  gap: var(--blora-space-2);
+}
+
+.blora-number-input__label {
+  color: var(--blora-color-text-secondary);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-number-input__control {
+  position: relative;
+  max-width: 16rem;
+}
+
+.blora-number-input__field {
+  width: 100%;
+  padding-inline-end: 5.25em;
+}
+
+.blora-number-input__actions {
+  position: absolute;
+  inset-inline-end: 0.4em;
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.05em;
+  height: 1.75em;
+  padding: 0.1em;
+  border: 1px solid color-mix(in srgb, var(--blora-color-border-subtle) 55%, transparent);
+  border-radius: var(--blora-radius-full);
+  background: color-mix(in srgb, var(--blora-color-text-primary) 4%, transparent);
+}
+
+.blora-number-input__button {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 1.55em;
+  height: 1.55em;
+  padding: 0;
+  color: var(--blora-color-text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--blora-radius-full);
+  cursor: pointer;
+}
+
+.blora-number-input__button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--blora-color-text-primary) 8%, transparent);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-number-input__button:focus-visible {
+  outline: 2px solid var(--blora-color-action-primary-default);
+  outline-offset: -2px;
+}
+
+.blora-number-input__button:disabled {
+  color: var(--blora-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.blora-number-input__button svg {
+  display: block;
+  width: 0.85em;
+  height: 0.85em;
+}

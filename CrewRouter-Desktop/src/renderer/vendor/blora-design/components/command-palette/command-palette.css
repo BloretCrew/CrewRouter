@@ -1,0 +1,165 @@
+/* Blora Design 2.0 - command palette (v1 cmdk + search input) */
+
+blora-command {
+  display: block;
+}
+
+/* Beat UA popover `fit-content` + `overflow: auto` + `border`. Overflow:auto
+   is the classic-scrollbar gutter on the right of the mask. */
+blora-command[data-overlay] {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  z-index: var(--blora-z-modal);
+  display: none;
+  place-items: start center;
+  padding: 15vh var(--blora-space-5) var(--blora-space-5);
+  margin: 0;
+  border: none;
+  overflow: visible;
+  box-sizing: border-box;
+  background: var(--blora-color-overlay-modal);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition-property: opacity, display, overlay;
+  transition-duration: var(--blora-duration-base);
+  transition-timing-function: var(--blora-easing-standard);
+  transition-behavior: allow-discrete;
+}
+
+blora-command[data-overlay][open],
+blora-command[data-overlay]:popover-open {
+  display: grid;
+  opacity: 1;
+}
+
+@starting-style {
+  blora-command[data-overlay][open],
+  blora-command[data-overlay]:popover-open {
+    opacity: 0;
+  }
+}
+
+.blora-command,
+.blora-cmdk {
+  max-width: 480px;
+  width: 100%;
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-4);
+  overflow: hidden;
+}
+
+blora-command[data-overlay][open] .blora-command,
+blora-command[data-overlay][open] .blora-cmdk,
+blora-command[data-overlay]:popover-open .blora-command,
+blora-command[data-overlay]:popover-open .blora-cmdk {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-overshoot);
+}
+
+@starting-style {
+  blora-command[data-overlay][open] .blora-command,
+  blora-command[data-overlay][open] .blora-cmdk,
+  blora-command[data-overlay]:popover-open .blora-command,
+  blora-command[data-overlay]:popover-open .blora-cmdk {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+}
+
+/* Closed/leave state: the panel keeps its own transition on the base rule so
+   removing [open] animates the card back out (the [open] rule carries the
+   entry transition only, which vanishes with the attribute). */
+blora-command[data-overlay] .blora-command,
+blora-command[data-overlay] .blora-cmdk {
+  opacity: 0;
+  transform: scale(0.96) translateY(8px);
+  transition:
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+/* While closing the element is still :popover-open (top layer), and those
+   selectors pin opacity to 1 — so the host would never fade until hidePopover
+   snaps it away. An explicit [data-exiting] state (declared after the
+   :popover-open rules to win the cascade) keeps the layout visible while both
+   backdrop and card animate out. Applied by close(), removed on teardown. */
+blora-command[data-overlay][data-exiting] {
+  display: grid;
+  opacity: 0;
+  transition-property: opacity;
+  transition-duration: var(--blora-duration-base);
+  transition-timing-function: var(--blora-easing-standard);
+}
+
+blora-command[data-overlay][data-exiting] .blora-command,
+blora-command[data-overlay][data-exiting] .blora-cmdk {
+  opacity: 0;
+  transform: scale(0.96) translateY(8px);
+  transition:
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-command__search,
+.blora-cmdk__search {
+  padding: var(--blora-space-3) var(--blora-space-4);
+
+  /* no divider — search sits flush above results */
+}
+
+.blora-cmdk-results,
+.blora-command__results {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--blora-space-2);
+}
+
+.blora-cmdk-item,
+.blora-command__item {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  padding: 0.6em 0.8em;
+  border-radius: var(--blora-radius-sm);
+  cursor: pointer;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-cmdk-item:hover,
+.blora-cmdk-item[data-active],
+.blora-command__item:hover,
+.blora-command__item[data-active] {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  blora-command[data-overlay],
+  blora-command[data-overlay][open] .blora-command,
+  blora-command[data-overlay][open] .blora-cmdk {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.blora-cmdk-item__kbd,
+.blora-command__kbd,
+.blora-cmdk-kbd {
+  margin-inline-start: auto;
+  font-family: var(--blora-font-mono);
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+  background: var(--blora-color-surface-sunken);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-sm);
+  padding: 0.1em 0.4em;
+}

@@ -1,0 +1,54 @@
+/* =========================================================================
+   Blora Design 2.0 - Skeleton component
+   ========================================================================= */
+
+.blora-skeleton {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    var(--blora-color-surface-sunken) 0%,
+    var(--blora-color-surface-raised) 50%,
+    var(--blora-color-surface-sunken) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--blora-radius-sm);
+  animation: blora-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+.blora-skeleton[data-variant="text"] {
+  height: 0.9em;
+  margin-bottom: 0.4em;
+}
+
+.blora-skeleton[data-variant="title"] {
+  height: 1.5em;
+  width: 60%;
+  margin-bottom: 0.6em;
+}
+
+.blora-skeleton[data-variant="circle"] {
+  width: 2.5em;
+  height: 2.5em;
+  border-radius: 50%;
+}
+
+.blora-skeleton[data-variant="block"] {
+  height: 6em;
+  border-radius: var(--blora-radius-md);
+}
+
+@keyframes blora-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blora-skeleton {
+    animation-duration: 3s;
+  }
+}

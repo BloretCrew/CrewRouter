@@ -1,0 +1,65 @@
+/* BackTop — aligned with v1 FAB-style fixed control (tokenized) */
+
+blora-backtop {
+  display: contents;
+}
+
+.blora-backtop:not(.blora-fab) {
+  position: fixed;
+  right: max(var(--blora-space-5), env(safe-area-inset-right, 0px));
+  bottom: max(var(--blora-space-5), env(safe-area-inset-bottom, 0px));
+  z-index: var(--blora-z-sticky);
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--blora-color-text-on-accent);
+  background: var(--blora-color-action-primary-default);
+
+  /* Match .blora-fab double shadow (surface + primary glow) */
+  box-shadow: var(--blora-shadow-4), var(--blora-shadow-primary);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.86);
+  transition:
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-overshoot);
+}
+
+.blora-backtop:not(.blora-fab).is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.blora-backtop:not(.blora-fab)[data-hidden] {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.86);
+}
+
+.blora-backtop:not(.blora-fab):hover {
+  transform: scale(1.12);
+}
+
+/* When using .blora-fab.blora-backtop */
+.blora-fab.blora-backtop.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.blora-fab.blora-backtop[data-hidden] {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.86);
+}
+
+.blora-backtop svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+}

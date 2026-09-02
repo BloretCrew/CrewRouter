@@ -1,0 +1,33 @@
+/* Blora Design 2.0 - masonry component (beta, migrated from v1) */
+
+.blora-masonry {
+  column-count: var(--blora-masonry-cols, 3);
+  column-gap: var(--blora-space-4);
+}
+
+.blora-masonry__item {
+  break-inside: avoid;
+  margin-bottom: var(--blora-space-4);
+  border-radius: var(--blora-radius-lg);
+  overflow: hidden;
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+}
+
+.blora-masonry__item img {
+  display: block;
+  width: 100%;
+}
+
+.blora-masonry__item-body {
+  padding: var(--blora-space-3) var(--blora-space-4);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-masonry {
+  --blora-masonry-cols: 2;
+}
+
+.blora-masonry {
+  --blora-masonry-cols: 1;
+}

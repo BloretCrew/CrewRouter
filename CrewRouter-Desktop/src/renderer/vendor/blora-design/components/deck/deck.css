@@ -1,0 +1,62 @@
+/* Blora Design 2.0 - deck (v1 parity: pose driven by controller vars only) */
+
+blora-deck {
+  display: block;
+}
+
+.blora-deck {
+  position: relative;
+  display: grid;
+  isolation: isolate;
+
+  /* Extra top padding so stacked cards above the front stay visible */
+  padding: calc(var(--blora-space-6) + 2rem) var(--blora-space-4) var(--blora-space-4);
+  touch-action: pan-x;
+  cursor: grab;
+  user-select: none;
+  outline: none;
+}
+
+.blora-deck:active {
+  cursor: grabbing;
+}
+
+.blora-deck:focus-visible {
+  box-shadow: 0 0 0 2px var(--blora-color-action-primary-default);
+  border-radius: var(--blora-radius-lg);
+}
+
+.blora-deck > * {
+  grid-area: 1 / 1;
+  z-index: var(--blora-z-base);
+  align-self: stretch;
+  transform: translate3d(0, var(--blora-deck-y, 0), 0) scale(var(--blora-deck-scale, 0.92));
+  opacity: var(--blora-deck-opacity, 0);
+  pointer-events: none;
+  transition:
+    transform var(--blora-duration-base) var(--blora-easing-standard),
+    opacity var(--blora-duration-base) var(--blora-easing-standard);
+  will-change: transform, opacity;
+
+  /* Ensure stacked cards remain legible */
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-deck > *[data-front] {
+  pointer-events: auto;
+  cursor: grab;
+  box-shadow: var(--blora-shadow-3);
+}
+
+.blora-deck > *[data-front]:active {
+  cursor: grabbing;
+}
+
+.blora-deck[data-dragging] > * {
+  transition: none;
+}
+
+.blora-deck--sm {
+  width: min(100%, 18rem);
+}

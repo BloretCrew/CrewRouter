@@ -1,0 +1,343 @@
+/* =========================================================================
+   Blora Design 2.0 - Base typography, focus, and scope defaults
+   Spec §8.3: 选择器规范, §8.4: 逻辑属性与 RTL, §8.6: Motion
+   ========================================================================= */
+
+/* -- 作用域字体与颜色 -- */
+:where(body.blora-page, .blora-scope, .blora-portal) {
+  font-family: var(--blora-font-sans);
+  font-size: var(--blora-text-base);
+  line-height: var(--blora-leading-normal);
+  color: var(--blora-color-text-secondary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizelegibility;
+  font-feature-settings: "kern", "liga", "calt";
+}
+
+/* -- 页面级 -- */
+body.blora-page {
+  margin: 0;
+  overflow-x: clip;
+  max-width: 100%;
+  background-color: var(--blora-color-surface-canvas);
+  background-image: var(--blora-texture-background), var(--blora-texture-overlay);
+  background-attachment: fixed;
+}
+
+html:has(body.blora-page) {
+  overflow-x: clip;
+  max-width: 100%;
+  scrollbar-color: var(--blora-color-border-subtle) var(--blora-color-surface-default);
+}
+
+/* OverlayController stamps this while a modal is open. Hide the classic
+   window scrollbar so the mask can own the full viewport. */
+html[data-blora-scroll-locked] {
+  overflow: hidden;
+}
+
+/* -- 标题 -- */
+.blora-h1,
+.blora-h2,
+.blora-h3,
+.blora-h4 {
+  font-family: var(--blora-font-heading);
+  font-weight: 600;
+  letter-spacing: var(--blora-tracking-tight);
+  color: var(--blora-color-text-primary);
+  line-height: var(--blora-leading-tight);
+}
+
+.blora-h1 {
+  font-size: var(--blora-text-4xl);
+  letter-spacing: 0;
+}
+
+.blora-h2 {
+  font-size: var(--blora-text-3xl);
+}
+
+.blora-h3 {
+  font-size: var(--blora-text-2xl);
+}
+
+.blora-h4 {
+  font-size: var(--blora-text-xl);
+}
+
+/* -- 辅助文本 -- */
+.blora-text-lead {
+  font-size: var(--blora-text-lg);
+  color: var(--blora-color-text-muted);
+  line-height: var(--blora-leading-loose);
+}
+
+.blora-text-muted {
+  color: var(--blora-color-text-muted);
+}
+
+.blora-text-faint {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-text-primary {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-text-mono {
+  font-family: var(--blora-font-mono);
+  font-size: 0.92em;
+}
+
+.blora-text-caps {
+  text-transform: uppercase;
+  letter-spacing: var(--blora-tracking-caps);
+  font-size: var(--blora-text-xs);
+  font-weight: 600;
+}
+
+/* -- 链接 -- */
+:where(body.blora-page, .blora-scope, .blora-portal) a {
+  color: var(--blora-color-action-primary-default);
+  text-decoration: none;
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+:where(body.blora-page, .blora-scope, .blora-portal) a:hover {
+  color: var(--blora-color-action-primary-hover);
+}
+
+/* -- 引文 -- */
+.blora-quote {
+  margin: var(--blora-space-5) 0;
+  padding: var(--blora-space-4) var(--blora-space-6);
+  border-inline-start: 3px solid var(--blora-color-action-primary-default);
+  background: var(--blora-color-surface-raised);
+  border-radius: 0 var(--blora-radius-md) var(--blora-radius-md) 0;
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-lg);
+  color: var(--blora-color-text-emphasis);
+  line-height: var(--blora-leading-loose);
+}
+
+.blora-quote cite {
+  display: block;
+  margin-top: var(--blora-space-3);
+  font-size: var(--blora-text-sm);
+  font-style: normal;
+  color: var(--blora-color-text-subtle);
+  font-family: var(--blora-font-sans);
+}
+
+/* -- 行内代码 -- */
+.blora-code {
+  font-family: var(--blora-font-mono);
+  font-size: 0.88em;
+  padding: 0.15em 0.45em;
+  background: var(--blora-color-surface-sunken);
+  color: var(--blora-color-action-primary-hover);
+  border-radius: var(--blora-radius-sm);
+  border: 1px solid var(--blora-color-border-subtle);
+}
+
+/* -- 代码块 -- */
+.blora-pre {
+  margin: var(--blora-space-4) 0;
+  padding: var(--blora-space-5);
+  background: var(--blora-color-code-background);
+  color: var(--blora-color-code-foreground);
+  border-radius: var(--blora-radius-lg);
+  font-family: var(--blora-font-mono);
+  font-size: var(--blora-text-sm);
+  line-height: 1.7;
+  overflow-x: auto;
+  box-shadow: var(--blora-shadow-3);
+  position: relative;
+}
+
+.blora-pre::before {
+  content: "";
+  position: absolute;
+  top: var(--blora-space-3);
+  inset-inline-end: var(--blora-space-4);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-soft);
+  box-shadow:
+    -14px 0 0 var(--blora-color-status-neutral-soft),
+    -28px 0 0 var(--blora-color-status-success-soft);
+  opacity: 0.5;
+}
+
+.blora-pre code {
+  font-family: inherit;
+  color: inherit;
+  background: none;
+  padding: 0;
+}
+
+/* -- Prose -- */
+.blora-prose {
+  max-width: 68ch;
+}
+
+.blora-prose p {
+  margin-bottom: var(--blora-space-4);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-prose p:last-child {
+  margin-bottom: 0;
+}
+
+/*
+ * Kill the default mobile tap flash (Chrome/Android = semi-transparent blue
+ * rectangle; Safari grey flash). Most product UIs set this transparent and rely
+ * on :active / our own states. Shows in desktop DevTools device mode too —
+ * not a "debug-only" feature, just easier to notice there.
+ */
+:where(body.blora-page, .blora-scope, .blora-portal),
+:where(body.blora-page, .blora-scope, .blora-portal) a,
+:where(body.blora-page, .blora-scope, .blora-portal) button,
+:where(body.blora-page, .blora-scope, .blora-portal) [role="button"],
+:where(body.blora-page, .blora-scope, .blora-portal) input,
+:where(body.blora-page, .blora-scope, .blora-portal) label,
+[class^="blora-"],
+[class*=" blora-"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Shared rounded-rect join. Circles / capsules / phone mockups stay out. */
+@supports (corner-shape: superellipse(1.2)) {
+  .blora-otp__input,
+  .blora-fieldset,
+  .blora-alert,
+  .blora-banner,
+  .blora-card,
+  .blora-panel,
+  .blora-notification,
+  .blora-accordion,
+  .blora-collapse,
+  .blora-table-wrap,
+  .blora-descriptions,
+  .blora-pre,
+  .blora-media,
+  .blora-image,
+  .blora-chart-container,
+  .blora-carousel,
+  .blora-dropzone,
+  .blora-select__popup,
+  .blora-autocomplete__menu,
+  .blora-mentions__menu,
+  .blora-dropdown__menu,
+  .blora-popover__panel,
+  .blora-popconfirm__panel,
+  .blora-tooltip__bubble,
+  .blora-dialog__panel,
+  .blora-command,
+  .blora-cmdk,
+  .blora-calendar,
+  .blora-datepicker__panel,
+  .blora-timepicker__panel,
+  .blora-treeselect__panel,
+  .blora-transfer__panel,
+  .blora-cascader,
+  .blora-color-panel,
+  .blora-color-swatch,
+  .blora-tour-pop,
+  .blora-tour__tooltip,
+  .blora-megamenu__panel,
+  .blora-pagination__item,
+  .blora-speed-dial__label,
+  .blora-speed-dial-stage,
+  .blora-palette-picker__menu,
+  .blora-palette-card,
+  .blora-sidebar-layout {
+    corner-shape: superellipse(1.2);
+  }
+}
+
+/* -- 焦点环 -- §8.3: 状态优先用原生属性 -- */
+:where(body.blora-page, .blora-scope, .blora-portal) :focus-visible,
+[class^="blora-"]:focus-visible,
+[class*=" blora-"]:focus-visible {
+  outline: var(--blora-focus-ring-width) solid var(--blora-color-action-primary-default);
+
+  /* Outline follows the element's border-radius in modern engines, so an
+     external offset makes the ring adapt to the target's own shape (circular
+     marks, pill chips, rounded cards) with breathing room — matching the
+     adaptive tour spotlight instead of a tight inset box. Elements inside an
+     overflow-clipped container can opt back into an inset ring by adding the
+     `.blora-focus-ring-inset` class. */
+  outline-offset: var(--blora-focus-ring-offset);
+}
+
+.blora-focus-ring-inset :focus-visible,
+.blora-focus-ring-inset:focus-visible {
+  outline-offset: calc(-1 * var(--blora-focus-ring-width));
+}
+
+/* -- reduced-motion -- §8.6 */
+@media (prefers-reduced-motion: reduce) {
+  :where(body.blora-page, .blora-scope, .blora-portal),
+  :where(body.blora-page, .blora-scope, .blora-portal) *,
+  :where(body.blora-page, .blora-scope, .blora-portal) *::before,
+  :where(body.blora-page, .blora-scope, .blora-portal) *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* —— Scrollbar (Blora) —— */
+:where(body.blora-page, .blora-scope, .blora-portal),
+:where(body.blora-page, .blora-scope, .blora-portal) * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--blora-color-border-subtle) transparent;
+}
+
+html:has(body.blora-page)::-webkit-scrollbar,
+:where(body.blora-page, .blora-scope, .blora-portal)::-webkit-scrollbar,
+:where(body.blora-page, .blora-scope, .blora-portal) *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html:has(body.blora-page)::-webkit-scrollbar-track,
+:where(body.blora-page, .blora-scope, .blora-portal)::-webkit-scrollbar-track,
+:where(body.blora-page, .blora-scope, .blora-portal) *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html:has(body.blora-page)::-webkit-scrollbar-thumb,
+:where(body.blora-page, .blora-scope, .blora-portal)::-webkit-scrollbar-thumb,
+:where(body.blora-page, .blora-scope, .blora-portal) *::-webkit-scrollbar-thumb {
+  background: var(--blora-color-border-subtle);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+html:has(body.blora-page)::-webkit-scrollbar-thumb:hover,
+:where(body.blora-page, .blora-scope, .blora-portal)::-webkit-scrollbar-thumb:hover,
+:where(body.blora-page, .blora-scope, .blora-portal) *::-webkit-scrollbar-thumb:hover {
+  background: var(--blora-color-text-subtle);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+}
+
+html:has(body.blora-page)::-webkit-scrollbar-button,
+:where(body.blora-page, .blora-scope, .blora-portal)::-webkit-scrollbar-button,
+:where(body.blora-page, .blora-scope, .blora-portal) *::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+html:has(body.blora-page)::-webkit-scrollbar-corner,
+:where(body.blora-page, .blora-scope, .blora-portal)::-webkit-scrollbar-corner,
+:where(body.blora-page, .blora-scope, .blora-portal) *::-webkit-scrollbar-corner {
+  background: transparent;
+}

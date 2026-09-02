@@ -1,0 +1,406 @@
+/* =========================================================================
+   Blora Design 2.0 - Table component (CSS-only native table)
+   Visual baseline: legacy/v1/blora.css lines 1785-1956
+   Spec §17.5: CSS-only native table, optional headless controller is beta.
+   ========================================================================= */
+
+/* -- Table wrapper: scroll container with border + radius -- */
+
+.blora-table-wrap {
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-table-wrap[data-loading] {
+  min-height: 8rem;
+}
+
+.blora-table-wrap[data-empty] .blora-table {
+  display: none;
+}
+
+.blora-table-empty {
+  display: none;
+  padding: var(--blora-space-8) var(--blora-space-5);
+}
+
+.blora-table-wrap[data-empty] .blora-table-empty {
+  display: flex;
+}
+
+.blora-table-loading {
+  position: absolute;
+  inset: 0;
+  z-index: var(--blora-z-sticky);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blora-space-3);
+  background: color-mix(in srgb, var(--blora-color-surface-default) 78%, transparent);
+  backdrop-filter: blur(2px);
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-table-loading[hidden] {
+  display: none;
+}
+
+/* Sortable header cue */
+.blora-table th[data-sort],
+.blora-table th[data-blora-sort] {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Default hidden; hover reveals the Lucide cue, active sort stays visible. */
+.blora-table th[data-sort] .blora-table__sort,
+.blora-table th[data-blora-sort] .blora-table__sort {
+  display: inline-flex;
+  margin-inline-start: 0.35em;
+  min-width: 0.75em;
+  opacity: 0;
+  vertical-align: middle;
+  transition: opacity var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-table th[data-sort]:hover .blora-table__sort,
+.blora-table th[data-blora-sort]:hover .blora-table__sort {
+  opacity: 0.7;
+}
+
+.blora-table th[data-sort-dir="asc"] .blora-table__sort,
+.blora-table th[data-sort-dir="desc"] .blora-table__sort {
+  opacity: 1;
+  color: var(--blora-color-action-primary-default);
+}
+
+/* -- Native table -- */
+
+.blora-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--blora-text-sm);
+}
+
+.blora-table thead th {
+  padding: 0.85em 1em;
+  text-align: start;
+  font-weight: 600;
+  color: var(--blora-color-text-secondary);
+  background: var(--blora-color-surface-raised);
+  border-bottom: 1px solid var(--blora-color-border-subtle);
+  white-space: nowrap;
+
+  /* Match body cells — default baseline lifts selection checkboxes above text */
+  vertical-align: middle;
+}
+
+.blora-table tbody td {
+  padding: 0.85em 1em;
+  color: var(--blora-color-text-emphasis);
+  border-bottom: 1px solid var(--blora-color-border-subtle);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.blora-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.blora-table tbody tr {
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-table tbody tr:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-table[data-striped] tbody tr:nth-child(odd) {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-table[data-striped] tbody tr:nth-child(odd):hover {
+  background: var(--blora-color-surface-sunken);
+}
+
+.blora-table__caption {
+  padding: var(--blora-space-3) 1em;
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+}
+
+/* -- Sortable headers -- */
+
+.blora-table-sort,
+th[data-blora-sort] {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.blora-table-sort:hover,
+th[data-blora-sort]:hover {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-table-sort:focus-visible,
+th[data-blora-sort]:focus-visible {
+  outline: 2px solid var(--blora-color-action-primary-default);
+  outline-offset: -4px;
+}
+
+/* -- Sticky / fixed columns (advanced) -- */
+
+.blora-table .blora-table-col--fixed-left,
+.blora-table [data-blora-fixed="left"] {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: var(--blora-z-base);
+  background: var(--blora-color-surface-default);
+  box-shadow: 1px 0 0 var(--blora-color-border-subtle);
+}
+
+.blora-table .blora-table-col--fixed-right,
+.blora-table [data-blora-fixed="right"] {
+  position: sticky;
+  inset-inline-end: 0;
+  z-index: var(--blora-z-base);
+  background: var(--blora-color-surface-default);
+  box-shadow: -1px 0 0 var(--blora-color-border-subtle);
+}
+
+.blora-table thead .blora-table-col--fixed-left,
+.blora-table thead [data-blora-fixed="left"],
+.blora-table thead .blora-table-col--fixed-right,
+.blora-table thead [data-blora-fixed="right"] {
+  background: var(--blora-color-surface-raised);
+  z-index: var(--blora-z-sticky);
+}
+
+.blora-table tbody tr:hover .blora-table-col--fixed-left,
+.blora-table tbody tr:hover [data-blora-fixed="left"],
+.blora-table tbody tr:hover .blora-table-col--fixed-right,
+.blora-table tbody tr:hover [data-blora-fixed="right"] {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-table[data-striped] tbody tr:nth-child(odd) .blora-table-col--fixed-left,
+.blora-table[data-striped] tbody tr:nth-child(odd) [data-blora-fixed="left"],
+.blora-table[data-striped] tbody tr:nth-child(odd) .blora-table-col--fixed-right,
+.blora-table[data-striped] tbody tr:nth-child(odd) [data-blora-fixed="right"] {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-table[data-striped] tbody tr:nth-child(odd):hover .blora-table-col--fixed-left,
+.blora-table[data-striped] tbody tr:nth-child(odd):hover [data-blora-fixed="left"],
+.blora-table[data-striped] tbody tr:nth-child(odd):hover .blora-table-col--fixed-right,
+.blora-table[data-striped] tbody tr:nth-child(odd):hover [data-blora-fixed="right"] {
+  background: var(--blora-color-surface-sunken);
+}
+
+/* -- Selection column --
+ * Table cells inherit a tall line-height (~1.6). That creates an anonymous
+ * line-box strut in the select col; the checkbox (inline-flex ~1.15em) then
+ * sits ~1–2px below the adjacent text ink mid — reads as "偏下" in both
+ * Storybook and showcase. Kill the strut on the col only; restore font-size
+ * on the label so em-based box sizing still works. No host-specific translate. */
+
+.blora-table-select-col {
+  width: 2.75rem;
+  text-align: center;
+  vertical-align: middle;
+  position: relative;
+  line-height: 0;
+}
+
+.blora-table-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+
+  /* Parent col uses line-height:0; re-assert control metrics */
+  font-size: var(--blora-text-sm);
+  line-height: 1;
+  vertical-align: middle;
+
+  /* Absolute input under the visual box; z-index keeps hit-testing above
+     th/td background paints. */
+  position: relative;
+  z-index: var(--blora-z-base);
+}
+
+.blora-table-check > input {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.blora-table-check > .blora-checkbox__box {
+  flex: none;
+}
+
+/* -- Bulk action bar -- */
+
+.blora-table-bulk {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--blora-space-3);
+  padding: var(--blora-space-3) var(--blora-space-4);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-action-primary-tint);
+  color: var(--blora-color-text-emphasis);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-table-bulk[hidden] {
+  display: none;
+}
+
+.blora-table-bulk__count {
+  font-weight: 600;
+  color: var(--blora-color-action-primary-default);
+}
+
+/* -- Column settings panel (v1 blora-table-cols) -- */
+
+.blora-table-cols-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--blora-space-2);
+}
+
+.blora-table-cols {
+  margin-bottom: var(--blora-space-3);
+  padding: var(--blora-space-3);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-table-cols[hidden] {
+  display: none;
+}
+
+.blora-table-cols__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-2);
+}
+
+.blora-table-cols__item {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  font-size: var(--blora-text-sm);
+  padding: 0.35em 0.4em;
+  border-radius: var(--blora-radius-sm);
+  border: 1px solid transparent;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition:
+    background var(--blora-duration-fast) var(--blora-easing-standard),
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-table-cols__item:active {
+  cursor: grabbing;
+}
+
+.blora-table-cols__item.is-dragging {
+  opacity: 0.45;
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-table-cols__item.is-drag-over {
+  border-color: var(--blora-color-action-primary-default);
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 10%, transparent);
+}
+
+.blora-table-cols__grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.25em;
+  color: var(--blora-color-text-subtle);
+  cursor: grab;
+}
+
+/* Column toggle uses framework .blora-checkbox (not native blue boxes) */
+.blora-table-cols__item > .blora-checkbox,
+.blora-table-cols__check {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.blora-table-cols__item > .blora-checkbox > span:last-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.blora-table-cols__foot {
+  margin-top: var(--blora-space-3);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Foot reset as text action (v1 blora-btn--text look) */
+.blora-table-cols__foot .blora-button[data-blora-cols-reset] {
+  color: var(--blora-color-action-primary-default);
+}
+
+/* -- Virtual scroll container -- */
+
+.blora-table-wrap[data-virtual],
+.blora-table-wrap[data-blora-virtual],
+.blora-table-wrap--virtual,
+.blora-table-virtual {
+  max-height: 22rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.blora-table-virtual .blora-table {
+  border: 0;
+}
+
+.blora-table-virtual-pad td,
+.blora-table-virtual-pad-cell {
+  line-height: 0;
+  font-size: 0;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* Horizontal virtual: table grows to full logical width; scroller clips */
+.blora-table-virtual {
+  overflow: auto;
+}
+
+/* -- Hidden rows / columns -- */
+
+.blora-table th[hidden],
+.blora-table td[hidden] {
+  display: none;
+}
+
+.blora-table tbody tr[hidden] {
+  display: none;
+}

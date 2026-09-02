@@ -1,0 +1,134 @@
+/* Blora Design 2.0 - Dropdown */
+
+blora-dropdown {
+  display: inline-block;
+}
+
+.blora-dropdown[data-trigger="custom"] {
+  display: block;
+}
+
+.blora-dropdown[data-trigger="custom"] [data-dropdown-trigger] {
+  cursor: pointer;
+}
+
+.blora-dropdown[data-trigger="custom"] [data-dropdown-trigger][aria-disabled="true"] {
+  cursor: default;
+  pointer-events: none;
+}
+
+.blora-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.blora-dropdown__menu {
+  position: absolute;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-start: 0;
+  width: max-content;
+  min-width: 180px;
+  max-width: min(22rem, calc(100vw - 2 * var(--blora-space-3)));
+  max-height: min(24rem, calc(100dvh - 2 * var(--blora-space-3)));
+  overflow: auto;
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  padding: var(--blora-space-2);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+  z-index: var(--blora-z-dropdown);
+}
+
+.blora-dropdown[data-placement="top"] .blora-dropdown__menu {
+  inset-block: auto calc(100% + 6px);
+  transform: translateY(4px);
+}
+
+.blora-dropdown[data-align="end"] .blora-dropdown__menu {
+  inset-inline: auto 0;
+}
+
+.blora-dropdown[data-align="center"] .blora-dropdown__menu {
+  inset-inline-start: 50%;
+  transform: translate(-50%, -4px);
+}
+
+.blora-dropdown[data-placement="top"][data-align="center"] .blora-dropdown__menu {
+  transform: translate(-50%, 4px);
+}
+
+.blora-dropdown[data-open] .blora-dropdown__menu {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.blora-dropdown[data-placement="top"][data-open] .blora-dropdown__menu {
+  transform: translateY(0);
+}
+
+.blora-dropdown[data-align="center"][data-open] .blora-dropdown__menu {
+  transform: translate(-50%, 0);
+}
+
+.blora-dropdown[data-variant="helper"] {
+  vertical-align: middle;
+}
+
+.blora-dropdown[data-variant="helper"] .blora-dropdown__menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-2);
+  min-width: 14rem;
+  padding: var(--blora-space-4);
+}
+
+.blora-dropdown[data-variant="helper"] .blora-dropdown__menu > strong {
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-dropdown__menu > .blora-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: var(--blora-space-2);
+  max-width: 18rem;
+}
+
+.blora-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  padding: 0.5em 0.8em;
+  font: inherit;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  border-radius: var(--blora-radius-sm);
+  cursor: pointer;
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: start;
+  text-decoration: none;
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-dropdown__item:hover {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-dropdown__sep {
+  height: 1px;
+  background: var(--blora-color-border-subtle);
+  margin: var(--blora-space-1) 0;
+}

@@ -1,0 +1,44 @@
+/* Visual baseline: legacy/v1 divider, previously in foundations/layout.css. */
+
+.blora-divider {
+  height: 1px;
+  margin: var(--blora-space-5) 0;
+  background: var(--blora-color-border-subtle);
+  border: none;
+}
+
+.blora-divider[data-orientation="vertical"],
+.blora-divider--vert {
+  align-self: stretch;
+  width: 1px;
+  height: auto;
+  margin: 0 var(--blora-space-3);
+  background: var(--blora-color-border-subtle);
+}
+
+.blora-divider[data-variant="dashed"],
+.blora-divider--dashed {
+  background: none;
+  border-block-start: 1px dashed var(--blora-color-text-subtle);
+}
+
+.blora-divider[data-variant="text"],
+.blora-divider--text {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  height: auto;
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-sm);
+  background: none;
+}
+
+.blora-divider[data-variant="text"]::before,
+.blora-divider[data-variant="text"]::after,
+.blora-divider--text::before,
+.blora-divider--text::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--blora-color-border-subtle);
+}

@@ -1,0 +1,56 @@
+/* Blora Design 2.0 - Popover */
+
+blora-popover {
+  display: inline-block;
+}
+
+.blora-popover__content {
+  margin: 0 0 var(--blora-space-3);
+  color: var(--blora-color-text-secondary);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-popover {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  vertical-align: top;
+}
+
+.blora-popover__panel {
+  position: absolute;
+  top: calc(100% + 0.5em);
+
+  /* Left edge flush with trigger — not centered (v1 used left:50% + translateX(-50%)) */
+  left: 0;
+  right: auto;
+  inset-inline: 0 auto;
+  width: max-content;
+  min-width: min(200px, calc(100vw - 2 * var(--blora-space-3)));
+  max-width: min(22rem, calc(100vw - 2 * var(--blora-space-3)));
+  max-height: min(24rem, calc(100dvh - 2 * var(--blora-space-3)));
+  overflow: auto;
+  margin: 0;
+
+  /* Only vertical motion — never translateX centering */
+  transform: translate(0, 4px);
+  padding: var(--blora-space-4);
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  opacity: 0;
+  pointer-events: none;
+  text-align: start;
+  transition:
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+  z-index: var(--blora-z-dropdown);
+}
+
+.blora-popover[data-open] .blora-popover__panel {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(0, 0);
+}

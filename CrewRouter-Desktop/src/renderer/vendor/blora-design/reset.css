@@ -1,0 +1,85 @@
+/* =========================================================================
+   Blora Design 2.0 - Reset (optional, opt-in)
+   Spec §8.2:侵入性 reset 移到独立入口，主组件 CSS 不依赖它。
+
+   用法：
+     import "@bloret-crew/blora-design/reset.css";
+
+   不导入此文件时，组件仍可正常工作。
+   ========================================================================= */
+
+/* 仅在 .blora-scope / .blora-portal / body.blora-page 下生效 */
+:where(body.blora-page, .blora-scope, .blora-portal),
+:where(body.blora-page, .blora-scope, .blora-portal) *,
+:where(body.blora-page, .blora-scope, .blora-portal) *::before,
+:where(body.blora-page, .blora-scope, .blora-portal) *::after {
+  box-sizing: border-box;
+}
+
+:where(body.blora-page, .blora-scope, .blora-portal) {
+  margin: 0;
+  padding: 0;
+}
+
+:where(body.blora-page, .blora-scope, .blora-portal) h1,
+:where(body.blora-page, .blora-scope, .blora-portal) h2,
+:where(body.blora-page, .blora-scope, .blora-portal) h3,
+:where(body.blora-page, .blora-scope, .blora-portal) h4,
+:where(body.blora-page, .blora-scope, .blora-portal) h5,
+:where(body.blora-page, .blora-scope, .blora-portal) h6 {
+  margin: 0;
+  font-weight: 600;
+}
+
+:where(body.blora-page, .blora-scope, .blora-portal) p,
+:where(body.blora-page, .blora-scope, .blora-portal) figure {
+  margin: 0;
+}
+
+:where(body.blora-page, .blora-scope, .blora-portal) button,
+:where(body.blora-page, .blora-scope, .blora-portal) input,
+:where(body.blora-page, .blora-scope, .blora-portal) textarea,
+:where(body.blora-page, .blora-scope, .blora-portal) select {
+  font: inherit;
+  color: inherit;
+}
+
+:where(body.blora-page, .blora-scope, .blora-portal) button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+:where(body.blora-page, .blora-scope, .blora-portal) ul,
+:where(body.blora-page, .blora-scope, .blora-portal) ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(body.blora-page, .blora-scope, .blora-portal) img,
+:where(body.blora-page, .blora-scope, .blora-portal) svg,
+:where(body.blora-page, .blora-scope, .blora-portal) video {
+  display: block;
+  max-width: 100%;
+}
+
+:where(body.blora-page, .blora-scope, .blora-portal) img {
+  height: auto;
+}
+
+/* 选区：不透明淡色底（主色混画布，亮色浅粉、暗色深褐粉），随主题自动求值。
+   不透明避免字符动画重叠时半透明底叠加变深。选中文字色用正文色跟随主题
+   （亮色深字/暗色浅字），否则强调底上的 on-accent 字在淡色底上会看不清。 */
+:where(body.blora-page, .blora-scope, .blora-portal)::selection,
+:where(body.blora-page, .blora-scope, .blora-portal) *::selection {
+  background: var(--blora-color-action-selection-bg);
+  color: var(--blora-color-text-primary);
+}
+
+:where(body.blora-page, .blora-scope, .blora-portal)::-moz-selection,
+:where(body.blora-page, .blora-scope, .blora-portal) *::-moz-selection {
+  background: var(--blora-color-action-selection-bg);
+  color: var(--blora-color-text-primary);
+}

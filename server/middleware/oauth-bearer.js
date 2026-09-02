@@ -12,6 +12,7 @@ const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { ensureOAuthTables } = require('../routes/oauth');
 const { buildInjectedPrompt } = require('../utils/inject-prompt');
+const { buildApiKeyModelBindings } = require('../utils/model-selection');
 
 function sha256Hex(s) {
   return crypto.createHash('sha256').update(s).digest('hex');
@@ -38,6 +39,30 @@ async function oauthBearer(req, res, next) {
 }
 
 module.exports = { oauthBearer };
+
+async function loadApiKeyModelBindings(apiKeyId) {
+  const [keyResult, queueResult] = await Promise.all([
+    pool.query(
+      `SELECT current_model_id FROM api_keys WHERE id = $1`,
+      [apiKeyId]
+    ),
+    pool.query(
+      `SELECT model_id FROM api_key_models
+       WHERE api_key_id = $1 AND enabled IS DISTINCT FROM FALSE
+       ORDER BY sort_order ASC, id ASC`,
+      [apiKeyId]
+    ),
+  ]);
+  const harnessResult = await pool.query(
+    `SELECT harness, model_id FROM api_key_harness_models WHERE api_key_id = $1`,
+    [apiKeyId]
+  );
+  return buildApiKeyModelBindings({
+    currentModelId: keyResult.rows[0]?.current_model_id || null,
+    modelQueueRows: queueResult.rows,
+    harnessRows: harnessResult.rows,
+  });
+}
 
 async function authenticateOAuthAccessToken(req, res, next) {
   const token = req.headers.authorization.slice('Bearer '.length);
@@ -90,6 +115,8 @@ async function authenticateOAuthAccessToken(req, res, next) {
       return res.status(403).json({ ok: false, error: 'API key has expired' });
     }
 
+    const modelBindings = await loadApiKeyModelBindings(key.id);
+
     // 注入提示词：与 api.js validateApiKey 产物字段对齐（本路径无缓存，逐请求查库）
     let injectPrompt = null;
     try {
@@ -107,6 +134,7 @@ async function authenticateOAuthAccessToken(req, res, next) {
       keyName: key.key_name || '',
       enabled: key.enabled !== false,
       injectPrompt,
+      ...modelBindings,
       viaOAuth: true,
       oauthClientId: row.client_id,
       oauthScope: row.scope,

@@ -1,0 +1,94 @@
+/* Blora Design 2.0 - splitter component (beta, migrated from v1) */
+
+blora-splitter {
+  display: block;
+}
+
+.blora-splitter {
+  display: flex;
+  width: 100%;
+  min-height: 12rem;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  overflow: hidden;
+  background: var(--blora-color-surface-default);
+}
+
+.blora-splitter--vertical {
+  flex-direction: column;
+}
+
+.blora-splitter__pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--blora-space-4);
+}
+
+.blora-splitter__bar {
+  flex: none;
+  background: var(--blora-color-surface-sunken);
+  position: relative;
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-splitter:not(.blora-splitter--vertical) .blora-splitter__bar {
+  width: 6px;
+  cursor: col-resize;
+}
+
+.blora-splitter--vertical .blora-splitter__bar {
+  height: 6px;
+  cursor: row-resize;
+  width: 100%;
+}
+
+.blora-splitter__bar:hover,
+.blora-splitter__bar[data-dragging] {
+  background: color-mix(
+    in srgb,
+    var(--blora-color-action-primary-default) 35%,
+    var(--blora-color-surface-sunken)
+  );
+}
+
+/* Handle (inserted by controller) */
+.blora-splitter__handle {
+  flex: none;
+  width: 6px;
+  cursor: col-resize;
+  background: var(--blora-color-surface-sunken);
+  display: grid;
+  place-items: center;
+  position: relative;
+  z-index: var(--blora-z-base);
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-splitter__handle:hover,
+.blora-splitter__handle[data-dragging] {
+  background: color-mix(
+    in srgb,
+    var(--blora-color-action-primary-default) 35%,
+    var(--blora-color-surface-sunken)
+  );
+}
+
+.blora-splitter__grip {
+  width: 3px;
+  height: 24px;
+  border-radius: var(--blora-radius-full);
+  background: var(--blora-color-text-subtle);
+  opacity: 0.5;
+  transition: opacity var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-splitter__handle:hover .blora-splitter__grip {
+  opacity: 1;
+}
+
+.blora-splitter__bar::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}

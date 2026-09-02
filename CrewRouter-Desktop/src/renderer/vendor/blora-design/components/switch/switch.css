@@ -1,0 +1,84 @@
+/* =========================================================================
+   Blora Design 2.0 - Switch component
+   Spec §11.1: Checkbox-based switch, no JS required
+   ========================================================================= */
+
+blora-switch,
+.blora-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.blora-switch > input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.blora-switch__track {
+  --blora-switch-w: 2.6em;
+  --blora-switch-h: 1.5em;
+  --blora-switch-pad: 0.2em;
+  --blora-switch-knob: calc(var(--blora-switch-h) - var(--blora-switch-pad) * 2);
+
+  width: var(--blora-switch-w);
+  height: var(--blora-switch-h);
+  flex: none;
+  background: var(--blora-color-surface-sunken);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-full);
+  position: relative;
+  transition:
+    background-color var(--blora-duration-base) var(--blora-easing-standard),
+    border-color var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-switch__track::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  inset-inline-start: var(--blora-switch-pad);
+  width: var(--blora-switch-knob);
+  height: var(--blora-switch-knob);
+  border-radius: 50%;
+  background: var(--blora-color-text-on-accent);
+  box-shadow: var(--blora-shadow-2);
+  transform: translateY(-50%);
+  transition:
+    inset-inline-start var(--blora-duration-base) var(--blora-easing-overshoot),
+    background var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-switch > input:checked + .blora-switch__track {
+  background: var(--blora-color-action-primary-default);
+  border-color: var(--blora-color-action-primary-default);
+}
+
+.blora-switch > input:focus-visible + .blora-switch__track {
+  box-shadow: var(--blora-focus-ring-strong);
+}
+
+.blora-switch > input:checked + .blora-switch__track::after {
+  inset-inline-start: calc(100% - var(--blora-switch-pad) - var(--blora-switch-knob));
+  background: var(--blora-color-text-on-accent);
+}
+
+.blora-switch > input:disabled + .blora-switch__track {
+  opacity: 0.4;
+}
+
+/* Sizes */
+.blora-switch[data-size="sm"] .blora-switch__track {
+  --blora-switch-w: 2.1em;
+  --blora-switch-h: 1.2em;
+  --blora-switch-pad: 0.16em;
+}
+
+.blora-switch[data-size="lg"] .blora-switch__track {
+  --blora-switch-w: 3.2em;
+  --blora-switch-h: 1.8em;
+  --blora-switch-pad: 0.24em;
+}

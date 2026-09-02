@@ -1,0 +1,68 @@
+/* =========================================================================
+   Blora Design 2.0 - Descriptions component
+   Visual baseline: legacy/v1/blora.css lines 2010-2013, 4128-4134
+   ========================================================================= */
+
+.blora-descriptions {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-md);
+  overflow: hidden;
+  font-size: var(--blora-text-sm);
+}
+
+.blora-descriptions th,
+.blora-descriptions td {
+  padding: 0.7em 1em;
+  border-bottom: 1px solid var(--blora-color-border-subtle);
+  border-inline-end: 1px solid var(--blora-color-border-subtle);
+}
+
+.blora-descriptions tr:last-child th,
+.blora-descriptions tr:last-child td {
+  border-bottom: 0;
+}
+
+.blora-descriptions th:last-child,
+.blora-descriptions td:last-child {
+  border-inline-end: 0;
+}
+
+.blora-descriptions th {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
+  font-weight: 500;
+  text-align: start;
+  width: 12em;
+}
+
+.blora-descriptions td {
+  color: var(--blora-color-text-emphasis);
+}
+
+/* Responsive: stack label above value on narrow containers */
+@container (max-width: 32rem) {
+  .blora-descriptions,
+  .blora-descriptions tbody,
+  .blora-descriptions tr {
+    display: block;
+    width: 100%;
+  }
+
+  .blora-descriptions tr {
+    display: grid;
+    grid-template-columns: minmax(4.5rem, auto) minmax(0, 1fr);
+  }
+
+  .blora-descriptions th {
+    width: auto;
+  }
+
+  .blora-descriptions th,
+  .blora-descriptions td {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}

@@ -79,7 +79,9 @@ async function seedPassportUser(client, user, username, invite = null) {
 
 router.get('/passport', async (req, res) => {
   try {
-    if (await getAuthMode() !== 'passport') return res.redirect('/?error=passport_disabled');
+    const { metadata } = require('../utils/instance-edition');
+    const edition = require('../config-loader').edition || 'personal';
+    if (!metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: await getAuthMode() }).auth.methods.includes('passport')) return res.redirect('/?error=passport_disabled');
     if (!passport.appId || !passport.appSecret) return res.redirect('/?error=passport_not_configured');
     const redirectUri = getRedirectUri(req);
     const state = crypto.randomBytes(24).toString('hex');

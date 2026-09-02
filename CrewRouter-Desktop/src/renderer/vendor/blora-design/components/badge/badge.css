@@ -1,0 +1,140 @@
+/* =========================================================================
+   Blora Design 2.0 - Badge component
+   ========================================================================= */
+
+.blora-badge {
+  /* Default is a growing capsule. A single digit opts into a disc with
+     data-shape="circle" — do not lock every badge to 1.5em. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  box-sizing: border-box;
+  flex-shrink: 0; /* .blora-row > * { min-width: 0 } must not squash pills */
+  min-width: 1.5em;
+  height: 1.5em;
+  padding: 0 0.4em;
+  font-size: var(--blora-text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+
+  /* Same as .blora-button — metric trim, not platform hacks */
+  text-box: trim-both cap alphabetic;
+  text-box-trim: trim-both;
+  text-box-edge: cap alphabetic;
+  white-space: nowrap;
+  vertical-align: middle;
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+  border-radius: var(--blora-radius-full);
+  box-shadow: var(--blora-shadow-primary);
+}
+
+.blora-badge[data-variant="dot"] {
+  min-width: 0.5em;
+  width: 0.5em;
+  height: 0.5em;
+  padding: 0;
+
+  /* Empty dots must stay square on every font-size / zoom */
+  line-height: 0;
+  overflow: hidden;
+}
+
+.blora-badge[data-variant="circle"] {
+  width: 2em;
+  min-width: 2em;
+  height: 2em;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.blora-badge[data-variant="pill"] {
+  min-width: max-content;
+  height: 2em;
+  padding-inline: 0.75em;
+  border-radius: var(--blora-radius-full);
+}
+
+.blora-badge[data-variant="neutral"],
+.blora-badge[data-variant="success"],
+.blora-badge[data-variant="info"],
+.blora-badge[data-variant="warning"],
+.blora-badge[data-variant="danger"] {
+  min-width: max-content;
+  height: auto;
+  padding: 0.2em 0.7em;
+  line-height: 1.25;
+  box-shadow: none;
+}
+
+.blora-badge[data-variant="neutral"] {
+  background: var(--blora-color-status-neutral);
+}
+
+.blora-badge[data-variant="success"] {
+  background: var(--blora-color-status-success);
+}
+
+.blora-badge[data-variant="info"] {
+  background: var(--blora-color-status-info);
+}
+
+.blora-badge[data-variant="warning"] {
+  background: color-mix(
+    in srgb,
+    var(--blora-color-status-warning) 60%,
+    var(--blora-color-text-primary)
+  );
+}
+
+.blora-badge[data-variant="danger"] {
+  background: var(--blora-color-status-danger);
+}
+
+.blora-badge > svg {
+  display: block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+}
+
+.blora-badge[data-shape="circle"] {
+  inline-size: 1.5em;
+  block-size: 1.5em;
+  min-inline-size: 1.5em;
+  min-block-size: 1.5em;
+  max-inline-size: 1.5em;
+  max-block-size: 1.5em;
+  padding: 0;
+  aspect-ratio: 1;
+  line-height: 1;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.blora-badge[data-shape="pill"],
+.blora-badge[data-variant="pill"] {
+  inline-size: auto;
+  block-size: auto;
+  min-inline-size: max-content;
+  min-block-size: 0;
+  max-inline-size: none;
+  max-block-size: none;
+  aspect-ratio: auto;
+  padding: 0.2em 0.7em;
+  line-height: 1.25;
+  border-radius: var(--blora-radius-full);
+  overflow: visible;
+}
+
+.blora-badge[data-variant="circle"][data-shape="circle"] {
+  inline-size: 2em;
+  block-size: 2em;
+  min-inline-size: 2em;
+  min-block-size: 2em;
+  max-inline-size: 2em;
+  max-block-size: 2em;
+}

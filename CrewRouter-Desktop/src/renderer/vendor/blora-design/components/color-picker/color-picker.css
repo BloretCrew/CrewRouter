@@ -1,0 +1,149 @@
+/* Blora Design 2.0 - color-picker (v1 HSV spectrum)
+   Spectrum/hue gradients are applied by the controller (raw hues are not design tokens). */
+
+blora-color-picker {
+  display: inline-block;
+}
+
+.blora-color-picker {
+  position: relative;
+  display: inline-block;
+}
+
+.blora-color-swatch {
+  width: 2.5em;
+  height: 2.5em;
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-md);
+  cursor: pointer;
+  transition:
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-color-swatch:hover {
+  border-color: var(--blora-color-text-subtle);
+  transform: scale(1.05);
+}
+
+.blora-color-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--blora-z-dropdown);
+  width: min(17.5rem, calc(100vw - 1rem));
+  max-width: calc(100vw - 1rem);
+  padding: var(--blora-space-3);
+  overflow: hidden;
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-color-panel[data-align-end] {
+  right: 0;
+  left: auto;
+}
+
+.blora-color-panel[data-open] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.blora-color-spectrum {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 5 / 3;
+  margin-bottom: var(--blora-space-3);
+  overflow: hidden;
+  border-radius: var(--blora-radius-md);
+  cursor: crosshair;
+  touch-action: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blora-color-text-primary) 16%, transparent);
+}
+
+.blora-color-spectrum:focus-visible {
+  outline: 2px solid var(--blora-color-action-primary-default);
+  outline-offset: -4px;
+}
+
+.blora-color-spectrum__cursor {
+  position: absolute;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid var(--blora-color-text-on-accent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: var(--blora-shadow-1);
+  pointer-events: none;
+}
+
+.blora-color-hue {
+  display: block;
+  width: 100%;
+  height: 1.25rem;
+  margin: 0 0 var(--blora-space-3);
+  padding: 0;
+  border-radius: var(--blora-radius-full);
+  appearance: none;
+  cursor: ew-resize;
+}
+
+.blora-color-hue::-webkit-slider-runnable-track {
+  height: 0.75rem;
+  background: transparent;
+  border-radius: var(--blora-radius-full);
+}
+
+.blora-color-hue::-moz-range-track {
+  height: 0.75rem;
+  background: transparent;
+  border-radius: var(--blora-radius-full);
+}
+
+.blora-color-hue::-webkit-slider-thumb {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: -0.1875rem;
+  border: 2px solid var(--blora-color-text-on-accent);
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-shadow-1);
+  appearance: none;
+}
+
+.blora-color-hue::-moz-range-thumb {
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--blora-color-text-on-accent);
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-color-custom {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+}
+
+.blora-color-preview {
+  width: 2em;
+  height: 2em;
+  flex: none;
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: 50%;
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-color-hex {
+  width: 8em;
+}

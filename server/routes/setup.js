@@ -16,6 +16,15 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // 检查是否需要 OOBE
 router.get('/setup/status', async (req, res) => {
+  if (process.env.CR_RUNTIME === 'desktop-local') {
+    return res.json({
+      needsSetup: false,
+      needsEdition: false,
+      dbReady: true,
+      authMode: 'local',
+      ...metadata('personal', { runtime: 'desktop-local', authMode: 'local' }),
+    });
+  }
   try {
     // 轻量探活：settings 可查且无 setup_complete → 需要初始化账号
     const result = await pool.query("SELECT value FROM settings WHERE key = 'setup_complete'");
@@ -24,7 +33,7 @@ router.get('/setup/status', async (req, res) => {
     const authModeResult = await pool.query("SELECT value FROM settings WHERE key = 'auth_mode'");
     const authMode = authModeResult.rows[0] ? decodeMode(authModeResult.rows[0].value) : null;
     const edition = await loadPersistedEdition(pool);
-    res.json({ needsSetup: needsSetup || !edition, needsEdition: !edition, dbReady: true, authMode, ...(edition ? metadata(edition) : { edition: null, capabilities: null }) });
+    res.json({ needsSetup: needsSetup || !edition, needsEdition: !edition, dbReady: true, authMode, ...(edition ? metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode }) : { edition: null, capabilities: null }) });
   } catch (error) {
     // settings 表不存在 = 数据库尚未初始化完成
     Logger.warn(`[OOBE] status 失败（数据库可能未就绪）: ${error.message}`);

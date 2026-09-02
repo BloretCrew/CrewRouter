@@ -1,0 +1,126 @@
+/* =========================================================================
+   Blora Design 2.0 - Checkbox component
+   Spec §11.1: Native input + visual box, no JS required
+   ========================================================================= */
+
+blora-checkbox {
+  display: inline-block;
+}
+
+blora-checkbox[data-group] {
+  display: block;
+}
+
+/* Options are inline-flex; a margin-top stack does not space them. */
+blora-checkbox[data-group] [role="group"] {
+  display: flex;
+  flex-flow: column;
+  align-items: flex-start;
+  gap: var(--blora-space-3);
+}
+
+blora-checkbox[data-group] [role="group"] > * + * {
+  margin-top: 0;
+}
+
+.blora-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-checkbox > input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.blora-checkbox__box {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  border: 1.5px solid var(--blora-color-text-subtle);
+  border-radius: var(--blora-radius-xs);
+  background: var(--blora-color-surface-default);
+  display: inline-block;
+  transition:
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    border-color var(--blora-duration-fast) var(--blora-easing-standard);
+  position: relative;
+
+  /* Keep box geometry independent of line-height / flex stretch */
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/*
+ * Checkmark geometry
+ * -------------------
+ * A border-drawn ✓ is an asymmetric L rotated 45°. Grid/flex "center" only
+ * centers that element's border-box, not the ink — so the tick reads as
+ * bottom-left (and looks different at different font sizes / DPR).
+ *
+ * Force a single optical center:
+ *  - absolute + top/left 50%
+ *  - translate(-50%, -60%) lifts ink so the glyph mass sits on the crosshair
+ *  - em-based stroke so scale stays consistent with the box
+ * Keep the same recipe on .blora-transfer__check.
+ */
+.blora-checkbox__box::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  box-sizing: border-box;
+  width: 0.3em;
+  height: 0.52em;
+  border: solid var(--blora-color-text-on-accent);
+  border-width: 0 0.15em 0.15em 0;
+  opacity: 0;
+  transform: translate(-50%, -60%) rotate(45deg) scale(0.4);
+  transform-origin: center center;
+  transition:
+    opacity var(--blora-duration-fast) var(--blora-easing-overshoot),
+    transform var(--blora-duration-fast) var(--blora-easing-overshoot);
+}
+
+.blora-checkbox > input:checked + .blora-checkbox__box {
+  background: var(--blora-color-action-primary-default);
+  border-color: var(--blora-color-action-primary-default);
+}
+
+.blora-checkbox > input:checked + .blora-checkbox__box::after {
+  opacity: 1;
+  transform: translate(-50%, -60%) rotate(45deg) scale(1);
+}
+
+.blora-checkbox > input:focus-visible + .blora-checkbox__box {
+  box-shadow: var(--blora-focus-ring-strong);
+}
+
+.blora-checkbox > input:disabled + .blora-checkbox__box {
+  opacity: 0.4;
+}
+
+/* Indeterminate */
+.blora-checkbox[data-indeterminate] > input + .blora-checkbox__box {
+  background: var(--blora-color-action-primary-default);
+  border-color: var(--blora-color-action-primary-default);
+}
+
+.blora-checkbox[data-indeterminate] > input + .blora-checkbox__box::after {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 50%;
+  width: 0.44em;
+  height: 0.44em;
+  border: 0;
+  background: var(--blora-color-text-on-accent);
+  opacity: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 1px;
+}

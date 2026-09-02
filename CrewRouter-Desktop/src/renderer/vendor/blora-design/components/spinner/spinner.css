@@ -1,0 +1,37 @@
+/* =========================================================================
+   Blora Design 2.0 - Spinner component
+   ========================================================================= */
+
+.blora-spinner {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  border: 2px solid var(--blora-color-border-subtle);
+  border-top-color: var(--blora-color-action-primary-default);
+  border-radius: 50%;
+  animation: blora-spinner-rotate 0.8s linear infinite;
+}
+
+.blora-spinner[data-size="sm"] {
+  width: 0.9em;
+  height: 0.9em;
+  border-width: 1.5px;
+}
+
+.blora-spinner[data-size="lg"] {
+  width: 2em;
+  height: 2em;
+  border-width: 3px;
+}
+
+@keyframes blora-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blora-spinner {
+    animation-duration: 1.5s;
+  }
+}

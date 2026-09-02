@@ -1,0 +1,78 @@
+/* Visual baseline: legacy/v1/blora.css indicator (lines 1428–1435). */
+
+.blora-indicator {
+  --blora-indicator-shift-x: 42%;
+  --blora-indicator-shift-y: -42%;
+
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: max-content;
+  max-width: max-content;
+  justify-self: start;
+}
+
+.blora-indicator__item {
+  position: absolute;
+  z-index: var(--blora-z-sticky);
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  transform: translate(var(--blora-indicator-shift-x), var(--blora-indicator-shift-y));
+}
+
+[dir="rtl"] .blora-indicator {
+  --blora-indicator-shift-x: -42%;
+}
+
+.blora-indicator[data-placement="top-start"],
+.blora-indicator--top-start {
+  --blora-indicator-shift-x: -42%;
+}
+
+[dir="rtl"] .blora-indicator[data-placement="top-start"],
+[dir="rtl"] .blora-indicator--top-start {
+  --blora-indicator-shift-x: 42%;
+}
+
+.blora-indicator[data-placement="top-start"] .blora-indicator__item,
+.blora-indicator--top-start .blora-indicator__item {
+  inset-inline: 0 auto;
+}
+
+.blora-indicator[data-placement="bottom-end"],
+.blora-indicator--bottom-end {
+  --blora-indicator-shift-y: 42%;
+}
+
+.blora-indicator[data-placement="bottom-end"] .blora-indicator__item,
+.blora-indicator--bottom-end .blora-indicator__item {
+  inset-block: auto 0;
+}
+
+.blora-indicator[data-placement="bottom-start"],
+.blora-indicator--bottom-start {
+  --blora-indicator-shift-x: -42%;
+  --blora-indicator-shift-y: 42%;
+}
+
+[dir="rtl"] .blora-indicator[data-placement="bottom-start"],
+[dir="rtl"] .blora-indicator--bottom-start {
+  --blora-indicator-shift-x: 42%;
+}
+
+.blora-indicator[data-placement="bottom-start"] .blora-indicator__item,
+.blora-indicator--bottom-start .blora-indicator__item {
+  inset-block: auto 0;
+  inset-inline: 0 auto;
+}
+
+.blora-indicator[data-placement="inside"],
+.blora-indicator--inside {
+  --blora-indicator-shift-x: -0.35rem;
+  --blora-indicator-shift-y: 0.35rem;
+}
+
+[dir="rtl"] .blora-indicator[data-placement="inside"],
+[dir="rtl"] .blora-indicator--inside {
+  --blora-indicator-shift-x: 0.35rem;
+}
