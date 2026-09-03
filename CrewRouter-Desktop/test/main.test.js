@@ -47,6 +47,13 @@ test('forged URL or header context cannot authorize privileged settings IPC', ()
   assert.doesNotMatch(source, /trustedRemote|x-crewrouter|authorization.*settings/i);
 });
 
+test('Electron acceptance writes required screenshots in the repository root', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'run-electron-acceptance.js'), 'utf8');
+  assert.match(source, /path\.resolve\(root, '\.\.', '\.hermes', 'screenshots'\)/);
+  assert.match(source, /desktop-settings-local-960x700\.png/);
+  assert.match(source, /desktop-settings-local-600x700\.png/);
+});
+
 test('preload bridge is present at the formal renderer path', () => {
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'src', 'preload.js')), true);
   const preload = fs.readFileSync(path.join(__dirname, '..', 'src', 'preload.js'), 'utf8');

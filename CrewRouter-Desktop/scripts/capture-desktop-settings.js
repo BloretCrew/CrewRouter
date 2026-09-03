@@ -6,7 +6,7 @@ const { app, BrowserWindow } = require('electron');
 
 const userData = process.env.CREWROUTER_ACCEPTANCE_USER_DATA;
 const phase = process.env.CREWROUTER_ACCEPTANCE_PHASE || 'first';
-const outputDir = path.resolve(process.env.CREWROUTER_ACCEPTANCE_OUTPUT || '.hermes/screenshots');
+const outputDir = path.resolve(process.env.CREWROUTER_ACCEPTANCE_OUTPUT || path.join(__dirname, '..', '..', '.hermes', 'screenshots'));
 if (!userData) throw new Error('CREWROUTER_ACCEPTANCE_USER_DATA is required');
 app.setPath('userData', path.resolve(userData));
 delete process.env.CREWROUTER_SERVER_ROOT;
@@ -63,18 +63,22 @@ async function capture(win, width, file) {
 }
 
 app.whenReady().then(async () => {
+  console.log(`[desktop-settings] ${phase}: app ready`);
   const main = windows()[0];
   if (!main) throw new Error('Desktop 主窗口未创建');
   await waitFor(main, "document.readyState === 'complete' && Boolean(window.crewrouterDesktop) && Boolean(document.getElementById('local'))", 30000);
+  console.log(`[desktop-settings] ${phase}: renderer ready`);
   if (phase === 'first') {
     await main.webContents.executeJavaScript("document.getElementById('local').click(); void 0", true);
     await waitFor(main, "!document.getElementById('local-profile-step').hidden && document.activeElement?.id === 'local-username'");
     await main.webContents.executeJavaScript("document.getElementById('local-username').value = 'Desktop Tester'; document.getElementById('local-profile-form').requestSubmit(); void 0", true);
   }
   await waitFor(main, "location.hostname === '127.0.0.1' && (location.pathname === '/console' || location.pathname === '/console/')", 60000);
+  console.log(`[desktop-settings] ${phase}: console ready`);
   await waitFor(main, "Boolean(document.getElementById('desktop-settings'))", 30000);
   await main.webContents.executeJavaScript("document.getElementById('desktop-settings').click(); void 0", true);
   const settings = await getSettingsWindow();
+  console.log(`[desktop-settings] ${phase}: settings window ready`);
   let details = await assertSettingsPage(settings, '运行中');
   const data = await settings.webContents.executeJavaScript('window.crewrouterDesktop.getDesktopSettings()', true);
   if (!data.local?.pid || !data.local?.port || data.local.ready !== true) throw new Error(`Local Server 元数据缺失：${JSON.stringify(data.local)}`);

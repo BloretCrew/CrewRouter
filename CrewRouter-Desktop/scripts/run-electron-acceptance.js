@@ -7,9 +7,10 @@ const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'crewrouter-electron-acceptance-'));
-const output = path.join(root, '.hermes', 'screenshots');
+const output = path.resolve(root, '..', '.hermes', 'screenshots');
 const sourceElectron = path.join(root, 'node_modules', '.bin', 'electron');
 const packagedElectron = path.join(root, 'dist', 'linux-unpacked', 'crewrouter-desktop');
+if (path.relative(path.resolve(root, '..'), output).startsWith('..')) throw new Error(`Electron acceptance output must be in repository root: ${output}`);
 // 使用正式源码 main 运行验收；打包 Server 由 test:packaged-server 单独验证。
 const electron = sourceElectron;
 const electronArgs = ['--disable-gpu', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : [])];
