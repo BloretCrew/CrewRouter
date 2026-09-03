@@ -8771,6 +8771,7 @@ ${extractorBody}
       this._currentManageModels = models;
       this.renderManageModels(models);
     } catch (error) {
+      setBloraState('manageModelsContent', 'error');
       setBloraState('manageModelsLoading', 'idle');
       setBloraState('manageModelsError', 'error');
       document.getElementById('manageModelsLoading').style.display = 'none';

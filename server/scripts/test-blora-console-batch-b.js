@@ -48,6 +48,7 @@ for (const marker of [
   "setBloraState('manageModelsError', 'error')",
   "setBloraState('manageModelsContent', models.length ? 'success' : 'empty')",
   "if (!Array.isArray(models)) throw new Error(t('获取模型列表失败'))",
+  "setBloraState('manageModelsContent', 'error')",
   "setBloraState('keyModelsContent', 'empty')",
   "setBloraState('keyModelsContent', 'success')",
   "setBloraState('keyModelsContent', 'error')",
