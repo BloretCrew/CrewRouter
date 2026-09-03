@@ -8,6 +8,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/blora/blora.css">
+  <link rel="stylesheet" href="/blora/tokens.css">
+  <link rel="stylesheet" href="/blora/tokens.dark.css">
+  <script type="module" src="/blora/auto.js"></script>
+  <script src="/js/blora-foundation.js"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
@@ -80,7 +85,7 @@
 </head>
 <body>
   <div style="position:absolute;top:10px;right:12px;z-index:99;">
-    <select id="langToggle" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;border:1px solid var(--border,#e5e7eb);border-radius:6px;background:var(--card,#fff);color:var(--foreground,#111827);">
+    <select id="langToggle" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;border:1px solid var(--border,#e5e7eb);border-radius:6px;background:var(--card,#fff);color:var(--foreground,#111827);" class="blora-input">
       <option value="zh">中文</option>
       <option value="en">EN</option>
     </select>
@@ -109,14 +114,14 @@
       <ul id="ocScopeList" class="oc-scopes"></ul>
 
       <div class="oc-section-label" data-i18n="选择用于本次授权的 API Key">选择用于本次授权的 API Key</div>
-      <select id="ocApiKeySelect" name="api_key_id" class="oc-select"></select>
+      <select id="ocApiKeySelect" name="api_key_id" class="oc-select blora-input"></select>
       <div class="oc-hint" data-i18n="本次授权将以所选密钥的身份行事，用量与计费归属该密钥。">本次授权将以所选密钥的身份行事，用量与计费归属该密钥。</div>
 
       <div id="ocHiddenFields"></div>
 
       <div class="oc-actions">
-        <button type="submit" name="decision" value="approve" id="ocApproveBtn" class="oc-btn oc-btn-approve" data-i18n="同意授权">同意授权</button>
-        <button type="submit" name="decision" value="deny" id="ocDenyBtn" class="oc-btn oc-btn-deny" data-i18n="拒绝">拒绝</button>
+        <button type="submit" name="decision" value="approve" id="ocApproveBtn" class="oc-btn oc-btn-approve blora-button" data-i18n="同意授权">同意授权</button>
+        <button type="submit" name="decision" value="deny" id="ocDenyBtn" class="oc-btn oc-btn-deny blora-button" data-i18n="拒绝">拒绝</button>
       </div>
     </form>
   </div>

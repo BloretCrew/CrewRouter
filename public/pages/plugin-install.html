@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>安装插件到 CrewRouter</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="stylesheet" href="/blora/blora.css">
+  <link rel="stylesheet" href="/blora/tokens.css">
+  <link rel="stylesheet" href="/blora/tokens.dark.css">
+  <script type="module" src="/blora/auto.js"></script>
+  <script src="/js/blora-foundation.js"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
@@ -107,8 +112,8 @@
         html += '<div class="pi-section"><h3>行为</h3><ul>' + behaviorHtml(info.behavior) + '</ul></div>';
         html += '<div class="pi-warn">安装后将立即启用该插件，并每日从插件商店检查是否有更新（若有更新会提醒系统管理员）。</div>';
         html += '<div class="pi-actions">' +
-          '<button class="btn btn-primary" id="piConfirm">确认安装</button>' +
-          '<button class="btn btn-secondary" id="piCancel">取消</button>' +
+          '<button class="btn btn-primary blora-button" id="piConfirm">确认安装</button>' +
+          '<button class="btn btn-secondary blora-button" id="piCancel">取消</button>' +
         '</div>';
 
         root.innerHTML = html;

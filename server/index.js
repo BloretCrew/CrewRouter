@@ -42,6 +42,16 @@ const PUBLIC_DIR = (() => {
   return path.join(__dirname, '../public');
 })();
 
+// Blora 只从正式依赖的 dist 目录提供资源，不把 node_modules 暴露为通用静态目录。
+const BLORA_DIST_DIR = (() => {
+  const candidates = [
+    path.join(__dirname, '../node_modules/@bloret-crew/blora-design/dist'),
+    path.join(__dirname, 'node_modules/@bloret-crew/blora-design/dist'),
+    path.join(process.cwd(), 'node_modules/@bloret-crew/blora-design/dist'),
+  ];
+  return candidates.find((dir) => fs.existsSync(dir) && fs.statSync(dir).isDirectory()) || candidates[0];
+})();
+
 // 版本号：开发时读项目根 package.json；构建后读 dist/package.json
 const APP_VERSION = (() => {
   const candidates = [
@@ -2548,6 +2558,17 @@ app.use((req, res, next) => {
 
 // 静态文件（开发环境禁用强缓存）
 app.use(express.static(PUBLIC_DIR, { etag: false, maxAge: 0 }));
+
+// 官方 Blora 资源映射：路径被固定在包内 dist，禁止回退到任意 node_modules 文件。
+app.use('/blora', express.static(BLORA_DIST_DIR, {
+  etag: true,
+  fallthrough: false,
+  index: false,
+  dotfiles: 'deny',
+  setHeaders(res) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  },
+}));
 
 // 版本号接口（无需认证）
 app.get('/api/version', (req, res) => {

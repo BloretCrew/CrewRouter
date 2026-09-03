@@ -1,0 +1,408 @@
+{
+  "schema": "crewrouter.blora-page-audit/v1",
+  "generatedAt": "2026-09-03T07:36:54.959Z",
+  "scope": "public/pages and public/js",
+  "pages": [
+    {
+      "page": "public/pages/admin.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 359,
+        "dialogs": 169,
+        "forms": 5,
+        "tables": 2,
+        "states": 101
+      },
+      "initialization": 11,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/i18n.js?v=2",
+        "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js",
+        "/js/theme.js?v=2",
+        "/js/dom.js?v=3",
+        "/js/dialog.js?v=2",
+        "/js/edition-badge.js?v=1",
+        "/js/admin.js?v=18",
+        "/js/plugin-runtime.js?v=1"
+      ]
+    },
+    {
+      "page": "public/pages/console.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 288,
+        "dialogs": 222,
+        "forms": 6,
+        "tables": 11,
+        "states": 112
+      },
+      "initialization": 28,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js",
+        "/js/theme.js?v=2",
+        "/js/i18n.js?v=2",
+        "/js/dom.js?v=3",
+        "/js/dialog.js?v=2",
+        "/js/session-tool-groups.js?v=2",
+        "/js/vendor/marked.min.js",
+        "/js/edition-badge.js?v=1",
+        "/js/app.js?v=55",
+        "/js/plugin-runtime.js?v=1"
+      ]
+    },
+    {
+      "page": "public/pages/data.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 2,
+        "dialogs": 0,
+        "forms": 0,
+        "tables": 2,
+        "states": 12
+      },
+      "initialization": 7,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/edition-badge.js?v=1",
+        "/js/i18n.js?v=2",
+        "/js/theme.js?v=2"
+      ]
+    },
+    {
+      "page": "public/pages/feishu-bind.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 3,
+        "dialogs": 0,
+        "forms": 1,
+        "tables": 0,
+        "states": 19
+      },
+      "initialization": 5,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/i18n.js?v=2",
+        "/js/theme.js?v=2",
+        "/js/edition-badge.js?v=1"
+      ]
+    },
+    {
+      "page": "public/pages/index.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 9,
+        "dialogs": 0,
+        "forms": 2,
+        "tables": 0,
+        "states": 78
+      },
+      "initialization": 14,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/i18n.js?v=2",
+        "/js/theme.js?v=2",
+        "/js/edition-badge.js?v=1"
+      ]
+    },
+    {
+      "page": "public/pages/oauth-consent.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 4,
+        "dialogs": 0,
+        "forms": 1,
+        "tables": 0,
+        "states": 8
+      },
+      "initialization": 5,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/i18n.js?v=2",
+        "/js/theme.js?v=2",
+        "/js/edition-badge.js?v=1",
+        "/js/oauth-consent.js?v=1"
+      ]
+    },
+    {
+      "page": "public/pages/playground.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 18,
+        "dialogs": 13,
+        "forms": 0,
+        "tables": 0,
+        "states": 3
+      },
+      "initialization": 5,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/i18n.js?v=2",
+        "/js/theme.js?v=2",
+        "/js/dom.js?v=3",
+        "/js/dialog.js?v=2",
+        "/js/edition-badge.js?v=1",
+        "/js/playground.js?v=2"
+      ]
+    },
+    {
+      "page": "public/pages/plugin-install.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 2,
+        "dialogs": 0,
+        "forms": 0,
+        "tables": 0,
+        "states": 20
+      },
+      "initialization": 6,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/edition-badge.js?v=1"
+      ]
+    },
+    {
+      "page": "public/pages/purchase.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 2,
+        "dialogs": 0,
+        "forms": 0,
+        "tables": 0,
+        "states": 22
+      },
+      "initialization": 7,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/i18n.js?v=2",
+        "/js/theme.js?v=2",
+        "/js/edition-badge.js?v=1"
+      ]
+    },
+    {
+      "page": "public/pages/set-password.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 4,
+        "dialogs": 0,
+        "forms": 1,
+        "tables": 0,
+        "states": 22
+      },
+      "initialization": 5,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/i18n.js?v=2",
+        "/js/theme.js?v=2",
+        "/js/edition-badge.js?v=1"
+      ]
+    },
+    {
+      "page": "public/pages/setup.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 12,
+        "dialogs": 0,
+        "forms": 0,
+        "tables": 0,
+        "states": 68
+      },
+      "initialization": 14,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/i18n.js?v=2",
+        "/js/edition-badge.js?v=1"
+      ]
+    },
+    {
+      "page": "public/pages/showcase.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 2,
+        "dialogs": 0,
+        "forms": 0,
+        "tables": 1,
+        "states": 2
+      },
+      "initialization": 10,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/i18n.js?v=2",
+        "/js/edition-badge.js?v=1"
+      ]
+    },
+    {
+      "page": "public/pages/store.html",
+      "blora": {
+        "css": true,
+        "tokens": true,
+        "darkTokens": true,
+        "auto": true,
+        "foundation": true
+      },
+      "dom": {
+        "controls": 3,
+        "dialogs": 0,
+        "forms": 0,
+        "tables": 0,
+        "states": 5
+      },
+      "initialization": 5,
+      "scripts": [
+        "/blora/auto.js",
+        "/js/blora-foundation.js",
+        "/js/i18n.js?v=2",
+        "/js/theme.js?v=2",
+        "/js/edition-badge.js?v=1",
+        "/js/store.js?v=3"
+      ]
+    }
+  ],
+  "initialization": [
+    {
+      "file": "public/js/admin.js",
+      "matches": 220
+    },
+    {
+      "file": "public/js/app.js",
+      "matches": 231
+    },
+    {
+      "file": "public/js/blora-foundation.js",
+      "matches": 1
+    },
+    {
+      "file": "public/js/dialog.js",
+      "matches": 7
+    },
+    {
+      "file": "public/js/dom.js",
+      "matches": 3
+    },
+    {
+      "file": "public/js/edition-badge.js",
+      "matches": 2
+    },
+    {
+      "file": "public/js/i18n.js",
+      "matches": 4
+    },
+    {
+      "file": "public/js/oauth-consent.js",
+      "matches": 3
+    },
+    {
+      "file": "public/js/playground.js",
+      "matches": 43
+    },
+    {
+      "file": "public/js/plugin-runtime.js",
+      "matches": 9
+    },
+    {
+      "file": "public/js/session-tool-groups.js",
+      "matches": 0
+    },
+    {
+      "file": "public/js/store.js",
+      "matches": 32
+    },
+    {
+      "file": "public/js/theme.js",
+      "matches": 6
+    }
+  ],
+  "summary": {
+    "pages": 13,
+    "pagesWithFoundation": 13,
+    "controls": 708,
+    "forms": 16,
+    "dialogs": 404,
+    "tables": 16,
+    "states": 472
+  }
+}
