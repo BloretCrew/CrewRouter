@@ -768,7 +768,7 @@ class ConsoleApp {
     ];
 
     return `
-      <div class="api-key-card ${isEnabled ? '' : 'key-disabled'}" data-key-id="${key.id}"
+      <div class="blora-card api-key-card ${isEnabled ? '' : 'key-disabled'}" data-key-id="${key.id}"
            ondragover="app.handleApiKeyDragOver(event);app.handleApiKeySortOver(event)" ondragleave="app.handleApiKeyDragLeave(event);app.handleApiKeySortLeave(event)" ondrop="app.handleApiKeyDrop(event, ${key.id});app.handleApiKeySortDrop(event, ${key.id})">
         <div class="api-key-header">
           <div class="api-key-title">
@@ -823,7 +823,7 @@ class ConsoleApp {
         <div class="api-key-footer">
           ${this._renderApiKeyRoutePill(key, modelDisplay, queueLen)}
           <div class="api-key-actions">
-            <button type="button" class="btn btn-sm btn-primary" onclick="app.showKeyModels(${key.id})">模型队列</button>
+            <button type="button" class="blora-button btn btn-sm btn-primary" onclick="app.showKeyModels(${key.id})">模型队列</button>
             ${this._renderApiKeyMoreMenu(key.id, moreItems)}
           </div>
         </div>
@@ -945,7 +945,7 @@ class ConsoleApp {
     }).join('');
     return `
       <div class="api-key-more">
-        <button type="button" class="btn btn-sm btn-secondary" onclick="event.stopPropagation();app.toggleApiKeyMoreMenu(${keyId})">更多</button>
+        <button type="button" class="blora-button btn btn-sm btn-secondary" onclick="event.stopPropagation();app.toggleApiKeyMoreMenu(${keyId})">更多</button>
         <div id="${menuId}" class="api-key-more-menu" style="display:none;" onclick="event.stopPropagation()">
           ${itemsHtml}
         </div>
@@ -2285,7 +2285,7 @@ class ConsoleApp {
     const hasModels = provider.models_loaded && provider.models && provider.models.length > 0;
     const totalCount = provider.model_count != null ? provider.model_count : (provider.pagination?.total ?? (provider.models ? provider.models.length : 0));
     return `
-      <div class="model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}"
+      <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}"
            data-picker-provider-index="${teamIndex}-${providerIndex}"
            data-team-id="${escapeHtml(team.team_id)}"
            data-provider-id="${escapeHtml(provider.provider_id)}"
@@ -10878,21 +10878,21 @@ ${extractorBody}
       <div class="model-library-item-actions">
         ${isKeyPicker ? '' : this._renderLibraryMoveControls('model', team.team_id, providerId)}
         ${isProviderDisabled
-          ? '<button class="btn btn-sm btn-secondary" disabled style="opacity:0.5;">' + t('供应商已禁用') + '</button>'
+          ? '<button class="blora-button btn btn-sm btn-secondary" disabled style="opacity:0.5;">' + t('供应商已禁用') + '</button>'
           : isKeyPicker
             ? (queueIndex >= 0
-              ? `<button class="btn btn-sm btn-secondary" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
-              : '<button class="btn btn-sm btn-primary">' + t('加入队列') + '</button>')
+              ? `<button class="blora-button btn btn-sm btn-secondary" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
+              : '<button class="blora-button btn btn-sm btn-primary">' + t('加入队列') + '</button>')
           : `
-             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title="${t('测试模型连通性')}">
+             <button class="blora-button btn btn-sm btn-secondary" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title="${t('测试模型连通性')}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试
             </button>
             ${isOwner
               ? ''
               : isCurrent
-                ? '<button class="btn btn-sm btn-secondary" disabled>' + t('已绑定') + '</button>'
-                : '<button class="btn btn-sm btn-primary">' + t('绑定') + '</button>'}
+                ? '<button class="blora-button btn btn-sm btn-secondary" disabled>' + t('已绑定') + '</button>'
+                : '<button class="blora-button btn btn-sm btn-primary">' + t('绑定') + '</button>'}
           `}
         ${isKeyPicker ? '' : this._renderLibraryMoreMenu(modelMoreItems)}
       </div>
