@@ -45,6 +45,8 @@ test('redirect callback binds one safe target and rejects replay or credentials'
   await assert.rejects(() => flow.parseCallback(`crewrouter://connect/?state=${second}&serverUrl=https%3A%2F%2Fother.example`, { allowLocalhost: true }), /不一致|DNS|内网/);
   const third = flow.createState({ serverUrl: 'http://127.0.0.1:20001' });
   assert.throws(() => flow.parseCallback(`crewrouter://connect/?state=${third}&code=secret`, { allowLocalhost: true }), /凭据/);
+  const fragmentState = flow.createState({ serverUrl: 'http://127.0.0.1:20001' });
+  assert.throws(() => flow.parseCallback(`crewrouter://connect/?state=${fragmentState}#access_token=secret`, { allowLocalhost: true }), /fragment/);
 });
 
 test('Demo URL construction carries a validated target without inventing an endpoint', () => {

@@ -11,7 +11,6 @@ contextBridge.exposeInMainWorld('crewrouterDesktop', Object.freeze({
   openExternal: (url) => ipcRenderer.invoke('desktop:open-external', url),
   listProfiles: () => ipcRenderer.invoke('desktop:list-profiles'),
   switchProfile: (id) => ipcRenderer.invoke('desktop:switch-profile', id),
-  restartLocal: () => ipcRenderer.invoke('desktop:restart-local'),
   quit: () => ipcRenderer.invoke('desktop:quit'),
   openSettings: () => ipcRenderer.invoke('desktop:open-settings'),
   getDesktopSettings: () => ipcRenderer.invoke('desktop:get-settings'),

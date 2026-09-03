@@ -31,6 +31,7 @@ class RedirectFlow {
     if (url.protocol === 'crewrouter:') {
       if (!((url.hostname === 'oauth' && url.pathname === '/callback') || (url.hostname === 'connect' && url.pathname === '/') || (url.hostname === 'connect' && url.pathname === ''))) throw new Error('不支持的回调类型');
     } else if (!['http:', 'https:'].includes(url.protocol)) throw new Error('不支持的回调协议');
+    if (url.hash) throw new Error('回调不得携带 fragment');
     for (const key of url.searchParams.keys()) if (SENSITIVE_CALLBACK_PARAM.test(key)) throw new Error('回调不得携带凭据或授权码');
     const state = url.searchParams.get('state');
     if (!state) throw new Error('回调缺少 state');

@@ -43,4 +43,9 @@ test('preload bridge is present at the formal renderer path', () => {
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'src', 'preload.js')), true);
   const preload = fs.readFileSync(path.join(__dirname, '..', 'src', 'preload.js'), 'utf8');
   assert.match(preload, /contextBridge\.exposeInMainWorld\('crewrouterDesktop'/);
+  assert.doesNotMatch(preload, /restartLocal/);
+  const settingsPreload = fs.readFileSync(path.join(__dirname, '..', 'src', 'settings-preload.js'), 'utf8');
+  assert.match(settingsPreload, /restartLocal/);
+  const mainSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'main.js'), 'utf8');
+  assert.match(mainSource, /desktop:restart-local', async \(event\) => \{ if \(!isSettingsFrame\(event\)/);
 });

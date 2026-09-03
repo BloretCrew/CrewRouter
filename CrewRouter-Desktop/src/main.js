@@ -128,7 +128,7 @@ async function openSafeExternal(raw) {
 }
 function createSettingsWindow() {
   if (state.settingsWindow && !state.settingsWindow.isDestroyed()) { state.settingsWindow.focus(); return; }
-  state.settingsWindow = new electron.BrowserWindow({ width: 760, height: 720, minWidth: 600, webPreferences: getWindowWebPreferences(), title: 'CrewRouter Desktop Settings' });
+  state.settingsWindow = new electron.BrowserWindow({ width: 760, height: 720, minWidth: 600, webPreferences: { ...getWindowWebPreferences(), preload: path.join(__dirname, 'settings-preload.js') }, title: 'CrewRouter Desktop Settings' });
   state.settingsWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   state.settingsWindow.webContents.on('will-navigate', (event, url) => { try { if (new URL(url).protocol !== 'file:' || decodeURIComponent(new URL(url).pathname) !== settingsEntry) event.preventDefault(); } catch { event.preventDefault(); } });
   state.settingsWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
@@ -171,7 +171,7 @@ function registerIpc() {
     return connect(active.url, { name: active.name });
   });
   const isSettingsFrame = (event) => Boolean(state.settingsWindow && event.sender === state.settingsWindow.webContents && event.senderFrame?.url === `file://${settingsEntry}` && event.senderFrame?.isMainFrame !== false);
-  ipcMain.handle('desktop:restart-local', async (event) => { if (!isRendererFrame(event) && !isSettingsFrame(event)) fail('IPC 来源不可信'); if (!state.local) fail('本地 Server 未运行'); return startLocal(); });
+  ipcMain.handle('desktop:restart-local', async (event) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); if (!state.local) fail('本地 Server 未运行'); return startLocal(); });
   ipcMain.handle('desktop:open-settings', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); createSettingsWindow(); });
 
   ipcMain.handle('desktop:get-settings', (event) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); return { status: currentStatus(), profiles: state.connection.listProfiles(), settings: state.connection.store.getSettings(), local: state.local?.getStatus() || null }; });
