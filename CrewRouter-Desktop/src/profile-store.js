@@ -6,7 +6,12 @@ const path = require('node:path');
 const SCHEMA_VERSION = 1;
 const USERNAME_MAX_LENGTH = 64;
 const DANGEROUS_USERNAME_CHARS = /[<>"'`\\/\u0000-\u001f\u007f]/;
-const emptyState = () => ({ schemaVersion: SCHEMA_VERSION, activeProfileId: null, profiles: [] });
+const emptyState = () => ({ schemaVersion: SCHEMA_VERSION, activeProfileId: null, profiles: [], settings: { autoConnect: true, theme: 'system', notifications: true, updateChecks: true } });
+const SETTINGS_KEYS = ['autoConnect', 'theme', 'notifications', 'updateChecks'];
+const normalizeSettings = (value) => {
+  const source = value && typeof value === 'object' ? value : {};
+  return { autoConnect: source.autoConnect !== false, theme: ['system', 'light', 'dark'].includes(source.theme) ? source.theme : 'system', notifications: source.notifications !== false, updateChecks: source.updateChecks !== false };
+};
 
 function validateLocalDisplayName(value) {
   if (typeof value !== 'string') return { ok: false, error: '请输入用户名。' };
@@ -28,7 +33,7 @@ class ProfileStore {
         capabilities: p.capabilities && typeof p.capabilities === 'object' ? p.capabilities : {},
         protocolVersion: p.protocolVersion || null, lastConnectedAt: p.lastConnectedAt || null }));
     const activeProfileId = profiles.some((p) => p.id === raw.activeProfileId) ? raw.activeProfileId : (profiles[0]?.id || null);
-    return { schemaVersion: SCHEMA_VERSION, activeProfileId, profiles };
+    return { schemaVersion: SCHEMA_VERSION, activeProfileId, profiles, settings: normalizeSettings(raw.settings) };
   }
 
   load() {
@@ -60,6 +65,17 @@ class ProfileStore {
   remove(id) { const state = this.load(); state.profiles = state.profiles.filter((p) => p.id !== id); if (state.activeProfileId === id) state.activeProfileId = state.profiles[0]?.id || null; return this.save(state); }
   setActive(id) { const state = this.load(); if (!state.profiles.some((p) => p.id === id)) throw new Error('profile 不存在'); state.activeProfileId = id; return this.save(state); }
   getActive() { const state = this.load(); return state.profiles.find((p) => p.id === state.activeProfileId) || null; }
+  rename(id, name) {
+    const result = validateLocalDisplayName(name);
+    if (!result.ok) throw new Error(result.error);
+    const state = this.load(); const profile = state.profiles.find((p) => p.id === id);
+    if (!profile) throw new Error('profile 不存在');
+    profile.name = result.value; profile.displayName = profile.mode === 'local' ? result.value : profile.displayName;
+    return this.save(state);
+  }
+  getSettings() { return this.load().settings; }
+  saveSettings(settings) { const state = this.load(); state.settings = normalizeSettings(settings); return this.save(state).settings; }
 }
 
-module.exports = { ProfileStore, SCHEMA_VERSION, USERNAME_MAX_LENGTH, validateLocalDisplayName };
+module.exports = { ProfileStore, SCHEMA_VERSION, USERNAME_MAX_LENGTH, validateLocalDisplayName, SETTINGS_KEYS, normalizeSettings };
+

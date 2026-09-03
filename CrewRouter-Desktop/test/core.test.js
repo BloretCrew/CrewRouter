@@ -72,6 +72,19 @@ test('profile store persists local display name and identity without affecting r
   assert.equal(state.profiles.find((p) => p.id === 'remote').displayName, null);
 });
 
+test('desktop settings are isolated and profiles can be renamed or removed', () => {
+  const store = tempStore();
+  store.upsert({ id: 'local', name: 'Local', url: 'http://localhost:1234', mode: 'local' });
+  store.upsert({ id: 'remote', name: 'Remote', url: 'https://remote.example', mode: 'remote' });
+  store.rename('remote', '远程工作区');
+  assert.equal(store.getSettings().theme, 'system');
+  store.saveSettings({ theme: 'dark', autoConnect: false, notifications: true, updateChecks: false, token: 'must-not-persist' });
+  assert.deepEqual(store.getSettings(), { theme: 'dark', autoConnect: false, notifications: true, updateChecks: false });
+  assert.doesNotMatch(JSON.stringify(store.load()), /token|api.?key/i);
+  store.remove('remote');
+  assert.equal(store.load().profiles.length, 1);
+});
+
 test('profile store recovers corruption and switches profiles', () => {
   const store = tempStore();
   assert.equal(store.load().profiles.length, 0);

@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="zh-CN" data-blora-color-scheme="dark">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CrewRouter Desktop Settings</title><link rel="stylesheet" href="vendor/blora-design/blora.css"><link rel="stylesheet" href="vendor/blora-design/tokens.dark.css"><link rel="stylesheet" href="settings.css"></head>
+<body><main class="settings-shell"><header><div><p class="eyebrow">CREWROUTER DESKTOP</p><h1 data-i18n="title">Desktop 设置</h1></div><select id="language" aria-label="Language"><option value="zh">中文</option><option value="en">English</option></select></header>
+<section class="card"><h2 data-i18n="connection">当前连接</h2><dl id="connection"></dl></section>
+<section class="card"><h2 data-i18n="profiles">Profiles</h2><div id="profiles"></div></section>
+<section class="card local-only" id="local-card"><h2 data-i18n="localServer">Local Server</h2><dl id="local"></dl><div class="actions"><button id="restart" data-i18n="restart">安全重启</button><button id="stop" class="danger" data-i18n="stop">停止</button></div></section>
+<section class="card"><h2 data-i18n="preferences">Desktop 偏好</h2><label><input type="checkbox" id="autoConnect"> <span data-i18n="autoConnect">启动时自动连接上次 Profile</span></label><label><input type="checkbox" id="notifications"> <span data-i18n="notifications">启用桌面通知</span></label><label><input type="checkbox" id="updateChecks"> <span data-i18n="updateChecks">检查更新</span></label><label><span data-i18n="theme">主题</span> <select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label></section>
+<section class="card"><h2 data-i18n="diagnostics">诊断信息</h2><p class="muted" data-i18n="diagnosticsHint">仅包含安全白名单字段，不包含 Token 或 API Key。</p><button id="copy" data-i18n="copy">复制诊断信息</button><output id="message" role="status"></output></section></main><script src="settings.js"></script></body></html>
