@@ -18,7 +18,12 @@ const distDir = path.join(path.dirname(packageJsonPath), 'dist');
 function createBloraResourceRouter() {
   const router = express.Router();
   router.use((req, res, next) => {
-    const requestPath = decodeURIComponent(req.path || '/');
+    let requestPath;
+    try {
+      requestPath = decodeURIComponent(req.path || '/');
+    } catch {
+      return res.status(404).type('text/plain').send('Not Found');
+    }
     if (requestPath.includes('\0') || requestPath.includes('..') || requestPath.startsWith('/.')) {
       return res.status(404).type('text/plain').send('Not Found');
     }
@@ -26,7 +31,8 @@ function createBloraResourceRouter() {
     if (file !== distDir && !file.startsWith(`${distDir}${path.sep}`)) return res.status(404).type('text/plain').send('Not Found');
     if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return res.status(404).type('text/plain').send('Not Found');
     res.setHeader('Cache-Control', 'public, max-age=31536000');
-    return res.sendFile(path.basename(file), { root: distDir, dotfiles: 'deny' }, (error) => {
+    const relativeFile = path.relative(distDir, file);
+    return res.sendFile(relativeFile, { root: distDir, dotfiles: 'deny' }, (error) => {
       if (error && !res.headersSent) res.status(error.statusCode || 404).type('text/plain').send('Not Found');
     });
   });

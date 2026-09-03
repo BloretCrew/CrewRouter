@@ -15,9 +15,21 @@ async function main() {
   assert.strictEqual(typeof auto.defineAllBloraElements, 'function');
   const autoPath = path.join(path.dirname(require.resolve('@bloret-crew/blora-design/package.json')), 'dist/auto.js');
   assert.strictEqual((await import(pathToFileURL(autoPath).href)).defineAllBloraElements instanceof Function, true);
-  const css = fs.readFileSync(path.join(path.dirname(autoPath), 'blora.css'), 'utf8');
-  assert.match(css, /@import ["']\.\/tokens\.css["']/);
-  assert.match(css, /@import ["']\.\/components\/button\/button\.css["']/);
+  const dist = path.dirname(autoPath);
+  const css = fs.readFileSync(path.join(dist, 'blora.css'), 'utf8');
+  const imports = [...css.matchAll(/@import\s+["']([^"']+)["']/g)].map((m) => m[1]);
+  assert.ok(imports.includes('./tokens.css'));
+  assert.ok(imports.includes('./components/button/button.css'));
+  const reachable = new Set();
+  const visitCss = (relative) => {
+    if (reachable.has(relative)) return;
+    reachable.add(relative);
+    const source = fs.readFileSync(path.join(dist, relative), 'utf8');
+    for (const imported of [...source.matchAll(/@import\s+["']([^"']+)["']/g)].map((m) => m[1])) {
+      if (imported.startsWith('./')) visitCss(path.posix.normalize(path.posix.join(path.posix.dirname(relative), imported)));
+    }
+  };
+  visitCss('blora.css');
 
   const app = express();
   app.use('/blora', createBloraResourceRouter());
@@ -31,7 +43,9 @@ async function main() {
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   try {
-    for (const [file, type] of [['blora.css', 'text/css'], ['tokens.dark.css', 'text/css'], ['auto.js', 'javascript']]) {
+    assert.ok(reachable.has('tokens.css'));
+    assert.ok(reachable.has('components/button/button.css'));
+    for (const [file, type] of [['blora.css', 'text/css'], ['tokens.dark.css', 'text/css'], ['components/button/button.css', 'text/css'], ['auto.js', 'javascript']]) {
       const response = await request(`/blora/${file}?v=2.0.8`);
       assert.strictEqual(response.status, 200, file); assert.match(response.type, new RegExp(type)); assert.match(response.cache, /max-age=31536000/); assert.ok(response.body.length > 0);
     }

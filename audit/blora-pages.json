@@ -1,6 +1,6 @@
 {
-  "schema": "crewrouter.blora-page-audit/v2",
-  "scope": "public/pages and explicit page initialization entry points",
+  "schema": "crewrouter.blora-page-audit/v3",
+  "scope": "static DOM plus explicit initialization entry points",
   "pages": [
     {
       "page": "public/pages/admin.html",
@@ -17,20 +17,19 @@
         ]
       },
       "dom": {
-        "controls": 359,
-        "dialogs": 0,
+        "controls": 319,
+        "nativeDialogs": 0,
         "forms": 5,
         "tables": 2,
         "states": 52,
-        "legacyModalContainers": 115,
-        "nativeDialogs": 0,
+        "legacyModalContainers": 95,
         "legacyDialogScript": 1,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 2,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -59,20 +58,19 @@
         ]
       },
       "dom": {
-        "controls": 288,
-        "dialogs": 0,
+        "controls": 260,
+        "nativeDialogs": 0,
         "forms": 6,
         "tables": 11,
         "states": 58,
-        "legacyModalContainers": 160,
-        "nativeDialogs": 0,
+        "legacyModalContainers": 133,
         "legacyDialogScript": 1,
         "legacyDialogApiCalls": 2,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 2,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -104,19 +102,18 @@
       },
       "dom": {
         "controls": 2,
-        "dialogs": 0,
+        "nativeDialogs": 0,
         "forms": 0,
         "tables": 0,
         "states": 0,
         "legacyModalContainers": 0,
-        "nativeDialogs": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 1,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -141,19 +138,18 @@
       },
       "dom": {
         "controls": 3,
-        "dialogs": 0,
+        "nativeDialogs": 0,
         "forms": 1,
         "tables": 0,
         "states": 1,
         "legacyModalContainers": 0,
-        "nativeDialogs": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 1,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -178,19 +174,18 @@
       },
       "dom": {
         "controls": 9,
-        "dialogs": 0,
+        "nativeDialogs": 0,
         "forms": 2,
         "tables": 0,
         "states": 1,
         "legacyModalContainers": 0,
-        "nativeDialogs": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 1,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -214,20 +209,19 @@
         ]
       },
       "dom": {
-        "controls": 4,
-        "dialogs": 0,
+        "controls": 2,
+        "nativeDialogs": 0,
         "forms": 1,
         "tables": 0,
         "states": 2,
         "legacyModalContainers": 0,
-        "nativeDialogs": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 1,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -253,19 +247,18 @@
       },
       "dom": {
         "controls": 18,
-        "dialogs": 0,
+        "nativeDialogs": 0,
         "forms": 0,
         "tables": 0,
         "states": 2,
         "legacyModalContainers": 6,
-        "nativeDialogs": 0,
         "legacyDialogScript": 1,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 1,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -293,17 +286,16 @@
       },
       "dom": {
         "controls": 0,
-        "dialogs": 0,
+        "nativeDialogs": 0,
         "forms": 0,
         "tables": 0,
-        "states": 1,
+        "states": 0,
         "legacyModalContainers": 0,
-        "nativeDialogs": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
       "initialization": 0,
       "scripts": [
@@ -328,19 +320,18 @@
       },
       "dom": {
         "controls": 1,
-        "dialogs": 0,
+        "nativeDialogs": 0,
         "forms": 0,
         "tables": 0,
         "states": 3,
         "legacyModalContainers": 0,
-        "nativeDialogs": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 1,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -365,19 +356,18 @@
       },
       "dom": {
         "controls": 4,
-        "dialogs": 0,
+        "nativeDialogs": 0,
         "forms": 1,
         "tables": 0,
         "states": 1,
         "legacyModalContainers": 0,
-        "nativeDialogs": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 1,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -401,20 +391,19 @@
         ]
       },
       "dom": {
-        "controls": 12,
-        "dialogs": 0,
+        "controls": 7,
+        "nativeDialogs": 0,
         "forms": 0,
         "tables": 0,
         "states": 11,
         "legacyModalContainers": 0,
-        "nativeDialogs": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 2,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -438,19 +427,18 @@
       },
       "dom": {
         "controls": 2,
-        "dialogs": 0,
+        "nativeDialogs": 0,
         "forms": 0,
         "tables": 1,
         "states": 0,
         "legacyModalContainers": 0,
-        "nativeDialogs": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 1,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -474,19 +462,18 @@
       },
       "dom": {
         "controls": 3,
-        "dialogs": 0,
+        "nativeDialogs": 0,
         "forms": 0,
         "tables": 0,
         "states": 3,
         "legacyModalContainers": 0,
-        "nativeDialogs": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "staticOnly": true,
         "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed"
+        "runtime": "not-observed",
+        "observation": "static-dom-only"
       },
-      "initialization": 1,
+      "initialization": 0,
       "scripts": [
         "/blora/auto.js?v=2.0.8",
         "/js/blora-foundation.js",
@@ -500,77 +487,99 @@
   "initialization": [
     {
       "file": "public/js/admin.js",
-      "matches": 1
+      "domContentLoaded": 1,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/app.js",
-      "matches": 0
+      "domContentLoaded": 0,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/blora-foundation.js",
-      "matches": 0
+      "domContentLoaded": 0,
+      "loadEntrypoints": 0
+    },
+    {
+      "file": "public/js/blora-version.js",
+      "domContentLoaded": 0,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/dialog.js",
-      "matches": 0
+      "domContentLoaded": 0,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/dom.js",
-      "matches": 0
+      "domContentLoaded": 0,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/edition-badge.js",
-      "matches": 1
+      "domContentLoaded": 1,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/i18n.js",
-      "matches": 1
+      "domContentLoaded": 1,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/oauth-consent.js",
-      "matches": 0
+      "domContentLoaded": 0,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/playground.js",
-      "matches": 1
+      "domContentLoaded": 1,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/plugin-runtime.js",
-      "matches": 1
+      "domContentLoaded": 1,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/session-tool-groups.js",
-      "matches": 0
+      "domContentLoaded": 0,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/store.js",
-      "matches": 1
+      "domContentLoaded": 1,
+      "loadEntrypoints": 0
     },
     {
       "file": "public/js/theme.js",
-      "matches": 1
+      "domContentLoaded": 1,
+      "loadEntrypoints": 0
     }
   ],
   "migration": {
-    "officialFoundation": "loaded on all public pages",
-    "nativeEnhancement": "blora-button/blora-input classes only; no custom elements claimed",
+    "nativeEnhancement": "CSS classes only; no custom elements claimed",
     "dialog": "not migrated; legacy dialog.js and modal markup remain",
-    "complexPages": "admin, console, playground not broadly rewritten"
+    "dynamicTemplates": "conservative count unavailable without runtime",
+    "runtime": "not observed"
   },
   "summary": {
     "pages": 13,
     "pagesWithFoundation": 13,
-    "controls": 705,
-    "dialogs": 0,
+    "controls": 630,
+    "nativeDialogs": 0,
     "forms": 16,
     "tables": 14,
-    "states": 135,
-    "legacyModalContainers": 281,
-    "nativeDialogs": 0,
+    "states": 134,
+    "legacyModalContainers": 234,
     "legacyDialogScript": 3,
     "legacyDialogApiCalls": 2,
-    "staticOnly": 13,
-    "dynamicTemplates": "0conservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobserved",
-    "runtime": "0not-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observed"
+    "dynamicTemplates": {
+      "value": "conservative-unobserved",
+      "numeric": false
+    },
+    "runtime": {
+      "value": "not-observed",
+      "numeric": false
+    }
   }
 }
