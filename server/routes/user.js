@@ -126,8 +126,9 @@ router.get('/models', requireAuth, async (req, res) => {
        FROM models m
        LEFT JOIN providers p ON m.provider = p.id
        LEFT JOIN series s ON m.series = s.name
-       WHERE m.enabled = TRUE
-       ORDER BY CASE WHEN m.series = '' THEN 1 ELSE 0 END, m.series, m.name`
+       WHERE m.enabled = TRUE AND m.created_by = $1
+       ORDER BY CASE WHEN m.series = '' THEN 1 ELSE 0 END, m.series, m.name`,
+      [req.session.user.id]
     );
     res.json(result.rows);
   } catch (error) {
@@ -143,8 +144,9 @@ router.get('/models', requireAuth, async (req, res) => {
          FROM models m
          LEFT JOIN providers p ON m.provider = p.id
          LEFT JOIN series s ON m.series = s.name
-         WHERE m.enabled = TRUE
-         ORDER BY CASE WHEN m.series = '' THEN 1 ELSE 0 END, m.series, m.name`
+         WHERE m.enabled = TRUE AND m.created_by = $1
+         ORDER BY CASE WHEN m.series = '' THEN 1 ELSE 0 END, m.series, m.name`,
+        [req.session.user.id]
       );
       res.json(fallback.rows);
     } catch (fallbackError) {
@@ -3598,7 +3600,8 @@ router.put('/current-model', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE
 router.get('/providers', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, format FROM providers WHERE enabled = TRUE ORDER BY name`
+      `SELECT id, name, format FROM providers WHERE enabled = TRUE AND created_by = $1 ORDER BY name`,
+      [req.session.user.id]
     );
     res.json(result.rows);
   } catch (error) {
@@ -4336,6 +4339,15 @@ router.post('/models', requireAuth, async (req, res) => {
   }
 
   try {
+    // 个人模型只能绑定当前用户拥有的供应商。
+    const providerCheck = await pool.query(
+      'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
+      [provider, req.session.user.id]
+    );
+    if (providerCheck.rows.length === 0) {
+      return res.status(403).json({ error: '只能使用您自己的供应商创建模型' });
+    }
+
     // 获取用户的个人 Team
     const personalTeam = await getUserPersonalTeam(req.session.user.id);
     if (!personalTeam) {

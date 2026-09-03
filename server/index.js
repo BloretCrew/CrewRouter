@@ -2411,7 +2411,7 @@ async function ensureDesktopLocalPersonalModels(client, team) {
      SELECT $1, m.id FROM models m
      JOIN providers p ON p.id = m.provider
      WHERE m.enabled = TRUE AND p.enabled = TRUE
-     ON CONFLICT (team_id, model_id) DO UPDATE SET enabled = TRUE`,
+     ON CONFLICT (team_id, model_id) DO NOTHING`,
     [team.id]
   );
 }

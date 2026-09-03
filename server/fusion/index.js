@@ -64,6 +64,28 @@ async function getModelConfig(modelId) {
 }
 
 // 获取供应商配置
+async function assertModelAccessForUser(modelIds, userId) {
+  const ids = [...new Set((modelIds || []).map(id => String(id || '').trim()).filter(Boolean))];
+  if (!ids.length || !userId) return;
+  const result = await pool.query(
+    `SELECT DISTINCT m.id, m.alias, m.upstream_model_id
+       FROM models m
+       JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
+       JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
+       JOIN user_teams ut ON ut.team_id = tm.team_id AND ut.user_id = $2
+      WHERE (m.id = ANY($1::text[]) OR m.alias = ANY($1::text[]) OR m.upstream_model_id = ANY($1::text[]))
+        AND m.enabled = TRUE`,
+    [ids, userId]
+  );
+  const allowed = new Set(result.rows.flatMap(row => [row.id, row.alias, row.upstream_model_id].filter(Boolean).map(String)));
+  const forbidden = ids.find(id => !allowed.has(String(id)));
+  if (forbidden) {
+    const error = new Error(`用户无权使用 Fusion 模型: ${forbidden}`);
+    error.code = 'model_access_denied';
+    throw error;
+  }
+}
+
 async function getProviderForRequest(providerId) {
   try {
     const provider = await pool.query('SELECT * FROM providers WHERE id = $1 AND enabled = TRUE', [providerId]);
@@ -396,6 +418,13 @@ async function processFusion(body, req, options = {}) {
     }
     Logger.info(`[Fusion] 使用预设配置: ${fusionConfig.name}`);
   }
+
+  const requestUserId = options.requestUserId || req?.apiUser?.userId || req?.apiUser?.user_id;
+  await assertModelAccessForUser([
+    ...(fusionConfig.panel_models || []),
+    fusionConfig.judge_model_id,
+    fusionConfig.outer_model_id
+  ], requestUserId);
 
   Logger.info(`[Fusion] 配置详情: panel=${fusionConfig.panel_models.join(', ')}, judge=${fusionConfig.judge_model_id}, outer=${fusionConfig.outer_model_id}`);
 

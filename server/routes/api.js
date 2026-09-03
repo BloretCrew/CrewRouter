@@ -352,6 +352,57 @@ function resolveModelQueue(apiUser) {
  * - 否则回退默认 modelQueue / currentModelId
  * @returns {{ queue: string[], requestSource: string, harnessOverride: boolean }}
  */
+async function getAuthorizedModelIds(userId, modelIds) {
+  const ids = [...new Set((modelIds || []).map(id => String(id || '').trim()).filter(Boolean))];
+  if (!ids.length) return new Set();
+  const result = await pool.query(
+    `SELECT DISTINCT m.id
+       FROM models m
+       JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
+       JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
+       JOIN user_teams ut ON ut.team_id = tm.team_id AND ut.user_id = $2
+      WHERE m.id = ANY($1::text[]) AND m.enabled = TRUE`,
+    [ids, userId]
+  );
+  return new Set(result.rows.map(row => String(row.id)));
+}
+
+async function refreshApiUserModelAuthorization(apiUser) {
+  const [keyResult, queueResult, harnessResult] = await Promise.all([
+    pool.query(
+      `SELECT current_model_id, fusion_panel_models, fusion_judge_model_id, fusion_outer_model_id
+         FROM api_keys WHERE id = $1 AND user_id = $2`,
+      [apiUser.keyId, apiUser.userId]
+    ),
+    pool.query(
+      `SELECT model_id FROM api_key_models
+         WHERE api_key_id = $1 AND enabled IS DISTINCT FROM FALSE
+         ORDER BY sort_order ASC, id ASC`,
+      [apiUser.keyId]
+    ),
+    pool.query(
+      `SELECT harness, model_id FROM api_key_harness_models WHERE api_key_id = $1`,
+      [apiUser.keyId]
+    ),
+  ]);
+  const key = keyResult.rows[0] || {};
+  const queue = queueResult.rows.map(row => String(row.model_id || '').trim()).filter(Boolean);
+  const currentModelId = key.current_model_id || null;
+  const harnessModels = Object.fromEntries(harnessResult.rows
+    .filter(row => row.harness && row.model_id)
+    .map(row => [row.harness, row.model_id]));
+  const fusionPanelModels = Array.isArray(key.fusion_panel_models) ? key.fusion_panel_models : [];
+  const fusionIds = [...fusionPanelModels, key.fusion_judge_model_id, key.fusion_outer_model_id];
+  const allowed = await getAuthorizedModelIds(apiUser.userId, [...queue, currentModelId, ...Object.values(harnessModels), ...fusionIds]);
+  apiUser.currentModelId = currentModelId && allowed.has(String(currentModelId)) ? currentModelId : null;
+  apiUser.modelQueue = queue.filter(id => allowed.has(String(id)));
+  apiUser.harnessModels = Object.fromEntries(Object.entries(harnessModels).filter(([, id]) => allowed.has(String(id))));
+  apiUser.fusionPanelModels = fusionPanelModels.filter(id => allowed.has(String(id)));
+  apiUser.fusionJudgeModelId = key.fusion_judge_model_id && allowed.has(String(key.fusion_judge_model_id)) ? key.fusion_judge_model_id : '';
+  apiUser.fusionOuterModelId = key.fusion_outer_model_id && allowed.has(String(key.fusion_outer_model_id)) ? key.fusion_outer_model_id : '';
+  return apiUser;
+}
+
 function resolveModelQueueForRequest(apiUser, req, metadata = {}) {
   const meta = clientMetaFromReq(req, metadata);
   const requestSource = normalizeRequestSource(meta.requestSource);
@@ -1138,6 +1189,7 @@ async function validateApiKey(req, res, next) {
         [cached.keyId]
       ).catch(err => Logger.warn('[API密钥验证] 更新 last_used_at 失败:', err.message));
 
+      await refreshApiUserModelAuthorization(cached);
       req.apiUser = cached;
       return next();
     }
@@ -1239,6 +1291,7 @@ async function validateApiKey(req, res, next) {
     // 缓存验证结果
     setCachedApiKey(apiKey, apiUser);
 
+    await refreshApiUserModelAuthorization(apiUser);
     req.apiUser = apiUser;
     next();
   } catch (error) {
@@ -2522,6 +2575,7 @@ async function handleChatCompletion(req, res) {
 
   // CrewRouter: 使用 API Key 绑定的有序模型队列，忽略请求中的 model；
   // 若识别到 harness 且有单独绑定，则优先使用该模型。
+  await refreshApiUserModelAuthorization(req.apiUser);
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
   if (!modelQueue.length) {
@@ -2884,6 +2938,7 @@ async function handleFusionRequest(req, res, format = 'openai') {
         response_format,
         requestContext: req._upstreamAttemptContext,
         signal: req._requestLifecycle?.signal,
+        requestUserId: req.apiUser.userId,
         apiKeyFusionConfig: {
           panel_models: req.apiUser.fusionPanelModels || [],
           judge_model_id: req.apiUser.fusionJudgeModelId || '',
@@ -3187,6 +3242,7 @@ async function handleAnthropicMessage(req, res) {
   }
 
   // CrewRouter: 使用 API Key 绑定的有序模型队列；harness 单独绑定优先
+  await refreshApiUserModelAuthorization(req.apiUser);
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
   if (!modelQueue.length) {
@@ -5273,6 +5329,7 @@ async function handleResponses(req, res) {
   }
 
   // CrewRouter: 使用 API Key 绑定的有序模型队列；harness 单独绑定优先
+  await refreshApiUserModelAuthorization(req.apiUser);
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
   if (!modelQueue.length) {
