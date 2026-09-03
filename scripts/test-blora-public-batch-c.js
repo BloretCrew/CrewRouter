@@ -12,6 +12,7 @@ const consolePage = read('public/pages/console.html');
 const playgroundJs = read('public/js/playground.js');
 const appJs = read('public/js/app.js');
 const serverJs = read('server/routes/playground.js');
+const streamState = require(path.join(root, 'server/utils/playground-stream-state'));
 
 for (const [name, html] of [['playground', playground], ['console', consolePage]]) {
   assert.match(html, /\/blora\/blora\.css\?v=2\.0\.8/);
@@ -41,7 +42,7 @@ assert.match(appJs, /outerSelect\.value = String\(currentOuter \|\| models\[0\]/
 assert.doesNotMatch(appJs, /fusionJudgeSelect[\s\S]{0,300}selected/);
 assert.match(playgroundJs, /STREAM_TERMINAL_ERROR/);
 assert.match(playgroundJs, /pg-retry-btn/);
-assert.match(playgroundJs, /Object\.freeze\(\{ text, model, systemPrompt, temperature, maxTokens, thinking, thinkingBudget, reasoningEffort \}\)/);
+assert.match(playgroundJs, /Object\.freeze\(\{ text, model, systemPrompt, temperature, maxTokens, thinking, thinkingBudget, reasoningEffort, apiMessages:/);
 assert.match(playgroundJs, /this\.send\(retryPayload\)/);
 assert.match(playgroundJs, /previousMessages = this\.messages\.slice\(\)/);
 assert.match(playgroundJs, /rollbackRequest\(\)/);
@@ -62,48 +63,40 @@ assert.match(serverJs, /streamFailed = true;[\s\S]*不可恢复的 SSE JSON 解�
 assert.match(playgroundJs, /const stopped = fullContent \|\| ''/);
 assert.match(playgroundJs, /data-id="\$\{Number\.isSafeInteger\(convId\)/);
 
-// Execute the terminal-state model against chunked SSE input, rather than only checking markers.
-function simulateSse(frames, mode = 'normal') {
+// Execute the production stream state helper against chunked SSE input.
+function executeSse(frames, mode = 'normal') {
   const out = [];
-  let completed = false;
-  let failed = false;
-  let disconnected = mode === 'disconnect';
+  const state = { clientDisconnected: mode === 'disconnect', timeoutAborted: mode === 'timeout', streamCompleted: false, streamFailed: false };
   for (const frame of frames) {
-    if (disconnected || completed || failed) break;
-    if (frame === '[DONE]') { completed = true; if (!disconnected) out.push('[DONE]'); break; }
-    try {
-      const value = JSON.parse(frame);
-      if (value.error) { failed = true; out.push({ error: value.error, terminal: true }); break; }
-      out.push(value);
-    } catch (_) {
-      failed = true;
-      out.push({ error: { type: 'upstream_stream_error' }, terminal: true });
-      break;
-    }
+    const result = streamState.consumePlaygroundSseFrame(state, frame);
+    if (result.kind === 'ignore') break;
+    out.push(result);
+    if (result.kind === 'done' || result.kind === 'error') break;
   }
-  if (mode === 'timeout' && !disconnected && !completed) {
-    failed = true;
-    out.push({ error: { type: 'upstream_stream_error' }, terminal: true });
-  }
-  if (!disconnected && !failed && !completed) out.push('[DONE]');
-  return { out, completed, failed, disconnected };
+  const terminal = streamState.finalizePlaygroundStream(state);
+  if (terminal === 'completed' && !out.some((item) => item.kind === 'done')) out.push({ kind: 'done' });
+  if (terminal === 'failed' && !out.some((item) => item.kind === 'error')) out.push({ kind: 'error', terminal: true });
+  if (terminal === 'timeout') out.push({ kind: 'error', terminal: true });
+  return { out, state, terminal };
 }
-const successful = simulateSse(['{"choices":[{"delta":{"content":"ok"}}]}', '[DONE]', '{"choices":[{"delta":{"content":"ignored"}}]}']);
-assert.deepStrictEqual(successful.out.map((x) => typeof x === 'string' ? x : x.choices?.[0]?.delta?.content), ['ok', '[DONE]']);
-assert.strictEqual(successful.out.filter((x) => x === '[DONE]').length, 1);
-const malformed = simulateSse(['{"choices":[]}', '{bad-json']);
-assert.strictEqual(malformed.failed, true);
-assert.strictEqual(malformed.out.at(-1).terminal, true);
-assert.strictEqual(malformed.out.includes('[DONE]'), false);
-const timedOut = simulateSse(['{"choices":[]}'], 'timeout');
-assert.strictEqual(timedOut.failed, true);
-assert.strictEqual(timedOut.out.at(-1).error.type, 'upstream_stream_error');
-assert.strictEqual(timedOut.out.includes('[DONE]'), false);
-const disconnected = simulateSse(['{"choices":[]}', '[DONE]'], 'disconnect');
+const successful = executeSse(['{"choices":[{"delta":{"content":"ok"}}]}', '[DONE]', '{"choices":[{"delta":{"content":"ignored"}}]}']);
+assert.strictEqual(successful.terminal, 'completed');
+assert.strictEqual(successful.out.filter((x) => x.kind === 'done').length, 1);
+const malformed = executeSse(['{"choices":[]}', '{bad-json']);
+assert.strictEqual(malformed.terminal, 'failed');
+assert.ok(malformed.out.some((item) => item.terminal === true));
+assert.strictEqual(malformed.out.filter((x) => x.kind === 'done').length, 0);
+const timedOut = executeSse(['{"choices":[]}'], 'timeout');
+assert.strictEqual(timedOut.terminal, 'timeout');
+assert.strictEqual(timedOut.out.filter((x) => x.kind === 'done').length, 0);
+const normalEof = executeSse(['{"choices":[]}']);
+assert.strictEqual(normalEof.terminal, 'failed');
+const disconnected = executeSse(['{"choices":[]}', '[DONE]'], 'disconnect');
+assert.strictEqual(disconnected.terminal, 'client-disconnected');
 assert.deepStrictEqual(disconnected.out, []);
 
-// Execute retry payload isolation: changing current UI values cannot alter the captured request.
-const captured = Object.freeze({ text: 'original', model: 'model-a', systemPrompt: 'system-a', temperature: 0.2, maxTokens: 100, thinking: true, thinkingBudget: 200, reasoningEffort: 'medium' });
+// Retry payload is built by production code; this assertion covers the frozen payload contract.
+const captured = Object.freeze({ text: 'original', model: 'model-a', systemPrompt: 'system-a', temperature: 0.2, maxTokens: 100, thinking: true, thinkingBudget: 200, reasoningEffort: 'medium', apiMessages: Object.freeze([{ role: 'user', content: 'original' }]) });
 const currentUi = { text: 'changed', model: 'model-b', systemPrompt: 'system-b', temperature: 1.9 };
 assert.strictEqual(captured.text, 'original');
 assert.strictEqual(captured.model, 'model-a');

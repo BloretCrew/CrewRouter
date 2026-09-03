@@ -439,7 +439,6 @@ class PlaygroundApp {
     const previousMessages = this.messages.slice();
     const previousActiveConvId = this.activeConvId;
     const previousReplyTo = this.replyTo;
-    const retryPayload = Object.freeze({ text, model, systemPrompt, temperature, maxTokens, thinking, thinkingBudget, reasoningEffort });
     const rollbackRequest = () => {
       this.messages = previousMessages;
       this.activeConvId = previousActiveConvId;
@@ -460,11 +459,13 @@ class PlaygroundApp {
       this.messages.push({ role: 'user', content: text });
     }
 
-    const apiMessages = [];
-    if (systemPrompt) {
+    const apiMessages = retryRequest?.apiMessages ? retryRequest.apiMessages.map(message => ({ ...message })) : [];
+    if (!retryRequest && systemPrompt) {
       apiMessages.push({ role: 'system', content: systemPrompt });
     }
-    apiMessages.push(...this.messages);
+    if (!retryRequest) apiMessages.push(...this.messages);
+    if (retryRequest) this.messages = apiMessages.filter(message => message.role !== 'system').map(message => ({ ...message }));
+    const retryPayload = Object.freeze({ text, model, systemPrompt, temperature, maxTokens, thinking, thinkingBudget, reasoningEffort, apiMessages: Object.freeze(apiMessages.map(message => Object.freeze({ ...message }))) });
 
     input.value = '';
     input.style.height = 'auto';
@@ -472,7 +473,7 @@ class PlaygroundApp {
     this.removeWelcome();
     this.renderMessages();
 
-    const currentModel = document.getElementById('pgModel').value;
+    const currentModel = model;
     const modelInfo = this.modelInfo?.[currentModel];
     const meta = {
       model: currentModel,

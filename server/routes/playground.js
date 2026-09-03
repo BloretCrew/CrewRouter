@@ -13,6 +13,7 @@ const { calculatePointsToDeduct } = require('../utils/points-deduct');
 const { clientMetaFromReq } = require('../utils/request-source');
 const { notifyUser, NOTIFICATION_TYPES } = require('../utils/notifications');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
+const { consumePlaygroundSseFrame, finalizePlaygroundStream } = require('../utils/playground-stream-state');
 
 const UPSTREAM_TIMEOUT = 60000;
 const UPSTREAM_STREAM_TIMEOUT = 300000; // 流式请求超时 5 分钟
@@ -372,7 +373,11 @@ router.post('/chat', requireAuth, async (req, res) => {
             if (!line.startsWith('data: ')) continue;
             sseLineCount++;
             const data = line.slice(6).trim();
-            if (data === '[DONE]') {
+            const frame = consumePlaygroundSseFrame({ clientDisconnected, timeoutAborted, streamCompleted, streamFailed }, data);
+            streamCompleted = frame.state?.streamCompleted ?? streamCompleted;
+            streamFailed = frame.state?.streamFailed ?? streamFailed;
+            if (frame.kind === 'ignore') break;
+            if (frame.kind === 'done') {
               Logger.stream(`[Playground] 收到上游 [DONE] 事件`);
               streamCompleted = true;
               if (!clientDisconnected && !res.writableEnded) {
@@ -381,8 +386,13 @@ router.post('/chat', requireAuth, async (req, res) => {
               }
               break;
             }
+            if (frame.kind === 'error') {
+              streamFailed = true;
+              Logger.error(`[Playground] 不可恢复的 SSE 错误: ${frame.message}`);
+              break;
+            }
             try {
-              const parsed = JSON.parse(data);
+              const parsed = frame.parsed;
 
               if (provider.format === 'anthropic') {
                 if (parsed.type === 'content_block_delta') {
@@ -450,6 +460,8 @@ router.post('/chat', requireAuth, async (req, res) => {
         }
       }
 
+      const streamTerminal = finalizePlaygroundStream({ clientDisconnected, timeoutAborted, streamCompleted, streamFailed });
+      if (streamTerminal === 'failed') streamFailed = true;
       if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null; }
       if ((streamFailed || timeoutAborted) && !clientDisconnected && !res.writableEnded) {
         const errorPayload = { error: { message: '上游流式响应失败', type: 'upstream_stream_error', terminal: true } };
