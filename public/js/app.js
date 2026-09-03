@@ -2288,6 +2288,7 @@ class ConsoleApp {
 
     const hasProviders = libraryData.teams.some(team => team.providers && team.providers.length > 0);
     if (!hasProviders) {
+      setBloraState('keyModelsContent', 'empty');
       setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="font-size:15px;color:var(--muted-foreground);margin:0;">' + t('请尝试调整筛选条件') + '</p></div>');
       return;
     }
@@ -10716,9 +10717,9 @@ ${extractorBody}
           <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
           <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">请联系管理员添加模型或加入 Team，也可添加自己的供应商</p>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button class="btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
-            <button class="btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
-            <button class="btn btn-secondary btn-sm" onclick="app.navigateTo(\'myUpstream\')">管理我的上游</button>
+            ${noKeys ? '<button class="blora-button btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
+            <button class="blora-button btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
+            <button class="blora-button btn btn-secondary btn-sm" onclick="app.navigateTo(\'myUpstream\')">管理我的上游</button>
           </div>
         </div>
       `);
@@ -10738,8 +10739,8 @@ ${extractorBody}
           <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
           <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">可调整筛选，或添加自己的上游供应商导入模型</p>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button class="btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
-            <button class="btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
+            ${noKeys ? '<button class="blora-button btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
+            <button class="blora-button btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
           </div>
         </div>
       `);
@@ -11175,12 +11176,12 @@ ${extractorBody}
       if (item.type === 'divider') return '<div class="library-more-menu-divider"></div>';
       const icon = item.icon ? this._libraryMoreMenuIcon(item.icon) : '';
       const cls = item.className ? ` ${item.className}` : '';
-      return `<button type="button" class="library-more-menu-item${cls}" onclick="event.stopPropagation();app.closeLibraryMoreMenus();${item.onClick}">${icon}<span>${escapeHtml(item.label)}</span></button>`;
+      return `<button type="button" class="blora-button library-more-menu-item${cls}" onclick="event.stopPropagation();app.closeLibraryMoreMenus();${item.onClick}">${icon}<span>${escapeHtml(item.label)}</span></button>`;
     }).join('');
 
     return `
       <div class="library-more-menu" onclick="event.stopPropagation()">
-        <button type="button" class="btn btn-sm btn-secondary library-more-btn" title="${t('更多操作')}" onclick="event.stopPropagation();app.toggleLibraryMoreMenu(event, this)">
+        <button type="button" class="blora-button btn btn-sm btn-secondary library-more-btn" title="${t('更多操作')}" onclick="event.stopPropagation();app.toggleLibraryMoreMenu(event, this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
           </svg>
@@ -11789,7 +11790,7 @@ ${extractorBody}
           const meta = this._usageRequestSourceMeta(h.harness);
           return `<button type="button" class="binding-harness-chip" style="--h-color:${meta.color};"
             title="${escapeHtml(meta.label)} → ${escapeHtml(h.name || h.model_id || '')}"
-            onclick="event.stopPropagation();app.enterLibraryHarnessBindMode('${escapeHtml(h.harness)}')">
+            onclick="event.stopPropagation();app.enterLibraryHarnessBindMode('${this._jsString(h.harness)}')">
             ${this._harnessIconHtml(h.harness, 12)}
             <span class="binding-harness-chip-label">${escapeHtml(meta.label)}</span>
             <span class="binding-harness-chip-model">${escapeHtml(h.name || h.model_id || '')}</span>

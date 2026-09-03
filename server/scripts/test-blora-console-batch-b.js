@@ -51,6 +51,12 @@ for (const marker of [
   "setBloraState('keyModelsContent', 'empty')",
   "setBloraState('keyModelsContent', 'success')",
   "setBloraState('keyModelsContent', 'error')",
+  "setBloraState('keyModelsContent', 'empty')",
+  "blora-button btn btn-primary btn-sm" ,
+  'class="blora-button btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商',
+  'class="blora-button library-more-menu-item',
+  'class="blora-button btn btn-sm btn-secondary library-more-btn"',
+  "app.enterLibraryHarnessBindMode('${this._jsString(h.harness)}')",
 ]) assert.ok(js.includes(marker), marker);
 for (const marker of [
   'class="blora-button btn btn-sm btn-secondary" onclick="app.showManageModelsModal(\'${this._jsString(p.id)}\')"',
@@ -60,7 +66,7 @@ for (const marker of [
 ]) assert.ok(js.includes(marker), marker);
 assert.match(js, /app\.testTeamModels\('\$\{this\._jsString\(team\.team_id\)\}'\)/);
 assert.ok((js.match(/app\.loadProviderModelsPage\('\$\{this\._jsString\(team\.team_id\)\}','\$\{this\._jsString\(provider\.provider_id\)\}'/g) || []).length >= 3);
-assert.doesNotMatch(js, /app\.(?:testTeamModels|loadProviderModelsPage|showManageModelsModal|pingUserProvider|editMyProvider|deleteMyProvider|_retryLoadProviderModels|editMyTeamModel|deleteMyTeamModel|selectProvider)\([^\n]*escapeHtml\(/);
+assert.doesNotMatch(js, /app\.(?:testTeamModels|loadProviderModelsPage|showManageModelsModal|pingUserProvider|editMyProvider|deleteMyProvider|_retryLoadProviderModels|editMyTeamModel|deleteMyTeamModel|selectProvider|enterLibraryHarnessBindMode)\([^\n]*escapeHtml\(/);
 for (const marker of [
   'class="blora-button btn btn-sm btn-secondary" onclick="app.editMyTeamModel(\'${this._jsString(m.id)}\')"',
   'class="blora-button btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel(\'${this._jsString(m.id)}\')"',
