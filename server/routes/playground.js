@@ -316,6 +316,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       let clientDisconnected = false;
       let streamCompleted = false;
       let streamFailed = false;
+      const streamState = { clientDisconnected, timeoutAborted, streamCompleted, streamFailed, pendingEvent: '' };
       let backpressureCount = 0;
 
       // 检测客户端断开连接
@@ -370,11 +371,15 @@ router.post('/chat', requireAuth, async (req, res) => {
           buffer = lines.pop() || '';
 
           for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
+            if (!line.startsWith('data: ') && !line.startsWith('event:')) continue;
             sseLineCount++;
-            const frame = consumePlaygroundSseLine({ clientDisconnected, timeoutAborted, streamCompleted, streamFailed }, line, provider.format);
-            streamCompleted = frame.state?.streamCompleted ?? streamCompleted;
-            streamFailed = frame.state?.streamFailed ?? streamFailed;
+            streamState.clientDisconnected = clientDisconnected;
+            streamState.timeoutAborted = timeoutAborted;
+            streamState.streamCompleted = streamCompleted;
+            streamState.streamFailed = streamFailed;
+            const frame = consumePlaygroundSseLine(streamState, line, provider.format);
+            streamCompleted = streamState.streamCompleted;
+            streamFailed = streamState.streamFailed;
             if (frame.kind === 'ignore') break;
             if (frame.kind === 'done') {
               Logger.stream(`[Playground] 收到上游完成事件`);
@@ -468,7 +473,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       }
       if (!res.writableEnded) res.end();
 
-      if (!shouldRecordPlaygroundUsage({ streamCompleted: streamTerminal === 'completed', clientDisconnected, timeoutAborted, streamFailed })) {
+      if (streamTerminal !== 'completed') {
         streamAbortController?.abort();
         recordModelCall(model, false);
         recordLiveCallTest(model, { ok: false, error: clientDisconnected ? 'client disconnected' : timeoutAborted ? 'upstream timeout' : 'upstream stream error' });

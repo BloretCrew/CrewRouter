@@ -67,8 +67,8 @@ assert.strictEqual(anthropicState.streamCompleted, true);
 assert.strictEqual(streamState.finalizePlaygroundStream(anthropicState), 'completed');
 assert.strictEqual(streamState.shouldRecordPlaygroundUsage(anthropicState), true);
 assert.match(serverJs, /upstream_stream_error/);
-assert.match(serverJs, /shouldRecordPlaygroundUsage/);
 assert.match(serverJs, /recordPlaygroundUsageIfCompleted/);
+assert.doesNotMatch(serverJs, /shouldRecordPlaygroundUsage\(/);
 let usageCalls = 0;
 const usageSpy = async () => { usageCalls += 1; };
 function runUsageSpyTest() {
@@ -90,7 +90,8 @@ for (const failure of [
   { streamCompleted: false, clientDisconnected: true, timeoutAborted: false, streamFailed: false },
   { streamCompleted: false, clientDisconnected: false, timeoutAborted: false, streamFailed: false }
 ]) assert.strictEqual(streamState.shouldRecordPlaygroundUsage(failure), false);
-assert.match(serverJs, /shouldRecordPlaygroundUsage/);
+assert.match(serverJs, /recordPlaygroundUsageIfCompleted/);
+assert.doesNotMatch(serverJs, /shouldRecordPlaygroundUsage\(/);
 assert.match(serverJs, /!streamCompleted && !clientDisconnected/);
 assert.match(serverJs, /setTimeout\(\(\) => \{ timeoutAborted = true; streamAbortController\.abort\(\); \}, UPSTREAM_STREAM_TIMEOUT\)/);
 assert.match(serverJs, /for \(let ki = 0; ki < keyAttempts\.length; ki\+\+\) \{[\s\S]*streamAbortController\?\.signal\.aborted/);
