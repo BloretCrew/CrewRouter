@@ -152,7 +152,7 @@ class AdminApp {
         document.querySelectorAll('[data-capability]').forEach((el) => {
           if (instance.capabilities[el.dataset.capability] === false) el.style.display = 'none';
         });
-        if (instance.capabilities.teamAdmin === false && (location.hash.startsWith('#adminTeams') || location.hash === '#adminUserGroups' || location.hash === '#adminAuditLogs')) location.hash = '#adminStats';
+        if (instance.capabilities.multiUser === false && (location.hash.startsWith('#adminUsers') || location.hash.startsWith('#adminTeams') || location.hash === '#adminUserGroups' || location.hash === '#adminAuditLogs')) location.hash = '#adminStats';
       }
     } catch (_) { /* backend remains authoritative */ }
     this.initInvitePanel();

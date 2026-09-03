@@ -24,7 +24,7 @@ const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
 const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-edition');
 
 const requireTeamAdminEdition = requireTeamEdition(() => loadPersistedEdition(pool));
-router.use(['/user-groups', '/user-groups/:id', '/user-group-rules/:id', '/audit-logs', '/stats/multi', '/stats/multi/filters'], requireTeamAdminEdition);
+router.use(['/users', '/users/:id', '/user-groups', '/user-groups/:id', '/user-group-rules/:id', '/audit-logs', '/stats/multi', '/stats/multi/filters'], requireTeamAdminEdition);
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const {
   normalizeProviderKeyEntries,

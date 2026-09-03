@@ -1,18 +1,33 @@
-const TEAM_ONLY_CAPABILITIES = Object.freeze({
-  multiUser: true,
-  teamMembers: true,
-  teamAdmin: true,
-  sharedApiKeys: true,
-  projects: true,
-  auditLogs: true,
-});
 const PERSONAL_CAPABILITIES = Object.freeze({
+  // Personal keeps the individual AI workspace available; only collaboration is edition-gated.
+  ai: true,
+  modelLibrary: true,
+  models: true,
+  providers: true,
+  playground: true,
+  apiKeys: true,
+  usage: true,
   multiUser: false,
   teamMembers: false,
   teamAdmin: false,
   sharedApiKeys: false,
   projects: false,
   auditLogs: false,
+});
+const TEAM_ONLY_CAPABILITIES = Object.freeze({
+  ai: true,
+  modelLibrary: true,
+  models: true,
+  providers: true,
+  playground: true,
+  apiKeys: true,
+  usage: true,
+  multiUser: true,
+  teamMembers: true,
+  teamAdmin: true,
+  sharedApiKeys: true,
+  projects: true,
+  auditLogs: true,
 });
 
 function normalizeEdition(value) {
