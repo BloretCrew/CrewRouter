@@ -40,6 +40,12 @@ function safeColor(value, fallback = 'var(--muted-foreground)') {
   return fallback;
 }
 
+function setBloraState(id, state) {
+  const el = document.getElementById(id);
+  if (el) el.setAttribute('data-blora-state', state);
+  return el;
+}
+
 function safeHttpUrl(value) {
   try {
     const url = new URL(String(value ?? ''), window.location.origin);
@@ -555,7 +561,7 @@ class ConsoleApp {
   }
 
   async loadApiKeys() {
-    const container = document.getElementById('apiKeysList');
+    const container = setBloraState('apiKeysList', 'loading');
     if (container && !(this._lastApiKeys || []).length) {
       setHTML(container, pageLoadingHtml(t('加载 API 密钥...')));
     }
@@ -586,6 +592,7 @@ class ConsoleApp {
       }
 
       if (apiKeys.length === 0) {
+        setBloraState('apiKeysList', 'empty');
         setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无 API 密钥，点击上方按钮一键创建') + '</p>');
         return;
       }
@@ -603,6 +610,7 @@ class ConsoleApp {
           </div>
           <div class="api-keys-list">${keys.map(key => this._renderApiKeyCard(key)).join('')}</div>
         </section>`;
+      setBloraState('apiKeysList', 'success');
       setHTML(container, `<div class="api-key-groups">
         ${renderGroup(t('普通 API Key'), t('仅自己管理的密钥'), normalKeys, 'api-key-group-normal')}
         ${renderGroup('Co-Key', t('已共享给成员，或由其他用户共享给您'), coKeys, 'api-key-group-cokey')}
@@ -612,6 +620,7 @@ class ConsoleApp {
       this._bindApiKeyTagsResizeObserver();
     } catch (error) {
       console.error(t('加载API密钥失败:'), error);
+      setBloraState('apiKeysList', 'error');
       if (container) setHTML(container, '<p style="text-align:center;color:var(--destructive);padding:40px;">' + t('加载失败，请刷新重试') + '</p>');
     }
   }
@@ -5694,6 +5703,7 @@ class ConsoleApp {
       }
       this._promptsCache = data.items;
 
+      setBloraState('myProvidersTable', 'success');
       setHTML(container, `
         <table>
           <thead>
@@ -8302,6 +8312,7 @@ ${extractorBody}
   // ==================== CrewRouter 模型库 ====================
 
   async loadModelLibrary() {
+    setBloraState('modelLibraryContent', 'loading');
     try {
       const libraryRes = await fetch('/api/user/model-library');
       if (!libraryRes.ok) throw new Error(t('模型库接口异常'));
@@ -8343,6 +8354,7 @@ ${extractorBody}
       if (filtersEl) filtersEl.style.display = hasModels ? 'flex' : 'none';
 
       this.filterAndRenderModelLibrary();
+      setBloraState('modelLibraryContent', 'success');
       this._updateLibraryHiddenButtons();
       this._updateLibraryBindingBar();
       this._initLibraryStickyBar();
@@ -8353,6 +8365,7 @@ ${extractorBody}
       this._startQuotaBackgroundRefresh();
     } catch (error) {
       console.error(t('加载模型库失败:'), error);
+      setBloraState('modelLibraryContent', 'error');
       setHTML(document.getElementById('modelLibraryContent'), '<div class="empty-state"><p>' + t('加载失败，请刷新重试') + '</p></div>');
       this._updateLibraryBindingBar();
       this._syncLibraryStickyVisibility(false);
@@ -8405,6 +8418,7 @@ ${extractorBody}
   }
 
   async loadMyProvidersPage() {
+    setBloraState('myProvidersTable', 'loading');
     try {
       const res = await fetch('/api/user/my-providers');
       if (!res.ok) return;
@@ -8412,6 +8426,7 @@ ${extractorBody}
 
       const container = document.getElementById('myProvidersTable');
       if (!providers.length) {
+        setBloraState('myProvidersTable', 'empty');
         setHTML(container, `
           <div class="empty-state" style="padding:60px 20px;text-align:center;">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
@@ -8982,14 +8997,17 @@ ${extractorBody}
   _myTeamModelsFiltered = [];
 
   async loadMyTeamModels() {
+    setBloraState('myTeamModelsTable', 'loading');
     try {
       const res = await fetch('/api/user/my-team-models');
       if (!res.ok) throw new Error(t('获取模型列表失败'));
       this._myTeamModels = await res.json();
       this._myTeamModelsFiltered = [...this._myTeamModels];
       this._renderMyTeamModels(this._myTeamModelsFiltered);
+      setBloraState('myTeamModelsTable', this._myTeamModelsFiltered.length ? 'success' : 'empty');
     } catch (error) {
       console.error(t('加载个人Team模型失败:'), error);
+      setBloraState('myTeamModelsTable', 'error');
       setHTML(document.getElementById('myTeamModelsTable'), '<div class="empty-state"><p>' + t('加载失败，请刷新重试') + '</p></div>');
     }
   }
@@ -10445,6 +10463,7 @@ ${extractorBody}
   }
 
   async loadProviderQuota() {
+    setBloraState('providerQuotaGrid', 'loading');
     const grid = document.getElementById('providerQuotaGrid');
     if (grid && !(this._providerQuotaLoadedOnce)) {
       setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>' + t('正在加载供应商额度缓存...') + '</span></div>');
@@ -10457,12 +10476,15 @@ ${extractorBody}
       const quotaData = await quotaRes.json();
       this._providerQuotaLoadedOnce = true;
       this.renderProviderQuota(quotaData.providers || []);
+      setBloraState('providerQuotaGrid', (quotaData.providers || []).length ? 'success' : 'empty');
     } catch (e) {
+      setBloraState('providerQuotaGrid', 'error');
       console.warn(t('加载供应商额度失败:'), e);
     }
   }
 
   async refreshProviderQuota() {
+    setBloraState('providerQuotaGrid', 'loading');
     const refreshButton = document.getElementById('providerQuotaRefreshBtn');
     if (refreshButton) {
       refreshButton.classList.add('is-loading');
@@ -10480,7 +10502,9 @@ ${extractorBody}
       const quotaData = await quotaRes.json();
       this._providerQuotaLoadedOnce = true;
       this.renderProviderQuota(quotaData.providers || []);
+      setBloraState('providerQuotaGrid', (quotaData.providers || []).length ? 'success' : 'empty');
     } catch (e) {
+      setBloraState('providerQuotaGrid', 'error');
       console.warn(t('刷新供应商额度失败:'), e);
     } finally {
       if (refreshButton) {
@@ -10761,7 +10785,7 @@ ${extractorBody}
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     测试
                   </button>
-                  <button class="btn btn-sm btn-secondary" style="padding:4px 6px;" title="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${provider.provider_id}')">
+                  <button class="blora-button btn btn-sm btn-secondary" style="padding:4px 6px;" title="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   </button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
@@ -10864,7 +10888,7 @@ ${extractorBody}
     <div class="blora-card model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
       <div class="model-library-item-info">
         <div class="model-library-item-name">
-          ${isKeyPicker ? '' : `<button type="button" class="model-star-btn ${isStarred ? 'starred' : ''}" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">
+          ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </button>`}
           ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
