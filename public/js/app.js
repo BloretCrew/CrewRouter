@@ -230,6 +230,7 @@ class ConsoleApp {
     const teamHashPages = new Set(['myUpstream']);
     const safePage = teamHashPages.has(restored.page) && this.instance?.capabilities?.teamProjects === false
       ? 'modelLibrary' : restored.page;
+    if (safePage !== restored.page) this._writeConsoleHash(safePage);
     const startPage = safePage || 'modelLibrary';
     await this.navigateTo(startPage, {
       skipHash: true,
@@ -426,6 +427,7 @@ class ConsoleApp {
     }
     let upstreamTab = options.upstreamTab || null;
     const docPage = options.docPage || null;
+    const legacyUpstreamEntry = page === 'myProviders' || page === 'myTeamModels';
     if (page === 'myProviders') {
       targetPage = 'myUpstream';
       upstreamTab = upstreamTab || 'providers';
@@ -433,7 +435,11 @@ class ConsoleApp {
       targetPage = 'myUpstream';
       upstreamTab = upstreamTab || 'models';
     }
-
+    if (legacyUpstreamEntry && this.instance?.capabilities?.personalProviders === false) {
+      targetPage = 'modelLibrary';
+      upstreamTab = null;
+      if (!options.skipHash) this._writeConsoleHash(targetPage);
+    }
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelector(`.nav-item[data-page="${targetPage}"]`)?.classList.add('active');
 

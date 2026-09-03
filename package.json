@@ -30,6 +30,7 @@
     "test:config-center": "node server/scripts/test-config-center.js",
     "test:instance-edition": "node server/scripts/test-instance-edition.js && node server/scripts/test-instance-edition-persistence.js",
     "test:edition-badge": "node server/scripts/test-edition-badge.js",
+    "test:batch-e-permissions": "node server/scripts/test-batch-e-permissions.js",
     "test:email-toctou-static": "node server/scripts/test-email-toctou-static.js",
     "test:outbox": "node server/scripts/test-outbox.js",
     "audit:blora-pages": "node scripts/audit-blora-pages.js --write",

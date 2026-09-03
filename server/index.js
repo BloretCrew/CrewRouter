@@ -2377,6 +2377,8 @@ if (isDemo) {
 }
 
 const { csrfProtection, csrfTokenRoute } = require('./middleware/csrf');
+app.locals.csrfAllowedOrigins = String(process.env.CR_CSRF_ALLOWED_ORIGINS || config.app?.publicOrigin || '')
+  .split(',').map(value => value.trim()).filter(Boolean);
 app.get('/api/csrf-token', csrfTokenRoute);
 app.use(csrfProtection);
 

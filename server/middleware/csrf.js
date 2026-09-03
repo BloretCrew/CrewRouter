@@ -3,6 +3,12 @@ const crypto = require('crypto');
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const EXEMPT_PREFIXES = ['/auth/', '/oauth/', '/.well-known/'];
 
+function allowedOrigins(req) {
+  const configured = req.app?.locals?.csrfAllowedOrigins || [];
+  const values = Array.isArray(configured) ? configured : [configured];
+  return new Set([requestOrigin(req), ...values.map(value => String(value || '').replace(/\/$/, '')).filter(Boolean)]);
+}
+
 function getOrigin(req) {
   const origin = String(req.headers.origin || '').trim();
   if (origin) return origin.replace(/\/$/, '');
@@ -38,7 +44,7 @@ function csrfProtection(req, res, next) {
   const tokenValid = suppliedBuffer.length === expectedBuffer.length
     && suppliedBuffer.length > 0
     && crypto.timingSafeEqual(suppliedBuffer, expectedBuffer);
-  if ((suppliedOrigin && expected && suppliedOrigin === expected) || tokenValid) return next();
+  if ((suppliedOrigin && allowedOrigins(req).has(suppliedOrigin)) || tokenValid) return next();
   return res.status(403).json({ error: 'CSRF 校验失败', type: 'csrf_failed' });
 }
 
