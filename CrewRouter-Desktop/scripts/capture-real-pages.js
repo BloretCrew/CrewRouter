@@ -24,10 +24,10 @@ async function capture(win, baseUrl, filename, width, height, theme, expectedTex
   await win.webContents.executeJavaScript("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))", true);
   await sleep(1000);
   fs.writeFileSync(path.join(output, filename), (await win.webContents.capturePage()).toPNG());
-  const details = await win.webContents.executeJavaScript(`({ href: location.href, title: document.title, text: document.body.innerText.slice(0, 5000), badge: document.querySelector('[data-edition-badge]')?.textContent || '' })`, true);
+  const details = await win.webContents.executeJavaScript(`({ href: location.href, title: document.title, text: document.body.innerText.slice(0, 5000), modelLibraryContent: document.getElementById('modelLibraryContent')?.innerText || '', badge: document.querySelector('[data-edition-badge]')?.textContent || '' })`, true);
   if (details.href.includes('/404') || /Not found|Error response|No route found/.test(details.text)) throw new Error(`${filename} captured a 404: ${JSON.stringify(details)}`);
   if (!details.badge) throw new Error(`${filename} has no edition badge: ${JSON.stringify(details)}`);
-  if (expectedText && !details.text.includes(expectedText)) throw new Error(`${filename} missing expected content: ${expectedText}`);
+  if (expectedText && !(expectedText instanceof RegExp ? expectedText.test(details.modelLibraryContent) : details.text.includes(expectedText))) throw new Error(`${filename} missing expected content: ${expectedText}`);
   return details;
 }
 
@@ -42,9 +42,10 @@ async function capture(win, baseUrl, filename, width, height, theme, expectedTex
     results.teamDark = await capture(win, teamUrl, 'team-dark-real.png', 1280, 800, 'dark', '2 个模型');
     results.teamNarrow = await capture(win, teamUrl, 'team-narrow-real.png', 600, 800, 'light', '2 个模型');
     const personal = await manager.start();
-    results.personalLight = await capture(win, personal.baseUrl, 'personal-light-real.png', 1280, 800, 'light', 'Personal 版本地服务不提供共享模型库');
-    results.personalDark = await capture(win, personal.baseUrl, 'personal-dark-real.png', 1280, 800, 'dark', 'Personal 版本地服务不提供共享模型库');
-    results.personalNarrow = await capture(win, personal.baseUrl, 'personal-narrow-real.png', 600, 800, 'light', 'Personal 版本地服务不提供共享模型库');
+    const personalEmptyState = /还没有配置 Provider|还没有配置供应商|暂无可用模型/;
+    results.personalLight = await capture(win, personal.baseUrl, 'personal-light-real.png', 1280, 800, 'light', personalEmptyState);
+    results.personalDark = await capture(win, personal.baseUrl, 'personal-dark-real.png', 1280, 800, 'dark', personalEmptyState);
+    results.personalNarrow = await capture(win, personal.baseUrl, 'personal-narrow-real.png', 600, 800, 'light', personalEmptyState);
     console.log(JSON.stringify({ results, output }));
   } finally {
     await manager.stop().catch(() => {});
