@@ -32,7 +32,7 @@ assert.match(scope, /id="keyModelsModalContent"[^>]*class="blora-dialog__panel/)
 for (const id of ['modelLibraryContent', 'myProvidersTable', 'myTeamModelsTable', 'apiKeysList', 'providerQuotaGrid', 'keyModelsContent', 'modelTestModalBody', 'modelUptimeModalBody', 'usageDetailContent']) assert.match(html, new RegExp(`id="${id}"[^>]*data-blora-state="(?:loading|idle|error|success|empty)"`));
 for (const marker of ['模型库', '我的上游', '当前 Key', '供应商额度', '添加供应商', '配置 API Key', 'API Key', '模型队列', 'Claude Code', 'Codex', 'DeepSeek Harness']) assert.ok(scope.includes(marker), marker);
 assert.doesNotMatch(html, /data-blora-state="[^"]+"[^>]*data-blora-state=/);
-for (const marker of ['safeHttpUrl(', 'safeColor(', 'class="blora-card model-library-item', 'class="blora-button btn btn-sm btn-secondary model-test-btn', 'class="blora-button model-star-btn', "pingLibraryProvider('${this._jsString(provider.provider_id)}')", "app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')", "setBloraState('modelLibraryContent', 'loading')", "setBloraState('myProvidersTable', 'loading')", "setBloraState('myTeamModelsTable', 'loading')", "setBloraState('apiKeysList', 'loading')", "setBloraState('providerQuotaGrid', 'loading')"]) assert.ok(js.includes(marker), marker);
+for (const marker of ['safeHttpUrl(', 'safeColor(', 'class="blora-card model-library-item', 'class="blora-button btn btn-sm btn-secondary model-test-btn', 'class="blora-button model-star-btn', "pingLibraryProvider('${this._jsString(provider.provider_id)}')", "app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')", "setBloraState('modelLibraryContent', 'loading')", "setBloraState('myProvidersTable', 'loading')", "setBloraState('myTeamModelsTable', 'loading')", "setBloraState('apiKeysList', 'loading')", "setBloraState('providerQuotaGrid', 'loading')", 'class="blora-button btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')"', 'class="blora-button btn btn-sm btn-secondary binding-mode-exit"', 'class="blora-button binding-harness-chip"', 'class="blora-button binding-key-name binding-key-trigger"', 'class="blora-button library-key-bubble-item"']) assert.ok(js.includes(marker), marker);
 assert.match(js, /series_icon_url[^\n]*safeHttpUrl/);
 assert.match(js, /model\.model_id[^\n]*_jsString/);
 for (const marker of [
@@ -86,4 +86,9 @@ const jsStringSource = js.match(/_jsString\(value\)\s*\{([\s\S]*?)\n  \}/)?.[0] 
 assert.ok(jsStringSource.includes("replace(/'/g"));
 assert.ok(jsStringSource.includes("replace(/\\\\/g"));
 assert.ok(jsStringSource.includes("replace(/\\n/g"));
+for (const marker of [
+  "app.enterLibraryHarnessBindMode('${this._jsString(h.harness)}')",
+  'class="blora-button binding-key-name binding-key-trigger"',
+  'class="blora-button library-key-bubble-item"',
+]) assert.ok(js.includes(marker), marker);
 console.log('Blora Batch B executable edge-state checks passed.');

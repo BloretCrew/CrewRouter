@@ -11736,7 +11736,7 @@ ${extractorBody}
       setHTML(summary, `
         <div class="binding-empty">
           <span>还没有 API Key，创建后才能绑定模型</span>
-          <button class="btn btn-primary btn-sm" onclick="app.navigateTo('apiKeys')">去创建 API Key</button>
+          <button type="button" class="blora-button btn btn-primary btn-sm" onclick="app.navigateTo('apiKeys')">去创建 API Key</button>
         </div>`);
       this._renderLibraryStickyKeyBtn();
       return;
@@ -11758,7 +11758,7 @@ ${extractorBody}
           <div class="binding-mode-banner">
             ${iconHtml}
             <span>正在为 <strong>${escapeHtml(harnessMeta.label)}</strong> 选择模型</span>
-            <button type="button" class="btn btn-sm btn-secondary binding-mode-exit" onclick="app.exitLibraryHarnessBindMode()">退出</button>
+            <button type="button" class="blora-button btn btn-sm btn-secondary binding-mode-exit" onclick="app.exitLibraryHarnessBindMode()">退出</button>
           </div>
           <div class="binding-key-row">
             <span class="binding-key-name">${keyName}</span>
@@ -11788,7 +11788,7 @@ ${extractorBody}
     const harnessChips = harnessList.length
       ? `<div class="binding-harness-chips">${harnessList.map(h => {
           const meta = this._usageRequestSourceMeta(h.harness);
-          return `<button type="button" class="binding-harness-chip" style="--h-color:${meta.color};"
+          return `<button type="button" class="blora-button binding-harness-chip" style="--h-color:${meta.color};"
             title="${escapeHtml(meta.label)} → ${escapeHtml(h.name || h.model_id || '')}"
             onclick="event.stopPropagation();app.enterLibraryHarnessBindMode('${this._jsString(h.harness)}')">
             ${this._harnessIconHtml(h.harness, 12)}
@@ -11803,7 +11803,7 @@ ${extractorBody}
       setHTML(summary, `
         <div class="binding-active">
           <div class="binding-key-row">
-            <button type="button" class="binding-key-name binding-key-trigger"
+            <button type="button" class="blora-button binding-key-name binding-key-trigger"
               data-key-id="${key.id}"
               onclick="app.selectLibraryKey(${key.id}, event)"
               title="${t('再次点击打开菜单')}">${keyName}</button>
@@ -11829,7 +11829,7 @@ ${extractorBody}
     setHTML(summary, `
       <div class="binding-active">
         <div class="binding-key-row">
-          <button type="button" class="binding-key-name binding-key-trigger"
+          <button type="button" class="blora-button binding-key-name binding-key-trigger"
             data-key-id="${key.id}"
             onclick="app.selectLibraryKey(${key.id}, event)"
             title="${t('再次点击打开菜单')}">${keyName}</button>
@@ -12005,7 +12005,7 @@ ${extractorBody}
       const modelText = bound?.name || t('跟随默认');
       const hasOverride = !!bound;
       return `
-        <button type="button" class="library-key-bubble-item" role="menuitem"
+        <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
                 onclick="app.onLibraryKeyBubbleHarness('${h.id}')">
           <span class="library-key-bubble-item-main">
             ${this._harnessIconHtml(h.id, 14)}
@@ -12016,7 +12016,7 @@ ${extractorBody}
     }).join('');
 
     setHTML(menu, `
-      <button type="button" class="library-key-bubble-item" role="menuitem"
+      <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
               onclick="app.onLibraryKeyBubbleLocate()">
         <span class="library-key-bubble-item-main">跳转到绑定模型</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
@@ -12030,7 +12030,7 @@ ${extractorBody}
       <div class="library-key-bubble-section-label">按工具绑定</div>
       ${harnessItems}
       <div class="expand-dropdown-divider"></div>
-      <button type="button" class="library-key-bubble-item" role="menuitem"
+      <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
               onclick="app.onLibraryKeyBubbleExportConfig()">
         <span class="library-key-bubble-item-main">导出客户端配置</span>
       </button>
