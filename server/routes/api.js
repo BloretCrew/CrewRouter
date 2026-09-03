@@ -361,7 +361,8 @@ async function getAuthorizedModelIds(userId, modelIds) {
        JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
        JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
        JOIN user_teams ut ON ut.team_id = tm.team_id AND ut.user_id = $2
-      WHERE m.id = ANY($1::text[]) AND m.enabled = TRUE`,
+      WHERE (m.id = ANY($1::text[]) OR m.alias = ANY($1::text[]) OR m.upstream_model_id = ANY($1::text[]))
+        AND m.enabled = TRUE`,
     [ids, userId]
   );
   return new Set(result.rows.flatMap(row => [row.id, row.alias, row.upstream_model_id].filter(Boolean).map(String)));
