@@ -74,11 +74,12 @@
     </div>
 
     <blora-navbar brand-href="/" title="CrewRouter" variant="floating" class="public-navbar">
-      <a class="blora-navbar__brand" href="/" aria-label="CrewRouter">CrewRouter</a>
-      <div class="blora-navbar__actions">
+      <blora-navbar-tool>
         <select id="langToggle" class="blora-input" data-size="sm" title="Language" aria-label="Language">
           <option value="zh">中文</option><option value="en">EN</option>
         </select>
+      </blora-navbar-tool>
+      <blora-navbar-tool>
         <button id="themeToggle" class="btn btn-icon blora-button" data-variant="secondary" title="切换主题" data-i18n-title="切换主题">
         <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="5"/>
@@ -91,7 +92,7 @@
           <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
         </svg>
         </button>
-      </div>
+      </blora-navbar-tool>
     </blora-navbar>
 
     <div class="login-card">
