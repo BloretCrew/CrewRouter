@@ -3,11 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    (function () {
+      var mode = localStorage.getItem('theme') || 'system';
+      var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', dark);
+      document.documentElement.classList.toggle('light', !dark);
+      document.documentElement.setAttribute('data-blora-color-scheme', dark ? 'dark' : 'light');
+    }());
+  </script>
+
   <title data-i18n="控制台 - CrewRouter">控制台 - CrewRouter</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
+  <script type="module" src="/blora/auto.js?v=2.0.8"></script>
+  <script src="/js/blora-foundation.js"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css?v=25">
   <link rel="stylesheet" href="/css/project-work.css?v=1">
@@ -24,7 +38,7 @@
     })();
   </script>
 </head>
-<body>
+<body class="blora-page">
   <!-- 移动端顶部导航栏 -->
   <div class="mobile-topbar">
     <button class="mobile-hamburger" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单">

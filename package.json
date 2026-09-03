@@ -32,9 +32,12 @@
     "test:edition-badge": "node server/scripts/test-edition-badge.js",
     "test:email-toctou-static": "node server/scripts/test-email-toctou-static.js",
     "test:outbox": "node server/scripts/test-outbox.js",
+    "audit:blora-pages": "node scripts/audit-blora-pages.js --write",
+    "test:blora-foundation": "node scripts/test-blora-foundation.js && node scripts/test-blora-audit-parser.js && node scripts/test-blora-http.js",
     "money-precision:migrate": "node scripts/migrate-money-precision.js"
   },
   "dependencies": {
+    "@bloret-crew/blora-design": "2.0.8",
     "@fluentui/web-components": "^2.6.1",
     "@simplewebauthn/server": "^13.3.0",
     "axios": "^1.16.0",
