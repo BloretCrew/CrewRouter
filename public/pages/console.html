@@ -184,14 +184,14 @@
         <!-- 滚动后悬浮顶栏：筛选 + 搜索 + Key 切换（默认隐藏，由 JS 控制） -->
         <div id="modelLibraryStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
-            <select id="libraryStickyProviderFilter" class="select model-library-sticky-select" aria-label="供应商筛选" data-i18n-title="供应商筛选">
+            <select id="libraryStickyProviderFilter" class="blora-select select model-library-sticky-select" aria-label="供应商筛选" data-i18n-title="供应商筛选">
               <option value="all"><span data-i18n="全部供应商">全部供应商</span></option>
             </select>
             <div class="model-search-box model-library-sticky-search">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               <input type="text" id="libraryStickySearchInput" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..." class="model-search-input" autocomplete="off">
             </div>
-            <button type="button" id="libraryStickyMoreFiltersBtn" class="btn btn-secondary btn-sm model-library-sticky-more-btn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
+            <button type="button" id="libraryStickyMoreFiltersBtn" class="blora-button btn btn-secondary btn-sm model-library-sticky-more-btn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
             <div class="model-library-sticky-key-wrap expand-dropdown" id="libraryStickyKeyWrap" style="display:none;">
@@ -202,19 +202,19 @@
             </div>
           </div>
           <div id="libraryStickyAdvancedFilters" class="model-library-sticky-advanced" style="display:none;" aria-hidden="true">
-            <select id="libraryStickySeriesFilter" class="select model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选">
+            <select id="libraryStickySeriesFilter" class="blora-select select model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选">
               <option value="all"><span data-i18n="全部系列">全部系列</span></option>
             </select>
-            <select id="libraryStickyProviderTagFilter" class="select model-library-sticky-select" aria-label="标签筛选" data-i18n-title="标签筛选">
+            <select id="libraryStickyProviderTagFilter" class="blora-select select model-library-sticky-select" aria-label="标签筛选" data-i18n-title="标签筛选">
               <option value="all"><span data-i18n="全部标签">全部标签</span></option>
             </select>
-            <select id="libraryStickyTestFilter" class="select model-library-sticky-select" aria-label="测试状态" data-i18n-title="测试状态">
+            <select id="libraryStickyTestFilter" class="blora-select select model-library-sticky-select" aria-label="测试状态" data-i18n-title="测试状态">
               <option value="all"><span data-i18n="全部状态">全部状态</span></option>
               <option value="pass"><span data-i18n="测试通过">测试通过</span></option>
               <option value="fail"><span data-i18n="测试失败">测试失败</span></option>
               <option value="untested"><span data-i18n="未测试">未测试</span></option>
             </select>
-            <select id="libraryStickySort" class="select model-library-sticky-select model-library-sticky-sort" aria-label="排序" data-i18n-title="排序">
+            <select id="libraryStickySort" class="blora-select select model-library-sticky-select model-library-sticky-sort" aria-label="排序" data-i18n-title="排序">
               <option value="default"><span data-i18n="默认 / 自定义排序">默认 / 自定义排序</span></option>
               <option value="price_asc"><span data-i18n="价格低→高">价格低→高</span></option>
               <option value="price_desc"><span data-i18n="价格高→低">价格高→低</span></option>
@@ -236,16 +236,16 @@
             <span class="model-library-header-hint"><span data-i18n="点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定">点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定</span></span>
           </div>
           <div class="model-library-header-actions" id="modelLibraryHeaderActions">
-            <button class="btn btn-secondary btn-sm" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型">
+            <button class="blora-button btn btn-secondary btn-sm" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span data-i18n="我的上游">
               我的上游
             </span></button>
-            <button class="btn btn-primary btn-sm" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商">
+            <button class="blora-button btn btn-primary btn-sm" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="添加供应商">
               添加供应商
             </span></button>
             <div class="expand-dropdown" id="libraryMoreDropdown">
-              <button class="btn btn-secondary btn-sm" onclick="app.toggleLibraryMoreDropdown(event)" title="更多操作" data-i18n-title="更多操作"><span data-i18n="更多">
+              <button class="blora-button btn btn-secondary btn-sm" onclick="app.toggleLibraryMoreDropdown(event)" title="更多操作" data-i18n-title="更多操作"><span data-i18n="更多">
                 更多
                 </span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="m6 9 6 6 6-6"/></svg>
               </button>
@@ -308,7 +308,7 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-14.9-4L3 9m0 0V4m0 5h5M4 13a8.1 8.1 0 0 0 14.9 4L21 15m0 0v5m0-5h-5"/></svg>
             </button>
           </div>
-          <div id="providerQuotaGrid" class="model-quota-grid"></div>
+          <div id="providerQuotaGrid" data-blora-state="idle" class="model-quota-grid"></div>
         </div>
 
         <!-- 排序模式工具条：拖拽 + 一键按测试结果排序 -->
@@ -318,16 +318,16 @@
             <span class="library-reorder-toolbar-hint"><span data-i18n="拖拽 ⠿ 调整顺序，或一键按测试结果写入自定义排序">拖拽 ⠿ 调整顺序，或一键按测试结果写入自定义排序</span></span>
           </div>
           <div class="library-reorder-toolbar-actions">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="app.applyLibraryOrderByTest('test_latency_asc')" title="通过的模型优先，延迟从低到高" data-i18n-title="通过的模型优先，延迟从低到高"><span data-i18n="延迟快→慢">
+            <button type="button" class="blora-button btn btn-secondary btn-sm" onclick="app.applyLibraryOrderByTest('test_latency_asc')" title="通过的模型优先，延迟从低到高" data-i18n-title="通过的模型优先，延迟从低到高"><span data-i18n="延迟快→慢">
               延迟快→慢
             </span></button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="app.applyLibraryOrderByTest('test_latency_desc')" title="通过的模型优先，延迟从高到低" data-i18n-title="通过的模型优先，延迟从高到低"><span data-i18n="延迟慢→快">
+            <button type="button" class="blora-button btn btn-secondary btn-sm" onclick="app.applyLibraryOrderByTest('test_latency_desc')" title="通过的模型优先，延迟从高到低" data-i18n-title="通过的模型优先，延迟从高到低"><span data-i18n="延迟慢→快">
               延迟慢→快
             </span></button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="app.applyLibraryOrderByTest('test_tps_desc')" title="通过的模型优先，吞吐从高到低" data-i18n-title="通过的模型优先，吞吐从高到低"><span data-i18n="吞吐高→低">
+            <button type="button" class="blora-button btn btn-secondary btn-sm" onclick="app.applyLibraryOrderByTest('test_tps_desc')" title="通过的模型优先，吞吐从高到低" data-i18n-title="通过的模型优先，吞吐从高到低"><span data-i18n="吞吐高→低">
               吞吐高→低
             </span></button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="app.resetLibraryOrder()" title="清除全部自定义排序" data-i18n-title="清除全部自定义排序"><span data-i18n="重置排序">
+            <button type="button" class="blora-button btn btn-secondary btn-sm" onclick="app.resetLibraryOrder()" title="清除全部自定义排序" data-i18n-title="清除全部自定义排序"><span data-i18n="重置排序">
               重置排序
             </span></button>
           </div>
@@ -340,27 +340,27 @@
             <input type="text" id="librarySearchInput" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..." class="model-search-input">
           </div>
           <div class="model-filter-selects">
-            <select id="libraryProviderFilter" class="select">
+            <select id="libraryProviderFilter" class="blora-select select">
               <option value="all"><span data-i18n="全部供应商">全部供应商</span></option>
             </select>
-            <button type="button" id="libraryMoreFiltersBtn" class="btn btn-secondary btn-sm" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
+            <button type="button" id="libraryMoreFiltersBtn" class="blora-button btn btn-secondary btn-sm" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
           </div>
           <div id="libraryAdvancedFilters" class="model-filter-selects model-filter-advanced" style="display:none;width:100%;">
-            <select id="librarySeriesFilter" class="select">
+            <select id="librarySeriesFilter" class="blora-select select">
               <option value="all"><span data-i18n="全部系列">全部系列</span></option>
             </select>
-            <select id="libraryProviderTagFilter" class="select">
+            <select id="libraryProviderTagFilter" class="blora-select select">
               <option value="all"><span data-i18n="全部标签">全部标签</span></option>
             </select>
-            <select id="libraryTestFilter" class="select">
+            <select id="libraryTestFilter" class="blora-select select">
               <option value="all"><span data-i18n="全部状态">全部状态</span></option>
               <option value="pass"><span data-i18n="测试通过">测试通过</span></option>
               <option value="fail"><span data-i18n="测试失败">测试失败</span></option>
               <option value="untested"><span data-i18n="未测试">未测试</span></option>
             </select>
-            <select id="librarySort" class="select">
+            <select id="librarySort" class="blora-select select">
               <option value="default"><span data-i18n="默认 / 自定义排序">默认 / 自定义排序</span></option>
               <option value="price_asc"><span data-i18n="价格低→高">价格低→高</span></option>
               <option value="price_desc"><span data-i18n="价格高→低">价格高→低</span></option>
@@ -379,7 +379,7 @@
         <div id="modelLibraryCount" style="display:none;margin-bottom:12px;font-size:13px;color:var(--muted-foreground);"></div>
 
         <!-- 模型列表 -->
-        <div id="modelLibraryContent" class="model-library-grid">
+        <div id="modelLibraryContent" data-blora-state="loading" class="model-library-grid">
           <div class="empty-state">
             <div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
           </div>
@@ -392,27 +392,27 @@
           <div class="section-header">
             <h2><span data-i18n="我的上游">我的上游</span></h2>
             <div class="section-actions" id="myUpstreamProviderActions">
-              <button class="btn btn-secondary" onclick="app.batchDeleteProviders()" id="batchDeleteBtn" style="display:none;"><span data-i18n="批量删除">批量删除</span></button>
-              <button class="btn btn-primary" onclick="app.showAddProviderModal()"><span data-i18n="添加供应商">添加供应商</span></button>
+              <button class="blora-button btn btn-secondary" onclick="app.batchDeleteProviders()" id="batchDeleteBtn" style="display:none;"><span data-i18n="批量删除">批量删除</span></button>
+              <button class="blora-button btn btn-primary" onclick="app.showAddProviderModal()"><span data-i18n="添加供应商">添加供应商</span></button>
             </div>
             <div class="section-actions" id="myUpstreamModelActions" style="display:none;">
-              <button class="btn btn-secondary" onclick="app.batchEnableMyTeamModels()" id="batchEnableMyModelsBtn" style="display:none;">
+              <button class="blora-button btn btn-secondary" onclick="app.batchEnableMyTeamModels()" id="batchEnableMyModelsBtn" style="display:none;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="批量启用">
                 批量启用
               </span></button>
-              <button class="btn btn-secondary" onclick="app.batchDisableMyTeamModels()" id="batchDisableMyModelsBtn" style="display:none;">
+              <button class="blora-button btn btn-secondary" onclick="app.batchDisableMyTeamModels()" id="batchDisableMyModelsBtn" style="display:none;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span data-i18n="批量禁用">
                 批量禁用
               </span></button>
-              <button class="btn btn-secondary" onclick="app.showBatchEditMyModelsModal()" id="batchEditMyModelsBtn" style="display:none;">
+              <button class="blora-button btn btn-secondary" onclick="app.showBatchEditMyModelsModal()" id="batchEditMyModelsBtn" style="display:none;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span data-i18n="批量编辑">
                 批量编辑
               </span></button>
-              <button class="btn btn-secondary" onclick="app.batchDeleteMyTeamModels()" id="batchDeleteMyModelsBtn" style="display:none;color:var(--destructive);">
+              <button class="blora-button btn btn-secondary" onclick="app.batchDeleteMyTeamModels()" id="batchDeleteMyModelsBtn" style="display:none;color:var(--destructive);">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span data-i18n="批量删除">
                 批量删除
               </span></button>
-              <button class="btn btn-primary" onclick="app.showAddModelModal()">
+              <button class="blora-button btn btn-primary" onclick="app.showAddModelModal()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="添加模型">
                 添加模型
               </span></button>
@@ -426,7 +426,7 @@
           <p class="my-upstream-hint" id="myUpstreamHint"><span data-i18n="管理自有上游供应商；导入的模型会出现在「模型」页签，也可在模型库中绑定到 API Key。">管理自有上游供应商；导入的模型会出现在「模型」页签，也可在模型库中绑定到 API Key。</span></p>
 
           <div id="myUpstreamProvidersPane" class="my-upstream-pane">
-            <div id="myProvidersTable" class="models-table">
+            <div id="myProvidersTable" data-blora-state="loading" class="models-table">
               <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
             </div>
           </div>
@@ -441,7 +441,7 @@
                 <span id="myTeamModelsCount" style="font-size:13px;color:var(--muted-foreground);"></span>
               </div>
             </div>
-            <div id="myTeamModelsTable" class="models-table">
+            <div id="myTeamModelsTable" data-blora-state="loading" class="models-table">
               <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
             </div>
           </div>
@@ -453,8 +453,8 @@
       <div id="myTeamModelsPage" class="page" style="display:none !important;" aria-hidden="true"></div>
 
       <!-- 批量编辑模型模态框 -->
-      <div id="batchEditMyModelsModal" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width:500px;">
+      <div id="batchEditMyModelsModal" class="blora-dialog modal" role="dialog" aria-modal="true" style="display:none;">
+        <div class="blora-dialog__panel modal-content" style="max-width:500px;">
           <div class="modal-header">
             <h3><span data-i18n="批量编辑模型">批量编辑模型</span></h3>
             <button class="modal-close" onclick="app.closeModals()">&times;</button>
@@ -466,7 +466,7 @@
                 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
                   <input type="checkbox" id="batchEditMyModelsEnabledCheck"><span data-i18n="启用状态"> 启用状态
                 </span></label>
-                <select id="batchEditMyModelsEnabled" class="select" style="margin-top:4px;" disabled>
+                <select id="batchEditMyModelsEnabled" class="blora-select select" style="margin-top:4px;" disabled>
                   <option value="true"><span data-i18n="启用">启用</span></option>
                   <option value="false"><span data-i18n="禁用">禁用</span></option>
                 </select>
@@ -475,38 +475,38 @@
                 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
                   <input type="checkbox" id="batchEditMyModelsSeriesCheck"><span data-i18n="系列"> 系列
                 </span></label>
-                <input type="text" id="batchEditMyModelsSeries" class="input" placeholder="系列名称" data-i18n-placeholder="系列名称" style="margin-top:4px;" disabled>
+                <input type="text" id="batchEditMyModelsSeries" class="blora-input input" placeholder="系列名称" data-i18n-placeholder="系列名称" style="margin-top:4px;" disabled>
               </div>
               <div>
                 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
                   <input type="checkbox" id="batchEditMyModelsDescCheck"><span data-i18n="描述"> 描述
                 </span></label>
-                <textarea id="batchEditMyModelsDesc" class="input" rows="2" placeholder="模型描述" data-i18n-placeholder="模型描述" style="margin-top:4px;resize:vertical;" disabled></textarea>
+                <textarea id="batchEditMyModelsDesc" class="blora-input input" rows="2" placeholder="模型描述" data-i18n-placeholder="模型描述" style="margin-top:4px;resize:vertical;" disabled></textarea>
               </div>
               <div>
                 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
                   <input type="checkbox" id="batchEditMyModelsAliasCheck"><span data-i18n="别名"> 别名
                 </span></label>
-                <input type="text" id="batchEditMyModelsAlias" class="input" placeholder="模型别名" data-i18n-placeholder="模型别名" style="margin-top:4px;" disabled>
+                <input type="text" id="batchEditMyModelsAlias" class="blora-input input" placeholder="模型别名" data-i18n-placeholder="模型别名" style="margin-top:4px;" disabled>
               </div>
               <div style="display:flex;gap:12px;">
                 <div style="flex:1;">
                   <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
                     <input type="checkbox" id="batchEditMyModelsInputPriceCheck"><span data-i18n="输入价格"> 输入价格
                   </span></label>
-                  <input type="number" id="batchEditMyModelsInputPrice" class="input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>
+                  <input type="number" id="batchEditMyModelsInputPrice" class="blora-input input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>
                 </div>
                 <div style="flex:1;">
                   <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
                     <input type="checkbox" id="batchEditMyModelsOutputPriceCheck"><span data-i18n="输出价格"> 输出价格
                   </span></label>
-                  <input type="number" id="batchEditMyModelsOutputPrice" class="input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>
+                  <input type="number" id="batchEditMyModelsOutputPrice" class="blora-input input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>
                 </div>
               </div>
             </div>
           </div>
           <div class="modal-footer">
-        <button class="btn btn-primary" onclick="app.saveBatchEditMyModels()"><span data-i18n="保存">保存</span></button>
+        <button class="blora-button btn btn-primary" onclick="app.saveBatchEditMyModels()"><span data-i18n="保存">保存</span></button>
           </div>
     </div>
       </div>
@@ -518,7 +518,7 @@
           <div class="model-library-sticky-inner">
             <span class="page-sticky-title"><span data-i18n="API 密钥">API 密钥</span></span>
             <span class="page-sticky-hint"><span data-i18n="拖拽标签到下方密钥卡片">拖拽标签到下方密钥卡片</span></span>
-            <button type="button" class="btn btn-primary btn-sm" onclick="app.showModal('createApiKeyModal')" style="margin-left:auto;"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
+            <button type="button" class="blora-button btn btn-primary btn-sm" onclick="app.showModal('createApiKeyModal')" style="margin-left:auto;"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
           </div>
           <div class="page-sticky-tag-row" aria-label="密钥标签" data-i18n-title="密钥标签">
             <span class="page-sticky-tag-label" title="拖拽标签到密钥卡片进行分配" data-i18n-title="拖拽标签到密钥卡片进行分配"><span data-i18n="标签">标签</span></span>
@@ -529,7 +529,7 @@
         <div class="content-section">
           <div class="section-header">
             <h2><span data-i18n="API 密钥">API 密钥</span></h2>
-            <button id="createApiKeyBtn" class="btn btn-primary"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
+            <button id="createApiKeyBtn" class="blora-button btn btn-primary"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
           </div>
 
           <!-- 我的 Key 用量概览（不含他人发起的 Co-Key） -->
@@ -560,7 +560,7 @@
             <div class="key-tag-popover-arrow"></div>
             <div class="key-tag-popover-content">
               <div id="keyTagPopoverTitle" style="font-weight:600;font-size:13px;margin-bottom:8px;"><span data-i18n="创建标签">创建标签</span></div>
-              <input type="text" id="createKeyTagName" class="input" placeholder="标签名称" data-i18n-placeholder="标签名称" style="width:100%;margin-bottom:10px;" maxlength="20">
+              <input type="text" id="createKeyTagName" class="blora-input input" placeholder="标签名称" data-i18n-placeholder="标签名称" style="width:100%;margin-bottom:10px;" maxlength="20">
               <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:6px;"><span data-i18n="选择颜色">选择颜色</span></div>
               <div class="color-picker color-picker-row" id="createKeyTagColors">
                 <div class="color-dot selected" data-color="var(--info)" style="background:var(--info);" onclick="app.selectTagColor(this)"></div>
@@ -575,13 +575,13 @@
                 <div class="color-dot" data-color="#6366f1" style="background:#6366f1;" onclick="app.selectTagColor(this)"></div>
               </div>
               <div style="display:flex;gap:8px;margin-top:12px;">
-                <button class="btn btn-primary btn-sm" id="keyTagPopoverSubmit" onclick="app.saveKeyTag()" style="flex:1;"><span data-i18n="创建">创建</span></button>
-                <button class="btn btn-secondary btn-sm" onclick="app.hideCreateKeyTagPopover()"><span data-i18n="取消">取消</span></button>
+                <button class="blora-button btn btn-primary btn-sm" id="keyTagPopoverSubmit" onclick="app.saveKeyTag()" style="flex:1;"><span data-i18n="创建">创建</span></button>
+                <button class="blora-button btn btn-secondary btn-sm" onclick="app.hideCreateKeyTagPopover()"><span data-i18n="取消">取消</span></button>
               </div>
             </div>
           </div>
 
-          <div id="apiKeysList" class="api-keys-list"></div>
+          <div id="apiKeysList" data-blora-state="loading" class="api-keys-list"></div>
     </div>
 
       <!-- 授权管理（自有 OAuth 服务签发的客户端授权，与 Passport 无关） -->
@@ -591,7 +591,7 @@
             <h2><span data-i18n="授权管理">授权管理</span></h2>
             <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。">已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。</span></p>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="app.loadAuthorizations()"><span data-i18n="刷新授权列表">刷新授权列表</span></button>
+          <button class="blora-button btn btn-secondary btn-sm" onclick="app.loadAuthorizations()"><span data-i18n="刷新授权列表">刷新授权列表</span></button>
         </div>
         <div id="oauthAuthorizationsList"></div>
       </div>
@@ -1974,8 +1974,8 @@ data: [DONE]</code></pre>
   </div>
 
   <!-- 创建API密钥模态框 -->
-  <div id="createApiKeyModal" class="modal" style="display: none;">
-    <div class="modal-content">
+  <div id="createApiKeyModal" class="blora-dialog modal" role="dialog" aria-modal="true" style="display: none;">
+    <div class="blora-dialog__panel modal-content">
       <div class="modal-header">
         <h3><span data-i18n="创建 API 密钥">创建 API 密钥</span></h3>
         <button class="modal-close">&times;</button>
@@ -1983,11 +1983,11 @@ data: [DONE]</code></pre>
       <div class="modal-body">
         <div class="form-group">
           <label for="apiKeyName"><span data-i18n="密钥名称（可选）">密钥名称（可选）</span></label>
-          <input type="text" id="apiKeyName" class="input" placeholder="例如：生产环境、开发测试" data-i18n-placeholder="例如：生产环境、开发测试">
+          <input type="text" id="apiKeyName" class="blora-input input" placeholder="例如：生产环境、开发测试" data-i18n-placeholder="例如：生产环境、开发测试">
         </div>
         <div class="form-group">
           <label for="apiKeyExpiry"><span data-i18n="有效期">有效期</span></label>
-          <select id="apiKeyExpiry" class="select">
+          <select id="apiKeyExpiry" class="blora-select select">
             <option value=""><span data-i18n="永不过期">永不过期</span></option>
             <option value="24"><span data-i18n="24 小时">24 小时</span></option>
             <option value="168"><span data-i18n="7 天">7 天</span></option>
@@ -2081,7 +2081,7 @@ data: [DONE]</code></pre>
   </div>
 
   <!-- API密钥模型管理模态框（支持有序模型队列） -->
-  <div id="keyModelsModal" class="modal" style="display: none;">
+  <div id="keyModelsModal" class="blora-dialog modal" role="dialog" aria-modal="true" style="display: none;">
     <div id="keyModelsModalContent" class="modal-content" style="max-width:720px;">
       <div class="modal-header">
         <h3 id="keyModelsTitle"><span data-i18n="管理可用模型">管理可用模型</span></h3>
@@ -2218,14 +2218,14 @@ data: [DONE]</code></pre>
   </div>
 
   <!-- 添加供应商向导模态框 -->
-  <div id="addProviderModal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width:550px;">
+  <div id="addProviderModal" class="blora-dialog modal" role="dialog" aria-modal="true" style="display: none;">
+    <div class="blora-dialog__panel modal-content" style="max-width:550px;">
       <div class="modal-header">
         <h3><span data-i18n="添加供应商">添加供应商</span></h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <div id="addProviderError" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
+        <div id="addProviderError" data-blora-state="error" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
 
         <!-- 步骤 1: 选择供应商 -->
         <div id="providerStep1" class="provider-step">
@@ -2234,7 +2234,7 @@ data: [DONE]</code></pre>
             <div style="font-weight:600;font-size:16px;"><span data-i18n="选择供应商">选择供应商</span></div>
           </div>
           <div style="margin-bottom:12px;">
-            <input type="text" id="providerSearchInput" class="input" placeholder="搜索供应商..." data-i18n-placeholder="搜索供应商..." style="width:100%;" oninput="app.filterProviderList(this.value)">
+            <input type="text" id="providerSearchInput" class="blora-input input" placeholder="搜索供应商..." data-i18n-placeholder="搜索供应商..." style="width:100%;" oninput="app.filterProviderList(this.value)">
           </div>
           <div id="providerListContainer" class="provider-list-container" style="max-height:300px;overflow-y:auto;">
             <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
@@ -2255,11 +2255,11 @@ data: [DONE]</code></pre>
           <div id="customProviderFields" style="display:none;">
             <div class="form-group">
               <label for="providerBaseUrl">Base URL <span style="color:var(--destructive);">*</span></label>
-              <input type="text" id="providerBaseUrl" class="input" placeholder="https://api.example.com/v1">
+              <input type="text" id="providerBaseUrl" class="blora-input input" placeholder="https://api.example.com/v1">
             </div>
             <div class="form-group">
               <label for="providerFormat"><span data-i18n="API 格式">API 格式</span></label>
-              <select id="providerFormat" class="select">
+              <select id="providerFormat" class="blora-select select">
                 <option value="openai">Chat Completions</option>
                 <option value="responses">Responses</option>
                 <option value="anthropic">Anthropic Messages</option>
@@ -2268,7 +2268,7 @@ data: [DONE]</code></pre>
           </div>
           <div class="form-group">
             <label for="providerApiKey">API Key <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;"><span data-i18n="（可留空，保存后稍后补全）">（可留空，保存后稍后补全）</span></span></label>
-            <input type="password" id="providerApiKey" class="input" placeholder="sk-xxx（可选）" data-i18n-placeholder="sk-xxx（可选）" autocomplete="new-password" form="providerForm">
+            <input type="password" id="providerApiKey" class="blora-input input" placeholder="sk-xxx（可选）" data-i18n-placeholder="sk-xxx（可选）" autocomplete="new-password" form="providerForm">
           </div>
           <div style="display:flex;gap:8px;margin-top:16px;">
             <button class="btn btn-secondary" onclick="app.showProviderStep(1)"><span data-i18n="← 返回">← 返回</span></button>
@@ -2281,14 +2281,14 @@ data: [DONE]</code></pre>
 
   <!-- 编辑供应商模态框 -->
   <form id="editProviderForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
-  <div id="editProviderModal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width:500px;">
+  <div id="editProviderModal" class="blora-dialog modal" role="dialog" aria-modal="true" style="display: none;">
+    <div class="blora-dialog__panel modal-content" style="max-width:500px;">
       <div class="modal-header">
         <h3><span data-i18n="编辑供应商">编辑供应商</span></h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <div id="editProviderError" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
+        <div id="editProviderError" data-blora-state="error" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
         <input type="hidden" id="editProviderId">
         <div class="form-group">
           <label><span data-i18n="供应商名称">供应商名称</span></label>
@@ -2296,15 +2296,15 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="editProviderBaseUrl">Base URL</label>
-          <input type="text" id="editProviderBaseUrl" class="input" placeholder="https://api.example.com/v1">
+          <input type="text" id="editProviderBaseUrl" class="blora-input input" placeholder="https://api.example.com/v1">
         </div>
         <div class="form-group">
           <label for="editProviderApiKey">API Key <span style="font-size:12px;color:var(--muted-foreground);"><span data-i18n="（留空则不更新）">（留空则不更新）</span></span></label>
-          <input type="password" id="editProviderApiKey" class="input" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新" autocomplete="new-password" form="editProviderForm">
+          <input type="password" id="editProviderApiKey" class="blora-input input" placeholder="留空则不更新" data-i18n-placeholder="留空则不更新" autocomplete="new-password" form="editProviderForm">
         </div>
         <div class="form-group">
           <label for="editProviderFormat"><span data-i18n="API 格式">API 格式</span></label>
-          <select id="editProviderFormat" class="select">
+          <select id="editProviderFormat" class="blora-select select">
             <option value="openai">Chat Completions</option>
             <option value="responses">Responses</option>
             <option value="anthropic">Anthropic Messages</option>
@@ -2318,21 +2318,21 @@ data: [DONE]</code></pre>
   </div>
 
   <!-- 管理模型模态框 -->
-  <div id="manageModelsModal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width:700px;max-height:80vh;">
+  <div id="manageModelsModal" class="blora-dialog modal" role="dialog" aria-modal="true" style="display: none;">
+    <div class="blora-dialog__panel modal-content" style="max-width:700px;max-height:80vh;">
       <div class="modal-header">
         <h3 id="manageModelsTitle"><span data-i18n="管理模型">管理模型</span></h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body" style="overflow-y:auto;">
-        <div id="manageModelsLoading" style="text-align:center;padding:40px;">
+        <div id="manageModelsLoading" data-blora-state="loading" style="text-align:center;padding:40px;">
           <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
         </div>
-        <div id="manageModelsError" style="display:none;color:var(--destructive);padding:16px;text-align:center;"></div>
+        <div id="manageModelsError" data-blora-state="error" style="display:none;color:var(--destructive);padding:16px;text-align:center;"></div>
         <div id="manageModelsContent" style="display:none;">
           <!-- 搜索和刷新 -->
           <div style="display:flex;gap:12px;margin-bottom:12px;">
-            <input type="text" id="manageModelsSearch" class="input" placeholder="搜索模型..." data-i18n-placeholder="搜索模型..." style="flex:1;" oninput="app.filterManageModels(this.value)">
+            <input type="text" id="manageModelsSearch" class="blora-input input" placeholder="搜索模型..." data-i18n-placeholder="搜索模型..." style="flex:1;" oninput="app.filterManageModels(this.value)">
             <button class="btn btn-secondary" onclick="app.refreshProviderModelsForManage()"><span data-i18n="刷新列表">刷新列表</span></button>
           </div>
           <!-- 批量操作栏 -->
@@ -2389,14 +2389,14 @@ data: [DONE]</code></pre>
   </div>
 
   <!-- 选择 API Key 模态框 -->
-  <div id="selectKeyModal" class="modal" style="display: none;">
-    <div class="modal-content" style="max-width:400px;">
+  <div id="selectKeyModal" class="blora-dialog modal" role="dialog" aria-modal="true" style="display: none;">
+    <div class="blora-dialog__panel modal-content" style="max-width:400px;">
       <div class="modal-header">
         <h3><span data-i18n="选择 API Key">选择 API Key</span></h3>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <div id="selectKeyContent"></div>
+        <div id="selectKeyContent" data-blora-state="idle"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-primary" onclick="app.confirmSelectKey()"><span data-i18n="确认">确认</span></button>
@@ -2636,7 +2636,7 @@ data: [DONE]</code></pre>
         <button class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <div id="addEditModelError" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
+        <div id="addEditModelError" data-blora-state="error" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
         <input type="hidden" id="editModelId">
         <input type="hidden" id="modelFormId">
         <div class="form-group">
