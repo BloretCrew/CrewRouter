@@ -1,6 +1,6 @@
 'use strict';
 
-function consumePlaygroundSseFrame(state, data) {
+function consumePlaygroundSseFrame(state, data, providerFormat) {
   if (state.clientDisconnected || state.streamCompleted || state.streamFailed || state.timeoutAborted) {
     return { kind: 'ignore', state };
   }
@@ -10,6 +10,10 @@ function consumePlaygroundSseFrame(state, data) {
   }
   try {
     const parsed = JSON.parse(data);
+    if (providerFormat === 'anthropic' && parsed?.type === 'message_stop') {
+      state.streamCompleted = true;
+      return { kind: 'done', state, providerMessageStop: true };
+    }
     if (parsed && parsed.error) {
       state.streamFailed = true;
       return { kind: 'error', terminal: true, message: String(parsed.error.message || '上游流式响应失败'), parsed, state };

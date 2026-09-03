@@ -373,7 +373,7 @@ router.post('/chat', requireAuth, async (req, res) => {
             if (!line.startsWith('data: ')) continue;
             sseLineCount++;
             const data = line.slice(6).trim();
-            const frame = consumePlaygroundSseFrame({ clientDisconnected, timeoutAborted, streamCompleted, streamFailed }, data);
+            const frame = consumePlaygroundSseFrame({ clientDisconnected, timeoutAborted, streamCompleted, streamFailed }, data, provider.format);
             streamCompleted = frame.state?.streamCompleted ?? streamCompleted;
             streamFailed = frame.state?.streamFailed ?? streamFailed;
             if (frame.kind === 'ignore') break;
@@ -417,8 +417,6 @@ router.post('/chat', requireAuth, async (req, res) => {
                   finishReason = parsed.delta?.stop_reason || finishReason;
                 } else if (parsed.type === 'message_stop') {
                   Logger.stream(`[Playground] 收到上游 message_stop 事件`);
-                  const ok = writeWithDrain('data: [DONE]\n\n');
-                  if (!ok) await waitForDrain();
                 }
               } else {
                 const content = parsed.choices?.[0]?.delta?.content || '';
