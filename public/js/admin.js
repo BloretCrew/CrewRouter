@@ -148,6 +148,7 @@ class AdminApp {
       const instance = window.CrewRouterEditionBadge
         ? await window.CrewRouterEditionBadge.load()
         : null;
+      this._instance = instance;
       if (instance?.capabilities) {
         document.querySelectorAll('[data-capability]').forEach((el) => {
           if (instance.capabilities[el.dataset.capability] === false) el.style.display = 'none';
@@ -163,7 +164,10 @@ class AdminApp {
     this._prefetchStatsRefreshInterval().catch(() => {});
     // 从 URL hash 恢复页面（刷新后保持原位置）
     const restored = this._parseAdminHash(location.hash);
-    const startPage = restored.page || 'adminStats';
+    const teamPages = new Set(['adminTeams', 'adminUserGroups', 'adminAuditLogs']);
+    const safePage = teamPages.has(restored.page) && this._instance?.capabilities?.teamAdmin === false
+      ? 'adminStats' : restored.page;
+    const startPage = safePage || 'adminStats';
     await this.navigateTo(startPage, {
       skipHash: true,
       teamId: restored.teamId || null
@@ -180,7 +184,14 @@ class AdminApp {
 
   async initInvitePanel() {
     const section = document.getElementById('passportInvitesSection');
-    if (section) section.style.display = '';
+    if (section) section.style.display = 'none';
+    try {
+      const instance = this._instance || await window.CrewRouterEditionBadge?.load?.();
+      this._instance = instance;
+      if (section) section.style.display = instance?.capabilities?.teamAdmin === true ? '' : 'none';
+    } catch (_) {
+      if (section) section.style.display = 'none';
+    }
   }
 
   /** 支持的管理后台页面 id */
@@ -761,8 +772,11 @@ class AdminApp {
     }
   }
 
-  async _inviteRequest(url, options) {
-    const response = await fetch(url, { credentials: 'same-origin', ...options });
+  async _inviteRequest(url, options = {}) {
+    const csrf = await fetch('/api/csrf-token', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
+    const headers = { ...(options.headers || {}) };
+    if (csrf.token) headers['X-CSRF-Token'] = csrf.token;
+    const response = await fetch(url, { credentials: 'same-origin', ...options, headers });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
     return data;
@@ -810,9 +824,11 @@ class AdminApp {
   }
 
   async openInviteDialog() {
+    const instance = this._instance || await window.CrewRouterEditionBadge?.load?.();
+    if (instance?.capabilities?.teamAdmin === false) return;
     const [teams, groups] = await Promise.all([
-      fetch('/api/admin/teams').then((r) => r.json()).catch(() => []),
-      fetch('/api/admin/user-groups').then((r) => r.json()).catch(() => []),
+      fetch('/api/admin/teams').then((r) => r.ok ? r.json() : []).catch(() => []),
+      fetch('/api/admin/user-groups').then((r) => r.ok ? r.json() : []).catch(() => []),
     ]);
     const teamOptions = (Array.isArray(teams) ? teams : []).map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
     const groupOptions = (Array.isArray(groups) ? groups : []).map((g) => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');

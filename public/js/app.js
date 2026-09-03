@@ -227,7 +227,10 @@ class ConsoleApp {
     this._bindHashRouting();
     // 从 URL hash 恢复页面（刷新后保持原位置）
     const restored = this._parseConsoleHash(location.hash);
-    const startPage = restored.page || 'modelLibrary';
+    const teamHashPages = new Set(['myUpstream']);
+    const safePage = teamHashPages.has(restored.page) && this.instance?.capabilities?.teamProjects === false
+      ? 'modelLibrary' : restored.page;
+    const startPage = safePage || 'modelLibrary';
     await this.navigateTo(startPage, {
       skipHash: true,
       upstreamTab: restored.upstreamTab,
@@ -312,9 +315,10 @@ class ConsoleApp {
   async _setStatsConsent(allow) {
     this.closeModals();
     try {
+      const csrf = await fetch('/api/csrf-token', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : {}).catch(() => ({}));
       const res = await fetch('/api/admin/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(csrf.token ? { 'X-CSRF-Token': csrf.token } : {}) },
         body: JSON.stringify({ stats_report_enabled: !!allow, stats_report_granularity: 'detailed' })
       });
       if (!res.ok) {
@@ -415,7 +419,8 @@ class ConsoleApp {
     // 旧入口重定向到合并页
     let targetPage = page;
     const capability = targetPage === 'projectWork' ? 'projects' : (targetPage === 'auditLogs' ? 'auditLogs' : null);
-    if (capability && this.instance?.capabilities?.[capability] === false) {
+    const capabilityEnabled = capability ? this.instance?.capabilities?.[capability] !== false : true;
+    if (capability && !capabilityEnabled) {
       targetPage = 'modelLibrary';
       if (!options.skipHash) this._writeConsoleHash(targetPage);
     }

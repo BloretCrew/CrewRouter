@@ -16,7 +16,7 @@ const Dialog = (() => {
   function render({ title, message, confirmText = t('确认'), cancelText = t('取消'), showCancel = true, danger = false }) {
     return new Promise((resolve) => {
       const container = getContainer();
-      const id = 'dialog-' + Date.now();
+      const id = 'dialog-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
 
       const confirmBtnClass = danger ? 'dialog-btn dialog-btn-danger' : 'dialog-btn dialog-btn-primary';
 
@@ -91,7 +91,7 @@ const Dialog = (() => {
 
   function showModal({ title, content, footer, width, panelClass = '' }) {
     const container = getContainer();
-    const id = 'modal-' + Date.now();
+    const id = 'modal-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
 
     // 如果有上一个对话框的清理定时器，先取消
     if (container._closeTimer) {
@@ -127,6 +127,15 @@ const Dialog = (() => {
 
     const overlay = document.getElementById(`${id}-overlay`);
     const panel = document.getElementById(`${id}-panel`);
+    let keyHandler;
+    let settled = false;
+    const closePromise = new Promise((resolve) => {
+      container._resolveModal = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+    });
 
     // Animate in
     requestAnimationFrame(() => {
@@ -143,7 +152,9 @@ const Dialog = (() => {
       if (e.target === overlay) close();
     });
 
-    function close() {
+    function close(value) {
+      document.removeEventListener('keydown', keyHandler);
+      container._resolveModal?.(value);
       // 只移除自己的元素，不误伤后续对话框
       const myOverlay = document.getElementById(`${id}-overlay`);
       const myPanel = document.getElementById(`${id}-panel`);
@@ -158,7 +169,14 @@ const Dialog = (() => {
       }, 200);
     }
 
-    return { close };
+    keyHandler = function handler(e) {
+      if (e.key !== 'Escape') return;
+      document.removeEventListener('keydown', keyHandler);
+      close(false);
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    return { close, promise: closePromise };
   }
 
   return { alert, confirm, showModal };

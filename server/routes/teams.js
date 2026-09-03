@@ -180,25 +180,32 @@ router.post('/teams/:id/members', requireAuth, requireAdmin, auditMiddleware(ACT
     if (teamCheck.rows[0].is_personal) {
       return res.status(403).json({ error: '个人账户 Team 不可添加成员' });
     }
-    const teamId = parseInt(req.params.id);
-
-    // 批量插入（忽略冲突）
-    let added = 0;
-    for (const userId of userIds) {
-      const result = await pool.query(
-        'INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT (user_id, team_id) DO NOTHING',
-        [userId, teamId]
+    const teamId = parseInt(req.params.id, 10);
+    const normalizedUserIds = [...new Set(userIds.map(id => parseInt(id, 10)).filter(Number.isInteger))];
+    if (!normalizedUserIds.length) return res.status(400).json({ error: '请提供有效用户 ID' });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT id FROM teams WHERE id = $1 FOR UPDATE', [teamId]);
+      const existingUsers = await client.query('SELECT id FROM users WHERE id = ANY($1::int[])', [normalizedUserIds]);
+      if (existingUsers.rows.length !== normalizedUserIds.length) throw Object.assign(new Error('用户不存在'), { status: 400 });
+      const result = await client.query(
+        `INSERT INTO user_teams (user_id, team_id)
+         SELECT unnest($1::int[]), $2
+         ON CONFLICT (user_id, team_id) DO NOTHING`,
+        [normalizedUserIds, teamId]
       );
-      added += result.rowCount;
-    }
-
-    // users.team_id 仅作兼容投影；批量成员均同步到有效主 Team。
-    await pool.query(
-      'UPDATE users SET team_id = $1 WHERE id = ANY($2::int[]) AND team_id IS NULL',
-      [teamId, userIds.map(id => parseInt(id, 10)).filter(Number.isInteger)]
-    );
-
-    res.json({ success: true, added });
+      await client.query(
+        'UPDATE users SET team_id = $1 WHERE id = ANY($2::int[]) AND team_id IS NULL',
+        [teamId, normalizedUserIds]
+      );
+      await client.query('COMMIT');
+      res.json({ success: true, added: result.rowCount });
+    } catch (error) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      if (error.status) return res.status(error.status).json({ error: error.message });
+      throw error;
+    } finally { client.release(); }
   } catch (error) {
     Logger.error('[添加Team成员] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
@@ -223,13 +230,22 @@ router.delete('/teams/:id/members/:userId', requireAuth, requireAdmin, auditMidd
     }
     const userId = parseInt(req.params.userId, 10);
     const teamId = parseInt(req.params.id, 10);
-    await pool.query('DELETE FROM user_teams WHERE user_id = $1 AND team_id = $2', [userId, teamId]);
-    await pool.query(
-      `UPDATE users u SET team_id = COALESCE((SELECT ut.team_id FROM user_teams ut WHERE ut.user_id = u.id ORDER BY ut.created_at ASC LIMIT 1), NULL)
-       WHERE u.id = $1 AND u.team_id = $2`,
-      [userId, teamId]
-    );
-    res.json({ success: true });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT id FROM teams WHERE id = $1 FOR UPDATE', [teamId]);
+      await client.query('DELETE FROM user_teams WHERE user_id = $1 AND team_id = $2', [userId, teamId]);
+      await client.query(
+        `UPDATE users u SET team_id = COALESCE((SELECT ut.team_id FROM user_teams ut WHERE ut.user_id = u.id ORDER BY ut.created_at ASC LIMIT 1), NULL)
+         WHERE u.id = $1 AND u.team_id = $2`,
+        [userId, teamId]
+      );
+      await client.query('COMMIT');
+      res.json({ success: true });
+    } catch (error) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw error;
+    } finally { client.release(); }
   } catch (error) {
     Logger.error('[移除Team成员] 错误:', error);
     res.status(500).json({ error: '服务器错误' });

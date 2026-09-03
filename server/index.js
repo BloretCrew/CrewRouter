@@ -2376,6 +2376,10 @@ if (isDemo) {
   }));
 }
 
+const { csrfProtection, csrfTokenRoute } = require('./middleware/csrf');
+app.get('/api/csrf-token', csrfTokenRoute);
+app.use(csrfProtection);
+
 // 演示模式：自动填充 session 用户
 if (isDemo) {
   const { getUser } = require('./demo/data');
