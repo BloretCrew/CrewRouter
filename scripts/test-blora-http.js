@@ -21,15 +21,16 @@ async function main() {
   assert.ok(imports.includes('./tokens.css'));
   assert.ok(imports.includes('./components/button/button.css'));
   const reachable = new Set();
-  const visitCss = (relative) => {
+  const visitCss = async (relative) => {
     if (reachable.has(relative)) return;
     reachable.add(relative);
     const source = fs.readFileSync(path.join(dist, relative), 'utf8');
     for (const imported of [...source.matchAll(/@import\s+["']([^"']+)["']/g)].map((m) => m[1])) {
-      if (imported.startsWith('./')) visitCss(path.posix.normalize(path.posix.join(path.posix.dirname(relative), imported)));
+      if (imported.startsWith('./')) await visitCss(path.posix.normalize(path.posix.join(path.posix.dirname(relative), imported)));
     }
   };
-  visitCss('blora.css');
+  await visitCss('blora.css');
+  assert.ok(reachable.size >= 93, `expected complete Blora CSS graph, got ${reachable.size}`);
 
   const app = express();
   app.use('/blora', createBloraResourceRouter());
@@ -45,6 +46,13 @@ async function main() {
   try {
     assert.ok(reachable.has('tokens.css'));
     assert.ok(reachable.has('components/button/button.css'));
+    for (const file of reachable) {
+      const response = await request(`/blora/${file}?v=2.0.8`);
+      assert.strictEqual(response.status, 200, file);
+      assert.match(response.type, file.endsWith('.css') ? /text\/css/ : /javascript/);
+      assert.match(response.cache, /max-age=31536000/);
+      assert.ok(response.body.length > 0);
+    }
     for (const [file, type] of [['blora.css', 'text/css'], ['tokens.dark.css', 'text/css'], ['components/button/button.css', 'text/css'], ['auto.js', 'javascript']]) {
       const response = await request(`/blora/${file}?v=2.0.8`);
       assert.strictEqual(response.status, 200, file); assert.match(response.type, new RegExp(type)); assert.match(response.cache, /max-age=31536000/); assert.ok(response.body.length > 0);

@@ -6,29 +6,12 @@ const root = path.resolve(__dirname, '..');
 const pagesDir = path.join(root, 'public/pages');
 const jsDir = path.join(root, 'public/js');
 const files = fs.readdirSync(pagesDir).filter((n) => n.endsWith('.html') && !n.endsWith('.bak'));
-const elementRe = /<!--[\s\S]*?-->|<script\b[\s\S]*?<\/script\s*>|<style\b[\s\S]*?<\/style\s*>|<([a-z][\w:-]*)(\s[^<>]*?)?\/?>(?=\s|<|$)/gi;
+const { scanHtml } = require('./blora-audit-parser');
 const rel = (f) => path.relative(root, f).split(path.sep).join('/');
-function scan(html) {
-  const counts = { controls: 0, nativeDialogs: 0, forms: 0, tables: 0, states: 0, legacyModalContainers: 0 };
-  let match;
-  while ((match = elementRe.exec(html))) {
-    const tag = match[1]?.toLowerCase(); const attrs = (match[2] || '').toLowerCase();
-    if (!tag) continue;
-    if (/^(button|input|select|textarea)$/.test(tag)) counts.controls++;
-    if (tag === 'dialog') counts.nativeDialogs++;
-    if (tag === 'form') counts.forms++;
-    if (tag === 'table') counts.tables++;
-    const classValue = attrs.match(/\bclass\s*=\s*["']([^"']*)["']/)?.[1] || '';
-    const semanticAttrs = attrs.match(/\b(?:class|id|role|aria-busy|aria-label)\s*=\s*["']([^"']*)["']/g)?.join(' ') || '';
-    if (/(?:^|[\s_-])modal(?:[\s_-]|$)/i.test(classValue)) counts.legacyModalContainers++;
-    if (/(?:loading|error|empty|success|status|disabled)/i.test(semanticAttrs)) counts.states++;
-  }
-  return counts;
-}
 function pageScripts(html) { return [...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map((m) => m[1]); }
 const pages = files.map((name) => {
   const file = path.join(pagesDir, name); const html = fs.readFileSync(file, 'utf8'); const scripts = pageScripts(html);
-  const dom = scan(html); const legacyDialogApiCalls = (html.match(/\b(?:showModal|closeModal|openDialog|closeDialog)\s*\(/g) || []).length;
+  const dom = scanHtml(html); const legacyDialogApiCalls = (html.match(/\b(?:showModal|closeModal|openDialog|closeDialog)\s*\(/g) || []).length;
   return { page: rel(file), blora: { css: html.includes('/blora/blora.css'), darkTokens: html.includes('/blora/tokens.dark.css'), auto: html.includes('/blora/auto.js'), foundation: html.includes('/js/blora-foundation.js'), scope: /<body\b[^>]*class=["'][^"']*\bblora-page\b/.test(html), version: [...html.matchAll(/\/blora\/(?:blora\.css|tokens\.dark\.css|auto\.js)\?v=([^"']+)/g)].map((m) => m[1]) }, dom: { ...dom, legacyDialogScript: scripts.filter((s) => /\/js\/dialog\.js/.test(s)).length, legacyDialogApiCalls, dynamicTemplates: 'conservative-unobserved', runtime: 'not-observed', observation: 'static-dom-only' }, initialization: 0, scripts };
 });
 const initialization = fs.readdirSync(jsDir).filter((n) => n.endsWith('.js') && !n.endsWith('.bak')).map((n) => { const source = fs.readFileSync(path.join(jsDir, n), 'utf8'); return { file: rel(path.join(jsDir, n)), domContentLoaded: (source.match(/DOMContentLoaded/g) || []).length, loadEntrypoints: (source.match(/window\.addEventListener\s*\(\s*["']load/g) || []).length }; });
