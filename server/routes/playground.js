@@ -13,7 +13,7 @@ const { calculatePointsToDeduct } = require('../utils/points-deduct');
 const { clientMetaFromReq } = require('../utils/request-source');
 const { notifyUser, NOTIFICATION_TYPES } = require('../utils/notifications');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
-const { consumePlaygroundSseFrame, finalizePlaygroundStream, shouldRecordPlaygroundUsage } = require('../utils/playground-stream-state');
+const { consumePlaygroundSseLine, finalizePlaygroundStream, recordPlaygroundUsageIfCompleted } = require('../utils/playground-stream-state');
 
 const UPSTREAM_TIMEOUT = 60000;
 const UPSTREAM_STREAM_TIMEOUT = 300000; // 流式请求超时 5 分钟
@@ -372,8 +372,7 @@ router.post('/chat', requireAuth, async (req, res) => {
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
             sseLineCount++;
-            const data = line.slice(6).trim();
-            const frame = consumePlaygroundSseFrame({ clientDisconnected, timeoutAborted, streamCompleted, streamFailed }, data, provider.format);
+            const frame = consumePlaygroundSseLine({ clientDisconnected, timeoutAborted, streamCompleted, streamFailed }, line, provider.format);
             streamCompleted = frame.state?.streamCompleted ?? streamCompleted;
             streamFailed = frame.state?.streamFailed ?? streamFailed;
             if (frame.kind === 'ignore') break;
@@ -503,7 +502,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       Logger.info(`[Playground] 流式完成: model=${model}, promptTokens=${normalized.promptTokens}, completionTokens=${normalized.completionTokens}, totalTokens=${totalTokens}, points=${pointsCost}`);
       const requestParams = { temperature, max_tokens, top_p, thinking: effectiveThinking, thinking_budget, reasoning_effort };
       try {
-        await recordUsage(userId, modelConfig.id, totalTokens, weightedTokens, pointsCost, messages, totalContent, normalized, totalReasoning, requestParams, finishReason, req);
+        await recordPlaygroundUsageIfCompleted({ streamCompleted: streamTerminal === 'completed', clientDisconnected, timeoutAborted, streamFailed }, recordUsage, [userId, modelConfig.id, totalTokens, weightedTokens, pointsCost, messages, totalContent, normalized, totalReasoning, requestParams, finishReason, req]);
       } catch (e) {
         Logger.error(`[Playground] 记录使用量异常: ${e.message}`);
       }

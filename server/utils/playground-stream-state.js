@@ -1,5 +1,22 @@
 'use strict';
 
+function consumePlaygroundSseLine(state, line, providerFormat) {
+  const value = String(line || '').replace(/\\r$/, '');
+  if (value.startsWith('event:')) {
+    state.pendingEvent = value.slice(6).trim();
+    return { kind: 'event', state };
+  }
+  if (!value.startsWith('data:')) return { kind: 'ignore', state };
+  const data = value.slice(5).trim();
+  if (state.pendingEvent === 'message_stop') {
+    state.pendingEvent = '';
+    state.streamCompleted = true;
+    return { kind: 'done', state, providerMessageStop: true };
+  }
+  state.pendingEvent = '';
+  return consumePlaygroundSseFrame(state, data, providerFormat);
+}
+
 function consumePlaygroundSseFrame(state, data, providerFormat) {
   if (state.clientDisconnected || state.streamCompleted || state.streamFailed || state.timeoutAborted) {
     return { kind: 'ignore', state };
@@ -29,6 +46,12 @@ function shouldRecordPlaygroundUsage(state) {
   return state.streamCompleted === true && state.clientDisconnected !== true && state.timeoutAborted !== true && state.streamFailed !== true;
 }
 
+async function recordPlaygroundUsageIfCompleted(state, recordUsageFn, args = []) {
+  if (!shouldRecordPlaygroundUsage(state)) return false;
+  await recordUsageFn(...args);
+  return true;
+}
+
 function finalizePlaygroundStream(state) {
   if (state.clientDisconnected) return 'client-disconnected';
   if (state.timeoutAborted) return 'timeout';
@@ -40,4 +63,4 @@ function finalizePlaygroundStream(state) {
   return 'completed';
 }
 
-module.exports = { consumePlaygroundSseFrame, finalizePlaygroundStream, shouldRecordPlaygroundUsage };
+module.exports = { consumePlaygroundSseLine, consumePlaygroundSseFrame, finalizePlaygroundStream, shouldRecordPlaygroundUsage, recordPlaygroundUsageIfCompleted };

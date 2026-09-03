@@ -56,16 +56,33 @@ assert.match(serverJs, /reader\.cancel\(\)/);
 assert.match(serverJs, /streamFailed/);
 assert.match(serverJs, /timeoutAborted/);
 assert.match(serverJs, /streamCompleted = true/);
-assert.match(serverJs, /consumePlaygroundSseFrame\([\s\S]*provider\.format\)/);
+assert.match(serverJs, /consumePlaygroundSseLine\([\s\S]*provider\.format\)/);
+assert.match(serverJs, /recordPlaygroundUsageIfCompleted/);
 const anthropicState = { clientDisconnected: false, timeoutAborted: false, streamCompleted: false, streamFailed: false };
-const messageStop = streamState.consumePlaygroundSseFrame(anthropicState, '{"type":"message_stop"}', 'anthropic');
-assert.strictEqual(messageStop.kind, 'done');
+const messageStop = streamState.consumePlaygroundSseLine(anthropicState, 'event: message_stop', 'anthropic');
+const messageStopData = streamState.consumePlaygroundSseLine(anthropicState, 'data: {}', 'anthropic');
+assert.strictEqual(messageStop.kind, 'event');
+assert.strictEqual(messageStopData.kind, 'done');
 assert.strictEqual(anthropicState.streamCompleted, true);
 assert.strictEqual(streamState.finalizePlaygroundStream(anthropicState), 'completed');
 assert.strictEqual(streamState.shouldRecordPlaygroundUsage(anthropicState), true);
 assert.match(serverJs, /upstream_stream_error/);
 assert.match(serverJs, /shouldRecordPlaygroundUsage/);
-assert.match(serverJs, /if \(!shouldRecordPlaygroundUsage/);
+assert.match(serverJs, /recordPlaygroundUsageIfCompleted/);
+let usageCalls = 0;
+const usageSpy = async () => { usageCalls += 1; };
+function runUsageSpyTest() {
+  return streamState.recordPlaygroundUsageIfCompleted({ streamCompleted: true, clientDisconnected: false, timeoutAborted: false, streamFailed: false }, usageSpy).then(async () => {
+    assert.strictEqual(usageCalls, 1);
+    for (const failure of [
+      { streamCompleted: false, clientDisconnected: false, timeoutAborted: false, streamFailed: true },
+      { streamCompleted: false, clientDisconnected: false, timeoutAborted: true, streamFailed: false },
+      { streamCompleted: false, clientDisconnected: true, timeoutAborted: false, streamFailed: false },
+      { streamCompleted: false, clientDisconnected: false, timeoutAborted: false, streamFailed: false }
+    ]) await streamState.recordPlaygroundUsageIfCompleted(failure, usageSpy);
+    assert.strictEqual(usageCalls, 1);
+  });
+}
 assert.strictEqual(streamState.shouldRecordPlaygroundUsage({ streamCompleted: true, clientDisconnected: false, timeoutAborted: false, streamFailed: false }), true);
 for (const failure of [
   { streamCompleted: false, clientDisconnected: false, timeoutAborted: false, streamFailed: true },
@@ -86,7 +103,7 @@ function executeSse(frames, mode = 'normal') {
   const out = [];
   const state = { clientDisconnected: mode === 'disconnect', timeoutAborted: mode === 'timeout', streamCompleted: false, streamFailed: false };
   for (const frame of frames) {
-    const result = streamState.consumePlaygroundSseFrame(state, frame);
+    const result = streamState.consumePlaygroundSseLine(state, `data: ${frame}`);
     if (result.kind === 'ignore') break;
     out.push(result);
     if (result.kind === 'done' || result.kind === 'error') break;
@@ -127,7 +144,9 @@ assert.deepStrictEqual(retryPrepared.apiMessages, [{ role: 'user', content: 'ori
 assert.strictEqual(playgroundState.shouldRollback('failed'), true);
 assert.strictEqual(playgroundState.shouldRollback('completed'), false);
 
+runUsageSpyTest().then(() => {
 new vm.Script(playgroundJs, { filename: 'public/js/playground.js' });
 new vm.Script(appJs, { filename: 'public/js/app.js' });
 new vm.Script(serverJs, { filename: 'server/routes/playground.js' });
 console.log('Blora public Batch C executable stream/retry and contract boundary checks passed.');
+});
