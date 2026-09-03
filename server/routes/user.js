@@ -116,7 +116,7 @@ router.get('/models/:id/uptime', requireAuth, async (req, res) => {
 router.get('/models', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT m.id, COALESCE(NULLIF(m.upstream_model_id, ''), m.id) AS upstream_model_id, m.name, m.alias, m.series, m.description, m.enabled,
+      `SELECT DISTINCT m.id, COALESCE(NULLIF(m.upstream_model_id, ''), m.id) AS upstream_model_id, m.name, m.alias, m.series, m.description, m.enabled,
         m.input_price_per_1k_tokens, m.output_price_per_1k_tokens, m.cached_output_price_per_1k_tokens,
         m.reference_input_price_per_1k_tokens, m.reference_output_price_per_1k_tokens, m.reference_cached_output_price_per_1k_tokens,
         m.rate_limit_rpm, m.rate_limit_tpm, m.icon_url, m.billing_mode, m.model_multiplier, m.completion_multiplier,
@@ -124,9 +124,11 @@ router.get('/models', requireAuth, async (req, res) => {
         p.name AS provider_name,
         s.icon_url AS series_icon_url
        FROM models m
-       LEFT JOIN providers p ON m.provider = p.id
+       JOIN providers p ON m.provider = p.id AND p.enabled = TRUE
+       JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
+       JOIN user_teams ut ON ut.team_id = tm.team_id AND ut.user_id = $1
        LEFT JOIN series s ON m.series = s.name
-       WHERE m.enabled = TRUE AND m.created_by = $1
+       WHERE m.enabled = TRUE
        ORDER BY CASE WHEN m.series = '' THEN 1 ELSE 0 END, m.series, m.name`,
       [req.session.user.id]
     );
@@ -135,16 +137,18 @@ router.get('/models', requireAuth, async (req, res) => {
     // 降级查询：如果某些列不存在，使用基础列
     try {
       const fallback = await pool.query(
-        `SELECT m.id, COALESCE(NULLIF(m.upstream_model_id, ''), m.id) AS upstream_model_id, m.name, m.alias, m.series, m.description, m.enabled,
+        `SELECT DISTINCT m.id, COALESCE(NULLIF(m.upstream_model_id, ''), m.id) AS upstream_model_id, m.name, m.alias, m.series, m.description, m.enabled,
           m.input_price_per_1k_tokens, m.output_price_per_1k_tokens, m.cached_output_price_per_1k_tokens,
           m.rate_limit_rpm, m.rate_limit_tpm, m.icon_url, m.billing_mode, m.model_multiplier, m.completion_multiplier,
           m.created_at, m.created_by, m.provider,
           p.name AS provider_name,
           s.icon_url AS series_icon_url
          FROM models m
-         LEFT JOIN providers p ON m.provider = p.id
+         JOIN providers p ON m.provider = p.id AND p.enabled = TRUE
+         JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
+         JOIN user_teams ut ON ut.team_id = tm.team_id AND ut.user_id = $1
          LEFT JOIN series s ON m.series = s.name
-         WHERE m.enabled = TRUE AND m.created_by = $1
+         WHERE m.enabled = TRUE
          ORDER BY CASE WHEN m.series = '' THEN 1 ELSE 0 END, m.series, m.name`,
         [req.session.user.id]
       );
@@ -3600,7 +3604,11 @@ router.put('/current-model', requireAuth, auditMiddleware(ACTIONS.API_KEY_UPDATE
 router.get('/providers', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, format FROM providers WHERE enabled = TRUE AND created_by = $1 ORDER BY name`,
+      `SELECT id, name, format, created_by
+         FROM providers
+        WHERE enabled = TRUE
+          AND (created_by IS NULL OR created_by = $1)
+        ORDER BY name`,
       [req.session.user.id]
     );
     res.json(result.rows);

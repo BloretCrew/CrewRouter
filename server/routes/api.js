@@ -356,7 +356,7 @@ async function getAuthorizedModelIds(userId, modelIds) {
   const ids = [...new Set((modelIds || []).map(id => String(id || '').trim()).filter(Boolean))];
   if (!ids.length) return new Set();
   const result = await pool.query(
-    `SELECT DISTINCT m.id
+    `SELECT DISTINCT m.id, m.alias, m.upstream_model_id
        FROM models m
        JOIN providers p ON p.id = m.provider AND p.enabled = TRUE
        JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE
@@ -364,7 +364,7 @@ async function getAuthorizedModelIds(userId, modelIds) {
       WHERE m.id = ANY($1::text[]) AND m.enabled = TRUE`,
     [ids, userId]
   );
-  return new Set(result.rows.map(row => String(row.id)));
+  return new Set(result.rows.flatMap(row => [row.id, row.alias, row.upstream_model_id].filter(Boolean).map(String)));
 }
 
 async function refreshApiUserModelAuthorization(apiUser) {
@@ -393,13 +393,15 @@ async function refreshApiUserModelAuthorization(apiUser) {
     .map(row => [row.harness, row.model_id]));
   const fusionPanelModels = Array.isArray(key.fusion_panel_models) ? key.fusion_panel_models : [];
   const fusionIds = [...fusionPanelModels, key.fusion_judge_model_id, key.fusion_outer_model_id];
-  const allowed = await getAuthorizedModelIds(apiUser.userId, [...queue, currentModelId, ...Object.values(harnessModels), ...fusionIds]);
-  apiUser.currentModelId = currentModelId && allowed.has(String(currentModelId)) ? currentModelId : null;
-  apiUser.modelQueue = queue.filter(id => allowed.has(String(id)));
-  apiUser.harnessModels = Object.fromEntries(Object.entries(harnessModels).filter(([, id]) => allowed.has(String(id))));
-  apiUser.fusionPanelModels = fusionPanelModels.filter(id => allowed.has(String(id)));
-  apiUser.fusionJudgeModelId = key.fusion_judge_model_id && allowed.has(String(key.fusion_judge_model_id)) ? key.fusion_judge_model_id : '';
-  apiUser.fusionOuterModelId = key.fusion_outer_model_id && allowed.has(String(key.fusion_outer_model_id)) ? key.fusion_outer_model_id : '';
+  const allConfiguredIds = [...queue, currentModelId, ...Object.values(harnessModels), ...fusionIds].filter(Boolean).map(String);
+  const allowed = await getAuthorizedModelIds(apiUser.userId, allConfiguredIds);
+  apiUser.modelAuthorization = { deniedModelIds: allConfiguredIds.filter(id => !allowed.has(id)) };
+  apiUser.currentModelId = currentModelId;
+  apiUser.modelQueue = queue;
+  apiUser.harnessModels = harnessModels;
+  apiUser.fusionPanelModels = fusionPanelModels;
+  apiUser.fusionJudgeModelId = key.fusion_judge_model_id || '';
+  apiUser.fusionOuterModelId = key.fusion_outer_model_id || '';
   return apiUser;
 }
 
@@ -2578,6 +2580,9 @@ async function handleChatCompletion(req, res) {
   await refreshApiUserModelAuthorization(req.apiUser);
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
+  if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
+    return res.status(403).json({ error: { message: 'One or more API Key model bindings are no longer authorized.', type: 'permission_error', code: 'model_access_denied', model_ids: req.apiUser.modelAuthorization.deniedModelIds } });
+  }
   if (!modelQueue.length) {
     return res.status(400).json({ error: { message: 'No model selected. Please select a model from the model library first.', type: 'invalid_request_error' } });
   }
@@ -3105,16 +3110,18 @@ async function handleFusionRequest(req, res, format = 'openai') {
 
     Logger.info(`[Fusion] 完成: latency=${Date.now() - startTime}ms, tokens=${totalTokens}, weightedTokens=${totalWeightedTokens}`);
   } catch (error) {
-    Logger.error(`[Fusion] 处理失败: ${error.message}, stack=${error.stack}`);
+    const denied = error?.code === 'model_access_denied';
+    const status = denied ? 403 : 500;
+    Logger.error(`[Fusion] 处理失败: ${error.message}, code=${error.code || 'unknown'}, stack=${error.stack}`);
     captureCallError(req, {
       modelId: 'fusion', requestType: 'fusion',
-      status: 500, error, isFinal: true
+      status, error, isFinal: true
     });
     if (!res.headersSent) {
       if (format === 'anthropic') {
-        res.status(500).json({ type: 'error', error: { type: 'api_error', message: 'Fusion processing failed: ' + error.message } });
+        res.status(status).json({ type: 'error', error: { type: denied ? 'permission_error' : 'api_error', message: error.message, ...(denied ? { code: 'model_access_denied' } : {}) } });
       } else {
-        res.status(500).json({ error: { message: 'Fusion processing failed: ' + error.message, type: 'server_error' } });
+        res.status(status).json({ error: { message: denied ? error.message : 'Fusion processing failed: ' + error.message, type: denied ? 'permission_error' : 'server_error', ...(denied ? { code: 'model_access_denied' } : {}) } });
       }
     }
   }
@@ -3245,6 +3252,9 @@ async function handleAnthropicMessage(req, res) {
   await refreshApiUserModelAuthorization(req.apiUser);
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
+  if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
+    return res.status(403).json({ error: { message: 'One or more API Key model bindings are no longer authorized.', type: 'permission_error', code: 'model_access_denied', model_ids: req.apiUser.modelAuthorization.deniedModelIds } });
+  }
   if (!modelQueue.length) {
     return res.status(400).json({ type: 'error', error: { type: 'invalid_request_error', message: 'No model selected. Please select a model from the model library first.' } });
   }
@@ -5332,6 +5342,9 @@ async function handleResponses(req, res) {
   await refreshApiUserModelAuthorization(req.apiUser);
   const resolved = resolveModelQueueForRequest(req.apiUser, req);
   const modelQueue = resolved.queue;
+  if (req.apiUser.modelAuthorization?.deniedModelIds?.length) {
+    return res.status(403).json({ error: { message: 'One or more API Key model bindings are no longer authorized.', type: 'permission_error', code: 'model_access_denied', model_ids: req.apiUser.modelAuthorization.deniedModelIds } });
+  }
   if (!modelQueue.length) {
     return res.status(400).json({ error: { message: 'No model selected. Please select a model from the model library first.', type: 'invalid_request_error' } });
   }
