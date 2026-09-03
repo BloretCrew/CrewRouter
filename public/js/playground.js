@@ -68,7 +68,6 @@ class PlaygroundApp {
       setHTML(select, html);
       if (select) {
         select.value = String(this.models[0]?.id || '');
-        select.dispatchEvent(new Event('change', { bubbles: true }));
       }
       setBloraState('pgModel', 'success');
 
@@ -90,10 +89,7 @@ class PlaygroundApp {
       // Add model change handler
       select.addEventListener('change', () => this.updateThinkingControls());
       const reasoningSelect = document.getElementById('pgReasoningEffort');
-      if (reasoningSelect) {
-        reasoningSelect.value = 'medium';
-        reasoningSelect.dispatchEvent(new Event('change', { bubbles: true }));
-      }
+      if (reasoningSelect) reasoningSelect.value = 'medium';
       this.updateThinkingControls();
     } catch (error) {
       console.error(t('加载模型失败:'), error);
@@ -187,8 +183,9 @@ class PlaygroundApp {
       const date = new Date(conv.updated_at);
       const dateStr = `${date.getMonth() + 1}${this.escapeHtml(t('月'))}${date.getDate()}${this.escapeHtml(t('日'))}${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
       const isActive = conv.id === this.activeConvId;
+      const convId = Number(conv.id);
       return `
-        <div class="pg-history-item${isActive ? ' active' : ''}" data-id="${conv.id}">
+        <div class="pg-history-item${isActive ? ' active' : ''}" data-id="${Number.isSafeInteger(convId) ? convId : ''}">
           <div class="pg-history-item-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -199,12 +196,12 @@ class PlaygroundApp {
             <div class="pg-history-item-date">${dateStr}</div>
           </div>
           <div class="pg-history-item-actions">
-            <button class="rename-btn" data-id="${conv.id}" title="${t('重命名')}">
+            <button type="button" class="rename-btn" data-id="${Number.isSafeInteger(convId) ? convId : ''}" title="${this.escapeHtml(t('重命名'))}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
               </svg>
             </button>
-            <button class="delete-btn" data-id="${conv.id}" title="${t('删除')}">
+            <button type="button" class="delete-btn" data-id="${Number.isSafeInteger(convId) ? convId : ''}" title="${this.escapeHtml(t('删除'))}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
               </svg>
@@ -747,7 +744,7 @@ class PlaygroundApp {
     setHTML(el, `
       <div class="pg-msg-avatar">${avatarHtml}</div>
       <div class="pg-msg-body">
-        <div class="pg-msg-role">${role === 'user' ? userName : modelName}</div>
+        <div class="pg-msg-role">${this.escapeHtml(role === 'user' ? userName : modelName)}</div>
         ${thinkingHtml}
         <div class="pg-msg-content">${content ? this.renderMarkdown(content) : ''}</div>
         ${metaFooter}

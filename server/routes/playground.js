@@ -218,6 +218,8 @@ router.post('/chat', requireAuth, async (req, res) => {
     }
 
     // 多 Key：顺序 / 权重尝试，失败后 fallback
+    const streamAbortController = isStream ? new AbortController() : null;
+    const streamTimeout = isStream ? setTimeout(() => streamAbortController.abort(), UPSTREAM_STREAM_TIMEOUT) : null;
     let response = null;
     let lastErrText = '';
     let lastStatus = 502;
@@ -234,13 +236,12 @@ router.post('/chat', requireAuth, async (req, res) => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           };
-      const upstreamAbortController = isStream ? new AbortController() : null;
       try {
         response = await fetch(url, {
           method: 'POST',
           headers,
           body: JSON.stringify(upstreamBody),
-          signal: upstreamAbortController?.signal || AbortSignal.timeout(UPSTREAM_TIMEOUT),
+          signal: streamAbortController?.signal || AbortSignal.timeout(UPSTREAM_TIMEOUT),
           redirect: 'manual'
         });
       } catch (fetchErr) {
@@ -301,7 +302,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       // 检测客户端断开连接
       req.on('close', () => {
         clientDisconnected = true;
-        upstreamAbortController?.abort();
+        streamAbortController?.abort();
         reader.cancel().catch(() => {});
         Logger.stream(`[Playground] 客户端断开连接: provider=${provider.id}, model=${model}, 已接收 ${chunkCount} 个chunk, ${sseLineCount} 行SSE`);
       });
@@ -408,9 +409,12 @@ router.post('/chat', requireAuth, async (req, res) => {
               }
             } catch (e) {
               jsonParseErrors++;
-              Logger.warn(`[Playground] JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
+              streamFailed = true;
+              Logger.error(`[Playground] 不可恢复的 SSE JSON 解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
+              break;
             }
           }
+          if (streamFailed) break;
         }
       } catch (err) {
         if (!clientDisconnected) streamFailed = true;
@@ -423,6 +427,7 @@ router.post('/chat', requireAuth, async (req, res) => {
         }
       }
 
+      if (streamTimeout) clearTimeout(streamTimeout);
       if (streamFailed && !clientDisconnected) {
         const errorPayload = { error: { message: '上游流式响应失败', type: 'upstream_stream_error' } };
         if (!res.writableEnded) res.write(`data: ${JSON.stringify(errorPayload)}\n\n`);
