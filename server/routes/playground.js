@@ -13,7 +13,7 @@ const { calculatePointsToDeduct } = require('../utils/points-deduct');
 const { clientMetaFromReq } = require('../utils/request-source');
 const { notifyUser, NOTIFICATION_TYPES } = require('../utils/notifications');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
-const { consumePlaygroundSseLine, finalizePlaygroundStream, recordPlaygroundUsageIfCompleted } = require('../utils/playground-stream-state');
+const { consumePlaygroundSseLines, finalizePlaygroundStream, recordPlaygroundUsageIfCompleted } = require('../utils/playground-stream-state');
 
 const UPSTREAM_TIMEOUT = 60000;
 const UPSTREAM_STREAM_TIMEOUT = 300000; // 流式请求超时 5 分钟
@@ -377,7 +377,8 @@ router.post('/chat', requireAuth, async (req, res) => {
             streamState.timeoutAborted = timeoutAborted;
             streamState.streamCompleted = streamCompleted;
             streamState.streamFailed = streamFailed;
-            const frame = consumePlaygroundSseLine(streamState, line, provider.format);
+            const frameResult = consumePlaygroundSseLines(streamState, [line], provider.format);
+            const frame = frameResult.output[0];
             streamCompleted = streamState.streamCompleted;
             streamFailed = streamState.streamFailed;
             if (frame.kind === 'ignore' || frame.kind === 'event') continue;

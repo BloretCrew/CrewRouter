@@ -56,11 +56,13 @@ assert.match(serverJs, /reader\.cancel\(\)/);
 assert.match(serverJs, /streamFailed/);
 assert.match(serverJs, /timeoutAborted/);
 assert.match(serverJs, /streamCompleted = true/);
-assert.match(serverJs, /consumePlaygroundSseLine\([\s\S]*provider\.format\)/);
+assert.match(serverJs, /consumePlaygroundSseLines\([\s\S]*provider\.format/);
 assert.match(streamState.consumePlaygroundSseLines ? serverJs + ' consumePlaygroundSseLines' : serverJs, /consumePlaygroundSseLines/);
 assert.match(serverJs, /if \(frame\.kind === 'ignore' \|\| frame\.kind === 'event'\) continue/);
 assert.match(serverJs, /recordPlaygroundUsageIfCompleted/);
-const productionLoop = streamState.consumePlaygroundSseLines({ clientDisconnected: false, timeoutAborted: false, streamCompleted: false, streamFailed: false, pendingEvent: '' }, ['event: message_stop', 'data: {}'], 'anthropic');
+const streamedResults = [];
+const productionLoop = streamState.consumePlaygroundSseLines({ clientDisconnected: false, timeoutAborted: false, streamCompleted: false, streamFailed: false, pendingEvent: '' }, ['event: message_stop', 'data: {}', 'data: [DONE]'], 'anthropic', result => streamedResults.push(result));
+assert.strictEqual(streamedResults.length, 2);
 assert.strictEqual(productionLoop.terminal, 'completed');
 assert.strictEqual(productionLoop.output[0].kind, 'event');
 assert.strictEqual(productionLoop.output[1].kind, 'done');
@@ -115,13 +117,8 @@ assert.match(playgroundJs, /data-id="\$\{Number\.isSafeInteger\(convId\)/);
 function executeSse(frames, mode = 'normal') {
   const out = [];
   const state = { clientDisconnected: mode === 'disconnect', timeoutAborted: mode === 'timeout', streamCompleted: false, streamFailed: false };
-  for (const frame of frames) {
-    const result = streamState.consumePlaygroundSseLine(state, `data: ${frame}`);
-    if (result.kind === 'ignore') break;
-    out.push(result);
-    if (result.kind === 'done' || result.kind === 'error') break;
-  }
-  const terminal = streamState.finalizePlaygroundStream(state);
+  const loop = streamState.consumePlaygroundSseLines(state, frames.map(frame => `data: ${frame}`), 'openai', result => out.push(result));
+  const terminal = loop.terminal;
   if (terminal === 'completed' && !out.some((item) => item.kind === 'done')) out.push({ kind: 'done' });
   if (terminal === 'failed' && !out.some((item) => item.kind === 'error')) out.push({ kind: 'error', terminal: true });
   if (terminal === 'timeout') out.push({ kind: 'error', terminal: true });
@@ -141,7 +138,7 @@ const normalEof = executeSse(['{"choices":[]}']);
 assert.strictEqual(normalEof.terminal, 'failed');
 const disconnected = executeSse(['{"choices":[]}', '[DONE]'], 'disconnect');
 assert.strictEqual(disconnected.terminal, 'client-disconnected');
-assert.deepStrictEqual(disconnected.out, []);
+assert.strictEqual(disconnected.out.every(item => item.kind === 'ignore'), true);
 
 // Execute the production retry payload helper; UI changes must not mutate it.
 const originalMessages = [{ role: 'user', content: 'original' }];

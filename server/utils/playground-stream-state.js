@@ -1,11 +1,12 @@
 'use strict';
 
-function consumePlaygroundSseLines(state, lines, providerFormat) {
+function consumePlaygroundSseLines(state, lines, providerFormat, onResult) {
   const output = [];
   for (const line of Array.isArray(lines) ? lines : []) {
     const result = consumePlaygroundSseLine(state, line, providerFormat);
     output.push(result);
-    if (result.kind === 'done' || result.kind === 'error' || result.kind === 'ignore') break;
+    if (typeof onResult === 'function') onResult(result);
+    if (result.kind === 'done' || result.kind === 'error') break;
   }
   return { state, output, terminal: finalizePlaygroundStream({ ...state }) };
 }
