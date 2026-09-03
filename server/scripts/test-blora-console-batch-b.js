@@ -35,4 +35,13 @@ assert.doesNotMatch(html, /data-blora-state="[^"]+"[^>]*data-blora-state=/);
 for (const marker of ['safeHttpUrl(', 'safeColor(', 'class="blora-card model-library-item', 'class="blora-button btn btn-sm btn-secondary model-test-btn', 'class="blora-button model-star-btn', "pingLibraryProvider('${this._jsString(provider.provider_id)}')", "app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')", "setBloraState('modelLibraryContent', 'loading')", "setBloraState('myProvidersTable', 'loading')", "setBloraState('myTeamModelsTable', 'loading')", "setBloraState('apiKeysList', 'loading')", "setBloraState('providerQuotaGrid', 'loading')"]) assert.ok(js.includes(marker), marker);
 assert.match(js, /series_icon_url[^\n]*safeHttpUrl/);
 assert.match(js, /model\.model_id[^\n]*_jsString/);
+for (const marker of [
+  'class="blora-button btn btn-sm btn-secondary" onclick="app.showManageModelsModal(\'${this._jsString(p.id)}\')"',
+  'class="blora-button btn btn-sm btn-secondary" onclick="app.pingUserProvider(\'${this._jsString(p.id)}\')"',
+  'class="blora-button btn btn-sm btn-secondary" onclick="app.editMyProvider(\'${this._jsString(p.id)}\')"',
+  'class="blora-button btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyProvider(\'${this._jsString(p.id)}\')"',
+]) assert.ok(js.includes(marker), marker);
+assert.match(js, /app\.testTeamModels\('\$\{this\._jsString\(team\.team_id\)\}'\)/);
+assert.ok((js.match(/app\.loadProviderModelsPage\('\$\{this\._jsString\(team\.team_id\)\}','\$\{this\._jsString\(provider\.provider_id\)\}'/g) || []).length >= 3);
+assert.doesNotMatch(js, /app\.(?:testTeamModels|loadProviderModelsPage|showManageModelsModal|pingUserProvider|editMyProvider|deleteMyProvider)\([^\n]*escapeHtml\(/);
 console.log('Blora console Batch B static contract/state/dynamic safety assertions passed.');

@@ -8444,7 +8444,7 @@ ${extractorBody}
         <table>
           <thead>
             <tr>
-              <th style="width:40px;"><input type="checkbox" onchange="app.toggleSelectAllProviders(this.checked)"></th>
+              <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllProviders(this.checked)"></th>
               <th>名称</th>
               <th>Base URL</th>
               <th>格式</th>
@@ -8456,7 +8456,7 @@ ${extractorBody}
           <tbody>
             ${providers.map(p => `
               <tr data-provider-id="${escapeHtml(p.id)}">
-                <td><input type="checkbox" class="provider-checkbox" value="${escapeHtml(p.id)}" onchange="app.updateBatchButtons()"></td>
+                <td><input type="checkbox" class="blora-input provider-checkbox" value="${escapeHtml(p.id)}" onchange="app.updateBatchButtons()"></td>
                 <td>
                   <div style="font-weight:500;">${escapeHtml(p.name)}</div>
                   <div style="font-size:11px;color:var(--muted-foreground);font-family:monospace;">${escapeHtml(p.id)}</div>
@@ -8466,21 +8466,21 @@ ${extractorBody}
                 </td>
                 <td><span style="font-size:12px;">${escapeHtml(formatDisplayName(p.format))}</span></td>
                 <td>
-                  <div id="user-ping-page-${p.id}" style="min-width:60px;font-size:12px;color:var(--muted-foreground);">-</div>
+                  <div id="user-ping-page-${escapeHtml(String(p.id))}" style="min-width:60px;font-size:12px;color:var(--muted-foreground);">-</div>
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-secondary" onclick="app.showManageModelsModal('${escapeHtml(p.id)}')" title="${t('管理模型')}">
+                  <button class="blora-button btn btn-sm btn-secondary" onclick="app.showManageModelsModal('${this._jsString(p.id)}')" title="${t('管理模型')}">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                     模型
                   </button>
                 </td>
                 <td>
                   <div style="display:flex;gap:6px;">
-                    <button class="btn btn-sm btn-secondary" onclick="app.pingUserProvider('${escapeHtml(p.id)}')" title="${t('检测连通性')}">
+                    <button class="blora-button btn btn-sm btn-secondary" onclick="app.pingUserProvider('${this._jsString(p.id)}')" title="${t('检测连通性')}">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     </button>
-                    <button class="btn btn-sm btn-secondary" onclick="app.editMyProvider('${escapeHtml(p.id)}')">编辑</button>
-                    <button class="btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyProvider('${escapeHtml(p.id)}')">删除</button>
+                    <button class="blora-button btn btn-sm btn-secondary" onclick="app.editMyProvider('${this._jsString(p.id)}')">编辑</button>
+                    <button class="blora-button btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyProvider('${this._jsString(p.id)}')">删除</button>
                   </div>
                 </td>
               </tr>
@@ -10739,7 +10739,7 @@ ${extractorBody}
             ${team.is_default ? '<span class="team-badge default">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
             <div style="flex:1;"></div>
-            <button class="blora-button btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${team.team_id}')" title="${t('测试此 Team 下所有模型')}">
+            <button class="blora-button btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${this._jsString(team.team_id)}')" title="${t('测试此 Team 下所有模型')}">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试全部
             </button>
@@ -11507,14 +11507,14 @@ ${extractorBody}
     const pageButtons = pages.map(p => {
       const gap = p - lastPage > 1 ? '<span class="model-library-page-ellipsis">...</span>' : '';
       lastPage = p;
-      return `${gap}<button class="blora-button model-library-page-btn ${p === current ? 'active' : ''}" ${p === current ? 'disabled' : ''} onclick="event.stopPropagation();app.loadProviderModelsPage('${escapeHtml(team.team_id)}','${escapeHtml(provider.provider_id)}',${p})">${p}</button>`;
+      return `${gap}<button class="blora-button model-library-page-btn ${p === current ? 'active' : ''}" ${p === current ? 'disabled' : ''} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${p})">${p}</button>`;
     }).join('');
 
     return `
       <div class="model-library-pagination">
-        <button class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${escapeHtml(team.team_id)}','${escapeHtml(provider.provider_id)}',${current - 1})">上一页</button>
+        <button class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current - 1})">上一页</button>
         ${pageButtons}
-        <button class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${escapeHtml(team.team_id)}','${escapeHtml(provider.provider_id)}',${current + 1})">下一页</button>
+        <button class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current + 1})">下一页</button>
         <span class="model-library-page-summary">共 ${pagination.total} 个</span>
       </div>
     `;
