@@ -34,6 +34,25 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function safeColor(value, fallback = 'var(--muted-foreground)') {
+  const raw = String(value ?? '').trim();
+  if (/^var\(--[a-z0-9-]+\)$/.test(raw) || /^#[0-9a-f]{3,8}$/i.test(raw) || /^(?:rgb|hsl)a?\([0-9.,%\s-]+\)$/.test(raw)) return raw;
+  return fallback;
+}
+
+function setBloraState(id, state) {
+  const el = document.getElementById(id);
+  if (el) el.setAttribute('data-blora-state', state);
+  return el;
+}
+
+function safeHttpUrl(value) {
+  try {
+    const url = new URL(String(value ?? ''), window.location.origin);
+    return /^https?:$/.test(url.protocol) ? url.href : '';
+  } catch (_) { return ''; }
+}
+
 function formatDisplayName(format) {
   switch (format) {
     case 'openai': return 'Chat Completions';
@@ -542,7 +561,7 @@ class ConsoleApp {
   }
 
   async loadApiKeys() {
-    const container = document.getElementById('apiKeysList');
+    const container = setBloraState('apiKeysList', 'loading');
     if (container && !(this._lastApiKeys || []).length) {
       setHTML(container, pageLoadingHtml(t('加载 API 密钥...')));
     }
@@ -573,6 +592,7 @@ class ConsoleApp {
       }
 
       if (apiKeys.length === 0) {
+        setBloraState('apiKeysList', 'empty');
         setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无 API 密钥，点击上方按钮一键创建') + '</p>');
         return;
       }
@@ -590,6 +610,7 @@ class ConsoleApp {
           </div>
           <div class="api-keys-list">${keys.map(key => this._renderApiKeyCard(key)).join('')}</div>
         </section>`;
+      setBloraState('apiKeysList', 'success');
       setHTML(container, `<div class="api-key-groups">
         ${renderGroup(t('普通 API Key'), t('仅自己管理的密钥'), normalKeys, 'api-key-group-normal')}
         ${renderGroup('Co-Key', t('已共享给成员，或由其他用户共享给您'), coKeys, 'api-key-group-cokey')}
@@ -599,6 +620,7 @@ class ConsoleApp {
       this._bindApiKeyTagsResizeObserver();
     } catch (error) {
       console.error(t('加载API密钥失败:'), error);
+      setBloraState('apiKeysList', 'error');
       if (container) setHTML(container, '<p style="text-align:center;color:var(--destructive);padding:40px;">' + t('加载失败，请刷新重试') + '</p>');
     }
   }
@@ -768,7 +790,7 @@ class ConsoleApp {
     ];
 
     return `
-      <div class="api-key-card ${isEnabled ? '' : 'key-disabled'}" data-key-id="${key.id}"
+      <div class="blora-card api-key-card ${isEnabled ? '' : 'key-disabled'}" data-key-id="${key.id}"
            ondragover="app.handleApiKeyDragOver(event);app.handleApiKeySortOver(event)" ondragleave="app.handleApiKeyDragLeave(event);app.handleApiKeySortLeave(event)" ondrop="app.handleApiKeyDrop(event, ${key.id});app.handleApiKeySortDrop(event, ${key.id})">
         <div class="api-key-header">
           <div class="api-key-title">
@@ -823,7 +845,7 @@ class ConsoleApp {
         <div class="api-key-footer">
           ${this._renderApiKeyRoutePill(key, modelDisplay, queueLen)}
           <div class="api-key-actions">
-            <button type="button" class="btn btn-sm btn-primary" onclick="app.showKeyModels(${key.id})">模型队列</button>
+            <button type="button" class="blora-button btn btn-sm btn-primary" onclick="app.showKeyModels(${key.id})">模型队列</button>
             ${this._renderApiKeyMoreMenu(key.id, moreItems)}
           </div>
         </div>
@@ -945,7 +967,7 @@ class ConsoleApp {
     }).join('');
     return `
       <div class="api-key-more">
-        <button type="button" class="btn btn-sm btn-secondary" onclick="event.stopPropagation();app.toggleApiKeyMoreMenu(${keyId})">更多</button>
+        <button type="button" class="blora-button btn btn-sm btn-secondary" onclick="event.stopPropagation();app.toggleApiKeyMoreMenu(${keyId})">更多</button>
         <div id="${menuId}" class="api-key-more-menu" style="display:none;" onclick="event.stopPropagation()">
           ${itemsHtml}
         </div>
@@ -992,13 +1014,13 @@ class ConsoleApp {
   _renderKeyTagChipsHtml() {
     return (this._keyTags || []).map(tag => `
       <div class="key-tag-chip"
-           style="border-color:${tag.color};"
+           style="border-color:${safeColor(tag.color)};"
            draggable="true"
            data-tag-id="${tag.id}"
            ondragstart="app.handleKeyTagDragStart(event, ${tag.id})"
            ondragend="app.handleKeyTagDragEnd(event)"
            title="${t('拖拽到 Key 卡片来分配 · 点击铅笔编辑')}">
-        <span style="color:${tag.color};">●</span>
+        <span style="color:${safeColor(tag.color)};">●</span>
         ${escapeHtml(tag.name)}
         <span class="edit-tag-def" onclick="event.stopPropagation();app.showEditKeyTagPopover(${tag.id}, this)" title="${t('编辑标签')}">✎</span>
         <span class="remove-tag-def" onclick="event.stopPropagation();app.deleteKeyTag(${tag.id})" title="${t('删除此标签')}">&times;</span>
@@ -1205,7 +1227,7 @@ class ConsoleApp {
     return `<div class="api-key-inline-tags" data-key-id="${key.id}">
       <div class="api-key-inline-tags-track">
         ${tags.map(tag => `
-          <span class="key-tag-chip-sm" data-tag-id="${tag.id}" style="border-color:${tag.color};color:${tag.color};background:${tag.color}10;">
+          <span class="key-tag-chip-sm" data-tag-id="${tag.id}" style="border-color:${safeColor(tag.color)};color:${safeColor(tag.color)};background:${safeColor(tag.color)}10;">
             ${escapeHtml(tag.name)}
             ${isOwner ? `<span class="remove-tag" onclick="event.stopPropagation();app.removeTagFromKey(${key.id},${tag.id})" title="${t('移除')}">&times;</span>` : ''}
           </span>`).join('')}
@@ -1747,7 +1769,7 @@ class ConsoleApp {
   }
 
   async showKeyModels(keyId) {
-    const container = document.getElementById('keyModelsContent');
+    const container = setBloraState('keyModelsContent', 'loading');
     this._configureKeyModelsModal({
       title: t('模型队列（失败按顺序回退）'),
       picker: true,
@@ -1768,6 +1790,7 @@ class ConsoleApp {
         fetch('/api/user/provider-tags').catch(() => null)
       ]);
       if (!libraryRes.ok || !assignedRes.ok) {
+        setBloraState('keyModelsContent', 'error');
         setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:32px;">' + t('加载失败') + '</p>');
         return;
       }
@@ -1803,10 +1826,12 @@ class ConsoleApp {
       };
 
       this._renderKeyModelPickerShell();
+      setBloraState('keyModelsContent', 'success');
       this._populateKeyModelPickerFilters();
       this.filterAndRenderKeyModelPicker();
     } catch (error) {
       console.error(t('加载密钥模型列表失败:'), error);
+      setBloraState('keyModelsContent', 'error');
       setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:32px;">' + t('加载失败') + '</p>');
     }
   }
@@ -1952,19 +1977,19 @@ class ConsoleApp {
         <div class="model-filter-bar">
           <div class="model-search-box">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" id="keyModelPickerSearch" placeholder="${t('搜索模型、供应商、Team...')}" class="model-search-input">
+            <input type="text" id="keyModelPickerSearch" placeholder="${escapeHtml(t('搜索模型、供应商、Team...'))}" class="blora-input model-search-input">
           </div>
           <div class="model-filter-selects">
-            <select id="keyModelPickerProvider" class="select"><option value="all">全部供应商</option></select>
-            <select id="keyModelPickerSeries" class="select"><option value="all">全部系列</option></select>
-            <select id="keyModelPickerProviderTag" class="select"><option value="all">全部标签</option></select>
-            <select id="keyModelPickerTest" class="select">
+            <select id="keyModelPickerProvider" class="blora-select select"><option value="all">全部供应商</option></select>
+            <select id="keyModelPickerSeries" class="blora-select select"><option value="all">全部系列</option></select>
+            <select id="keyModelPickerProviderTag" class="blora-select select"><option value="all">全部标签</option></select>
+            <select id="keyModelPickerTest" class="blora-select select">
               <option value="all">全部状态</option>
               <option value="pass">测试通过</option>
               <option value="fail">测试失败</option>
               <option value="untested">未测试</option>
             </select>
-            <select id="keyModelPickerSort" class="select">
+            <select id="keyModelPickerSort" class="blora-select select">
               <option value="default">默认排序</option>
               <option value="price_asc">价格低→高</option>
               <option value="price_desc">价格高→低</option>
@@ -2131,6 +2156,7 @@ class ConsoleApp {
     }
 
     const expandedState = this._captureKeyPickerExpandedState();
+    setBloraState('keyModelsContent', filtered.teams.some(team => team.providers?.some(provider => (provider.models || []).length)) ? 'success' : 'empty');
     this._renderKeyModelPickerLibrary(filtered);
     this._restoreKeyPickerExpandedState(expandedState);
   }
@@ -2157,6 +2183,7 @@ class ConsoleApp {
       const res = await fetch(`/api/user/model-library/search?${params.toString()}`);
       if (!res.ok) throw new Error(t('搜索失败'));
       const data = await res.json();
+      if (!data || typeof data !== 'object' || !Array.isArray(data.models)) throw new Error(t('搜索失败'));
       if (seq !== ctx.globalSearchSeq || this._keyModelPicker !== ctx) return;
       if (!this._shouldUseKeyPickerGlobalSearch(ctx)) return;
 
@@ -2168,6 +2195,7 @@ class ConsoleApp {
         countEl.textContent = `${t('找到')}${data.pagination?.total ?? models.length}${t('个模型')}`;
       }
       if (!models.length) {
+        setBloraState('keyModelsContent', 'empty');
         if (container) {
           setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('没有符合条件的模型') + '</p></div>');
         }
@@ -2191,6 +2219,7 @@ class ConsoleApp {
       }
 
       if (!container) return;
+      setBloraState('keyModelsContent', 'success');
       setHTML(container, [...teamMap.values()].map(team => `
         <div class="model-library-team model-search-team">
           <div class="model-library-team-header" style="cursor:default;">
@@ -2208,6 +2237,7 @@ class ConsoleApp {
       `).join(''));
     } catch (e) {
       if (seq !== ctx.globalSearchSeq) return;
+      setBloraState('keyModelsContent', 'error');
       console.warn(t('[API Key 模型选择] 全局搜索失败:'), e);
       if (container) {
         setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--destructive);margin:0;">' + t('搜索失败，请重试') + '</p></div>');
@@ -2251,12 +2281,14 @@ class ConsoleApp {
     const container = document.getElementById('keyModelPickerContent');
     if (!container) return;
     if (!libraryData.teams || libraryData.teams.length === 0) {
+      setBloraState('keyModelsContent', 'empty');
       setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="font-size:15px;color:var(--muted-foreground);margin:0;">' + t('暂无可用模型') + '</p></div>');
       return;
     }
 
     const hasProviders = libraryData.teams.some(team => team.providers && team.providers.length > 0);
     if (!hasProviders) {
+      setBloraState('keyModelsContent', 'empty');
       setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="font-size:15px;color:var(--muted-foreground);margin:0;">' + t('请尝试调整筛选条件') + '</p></div>');
       return;
     }
@@ -2264,7 +2296,7 @@ class ConsoleApp {
     setHTML(container, libraryData.teams.map((team, teamIndex) => {
       if (!team.providers || team.providers.length === 0) return '';
       return `
-        <div class="model-library-team" data-picker-team-index="${teamIndex}" data-team-id="${escapeHtml(team.team_id)}">
+        <div class="model-library-team" data-picker-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
           <div class="model-library-team-header" onclick="app.toggleKeyModelPickerTeam(${teamIndex})">
             <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             <h3>${escapeHtml(team.team_name)}</h3>
@@ -2285,10 +2317,10 @@ class ConsoleApp {
     const hasModels = provider.models_loaded && provider.models && provider.models.length > 0;
     const totalCount = provider.model_count != null ? provider.model_count : (provider.pagination?.total ?? (provider.models ? provider.models.length : 0));
     return `
-      <div class="model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}"
+      <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}"
            data-picker-provider-index="${teamIndex}-${providerIndex}"
-           data-team-id="${escapeHtml(team.team_id)}"
-           data-provider-id="${escapeHtml(provider.provider_id)}"
+           data-team-id="${escapeHtml(String(team.team_id))}"
+           data-provider-id="${escapeHtml(String(provider.provider_id))}"
            style="${isProviderDisabled ? 'position:relative;' : ''}">
         ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
         <div class="model-library-provider-header" onclick="app.toggleKeyModelPickerProvider(${teamIndex}, ${providerIndex})">
@@ -2297,7 +2329,7 @@ class ConsoleApp {
             ${renderProviderNameTag(provider.provider_name)}
             ${this._renderProviderTestSummary(provider)}
             ${(provider.tags || []).map(t =>
-              `<span class="model-item-badge" style="background:${t.color}18;color:${t.color};border:1px solid ${t.color}44;">${escapeHtml(t.name)}</span>`
+              `<span class="model-item-badge" style="background:${safeColor(t.color)}18;color:${safeColor(t.color)};border:1px solid ${safeColor(t.color)}44;">${escapeHtml(t.name)}</span>`
             ).join('')}
             ${isProviderDisabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('已禁用') + '</span>' : ''}
           </div>
@@ -2539,13 +2571,13 @@ class ConsoleApp {
     const pageButtons = pages.map(p => {
       const gap = p - lastPage > 1 ? '<span class="model-library-page-ellipsis">...</span>' : '';
       lastPage = p;
-      return `${gap}<button class="model-library-page-btn ${p === current ? 'active' : ''}" ${p === current ? 'disabled' : ''} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${p})">${p}</button>`;
+      return `${gap}<button class="blora-button model-library-page-btn ${p === current ? 'active' : ''}" ${p === current ? 'disabled' : ''} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${p})">${p}</button>`;
     }).join('');
     return `
       <div class="model-library-pagination">
-        <button class="model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current - 1})">上一页</button>
+        <button class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current - 1})">上一页</button>
         ${pageButtons}
-        <button class="model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current + 1})">下一页</button>
+        <button class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current + 1})">下一页</button>
         <span class="model-library-page-summary">共 ${pagination.total} 个</span>
       </div>
     `;
@@ -2639,7 +2671,7 @@ class ConsoleApp {
         <span class="key-model-queue-order">${index + 1}</span>
         <span class="key-model-queue-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}${index === 0 ? ' <em class="key-model-queue-primary">' + t('首选') + '</em>' : ''}</span>
         <div class="key-model-queue-actions">
-          <button type="button" class="btn btn-ghost btn-sm" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title="${t('移除')}">×</button>
+          <button type="button" class="blora-button btn btn-ghost btn-sm" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title="${t('移除')}">×</button>
         </div>
       </div>`;
     }).join(''));
@@ -2922,20 +2954,20 @@ class ConsoleApp {
         <div style="margin-bottom:16px;">
           <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:8px;">Panel 模型（多选，并行调用）</div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
-            <input type="text" id="fusionPanelSearch" class="input" placeholder="${t('搜索模型...')}" style="flex:1;font-size:13px;" oninput="app._filterFusionPanelModels()">
-            <button class="btn btn-sm btn-secondary" onclick="app._toggleAllFusionPanels()">全选/取消</button>
+            <input type="text" id="fusionPanelSearch" class="blora-input input" placeholder="${escapeHtml(t('搜索模型...'))}" style="flex:1;font-size:13px;" oninput="app._filterFusionPanelModels()">
+            <button type="button" class="blora-button btn btn-sm btn-secondary" onclick="app._toggleAllFusionPanels()">全选/取消</button>
           </div>
           <div id="fusionPanelList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;">
             ${providerEntries.map(([provider, pModels]) => `
               <div class="fusion-provider-group" style="margin-bottom:8px;">
-                <div style="font-size:11px;font-weight:600;color:var(--muted-foreground);text-transform:uppercase;margin-bottom:4px;">${provider}</div>
+                <div style="font-size:11px;font-weight:600;color:var(--muted-foreground);text-transform:uppercase;margin-bottom:4px;">${escapeHtml(provider)}</div>
                 ${pModels.map(m => {
                   const label = m.name || m.upstream_model_id || m.id;
                   const checked = selectedPanels.has(m.id) ? 'checked' : '';
                   return `
-                    <label class="fusion-panel-item" data-search="${(label + ' ' + m.id).toLowerCase()}" style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:4px;font-size:13px;">
-                      <input type="checkbox" class="fusion-panel-cb" value="${m.id}" ${checked}>
-                      <span>${label}</span>
+                    <label class="blora-card fusion-panel-item" data-search="${escapeHtml((label + ' ' + m.id).toLowerCase())}" style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:4px;font-size:13px;">
+                      <input type="checkbox" class="blora-input fusion-panel-cb" value="${escapeHtml(String(m.id))}" ${checked}>
+                      <span>${escapeHtml(label)}</span>
                     </label>
                   `;
                 }).join('')}
@@ -2948,14 +2980,14 @@ class ConsoleApp {
         <div style="display:flex;gap:12px;margin-bottom:16px;">
           <div style="flex:1;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:6px;">Judge 模型</div>
-            <select id="fusionJudgeSelect" class="input" style="font-size:13px;">
-              ${models.map(m => `<option value="${m.id}" ${currentJudge === m.id ? 'selected' : ''}>${m.name || m.id}</option>`).join('')}
+            <select id="fusionJudgeSelect" class="blora-select select" style="font-size:13px;">
+              ${models.map(m => `<option value="${escapeHtml(String(m.id))}" ${currentJudge === m.id ? 'selected' : ''}>${escapeHtml(m.name || m.id)}</option>`).join('')}
             </select>
           </div>
           <div style="flex:1;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:6px;">合成模型</div>
-            <select id="fusionOuterSelect" class="input" style="font-size:13px;">
-              ${models.map(m => `<option value="${m.id}" ${currentOuter === m.id ? 'selected' : ''}>${m.name || m.id}</option>`).join('')}
+            <select id="fusionOuterSelect" class="blora-select select" style="font-size:13px;">
+              ${models.map(m => `<option value="${escapeHtml(String(m.id))}" ${currentOuter === m.id ? 'selected' : ''}>${escapeHtml(m.name || m.id)}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -3490,7 +3522,7 @@ class ConsoleApp {
         ['Token', fmtTok(summary.tokens), t('总投入')],
         [t('最近活动'), date(summary.last_activity), t('最后一次工作')],
       ];
-      setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="project-work-stat"><span>${label}</span><strong>${value}</strong><small>${sub}</small></div>`).join(''));
+      setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="project-work-stat"><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${sub}</small></div>`).join(''));
       setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)}${t('次 ·')}${fmtTok(p.tokens)}${t('Token · 最近')}${date(p.last_activity)}</small></span><span class="project-work-arrow">→</span></button>`).join(''));
       setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)}${t(')" title="' + t('复制工作区路径') + '">')}${escapeHtml(p.workspace_path)}${'</button></div></div><div class="project-work-project-metrics"><div><span>' + t('请求')}</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmtTok(p.tokens)}${'</strong></div><div><span>' + t('活跃')}</span><strong>${fmt(p.active_days)}${t('天')}</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || t('未标记客户端')}</span><span>${money(p.cost)}${t('积分')}</span></div></article>`).join(''));
       if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('AI 请求'), data: (data.daily || []).map(r => r.requests), borderColor: readCssVar('--chart-6', '#0f766e'), backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: t('活跃项目'), data: (data.daily || []).map(r => r.projects), borderColor: 'var(--warning)', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
@@ -8289,6 +8321,7 @@ ${extractorBody}
   // ==================== CrewRouter 模型库 ====================
 
   async loadModelLibrary() {
+    setBloraState('modelLibraryContent', 'loading');
     try {
       const libraryRes = await fetch('/api/user/model-library');
       if (!libraryRes.ok) throw new Error(t('模型库接口异常'));
@@ -8330,6 +8363,7 @@ ${extractorBody}
       if (filtersEl) filtersEl.style.display = hasModels ? 'flex' : 'none';
 
       this.filterAndRenderModelLibrary();
+      setBloraState('modelLibraryContent', 'success');
       this._updateLibraryHiddenButtons();
       this._updateLibraryBindingBar();
       this._initLibraryStickyBar();
@@ -8340,6 +8374,7 @@ ${extractorBody}
       this._startQuotaBackgroundRefresh();
     } catch (error) {
       console.error(t('加载模型库失败:'), error);
+      setBloraState('modelLibraryContent', 'error');
       setHTML(document.getElementById('modelLibraryContent'), '<div class="empty-state"><p>' + t('加载失败，请刷新重试') + '</p></div>');
       this._updateLibraryBindingBar();
       this._syncLibraryStickyVisibility(false);
@@ -8392,13 +8427,19 @@ ${extractorBody}
   }
 
   async loadMyProvidersPage() {
+    setBloraState('myProvidersTable', 'loading');
     try {
       const res = await fetch('/api/user/my-providers');
-      if (!res.ok) return;
+      if (!res.ok) { setBloraState('myProvidersTable', 'error'); return; }
       const providers = await res.json();
 
       const container = document.getElementById('myProvidersTable');
+      if (!Array.isArray(providers)) {
+        setBloraState('myProvidersTable', 'error');
+        return;
+      }
       if (!providers.length) {
+        setBloraState('myProvidersTable', 'empty');
         setHTML(container, `
           <div class="empty-state" style="padding:60px 20px;text-align:center;">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
@@ -8412,11 +8453,12 @@ ${extractorBody}
         return;
       }
 
+      setBloraState('myProvidersTable', 'success');
       setHTML(container, `
         <table>
           <thead>
             <tr>
-              <th style="width:40px;"><input type="checkbox" onchange="app.toggleSelectAllProviders(this.checked)"></th>
+              <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllProviders(this.checked)"></th>
               <th>名称</th>
               <th>Base URL</th>
               <th>格式</th>
@@ -8428,7 +8470,7 @@ ${extractorBody}
           <tbody>
             ${providers.map(p => `
               <tr data-provider-id="${escapeHtml(p.id)}">
-                <td><input type="checkbox" class="provider-checkbox" value="${escapeHtml(p.id)}" onchange="app.updateBatchButtons()"></td>
+                <td><input type="checkbox" class="blora-input provider-checkbox" value="${escapeHtml(p.id)}" onchange="app.updateBatchButtons()"></td>
                 <td>
                   <div style="font-weight:500;">${escapeHtml(p.name)}</div>
                   <div style="font-size:11px;color:var(--muted-foreground);font-family:monospace;">${escapeHtml(p.id)}</div>
@@ -8438,21 +8480,21 @@ ${extractorBody}
                 </td>
                 <td><span style="font-size:12px;">${escapeHtml(formatDisplayName(p.format))}</span></td>
                 <td>
-                  <div id="user-ping-page-${p.id}" style="min-width:60px;font-size:12px;color:var(--muted-foreground);">-</div>
+                  <div id="user-ping-page-${escapeHtml(String(p.id))}" style="min-width:60px;font-size:12px;color:var(--muted-foreground);">-</div>
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-secondary" onclick="app.showManageModelsModal('${escapeHtml(p.id)}')" title="${t('管理模型')}">
+                  <button class="blora-button btn btn-sm btn-secondary" onclick="app.showManageModelsModal('${this._jsString(p.id)}')" title="${t('管理模型')}">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                     模型
                   </button>
                 </td>
                 <td>
                   <div style="display:flex;gap:6px;">
-                    <button class="btn btn-sm btn-secondary" onclick="app.pingUserProvider('${escapeHtml(p.id)}')" title="${t('检测连通性')}">
+                    <button class="blora-button btn btn-sm btn-secondary" onclick="app.pingUserProvider('${this._jsString(p.id)}')" title="${t('检测连通性')}">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     </button>
-                    <button class="btn btn-sm btn-secondary" onclick="app.editMyProvider('${escapeHtml(p.id)}')">编辑</button>
-                    <button class="btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyProvider('${escapeHtml(p.id)}')">删除</button>
+                    <button class="blora-button btn btn-sm btn-secondary" onclick="app.editMyProvider('${this._jsString(p.id)}')">编辑</button>
+                    <button class="blora-button btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyProvider('${this._jsString(p.id)}')">删除</button>
                   </div>
                 </td>
               </tr>
@@ -8461,6 +8503,7 @@ ${extractorBody}
         </table>
       `);
     } catch (error) {
+      setBloraState('myProvidersTable', 'error');
       console.error(t('加载供应商页面失败:'), error);
     }
   }
@@ -8710,6 +8753,8 @@ ${extractorBody}
 
     // 显示模态框
     document.getElementById('manageModelsTitle').textContent = t('管理模型');
+    setBloraState('manageModelsLoading', 'loading');
+    setBloraState('manageModelsError', 'idle');
     document.getElementById('manageModelsLoading').style.display = 'block';
     document.getElementById('manageModelsError').style.display = 'none';
     document.getElementById('manageModelsContent').style.display = 'none';
@@ -8720,10 +8765,15 @@ ${extractorBody}
       const res = await fetch(`/api/user/providers/${providerId}/models`);
       if (!res.ok) throw new Error(t('获取模型列表失败'));
       const models = await res.json();
+      if (!Array.isArray(models)) throw new Error(t('获取模型列表失败'));
+      setBloraState('manageModelsContent', models.length ? 'success' : 'empty');
 
       this._currentManageModels = models;
       this.renderManageModels(models);
     } catch (error) {
+      setBloraState('manageModelsContent', 'error');
+      setBloraState('manageModelsLoading', 'idle');
+      setBloraState('manageModelsError', 'error');
       document.getElementById('manageModelsLoading').style.display = 'none';
       document.getElementById('manageModelsError').style.display = 'block';
       document.getElementById('manageModelsError').textContent = error.message;
@@ -8731,6 +8781,8 @@ ${extractorBody}
   }
 
   renderManageModels(models) {
+    setBloraState('manageModelsLoading', 'idle');
+    setBloraState('manageModelsError', 'idle');
     document.getElementById('manageModelsLoading').style.display = 'none';
     document.getElementById('manageModelsContent').style.display = 'block';
     document.getElementById('manageModelsFooter').style.display = 'flex';
@@ -8741,6 +8793,7 @@ ${extractorBody}
 
   _renderManageModelsList(models) {
     const container = document.getElementById('manageModelsList');
+    setBloraState('manageModelsContent', models.length ? 'success' : 'empty');
     const countEl = document.getElementById('manageModelsCount');
     document.getElementById('selectAllManageModels').checked = false;
 
@@ -8757,8 +8810,8 @@ ${extractorBody}
     }
 
     setHTML(container, models.map((model, index) => `
-      <div class="model-check-item" data-model-id="${model.id}" data-model-name="${model.name || ''}">
-        <input type="checkbox" class="manage-model-checkbox" id="manageModel_${index}" value="${model.id}" onchange="app._updateManageModelsBatchBar()">
+      <div class="blora-card model-check-item" data-model-id="${escapeHtml(String(model.id))}" data-model-name="${escapeHtml(model.name || '')}">
+        <input type="checkbox" class="blora-input manage-model-checkbox" id="manageModel_${index}" value="${escapeHtml(String(model.id))}" onchange="app._updateManageModelsBatchBar()">
         <label for="manageModel_${index}" style="flex:1;cursor:pointer;">
           <span style="font-weight:500;">${escapeHtml(model.name || model.id)}</span>
           ${model.name && model.name !== model.id ? `<span style="font-size:12px;color:var(--muted-foreground);margin-left:8px;">${escapeHtml(model.id)}</span>` : ''}
@@ -8969,14 +9022,17 @@ ${extractorBody}
   _myTeamModelsFiltered = [];
 
   async loadMyTeamModels() {
+    setBloraState('myTeamModelsTable', 'loading');
     try {
       const res = await fetch('/api/user/my-team-models');
       if (!res.ok) throw new Error(t('获取模型列表失败'));
       this._myTeamModels = await res.json();
       this._myTeamModelsFiltered = [...this._myTeamModels];
       this._renderMyTeamModels(this._myTeamModelsFiltered);
+      setBloraState('myTeamModelsTable', this._myTeamModelsFiltered.length ? 'success' : 'empty');
     } catch (error) {
       console.error(t('加载个人Team模型失败:'), error);
+      setBloraState('myTeamModelsTable', 'error');
       setHTML(document.getElementById('myTeamModelsTable'), '<div class="empty-state"><p>' + t('加载失败，请刷新重试') + '</p></div>');
     }
   }
@@ -9007,7 +9063,7 @@ ${extractorBody}
       <table>
         <thead>
           <tr>
-            <th style="width:40px;"><input type="checkbox" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></th>
+            <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></th>
             <th>模型名称</th>
             <th>上游模型ID</th>
             <th>供应商</th>
@@ -9020,7 +9076,7 @@ ${extractorBody}
         <tbody>
           ${models.map(m => `
             <tr data-model-id="${escapeHtml(m.id)}">
-              <td><input type="checkbox" class="my-team-model-checkbox" value="${escapeHtml(m.id)}" onchange="app.updateMyModelsBatchButtons()"></td>
+              <td><input type="checkbox" class="blora-input my-team-model-checkbox" value="${escapeHtml(m.id)}" onchange="app.updateMyModelsBatchButtons()"></td>
               <td>
                 <div style="font-weight:500;">${escapeHtml(m.alias || m.name || m.id)}</div>
                 ${m.description ? `<div style="font-size:11px;color:var(--muted-foreground);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
@@ -9035,8 +9091,8 @@ ${extractorBody}
               }</td>
               <td>
                 <div style="display:flex;gap:4px;">
-                  <button class="btn btn-sm btn-secondary" onclick="app.editMyTeamModel('${escapeHtml(m.id)}')">编辑</button>
-                  <button class="btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel('${escapeHtml(m.id)}')">删除</button>
+                  <button class="blora-button btn btn-sm btn-secondary" onclick="app.editMyTeamModel('${this._jsString(m.id)}')">编辑</button>
+                  <button class="blora-button btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel('${this._jsString(m.id)}')">删除</button>
                 </div>
               </td>
             </tr>
@@ -9477,10 +9533,10 @@ ${extractorBody}
       const page = pagination.page || 1;
       paginationHtml = `
         <div class="model-library-pagination" style="margin-top:12px;">
-          <button class="model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'}
+          <button class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'}
             onclick="app.loadLibraryGlobalSearchPage(${page - 1})">上一页</button>
           <span class="model-library-page-summary">第 ${page} / ${pagination.total_pages} 页 · 共 ${pagination.total} 个</span>
-          <button class="model-library-page-btn" ${pagination.has_next ? '' : 'disabled'}
+          <button class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'}
             onclick="app.loadLibraryGlobalSearchPage(${page + 1})">下一页</button>
         </div>`;
     }
@@ -10432,6 +10488,7 @@ ${extractorBody}
   }
 
   async loadProviderQuota() {
+    setBloraState('providerQuotaGrid', 'loading');
     const grid = document.getElementById('providerQuotaGrid');
     if (grid && !(this._providerQuotaLoadedOnce)) {
       setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>' + t('正在加载供应商额度缓存...') + '</span></div>');
@@ -10444,12 +10501,15 @@ ${extractorBody}
       const quotaData = await quotaRes.json();
       this._providerQuotaLoadedOnce = true;
       this.renderProviderQuota(quotaData.providers || []);
+      setBloraState('providerQuotaGrid', (quotaData.providers || []).length ? 'success' : 'empty');
     } catch (e) {
+      setBloraState('providerQuotaGrid', 'error');
       console.warn(t('加载供应商额度失败:'), e);
     }
   }
 
   async refreshProviderQuota() {
+    setBloraState('providerQuotaGrid', 'loading');
     const refreshButton = document.getElementById('providerQuotaRefreshBtn');
     if (refreshButton) {
       refreshButton.classList.add('is-loading');
@@ -10467,7 +10527,9 @@ ${extractorBody}
       const quotaData = await quotaRes.json();
       this._providerQuotaLoadedOnce = true;
       this.renderProviderQuota(quotaData.providers || []);
+      setBloraState('providerQuotaGrid', (quotaData.providers || []).length ? 'success' : 'empty');
     } catch (e) {
+      setBloraState('providerQuotaGrid', 'error');
       console.warn(t('刷新供应商额度失败:'), e);
     } finally {
       if (refreshButton) {
@@ -10656,9 +10718,9 @@ ${extractorBody}
           <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
           <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">请联系管理员添加模型或加入 Team，也可添加自己的供应商</p>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button class="btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
-            <button class="btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
-            <button class="btn btn-secondary btn-sm" onclick="app.navigateTo(\'myUpstream\')">管理我的上游</button>
+            ${noKeys ? '<button class="blora-button btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
+            <button class="blora-button btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
+            <button class="blora-button btn btn-secondary btn-sm" onclick="app.navigateTo(\'myUpstream\')">管理我的上游</button>
           </div>
         </div>
       `);
@@ -10678,8 +10740,8 @@ ${extractorBody}
           <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
           <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">可调整筛选，或添加自己的上游供应商导入模型</p>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button class="btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
-            <button class="btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
+            ${noKeys ? '<button class="blora-button btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
+            <button class="blora-button btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
           </div>
         </div>
       `);
@@ -10694,7 +10756,7 @@ ${extractorBody}
       }
 
       return `
-        <div class="model-library-team" data-team-index="${teamIndex}" data-team-id="${escapeHtml(team.team_id)}">
+        <div class="model-library-team" data-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
           <div class="model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
             <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             <h3>${escapeHtml(team.team_name)}</h3>
@@ -10702,7 +10764,7 @@ ${extractorBody}
             ${team.is_default ? '<span class="team-badge default">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
             <div style="flex:1;"></div>
-            <button class="btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${team.team_id}')" title="${t('测试此 Team 下所有模型')}">
+            <button class="blora-button btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${this._jsString(team.team_id)}')" title="${t('测试此 Team 下所有模型')}">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试全部
             </button>
@@ -10728,7 +10790,7 @@ ${extractorBody}
               }
             ];
             return `
-            <div class="model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(team.team_id)}" data-provider-id="${escapeHtml(provider.provider_id)}" style="${isProviderDisabled ? 'position:relative;' : ''}">
+            <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''}">
               ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
               <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
                 <div class="model-library-provider-title">
@@ -10736,19 +10798,19 @@ ${extractorBody}
                   ${renderProviderNameTag(provider.provider_name)}
                   ${this._renderProviderTestSummary(provider)}
                   ${(provider.tags || []).map(t =>
-                    `<span class="model-item-badge" style="background:${t.color}18;color:${t.color};border:1px solid ${t.color}44;">${escapeHtml(t.name)}</span>`
+                    `<span class="model-item-badge" style="background:${safeColor(t.color)}18;color:${safeColor(t.color)};border:1px solid ${safeColor(t.color)}44;">${escapeHtml(t.name)}</span>`
                   ).join('')}
                   ${this._renderLibraryMoveControls('provider', team.team_id, provider.provider_id)}
                   ${isProviderDisabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('已禁用') + '</span>' : ''}
                   ${isProviderHidden ? '<span class="library-hidden-badge">' + t('已隐藏') + '</span>' : ''}
                 </div>
                 <div class="model-library-provider-actions">
-                  <span class="lib-ping" data-provider-id="${provider.provider_id}" style="font-size:12px;color:var(--muted-foreground);"></span>
-                  <button class="btn btn-sm btn-secondary model-test-btn" style="padding:4px 6px;" title="${t('测试此供应商下所有模型')}" onclick="event.stopPropagation();app.testProviderModels('${team.team_id}', '${provider.provider_id}')">
+                  <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="font-size:12px;color:var(--muted-foreground);"></span>
+                  <button class="blora-button btn btn-sm btn-secondary model-test-btn" style="padding:4px 6px;" title="${t('测试此供应商下所有模型')}" onclick="event.stopPropagation();app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     测试
                   </button>
-                  <button class="btn btn-sm btn-secondary" style="padding:4px 6px;" title="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${provider.provider_id}')">
+                  <button class="blora-button btn btn-sm btn-secondary" style="padding:4px 6px;" title="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   </button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
@@ -10848,13 +10910,13 @@ ${extractorBody}
     ];
 
     return `
-    <div class="model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
+    <div class="blora-card model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
       <div class="model-library-item-info">
         <div class="model-library-item-name">
-          ${isKeyPicker ? '' : `<button type="button" class="model-star-btn ${isStarred ? 'starred' : ''}" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">
+          ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </button>`}
-          ${model.series_icon_url ? `<img src="${model.series_icon_url}" onerror="this.style.display='none'">` : ''}
+          ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
           <span>${escapeHtml(model.name)}</span>
           ${testBadgeHtml}
           <div class="model-item-badges">
@@ -10878,21 +10940,21 @@ ${extractorBody}
       <div class="model-library-item-actions">
         ${isKeyPicker ? '' : this._renderLibraryMoveControls('model', team.team_id, providerId)}
         ${isProviderDisabled
-          ? '<button class="btn btn-sm btn-secondary" disabled style="opacity:0.5;">' + t('供应商已禁用') + '</button>'
+          ? '<button class="blora-button btn btn-sm btn-secondary" disabled style="opacity:0.5;">' + t('供应商已禁用') + '</button>'
           : isKeyPicker
             ? (queueIndex >= 0
-              ? `<button class="btn btn-sm btn-secondary" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
-              : '<button class="btn btn-sm btn-primary">' + t('加入队列') + '</button>')
+              ? `<button class="blora-button btn btn-sm btn-secondary" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
+              : '<button class="blora-button btn btn-sm btn-primary">' + t('加入队列') + '</button>')
           : `
-             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title="${t('测试模型连通性')}">
+             <button class="blora-button btn btn-sm btn-secondary" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title="${t('测试模型连通性')}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试
             </button>
             ${isOwner
               ? ''
               : isCurrent
-                ? '<button class="btn btn-sm btn-secondary" disabled>' + t('已绑定') + '</button>'
-                : '<button class="btn btn-sm btn-primary">' + t('绑定') + '</button>'}
+                ? '<button class="blora-button btn btn-sm btn-secondary" disabled>' + t('已绑定') + '</button>'
+                : '<button class="blora-button btn btn-sm btn-primary">' + t('绑定') + '</button>'}
           `}
         ${isKeyPicker ? '' : this._renderLibraryMoreMenu(modelMoreItems)}
       </div>
@@ -11115,12 +11177,12 @@ ${extractorBody}
       if (item.type === 'divider') return '<div class="library-more-menu-divider"></div>';
       const icon = item.icon ? this._libraryMoreMenuIcon(item.icon) : '';
       const cls = item.className ? ` ${item.className}` : '';
-      return `<button type="button" class="library-more-menu-item${cls}" onclick="event.stopPropagation();app.closeLibraryMoreMenus();${item.onClick}">${icon}<span>${escapeHtml(item.label)}</span></button>`;
+      return `<button type="button" class="blora-button library-more-menu-item${cls}" onclick="event.stopPropagation();app.closeLibraryMoreMenus();${item.onClick}">${icon}<span>${escapeHtml(item.label)}</span></button>`;
     }).join('');
 
     return `
       <div class="library-more-menu" onclick="event.stopPropagation()">
-        <button type="button" class="btn btn-sm btn-secondary library-more-btn" title="${t('更多操作')}" onclick="event.stopPropagation();app.toggleLibraryMoreMenu(event, this)">
+        <button type="button" class="blora-button btn btn-sm btn-secondary library-more-btn" title="${t('更多操作')}" onclick="event.stopPropagation();app.toggleLibraryMoreMenu(event, this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
           </svg>
@@ -11359,7 +11421,7 @@ ${extractorBody}
           });
           const listEl = freshEl.querySelector('.model-library-list');
           if (listEl) {
-            setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">渲染失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${escapeHtml(String(team.team_id))}','${escapeHtml(String(provider.provider_id))}\')">${t('重试')}</a></span></div>`);
+            setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">渲染失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\')">${t('重试')}</a></span></div>`);
           }
         }
       }
@@ -11378,7 +11440,7 @@ ${extractorBody}
       const failEl = this._findProviderEl(team.team_id, provider.provider_id, providerEl);
       if (failEl && !aborted) {
         const listEl = failEl.querySelector('.model-library-list');
-        if (listEl) setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">加载失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${escapeHtml(String(team.team_id))}','${escapeHtml(String(provider.provider_id))}\')">${t('重试')}</a></span></div>`);
+        if (listEl) setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">加载失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\')">${t('重试')}</a></span></div>`);
       }
     } finally {
       this._libraryLoadingProviders.delete(providerKey);
@@ -11470,14 +11532,14 @@ ${extractorBody}
     const pageButtons = pages.map(p => {
       const gap = p - lastPage > 1 ? '<span class="model-library-page-ellipsis">...</span>' : '';
       lastPage = p;
-      return `${gap}<button class="model-library-page-btn ${p === current ? 'active' : ''}" ${p === current ? 'disabled' : ''} onclick="event.stopPropagation();app.loadProviderModelsPage('${escapeHtml(team.team_id)}','${escapeHtml(provider.provider_id)}',${p})">${p}</button>`;
+      return `${gap}<button class="blora-button model-library-page-btn ${p === current ? 'active' : ''}" ${p === current ? 'disabled' : ''} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${p})">${p}</button>`;
     }).join('');
 
     return `
       <div class="model-library-pagination">
-        <button class="model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${escapeHtml(team.team_id)}','${escapeHtml(provider.provider_id)}',${current - 1})">上一页</button>
+        <button class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current - 1})">上一页</button>
         ${pageButtons}
-        <button class="model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${escapeHtml(team.team_id)}','${escapeHtml(provider.provider_id)}',${current + 1})">下一页</button>
+        <button class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current + 1})">下一页</button>
         <span class="model-library-page-summary">共 ${pagination.total} 个</span>
       </div>
     `;
@@ -11675,7 +11737,7 @@ ${extractorBody}
       setHTML(summary, `
         <div class="binding-empty">
           <span>还没有 API Key，创建后才能绑定模型</span>
-          <button class="btn btn-primary btn-sm" onclick="app.navigateTo('apiKeys')">去创建 API Key</button>
+          <button type="button" class="blora-button btn btn-primary btn-sm" onclick="app.navigateTo('apiKeys')">去创建 API Key</button>
         </div>`);
       this._renderLibraryStickyKeyBtn();
       return;
@@ -11697,7 +11759,7 @@ ${extractorBody}
           <div class="binding-mode-banner">
             ${iconHtml}
             <span>正在为 <strong>${escapeHtml(harnessMeta.label)}</strong> 选择模型</span>
-            <button type="button" class="btn btn-sm btn-secondary binding-mode-exit" onclick="app.exitLibraryHarnessBindMode()">退出</button>
+            <button type="button" class="blora-button btn btn-sm btn-secondary binding-mode-exit" onclick="app.exitLibraryHarnessBindMode()">退出</button>
           </div>
           <div class="binding-key-row">
             <span class="binding-key-name">${keyName}</span>
@@ -11727,9 +11789,9 @@ ${extractorBody}
     const harnessChips = harnessList.length
       ? `<div class="binding-harness-chips">${harnessList.map(h => {
           const meta = this._usageRequestSourceMeta(h.harness);
-          return `<button type="button" class="binding-harness-chip" style="--h-color:${meta.color};"
+          return `<button type="button" class="blora-button binding-harness-chip" style="--h-color:${meta.color};"
             title="${escapeHtml(meta.label)} → ${escapeHtml(h.name || h.model_id || '')}"
-            onclick="event.stopPropagation();app.enterLibraryHarnessBindMode('${escapeHtml(h.harness)}')">
+            onclick="event.stopPropagation();app.enterLibraryHarnessBindMode('${this._jsString(h.harness)}')">
             ${this._harnessIconHtml(h.harness, 12)}
             <span class="binding-harness-chip-label">${escapeHtml(meta.label)}</span>
             <span class="binding-harness-chip-model">${escapeHtml(h.name || h.model_id || '')}</span>
@@ -11742,7 +11804,7 @@ ${extractorBody}
       setHTML(summary, `
         <div class="binding-active">
           <div class="binding-key-row">
-            <button type="button" class="binding-key-name binding-key-trigger"
+            <button type="button" class="blora-button binding-key-name binding-key-trigger"
               data-key-id="${key.id}"
               onclick="app.selectLibraryKey(${key.id}, event)"
               title="${t('再次点击打开菜单')}">${keyName}</button>
@@ -11768,7 +11830,7 @@ ${extractorBody}
     setHTML(summary, `
       <div class="binding-active">
         <div class="binding-key-row">
-          <button type="button" class="binding-key-name binding-key-trigger"
+          <button type="button" class="blora-button binding-key-name binding-key-trigger"
             data-key-id="${key.id}"
             onclick="app.selectLibraryKey(${key.id}, event)"
             title="${t('再次点击打开菜单')}">${keyName}</button>
@@ -11823,7 +11885,7 @@ ${extractorBody}
              onclick="app.selectLibraryKey(${key.id}, event)"
              title="${escapeHtml(tip)}">
           <span class="key-name">${escapeHtml(name)}</span>
-          ${tags.map(t => `<span class="key-tag-dot" style="background:${t.color};" title="${escapeHtml(t.name)}"></span>`).join('')}
+          ${tags.map(t => `<span class="key-tag-dot" style="background:${safeColor(t.color)};" title="${escapeHtml(t.name)}"></span>`).join('')}
           ${modelName ? `<span class="key-model-badge">${escapeHtml(modelName)}</span>` : ''}
           ${harnessCount ? `<span class="key-harness-count" title="${harnessCount}${t('个工具单独绑定">')}${harnessCount}</span>` : ''}
         </div>
@@ -11944,7 +12006,7 @@ ${extractorBody}
       const modelText = bound?.name || t('跟随默认');
       const hasOverride = !!bound;
       return `
-        <button type="button" class="library-key-bubble-item" role="menuitem"
+        <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
                 onclick="app.onLibraryKeyBubbleHarness('${h.id}')">
           <span class="library-key-bubble-item-main">
             ${this._harnessIconHtml(h.id, 14)}
@@ -11955,13 +12017,13 @@ ${extractorBody}
     }).join('');
 
     setHTML(menu, `
-      <button type="button" class="library-key-bubble-item" role="menuitem"
+      <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
               onclick="app.onLibraryKeyBubbleLocate()">
         <span class="library-key-bubble-item-main">跳转到绑定模型</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
       </button>
       <div class="expand-dropdown-divider"></div>
-      <button type="button" class="library-key-bubble-item ${this._libraryBindTarget === 'default' ? 'active' : ''}" role="menuitem"
+      <button type="button" class="blora-button library-key-bubble-item ${this._libraryBindTarget === 'default' ? 'active' : ''}" role="menuitem"
               onclick="app.onLibraryKeyBubbleDefault()">
         <span class="library-key-bubble-item-main">默认绑定</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
@@ -11969,7 +12031,7 @@ ${extractorBody}
       <div class="library-key-bubble-section-label">按工具绑定</div>
       ${harnessItems}
       <div class="expand-dropdown-divider"></div>
-      <button type="button" class="library-key-bubble-item" role="menuitem"
+      <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
               onclick="app.onLibraryKeyBubbleExportConfig()">
         <span class="library-key-bubble-item-main">导出客户端配置</span>
       </button>
@@ -12349,7 +12411,7 @@ ${extractorBody}
              onclick="app.selectLibraryKeyFromSticky(${key.id})"
              title="${escapeHtml(name)}${modelName ? ' → ' + escapeHtml(modelName) : ''}">
           <span class="sticky-menu-key-name">${escapeHtml(name)}</span>
-          ${tags.map(t => `<span class="key-tag-dot" style="background:${t.color};" title="${escapeHtml(t.name)}"></span>`).join('')}
+          ${tags.map(t => `<span class="key-tag-dot" style="background:${safeColor(t.color)};" title="${escapeHtml(t.name)}"></span>`).join('')}
           ${modelName ? `<span class="sticky-menu-model-capsule">${escapeHtml(modelName)}</span>` : ''}
         </div>
       `;
@@ -12775,7 +12837,7 @@ ${extractorBody}
         <span class="provider-list-url">手动填写 →</span>
       </div>
       ${providers.map(p => `
-        <div class="provider-list-item" onclick="app.selectProvider('${escapeHtml(p.id)}')">
+        <div class="provider-list-item" onclick="app.selectProvider('${this._jsString(p.id)}')">
           <span class="provider-list-name">${escapeHtml(p.name)}</span>
           <span class="provider-list-url">${escapeHtml(p.base_url)}</span>
         </div>
