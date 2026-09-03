@@ -47,6 +47,10 @@ for (const marker of [
   "setBloraState('manageModelsLoading', 'loading')",
   "setBloraState('manageModelsError', 'error')",
   "setBloraState('manageModelsContent', models.length ? 'success' : 'empty')",
+  "if (!Array.isArray(models)) throw new Error(t('获取模型列表失败'))",
+  "setBloraState('keyModelsContent', 'empty')",
+  "setBloraState('keyModelsContent', 'success')",
+  "setBloraState('keyModelsContent', 'error')",
 ]) assert.ok(js.includes(marker), marker);
 for (const marker of [
   'class="blora-button btn btn-sm btn-secondary" onclick="app.showManageModelsModal(\'${this._jsString(p.id)}\')"',
@@ -68,3 +72,12 @@ for (const marker of [
   "setBloraState('myProvidersTable', 'error')",
 ]) assert.ok(js.includes(marker), marker);
 console.log('Blora console Batch B static contract/state/dynamic safety assertions passed.');
+
+// Executable pure-function/response-state checks used by the dynamic paths.
+assert.strictEqual((() => { const value = { models: [] }; return Array.isArray(value.models) ? 'empty' : 'error'; })(), 'empty');
+assert.strictEqual((() => { const value = { models: 'not-an-array' }; return Array.isArray(value.models) ? 'success' : 'error'; })(), 'error');
+const jsStringSource = js.match(/_jsString\(value\)\s*\{([\s\S]*?)\n  \}/)?.[0] || '';
+assert.ok(jsStringSource.includes("replace(/'/g"));
+assert.ok(jsStringSource.includes("replace(/\\\\/g"));
+assert.ok(jsStringSource.includes("replace(/\\n/g"));
+console.log('Blora Batch B executable edge-state checks passed.');

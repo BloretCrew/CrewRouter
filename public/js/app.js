@@ -2156,6 +2156,7 @@ class ConsoleApp {
     }
 
     const expandedState = this._captureKeyPickerExpandedState();
+    setBloraState('keyModelsContent', filtered.teams.some(team => team.providers?.some(provider => (provider.models || []).length)) ? 'success' : 'empty');
     this._renderKeyModelPickerLibrary(filtered);
     this._restoreKeyPickerExpandedState(expandedState);
   }
@@ -2182,6 +2183,7 @@ class ConsoleApp {
       const res = await fetch(`/api/user/model-library/search?${params.toString()}`);
       if (!res.ok) throw new Error(t('搜索失败'));
       const data = await res.json();
+      if (!data || typeof data !== 'object' || !Array.isArray(data.models)) throw new Error(t('搜索失败'));
       if (seq !== ctx.globalSearchSeq || this._keyModelPicker !== ctx) return;
       if (!this._shouldUseKeyPickerGlobalSearch(ctx)) return;
 
@@ -2193,6 +2195,7 @@ class ConsoleApp {
         countEl.textContent = `${t('找到')}${data.pagination?.total ?? models.length}${t('个模型')}`;
       }
       if (!models.length) {
+        setBloraState('keyModelsContent', 'empty');
         if (container) {
           setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('没有符合条件的模型') + '</p></div>');
         }
@@ -2216,6 +2219,7 @@ class ConsoleApp {
       }
 
       if (!container) return;
+      setBloraState('keyModelsContent', 'success');
       setHTML(container, [...teamMap.values()].map(team => `
         <div class="model-library-team model-search-team">
           <div class="model-library-team-header" style="cursor:default;">
@@ -2233,6 +2237,7 @@ class ConsoleApp {
       `).join(''));
     } catch (e) {
       if (seq !== ctx.globalSearchSeq) return;
+      setBloraState('keyModelsContent', 'error');
       console.warn(t('[API Key 模型选择] 全局搜索失败:'), e);
       if (container) {
         setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--destructive);margin:0;">' + t('搜索失败，请重试') + '</p></div>');
@@ -2276,6 +2281,7 @@ class ConsoleApp {
     const container = document.getElementById('keyModelPickerContent');
     if (!container) return;
     if (!libraryData.teams || libraryData.teams.length === 0) {
+      setBloraState('keyModelsContent', 'empty');
       setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="font-size:15px;color:var(--muted-foreground);margin:0;">' + t('暂无可用模型') + '</p></div>');
       return;
     }
@@ -8758,6 +8764,8 @@ ${extractorBody}
       const res = await fetch(`/api/user/providers/${providerId}/models`);
       if (!res.ok) throw new Error(t('获取模型列表失败'));
       const models = await res.json();
+      if (!Array.isArray(models)) throw new Error(t('获取模型列表失败'));
+      setBloraState('manageModelsContent', models.length ? 'success' : 'empty');
 
       this._currentManageModels = models;
       this.renderManageModels(models);
