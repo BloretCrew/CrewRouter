@@ -82,13 +82,20 @@ console.log('Blora console Batch B static contract/state/dynamic safety assertio
 // Executable pure-function/response-state checks used by the dynamic paths.
 assert.strictEqual((() => { const value = { models: [] }; return Array.isArray(value.models) ? 'empty' : 'error'; })(), 'empty');
 assert.strictEqual((() => { const value = { models: 'not-an-array' }; return Array.isArray(value.models) ? 'success' : 'error'; })(), 'error');
-const jsStringSource = js.match(/_jsString\(value\)\s*\{([\s\S]*?)\n  \}/)?.[0] || '';
-assert.ok(jsStringSource.includes("replace(/'/g"));
-assert.ok(jsStringSource.includes("replace(/\\\\/g"));
-assert.ok(jsStringSource.includes("replace(/\\n/g"));
+const jsStringMatch = js.match(/_jsString\(value\)\s*\{([\s\S]*?)\n  \}/);
+assert.ok(jsStringMatch);
+const jsStringSource = jsStringMatch[0];
+const encodeJsString = new Function('value', jsStringMatch[1]);
+for (const value of ["single'quote", 'double"quote', 'slash\\\\value', 'line\\nnext', '</script>']) {
+  const encoded = encodeJsString(value);
+  assert.ok(!encoded.includes('</script>'));
+  assert.doesNotThrow(() => Function(`const value = '${encoded}'; return value;`)());
+  assert.strictEqual(Function(`const value = '${encoded}'; return value;`)(), value);
+}
 for (const marker of [
   "app.enterLibraryHarnessBindMode('${this._jsString(h.harness)}')",
   'class="blora-button binding-key-name binding-key-trigger"',
   'class="blora-button library-key-bubble-item"',
+  'class="blora-button library-key-bubble-item ${this._libraryBindTarget === \'default\' ? \'active\' : \'\'}"',
 ]) assert.ok(js.includes(marker), marker);
 console.log('Blora Batch B executable edge-state checks passed.');

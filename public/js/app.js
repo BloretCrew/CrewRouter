@@ -12022,7 +12022,7 @@ ${extractorBody}
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
       </button>
       <div class="expand-dropdown-divider"></div>
-      <button type="button" class="library-key-bubble-item ${this._libraryBindTarget === 'default' ? 'active' : ''}" role="menuitem"
+      <button type="button" class="blora-button library-key-bubble-item ${this._libraryBindTarget === 'default' ? 'active' : ''}" role="menuitem"
               onclick="app.onLibraryKeyBubbleDefault()">
         <span class="library-key-bubble-item-main">默认绑定</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
