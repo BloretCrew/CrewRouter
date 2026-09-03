@@ -46,7 +46,8 @@ class PlaygroundApp {
       this.models = Array.isArray(data) ? data : [];
       const select = document.getElementById('pgModel');
       if (this.models.length === 0) {
-        setHTML(select, '<option value="" disabled selected>' + t('暂无可用模型') + '</option>');
+        setBloraState('pgModel', 'empty');
+        setHTML(select, '<blora-option value="" disabled selected>' + this.escapeHtml(t('暂无可用模型')) + '</blora-option>');
         return;
       }
       const grouped = {};
@@ -56,14 +57,19 @@ class PlaygroundApp {
       });
       let html = '';
       for (const [provider, models] of Object.entries(grouped)) {
-        html += `<optgroup label="${provider}">`;
         models.forEach(m => {
+          const id = this.escapeHtml(String(m.id || ''));
+          const label = this.escapeHtml(String(m.name || m.id || ''));
+          const providerLabel = this.escapeHtml(String(provider || t('其他')));
           const mult = Number(m.model_multiplier || 1.0);
-          html += `<option value="${m.id}">${m.name} (×${mult.toFixed(2)})</option>`;
+          html += `<blora-option value="${id}">${label} · ${providerLabel} (×${mult.toFixed(2)})</blora-option>`;
         });
-        html += '</optgroup>';
       }
       setHTML(select, html);
+      if (select) {
+        select.value = String(this.models[0]?.id || '');
+      }
+      setBloraState('pgModel', 'success');
 
       // Store model pricing and info for cost calculation
       this.modelPricing = {};
@@ -82,11 +88,13 @@ class PlaygroundApp {
 
       // Add model change handler
       select.addEventListener('change', () => this.updateThinkingControls());
+      const reasoningSelect = document.getElementById('pgReasoningEffort');
+      if (reasoningSelect) reasoningSelect.value = 'medium';
       this.updateThinkingControls();
     } catch (error) {
       console.error(t('加载模型失败:'), error);
       const select = document.getElementById('pgModel');
-      if (select) setHTML(select, '<option value="" disabled selected>' + t('加载失败') + '</option>');
+      if (select) { setBloraState('pgModel', 'error'); setHTML(select, '<blora-option value="" disabled selected>' + this.escapeHtml(t('加载失败')) + '</blora-option>'); }
     }
   }
 
@@ -173,10 +181,11 @@ class PlaygroundApp {
 
     setHTML(list, this.conversations.map(conv => {
       const date = new Date(conv.updated_at);
-      const dateStr = `${date.getMonth() + 1}${t('月')}${date.getDate()}${t('日')}${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+      const dateStr = `${date.getMonth() + 1}${this.escapeHtml(t('月'))}${date.getDate()}${this.escapeHtml(t('日'))}${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
       const isActive = conv.id === this.activeConvId;
+      const convId = Number(conv.id);
       return `
-        <div class="pg-history-item${isActive ? ' active' : ''}" data-id="${conv.id}">
+        <div class="pg-history-item${isActive ? ' active' : ''}" data-id="${Number.isSafeInteger(convId) ? convId : ''}">
           <div class="pg-history-item-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -187,12 +196,12 @@ class PlaygroundApp {
             <div class="pg-history-item-date">${dateStr}</div>
           </div>
           <div class="pg-history-item-actions">
-            <button class="rename-btn" data-id="${conv.id}" title="${t('重命名')}">
+            <button type="button" class="rename-btn" data-id="${Number.isSafeInteger(convId) ? convId : ''}" title="${this.escapeHtml(t('重命名'))}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
               </svg>
             </button>
-            <button class="delete-btn" data-id="${conv.id}" title="${t('删除')}">
+            <button type="button" class="delete-btn" data-id="${Number.isSafeInteger(convId) ? convId : ''}" title="${this.escapeHtml(t('删除'))}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
               </svg>
@@ -407,25 +416,37 @@ class PlaygroundApp {
 
   // ========== Chat ==========
 
-  async send() {
+  async send(retryRequest = null) {
     if (this.streaming) return;
 
     const input = document.getElementById('pgInput');
-    const text = input.value.trim();
+    const text = retryRequest?.text ?? input.value.trim();
     if (!text) return;
 
-    const model = document.getElementById('pgModel').value;
-    const systemPrompt = document.getElementById('pgSystemPrompt').value.trim();
-    const temperature = parseFloat(document.getElementById('pgTemperature').value);
-    const maxTokens = parseInt(document.getElementById('pgMaxTokens').value) || 4096;
-    const thinking = document.getElementById('pgThinkingToggle').checked;
-    const thinkingBudget = parseInt(document.getElementById('pgThinkingBudget').value) || 4096;
-    const reasoningEffort = document.getElementById('pgReasoningEffort').value;
+    const model = retryRequest?.model ?? document.getElementById('pgModel').value;
+    const systemPrompt = retryRequest?.systemPrompt ?? document.getElementById('pgSystemPrompt').value.trim();
+    const temperature = retryRequest?.temperature ?? parseFloat(document.getElementById('pgTemperature').value);
+    const maxTokens = retryRequest?.maxTokens ?? (parseInt(document.getElementById('pgMaxTokens').value) || 4096);
+    const thinking = retryRequest?.thinking ?? document.getElementById('pgThinkingToggle').checked;
+    const thinkingBudget = retryRequest?.thinkingBudget ?? (parseInt(document.getElementById('pgThinkingBudget').value) || 4096);
+    const reasoningEffort = retryRequest?.reasoningEffort ?? document.getElementById('pgReasoningEffort').value;
 
     if (!model) {
       alert(t('请先选择模型'));
       return;
     }
+
+    const previousMessages = this.messages.slice();
+    const previousActiveConvId = this.activeConvId;
+    const previousReplyTo = this.replyTo;
+    const rollbackRequest = () => {
+      this.messages = previousMessages;
+      this.activeConvId = previousActiveConvId;
+      this.replyTo = previousReplyTo;
+      input.value = text;
+      input.style.height = 'auto';
+      this.renderMessages();
+    };
 
     // If replying, build context: messages up to reply point + the replied message
     if (this.replyTo !== null && this.replyTo < this.messages.length) {
@@ -438,11 +459,18 @@ class PlaygroundApp {
       this.messages.push({ role: 'user', content: text });
     }
 
-    const apiMessages = [];
-    if (systemPrompt) {
+    const apiMessages = retryRequest?.apiMessages ? retryRequest.apiMessages.map(message => ({ ...message })) : [];
+    if (!retryRequest && systemPrompt) {
       apiMessages.push({ role: 'system', content: systemPrompt });
     }
-    apiMessages.push(...this.messages);
+    if (!retryRequest) apiMessages.push(...this.messages);
+    if (retryRequest && PlaygroundState?.prepareRetryRequest) {
+      const prepared = PlaygroundState.prepareRetryRequest(retryRequest, this.messages);
+      this.messages = prepared.messages;
+    }
+    const retryPayload = (window.PlaygroundState || {}).buildRetryPayload
+      ? PlaygroundState.buildRetryPayload({ text, model, systemPrompt, temperature, maxTokens, thinking, thinkingBudget, reasoningEffort, apiMessages })
+      : Object.freeze({ text, model, systemPrompt, temperature, maxTokens, thinking, thinkingBudget, reasoningEffort, apiMessages: Object.freeze(apiMessages.map(message => Object.freeze({ ...message }))) } );
 
     input.value = '';
     input.style.height = 'auto';
@@ -450,7 +478,7 @@ class PlaygroundApp {
     this.removeWelcome();
     this.renderMessages();
 
-    const currentModel = document.getElementById('pgModel').value;
+    const currentModel = model;
     const modelInfo = this.modelInfo?.[currentModel];
     const meta = {
       model: currentModel,
@@ -463,10 +491,12 @@ class PlaygroundApp {
     this.setStreaming(true);
 
     let convId = this.activeConvId;
-    if (!convId) {
-      convId = await this.createConversation();
-    }
 
+    let fullContent = '';
+    let reasoningContent = '';
+    let streamFailed = false;
+    let streamCompleted = false;
+    let streamErrorMessage = '';
     try {
       this.abortController = new AbortController();
 
@@ -494,17 +524,20 @@ class PlaygroundApp {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let fullContent = '';
-      let reasoningContent = '';
+      reasoningContent = '';
+      streamFailed = false;
+      streamErrorMessage = '';
       let thinkingStarted = false;
       let promptTokens = 0;
       let completionTokens = 0;
+      let cachedTokens = 0;
 
       clearChildren(contentEl);
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        if (streamCompleted) break;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -513,10 +546,18 @@ class PlaygroundApp {
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const data = line.slice(6).trim();
-          if (data === '[DONE]') continue;
+          if (data === '[DONE]') {
+            streamCompleted = true;
+            break;
+          }
 
           try {
             const parsed = JSON.parse(data);
+            if (parsed.error) {
+              streamFailed = true;
+              streamErrorMessage = String(parsed.error.message || t('上游流式响应失败'));
+              throw Object.assign(new Error(streamErrorMessage), { code: 'STREAM_TERMINAL_ERROR' });
+            }
             const delta = parsed.choices?.[0]?.delta;
             if (!delta) continue;
 
@@ -545,9 +586,13 @@ class PlaygroundApp {
               promptTokens = parsed.usage.prompt_tokens || 0;
               completionTokens = parsed.usage.completion_tokens || 0;
             }
-          } catch {}
+          } catch (error) {
+            if (error?.code === 'STREAM_TERMINAL_ERROR') throw error;
+          }
         }
       }
+
+      if (streamFailed) throw Object.assign(new Error(streamErrorMessage), { code: 'STREAM_TERMINAL_ERROR' });
 
       // Try to parse usage from remaining buffer
       try {
@@ -562,7 +607,11 @@ class PlaygroundApp {
             completionTokens = parsed.usage.completion_tokens || completionTokens;
           }
         }
-      } catch {}
+      } catch (error) {
+        if (streamFailed) throw Object.assign(new Error(streamErrorMessage), { code: 'STREAM_TERMINAL_ERROR' });
+      }
+
+      if (streamFailed) throw Object.assign(new Error(streamErrorMessage), { code: 'STREAM_TERMINAL_ERROR' });
 
       // Update token counts
       const totalNewTokens = promptTokens + completionTokens;
@@ -611,12 +660,13 @@ class PlaygroundApp {
       const msgCost = (promptTokens / 1000) * inputPrice + (completionTokens / 1000) * outputPrice;
       msg.meta = {
         model: model,
-        modelDisplayName: document.getElementById('pgModel').selectedOptions[0]?.text?.split(' (')[0] || model,
+        modelDisplayName: document.getElementById('pgModel').selectedOptions[0]?.label || document.getElementById('pgModel').selectedOptions[0]?.textContent?.split(' (')[0] || model,
         tokens: totalTokensForMsg,
         cost: msgCost
       };
       this.messages.push(msg);
 
+      if (!convId) convId = await this.createConversation();
       if (convId) {
         // Update title if this was the first user message
         if (this.messages.filter(m => m.role === 'user').length === 1) {
@@ -632,9 +682,22 @@ class PlaygroundApp {
       await this.updateCost();
     } catch (error) {
       if (error.name === 'AbortError') {
-        setHTML(contentEl, this.renderMarkdown(contentEl.textContent || '') + t('\\n\\n*[已停止]*'));
+        rollbackRequest();
+        const stopped = fullContent || '';
+        setHTML(contentEl, this.renderMarkdown(stopped) + `<p class="pg-stream-status">${this.escapeHtml(t('已停止'))}</p>`);
+      } else if (error.code === 'STREAM_TERMINAL_ERROR' || streamFailed) {
+        rollbackRequest();
+        this.removeWelcome();
+        const retryEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
+        const retryContent = retryEl.querySelector('.pg-msg-content');
+        setHTML(retryContent, `<div class="pg-msg-error">${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        retryContent.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send(retryPayload));
       } else {
-        setHTML(contentEl, `<div class="pg-msg-error">${escapeHtml(error.message || "")}</div>`);
+        rollbackRequest();
+        this.removeWelcome();
+        const errorEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
+        setHTML(errorEl.querySelector('.pg-msg-content'), `<div class="pg-msg-error">${this.escapeHtml(error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        errorEl.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send(retryPayload));
       }
     } finally {
       this.setStreaming(false);
@@ -695,12 +758,14 @@ class PlaygroundApp {
       modelName = meta.modelDisplayName || meta.model || t('助手');
       const modelInfo = this.modelInfo?.[meta.model];
       if (modelInfo?.seriesIconUrl) {
-        modelIconHtml = `<img src="${modelInfo.seriesIconUrl}" alt="" class="pg-msg-avatar-icon">`;
+        let iconUrl = '';
+        try { const parsed = new URL(String(modelInfo.seriesIconUrl), window.location.origin); if (parsed.protocol === 'https:') iconUrl = parsed.href; } catch (_) {}
+        if (iconUrl) modelIconHtml = `<img src="${this.escapeHtml(iconUrl)}" alt="" class="pg-msg-avatar-icon">`;
       }
     }
 
     const avatarHtml = role === 'user'
-      ? (userAvatar ? `<img src="${userAvatar}" alt="" class="pg-msg-avatar-icon">` : 'U')
+      ? (this.safeAvatarHtml(userAvatar) || 'U')
       : (modelIconHtml || 'AI');
 
     let thinkingHtml = '';
@@ -730,7 +795,7 @@ class PlaygroundApp {
     setHTML(el, `
       <div class="pg-msg-avatar">${avatarHtml}</div>
       <div class="pg-msg-body">
-        <div class="pg-msg-role">${role === 'user' ? userName : modelName}</div>
+        <div class="pg-msg-role">${this.escapeHtml(role === 'user' ? userName : modelName)}</div>
         ${thinkingHtml}
         <div class="pg-msg-content">${content ? this.renderMarkdown(content) : ''}</div>
         ${metaFooter}
@@ -1054,6 +1119,14 @@ class PlaygroundApp {
 
   // ========== Utils ==========
 
+  safeAvatarHtml(value) {
+    try {
+      const parsed = new URL(String(value || ''), window.location.origin);
+      if (!['https:', 'http:'].includes(parsed.protocol)) return '';
+      return `<img src="${this.escapeHtml(parsed.href)}" alt="" class="pg-msg-avatar-icon">`;
+    } catch (_) { return ''; }
+  }
+
   escapeHtml(value) {
     return Dom.escapeHtml(value);
   }
@@ -1158,8 +1231,8 @@ class PlaygroundApp {
     const modalOverlay = document.getElementById('pgHistoryModalOverlay');
     const modal = document.getElementById('pgHistoryModal');
 
-    if (modalClose) modalClose.addEventListener('click', () => { modal.style.display = 'none'; });
-    if (modalOverlay) modalOverlay.addEventListener('click', () => { modal.style.display = 'none'; });
+    if (modalClose) modalClose.addEventListener('click', () => { modal?.close?.(); });
+    if (modalOverlay) modalOverlay.addEventListener('click', () => { modal?.close?.(); });
   }
 
   // ========== History ==========
@@ -1190,14 +1263,15 @@ class PlaygroundApp {
       const time = new Date(r.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       const hasThinking = r.requestParams?.thinking !== false && r.reasoningContent;
       const preview = r.messages?.[0]?.content?.substring(0, 50) || '';
-      return `<div class="pg-history-item" data-id="${r.id}">
+      const recordId = Number(r.id);
+      return `<div class="pg-history-item" data-id="${Number.isSafeInteger(recordId) ? recordId : ''}">
         <div class="pg-history-item-header">
-          <span class="pg-history-item-model">${r.model}${hasThinking ? '<span class="pg-history-item-thinking-badge">' + t('思考') + '</span>' : ''}</span>
-          <span class="pg-history-item-time">${time}</span>
+          <span class="pg-history-item-model">${this.escapeHtml(r.model)}${hasThinking ? '<span class="pg-history-item-thinking-badge">' + this.escapeHtml(t('思考')) + '</span>' : ''}</span>
+          <span class="pg-history-item-time">${this.escapeHtml(time)}</span>
         </div>
         <div class="pg-history-item-stats">
-          <span>📝 ${r.totalTokens?.toLocaleString() || 0} tokens</span>
-          <span>💰 ${r.cost?.toFixed(4) || '0.0000'}${t(' 积分')}</span>
+          <span>📝 ${this.escapeHtml(r.totalTokens?.toLocaleString() || 0)} tokens</span>
+          <span>💰 ${this.escapeHtml(r.cost?.toFixed(4) || '0.0000')}${this.escapeHtml(t(' 积分'))}</span>
         </div>
         <div class="pg-history-item-preview">${this.escapeHtml(preview)}</div>
       </div>`;
@@ -1229,7 +1303,7 @@ class PlaygroundApp {
     if (!modal || !title || !body) return;
 
     const time = new Date(r.createdAt).toLocaleString('zh-CN');
-    title.textContent = `${r.model} - ${time}`;
+    title.textContent = `${String(r.model || '')} - ${time}`;
 
     let html = '';
 
@@ -1242,7 +1316,7 @@ class PlaygroundApp {
     html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('总计 Tokens')}</div><div class="pg-detail-stat-value">${r.totalTokens?.toLocaleString() || 0}</div></div>`;
     html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('积分')}</div><div class="pg-detail-stat-value">${r.cost?.toFixed(4) || '0.0000'}</div></div>`;
     if (r.finishReason) {
-      html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('结束原因')}</div><div class="pg-detail-stat-value">${r.finishReason}</div></div>`;
+      html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${this.escapeHtml(t('结束原因'))}</div><div class="pg-detail-stat-value">${this.escapeHtml(r.finishReason)}</div></div>`;
     }
     html += '</div></div>';
 
@@ -1252,12 +1326,12 @@ class PlaygroundApp {
       html +=  + '<div class="pg-detail-section-title">' + t('请求参数') + '</div>';
       html += '<div class="pg-detail-params">';
       const params = r.requestParams;
-      if (params.temperature !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">temp:</span> ${params.temperature}</span>`;
-      if (params.max_tokens) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">max:</span> ${params.max_tokens}</span>`;
-      if (params.top_p !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">top_p:</span> ${params.top_p}</span>`;
-      if (params.thinking !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">thinking:</span> ${params.thinking ? 'on' : 'off'}</span>`;
-      if (params.thinking_budget) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">budget:</span> ${params.thinking_budget}</span>`;
-      if (params.reasoning_effort) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">effort:</span> ${params.reasoning_effort}</span>`;
+      if (params.temperature !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">temp:</span> ${this.escapeHtml(params.temperature)}</span>`;
+      if (params.max_tokens) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">max:</span> ${this.escapeHtml(params.max_tokens)}</span>`;
+      if (params.top_p !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">top_p:</span> ${this.escapeHtml(params.top_p)}</span>`;
+      if (params.thinking !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">thinking:</span> ${this.escapeHtml(params.thinking ? 'on' : 'off')}</span>`;
+      if (params.thinking_budget) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">budget:</span> ${this.escapeHtml(params.thinking_budget)}</span>`;
+      if (params.reasoning_effort) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">effort:</span> ${this.escapeHtml(params.reasoning_effort)}</span>`;
       html += '</div></div>';
     }
 
@@ -1287,7 +1361,8 @@ class PlaygroundApp {
     html += '</div></div>';
 
     setHTML(body, html);
-    modal.style.display = 'flex';
+    if (typeof modal.show === 'function') modal.show();
+    else modal.setAttribute('open', '');
   }
 
   escapeHtml(value) {

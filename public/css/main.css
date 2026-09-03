@@ -2584,6 +2584,13 @@
 }
 
 .model-library-item {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  width: 100%;
   display: flex;
   flex-direction: column;
   padding: 14px 16px;

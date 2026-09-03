@@ -13,6 +13,7 @@ const { calculatePointsToDeduct } = require('../utils/points-deduct');
 const { clientMetaFromReq } = require('../utils/request-source');
 const { notifyUser, NOTIFICATION_TYPES } = require('../utils/notifications');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
+const { consumePlaygroundSseLines, finalizePlaygroundStream, recordPlaygroundUsageIfCompleted } = require('../utils/playground-stream-state');
 
 const UPSTREAM_TIMEOUT = 60000;
 const UPSTREAM_STREAM_TIMEOUT = 300000; // 流式请求超时 5 分钟
@@ -59,6 +60,9 @@ router.post('/chat', requireAuth, async (req, res) => {
     return res.status(400).json({ error: '缺少必要参数' });
   }
 
+  let streamAbortController = null;
+  let streamTimeout = null;
+  let timeoutAborted = false;
   try {
     const userResult = await pool.query('SELECT balance + refund_balance as total FROM users WHERE id = $1', [userId]);
     const totalBalance = parseFloat(userResult.rows[0]?.total || 0);
@@ -218,10 +222,18 @@ router.post('/chat', requireAuth, async (req, res) => {
     }
 
     // 多 Key：顺序 / 权重尝试，失败后 fallback
+    streamAbortController = isStream ? new AbortController() : null;
+    streamTimeout = isStream ? setTimeout(() => { timeoutAborted = true; streamAbortController.abort(); }, UPSTREAM_STREAM_TIMEOUT) : null;
     let response = null;
     let lastErrText = '';
     let lastStatus = 502;
     for (let ki = 0; ki < keyAttempts.length; ki++) {
+      if (streamAbortController?.signal.aborted) {
+        lastErrText = '流式请求超时或已取消';
+        lastStatus = 504;
+        response = null;
+        break;
+      }
       const apiKey = keyAttempts[ki];
       provider = { ...provider, api_key: apiKey };
       const headers = provider.format === 'anthropic'
@@ -239,10 +251,16 @@ router.post('/chat', requireAuth, async (req, res) => {
           method: 'POST',
           headers,
           body: JSON.stringify(upstreamBody),
-          signal: AbortSignal.timeout(isStream ? UPSTREAM_STREAM_TIMEOUT : UPSTREAM_TIMEOUT),
+          signal: streamAbortController?.signal || AbortSignal.timeout(UPSTREAM_TIMEOUT),
           redirect: 'manual'
         });
       } catch (fetchErr) {
+        if (streamAbortController?.signal.aborted) {
+          lastErrText = '流式请求超时或已取消';
+          lastStatus = 504;
+          response = null;
+          break;
+        }
         lastErrText = fetchErr.message || 'fetch failed';
         lastStatus = 502;
         response = null;
@@ -264,6 +282,8 @@ router.post('/chat', requireAuth, async (req, res) => {
     }
 
     if (!response || !response.ok) {
+      if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null; }
+      if (streamAbortController?.signal.aborted && isStream) lastStatus = 504;
       Logger.error(`[Playground] 上游错误: provider=${provider.id}, url=${url}, status=${lastStatus}, body=${String(lastErrText).substring(0, 500)}`);
       recordModelCall(model, false);
       recordLiveCallTest(model, { ok: false, error: `HTTP ${lastStatus}` });
@@ -294,11 +314,16 @@ router.post('/chat', requireAuth, async (req, res) => {
       let jsonParseErrors = 0;
       let firstChunkTime = null;
       let clientDisconnected = false;
+      let streamCompleted = false;
+      let streamFailed = false;
+      const streamState = { clientDisconnected, timeoutAborted, streamCompleted, streamFailed, pendingEvent: '' };
       let backpressureCount = 0;
 
       // 检测客户端断开连接
       req.on('close', () => {
         clientDisconnected = true;
+        streamAbortController?.abort();
+        reader.cancel().catch(() => {});
         Logger.stream(`[Playground] 客户端断开连接: provider=${provider.id}, model=${model}, 已接收 ${chunkCount} 个chunk, ${sseLineCount} 行SSE`);
       });
 
@@ -346,17 +371,33 @@ router.post('/chat', requireAuth, async (req, res) => {
           buffer = lines.pop() || '';
 
           for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
+            if (!line.startsWith('data: ') && !line.startsWith('event:')) continue;
             sseLineCount++;
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') {
-              Logger.stream(`[Playground] 收到上游 [DONE] 事件`);
-              const ok = writeWithDrain('data: [DONE]\n\n');
-              if (!ok) await waitForDrain();
-              continue;
+            streamState.clientDisconnected = clientDisconnected;
+            streamState.timeoutAborted = timeoutAborted;
+            streamState.streamCompleted = streamCompleted;
+            streamState.streamFailed = streamFailed;
+            const frameResult = consumePlaygroundSseLines(streamState, [line], provider.format);
+            const frame = frameResult.output[0];
+            streamCompleted = streamState.streamCompleted;
+            streamFailed = streamState.streamFailed;
+            if (frame.kind === 'ignore' || frame.kind === 'event') continue;
+            if (frame.kind === 'done') {
+              Logger.stream(`[Playground] 收到上游完成事件`);
+              streamCompleted = true;
+              if (!clientDisconnected && !res.writableEnded) {
+                const ok = writeWithDrain('data: [DONE]\n\n');
+                if (!ok) await waitForDrain();
+              }
+              break;
+            }
+            if (frame.kind === 'error') {
+              streamFailed = true;
+              Logger.error(`[Playground] 不可恢复的 SSE 错误: ${frame.message}`);
+              break;
             }
             try {
-              const parsed = JSON.parse(data);
+              const parsed = frame.parsed;
 
               if (provider.format === 'anthropic') {
                 if (parsed.type === 'content_block_delta') {
@@ -381,8 +422,6 @@ router.post('/chat', requireAuth, async (req, res) => {
                   finishReason = parsed.delta?.stop_reason || finishReason;
                 } else if (parsed.type === 'message_stop') {
                   Logger.stream(`[Playground] 收到上游 message_stop 事件`);
-                  const ok = writeWithDrain('data: [DONE]\n\n');
-                  if (!ok) await waitForDrain();
                 }
               } else {
                 const content = parsed.choices?.[0]?.delta?.content || '';
@@ -404,12 +443,18 @@ router.post('/chat', requireAuth, async (req, res) => {
               }
             } catch (e) {
               jsonParseErrors++;
-              Logger.warn(`[Playground] JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
+              streamFailed = true;
+              Logger.error(`[Playground] 不可恢复的 SSE JSON 解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
+              break;
             }
           }
+          if (streamFailed || streamCompleted) break;
         }
       } catch (err) {
-        if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+        if (!clientDisconnected && !timeoutAborted) streamFailed = true;
+        if (timeoutAborted) {
+          Logger.error(`[Playground] 流式超时 (${UPSTREAM_STREAM_TIMEOUT}ms): url=${url}, model=${model}, 已接收 ${chunkCount} chunks`);
+        } else if (err.name === 'AbortError' || err.name === 'TimeoutError') {
           Logger.error(`[Playground] 流式超时 (${UPSTREAM_STREAM_TIMEOUT}ms): url=${url}, model=${model}, 已接收 ${chunkCount} chunks`);
         } else if (clientDisconnected) {
           Logger.warn(`[Playground] 上游读取中断(客户端已断开): url=${url}, model=${model}, error=${err.message}`);
@@ -418,7 +463,23 @@ router.post('/chat', requireAuth, async (req, res) => {
         }
       }
 
-      res.end();
+      const streamTerminal = finalizePlaygroundStream({ clientDisconnected, timeoutAborted, streamCompleted, streamFailed });
+      if (streamTerminal === 'failed') streamFailed = true;
+      if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null; }
+      if ((streamFailed || timeoutAborted) && !clientDisconnected && !res.writableEnded) {
+        const errorPayload = { error: { message: '上游流式响应失败', type: 'upstream_stream_error', terminal: true } };
+        if (!res.writableEnded) res.write(`data: ${JSON.stringify(errorPayload)}\n\n`);
+      } else if (!streamCompleted && !clientDisconnected && !res.writableEnded) {
+        res.write('data: [DONE]\n\n');
+      }
+      if (!res.writableEnded) res.end();
+
+      if (streamTerminal !== 'completed') {
+        streamAbortController?.abort();
+        recordModelCall(model, false);
+        recordLiveCallTest(model, { ok: false, error: clientDisconnected ? 'client disconnected' : timeoutAborted ? 'upstream timeout' : 'upstream stream error' });
+        return;
+      }
 
       // Normalize tokens based on provider format
       let normalized;
@@ -447,7 +508,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       Logger.info(`[Playground] 流式完成: model=${model}, promptTokens=${normalized.promptTokens}, completionTokens=${normalized.completionTokens}, totalTokens=${totalTokens}, points=${pointsCost}`);
       const requestParams = { temperature, max_tokens, top_p, thinking: effectiveThinking, thinking_budget, reasoning_effort };
       try {
-        await recordUsage(userId, modelConfig.id, totalTokens, weightedTokens, pointsCost, messages, totalContent, normalized, totalReasoning, requestParams, finishReason, req);
+        await recordPlaygroundUsageIfCompleted({ streamCompleted: streamTerminal === 'completed', clientDisconnected, timeoutAborted, streamFailed }, recordUsage, [userId, modelConfig.id, totalTokens, weightedTokens, pointsCost, messages, totalContent, normalized, totalReasoning, requestParams, finishReason, req]);
       } catch (e) {
         Logger.error(`[Playground] 记录使用量异常: ${e.message}`);
       }
@@ -506,6 +567,8 @@ router.post('/chat', requireAuth, async (req, res) => {
       });
     }
   } catch (error) {
+    if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null; }
+    streamAbortController?.abort();
     Logger.error(`[Playground] 错误: model=${model}, userId=${userId}, error=${error.message}, stack=${error.stack}`);
     if (model) {
       recordModelCall(model, false);

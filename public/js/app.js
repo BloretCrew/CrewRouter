@@ -2980,15 +2980,15 @@ class ConsoleApp {
         <div style="display:flex;gap:12px;margin-bottom:16px;">
           <div style="flex:1;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:6px;">Judge 模型</div>
-            <select id="fusionJudgeSelect" class="blora-select select" style="font-size:13px;">
-              ${models.map(m => `<option value="${escapeHtml(String(m.id))}" ${currentJudge === m.id ? 'selected' : ''}>${escapeHtml(m.name || m.id)}</option>`).join('')}
-            </select>
+            <blora-select id="fusionJudgeSelect" name="judge_model_id" class="blora-select select" style="font-size:13px;">
+              ${models.map(m => `<blora-option value="${escapeHtml(String(m.id))}">${escapeHtml(m.name || m.id)}</blora-option>`).join('')}
+            </blora-select>
           </div>
           <div style="flex:1;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:6px;">合成模型</div>
-            <select id="fusionOuterSelect" class="blora-select select" style="font-size:13px;">
-              ${models.map(m => `<option value="${escapeHtml(String(m.id))}" ${currentOuter === m.id ? 'selected' : ''}>${escapeHtml(m.name || m.id)}</option>`).join('')}
-            </select>
+            <blora-select id="fusionOuterSelect" name="outer_model_id" class="blora-select select" style="font-size:13px;">
+              ${models.map(m => `<blora-option value="${escapeHtml(String(m.id))}">${escapeHtml(m.name || m.id)}</blora-option>`).join('')}
+            </blora-select>
           </div>
         </div>
 
@@ -2997,6 +2997,10 @@ class ConsoleApp {
         </div>
         </div>
       `);
+      const judgeSelect = document.getElementById('fusionJudgeSelect');
+      const outerSelect = document.getElementById('fusionOuterSelect');
+      if (judgeSelect) judgeSelect.value = String(currentJudge || models[0]?.id || '');
+      if (outerSelect) outerSelect.value = String(currentOuter || models[0]?.id || '');
 
       // 绑定 Fusion 启用开关
       const toggleEl = document.getElementById('fusionEnabledToggle');
@@ -5172,6 +5176,7 @@ class ConsoleApp {
       const input = document.getElementById('sessionsSearchInput');
       if (input) input.value = '';
     }
+    setBloraState('sessionsList', 'loading');
     setHTML(container, pageLoadingHtml(t('加载会话...'), { compact: true }));
 
     const days = (document.getElementById('sessionDaysFilter')?.value || '7').trim();
@@ -5196,12 +5201,15 @@ class ConsoleApp {
       if (pageInfoEl) pageInfoEl.textContent = `${t('第')}${this._sessionsPage} / ${totalPages}${t('页')}`;
 
       if (!data.items || !data.items.length) {
+        setBloraState('sessionsList', 'empty');
         setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc" style="text-align:center;">${t('所选时间范围内暂无会话')}</div></div></div>`);
         return;
       }
       setHTML(container, data.items.map(item => this.renderSessionCard(item)).join(''));
+      setBloraState('sessionsList', 'success');
     } catch (error) {
-      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('会话加载失败'))}<div style="margin-top:10px;"><button class="btn btn-secondary btn-sm" onclick="app.loadSessions(${this._sessionsPage || 1})">${t('重试')}</button></div></div></div></div>`);
+      setBloraState('sessionsList', 'error');
+      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('会话加载失败'))}<div style="margin-top:10px;"><button type="button" class="blora-button btn btn-secondary btn-sm" onclick="app.loadSessions(${this._sessionsPage || 1})">${t('重试')}</button></div></div></div></div>`);
     }
   }
 
@@ -5225,7 +5233,7 @@ class ConsoleApp {
     const cwdText = item.cwd ? `<div class="model-library-item-desc" style="-webkit-line-clamp:1;" title="${escapeHtml(item.cwd)}">${this._sfIcon('folder.fill', '9ca3af')} ${escapeHtml(String(item.cwd).slice(-80))}</div>` : '';
     const lastTool = item.lastToolName ? ` · ${t('最近')}: ${item.lastToolName}` : '';
     return `
-      <div class="model-library-item" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
+      <button type="button" class="model-library-item" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
         <div class="model-library-item-info">
           <div class="model-library-item-name">
             ${this._harnessIconHtml(item.harness, 16)}
@@ -5245,7 +5253,7 @@ class ConsoleApp {
           ${summaryBadge}
           ${pressureBadge}
         </div>
-      </div>`;
+      </button>`;
   }
 
   /** 会话内容搜索：调 /search 端点，按会话聚合渲染结果卡片（复用列表卡片样式） */
@@ -5304,7 +5312,7 @@ class ConsoleApp {
           <span style="color:var(--muted-foreground);opacity:.75;">${escapeHtml(new Date(p.ts).toLocaleString())} · </span>${this._renderSearchExcerpt(p.excerpt)}
         </div>`).join('');
     return `
-      <div class="model-library-item" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
+      <button type="button" class="model-library-item" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
         <div class="model-library-item-info">
           <div class="model-library-item-name">
             ${this._harnessIconHtml(item.harness, 16)}
@@ -5319,7 +5327,7 @@ class ConsoleApp {
         <div class="model-library-item-actions model-item-badges">
           <span class="model-item-badge session-badge-cached" style="background:rgba(245,158,11,.14);color:var(--warning);" title="${t('命中请求数')}">${Number(item.matchCount || 0)} ${t('条命中')}</span>
         </div>
-      </div>`;
+      </button>`;
   }
 
   /** 清空搜索：恢复正常会话列表视图 */
