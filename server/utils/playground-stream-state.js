@@ -11,7 +11,6 @@ function consumePlaygroundSseLine(state, line, providerFormat) {
   if (state.pendingEvent === 'message_stop') {
     state.pendingEvent = '';
     state.streamCompleted = true;
-    state.streamCompleted = true;
     return { kind: 'done', state, providerMessageStop: true };
   }
   state.pendingEvent = '';

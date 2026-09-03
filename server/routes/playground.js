@@ -380,7 +380,7 @@ router.post('/chat', requireAuth, async (req, res) => {
             const frame = consumePlaygroundSseLine(streamState, line, provider.format);
             streamCompleted = streamState.streamCompleted;
             streamFailed = streamState.streamFailed;
-            if (frame.kind === 'ignore') break;
+            if (frame.kind === 'ignore' || frame.kind === 'event') continue;
             if (frame.kind === 'done') {
               Logger.stream(`[Playground] 收到上游完成事件`);
               streamCompleted = true;
