@@ -416,20 +416,20 @@ class PlaygroundApp {
 
   // ========== Chat ==========
 
-  async send() {
+  async send(retryRequest = null) {
     if (this.streaming) return;
 
     const input = document.getElementById('pgInput');
-    const text = input.value.trim();
+    const text = retryRequest?.text ?? input.value.trim();
     if (!text) return;
 
-    const model = document.getElementById('pgModel').value;
-    const systemPrompt = document.getElementById('pgSystemPrompt').value.trim();
-    const temperature = parseFloat(document.getElementById('pgTemperature').value);
-    const maxTokens = parseInt(document.getElementById('pgMaxTokens').value) || 4096;
-    const thinking = document.getElementById('pgThinkingToggle').checked;
-    const thinkingBudget = parseInt(document.getElementById('pgThinkingBudget').value) || 4096;
-    const reasoningEffort = document.getElementById('pgReasoningEffort').value;
+    const model = retryRequest?.model ?? document.getElementById('pgModel').value;
+    const systemPrompt = retryRequest?.systemPrompt ?? document.getElementById('pgSystemPrompt').value.trim();
+    const temperature = retryRequest?.temperature ?? parseFloat(document.getElementById('pgTemperature').value);
+    const maxTokens = retryRequest?.maxTokens ?? (parseInt(document.getElementById('pgMaxTokens').value) || 4096);
+    const thinking = retryRequest?.thinking ?? document.getElementById('pgThinkingToggle').checked;
+    const thinkingBudget = retryRequest?.thinkingBudget ?? (parseInt(document.getElementById('pgThinkingBudget').value) || 4096);
+    const reasoningEffort = retryRequest?.reasoningEffort ?? document.getElementById('pgReasoningEffort').value;
 
     if (!model) {
       alert(t('请先选择模型'));
@@ -439,6 +439,7 @@ class PlaygroundApp {
     const previousMessages = this.messages.slice();
     const previousActiveConvId = this.activeConvId;
     const previousReplyTo = this.replyTo;
+    const retryPayload = Object.freeze({ text, model, systemPrompt, temperature, maxTokens, thinking, thinkingBudget, reasoningEffort });
     const rollbackRequest = () => {
       this.messages = previousMessages;
       this.activeConvId = previousActiveConvId;
@@ -488,6 +489,7 @@ class PlaygroundApp {
     let fullContent = '';
     let reasoningContent = '';
     let streamFailed = false;
+    let streamCompleted = false;
     let streamErrorMessage = '';
     try {
       this.abortController = new AbortController();
@@ -537,7 +539,10 @@ class PlaygroundApp {
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const data = line.slice(6).trim();
-          if (data === '[DONE]') continue;
+          if (data === '[DONE]') {
+            streamCompleted = true;
+            break;
+          }
 
           try {
             const parsed = JSON.parse(data);
@@ -679,13 +684,13 @@ class PlaygroundApp {
         const retryEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
         const retryContent = retryEl.querySelector('.pg-msg-content');
         setHTML(retryContent, `<div class="pg-msg-error">${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
-        retryContent.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send());
+        retryContent.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send(retryPayload));
       } else {
         rollbackRequest();
         this.removeWelcome();
         const errorEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
         setHTML(errorEl.querySelector('.pg-msg-content'), `<div class="pg-msg-error">${this.escapeHtml(error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
-        errorEl.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send());
+        errorEl.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send(retryPayload));
       }
     } finally {
       this.setStreaming(false);

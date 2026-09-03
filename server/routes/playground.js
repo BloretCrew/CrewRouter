@@ -61,6 +61,7 @@ router.post('/chat', requireAuth, async (req, res) => {
 
   let streamAbortController = null;
   let streamTimeout = null;
+  let timeoutAborted = false;
   try {
     const userResult = await pool.query('SELECT balance + refund_balance as total FROM users WHERE id = $1', [userId]);
     const totalBalance = parseFloat(userResult.rows[0]?.total || 0);
@@ -221,7 +222,7 @@ router.post('/chat', requireAuth, async (req, res) => {
 
     // 多 Key：顺序 / 权重尝试，失败后 fallback
     streamAbortController = isStream ? new AbortController() : null;
-    streamTimeout = isStream ? setTimeout(() => streamAbortController.abort(), UPSTREAM_STREAM_TIMEOUT) : null;
+    streamTimeout = isStream ? setTimeout(() => { timeoutAborted = true; streamAbortController.abort(); }, UPSTREAM_STREAM_TIMEOUT) : null;
     let response = null;
     let lastErrText = '';
     let lastStatus = 502;
@@ -312,6 +313,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       let jsonParseErrors = 0;
       let firstChunkTime = null;
       let clientDisconnected = false;
+      let streamCompleted = false;
       let streamFailed = false;
       let backpressureCount = 0;
 
@@ -372,9 +374,12 @@ router.post('/chat', requireAuth, async (req, res) => {
             const data = line.slice(6).trim();
             if (data === '[DONE]') {
               Logger.stream(`[Playground] 收到上游 [DONE] 事件`);
-              const ok = writeWithDrain('data: [DONE]\n\n');
-              if (!ok) await waitForDrain();
-              continue;
+              streamCompleted = true;
+              if (!clientDisconnected && !res.writableEnded) {
+                const ok = writeWithDrain('data: [DONE]\n\n');
+                if (!ok) await waitForDrain();
+              }
+              break;
             }
             try {
               const parsed = JSON.parse(data);
@@ -430,11 +435,13 @@ router.post('/chat', requireAuth, async (req, res) => {
               break;
             }
           }
-          if (streamFailed) break;
+          if (streamFailed || streamCompleted) break;
         }
       } catch (err) {
-        if (!clientDisconnected) streamFailed = true;
-        if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+        if (!clientDisconnected && !timeoutAborted) streamFailed = true;
+        if (timeoutAborted) {
+          Logger.error(`[Playground] 流式超时 (${UPSTREAM_STREAM_TIMEOUT}ms): url=${url}, model=${model}, 已接收 ${chunkCount} chunks`);
+        } else if (err.name === 'AbortError' || err.name === 'TimeoutError') {
           Logger.error(`[Playground] 流式超时 (${UPSTREAM_STREAM_TIMEOUT}ms): url=${url}, model=${model}, 已接收 ${chunkCount} chunks`);
         } else if (clientDisconnected) {
           Logger.warn(`[Playground] 上游读取中断(客户端已断开): url=${url}, model=${model}, error=${err.message}`);
@@ -444,17 +451,18 @@ router.post('/chat', requireAuth, async (req, res) => {
       }
 
       if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null; }
-      if (streamFailed && !clientDisconnected) {
+      if ((streamFailed || timeoutAborted) && !clientDisconnected && !res.writableEnded) {
         const errorPayload = { error: { message: '上游流式响应失败', type: 'upstream_stream_error', terminal: true } };
         if (!res.writableEnded) res.write(`data: ${JSON.stringify(errorPayload)}\n\n`);
-      } else if (!clientDisconnected && !res.writableEnded) {
+      } else if (!streamCompleted && !clientDisconnected && !res.writableEnded) {
         res.write('data: [DONE]\n\n');
       }
       if (!res.writableEnded) res.end();
 
-      if (streamFailed || clientDisconnected) {
+      if (streamFailed || timeoutAborted || clientDisconnected) {
+        streamAbortController?.abort();
         recordModelCall(model, false);
-        recordLiveCallTest(model, { ok: false, error: streamFailed ? 'upstream stream error' : 'client disconnected' });
+        recordLiveCallTest(model, { ok: false, error: clientDisconnected ? 'client disconnected' : timeoutAborted ? 'upstream timeout' : 'upstream stream error' });
         return;
       }
 
