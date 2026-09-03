@@ -92,10 +92,9 @@ app.whenReady().then(async () => {
   await settings.webContents.executeJavaScript("window.confirm = () => true; document.getElementById('stop').click(); void 0", true);
   await waitFor(settings, "document.getElementById('local').innerText.includes('已停止')", 30000);
   try { process.kill(pid, 0); throw new Error(`Desktop Local 子进程仍在运行：${pid}`); } catch (error) { if (error.message.includes('仍在运行')) throw error; }
-  await main.webContents.executeJavaScript("window.crewrouterDesktop.setupLocalProfile('Desktop Tester'); void 0", true);
-  await waitFor(main, "location.hostname === '127.0.0.1' && (location.pathname === '/console' || location.pathname === '/console/')", 60000);
-  const restored = await getSettingsWindow();
-  const restoredDetails = await assertSettingsPage(restored, '运行中');
+  await settings.webContents.executeJavaScript("document.getElementById('restart').click(); void 0", true);
+  await waitFor(settings, "document.getElementById('local').innerText.includes('运行中')", 60000);
+  const restoredDetails = await assertSettingsPage(settings, '运行中');
   if (!restoredDetails.local.includes('运行中')) throw new Error('从主窗口重新启动后 Local Server 未恢复运行');
   console.log(JSON.stringify({ phase, screenshots: ['desktop-settings-local-960x700.png', 'desktop-settings-local-600x700.png'], theme: saved.settings.theme, stoppedPid: pid, restored: true }));
   await app.quit();

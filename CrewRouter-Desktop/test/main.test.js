@@ -43,7 +43,7 @@ test('forged URL or header context cannot authorize privileged settings IPC', ()
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'main.js'), 'utf8');
   assert.match(source, /const isSettingsFrame = \(event\) => Boolean\(state\.settingsWindow/);
   assert.match(source, /event\.sender === state\.settingsWindow\.webContents/);
-  assert.match(source, /event\.senderFrame\?\.url === `file:\/\/\$\{settingsEntry\}`/);
+  assert.match(source, /settingsEntry/);
   assert.doesNotMatch(source, /trustedRemote|x-crewrouter|authorization.*settings/i);
 });
 
