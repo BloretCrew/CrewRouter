@@ -13,6 +13,7 @@ const playgroundJs = read('public/js/playground.js');
 const appJs = read('public/js/app.js');
 const serverJs = read('server/routes/playground.js');
 const streamState = require(path.join(root, 'server/utils/playground-stream-state'));
+const playgroundState = require(path.join(root, 'public/js/playground-state.js'));
 
 for (const [name, html] of [['playground', playground], ['console', consolePage]]) {
   assert.match(html, /\/blora\/blora\.css\?v=2\.0\.8/);
@@ -29,6 +30,7 @@ assert.match(consolePage, /<blora-select\b[^>]*id="sessionSourceFilter"[\s\S]*<b
 assert.match(appJs, /setBloraState\('sessionsList', 'loading'\)/);
 assert.match(appJs, /setBloraState\('sessionsList', 'error'\)/);
 assert.match(appJs, /<button type="button" class="model-library-item"/);
+assert.match(playgroundJs, /PlaygroundState\.buildRetryPayload/);
 assert.doesNotMatch(playgroundJs, /<option\b/);
 assert.doesNotMatch(playgroundJs, /src="\$\{modelInfo\./);
 assert.match(playgroundJs, /select\.value = String\(this\.models\[0\]/);
@@ -55,7 +57,16 @@ assert.match(serverJs, /streamFailed/);
 assert.match(serverJs, /timeoutAborted/);
 assert.match(serverJs, /streamCompleted = true/);
 assert.match(serverJs, /upstream_stream_error/);
-assert.match(serverJs, /if \(streamFailed \|\| timeoutAborted \|\| clientDisconnected\)/);
+assert.match(serverJs, /shouldRecordPlaygroundUsage/);
+assert.match(serverJs, /if \(!shouldRecordPlaygroundUsage/);
+assert.strictEqual(streamState.shouldRecordPlaygroundUsage({ streamCompleted: true, clientDisconnected: false, timeoutAborted: false, streamFailed: false }), true);
+for (const failure of [
+  { streamCompleted: false, clientDisconnected: false, timeoutAborted: false, streamFailed: true },
+  { streamCompleted: false, clientDisconnected: false, timeoutAborted: true, streamFailed: false },
+  { streamCompleted: false, clientDisconnected: true, timeoutAborted: false, streamFailed: false },
+  { streamCompleted: false, clientDisconnected: false, timeoutAborted: false, streamFailed: false }
+]) assert.strictEqual(streamState.shouldRecordPlaygroundUsage(failure), false);
+assert.match(serverJs, /shouldRecordPlaygroundUsage/);
 assert.match(serverJs, /!streamCompleted && !clientDisconnected/);
 assert.match(serverJs, /setTimeout\(\(\) => \{ timeoutAborted = true; streamAbortController\.abort\(\); \}, UPSTREAM_STREAM_TIMEOUT\)/);
 assert.match(serverJs, /for \(let ki = 0; ki < keyAttempts\.length; ki\+\+\) \{[\s\S]*streamAbortController\?\.signal\.aborted/);
@@ -95,13 +106,16 @@ const disconnected = executeSse(['{"choices":[]}', '[DONE]'], 'disconnect');
 assert.strictEqual(disconnected.terminal, 'client-disconnected');
 assert.deepStrictEqual(disconnected.out, []);
 
-// Retry payload is built by production code; this assertion covers the frozen payload contract.
-const captured = Object.freeze({ text: 'original', model: 'model-a', systemPrompt: 'system-a', temperature: 0.2, maxTokens: 100, thinking: true, thinkingBudget: 200, reasoningEffort: 'medium', apiMessages: Object.freeze([{ role: 'user', content: 'original' }]) });
-const currentUi = { text: 'changed', model: 'model-b', systemPrompt: 'system-b', temperature: 1.9 };
+// Execute the production retry payload helper; UI changes must not mutate it.
+const originalMessages = [{ role: 'user', content: 'original' }];
+const captured = playgroundState.buildRetryPayload({ text: 'original', model: 'model-a', systemPrompt: 'system-a', temperature: 0.2, maxTokens: 100, thinking: true, thinkingBudget: 200, reasoningEffort: 'medium', apiMessages: originalMessages });
+originalMessages[0].content = 'changed';
 assert.strictEqual(captured.text, 'original');
 assert.strictEqual(captured.model, 'model-a');
 assert.strictEqual(captured.temperature, 0.2);
-assert.notStrictEqual(currentUi.model, captured.model);
+assert.strictEqual(captured.apiMessages[0].content, 'original');
+assert.strictEqual(playgroundState.shouldRollback('failed'), true);
+assert.strictEqual(playgroundState.shouldRollback('completed'), false);
 
 new vm.Script(playgroundJs, { filename: 'public/js/playground.js' });
 new vm.Script(appJs, { filename: 'public/js/app.js' });

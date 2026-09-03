@@ -13,7 +13,7 @@ const { calculatePointsToDeduct } = require('../utils/points-deduct');
 const { clientMetaFromReq } = require('../utils/request-source');
 const { notifyUser, NOTIFICATION_TYPES } = require('../utils/notifications');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
-const { consumePlaygroundSseFrame, finalizePlaygroundStream } = require('../utils/playground-stream-state');
+const { consumePlaygroundSseFrame, finalizePlaygroundStream, shouldRecordPlaygroundUsage } = require('../utils/playground-stream-state');
 
 const UPSTREAM_TIMEOUT = 60000;
 const UPSTREAM_STREAM_TIMEOUT = 300000; // 流式请求超时 5 分钟
@@ -471,7 +471,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       }
       if (!res.writableEnded) res.end();
 
-      if (streamFailed || timeoutAborted || clientDisconnected) {
+      if (!shouldRecordPlaygroundUsage({ streamCompleted: streamTerminal === 'completed', clientDisconnected, timeoutAborted, streamFailed })) {
         streamAbortController?.abort();
         recordModelCall(model, false);
         recordLiveCallTest(model, { ok: false, error: clientDisconnected ? 'client disconnected' : timeoutAborted ? 'upstream timeout' : 'upstream stream error' });

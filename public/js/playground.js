@@ -465,7 +465,9 @@ class PlaygroundApp {
     }
     if (!retryRequest) apiMessages.push(...this.messages);
     if (retryRequest) this.messages = apiMessages.filter(message => message.role !== 'system').map(message => ({ ...message }));
-    const retryPayload = Object.freeze({ text, model, systemPrompt, temperature, maxTokens, thinking, thinkingBudget, reasoningEffort, apiMessages: Object.freeze(apiMessages.map(message => Object.freeze({ ...message }))) });
+    const retryPayload = (window.PlaygroundState || {}).buildRetryPayload
+      ? PlaygroundState.buildRetryPayload({ text, model, systemPrompt, temperature, maxTokens, thinking, thinkingBudget, reasoningEffort, apiMessages })
+      : Object.freeze({ text, model, systemPrompt, temperature, maxTokens, thinking, thinkingBudget, reasoningEffort, apiMessages: Object.freeze(apiMessages.map(message => Object.freeze({ ...message }))) } );
 
     input.value = '';
     input.style.height = 'auto';
@@ -532,6 +534,7 @@ class PlaygroundApp {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        if (streamCompleted) break;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');

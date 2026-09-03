@@ -21,6 +21,10 @@ function consumePlaygroundSseFrame(state, data) {
   }
 }
 
+function shouldRecordPlaygroundUsage(state) {
+  return state.streamCompleted === true && state.clientDisconnected !== true && state.timeoutAborted !== true && state.streamFailed !== true;
+}
+
 function finalizePlaygroundStream(state) {
   if (state.clientDisconnected) return 'client-disconnected';
   if (state.timeoutAborted) return 'timeout';
@@ -32,4 +36,4 @@ function finalizePlaygroundStream(state) {
   return 'completed';
 }
 
-module.exports = { consumePlaygroundSseFrame, finalizePlaygroundStream };
+module.exports = { consumePlaygroundSseFrame, finalizePlaygroundStream, shouldRecordPlaygroundUsage };
