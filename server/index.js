@@ -2385,6 +2385,38 @@ if (isDemo) {
 }
 
 // Desktop Local 使用显式、仅本实例可用的本地 principal；不把缺失 session 当作管理员。
+async function ensureDesktopLocalPersonalTeam(client, user) {
+  const existing = await client.query(
+    `SELECT t.id FROM teams t
+     JOIN user_teams ut ON ut.team_id = t.id
+     WHERE ut.user_id = $1 AND t.is_personal = TRUE
+     LIMIT 1`,
+    [user.id]
+  );
+  if (existing.rows.length) return existing.rows[0];
+  const team = await client.query(
+    'INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id',
+    [`${user.username} 的个人账户`, '个人账户，系统自动创建']
+  );
+  await client.query(
+    'INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+    [user.id, team.rows[0].id]
+  );
+  return team.rows[0];
+}
+
+async function ensureDesktopLocalPersonalModels(client, team) {
+  await client.query(
+    `INSERT INTO team_models (team_id, model_id)
+     SELECT $1, m.id FROM models m
+     JOIN providers p ON p.id = m.provider
+     WHERE m.enabled = TRUE AND p.enabled = TRUE
+     ON CONFLICT (team_id, model_id) DO UPDATE SET enabled = TRUE`,
+    [team.id]
+  );
+}
+
+
 async function ensureDesktopLocalPrincipal() {
   if (!isDesktopLocal) return;
   const { pool: db } = require('./models/database');
@@ -2405,6 +2437,8 @@ async function ensureDesktopLocalPrincipal() {
         await client.query('UPDATE users SET username = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [displayName, current.id]);
         current.username = displayName;
       }
+      const personalTeam = await ensureDesktopLocalPersonalTeam(client, current);
+      await ensureDesktopLocalPersonalModels(client, personalTeam);
       await client.query('COMMIT');
       return current;
     }
@@ -2412,6 +2446,8 @@ async function ensureDesktopLocalPrincipal() {
       `INSERT INTO users (username, email, is_admin, email_verified, balance) VALUES ($1, NULL, TRUE, TRUE, 0) RETURNING *`,
       [displayName]
     );
+    const personalTeam = await ensureDesktopLocalPersonalTeam(client, inserted.rows[0]);
+    await ensureDesktopLocalPersonalModels(client, personalTeam);
     await client.query('COMMIT');
     return inserted.rows[0];
   } catch (error) {

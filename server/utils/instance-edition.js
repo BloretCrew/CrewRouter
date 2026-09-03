@@ -11,8 +11,10 @@ const PERSONAL_CAPABILITIES = Object.freeze({
   teamMembers: false,
   teamAdmin: false,
   sharedApiKeys: false,
-  projects: false,
-  auditLogs: false,
+  projects: true,
+  auditLogs: true,
+  teamProjects: false,
+  teamAuditLogs: false,
 });
 const TEAM_ONLY_CAPABILITIES = Object.freeze({
   ai: true,
@@ -28,6 +30,8 @@ const TEAM_ONLY_CAPABILITIES = Object.freeze({
   sharedApiKeys: true,
   projects: true,
   auditLogs: true,
+  teamProjects: true,
+  teamAuditLogs: true,
 });
 
 function normalizeEdition(value) {
