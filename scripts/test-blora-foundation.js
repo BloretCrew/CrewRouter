@@ -14,12 +14,15 @@ assert.strictEqual(blora.exports['./auto'].import, './dist/auto.js');
 assert.strictEqual(blora.exports['./blora.css'], './dist/blora.css');
 for (const file of ['blora.css', 'tokens.css', 'tokens.dark.css', 'auto.js']) assert.ok(fs.existsSync(path.join(root, 'node_modules/@bloret-crew/blora-design/dist', file)), `missing dist/${file}`);
 const server = fs.readFileSync(path.join(root, 'server/index.js'), 'utf8');
-assert.match(server, /app\.use\('\/blora',\s*express\.static\(BLORA_DIST_DIR/);
-assert.match(server, /BLORA_DIST_DIR/);
+assert.match(server, /app\.use\('\/blora',\s*createBloraResourceRouter\(\)/);
+assert.match(server, /require\('\.\/blora-resources'\)/);
+const resources = require(path.join(root, 'server/blora-resources.js'));
+assert.strictEqual(resources.EXPECTED_VERSION, '2.0.8');
 for (const name of fs.readdirSync(path.join(root, 'public/pages')).filter((n) => n.endsWith('.html') && !n.endsWith('.bak'))) {
   const html = fs.readFileSync(path.join(root, 'public/pages', name), 'utf8');
-  for (const marker of ['/blora/blora.css', '/blora/tokens.dark.css', '/blora/auto.js', '/js/blora-foundation.js']) assert.ok(html.includes(marker), `${name} missing ${marker}`);
+  for (const marker of ['/blora/blora.css?v=2.0.8', '/blora/tokens.dark.css?v=2.0.8', '/blora/auto.js?v=2.0.8', '/js/blora-foundation.js']) assert.ok(html.includes(marker), `${name} missing ${marker}`);
   assert.ok(/<body\b[^>]*class=["'][^"']*\bblora-page\b/.test(html), `${name} missing blora-page scope`);
+  assert.strictEqual([...html.matchAll(/\/blora\/(?:blora\.css|tokens\.dark\.css|auto\.js)\?v=([^"']+)/g)].every((m) => m[1] === '2.0.8'), true);
   assert.ok(html.indexOf("data-blora-color-scheme") < html.indexOf('/blora/blora.css'), `${name} theme bootstrap must precede Blora CSS`);
 }
 console.log('Blora foundation static checks passed.');

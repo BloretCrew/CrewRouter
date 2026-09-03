@@ -9,14 +9,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 359,
         "dialogs": 0,
         "forms": 5,
         "tables": 2,
-        "states": 52
+        "states": 52,
+        "legacyModalContainers": 115,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 1,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 2,
       "scripts": [
@@ -39,14 +51,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 288,
         "dialogs": 0,
         "forms": 6,
         "tables": 11,
-        "states": 58
+        "states": 58,
+        "legacyModalContainers": 160,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 1,
+        "legacyDialogApiCalls": 2,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 2,
       "scripts": [
@@ -71,14 +95,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 2,
         "dialogs": 0,
         "forms": 0,
         "tables": 0,
-        "states": 0
+        "states": 0,
+        "legacyModalContainers": 0,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 0,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 1,
       "scripts": [
@@ -96,14 +132,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 3,
         "dialogs": 0,
         "forms": 1,
         "tables": 0,
-        "states": 1
+        "states": 1,
+        "legacyModalContainers": 0,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 0,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 1,
       "scripts": [
@@ -121,14 +169,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 9,
         "dialogs": 0,
         "forms": 2,
         "tables": 0,
-        "states": 1
+        "states": 1,
+        "legacyModalContainers": 0,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 0,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 1,
       "scripts": [
@@ -146,14 +206,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 4,
         "dialogs": 0,
         "forms": 1,
         "tables": 0,
-        "states": 2
+        "states": 2,
+        "legacyModalContainers": 0,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 0,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 1,
       "scripts": [
@@ -172,14 +244,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 18,
         "dialogs": 0,
         "forms": 0,
         "tables": 0,
-        "states": 2
+        "states": 2,
+        "legacyModalContainers": 6,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 1,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 1,
       "scripts": [
@@ -200,14 +284,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 0,
         "dialogs": 0,
         "forms": 0,
         "tables": 0,
-        "states": 1
+        "states": 1,
+        "legacyModalContainers": 0,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 0,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 0,
       "scripts": [
@@ -223,14 +319,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 1,
         "dialogs": 0,
         "forms": 0,
         "tables": 0,
-        "states": 3
+        "states": 3,
+        "legacyModalContainers": 0,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 0,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 1,
       "scripts": [
@@ -248,14 +356,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 4,
         "dialogs": 0,
         "forms": 1,
         "tables": 0,
-        "states": 1
+        "states": 1,
+        "legacyModalContainers": 0,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 0,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 1,
       "scripts": [
@@ -273,14 +393,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 12,
         "dialogs": 0,
         "forms": 0,
         "tables": 0,
-        "states": 11
+        "states": 11,
+        "legacyModalContainers": 0,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 0,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 2,
       "scripts": [
@@ -297,14 +429,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 2,
         "dialogs": 0,
         "forms": 0,
         "tables": 1,
-        "states": 0
+        "states": 0,
+        "legacyModalContainers": 0,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 0,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 1,
       "scripts": [
@@ -321,14 +465,26 @@
         "darkTokens": true,
         "auto": true,
         "foundation": true,
-        "scope": true
+        "scope": true,
+        "version": [
+          "2.0.8",
+          "2.0.8",
+          "2.0.8"
+        ]
       },
       "dom": {
         "controls": 3,
         "dialogs": 0,
         "forms": 0,
         "tables": 0,
-        "states": 3
+        "states": 3,
+        "legacyModalContainers": 0,
+        "nativeDialogs": 0,
+        "legacyDialogScript": 0,
+        "legacyDialogApiCalls": 0,
+        "staticOnly": true,
+        "dynamicTemplates": "conservative-unobserved",
+        "runtime": "not-observed"
       },
       "initialization": 1,
       "scripts": [
@@ -408,6 +564,13 @@
     "dialogs": 0,
     "forms": 16,
     "tables": 14,
-    "states": 135
+    "states": 135,
+    "legacyModalContainers": 281,
+    "nativeDialogs": 0,
+    "legacyDialogScript": 3,
+    "legacyDialogApiCalls": 2,
+    "staticOnly": 13,
+    "dynamicTemplates": "0conservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobservedconservative-unobserved",
+    "runtime": "0not-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observednot-observed"
   }
 }

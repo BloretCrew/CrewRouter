@@ -43,15 +43,7 @@ const PUBLIC_DIR = (() => {
 })();
 
 // Blora 资源根目录只能由包解析结果得到，避免 process.cwd() 影响服务资源。
-const BLORA_PACKAGE_JSON = require.resolve('@bloret-crew/blora-design/package.json');
-const BLORA_PACKAGE = JSON.parse(fs.readFileSync(BLORA_PACKAGE_JSON, 'utf8'));
-if (BLORA_PACKAGE.version !== '2.0.8') {
-  throw new Error(`Unsupported @bloret-crew/blora-design version: ${BLORA_PACKAGE.version}`);
-}
-const BLORA_DIST_DIR = path.join(path.dirname(BLORA_PACKAGE_JSON), 'dist');
-if (!fs.existsSync(BLORA_DIST_DIR) || !fs.statSync(BLORA_DIST_DIR).isDirectory()) {
-  throw new Error(`Blora dist directory not found: ${BLORA_DIST_DIR}`);
-}
+const { createBloraResourceRouter } = require('./blora-resources');
 
 // 版本号：开发时读项目根 package.json；构建后读 dist/package.json
 const APP_VERSION = (() => {
@@ -2560,16 +2552,8 @@ app.use((req, res, next) => {
 // 静态文件（开发环境禁用强缓存）
 app.use(express.static(PUBLIC_DIR, { etag: false, maxAge: 0 }));
 
-// 官方 Blora 资源映射：路径被固定在包内 dist，禁止回退到任意 node_modules 文件。
-app.use('/blora', express.static(BLORA_DIST_DIR, {
-  etag: true,
-  fallthrough: false,
-  index: false,
-  dotfiles: 'deny',
-  setHeaders(res) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000');
-  },
-}));
+// 官方 Blora 资源映射：生产路由与 smoke test 共用同一资源模块。
+app.use('/blora', createBloraResourceRouter());
 
 // 版本号接口（无需认证）
 app.get('/api/version', (req, res) => {
