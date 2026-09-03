@@ -46,7 +46,8 @@ class PlaygroundApp {
       this.models = Array.isArray(data) ? data : [];
       const select = document.getElementById('pgModel');
       if (this.models.length === 0) {
-        setHTML(select, '<option value="" disabled selected>' + t('暂无可用模型') + '</option>');
+        setBloraState('pgModel', 'empty');
+        setHTML(select, '<blora-option value="" disabled selected>' + this.escapeHtml(t('暂无可用模型')) + '</blora-option>');
         return;
       }
       const grouped = {};
@@ -56,14 +57,16 @@ class PlaygroundApp {
       });
       let html = '';
       for (const [provider, models] of Object.entries(grouped)) {
-        html += `<optgroup label="${provider}">`;
         models.forEach(m => {
+          const id = this.escapeHtml(String(m.id || ''));
+          const label = this.escapeHtml(String(m.name || m.id || ''));
+          const providerLabel = this.escapeHtml(String(provider || t('其他')));
           const mult = Number(m.model_multiplier || 1.0);
-          html += `<option value="${m.id}">${m.name} (×${mult.toFixed(2)})</option>`;
+          html += `<blora-option value="${id}">${label} · ${providerLabel} (×${mult.toFixed(2)})</blora-option>`;
         });
-        html += '</optgroup>';
       }
       setHTML(select, html);
+      setBloraState('pgModel', 'success');
 
       // Store model pricing and info for cost calculation
       this.modelPricing = {};
@@ -86,7 +89,7 @@ class PlaygroundApp {
     } catch (error) {
       console.error(t('加载模型失败:'), error);
       const select = document.getElementById('pgModel');
-      if (select) setHTML(select, '<option value="" disabled selected>' + t('加载失败') + '</option>');
+      if (select) { setBloraState('pgModel', 'error'); setHTML(select, '<blora-option value="" disabled selected>' + this.escapeHtml(t('加载失败')) + '</blora-option>'); }
     }
   }
 
@@ -499,6 +502,7 @@ class PlaygroundApp {
       let thinkingStarted = false;
       let promptTokens = 0;
       let completionTokens = 0;
+      let cachedTokens = 0;
 
       clearChildren(contentEl);
 
@@ -695,7 +699,9 @@ class PlaygroundApp {
       modelName = meta.modelDisplayName || meta.model || t('助手');
       const modelInfo = this.modelInfo?.[meta.model];
       if (modelInfo?.seriesIconUrl) {
-        modelIconHtml = `<img src="${modelInfo.seriesIconUrl}" alt="" class="pg-msg-avatar-icon">`;
+        let iconUrl = '';
+        try { const parsed = new URL(String(modelInfo.seriesIconUrl), window.location.origin); if (parsed.protocol === 'https:') iconUrl = parsed.href; } catch (_) {}
+        if (iconUrl) modelIconHtml = `<img src="${this.escapeHtml(iconUrl)}" alt="" class="pg-msg-avatar-icon">`;
       }
     }
 
@@ -1158,8 +1164,8 @@ class PlaygroundApp {
     const modalOverlay = document.getElementById('pgHistoryModalOverlay');
     const modal = document.getElementById('pgHistoryModal');
 
-    if (modalClose) modalClose.addEventListener('click', () => { modal.style.display = 'none'; });
-    if (modalOverlay) modalOverlay.addEventListener('click', () => { modal.style.display = 'none'; });
+    if (modalClose) modalClose.addEventListener('click', () => { modal.close?.(); });
+    if (modalOverlay) modalOverlay.addEventListener('click', () => { modal.close?.(); });
   }
 
   // ========== History ==========
@@ -1287,7 +1293,8 @@ class PlaygroundApp {
     html += '</div></div>';
 
     setHTML(body, html);
-    modal.style.display = 'flex';
+    if (typeof modal.show === 'function') modal.show();
+    else modal.setAttribute('open', '');
   }
 
   escapeHtml(value) {

@@ -1,5 +1,15 @@
 /* Playground - Three Column Layout */
 
+.pg-container .blora-button { font: inherit; }
+.pg-container blora-select { display: block; width: 100%; }
+.pg-history-panel, .pg-settings-panel, .pg-history-detail-panel { color-scheme: light dark; }
+.pg-history-modal::part(panel) { min-height: min(70vh, 680px); }
+.pg-history-modal-body { min-height: 120px; }
+.pg-history-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pg-history-modal-header h3 { margin: 0; }
+.pg-history-modal .pg-modal-close { flex: 0 0 auto; }
+
+
 /* ============================================
    Container
    ============================================ */
