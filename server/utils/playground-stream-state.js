@@ -1,5 +1,15 @@
 'use strict';
 
+function consumePlaygroundSseLines(state, lines, providerFormat) {
+  const output = [];
+  for (const line of Array.isArray(lines) ? lines : []) {
+    const result = consumePlaygroundSseLine(state, line, providerFormat);
+    output.push(result);
+    if (result.kind === 'done' || result.kind === 'error' || result.kind === 'ignore') break;
+  }
+  return { state, output, terminal: finalizePlaygroundStream({ ...state }) };
+}
+
 function consumePlaygroundSseLine(state, line, providerFormat) {
   const value = String(line || '').replace(/\\r$/, '');
   if (value.startsWith('event:')) {
@@ -63,4 +73,4 @@ function finalizePlaygroundStream(state) {
   return 'completed';
 }
 
-module.exports = { consumePlaygroundSseLine, consumePlaygroundSseFrame, finalizePlaygroundStream, shouldRecordPlaygroundUsage, recordPlaygroundUsageIfCompleted };
+module.exports = { consumePlaygroundSseLines, consumePlaygroundSseLine, consumePlaygroundSseFrame, finalizePlaygroundStream, shouldRecordPlaygroundUsage, recordPlaygroundUsageIfCompleted };
