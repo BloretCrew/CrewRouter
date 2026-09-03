@@ -4,7 +4,7 @@ function consumePlaygroundSseFrame(state, data, providerFormat) {
   if (state.clientDisconnected || state.streamCompleted || state.streamFailed || state.timeoutAborted) {
     return { kind: 'ignore', state };
   }
-  if (data === '[DONE]') {
+  if (data === '[DONE]' || (providerFormat === 'anthropic' && data === 'message_stop')) {
     state.streamCompleted = true;
     return { kind: 'done', state };
   }

@@ -378,7 +378,7 @@ router.post('/chat', requireAuth, async (req, res) => {
             streamFailed = frame.state?.streamFailed ?? streamFailed;
             if (frame.kind === 'ignore') break;
             if (frame.kind === 'done') {
-              Logger.stream(`[Playground] 收到上游 [DONE] 事件`);
+              Logger.stream(`[Playground] 收到上游完成事件`);
               streamCompleted = true;
               if (!clientDisconnected && !res.writableEnded) {
                 const ok = writeWithDrain('data: [DONE]\n\n');
