@@ -25,6 +25,7 @@ for (const [id, title] of Object.entries(dialogs)) {
   const rootMatch = scope.match(new RegExp(`id="${id}"[^>]*class="blora-dialog modal"[^>]*`));
   assert.ok(rootMatch && new RegExp(`role="dialog"`).test(rootMatch[0]) && new RegExp(`aria-modal="true"`).test(rootMatch[0]) && new RegExp(`aria-labelledby="${title}"`).test(rootMatch[0]), `${id} must use dialog semantics and ${title}`);
   assert.ok(rootMatch, `${id} must use dialog semantics and ${title}`);
+  assert.strictEqual((scope.match(new RegExp(`id=\"${id}\"`, 'g')) || []).length, 1, `${id} must have one modal root`);
   const from = scope.indexOf(rootMatch[0]);
   const nextMatch = scope.slice(from + rootMatch[0].length).match(/<div id="[^"]+"[^>]*class="blora-dialog modal"/);
   const next = nextMatch ? from + rootMatch[0].length + nextMatch.index : -1;
@@ -40,6 +41,10 @@ for (const id of ['modelLibraryContent', 'myProvidersTable', 'myTeamModelsTable'
 }
 for (const marker of ['模型库', '我的上游', '当前 Key', '供应商额度', '添加供应商', '配置 API Key', 'API Key', '模型队列', 'Claude Code', 'Codex', 'DeepSeek Harness']) assert.ok(scope.includes(marker), `missing marker: ${marker}`);
 assert.doesNotMatch(scope, /--blora-[a-z-]+\s*:/);
+assert.doesNotMatch(html, /data-blora-state=\"[^\"]+\"[^>]*data-blora-state=/);
+for (const marker of ['safeHttpUrl(', 'safeColor(', 'blora-card', 'blora-button', '_jsString(team.team_id)', '_jsString(provider.provider_id)']) assert.ok(js.includes(marker), `missing hardened dynamic marker: ${marker}`);
+assert.match(js, /series_icon_url[^\n]*safeHttpUrl/);
+assert.match(js, /style=\"[^\"]*safeColor\(t\.color\)/);
 assert.match(js, /setHTML\(/);
 for (const marker of ['escapeHtml(', '_jsString(', 'modelTestModal', 'modelUptimeModal', 'usageDetailModal', 'showKeyModels', 'blora-button']) assert.ok(js.includes(marker), `missing dynamic/security marker: ${marker}`);
 assert.match(js, /model\.model_id[^\n]*_jsString/);
