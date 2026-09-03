@@ -98,6 +98,13 @@ test('renderer guards repeated actions and renders server metadata/errors', () =
   assert.match(js, /setStatus\(error\?\.message/);
 });
 
+test('remote renderer hides settings and does not expose the privileged entry point', () => {
+  assert.match(fs.readFileSync(path.join(rendererDir, 'renderer.js'), 'utf8'), /settingsButton\.hidden = status\.mode === 'remote' \|\| status\.runtime !== 'desktop-local'/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'src', 'main.js'), 'utf8'), /id = 'desktop-settings'/);
+  assert.match(settingsJs, /remoteNote/);
+  assert.doesNotMatch(settingsJs, /trustedRemote|remoteTrust|highPrivilege/);
+});
+
 test('desktop settings are localized, bridge-safe, system-theme aware and remote-limited', () => {
   assert.match(settingsHtml, /Content-Security-Policy/);
   assert.match(settingsJs, /required =/);

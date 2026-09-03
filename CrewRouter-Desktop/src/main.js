@@ -39,7 +39,8 @@ function currentStatus() {
   const active = state.connection?.activeProfile() || null;
   const localProfile = state.localProfile || (active?.mode === 'local' ? active : null);
   const needsLocalProfile = state.mode === 'connect' && (!active || (active.mode === 'local' && !active.displayName));
-  return { mode: state.mode, target: state.currentTarget, runtime: state.instance?.runtime || null, edition: state.instance?.edition || null, auth: state.instance?.auth || null, demo: state.instance?.demo ?? null, capabilities: state.instance?.capabilities || {}, protocolVersion: state.instance?.protocolVersion || null, profile: state.instance?.profile || null, localProfile: localProfile ? { id: localProfile.id, displayName: localProfile.displayName || null, localIdentityId: localProfile.localIdentityId || null } : null, needsLocalProfile };
+  const localStatus = state.local?.getStatus?.() || null;
+  return { mode: state.mode, target: state.currentTarget, runtime: state.instance?.runtime || localStatus?.runtime || null, edition: state.instance?.edition || localStatus?.edition || null, auth: state.instance?.auth || localStatus?.auth || null, demo: state.instance?.demo ?? localStatus?.demo ?? null, capabilities: state.instance?.capabilities || localStatus?.capabilities || {}, protocolVersion: state.instance?.protocolVersion || null, profile: state.instance?.profile || null, localProfile: localProfile ? { id: localProfile.id, displayName: localProfile.displayName || null, localIdentityId: localProfile.localIdentityId || null } : null, needsLocalProfile };
 }
 
 async function connect(url, { local = false, name = local ? '本地 CrewRouter' : 'CrewRouter', id, displayName, localIdentityId } = {}) {
@@ -50,6 +51,7 @@ async function connect(url, { local = false, name = local ? '本地 CrewRouter' 
   state.instance = { ...profile, profile: { id: profile.id, name: profile.name, lastConnectedAt: profile.lastConnectedAt } };
   try {
     await state.mainWindow.loadURL(local ? `${state.currentTarget}/console` : state.currentTarget);
+    if (local) await state.mainWindow.webContents.executeJavaScript(`(() => { let button = document.getElementById('desktop-settings'); if (!button) { button = document.createElement('button'); button.id = 'desktop-settings'; button.type = 'button'; button.textContent = '⚙ Desktop 设置'; Object.assign(button.style, { position: 'fixed', top: '12px', right: '16px', zIndex: '2147483647', padding: '8px 12px', borderRadius: '8px', border: '1px solid currentColor', background: 'transparent', color: 'inherit', cursor: 'pointer' }); document.body.appendChild(button); } button.onclick = () => window.crewrouterDesktop?.openSettings?.(); })()`, true);
   } catch (error) {
     // A redirect can supersede the initial navigation after the target is already loaded.
     if (error?.code !== 'ERR_ABORTED' && error?.errno !== -3) throw error;
@@ -116,7 +118,9 @@ function getWindowWebPreferences() { return { preload: path.join(__dirname, 'pre
 function isRendererFrame(event) {
   let framePath = '';
   try { const frameUrl = new URL(event.senderFrame?.url || ''); if (frameUrl.protocol === 'file:') framePath = decodeURIComponent(frameUrl.pathname); } catch {}
-  return Boolean(state.mainWindow && event.sender === state.mainWindow.webContents && framePath === rendererEntry && !state.currentTarget);
+  let localConsole = false;
+  try { localConsole = state.mode === 'local' && state.instance?.runtime === 'desktop-local' && new URL(event.senderFrame?.url || '').origin === state.currentTarget; } catch {}
+  return Boolean(state.mainWindow && event.sender === state.mainWindow.webContents && (framePath === rendererEntry || localConsole) && (!state.currentTarget || localConsole));
 }
 function allowedNavigation(target) {
   try { const url = new URL(target); if (url.protocol === 'file:') return url.pathname === rendererEntry && !state.currentTarget; return Boolean(state.currentTarget && url.origin === state.currentTarget); } catch { return false; }
@@ -178,7 +182,7 @@ function registerIpc() {
   ipcMain.handle('desktop:save-settings', (event, settings) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); return state.connection.store.saveSettings(settings); });
   ipcMain.handle('desktop:rename-profile', (event, id, name) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); return state.connection.store.rename(id, name); });
   ipcMain.handle('desktop:delete-profile', (event, id) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); if (state.localProfile?.id === id || state.connection.activeProfile()?.id === id) fail('不能删除当前连接 profile'); return state.connection.store.remove(id); });
-  ipcMain.handle('desktop:stop-local', async (event) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); if (state.local) await state.local.stop(); state.local = null; state.currentTarget = null; state.instance = null; state.mode = 'connect'; return currentStatus(); });
+  ipcMain.handle('desktop:stop-local', async (event) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); if (state.local) await state.local.stop(); state.mode = 'local'; return currentStatus(); });
   ipcMain.handle('desktop:get-diagnostics', (event) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); const active = state.connection.activeProfile(); return { app: 'CrewRouter Desktop', version: electron.app.getVersion(), runtime: state.instance?.runtime || null, edition: state.instance?.edition || null, mode: state.mode, target: state.currentTarget, profileId: active?.id || null, localServer: Boolean(state.local?.getStatus().ready) }; });
   ipcMain.handle('desktop:quit', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); electron.app.quit(); });
 }

@@ -60,7 +60,7 @@ function describeStatus(status) {
   if (!status) return;
   if (status.error) return showError(new Error(status.error));
   if (status.needsLocalProfile && status.mode === 'connect') return showLocalProfileStep();
-  if (settingsButton) settingsButton.hidden = status.runtime !== 'desktop-local';
+  if (settingsButton) settingsButton.hidden = status.mode === 'remote' || status.runtime !== 'desktop-local';
   if (status.mode && status.mode !== 'connect') {
     const authLabel = status.auth ? (status.auth.required === false ? '免登录' : `登录：${(status.auth.methods || []).join('、') || '服务器'}`) : '';
     const metadata = [status.runtime, status.edition, authLabel].filter(Boolean).join(' · ');

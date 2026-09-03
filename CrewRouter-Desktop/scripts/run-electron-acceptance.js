@@ -18,7 +18,7 @@ function run(phase) {
   const env = { ...process.env, CREWROUTER_ACCEPTANCE_USER_DATA: userData, CREWROUTER_ACCEPTANCE_PHASE: phase, CREWROUTER_ACCEPTANCE_OUTPUT: output };
   delete env.CREWROUTER_SERVER_ROOT;
   delete env.CREWROUTER_PACKAGED_SERVER_ROOT;
-  const args = [...electronArgs, 'scripts/capture-local-username.js'];
+  const args = [...electronArgs, 'scripts/capture-desktop-settings.js'];
   const result = spawnSync('xvfb-run', ['-a', electron, ...args], {
     cwd: root,
     env,
@@ -31,7 +31,7 @@ try {
   fs.mkdirSync(output, { recursive: true });
   run('first');
   run('restart');
-  console.log(JSON.stringify({ userData, screenshots: ['local-username-oobe-960x700.png', 'local-username-console-960x700.png', 'local-username-console-600x700.png'] }));
+  console.log(JSON.stringify({ userData, screenshots: ['desktop-settings-local-960x700.png', 'desktop-settings-local-600x700.png'] }));
 } finally {
   fs.rmSync(userData, { recursive: true, force: true });
 }
