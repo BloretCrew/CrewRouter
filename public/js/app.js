@@ -5703,7 +5703,6 @@ class ConsoleApp {
       }
       this._promptsCache = data.items;
 
-      setBloraState('myProvidersTable', 'success');
       setHTML(container, `
         <table>
           <thead>
@@ -8421,10 +8420,14 @@ ${extractorBody}
     setBloraState('myProvidersTable', 'loading');
     try {
       const res = await fetch('/api/user/my-providers');
-      if (!res.ok) return;
+      if (!res.ok) { setBloraState('myProvidersTable', 'error'); return; }
       const providers = await res.json();
 
       const container = document.getElementById('myProvidersTable');
+      if (!Array.isArray(providers)) {
+        setBloraState('myProvidersTable', 'error');
+        return;
+      }
       if (!providers.length) {
         setBloraState('myProvidersTable', 'empty');
         setHTML(container, `
@@ -8440,6 +8443,7 @@ ${extractorBody}
         return;
       }
 
+      setBloraState('myProvidersTable', 'success');
       setHTML(container, `
         <table>
           <thead>
@@ -8489,6 +8493,7 @@ ${extractorBody}
         </table>
       `);
     } catch (error) {
+      setBloraState('myProvidersTable', 'error');
       console.error(t('加载供应商页面失败:'), error);
     }
   }
@@ -8785,8 +8790,8 @@ ${extractorBody}
     }
 
     setHTML(container, models.map((model, index) => `
-      <div class="model-check-item" data-model-id="${model.id}" data-model-name="${model.name || ''}">
-        <input type="checkbox" class="manage-model-checkbox" id="manageModel_${index}" value="${model.id}" onchange="app._updateManageModelsBatchBar()">
+      <div class="blora-card model-check-item" data-model-id="${escapeHtml(String(model.id))}" data-model-name="${escapeHtml(model.name || '')}">
+        <input type="checkbox" class="blora-input manage-model-checkbox" id="manageModel_${index}" value="${escapeHtml(String(model.id))}" onchange="app._updateManageModelsBatchBar()">
         <label for="manageModel_${index}" style="flex:1;cursor:pointer;">
           <span style="font-weight:500;">${escapeHtml(model.name || model.id)}</span>
           ${model.name && model.name !== model.id ? `<span style="font-size:12px;color:var(--muted-foreground);margin-left:8px;">${escapeHtml(model.id)}</span>` : ''}
@@ -9066,8 +9071,8 @@ ${extractorBody}
               }</td>
               <td>
                 <div style="display:flex;gap:4px;">
-                  <button class="btn btn-sm btn-secondary" onclick="app.editMyTeamModel('${escapeHtml(m.id)}')">编辑</button>
-                  <button class="btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel('${escapeHtml(m.id)}')">删除</button>
+                  <button class="blora-button btn btn-sm btn-secondary" onclick="app.editMyTeamModel('${this._jsString(m.id)}')">编辑</button>
+                  <button class="blora-button btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel('${this._jsString(m.id)}')">删除</button>
                 </div>
               </td>
             </tr>
@@ -11396,7 +11401,7 @@ ${extractorBody}
           });
           const listEl = freshEl.querySelector('.model-library-list');
           if (listEl) {
-            setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">渲染失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${escapeHtml(String(team.team_id))}','${escapeHtml(String(provider.provider_id))}\')">${t('重试')}</a></span></div>`);
+            setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">渲染失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\')">${t('重试')}</a></span></div>`);
           }
         }
       }
@@ -11415,7 +11420,7 @@ ${extractorBody}
       const failEl = this._findProviderEl(team.team_id, provider.provider_id, providerEl);
       if (failEl && !aborted) {
         const listEl = failEl.querySelector('.model-library-list');
-        if (listEl) setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">加载失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${escapeHtml(String(team.team_id))}','${escapeHtml(String(provider.provider_id))}\')">${t('重试')}</a></span></div>`);
+        if (listEl) setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">加载失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\')">${t('重试')}</a></span></div>`);
       }
     } finally {
       this._libraryLoadingProviders.delete(providerKey);
@@ -12812,7 +12817,7 @@ ${extractorBody}
         <span class="provider-list-url">手动填写 →</span>
       </div>
       ${providers.map(p => `
-        <div class="provider-list-item" onclick="app.selectProvider('${escapeHtml(p.id)}')">
+        <div class="provider-list-item" onclick="app.selectProvider('${this._jsString(p.id)}')">
           <span class="provider-list-name">${escapeHtml(p.name)}</span>
           <span class="provider-list-url">${escapeHtml(p.base_url)}</span>
         </div>

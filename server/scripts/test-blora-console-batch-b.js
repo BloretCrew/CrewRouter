@@ -43,5 +43,15 @@ for (const marker of [
 ]) assert.ok(js.includes(marker), marker);
 assert.match(js, /app\.testTeamModels\('\$\{this\._jsString\(team\.team_id\)\}'\)/);
 assert.ok((js.match(/app\.loadProviderModelsPage\('\$\{this\._jsString\(team\.team_id\)\}','\$\{this\._jsString\(provider\.provider_id\)\}'/g) || []).length >= 3);
-assert.doesNotMatch(js, /app\.(?:testTeamModels|loadProviderModelsPage|showManageModelsModal|pingUserProvider|editMyProvider|deleteMyProvider)\([^\n]*escapeHtml\(/);
+assert.doesNotMatch(js, /app\.(?:testTeamModels|loadProviderModelsPage|showManageModelsModal|pingUserProvider|editMyProvider|deleteMyProvider|_retryLoadProviderModels|editMyTeamModel|deleteMyTeamModel|selectProvider)\([^\n]*escapeHtml\(/);
+for (const marker of [
+  'class="blora-button btn btn-sm btn-secondary" onclick="app.editMyTeamModel(\'${this._jsString(m.id)}\')"',
+  'class="blora-button btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel(\'${this._jsString(m.id)}\')"',
+  'class="blora-input manage-model-checkbox" id="manageModel_${index}" value="${escapeHtml(String(model.id))}"',
+  "app._retryLoadProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\\')",
+  "app.selectProvider('${this._jsString(p.id)}')",
+  "setBloraState('myProvidersTable', 'empty')",
+  "setBloraState('myProvidersTable', 'success')",
+  "setBloraState('myProvidersTable', 'error')",
+]) assert.ok(js.includes(marker), marker);
 console.log('Blora console Batch B static contract/state/dynamic safety assertions passed.');
