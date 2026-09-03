@@ -14,6 +14,13 @@ function scanHtml(html) {
     const tagMatch = html.slice(start).match(/^<([A-Za-z][\w:-]*)\b/);
     if (!tagMatch) { i = start + 1; continue; }
     const tag = tagMatch[1].toLowerCase();
+    if (tag === 'script' || tag === 'style') {
+      const close = new RegExp(`</${tag}\\s*>`, 'ig');
+      close.lastIndex = start + tagMatch[0].length;
+      const closing = close.exec(html);
+      i = closing ? closing.index + closing[0].length : html.length;
+      continue;
+    }
     let cursor = start + tagMatch[0].length;
     let quote = null;
     while (cursor < html.length) {
@@ -30,7 +37,7 @@ function scanHtml(html) {
     if (tag === 'table') counts.tables++;
     const classValue = attrs.match(/\bclass\s*=\s*["']([^"']*)["']/)?.[1] || '';
     const semanticAttrs = attrs.match(/\b(?:class|id|role|aria-busy|aria-label)\s*=\s*["']([^"']*)["']/g)?.join(' ') || '';
-    if (/(?:^|[\s_-])modal(?:[\s_-]|$)/i.test(classValue)) counts.legacyModalContainers++;
+    if (classValue.split(/\s+/).includes('modal')) counts.legacyModalContainers++;
     if (/(?:loading|error|empty|success|status|disabled)/i.test(semanticAttrs)) counts.states++;
     i = cursor;
   }

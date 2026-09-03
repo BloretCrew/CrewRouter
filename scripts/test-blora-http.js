@@ -26,7 +26,11 @@ async function main() {
     reachable.add(relative);
     const source = fs.readFileSync(path.join(dist, relative), 'utf8');
     for (const imported of [...source.matchAll(/@import\s+["']([^"']+)["']/g)].map((m) => m[1])) {
-      if (imported.startsWith('./')) await visitCss(path.posix.normalize(path.posix.join(path.posix.dirname(relative), imported)));
+      assert.ok(imported.startsWith('./'), `${relative}: import must be relative: ${imported}`);
+      const target = path.posix.normalize(path.posix.join(path.posix.dirname(relative), imported));
+      assert.ok(target.endsWith('.css'), `${relative}: import must target CSS: ${imported}`);
+      assert.ok(!target.startsWith('../') && !target.includes('/../'), `${relative}: import escapes dist: ${imported}`);
+      await visitCss(target);
     }
   };
   await visitCss('blora.css');
