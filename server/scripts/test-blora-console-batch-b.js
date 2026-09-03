@@ -36,6 +36,19 @@ for (const marker of ['safeHttpUrl(', 'safeColor(', 'class="blora-card model-lib
 assert.match(js, /series_icon_url[^\n]*safeHttpUrl/);
 assert.match(js, /model\.model_id[^\n]*_jsString/);
 for (const marker of [
+  'id="keyModelPickerSearch" placeholder="${escapeHtml(t(\'搜索模型、供应商、Team...\'))}" class="blora-input',
+  'class="blora-input" onchange="app.toggleSelectAllMyTeamModels(this.checked)"',
+  'class="blora-input my-team-model-checkbox"',
+  'class="blora-button btn btn-sm btn-secondary" onclick="app.editMyTeamModel(\'${this._jsString(m.id)}\')"',
+  'class="blora-button btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel(\'${this._jsString(m.id)}\')"',
+  "setBloraState('keyModelsContent', 'loading')",
+  "setBloraState('keyModelsContent', 'success')",
+  "setBloraState('keyModelsContent', 'error')",
+  "setBloraState('manageModelsLoading', 'loading')",
+  "setBloraState('manageModelsError', 'error')",
+  "setBloraState('manageModelsContent', models.length ? 'success' : 'empty')",
+]) assert.ok(js.includes(marker), marker);
+for (const marker of [
   'class="blora-button btn btn-sm btn-secondary" onclick="app.showManageModelsModal(\'${this._jsString(p.id)}\')"',
   'class="blora-button btn btn-sm btn-secondary" onclick="app.pingUserProvider(\'${this._jsString(p.id)}\')"',
   'class="blora-button btn btn-sm btn-secondary" onclick="app.editMyProvider(\'${this._jsString(p.id)}\')"',

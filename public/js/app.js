@@ -1769,7 +1769,7 @@ class ConsoleApp {
   }
 
   async showKeyModels(keyId) {
-    const container = document.getElementById('keyModelsContent');
+    const container = setBloraState('keyModelsContent', 'loading');
     this._configureKeyModelsModal({
       title: t('模型队列（失败按顺序回退）'),
       picker: true,
@@ -1790,6 +1790,7 @@ class ConsoleApp {
         fetch('/api/user/provider-tags').catch(() => null)
       ]);
       if (!libraryRes.ok || !assignedRes.ok) {
+        setBloraState('keyModelsContent', 'error');
         setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:32px;">' + t('加载失败') + '</p>');
         return;
       }
@@ -1825,10 +1826,12 @@ class ConsoleApp {
       };
 
       this._renderKeyModelPickerShell();
+      setBloraState('keyModelsContent', 'success');
       this._populateKeyModelPickerFilters();
       this.filterAndRenderKeyModelPicker();
     } catch (error) {
       console.error(t('加载密钥模型列表失败:'), error);
+      setBloraState('keyModelsContent', 'error');
       setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:32px;">' + t('加载失败') + '</p>');
     }
   }
@@ -1974,7 +1977,7 @@ class ConsoleApp {
         <div class="model-filter-bar">
           <div class="model-search-box">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" id="keyModelPickerSearch" placeholder="${t('搜索模型、供应商、Team...')}" class="model-search-input">
+            <input type="text" id="keyModelPickerSearch" placeholder="${escapeHtml(t('搜索模型、供应商、Team...'))}" class="blora-input model-search-input">
           </div>
           <div class="model-filter-selects">
             <select id="keyModelPickerProvider" class="blora-select select"><option value="all">全部供应商</option></select>
@@ -8743,6 +8746,8 @@ ${extractorBody}
 
     // 显示模态框
     document.getElementById('manageModelsTitle').textContent = t('管理模型');
+    setBloraState('manageModelsLoading', 'loading');
+    setBloraState('manageModelsError', 'idle');
     document.getElementById('manageModelsLoading').style.display = 'block';
     document.getElementById('manageModelsError').style.display = 'none';
     document.getElementById('manageModelsContent').style.display = 'none';
@@ -8757,6 +8762,8 @@ ${extractorBody}
       this._currentManageModels = models;
       this.renderManageModels(models);
     } catch (error) {
+      setBloraState('manageModelsLoading', 'idle');
+      setBloraState('manageModelsError', 'error');
       document.getElementById('manageModelsLoading').style.display = 'none';
       document.getElementById('manageModelsError').style.display = 'block';
       document.getElementById('manageModelsError').textContent = error.message;
@@ -8764,6 +8771,8 @@ ${extractorBody}
   }
 
   renderManageModels(models) {
+    setBloraState('manageModelsLoading', 'idle');
+    setBloraState('manageModelsError', 'idle');
     document.getElementById('manageModelsLoading').style.display = 'none';
     document.getElementById('manageModelsContent').style.display = 'block';
     document.getElementById('manageModelsFooter').style.display = 'flex';
@@ -8774,6 +8783,7 @@ ${extractorBody}
 
   _renderManageModelsList(models) {
     const container = document.getElementById('manageModelsList');
+    setBloraState('manageModelsContent', models.length ? 'success' : 'empty');
     const countEl = document.getElementById('manageModelsCount');
     document.getElementById('selectAllManageModels').checked = false;
 
@@ -9043,7 +9053,7 @@ ${extractorBody}
       <table>
         <thead>
           <tr>
-            <th style="width:40px;"><input type="checkbox" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></th>
+            <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></th>
             <th>模型名称</th>
             <th>上游模型ID</th>
             <th>供应商</th>
@@ -9056,7 +9066,7 @@ ${extractorBody}
         <tbody>
           ${models.map(m => `
             <tr data-model-id="${escapeHtml(m.id)}">
-              <td><input type="checkbox" class="my-team-model-checkbox" value="${escapeHtml(m.id)}" onchange="app.updateMyModelsBatchButtons()"></td>
+              <td><input type="checkbox" class="blora-input my-team-model-checkbox" value="${escapeHtml(m.id)}" onchange="app.updateMyModelsBatchButtons()"></td>
               <td>
                 <div style="font-weight:500;">${escapeHtml(m.alias || m.name || m.id)}</div>
                 ${m.description ? `<div style="font-size:11px;color:var(--muted-foreground);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
