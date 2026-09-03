@@ -3,12 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    (function () {
+      var mode = localStorage.getItem('theme') || 'system';
+      var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', dark);
+      document.documentElement.classList.toggle('light', !dark);
+      document.documentElement.setAttribute('data-blora-color-scheme', dark ? 'dark' : 'light');
+    }());
+  </script>
+
   <title>安装插件到 CrewRouter</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="stylesheet" href="/blora/blora.css">
-  <link rel="stylesheet" href="/blora/tokens.css">
-  <link rel="stylesheet" href="/blora/tokens.dark.css">
-  <script type="module" src="/blora/auto.js"></script>
+  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
+  <script type="module" src="/blora/auto.js?v=2.0.8"></script>
   <script src="/js/blora-foundation.js"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
@@ -33,7 +42,7 @@
   </style>
   <script src="/js/edition-badge.js?v=1"></script>
 </head>
-<body>
+<body class="blora-page">
   <div class="pi-wrap">
     <div class="pi-brand">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></div>
     <div id="pi-root" class="pi-card">

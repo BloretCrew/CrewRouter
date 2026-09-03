@@ -42,15 +42,16 @@ const PUBLIC_DIR = (() => {
   return path.join(__dirname, '../public');
 })();
 
-// Blora 只从正式依赖的 dist 目录提供资源，不把 node_modules 暴露为通用静态目录。
-const BLORA_DIST_DIR = (() => {
-  const candidates = [
-    path.join(__dirname, '../node_modules/@bloret-crew/blora-design/dist'),
-    path.join(__dirname, 'node_modules/@bloret-crew/blora-design/dist'),
-    path.join(process.cwd(), 'node_modules/@bloret-crew/blora-design/dist'),
-  ];
-  return candidates.find((dir) => fs.existsSync(dir) && fs.statSync(dir).isDirectory()) || candidates[0];
-})();
+// Blora 资源根目录只能由包解析结果得到，避免 process.cwd() 影响服务资源。
+const BLORA_PACKAGE_JSON = require.resolve('@bloret-crew/blora-design/package.json');
+const BLORA_PACKAGE = JSON.parse(fs.readFileSync(BLORA_PACKAGE_JSON, 'utf8'));
+if (BLORA_PACKAGE.version !== '2.0.8') {
+  throw new Error(`Unsupported @bloret-crew/blora-design version: ${BLORA_PACKAGE.version}`);
+}
+const BLORA_DIST_DIR = path.join(path.dirname(BLORA_PACKAGE_JSON), 'dist');
+if (!fs.existsSync(BLORA_DIST_DIR) || !fs.statSync(BLORA_DIST_DIR).isDirectory()) {
+  throw new Error(`Blora dist directory not found: ${BLORA_DIST_DIR}`);
+}
 
 // 版本号：开发时读项目根 package.json；构建后读 dist/package.json
 const APP_VERSION = (() => {
@@ -2566,7 +2567,7 @@ app.use('/blora', express.static(BLORA_DIST_DIR, {
   index: false,
   dotfiles: 'deny',
   setHeaders(res) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
   },
 }));
 
