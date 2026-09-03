@@ -505,6 +505,8 @@ class PlaygroundApp {
       let buffer = '';
       let fullContent = '';
       let reasoningContent = '';
+      let streamFailed = false;
+      let streamErrorMessage = '';
       let thinkingStarted = false;
       let promptTokens = 0;
       let completionTokens = 0;
@@ -527,7 +529,11 @@ class PlaygroundApp {
 
           try {
             const parsed = JSON.parse(data);
-            if (parsed.error) throw new Error(parsed.error.message || t('上游流式响应失败'));
+            if (parsed.error) {
+              streamFailed = true;
+              streamErrorMessage = String(parsed.error.message || t('上游流式响应失败'));
+              throw Object.assign(new Error(streamErrorMessage), { code: 'STREAM_TERMINAL_ERROR' });
+            }
             const delta = parsed.choices?.[0]?.delta;
             if (!delta) continue;
 
@@ -556,9 +562,13 @@ class PlaygroundApp {
               promptTokens = parsed.usage.prompt_tokens || 0;
               completionTokens = parsed.usage.completion_tokens || 0;
             }
-          } catch {}
+          } catch (error) {
+            if (error?.code === 'STREAM_TERMINAL_ERROR') throw error;
+          }
         }
       }
+
+      if (streamFailed) throw Object.assign(new Error(streamErrorMessage), { code: 'STREAM_TERMINAL_ERROR' });
 
       // Try to parse usage from remaining buffer
       try {
@@ -573,7 +583,11 @@ class PlaygroundApp {
             completionTokens = parsed.usage.completion_tokens || completionTokens;
           }
         }
-      } catch {}
+      } catch (error) {
+        if (streamFailed) throw Object.assign(new Error(streamErrorMessage), { code: 'STREAM_TERMINAL_ERROR' });
+      }
+
+      if (streamFailed) throw Object.assign(new Error(streamErrorMessage), { code: 'STREAM_TERMINAL_ERROR' });
 
       // Update token counts
       const totalNewTokens = promptTokens + completionTokens;
@@ -645,8 +659,11 @@ class PlaygroundApp {
       if (error.name === 'AbortError') {
         const stopped = fullContent || '';
         setHTML(contentEl, this.renderMarkdown(stopped) + `<p class="pg-stream-status">${this.escapeHtml(t('已停止'))}</p>`);
+      } else if (error.code === 'STREAM_TERMINAL_ERROR' || streamFailed) {
+        setHTML(contentEl, `<div class="pg-msg-error">${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        contentEl.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send());
       } else {
-        setHTML(contentEl, `<div class="pg-msg-error">${escapeHtml(error.message || "")}</div>`);
+        setHTML(contentEl, `<div class="pg-msg-error">${this.escapeHtml(error.message || "")}</div>`);
       }
     } finally {
       this.setStreaming(false);
@@ -1212,14 +1229,15 @@ class PlaygroundApp {
       const time = new Date(r.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       const hasThinking = r.requestParams?.thinking !== false && r.reasoningContent;
       const preview = r.messages?.[0]?.content?.substring(0, 50) || '';
-      return `<div class="pg-history-item" data-id="${r.id}">
+      const recordId = Number(r.id);
+      return `<div class="pg-history-item" data-id="${Number.isSafeInteger(recordId) ? recordId : ''}">
         <div class="pg-history-item-header">
-          <span class="pg-history-item-model">${r.model}${hasThinking ? '<span class="pg-history-item-thinking-badge">' + t('思考') + '</span>' : ''}</span>
-          <span class="pg-history-item-time">${time}</span>
+          <span class="pg-history-item-model">${this.escapeHtml(r.model)}${hasThinking ? '<span class="pg-history-item-thinking-badge">' + this.escapeHtml(t('思考')) + '</span>' : ''}</span>
+          <span class="pg-history-item-time">${this.escapeHtml(time)}</span>
         </div>
         <div class="pg-history-item-stats">
-          <span>📝 ${r.totalTokens?.toLocaleString() || 0} tokens</span>
-          <span>💰 ${r.cost?.toFixed(4) || '0.0000'}${t(' 积分')}</span>
+          <span>📝 ${this.escapeHtml(r.totalTokens?.toLocaleString() || 0)} tokens</span>
+          <span>💰 ${this.escapeHtml(r.cost?.toFixed(4) || '0.0000')}${this.escapeHtml(t(' 积分'))}</span>
         </div>
         <div class="pg-history-item-preview">${this.escapeHtml(preview)}</div>
       </div>`;
@@ -1251,7 +1269,7 @@ class PlaygroundApp {
     if (!modal || !title || !body) return;
 
     const time = new Date(r.createdAt).toLocaleString('zh-CN');
-    title.textContent = `${r.model} - ${time}`;
+    title.textContent = `${String(r.model || '')} - ${time}`;
 
     let html = '';
 
@@ -1264,7 +1282,7 @@ class PlaygroundApp {
     html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('总计 Tokens')}</div><div class="pg-detail-stat-value">${r.totalTokens?.toLocaleString() || 0}</div></div>`;
     html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('积分')}</div><div class="pg-detail-stat-value">${r.cost?.toFixed(4) || '0.0000'}</div></div>`;
     if (r.finishReason) {
-      html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('结束原因')}</div><div class="pg-detail-stat-value">${r.finishReason}</div></div>`;
+      html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${this.escapeHtml(t('结束原因'))}</div><div class="pg-detail-stat-value">${this.escapeHtml(r.finishReason)}</div></div>`;
     }
     html += '</div></div>';
 

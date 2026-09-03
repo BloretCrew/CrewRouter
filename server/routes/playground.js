@@ -59,6 +59,8 @@ router.post('/chat', requireAuth, async (req, res) => {
     return res.status(400).json({ error: '缺少必要参数' });
   }
 
+  let streamAbortController = null;
+  let streamTimeout = null;
   try {
     const userResult = await pool.query('SELECT balance + refund_balance as total FROM users WHERE id = $1', [userId]);
     const totalBalance = parseFloat(userResult.rows[0]?.total || 0);
@@ -218,8 +220,8 @@ router.post('/chat', requireAuth, async (req, res) => {
     }
 
     // 多 Key：顺序 / 权重尝试，失败后 fallback
-    const streamAbortController = isStream ? new AbortController() : null;
-    const streamTimeout = isStream ? setTimeout(() => streamAbortController.abort(), UPSTREAM_STREAM_TIMEOUT) : null;
+    streamAbortController = isStream ? new AbortController() : null;
+    streamTimeout = isStream ? setTimeout(() => streamAbortController.abort(), UPSTREAM_STREAM_TIMEOUT) : null;
     let response = null;
     let lastErrText = '';
     let lastStatus = 502;
@@ -427,12 +429,13 @@ router.post('/chat', requireAuth, async (req, res) => {
         }
       }
 
-      if (streamTimeout) clearTimeout(streamTimeout);
+      if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null; }
       if (streamFailed && !clientDisconnected) {
-        const errorPayload = { error: { message: '上游流式响应失败', type: 'upstream_stream_error' } };
+        const errorPayload = { error: { message: '上游流式响应失败', type: 'upstream_stream_error', terminal: true } };
         if (!res.writableEnded) res.write(`data: ${JSON.stringify(errorPayload)}\n\n`);
+      } else if (!clientDisconnected && !res.writableEnded) {
+        res.write('data: [DONE]\n\n');
       }
-      if (!clientDisconnected && !res.writableEnded) res.write('data: [DONE]\n\n');
       if (!res.writableEnded) res.end();
 
       if (streamFailed || clientDisconnected) {
@@ -527,6 +530,8 @@ router.post('/chat', requireAuth, async (req, res) => {
       });
     }
   } catch (error) {
+    if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null; }
+    streamAbortController?.abort();
     Logger.error(`[Playground] 错误: model=${model}, userId=${userId}, error=${error.message}, stack=${error.stack}`);
     if (model) {
       recordModelCall(model, false);

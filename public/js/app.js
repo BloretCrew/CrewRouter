@@ -2981,13 +2981,13 @@ class ConsoleApp {
           <div style="flex:1;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:6px;">Judge 模型</div>
             <blora-select id="fusionJudgeSelect" name="judge_model_id" class="blora-select select" style="font-size:13px;">
-              ${models.map(m => `<blora-option value="${escapeHtml(String(m.id))}" ${currentJudge === m.id ? 'selected' : ''}>${escapeHtml(m.name || m.id)}</blora-option>`).join('')}
+              ${models.map(m => `<blora-option value="${escapeHtml(String(m.id))}">${escapeHtml(m.name || m.id)}</blora-option>`).join('')}
             </blora-select>
           </div>
           <div style="flex:1;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:6px;">合成模型</div>
             <blora-select id="fusionOuterSelect" name="outer_model_id" class="blora-select select" style="font-size:13px;">
-              ${models.map(m => `<blora-option value="${escapeHtml(String(m.id))}" ${currentOuter === m.id ? 'selected' : ''}>${escapeHtml(m.name || m.id)}</blora-option>`).join('')}
+              ${models.map(m => `<blora-option value="${escapeHtml(String(m.id))}">${escapeHtml(m.name || m.id)}</blora-option>`).join('')}
             </blora-select>
           </div>
         </div>
@@ -2997,6 +2997,10 @@ class ConsoleApp {
         </div>
         </div>
       `);
+      const judgeSelect = document.getElementById('fusionJudgeSelect');
+      const outerSelect = document.getElementById('fusionOuterSelect');
+      if (judgeSelect) judgeSelect.value = String(currentJudge || models[0]?.id || '');
+      if (outerSelect) outerSelect.value = String(currentOuter || models[0]?.id || '');
 
       // 绑定 Fusion 启用开关
       const toggleEl = document.getElementById('fusionEnabledToggle');
