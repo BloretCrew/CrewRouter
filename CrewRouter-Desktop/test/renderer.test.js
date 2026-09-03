@@ -11,6 +11,8 @@ const vendorRoot = path.join(rendererDir, 'vendor', 'blora-design');
 const html = fs.readFileSync(path.join(rendererDir, 'index.html'), 'utf8');
 const css = fs.readFileSync(path.join(rendererDir, 'styles.css'), 'utf8');
 const js = fs.readFileSync(path.join(rendererDir, 'renderer.js'), 'utf8');
+const settingsHtml = fs.readFileSync(path.join(rendererDir, 'settings.html'), 'utf8');
+const settingsJs = fs.readFileSync(path.join(rendererDir, 'settings.js'), 'utf8');
 
 test('renderer resolves the published Blora 2 package and loads its CSS', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
@@ -94,6 +96,16 @@ test('renderer guards repeated actions and renders server metadata/errors', () =
   assert.match(js, /正在直接连接自定义服务器/);
   assert.match(js, /connectCustomRemote/);
   assert.match(js, /setStatus\(error\?\.message/);
+});
+
+test('desktop settings are localized, bridge-safe, system-theme aware and remote-limited', () => {
+  assert.match(settingsHtml, /Content-Security-Policy/);
+  assert.match(settingsJs, /required =/);
+  assert.match(settingsJs, /prefers-color-scheme/);
+  assert.match(settingsJs, /remoteNote/);
+  assert.match(settingsJs, /copied/);
+  assert.match(settingsJs, /escapeHtml\(p.id\)/);
+  assert.match(settingsJs, /return; }/);
 });
 
 test('main registers visible diagnostics for failed renderer loads', () => {

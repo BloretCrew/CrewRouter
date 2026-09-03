@@ -15,6 +15,8 @@ const tempStore = () => new ProfileStore(path.join(fs.mkdtempSync(path.join(os.t
 test('URL policy blocks private targets and redacts secrets', async () => {
   assert.equal((await validateRemoteUrl('http://127.0.0.1:1234')).ok, false);
   assert.equal((await validateRemoteUrl('http://localhost:1234')).ok, false);
+  assert.equal((await validateRemoteUrl('https://example.com/#access_token=secret')).ok, false);
+  assert.equal(redactUrl('https://example.com/#access_token=secret'), 'https://example.com/#[REDACTED]');
   assert.equal((await validateRemoteUrl('http://127.0.0.1:1234', { allowLocalhost: true })).ok, true);
   assert.equal((await validateRemoteUrl('http://example.invalid', { allowLocalhost: true })).ok, false);
   assert.equal((await validateRemoteUrl('http://user:pass@example.com')).ok, false);

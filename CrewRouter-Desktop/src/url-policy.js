@@ -28,6 +28,7 @@ function redactUrl(input) {
     if (/token|secret|key|code|auth|ticket|session|state/i.test(key)) url.searchParams.set(key, '[REDACTED]');
   }
   if (url.username || url.password) { url.username = '[REDACTED]'; url.password = ''; }
+  if (url.hash) url.hash = '#[REDACTED]';
   return url.toString();
 }
 
@@ -37,7 +38,7 @@ async function validateRemoteUrl(input, options = {}) {
   let url;
   try { url = new URL(input); } catch { return { ok: false, error: 'URL 格式无效' }; }
   if (!['http:', 'https:'].includes(url.protocol)) return { ok: false, error: '仅允许 http/https' };
-  if (url.username || url.password || [...url.searchParams.keys()].some((key) => /token|secret|key|code|auth|ticket|session|state/i.test(key))) return { ok: false, error: 'URL 不得包含凭据或敏感参数' };
+  if (url.username || url.password || url.hash || [...url.searchParams.keys()].some((key) => /token|secret|key|code|auth|ticket|session|state/i.test(key))) return { ok: false, error: 'URL 不得包含凭据、fragment 或敏感参数' };
   const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
   const local = isPrivateHost(host);
   const explicitLocal = allowLocalhost && (isLocalHost(host) || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0');

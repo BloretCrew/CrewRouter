@@ -164,6 +164,7 @@ class LocalServerManager {
     this.status = { pid: null, port: null, baseUrl: null, ready: false, runtime: null, edition: null, auth: null, demo: null, capabilities: {}, version: null };
     this.runtime = null;
     this.database = null;
+    this.childNonce = null;
   }
 
   async start() {
@@ -221,7 +222,8 @@ class LocalServerManager {
     try {
       child = (opts.spawn || spawn)(process.execPath, [entry], { cwd: this.runtime.runtimeDir, env, stdio: ['ignore', 'pipe', 'pipe'] });
       this.child = child;
-      this.status = { pid: child.pid || null, port, baseUrl: `http://${opts.host}:${port}`, ready: false, runtime: null, edition: null, auth: null, demo: null, capabilities: {}, version: null, setup: null };
+      this.childNonce = crypto.randomUUID();
+      this.status = { pid: child.pid || null, ownerNonce: this.childNonce, port, baseUrl: `http://${opts.host}:${port}`, ready: false, runtime: null, edition: null, auth: null, demo: null, capabilities: {}, version: null, setup: null };
       const write = (chunk) => logStream.write(redact(chunk));
       child.stdout?.on('data', write); child.stderr?.on('data', write);
       let exitError;
@@ -297,9 +299,11 @@ class LocalServerManager {
     throw error;
   }
 
-  async stop() {
+  async stop(expectedNonce = this.childNonce) {
     const child = this.child;
-    this.child = null;
+    if (!child) { this.childNonce = null; this.status.ready = false; this.status.ownerNonce = null; return; }
+    if (expectedNonce !== this.childNonce || child.pid !== this.status.pid || child !== this.child) throw new Error('Local server ownership check failed');
+    this.child = null; this.childNonce = null;
     if (child && child.exitCode === null && !child.killed) {
       child.kill('SIGTERM');
       await new Promise((resolve) => {
@@ -308,6 +312,7 @@ class LocalServerManager {
       });
     }
     this.status.ready = false;
+    this.status.ownerNonce = null;
     await this.database?.stop().catch(() => {});
     this.database = null;
   }

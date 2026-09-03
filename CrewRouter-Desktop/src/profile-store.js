@@ -6,6 +6,7 @@ const path = require('node:path');
 const SCHEMA_VERSION = 1;
 const USERNAME_MAX_LENGTH = 64;
 const DANGEROUS_USERNAME_CHARS = /[<>"'`\\/\u0000-\u001f\u007f]/;
+const PROFILE_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 const emptyState = () => ({ schemaVersion: SCHEMA_VERSION, activeProfileId: null, profiles: [], settings: { autoConnect: true, theme: 'system', notifications: true, updateChecks: true } });
 const SETTINGS_KEYS = ['autoConnect', 'theme', 'notifications', 'updateChecks'];
 const normalizeSettings = (value) => {
@@ -27,7 +28,7 @@ class ProfileStore {
 
   _normalize(raw) {
     if (!raw || typeof raw !== 'object' || raw.schemaVersion !== SCHEMA_VERSION || !Array.isArray(raw.profiles)) return emptyState();
-    const profiles = raw.profiles.filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && typeof p.url === 'string')
+    const profiles = raw.profiles.filter((p) => p && typeof p.id === 'string' && PROFILE_ID_PATTERN.test(p.id) && typeof p.name === 'string' && typeof p.url === 'string')
       .map((p) => ({ id: p.id, name: p.name, displayName: typeof p.displayName === 'string' ? p.displayName : null, localIdentityId: typeof p.localIdentityId === 'string' ? p.localIdentityId : null, url: p.url, mode: p.mode === 'local' ? 'local' : 'remote', runtime: p.runtime === 'desktop-local' || p.runtime === 'server' ? p.runtime : null, edition: p.edition === 'personal' || p.edition === 'team' ? p.edition : null,
         auth: p.auth && typeof p.auth === 'object' && typeof p.auth.required === 'boolean' && Array.isArray(p.auth.methods) ? { required: p.auth.required, methods: [...new Set(p.auth.methods.filter((method) => typeof method === 'string'))] } : null,
         capabilities: p.capabilities && typeof p.capabilities === 'object' ? p.capabilities : {},
@@ -54,7 +55,7 @@ class ProfileStore {
     const state = this.load();
     const index = state.profiles.findIndex((p) => p.id === profile.id);
     const candidate = { ...profile, mode: profile.mode || 'remote' };
-    if (typeof candidate.id !== 'string' || typeof candidate.name !== 'string' || typeof candidate.url !== 'string') throw new Error('profile 无效');
+    if (typeof candidate.id !== 'string' || !PROFILE_ID_PATTERN.test(candidate.id) || typeof candidate.name !== 'string' || typeof candidate.url !== 'string') throw new Error('profile 无效');
     const next = this._normalize({ schemaVersion: SCHEMA_VERSION, activeProfileId: candidate.id, profiles: [candidate] });
     if (!next.profiles.length) throw new Error('profile 无效');
     if (index < 0) state.profiles.push(next.profiles[0]); else state.profiles[index] = next.profiles[0];
@@ -77,5 +78,5 @@ class ProfileStore {
   saveSettings(settings) { const state = this.load(); state.settings = normalizeSettings(settings); return this.save(state).settings; }
 }
 
-module.exports = { ProfileStore, SCHEMA_VERSION, USERNAME_MAX_LENGTH, validateLocalDisplayName, SETTINGS_KEYS, normalizeSettings };
+module.exports = { ProfileStore, SCHEMA_VERSION, USERNAME_MAX_LENGTH, PROFILE_ID_PATTERN, validateLocalDisplayName, SETTINGS_KEYS, normalizeSettings };
 
