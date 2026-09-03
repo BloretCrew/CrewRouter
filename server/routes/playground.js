@@ -226,6 +226,12 @@ router.post('/chat', requireAuth, async (req, res) => {
     let lastErrText = '';
     let lastStatus = 502;
     for (let ki = 0; ki < keyAttempts.length; ki++) {
+      if (streamAbortController?.signal.aborted) {
+        lastErrText = '流式请求超时或已取消';
+        lastStatus = 504;
+        response = null;
+        break;
+      }
       const apiKey = keyAttempts[ki];
       provider = { ...provider, api_key: apiKey };
       const headers = provider.format === 'anthropic'
@@ -247,6 +253,12 @@ router.post('/chat', requireAuth, async (req, res) => {
           redirect: 'manual'
         });
       } catch (fetchErr) {
+        if (streamAbortController?.signal.aborted) {
+          lastErrText = '流式请求超时或已取消';
+          lastStatus = 504;
+          response = null;
+          break;
+        }
         lastErrText = fetchErr.message || 'fetch failed';
         lastStatus = 502;
         response = null;
@@ -268,6 +280,8 @@ router.post('/chat', requireAuth, async (req, res) => {
     }
 
     if (!response || !response.ok) {
+      if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null; }
+      if (streamAbortController?.signal.aborted && isStream) lastStatus = 504;
       Logger.error(`[Playground] 上游错误: provider=${provider.id}, url=${url}, status=${lastStatus}, body=${String(lastErrText).substring(0, 500)}`);
       recordModelCall(model, false);
       recordLiveCallTest(model, { ok: false, error: `HTTP ${lastStatus}` });

@@ -436,6 +436,18 @@ class PlaygroundApp {
       return;
     }
 
+    const previousMessages = this.messages.slice();
+    const previousActiveConvId = this.activeConvId;
+    const previousReplyTo = this.replyTo;
+    const rollbackRequest = () => {
+      this.messages = previousMessages;
+      this.activeConvId = previousActiveConvId;
+      this.replyTo = previousReplyTo;
+      input.value = text;
+      input.style.height = 'auto';
+      this.renderMessages();
+    };
+
     // If replying, build context: messages up to reply point + the replied message
     if (this.replyTo !== null && this.replyTo < this.messages.length) {
       const contextMessages = this.messages.slice(0, this.replyTo + 1);
@@ -472,10 +484,11 @@ class PlaygroundApp {
     this.setStreaming(true);
 
     let convId = this.activeConvId;
-    if (!convId) {
-      convId = await this.createConversation();
-    }
 
+    let fullContent = '';
+    let reasoningContent = '';
+    let streamFailed = false;
+    let streamErrorMessage = '';
     try {
       this.abortController = new AbortController();
 
@@ -503,10 +516,9 @@ class PlaygroundApp {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let fullContent = '';
-      let reasoningContent = '';
-      let streamFailed = false;
-      let streamErrorMessage = '';
+      reasoningContent = '';
+      streamFailed = false;
+      streamErrorMessage = '';
       let thinkingStarted = false;
       let promptTokens = 0;
       let completionTokens = 0;
@@ -642,6 +654,7 @@ class PlaygroundApp {
       };
       this.messages.push(msg);
 
+      if (!convId) convId = await this.createConversation();
       if (convId) {
         // Update title if this was the first user message
         if (this.messages.filter(m => m.role === 'user').length === 1) {
@@ -657,13 +670,22 @@ class PlaygroundApp {
       await this.updateCost();
     } catch (error) {
       if (error.name === 'AbortError') {
+        rollbackRequest();
         const stopped = fullContent || '';
         setHTML(contentEl, this.renderMarkdown(stopped) + `<p class="pg-stream-status">${this.escapeHtml(t('已停止'))}</p>`);
       } else if (error.code === 'STREAM_TERMINAL_ERROR' || streamFailed) {
-        setHTML(contentEl, `<div class="pg-msg-error">${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
-        contentEl.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send());
+        rollbackRequest();
+        this.removeWelcome();
+        const retryEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
+        const retryContent = retryEl.querySelector('.pg-msg-content');
+        setHTML(retryContent, `<div class="pg-msg-error">${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        retryContent.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send());
       } else {
-        setHTML(contentEl, `<div class="pg-msg-error">${this.escapeHtml(error.message || "")}</div>`);
+        rollbackRequest();
+        this.removeWelcome();
+        const errorEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
+        setHTML(errorEl.querySelector('.pg-msg-content'), `<div class="pg-msg-error">${this.escapeHtml(error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        errorEl.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send());
       }
     } finally {
       this.setStreaming(false);
@@ -1292,12 +1314,12 @@ class PlaygroundApp {
       html +=  + '<div class="pg-detail-section-title">' + t('请求参数') + '</div>';
       html += '<div class="pg-detail-params">';
       const params = r.requestParams;
-      if (params.temperature !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">temp:</span> ${params.temperature}</span>`;
-      if (params.max_tokens) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">max:</span> ${params.max_tokens}</span>`;
-      if (params.top_p !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">top_p:</span> ${params.top_p}</span>`;
-      if (params.thinking !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">thinking:</span> ${params.thinking ? 'on' : 'off'}</span>`;
-      if (params.thinking_budget) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">budget:</span> ${params.thinking_budget}</span>`;
-      if (params.reasoning_effort) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">effort:</span> ${params.reasoning_effort}</span>`;
+      if (params.temperature !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">temp:</span> ${this.escapeHtml(params.temperature)}</span>`;
+      if (params.max_tokens) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">max:</span> ${this.escapeHtml(params.max_tokens)}</span>`;
+      if (params.top_p !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">top_p:</span> ${this.escapeHtml(params.top_p)}</span>`;
+      if (params.thinking !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">thinking:</span> ${this.escapeHtml(params.thinking ? 'on' : 'off')}</span>`;
+      if (params.thinking_budget) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">budget:</span> ${this.escapeHtml(params.thinking_budget)}</span>`;
+      if (params.reasoning_effort) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">effort:</span> ${this.escapeHtml(params.reasoning_effort)}</span>`;
       html += '</div></div>';
     }
 
