@@ -66,6 +66,10 @@ class PlaygroundApp {
         });
       }
       setHTML(select, html);
+      if (select) {
+        select.value = String(this.models[0]?.id || '');
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       setBloraState('pgModel', 'success');
 
       // Store model pricing and info for cost calculation
@@ -85,6 +89,11 @@ class PlaygroundApp {
 
       // Add model change handler
       select.addEventListener('change', () => this.updateThinkingControls());
+      const reasoningSelect = document.getElementById('pgReasoningEffort');
+      if (reasoningSelect) {
+        reasoningSelect.value = 'medium';
+        reasoningSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       this.updateThinkingControls();
     } catch (error) {
       console.error(t('加载模型失败:'), error);
@@ -176,7 +185,7 @@ class PlaygroundApp {
 
     setHTML(list, this.conversations.map(conv => {
       const date = new Date(conv.updated_at);
-      const dateStr = `${date.getMonth() + 1}${t('月')}${date.getDate()}${t('日')}${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+      const dateStr = `${date.getMonth() + 1}${this.escapeHtml(t('月'))}${date.getDate()}${this.escapeHtml(t('日'))}${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
       const isActive = conv.id === this.activeConvId;
       return `
         <div class="pg-history-item${isActive ? ' active' : ''}" data-id="${conv.id}">
@@ -521,6 +530,7 @@ class PlaygroundApp {
 
           try {
             const parsed = JSON.parse(data);
+            if (parsed.error) throw new Error(parsed.error.message || t('上游流式响应失败'));
             const delta = parsed.choices?.[0]?.delta;
             if (!delta) continue;
 
@@ -615,7 +625,7 @@ class PlaygroundApp {
       const msgCost = (promptTokens / 1000) * inputPrice + (completionTokens / 1000) * outputPrice;
       msg.meta = {
         model: model,
-        modelDisplayName: document.getElementById('pgModel').selectedOptions[0]?.text?.split(' (')[0] || model,
+        modelDisplayName: document.getElementById('pgModel').selectedOptions[0]?.label || document.getElementById('pgModel').selectedOptions[0]?.textContent?.split(' (')[0] || model,
         tokens: totalTokensForMsg,
         cost: msgCost
       };
@@ -636,7 +646,8 @@ class PlaygroundApp {
       await this.updateCost();
     } catch (error) {
       if (error.name === 'AbortError') {
-        setHTML(contentEl, this.renderMarkdown(contentEl.textContent || '') + t('\\n\\n*[已停止]*'));
+        const stopped = fullContent || '';
+        setHTML(contentEl, this.renderMarkdown(stopped) + `<p class="pg-stream-status">${this.escapeHtml(t('已停止'))}</p>`);
       } else {
         setHTML(contentEl, `<div class="pg-msg-error">${escapeHtml(error.message || "")}</div>`);
       }
@@ -706,7 +717,7 @@ class PlaygroundApp {
     }
 
     const avatarHtml = role === 'user'
-      ? (userAvatar ? `<img src="${userAvatar}" alt="" class="pg-msg-avatar-icon">` : 'U')
+      ? (this.safeAvatarHtml(userAvatar) || 'U')
       : (modelIconHtml || 'AI');
 
     let thinkingHtml = '';
@@ -1060,6 +1071,14 @@ class PlaygroundApp {
 
   // ========== Utils ==========
 
+  safeAvatarHtml(value) {
+    try {
+      const parsed = new URL(String(value || ''), window.location.origin);
+      if (!['https:', 'http:'].includes(parsed.protocol)) return '';
+      return `<img src="${this.escapeHtml(parsed.href)}" alt="" class="pg-msg-avatar-icon">`;
+    } catch (_) { return ''; }
+  }
+
   escapeHtml(value) {
     return Dom.escapeHtml(value);
   }
@@ -1164,8 +1183,8 @@ class PlaygroundApp {
     const modalOverlay = document.getElementById('pgHistoryModalOverlay');
     const modal = document.getElementById('pgHistoryModal');
 
-    if (modalClose) modalClose.addEventListener('click', () => { modal.close?.(); });
-    if (modalOverlay) modalOverlay.addEventListener('click', () => { modal.close?.(); });
+    if (modalClose) modalClose.addEventListener('click', () => { modal?.close?.(); });
+    if (modalOverlay) modalOverlay.addEventListener('click', () => { modal?.close?.(); });
   }
 
   // ========== History ==========

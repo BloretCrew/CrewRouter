@@ -2980,15 +2980,15 @@ class ConsoleApp {
         <div style="display:flex;gap:12px;margin-bottom:16px;">
           <div style="flex:1;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:6px;">Judge 模型</div>
-            <select id="fusionJudgeSelect" class="blora-select select" style="font-size:13px;">
-              ${models.map(m => `<option value="${escapeHtml(String(m.id))}" ${currentJudge === m.id ? 'selected' : ''}>${escapeHtml(m.name || m.id)}</option>`).join('')}
-            </select>
+            <blora-select id="fusionJudgeSelect" name="judge_model_id" class="blora-select select" style="font-size:13px;">
+              ${models.map(m => `<blora-option value="${escapeHtml(String(m.id))}" ${currentJudge === m.id ? 'selected' : ''}>${escapeHtml(m.name || m.id)}</blora-option>`).join('')}
+            </blora-select>
           </div>
           <div style="flex:1;">
             <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:6px;">合成模型</div>
-            <select id="fusionOuterSelect" class="blora-select select" style="font-size:13px;">
-              ${models.map(m => `<option value="${escapeHtml(String(m.id))}" ${currentOuter === m.id ? 'selected' : ''}>${escapeHtml(m.name || m.id)}</option>`).join('')}
-            </select>
+            <blora-select id="fusionOuterSelect" name="outer_model_id" class="blora-select select" style="font-size:13px;">
+              ${models.map(m => `<blora-option value="${escapeHtml(String(m.id))}" ${currentOuter === m.id ? 'selected' : ''}>${escapeHtml(m.name || m.id)}</blora-option>`).join('')}
+            </blora-select>
           </div>
         </div>
 

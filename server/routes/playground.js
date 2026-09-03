@@ -234,12 +234,13 @@ router.post('/chat', requireAuth, async (req, res) => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           };
+      const upstreamAbortController = isStream ? new AbortController() : null;
       try {
         response = await fetch(url, {
           method: 'POST',
           headers,
           body: JSON.stringify(upstreamBody),
-          signal: AbortSignal.timeout(isStream ? UPSTREAM_STREAM_TIMEOUT : UPSTREAM_TIMEOUT),
+          signal: upstreamAbortController?.signal || AbortSignal.timeout(UPSTREAM_TIMEOUT),
           redirect: 'manual'
         });
       } catch (fetchErr) {
@@ -294,11 +295,14 @@ router.post('/chat', requireAuth, async (req, res) => {
       let jsonParseErrors = 0;
       let firstChunkTime = null;
       let clientDisconnected = false;
+      let streamFailed = false;
       let backpressureCount = 0;
 
       // 检测客户端断开连接
       req.on('close', () => {
         clientDisconnected = true;
+        upstreamAbortController?.abort();
+        reader.cancel().catch(() => {});
         Logger.stream(`[Playground] 客户端断开连接: provider=${provider.id}, model=${model}, 已接收 ${chunkCount} 个chunk, ${sseLineCount} 行SSE`);
       });
 
@@ -409,6 +413,7 @@ router.post('/chat', requireAuth, async (req, res) => {
           }
         }
       } catch (err) {
+        if (!clientDisconnected) streamFailed = true;
         if (err.name === 'AbortError' || err.name === 'TimeoutError') {
           Logger.error(`[Playground] 流式超时 (${UPSTREAM_STREAM_TIMEOUT}ms): url=${url}, model=${model}, 已接收 ${chunkCount} chunks`);
         } else if (clientDisconnected) {
@@ -418,7 +423,18 @@ router.post('/chat', requireAuth, async (req, res) => {
         }
       }
 
-      res.end();
+      if (streamFailed && !clientDisconnected) {
+        const errorPayload = { error: { message: '上游流式响应失败', type: 'upstream_stream_error' } };
+        if (!res.writableEnded) res.write(`data: ${JSON.stringify(errorPayload)}\n\n`);
+      }
+      if (!clientDisconnected && !res.writableEnded) res.write('data: [DONE]\n\n');
+      if (!res.writableEnded) res.end();
+
+      if (streamFailed || clientDisconnected) {
+        recordModelCall(model, false);
+        recordLiveCallTest(model, { ok: false, error: streamFailed ? 'upstream stream error' : 'client disconnected' });
+        return;
+      }
 
       // Normalize tokens based on provider format
       let normalized;
