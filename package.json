@@ -38,6 +38,7 @@
     "test:blora-public-batch-a": "node scripts/verify-blora-public-batch-a.js",
     "test:blora-public-batch-c": "node scripts/test-blora-public-batch-c.js",
     "test:blora-navbar-runtime": "node scripts/verify-blora-navbar-runtime.js",
+    "test:blora-runtime": "cd CrewRouter-Desktop && xvfb-run -a node_modules/.bin/electron --disable-gpu --no-sandbox ../scripts/verify-blora-runtime.js",
     "test:no-legacy-dialog": "node scripts/test-no-legacy-dialog.js",
     "money-precision:migrate": "node scripts/migrate-money-precision.js"
   },

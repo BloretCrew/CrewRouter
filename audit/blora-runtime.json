@@ -1,0 +1,765 @@
+{
+  "schema": "crewrouter.blora-runtime/v1",
+  "generatedAt": "2026-09-04T02:55:15.698Z",
+  "pages": [
+    {
+      "page": "admin",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-admin-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "BUTTON",
+        "clickedMore": false,
+        "dialogLifecycle": true
+      },
+      "href": "http://127.0.0.1:46493/admin#adminStats",
+      "title": "管理后台 - CrewRouter",
+      "text": "CrewRouter TEAM\n管理员\n用户管理\nTeam 管理\n用户组管理\n模型管理\n供应商管理\n统计信息\n调用错误\n操作日志\n提示词\n插件管理\n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n统计信息\n中文\nEN\n \n统计信息\n\n系统全局使用情况、积分消耗和性能监控\n\n时间范围\n最近 7 天\n最近 30 天\n最近 90 天\n最近 180 天\n最近 1 年\n总览\n多维分析\n每日统计\n模型分析\n供应商分析\n客户端\n成员 / Team / 用户组\n消息分析\n调用记录\n总请求数\n3,252\n日均 108\n总 Token 消耗\n1.48M\n日均 49.4K\n总积分消耗\n5.19 积分\n日均 ¥0.17\n活跃模型\n6\n供应商 3\n客户端识别率\n0.0%\n活跃0种 · 未知0次\n今日\n请求数\n135\n↓ 4.9%\nToken\n64.7K\n↑ 9.2%\n积分消耗\n0.23 积分\n↑ 9.2%\n昨日\n请求数\n142\nToken\n59.2K\n积分消耗\n0.21 积分\n每日请求量趋势\n每日Token消耗趋势\n每日积分趋势\n每日平均Token/请求",
+      "customElements": 20,
+      "dialogs": 20,
+      "openedDialogs": 0,
+      "controls": 13,
+      "buttons": 11,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "admin",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-admin-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "BUTTON",
+        "clickedMore": false,
+        "dialogLifecycle": true
+      },
+      "href": "http://127.0.0.1:46493/admin#adminStats",
+      "title": "管理后台 - CrewRouter",
+      "text": "CrewRouter TEAM\n管理员\n用户管理\nTeam 管理\n用户组管理\n模型管理\n供应商管理\n统计信息\n调用错误\n操作日志\n提示词\n插件管理\n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n统计信息\n中文\nEN\n \n统计信息\n\n系统全局使用情况、积分消耗和性能监控\n\n时间范围\n最近 7 天\n最近 30 天\n最近 90 天\n最近 180 天\n最近 1 年\n总览\n多维分析\n每日统计\n模型分析\n供应商分析\n客户端\n成员 / Team / 用户组\n消息分析\n调用记录\n总请求数\n3,252\n日均 108\n总 Token 消耗\n1.48M\n日均 49.4K\n总积分消耗\n5.19 积分\n日均 ¥0.17\n活跃模型\n6\n供应商 3\n客户端识别率\n0.0%\n活跃0种 · 未知0次\n今日\n请求数\n135\n↓ 4.9%\nToken\n64.7K\n↑ 9.2%\n积分消耗\n0.23 积分\n↑ 9.2%\n昨日\n请求数\n142\nToken\n59.2K\n积分消耗\n0.21 积分\n每日请求量趋势\n每日Token消耗趋势\n每日积分趋势\n每日平均Token/请求",
+      "customElements": 20,
+      "dialogs": 20,
+      "openedDialogs": 0,
+      "controls": 13,
+      "buttons": 11,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "console",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-console-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "BUTTON",
+        "clickedMore": true,
+        "dialogLifecycle": true
+      },
+      "href": "http://127.0.0.1:46493/console#modelLibrary",
+      "title": "控制台 - CrewRouter",
+      "text": "CrewRouter TEAM\n模型库\n我的上游\nAPI Key与用量\n统计信息\n项目工作\n排行榜\n接口文档\n积分\n操作日志\n提示词\n会话\n设置\n用户设置\n管理后台\nDemo User\n中文\nEN\n模型库\n模型库\n点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n我的上游\n添加供应商\n更多\n展开全部 Team\n折叠全部 Team\n展开全部 供应商\n折叠全部 供应商\n测试全部模型\n测试当前 Team\n测试当前供应商\n一键检测连通性\n显示已隐藏\n排序模式\n当前 KEY\n生产环境 Key\n→\nOpenAI\n→\nGPT-4.1\n320ms · 45.2 t/s\n99.60%\n默认请求路由到此模型 · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n切换 Key\n生产环境 Key\nGPT-4.1\n测试环境 Key\nDeepSeek V3\n全部供应商\nAnthropic\nDeepSeek\nOpenAI\n更多筛选\n星标\n2 个模型\n倍率\n×1.00\n99.60%\n测试\n绑定\n倍率\n×1.00\n—\n测试\n绑定\nDemo Team\n个人\n默认\n测试全部\nOpenAI\n全部成功 - 平均246ms - 43.1 t/s\n测试\n3 个模型\nAnthropic\n全部成功 - 平均246ms - 43.1 t/s\n测试\n3 个模型\nDeepSeek\n全部成功 - 平均214ms - 48.7 t/s\n测试\n2 个模型",
+      "customElements": 42,
+      "dialogs": 28,
+      "openedDialogs": 0,
+      "controls": 28,
+      "buttons": 25,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "console",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-console-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "BUTTON",
+        "clickedMore": true,
+        "dialogLifecycle": true
+      },
+      "href": "http://127.0.0.1:46493/console#modelLibrary",
+      "title": "控制台 - CrewRouter",
+      "text": "CrewRouter TEAM\n模型库\n我的上游\nAPI Key与用量\n统计信息\n项目工作\n排行榜\n接口文档\n积分\n操作日志\n提示词\n会话\n设置\n用户设置\n管理后台\nDemo User\n中文\nEN\n模型库\n模型库\n点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n我的上游\n添加供应商\n更多\n展开全部 Team\n折叠全部 Team\n展开全部 供应商\n折叠全部 供应商\n测试全部模型\n测试当前 Team\n测试当前供应商\n一键检测连通性\n显示已隐藏\n排序模式\n当前 KEY\n生产环境 Key\n→\nOpenAI\n→\nGPT-4.1\n320ms · 45.2 t/s\n99.60%\n默认请求路由到此模型 · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n切换 Key\n生产环境 Key\nGPT-4.1\n测试环境 Key\nDeepSeek V3\n全部供应商\nAnthropic\nDeepSeek\nOpenAI\n更多筛选\n星标\n2 个模型\n倍率\n×1.00\n99.60%\n测试\n绑定\n倍率\n×1.00\n—\n测试\n绑定\nDemo Team\n个人\n默认\n测试全部\nOpenAI\n全部成功 - 平均246ms - 43.1 t/s\n测试\n3 个模型\nAnthropic\n全部成功 - 平均246ms - 43.1 t/s\n测试\n3 个模型\nDeepSeek\n全部成功 - 平均214ms - 48.7 t/s\n测试\n2 个模型",
+      "customElements": 42,
+      "dialogs": 28,
+      "openedDialogs": 0,
+      "controls": 28,
+      "buttons": 25,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "data",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-data-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/data",
+      "title": "统计数据 - CrewRouter",
+      "text": "CrewRouter\nTEAM\n插件商店\n中文\nEN\nCrewRouter 实例统计\n\n自动刷新中 · 每 30 秒刷新 · 上次更新: -\n\n实例明细\n最近上报",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 2,
+      "buttons": 3,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "data",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-data-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/data",
+      "title": "统计数据 - CrewRouter",
+      "text": "CrewRouter\nTEAM\n插件商店\n中文\nEN\nCrewRouter 实例统计\n\n自动刷新中 · 每 30 秒刷新 · 上次更新: -\n\n实例明细\n最近上报",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 2,
+      "buttons": 3,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "feishu-bind",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-feishu-bind-light-1440x900.png",
+      "loadError": "ERR_ABORTED (-3) loading 'http://127.0.0.1:46493/'",
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/",
+      "title": "CrewRouter — 团队级 AI 模型统一网关",
+      "text": "CrewRouter\nTEAM\n功能\n架构\n亮点\n文档\n进入演示\n中文\nEN\n团队级 AI 模型网关\nCrewRouter\n\n一个 API 端点，接入所有 AI 模型。智能路由、精细管控、实时洞察，为团队而生。\n\n进入演示控制台\n插件商店\nGitHub\n下载\nCrewRouter\n核心功能\n\n为团队 AI 应用提供全方位的模型管理和路由能力\n\n多供应商聚合\n\nOpenAI、Anthropic、DeepSeek 等主流供应商，一个 API 端点全部接入。\n\n协议自动转换\n\n系统自动在 OpenAI 与 Anthropic 协议间双向转换。用 OpenAI SDK 调用 Claude，或用 Anthropic SDK 调用 GPT，无需关心协议差异。\n\n智能路由\n\n按团队分配模型，支持别名、上游映射和自定义路由规则，精准控制每个团队的模型访问范围。\n\nFusion 模式\n\n同一请求并发多个模型，由裁判模型评估并综合最优回答，大幅提升输出质量和可靠性。\n\n实时统计\n\n请求量、Token 用量、延迟、成本多维度分析。按模型、Key、时间粒度下钻，缓存命中率一目了然。\n\nAPI Key 管理\n\n时间调度启停、模型绑定、自定义签名、Fusion 配置。每个 Key 独立权限，精细化管控。\n\n多因素认证\n\n支持 TOTP 双因素认证、WebAuthn PassKey 无密码登录、飞书 OAuth 企业级接入，全方位保障账户安全。\n\n动态密钥刷新\n\n供应商 API Key 支持脚本模式自动轮换，定时刷新密钥并缓存，保障高可用不间断服务。\n\n代理池管理\n\n每个供应商独立配置代理池，支持订阅链接批量导入和手动添加，保障跨境访问稳定性。\n\n一个端点，所有模型\n\n完美兼容 OpenAI 和 Anthropic SDK，零改动迁移现有应用\n\nterminal\n# 只需更换 base_url，即可接入所有模型\ncurl https://api.crewrouter.io/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-your-key\" \\\n  -d '{\n    \"model\": \"gpt-4.1\",\n    \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}]\n  }'\n你的应用\nCrewRouter\nOpenAI\nAnthropic\nDeepSeek\n更多…\n兼容所有支持 OpenAI / Anthropic 格式的编程工具\nClaude Code\nClaude Desktop\nCodex\nOpenCode\nOpenClaw\nHermes Agent\nKilo Code\nCline\nCherry Studio\nQwen Code\nCursor\n更多…\n技术亮点\n\n为生产环境",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 2,
+      "buttons": 13,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "hidden"
+    },
+    {
+      "page": "feishu-bind",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-feishu-bind-dark-1440x900.png",
+      "loadError": "ERR_ABORTED (-3) loading 'http://127.0.0.1:46493/'",
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/",
+      "title": "CrewRouter — 团队级 AI 模型统一网关",
+      "text": "CrewRouter\nTEAM\n功能\n架构\n亮点\n文档\n进入演示\n中文\nEN\n团队级 AI 模型网关\nCrewRouter\n\n一个 API 端点，接入所有 AI 模型。智能路由、精细管控、实时洞察，为团队而生。\n\n进入演示控制台\n插件商店\nGitHub\n下载\nCrewRouter\n核心功能\n\n为团队 AI 应用提供全方位的模型管理和路由能力\n\n多供应商聚合\n\nOpenAI、Anthropic、DeepSeek 等主流供应商，一个 API 端点全部接入。\n\n协议自动转换\n\n系统自动在 OpenAI 与 Anthropic 协议间双向转换。用 OpenAI SDK 调用 Claude，或用 Anthropic SDK 调用 GPT，无需关心协议差异。\n\n智能路由\n\n按团队分配模型，支持别名、上游映射和自定义路由规则，精准控制每个团队的模型访问范围。\n\nFusion 模式\n\n同一请求并发多个模型，由裁判模型评估并综合最优回答，大幅提升输出质量和可靠性。\n\n实时统计\n\n请求量、Token 用量、延迟、成本多维度分析。按模型、Key、时间粒度下钻，缓存命中率一目了然。\n\nAPI Key 管理\n\n时间调度启停、模型绑定、自定义签名、Fusion 配置。每个 Key 独立权限，精细化管控。\n\n多因素认证\n\n支持 TOTP 双因素认证、WebAuthn PassKey 无密码登录、飞书 OAuth 企业级接入，全方位保障账户安全。\n\n动态密钥刷新\n\n供应商 API Key 支持脚本模式自动轮换，定时刷新密钥并缓存，保障高可用不间断服务。\n\n代理池管理\n\n每个供应商独立配置代理池，支持订阅链接批量导入和手动添加，保障跨境访问稳定性。\n\n一个端点，所有模型\n\n完美兼容 OpenAI 和 Anthropic SDK，零改动迁移现有应用\n\nterminal\n# 只需更换 base_url，即可接入所有模型\ncurl https://api.crewrouter.io/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-your-key\" \\\n  -d '{\n    \"model\": \"gpt-4.1\",\n    \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}]\n  }'\n你的应用\nCrewRouter\nOpenAI\nAnthropic\nDeepSeek\n更多…\n兼容所有支持 OpenAI / Anthropic 格式的编程工具\nClaude Code\nClaude Desktop\nCodex\nOpenCode\nOpenClaw\nHermes Agent\nKilo Code\nCline\nCherry Studio\nQwen Code\nCursor\n更多…\n技术亮点\n\n为生产环境",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 2,
+      "buttons": 13,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "hidden"
+    },
+    {
+      "page": "index",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-index-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "BODY",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/index",
+      "title": "",
+      "text": "{\"error\":{\"message\":\"Not found\",\"type\":\"not_found\"}}",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 0,
+      "buttons": 0,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "visible"
+    },
+    {
+      "page": "index",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-index-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "BODY",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/index",
+      "title": "",
+      "text": "{\"error\":{\"message\":\"Not found\",\"type\":\"not_found\"}}",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 0,
+      "buttons": 0,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "visible"
+    },
+    {
+      "page": "oauth-consent",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-oauth-consent-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/oauth-consent",
+      "title": "授权确认 - CrewRouter",
+      "text": "中文\nEN\nCrewRouter\nTEAM\n加载失败",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 1,
+      "buttons": 0,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "oauth-consent",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-oauth-consent-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/oauth-consent",
+      "title": "授权确认 - CrewRouter",
+      "text": "中文\nEN\nCrewRouter\nTEAM\n加载失败",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 1,
+      "buttons": 0,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "playground",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-playground-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": true
+      },
+      "href": "http://127.0.0.1:46493/playground",
+      "title": "Playground - CrewRouter",
+      "text": "中文\nEN\n返回控制台\n对话历史\n新对话\n暂无对话记录\nCrant AI Playground\n\n选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。\n\n清空对话\n0 积分\n模型\n系统提示词\nTemperature: 1.0\nMax Tokens\n思考模式\n已启用\n余额\n¥0.00\n本次消耗\n¥0.00\nTokens\n0\n历史记录",
+      "customElements": 14,
+      "dialogs": 1,
+      "openedDialogs": 1,
+      "controls": 9,
+      "buttons": 5,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "playground",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-playground-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": true
+      },
+      "href": "http://127.0.0.1:46493/playground",
+      "title": "Playground - CrewRouter",
+      "text": "中文\nEN\n返回控制台\n对话历史\n新对话\n暂无对话记录\nCrant AI Playground\n\n选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。\n\n清空对话\n0 积分\n模型\n系统提示词\nTemperature: 1.0\nMax Tokens\n思考模式\n已启用\n余额\n¥0.00\n本次消耗\n¥0.00\nTokens\n0\n历史记录",
+      "customElements": 14,
+      "dialogs": 1,
+      "openedDialogs": 1,
+      "controls": 9,
+      "buttons": 5,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "plugin-install",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-plugin-install-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "BODY",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/plugin-install",
+      "title": "安装插件到 CrewRouter",
+      "text": "CrewRouter TEAM\n缺少插件 id\n无法确定要安装的插件。",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 0,
+      "buttons": 0,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "plugin-install",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-plugin-install-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "BODY",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/plugin-install",
+      "title": "安装插件到 CrewRouter",
+      "text": "CrewRouter TEAM\n缺少插件 id\n无法确定要安装的插件。",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 0,
+      "buttons": 0,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "purchase",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-purchase-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/purchase",
+      "title": "购买商品 - CrewRouter",
+      "text": "中文\nEN\nCrewRouter TEAM\n返回控制台\n购买商品\n商品ID不存在",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 1,
+      "buttons": 0,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "purchase",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-purchase-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/purchase",
+      "title": "购买商品 - CrewRouter",
+      "text": "中文\nEN\nCrewRouter TEAM\n返回控制台\n购买商品\n商品ID不存在",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 1,
+      "buttons": 0,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "set-password",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-set-password-light-1440x900.png",
+      "loadError": "ERR_ABORTED (-3) loading 'http://127.0.0.1:46493/console'",
+      "interaction": {
+        "focused": "BUTTON",
+        "clickedMore": true,
+        "dialogLifecycle": true
+      },
+      "href": "http://127.0.0.1:46493/console#modelLibrary",
+      "title": "控制台 - CrewRouter",
+      "text": "CrewRouter TEAM\n模型库\n我的上游\nAPI Key与用量\n统计信息\n项目工作\n排行榜\n接口文档\n积分\n操作日志\n提示词\n会话\n设置\n用户设置\n管理后台\nDemo User\n中文\nEN\n模型库\n模型库\n点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n我的上游\n添加供应商\n更多\n展开全部 Team\n折叠全部 Team\n展开全部 供应商\n折叠全部 供应商\n测试全部模型\n测试当前 Team\n测试当前供应商\n一键检测连通性\n显示已隐藏\n排序模式\n当前 KEY\n生产环境 Key\n→\nOpenAI\n→\nGPT-4.1\n320ms · 45.2 t/s\n99.60%\n默认请求路由到此模型 · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n切换 Key\n生产环境 Key\nGPT-4.1\n测试环境 Key\nDeepSeek V3\n全部供应商\nAnthropic\nDeepSeek\nOpenAI\n更多筛选\n星标\n2 个模型\n倍率\n×1.00\n99.60%\n测试\n绑定\n倍率\n×1.00\n—\n测试\n绑定\nDemo Team\n个人\n默认\n测试全部\nOpenAI\n全部成功 - 平均246ms - 43.1 t/s\n测试\n3 个模型\nAnthropic\n全部成功 - 平均246ms - 43.1 t/s\n测试\n3 个模型\nDeepSeek\n全部成功 - 平均214ms - 48.7 t/s\n测试\n2 个模型",
+      "customElements": 42,
+      "dialogs": 28,
+      "openedDialogs": 0,
+      "controls": 28,
+      "buttons": 25,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "set-password",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-set-password-dark-1440x900.png",
+      "loadError": "ERR_ABORTED (-3) loading 'http://127.0.0.1:46493/console'",
+      "interaction": {
+        "focused": "BUTTON",
+        "clickedMore": true,
+        "dialogLifecycle": true
+      },
+      "href": "http://127.0.0.1:46493/console#modelLibrary",
+      "title": "控制台 - CrewRouter",
+      "text": "CrewRouter TEAM\n模型库\n我的上游\nAPI Key与用量\n统计信息\n项目工作\n排行榜\n接口文档\n积分\n操作日志\n提示词\n会话\n设置\n用户设置\n管理后台\nDemo User\n中文\nEN\n模型库\n模型库\n点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n我的上游\n添加供应商\n更多\n展开全部 Team\n折叠全部 Team\n展开全部 供应商\n折叠全部 供应商\n测试全部模型\n测试当前 Team\n测试当前供应商\n一键检测连通性\n显示已隐藏\n排序模式\n当前 KEY\n生产环境 Key\n→\nOpenAI\n→\nGPT-4.1\n320ms · 45.2 t/s\n99.60%\n默认请求路由到此模型 · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n切换 Key\n生产环境 Key\nGPT-4.1\n测试环境 Key\nDeepSeek V3\n全部供应商\nAnthropic\nDeepSeek\nOpenAI\n更多筛选\n星标\n2 个模型\n倍率\n×1.00\n99.60%\n测试\n绑定\n倍率\n×1.00\n—\n测试\n绑定\nDemo Team\n个人\n默认\n测试全部\nOpenAI\n全部成功 - 平均246ms - 43.1 t/s\n测试\n3 个模型\nAnthropic\n全部成功 - 平均246ms - 43.1 t/s\n测试\n3 个模型\nDeepSeek\n全部成功 - 平均214ms - 48.7 t/s\n测试\n2 个模型",
+      "customElements": 42,
+      "dialogs": 28,
+      "openedDialogs": 0,
+      "controls": 28,
+      "buttons": 25,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "setup",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-setup-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/setup",
+      "title": "初始化设置 - CrewRouter",
+      "text": "CrewRouter\n中文\nEN\n🚀 CrewRouter\n\n首次使用，请创建管理员账号\n\n系统已初始化\n\n无需重复配置，可直接登录\n\n前往登录",
+      "customElements": 1,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 2,
+      "buttons": 2,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "setup",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-setup-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/setup",
+      "title": "初始化设置 - CrewRouter",
+      "text": "CrewRouter\n中文\nEN\n🚀 CrewRouter\n\n首次使用，请创建管理员账号\n\n系统已初始化\n\n无需重复配置，可直接登录\n\n前往登录",
+      "customElements": 1,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 2,
+      "buttons": 2,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "showcase",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-showcase-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/showcase",
+      "title": "CrewRouter — 团队级 AI 模型统一网关",
+      "text": "CrewRouter\nTEAM\n功能\n架构\n亮点\n文档\n进入演示\n中文\nEN\n团队级 AI 模型网关\nCrewRouter\n\n一个 API 端点，接入所有 AI 模型。智能路由、精细管控、实时洞察，为团队而生。\n\n进入演示控制台\n插件商店\nGitHub\n下载\nCrewRouter\n核心功能\n\n为团队 AI 应用提供全方位的模型管理和路由能力\n\n多供应商聚合\n\nOpenAI、Anthropic、DeepSeek 等主流供应商，一个 API 端点全部接入。\n\n协议自动转换\n\n系统自动在 OpenAI 与 Anthropic 协议间双向转换。用 OpenAI SDK 调用 Claude，或用 Anthropic SDK 调用 GPT，无需关心协议差异。\n\n智能路由\n\n按团队分配模型，支持别名、上游映射和自定义路由规则，精准控制每个团队的模型访问范围。\n\nFusion 模式\n\n同一请求并发多个模型，由裁判模型评估并综合最优回答，大幅提升输出质量和可靠性。\n\n实时统计\n\n请求量、Token 用量、延迟、成本多维度分析。按模型、Key、时间粒度下钻，缓存命中率一目了然。\n\nAPI Key 管理\n\n时间调度启停、模型绑定、自定义签名、Fusion 配置。每个 Key 独立权限，精细化管控。\n\n多因素认证\n\n支持 TOTP 双因素认证、WebAuthn PassKey 无密码登录、飞书 OAuth 企业级接入，全方位保障账户安全。\n\n动态密钥刷新\n\n供应商 API Key 支持脚本模式自动轮换，定时刷新密钥并缓存，保障高可用不间断服务。\n\n代理池管理\n\n每个供应商独立配置代理池，支持订阅链接批量导入和手动添加，保障跨境访问稳定性。\n\n一个端点，所有模型\n\n完美兼容 OpenAI 和 Anthropic SDK，零改动迁移现有应用\n\nterminal\n# 只需更换 base_url，即可接入所有模型\ncurl https://api.crewrouter.io/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-your-key\" \\\n  -d '{\n    \"model\": \"gpt-4.1\",\n    \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}]\n  }'\n你的应用\nCrewRouter\nOpenAI\nAnthropic\nDeepSeek\n更多…\n兼容所有支持 OpenAI / Anthropic 格式的编程工具\nClaude Code\nClaude Desktop\nCodex\nOpenCode\nOpenClaw\nHermes Agent\nKilo Code\nCline\nCherry Studio\nQwen Code\nCursor\n更多…\n技术亮点\n\n为生产环境",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 2,
+      "buttons": 13,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "hidden"
+    },
+    {
+      "page": "showcase",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-showcase-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/showcase",
+      "title": "CrewRouter — 团队级 AI 模型统一网关",
+      "text": "CrewRouter\nTEAM\n功能\n架构\n亮点\n文档\n进入演示\n中文\nEN\n团队级 AI 模型网关\nCrewRouter\n\n一个 API 端点，接入所有 AI 模型。智能路由、精细管控、实时洞察，为团队而生。\n\n进入演示控制台\n插件商店\nGitHub\n下载\nCrewRouter\n核心功能\n\n为团队 AI 应用提供全方位的模型管理和路由能力\n\n多供应商聚合\n\nOpenAI、Anthropic、DeepSeek 等主流供应商，一个 API 端点全部接入。\n\n协议自动转换\n\n系统自动在 OpenAI 与 Anthropic 协议间双向转换。用 OpenAI SDK 调用 Claude，或用 Anthropic SDK 调用 GPT，无需关心协议差异。\n\n智能路由\n\n按团队分配模型，支持别名、上游映射和自定义路由规则，精准控制每个团队的模型访问范围。\n\nFusion 模式\n\n同一请求并发多个模型，由裁判模型评估并综合最优回答，大幅提升输出质量和可靠性。\n\n实时统计\n\n请求量、Token 用量、延迟、成本多维度分析。按模型、Key、时间粒度下钻，缓存命中率一目了然。\n\nAPI Key 管理\n\n时间调度启停、模型绑定、自定义签名、Fusion 配置。每个 Key 独立权限，精细化管控。\n\n多因素认证\n\n支持 TOTP 双因素认证、WebAuthn PassKey 无密码登录、飞书 OAuth 企业级接入，全方位保障账户安全。\n\n动态密钥刷新\n\n供应商 API Key 支持脚本模式自动轮换，定时刷新密钥并缓存，保障高可用不间断服务。\n\n代理池管理\n\n每个供应商独立配置代理池，支持订阅链接批量导入和手动添加，保障跨境访问稳定性。\n\n一个端点，所有模型\n\n完美兼容 OpenAI 和 Anthropic SDK，零改动迁移现有应用\n\nterminal\n# 只需更换 base_url，即可接入所有模型\ncurl https://api.crewrouter.io/v1/chat/completions \\\n  -H \"Authorization: Bearer sk-your-key\" \\\n  -d '{\n    \"model\": \"gpt-4.1\",\n    \"messages\": [{\"role\": \"user\", \"content\": \"Hello!\"}]\n  }'\n你的应用\nCrewRouter\nOpenAI\nAnthropic\nDeepSeek\n更多…\n兼容所有支持 OpenAI / Anthropic 格式的编程工具\nClaude Code\nClaude Desktop\nCodex\nOpenCode\nOpenClaw\nHermes Agent\nKilo Code\nCline\nCherry Studio\nQwen Code\nCursor\n更多…\n技术亮点\n\n为生产环境",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 2,
+      "buttons": 13,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "hidden"
+    },
+    {
+      "page": "store",
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-store-light-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/store",
+      "title": "插件商店 - CrewRouter",
+      "text": "中文\nEN\nCrewRouter\nTEAM\n插件商店\n浏览\n提交插件\n统计\n登录\nHTTP 500\nHTTP 500",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 2,
+      "buttons": 5,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "store",
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "screenshot": ".hermes/screenshots/runtime-store-dark-1440x900.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:46493/store",
+      "title": "插件商店 - CrewRouter",
+      "text": "中文\nEN\nCrewRouter\nTEAM\n插件商店\n浏览\n提交插件\n统计\n登录\nHTTP 500\nHTTP 500",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 2,
+      "buttons": 5,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "clip"
+    },
+    {
+      "page": "console",
+      "theme": "light",
+      "viewport": {
+        "width": 600,
+        "height": 700
+      },
+      "screenshot": ".hermes/screenshots/runtime-console-light-600x700.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "BUTTON",
+        "clickedMore": true,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:41995/console#modelLibrary",
+      "title": "控制台 - CrewRouter",
+      "text": "模型库\n中文\nEnglish\n中文\nEN\n模型库\n模型库\n点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n我的上游\n添加供应商\n更多\n展开全部 Team\n折叠全部 Team\n展开全部 供应商\n折叠全部 供应商\n测试全部模型\n测试当前 Team\n测试当前供应商\n一键检测连通性\n显示已隐藏\n排序模式\n当前 KEY\n还没有 API Key，创建后才能绑定模型\n去创建 API Key\n供应商额度\n\n显示上次刷新（定时 / 手动）的结果\n\n正在加载供应商额度缓存...\n\n暂无可用模型\n\n请联系管理员添加模型或加入 Team，也可添加自己的供应商\n\n创建 API Key\n添加供应商\n管理我的上游",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 14,
+      "buttons": 12,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "visible"
+    },
+    {
+      "page": "playground",
+      "theme": "light",
+      "viewport": {
+        "width": 600,
+        "height": 700
+      },
+      "screenshot": ".hermes/screenshots/runtime-playground-light-600x700.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "SELECT",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:41995/playground",
+      "title": "Playground - CrewRouter",
+      "text": "中文\nEN\nCrewRouter LOCAL\n返回控制台\n对话历史\n新对话\n暂无对话记录\nCrant AI Playground\n\n选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。\n\n清空对话\n0积分",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 6,
+      "buttons": 6,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "visible"
+    },
+    {
+      "page": "store",
+      "theme": "light",
+      "viewport": {
+        "width": 600,
+        "height": 700
+      },
+      "screenshot": ".hermes/screenshots/runtime-store-light-600x700.png",
+      "loadError": null,
+      "interaction": {
+        "focused": "BODY",
+        "clickedMore": false,
+        "dialogLifecycle": false
+      },
+      "href": "http://127.0.0.1:41995/store",
+      "title": "",
+      "text": "{\"error\":{\"message\":\"Not found\",\"type\":\"not_found\"}}",
+      "customElements": 0,
+      "dialogs": 0,
+      "openedDialogs": 0,
+      "controls": 0,
+      "buttons": 0,
+      "errors": 0,
+      "legacyOverlay": 0,
+      "bodyOverflow": "visible"
+    }
+  ],
+  "summary": {
+    "observations": 25,
+    "failures": 0,
+    "pages": 13
+  }
+}

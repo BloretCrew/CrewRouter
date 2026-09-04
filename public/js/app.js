@@ -6555,7 +6555,7 @@ class ConsoleApp {
       });
       if (!res.ok) throw new Error(t('保存失败'));
       this._hookNotifySelection = { harnesses, eventTypes };
-      this.closeModal('hookNotifySelectModal');
+      this.closeModals();
       this.showToast(t('事件通知偏好已保存'), 'success');
     } catch (error) {
       this.showToast(error.message || t('保存失败'), 'error');

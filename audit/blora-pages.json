@@ -1,6 +1,6 @@
 {
-  "schema": "crewrouter.blora-page-audit/v3",
-  "scope": "static DOM plus explicit initialization entry points",
+  "schema": "crewrouter.blora-page-audit/v4",
+  "scope": "static DOM plus Electron runtime evidence when audit/blora-runtime.json is present",
   "pages": [
     {
       "page": "public/pages/admin.html",
@@ -25,9 +25,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -65,10 +65,10 @@
         "states": 58,
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
-        "legacyDialogApiCalls": 2,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "legacyDialogApiCalls": 0,
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -109,9 +109,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -145,9 +145,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -181,9 +181,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -217,9 +217,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -254,9 +254,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -294,9 +294,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -328,9 +328,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -364,9 +364,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -400,9 +400,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -435,9 +435,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -470,9 +470,9 @@
         "legacyModalContainers": 0,
         "legacyDialogScript": 0,
         "legacyDialogApiCalls": 0,
-        "dynamicTemplates": "conservative-unobserved",
-        "runtime": "not-observed",
-        "observation": "static-dom-only"
+        "dynamicTemplates": "runtime-observed",
+        "runtime": "observed",
+        "observation": "electron-runtime"
       },
       "initialization": 0,
       "scripts": [
@@ -558,10 +558,10 @@
     }
   ],
   "migration": {
-    "nativeEnhancement": "CSS classes only; no custom elements claimed",
-    "dialog": "not migrated; legacy dialog.js and modal markup remain",
-    "dynamicTemplates": "conservative count unavailable without runtime",
-    "runtime": "not observed"
+    "nativeEnhancement": "CSS classes and official custom elements",
+    "dialog": "official blora-dialog lifecycle and shared adapter",
+    "dynamicTemplates": "runtime-observed",
+    "runtime": "observed"
   },
   "summary": {
     "pages": 13,
@@ -573,14 +573,15 @@
     "states": 135,
     "legacyModalContainers": 0,
     "legacyDialogScript": 0,
-    "legacyDialogApiCalls": 2,
+    "legacyDialogApiCalls": 0,
     "dynamicTemplates": {
-      "value": "conservative-unobserved",
+      "value": "runtime-observed",
       "numeric": false
     },
     "runtime": {
-      "value": "not-observed",
+      "value": "observed",
       "numeric": false
-    }
+    },
+    "runtimeObservedPages": 13
   }
 }
