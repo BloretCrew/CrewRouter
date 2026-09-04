@@ -1,6 +1,5 @@
 // Shared Blora dialog adapter for legacy application call sites.
-// The adapter keeps the existing promise API while delegating rendering and focus
-// management to the official <blora-dialog> custom element.
+// The adapter keeps existing promise/call-site APIs while using official dialogs.
 const Dialog = (() => {
   let sequence = 0;
 
@@ -18,7 +17,7 @@ const Dialog = (() => {
     const dialog = document.createElement('blora-dialog');
     dialog.id = `blora-dialog-${Date.now()}-${++sequence}`;
     if (size) dialog.setAttribute('size', size);
-    if (!closeOnOutsideClick) dialog.setAttribute('close-on-outside-click', 'false');
+    dialog.setAttribute('close-on-outside-click', closeOnOutsideClick ? 'true' : 'false');
 
     const titleNode = document.createElement('span');
     titleNode.slot = 'title';
@@ -46,9 +45,10 @@ const Dialog = (() => {
       const finish = (value) => {
         if (settled) return;
         settled = true;
+        const done = () => { dialog.remove(); resolve(value); };
+        dialog.addEventListener('blora-close', done, { once: true });
         dialog.close('result');
-        dialog.addEventListener('blora-close', () => { dialog.remove(); resolve(value); }, { once: true });
-        if (!dialog.hasAttribute('open')) { dialog.remove(); resolve(value); }
+        if (!dialog.hasAttribute('open')) done();
       };
       dialog.addEventListener('click', (event) => {
         const target = event.target.closest?.('[data-dialog-confirm], [data-dialog-cancel]');
@@ -73,11 +73,9 @@ const Dialog = (() => {
     return render({ title, message, confirmText: options.confirmText || t('确认'), cancelText: options.cancelText || t('取消'), showCancel: true, danger: options.danger || false });
   }
 
-  function showModal({ title, content, footer, width, panelClass = '' }) {
+  function showModal({ title, content, footer, width }) {
     const dialog = createDialog({ title, content, footer, size: width && Number(width) > 700 ? 'lg' : '' });
     if (width) dialog.style.setProperty('--blora-dialog-max-width', typeof width === 'number' ? `${width}px` : width);
-    if (panelClass) dialog.dataset.panelClass = panelClass;
-
     let settled = false;
     let resolvePromise;
     const promise = new Promise((resolve) => { resolvePromise = resolve; });
@@ -89,13 +87,13 @@ const Dialog = (() => {
     };
     const close = (value) => {
       if (settled) return;
-      dialog.close('api');
       dialog.addEventListener('blora-close', () => settle(value), { once: true });
+      dialog.close('api');
       if (!dialog.hasAttribute('open')) settle(value);
     };
     dialog.addEventListener('blora-close', () => settle(false));
     dialog.show();
-    return { close, promise };
+    return { close, promise, element: dialog };
   }
 
   return { alert, confirm, showModal };

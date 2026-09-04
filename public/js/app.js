@@ -360,12 +360,7 @@ class ConsoleApp {
     document.getElementById('statsConsentAllow')?.addEventListener('click', () => this._setStatsConsent(true));
     document.getElementById('statsConsentReject')?.addEventListener('click', () => this._setStatsConsent(false));
 
-    // 点击遮罩空白处关闭弹窗（点到 .modal 本身，而非 .modal-content）
-    document.querySelectorAll('.modal').forEach(modal => {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) this.closeModals();
-      });
-    });
+    // 官方 blora-dialog 自带遮罩、Escape、焦点陷阱和焦点回收。
 
     // Model library filters
     this._ensureLibraryReorderControls();
@@ -3914,7 +3909,8 @@ class ConsoleApp {
   }
 
   closeModelTestModal() {
-    document.getElementById('modelTestModal').style.display = 'none';
+    const modal = document.getElementById('modelTestModal');
+    if (modal?.close) modal.close('api');
   }
 
   async testModel(modelId, buttonEl) {
@@ -4247,7 +4243,7 @@ class ConsoleApp {
   async _runBatchTest(modelIds, loadingMsg) {
     const modal = document.getElementById('modelTestModal');
     const body = document.getElementById('modelTestModalBody');
-    modal.style.display = 'flex';
+    this.showModal('modelTestModal');
     setHTML(body, `
       <div style="text-align:center;padding:40px 20px;">
         <div style="display:inline-block;width:36px;height:36px;border:3px solid #222;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:20px;"></div>
@@ -4284,7 +4280,8 @@ class ConsoleApp {
     const body = document.getElementById('modelTestModalBody');
     const title = modal?.querySelector('.modal-header h3');
     if (title) title.textContent = `${t('测试结果 [')}${result.model || t('模型测试')}]`;
-    modal.style.display = 'flex';
+    if (modal.show) modal.show();
+    else modal.setAttribute('open', '');
     this._renderTestResults([{ modelId, ...result }]);
   }
 
@@ -5800,8 +5797,8 @@ class ConsoleApp {
     const content = document.getElementById('promptDetailContent');
     if (!modal || !content) return;
     setHTML(content, pageLoadingHtml(t('加载详情...'), { compact: true }));
-    modal.style.display = 'flex';
-    modal.classList.add('active');
+    if (modal.show) modal.show();
+    else modal.setAttribute('open', '');
 
     try {
       const res = await fetch(`/api/user/custom-instructions/${encodeURIComponent(fingerprint)}`);
@@ -5934,8 +5931,8 @@ class ConsoleApp {
       keys = data.items || [];
     } catch (error) {
       setHTML(keyListEl, `<p style="font-size:13px;color:var(--destructive);margin:0;">${escapeHtml(error.message || t('加载失败'))}</p>`);
-      modal.style.display = 'flex';
-      modal.classList.add('active');
+      if (modal.show) modal.show();
+      else modal.setAttribute('open', '');
       return;
     }
 
@@ -5953,8 +5950,8 @@ class ConsoleApp {
       `);
     }
 
-    modal.style.display = 'flex';
-    modal.classList.add('active');
+    if (modal.show) modal.show();
+    else modal.setAttribute('open', '');
   }
 
   /** 保存条目本体（新建或修改），返回条目 id */
@@ -6203,8 +6200,8 @@ class ConsoleApp {
         const content = document.getElementById('usageDetailContent');
         if (modal && content) {
           setHTML(content, pageLoadingHtml(t('加载详情...'), { compact: true }));
-          modal.style.display = 'flex';
-          modal.classList.add('active');
+          if (modal.show) modal.show();
+      else modal.setAttribute('open', '');
         }
         const res = await fetch(`/api/user/usage-logs/${log.id}`);
         if (!res.ok) throw new Error(`${t('加载详情失败 (')}${res.status})`);
@@ -6282,8 +6279,7 @@ class ConsoleApp {
 
     const modal = document.getElementById('usageDetailModal');
     if (modal) {
-      modal.style.display = 'flex';
-      modal.classList.add('active');
+      this.showModal('usageDetailModal');
     }
   }
 
@@ -7868,14 +7864,15 @@ ${extractorBody}
 
   showModal(id) {
     const modal = document.getElementById(id);
-    modal.style.display = 'flex';
-    modal.classList.add('active');
+    if (!modal) return;
+    if (typeof modal.show === 'function') modal.show();
+    else modal.setAttribute('open', '');
   }
 
   closeModals() {
-    document.querySelectorAll('.modal').forEach(m => {
-      m.style.display = 'none';
-      m.classList.remove('active');
+    document.querySelectorAll('blora-dialog').forEach(modal => {
+      if (typeof modal.close === 'function') modal.close('api');
+      else modal.removeAttribute('open');
     });
     this._summaryModalSessionKey = null;
   }

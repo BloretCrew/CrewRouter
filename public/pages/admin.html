@@ -1513,7 +1513,7 @@
   </div>
 
   <!-- 编辑用户模态框 -->
-  <div id="editUserModal" class="modal" style="display: none;">
+  <blora-dialog id="editUserModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="编辑用户">编辑用户</span></h3>
@@ -1566,10 +1566,10 @@
         <button id="saveUserBtn" class="btn btn-primary"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 添加模型模态框 -->
-  <div id="addModelModal" class="modal" style="display: none;">
+  <blora-dialog id="addModelModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="添加模型">添加模型</span></h3>
@@ -1681,10 +1681,10 @@
         <button id="saveModelBtn" class="btn btn-primary"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 添加/编辑供应商模态框 -->
-  <div id="addProviderModal" class="modal" style="display: none;">
+  <blora-dialog id="addProviderModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content modal-content-lg">
       <div class="modal-header">
         <h3 id="providerModalTitle"><span data-i18n="添加供应商">添加供应商</span></h3>
@@ -2015,10 +2015,10 @@
         <button id="saveProviderBtn" class="btn btn-primary"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 导入 OpenCode 配置模态框 -->
-  <div id="importOpenCodeModal" class="modal" style="display: none;">
+  <blora-dialog id="importOpenCodeModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="导入配置">导入配置</span></h3>
@@ -2062,10 +2062,10 @@
         <button id="confirmImportOpenCodeBtn" class="btn btn-primary"><span data-i18n="导入">导入</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 选择模型对话框 -->
-  <div id="fetchModelsModal" class="modal" style="display: none;">
+  <blora-dialog id="fetchModelsModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content model-picker-modal">
       <div class="modal-header">
         <h3 id="fetchModelsTitle"><span data-i18n="获取模型列表">获取模型列表</span></h3>
@@ -2105,10 +2105,10 @@
         </div>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 批量设置固定价格模态框 -->
-  <div id="batchSetPricesModal" class="modal" style="display: none;">
+  <blora-dialog id="batchSetPricesModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="批量设置固定价格">批量设置固定价格</span></h3>
@@ -2130,10 +2130,10 @@
         <button class="btn btn-primary" onclick="adminApp.executeBatchSetPrices()"><span data-i18n="确认设置">确认设置</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- JSON 批量定价模态框 -->
-  <div id="batchJsonPricesModal" class="modal" style="display: none;">
+  <blora-dialog id="batchJsonPricesModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 560px;">
       <div class="modal-header">
         <h3><span data-i18n="JSON 批量定价">JSON 批量定价</span></h3>
@@ -2156,10 +2156,10 @@
         <button class="btn btn-primary" onclick="adminApp.executeBatchJsonPrices()"><span data-i18n="应用价格">应用价格</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- JSON 批量定参考价模态框 -->
-  <div id="batchJsonRefPricesModal" class="modal" style="display: none;">
+  <blora-dialog id="batchJsonRefPricesModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 560px;">
       <div class="modal-header">
         <h3><span data-i18n="JSON 批量定参考价">JSON 批量定参考价</span></h3>
@@ -2182,10 +2182,10 @@
         <button class="btn btn-primary" onclick="adminApp.executeBatchJsonRefPrices()"><span data-i18n="应用参考价">应用参考价</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 批量调整价格（按比例）模态框 -->
-  <div id="batchAdjustPricesModal" class="modal" style="display: none;">
+  <blora-dialog id="batchAdjustPricesModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="批量按比例调整价格">批量按比例调整价格</span></h3>
@@ -2202,10 +2202,10 @@
         <button class="btn btn-primary" onclick="adminApp.executeBatchAdjustPrices()"><span data-i18n="确认调整">确认调整</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 批量设置速率限制模态框 -->
-  <div id="batchSetRateLimitModal" class="modal" style="display: none;">
+  <blora-dialog id="batchSetRateLimitModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
         <h3><span data-i18n="批量设置速率限制">批量设置速率限制</span></h3>
@@ -2226,10 +2226,10 @@
         <button class="btn btn-primary" onclick="adminApp.executeBatchSetRateLimit()"><span data-i18n="确认设置">确认设置</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 批量修改说明模态框 -->
-  <div id="batchEditDescModal" class="modal" style="display: none;">
+  <blora-dialog id="batchEditDescModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 600px;">
       <div class="modal-header">
         <h3><span data-i18n="批量修改模型说明">批量修改模型说明</span></h3>
@@ -2257,10 +2257,10 @@
         <button class="btn btn-primary" onclick="adminApp.executeBatchEditDesc()"><span data-i18n="确认修改">确认修改</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 批量设置系列模态框 -->
-  <div id="batchSetSeriesModal" class="modal" style="display: none;">
+  <blora-dialog id="batchSetSeriesModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 500px;">
       <div class="modal-header">
         <h3><span data-i18n="批量设置系列">批量设置系列</span></h3>
@@ -2281,10 +2281,10 @@
         <button class="btn btn-primary" onclick="adminApp.executeBatchSetSeries()"><span data-i18n="确认设置">确认设置</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 系列图标管理模态框 -->
-  <div id="seriesIconsModal" class="modal" style="display: none;">
+  <blora-dialog id="seriesIconsModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 600px;">
       <div class="modal-header">
         <h3><span data-i18n="系列图标管理">系列图标管理</span></h3>
@@ -2303,10 +2303,10 @@
         <div id="seriesIconsStatus" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px;"></div>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 按参考价百分比批量设置价格模态框 -->
-  <div id="batchAdjustByRefModal" class="modal" style="display: none;">
+  <blora-dialog id="batchAdjustByRefModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 800px;">
       <div class="modal-header">
         <h3><span data-i18n="按参考价百分比设置价格">按参考价百分比设置价格</span></h3>
@@ -2351,10 +2351,10 @@
         <button id="batchAdjustByRefConfirmBtn" class="btn btn-primary" style="display:none;" onclick="adminApp.executeBatchAdjustByRef()"><span data-i18n="确认执行">确认执行</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 供应商额度查询模态框 -->
-  <div id="providerQuotaModal" class="modal" style="display: none;">
+  <blora-dialog id="providerQuotaModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width: 560px;">
       <div class="modal-header">
         <h3><span data-i18n="供应商额度查询">供应商额度查询</span></h3>
@@ -2431,10 +2431,10 @@
         <button class="btn btn-secondary" id="quotaCancelEditBtn" style="display:none;" onclick="adminApp.checkProviderQuota(adminApp._quotaProviderId)"><span data-i18n="取消">取消</span></button>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 用量详情模态框 -->
-  <div id="usageDetailModal" class="modal" style="display: none;">
+  <blora-dialog id="usageDetailModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content modal-wide">
       <div class="modal-header">
         <h3><span data-i18n="用量详情">用量详情</span></h3>
@@ -2444,10 +2444,10 @@
         <div id="usageDetailContent"></div>
       </div>
 </div>
-  </div>
+  </blora-dialog>
 
   <!-- 调用错误详情模态框 -->
-  <div id="errorDetailModal" class="modal" style="display: none;">
+  <blora-dialog id="errorDetailModal" style="display: none;" role="dialog" aria-modal="true">
     <div class="modal-content modal-wide">
       <div class="modal-header">
         <h3><span data-i18n="调用错误详情">调用错误详情</span></h3>
@@ -2457,7 +2457,7 @@
         <div id="errorDetailContent"></div>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <style>
     @keyframes spin {
@@ -2532,7 +2532,7 @@
   </script>
 
   <!-- 模型测试结果弹窗 -->
-  <div id="adminTestResultModal" class="modal" style="display:none;">
+  <blora-dialog id="adminTestResultModal" style="display:none;" role="dialog" aria-modal="true">
     <div class="modal-overlay" onclick="adminApp.closeTestResultModal()"></div>
     <div class="modal-content" style="max-width:640px;">
       <div class="modal-header">
@@ -2543,10 +2543,10 @@
         <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
       </div>
 </div>
-  </div>
+  </blora-dialog>
 
   <!-- 模型调用可用率详情 -->
-  <div id="modelUptimeModal" class="modal" style="display:none;">
+  <blora-dialog id="modelUptimeModal" style="display:none;" role="dialog" aria-modal="true">
     <div class="modal-content" style="max-width:720px;">
       <div class="modal-header">
         <h3 id="modelUptimeModalTitle"><span data-i18n="模型调用状态">模型调用状态</span></h3>
@@ -2556,10 +2556,10 @@
         <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
       </div>
     </div>
-  </div>
+  </blora-dialog>
 
   <!-- 提示词详情弹窗 -->
-  <div id="adminPromptDetailModal" class="modal" style="display:none;">
+  <blora-dialog id="adminPromptDetailModal" style="display:none;" role="dialog" aria-modal="true">
     <div class="modal-content modal-wide">
       <div class="modal-header">
         <h3 id="adminPromptDetailTitle"><span data-i18n="提示词详情">提示词详情</span></h3>
@@ -2567,7 +2567,7 @@
       </div>
       <div class="modal-body" id="adminPromptDetailBody"></div>
     </div>
-  </div>
+  </blora-dialog>
 <script>
   // Page-level i18n: apply catalog to static DOM once ready.
   (function () {
