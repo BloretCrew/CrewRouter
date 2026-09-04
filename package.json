@@ -38,11 +38,11 @@
     "test:blora-public-batch-a": "node scripts/verify-blora-public-batch-a.js",
     "test:blora-public-batch-c": "node scripts/test-blora-public-batch-c.js",
     "test:blora-navbar-runtime": "node scripts/verify-blora-navbar-runtime.js",
+    "test:no-legacy-dialog": "node scripts/test-no-legacy-dialog.js",
     "money-precision:migrate": "node scripts/migrate-money-precision.js"
   },
   "dependencies": {
     "@bloret-crew/blora-design": "2.0.8",
-    "@fluentui/web-components": "^2.6.1",
     "@simplewebauthn/server": "^13.3.0",
     "axios": "^1.16.0",
     "bcryptjs": "^2.4.3",

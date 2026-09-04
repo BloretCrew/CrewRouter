@@ -23,29 +23,28 @@
   <link rel="stylesheet" href="/css/main.css">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <style>
-    body { font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", sans-serif); background: var(--background, #f9fafb); color: var(--foreground, #111827); margin: 0; }
-    .pi-wrap { max-width: 640px; margin: 0 auto; padding: 40px 16px; }
-    .pi-brand { margin-bottom: 12px; font-size: 17px; font-weight: 700; }
-    .pi-card { background: var(--background, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 14px; padding: 22px; box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
-    .pi-title { font-size: 19px; font-weight: 700; margin: 0 0 4px; }
-    .pi-byline { font-size: 13px; color: var(--muted-foreground, #6b7280); margin-bottom: 14px; }
-    .pi-section { margin: 18px 0; }
-    .pi-section h3 { font-size: 14px; margin: 0 0 8px; color: var(--muted-foreground, #6b7280); }
-    .pi-section ul { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; }
-    .pi-section ul li code { background: var(--muted, #f3f4f6); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
-    .pi-desc { font-size: 14px; color: var(--muted-foreground, #4b5563); line-height: 1.7; }
-    .pi-warn { margin-top: 16px; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--warning, #f59e0b) 12%, transparent); border: 1px solid color-mix(in srgb, var(--warning, #f59e0b) 40%, transparent); font-size: 13px; }
-    .pi-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
-    .pi-link { color: var(--primary, #2563eb); text-decoration: none; }
-    .pi-loading, .pi-err { text-align: center; padding: 40px 0; color: var(--muted-foreground, #6b7280); }
-    .pi-err strong { display: block; margin-bottom: 8px; color: var(--destructive, #ef4444); }
+    .pi-wrap { max-width: 640px; margin: 0 auto; padding: var(--blora-space-10) var(--blora-space-4); }
+    .pi-brand { margin-bottom: var(--blora-space-3); font: var(--blora-text-lg) var(--blora-font-heading); color: var(--blora-color-text-primary); }
+    .pi-card { padding: var(--blora-space-6); }
+    .pi-title { margin: 0 0 var(--blora-space-1); font: var(--blora-text-xl) var(--blora-font-heading); }
+    .pi-byline { margin-bottom: var(--blora-space-4); color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); }
+    .pi-section { margin: var(--blora-space-5) 0; }
+    .pi-section h3 { margin: 0 0 var(--blora-space-2); color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); }
+    .pi-section ul { margin: 0; padding-left: var(--blora-space-5); line-height: 1.7; }
+    .pi-section ul li code { background: var(--blora-color-surface-raised); padding: 1px var(--blora-space-1); border-radius: var(--blora-radius-sm); font-size: var(--blora-text-xs); }
+    .pi-desc { color: var(--blora-color-text-emphasis); line-height: 1.7; }
+    .pi-warn { margin-top: var(--blora-space-4); }
+    .pi-actions { display: flex; gap: var(--blora-space-2); margin-top: var(--blora-space-5); flex-wrap: wrap; }
+    .pi-link { color: var(--blora-color-action-primary); }
+    .pi-loading, .pi-err { text-align: center; padding: var(--blora-space-10) 0; color: var(--blora-color-text-subtle); }
+    .pi-err strong { display: block; margin-bottom: var(--blora-space-2); color: var(--blora-color-status-danger); }
   </style>
   <script src="/js/edition-badge.js?v=1"></script>
 </head>
 <body class="blora-page">
   <div class="pi-wrap">
     <div class="pi-brand">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></div>
-    <div id="pi-root" class="pi-card">
+    <div id="pi-root" class="blora-card pi-card">
       <div class="pi-loading">正在获取插件信息…</div>
     </div>
   </div>
@@ -119,10 +118,10 @@
 
         html += '<div class="pi-section"><h3>权限</h3><ul>' + permHtml(info.permissions) + '</ul></div>';
         html += '<div class="pi-section"><h3>行为</h3><ul>' + behaviorHtml(info.behavior) + '</ul></div>';
-        html += '<div class="pi-warn">安装后将立即启用该插件，并每日从插件商店检查是否有更新（若有更新会提醒系统管理员）。</div>';
+        html += '<div class="blora-message pi-warn" data-variant="warning">安装后将立即启用该插件，并每日从插件商店检查是否有更新（若有更新会提醒系统管理员）。</div>';
         html += '<div class="pi-actions">' +
-          '<button class="btn btn-primary blora-button" id="piConfirm">确认安装</button>' +
-          '<button class="btn btn-secondary blora-button" id="piCancel">取消</button>' +
+          '<button class="blora-button" data-variant="primary" id="piConfirm">确认安装</button>' +
+          '<button class="blora-button" data-variant="outline" id="piCancel">取消</button>' +
         '</div>';
 
         root.innerHTML = html;
@@ -150,7 +149,7 @@
           if (res.ok) {
             root.innerHTML = '<div class="pi-err"><strong style="color:var(--primary,#2563eb);">安装成功</strong>' +
               esc(res.data.name || pluginId) + ' v' + esc(res.data.version || '') + ' 已启用。</div>' +
-              '<div class="pi-actions"><a class="btn btn-primary" href="/admin">前往插件管理</a></div>';
+              '<div class="pi-actions"><a class="blora-button" data-variant="primary" href="/admin">前往插件管理</a></div>';
           } else {
             throw new Error((res.data && res.data.error) || ('HTTP ' + res.status));
           }
