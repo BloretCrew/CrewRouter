@@ -11199,7 +11199,9 @@ async function(ctx) {
   }
 
   closeTestResultModal() {
-    document.getElementById('adminTestResultModal').style.display = 'none';
+    const modal = document.getElementById('adminTestResultModal');
+    if (modal && typeof modal.close === 'function') modal.close('api');
+    else if (modal) modal.removeAttribute('open');
   }
 
   async testModel(modelId, buttonEl) {
