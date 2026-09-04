@@ -496,6 +496,13 @@ class AdminApp {
     }
   }
 
+  showModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    if (typeof modal.show === 'function') modal.show();
+    else modal.setAttribute('open', '');
+  }
+
   closeModals() {
     document.querySelectorAll('blora-dialog').forEach(modal => {
       if (typeof modal.close === 'function') modal.close('api');
