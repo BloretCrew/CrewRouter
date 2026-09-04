@@ -35,19 +35,14 @@ function copyDirectory(relative) {
   });
 }
 
-function patchDesktopPersonalModelLibrary() {
+function patchDesktopInstancePayload() {
   const appPath = path.join(destination, 'public', 'js', 'app.js');
   if (!fs.existsSync(appPath)) throw new Error('Expected public/js/app.js in Server bundle');
   const sourceText = fs.readFileSync(appPath, 'utf8');
-  const marker = "  async loadModelLibrary() {\n    try {\n      const libraryRes = await fetch('/api/user/model-library');";
-  const replacement = "  async loadModelLibrary() {\n    // Personal desktop-local servers intentionally do not expose the Team model-library API.\n    if (this.instance?.runtime === 'desktop-local' && this.instance?.edition === 'personal') {\n      const container = document.getElementById('modelLibraryContent');\n      if (container) {\n        setHTML(container, '<div class=\"empty-state\"><p>' + t('Personal 版本地服务不提供共享模型库。') + '</p></div>');\n      }\n      const binding = document.getElementById('modelLibraryBindingSummary');\n      if (binding) {\n        setHTML(binding, '<div class=\"binding-empty\"><span>' + t('Personal 本地服务不提供共享模型库，也不需要绑定当前 Key。') + '</span></div>');\n      }\n      const selector = document.getElementById('modelLibraryKeySelector');\n      if (selector) selector.style.display = 'none';\n      this._syncLibraryStickyVisibility(false);\n      return;\n    }\n    try {\n      const libraryRes = await fetch('/api/user/model-library');";
-  if (!sourceText.includes(marker)) throw new Error('Expected model-library loader was not found in staged app.js');
-  let patched = sourceText.replace(marker, replacement);
   const instanceMarker = "      this.instance = window.CrewRouterEditionBadge\n        ? await window.CrewRouterEditionBadge.load()\n        : null;";
   const instanceReplacement = "      const instancePayload = window.CrewRouterEditionBadge\n        ? await window.CrewRouterEditionBadge.load()\n        : null;\n      this.instance = instancePayload?.data && typeof instancePayload.data === 'object'\n        ? instancePayload.data\n        : instancePayload;";
-  if (!patched.includes(instanceMarker)) throw new Error('Expected instance bootstrap was not found in Server app.js');
-  patched = patched.replace(instanceMarker, instanceReplacement);
-  fs.writeFileSync(appPath, patched);
+  if (!sourceText.includes(instanceMarker)) throw new Error('Expected instance bootstrap was not found in staged app.js');
+  fs.writeFileSync(appPath, sourceText.replace(instanceMarker, instanceReplacement));
 }
 
 function assertSafeBundle() {
@@ -72,7 +67,7 @@ if (!fs.existsSync(source)) {
     fs.mkdirSync(destination, { recursive: true });
     files.forEach(copyFile);
     directories.forEach(copyDirectory);
-    patchDesktopPersonalModelLibrary();
+    patchDesktopInstancePayload();
     execFileSync(process.env.npm_execpath || 'npm', ['install', '--omit=dev', '--ignore-scripts', '--no-package-lock', '--no-audit', '--no-fund'], {
       cwd: destination,
       stdio: 'inherit',

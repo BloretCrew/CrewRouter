@@ -56,6 +56,8 @@ zh/en 词典均覆盖设置页 `data-i18n` key；动态 mode/target/runtime/edit
 - File: `CrewRouter-Desktop/src/redirect-flow.js:34-43`
 - Description: `parseCallback()` 仅遍历 `url.searchParams` 检查敏感 callback 参数，没有检查 `url.hash`。带有 `#access_token=...` 的 callback 会通过 callback 层校验，随后 fragment 被忽略。它不会沿当前 target/profile 路径落盘，但会使 OAuth 凭据输入边界与普通 URL 校验不一致，并可能在协议回调错误处理、系统 URL 记录或调试环境中短暂暴露。
 - Recommendation: 对 callback URL 的非空 fragment 直接拒绝；至少拒绝包含敏感字段的 fragment，并补充 fragment token 测试。
+- Status: fixed
+- Response: 已在 RedirectFlow.parseCallback 中拒绝任意非空 fragment，并补充 access_token fragment 回归测试。
 
 ### 2. restart IPC 仍允许主 renderer 来源
 
@@ -63,7 +65,9 @@ zh/en 词典均覆盖设置页 `data-i18n` key；动态 mode/target/runtime/edit
 - File: `CrewRouter-Desktop/src/main.js:173-175`
 - Description: `desktop:restart-local` 使用 `if (!isRendererFrame(event) && !isSettingsFrame(event))`，所以主窗口 renderer 满足 `isRendererFrame` 时可以调用 restart。主 renderer preload 也暴露 `restartLocal`。这违反当前报告已确认的“Local Server 重启/停止均需从设置窗口触发”边界；在主窗口处于本地 file 页面且本地 manager 存在的竞态/路径下，主 renderer 可触发停止并重启本地服务。
 - Recommendation: restart handler 与 stop/settings handler 一致，仅接受 `isSettingsFrame(event)`；若主页面确需该能力，应改为受限且明确的 UI 入口并重新审计，不要依赖 preload 暴露即视为授权。
+- Status: fixed
+- Response: 已收紧为仅接受设置窗口来源；主窗口 preload 移除 restartLocal，设置窗口改用独立 settings-preload 暴露该能力，并补充静态回归测试。
 
 ## 结论
 
-上一版 8 项问题的修复均有对应实现（第 7 项按 Local-only 决策继续 wontfix），未发现 fragment/token 普通设置数据落盘、设置窗口来源校验可由导航绕过、stop 目标 PID 外部注入、bridge 失败导致交互崩溃、i18n key 缺失、system theme 固定深色或 CSP 资源配置错误。当前仍有上述 2 个 Open Issues，因此不能标记为“空 Issues”。
+上一版 8 项问题的修复均有对应实现（第 7 项按 Local-only 决策继续 wontfix），本次两个 Open Issues 已修复并补充测试。当前未发现 fragment/token 普通设置数据落盘、设置窗口来源校验可由导航绕过、restart IPC 越权、stop 目标 PID 外部注入、bridge 失败导致交互崩溃、i18n key 缺失、system theme 固定深色或 CSP 资源配置错误。当前 Open Issues 已清零。

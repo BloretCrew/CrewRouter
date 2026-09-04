@@ -167,6 +167,7 @@ class AdminApp {
     const teamPages = new Set(['adminTeams', 'adminUserGroups', 'adminAuditLogs']);
     const safePage = teamPages.has(restored.page) && this._instance?.capabilities?.teamAdmin === false
       ? 'adminStats' : restored.page;
+    if (safePage !== restored.page) this._writeAdminHash(safePage, { replaceHash: true });
     const startPage = safePage || 'adminStats';
     await this.navigateTo(startPage, {
       skipHash: true,
