@@ -1,16 +1,17 @@
-name: CI
+name: CrewRouter Desktop CI
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: desktop-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -20,6 +21,9 @@ jobs:
     strategy:
       matrix:
         node-version: [20.x, 22.x]
+    defaults:
+      run:
+        working-directory: CrewRouter-Desktop
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,6 +32,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
+          cache-dependency-path: CrewRouter-Desktop/package-lock.json
       - name: Install dependencies
         run: npm ci
       - name: Run tests
@@ -36,7 +41,7 @@ jobs:
         run: npm run syntax
 
   package:
-    name: Build desktop packages
+    name: Build desktop packages (${{ matrix.platform }})
     needs: test
     strategy:
       fail-fast: false
@@ -46,18 +51,21 @@ jobs:
             platform: linux
             command: npm run pack:linux
             artifact: crewrouter-desktop-linux
-            path: dist/*.AppImage
+            path: CrewRouter-Desktop/dist/*.AppImage
           - os: windows-latest
             platform: windows
             command: npm run pack:win
             artifact: crewrouter-desktop-windows
-            path: dist/*.exe
+            path: CrewRouter-Desktop/dist/*.exe
           - os: macos-latest
             platform: macos
             command: npm run pack:mac
             artifact: crewrouter-desktop-macos
-            path: dist/*.dmg
+            path: CrewRouter-Desktop/dist/*.dmg
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: CrewRouter-Desktop
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,6 +74,7 @@ jobs:
         with:
           node-version: 22.x
           cache: npm
+          cache-dependency-path: CrewRouter-Desktop/package-lock.json
       - name: Install dependencies
         run: npm ci
       - name: Build package
@@ -77,4 +86,3 @@ jobs:
           path: ${{ matrix.path }}
           if-no-files-found: error
           retention-days: 14
-
