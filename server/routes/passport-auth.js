@@ -6,6 +6,7 @@ const config = require('../config-loader');
 const Logger = require('../logger');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const { getAuthMode } = require('../utils/auth-mode');
+const { loadPersistedEdition } = require('../utils/instance-edition');
 
 const router = express.Router();
 const passport = config.passport || {};
@@ -80,7 +81,7 @@ async function seedPassportUser(client, user, username, invite = null) {
 router.get('/passport', async (req, res) => {
   try {
     const { metadata } = require('../utils/instance-edition');
-    const edition = require('../config-loader').edition || 'personal';
+    const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
     if (!metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: await getAuthMode() }).auth.methods.includes('passport')) return res.redirect('/?error=passport_disabled');
     if (!passport.appId || !passport.appSecret) return res.redirect('/?error=passport_not_configured');
     const redirectUri = getRedirectUri(req);

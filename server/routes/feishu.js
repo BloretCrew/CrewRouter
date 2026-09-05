@@ -13,6 +13,7 @@ const {
 } = require('../utils/feishu-config');
 const { reportLoginEvent } = require('../utils/login-reporter');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
+const { loadPersistedEdition } = require('../utils/instance-edition');
 
 async function getAppAccessToken() {
   const cached = getCachedAppAccessToken();
@@ -57,7 +58,7 @@ router.get('/feishu/status', async (req, res) => {
 router.get('/feishu', async (req, res) => {
   try {
     const { metadata } = require('../utils/instance-edition');
-    const edition = require('../config-loader').edition || 'personal';
+    const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
     const mode = await require('../utils/auth-mode').getAuthMode();
     if (!metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: mode }).auth.methods.includes('feishu')) {
       return res.status(403).json({ error: '当前实例不支持飞书登录', type: 'auth_method_disabled' });

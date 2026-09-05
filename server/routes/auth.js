@@ -5,6 +5,7 @@ const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { ACTIONS, logAction } = require('../utils/audit-log');
 const { reportLoginEvent, reportLogoutEvent } = require('../utils/login-reporter');
+const { loadPersistedEdition } = require('../utils/instance-edition');
 
 const loginRateLimits = new Map();
 const LOGIN_LIMIT = 5;
@@ -49,7 +50,7 @@ router.get('/status', async (req, res) => {
     const { getAuthMode } = require('../utils/auth-mode');
     const mode = await getAuthMode();
     const { isFeishuLoginAvailable } = require('../utils/feishu-config');
-    const edition = require('../config-loader').edition || 'personal';
+    const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
     const instance = metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: mode });
     res.json({ auth: instance.auth, authMode: mode, feishuEnabled: instance.auth.methods.includes('feishu') && await isFeishuLoginAvailable() });
   } catch (error) { res.status(503).json({ error: '认证状态暂不可用' }); }
@@ -59,7 +60,7 @@ router.get('/status', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { metadata } = require('../utils/instance-edition');
-    const edition = require('../config-loader').edition || 'personal';
+    const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
     if (metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: await require('../utils/auth-mode').getAuthMode() }).auth.methods.includes('password') === false) {
       return res.status(403).json({ error: '当前实例不支持密码登录', type: 'auth_method_disabled' });
     }
