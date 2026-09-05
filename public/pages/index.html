@@ -19,6 +19,8 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <script type="module" src="/blora/auto.js?v=2.0.8"></script>
+  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
   <script src="/js/blora-foundation.js?v=2.0.8"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
@@ -64,8 +66,6 @@
       } catch {}
     })();
   </script>
-  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
-  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
 </head>
 <body class="blora-page">
   <div class="login-container">
@@ -80,7 +80,7 @@
         </select>
       </blora-navbar-tool>
       <blora-navbar-tool>
-        <button id="themeToggle" class="btn btn-icon blora-button" data-variant="secondary" title="切换主题" data-i18n-title="切换主题">
+        <button id="themeToggle" class="blora-button" data-variant="ghost" data-size="sm" title="切换主题" data-i18n-title="切换主题">
         <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="5"/>
           <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -97,8 +97,8 @@
 
     <div class="login-card">
       <div class="logo">
-        <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-          <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo" style="width:40px;height:40px;border-radius:10px;">
+        <div>
+          <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">
           <h1>CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
         </div>
         <p><span data-i18n="统一 AI 模型接入平台">统一 AI 模型接入平台</span></p>

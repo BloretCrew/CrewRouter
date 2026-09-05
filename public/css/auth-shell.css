@@ -10,6 +10,8 @@
 .login-container {
   min-height: 100vh;
   padding: var(--blora-space-6) var(--blora-space-4);
+  display: grid;
+  place-items: center;
 }
 
 .login-bg { opacity: .22; }
@@ -29,7 +31,56 @@
   box-shadow: var(--blora-shadow-2);
 }
 
-.login-card { max-width: 28rem; padding: var(--blora-space-8) var(--blora-space-6); }
+.login-card {
+  width: min(100%, 28rem);
+  max-width: 28rem;
+  padding: var(--blora-space-8) var(--blora-space-6);
+  box-sizing: border-box;
+}
+
+.login-card .logo > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blora-space-3);
+}
+
+.login-card .logo img {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--blora-radius-md);
+}
+
+.login-card .logo h1 {
+  margin: 0;
+  font-size: var(--blora-text-xl);
+  letter-spacing: normal;
+  color: var(--blora-color-text-primary);
+}
+
+.login-card .login-form,
+.login-card .login-footer {
+  width: 100%;
+}
+
+.login-form .form-group {
+  margin-block-end: var(--blora-space-3);
+}
+
+.login-form .login-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.login-form .login-alt-actions,
+.login-form .login-oauth {
+  margin-block-start: var(--blora-space-3);
+}
+
+.login-footer {
+  border-top: 1px solid var(--blora-color-border-subtle);
+  padding-block-start: var(--blora-space-4);
+}
 .login-form .divider { color: var(--blora-color-text-muted); }
 .login-form .divider::before,
 .login-form .divider::after,
