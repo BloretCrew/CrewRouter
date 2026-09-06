@@ -13,23 +13,86 @@ const Dialog = (() => {
     return el;
   }
 
-  function createDialog({ title, content, footer, size = '', closeOnOutsideClick = true }) {
+  function setContent(target, content) {
+    if (!target) return;
+    target.innerHTML = content || '';
+  }
+
+  function prepareLegacyDialog(dialog) {
+    if (!dialog || dialog.dataset.legacyPrepared === 'true') return dialog;
+    const content = dialog.querySelector(':scope > .modal-content');
+    if (!content) return dialog;
+
+    // Existing pages already provide their own header/body/footer. Keeping the
+    // inner panel class would create a second panel inside Blora's shadow panel.
+    content.classList.remove('blora-dialog__panel');
+    content.style.width = '100%';
+    content.style.maxWidth = '100%';
+    content.style.maxHeight = '100%';
+    content.style.boxSizing = 'border-box';
+    content.style.margin = '0';
+    dialog.dataset.legacyPrepared = 'true';
+
+    const applyShadowCompatibility = () => {
+      const shadow = dialog.shadowRoot;
+      if (!shadow) return;
+      const header = shadow.querySelector('.blora-dialog__header');
+      const footer = shadow.querySelector('.blora-dialog__footer');
+      const body = shadow.querySelector('.blora-dialog__body');
+      if (header) header.hidden = true;
+      if (footer) footer.hidden = true;
+      if (body) {
+        body.style.padding = '0';
+        body.style.background = 'transparent';
+      }
+      const panel = shadow.querySelector('.blora-dialog__panel');
+      if (panel) {
+        panel.style.maxWidth = 'none';
+        panel.style.maxHeight = '100%';
+        panel.style.width = '100%';
+        panel.style.background = 'transparent';
+        panel.style.boxShadow = 'none';
+        panel.style.borderRadius = '0';
+        panel.style.overflow = 'visible';
+      }
+
+      const maxWidth = content.style.maxWidth;
+      const maxHeight = content.style.maxHeight;
+      if (maxWidth) dialog.style.setProperty('--blora-dialog-max-width', maxWidth);
+      if (maxHeight) {
+        const panel = shadow.querySelector('.blora-dialog__panel');
+        if (panel) panel.style.maxHeight = maxHeight;
+      }
+    };
+
+    if (dialog.shadowRoot) applyShadowCompatibility();
+    else customElements.whenDefined('blora-dialog').then(applyShadowCompatibility);
+    return dialog;
+  }
+
+  function prepareAllDialogs(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    scope.querySelectorAll('blora-dialog').forEach(prepareLegacyDialog);
+  }
+
+  function createDialog({ title, content, footer, width, closeOnOutsideClick = true }) {
     const dialog = document.createElement('blora-dialog');
     dialog.id = `blora-dialog-${Date.now()}-${++sequence}`;
-    if (size) dialog.setAttribute('size', size);
     dialog.setAttribute('close-on-outside-click', closeOnOutsideClick ? 'true' : 'false');
+    if (width) dialog.style.setProperty('--blora-dialog-max-width', typeof width === 'number' ? `${width}px` : width);
 
     const titleNode = document.createElement('span');
     titleNode.slot = 'title';
-    titleNode.innerHTML = title || '';
+    setContent(titleNode, title);
+
     const body = document.createElement('div');
-    body.innerHTML = content || '';
+    setContent(body, content);
     dialog.append(titleNode, body);
 
     if (footer) {
       const footerNode = document.createElement('div');
       footerNode.slot = 'footer';
-      footerNode.innerHTML = footer;
+      setContent(footerNode, footer);
       dialog.appendChild(footerNode);
     }
 
@@ -37,18 +100,34 @@ const Dialog = (() => {
     return dialog;
   }
 
+  function removeAfterClose(dialog, callback) {
+    let removed = false;
+    const remove = () => {
+      if (removed) return;
+      removed = true;
+      dialog.remove();
+      if (callback) callback();
+    };
+    dialog.addEventListener('blora-close', remove, { once: true });
+    return remove;
+  }
+
   function render({ title, message, confirmText = t('确认'), cancelText = t('取消'), showCancel = true, danger = false }) {
     return new Promise((resolve) => {
       const footer = `${showCancel ? `<button type="button" class="blora-button" data-variant="outline" data-dialog-cancel>${cancelText}</button>` : ''}<button type="button" class="blora-button" data-variant="${danger ? 'danger' : 'primary'}" data-dialog-confirm>${confirmText}</button>`;
-      const dialog = createDialog({ title, content: message, footer, size: 'sm' });
+      const dialog = createDialog({
+        title: t('提示'),
+        content: title && message ? `<strong>${title}</strong><br>${message}` : title,
+        footer,
+        width: 400,
+      });
       let settled = false;
       const finish = (value) => {
         if (settled) return;
         settled = true;
-        const done = () => { dialog.remove(); resolve(value); };
-        dialog.addEventListener('blora-close', done, { once: true });
+        const remove = removeAfterClose(dialog, () => resolve(value));
         dialog.close('result');
-        if (!dialog.hasAttribute('open')) done();
+        if (!dialog.hasAttribute('open')) remove();
       };
       dialog.addEventListener('click', (event) => {
         const target = event.target.closest?.('[data-dialog-confirm], [data-dialog-cancel]');
@@ -60,13 +139,7 @@ const Dialog = (() => {
   }
 
   function alert(title, message, options = {}) {
-    return render({
-      title: t('提示'),
-      message: title && message ? `<strong>${title}</strong><br>${message}` : title,
-      confirmText: options.confirmText || t('知道了'),
-      showCancel: false,
-      danger: options.danger || false
-    });
+    return render({ title, message, confirmText: options.confirmText || t('知道了'), showCancel: false, danger: options.danger || false });
   }
 
   function confirm(title, message, options = {}) {
@@ -74,8 +147,7 @@ const Dialog = (() => {
   }
 
   function showModal({ title, content, footer, width }) {
-    const dialog = createDialog({ title, content, footer, size: width && Number(width) > 700 ? 'lg' : '' });
-    if (width) dialog.style.setProperty('--blora-dialog-max-width', typeof width === 'number' ? `${width}px` : width);
+    const dialog = createDialog({ title, content, footer, width });
     let settled = false;
     let resolvePromise;
     const promise = new Promise((resolve) => { resolvePromise = resolve; });
@@ -87,9 +159,9 @@ const Dialog = (() => {
     };
     const close = (value) => {
       if (settled) return;
-      dialog.addEventListener('blora-close', () => settle(value), { once: true });
+      const remove = removeAfterClose(dialog, () => resolvePromise(value));
       dialog.close('api');
-      if (!dialog.hasAttribute('open')) settle(value);
+      if (!dialog.hasAttribute('open')) remove();
     };
     dialog.addEventListener('blora-close', () => settle(false));
     dialog.show();
@@ -101,3 +173,18 @@ const Dialog = (() => {
 
 window.alert = (msg) => Dialog.alert(String(msg));
 window.confirm = (msg) => Dialog.confirm(t('确认'), String(msg));
+
+(function installLegacyDialogCompatibility() {
+  function scan(root) {
+    if (document.readyState === 'loading') return;
+    prepareAllDialogs(root);
+  }
+  scan(document);
+  if (window.MutationObserver) {
+    new MutationObserver((records) => {
+      records.forEach((record) => record.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) scan(node);
+      }));
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
+})();

@@ -15,13 +15,13 @@ const dialogs = {
   batchEditMyModelsModal: 'batchEditMyModelsTitle', createApiKeyModal: 'createApiKeyModalTitle', hookNotifySelectModal: 'hookNotifySelectTitle', keyModelsModal: 'keyModelsTitle', keyOptionsModal: 'keyOptionsTitle', keySignatureModal: 'keySignatureTitle', keyScheduleModal: 'keyScheduleTitle', addProviderModal: 'addProviderModalTitle', editProviderModal: 'editProviderModalTitle', manageModelsModal: 'manageModelsTitle', batchPriceModal: 'batchPriceTitle', selectKeyModal: 'selectKeyTitle', configToolSelectModal: 'configToolSelectTitle', addEditModelModal: 'addEditModelTitle', modelTestModal: 'modelTestTitle', modelUptimeModal: 'modelUptimeModalTitle', usageDetailModal: 'usageDetailTitle',
 };
 for (const [id, title] of Object.entries(dialogs)) {
-  const re = new RegExp(`<div id="${id}"[^>]*class="blora-dialog modal"[^>]*>`);
+  const re = new RegExp(`<blora-dialog id="${id}"[^>]*>`);
   const match = scope.match(re);
   assert.ok(match, `${id} root contract`);
   assert.ok(/role="dialog"/.test(match[0]) && /aria-modal="true"/.test(match[0]) && match[0].includes(`aria-labelledby="${title}"`), `${id} a11y contract`);
   assert.strictEqual((scope.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, `${id} unique root`);
   const from = scope.indexOf(match[0]);
-  const next = scope.slice(from + match[0].length).search(/<div id="[^"]+"[^>]*class="blora-dialog modal"/);
+  const next = scope.slice(from + match[0].length).search(/<blora-dialog id="[^"]+"/);
   const block = scope.slice(from, next < 0 ? scope.length : from + match[0].length + next);
   assert.match(block, /class="blora-dialog__panel\b/);
   assert.match(block, new RegExp(`id="${title}"`));
