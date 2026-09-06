@@ -38,7 +38,7 @@ function copyDirectory(relative) {
 function patchDesktopInstancePayload() {
   const appPath = path.join(destination, 'public', 'js', 'app.js');
   if (!fs.existsSync(appPath)) throw new Error('Expected public/js/app.js in Server bundle');
-  const sourceText = fs.readFileSync(appPath, 'utf8');
+  const sourceText = fs.readFileSync(appPath, 'utf8').replace(/\r\n/g, '\n');
   const instanceMarker = "      this.instance = window.CrewRouterEditionBadge\n        ? await window.CrewRouterEditionBadge.load()\n        : null;";
   const instanceReplacement = "      const instancePayload = window.CrewRouterEditionBadge\n        ? await window.CrewRouterEditionBadge.load()\n        : null;\n      this.instance = instancePayload?.data && typeof instancePayload.data === 'object'\n        ? instancePayload.data\n        : instancePayload;";
   if (!sourceText.includes(instanceMarker)) throw new Error('Expected instance bootstrap was not found in staged app.js');
