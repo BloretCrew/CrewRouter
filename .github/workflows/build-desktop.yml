@@ -75,8 +75,11 @@ jobs:
           node-version: 22.x
           cache: npm
           cache-dependency-path: CrewRouter-Desktop/package-lock.json
-      - name: Install dependencies
+      - name: Install desktop dependencies
         run: npm ci
+      - name: Build server release
+        working-directory: .
+        run: npm ci && npm run build
       - name: Build package
         run: ${{ matrix.command }}
       - name: Upload ${{ matrix.platform }} artifact
