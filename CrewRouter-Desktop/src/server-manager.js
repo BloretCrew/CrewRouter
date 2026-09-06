@@ -263,9 +263,9 @@ class LocalServerManager {
     try { bcrypt = require(bcryptPath); } catch (error) { throw new Error(`本地身份初始化依赖缺失：${error.message}`); }
     const passwordHash = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 10);
     const database = this.runtime.config.database;
-    const sql = `UPDATE users SET password_hash = '${passwordHash}' WHERE username = 'desktop-local' AND (password_hash IS NULL OR password_hash = '')`;
+    const sql = "UPDATE users SET password_hash = :'passwordHash' WHERE username = 'desktop-local' AND (password_hash IS NULL OR password_hash = '')";
     const psql = this.options.psql || process.env.PSQL || 'psql';
-    execFileSync('runuser', ['-u', 'postgres', '--', psql, '-h', database.host, '-p', String(database.port), '-d', database.name, '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'ignore' });
+    execFileSync('runuser', ['-u', 'postgres', '--', psql, '-h', database.host, '-p', String(database.port), '-d', database.name, '-v', `passwordHash=${passwordHash}`, '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'ignore' });
   }
 
   async waitUntilReady(child = this.child, getExitError = () => null) {
