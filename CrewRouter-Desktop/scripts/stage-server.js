@@ -68,7 +68,12 @@ if (!fs.existsSync(source)) {
     files.forEach(copyFile);
     directories.forEach(copyDirectory);
     patchDesktopInstancePayload();
-    execFileSync(process.env.npm_execpath || 'npm', ['install', '--omit=dev', '--ignore-scripts', '--no-package-lock', '--no-audit', '--no-fund'], {
+    const npmArgs = ['install', '--omit=dev', '--ignore-scripts', '--no-package-lock', '--no-audit', '--no-fund'];
+    const npmCommand = process.platform === 'win32'
+      ? (process.env.npm_node_execpath || process.execPath)
+      : (process.env.npm_execpath || 'npm');
+    if (process.platform === 'win32' && process.env.npm_execpath) npmArgs.unshift(process.env.npm_execpath);
+    execFileSync(npmCommand, npmArgs, {
       cwd: destination,
       stdio: 'inherit',
     });
