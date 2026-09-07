@@ -93,8 +93,14 @@ async function openOfficialDemo() {
     response.end(valid ? '<!doctype html><meta charset="utf-8"><title>CrewRouter Desktop</title><p>登录已完成，请回到 CrewRouter Desktop。</p>' : '<!doctype html><meta charset="utf-8"><title>CrewRouter Desktop</title><p>登录回调无效，请关闭此页面并重试。</p>');
     server.close();
     state.officialLogin = null;
-    if (valid) connect(payload.router_url, { name: '官方站连接', officialTarget: true }).catch((error) => sendStatus({ error: `官方站登录后连接失败：${error.message}` }));
-    else sendStatus({ error: '官方站登录回调无效，请重试。' });
+    if (valid) {
+      validateRemoteUrl(payload.router_url, { resolveDns: false }).then(async (target) => {
+        if (!target.ok) throw new Error(target.error);
+        // OAuth 会话保存在系统浏览器中；继续在同一浏览器打开目标，避免 Electron 独立会话再次要求登录。
+        await electron.shell.openExternal(target.url.toString());
+        sendStatus({ message: '授权完成，已在浏览器中打开目标 CrewRouter。', mode: 'redirecting', target: target.url.origin });
+      }).catch((error) => sendStatus({ error: `官方站登录后打开目标失败：${error.message}` }));
+    } else sendStatus({ error: '官方站登录回调无效，请重试。' });
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
   state.officialLogin = { server, close: () => server.close() };
