@@ -43,9 +43,9 @@ function currentStatus() {
   return { mode: state.mode, target: state.currentTarget, runtime: state.instance?.runtime || localStatus?.runtime || null, edition: state.instance?.edition || localStatus?.edition || null, auth: state.instance?.auth || localStatus?.auth || null, demo: state.instance?.demo ?? localStatus?.demo ?? null, capabilities: state.instance?.capabilities || localStatus?.capabilities || {}, protocolVersion: state.instance?.protocolVersion || null, profile: state.instance?.profile || null, localProfile: localProfile ? { id: localProfile.id, displayName: localProfile.displayName || null, localIdentityId: localProfile.localIdentityId || null } : null, needsLocalProfile };
 }
 
-async function connect(url, { local = false, name = local ? '本地 CrewRouter' : 'CrewRouter', id, displayName, localIdentityId } = {}) {
+async function connect(url, { local = false, name = local ? '本地 CrewRouter' : 'CrewRouter', id, displayName, localIdentityId, officialTarget = false } = {}) {
   sendStatus({ message: local ? '正在读取本地服务信息…' : '正在检查远程服务器…' });
-  const profile = await state.connection.connect({ id, url, mode: local ? 'local' : 'remote', allowLocalhost: local, name, displayName, localIdentityId });
+  const profile = await state.connection.connect({ id, url, mode: local ? 'local' : 'remote', allowLocalhost: local, resolveDns: officialTarget ? false : undefined, name, displayName, localIdentityId });
   state.currentTarget = new URL(profile.url).origin;
   state.mode = local ? 'local' : 'remote';
   state.instance = { ...profile, profile: { id: profile.id, name: profile.name, lastConnectedAt: profile.lastConnectedAt } };
@@ -93,7 +93,7 @@ async function openOfficialDemo() {
     response.end(valid ? '<!doctype html><meta charset="utf-8"><title>CrewRouter Desktop</title><p>登录已完成，请回到 CrewRouter Desktop。</p>' : '<!doctype html><meta charset="utf-8"><title>CrewRouter Desktop</title><p>登录回调无效，请关闭此页面并重试。</p>');
     server.close();
     state.officialLogin = null;
-    if (valid) connect(payload.router_url, { name: '官方站连接' }).catch((error) => sendStatus({ error: `官方站登录后连接失败：${error.message}` }));
+    if (valid) connect(payload.router_url, { name: '官方站连接', officialTarget: true }).catch((error) => sendStatus({ error: `官方站登录后连接失败：${error.message}` }));
     else sendStatus({ error: '官方站登录回调无效，请重试。' });
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
