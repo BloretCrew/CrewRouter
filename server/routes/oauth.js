@@ -41,6 +41,7 @@ const LOOPBACK_REDIRECT_RE = /^http:\/\/127\.0\.0\.1:\d+\/.*/;
 
 // 首方 client 种子与其 scope 白名单（scope 枚举第三项 console:read 预留、暂无 client 使用）
 const FIRST_PARTY_CLIENTS = [
+  { client_id: 'crewrouter-desktop', name: 'CrewRouter Desktop', scopes: ['events:report'] },
   { client_id: 'crewrouter-helper', name: 'CrewRouter Helper', scopes: ['events:report'] },
   { client_id: 'crewrouter-cli', name: 'CrewRouter CLI', scopes: ['gateway:invoke'] },
 ];

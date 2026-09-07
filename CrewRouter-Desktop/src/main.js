@@ -103,7 +103,7 @@ async function openOfficialDemo() {
   loginUrl.searchParams.set('helper_login', '1');
   loginUrl.searchParams.set('state', nonce);
   loginUrl.searchParams.set('redirect_uri', redirectUri);
-  loginUrl.searchParams.set('client_id', 'crewrouter-helper');
+  loginUrl.searchParams.set('client_id', 'crewrouter-desktop');
   loginUrl.searchParams.set('scope', 'events:report');
   loginUrl.searchParams.set('code_challenge', crypto.randomBytes(32).toString('base64url'));
   loginUrl.searchParams.set('code_challenge_method', 'S256');
