@@ -22,6 +22,8 @@ test('main uses the official CrewRouter demo by default', () => {
   assert.match(source, /state\.connection\.inspect\(target\.url\.toString\(\)\)/);
   assert.match(source, /targetOrigin/);
   assert.match(source, /validateRemoteUrl\(DEMO_URL, \{ resolveDns: false \}\)/);
+  assert.match(source, /helper_login/);
+  assert.match(source, /选择要登录的 CrewRouter/);
 });
 
 test('main status exposes an explicit connect state', () => {

@@ -16,7 +16,7 @@ try { electron = require('electron'); } catch { electron = null; }
 const DEMO_URL = process.env.CREWROUTER_DEMO_URL || 'https://crewrouter.bloret.net';
 const rendererEntry = path.join(__dirname, 'renderer', 'index.html');
 const settingsEntry = path.join(__dirname, 'renderer', 'settings.html');
-const state = { mainWindow: null, settingsWindow: null, currentTarget: null, mode: 'connect', instance: null, local: null, connection: null, quitting: false, localProfile: null, localIdentityId: null };
+const state = { mainWindow: null, settingsWindow: null, currentTarget: null, mode: 'connect', instance: null, local: null, connection: null, quitting: false, localProfile: null, localIdentityId: null, officialLogin: null };
 const redirectFlow = new RedirectFlow();
 
 function requestFetch(url, options = {}) {
@@ -76,11 +76,39 @@ async function startRemoteRedirect(rawTarget) {
 }
 
 async function openOfficialDemo() {
-  // 官方站是受信任的固定入口；容器 DNS 代理可能把公网域名解析成测试网段，不能因此阻断浏览器打开。
+  // 官方站负责展示登录过的实例，用户选择后再跳转到目标 CrewRouter。
   const demo = await validateRemoteUrl(DEMO_URL, { resolveDns: false });
   if (!demo.ok) fail(`官方站地址无效：${demo.error}`);
-  sendStatus({ message: '正在打开官方站…', redirect: true, target: demo.url.origin });
-  await electron.shell.openExternal(demo.url.toString());
+  if (state.officialLogin) state.officialLogin.close();
+  const nonce = crypto.randomBytes(24).toString('base64url');
+  const server = http.createServer((request, response) => {
+    const callbackUrl = new URL(request.url, 'http://127.0.0.1');
+    if (request.method !== 'GET' || callbackUrl.pathname !== '/callback') { response.writeHead(404); response.end(); return; }
+    const stateParam = callbackUrl.searchParams.get('state') || '';
+    const code = callbackUrl.searchParams.get('code') || '';
+    let payload = null;
+    try { payload = JSON.parse(Buffer.from(stateParam, 'base64url').toString('utf8')); } catch {}
+    const valid = payload?.nonce === nonce && code && typeof payload?.router_url === 'string';
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    response.end(valid ? '<!doctype html><meta charset="utf-8"><title>CrewRouter Desktop</title><p>登录已完成，请回到 CrewRouter Desktop。</p>' : '<!doctype html><meta charset="utf-8"><title>CrewRouter Desktop</title><p>登录回调无效，请关闭此页面并重试。</p>');
+    server.close();
+    state.officialLogin = null;
+    if (valid) connect(payload.router_url, { name: '官方站连接' }).catch((error) => sendStatus({ error: `官方站登录后连接失败：${error.message}` }));
+    else sendStatus({ error: '官方站登录回调无效，请重试。' });
+  });
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  state.officialLogin = { server, close: () => server.close() };
+  const redirectUri = `http://127.0.0.1:${server.address().port}/callback`;
+  const loginUrl = new URL('/store', demo.url.origin);
+  loginUrl.searchParams.set('helper_login', '1');
+  loginUrl.searchParams.set('state', nonce);
+  loginUrl.searchParams.set('redirect_uri', redirectUri);
+  loginUrl.searchParams.set('client_id', 'crewrouter-helper');
+  loginUrl.searchParams.set('scope', 'events:report');
+  loginUrl.searchParams.set('code_challenge', crypto.randomBytes(32).toString('base64url'));
+  loginUrl.searchParams.set('code_challenge_method', 'S256');
+  sendStatus({ message: '正在打开官方站，请选择要登录的 CrewRouter…', redirect: true, target: demo.url.origin });
+  await electron.shell.openExternal(loginUrl.toString());
   return { ...currentStatus(), mode: 'redirecting', target: null };
 }
 
