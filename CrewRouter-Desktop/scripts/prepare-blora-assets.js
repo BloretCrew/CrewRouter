@@ -10,7 +10,7 @@ function copyCssAssets(sourceRoot, relative = '') {
   for (const entry of fs.readdirSync(path.join(sourceRoot, relative), { withFileTypes: true })) {
     const child = path.join(relative, entry.name);
     if (entry.isDirectory()) copyCssAssets(sourceRoot, child);
-    else if (entry.isFile() && entry.name.endsWith('.css')) {
+    else if (entry.isFile() && (entry.name.endsWith('.css') || entry.name.endsWith('.js'))) {
       const source = path.join(sourceRoot, child);
       const target = path.join(targetRoot, child);
       fs.mkdirSync(path.dirname(target), { recursive: true });
