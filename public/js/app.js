@@ -338,7 +338,7 @@ class ConsoleApp {
     document.querySelectorAll('[data-settings-category]').forEach(item => {
       item.addEventListener('click', () => this.showSettingsCategory(item.dataset.settingsCategory));
     });
-    document.getElementById('desktopSettingsCard')?.addEventListener('click', () => window.crewrouterDesktop?.openSettings?.());
+    document.getElementById('desktopSettingsCard')?.addEventListener('click', () => this.showSettingsCategory('desktop'));
     document.getElementById('settingsBackButton')?.addEventListener('click', () => this.showSettingsOverview());
 
     document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
@@ -6380,6 +6380,22 @@ class ConsoleApp {
     if (title) title.textContent = document.querySelector(`[data-settings-category="${category}"] strong`)?.textContent || '';
     document.querySelectorAll('.settings-section').forEach(item => { item.hidden = !sections.includes(item); });
     sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (category === 'desktop') this.loadDesktopSettingsEmbed();
+  }
+
+  async loadDesktopSettingsEmbed() {
+    const target = document.getElementById('desktopSettingsEmbed');
+    const bridge = window.crewrouterDesktop;
+    if (!target || !bridge?.getDesktopSettings) return;
+    try {
+      const data = await bridge.getDesktopSettings();
+      const settings = data.settings || {};
+      const status = data.status || {};
+      target.innerHTML = `<dl class="settings-details"><dt>模式</dt><dd>${escapeHtml(status.mode || '-')}</dd><dt>目标地址</dt><dd>${escapeHtml(status.target || '-')}</dd><dt>主题</dt><dd>${escapeHtml(settings.theme || 'system')}</dd></dl>`;
+      target.querySelector('#desktopEmbeddedOpen')?.addEventListener('click', () => bridge.openSettings?.());
+    } catch (error) {
+      target.textContent = error?.message || 'Desktop 设置不可用';
+    }
   }
 
   async loadSettings() {
