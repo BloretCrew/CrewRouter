@@ -22,7 +22,8 @@ const redirectFlow = new RedirectFlow();
 function requestFetch(url, options = {}) {
   return new Promise((resolve, reject) => {
     const target = new URL(url);
-    const request = (target.protocol === 'https:' ? https : http).get(target, { headers: options.headers }, (response) => {
+    const transport = target.protocol === 'https:' ? https : http;
+    const request = transport.request(target, { method: options.method || 'GET', headers: options.headers }, (response) => {
       let body = '';
       response.setEncoding('utf8');
       response.on('data', (chunk) => { body += chunk; });
@@ -30,6 +31,7 @@ function requestFetch(url, options = {}) {
     });
     request.setTimeout(8000, () => request.destroy(new Error('连接超时')));
     request.once('error', reject);
+    request.end(options.body || undefined);
   });
 }
 
@@ -81,6 +83,8 @@ async function openOfficialDemo() {
   if (!demo.ok) fail(`官方站地址无效：${demo.error}`);
   if (state.officialLogin) { state.officialLogin.close(); state.officialLogin = null; }
   const nonce = crypto.randomBytes(24).toString('base64url');
+  const verifier = crypto.randomBytes(32).toString('base64url');
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
   const server = http.createServer((request, response) => {
     const callbackUrl = new URL(request.url, 'http://127.0.0.1');
     if (request.method !== 'GET' || callbackUrl.pathname !== '/callback') { response.writeHead(404); response.end(); return; }
@@ -96,9 +100,16 @@ async function openOfficialDemo() {
     if (valid) {
       validateRemoteUrl(payload.router_url, { resolveDns: false }).then(async (target) => {
         if (!target.ok) throw new Error(target.error);
-        // OAuth 会话保存在系统浏览器中；继续在同一浏览器打开目标，避免 Electron 独立会话再次要求登录。
-        await electron.shell.openExternal(target.url.toString());
-        sendStatus({ message: '授权完成，已在浏览器中打开目标 CrewRouter。', mode: 'authorized', target: target.url.origin });
+        const exchange = await requestFetch(new URL('/oauth/desktop-session', target.url), {
+          method: 'POST',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ code, client_id: 'crewrouter-desktop', code_verifier: verifier }).toString()
+        });
+        if (!exchange.ok) throw new Error(`Web Session 交换失败（HTTP ${exchange.status}）`);
+        await state.mainWindow.loadURL(target.url.toString());
+        state.mode = 'remote';
+        state.currentTarget = target.url.origin;
+        sendStatus({ message: '授权完成，已在 Desktop 中打开目标 CrewRouter。', mode: 'authorized', target: target.url.origin });
       }).catch((error) => sendStatus({ error: `官方站登录后打开目标失败：${error.message}` }));
     } else sendStatus({ error: '官方站登录回调无效，请重试。' });
   });
@@ -111,7 +122,7 @@ async function openOfficialDemo() {
   loginUrl.searchParams.set('redirect_uri', redirectUri);
   loginUrl.searchParams.set('client_id', 'crewrouter-desktop');
   loginUrl.searchParams.set('scope', 'events:report');
-  loginUrl.searchParams.set('code_challenge', crypto.randomBytes(32).toString('base64url'));
+  loginUrl.searchParams.set('code_challenge', challenge);
   loginUrl.searchParams.set('code_challenge_method', 'S256');
   sendStatus({ message: '正在打开官方站，请选择要登录的 CrewRouter…', redirect: true, target: demo.url.origin });
   await electron.shell.openExternal(loginUrl.toString());
