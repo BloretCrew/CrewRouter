@@ -79,7 +79,7 @@ async function openOfficialDemo() {
   // 官方站负责展示登录过的实例，用户选择后再跳转到目标 CrewRouter。
   const demo = await validateRemoteUrl(DEMO_URL, { resolveDns: false });
   if (!demo.ok) fail(`官方站地址无效：${demo.error}`);
-  if (state.officialLogin) state.officialLogin.close();
+  if (state.officialLogin) { state.officialLogin.close(); state.officialLogin = null; }
   const nonce = crypto.randomBytes(24).toString('base64url');
   const server = http.createServer((request, response) => {
     const callbackUrl = new URL(request.url, 'http://127.0.0.1');
