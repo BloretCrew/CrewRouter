@@ -78,6 +78,62 @@
     window.location.href = AUTH + '/login?return_to=' + encodeURIComponent(returnTo);
   }
 
+  function base64UrlJson(value) {
+    return btoa(JSON.stringify(value)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  }
+
+  function openHelperLoginTargets() {
+    var params = new URLSearchParams(location.search);
+    var nonce = params.get('state') || '';
+    var redirectUri = params.get('redirect_uri') || '';
+    var clientId = params.get('client_id') || '';
+    var scope = params.get('scope') || '';
+    var challenge = params.get('code_challenge') || '';
+    var challengeMethod = params.get('code_challenge_method') || 'S256';
+    if (!nonce || !redirectUri || !clientId || !challenge) {
+      setBanner('err', t('登录参数不完整，请回终端重试'));
+      return;
+    }
+    api('/install-targets').then(function (data) {
+      renderHelperLoginTargets(data.targets || [], nonce, redirectUri, clientId, scope, challenge, challengeMethod);
+    }).catch(function (error) {
+      if (error.code === 'NOT_LOGIN' || error.status === 401) {
+        setBanner('warn', t('请先登录官方站，再选择 CrewRouter'));
+        login();
+        return;
+      }
+      setBanner('err', error.message || t('加载登录过的 CrewRouter 失败'));
+    });
+  }
+
+  function renderHelperLoginTargets(targets, nonce, redirectUri, clientId, scope, challenge, challengeMethod) {
+    var html = '<div class="store-modal-mask" id="storeHelperLoginMask"><div class="store-modal">';
+    html += '<div class="store-modal__head"><h3>' + esc(t('选择要登录的 CrewRouter')) + '</h3></div>';
+    html += '<p style="color:var(--muted-foreground);font-size:13px;margin:0 0 14px;">' + esc(t('请选择你要登录的 CrewRouter，登录完成后会回到桌面应用。')) + '</p>';
+    if (!targets.length) {
+      html += '<div class="store-empty">' + esc(t('未检测到你登录过的 CrewRouter，请先在目标实例登录一次。')) + '</div>';
+    } else {
+      html += '<div class="store-modal__list">' + targets.map(function (target) {
+        var routerUrl = 'https://' + target.domain;
+        var targetState = base64UrlJson({ nonce: nonce, router_url: routerUrl });
+        var authorizeUrl = routerUrl + '/oauth/authorize?' + new URLSearchParams({
+          client_id: clientId, response_type: 'code', scope: scope,
+          redirect_uri: redirectUri, state: targetState,
+          code_challenge: challenge, code_challenge_method: challengeMethod
+        }).toString();
+        return '<a class="store-target store-target--ok" href="' + esc(authorizeUrl) + '">' +
+          '<div class="store-target__domain">' + esc(target.domain) + '</div>' +
+          '<div class="store-target__meta">' + esc(fmtDate(target.lastLogin)) + ' · ' + esc(String(target.logins)) + ' ' + esc(t('次登录')) + '</div></a>';
+      }).join('') + '</div>';
+    }
+    html += '</div></div>';
+    var wrap = document.createElement('div');
+    wrap.innerHTML = html;
+    document.body.appendChild(wrap.firstChild);
+    var mask = document.getElementById('storeHelperLoginMask');
+    if (mask) mask.addEventListener('click', function (event) { if (event.target === mask) mask.remove(); });
+  }
+
   function starHtml(score) {
     var cls = ['', 'store-stars'];
     var html = '<span class="' + cls[1] + '">';
@@ -675,6 +731,10 @@
 
   function boot() {
     document.getElementById('storeLoginBtn').addEventListener('click', login);
+    if (new URLSearchParams(location.search).get('helper_login') === '1') {
+      openHelperLoginTargets();
+      return;
+    }
     document.getElementById('storeLogoutBtn').addEventListener('click', function () {
       window.location.href = AUTH + '/logout';
     });
