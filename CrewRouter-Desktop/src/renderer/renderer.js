@@ -123,7 +123,7 @@ function describeStatus(status) {
     renderStep('welcome', { focus: false }); setStatus(status.message || '连接已完成。', 'success');
   }
   if (status.message && status.mode === 'connect') setStatus(status.message);
-  if (status.mode === 'redirecting') { setBusy(false); renderStep('remote', { focus: false }); setStatus('官方站已打开，请在浏览器中继续。', 'success'); }
+  if (status.mode === 'redirecting') { setBusy(false); renderStep('remote', { focus: false }); setStatus(status.message || '官方站已打开，请在浏览器中继续。', 'success'); }
 }
 api.onStatus(describeStatus);
 api.getStatus().then(describeStatus).catch(showError);
