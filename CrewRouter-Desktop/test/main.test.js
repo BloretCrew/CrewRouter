@@ -49,6 +49,7 @@ test('main status exposes an explicit connect state', () => {
 test('forged URL or header context cannot authorize privileged settings IPC', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'src', 'main.js'), 'utf8');
   assert.match(source, /const isSettingsFrame = \(event\) => Boolean\(state\.settingsWindow/);
+  assert.match(source, /const isConnectedMainFrame = \(event\) => Boolean\(state\.mainWindow/);
   assert.match(source, /event\.sender === state\.settingsWindow\.webContents/);
   assert.match(source, /settingsEntry/);
   assert.doesNotMatch(source, /trustedRemote|x-crewrouter|authorization.*settings/i);
