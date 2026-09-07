@@ -94,14 +94,9 @@
       setBanner('err', t('登录参数不完整，请回终端重试'));
       return;
     }
-    api('/install-targets').then(function (data) {
+    api('/install-targets?helper_login=1').then(function (data) {
       renderHelperLoginTargets(data.targets || [], nonce, redirectUri, clientId, scope, challenge, challengeMethod);
     }).catch(function (error) {
-      if (error.code === 'NOT_LOGIN' || error.status === 401) {
-        setBanner('warn', t('请先登录官方站，再选择 CrewRouter'));
-        login();
-        return;
-      }
       setBanner('err', error.message || t('加载登录过的 CrewRouter 失败'));
     });
   }
