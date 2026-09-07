@@ -53,7 +53,7 @@ async function connect(url, { local = false, name = local ? '本地 CrewRouter' 
   state.instance = { ...profile, profile: { id: profile.id, name: profile.name, lastConnectedAt: profile.lastConnectedAt } };
   try {
     await state.mainWindow.loadURL(local ? `${state.currentTarget}/console` : state.currentTarget);
-    if (local) await state.mainWindow.webContents.executeJavaScript(`(() => { let button = document.getElementById('desktop-settings'); if (!button) { button = document.createElement('button'); button.id = 'desktop-settings'; button.type = 'button'; button.textContent = '⚙ Desktop 设置'; Object.assign(button.style, { position: 'fixed', top: '12px', right: '16px', zIndex: '2147483647', padding: '8px 12px', borderRadius: '8px', border: '1px solid currentColor', background: 'transparent', color: 'inherit', cursor: 'pointer' }); document.body.appendChild(button); } button.onclick = () => window.crewrouterDesktop?.openSettings?.(); })()`, true);
+    if (local) await state.mainWindow.webContents.executeJavaScript(`(() => { const card = document.getElementById('desktopSettingsCard'); if (card) { card.hidden = false; card.onclick = () => window.crewrouterDesktop?.openSettings?.(); } })()`, true);
   } catch (error) {
     // A redirect can supersede the initial navigation after the target is already loaded.
     if (error?.code !== 'ERR_ABORTED' && error?.errno !== -3) throw error;
@@ -112,6 +112,7 @@ async function openOfficialDemo() {
         const targetUrl = new URL(target.url.toString());
         await electron.session.defaultSession.cookies.set({ url: targetUrl.origin, name: cookiePair.split('=', 1)[0], value: cookiePair.slice(cookiePair.indexOf('=') + 1), path: '/' });
         await state.mainWindow.loadURL(target.url.toString());
+        await state.mainWindow.webContents.executeJavaScript(`(() => { const card = document.getElementById('desktopSettingsCard'); if (card) { card.hidden = false; card.onclick = () => window.crewrouterDesktop?.openSettings?.(); } })()`, true);
         state.mode = 'remote';
         state.currentTarget = target.url.origin;
         sendStatus({ message: '授权完成，已在 Desktop 中打开目标 CrewRouter。', mode: 'authorized', target: target.url.origin });
