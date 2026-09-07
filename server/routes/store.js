@@ -161,7 +161,10 @@ function createStoreRoutes() {
   // ---------- API：可安装的目标实例 ----------
 
   // 按访问者终端 IP 查询其登录过的 CrewRouter 实例（弱关联：IP + 设备码 + 域名）
-  router.get('/api/install-targets', requireLogin, async (req, res) => {
+  router.get('/api/install-targets', async (req, res, next) => {
+    // Desktop helper_login intentionally uses the visitor IP to show target routers;
+    // normal store operations still require the independent PassPort session.
+    if (req.query.helper_login !== '1') return requireLogin(req, res, next);
     try {
       const clientIp = req.ip || (req.connection && req.connection.remoteAddress) || '';
       const targets = await storeStore().listInstallTargets(clientIp);
