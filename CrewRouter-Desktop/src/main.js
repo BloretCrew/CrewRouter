@@ -109,8 +109,12 @@ async function openOfficialDemo() {
         const sessionCookie = Array.isArray(exchange.headers?.['set-cookie']) ? exchange.headers['set-cookie'][0] : exchange.headers?.['set-cookie'];
         if (!sessionCookie) throw new Error('Web Session 交换未返回登录 Cookie');
         const cookiePair = String(sessionCookie).split(';', 1)[0];
+        const cookieName = cookiePair.split('=', 1)[0];
+        const cookieValue = cookiePair.slice(cookiePair.indexOf('=') + 1);
         const targetUrl = new URL(target.url.toString());
-        await electron.session.defaultSession.cookies.set({ url: targetUrl.origin, name: cookiePair.split('=', 1)[0], value: cookiePair.slice(cookiePair.indexOf('=') + 1), path: '/' });
+        const cookieUrl = `${targetUrl.origin}/`;
+        await electron.session.defaultSession.cookies.remove(cookieUrl, cookieName).catch(() => {});
+        await electron.session.defaultSession.cookies.set({ url: cookieUrl, name: cookieName, value: cookieValue, path: '/', httpOnly: true, secure: targetUrl.protocol === 'https:' });
         await state.mainWindow.loadURL(target.url.toString());
         await state.mainWindow.webContents.executeJavaScript(`(() => { const card = document.getElementById('desktopSettingsCard'); if (card) { card.hidden = false; card.onclick = () => window.crewrouterDesktop?.openSettings?.(); } })()`, true);
         state.mode = 'remote';
