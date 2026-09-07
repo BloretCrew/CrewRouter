@@ -27,7 +27,7 @@ function requestFetch(url, options = {}) {
       let body = '';
       response.setEncoding('utf8');
       response.on('data', (chunk) => { body += chunk; });
-      response.on('end', () => resolve({ ok: response.statusCode >= 200 && response.statusCode < 300, status: response.statusCode, json: async () => JSON.parse(body) }));
+      response.on('end', () => resolve({ ok: response.statusCode >= 200 && response.statusCode < 300, status: response.statusCode, headers: response.headers, json: async () => JSON.parse(body) }));
     });
     request.setTimeout(8000, () => request.destroy(new Error('连接超时')));
     request.once('error', reject);
@@ -106,6 +106,11 @@ async function openOfficialDemo() {
           body: new URLSearchParams({ code, client_id: 'crewrouter-desktop', code_verifier: verifier }).toString()
         });
         if (!exchange.ok) throw new Error(`Web Session 交换失败（HTTP ${exchange.status}）`);
+        const sessionCookie = Array.isArray(exchange.headers?.['set-cookie']) ? exchange.headers['set-cookie'][0] : exchange.headers?.['set-cookie'];
+        if (!sessionCookie) throw new Error('Web Session 交换未返回登录 Cookie');
+        const cookiePair = String(sessionCookie).split(';', 1)[0];
+        const targetUrl = new URL(target.url.toString());
+        await electron.session.defaultSession.cookies.set({ url: targetUrl.origin, name: cookiePair.split('=', 1)[0], value: cookiePair.slice(cookiePair.indexOf('=') + 1), path: '/' });
         await state.mainWindow.loadURL(target.url.toString());
         state.mode = 'remote';
         state.currentTarget = target.url.origin;
