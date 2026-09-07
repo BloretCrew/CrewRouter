@@ -12,6 +12,30 @@ function showRuntimeError(message) {
   if (feedbackEl) feedbackEl.dataset.state = 'error';
 }
 if (!api) { showRuntimeError('桌面桥接加载失败，请重启应用后重试。'); throw new Error('CrewRouter Desktop preload API unavailable'); }
+const iconPaths = {
+  'arrow-right': [['line', { x1: '5', y1: '12', x2: '19', y2: '12' }], ['polyline', { points: '12 5 19 12 12 19' }]],
+  'chevron-left': [['polyline', { points: '15 18 9 12 15 6' }]],
+  'chevron-right': [['polyline', { points: '9 18 15 12 9 6' }]],
+  'external-link': [['path', { d: 'M15 3h6v6' }], ['path', { d: 'M10 14 21 3' }], ['path', { d: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6' }]],
+  globe: [['circle', { cx: '12', cy: '12', r: '10' }], ['line', { x1: '2', y1: '12', x2: '22', y2: '12' }], ['path', { d: 'M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20' }]],
+  home: [['path', { d: 'm3 10 9-7 9 7' }], ['path', { d: 'M5 9v11h14V9' }], ['path', { d: 'M9 20v-6h6v6' }]],
+  search: [['circle', { cx: '11', cy: '11', r: '7' }], ['path', { d: 'm20 20-4-4' }]],
+  settings: [['path', { d: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z' }], ['path', { d: 'M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.4 1.4-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L9 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H7v-2h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L8.4 9 9.8 7.6l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h2v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 9l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v2H21a1.7 1.7 0 0 0-1.6 1Z' }]],
+};
+function createBloraIcon(name, size = 16) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', String(size)); svg.setAttribute('height', String(size)); svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round'); svg.setAttribute('aria-hidden', 'true'); svg.dataset.bloraIcon = name;
+  (iconPaths[name] || []).forEach(([tag, attrs]) => { const node = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value)); svg.appendChild(node); });
+  return svg;
+}
+function mountIcons() {
+  document.querySelectorAll('[data-icon]').forEach((host) => {
+    const name = host.dataset.icon;
+    if (host.querySelector('svg') || !iconPaths[name]) return;
+    host.appendChild(createBloraIcon(name, host.classList.contains('mode-option__icon') ? 20 : 16));
+  });
+}
+mountIcons();
 const formEl = document.getElementById('connection-form');
 const introEl = document.getElementById('intro');
 const urlEl = document.getElementById('remote-url');
@@ -41,12 +65,8 @@ let isBusy = false;
 function setStatus(message, state = 'idle') { statusEl.textContent = message; feedbackEl.dataset.state = state; }
 function busy(value) {
   isBusy = value;
-  [localButton, localContinue, remoteChoice, officialRemote, officialBack, customRemote, choiceBackButton, backButton, remoteButton, quitButton].forEach((button) => {
-    if (button) button.disabled = value;
-  });
-  [localButton, localContinue, remoteChoice, officialRemote, customRemote, remoteButton].forEach((button) => {
-    if (button) button.setAttribute('aria-busy', String(value));
-  });
+  [localButton, localContinue, remoteChoice, officialRemote, officialBack, customRemote, choiceBackButton, backButton, remoteButton, quitButton].forEach((button) => { if (button) button.disabled = value; });
+  [localButton, localContinue, remoteChoice, officialRemote, customRemote, remoteButton].forEach((button) => { if (button) button.setAttribute('aria-busy', String(value)); });
 }
 function setUrlError(message = '') { urlErrorEl.textContent = message; urlEl.setAttribute('aria-invalid', message ? 'true' : 'false'); }
 function showError(error) { busy(false); setStatus(error?.message || '连接失败，请检查地址后重试。', 'error'); }
@@ -55,7 +75,6 @@ function showRemoteChoiceStep() { modeStep.hidden = true; localProfileStep.hidde
 function showOfficialRemoteStep() { modeStep.hidden = true; localProfileStep.hidden = true; remoteChoiceStep.hidden = true; remoteStep.hidden = true; officialRemoteStep.hidden = false; setStatus('请输入目标服务器'); officialRemoteUrl.focus(); }
 function showRemoteStep() { modeStep.hidden = true; remoteChoiceStep.hidden = true; officialRemoteStep.hidden = true; remoteStep.hidden = false; setStatus('请输入服务器地址'); urlEl.focus(); }
 function showModeStep() { remoteStep.hidden = true; remoteChoiceStep.hidden = true; officialRemoteStep.hidden = true; localProfileStep.hidden = true; modeStep.hidden = false; setUrlError(); setStatus('请选择一个连接方式'); remoteChoice.focus(); }
-function showChoiceStep() { remoteStep.hidden = true; officialRemoteStep.hidden = true; modeStep.hidden = true; remoteChoiceStep.hidden = false; setUrlError(); setStatus('请选择远程连接方式'); officialRemote.focus(); }
 function describeStatus(status) {
   if (!status) return;
   if (status.error) return showError(new Error(status.error));
@@ -88,8 +107,7 @@ officialRemoteForm.addEventListener('submit', async (event) => {
   if (!url) { officialUrlError.textContent = '请输入目标服务器地址。'; setStatus('需要目标服务器地址才能继续。', 'error'); officialRemoteUrl.focus(); return; }
   let parsed; try { parsed = new URL(url); } catch { officialUrlError.textContent = '请输入有效的 URL。'; setStatus('地址格式不正确。', 'error'); officialRemoteUrl.focus(); return; }
   if (!['http:', 'https:'].includes(parsed.protocol)) { officialUrlError.textContent = '仅支持 http:// 或 https:// 地址。'; setStatus('地址格式不正确。', 'error'); officialRemoteUrl.focus(); return; }
-  busy(true); setStatus('正在验证目标并打开官方 Demo…');
-  try { await api.connectRemote(url); } catch (error) { showError(error); }
+  busy(true); setStatus('正在验证目标并打开官方 Demo…'); try { await api.connectRemote(url); } catch (error) { showError(error); }
 });
 customRemote.addEventListener('click', () => { if (!isBusy) showRemoteStep(); });
 choiceBackButton.addEventListener('click', () => { if (!isBusy) showModeStep(); });
