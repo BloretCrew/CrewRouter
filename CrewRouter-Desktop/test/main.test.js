@@ -21,6 +21,7 @@ test('main uses the official CrewRouter demo by default', () => {
   assert.match(source, /if \(active\.mode === 'local'\) return startLocal\(active\.displayName\)/);
   assert.match(source, /state\.connection\.inspect\(target\.url\.toString\(\)\)/);
   assert.match(source, /targetOrigin/);
+  assert.match(source, /validateRemoteUrl\(DEMO_URL, \{ resolveDns: false \}\)/);
 });
 
 test('main status exposes an explicit connect state', () => {
