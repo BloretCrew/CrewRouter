@@ -76,7 +76,8 @@ async function startRemoteRedirect(rawTarget) {
 }
 
 async function openOfficialDemo() {
-  const demo = await validateRemoteUrl(DEMO_URL);
+  // 官方站是受信任的固定入口；容器 DNS 代理可能把公网域名解析成测试网段，不能因此阻断浏览器打开。
+  const demo = await validateRemoteUrl(DEMO_URL, { resolveDns: false });
   if (!demo.ok) fail(`官方站地址无效：${demo.error}`);
   sendStatus({ message: '正在打开官方站…', redirect: true, target: demo.url.origin });
   await electron.shell.openExternal(demo.url.toString());
