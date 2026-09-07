@@ -93,6 +93,7 @@ test('renderer guards repeated actions and renders server metadata/errors', () =
   assert.match(js, /正在打开官方站/);
   assert.match(js, /openOfficialDemo/);
   assert.match(js, /setBusy\(false\); renderStep\('remote'/);
+  assert.match(js, /status\.mode === 'authorized'/);
   assert.match(js, /status\.message \|\| '官方站已打开/);
   assert.match(html, /官方页面选择或输入服务器/);
   assert.match(js, /正在直接连接自定义服务器/);

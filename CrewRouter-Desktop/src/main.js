@@ -98,7 +98,7 @@ async function openOfficialDemo() {
         if (!target.ok) throw new Error(target.error);
         // OAuth 会话保存在系统浏览器中；继续在同一浏览器打开目标，避免 Electron 独立会话再次要求登录。
         await electron.shell.openExternal(target.url.toString());
-        sendStatus({ message: '授权完成，已在浏览器中打开目标 CrewRouter。', mode: 'redirecting', target: target.url.origin });
+        sendStatus({ message: '授权完成，已在浏览器中打开目标 CrewRouter。', mode: 'authorized', target: target.url.origin });
       }).catch((error) => sendStatus({ error: `官方站登录后打开目标失败：${error.message}` }));
     } else sendStatus({ error: '官方站登录回调无效，请重试。' });
   });

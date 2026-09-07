@@ -94,7 +94,7 @@ document.getElementById('local').addEventListener('click', () => { if (!isBusy) 
 document.getElementById('remote-choice').addEventListener('click', () => { if (!isBusy) renderStep('remote'); });
 document.getElementById('choice-back').addEventListener('click', () => { if (!isBusy) renderStep('welcome'); });
 document.getElementById('local-back').addEventListener('click', () => { if (!isBusy) renderStep('welcome'); });
-document.getElementById('official-remote').addEventListener('click', async () => { if (isBusy) return; setBusy(true); setStatus('正在打开官方站…'); try { await api.openOfficialDemo(); setBusy(false); renderStep('remote', { focus: false }); setStatus('官方站已打开，请在浏览器中选择要登录的 CrewRouter。', 'success'); } catch (error) { showError(error); renderStep('remote', { focus: false }); } });
+document.getElementById('official-remote').addEventListener('click', async () => { if (isBusy) return; setBusy(true); setStatus('正在打开官方站…'); try { await api.openOfficialDemo(); setBusy(false); renderStep('remote', { focus: false }); } catch (error) { showError(error); renderStep('remote', { focus: false }); } });
 document.getElementById('custom-remote').addEventListener('click', () => { if (!isBusy) renderStep('custom'); });
 document.getElementById('custom-back').addEventListener('click', () => { if (!isBusy) renderStep('remote'); });
 document.getElementById('local-profile-form').addEventListener('submit', async (event) => {
@@ -123,6 +123,7 @@ function describeStatus(status) {
     renderStep('welcome', { focus: false }); setStatus(status.message || '连接已完成。', 'success');
   }
   if (status.message && status.mode === 'connect') setStatus(status.message);
+  if (status.mode === 'authorized') { setBusy(false); renderStep('remote', { focus: false }); setStatus(status.message || '授权已完成。', 'success'); }
   if (status.mode === 'redirecting') { setBusy(false); renderStep('remote', { focus: false }); setStatus(status.message || '官方站已打开，请在浏览器中继续。', 'success'); }
 }
 api.onStatus(describeStatus);
