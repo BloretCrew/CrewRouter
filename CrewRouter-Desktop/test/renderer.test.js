@@ -49,11 +49,10 @@ test('renderer keeps one active OOBE panel and uses official Blora structure', (
   assert.match(html, /class="blora-hero oobe-hero"/);
   assert.match(html, /<blora-steps id="oobe-steps"/);
   assert.match(html, /<blora-field id="local-username-field"/);
-  assert.match(html, /<blora-field id="official-url-field"/);
   assert.match(html, /<blora-field id="custom-url-field"/);
+  assert.doesNotMatch(html, /official-target-panel|official-url-field|official-remote-form/);
   assert.match(html, /id="local-profile-panel"[^>]+hidden/);
   assert.match(html, /id="remote-method-panel"[^>]+hidden/);
-  assert.match(html, /id="official-target-panel"[^>]+hidden/);
   assert.match(html, /id="custom-target-panel"[^>]+hidden/);
   assert.match(js, /function renderStep\(step/);
   assert.match(js, /Object\.entries\(panels\)\.forEach/);
@@ -64,7 +63,7 @@ test('renderer uses official Blora 2 structure without the 1.x API or local toke
   assert.match(html, /class="oobe-shell"/);
   assert.match(html, /class="blora-card oobe-choice"/);
   assert.match(html, /class="blora-button" data-variant="primary" data-size="lg"/);
-  assert.equal((html.match(/class="blora-button" data-variant="primary" data-size="lg"/g) || []).length, 3);
+  assert.equal((html.match(/class="blora-button" data-variant="primary" data-size="lg"/g) || []).length, 2);
   assert.match(html, /vendor\/blora-design\/auto\.js/);
   assert.doesNotMatch(`${html}${css}${js}`, /blora-btn|Blora\.init|blora\.js/);
   assert.doesNotMatch(css, /--blora-[a-z-]+\s*:/);
@@ -90,8 +89,8 @@ test('renderer guards repeated actions and renders server metadata/errors', () =
   assert.match(js, /status\.edition/);
   assert.match(js, /status\.auth/);
   assert.match(js, /status\.auth\.methods/);
-  assert.match(js, /正在验证目标并打开官方站/);
-  assert.match(js, /official-remote-form/);
+  assert.match(js, /正在打开官方站/);
+  assert.match(js, /openOfficialDemo/);
   assert.match(js, /正在直接连接自定义服务器/);
   assert.match(js, /connectCustomRemote/);
   assert.match(js, /setStatus\(error\?\.message/);

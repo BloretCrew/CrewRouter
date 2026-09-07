@@ -80,19 +80,9 @@
       <div class="oobe-panel__heading"><div><p class="blora-eyebrow">第二步</p><h2 id="remote-method-heading">连接服务器</h2></div><button id="choice-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
       <p class="oobe-description">选择连接方式。Personal / Team 由目标服务器自动识别。</p>
       <div class="oobe-choice-list">
-        <button id="official-remote" class="blora-card oobe-choice" data-variant="hover" type="button"><span class="oobe-choice__icon" data-icon="external-link" aria-hidden="true"></span><span class="oobe-choice__copy"><strong>通过官方站连接</strong><small>验证目标服务器后，打开官方站转向入口</small></span><span class="oobe-choice__arrow" data-icon="chevron-right" aria-hidden="true"></span></button>
+        <button id="official-remote" class="blora-card oobe-choice" data-variant="hover" type="button"><span class="oobe-choice__icon" data-icon="external-link" aria-hidden="true"></span><span class="oobe-choice__copy"><strong>通过官方站连接</strong><small>打开官方站，在官方页面选择或输入服务器</small></span><span class="oobe-choice__arrow" data-icon="chevron-right" aria-hidden="true"></span></button>
         <button id="custom-remote" class="blora-card oobe-choice" data-variant="hover" type="button"><span class="oobe-choice__icon" data-icon="search" aria-hidden="true"></span><span class="oobe-choice__copy"><strong>输入服务器地址</strong><small>直接打开你填写的服务器，不经过官方站</small></span><span class="oobe-choice__arrow" data-icon="chevron-right" aria-hidden="true"></span></button>
       </div>
-    </section>
-
-    <section id="official-target-panel" class="oobe-panel blora-card" data-variant="content" aria-labelledby="official-target-heading" hidden>
-      <div class="oobe-panel__heading"><div><p class="blora-eyebrow">第三步</p><h2 id="official-target-heading">输入目标服务器</h2></div><button id="official-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
-      <p class="oobe-description">Desktop 只验证公开实例信息，不接触登录凭据。</p>
-      <form id="official-remote-form" class="oobe-form" novalidate>
-        <blora-field id="official-url-field" label="目标服务器地址" name="official-url" type="url" placeholder="https://server.example.com" hint="验证通过后将在系统浏览器打开官方站转向入口。" autocomplete="url" inputmode="url" required></blora-field>
-        <p id="official-url-error" class="oobe-field-error" role="alert"></p>
-        <div class="oobe-actions"><button id="official-continue" class="blora-button" data-variant="primary" data-size="lg" type="submit">打开官方站 <span class="button-icon" data-icon="external-link" aria-hidden="true"></span></button></div>
-      </form>
     </section>
 
     <section id="custom-target-panel" class="oobe-panel blora-card" data-variant="content" aria-labelledby="custom-target-heading" hidden>

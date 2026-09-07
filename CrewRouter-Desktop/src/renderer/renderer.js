@@ -12,14 +12,11 @@ const panels = {
   welcome: document.getElementById('welcome-panel'),
   local: document.getElementById('local-profile-panel'),
   remote: document.getElementById('remote-method-panel'),
-  official: document.getElementById('official-target-panel'),
   custom: document.getElementById('custom-target-panel'),
 };
 const localField = document.getElementById('local-username-field');
-const officialField = document.getElementById('official-url-field');
 const customField = document.getElementById('custom-url-field');
 const localError = document.getElementById('local-username-error');
-const officialError = document.getElementById('official-url-error');
 const customError = document.getElementById('url-error');
 let currentStep = 'welcome';
 let isBusy = false;
@@ -66,7 +63,7 @@ function updateProgress(step) {
   stepsEl.setAttribute('current', String(index));
 }
 function focusStep(step) {
-  const target = step === 'welcome' ? document.getElementById('local') : step === 'local' ? localField : step === 'remote' ? document.getElementById('official-remote') : step === 'official' ? officialField : customField;
+  const target = step === 'welcome' ? document.getElementById('local') : step === 'local' ? localField : step === 'remote' ? document.getElementById('official-remote') : customField;
   window.requestAnimationFrame(() => target?.focus?.());
 }
 function renderStep(step, { focus = true } = {}) {
@@ -79,7 +76,7 @@ function renderStep(step, { focus = true } = {}) {
 function setBusy(value) {
   isBusy = value;
   document.querySelectorAll('button').forEach((button) => { button.disabled = value; if (value) button.setAttribute('aria-busy', 'true'); else button.removeAttribute('aria-busy'); });
-  [localField, officialField, customField].forEach((field) => { if (field) field.toggleAttribute('disabled', value); });
+  [localField, customField].forEach((field) => { if (field) field.toggleAttribute('disabled', value); });
 }
 function showError(error, field, errorElement) { setBusy(false); if (field) setFieldError(field, errorElement, error?.message || '连接失败，请检查地址后重试。'); setStatus(error?.message || '连接失败，请检查地址后重试。', 'error'); }
 function validateUrl(value, field, errorElement, requiredMessage) {
@@ -95,9 +92,8 @@ document.getElementById('local').addEventListener('click', () => { if (!isBusy) 
 document.getElementById('remote-choice').addEventListener('click', () => { if (!isBusy) renderStep('remote'); });
 document.getElementById('choice-back').addEventListener('click', () => { if (!isBusy) renderStep('welcome'); });
 document.getElementById('local-back').addEventListener('click', () => { if (!isBusy) renderStep('welcome'); });
-document.getElementById('official-remote').addEventListener('click', () => { if (!isBusy) renderStep('official'); });
+document.getElementById('official-remote').addEventListener('click', async () => { if (isBusy) return; setBusy(true); setStatus('正在打开官方站…'); try { await api.openOfficialDemo(); } catch (error) { showError(error); renderStep('remote', { focus: false }); } });
 document.getElementById('custom-remote').addEventListener('click', () => { if (!isBusy) renderStep('custom'); });
-document.getElementById('official-back').addEventListener('click', () => { if (!isBusy) renderStep('remote'); });
 document.getElementById('custom-back').addEventListener('click', () => { if (!isBusy) renderStep('remote'); });
 document.getElementById('local-profile-form').addEventListener('submit', async (event) => {
   event.preventDefault(); if (isBusy) return;
@@ -105,10 +101,6 @@ document.getElementById('local-profile-form').addEventListener('submit', async (
   if (!displayName) { setFieldError(localField, localError, '用户名不能为空。'); setStatus('请先输入用户名。', 'error'); localField.focus(); return; }
   if (displayName.length > 64 || /[<>"'`\\/\u0000-\u001f\u007f]/.test(displayName)) { setFieldError(localField, localError, '用户名格式不符合要求。'); setStatus('用户名格式不符合要求。', 'error'); localField.focus(); return; }
   setBusy(true); setStatus('正在启动本地服务…'); try { await api.setupLocalProfile(displayName); } catch (error) { showError(error); }
-});
-document.getElementById('official-remote-form').addEventListener('submit', async (event) => {
-  event.preventDefault(); if (isBusy || !validateUrl(fieldValue(officialField), officialField, officialError, '请输入目标服务器地址。')) return;
-  setBusy(true); setStatus('正在验证目标并打开官方站…'); try { await api.connectRemote(fieldValue(officialField)); } catch (error) { showError(error, officialField, officialError); }
 });
 document.getElementById('connection-form').addEventListener('submit', async (event) => {
   event.preventDefault(); if (isBusy || !validateUrl(fieldValue(customField), customField, customError, '请输入远程服务器地址。')) return;
@@ -129,6 +121,7 @@ function describeStatus(status) {
     renderStep('welcome', { focus: false }); setStatus(status.message || '连接已完成。', 'success');
   }
   if (status.message && status.mode === 'connect') setStatus(status.message);
+  if (status.mode === 'redirecting') { setBusy(false); renderStep('remote', { focus: false }); setStatus('官方站已打开，请在浏览器中继续。', 'success'); }
 }
 api.onStatus(describeStatus);
 api.getStatus().then(describeStatus).catch(showError);
