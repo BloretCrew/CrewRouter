@@ -338,6 +338,7 @@ class ConsoleApp {
     document.querySelectorAll('[data-settings-category]').forEach(item => {
       item.addEventListener('click', () => this.showSettingsCategory(item.dataset.settingsCategory));
     });
+    document.getElementById('desktopSettingsCard')?.addEventListener('click', () => window.crewrouterDesktop?.openSettings?.());
     document.getElementById('settingsBackButton')?.addEventListener('click', () => this.showSettingsOverview());
 
     document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
