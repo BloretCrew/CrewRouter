@@ -336,6 +336,26 @@ function sendTokenError(res, error, description) {
   return res.status(400).json({ error, ...(description ? { error_description: description } : {}) });
 }
 
+// ---------- Desktop Web Session 交换（一次性授权码 + PKCE） ----------
+router.post('/oauth/desktop-session', async (req, res) => {
+  await ensureOAuthTables();
+  const { code, client_id: clientId, code_verifier: verifier } = req.body || {};
+  if (!code || clientId !== 'crewrouter-desktop' || !verifier) return sendTokenError(res, 'invalid_request');
+  const found = await pool.query('SELECT * FROM oauth_auth_codes WHERE code = $1', [String(code)]);
+  const row = found.rows[0];
+  if (!row || row.client_id !== clientId) return sendTokenError(res, 'invalid_grant');
+  const claim = await pool.query('UPDATE oauth_auth_codes SET used = TRUE WHERE code = $1 AND used = FALSE RETURNING code', [String(code)]);
+  if (claim.rowCount === 0 || new Date(row.expires_at) < new Date() || !pkceMatches(verifier, row.code_challenge)) return sendTokenError(res, 'invalid_grant');
+  const userResult = await pool.query('SELECT id, username, email, avatar, is_admin, balance, refund_balance, api_signature_enabled, api_signature_template FROM users WHERE id = $1', [row.user_id]);
+  const user = userResult.rows[0];
+  if (!user) return sendTokenError(res, 'invalid_grant');
+  await new Promise((resolve, reject) => req.session.regenerate((error) => error ? reject(error) : resolve()));
+  req.session.user = { id: user.id, username: user.username, email: user.email, avatar: user.avatar, isAdmin: user.is_admin, balance: user.balance, refund_balance: user.refund_balance || 0, api_signature_enabled: user.api_signature_enabled === true, api_signature_template: user.api_signature_template || '{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}' };
+  await new Promise((resolve, reject) => req.session.save((error) => error ? reject(error) : resolve()));
+  Logger.info(`[OAuth授权] Desktop Web Session 已建立: user=${user.username}`);
+  res.json({ ok: true });
+});
+
 // ---------- token 端点（机器调用，无 session） ----------
 router.post('/oauth/token', async (req, res) => {
   await ensureOAuthTables();

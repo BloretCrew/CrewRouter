@@ -25,7 +25,7 @@ test('main uses the official CrewRouter demo by default', () => {
   assert.match(source, /helper_login/);
   assert.match(source, /crewrouter-desktop/);
   assert.match(source, /resolveDns: officialTarget \? false : undefined/);
-  assert.match(source, /Electron 独立会话再次要求登录/);
+  assert.match(source, /oauth\/desktop-session/);
   assert.match(source, /选择要登录的 CrewRouter/);
 });
 
