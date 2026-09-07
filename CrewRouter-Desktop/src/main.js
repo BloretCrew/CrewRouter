@@ -75,6 +75,14 @@ async function startRemoteRedirect(rawTarget) {
   return { ...currentStatus(), mode: 'redirecting', target: null };
 }
 
+async function openOfficialDemo() {
+  const demo = await validateRemoteUrl(DEMO_URL);
+  if (!demo.ok) fail(`官方站地址无效：${demo.error}`);
+  sendStatus({ message: '正在打开官方站…', redirect: true, target: demo.url.origin });
+  await electron.shell.openExternal(demo.url.toString());
+  return { ...currentStatus(), mode: 'redirecting', target: null };
+}
+
 async function connectCustomRemote(rawUrl) {
   const target = await validateRemoteUrl(rawUrl);
   if (!target.ok) fail(target.error);
@@ -162,6 +170,7 @@ function registerIpc() {
   ipcMain.handle('desktop:choose-mode', async (event, requested) => { if (!isRendererFrame(event) || requested !== 'local') fail('不支持的模式'); return startLocal(); });
   ipcMain.handle('desktop:setup-local-profile', async (event, displayName) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); const result = validateLocalDisplayName(displayName); if (!result.ok) fail(result.error); return startLocal(result.value); });
   ipcMain.handle('desktop:connect-remote', async (event, url) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return startRemoteRedirect(url); });
+  ipcMain.handle('desktop:open-official-demo', async (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return openOfficialDemo(); });
   ipcMain.handle('desktop:connect-custom-remote', async (event, url) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return connectCustomRemote(url); });
   ipcMain.handle('desktop:open-external', async (event, url) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return openSafeExternal(url); });
   ipcMain.handle('desktop:list-profiles', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return state.connection.listProfiles(); });

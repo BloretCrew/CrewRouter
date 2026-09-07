@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('crewrouterDesktop', Object.freeze({
   chooseMode: (mode) => ipcRenderer.invoke('desktop:choose-mode', mode),
   setupLocalProfile: (displayName) => ipcRenderer.invoke('desktop:setup-local-profile', displayName),
   connectRemote: (url) => ipcRenderer.invoke('desktop:connect-remote', url),
+  openOfficialDemo: () => ipcRenderer.invoke('desktop:open-official-demo'),
   connectCustomRemote: (url) => ipcRenderer.invoke('desktop:connect-custom-remote', url),
   openExternal: (url) => ipcRenderer.invoke('desktop:open-external', url),
   listProfiles: () => ipcRenderer.invoke('desktop:list-profiles'),
