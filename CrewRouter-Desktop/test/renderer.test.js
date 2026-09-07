@@ -92,6 +92,7 @@ test('renderer guards repeated actions and renders server metadata/errors', () =
   assert.match(js, /status\.auth\.methods/);
   assert.match(js, /正在打开官方站/);
   assert.match(js, /openOfficialDemo/);
+  assert.match(js, /setBusy\(false\); renderStep\('remote'/);
   assert.match(html, /官方页面选择或输入服务器/);
   assert.match(js, /正在直接连接自定义服务器/);
   assert.match(js, /connectCustomRemote/);
