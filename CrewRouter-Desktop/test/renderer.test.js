@@ -47,7 +47,8 @@ test('renderer keeps one active OOBE panel and uses official Blora structure', (
   assert.match(css, /@media \(min-width: 701px\) and \(max-height: 760px\)/);
   assert.match(css, /overflow-wrap: anywhere/);
   assert.match(html, /class="blora-hero oobe-hero"/);
-  assert.match(html, /<blora-steps id="oobe-steps"/);
+  assert.match(html, /<blora-steps id="oobe-steps" current="0" clickable="false"/);
+  assert.match(js, /stepsEl\.setCurrent\?\.\(index\)/);
   assert.match(html, /<blora-field id="local-username-field"/);
   assert.match(html, /<blora-field id="custom-url-field"/);
   assert.doesNotMatch(html, /official-target-panel|official-url-field|official-remote-form/);

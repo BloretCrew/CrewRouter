@@ -61,6 +61,8 @@ function setStatus(message, variant = 'info') {
 function updateProgress(step) {
   const index = step === 'welcome' ? 0 : (step === 'local' || step === 'remote' ? 1 : 2);
   stepsEl.setAttribute('current', String(index));
+  stepsEl.current = index;
+  stepsEl.setCurrent?.(index);
 }
 function focusStep(step) {
   const target = step === 'welcome' ? document.getElementById('local') : step === 'local' ? localField : step === 'remote' ? document.getElementById('official-remote') : customField;
