@@ -120,7 +120,8 @@ function describeStatus(status) {
   if (!status) return;
   if (status.error) return showError(new Error(status.error));
   if (settingsButton) settingsButton.hidden = status.mode === 'remote' || status.runtime !== 'desktop-local';
-  if (status.needsLocalProfile && status.mode === 'connect') { renderStep('local'); setStatus('请输入用户名。'); return; }
+  // 首次启动必须先展示欢迎页；只有用户选择本地使用后才进入用户名步骤。
+  if (status.needsLocalProfile && status.mode === 'connect' && currentStep === 'local') { setStatus('请输入用户名。'); return; }
   if (status.mode && status.mode !== 'connect') {
     const authLabel = status.auth ? (status.auth.required === false ? '免登录' : `登录：${(status.auth.methods || []).join('、') || '服务器'}`) : '';
     const metadata = [status.runtime, status.edition, authLabel].filter(Boolean).join(' · ');
