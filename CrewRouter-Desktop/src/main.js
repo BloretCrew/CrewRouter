@@ -106,15 +106,21 @@ async function openOfficialDemo() {
           body: new URLSearchParams({ code, client_id: 'crewrouter-desktop', code_verifier: verifier }).toString()
         });
         if (!exchange.ok) throw new Error(`Web Session 交换失败（HTTP ${exchange.status}）`);
+        sendStatus({ message: '已完成授权，正在建立 Desktop 登录会话…' });
         const sessionCookie = Array.isArray(exchange.headers?.['set-cookie']) ? exchange.headers['set-cookie'][0] : exchange.headers?.['set-cookie'];
         if (!sessionCookie) throw new Error('Web Session 交换未返回登录 Cookie');
         const cookiePair = String(sessionCookie).split(';', 1)[0];
-        const cookieName = cookiePair.split('=', 1)[0];
-        const cookieValue = cookiePair.slice(cookiePair.indexOf('=') + 1);
+        const separator = cookiePair.indexOf('=');
+        if (separator <= 0) throw new Error('Web Session 返回的 Cookie 格式无效');
+        const cookieName = cookiePair.slice(0, separator).trim();
+        const cookieValue = cookiePair.slice(separator + 1).trim();
         const targetUrl = new URL(target.url.toString());
         const cookieUrl = `${targetUrl.origin}/`;
-        await electron.session.defaultSession.cookies.remove(cookieUrl, cookieName).catch(() => {});
-        await electron.session.defaultSession.cookies.set({ url: cookieUrl, name: cookieName, value: cookieValue, path: '/', httpOnly: true, secure: targetUrl.protocol === 'https:' });
+        const cookieStore = electron.session.defaultSession.cookies;
+        await cookieStore.remove(cookieUrl, cookieName).catch(() => {});
+        await cookieStore.set({ url: cookieUrl, name: cookieName, value: cookieValue, path: '/', httpOnly: true, secure: targetUrl.protocol === 'https:', sameSite: 'lax' });
+        const installed = await cookieStore.get({ url: cookieUrl, name: cookieName });
+        if (!installed.length || installed[0].value !== cookieValue) throw new Error('Web Session Cookie 写入失败');
         await state.mainWindow.loadURL(target.url.toString());
         await state.mainWindow.webContents.executeJavaScript(`(() => { const card = document.getElementById('desktopSettingsCard'); if (card) { card.hidden = false; card.onclick = () => window.crewrouterDesktop?.openSettings?.(); } })()`, true);
         state.mode = 'remote';

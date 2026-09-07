@@ -26,7 +26,7 @@ test('main uses the official CrewRouter demo by default', () => {
   assert.match(source, /crewrouter-desktop/);
   assert.match(source, /resolveDns: officialTarget \? false : undefined/);
   assert.match(source, /oauth\/desktop-session/);
-  assert.match(source, /cookies\.remove\(cookieUrl, cookieName\)/);
+  assert.match(source, /cookieStore\.remove\(cookieUrl, cookieName\)/);
   assert.match(source, /选择要登录的 CrewRouter/);
 });
 
