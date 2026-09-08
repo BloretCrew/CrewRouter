@@ -26,4 +26,19 @@
 .settings-back-button:hover { color:var(--foreground); }
 .settings-detail-title { margin-top:14px; font-size:24px; font-weight:700; }
 .settings-section[hidden], .settings-overview[hidden], .settings-detail[hidden] { display:none; }
-@media (max-width:640px) { .settings-category-grid { grid-template-columns:1fr; } .settings-version-card { padding:16px; } .settings-link-list { gap:6px; } .settings-link-button { font-size:11px; padding:5px 7px; } .settings-detail-title { font-size:21px; } }
+.settings-desktop-embed { padding: 0 !important; border: 0 !important; background: transparent; }
+.settings-desktop-stack { display: grid; gap: 16px; }
+.settings-desktop-block { padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: var(--shadow-card); }
+.settings-desktop-block h3 { margin: 0 0 16px; font-size: 16px; font-weight: 700; }
+.settings-desktop-block .settings-details { max-width: 620px; }
+.desktop-profile-row { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--border); }
+.desktop-profile-row:first-child { border-top: 0; padding-top: 0; }
+.desktop-profile-row > div:first-child { display: grid; gap: 5px; min-width: 0; flex: 1; }
+.desktop-profile-row small { color: var(--muted-foreground); overflow-wrap: anywhere; }
+.desktop-profile-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.settings-desktop-preferences { display: grid; gap: 12px; }
+.settings-desktop-preferences label { display: flex; align-items: center; gap: 8px; color: var(--foreground); font-size: 14px; }
+.settings-desktop-preferences label:last-child { justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border); }
+.settings-desktop-preferences select { min-width: 140px; }
+.settings-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+@media (max-width:640px) { .settings-category-grid { grid-template-columns:1fr; } .settings-version-card { padding:16px; } .settings-link-list { gap:6px; } .settings-link-button { font-size:11px; padding:5px 7px; } .settings-detail-title { font-size:21px; } .desktop-profile-row { align-items: flex-start; flex-direction: column; } .desktop-profile-actions { justify-content: flex-start; } .settings-desktop-preferences label:last-child { align-items: flex-start; flex-direction: column; } .settings-desktop-preferences select { width: 100%; } }
