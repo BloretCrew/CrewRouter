@@ -1,0 +1,144 @@
+/* Blora surface migration for the API documentation page. */
+.blora-docs-page {
+  --docs-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --docs-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-docs-page .docs-container {
+  align-items: flex-start;
+  gap: var(--blora-space-5) !important;
+}
+
+.blora-docs-page .docs-sidebar {
+  position: sticky;
+  top: var(--blora-space-5);
+  width: 13rem !important;
+  padding: var(--blora-space-2) !important;
+  border: var(--docs-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-docs-page .docs-nav-item {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  padding: var(--blora-space-2) var(--blora-space-3);
+  border-radius: var(--blora-radius-md);
+  color: var(--blora-color-text-subtle);
+  cursor: pointer;
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard), color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-docs-page .docs-nav-item:hover,
+.blora-docs-page .docs-nav-item.active {
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-primary);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-docs-page .docs-nav-item[style*="display: none"] {
+  display: none !important;
+}
+
+.blora-docs-page .docs-content {
+  min-width: 0;
+  border: var(--docs-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-docs-page .doc-page > h2 {
+  margin-top: 0;
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-docs-page .doc-section {
+  margin: 0 0 var(--blora-space-5);
+  padding: var(--blora-space-5);
+  border: var(--docs-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-docs-page .doc-section h3 {
+  margin-top: 0;
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-docs-page pre {
+  overflow-x: auto;
+  border: var(--docs-border-soft);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-docs-page .docs-table-wrap,
+.blora-docs-page .docs-models-table {
+  overflow-x: auto;
+}
+
+.blora-docs-page .docs-table {
+  min-width: 36rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border: var(--docs-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-docs-page .docs-table th {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
+  border-bottom: var(--docs-border-soft);
+}
+
+.blora-docs-page .docs-table td {
+  color: var(--blora-color-text-emphasis);
+  border-bottom: var(--docs-border-soft);
+}
+
+.blora-docs-page .docs-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.blora-docs-page .docs-table tbody tr:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+@media (max-width: 640px) {
+  .blora-docs-page .docs-container {
+    flex-direction: column;
+  }
+
+  .blora-docs-page .docs-sidebar {
+    position: static;
+    width: 100% !important;
+    display: flex;
+    gap: var(--blora-space-1);
+    overflow-x: auto;
+    box-sizing: border-box;
+  }
+
+  .blora-docs-page .docs-nav-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .blora-docs-page .docs-content {
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--blora-space-4);
+  }
+
+  .blora-docs-page .doc-section {
+    padding: var(--blora-space-4);
+  }
+}
