@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('crewrouterDesktop', Object.freeze({
   listProfiles: () => ipcRenderer.invoke('desktop:list-profiles'),
   switchProfile: (id) => ipcRenderer.invoke('desktop:switch-profile', id),
   quit: () => ipcRenderer.invoke('desktop:quit'),
+  restartApp: () => ipcRenderer.invoke('desktop:restart-app'),
   openSettings: () => ipcRenderer.invoke('desktop:open-settings'),
   getDesktopSettings: () => ipcRenderer.invoke('desktop:get-settings'),
   saveDesktopSettings: (settings) => ipcRenderer.invoke('desktop:save-settings', settings),
