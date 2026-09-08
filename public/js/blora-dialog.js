@@ -168,7 +168,7 @@ const Dialog = (() => {
     return { close, promise, element: dialog };
   }
 
-  return { alert, confirm, showModal };
+  return { alert, confirm, showModal, prepareAllDialogs };
 })();
 
 window.alert = (msg) => Dialog.alert(String(msg));
@@ -177,7 +177,7 @@ window.confirm = (msg) => Dialog.confirm(t('确认'), String(msg));
 (function installLegacyDialogCompatibility() {
   function scan(root) {
     if (document.readyState === 'loading') return;
-    prepareAllDialogs(root);
+    Dialog.prepareAllDialogs(root);
   }
   scan(document);
   if (window.MutationObserver) {
