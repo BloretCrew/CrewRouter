@@ -39,14 +39,16 @@ const Dialog = (() => {
       const header = shadow.querySelector('.blora-dialog__header');
       const footer = shadow.querySelector('.blora-dialog__footer');
       const body = shadow.querySelector('.blora-dialog__body');
-      if (header) header.hidden = true;
-      if (footer) footer.hidden = true;
+      if (header) header.style.setProperty('display', 'none', 'important');
+      if (footer) footer.style.setProperty('display', 'none', 'important');
       if (body) {
+        body.style.setProperty('display', 'block', 'important');
         body.style.padding = '0';
         body.style.background = 'transparent';
       }
       const panel = shadow.querySelector('.blora-dialog__panel');
       if (panel) {
+        panel.style.setProperty('display', 'block', 'important');
         panel.style.maxWidth = 'none';
         panel.style.maxHeight = '100%';
         panel.style.width = '100%';
@@ -72,6 +74,7 @@ const Dialog = (() => {
 
   function prepareAllDialogs(root) {
     const scope = root && root.querySelectorAll ? root : document;
+    if (scope.matches?.('blora-dialog')) prepareLegacyDialog(scope);
     scope.querySelectorAll('blora-dialog').forEach(prepareLegacyDialog);
   }
 
@@ -176,10 +179,10 @@ window.confirm = (msg) => Dialog.confirm(t('确认'), String(msg));
 
 (function installLegacyDialogCompatibility() {
   function scan(root) {
-    if (document.readyState === 'loading') return;
     Dialog.prepareAllDialogs(root);
   }
   scan(document);
+  document.addEventListener('DOMContentLoaded', () => scan(document), { once: true });
   if (window.MutationObserver) {
     new MutationObserver((records) => {
       records.forEach((record) => record.addedNodes.forEach((node) => {
