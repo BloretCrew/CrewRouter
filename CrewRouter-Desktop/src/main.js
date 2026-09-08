@@ -59,7 +59,6 @@ async function connect(url, { local = false, name = local ? '本地 CrewRouter' 
     if (error?.code !== 'ERR_ABORTED' && error?.errno !== -3) throw error;
   }
   sendStatus({ message: `${profile.edition} Server 已连接`, ...currentStatus() });
-  if (local) createSettingsWindow();
   return currentStatus();
 }
 
