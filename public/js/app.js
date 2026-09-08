@@ -6410,8 +6410,10 @@ class ConsoleApp {
       const confirmAction = async (message, action) => {
         if (!await window.confirm(message)) return;
         const output = target.querySelector('#desktopSettingsMessage');
-        if (output) output.textContent = '正在执行…';
-        try { await action(); } catch (error) { if (output) output.textContent = error.message; }
+        if (output) output.innerHTML = '<span class="desktop-settings-spinner" aria-hidden="true"></span><span>正在执行…</span>';
+        target.classList.add('desktop-settings-is-loading');
+        target.querySelectorAll('button, input, select').forEach((control) => { control.disabled = true; });
+        try { await action(); } catch (error) { if (output) output.textContent = error.message; } finally { target.classList.remove('desktop-settings-is-loading'); }
       };
       target.querySelectorAll('[data-profile-switch]').forEach((button) => button.addEventListener('click', async () => { const profile = profiles.find((item) => item.id === button.dataset.profileSwitch); confirmAction(`确定切换到“${profile?.name || '这个 CrewRouter'}”吗？`, async () => { await bridge.switchProfile(button.dataset.profileSwitch); }); }));
       target.querySelectorAll('[data-profile-rename]').forEach((button) => button.addEventListener('click', async () => { const current = profiles.find((item) => item.id === button.dataset.profileRename)?.name || ''; const name = window.prompt('重命名', current); if (!name || name.trim() === current.trim()) return; if (!window.confirm(`确定将实例重命名为“${name.trim()}”吗？`)) return; try { await bridge.renameProfile(button.dataset.profileRename, name); reloadDesktop(); } catch (error) { target.querySelector('#desktopSettingsMessage').textContent = error.message; } }));
