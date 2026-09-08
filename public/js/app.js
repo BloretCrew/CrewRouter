@@ -6398,12 +6398,11 @@ class ConsoleApp {
       const localStatus = data.local;
       target.querySelector('#desktopLocalStatus').innerHTML = status.runtime === 'desktop-local' && localStatus ? `<dl class="settings-details"><dt>状态</dt><dd>${localStatus.ready ? '运行中' : '已停止'}</dd><dt>进程 ID</dt><dd>${escapeHtml(localStatus.pid || '-')}</dd><dt>端口</dt><dd>${escapeHtml(localStatus.port || '-')}</dd></dl><div class="settings-actions"><button type="button" class="blora-button" data-variant="secondary" id="desktopRestartLocal">安全重启</button><button type="button" class="blora-button" data-variant="danger" id="desktopStopLocal">停止</button></div>` : '<p class="settings-muted">当前连接不是 Desktop Local，没有可管理的本地 Server。</p>';
       const reloadDesktop = () => this.loadDesktopSettingsEmbed();
-      const confirmAction = (message, action) => {
+      const confirmAction = async (message, action) => {
+        if (!await window.confirm(message)) return;
         const output = target.querySelector('#desktopSettingsMessage');
-        if (!output) return;
-        output.innerHTML = `<span>${escapeHtml(message)}</span> <button type="button" class="blora-button" data-variant="primary" data-confirm-action>确认</button> <button type="button" class="blora-button" data-variant="text" data-cancel-action>取消</button>`;
-        output.querySelector('[data-confirm-action]').addEventListener('click', async () => { output.textContent = '正在执行…'; try { await action(); } catch (error) { output.textContent = error.message; } });
-        output.querySelector('[data-cancel-action]').addEventListener('click', () => { output.textContent = ''; });
+        if (output) output.textContent = '正在执行…';
+        try { await action(); } catch (error) { if (output) output.textContent = error.message; }
       };
       target.querySelectorAll('[data-profile-switch]').forEach((button) => button.addEventListener('click', async () => { const profile = profiles.find((item) => item.id === button.dataset.profileSwitch); confirmAction(`确定切换到“${profile?.name || '这个 CrewRouter'}”吗？`, () => bridge.switchProfile(button.dataset.profileSwitch)); }));
       target.querySelectorAll('[data-profile-rename]').forEach((button) => button.addEventListener('click', async () => { const current = profiles.find((item) => item.id === button.dataset.profileRename)?.name || ''; const name = window.prompt('重命名', current); if (!name || name.trim() === current.trim()) return; if (!window.confirm(`确定将实例重命名为“${name.trim()}”吗？`)) return; try { await bridge.renameProfile(button.dataset.profileRename, name); reloadDesktop(); } catch (error) { target.querySelector('#desktopSettingsMessage').textContent = error.message; } }));
