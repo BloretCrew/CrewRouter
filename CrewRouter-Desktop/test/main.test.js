@@ -19,6 +19,7 @@ test('main uses the official CrewRouter demo by default', () => {
   assert.match(source, /async function connectCustomRemote/);
   assert.match(source, /desktop:connect-custom-remote/);
   assert.match(source, /if \(profile\.mode === 'local'\) return startLocal\(profile\.displayName\)/);
+  assert.match(source, /officialTarget: true/);
   assert.match(source, /state\.connection\.inspect\(target\.url\.toString\(\)\)/);
   assert.match(source, /targetOrigin/);
   assert.match(source, /validateRemoteUrl\(DEMO_URL, \{ resolveDns: false \}\)/);
