@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="/css/model-library-blora.css?v=1">
   <link rel="stylesheet" href="/css/upstream-blora.css?v=1">
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=1">
+  <link rel="stylesheet" href="/css/config-dialog-blora.css?v=1">
   <link rel="stylesheet" href="/css/stats-blora.css?v=1">
   <link rel="stylesheet" href="/css/project-work.css?v=1">
   <link rel="stylesheet" href="/css/project-work-blora.css?v=1">
@@ -2440,46 +2441,46 @@ data: [DONE]</code></pre>
       </div>
       <div class="modal-body">
         <p style="color:var(--muted-foreground);margin-bottom:16px;font-size:13px;"><span data-i18n="选择你要配置的工具：">选择你要配置的工具：</span></p>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <button type="button" class="blora-button btn" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateToolConfig('claude')">
-            <img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" width="20" height="20" style="margin-right:10px;border-radius:4px;">
-            Claude Code
-            <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">~/.claude/settings.json</span>
+        <div class="config-tool-list">
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('claude')">
+            <img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" class="config-tool-option-icon">
+            <span class="config-tool-option-label">Claude Code</span>
+            <span class="config-tool-option-path">~/.claude/settings.json</span>
           </button>
-          <button type="button" class="blora-button btn" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateToolConfig('codex')">
-            <img src="https://img.bloret.net/img/1781951439833/5dd31c41da3d9ba8d8c63c41ba899d52" alt="" width="20" height="20" style="margin-right:10px;border-radius:4px;">
-            Codex
-            <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">~/.codex/config.toml</span>
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('codex')">
+            <img src="https://img.bloret.net/img/1781951439833/5dd31c41da3d9ba8d8c63c41ba899d52" alt="" class="config-tool-option-icon">
+            <span class="config-tool-option-label">Codex</span>
+            <span class="config-tool-option-path">~/.codex/config.toml</span>
           </button>
-          <button type="button" class="blora-button btn" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateToolConfig('opencode')">
-            <img src="https://img.bloret.net/img/1781951398735/6d800bec66c4599b4f8e8e42bb9331d6" alt="" width="20" height="20" style="margin-right:10px;border-radius:4px;">
-            OpenCode
-            <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">opencode.json</span>
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('opencode')">
+            <img src="https://img.bloret.net/img/1781951398735/6d800bec66c4599b4f8e8e42bb9331d6" alt="" class="config-tool-option-icon">
+            <span class="config-tool-option-label">OpenCode</span>
+            <span class="config-tool-option-path">opencode.json</span>
           </button>
-          <button type="button" class="blora-button btn" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateToolConfig('grok')">
-            <img src="https://img.bloret.net/img/1783646659585/b5f2e4758d401fa16e43dd9d58278c5c" alt="Grok" width="20" height="20" style="margin-right:10px;border-radius:4px;">
-            Grok Build
-            <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">~/.grok/config.toml</span>
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('grok')">
+            <img src="https://img.bloret.net/img/1783646659585/b5f2e4758d401fa16e43dd9d58278c5c" alt="Grok" class="config-tool-option-icon">
+            <span class="config-tool-option-label">Grok Build</span>
+            <span class="config-tool-option-path">~/.grok/config.toml</span>
           </button>
-          <button type="button" class="blora-button btn" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateToolConfig('deepseek')">
-            <img src="https://img.bloret.net/img/1786632261665/ef60a8b9b5a3da93259ffb7b024fd80f" alt="DeepSeek Harness" width="20" height="20" style="margin-right:10px;border-radius:4px;">
-            DeepSeek Harness
-            <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">~/.dsh/settings.yaml</span>
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('deepseek')">
+            <img src="https://img.bloret.net/img/1786632261665/ef60a8b9b5a3da93259ffb7b024fd80f" alt="DeepSeek Harness" class="config-tool-option-icon">
+            <span class="config-tool-option-label">DeepSeek Harness</span>
+            <span class="config-tool-option-path">~/.dsh/settings.yaml</span>
           </button>
-          <button type="button" class="blora-button btn" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateToolConfig('qwen_code')">
-            <img src="https://img.bloret.net/img/1783300468869/0e65783456053817af53fe8e72836b5d" alt="Qwen Code" width="20" height="20" style="margin-right:10px;border-radius:4px;">
-            Qwen Code
-            <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">~/.qwen/settings.json</span>
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('qwen_code')">
+            <img src="https://img.bloret.net/img/1783300468869/0e65783456053817af53fe8e72836b5d" alt="Qwen Code" class="config-tool-option-icon">
+            <span class="config-tool-option-label">Qwen Code</span>
+            <span class="config-tool-option-path">~/.qwen/settings.json</span>
           </button>
-          <button type="button" class="blora-button btn" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateToolConfig('hermes')">
-            <img src="https://img.bloret.net/img/1783300640677/085bcecf994f63347ce29dcdadffdb9f" alt="Hermes" width="20" height="20" style="margin-right:10px;border-radius:4px;">
-            Hermes
-            <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">OPENAI_BASE_URL</span>
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('hermes')">
+            <img src="https://img.bloret.net/img/1783300640677/085bcecf994f63347ce29dcdadffdb9f" alt="Hermes" class="config-tool-option-icon">
+            <span class="config-tool-option-label">Hermes</span>
+            <span class="config-tool-option-path">OPENAI_BASE_URL</span>
           </button>
-          <button type="button" class="blora-button btn" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateToolConfig('openclaw')">
-            <img src="https://img.bloret.net/img/1783300468566/b085d548a9a6683cc47d4dc104e93d7a" alt="OpenClaw" width="20" height="20" style="margin-right:10px;border-radius:4px;">
-            OpenClaw
-            <span style="margin-left:auto;font-size:12px;color:var(--muted-foreground);font-weight:400;">openclaw.json</span>
+          <button type="button" class="config-tool-option" onclick="app.generateToolConfig('openclaw')">
+            <img src="https://img.bloret.net/img/1783300468566/b085d548a9a6683cc47d4dc104e93d7a" alt="OpenClaw" class="config-tool-option-icon">
+            <span class="config-tool-option-label">OpenClaw</span>
+            <span class="config-tool-option-path">openclaw.json</span>
           </button>
           <button type="button" class="blora-button btn" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.showCcSwitchSubmenu()">
             <img src="https://img.bloret.net/img/1782959477140/73ea67d49cd40c9b00b85de08e5ee534" alt="" width="20" height="20" style="margin-right:10px;border-radius:4px;">

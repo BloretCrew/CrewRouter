@@ -1,0 +1,139 @@
+/* Blora dialog migration for API Key client configuration flows. */
+#configToolSelectModal .modal-content,
+#ccSwitchSubmenuModal .modal-content,
+#ccSwitchResultModal .modal-content,
+#configOutputModal .modal-content {
+  width: min(92vw, 700px);
+  max-height: min(88dvh, 760px);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-4);
+}
+
+#configToolSelectModal .modal-body,
+#ccSwitchSubmenuModal .modal-body,
+#ccSwitchResultModal .modal-body,
+#configOutputModal .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+#configToolSelectModal .modal-header,
+#ccSwitchSubmenuModal .modal-header,
+#ccSwitchResultModal .modal-header,
+#configOutputModal .modal-header {
+  flex-shrink: 0;
+  border-bottom: 0;
+}
+
+#configToolSelectModal .config-tool-list,
+#ccSwitchSubmenuModal .config-tool-list {
+  display: grid;
+  gap: var(--blora-space-2);
+}
+
+#configToolSelectModal .config-tool-option,
+#ccSwitchSubmenuModal .config-tool-option {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  width: 100%;
+  min-height: 3.5rem;
+  padding: var(--blora-space-3) var(--blora-space-4);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-primary);
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard), transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+#configToolSelectModal .config-tool-option:hover,
+#ccSwitchSubmenuModal .config-tool-option:hover {
+  border-color: var(--blora-color-action-primary-default);
+  background: var(--blora-color-surface-raised);
+  transform: translateY(-1px);
+}
+
+#configToolSelectModal .config-tool-option img,
+#ccSwitchSubmenuModal .config-tool-option img {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  object-fit: contain;
+  border-radius: var(--blora-radius-md);
+}
+
+#configToolSelectModal .config-tool-option-label {
+  min-width: 0;
+  font-weight: 600;
+}
+
+#configToolSelectModal .config-tool-option-path {
+  margin-inline-start: auto;
+  max-width: 48%;
+  overflow: hidden;
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#configOutputModal .modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-3);
+}
+
+#configOutputDesc {
+  margin: 0 !important;
+  color: var(--blora-color-text-subtle) !important;
+  line-height: 1.6;
+}
+
+#configOutputContent {
+  display: block;
+  width: 100%;
+  min-height: 22rem;
+  max-height: 52dvh;
+  box-sizing: border-box;
+  resize: vertical;
+  overflow: auto;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: var(--blora-text-xs);
+  line-height: 1.55;
+  white-space: pre;
+}
+
+#configOutputModal .modal-footer {
+  flex-shrink: 0;
+  border-top: var(--blora-border-subtle);
+}
+
+@media (max-width: 640px) {
+  #configToolSelectModal .modal-content,
+  #ccSwitchSubmenuModal .modal-content,
+  #ccSwitchResultModal .modal-content,
+  #configOutputModal .modal-content {
+    width: calc(100vw - 1.5rem);
+    max-height: calc(100dvh - 2rem);
+    border-radius: var(--blora-radius-lg);
+  }
+
+  #configToolSelectModal .config-tool-option-path {
+    max-width: 40%;
+  }
+
+  #configOutputContent {
+    min-height: 15rem;
+    max-height: 48dvh;
+  }
+}
