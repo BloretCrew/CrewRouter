@@ -23,6 +23,7 @@
   <script src="/js/blora-dialog.js?v=4"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css?v=25">
+  <link rel="stylesheet" href="/css/model-library-blora.css?v=1">
   <link rel="stylesheet" href="/css/project-work.css?v=1">
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
@@ -179,7 +180,7 @@
       </div>
 
       <!-- 模型库页面 (CrewRouter) - 首页 -->
-      <div id="modelLibraryPage" class="page active">
+      <div id="modelLibraryPage" class="page active blora-model-library">
         <!-- 后台任务通知条：会话总结等长任务的进行中提示 -->
         <div id="modelLibraryTaskBar" style="display:none;margin-bottom:12px;"></div>
         <!-- 滚动后悬浮顶栏：筛选 + 搜索 + Key 切换（默认隐藏，由 JS 控制） -->
@@ -341,36 +342,36 @@
             <input type="text" id="librarySearchInput" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..." class="model-search-input">
           </div>
           <div class="model-filter-selects">
-            <select id="libraryProviderFilter" class="blora-select select">
-              <option value="all"><span data-i18n="全部供应商">全部供应商</span></option>
-            </select>
+            <blora-select id="libraryProviderFilter">
+              <blora-option value="all">全部供应商</blora-option>
+            </blora-select>
             <button type="button" id="libraryMoreFiltersBtn" class="blora-button btn btn-secondary btn-sm" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
           </div>
           <div id="libraryAdvancedFilters" class="model-filter-selects model-filter-advanced" style="display:none;width:100%;">
-            <select id="librarySeriesFilter" class="blora-select select">
-              <option value="all"><span data-i18n="全部系列">全部系列</span></option>
-            </select>
-            <select id="libraryProviderTagFilter" class="blora-select select">
-              <option value="all"><span data-i18n="全部标签">全部标签</span></option>
-            </select>
-            <select id="libraryTestFilter" class="blora-select select">
-              <option value="all"><span data-i18n="全部状态">全部状态</span></option>
-              <option value="pass"><span data-i18n="测试通过">测试通过</span></option>
-              <option value="fail"><span data-i18n="测试失败">测试失败</span></option>
-              <option value="untested"><span data-i18n="未测试">未测试</span></option>
-            </select>
-            <select id="librarySort" class="blora-select select">
-              <option value="default"><span data-i18n="默认 / 自定义排序">默认 / 自定义排序</span></option>
-              <option value="price_asc"><span data-i18n="价格低→高">价格低→高</span></option>
-              <option value="price_desc"><span data-i18n="价格高→低">价格高→低</span></option>
-              <option value="name_asc"><span data-i18n="名称 A-Z">名称 A-Z</span></option>
-              <option value="name_desc"><span data-i18n="名称 Z-A">名称 Z-A</span></option>
-              <option value="test_latency_asc"><span data-i18n="测试最快">测试最快</span></option>
-              <option value="test_latency_desc"><span data-i18n="测试最慢">测试最慢</span></option>
-              <option value="test_tps_desc"><span data-i18n="吞吐最高">吞吐最高</span></option>
-            </select>
+            <blora-select id="librarySeriesFilter">
+              <blora-option value="all">全部系列</blora-option>
+            </blora-select>
+            <blora-select id="libraryProviderTagFilter">
+              <blora-option value="all">全部标签</blora-option>
+            </blora-select>
+            <blora-select id="libraryTestFilter">
+              <blora-option value="all">全部状态</blora-option>
+              <blora-option value="pass">测试通过</blora-option>
+              <blora-option value="fail">测试失败</blora-option>
+              <blora-option value="untested">未测试</blora-option>
+            </blora-select>
+            <blora-select id="librarySort">
+              <blora-option value="default">默认 / 自定义排序</blora-option>
+              <blora-option value="price_asc">价格低→高</blora-option>
+              <blora-option value="price_desc">价格高→低</blora-option>
+              <blora-option value="name_asc">名称 A-Z</blora-option>
+              <blora-option value="name_desc">名称 Z-A</blora-option>
+              <blora-option value="test_latency_asc">测试最快</blora-option>
+              <blora-option value="test_latency_desc">测试最慢</blora-option>
+              <blora-option value="test_tps_desc">吞吐最高</blora-option>
+            </blora-select>
           </div>
         </div>
         <!-- 悬浮顶栏显隐哨兵：滚出视口后显示 sticky bar -->
