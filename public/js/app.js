@@ -2307,8 +2307,8 @@ class ConsoleApp {
           <div class="model-library-team-header" onclick="app.toggleKeyModelPickerTeam(${teamIndex})">
             <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="team-badge">' + t('个人') + '</span>' : ''}
-            ${team.is_default ? '<span class="team-badge default">' + t('默认') + '</span>' : ''}
+            ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
+            ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
           </div>
           <div class="model-library-team-content">
             ${team.providers.map((provider, providerIndex) => this._renderKeyPickerProvider(team, provider, teamIndex, providerIndex)).join('')}
@@ -2338,7 +2338,7 @@ class ConsoleApp {
             ${(provider.tags || []).map(t =>
               `<span class="model-item-badge" style="background:${safeColor(t.color)}18;color:${safeColor(t.color)};border:1px solid ${safeColor(t.color)}44;">${escapeHtml(t.name)}</span>`
             ).join('')}
-            ${isProviderDisabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('已禁用') + '</span>' : ''}
+            ${isProviderDisabled ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>' : ''}
           </div>
           <div class="model-library-provider-actions">
             <span class="provider-model-count">${totalCount} 个模型</span>
@@ -9579,8 +9579,8 @@ ${extractorBody}
         <div class="model-library-team model-search-team">
           <div class="model-library-team-header" style="cursor:default;">
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="team-badge">' + t('个人') + '</span>' : ''}
-            ${team.is_default ? '<span class="team-badge default">' + t('默认') + '</span>' : ''}
+            ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
+            ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
             <div style="flex:1;"></div>
             <span class="provider-model-count">${team.models.length} 个结果</span>
           </div>
@@ -10820,8 +10820,8 @@ ${extractorBody}
           <div class="model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
             <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             <h3>${escapeHtml(team.team_name)}</h3>
-            ${team.is_personal ? '<span class="team-badge">' + t('个人') + '</span>' : ''}
-            ${team.is_default ? '<span class="team-badge default">' + t('默认') + '</span>' : ''}
+            ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
+            ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
             <div style="flex:1;"></div>
             <button type="button" class="blora-button btn btn-sm btn-secondary model-test-btn" data-variant="outline" data-size="sm" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${this._jsString(team.team_id)}')" title="${t('测试此 Team 下所有模型')}">
@@ -10861,8 +10861,8 @@ ${extractorBody}
                     `<span class="model-item-badge" style="background:${safeColor(t.color)}18;color:${safeColor(t.color)};border:1px solid ${safeColor(t.color)}44;">${escapeHtml(t.name)}</span>`
                   ).join('')}
                   ${this._renderLibraryMoveControls('provider', team.team_id, provider.provider_id)}
-                  ${isProviderDisabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('已禁用') + '</span>' : ''}
-                  ${isProviderHidden ? '<span class="library-hidden-badge">' + t('已隐藏') + '</span>' : ''}
+                  ${isProviderDisabled ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>' : ''}
+                  ${isProviderHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
                 </div>
                 <div class="model-library-provider-actions">
                   <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="font-size:12px;color:var(--muted-foreground);"></span>
@@ -10984,8 +10984,8 @@ ${extractorBody}
             ${subtitleHtml}
             ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
             ${isOwner ? '<span class="model-item-badge owner">' + t('我的') + '</span>' : ''}
-            ${isStarred ? '<span class="library-star-badge">' + t('星标') + '</span>' : ''}
-            ${isModelHidden ? '<span class="library-hidden-badge">' + t('已隐藏') + '</span>' : ''}
+            ${isStarred ? '<span class="blora-badge" data-variant="warning">' + t('星标') + '</span>' : ''}
+            ${isModelHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
           </div>
         </div>
         ${model.description ? `<div class="model-library-item-desc">${escapeHtml(model.description)}</div>` : ''}
