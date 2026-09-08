@@ -1,6 +1,8 @@
 /* Model library surface migration: keep behavior in app.js and use Blora primitives for visual surfaces. */
 .blora-model-library {
   --library-gap: var(--blora-space-4);
+  --library-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --library-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
 }
 
 .blora-model-library .model-library-header,
@@ -8,7 +10,7 @@
 .blora-model-library .model-quota-section,
 .blora-model-library .library-reorder-toolbar,
 .blora-model-library .model-filter-bar {
-  border: var(--blora-border-subtle);
+  border: var(--library-border);
   border-radius: var(--blora-radius-xl);
   background: var(--blora-color-surface-default);
   box-shadow: var(--blora-shadow-1);
@@ -77,7 +79,7 @@
 
 .blora-model-library .model-search-input,
 .blora-model-library .model-library-sticky-search .model-search-input {
-  border-color: var(--blora-color-border-default);
+  border-color: color-mix(in srgb, var(--border) 52%, transparent);
   background: var(--blora-color-surface-raised);
   color: var(--blora-color-text-primary);
 }
@@ -89,7 +91,7 @@
 .blora-model-library .model-library-team {
   margin-bottom: var(--library-gap);
   padding: 0;
-  border: var(--blora-border-subtle);
+  border: var(--library-border);
   border-radius: var(--blora-radius-xl);
   background: var(--blora-color-surface-default);
   box-shadow: var(--blora-shadow-1);
@@ -101,7 +103,7 @@
   gap: var(--blora-space-3);
   padding: var(--blora-space-4) var(--blora-space-5);
   background: var(--blora-color-surface-raised);
-  border-bottom: var(--blora-border-subtle);
+  border-bottom: var(--library-border-soft);
 }
 
 .blora-model-library .model-library-team-content {
@@ -114,7 +116,7 @@
 
 .blora-model-library .model-library-provider {
   padding: 0;
-  border-color: var(--blora-color-border-default);
+  border-color: color-mix(in srgb, var(--border) 52%, transparent);
   border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-default);
   box-shadow: none;
@@ -177,7 +179,7 @@
 .blora-model-library .model-library-item {
   min-height: 12rem;
   padding: var(--blora-space-4);
-  border: var(--blora-border-subtle);
+  border: var(--library-border);
   border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-default);
   box-shadow: none;
@@ -185,7 +187,7 @@
 }
 
 .blora-model-library .model-library-item:hover {
-  border-color: var(--blora-color-border-strong);
+  border-color: color-mix(in srgb, var(--primary) 52%, var(--border));
   box-shadow: var(--blora-shadow-2);
   transform: translateY(-1px);
 }
@@ -222,14 +224,14 @@
 .blora-model-library .model-library-item-price {
   margin-top: auto;
   padding-top: var(--blora-space-3);
-  border-top: var(--blora-border-subtle);
+  border-top: var(--library-border-soft);
 }
 
 .blora-model-library .model-library-item-actions {
   margin-top: var(--blora-space-4);
   margin-inline-start: 0;
   padding-top: var(--blora-space-3);
-  border-top: var(--blora-border-subtle);
+  border-top: var(--library-border-soft);
   flex-wrap: wrap;
   gap: var(--blora-space-2);
   min-height: 2.25rem;
@@ -319,7 +321,7 @@
 }
 
 .blora-model-library .model-item-badge {
-  border: var(--blora-border-subtle);
+  border: var(--library-border);
   background: var(--blora-color-surface-raised) !important;
   color: var(--blora-color-text-subtle) !important;
 }
@@ -333,7 +335,7 @@
 }
 
 .blora-model-library .model-library-starred {
-  border-color: color-mix(in srgb, var(--blora-color-status-warning) 40%, var(--blora-color-border-default));
+  border-color: color-mix(in srgb, var(--status-warning, #d99a20) 34%, var(--border));
 }
 
 .blora-model-library .model-library-starred > .model-library-team-header {
@@ -341,7 +343,7 @@
 }
 
 .blora-model-library .empty-state {
-  border: var(--blora-border-subtle);
+  border: var(--library-border);
   border-radius: var(--blora-radius-xl);
   background: var(--blora-color-surface-default);
 }
