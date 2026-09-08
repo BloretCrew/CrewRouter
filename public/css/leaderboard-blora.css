@@ -1,0 +1,87 @@
+/* Blora surface migration for the leaderboard page. */
+.blora-leaderboard-page {
+  --leader-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --leader-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-leaderboard-page > .content-section {
+  border: var(--leader-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-leaderboard-page .section-header h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-leaderboard-page .stats-filters {
+  gap: var(--blora-space-3);
+  padding: var(--blora-space-4);
+  border: var(--leader-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-leaderboard-page .stats-filter-label {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-leaderboard-page #leaderboardContent {
+  overflow-x: auto;
+  border: var(--leader-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-leaderboard-page .leaderboard-table {
+  min-width: 680px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.blora-leaderboard-page .leaderboard-table th {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
+  border-bottom: var(--leader-border-soft);
+  font-family: var(--blora-font-body);
+}
+
+.blora-leaderboard-page .leaderboard-table td {
+  border-bottom: var(--leader-border-soft);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-leaderboard-page .leaderboard-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.blora-leaderboard-page .leaderboard-table tbody tr:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-leaderboard-page .leaderboard-current-row,
+.blora-leaderboard-page .leaderboard-current-row:hover td {
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 8%, var(--blora-color-surface-default)) !important;
+}
+
+.blora-leaderboard-page .leaderboard-avatar-placeholder {
+  background: var(--blora-color-action-primary-default);
+}
+
+.blora-leaderboard-page .leaderboard-footer {
+  color: var(--blora-color-text-subtle);
+  padding: var(--blora-space-4);
+}
+
+@media (max-width: 640px) {
+  .blora-leaderboard-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-leaderboard-page .stats-filter-group {
+    width: 100%;
+  }
+}
