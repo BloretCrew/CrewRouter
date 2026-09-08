@@ -109,12 +109,12 @@
         <div class="divider"><span><span data-i18n="安全登录">安全登录</span></span></div>
 
         <!-- 登录表单 -->
-        <form id="loginForm" onsubmit="handleLogin(event)">
+        <form id="loginForm" method="post" action="/auth/login?format=html" accept-charset="UTF-8" onsubmit="if (typeof handleLogin === 'function' && typeof window.fetch === 'function') { handleLogin(event); return false; } return true;">
           <div class="form-group">
-            <input type="text" id="loginInput" placeholder="用户名或邮箱" data-i18n-placeholder="用户名或邮箱" class="input blora-input" required autocomplete="username">
+            <input type="text" id="loginInput" name="login" placeholder="用户名或邮箱" data-i18n-placeholder="用户名或邮箱" class="input blora-input" required autocomplete="username">
           </div>
           <div class="form-group">
-            <input type="password" id="password" placeholder="密码（至少6位）" data-i18n-placeholder="密码（至少6位）" class="input blora-input" minlength="6" required autocomplete="current-password">
+            <input type="password" id="password" name="password" placeholder="密码（至少6位）" data-i18n-placeholder="密码（至少6位）" class="input blora-input" minlength="6" required autocomplete="current-password">
           </div>
           <button type="submit" class="login-btn blora-button" data-variant="primary" id="submitBtn">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -217,7 +217,7 @@
       try {
         const res = await fetch('/auth/login', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           credentials: 'same-origin',
           body: JSON.stringify({ login: loginInput, password })
         });
@@ -452,6 +452,7 @@
       const errorEl = document.getElementById('errorMessage');
       const errors = {
         'session_failed': '会话保存失败',
+        'login_failed': '用户名/密码错误或登录失败',
         'feishu_state_invalid': '飞书登录失败：安全校验不通过，请重试',
         'feishu_no_code': '飞书登录失败：未收到授权码',
         'feishu_token_failed': '飞书登录失败：获取 Token 失败',

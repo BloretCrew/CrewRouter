@@ -58,22 +58,30 @@ router.get('/status', async (req, res) => {
 
 // 登录
 router.post('/login', async (req, res) => {
+  const htmlLogin = req.query.format === 'html' && req.accepts('html');
+  const reply = (status, payload) => {
+    if (htmlLogin) {
+      const target = status >= 400 ? `/?error=login_failed&message=${encodeURIComponent(payload.error || '登录失败')}` : '/console';
+      return res.redirect(target);
+    }
+    return res.status(status).json(payload);
+  };
   try {
     const { metadata } = require('../utils/instance-edition');
     const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
     if (metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: await require('../utils/auth-mode').getAuthMode() }).auth.methods.includes('password') === false) {
-      return res.status(403).json({ error: '当前实例不支持密码登录', type: 'auth_method_disabled' });
+      return reply(403, { error: '当前实例不支持密码登录', type: 'auth_method_disabled' });
     }
     const { login, email, password } = req.body;
     const loginValue = login || email;
 
     if (!loginValue || !password) {
-      return res.status(400).json({ error: '请提供用户名或邮箱和密码' });
+      return reply(400, { error: '请提供用户名或邮箱和密码' });
     }
 
     const rateKey = `${req.ip || 'unknown'}:${String(loginValue).toLowerCase().trim()}`;
     if (!consumeLoginAttempt(rateKey)) {
-      return res.status(429).json({ error: '登录尝试过于频繁，请稍后再试' });
+      return reply(429, { error: '登录尝试过于频繁，请稍后再试' });
     }
 
     // 统一转小写，不区分大小写
@@ -86,20 +94,20 @@ router.post('/login', async (req, res) => {
       [normalized]
     );
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: '用户名/邮箱或密码错误' });
+      return reply(401, { error: '用户名/邮箱或密码错误' });
     }
 
     const user = result.rows[0];
 
     // 检查密码是否存在（兼容旧用户，init-db会自动设置默认密码）
     if (!user.password_hash) {
-      return res.status(401).json({ error: '该账号尚未设置密码，请联系管理员' });
+      return reply(401, { error: '该账号尚未设置密码，请联系管理员' });
     }
 
     // 验证密码
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(401).json({ error: '用户名/邮箱或密码错误' });
+      return reply(401, { error: '用户名/邮箱或密码错误' });
     }
 
     // 登录成功后清除该账号/IP 的失败计数
@@ -108,8 +116,8 @@ router.post('/login', async (req, res) => {
     // 检查是否启用了 2FA
     if (user.two_factor_enabled) {
       // 返回需要 2FA 验证的提示，携带用户 ID 用于后续验证
-      return res.json({ 
-        require2FA: true, 
+      return reply(200, {
+        require2FA: true,
         userId: user.id,
         message: '需要进行 2FA 验证' 
       });
@@ -142,7 +150,7 @@ router.post('/login', async (req, res) => {
     req.session.save((err) => {
       if (err) {
         Logger.error('[登录] Session保存失败:', err);
-        return res.status(500).json({ error: '登录失败，请稍后重试' });
+        return reply(500, { error: '登录失败，请稍后重试' });
       }
       logAction({
         userId: user.id,
@@ -157,11 +165,11 @@ router.post('/login', async (req, res) => {
       });
       // 登录状态上报（fire-and-forget，不阻塞响应）
       reportLoginEvent(req);
-      res.json(req.session.user);
+      reply(200, req.session.user);
     });
   } catch (error) {
     Logger.error('[登录] 错误:', error);
-    res.status(500).json({ error: '登录失败，请稍后重试' });
+    reply(500, { error: '登录失败，请稍后重试' });
   }
 });
 
