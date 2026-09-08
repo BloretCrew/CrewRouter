@@ -1,0 +1,93 @@
+/* Blora surface migration for the admin user management page. */
+.blora-admin-users-page {
+  --users-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --users-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-admin-users-page > .content-section {
+  border: var(--users-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-admin-users-page > .content-section > h2 {
+  margin-top: 0;
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-admin-users-page .admin-stat-cards {
+  gap: var(--blora-space-3);
+}
+
+.blora-admin-users-page .admin-stat-card {
+  border: var(--users-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-admin-users-page .admin-stat-card-value,
+.blora-admin-users-page .admin-stat-card-label {
+  color: var(--blora-color-text-primary);
+}
+
+.blora-admin-users-page .admin-filter-bar {
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-3);
+  border: var(--users-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-users-page .admin-filter-bar .input {
+  min-height: 2.5rem;
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-users-page .users-table {
+  overflow-x: auto;
+  border: var(--users-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-users-page .users-table table {
+  min-width: 60rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.blora-admin-users-page .users-table th {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
+  border-bottom: var(--users-border-soft);
+}
+
+.blora-admin-users-page .users-table td {
+  border-bottom: var(--users-border-soft);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-admin-users-page .users-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.blora-admin-users-page .users-table tbody tr:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+@media (max-width: 640px) {
+  .blora-admin-users-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-admin-users-page .admin-filter-bar .input,
+  .blora-admin-users-page .admin-filter-bar .blora-button {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
