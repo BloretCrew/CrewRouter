@@ -1,0 +1,194 @@
+/* Model library surface migration: keep behavior in app.js and use Blora primitives for visual surfaces. */
+.blora-model-library {
+  --library-gap: var(--blora-space-4);
+}
+
+.blora-model-library .model-library-header,
+.blora-model-library .model-library-binding-bar,
+.blora-model-library .model-quota-section,
+.blora-model-library .library-reorder-toolbar,
+.blora-model-library .model-filter-bar {
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-model-library .model-library-header {
+  padding: var(--blora-space-5) var(--blora-space-6);
+  gap: var(--blora-space-5);
+}
+
+.blora-model-library .model-library-header h2 {
+  color: var(--blora-color-text-primary) !important;
+  font-family: var(--blora-font-heading);
+  letter-spacing: -0.02em;
+}
+
+.blora-model-library .model-library-header-hint {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-model-library .model-library-binding-bar,
+.blora-model-library .model-quota-section,
+.blora-model-library .library-reorder-toolbar,
+.blora-model-library .model-filter-bar {
+  padding: var(--blora-space-4) var(--blora-space-5);
+}
+
+.blora-model-library .model-library-binding-bar,
+.blora-model-library .model-quota-section {
+  margin-bottom: var(--library-gap);
+}
+
+.blora-model-library .model-library-binding-label,
+.blora-model-library .model-quota-section-header h3,
+.blora-model-library .model-library-team-header h3 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-model-library .model-library-binding-summary,
+.blora-model-library .model-library-header-hint,
+.blora-model-library .model-quota-section-header p,
+.blora-model-library .library-reorder-toolbar-hint,
+.blora-model-library #modelLibraryCount {
+  color: var(--blora-color-text-subtle) !important;
+}
+
+.blora-model-library .model-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--library-gap);
+}
+
+.blora-model-library .model-filter-bar .model-search-box {
+  flex: 1 1 260px;
+  max-width: none;
+}
+
+.blora-model-library .model-filter-selects,
+.blora-model-library .model-library-header-actions,
+.blora-model-library .library-reorder-toolbar-actions {
+  gap: var(--blora-space-2);
+}
+
+.blora-model-library .model-search-input,
+.blora-model-library .model-library-sticky-search .model-search-input {
+  border-color: var(--blora-color-border-default);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-model-library blora-select {
+  min-width: 9rem;
+}
+
+.blora-model-library .model-library-team {
+  margin-bottom: var(--library-gap);
+  padding: var(--blora-space-4);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-model-library .model-library-team-header {
+  min-height: 2.75rem;
+  gap: var(--blora-space-3);
+  padding: 0 var(--blora-space-2) var(--blora-space-3);
+  border-bottom: var(--blora-border-subtle);
+}
+
+.blora-model-library .model-library-provider {
+  border-color: var(--blora-color-border-default);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: none;
+}
+
+.blora-model-library .model-library-provider + .model-library-provider {
+  margin-top: var(--blora-space-3);
+}
+
+.blora-model-library .model-library-provider-header {
+  min-height: 3.25rem;
+  padding: var(--blora-space-3) var(--blora-space-4);
+}
+
+.blora-model-library .model-library-provider-title,
+.blora-model-library .model-library-provider-actions {
+  gap: var(--blora-space-2);
+}
+
+.blora-model-library .model-library-list {
+  padding: 0 var(--blora-space-3) var(--blora-space-3);
+}
+
+.blora-model-library .model-library-item {
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: none;
+  transition: box-shadow var(--blora-duration-base) var(--blora-easing-standard), transform var(--blora-duration-base) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-model-library .model-library-item:hover {
+  border-color: var(--blora-color-border-strong);
+  box-shadow: var(--blora-shadow-2);
+  transform: translateY(-1px);
+}
+
+.blora-model-library .model-library-item.selected {
+  border-color: var(--blora-color-border-accent);
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-model-library .model-library-item-name > span {
+  color: var(--blora-color-text-primary);
+}
+
+.blora-model-library .model-library-item-desc,
+.blora-model-library .model-price-label,
+.blora-model-library .model-library-item-price {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-model-library .model-library-item-actions .blora-button,
+.blora-model-library .model-library-header-actions .blora-button,
+.blora-model-library .library-reorder-toolbar-actions .blora-button {
+  font-family: var(--blora-font-body);
+}
+
+.blora-model-library .empty-state {
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+}
+
+@media (max-width: 640px) {
+  .blora-model-library .model-library-header,
+  .blora-model-library .model-filter-bar,
+  .blora-model-library .model-library-binding-bar,
+  .blora-model-library .model-quota-section,
+  .blora-model-library .library-reorder-toolbar {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-model-library .model-library-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .blora-model-library .model-library-header-actions,
+  .blora-model-library .model-filter-selects {
+    width: 100%;
+  }
+
+  .blora-model-library .model-library-header-actions .blora-button,
+  .blora-model-library .model-filter-selects blora-select {
+    flex: 1 1 auto;
+  }
+}

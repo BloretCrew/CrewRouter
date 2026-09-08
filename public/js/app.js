@@ -9409,8 +9409,8 @@ ${extractorBody}
     });
 
     // 填充供应商筛选器（主栏 + 悬浮栏）
-    const optionsHtml = '<option value="all">' + t('全部供应商') + '</option>' +
-      [...providers].sort().map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+    const optionsHtml = '<blora-option value="all">' + t('全部供应商') + '</blora-option>' +
+      [...providers].sort().map(p => `<blora-option value="${escapeHtml(p)}">${escapeHtml(p)}</blora-option>`).join('');
     const keepValue = [...providers].includes(this.libraryProviderFilter) || this.libraryProviderFilter === 'all'
       ? this.libraryProviderFilter
       : 'all';
@@ -9429,8 +9429,8 @@ ${extractorBody}
   _populateProviderTagFilter() {
     const tags = this._providerTags || [];
     const prev = this.libraryProviderTagFilter;
-    const optionsHtml = '<option value="all">' + t('全部标签') + '</option>' +
-      tags.map(t => `<option value="tag:${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    const optionsHtml = '<blora-option value="all">' + t('全部标签') + '</blora-option>' +
+      tags.map(t => `<blora-option value="tag:${t.id}">${escapeHtml(t.name)}</blora-option>`).join('');
     const values = ['all', ...tags.map(t => `tag:${t.id}`)];
     const keepValue = values.includes(prev) ? prev : 'all';
     this.libraryProviderTagFilter = keepValue;
@@ -9446,8 +9446,8 @@ ${extractorBody}
   _renderSeriesFilter(seriesSelect, seriesSet) {
     if (!seriesSelect) return;
     const prev = this.librarySeriesFilter;
-    setHTML(seriesSelect, '<option value="all">' + t('全部系列') + '</option>' +
-      [...seriesSet].sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join(''));
+    setHTML(seriesSelect, '<blora-option value="all">' + t('全部系列') + '</blora-option>' +
+      [...seriesSet].sort().map(s => `<blora-option value="${escapeHtml(s)}">${escapeHtml(s)}</blora-option>`).join(''));
     if ([...seriesSet].includes(prev) || prev === 'all') {
       seriesSelect.value = prev;
     } else {
@@ -9818,7 +9818,7 @@ ${extractorBody}
   _ensureLibraryReorderControls() {
     // 排序/隐藏控件已放入「更多」菜单（console.html），此处仅同步状态
     const sortSelect = document.getElementById('librarySort');
-    const defaultOption = sortSelect?.querySelector('option[value="default"]');
+    const defaultOption = sortSelect?.querySelector('blora-option[value="default"]');
     if (defaultOption) defaultOption.textContent = t('默认 / 自定义排序');
     this._updateLibraryHiddenButtons();
     this._updateLibraryReorderButtons();
