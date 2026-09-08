@@ -1,0 +1,83 @@
+/* Blora surface migration for the balance page. */
+.blora-balance-page {
+  --balance-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --balance-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-balance-page > .content-section {
+  border: var(--balance-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-balance-page > .content-section > h2 {
+  margin-top: 0;
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-balance-page .balance-info {
+  border: var(--balance-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+  padding: var(--blora-space-5);
+}
+
+.blora-balance-page .balance-current {
+  padding: var(--blora-space-5) 0;
+}
+
+.blora-balance-page .balance-current .label {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-balance-page .balance-current .amount {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-balance-page .group-info-card,
+.blora-balance-page .limits-grid {
+  border: var(--balance-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-balance-page .group-info-card {
+  padding: var(--blora-space-5);
+}
+
+.blora-balance-page .group-header {
+  border-bottom: var(--balance-border-soft);
+  padding-bottom: var(--blora-space-4);
+}
+
+.blora-balance-page .group-name,
+.blora-balance-page .group-desc {
+  color: var(--blora-color-text-primary);
+}
+
+.blora-balance-page .group-rules {
+  padding-top: var(--blora-space-4);
+}
+
+.blora-balance-page .limits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--blora-space-3);
+  padding: var(--blora-space-4);
+}
+
+.blora-balance-page .limits-grid > * {
+  border: var(--balance-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+@media (max-width: 640px) {
+  .blora-balance-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+}
