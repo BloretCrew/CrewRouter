@@ -53,7 +53,7 @@ async function connect(url, { local = false, name = local ? '本地 CrewRouter' 
   state.instance = { ...profile, profile: { id: profile.id, name: profile.name, lastConnectedAt: profile.lastConnectedAt } };
   try {
     await state.mainWindow.loadURL(local ? `${state.currentTarget}/console` : state.currentTarget);
-    if (local) await state.mainWindow.webContents.executeJavaScript(`(() => { const card = document.getElementById('desktopSettingsCard'); if (card) { card.hidden = false; card.onclick = () => window.crewrouterDesktop?.openSettings?.(); } })()`, true);
+    if (local) await state.mainWindow.webContents.executeJavaScript(`(() => { document.getElementById('desktop-settings')?.remove(); const card = document.getElementById('desktopSettingsCard'); if (card) card.hidden = false; })()`, true);
   } catch (error) {
     // A redirect can supersede the initial navigation after the target is already loaded.
     if (error?.code !== 'ERR_ABORTED' && error?.errno !== -3) throw error;
@@ -122,7 +122,7 @@ async function openOfficialDemo() {
         const installed = await cookieStore.get({ url: cookieUrl, name: cookieName });
         if (!installed.length || installed[0].value !== cookieValue) throw new Error('Web Session Cookie 写入失败');
         await state.mainWindow.loadURL(target.url.toString());
-        await state.mainWindow.webContents.executeJavaScript(`(() => { const card = document.getElementById('desktopSettingsCard'); if (card) { card.hidden = false; card.onclick = () => window.crewrouterDesktop?.openSettings?.(); } })()`, true);
+        await state.mainWindow.webContents.executeJavaScript(`(() => { document.getElementById('desktop-settings')?.remove(); const card = document.getElementById('desktopSettingsCard'); if (card) card.hidden = false; })()`, true);
         state.mode = 'remote';
         state.currentTarget = target.url.origin;
         sendStatus({ message: '授权完成，已在 Desktop 中打开目标 CrewRouter。', mode: 'authorized', target: target.url.origin });
