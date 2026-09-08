@@ -18,7 +18,7 @@ test('main uses the official CrewRouter demo by default', () => {
   assert.match(source, /process\.env\.CREWROUTER_DEMO_URL \|\| 'https:\/\/crewrouter\.bloret\.net'/);
   assert.match(source, /async function connectCustomRemote/);
   assert.match(source, /desktop:connect-custom-remote/);
-  assert.match(source, /if \(active\.mode === 'local'\) return startLocal\(active\.displayName\)/);
+  assert.match(source, /if \(profile\.mode === 'local'\) return startLocal\(profile\.displayName\)/);
   assert.match(source, /state\.connection\.inspect\(target\.url\.toString\(\)\)/);
   assert.match(source, /targetOrigin/);
   assert.match(source, /validateRemoteUrl\(DEMO_URL, \{ resolveDns: false \}\)/);
@@ -51,6 +51,7 @@ test('forged URL or header context cannot authorize privileged settings IPC', ()
   assert.match(source, /const isSettingsFrame = \(event\) => Boolean\(state\.settingsWindow/);
   assert.match(source, /const isConnectedMainFrame = \(event\) => Boolean\(state\.mainWindow/);
   assert.match(source, /desktop:restart-local/);
+  assert.match(source, /const profile = state\.connection\.listProfiles\(\)\.find/);
   assert.match(source, /event\.sender === state\.settingsWindow\.webContents/);
   assert.match(source, /settingsEntry/);
   assert.doesNotMatch(source, /trustedRemote|x-crewrouter|authorization.*settings/i);
