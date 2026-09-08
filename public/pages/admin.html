@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <link rel="stylesheet" href="/css/admin-stats-blora.css?v=1">
+  <link rel="stylesheet" href="/css/admin-users-blora.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -179,13 +180,13 @@
       </div>
 
       <!-- 用户管理页面 -->
-      <div id="adminUsersPage" class="page">
+      <div id="adminUsersPage" class="page blora-admin-users-page">
         <div class="content-section">
           <h2><span data-i18n="用户管理">用户管理</span></h2>
           <div id="userStatsCards" class="admin-stat-cards"></div>
           <div class="admin-filter-bar">
-            <input type="text" id="userSearchInput" class="input" placeholder="搜索用户名或邮箱..." data-i18n-placeholder="搜索用户名或邮箱..." oninput="adminApp.filterUsers(this.value)">
-            <button class="btn btn-primary" type="button" onclick="adminApp.openInviteDialog()">生成邀请链接</button>
+            <input type="search" id="userSearchInput" class="blora-input input" placeholder="搜索用户名或邮箱..." data-i18n-placeholder="搜索用户名或邮箱..." oninput="adminApp.filterUsers(this.value)">
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.openInviteDialog()">生成邀请链接</button>
           </div>
           <div id="usersList" class="users-table">
             <!-- 用户列表将通过JS动态加载 -->
