@@ -29,7 +29,8 @@
 .settings-desktop-embed { padding: 0 !important; border: 0 !important; background: transparent; }
 .settings-desktop-stack { display: grid; gap: 16px; }
 .settings-desktop-block { padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: var(--shadow-card); }
-.settings-desktop-block h3 { margin: 0 0 16px; font-size: 16px; font-weight: 700; }
+.settings-desktop-block-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+.settings-desktop-block h3 { margin: 0; font-size: 16px; font-weight: 700; }
 .settings-desktop-block .settings-details { max-width: 620px; }
 .desktop-profile-row { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid var(--border); }
 .desktop-profile-row:first-child { border-top: 0; padding-top: 0; }

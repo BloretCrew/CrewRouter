@@ -228,7 +228,8 @@ function createWindow() {
 }
 function registerIpc() {
   const { ipcMain } = electron;
-  ipcMain.handle('desktop:get-status', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return currentStatus(); });
+  ipcMain.handle('desktop:get-status', (event) => { if (!isRendererFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); return currentStatus(); });
+  ipcMain.handle('desktop:open-oobe', (event) => { if (!isConnectedMainFrame(event)) fail('IPC 来源不可信'); state.currentTarget = null; state.mode = 'connect'; state.instance = null; state.mainWindow.loadFile(rendererEntry); return currentStatus(); });
   ipcMain.handle('desktop:choose-mode', async (event, requested) => { if (!isRendererFrame(event) || requested !== 'local') fail('不支持的模式'); return startLocal(); });
   ipcMain.handle('desktop:setup-local-profile', async (event, displayName) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); const result = validateLocalDisplayName(displayName); if (!result.ok) fail(result.error); return startLocal(result.value); });
   ipcMain.handle('desktop:connect-remote', async (event, url) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); return startRemoteRedirect(url); });
