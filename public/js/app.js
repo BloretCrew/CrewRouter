@@ -10824,7 +10824,7 @@ ${extractorBody}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
             <div style="flex:1;"></div>
-            <button type="button" class="blora-button btn btn-sm btn-secondary model-test-btn" data-variant="outline" data-size="sm" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${this._jsString(team.team_id)}')" title="${t('测试此 Team 下所有模型')}">
+            <button type="button" class="blora-button model-action-test" data-variant="outline" data-size="sm" onclick="event.stopPropagation();app.testTeamModels('${this._jsString(team.team_id)}')" title="${t('测试此 Team 下所有模型')}">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试全部
             </button>
@@ -10866,11 +10866,11 @@ ${extractorBody}
                 </div>
                 <div class="model-library-provider-actions">
                   <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="font-size:12px;color:var(--muted-foreground);"></span>
-                  <button type="button" class="blora-button btn btn-sm btn-secondary model-test-btn" data-variant="outline" data-size="sm" style="padding:4px 6px;" title="${t('测试此供应商下所有模型')}" onclick="event.stopPropagation();app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')">
+                  <button type="button" class="blora-button model-action-test" data-variant="outline" data-size="sm" title="${t('测试此供应商下所有模型')}" onclick="event.stopPropagation();app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     测试
                   </button>
-                  <button type="button" class="blora-button btn btn-sm btn-secondary" data-variant="ghost" data-size="icon" style="padding:4px 6px;" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">
+                  <button type="button" class="blora-button model-action-icon" data-variant="ghost" data-size="icon" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   </button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
@@ -11000,21 +11000,21 @@ ${extractorBody}
       <div class="model-library-item-actions">
         ${isKeyPicker ? '' : this._renderLibraryMoveControls('model', team.team_id, providerId)}
         ${isProviderDisabled
-          ? '<button type="button" class="blora-button" data-variant="secondary" data-size="sm" disabled style="opacity:0.5;">' + t('供应商已禁用') + '</button>'
+          ? '<button type="button" class="blora-button model-action-disabled" data-variant="secondary" data-size="sm" disabled>' + t('供应商已禁用') + '</button>'
           : isKeyPicker
             ? (queueIndex >= 0
-              ? `<button type="button" class="blora-button" data-variant="secondary" data-size="sm" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
-              : '<button type="button" class="blora-button" data-variant="primary" data-size="sm">' + t('加入队列') + '</button>')
+              ? `<button type="button" class="blora-button model-action-bound" data-variant="secondary" data-size="sm" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
+              : '<button type="button" class="blora-button model-action-primary" data-variant="primary" data-size="sm">' + t('加入队列') + '</button>')
           : `
-             <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title="${t('测试模型连通性')}">
+             <button type="button" class="blora-button model-action-test" data-variant="outline" data-size="sm" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title="${t('测试模型连通性')}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试
             </button>
             ${isOwner
               ? ''
               : isCurrent
-                ? '<button type="button" class="blora-button" data-variant="secondary" data-size="sm" disabled>' + t('已绑定') + '</button>'
-                : '<button type="button" class="blora-button" data-variant="primary" data-size="sm">' + t('绑定') + '</button>'}
+                ? '<button type="button" class="blora-button model-action-bound" data-variant="secondary" data-size="sm" disabled>' + t('已绑定') + '</button>'
+                : '<button type="button" class="blora-button model-action-primary" data-variant="primary" data-size="sm">' + t('绑定') + '</button>'}
           `}
         ${isKeyPicker ? '' : this._renderLibraryMoreMenu(modelMoreItems)}
       </div>
@@ -11247,49 +11247,24 @@ ${extractorBody}
     }).join('');
 
     return `
-      <blora-dropdown class="library-more-menu" label="${t('更多操作')}" align="end" onclick="event.stopPropagation()">
+      <blora-dropdown class="library-more-menu" align="end" onclick="event.stopPropagation()">
+        <button slot="trigger" type="button" class="blora-button library-more-trigger" data-variant="outline" data-size="sm" aria-label="${t('更多操作')}">
+          <span>${t('更多操作')}</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
         ${menuItems}
       </blora-dropdown>`;
   }
 
-  closeLibraryMoreMenus(exceptEl = null) {
-    document.querySelectorAll('.library-more-menu.open').forEach(menu => {
-      if (exceptEl && menu === exceptEl) return;
-      menu.classList.remove('open');
-      const panel = menu.querySelector('.library-more-menu-panel');
-      if (panel) panel.style.display = 'none';
+  closeLibraryMoreMenus() {
+    document.querySelectorAll('.library-more-menu').forEach(menu => {
+      menu.close?.();
     });
   }
 
   toggleLibraryMoreMenu(event, btn) {
     event.stopPropagation();
-    const menu = btn?.closest('.library-more-menu');
-    if (!menu) return;
-    const panel = menu.querySelector('.library-more-menu-panel');
-    if (!panel) return;
-    const willOpen = !menu.classList.contains('open');
-    this.closeLibraryMoreMenus(willOpen ? menu : null);
-    if (willOpen) {
-      menu.classList.add('open');
-      panel.style.display = 'block';
-      // 靠近底部时向上弹出，避免被裁切
-      const rect = panel.getBoundingClientRect();
-      if (rect.bottom > window.innerHeight - 8) {
-        panel.classList.add('drop-up');
-      } else {
-        panel.classList.remove('drop-up');
-      }
-      const close = (e) => {
-        if (!menu.contains(e.target)) {
-          this.closeLibraryMoreMenus();
-          document.removeEventListener('click', close);
-        }
-      };
-      setTimeout(() => document.addEventListener('click', close), 0);
-    } else {
-      menu.classList.remove('open');
-      panel.style.display = 'none';
-    }
+    btn?.closest('.library-more-menu')?.toggle?.();
   }
 
   toggleTeam(teamIndex) {
