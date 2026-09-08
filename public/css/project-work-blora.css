@@ -1,0 +1,116 @@
+/* Blora surface migration for the project work dashboard. */
+.blora-project-work-page {
+  --project-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --project-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-project-work-page > .content-section {
+  border: var(--project-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-project-work-page .project-work-heading {
+  gap: var(--blora-space-5);
+  margin-bottom: var(--blora-space-5);
+  padding: var(--blora-space-5);
+  border: var(--project-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-project-work-page .project-work-kicker {
+  color: var(--blora-color-action-primary-default);
+  letter-spacing: 0.12em;
+}
+
+.blora-project-work-page .project-work-heading h3 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-project-work-page .project-work-status {
+  border: var(--project-border-soft);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-project-work-page .project-work-filters {
+  border: var(--project-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-project-work-page .project-work-summary {
+  gap: var(--blora-space-3);
+}
+
+.blora-project-work-page .project-work-stat,
+.blora-project-work-page .project-work-chart-card,
+.blora-project-work-page .project-work-focus-card,
+.blora-project-work-page .project-work-list-card,
+.blora-project-work-page .project-work-project-card {
+  border: var(--project-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+  box-shadow: none;
+}
+
+.blora-project-work-page .project-work-stat {
+  padding: var(--blora-space-5);
+}
+
+.blora-project-work-page .project-work-stat span,
+.blora-project-work-page .project-work-stat small,
+.blora-project-work-page .project-work-card-title span,
+.blora-project-work-page .project-work-project-metrics span,
+.blora-project-work-page .project-work-project-footer {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-project-work-page .project-work-stat strong,
+.blora-project-work-page .project-work-card-title strong,
+.blora-project-work-page .project-work-project-title h4 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-project-work-page .project-work-recent-item {
+  border-bottom: var(--project-border-soft);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-project-work-page .project-work-rank {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-project-work-page .project-work-project-card {
+  transition: transform var(--blora-duration-fast) var(--blora-easing-standard), box-shadow var(--blora-duration-base) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-project-work-page .project-work-project-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  box-shadow: var(--blora-shadow-2);
+  transform: translateY(-1px);
+}
+
+.blora-project-work-page .project-work-project-icon {
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-action-primary-default);
+}
+
+.blora-project-work-page .project-work-project-title button {
+  color: var(--blora-color-text-subtle);
+}
+
+@media (max-width: 800px) {
+  .blora-project-work-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-project-work-page .project-work-heading {
+    padding: var(--blora-space-4);
+  }
+}
