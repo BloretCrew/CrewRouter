@@ -185,9 +185,9 @@
         <!-- 滚动后悬浮顶栏：筛选 + 搜索 + Key 切换（默认隐藏，由 JS 控制） -->
         <div id="modelLibraryStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
-            <select id="libraryStickyProviderFilter" class="blora-select select model-library-sticky-select" aria-label="供应商筛选" data-i18n-title="供应商筛选">
-              <option value="all"><span data-i18n="全部供应商">全部供应商</span></option>
-            </select>
+            <blora-select id="libraryStickyProviderFilter" class="model-library-sticky-select" aria-label="供应商筛选" data-i18n-title="供应商筛选">
+              <blora-option value="all">全部供应商</blora-option>
+            </blora-select>
             <div class="model-search-box model-library-sticky-search">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               <input type="text" id="libraryStickySearchInput" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..." class="model-search-input" autocomplete="off">
@@ -203,28 +203,28 @@
             </div>
           </div>
           <div id="libraryStickyAdvancedFilters" class="model-library-sticky-advanced" style="display:none;" aria-hidden="true">
-            <select id="libraryStickySeriesFilter" class="blora-select select model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选">
-              <option value="all"><span data-i18n="全部系列">全部系列</span></option>
-            </select>
-            <select id="libraryStickyProviderTagFilter" class="blora-select select model-library-sticky-select" aria-label="标签筛选" data-i18n-title="标签筛选">
-              <option value="all"><span data-i18n="全部标签">全部标签</span></option>
-            </select>
-            <select id="libraryStickyTestFilter" class="blora-select select model-library-sticky-select" aria-label="测试状态" data-i18n-title="测试状态">
-              <option value="all"><span data-i18n="全部状态">全部状态</span></option>
-              <option value="pass"><span data-i18n="测试通过">测试通过</span></option>
-              <option value="fail"><span data-i18n="测试失败">测试失败</span></option>
-              <option value="untested"><span data-i18n="未测试">未测试</span></option>
-            </select>
-            <select id="libraryStickySort" class="blora-select select model-library-sticky-select model-library-sticky-sort" aria-label="排序" data-i18n-title="排序">
-              <option value="default"><span data-i18n="默认 / 自定义排序">默认 / 自定义排序</span></option>
-              <option value="price_asc"><span data-i18n="价格低→高">价格低→高</span></option>
-              <option value="price_desc"><span data-i18n="价格高→低">价格高→低</span></option>
-              <option value="name_asc"><span data-i18n="名称 A-Z">名称 A-Z</span></option>
-              <option value="name_desc"><span data-i18n="名称 Z-A">名称 Z-A</span></option>
-              <option value="test_latency_asc"><span data-i18n="测试最快">测试最快</span></option>
-              <option value="test_latency_desc"><span data-i18n="测试最慢">测试最慢</span></option>
-              <option value="test_tps_desc"><span data-i18n="吞吐最高">吞吐最高</span></option>
-            </select>
+            <blora-select id="libraryStickySeriesFilter" class="model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选">
+              <blora-option value="all">全部系列</blora-option>
+            </blora-select>
+            <blora-select id="libraryStickyProviderTagFilter" class="model-library-sticky-select" aria-label="标签筛选" data-i18n-title="标签筛选">
+              <blora-option value="all">全部标签</blora-option>
+            </blora-select>
+            <blora-select id="libraryStickyTestFilter" class="model-library-sticky-select" aria-label="测试状态" data-i18n-title="测试状态">
+              <blora-option value="all">全部状态</blora-option>
+              <blora-option value="pass">测试通过</blora-option>
+              <blora-option value="fail">测试失败</blora-option>
+              <blora-option value="untested">未测试</blora-option>
+            </blora-select>
+            <blora-select id="libraryStickySort" class="model-library-sticky-select model-library-sticky-sort" aria-label="排序" data-i18n-title="排序">
+              <blora-option value="default">默认 / 自定义排序</blora-option>
+              <blora-option value="price_asc">价格低→高</blora-option>
+              <blora-option value="price_desc">价格高→低</blora-option>
+              <blora-option value="name_asc">名称 A-Z</blora-option>
+              <blora-option value="name_desc">名称 Z-A</blora-option>
+              <blora-option value="test_latency_asc">测试最快</blora-option>
+              <blora-option value="test_latency_desc">测试最慢</blora-option>
+              <blora-option value="test_tps_desc">吞吐最高</blora-option>
+            </blora-select>
           </div>
         </div>
 
