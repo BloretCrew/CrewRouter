@@ -52,6 +52,7 @@ test('forged URL or header context cannot authorize privileged settings IPC', ()
   assert.match(source, /const isConnectedMainFrame = \(event\) => Boolean\(state\.mainWindow/);
   assert.match(source, /desktop:restart-local/);
   assert.match(source, /const profile = state\.connection\.listProfiles\(\)\.find/);
+  assert.match(source, /activeProfile\?\.mode === 'remote'/);
   assert.match(source, /event\.sender === state\.settingsWindow\.webContents/);
   assert.match(source, /settingsEntry/);
   assert.doesNotMatch(source, /trustedRemote|x-crewrouter|authorization.*settings/i);
