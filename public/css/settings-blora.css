@@ -1,0 +1,109 @@
+/* Blora surface migration for user settings. */
+.blora-settings-page {
+  --settings-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --settings-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-settings-page .settings-overview {
+  max-width: none;
+  padding: var(--blora-space-6);
+  border: var(--settings-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-settings-page .settings-version-card {
+  padding: var(--blora-space-5);
+  border: var(--settings-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-settings-page .settings-version-info > strong,
+.blora-settings-page .settings-detail-title,
+.blora-settings-page .settings-section h2,
+.blora-settings-page .settings-section h3 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-settings-page .settings-link-button {
+  border: var(--settings-border-soft);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-settings-page .settings-link-button:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-settings-page .settings-category-card {
+  min-height: 5.5rem;
+  border: var(--settings-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-primary);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-settings-page .settings-category-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-settings-page .settings-category-card small,
+.blora-settings-page .settings-overview-hint,
+.blora-settings-page .settings-version-info > span {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-settings-page .settings-detail {
+  max-width: none;
+  margin: var(--blora-space-5) 0;
+}
+
+.blora-settings-page .settings-back-button {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-settings-page .settings-back-button:hover {
+  color: var(--blora-color-text-primary);
+}
+
+.blora-settings-page .settings-section {
+  border: var(--settings-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-settings-page .settings-section > div[style*="border"] {
+  border: var(--settings-border-soft) !important;
+  border-radius: var(--blora-radius-lg) !important;
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-settings-page .settings-section .blora-button {
+  font-family: var(--blora-font-body);
+}
+
+.blora-settings-page .settings-section .form-group label,
+.blora-settings-page .settings-section small {
+  color: var(--blora-color-text-subtle);
+}
+
+@media (max-width: 640px) {
+  .blora-settings-page .settings-overview,
+  .blora-settings-page .settings-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-settings-page .settings-category-grid {
+    grid-template-columns: 1fr;
+  }
+}
