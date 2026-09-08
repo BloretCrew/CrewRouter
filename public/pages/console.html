@@ -37,6 +37,7 @@
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/settings-blora.css?v=1">
   <link rel="stylesheet" href="/css/sessions-blora.css?v=1">
+  <link rel="stylesheet" href="/css/prompts-blora.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <script>
     (function() {
@@ -1148,7 +1149,7 @@
       </div>
 
       <!-- 提示词页面（历史自定义提示词，重复合并） -->
-      <div id="promptsPage" class="page">
+      <div id="promptsPage" class="page blora-prompts-page">
         <!-- 注入提示词配置（模型库同款卡片风格） -->
         <div class="content-section">
           <div class="section-header">
@@ -1156,7 +1157,7 @@
               <h2><span data-i18n="注入提示词">注入提示词</span></h2>
               <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="转发的请求会自动把启用的条目追加到 system 末尾，客户端零改动">转发的请求会自动把启用的条目追加到 system 末尾，客户端零改动</span></p>
             </div>
-            <button type="button" class="blora-button btn btn-primary btn-sm" onclick="app.showInjectPromptModal()"><span data-i18n="新建条目">新建条目</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showInjectPromptModal()"><span data-i18n="新建条目">新建条目</span></button>
           </div>
           <div id="injectPromptsList" class="model-library-list" style="padding:0;">
             <!-- 注入条目列表由 JS 动态加载 -->
@@ -1189,17 +1190,17 @@
               <option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></option>
               <option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></option>
             </select>
-            <button type="button" class="blora-button btn btn-primary" onclick="app.loadCustomPrompts(1)"><span data-i18n="查询">查询</span></button>
-            <button type="button" class="blora-button btn btn-secondary" onclick="app.clearPromptFilters()"><span data-i18n="清除">清除</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.loadCustomPrompts(1)"><span data-i18n="查询">查询</span></button>
+            <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.clearPromptFilters()"><span data-i18n="清除">清除</span></button>
             <span id="promptCount" class="filter-info"></span>
           </div>
           <div id="promptsList" class="models-table">
             <!-- 提示词列表由 JS 动态加载 -->
           </div>
           <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-            <button type="button" id="promptPrevBtn" class="blora-button btn btn-secondary" onclick="app.loadCustomPrompts(app.promptPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
+            <button type="button" id="promptPrevBtn" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadCustomPrompts(app.promptPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
             <span id="promptPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-            <button type="button" id="promptNextBtn" class="blora-button btn btn-secondary" onclick="app.loadCustomPrompts(app.promptPage + 1)"><span data-i18n="下一页">下一页</span></button>
+            <button type="button" id="promptNextBtn" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadCustomPrompts(app.promptPage + 1)"><span data-i18n="下一页">下一页</span></button>
           </div>
         </div>
       </div>

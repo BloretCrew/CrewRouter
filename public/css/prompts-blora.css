@@ -1,0 +1,105 @@
+/* Blora surface migration for the prompts page. */
+.blora-prompts-page {
+  --prompt-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --prompt-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-prompts-page > .content-section {
+  border: var(--prompt-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-prompts-page .section-header h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-prompts-page .admin-filter-bar {
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-3);
+  border: var(--prompt-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-prompts-page .admin-filter-bar .blora-input {
+  min-height: 2.5rem;
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-prompts-page .models-table {
+  overflow-x: auto;
+  border: var(--prompt-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-prompts-page .models-table table {
+  min-width: 48rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.blora-prompts-page .models-table th {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
+  border-bottom: var(--prompt-border-soft);
+}
+
+.blora-prompts-page .models-table td {
+  border-bottom: var(--prompt-border-soft);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-prompts-page .models-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.blora-prompts-page .models-table tbody tr:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-prompts-page #injectPromptsList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--blora-space-3);
+}
+
+.blora-prompts-page #injectPromptsList .model-library-item {
+  min-height: 0;
+  padding: var(--blora-space-5);
+  border: var(--prompt-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-prompts-page #injectPromptsList .model-library-item:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-2);
+}
+
+@media (max-width: 720px) {
+  .blora-prompts-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-prompts-page .admin-filter-bar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .blora-prompts-page .admin-filter-bar .blora-input,
+  .blora-prompts-page .admin-filter-bar .blora-button {
+    flex: 1 1 100%;
+  }
+
+  .blora-prompts-page #injectPromptsList {
+    grid-template-columns: 1fr;
+  }
+}
