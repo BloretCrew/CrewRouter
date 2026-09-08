@@ -1,0 +1,114 @@
+/* Blora surface migration for the admin statistics dashboard. */
+.blora-admin-stats-page {
+  --admin-stats-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --admin-stats-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-admin-stats-page > .content-section {
+  border: var(--admin-stats-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-admin-stats-page .section-header h2,
+.blora-admin-stats-page h3,
+.blora-admin-stats-page h4 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-admin-stats-page .section-header > div:last-child {
+  gap: var(--blora-space-2) !important;
+}
+
+.blora-admin-stats-page #adminStatsDays {
+  min-height: 2.5rem;
+  border: var(--admin-stats-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-stats-page .stats-tab-bar {
+  gap: var(--blora-space-1);
+  padding: var(--blora-space-1);
+  border: var(--admin-stats-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+  overflow-x: auto;
+}
+
+.blora-admin-stats-page .stats-tab-bar button {
+  min-height: 2.5rem;
+  border: 0;
+  border-radius: var(--blora-radius-md);
+  padding: var(--blora-space-2) var(--blora-space-4);
+  color: var(--blora-color-text-subtle);
+  font-family: var(--blora-font-body);
+}
+
+.blora-admin-stats-page .stats-tab-bar button.active {
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-primary);
+  box-shadow: var(--blora-shadow-1);
+  border-bottom: 0;
+}
+
+.blora-admin-stats-page .stats-overview-card,
+.blora-admin-stats-page .chart-card,
+.blora-admin-stats-page .multi-stats-intro,
+.blora-admin-stats-page .multi-stats-table-card {
+  border: var(--admin-stats-border-soft);
+  border-radius: var(--blora-radius-xl);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-admin-stats-page .chart-card {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-stats-page .admin-filter-bar {
+  border: var(--admin-stats-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-stats-page .multi-stats-filters {
+  gap: var(--blora-space-3);
+}
+
+.blora-admin-stats-page .multi-stats-filters label {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-admin-stats-page .stats-table {
+  border: var(--admin-stats-border-soft);
+  border-radius: var(--blora-radius-lg);
+  overflow: hidden;
+}
+
+.blora-admin-stats-page .stats-table th {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
+  border-bottom: var(--admin-stats-border-soft);
+}
+
+.blora-admin-stats-page .stats-table td {
+  border-bottom: var(--admin-stats-border-soft);
+}
+
+@media (max-width: 640px) {
+  .blora-admin-stats-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-admin-stats-page .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .blora-admin-stats-page .section-header > div:last-child {
+    width: 100%;
+  }
+}

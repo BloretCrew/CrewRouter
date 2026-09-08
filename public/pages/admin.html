@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="/css/main.css?v=25">
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
+  <link rel="stylesheet" href="/css/admin-stats-blora.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -659,7 +660,7 @@
           <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
         </div>
       </div>
-      <div id="adminStatsPage" class="page active">
+      <div id="adminStatsPage" class="page active blora-admin-stats-page">
         <div class="content-section">
           <div class="section-header">
             <div>
@@ -865,7 +866,7 @@
               <label><span data-i18n="供应商">供应商</span><select id="multiStatsProvider" class="input"><option value=""><span data-i18n="全部供应商">全部供应商</span></option></select></label>
               <label><span data-i18n="客户端">客户端</span><select id="multiStatsSource" class="input"><option value=""><span data-i18n="全部客户端">全部客户端</span></option></select></label>
               <label><span data-i18n="项目">项目</span><select id="multiStatsProject" class="input"><option value=""><span data-i18n="全部项目">全部项目</span></option></select></label>
-              <div class="multi-stats-filter-actions"><button class="btn btn-primary btn-sm" onclick="adminApp.loadMultiStats()"><span data-i18n="查询">查询</span></button><button class="btn btn-ghost btn-sm" onclick="adminApp.resetMultiStatsFilters()"><span data-i18n="重置">重置</span></button></div>
+              <div class="multi-stats-filter-actions"><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.loadMultiStats()"><span data-i18n="查询">查询</span></button><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="adminApp.resetMultiStatsFilters()"><span data-i18n="重置">重置</span></button></div>
             </div>
             <div id="adminStatsMultiSummary" class="stats-overview-grid multi-stats-summary"></div>
             <div class="responsive-grid-2 multi-stats-chart-row">
