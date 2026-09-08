@@ -8551,18 +8551,18 @@ ${extractorBody}
                   <div id="user-ping-page-${escapeHtml(String(p.id))}" style="min-width:60px;font-size:12px;color:var(--muted-foreground);">-</div>
                 </td>
                 <td>
-                  <button class="blora-button btn btn-sm btn-secondary" onclick="app.showManageModelsModal('${this._jsString(p.id)}')" title="${t('管理模型')}">
+                  <button type="button" class="blora-button upstream-action" data-variant="outline" data-size="sm" onclick="app.showManageModelsModal('${this._jsString(p.id)}')" title="${t('管理模型')}">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                     模型
                   </button>
                 </td>
                 <td>
                   <div style="display:flex;gap:6px;">
-                    <button class="blora-button btn btn-sm btn-secondary" onclick="app.pingUserProvider('${this._jsString(p.id)}')" title="${t('检测连通性')}">
+                    <button type="button" class="blora-button upstream-icon-action" data-variant="ghost" data-size="icon" onclick="app.pingUserProvider('${this._jsString(p.id)}')" title="${t('检测连通性')}" aria-label="${t('检测连通性')}">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     </button>
-                    <button class="blora-button btn btn-sm btn-secondary" onclick="app.editMyProvider('${this._jsString(p.id)}')">编辑</button>
-                    <button class="blora-button btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyProvider('${this._jsString(p.id)}')">删除</button>
+                    <button type="button" class="blora-button upstream-action" data-variant="outline" data-size="sm" onclick="app.editMyProvider('${this._jsString(p.id)}')">编辑</button>
+                    <button type="button" class="blora-button upstream-action" data-variant="danger" data-size="sm" onclick="app.deleteMyProvider('${this._jsString(p.id)}')">删除</button>
                   </div>
                 </td>
               </tr>

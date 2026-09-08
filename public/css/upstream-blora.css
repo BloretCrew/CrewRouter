@@ -119,6 +119,28 @@
   font-family: var(--blora-font-body);
 }
 
+.blora-upstream-page .models-table .upstream-action {
+  min-width: 4rem;
+  height: 2.25rem;
+  padding-inline: var(--blora-space-3);
+  border-radius: var(--blora-radius-lg);
+}
+
+.blora-upstream-page .models-table .upstream-icon-action {
+  width: 2.25rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.blora-upstream-page .models-table td:last-child > div {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2) !important;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 720px) {
   .blora-upstream-page > .content-section {
     padding: var(--blora-space-4);
