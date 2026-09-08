@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=1">
   <link rel="stylesheet" href="/css/stats-blora.css?v=1">
   <link rel="stylesheet" href="/css/project-work.css?v=1">
+  <link rel="stylesheet" href="/css/project-work-blora.css?v=1">
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <script>
@@ -1343,7 +1344,7 @@
       </div>
 
       <!-- 项目工作页面 -->
-      <div id="projectWorkPage" class="page">
+      <div id="projectWorkPage" class="page blora-project-work-page">
         <div class="content-section">
           <div class="section-header">
             <div>
@@ -1358,9 +1359,9 @@
           <div class="stats-filters project-work-filters">
             <div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label><select id="projectWorkTimeRange" class="blora-select select" onchange="app.loadProjectWorkStats()"><option value="7"><span data-i18n="最近 7 天">最近 7 天</span></option><option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></option><option value="90"><span data-i18n="最近 90 天">最近 90 天</span></option><option value="180"><span data-i18n="最近 180 天">最近 180 天</span></option><option value="365"><span data-i18n="最近 1 年">最近 1 年</span></option><option value="custom"><span data-i18n="自定义">自定义</span></option></select></div>
             <div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label><select id="projectWorkSourceFilter" class="blora-select select" onchange="app.loadProjectWorkStats()"><option value=""><span data-i18n="全部客户端">全部客户端</span></option><option value="grok">Grok</option><option value="codex">Codex</option><option value="claude_code">Claude Code</option><option value="opencode">OpenCode</option><option value="qwen_code">Qwen Code</option><option value="hermes">Hermes</option><option value="openclaw">OpenClaw</option><option value="deepseek_harness">DeepSeek Harness</option><option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option></select></div>
-            <div class="stats-filter-group" style="align-self:flex-end;"><button type="button" class="blora-button btn btn-ghost btn-sm" onclick="app.navigateTo('stats')"><span data-i18n="返回总统计">返回总统计</span></button></div>
+            <div class="stats-filter-group" style="align-self:flex-end;"><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.navigateTo('stats')"><span data-i18n="返回总统计">返回总统计</span></button></div>
           </div>
-          <div id="projectWorkCustomRange" style="display:none;gap:8px;align-items:center;margin-bottom:16px;padding:12px;background:var(--muted);border-radius:8px;"><label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="自定义范围：">自定义范围：</span></label><input type="date" id="projectWorkStartDate" class="blora-input input"><span style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="至">至</span></span><input type="date" id="projectWorkEndDate" class="blora-input input"><button type="button" class="blora-button btn btn-primary btn-sm" onclick="app.loadProjectWorkStats()"><span data-i18n="查询">查询</span></button></div>
+          <div id="projectWorkCustomRange" style="display:none;gap:8px;align-items:center;margin-bottom:16px;padding:12px;background:var(--muted);border-radius:8px;"><label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="自定义范围：">自定义范围：</span></label><input type="date" id="projectWorkStartDate" class="blora-input input"><span style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="至">至</span></span><input type="date" id="projectWorkEndDate" class="blora-input input"><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.loadProjectWorkStats()"><span data-i18n="查询">查询</span></button></div>
           <div id="projectWorkSummary" class="project-work-summary"><div class="project-work-loading"><span data-i18n="正在读取项目活动...">正在读取项目活动...</span></div></div>
           <div class="project-work-grid"><div class="project-work-chart-card"><div class="project-work-card-title"><strong><span data-i18n="最近活动">最近活动</span></strong><span><span data-i18n="每日请求与活跃项目">每日请求与活跃项目</span></span></div><div class="project-work-chart"><canvas id="userProjectDailyChart"></canvas></div></div><div class="project-work-focus-card"><div class="project-work-card-title"><strong><span data-i18n="最近活跃项目">最近活跃项目</span></strong><span><span data-i18n="按最近活动排序">按最近活动排序</span></span></div><div id="projectWorkRecent" class="project-work-recent"><div class="project-work-loading"><span data-i18n="正在读取...">正在读取...</span></div></div></div></div>
           <div class="project-work-list-card"><div class="project-work-card-title"><strong><span data-i18n="项目工作台">项目工作台</span></strong><span><span data-i18n="点击项目可复制工作区路径">点击项目可复制工作区路径</span></span></div><div id="projectWorkProjects" class="project-work-projects"><div class="project-work-loading"><span data-i18n="正在读取项目...">正在读取项目...</span></div></div></div>
