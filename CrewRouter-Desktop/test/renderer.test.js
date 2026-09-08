@@ -106,6 +106,7 @@ test('remote renderer hides settings and does not expose the privileged entry po
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'src', 'main.js'), 'utf8'), /desktopSettingsCard/);
   assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'js', 'app.js'), 'utf8'), /desktopSettingsCard.*showSettingsCategory/);
   assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'js', 'app.js'), 'utf8'), /loadDesktopSettingsEmbed/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'js', 'app.js'), 'utf8'), /desktopProfilesList/);
   assert.match(settingsJs, /remoteNote/);
   assert.doesNotMatch(settingsJs, /trustedRemote|remoteTrust|highPrivilege/);
 });

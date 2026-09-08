@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('crewrouterDesktop', Object.freeze({
   renameProfile: (id, name) => ipcRenderer.invoke('desktop:rename-profile', id, name),
   deleteProfile: (id) => ipcRenderer.invoke('desktop:delete-profile', id),
   stopLocal: () => ipcRenderer.invoke('desktop:stop-local'),
+  restartLocal: () => ipcRenderer.invoke('desktop:restart-local'),
   getDiagnostics: () => ipcRenderer.invoke('desktop:get-diagnostics'),
   onStatus: (callback) => {
     const listener = (_event, status) => callback(status);
