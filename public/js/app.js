@@ -3465,12 +3465,20 @@ class ConsoleApp {
   }
 
   async loadDocsModels() {
+    const container = document.getElementById('docsModelsList');
+    if (!container) return;
     try {
       const res = await fetch('/api/user/models');
-      if (!res.ok) return;
+      if (!res.ok) {
+        setHTML(container, '<p class="docs-models-error">' + t('模型列表暂时不可用') + '</p>');
+        return;
+      }
       const models = await res.json();
-      if (!Array.isArray(models)) return;
-      setHTML(document.getElementById('docsModelsList'), `
+      if (!Array.isArray(models)) {
+        setHTML(container, '<p class="docs-models-error">' + t('模型列表暂时不可用') + '</p>');
+        return;
+      }
+      setHTML(container, `
         <table class="docs-table">
           <thead><tr><th>模型名称</th><th>服务商</th><th>输入价/百万Token</th><th>输出价/百万Token</th></tr></thead>
           <tbody>
