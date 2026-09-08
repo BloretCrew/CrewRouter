@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="/css/audit-logs-blora.css?v=1">
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/settings-blora.css?v=1">
+  <link rel="stylesheet" href="/css/sessions-blora.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <script>
     (function() {
@@ -1204,7 +1205,7 @@
       </div>
 
       <!-- 会话页面（经网关的客户端会话聚合，只读） -->
-      <div id="sessionsPage" class="page">
+      <div id="sessionsPage" class="page blora-sessions-page">
         <style>
           .session-card-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--muted-foreground); }
           .session-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; white-space:nowrap; background:color-mix(in srgb, var(--muted-foreground) 12%, transparent); color:var(--muted-foreground); }
@@ -1303,19 +1304,19 @@
               <blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
               <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
             </blora-select>
-            <button type="button" class="blora-button btn btn-primary" onclick="app.loadSessions(1)"><span data-i18n="查询">查询</span></button>
-            <button type="button" class="blora-button btn btn-secondary" onclick="app.loadSessions(app._sessionsPage || 1)" title="刷新会话列表" data-i18n-title="刷新会话列表"><span data-i18n="刷新">刷新</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.loadSessions(1)"><span data-i18n="查询">查询</span></button>
+            <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadSessions(app._sessionsPage || 1)" title="刷新会话列表" data-i18n-title="刷新会话列表"><span data-i18n="刷新">刷新</span></button>
             <span id="sessionsCountInfo" class="filter-info"></span>
             <input id="sessionsSearchInput" class="blora-input input" style="flex:1;min-width:200px;margin-left:auto;" type="text"
                    placeholder="搜索会话内容" data-i18n-placeholder="搜索会话内容" data-i18n-title="搜索会话内容（消息全文与回复，回车触发）"
                    onkeydown="if(event.key==='Enter')app.runSessionsSearch();">
-            <button type="button" class="blora-button btn btn-secondary" onclick="app.runSessionsSearch()"><span data-i18n="搜索">搜索</span></button>
+            <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.runSessionsSearch()"><span data-i18n="搜索">搜索</span></button>
           </div>
           <!-- 内容搜索结果视图（与正常列表互斥显示） -->
           <div id="sessionsSearchResultsWrap" style="display:none;">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
               <span id="sessionsSearchInfo" style="font-size:12.5px;color:var(--muted-foreground);"></span>
-              <button type="button" class="blora-button btn btn-secondary btn-sm" style="margin-left:auto;" onclick="app.clearSessionsSearch()"><span data-i18n="返回会话列表">返回会话列表</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" style="margin-left:auto;" onclick="app.clearSessionsSearch()"><span data-i18n="返回会话列表">返回会话列表</span></button>
             </div>
             <div id="sessionsSearchResults" class="model-library-list"></div>
           </div>
@@ -1331,20 +1332,20 @@
         <div class="content-section" id="sessionDetailWrap" style="display:none;">
           <div class="section-header">
             <div style="display:flex;align-items:center;gap:10px;">
-              <button type="button" class="blora-button btn btn-secondary btn-sm" onclick="app.closeSessionDetail()"><span data-i18n="← 返回会话列表">← 返回会话列表</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.closeSessionDetail()"><span data-i18n="← 返回会话列表">← 返回会话列表</span></button>
               <h2 id="sessionDetailTitle" style="margin:0;"></h2>
             </div>
           </div>
           <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-            <button type="button" class="blora-button btn btn-secondary" onclick="app.generateSessionSummary()"><span data-i18n="生成总结">生成总结</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.generateSessionSummary()"><span data-i18n="生成总结">生成总结</span></button>
           </div>
           <div id="sessionDetailMetaBar" class="session-card-meta" style="margin-bottom:16px;"></div>
           <!-- 会话总结内联展示：生成时流式渲染，完成后可折叠；有缓存进入时也展示 -->
           <div id="sessionSummaryInline" style="display:none;margin-bottom:16px;"></div>
           <div id="sessionTimeline" class="timeline"></div>
           <div class="session-more-actions">
-            <button type="button" id="sessionMoreBtn" class="blora-button btn btn-secondary" onclick="app.loadSessionMessages(app._detailSessionKey, (app._detailMsgPage || 1) + 1)"><span data-i18n="加载更多（向上翻更早）">加载更多（向上翻更早）</span></button>
-            <button type="button" class="blora-button btn btn-secondary" style="margin-left:8px;" onclick="app.generateSessionSummary()"><span data-i18n="生成总结">生成总结</span></button>
+            <button type="button" id="sessionMoreBtn" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadSessionMessages(app._detailSessionKey, (app._detailMsgPage || 1) + 1)"><span data-i18n="加载更多（向上翻更早）">加载更多（向上翻更早）</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" style="margin-left:8px;" onclick="app.generateSessionSummary()"><span data-i18n="生成总结">生成总结</span></button>
           </div>
         </div>
       </div>

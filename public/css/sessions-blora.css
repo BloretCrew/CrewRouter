@@ -1,0 +1,113 @@
+/* Blora surface migration for the sessions page. */
+.blora-sessions-page {
+  --session-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --session-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-sessions-page > .content-section {
+  border: var(--session-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-sessions-page .section-header h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-sessions-page .admin-filter-bar {
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-3);
+  border: var(--session-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-sessions-page .admin-filter-bar .blora-input {
+  min-height: 2.5rem;
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-sessions-page .session-card-meta,
+.blora-sessions-page .session-card-preview {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-sessions-page .session-badge {
+  border-radius: var(--blora-radius-pill);
+}
+
+.blora-sessions-page #sessionsList,
+.blora-sessions-page #sessionsSearchResults {
+  gap: var(--blora-space-3);
+}
+
+.blora-sessions-page .model-library-item {
+  min-height: 0;
+  padding: var(--blora-space-5);
+  border: var(--session-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-sessions-page .model-library-item:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-sessions-page .model-library-item-actions {
+  margin-inline-start: 0;
+  padding-top: var(--blora-space-3);
+  border-top: var(--session-border-soft);
+}
+
+.blora-sessions-page .timeline {
+  border-left-color: color-mix(in srgb, var(--border) 70%, transparent);
+  gap: var(--blora-space-3);
+}
+
+.blora-sessions-page .timeline-event {
+  border: var(--session-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-sessions-page .timeline-event details pre,
+.blora-sessions-page .tool-args-full,
+.blora-sessions-page .tool-result-text {
+  border: var(--session-border-soft);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-sessions-page #sessionDetailWrap {
+  margin-top: var(--blora-space-5);
+}
+
+.blora-sessions-page .session-summary-inline {
+  border: var(--session-border);
+  border-left: 3px solid var(--blora-color-action-primary-default);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+@media (max-width: 640px) {
+  .blora-sessions-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-sessions-page .admin-filter-bar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .blora-sessions-page .admin-filter-bar .blora-button,
+  .blora-sessions-page .admin-filter-bar .blora-input {
+    flex: 1 1 100%;
+  }
+}
