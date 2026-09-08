@@ -242,7 +242,7 @@ function registerIpc() {
     const profile = state.connection.listProfiles().find((item) => item.id === id);
     if (!profile) fail('profile 不存在');
     if (profile.mode === 'local') return startLocal(profile.displayName);
-    return connect(profile.url, { id: profile.id, name: profile.name, displayName: profile.displayName, localIdentityId: profile.localIdentityId });
+    return connect(profile.url, { id: profile.id, name: profile.name, displayName: profile.displayName, localIdentityId: profile.localIdentityId, officialTarget: true });
   });
   const isSettingsFrame = (event) => Boolean(state.settingsWindow && event.sender === state.settingsWindow.webContents && event.senderFrame?.isMainFrame !== false && (() => { try { return new URL(event.senderFrame?.url || '').protocol === 'file:' && decodeURIComponent(new URL(event.senderFrame.url).pathname) === settingsEntry; } catch { return false; } })());
   const isConnectedMainFrame = (event) => Boolean(state.mainWindow && event.sender === state.mainWindow.webContents && event.senderFrame?.isMainFrame !== false && state.currentTarget && (() => { try { return new URL(event.senderFrame?.url || '').origin === state.currentTarget; } catch { return false; } })());
