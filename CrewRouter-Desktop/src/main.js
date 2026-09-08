@@ -247,14 +247,14 @@ function registerIpc() {
   });
   const isSettingsFrame = (event) => Boolean(state.settingsWindow && event.sender === state.settingsWindow.webContents && event.senderFrame?.isMainFrame !== false && (() => { try { return new URL(event.senderFrame?.url || '').protocol === 'file:' && decodeURIComponent(new URL(event.senderFrame.url).pathname) === settingsEntry; } catch { return false; } })());
   const isConnectedMainFrame = (event) => Boolean(state.mainWindow && event.sender === state.mainWindow.webContents && event.senderFrame?.isMainFrame !== false && state.currentTarget && (() => { try { return new URL(event.senderFrame?.url || '').origin === state.currentTarget; } catch { return false; } })());
-  ipcMain.handle('desktop:restart-local', async (event) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); return startLocal(); });
+  ipcMain.handle('desktop:restart-local', async (event) => { if (!isSettingsFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); return startLocal(); });
   ipcMain.handle('desktop:open-settings', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); createSettingsWindow(); });
 
   ipcMain.handle('desktop:get-settings', (event) => { if (!isSettingsFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); return { status: currentStatus(), profiles: state.connection.listProfiles(), settings: state.connection.store.getSettings(), local: state.local?.getStatus() || null }; });
-  ipcMain.handle('desktop:save-settings', (event, settings) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); return state.connection.store.saveSettings(settings); });
-  ipcMain.handle('desktop:rename-profile', (event, id, name) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); return state.connection.store.rename(id, name); });
-  ipcMain.handle('desktop:delete-profile', (event, id) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); if (state.localProfile?.id === id || state.connection.activeProfile()?.id === id) fail('不能删除当前连接 profile'); return state.connection.store.remove(id); });
-  ipcMain.handle('desktop:stop-local', async (event) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); if (state.local) await state.local.stop(); state.local = null; state.mode = 'local'; return currentStatus(); });
+  ipcMain.handle('desktop:save-settings', (event, settings) => { if (!isSettingsFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); return state.connection.store.saveSettings(settings); });
+  ipcMain.handle('desktop:rename-profile', (event, id, name) => { if (!isSettingsFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); return state.connection.store.rename(id, name); });
+  ipcMain.handle('desktop:delete-profile', (event, id) => { if (!isSettingsFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); if (state.localProfile?.id === id || state.connection.activeProfile()?.id === id) fail('不能删除当前连接 profile'); return state.connection.store.remove(id); });
+  ipcMain.handle('desktop:stop-local', async (event) => { if (!isSettingsFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); if (state.local) await state.local.stop(); state.local = null; state.mode = 'local'; return currentStatus(); });
   ipcMain.handle('desktop:get-diagnostics', (event) => { if (!isSettingsFrame(event)) fail('IPC 来源不可信'); const active = state.connection.activeProfile(); return { app: 'CrewRouter Desktop', version: electron.app.getVersion(), runtime: state.instance?.runtime || null, edition: state.instance?.edition || null, mode: state.mode, target: state.currentTarget, profileId: active?.id || null, localServer: Boolean(state.local?.getStatus().ready) }; });
   ipcMain.handle('desktop:quit', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); electron.app.quit(); });
 }
