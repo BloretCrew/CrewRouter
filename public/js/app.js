@@ -694,7 +694,7 @@ class ConsoleApp {
             <h3 class="api-key-group-title">${escapeHtml(a.client_name || a.client_id)}</h3>
             <p class="api-key-group-hint"><code>${escapeHtml(a.client_id)}</code></p>
           </div>
-          <button class="btn btn-danger btn-sm" onclick="app.revokeAuthorization(${Number(a.id)})">${t('吊销')}</button>
+          <button type="button" class="blora-button" data-variant="danger" data-size="sm" onclick="app.revokeAuthorization(${Number(a.id)})">${t('吊销')}</button>
         </div>
         <div style="padding:12px 16px;">
           ${statusChip} ${scopeChips}
@@ -974,7 +974,7 @@ class ConsoleApp {
     }).join('');
     return `
       <div class="api-key-more">
-        <button type="button" class="blora-button btn btn-sm btn-secondary" onclick="event.stopPropagation();app.toggleApiKeyMoreMenu(${keyId})">更多</button>
+        <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="event.stopPropagation();app.toggleApiKeyMoreMenu(${keyId})">更多</button>
         <div id="${menuId}" class="api-key-more-menu" style="display:none;" onclick="event.stopPropagation()">
           ${itemsHtml}
         </div>
