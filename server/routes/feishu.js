@@ -69,7 +69,8 @@ router.get('/feishu', async (req, res) => {
       return res.status(503).json({ error: '飞书登录未启用或未配置' });
     }
 
-    const redirectUri = encodeURIComponent(buildRedirectUri());
+    const redirectUriValue = buildRedirectUri(req);
+    const redirectUri = encodeURIComponent(redirectUriValue);
     const state = crypto.randomBytes(16).toString('hex');
 
     req.session.feishuState = state;
@@ -77,7 +78,7 @@ router.get('/feishu', async (req, res) => {
     const authUrl = `https://open.feishu.cn/open-apis/authen/v1/authorize?` +
       `app_id=${cfg.appId}&redirect_uri=${redirectUri}&state=${state}`;
 
-    Logger.info(`[飞书登录] 重定向到授权页, state=${state}, redirectUri=${buildRedirectUri()}`);
+    Logger.info(`[飞书登录] 重定向到授权页, state=${state}, redirectUri=${redirectUriValue}`);
     req.session.save((err) => {
       if (err) {
         Logger.error('[飞书登录] Session 保存失败:', err);

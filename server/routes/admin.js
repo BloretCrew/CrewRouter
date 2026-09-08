@@ -3337,7 +3337,7 @@ router.post('/retention/run-purge', requireAuth, requireAdmin, auditMiddleware(A
 router.get('/feishu-login', requireAuth, requireAdmin, async (req, res) => {
   try {
     const cfg = await getFeishuConfig();
-    const view = toPublicAdminView(cfg);
+    const view = toPublicAdminView(cfg, req);
     Logger.info(
       `[飞书配置] 管理员 ${req.session.user?.username} 读取配置: ` +
       `enabled=${view.enabled}, hasAppId=${!!view.appId}, hasSecret=${view.hasAppSecret}, source=${view.source}`
@@ -3383,7 +3383,7 @@ router.put('/feishu-login', requireAuth, requireAdmin, auditMiddleware(ACTIONS.A
       `secretUpdated=${secretProvided}, tenantKey=${saved.tenantKey ? '已设置' : '未设置'}`
     );
 
-    res.json({ success: true, ...toPublicAdminView({ ...saved, source: 'settings' }) });
+    res.json({ success: true, ...toPublicAdminView({ ...saved, source: 'settings' }, req) });
   } catch (error) {
     Logger.error('[飞书配置] 更新失败:', error);
     res.status(500).json({ error: '服务器错误' });
