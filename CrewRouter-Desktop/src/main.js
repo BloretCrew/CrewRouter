@@ -254,7 +254,8 @@ function registerIpc() {
   ipcMain.handle('desktop:delete-profile', (event, id) => { if (!isSettingsFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); if (state.localProfile?.id === id || state.connection.activeProfile()?.id === id) fail('不能删除当前连接 profile'); return state.connection.store.remove(id); });
   ipcMain.handle('desktop:stop-local', async (event) => { if (!isSettingsFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); if (state.local) await state.local.stop(); state.local = null; state.mode = 'local'; return currentStatus(); });
   ipcMain.handle('desktop:get-diagnostics', (event) => { if (!isSettingsFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); const active = state.connection.activeProfile(); return { app: 'CrewRouter Desktop', version: electron.app.getVersion(), runtime: state.instance?.runtime || null, edition: state.instance?.edition || null, mode: state.mode, target: state.currentTarget, profileId: active?.id || null, localServer: Boolean(state.local?.getStatus().ready) }; });
-  ipcMain.handle('desktop:quit', (event) => { if (!isRendererFrame(event)) fail('IPC 来源不可信'); electron.app.quit(); });
+  ipcMain.handle('desktop:quit', (event) => { if (!isRendererFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); electron.app.quit(); });
+  ipcMain.handle('desktop:restart-app', (event) => { if (!isRendererFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信'); electron.app.relaunch(); electron.app.exit(0); });
 }
 function bootstrap() {
   const gotLock = electron.app.requestSingleInstanceLock();
