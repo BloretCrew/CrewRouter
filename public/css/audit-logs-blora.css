@@ -1,0 +1,96 @@
+/* Blora surface migration for the audit log page. */
+.blora-audit-page {
+  --audit-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --audit-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-audit-page > .content-section {
+  border: var(--audit-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-audit-page .section-header {
+  gap: var(--blora-space-4);
+  margin-bottom: var(--blora-space-5);
+}
+
+.blora-audit-page .section-header h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-audit-page .section-header > div:last-child {
+  gap: var(--blora-space-2) !important;
+}
+
+.blora-audit-page #auditLogActionFilter {
+  min-height: 2.25rem;
+  border: var(--audit-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-audit-page .audit-log-row {
+  gap: var(--blora-space-4) !important;
+  padding: var(--blora-space-4) !important;
+  border: var(--audit-border-soft) !important;
+  border-radius: var(--blora-radius-lg) !important;
+  background: var(--blora-color-surface-default);
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-audit-page .audit-log-row:hover {
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--border)) !important;
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-audit-page .audit-log-action {
+  border-radius: var(--blora-radius-pill) !important;
+  background: var(--blora-color-action-primary-default) !important;
+  font-size: var(--blora-text-xs) !important;
+}
+
+.blora-audit-page .audit-log-row details {
+  margin-top: var(--blora-space-2) !important;
+}
+
+.blora-audit-page .audit-log-row summary {
+  color: var(--blora-color-text-subtle) !important;
+}
+
+.blora-audit-page .audit-log-row pre {
+  margin: var(--blora-space-2) 0 0 !important;
+  padding: var(--blora-space-3);
+  border: var(--audit-border-soft);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-audit-page #auditLogsPagination {
+  align-items: center;
+  gap: var(--blora-space-2) !important;
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-audit-page #auditLogsPagination .blora-button {
+  min-height: 2.25rem;
+}
+
+@media (max-width: 640px) {
+  .blora-audit-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-audit-page .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .blora-audit-page .section-header > div:last-child {
+    width: 100%;
+  }
+}

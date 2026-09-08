@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="/css/leaderboard-blora.css?v=1">
   <link rel="stylesheet" href="/css/docs-blora.css?v=1">
   <link rel="stylesheet" href="/css/balance-blora.css?v=1">
+  <link rel="stylesheet" href="/css/audit-logs-blora.css?v=1">
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <script>
@@ -1694,7 +1695,7 @@ data: [DONE]</code></pre>
       </div>
 
       <!-- 用户设置页面 -->
-      <div id="auditLogsPage" class="page">
+      <div id="auditLogsPage" class="page blora-audit-page">
         <div class="content-section">
           <div class="section-header">
             <h2><span data-i18n="操作日志">操作日志</span></h2>
@@ -1708,7 +1709,7 @@ data: [DONE]</code></pre>
                 <option value="provider"><span data-i18n="供应商">供应商</span></option>
                 <option value="model"><span data-i18n="模型">模型</span></option>
               </select>
-              <button type="button" class="blora-button btn btn-sm btn-secondary" onclick="app.loadAuditLogs(1)"><span data-i18n="刷新">刷新</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadAuditLogs(1)"><span data-i18n="刷新">刷新</span></button>
             </div>
           </div>
           <div id="auditLogsList" style="display:flex;flex-direction:column;gap:8px;"></div>

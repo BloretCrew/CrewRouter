@@ -7300,9 +7300,9 @@ class ConsoleApp {
       const totalPages = Math.ceil(total / limit);
       if (totalPages > 1) {
         setHTML(paginationEl, `
-          <button class="btn btn-sm btn-secondary" ${page <= 1 ? 'disabled' : ''} onclick="app.loadAuditLogs(${page - 1})">上一页</button>
+          <button type="button" class="blora-button" data-variant="outline" data-size="sm" ${page <= 1 ? 'disabled' : ''} onclick="app.loadAuditLogs(${page - 1})">上一页</button>
           <span style="padding:0 8px;font-size:13px;">${page} / ${totalPages}</span>
-          <button class="btn btn-sm btn-secondary" ${page >= totalPages ? 'disabled' : ''} onclick="app.loadAuditLogs(${page + 1})">下一页</button>`);
+          <button type="button" class="blora-button" data-variant="outline" data-size="sm" ${page >= totalPages ? 'disabled' : ''} onclick="app.loadAuditLogs(${page + 1})">下一页</button>`);
       } else {
         setHTML(paginationEl, '');
       }
