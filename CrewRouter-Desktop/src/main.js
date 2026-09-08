@@ -272,7 +272,11 @@ function bootstrap() {
     const activeProfile = state.connection.activeProfile();
     if (activeProfile?.mode === 'local' && activeProfile.displayName) state.localProfile = activeProfile;
     createWindow();
-    if (activeProfile?.mode === 'local' && activeProfile.displayName && state.connection.store.getSettings().autoConnect) startLocal(activeProfile.displayName).catch((error) => sendStatus({ error: `本地服务启动失败：${error.message}` }));
+    if (activeProfile?.mode === 'local' && activeProfile.displayName && state.connection.store.getSettings().autoConnect) {
+      startLocal(activeProfile.displayName).catch((error) => sendStatus({ error: `本地服务启动失败：${error.message}` }));
+    } else if (activeProfile?.mode === 'remote' && state.connection.store.getSettings().autoConnect) {
+      connect(activeProfile.url, { id: activeProfile.id, name: activeProfile.name, displayName: activeProfile.displayName, officialTarget: true }).catch((error) => sendStatus({ error: `远程实例自动连接失败：${error.message}` }));
+    }
     const protocolArg = process.argv.find((value) => value.startsWith('crewrouter://'));
     if (protocolArg) handleProtocol(protocolArg);
   });
