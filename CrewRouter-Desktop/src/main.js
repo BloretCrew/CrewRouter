@@ -153,9 +153,9 @@ async function connectCustomRemote(rawUrl) {
 
 function localProfileStore() { return state.connection?.store; }
 
-async function startLocal(displayName) {
+async function startLocal(displayName, selectedProfile = null) {
   const active = localProfileStore()?.getActive();
-  const profile = state.localProfile?.mode === 'local' ? state.localProfile : (active?.mode === 'local' ? active : null);
+  const profile = selectedProfile?.mode === 'local' ? selectedProfile : (state.localProfile?.mode === 'local' ? state.localProfile : (active?.mode === 'local' ? active : null));
   const resolvedName = displayName || profile?.displayName;
   if (!resolvedName) fail('首次本地使用需要先设置用户名。');
   const localIdentityId = profile?.localIdentityId || crypto.randomUUID();
@@ -240,7 +240,7 @@ function registerIpc() {
     if (!isRendererFrame(event) && !isConnectedMainFrame(event)) fail('IPC 来源不可信');
     const profile = state.connection.listProfiles().find((item) => item.id === id);
     if (!profile) fail('profile 不存在');
-    if (profile.mode === 'local') return startLocal(profile.displayName);
+    if (profile.mode === 'local') return startLocal(profile.displayName, profile);
     return connect(profile.url, { id: profile.id, name: profile.name, displayName: profile.displayName, localIdentityId: profile.localIdentityId, officialTarget: true });
   });
   const isSettingsFrame = (event) => Boolean(state.settingsWindow && event.sender === state.settingsWindow.webContents && event.senderFrame?.isMainFrame !== false && (() => { try { return new URL(event.senderFrame?.url || '').protocol === 'file:' && decodeURIComponent(new URL(event.senderFrame.url).pathname) === settingsEntry; } catch { return false; } })());

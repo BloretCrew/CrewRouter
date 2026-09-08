@@ -28,6 +28,10 @@
 .settings-section[hidden], .settings-overview[hidden], .settings-detail[hidden] { display:none; }
 .settings-desktop-embed { padding: 0 !important; border: 0 !important; background: transparent; }
 .settings-desktop-stack { display: grid; gap: 16px; }
+.desktop-settings-spinner { display:inline-block; width:16px; height:16px; margin-right:8px; vertical-align:-3px; border:2px solid var(--border); border-top-color:var(--ring); border-radius:50%; animation:desktop-settings-spin .7s linear infinite; }
+.desktop-settings-is-loading { cursor:progress; }
+@keyframes desktop-settings-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .desktop-settings-spinner { animation:none; } }
 .settings-desktop-block { padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: var(--shadow-card); }
 .settings-desktop-block-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
 .settings-desktop-block h3 { margin: 0; font-size: 16px; font-weight: 700; }
