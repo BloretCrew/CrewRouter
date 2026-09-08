@@ -103,10 +103,24 @@
 }
 
 .blora-model-library .model-library-provider {
+  padding: 0;
   border-color: var(--blora-color-border-default);
   border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-default);
   box-shadow: none;
+}
+
+.blora-model-library .model-library-provider > .model-library-provider-header,
+.blora-model-library .model-library-provider > .model-library-list {
+  min-width: 0;
+}
+
+.blora-model-library .model-library-provider > .model-library-provider-header {
+  border-radius: var(--blora-radius-lg) var(--blora-radius-lg) 0 0;
+}
+
+.blora-model-library .model-library-provider.collapsed > .model-library-provider-header {
+  border-radius: var(--blora-radius-lg);
 }
 
 .blora-model-library .model-library-provider + .model-library-provider {
@@ -128,6 +142,7 @@
 }
 
 .blora-model-library .model-library-item {
+  padding: var(--blora-space-4);
   border: var(--blora-border-subtle);
   border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-default);
@@ -160,6 +175,42 @@
 .blora-model-library .model-library-header-actions .blora-button,
 .blora-model-library .library-reorder-toolbar-actions .blora-button {
   font-family: var(--blora-font-body);
+}
+
+.blora-model-library .library-more-menu {
+  --blora-button-height: 2rem;
+  flex: 0 0 auto;
+}
+
+.blora-model-library .library-more-menu::part(trigger) {
+  border-radius: var(--blora-radius-md);
+}
+
+.blora-model-library .library-more-menu blora-dropdown-item {
+  display: block;
+}
+
+.blora-model-library .model-star-btn {
+  margin-inline-end: var(--blora-space-1);
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-model-library .model-star-btn.starred {
+  color: var(--blora-color-status-warning, var(--blora-color-action-primary));
+}
+
+.blora-model-library .model-item-badge,
+.blora-model-library .team-badge,
+.blora-model-library .library-star-badge,
+.blora-model-library .library-hidden-badge,
+.blora-model-library .provider-test-summary {
+  border-radius: var(--blora-radius-pill);
+}
+
+.blora-model-library .model-item-badge {
+  border: var(--blora-border-subtle);
+  background: var(--blora-color-surface-raised) !important;
+  color: var(--blora-color-text-subtle) !important;
 }
 
 .blora-model-library .empty-state {

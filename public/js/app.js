@@ -852,7 +852,7 @@ class ConsoleApp {
         <div class="api-key-footer">
           ${this._renderApiKeyRoutePill(key, modelDisplay, queueLen)}
           <div class="api-key-actions">
-            <button type="button" class="blora-button btn btn-sm btn-primary" onclick="app.showKeyModels(${key.id})">模型队列</button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showKeyModels(${key.id})">模型队列</button>
             ${this._renderApiKeyMoreMenu(key.id, moreItems)}
           </div>
         </div>
@@ -2324,7 +2324,7 @@ class ConsoleApp {
     const hasModels = provider.models_loaded && provider.models && provider.models.length > 0;
     const totalCount = provider.model_count != null ? provider.model_count : (provider.pagination?.total ?? (provider.models ? provider.models.length : 0));
     return `
-      <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}"
+      <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}" data-variant="hover"
            data-picker-provider-index="${teamIndex}-${providerIndex}"
            data-team-id="${escapeHtml(String(team.team_id))}"
            data-provider-id="${escapeHtml(String(provider.provider_id))}"
@@ -10823,7 +10823,7 @@ ${extractorBody}
             ${team.is_default ? '<span class="team-badge default">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
             <div style="flex:1;"></div>
-            <button class="blora-button btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${this._jsString(team.team_id)}')" title="${t('测试此 Team 下所有模型')}">
+            <button type="button" class="blora-button btn btn-sm btn-secondary model-test-btn" data-variant="outline" data-size="sm" style="padding:4px 8px;font-size:11px;" onclick="event.stopPropagation();app.testTeamModels('${this._jsString(team.team_id)}')" title="${t('测试此 Team 下所有模型')}">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试全部
             </button>
@@ -10849,7 +10849,7 @@ ${extractorBody}
               }
             ];
             return `
-            <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''}">
+            <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-variant="hover" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''}">
               ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
               <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
                 <div class="model-library-provider-title">
@@ -10865,11 +10865,11 @@ ${extractorBody}
                 </div>
                 <div class="model-library-provider-actions">
                   <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="font-size:12px;color:var(--muted-foreground);"></span>
-                  <button class="blora-button btn btn-sm btn-secondary model-test-btn" style="padding:4px 6px;" title="${t('测试此供应商下所有模型')}" onclick="event.stopPropagation();app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')">
+                  <button type="button" class="blora-button btn btn-sm btn-secondary model-test-btn" data-variant="outline" data-size="sm" style="padding:4px 6px;" title="${t('测试此供应商下所有模型')}" onclick="event.stopPropagation();app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     测试
                   </button>
-                  <button class="blora-button btn btn-sm btn-secondary" style="padding:4px 6px;" title="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">
+                  <button type="button" class="blora-button btn btn-sm btn-secondary" data-variant="ghost" data-size="icon" style="padding:4px 6px;" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   </button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
@@ -10969,10 +10969,10 @@ ${extractorBody}
     ];
 
     return `
-    <div class="blora-card model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
+    <div class="blora-card model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-variant="hover" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
       <div class="model-library-item-info">
         <div class="model-library-item-name">
-          ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">
+          ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" data-variant="ghost" data-size="icon" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-label="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </button>`}
           ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
@@ -10999,21 +10999,21 @@ ${extractorBody}
       <div class="model-library-item-actions">
         ${isKeyPicker ? '' : this._renderLibraryMoveControls('model', team.team_id, providerId)}
         ${isProviderDisabled
-          ? '<button class="blora-button btn btn-sm btn-secondary" disabled style="opacity:0.5;">' + t('供应商已禁用') + '</button>'
+          ? '<button type="button" class="blora-button" data-variant="secondary" data-size="sm" disabled style="opacity:0.5;">' + t('供应商已禁用') + '</button>'
           : isKeyPicker
             ? (queueIndex >= 0
-              ? `<button class="blora-button btn btn-sm btn-secondary" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
-              : '<button class="blora-button btn btn-sm btn-primary">' + t('加入队列') + '</button>')
+              ? `<button type="button" class="blora-button" data-variant="secondary" data-size="sm" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
+              : '<button type="button" class="blora-button" data-variant="primary" data-size="sm">' + t('加入队列') + '</button>')
           : `
-             <button class="blora-button btn btn-sm btn-secondary" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title="${t('测试模型连通性')}">
+             <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title="${t('测试模型连通性')}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试
             </button>
             ${isOwner
               ? ''
               : isCurrent
-                ? '<button class="blora-button btn btn-sm btn-secondary" disabled>' + t('已绑定') + '</button>'
-                : '<button class="blora-button btn btn-sm btn-primary">' + t('绑定') + '</button>'}
+                ? '<button type="button" class="blora-button" data-variant="secondary" data-size="sm" disabled>' + t('已绑定') + '</button>'
+                : '<button type="button" class="blora-button" data-variant="primary" data-size="sm">' + t('绑定') + '</button>'}
           `}
         ${isKeyPicker ? '' : this._renderLibraryMoreMenu(modelMoreItems)}
       </div>
@@ -11232,24 +11232,23 @@ ${extractorBody}
   // 渲染模型库「⋯」更多菜单
   _renderLibraryMoreMenu(items = []) {
     if (!items || !items.length) return '';
+    let separator = false;
     const menuItems = items.map(item => {
-      if (item.type === 'divider') return '<div class="library-more-menu-divider"></div>';
+      if (item.type === 'divider') {
+        separator = true;
+        return '';
+      }
       const icon = item.icon ? this._libraryMoreMenuIcon(item.icon) : '';
-      const cls = item.className ? ` ${item.className}` : '';
-      return `<button type="button" class="blora-button library-more-menu-item${cls}" onclick="event.stopPropagation();app.closeLibraryMoreMenus();${item.onClick}">${icon}<span>${escapeHtml(item.label)}</span></button>`;
+      const dangerAttr = item.className === 'danger' ? ' data-variant="danger"' : '';
+      const separatorAttr = separator ? ' separator' : '';
+      separator = false;
+      return `<blora-dropdown-item value="${escapeHtml(item.label)}"${separatorAttr}${dangerAttr} onclick="event.stopPropagation();${item.onClick}">${icon}<span>${escapeHtml(item.label)}</span></blora-dropdown-item>`;
     }).join('');
 
     return `
-      <div class="library-more-menu" onclick="event.stopPropagation()">
-        <button type="button" class="blora-button btn btn-sm btn-secondary library-more-btn" title="${t('更多操作')}" onclick="event.stopPropagation();app.toggleLibraryMoreMenu(event, this)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
-          </svg>
-        </button>
-        <div class="library-more-menu-panel" style="display:none;">
-          ${menuItems}
-        </div>
-      </div>`;
+      <blora-dropdown class="library-more-menu" label="${t('更多操作')}" align="end" onclick="event.stopPropagation()">
+        ${menuItems}
+      </blora-dropdown>`;
   }
 
   closeLibraryMoreMenus(exceptEl = null) {
