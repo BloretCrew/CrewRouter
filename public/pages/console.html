@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="/css/main.css?v=25">
   <link rel="stylesheet" href="/css/model-library-blora.css?v=1">
   <link rel="stylesheet" href="/css/upstream-blora.css?v=1">
+  <link rel="stylesheet" href="/css/api-keys-blora.css?v=1">
   <link rel="stylesheet" href="/css/project-work.css?v=1">
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
@@ -515,13 +516,13 @@
       </blora-dialog>
 
       <!-- API密钥页面 -->
-      <div id="apiKeysPage" class="page">
+      <div id="apiKeysPage" class="page blora-api-keys-page">
         <!-- 滚动后悬浮顶栏：创建密钥 + 可拖拽标签（默认隐藏，由 JS 控制） -->
         <div id="apiKeysStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
             <span class="page-sticky-title"><span data-i18n="API 密钥">API 密钥</span></span>
             <span class="page-sticky-hint"><span data-i18n="拖拽标签到下方密钥卡片">拖拽标签到下方密钥卡片</span></span>
-            <button type="button" class="blora-button btn btn-primary btn-sm" onclick="app.showModal('createApiKeyModal')" style="margin-left:auto;"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showModal('createApiKeyModal')" style="margin-left:auto;"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
           </div>
           <div class="page-sticky-tag-row" aria-label="密钥标签" data-i18n-title="密钥标签">
             <span class="page-sticky-tag-label" title="拖拽标签到密钥卡片进行分配" data-i18n-title="拖拽标签到密钥卡片进行分配"><span data-i18n="标签">标签</span></span>
@@ -532,7 +533,7 @@
         <div class="content-section">
           <div class="section-header">
             <h2><span data-i18n="API 密钥">API 密钥</span></h2>
-            <button type="button" id="createApiKeyBtn" class="blora-button btn btn-primary"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
+            <button type="button" id="createApiKeyBtn" class="blora-button" data-variant="primary"><span data-i18n="+ 创建密钥">+ 创建密钥</span></button>
           </div>
 
           <!-- 我的 Key 用量概览（不含他人发起的 Co-Key） -->
@@ -594,7 +595,7 @@
             <h2><span data-i18n="授权管理">授权管理</span></h2>
             <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。">已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。</span></p>
           </div>
-          <button type="button" class="blora-button btn btn-secondary btn-sm" onclick="app.loadAuthorizations()"><span data-i18n="刷新授权列表">刷新授权列表</span></button>
+          <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadAuthorizations()"><span data-i18n="刷新授权列表">刷新授权列表</span></button>
         </div>
         <div id="oauthAuthorizationsList"></div>
       </div>

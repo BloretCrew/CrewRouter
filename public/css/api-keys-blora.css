@@ -1,0 +1,164 @@
+/* Blora surface migration for API Key and authorization views. */
+.blora-api-keys-page {
+  --key-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --key-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-api-keys-page > .content-section {
+  border: var(--key-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-api-keys-page .section-header {
+  gap: var(--blora-space-4);
+  margin-bottom: var(--blora-space-5);
+}
+
+.blora-api-keys-page .section-header h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-api-keys-page .usage-overview {
+  gap: var(--blora-space-3);
+  margin-bottom: var(--blora-space-4);
+}
+
+.blora-api-keys-page .usage-overview-item {
+  border: var(--key-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-api-keys-page .key-tag-bar {
+  border: var(--key-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+  padding: var(--blora-space-3) var(--blora-space-4);
+}
+
+.blora-api-keys-page .api-key-groups {
+  gap: var(--blora-space-6);
+}
+
+.blora-api-keys-page .api-key-group-header {
+  align-items: center;
+  margin-bottom: var(--blora-space-3);
+}
+
+.blora-api-keys-page .api-key-group-title {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-api-keys-page .api-key-group-count,
+.blora-api-keys-page .api-key-chip {
+  border-radius: var(--blora-radius-pill);
+}
+
+.blora-api-keys-page .api-key-card {
+  border: var(--key-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-5);
+  transition: border-color var(--blora-duration-fast) var(--blora-easing-standard), box-shadow var(--blora-duration-base) var(--blora-easing-standard), transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-api-keys-page .api-key-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  box-shadow: var(--blora-shadow-2);
+  transform: translateY(-1px);
+}
+
+.blora-api-keys-page .api-key-card::before {
+  background: var(--blora-color-action-primary-default);
+  border-radius: var(--blora-radius-pill);
+}
+
+.blora-api-keys-page .api-key-header {
+  gap: var(--blora-space-3);
+  margin-bottom: var(--blora-space-4);
+}
+
+.blora-api-keys-page .api-key-name {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-api-keys-page .api-key-footer {
+  gap: var(--blora-space-3);
+  padding-top: var(--blora-space-4);
+  border-top: var(--key-border-soft);
+}
+
+.blora-api-keys-page .api-key-actions {
+  gap: var(--blora-space-2);
+}
+
+.blora-api-keys-page .api-key-actions .blora-button {
+  min-height: 2.25rem;
+  font-family: var(--blora-font-body);
+}
+
+.blora-api-keys-page .api-key-actions .btn {
+  flex: initial;
+}
+
+.blora-api-keys-page .api-key-more > .blora-button {
+  min-width: 4.5rem;
+  border-radius: var(--blora-radius-lg);
+}
+
+.blora-api-keys-page .api-key-more-menu {
+  border: var(--key-border);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-3);
+}
+
+.blora-api-keys-page .api-key-more-item {
+  border-radius: var(--blora-radius-md);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-api-keys-page .api-key-more-item:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-api-keys-page #oauthAuthorizationsList .api-key-group {
+  border: var(--key-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  overflow: hidden;
+}
+
+.blora-api-keys-page #oauthAuthorizationsList .api-key-group-header,
+.blora-api-keys-page #oauthAuthorizationsList .api-key-group > div:last-child {
+  padding-inline: var(--blora-space-5);
+}
+
+@media (max-width: 640px) {
+  .blora-api-keys-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-api-keys-page .api-key-card {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-api-keys-page .api-key-footer {
+    align-items: stretch;
+  }
+
+  .blora-api-keys-page .api-key-actions {
+    width: 100%;
+  }
+
+  .blora-api-keys-page .api-key-actions .blora-button {
+    flex: 1 1 auto;
+  }
+}
