@@ -12,11 +12,22 @@ const MASKED_SECRET = '********';
 let appAccessToken = null;
 let tokenExpireTime = 0;
 
-function buildRedirectUri() {
-  const host = config.app?.host === 'localhost'
+function buildRedirectUri(req) {
+  const configuredOrigin = String(config.app?.publicOrigin || '').trim().replace(/\/$/, '');
+  if (configuredOrigin) return `${configuredOrigin}/auth/feishu/callback`;
+
+  const forwardedHost = String(req?.get?.('x-forwarded-host') || '').split(',')[0].trim();
+  const host = forwardedHost || String(req?.get?.('host') || '').split(',')[0].trim();
+  if (host) {
+    const forwardedProto = String(req?.get?.('x-forwarded-proto') || '').split(',')[0].trim();
+    const protocol = forwardedProto || (req?.secure ? 'https' : req?.protocol) || 'http';
+    return `${protocol}://${host}/auth/feishu/callback`;
+  }
+
+  const configuredHost = config.app?.host === 'localhost'
     ? `http://localhost:${config.app?.port || 20003}`
     : `https://${config.app?.host}`;
-  return `${host}/auth/feishu/callback`;
+  return `${configuredHost}/auth/feishu/callback`;
 }
 
 function configFileFallback() {
@@ -133,14 +144,14 @@ function setCachedAppAccessToken(token, expireSeconds) {
 /**
  * 对外返回时脱敏
  */
-function toPublicAdminView(cfg) {
+function toPublicAdminView(cfg, req) {
   return {
     enabled: cfg.enabled === true,
     appId: cfg.appId || '',
     appSecret: cfg.appSecret ? MASKED_SECRET : '',
     hasAppSecret: !!cfg.appSecret,
     tenantKey: cfg.tenantKey || '',
-    redirectUri: buildRedirectUri(),
+    redirectUri: buildRedirectUri(req),
     source: cfg.source || 'settings',
   };
 }
