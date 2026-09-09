@@ -32,6 +32,7 @@
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=1">
+  <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -1136,12 +1137,12 @@
       </div>
 
       <!-- 操作日志页面 -->
-      <div id="adminAuditLogsPage" class="page">
+      <div id="adminAuditLogsPage" class="page blora-admin-audit-page">
         <div class="content-section">
           <div class="section-header">
             <h2><span data-i18n="操作日志">操作日志</span></h2>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <input id="adminAuditLogSearch" class="input" type="text" placeholder="搜索用户名/描述" data-i18n-placeholder="搜索用户名/描述" style="width:200px;" onkeydown="if(event.key==='Enter')adminApp.loadAdminAuditLogs(1)">
+              <input id="adminAuditLogSearch" class="blora-input input" type="text" placeholder="搜索用户名/描述" data-i18n-placeholder="搜索用户名/描述" style="width:200px;" onkeydown="if(event.key==='Enter')adminApp.loadAdminAuditLogs(1)">
               <select id="adminAuditLogResourceFilter" class="input" style="width:auto;" onchange="adminApp.loadAdminAuditLogs(1)">
                 <option value=""><span data-i18n="全部资源">全部资源</span></option>
                 <option value="api_key">API Key</option>
@@ -1154,7 +1155,7 @@
                 <option value="product"><span data-i18n="商品">商品</span></option>
                 <option value="redemption_code"><span data-i18n="兑换码">兑换码</span></option>
               </select>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.loadAdminAuditLogs(1)"><span data-i18n="刷新">刷新</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.loadAdminAuditLogs(1)"><span data-i18n="刷新">刷新</span></button>
             </div>
           </div>
           <div id="adminAuditLogsList" style="display:flex;flex-direction:column;gap:8px;"></div>
