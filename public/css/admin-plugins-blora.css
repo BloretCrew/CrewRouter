@@ -1,0 +1,19 @@
+/* Blora surface migration for admin plugin management. */
+.blora-admin-plugins-page > .content-section {
+  min-height: 12rem;
+  border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-admin-plugins-page .page-loading {
+  color: var(--blora-color-text-subtle);
+}
+
+@media (max-width: 640px) {
+  .blora-admin-plugins-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+}
