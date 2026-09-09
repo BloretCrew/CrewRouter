@@ -2379,9 +2379,9 @@ class AdminApp {
             ` : ''}
           </div>
           <div class="admin-card-footer">
-            <button type="button" class="btn btn-sm btn-secondary model-test-btn" data-admin-model-action="test" data-model-id="${escapeHtml(model.id)}">测试</button>
-            <button type="button" class="btn btn-sm btn-secondary" data-admin-model-action="edit" data-model-id="${escapeHtml(model.id)}">编辑</button>
-            <button type="button" class="btn btn-sm btn-secondary" style="color:var(--destructive);" data-admin-model-action="delete" data-model-id="${escapeHtml(model.id)}">删除</button>
+            <button type="button" class="blora-button admin-model-action" data-variant="outline" data-size="sm" data-admin-model-action="test" data-model-id="${escapeHtml(model.id)}">测试</button>
+            <button type="button" class="blora-button admin-model-action" data-variant="outline" data-size="sm" data-admin-model-action="edit" data-model-id="${escapeHtml(model.id)}">编辑</button>
+            <button type="button" class="blora-button admin-model-action" data-variant="danger" data-size="sm" data-admin-model-action="delete" data-model-id="${escapeHtml(model.id)}">删除</button>
           </div>
         </div>
       `;
