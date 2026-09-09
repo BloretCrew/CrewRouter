@@ -1,0 +1,87 @@
+/* Blora surface migration for admin audit logs. */
+.blora-admin-audit-page {
+  --audit-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --audit-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-admin-audit-page > .content-section {
+  border: var(--audit-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-admin-audit-page .section-header h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-admin-audit-page .section-header > div:last-child {
+  gap: var(--blora-space-2) !important;
+}
+
+.blora-admin-audit-page .section-header .input {
+  min-height: 2.5rem;
+  border: var(--audit-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-audit-page .audit-log-row {
+  gap: var(--blora-space-4) !important;
+  padding: var(--blora-space-4) !important;
+  border: var(--audit-border-soft) !important;
+  border-radius: var(--blora-radius-lg) !important;
+  background: var(--blora-color-surface-default);
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-admin-audit-page .audit-log-row:hover {
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--border)) !important;
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-audit-page .audit-log-row > div:first-child > div:first-child span {
+  border-radius: var(--blora-radius-pill) !important;
+}
+
+.blora-admin-audit-page .audit-log-row details summary {
+  color: var(--blora-color-text-subtle) !important;
+}
+
+.blora-admin-audit-page .audit-log-row pre {
+  margin-top: var(--blora-space-2) !important;
+  padding: var(--blora-space-3);
+  border: var(--audit-border-soft);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-admin-audit-page #adminAuditLogsPagination {
+  align-items: center;
+  gap: var(--blora-space-2) !important;
+  color: var(--blora-color-text-subtle);
+}
+
+@media (max-width: 640px) {
+  .blora-admin-audit-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-admin-audit-page .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .blora-admin-audit-page .section-header > div:last-child {
+    width: 100%;
+  }
+
+  .blora-admin-audit-page .section-header .input,
+  .blora-admin-audit-page .section-header .blora-button {
+    flex: 1 1 100%;
+    width: 100% !important;
+  }
+}
