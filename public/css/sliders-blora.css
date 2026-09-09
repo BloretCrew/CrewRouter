@@ -1,0 +1,47 @@
+/* Shared Blora range slider and toggle normalization. */
+.blora-page input[type="range"],
+.blora-page .range-input,
+.blora-page .ccs-slider {
+  appearance: none;
+  width: 100%;
+  height: 0.375rem;
+  border: 0;
+  border-radius: var(--blora-radius-pill);
+  background: var(--blora-color-surface-raised);
+  accent-color: var(--blora-color-action-primary-default);
+  cursor: pointer;
+}
+
+.blora-page input[type="range"]::-webkit-slider-thumb,
+.blora-page .range-input::-webkit-slider-thumb,
+.blora-page .ccs-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--blora-color-surface-default);
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-page input[type="range"]::-moz-range-thumb,
+.blora-page .range-input::-moz-range-thumb,
+.blora-page .ccs-slider::-moz-range-thumb {
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--blora-color-surface-default);
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-page :is(.pg-toggle-slider, .toggle-slider) {
+  border-color: var(--blora-color-border-subtle);
+  background: var(--blora-color-surface-raised);
+  border-radius: var(--blora-radius-pill);
+}
+
+.blora-page :is(.pg-toggle input:checked + .pg-toggle-slider, .toggle-switch input:checked + .toggle-slider) {
+  background: var(--blora-color-action-primary-default);
+  border-color: transparent;
+}
