@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <link rel="stylesheet" href="/css/admin-stats-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-users-blora.css?v=1">
+  <link rel="stylesheet" href="/css/admin-teams-blora.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -195,7 +196,7 @@
       </div>
 
       <!-- Team 管理页面 -->
-      <div id="adminTeamsPage" class="page">
+      <div id="adminTeamsPage" class="page blora-admin-teams-page">
         <!-- 滚动后悬浮顶栏：列表搜索 / 创建（默认隐藏，由 JS 控制） -->
         <div id="adminTeamsStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
@@ -237,11 +238,11 @@
           <div id="teamStatsCards" class="admin-stat-cards"></div>
           <div class="admin-page-header">
             <div class="section-actions">
-              <button id="createTeamBtn" class="btn btn-primary"><span data-i18n="创建 Team">创建 Team</span></button>
+              <button type="button" id="createTeamBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="创建 Team">创建 Team</span></button>
             </div>
           </div>
           <div class="admin-filter-bar" id="adminTeamsFilters">
-            <input type="text" id="teamSearchInput" class="input" placeholder="搜索 Team 名称或描述..." data-i18n-placeholder="搜索 Team 名称或描述..." oninput="adminApp.onAdminTeamFilterInput(this.value, 'main')">
+            <input type="search" id="teamSearchInput" class="blora-input input" placeholder="搜索 Team 名称或描述..." data-i18n-placeholder="搜索 Team 名称或描述..." oninput="adminApp.onAdminTeamFilterInput(this.value, 'main')">
             <span id="teamCount" class="filter-info"></span>
           </div>
           <!-- 列表悬浮顶栏哨兵 -->
