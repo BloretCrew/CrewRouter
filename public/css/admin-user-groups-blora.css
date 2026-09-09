@@ -1,0 +1,104 @@
+/* Blora surface migration for admin user group management. */
+.blora-admin-user-groups-page {
+  --groups-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --groups-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-admin-user-groups-page > .content-section {
+  border: var(--groups-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-admin-user-groups-page > .content-section > h2,
+.blora-admin-user-groups-page .section-header h2,
+.blora-admin-user-groups-page .section-header h3 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-admin-user-groups-page .admin-stat-cards {
+  gap: var(--blora-space-3);
+}
+
+.blora-admin-user-groups-page .admin-stat-card,
+.blora-admin-user-groups-page #userGroupDetailPanel > .content-section {
+  border: var(--groups-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-admin-user-groups-page .admin-filter-bar {
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-3);
+  border: var(--groups-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-user-groups-page .admin-filter-bar .input {
+  min-height: 2.5rem;
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-user-groups-page .models-table,
+.blora-admin-user-groups-page .users-table,
+.blora-admin-user-groups-page .rules-list {
+  overflow-x: auto;
+  border: var(--groups-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-user-groups-page .models-table table,
+.blora-admin-user-groups-page .users-table table {
+  min-width: 52rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.blora-admin-user-groups-page .models-table th,
+.blora-admin-user-groups-page .users-table th {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
+  border-bottom: var(--groups-border-soft);
+}
+
+.blora-admin-user-groups-page .models-table td,
+.blora-admin-user-groups-page .users-table td {
+  border-bottom: var(--groups-border-soft);
+}
+
+.blora-admin-user-groups-page .models-table tbody tr:last-child td,
+.blora-admin-user-groups-page .users-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.blora-admin-user-groups-page .models-table tbody tr:hover,
+.blora-admin-user-groups-page .users-table tbody tr:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-user-groups-page .rule-row {
+  margin-bottom: var(--blora-space-2);
+  border: var(--groups-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+@media (max-width: 640px) {
+  .blora-admin-user-groups-page > .content-section,
+  .blora-admin-user-groups-page #userGroupDetailPanel > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-admin-user-groups-page .admin-filter-bar .input,
+  .blora-admin-user-groups-page .admin-filter-bar .blora-button {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}

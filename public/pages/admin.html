@@ -28,6 +28,7 @@
   <link rel="stylesheet" href="/css/admin-stats-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-users-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=1">
+  <link rel="stylesheet" href="/css/admin-user-groups-blora.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -327,17 +328,17 @@
       </div>
 
       <!-- 用户组管理页面 -->
-      <div id="adminUserGroupsPage" class="page">
+      <div id="adminUserGroupsPage" class="page blora-admin-user-groups-page">
         <div class="content-section">
           <h2><span data-i18n="用户组管理">用户组管理</span></h2>
           <div id="userGroupStatsCards" class="admin-stat-cards"></div>
           <div class="admin-page-header">
             <div class="section-actions">
-              <button id="createUserGroupBtn" class="btn btn-primary"><span data-i18n="创建用户组">创建用户组</span></button>
+              <button type="button" id="createUserGroupBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="创建用户组">创建用户组</span></button>
             </div>
           </div>
           <div class="admin-filter-bar">
-            <input type="text" id="userGroupSearchInput" class="input" placeholder="搜索用户组名称或描述..." data-i18n-placeholder="搜索用户组名称或描述..." oninput="adminApp.filterUserGroups()">
+            <input type="search" id="userGroupSearchInput" class="blora-input input" placeholder="搜索用户组名称或描述..." data-i18n-placeholder="搜索用户组名称或描述..." oninput="adminApp.filterUserGroups()">
             <span id="userGroupCount" class="filter-info"></span>
           </div>
           <div id="userGroupsList" class="models-table">
