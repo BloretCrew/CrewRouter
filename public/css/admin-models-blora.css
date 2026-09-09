@@ -61,6 +61,17 @@
 
 .blora-admin-models-page #adminModelsList .admin-card-footer {
   border-top-color: color-mix(in srgb, var(--border) 36%, transparent);
+  gap: var(--blora-space-2);
+}
+
+.blora-admin-models-page #adminModelsList .admin-model-action {
+  min-height: 2.25rem;
+  min-width: 3.5rem;
+  border-radius: var(--blora-radius-lg);
+}
+
+.blora-admin-models-page .model-filter-selects .blora-button {
+  min-height: 2.25rem;
 }
 
 .blora-admin-models-page .models-table,
