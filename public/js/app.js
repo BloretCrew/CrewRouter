@@ -134,8 +134,8 @@ class ConsoleApp {
   /** 控制台可路由页面 id */
   _consolePageIds() {
     return new Set([
-      'modelLibrary', 'myUpstream', 'apiKeys', 'stats', 'projectWork',
-      'leaderboard', 'docs', 'balance', 'settings'
+      'home', 'modelLibrary', 'myUpstream', 'apiKeys', 'stats', 'projectWork',
+      'leaderboard', 'docs', 'balance', 'settings', 'auditLogs', 'prompts', 'sessions'
     ]);
   }
 
@@ -217,6 +217,9 @@ class ConsoleApp {
       this.instance = window.CrewRouterEditionBadge
         ? await window.CrewRouterEditionBadge.load()
         : null;
+      if (this.instance?.edition !== 'personal') {
+        document.querySelectorAll('[data-personal-only]').forEach((el) => { el.style.display = 'none'; });
+      }
       if (this.instance?.capabilities) {
         document.querySelectorAll('[data-capability]').forEach((el) => {
           if (this.instance.capabilities[el.dataset.capability] === false) el.style.display = 'none';
@@ -231,7 +234,8 @@ class ConsoleApp {
     const safePage = teamHashPages.has(restored.page) && this.instance?.capabilities?.teamProjects === false
       ? 'modelLibrary' : restored.page;
     if (safePage !== restored.page) this._writeConsoleHash(safePage);
-    const startPage = safePage || 'modelLibrary';
+    const requestedStartPage = safePage || (this.instance?.edition === 'personal' ? 'home' : 'modelLibrary');
+    const startPage = requestedStartPage === 'home' && this.instance?.edition !== 'personal' ? 'modelLibrary' : requestedStartPage;
     await this.navigateTo(startPage, {
       skipHash: true,
       upstreamTab: restored.upstreamTab,
@@ -282,7 +286,10 @@ class ConsoleApp {
 
   checkAdminStatus() {
     const adminLink = document.getElementById('adminLink');
-    if (adminLink && this.user.isAdmin) {
+    // Personal Edition 将个人管理能力收进控制台，不再把用户带到另一套后台。
+    if (adminLink && this.instance?.edition === 'personal') {
+      adminLink.style.display = 'none';
+    } else if (adminLink && this.user.isAdmin) {
       adminLink.style.display = 'flex';
       adminLink.onclick = () => window.location.href = '/admin';
     }
@@ -443,7 +450,7 @@ class ConsoleApp {
     document.getElementById(`${targetPage}Page`)?.classList.add('active');
 
     const titles = {
-      'dashboard': t('控制台'), 'modelLibrary': t('模型库'), 'myUpstream': t('我的上游'),
+      'dashboard': t('控制台'), 'home': t('个人工作台'), 'modelLibrary': t('模型库'), 'myUpstream': t('我的上游'),
       'myProviders': t('我的上游'), 'myTeamModels': t('我的上游'),
       'apiKeys': t('API Key 与用量'), 'stats': t('统计信息'), 'projectWork': t('项目工作'), 'leaderboard': t('排行榜'), 'docs': t('接口文档'),
       'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志'), 'prompts': t('提示词')
@@ -496,6 +503,7 @@ class ConsoleApp {
     }
 
     switch (page) {
+      case 'home': await this.loadPersonalHome(); break;
       case 'dashboard':
       case 'modelLibrary': await this.loadModelLibrary(); break;
       case 'myUpstream':
@@ -565,6 +573,49 @@ class ConsoleApp {
   getSFIcon(name, size) {
     const color = (window.themeManager?.resolvedTheme || 'dark') === 'dark' ? 'white' : 'black';
     return `<img src="https://img.bloret.net/SF/${name}?color=${color}" alt="" width="${size || 18}" height="${size || 18}" class="sf-icon" data-sf-name="${name}" style="display:inline-block;vertical-align:middle;">`;
+  }
+
+  async loadPersonalHome() {
+    const checklist = document.getElementById('homeSetupChecklist');
+    try {
+      const [statsRes, keysRes, providersRes] = await Promise.all([
+        fetch('/api/user/stats?days=30', { credentials: 'same-origin' }),
+        fetch('/api/user/api-keys', { credentials: 'same-origin' }),
+        fetch('/api/user/providers', { credentials: 'same-origin' })
+      ]);
+      const stats = statsRes.ok ? await statsRes.json() : {};
+      const keys = keysRes.ok ? await keysRes.json() : [];
+      const providers = providersRes.ok ? await providersRes.json() : [];
+      const summary = stats.summary || {};
+      const totalRequests = Number(summary.total_requests || 0);
+      const totalTokens = Number(summary.total_tokens || 0);
+      const totalCost = Number(summary.total_cost || 0);
+      const providerCount = Array.isArray(providers) ? providers.length : Number(providers.count || 0);
+      const keyCount = Array.isArray(keys) ? keys.length : 0;
+
+      document.getElementById('homeTotalRequests').textContent = totalRequests.toLocaleString();
+      document.getElementById('homeTotalTokens').textContent = this._formatBigNumber(totalTokens);
+      document.getElementById('homeTotalCost').textContent = `${totalCost.toFixed(4)}${t(' 积分')}`;
+      document.getElementById('homeKeyCount').textContent = keyCount.toLocaleString();
+      document.getElementById('homeRequestsHint').textContent = totalRequests ? t('较上个周期持续累计') : t('还没有调用记录');
+      document.getElementById('homeTokensHint').textContent = totalTokens ? t('输入与输出合计') : t('开始调用后显示');
+
+      const steps = [
+        { done: providerCount > 0, label: t('接入一个供应商'), action: "app.navigateTo('myUpstream')" },
+        { done: keyCount > 0, label: t('创建一个 API Key'), action: "app.navigateTo('apiKeys')" },
+        { done: totalRequests > 0, label: t('完成第一次调用'), action: "app.navigateTo('docs')" }
+      ];
+      if (checklist) setHTML(checklist, steps.map((step, index) => `
+        <button type="button" class="personal-checklist-item ${step.done ? 'is-done' : ''}" onclick="${step.action}">
+          <span class="personal-checklist-number">${step.done ? '✓' : index + 1}</span>
+          <span>${escapeHtml(step.label)}</span>
+          <span class="personal-checklist-arrow">${step.done ? t('已完成') : '→'}</span>
+        </button>
+      `).join(''));
+    } catch (error) {
+      console.error(t('加载个人工作台失败:'), error);
+      if (checklist) setHTML(checklist, `<div class="personal-checklist-error">${t('配置状态暂时无法加载，请稍后重试')}</div>`);
+    }
   }
 
   async loadApiKeys() {

@@ -98,7 +98,11 @@
 
       <nav class="sidebar-nav">
         <div class="nav-section">
-          <div class="nav-item active" data-page="modelLibrary">
+          <div class="nav-item active" data-page="home" data-personal-only="true">
+            <img src="https://img.bloret.net/SF/rectangle.grid.2x2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="rectangle.grid.2x2">
+            <span><span data-i18n="个人工作台">个人工作台</span></span>
+          </div>
+          <div class="nav-item" data-page="modelLibrary">
             <img src="https://img.bloret.net/SF/books.vertical?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="books.vertical">
             <span><span data-i18n="模型库">模型库</span></span>
           </div>
@@ -195,8 +199,51 @@
         </div>
       </div>
 
+      <!-- 个人工作台：个人版默认入口，集中展示状态与快捷管理 -->
+      <div id="homePage" class="page personal-home-page">
+        <section class="personal-home-hero">
+          <div>
+            <span class="personal-home-eyebrow"><span data-i18n="个人版工作台">个人版工作台</span></span>
+            <h2><span data-i18n="把模型接入、密钥管理和使用情况放在一个地方">把模型接入、密钥管理和使用情况放在一个地方</span></h2>
+            <p><span data-i18n="无需切换管理后台，直接完成个人 AI 网关的日常配置。">无需切换管理后台，直接完成个人 AI 网关的日常配置。</span></p>
+          </div>
+          <div class="personal-home-hero-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        </section>
+
+        <section class="personal-home-stats" aria-label="个人使用概览">
+          <div class="personal-home-stat-card"><span class="personal-home-stat-label"><span data-i18n="近 30 天请求">近 30 天请求</span></span><strong id="homeTotalRequests">—</strong><span id="homeRequestsHint" class="personal-home-stat-hint"><span data-i18n="等待数据">等待数据</span></span></div>
+          <div class="personal-home-stat-card"><span class="personal-home-stat-label"><span data-i18n="Token 消耗">Token 消耗</span></span><strong id="homeTotalTokens">—</strong><span id="homeTokensHint" class="personal-home-stat-hint"><span data-i18n="近 30 天">近 30 天</span></span></div>
+          <div class="personal-home-stat-card"><span class="personal-home-stat-label"><span data-i18n="积分消耗">积分消耗</span></span><strong id="homeTotalCost">—</strong><span class="personal-home-stat-hint"><span data-i18n="按当前统计周期">按当前统计周期</span></span></div>
+          <div class="personal-home-stat-card"><span class="personal-home-stat-label"><span data-i18n="已配置密钥">已配置密钥</span></span><strong id="homeKeyCount">—</strong><span class="personal-home-stat-hint"><span data-i18n="可随时创建或调整">可随时创建或调整</span></span></div>
+        </section>
+
+        <section class="personal-home-grid">
+          <div class="content-section personal-home-actions">
+            <div class="section-header"><div><h2><span data-i18n="快速管理">快速管理</span></h2><p><span data-i18n="常用配置一步直达">常用配置一步直达</span></p></div></div>
+            <div class="personal-action-grid">
+              <button type="button" class="personal-action-card" onclick="app.navigateTo('myUpstream')"><span class="personal-action-icon">＋</span><span><strong data-i18n="接入供应商">接入供应商</strong><small data-i18n="添加自己的 API 上游">添加自己的 API 上游</small></span><span class="personal-action-arrow">→</span></button>
+              <button type="button" class="personal-action-card" onclick="app.navigateTo('apiKeys')"><span class="personal-action-icon">⌁</span><span><strong data-i18n="管理 API Key">管理 API Key</strong><small data-i18n="创建密钥并绑定模型">创建密钥并绑定模型</small></span><span class="personal-action-arrow">→</span></button>
+              <button type="button" class="personal-action-card" onclick="app.navigateTo('modelLibrary')"><span class="personal-action-icon">◇</span><span><strong data-i18n="浏览模型库">浏览模型库</strong><small data-i18n="选择并测试可用模型">选择并测试可用模型</small></span><span class="personal-action-arrow">→</span></button>
+              <button type="button" class="personal-action-card" onclick="app.navigateTo('stats')"><span class="personal-action-icon">↗</span><span><strong data-i18n="查看使用统计">查看使用统计</strong><small data-i18n="了解请求与消耗趋势">了解请求与消耗趋势</small></span><span class="personal-action-arrow">→</span></button>
+            </div>
+          </div>
+          <div class="content-section personal-home-status">
+            <div class="section-header"><div><h2><span data-i18n="配置状态">配置状态</span></h2><p><span data-i18n="完成这几步即可开始使用">完成这几步即可开始使用</span></p></div></div>
+            <div id="homeSetupChecklist" class="personal-checklist"><div class="personal-checklist-loading"><span class="loading-spinner sm"></span><span data-i18n="正在检查配置...">正在检查配置...</span></div></div>
+          </div>
+        </section>
+
+        <section class="content-section personal-home-tip">
+          <div class="personal-home-tip-mark">i</div>
+          <div><strong data-i18n="个人版已将管理能力整合到控制台">个人版已将管理能力整合到控制台</strong><p data-i18n="供应商、模型、API Key、统计和日志都可以从左侧直接管理。">供应商、模型、API Key、统计和日志都可以从左侧直接管理。</p></div>
+          <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.navigateTo('docs')"><span data-i18n="查看接口文档">查看接口文档</span></button>
+        </section>
+      </div>
+
       <!-- 模型库页面 (CrewRouter) - 首页 -->
-      <div id="modelLibraryPage" class="page active blora-model-library">
+      <div id="modelLibraryPage" class="page blora-model-library">
         <!-- 后台任务通知条：会话总结等长任务的进行中提示 -->
         <div id="modelLibraryTaskBar" style="display:none;margin-bottom:12px;"></div>
         <!-- 滚动后悬浮顶栏：筛选 + 搜索 + Key 切换（默认隐藏，由 JS 控制） -->
