@@ -927,7 +927,7 @@ class AdminApp {
               <td style="color:var(--muted-foreground);font-size:12px;">${escapeHtml(user.email) || '-'}</td>
               <td>${user.email_verified ? '<span style="color:var(--status-success);font-size:12px;">' + t('✓ 已验证') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('✗ 未验证') + '</span>'}</td>
               <td style="font-variant-numeric:tabular-nums;">${parseFloat(user.balance || 0).toFixed(0)}</td>
-              <td>${user.is_admin ? '<span style="background:rgba(139,92,246,0.1);color:var(--purple);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;">' + t('管理员') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('普通用户') + '</span>'}</td>
+              <td>${user.is_admin ? '<span class="blora-badge" data-variant="info">' + t('管理员') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('普通用户') + '</span>'}</td>
               <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
               <td style="color:var(--muted-foreground);font-size:12px;">${new Date(user.created_at).toLocaleDateString('zh-CN')}</td>
               <td>
@@ -2332,7 +2332,7 @@ class AdminApp {
               <div class="admin-card-title" title="${escapeHtml(model.upstream_model_id || model.name || '')}">${escapeHtml(model.upstream_model_id || model.name || model.id)}</div>
               ${model.name && model.name !== model.upstream_model_id ? `<div class="admin-card-subtitle">${escapeHtml(model.name)}</div>` : ''}
             </div>
-            <span class="admin-card-badge ${model.enabled ? 'green' : 'red'}">${model.enabled ? t('启用') : t('禁用')}</span>
+            <span class="blora-badge" data-variant="${model.enabled ? 'success' : 'danger'}">${model.enabled ? t('启用') : t('禁用')}</span>
           </div>
           <div class="admin-card-body">
             <div class="admin-card-row">
@@ -3562,7 +3562,7 @@ class AdminApp {
               <div style="flex:1;min-width:0;">
                 <div class="admin-card-title-row">
                   <div class="admin-card-title">${escapeHtml(provider.name)}</div>
-                  <span class="admin-card-badge ${provider.enabled ? 'green' : 'red'}">${provider.enabled ? t('启用') : t('禁用')}</span>
+                  <span class="blora-badge" data-variant="${provider.enabled ? 'success' : 'danger'}">${provider.enabled ? t('启用') : t('禁用')}</span>
                 </div>
                 <div class="admin-card-subtitle" title="${escapeHtml(provider.base_url || '')}">${escapeHtml(provider.base_url || '-')}</div>
                 <div class="admin-card-header-tags ${hasTags ? 'has-tags' : ''}" title="${t('拖拽标签到卡片可分配')}">
@@ -9591,7 +9591,7 @@ async function(ctx) {
         <td>${escapeHtml(g.description || '-')}</td>
         <td>${g.member_count}</td>
         <td>${g.rule_count}</td>
-        <td>${g.is_default ? '<span style="background:rgba(34,197,94,0.1);color:var(--success);padding:2px 10px;border-radius:12px;font-size:12px;font-weight:500;">' + t('默认') + '</span>' : '-'}</td>
+        <td>${g.is_default ? '<span class="blora-badge" data-variant="success">' + t('默认') + '</span>' : '-'}</td>
         <td>${new Date(g.created_at).toLocaleDateString()}</td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
           ${g.is_default
@@ -10239,7 +10239,7 @@ async function(ctx) {
     const renderTeamCard = (team) => `
       <div class="team-card" data-team-id="${team.id}">
         <div class="team-card-header">
-          <h3>${escapeHtml(team.name)}${team.is_default ? ' <span class="badge badge-warning">' + t('默认') + '</span>' : ''}${team.is_frontier ? ' <span style="background:rgba(139,92,246,0.1);color:var(--purple);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;">' + t('前沿') + '</span>' : ''}${team.is_personal ? ' <span style="background:rgba(59,130,246,0.1);color:var(--info);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500;">' + t('个人') + '</span>' : ''}</h3>
+          <h3>${escapeHtml(team.name)}${team.is_default ? ' <span class="blora-badge" data-variant="warning">' + t('默认') + '</span>' : ''}${team.is_frontier ? ' <span class="blora-badge" data-variant="info">' + t('前沿') + '</span>' : ''}${team.is_personal ? ' <span class="blora-badge" data-variant="primary">' + t('个人') + '</span>' : ''}</h3>
           <span class="badge">${team.member_count} 成员</span>
         </div>
         <p class="team-description">${escapeHtml(team.description || t('暂无描述'))}</p>
@@ -11896,8 +11896,8 @@ async function(ctx) {
         <div class="audit-log-row" style="display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-              <span style="font-size:12px;padding:2px 8px;border-radius:4px;background:var(--brand-blue);color:#fff;font-weight:500;">${escapeHtml(log.action)}</span>
-              ${log.is_admin ? '<span style="font-size:11px;padding:1px 6px;border-radius:4px;background:var(--destructive);color:#fff;">' + t('管理员') + '</span>' : ''}
+              <span class="blora-badge" data-variant="info">${escapeHtml(log.action)}</span>
+              ${log.is_admin ? '<span class="blora-badge" data-variant="danger">' + t('管理员') + '</span>' : ''}
               <strong style="font-size:13px;">${escapeHtml(log.username || '-')}</strong>
               <span style="font-size:13px;color:var(--foreground);">${escapeHtml(log.description || '')}</span>
             </div>
