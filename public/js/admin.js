@@ -834,14 +834,14 @@ class AdminApp {
       fetch('/api/admin/teams').then((r) => r.ok ? r.json() : []).catch(() => []),
       fetch('/api/admin/user-groups').then((r) => r.ok ? r.json() : []).catch(() => []),
     ]);
-    const teamOptions = (Array.isArray(teams) ? teams : []).map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
-    const groupOptions = (Array.isArray(groups) ? groups : []).map((g) => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    const teamOptions = (Array.isArray(teams) ? teams : []).map((t) => `<blora-option value="${t.id}">${escapeHtml(t.name)}</blora-option>`).join('');
+    const groupOptions = (Array.isArray(groups) ? groups : []).map((g) => `<blora-option value="${g.id}">${escapeHtml(g.name)}</blora-option>`).join('');
     const content = `
       <div class="setup-form" style="display:grid;gap:12px;">
         <div class="form-group"><label>使用人数 *</label><input id="inviteMaxUses" class="input" type="number" min="1" max="10000" value="1" required></div>
         <div class="form-group"><label>有效天数 *</label><input id="inviteDays" class="input" type="number" min="1" max="365" value="7" required></div>
-        <div class="form-group"><label>加入 Team</label><select id="inviteTeamId" class="input"><option value="">不指定</option>${teamOptions}</select></div>
-        <div class="form-group"><label>加入用户组</label><select id="inviteGroupId" class="input"><option value="">不指定</option>${groupOptions}</select></div>
+        <div class="form-group"><label>加入 Team</label><blora-select id="inviteTeamId" class="input"><blora-option value="">不指定</blora-option>${teamOptions}</blora-select></div>
+        <div class="form-group"><label>加入用户组</label><blora-select id="inviteGroupId" class="input"><blora-option value="">不指定</blora-option>${groupOptions}</blora-select></div>
       </div>`;
     const footer = `<button type="button" class="dialog-btn dialog-btn-primary" id="inviteGenerateBtn">生成</button>`;
     const modal = Dialog.showModal({ title: '生成邀请链接', content, footer, width: 480 });
@@ -987,8 +987,8 @@ class AdminApp {
       if (!response.ok) return;
       const groups = await response.json();
       const select = document.getElementById('editUserGroup');
-      setHTML(select, '<option value="">' + t('无用户组') + '</option>' +
-        groups.map(g => `<option value="${g.id}" ${g.id === selectedGroupId ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join(''));
+      setHTML(select, '<blora-option value="">' + t('无用户组') + '</blora-option>' +
+        groups.map(g => `<blora-option value="${g.id}" ${g.id === selectedGroupId ? 'selected' : ''}>${escapeHtml(g.name)}</blora-option>`).join(''));
     } catch (error) {
       console.error(t('加载用户组列表失败:'), error);
     }
@@ -1442,8 +1442,8 @@ class AdminApp {
     });
     const providers = Object.keys(providerMap).sort((a, b) => (providerMap[a] || '').localeCompare(providerMap[b] || '', 'zh-CN'));
     const currentValue = selects[0].value;
-    const optionsHtml = '<option value="">' + t('全部供应商') + '</option>' + providers.map(p =>
-      `<option value="${escapeHtml(p)}">${escapeHtml(providerMap[p])}</option>`
+    const optionsHtml = '<blora-option value="">' + t('全部供应商') + '</blora-option>' + providers.map(p =>
+      `<blora-option value="${escapeHtml(p)}">${escapeHtml(providerMap[p])}</blora-option>`
     ).join('');
 
     selects.forEach(select => {
@@ -1467,8 +1467,8 @@ class AdminApp {
     } else {
       series = [...series].sort((a, b) => String(a).localeCompare(String(b), 'zh-CN'));
     }
-    const optionsHtml = '<option value="">' + t('全部系列') + '</option>' + series.map(s =>
-      `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`
+    const optionsHtml = '<blora-option value="">' + t('全部系列') + '</blora-option>' + series.map(s =>
+      `<blora-option value="${escapeHtml(s)}">${escapeHtml(s)}</blora-option>`
     ).join('');
     selects.forEach(select => {
       setHTML(select, optionsHtml);
@@ -2552,10 +2552,10 @@ class AdminApp {
       const options = models.map(m => {
         const label = m.name || m.upstream_model_id || m.id;
         const extra = m.alias && m.alias !== m.name ? ` (${m.alias})` : '';
-        return `<option value="${m.id}">${label}${extra}</option>`;
+        return `<blora-option value="${m.id}">${label}${extra}</blora-option>`;
       }).join('');
-      setHTML(document.getElementById('modelThinkingModel'), '<option value="">' + t('不设置（使用自身）') + '</option>' + options);
-      setHTML(document.getElementById('modelNonThinkingModel'), '<option value="">' + t('不设置（使用自身）') + '</option>' + options);
+      setHTML(document.getElementById('modelThinkingModel'), '<blora-option value="">' + t('不设置（使用自身）') + '</blora-option>' + options);
+      setHTML(document.getElementById('modelNonThinkingModel'), '<blora-option value="">' + t('不设置（使用自身）') + '</blora-option>' + options);
     } catch (error) {
       console.error(t('加载模型选项失败:'), error);
     }
@@ -2569,7 +2569,7 @@ class AdminApp {
       this._providerOptionsCache = Array.isArray(providers) ? providers : [];
       const select = document.getElementById('modelProvider');
       setHTML(select, this._providerOptionsCache.map(p =>
-        `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`
+        `<blora-option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</blora-option>`
       ).join(''));
     } catch (error) {
       console.error(t('加载供应商选项失败:'), error);
@@ -6560,7 +6560,7 @@ async function(ctx) {
     configs.forEach(([id, rows, placeholder]) => {
       const el = document.getElementById(id);
       if (!el) return;
-      setHTML(el, `<option value="">${placeholder}</option>${(rows || []).map(row => `<option value="${escapeHtml(row.id)}">${escapeHtml(row.name || row.id)}</option>`).join('')}`);
+      setHTML(el, `<blora-option value="">${placeholder}</blora-option>${(rows || []).map(row => `<blora-option value="${escapeHtml(row.id)}">${escapeHtml(row.name || row.id)}</blora-option>`).join('')}`);
     });
     this._multiStatsFiltersLoaded = true;
   }
@@ -9280,13 +9280,13 @@ async function(ctx) {
   async loadSeriesNames() {
     try {
       const select = document.getElementById('newSeriesName');
-      setHTML(select, '<option value="">' + t('选择系列...') + '</option>');
+      setHTML(select, '<blora-option value="">' + t('选择系列...') + '</blora-option>');
       const seriesSet = new Set();
       this.modelsData.forEach(m => {
         if (m.series) seriesSet.add(m.series);
       });
       Array.from(seriesSet).sort().forEach(name => {
-        appendHTML(select, `<option value="${name}">${name}</option>`);
+        appendHTML(select, `<blora-option value="${name}">${name}</blora-option>`);
       });
     } catch (error) {
       console.error(t('加载系列列表失败:'), error);
@@ -9748,10 +9748,10 @@ async function(ctx) {
     html += `
       <div class="rule-add-form" id="ruleAddForm">
         <div class="rule-add-row">
-          <select id="ruleNewType" class="form-input" style="width:auto;">
-            <option value="requests">请求次数</option>
-            <option value="tokens">Token 用量</option>
-          </select>
+          <blora-select id="ruleNewType" class="form-input" style="width:auto;">
+            <blora-option value="requests">请求次数</blora-option>
+            <blora-option value="tokens">Token 用量</blora-option>
+          </blora-select>
           <span class="rule-add-label">每</span>
           <input type="number" id="ruleNewDuration" class="form-input" style="width:100px;" min="1" placeholder="${t('小时数')}">
           <span class="rule-add-label">小时</span>
@@ -10702,8 +10702,8 @@ async function(ctx) {
       if (key && !map[key]) map[key] = name;
     });
     const keys = Object.keys(map).sort((a, b) => (map[a] || '').localeCompare(map[b] || '', 'zh-CN'));
-    const optionsHtml = '<option value="">' + t('全部供应商') + '</option>' + keys.map(k =>
-      `<option value="${escapeHtml(k)}">${escapeHtml(map[k])}</option>`
+    const optionsHtml = '<blora-option value="">' + t('全部供应商') + '</blora-option>' + keys.map(k =>
+      `<blora-option value="${escapeHtml(k)}">${escapeHtml(map[k])}</blora-option>`
     ).join('');
     selects.forEach(select => {
       setHTML(select, optionsHtml);

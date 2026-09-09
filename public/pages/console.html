@@ -64,10 +64,10 @@
       <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">
     </div>
     <div class="mobile-topbar-title" id="mobilePageTitle"><span data-i18n="控制台">控制台</span></div>
-    <select id="langToggleMobile" class="btn btn-icon" title="Language" style="width:auto;height:32px;padding:0 6px;font-size:13px;cursor:pointer;margin-right:8px;">
-      <option value="zh">中文</option>
-      <option value="en">English</option>
-    </select>
+    <blora-select id="langToggleMobile" class="btn btn-icon" title="Language" style="width:auto;height:32px;padding:0 6px;font-size:13px;cursor:pointer;margin-right:8px;">
+      <blora-option value="zh">中文</blora-option>
+      <blora-option value="en">English</blora-option>
+    </blora-select>
     <button id="themeToggleMobile" class="btn btn-icon" title="切换主题" data-i18n-title="切换主题" style="width:32px;height:32px;">
       <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -164,10 +164,10 @@
         <button id="logoutBtn" class="btn btn-icon" title="登出" data-i18n-title="登出">
           <img src="https://img.bloret.net/SF/arrow.right.square?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.right.square">
         </button>
-        <select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:32px;padding:0 6px;font-size:12px;cursor:pointer;">
-          <option value="zh">中文</option>
-          <option value="en">EN</option>
-        </select>
+        <blora-select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:32px;padding:0 6px;font-size:12px;cursor:pointer;">
+          <blora-option value="zh">中文</blora-option>
+          <blora-option value="en">EN</blora-option>
+        </blora-select>
       </div>
     </aside>
 
@@ -480,10 +480,10 @@
                 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
                   <input type="checkbox" id="batchEditMyModelsEnabledCheck"><span data-i18n="启用状态"> 启用状态
                 </span></label>
-                <select id="batchEditMyModelsEnabled" class="blora-select select" style="margin-top:4px;" disabled>
-                  <option value="true"><span data-i18n="启用">启用</span></option>
-                  <option value="false"><span data-i18n="禁用">禁用</span></option>
-                </select>
+                <blora-select id="batchEditMyModelsEnabled" class="blora-select select" style="margin-top:4px;" disabled>
+                  <blora-option value="true"><span data-i18n="启用">启用</span></blora-option>
+                  <blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>
+                </blora-select>
               </div>
               <div>
                 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
@@ -628,47 +628,47 @@
           <div class="stats-filters">
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label>
-              <select id="statsTimeRange" class="blora-select select" onchange="app.loadStats()">
-                <option value="7"><span data-i18n="最近 7 天">最近 7 天</span></option>
-                <option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></option>
-                <option value="90"><span data-i18n="最近 90 天">最近 90 天</span></option>
-                <option value="180"><span data-i18n="最近 180 天">最近 180 天</span></option>
-                <option value="365"><span data-i18n="最近 1 年">最近 1 年</span></option>
-                <option value="custom"><span data-i18n="自定义">自定义</span></option>
-              </select>
+              <blora-select id="statsTimeRange" class="blora-select select" onchange="app.loadStats()">
+                <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
+                <blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option>
+                <blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option>
+                <blora-option value="180"><span data-i18n="最近 180 天">最近 180 天</span></blora-option>
+                <blora-option value="365"><span data-i18n="最近 1 年">最近 1 年</span></blora-option>
+                <blora-option value="custom"><span data-i18n="自定义">自定义</span></blora-option>
+              </blora-select>
             </div>
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="模型">模型</span></label>
-              <select id="statsModelFilter" class="blora-select select" onchange="app.loadStats()">
-                <option value=""><span data-i18n="全部模型">全部模型</span></option>
-              </select>
+              <blora-select id="statsModelFilter" class="blora-select select" onchange="app.loadStats()">
+                <blora-option value=""><span data-i18n="全部模型">全部模型</span></blora-option>
+              </blora-select>
             </div>
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="供应商">供应商</span></label>
-              <select id="statsProviderFilter" class="blora-select select" onchange="app.loadStats()">
-                <option value=""><span data-i18n="全部供应商">全部供应商</span></option>
-              </select>
+              <blora-select id="statsProviderFilter" class="blora-select select" onchange="app.loadStats()">
+                <blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
+              </blora-select>
             </div>
             <div class="stats-filter-group">
               <label class="stats-filter-label">Team</label>
-              <select id="statsTeamFilter" class="blora-select select" onchange="app.loadStats()">
-                <option value=""><span data-i18n="全部 Team">全部 Team</span></option>
-              </select>
+              <blora-select id="statsTeamFilter" class="blora-select select" onchange="app.loadStats()">
+                <blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option>
+              </blora-select>
             </div>
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label>
-              <select id="statsSourceFilter" class="blora-select select" onchange="app.loadStats()" title="按 harness / 客户端筛选" data-i18n-title="按 harness / 客户端筛选">
-                <option value=""><span data-i18n="全部客户端">全部客户端</span></option>
-                <option value="grok">Grok</option>
-                <option value="codex">Codex</option>
-                <option value="claude_code">Claude Code</option>
-                <option value="opencode">OpenCode</option>
-                <option value="qwen_code">Qwen Code</option>
-                <option value="hermes">Hermes</option>
-                <option value="openclaw">OpenClaw</option>
-                <option value="deepseek_harness">DeepSeek Harness</option>
-                <option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option>
-              </select>
+              <blora-select id="statsSourceFilter" class="blora-select select" onchange="app.loadStats()" title="按 harness / 客户端筛选" data-i18n-title="按 harness / 客户端筛选">
+                <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
+                <blora-option value="grok">Grok</blora-option>
+                <blora-option value="codex">Codex</blora-option>
+                <blora-option value="claude_code">Claude Code</blora-option>
+                <blora-option value="opencode">OpenCode</blora-option>
+                <blora-option value="qwen_code">Qwen Code</blora-option>
+                <blora-option value="hermes">Hermes</blora-option>
+                <blora-option value="openclaw">OpenClaw</blora-option>
+                <blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
+                <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
+              </blora-select>
             </div>
             <div class="stats-filter-group" style="align-self:flex-end;">
               <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.resetStatsFilters()">
@@ -1110,25 +1110,25 @@
           <div id="statsTabLogs" class="stats-tab-content" style="display:none;">
             <div class="admin-filter-bar" style="margin-bottom:16px;">
               <input type="text" id="usageLogModelFilter" class="blora-input input" placeholder="模型名称..." data-i18n-placeholder="模型名称..." style="min-width:140px;">
-              <select id="usageLogRequestTypeFilter" class="blora-input input" style="min-width:130px;">
-                <option value=""><span data-i18n="全部类型">全部类型</span></option>
-                <option value="chat">chat</option>
-                <option value="responses">responses</option>
-                <option value="fusion">fusion</option>
-                <option value="playground">playground</option>
-              </select>
-              <select id="usageLogRequestSourceFilter" class="blora-input input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
-                <option value=""><span data-i18n="全部客户端">全部客户端</span></option>
-                <option value="grok">Grok</option>
-                <option value="codex">Codex</option>
-                <option value="claude_code">Claude Code</option>
-                <option value="opencode">OpenCode</option>
-                <option value="qwen_code">Qwen Code</option>
-                <option value="hermes">Hermes</option>
-                <option value="openclaw">OpenClaw</option>
-                <option value="deepseek_harness">DeepSeek Harness</option>
-                <option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option>
-              </select>
+              <blora-select id="usageLogRequestTypeFilter" class="blora-input input" style="min-width:130px;">
+                <blora-option value=""><span data-i18n="全部类型">全部类型</span></blora-option>
+                <blora-option value="chat">chat</blora-option>
+                <blora-option value="responses">responses</blora-option>
+                <blora-option value="fusion">fusion</blora-option>
+                <blora-option value="playground">playground</blora-option>
+              </blora-select>
+              <blora-select id="usageLogRequestSourceFilter" class="blora-input input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
+                <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
+                <blora-option value="grok">Grok</blora-option>
+                <blora-option value="codex">Codex</blora-option>
+                <blora-option value="claude_code">Claude Code</blora-option>
+                <blora-option value="opencode">OpenCode</blora-option>
+                <blora-option value="qwen_code">Qwen Code</blora-option>
+                <blora-option value="hermes">Hermes</blora-option>
+                <blora-option value="openclaw">OpenClaw</blora-option>
+                <blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
+                <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
+              </blora-select>
               <input type="date" id="usageLogStartDate" class="blora-input input">
               <input type="date" id="usageLogEndDate" class="blora-input input">
               <button type="button" class="blora-button btn btn-primary" onclick="app.loadUsageLogs()"><span data-i18n="查询">查询</span></button>
@@ -1173,23 +1173,23 @@
           </div>
           <div class="admin-filter-bar" style="margin-bottom:16px;">
             <input type="text" id="promptSearchInput" class="blora-input input" placeholder="搜索文件名或内容..." data-i18n-placeholder="搜索文件名或内容..." style="min-width:200px;" onkeydown="if(event.key==='Enter')app.loadCustomPrompts(1)">
-            <select id="promptSourceFilter" class="blora-input input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
-              <option value=""><span data-i18n="全部客户端">全部客户端</span></option>
-              <option value="grok">Grok</option>
-              <option value="codex">Codex</option>
-              <option value="claude_code">Claude Code</option>
-              <option value="opencode">OpenCode</option>
-              <option value="qwen_code">Qwen Code</option>
-              <option value="hermes">Hermes</option>
-              <option value="openclaw">OpenClaw</option>
-              <option value="deepseek_harness">DeepSeek Harness</option>
-              <option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option>
-            </select>
-            <select id="promptSortSelect" class="blora-input input" style="min-width:130px;">
-              <option value="count"><span data-i18n="按出现次数排序">按出现次数排序</span></option>
-              <option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></option>
-              <option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></option>
-            </select>
+            <blora-select id="promptSourceFilter" class="blora-input input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
+              <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
+              <blora-option value="grok">Grok</blora-option>
+              <blora-option value="codex">Codex</blora-option>
+              <blora-option value="claude_code">Claude Code</blora-option>
+              <blora-option value="opencode">OpenCode</blora-option>
+              <blora-option value="qwen_code">Qwen Code</blora-option>
+              <blora-option value="hermes">Hermes</blora-option>
+              <blora-option value="openclaw">OpenClaw</blora-option>
+              <blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
+              <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
+            </blora-select>
+            <blora-select id="promptSortSelect" class="blora-input input" style="min-width:130px;">
+              <blora-option value="count"><span data-i18n="按出现次数排序">按出现次数排序</span></blora-option>
+              <blora-option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></blora-option>
+              <blora-option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></blora-option>
+            </blora-select>
             <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.loadCustomPrompts(1)"><span data-i18n="查询">查询</span></button>
             <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.clearPromptFilters()"><span data-i18n="清除">清除</span></button>
             <span id="promptCount" class="filter-info"></span>
@@ -1365,8 +1365,8 @@
             <div id="projectWorkStatus" class="project-work-status"><span data-i18n="正在同步活动...">正在同步活动...</span></div>
           </div>
           <div class="stats-filters project-work-filters">
-            <div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label><select id="projectWorkTimeRange" class="blora-select select" onchange="app.loadProjectWorkStats()"><option value="7"><span data-i18n="最近 7 天">最近 7 天</span></option><option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></option><option value="90"><span data-i18n="最近 90 天">最近 90 天</span></option><option value="180"><span data-i18n="最近 180 天">最近 180 天</span></option><option value="365"><span data-i18n="最近 1 年">最近 1 年</span></option><option value="custom"><span data-i18n="自定义">自定义</span></option></select></div>
-            <div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label><select id="projectWorkSourceFilter" class="blora-select select" onchange="app.loadProjectWorkStats()"><option value=""><span data-i18n="全部客户端">全部客户端</span></option><option value="grok">Grok</option><option value="codex">Codex</option><option value="claude_code">Claude Code</option><option value="opencode">OpenCode</option><option value="qwen_code">Qwen Code</option><option value="hermes">Hermes</option><option value="openclaw">OpenClaw</option><option value="deepseek_harness">DeepSeek Harness</option><option value="unknown"><span data-i18n="未知/其他">未知/其他</span></option></select></div>
+            <div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label><blora-select id="projectWorkTimeRange" class="blora-select select" onchange="app.loadProjectWorkStats()"><blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option><blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option><blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option><blora-option value="180"><span data-i18n="最近 180 天">最近 180 天</span></blora-option><blora-option value="365"><span data-i18n="最近 1 年">最近 1 年</span></blora-option><blora-option value="custom"><span data-i18n="自定义">自定义</span></blora-option></blora-select></div>
+            <div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label><blora-select id="projectWorkSourceFilter" class="blora-select select" onchange="app.loadProjectWorkStats()"><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option></blora-select></div>
             <div class="stats-filter-group" style="align-self:flex-end;"><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.navigateTo('stats')"><span data-i18n="返回总统计">返回总统计</span></button></div>
           </div>
           <div id="projectWorkCustomRange" style="display:none;gap:8px;align-items:center;margin-bottom:16px;padding:12px;background:var(--muted);border-radius:8px;"><label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="自定义范围：">自定义范围：</span></label><input type="date" id="projectWorkStartDate" class="blora-input input"><span style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="至">至</span></span><input type="date" id="projectWorkEndDate" class="blora-input input"><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.loadProjectWorkStats()"><span data-i18n="查询">查询</span></button></div>
@@ -1390,22 +1390,22 @@
           <div class="stats-filters">
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label>
-              <select id="leaderboardTimeRange" class="blora-select select" onchange="app.loadLeaderboard()">
-                <option value="7"><span data-i18n="最近 7 天">最近 7 天</span></option>
-                <option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></option>
-                <option value="90"><span data-i18n="最近 90 天">最近 90 天</span></option>
-                <option value="365"><span data-i18n="最近 1 年">最近 1 年</span></option>
-              </select>
+              <blora-select id="leaderboardTimeRange" class="blora-select select" onchange="app.loadLeaderboard()">
+                <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
+                <blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option>
+                <blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option>
+                <blora-option value="365"><span data-i18n="最近 1 年">最近 1 年</span></blora-option>
+              </blora-select>
             </div>
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="排序方式">排序方式</span></label>
-              <select id="leaderboardSort" class="blora-select select" onchange="app.loadLeaderboard()">
-                <option value="tokens"><span data-i18n="Token 数">Token 数</span></option>
-                <option value="requests"><span data-i18n="请求数">请求数</span></option>
-                <option value="points"><span data-i18n="消耗积分">消耗积分</span></option>
-                <option value="cache"><span data-i18n="缓存命中率">缓存命中率</span></option>
-                <option value="balance"><span data-i18n="当前余额">当前余额</span></option>
-              </select>
+              <blora-select id="leaderboardSort" class="blora-select select" onchange="app.loadLeaderboard()">
+                <blora-option value="tokens"><span data-i18n="Token 数">Token 数</span></blora-option>
+                <blora-option value="requests"><span data-i18n="请求数">请求数</span></blora-option>
+                <blora-option value="points"><span data-i18n="消耗积分">消耗积分</span></blora-option>
+                <blora-option value="cache"><span data-i18n="缓存命中率">缓存命中率</span></blora-option>
+                <blora-option value="balance"><span data-i18n="当前余额">当前余额</span></blora-option>
+              </blora-select>
             </div>
           </div>
 
@@ -1703,15 +1703,15 @@ data: [DONE]</code></pre>
           <div class="section-header">
             <h2><span data-i18n="操作日志">操作日志</span></h2>
             <div style="display:flex;gap:8px;align-items:center;">
-              <select id="auditLogActionFilter" class="blora-input input" style="width:auto;" onchange="app.loadAuditLogs(1)">
-                <option value=""><span data-i18n="全部操作">全部操作</span></option>
-                <option value="api_key">API Key</option>
-                <option value="cokey">Co-Key</option>
-                <option value="user"><span data-i18n="用户">用户</span></option>
-                <option value="auth"><span data-i18n="认证">认证</span></option>
-                <option value="provider"><span data-i18n="供应商">供应商</span></option>
-                <option value="model"><span data-i18n="模型">模型</span></option>
-              </select>
+              <blora-select id="auditLogActionFilter" class="blora-input input" style="width:auto;" onchange="app.loadAuditLogs(1)">
+                <blora-option value=""><span data-i18n="全部操作">全部操作</span></blora-option>
+                <blora-option value="api_key">API Key</blora-option>
+                <blora-option value="cokey">Co-Key</blora-option>
+                <blora-option value="user"><span data-i18n="用户">用户</span></blora-option>
+                <blora-option value="auth"><span data-i18n="认证">认证</span></blora-option>
+                <blora-option value="provider"><span data-i18n="供应商">供应商</span></blora-option>
+                <blora-option value="model"><span data-i18n="模型">模型</span></blora-option>
+              </blora-select>
               <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadAuditLogs(1)"><span data-i18n="刷新">刷新</span></button>
             </div>
           </div>
@@ -2009,12 +2009,12 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="apiKeyExpiry"><span data-i18n="有效期">有效期</span></label>
-          <select id="apiKeyExpiry" class="blora-select select">
-            <option value=""><span data-i18n="永不过期">永不过期</span></option>
-            <option value="24"><span data-i18n="24 小时">24 小时</span></option>
-            <option value="168"><span data-i18n="7 天">7 天</span></option>
-            <option value="720"><span data-i18n="30 天">30 天</span></option>
-          </select>
+          <blora-select id="apiKeyExpiry" class="blora-select select">
+            <blora-option value=""><span data-i18n="永不过期">永不过期</span></blora-option>
+            <blora-option value="24"><span data-i18n="24 小时">24 小时</span></blora-option>
+            <blora-option value="168"><span data-i18n="7 天">7 天</span></blora-option>
+            <blora-option value="720"><span data-i18n="30 天">30 天</span></blora-option>
+          </blora-select>
         </div>
       </div>
       <div class="modal-footer">
@@ -2157,11 +2157,11 @@ data: [DONE]</code></pre>
         </span></div>
         <div class="form-group">
           <label><span data-i18n="签名启用策略">签名启用策略</span></label>
-          <select id="keySignatureMode" class="blora-select select" onchange="app.toggleKeySignatureMode()">
-            <option value="inherit"><span data-i18n="继承用户默认设置">继承用户默认设置</span></option>
-            <option value="enable"><span data-i18n="强制启用">强制启用</span></option>
-            <option value="disable"><span data-i18n="强制禁用">强制禁用</span></option>
-          </select>
+          <blora-select id="keySignatureMode" class="blora-select select" onchange="app.toggleKeySignatureMode()">
+            <blora-option value="inherit"><span data-i18n="继承用户默认设置">继承用户默认设置</span></blora-option>
+            <blora-option value="enable"><span data-i18n="强制启用">强制启用</span></blora-option>
+            <blora-option value="disable"><span data-i18n="强制禁用">强制禁用</span></blora-option>
+          </blora-select>
         </div>
         <div id="keySignatureTemplateGroup">
           <div class="form-group">
@@ -2221,15 +2221,15 @@ data: [DONE]</code></pre>
           </div>
           <div class="form-group">
             <label><span data-i18n="时区">时区</span></label>
-            <select id="scheduleTimezone" class="blora-select select" style="width:100%;">
-              <option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</option>
-              <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
-              <option value="America/New_York">America/New_York (ET)</option>
-              <option value="America/Los_Angeles">America/Los_Angeles (PT)</option>
-              <option value="Europe/London">Europe/London (GMT/BST)</option>
-              <option value="Europe/Berlin">Europe/Berlin (CET)</option>
-              <option value="UTC">UTC</option>
-            </select>
+            <blora-select id="scheduleTimezone" class="blora-select select" style="width:100%;">
+              <blora-option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</blora-option>
+              <blora-option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</blora-option>
+              <blora-option value="America/New_York">America/New_York (ET)</blora-option>
+              <blora-option value="America/Los_Angeles">America/Los_Angeles (PT)</blora-option>
+              <blora-option value="Europe/London">Europe/London (GMT/BST)</blora-option>
+              <blora-option value="Europe/Berlin">Europe/Berlin (CET)</blora-option>
+              <blora-option value="UTC">UTC</blora-option>
+            </blora-select>
           </div>
         </div>
       </div>
@@ -2281,11 +2281,11 @@ data: [DONE]</code></pre>
             </div>
             <div class="form-group">
               <label for="providerFormat"><span data-i18n="API 格式">API 格式</span></label>
-              <select id="providerFormat" class="blora-select select">
-                <option value="openai">Chat Completions</option>
-                <option value="responses">Responses</option>
-                <option value="anthropic">Anthropic Messages</option>
-              </select>
+              <blora-select id="providerFormat" class="blora-select select">
+                <blora-option value="openai">Chat Completions</blora-option>
+                <blora-option value="responses">Responses</blora-option>
+                <blora-option value="anthropic">Anthropic Messages</blora-option>
+              </blora-select>
             </div>
           </div>
           <div class="form-group">
@@ -2326,11 +2326,11 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="editProviderFormat"><span data-i18n="API 格式">API 格式</span></label>
-          <select id="editProviderFormat" class="blora-select select">
-            <option value="openai">Chat Completions</option>
-            <option value="responses">Responses</option>
-            <option value="anthropic">Anthropic Messages</option>
-          </select>
+          <blora-select id="editProviderFormat" class="blora-select select">
+            <blora-option value="openai">Chat Completions</blora-option>
+            <blora-option value="responses">Responses</blora-option>
+            <blora-option value="anthropic">Anthropic Messages</blora-option>
+          </blora-select>
         </div>
       </div>
       <div class="modal-footer">
@@ -2673,9 +2673,9 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="modelFormProvider"><span data-i18n="提供商">提供商</span></label>
-          <select id="modelFormProvider" class="blora-select select">
+          <blora-select id="modelFormProvider" class="blora-select select">
             <!-- 供应商列表将通过JS动态加载 -->
-          </select>
+          </blora-select>
         </div>
         <div class="form-group">
           <label for="modelFormSeries"><span data-i18n="系列">系列</span></label>
@@ -2714,16 +2714,16 @@ data: [DONE]</code></pre>
           <div style="font-weight:600;margin-bottom:12px;color:var(--foreground);"><span data-i18n="模型路由（可选，用于根据思考模式自动切换模型）">模型路由（可选，用于根据思考模式自动切换模型）</span></div>
           <div class="form-group">
             <label for="modelFormThinkingModel"><span data-i18n="思考模式模型">思考模式模型</span></label>
-            <select id="modelFormThinkingModel" class="blora-select select">
-              <option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></option>
-            </select>
+            <blora-select id="modelFormThinkingModel" class="blora-select select">
+              <blora-option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></blora-option>
+            </blora-select>
             <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="开启思考模式时实际使用的模型">开启思考模式时实际使用的模型</span></small>
           </div>
           <div class="form-group">
             <label for="modelFormNonThinkingModel"><span data-i18n="非思考模式模型">非思考模式模型</span></label>
-            <select id="modelFormNonThinkingModel" class="blora-select select">
-              <option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></option>
-            </select>
+            <blora-select id="modelFormNonThinkingModel" class="blora-select select">
+              <blora-option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></blora-option>
+            </blora-select>
             <small style="color:var(--muted-foreground);margin-top:4px;display:block;"><span data-i18n="关闭思考模式时实际使用的模型">关闭思考模式时实际使用的模型</span></small>
           </div>
         </div>
@@ -2737,10 +2737,10 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="modelFormEnabled"><span data-i18n="启用状态">启用状态</span></label>
-          <select id="modelFormEnabled" class="blora-select select">
-            <option value="true"><span data-i18n="启用">启用</span></option>
-            <option value="false"><span data-i18n="禁用">禁用</span></option>
-          </select>
+          <blora-select id="modelFormEnabled" class="blora-select select">
+            <blora-option value="true"><span data-i18n="启用">启用</span></blora-option>
+            <blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>
+          </blora-select>
         </div>
       </div>
       <div class="modal-footer">

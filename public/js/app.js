@@ -1987,25 +1987,25 @@ class ConsoleApp {
             <input type="text" id="keyModelPickerSearch" placeholder="${escapeHtml(t('搜索模型、供应商、Team...'))}" class="blora-input model-search-input">
           </div>
           <div class="model-filter-selects">
-            <select id="keyModelPickerProvider" class="blora-select select"><option value="all">全部供应商</option></select>
-            <select id="keyModelPickerSeries" class="blora-select select"><option value="all">全部系列</option></select>
-            <select id="keyModelPickerProviderTag" class="blora-select select"><option value="all">全部标签</option></select>
-            <select id="keyModelPickerTest" class="blora-select select">
-              <option value="all">全部状态</option>
-              <option value="pass">测试通过</option>
-              <option value="fail">测试失败</option>
-              <option value="untested">未测试</option>
-            </select>
-            <select id="keyModelPickerSort" class="blora-select select">
-              <option value="default">默认排序</option>
-              <option value="price_asc">价格低→高</option>
-              <option value="price_desc">价格高→低</option>
-              <option value="name_asc">名称 A-Z</option>
-              <option value="name_desc">名称 Z-A</option>
-              <option value="test_latency_asc">测试最快</option>
-              <option value="test_latency_desc">测试最慢</option>
-              <option value="test_tps_desc">吞吐最高</option>
-            </select>
+            <blora-select id="keyModelPickerProvider" class="blora-select select"><blora-option value="all">全部供应商</blora-option></blora-select>
+            <blora-select id="keyModelPickerSeries" class="blora-select select"><blora-option value="all">全部系列</blora-option></blora-select>
+            <blora-select id="keyModelPickerProviderTag" class="blora-select select"><blora-option value="all">全部标签</blora-option></blora-select>
+            <blora-select id="keyModelPickerTest" class="blora-select select">
+              <blora-option value="all">全部状态</blora-option>
+              <blora-option value="pass">测试通过</blora-option>
+              <blora-option value="fail">测试失败</blora-option>
+              <blora-option value="untested">未测试</blora-option>
+            </blora-select>
+            <blora-select id="keyModelPickerSort" class="blora-select select">
+              <blora-option value="default">默认排序</blora-option>
+              <blora-option value="price_asc">价格低→高</blora-option>
+              <blora-option value="price_desc">价格高→低</blora-option>
+              <blora-option value="name_asc">名称 A-Z</blora-option>
+              <blora-option value="name_desc">名称 Z-A</blora-option>
+              <blora-option value="test_latency_asc">测试最快</blora-option>
+              <blora-option value="test_latency_desc">测试最慢</blora-option>
+              <blora-option value="test_tps_desc">吞吐最高</blora-option>
+            </blora-select>
           </div>
         </div>
         <div id="keyModelPickerCount" class="model-picker-count key-model-picker-count" style="display:none;"></div>
@@ -2057,8 +2057,8 @@ class ConsoleApp {
     }
     const providerSelect = document.getElementById('keyModelPickerProvider');
     if (providerSelect) {
-      setHTML(providerSelect, '<option value="all">' + t('全部供应商') + '</option>' +
-        [...providers].sort().map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join(''));
+      setHTML(providerSelect, '<blora-option value="all">' + t('全部供应商') + '</blora-option>' +
+        [...providers].sort().map(p => `<blora-option value="${escapeHtml(p)}">${escapeHtml(p)}</blora-option>`).join(''));
       providerSelect.value = providers.has(ctx.providerFilter) ? ctx.providerFilter : 'all';
       ctx.providerFilter = providerSelect.value;
     }
@@ -2066,8 +2066,8 @@ class ConsoleApp {
     const tagSelect = document.getElementById('keyModelPickerProviderTag');
     if (tagSelect) {
       const tags = ctx.providerTags || [];
-      setHTML(tagSelect, '<option value="all">' + t('全部标签') + '</option>' +
-        tags.map(t => `<option value="tag:${t.id}">${escapeHtml(t.name)}</option>`).join(''));
+      setHTML(tagSelect, '<blora-option value="all">' + t('全部标签') + '</blora-option>' +
+        tags.map(t => `<blora-option value="tag:${t.id}">${escapeHtml(t.name)}</blora-option>`).join(''));
       const values = ['all', ...tags.map(t => `tag:${t.id}`)];
       tagSelect.value = values.includes(ctx.providerTagFilter) ? ctx.providerTagFilter : 'all';
       ctx.providerTagFilter = tagSelect.value;
@@ -2092,8 +2092,8 @@ class ConsoleApp {
     const select = document.getElementById('keyModelPickerSeries');
     if (!select) return;
     const prev = ctx?.seriesFilter || 'all';
-    setHTML(select, '<option value="all">' + t('全部系列') + '</option>' +
-      [...series].sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join(''));
+    setHTML(select, '<blora-option value="all">' + t('全部系列') + '</blora-option>' +
+      [...series].sort().map(s => `<blora-option value="${escapeHtml(s)}">${escapeHtml(s)}</blora-option>`).join(''));
     select.value = prev === 'all' || series.has(prev) ? prev : 'all';
     if (ctx) ctx.seriesFilter = select.value;
   }
@@ -3751,16 +3751,16 @@ class ConsoleApp {
       const teamSelect = document.getElementById('statsTeamFilter');
 
       if (modelSelect && data.models) {
-        setHTML(modelSelect, '<option value="">' + t('全部模型') + '</option>' +
-          data.models.map(m => `<option value="${escapeHtml(m.model_id)}">${escapeHtml(m.name)}</option>`).join(''));
+        setHTML(modelSelect, '<blora-option value="">' + t('全部模型') + '</blora-option>' +
+          data.models.map(m => `<blora-option value="${escapeHtml(m.model_id)}">${escapeHtml(m.name)}</blora-option>`).join(''));
       }
       if (providerSelect && data.providers) {
-        setHTML(providerSelect, '<option value="">' + t('全部供应商') + '</option>' +
-          data.providers.map(p => `<option value="${escapeHtml(p.provider_id)}">${escapeHtml(p.name)}</option>`).join(''));
+        setHTML(providerSelect, '<blora-option value="">' + t('全部供应商') + '</blora-option>' +
+          data.providers.map(p => `<blora-option value="${escapeHtml(p.provider_id)}">${escapeHtml(p.name)}</blora-option>`).join(''));
       }
       if (teamSelect && data.teams) {
-        setHTML(teamSelect, '<option value="">' + t('全部 Team') + '</option>' +
-          data.teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join(''));
+        setHTML(teamSelect, '<blora-option value="">' + t('全部 Team') + '</blora-option>' +
+          data.teams.map(t => `<blora-option value="${t.id}">${escapeHtml(t.name)}</blora-option>`).join(''));
       }
 
       this._statsFiltersLoaded = true;
@@ -6399,7 +6399,7 @@ class ConsoleApp {
       const data = await bridge.getDesktopSettings();
       const settings = data.settings || {};
       const status = data.status || {};
-      target.innerHTML = `<div class="settings-desktop-stack"><section class="settings-desktop-block"><h3>当前连接</h3><dl class="settings-details"><dt>模式</dt><dd>${escapeHtml(status.mode || '-')}</dd><dt>目标地址</dt><dd>${escapeHtml(status.target || '-')}</dd><dt>运行时</dt><dd>${escapeHtml(status.runtime || '-')}</dd><dt>版本</dt><dd>${escapeHtml(status.edition || '-')}</dd></dl></section><section class="settings-desktop-block"><div class="settings-desktop-block-header"><h3>已保存的 CrewRouter</h3><button type="button" class="blora-button" data-variant="primary" id="desktopAddConnection">添加连接</button></div><div id="desktopProfilesList"></div></section><section class="settings-desktop-block"><h3>Desktop 偏好</h3><div class="settings-desktop-preferences"><label><input type="checkbox" id="desktopAutoConnect" ${settings.autoConnect !== false ? 'checked' : ''}> 启动时自动连接上次实例</label><label><input type="checkbox" id="desktopNotifications" ${settings.notifications !== false ? 'checked' : ''}> 启用桌面通知</label><label><input type="checkbox" id="desktopUpdateChecks" ${settings.updateChecks !== false ? 'checked' : ''}> 检查更新</label><label>主题 <select id="desktopTheme" class="blora-input"><option value="system" ${settings.theme === 'system' ? 'selected' : ''}>跟随系统</option><option value="light" ${settings.theme === 'light' ? 'selected' : ''}>浅色</option><option value="dark" ${settings.theme === 'dark' ? 'selected' : ''}>深色</option></select></label></div></section><section class="settings-desktop-block"><h3>本地 Server</h3><div id="desktopLocalStatus"></div></section><section class="settings-desktop-block"><h3>诊断</h3><p class="settings-muted">诊断信息不包含 Token、Cookie 或 API Key。</p><button type="button" class="blora-button" data-variant="outline" id="desktopCopyDiagnostics">复制诊断信息</button><output id="desktopSettingsMessage" class="settings-output" role="status"></output></section><section class="settings-desktop-block"><h3>应用程序</h3><p class="settings-muted">重启会重新加载 Desktop；关闭会停止桌面应用及其管理的本地服务。</p><div class="settings-actions"><button type="button" class="blora-button" data-variant="secondary" id="desktopRestartApp">重启 Desktop</button><button type="button" class="blora-button" data-variant="danger" id="desktopQuitApp">关闭 Desktop</button></div></section></div>`;
+      target.innerHTML = `<div class="settings-desktop-stack"><section class="settings-desktop-block"><h3>当前连接</h3><dl class="settings-details"><dt>模式</dt><dd>${escapeHtml(status.mode || '-')}</dd><dt>目标地址</dt><dd>${escapeHtml(status.target || '-')}</dd><dt>运行时</dt><dd>${escapeHtml(status.runtime || '-')}</dd><dt>版本</dt><dd>${escapeHtml(status.edition || '-')}</dd></dl></section><section class="settings-desktop-block"><div class="settings-desktop-block-header"><h3>已保存的 CrewRouter</h3><button type="button" class="blora-button" data-variant="primary" id="desktopAddConnection">添加连接</button></div><div id="desktopProfilesList"></div></section><section class="settings-desktop-block"><h3>Desktop 偏好</h3><div class="settings-desktop-preferences"><label><input type="checkbox" id="desktopAutoConnect" ${settings.autoConnect !== false ? 'checked' : ''}> 启动时自动连接上次实例</label><label><input type="checkbox" id="desktopNotifications" ${settings.notifications !== false ? 'checked' : ''}> 启用桌面通知</label><label><input type="checkbox" id="desktopUpdateChecks" ${settings.updateChecks !== false ? 'checked' : ''}> 检查更新</label><label>主题 <blora-select id="desktopTheme" class="blora-input"><blora-option value="system" ${settings.theme === 'system' ? 'selected' : ''}>跟随系统</blora-option><blora-option value="light" ${settings.theme === 'light' ? 'selected' : ''}>浅色</blora-option><blora-option value="dark" ${settings.theme === 'dark' ? 'selected' : ''}>深色</blora-option></blora-select></label></div></section><section class="settings-desktop-block"><h3>本地 Server</h3><div id="desktopLocalStatus"></div></section><section class="settings-desktop-block"><h3>诊断</h3><p class="settings-muted">诊断信息不包含 Token、Cookie 或 API Key。</p><button type="button" class="blora-button" data-variant="outline" id="desktopCopyDiagnostics">复制诊断信息</button><output id="desktopSettingsMessage" class="settings-output" role="status"></output></section><section class="settings-desktop-block"><h3>应用程序</h3><p class="settings-muted">重启会重新加载 Desktop；关闭会停止桌面应用及其管理的本地服务。</p><div class="settings-actions"><button type="button" class="blora-button" data-variant="secondary" id="desktopRestartApp">重启 Desktop</button><button type="button" class="blora-button" data-variant="danger" id="desktopQuitApp">关闭 Desktop</button></div></section></div>`;
       const profiles = data.profiles || [];
       const profileList = target.querySelector('#desktopProfilesList');
       if (status.mode === 'connect') { target.textContent = '正在连接本地 CrewRouter…'; return; }
@@ -9357,7 +9357,7 @@ ${extractorBody}
 
     // 从 _myTeamModels 数据填充表单
     document.getElementById('editModelId').value = modelId;
-    setHTML(document.getElementById('modelFormProvider'), `<option value="${escapeHtml(model.provider)}" selected>${escapeHtml(model.provider_name || model.provider)}</option>`);
+    setHTML(document.getElementById('modelFormProvider'), `<blora-option value="${escapeHtml(model.provider)}" selected>${escapeHtml(model.provider_name || model.provider)}</blora-option>`);
     document.getElementById('modelFormProvider').disabled = true;
     document.getElementById('modelFormId').value = modelId;
     document.getElementById('modelFormUpstreamId').value = model.upstream_model_id || '';
@@ -12835,10 +12835,10 @@ ${extractorBody}
       const options = models.map(m => {
         const label = m.alias || m.name || m.upstream_model_id || m.id;
         const extra = m.alias && m.alias !== m.upstream_model_id ? ` (${m.upstream_model_id})` : '';
-        return `<option value="${escapeHtml(m.id)}">${escapeHtml(label)}${escapeHtml(extra)}</option>`;
+        return `<blora-option value="${escapeHtml(m.id)}">${escapeHtml(label)}${escapeHtml(extra)}</blora-option>`;
       }).join('');
-      setHTML(document.getElementById('modelFormThinkingModel'), '<option value="">' + t('不设置（使用自身）') + '</option>' + options);
-      setHTML(document.getElementById('modelFormNonThinkingModel'), '<option value="">' + t('不设置（使用自身）') + '</option>' + options);
+      setHTML(document.getElementById('modelFormThinkingModel'), '<blora-option value="">' + t('不设置（使用自身）') + '</blora-option>' + options);
+      setHTML(document.getElementById('modelFormNonThinkingModel'), '<blora-option value="">' + t('不设置（使用自身）') + '</blora-option>' + options);
     } catch (error) {
       console.error(t('加载模型选项失败:'), error);
     }
@@ -13020,8 +13020,8 @@ ${extractorBody}
     // 加载供应商列表
     const providers = await this.loadProviders();
     const select = document.getElementById('modelFormProvider');
-    setHTML(select, '<option value="">' + t('请选择供应商') + '</option>' +
-      providers.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join(''));
+    setHTML(select, '<blora-option value="">' + t('请选择供应商') + '</blora-option>' +
+      providers.map(p => `<blora-option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</blora-option>`).join(''));
 
     // 加载模型选项（用于思考模式路由）
     await this.loadModelOptions();
@@ -13038,8 +13038,8 @@ ${extractorBody}
     // 加载供应商列表
     const providers = await this.loadProviders();
     const select = document.getElementById('modelFormProvider');
-    setHTML(select, '<option value="">' + t('请选择供应商') + '</option>' +
-      providers.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join(''));
+    setHTML(select, '<blora-option value="">' + t('请选择供应商') + '</blora-option>' +
+      providers.map(p => `<blora-option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</blora-option>`).join(''));
 
     // 加载模型选项（用于思考模式路由）
     await this.loadModelOptions();
