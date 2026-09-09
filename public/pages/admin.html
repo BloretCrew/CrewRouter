@@ -36,6 +36,7 @@
   <link rel="stylesheet" href="/css/admin-prompts-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-settings-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-plugins-blora.css?v=1">
+  <link rel="stylesheet" href="/css/admin-dialogs-blora.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -51,7 +52,7 @@
   <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
 </head>
-<body class="blora-page">
+<body class="blora-page blora-admin-page">
   <!-- 移动端顶部导航栏 -->
   <div class="mobile-topbar">
     <button class="mobile-hamburger" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单">
@@ -1574,7 +1575,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button id="saveUserBtn" class="btn btn-primary"><span data-i18n="保存">保存</span></button>
+        <button type="button" id="saveUserBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
   </blora-dialog>
@@ -1689,7 +1690,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button id="saveModelBtn" class="btn btn-primary"><span data-i18n="保存">保存</span></button>
+        <button type="button" id="saveModelBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
   </blora-dialog>
@@ -2023,7 +2024,7 @@
         </details>
       </div>
       <div class="modal-footer">
-        <button id="saveProviderBtn" class="btn btn-primary"><span data-i18n="保存">保存</span></button>
+        <button type="button" id="saveProviderBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
   </blora-dialog>
