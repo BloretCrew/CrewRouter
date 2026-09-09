@@ -1,0 +1,90 @@
+/* Blora surface migration for admin model management. */
+.blora-admin-models-page {
+  --models-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --models-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-admin-models-page > .content-section {
+  border: var(--models-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-admin-models-page .model-library-header h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-admin-models-page .model-library-header-actions {
+  gap: var(--blora-space-2) !important;
+}
+
+.blora-admin-models-page .admin-stat-cards {
+  gap: var(--blora-space-3);
+}
+
+.blora-admin-models-page .admin-stat-card {
+  border: var(--models-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-admin-models-page .model-filter-bar {
+  gap: var(--blora-space-3);
+  padding: var(--blora-space-4);
+  border: var(--models-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-models-page .model-search-input {
+  min-height: 2.5rem;
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-models-page #adminModelsList .blora-card,
+.blora-admin-models-page #adminModelsList .admin-card {
+  border-color: color-mix(in srgb, var(--border) 52%, transparent);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-admin-models-page #adminModelsList .admin-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-admin-models-page #adminModelsList .admin-card-footer {
+  border-top-color: color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-admin-models-page .models-table,
+.blora-admin-models-page .model-library-grid {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .blora-admin-models-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-admin-models-page .model-library-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .blora-admin-models-page .model-library-header-actions,
+  .blora-admin-models-page .model-filter-selects {
+    width: 100%;
+  }
+
+  .blora-admin-models-page .model-library-header-actions .blora-button,
+  .blora-admin-models-page .model-filter-selects .blora-button {
+    flex: 1 1 auto;
+  }
+}
