@@ -1446,7 +1446,7 @@ class ConsoleApp {
     setHTML(pop, `
       <div class="api-key-tags-overflow-title">已绑定标签（${tags.length}）</div>
       <div class="api-key-tags-overflow-list">${listHtml}</div>
-      ${isOwner ? '<button type="button" class="btn btn-sm btn-secondary api-key-tags-overflow-manage">' + t('管理全部标签') + '</button>' : ''}
+      ${isOwner ? '<button type="button" class="blora-button api-key-tags-overflow-manage" data-variant="secondary" data-size="sm">' + t('管理全部标签') + '</button>' : ''}
     `);
 
     pop.querySelector('.api-key-tags-overflow-manage')?.addEventListener('click', (e) => {
@@ -2678,7 +2678,7 @@ class ConsoleApp {
         <span class="key-model-queue-order">${index + 1}</span>
         <span class="key-model-queue-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}${index === 0 ? ' <em class="key-model-queue-primary">' + t('首选') + '</em>' : ''}</span>
         <div class="key-model-queue-actions">
-          <button type="button" class="blora-button btn btn-ghost btn-sm" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title="${t('移除')}">×</button>
+          <button type="button" class="blora-button" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title="${t('移除')}" data-variant="ghost" data-size="sm">×</button>
         </div>
       </div>`;
     }).join(''));
@@ -2962,7 +2962,7 @@ class ConsoleApp {
           <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:8px;">Panel 模型（多选，并行调用）</div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
             <input type="text" id="fusionPanelSearch" class="blora-input input" placeholder="${escapeHtml(t('搜索模型...'))}" style="flex:1;font-size:13px;" oninput="app._filterFusionPanelModels()">
-            <button type="button" class="blora-button btn btn-sm btn-secondary" onclick="app._toggleAllFusionPanels()">全选/取消</button>
+            <button type="button" class="blora-button" onclick="app._toggleAllFusionPanels()" data-variant="secondary" data-size="sm">全选/取消</button>
           </div>
           <div id="fusionPanelList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;">
             ${providerEntries.map(([provider, pModels]) => `
@@ -4994,8 +4994,8 @@ class ConsoleApp {
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseFloat(s.cost || 0).toFixed(4)}</td>
         <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${latency}</td>
         <td style="padding:8px;border-bottom:1px solid var(--border);white-space:nowrap;">
-          <button type="button" class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px;" onclick="app.filterStatsBySource('${escapeHtml(sid)}')">筛选</button>
-          <button type="button" class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px;margin-left:4px;" onclick="app.jumpToUsageLogsBySource('${escapeHtml(sid)}')">记录</button>
+          <button type="button" class="blora-button" style="font-size:11px;padding:2px 8px;" onclick="app.filterStatsBySource('${escapeHtml(sid)}')" data-variant="secondary" data-size="sm">筛选</button>
+          <button type="button" class="blora-button" style="font-size:11px;padding:2px 8px;margin-left:4px;" onclick="app.jumpToUsageLogsBySource('${escapeHtml(sid)}')" data-variant="secondary" data-size="sm">记录</button>
         </td>
       </tr>`;
     }).join(''));
@@ -5226,7 +5226,7 @@ class ConsoleApp {
       setBloraState('sessionsList', 'success');
     } catch (error) {
       setBloraState('sessionsList', 'error');
-      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('会话加载失败'))}<div style="margin-top:10px;"><button type="button" class="blora-button btn btn-secondary btn-sm" onclick="app.loadSessions(${this._sessionsPage || 1})">${t('重试')}</button></div></div></div></div>`);
+      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('会话加载失败'))}<div style="margin-top:10px;"><button type="button" class="blora-button" onclick="app.loadSessions(${this._sessionsPage || 1})" data-variant="secondary" data-size="sm">${t('重试')}</button></div></div></div></div>`);
     }
   }
 
@@ -5512,7 +5512,7 @@ class ConsoleApp {
       }
     } catch (error) {
       if (requestSeq !== this._detailRequestSeq || sessionKey !== this._detailSessionKey) return;
-      const retry = `<button class="btn btn-secondary btn-sm" onclick="app.loadSessionMessages('${this._jsString(sessionKey)}', ${page})">${t('重试')}</button>`;
+      const retry = `<button class="blora-button" onclick="app.loadSessionMessages('${this._jsString(sessionKey)}', ${page})" data-variant="secondary" data-size="sm">${t('重试')}</button>`;
       if (page > 1 && timeline.children.length) {
         this._removeDetailLoadError();
         timeline.insertAdjacentHTML('beforeend', `<li class="session-detail-load-error"><div class="timeline-event-text" style="text-align:center;color:var(--destructive);padding:16px;">${escapeHtml(error.message || t('会话详情加载失败'))}<div style="margin-top:8px;">${retry}</div></div></li>`);
@@ -5763,7 +5763,7 @@ class ConsoleApp {
                 <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.occurrence_count, 10) || 0).toLocaleString()}</td>
                 <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.first_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
                 <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.last_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
-                <td class="cell-actions"><button type="button" class="btn btn-sm btn-secondary" data-prompt-view-idx="${idx}">${t('查看内容')}</button></td>
+                <td class="cell-actions"><button type="button" class="blora-button" data-prompt-view-idx="${idx}" data-variant="secondary" data-size="sm">${t('查看内容')}</button></td>
               </tr>
             `).join('')}
           </tbody>
@@ -5912,8 +5912,8 @@ class ConsoleApp {
           <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)">
           <span class="toggle-slider"></span>
         </label>
-        <button type="button" class="btn btn-sm btn-secondary" onclick="app.showInjectPromptModal(${parseInt(item.id, 10)})">${t('编辑')}</button>
-        <button type="button" class="btn btn-sm btn-secondary" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})">${t('删除')}</button>
+        <button type="button" class="blora-button" onclick="app.showInjectPromptModal(${parseInt(item.id, 10)})" data-variant="secondary" data-size="sm">${t('编辑')}</button>
+        <button type="button" class="blora-button" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})" data-variant="secondary" data-size="sm">${t('删除')}</button>
       </div>
     </div>`;
   }
@@ -6559,7 +6559,7 @@ class ConsoleApp {
       if (!res.ok) throw new Error(t('加载失败'));
       const items = await res.json();
       if (!items.length) { list.innerHTML = '<div style="color:var(--muted-foreground);font-size:13px;padding:12px 0;">' + t('暂无通知') + '</div>'; return; }
-      list.innerHTML = items.map(item => `<div style="padding:14px 0;border-bottom:1px solid var(--border);${item.read_at ? '' : 'background:color-mix(in srgb, var(--primary) 5%, transparent);'}"><div style="display:flex;gap:8px;align-items:center;"><strong>${escapeHtml(item.title)}</strong><span style="font-size:12px;color:var(--muted-foreground);">${this.formatRelativeTime(item.created_at)}</span><button class="btn btn-secondary" style="margin-left:auto;padding:4px 8px;font-size:12px;" onclick="app.deleteNotification(${item.id})">${t('删除')}</button></div><div style="margin-top:6px;font-size:13px;color:var(--muted-foreground);white-space:pre-wrap;">${escapeHtml(item.body)}</div>${item.read_at ? '' : `<button class="btn btn-secondary" style="margin-top:8px;padding:4px 8px;font-size:12px;" onclick="app.markNotificationRead(${item.id})">标记已读</button>`}</div>`).join('');
+      list.innerHTML = items.map(item => `<div style="padding:14px 0;border-bottom:1px solid var(--border);${item.read_at ? '' : 'background:color-mix(in srgb, var(--primary) 5%, transparent);'}"><div style="display:flex;gap:8px;align-items:center;"><strong>${escapeHtml(item.title)}</strong><span style="font-size:12px;color:var(--muted-foreground);">${this.formatRelativeTime(item.created_at)}</span><button class="blora-button" style="margin-left:auto;padding:4px 8px;font-size:12px;" onclick="app.deleteNotification(${item.id})" data-variant="secondary">${t('删除')}</button></div><div style="margin-top:6px;font-size:13px;color:var(--muted-foreground);white-space:pre-wrap;">${escapeHtml(item.body)}</div>${item.read_at ? '' : `<button class="blora-button" style="margin-top:8px;padding:4px 8px;font-size:12px;" onclick="app.markNotificationRead(${item.id})" data-variant="secondary">标记已读</button>`}</div>`).join('');
     } catch (error) { list.innerHTML = '<div style="color:var(--destructive);font-size:13px;">' + t('通知加载失败') + '</div>'; }
   }
 
@@ -6804,7 +6804,7 @@ class ConsoleApp {
         <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid var(--border);border-radius:12px;background:var(--card);">
           <div class="summary-spinner"></div>
           <span style="font-size:13px;color:var(--muted-foreground);">${t('正在生成会话总结...')}<small style="margin-left:6px;opacity:.7;">${t('可离开此页，完成后在此查看')}</small></span>
-          ${sessionKey ? `<button type="button" class="btn btn-sm btn-secondary" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')">${t('查看总结')}</button>` : ''}
+          ${sessionKey ? `<button type="button" class="blora-button" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')" data-variant="secondary" data-size="sm">${t('查看总结')}</button>` : ''}
         </div>`);
       return;
     }
@@ -6819,13 +6819,13 @@ class ConsoleApp {
         <div style="padding:14px 16px;border:1px solid var(--border);border-left:3px solid var(--success);border-radius:12px;background:var(--card);">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <strong style="font-size:13px;">${t('会话总结已生成')}</strong>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="app.dismissModelLibraryTaskBar()" title="${t('关闭')}" style="padding:2px 8px;">✕</button>
+            <button type="button" class="blora-button" onclick="app.dismissModelLibraryTaskBar()" title="${t('关闭')}" style="padding:2px 8px;" data-variant="secondary" data-size="sm">✕</button>
           </div>
           <div class="session-summary-md" style="max-height:180px;overflow-y:auto;">${this._renderSafeMarkdown(text)}</div>
           <div style="margin-top:10px;display:flex;gap:8px;">
-            <button type="button" class="btn btn-sm btn-primary" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')">${t('查看总结')}</button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="app.showSessionDetail('${this._jsString(sessionKey)}')">${t('跳到该会话')}</button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="app.copySessionSummary('${this._jsString(sessionKey)}')">${t('复制')}</button>
+            <button type="button" class="blora-button" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')" data-variant="primary" data-size="sm">${t('查看总结')}</button>
+            <button type="button" class="blora-button" onclick="app.showSessionDetail('${this._jsString(sessionKey)}')" data-variant="secondary" data-size="sm">${t('跳到该会话')}</button>
+            <button type="button" class="blora-button" onclick="app.copySessionSummary('${this._jsString(sessionKey)}')" data-variant="secondary" data-size="sm">${t('复制')}</button>
           </div>
         </div>`);
       return;
@@ -7226,7 +7226,7 @@ class ConsoleApp {
       setHTML(list, members.length ? members.map(member => `
         <div class="co-key-member-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;">
           <div><strong>${escapeHtml(member.username || '')}</strong><div class="api-key-sub-muted">${escapeHtml(member.email || '')}</div></div>
-          <button type="button" class="btn btn-sm btn-secondary" onclick="app.removeKeyMember(${member.id})">移除</button>
+          <button type="button" class="blora-button" onclick="app.removeKeyMember(${member.id})" data-variant="secondary" data-size="sm">移除</button>
         </div>`).join('') : '<p class="api-key-sub-muted" style="text-align:center;padding:18px;">' + t('暂无共同成员') + '</p>');
     } catch (error) {
       setHTML(list, `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
@@ -8301,7 +8301,7 @@ ${extractorBody}
               创建于: ${pk.createdAt ? new Date(pk.createdAt).toLocaleDateString('zh-CN') : t('未知')}
             </div>
           </div>
-          <button class="btn btn-sm btn-danger" onclick="app.deletePasskey('${safeId}')">删除</button>
+          <button class="blora-button" onclick="app.deletePasskey('${safeId}')" data-variant="danger" data-size="sm">删除</button>
         </li>`;
       }).join(''));
     } catch (error) {
@@ -8492,7 +8492,7 @@ ${extractorBody}
     const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${renderSemantics(e.semantics)}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? t('成功') : t('失败')}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
     const detail = document.createElement('div');
     detail.className = 'trace-report-modal';
-    detail.innerHTML = `${'<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>' + t('跟踪报告')}${escapeHtml(session.public_id)}${'</h3><button class="btn btn-secondary btn-sm" onclick="this.closest(\'.trace-report-modal\').remove()">' + t('关闭')}</button></div><p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div></div>`;
+    detail.innerHTML = `${'<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>' + t('跟踪报告')}${escapeHtml(session.public_id)}${'</h3><button class="blora-button" onclick="this.closest(\'.trace-report-modal\').remove()" data-variant="secondary" data-size="sm">' + t('关闭')}</button></div><p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div></div>`;
     document.body.appendChild(detail);
     detail.addEventListener('click', e => { if (e.target === detail) detail.remove(); });
     this.loadTraceReports().catch(() => {});
@@ -9163,8 +9163,8 @@ ${extractorBody}
               }</td>
               <td>
                 <div style="display:flex;gap:4px;">
-                  <button class="blora-button btn btn-sm btn-secondary" onclick="app.editMyTeamModel('${this._jsString(m.id)}')">编辑</button>
-                  <button class="blora-button btn btn-sm" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel('${this._jsString(m.id)}')">删除</button>
+                  <button class="blora-button" onclick="app.editMyTeamModel('${this._jsString(m.id)}')" data-variant="secondary" data-size="sm">编辑</button>
+                  <button class="blora-button" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel('${this._jsString(m.id)}')" data-variant="secondary" data-size="sm">删除</button>
                 </div>
               </td>
             </tr>
@@ -10790,9 +10790,9 @@ ${extractorBody}
           <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
           <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">请联系管理员添加模型或加入 Team，也可添加自己的供应商</p>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button class="blora-button btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
-            <button class="blora-button btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
-            <button class="blora-button btn btn-secondary btn-sm" onclick="app.navigateTo(\'myUpstream\')">管理我的上游</button>
+            ${noKeys ? '<button class="blora-button" onclick="app.navigateTo(\'apiKeys\')" data-variant="primary" data-size="sm">' + t('创建 API Key') + '</button>' : ''}
+            <button class="blora-button" onclick="app.showAddProviderModal()" data-variant="secondary" data-size="sm">添加供应商</button>
+            <button class="blora-button" onclick="app.navigateTo(\'myUpstream\')" data-variant="secondary" data-size="sm">管理我的上游</button>
           </div>
         </div>
       `);
@@ -10812,8 +10812,8 @@ ${extractorBody}
           <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
           <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">可调整筛选，或添加自己的上游供应商导入模型</p>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button class="blora-button btn btn-primary btn-sm" onclick="app.navigateTo(\'apiKeys\')">' + t('创建 API Key') + '</button>' : ''}
-            <button class="blora-button btn btn-secondary btn-sm" onclick="app.showAddProviderModal()">添加供应商</button>
+            ${noKeys ? '<button class="blora-button" onclick="app.navigateTo(\'apiKeys\')" data-variant="primary" data-size="sm">' + t('创建 API Key') + '</button>' : ''}
+            <button class="blora-button" onclick="app.showAddProviderModal()" data-variant="secondary" data-size="sm">添加供应商</button>
           </div>
         </div>
       `);
@@ -11783,7 +11783,7 @@ ${extractorBody}
       setHTML(summary, `
         <div class="binding-empty">
           <span>还没有 API Key，创建后才能绑定模型</span>
-          <button type="button" class="blora-button btn btn-primary btn-sm" onclick="app.navigateTo('apiKeys')">去创建 API Key</button>
+          <button type="button" class="blora-button" onclick="app.navigateTo('apiKeys')" data-variant="primary" data-size="sm">去创建 API Key</button>
         </div>`);
       this._renderLibraryStickyKeyBtn();
       return;
@@ -11805,7 +11805,7 @@ ${extractorBody}
           <div class="binding-mode-banner">
             ${iconHtml}
             <span>正在为 <strong>${escapeHtml(harnessMeta.label)}</strong> 选择模型</span>
-            <button type="button" class="blora-button btn btn-sm btn-secondary binding-mode-exit" onclick="app.exitLibraryHarnessBindMode()">退出</button>
+            <button type="button" class="blora-button binding-mode-exit" onclick="app.exitLibraryHarnessBindMode()" data-variant="secondary" data-size="sm">退出</button>
           </div>
           <div class="binding-key-row">
             <span class="binding-key-name">${keyName}</span>
