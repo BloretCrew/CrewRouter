@@ -407,10 +407,10 @@
               <option value="enabled"><span data-i18n="已启用">已启用</span></option>
               <option value="disabled"><span data-i18n="已禁用">已禁用</span></option>
             </select>
-            <button type="button" id="adminModelsStickyMoreBtn" class="btn btn-secondary btn-sm model-library-sticky-more-btn" onclick="adminApp.toggleAdminModelsStickyMore()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
+            <button type="button" id="adminModelsStickyMoreBtn" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.toggleAdminModelsStickyMore()" title="更多筛选" data-i18n-title="更多筛选"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="adminApp.showAddModelModal()" title="添加模型" data-i18n-title="添加模型"><span data-i18n="添加模型">添加模型</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.showAddModelModal()" title="添加模型" data-i18n-title="添加模型"><span data-i18n="添加模型">添加模型</span></button>
           </div>
           <div id="adminModelsStickyAdvanced" class="model-library-sticky-advanced" style="display:none;" aria-hidden="true">
             <select id="adminModelsStickySeries" class="select model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'sticky')">
@@ -422,9 +422,9 @@
               <option value="fail"><span data-i18n="测试失败">测试失败</span></option>
               <option value="untested"><span data-i18n="未测试">未测试</span></option>
             </select>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearModelFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商"><span data-i18n="展开">展开</span></button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商"><span data-i18n="折叠">折叠</span></button>
+            <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.clearModelFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
+            <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商"><span data-i18n="展开">展开</span></button>
+            <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商"><span data-i18n="折叠">折叠</span></button>
             <span id="adminModelsStickyCount" class="filter-info"></span>
           </div>
         </div>
@@ -437,7 +437,7 @@
             </div>
             <div class="model-library-header-actions" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
               <div id="batchActionsGroup" class="admin-action-dropdown" style="display:none;">
-                <button class="btn btn-secondary btn-sm" onclick="adminApp.toggleBatchDropdown(event)"><span data-i18n="批量操作">
+                <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.toggleBatchDropdown(event)"><span data-i18n="批量操作">
                   批量操作 </span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:4px;"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
                 <div class="dropdown-menu" id="batchDropdownMenu">
@@ -456,7 +456,7 @@
                 </div>
               </div>
               <div class="model-test-batch-btn expand-dropdown" id="adminTestDropdown" style="display:inline-block;position:relative;">
-                <button class="btn btn-secondary btn-sm" onclick="adminApp.toggleTestDropdown(event)">
+                <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.toggleTestDropdown(event)">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span data-i18n="一键测试">
                   一键测试
                   </span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="m6 9 6 6 6-6"/></svg>
@@ -466,9 +466,9 @@
                   <div class="dropdown-item" onclick="adminApp.testSelectedModels()"><span data-i18n="测试选中模型">测试选中模型</span></div>
                 </div>
               </div>
-              <button class="btn btn-secondary btn-sm" onclick="adminApp.showBatchJsonPricesModal()"><span data-i18n="JSON 定价">JSON 定价</span></button>
-              <button class="btn btn-secondary btn-sm" onclick="adminApp.exportModelsCsv()"><span data-i18n="导出 CSV">导出 CSV</span></button>
-              <button class="btn btn-secondary btn-sm" onclick="adminApp.showSeriesIconsModal()"><span data-i18n="系列图标">系列图标</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.showBatchJsonPricesModal()"><span data-i18n="JSON 定价">JSON 定价</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.exportModelsCsv()"><span data-i18n="导出 CSV">导出 CSV</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.showSeriesIconsModal()"><span data-i18n="系列图标">系列图标</span></button>
               <button type="button" id="addModelBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="添加模型">添加模型</span></button>
             </div>
           </div>
@@ -497,9 +497,9 @@
                 <option value="fail"><span data-i18n="测试失败">测试失败</span></option>
                 <option value="untested"><span data-i18n="未测试">未测试</span></option>
               </select>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearModelFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商"><span data-i18n="展开">展开</span></button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商"><span data-i18n="折叠">折叠</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.clearModelFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商"><span data-i18n="展开">展开</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商"><span data-i18n="折叠">折叠</span></button>
               <span id="modelCount" class="filter-info"></span>
             </div>
           </div>
