@@ -12092,7 +12092,7 @@ async function(ctx) {
           <span style="color:var(--muted-foreground);font-size:13px;">${t('完整内容')}</span>
           <pre id="adminPromptFullContent" style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(data.content || '')}</pre>
         </div>
-        <div style="padding:8px 0;"><button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.copyAdminPromptContent(this)">⧉ ${t('复制内容')}</button></div>
+        <div style="padding:8px 0;"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.copyAdminPromptContent(this)">⧉ ${t('复制内容')}</button></div>
         ${refsHtml}
       `);
     } catch (error) {

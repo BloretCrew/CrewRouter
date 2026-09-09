@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=1">
+  <link rel="stylesheet" href="/css/admin-prompts-blora.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -1164,14 +1165,14 @@
       </div>
 
       <!-- 提示词页面（历史自定义提示词，重复合并） -->
-      <div id="adminPromptsPage" class="page">
+      <div id="adminPromptsPage" class="page blora-admin-prompts-page">
         <div class="content-section">
           <div class="section-header">
             <h2><span data-i18n="提示词">提示词</span></h2>
             <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;"><span data-i18n="历史收集到的自定义提示词文件，相同内容自动合并显示">历史收集到的自定义提示词文件，相同内容自动合并显示</span></p>
           </div>
           <div class="admin-filter-bar" style="margin-bottom:16px;">
-            <input type="text" id="adminPromptSearchInput" class="input" placeholder="搜索文件名或内容..." data-i18n-placeholder="搜索文件名或内容..." style="min-width:200px;" onkeydown="if(event.key==='Enter')adminApp.loadAdminCustomPrompts(1)">
+            <input type="search" id="adminPromptSearchInput" class="blora-input input" placeholder="搜索文件名或内容..." data-i18n-placeholder="搜索文件名或内容..." style="min-width:200px;" onkeydown="if(event.key==='Enter')adminApp.loadAdminCustomPrompts(1)">
             <select id="adminPromptSourceFilter" class="input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
               <option value=""><span data-i18n="全部客户端">全部客户端</span></option>
               <option value="grok">Grok</option>
@@ -1189,17 +1190,17 @@
               <option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></option>
               <option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></option>
             </select>
-            <button type="button" class="btn btn-primary" onclick="adminApp.loadAdminCustomPrompts(1)"><span data-i18n="查询">查询</span></button>
-            <button type="button" class="btn btn-secondary" onclick="adminApp.clearAdminPromptFilters()"><span data-i18n="清除">清除</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.loadAdminCustomPrompts(1)"><span data-i18n="查询">查询</span></button>
+            <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.clearAdminPromptFilters()"><span data-i18n="清除">清除</span></button>
             <span id="adminPromptCount" class="filter-info"></span>
           </div>
           <div id="adminPromptsList" class="models-table">
             <!-- 提示词列表由 JS 动态加载 -->
           </div>
           <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-            <button id="adminPromptPrevBtn" class="btn btn-secondary" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
+            <button type="button" id="adminPromptPrevBtn" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
             <span id="adminPromptPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-            <button id="adminPromptNextBtn" class="btn btn-secondary" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage + 1)"><span data-i18n="下一页">下一页</span></button>
+            <button type="button" id="adminPromptNextBtn" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage + 1)"><span data-i18n="下一页">下一页</span></button>
           </div>
         </div>
       </div>
