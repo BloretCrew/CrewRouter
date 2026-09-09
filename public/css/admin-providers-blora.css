@@ -1,0 +1,88 @@
+/* Blora surface migration for admin provider management. */
+.blora-admin-providers-page {
+  --providers-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --providers-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-admin-providers-page > .content-section {
+  border: var(--providers-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-admin-providers-page .provider-page-desc {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-admin-providers-page .admin-stat-cards {
+  gap: var(--blora-space-3);
+}
+
+.blora-admin-providers-page .admin-stat-card,
+.blora-admin-providers-page .admin-card {
+  border: var(--providers-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-admin-providers-page .admin-stat-card-clickable:hover,
+.blora-admin-providers-page .admin-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-admin-providers-page .provider-toolbar {
+  gap: var(--blora-space-2);
+}
+
+.blora-admin-providers-page .admin-filter-bar {
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-3);
+  border: var(--providers-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-providers-page .admin-filter-bar .input,
+.blora-admin-providers-page .admin-filter-bar .select {
+  min-height: 2.5rem;
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-providers-page #adminProvidersList {
+  overflow-x: auto;
+  border: var(--providers-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-providers-page .admin-card-footer,
+.blora-admin-providers-page .provider-row-actions {
+  border-top-color: color-mix(in srgb, var(--border) 36%, transparent);
+  gap: var(--blora-space-2);
+}
+
+.blora-admin-providers-page .provider-more-dropdown,
+.blora-admin-providers-page .provider-row-dropdown {
+  border: var(--providers-border);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-3);
+}
+
+@media (max-width: 640px) {
+  .blora-admin-providers-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-admin-providers-page .provider-toolbar .blora-button,
+  .blora-admin-providers-page .admin-filter-bar .input,
+  .blora-admin-providers-page .admin-filter-bar .select {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
