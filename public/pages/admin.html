@@ -29,6 +29,7 @@
   <link rel="stylesheet" href="/css/admin-users-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-user-groups-blora.css?v=1">
+  <link rel="stylesheet" href="/css/admin-models-blora.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -384,7 +385,7 @@
       </div>
 
       <!-- 模型管理页面（界面与用户侧模型库对齐） -->
-      <div id="adminModelsPage" class="page">
+      <div id="adminModelsPage" class="page blora-admin-models-page">
         <!-- 滚动后悬浮顶栏：筛选 + 搜索（默认隐藏，由 JS 控制） -->
         <div id="adminModelsStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
@@ -462,7 +463,7 @@
               <button class="btn btn-secondary btn-sm" onclick="adminApp.showBatchJsonPricesModal()"><span data-i18n="JSON 定价">JSON 定价</span></button>
               <button class="btn btn-secondary btn-sm" onclick="adminApp.exportModelsCsv()"><span data-i18n="导出 CSV">导出 CSV</span></button>
               <button class="btn btn-secondary btn-sm" onclick="adminApp.showSeriesIconsModal()"><span data-i18n="系列图标">系列图标</span></button>
-              <button id="addModelBtn" class="btn btn-primary btn-sm"><span data-i18n="添加模型">添加模型</span></button>
+              <button type="button" id="addModelBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="添加模型">添加模型</span></button>
             </div>
           </div>
           <div id="modelStatsCards" class="admin-stat-cards"></div>
@@ -470,7 +471,7 @@
           <div class="model-filter-bar admin-models-filter-bar" id="adminModelsFilters">
             <div class="model-search-box">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              <input type="text" id="modelSearchInput" class="model-search-input" placeholder="搜索模型名称、上游 ID、系列..." data-i18n-placeholder="搜索模型名称、上游 ID、系列..." oninput="adminApp.onAdminModelFilterInput('search', this.value, 'main')">
+              <input type="search" id="modelSearchInput" class="blora-input model-search-input" placeholder="搜索模型名称、上游 ID、系列..." data-i18n-placeholder="搜索模型名称、上游 ID、系列..." oninput="adminApp.onAdminModelFilterInput('search', this.value, 'main')">
             </div>
             <div class="model-filter-selects admin-models-filter-selects">
               <select id="modelProviderFilter" class="select" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'main')">
