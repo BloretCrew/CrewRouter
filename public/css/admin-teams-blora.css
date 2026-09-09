@@ -1,0 +1,81 @@
+/* Blora surface migration for admin Team management. */
+.blora-admin-teams-page {
+  --teams-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --teams-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-admin-teams-page .content-section {
+  border: var(--teams-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-admin-teams-page .admin-stat-cards {
+  gap: var(--blora-space-3);
+}
+
+.blora-admin-teams-page .admin-stat-card,
+.blora-admin-teams-page .team-card {
+  border: var(--teams-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-admin-teams-page .team-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-admin-teams-page .admin-filter-bar,
+.blora-admin-teams-page .model-filter-bar {
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-3);
+  border: var(--teams-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-teams-page .admin-filter-bar .input,
+.blora-admin-teams-page .model-filter-bar .model-search-input {
+  min-height: 2.5rem;
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-teams-page .team-card-header h3,
+.blora-admin-teams-page .team-detail-section-title,
+.blora-admin-teams-page .team-detail-section h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-admin-teams-page .team-detail-section {
+  margin-top: var(--blora-space-4);
+  border: var(--teams-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
+  box-shadow: none;
+  padding: var(--blora-space-5);
+}
+
+.blora-admin-teams-page .team-detail-section-body .users-table,
+.blora-admin-teams-page #teamModelsList {
+  border: var(--teams-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+@media (max-width: 640px) {
+  .blora-admin-teams-page .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-admin-teams-page .admin-filter-bar .input,
+  .blora-admin-teams-page .admin-filter-bar .blora-button {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
