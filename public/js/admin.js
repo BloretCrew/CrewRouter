@@ -809,8 +809,8 @@ class AdminApp {
     list.innerHTML = `<table><thead><tr><th>ID</th><th>状态</th><th>使用人数</th><th>有效期</th><th>Team</th><th>用户组</th><th>创建人</th><th>创建时间</th><th>最近使用</th><th>操作</th></tr></thead><tbody>${rows.map((row) => {
       const status = statusLabel[row.status] || row.status;
       const actions = [
-        this._inviteUrlMap?.[row.id] ? `<button class="btn btn-sm" type="button" onclick="adminApp.copyInviteUrl(${row.id})">复制链接</button>` : '',
-        row.status === 'active' ? `<button class="btn btn-sm" type="button" onclick="adminApp.revokeInvite(${row.id})">撤销</button>` : '',
+        this._inviteUrlMap?.[row.id] ? `<button class="blora-button" type="button" onclick="adminApp.copyInviteUrl(${row.id})" data-variant="secondary" data-size="sm">复制链接</button>` : '',
+        row.status === 'active' ? `<button class="blora-button" type="button" onclick="adminApp.revokeInvite(${row.id})" data-variant="secondary" data-size="sm">撤销</button>` : '',
       ].filter(Boolean).join(' ');
       return `<tr>
         <td>#${row.id}</td>
@@ -931,7 +931,7 @@ class AdminApp {
               <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
               <td style="color:var(--muted-foreground);font-size:12px;">${new Date(user.created_at).toLocaleDateString('zh-CN')}</td>
               <td>
-                <button class="btn btn-icon" title="${t('编辑')}" onclick="adminApp.editUserById(${user.id})">
+                <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editUserById(${user.id})" data-variant="secondary" data-size="icon">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -1678,12 +1678,12 @@ class AdminApp {
           ${this._renderModelUptimeSlot(modelId, displayName)}
         </div>
         <div class="model-library-item-actions" style="margin-left:0;margin-top:10px;justify-content:flex-end;">
-          <button type="button" class="btn btn-sm btn-secondary model-test-btn" title="${t('测试')}"
-            data-admin-model-action="test" data-model-id="${idAttr}">测试</button>
-          <button type="button" class="btn btn-sm btn-secondary"
-            data-admin-model-action="edit" data-model-id="${idAttr}">编辑</button>
-          <button type="button" class="btn btn-sm btn-secondary" style="color:var(--destructive);"
-            data-admin-model-action="delete" data-model-id="${idAttr}">删除</button>
+          <button type="button" class="blora-button model-test-btn" title="${t('测试')}"
+            data-admin-model-action="test" data-model-id="${idAttr}" data-variant="secondary" data-size="sm">测试</button>
+          <button type="button" class="blora-button"
+            data-admin-model-action="edit" data-model-id="${idAttr}" data-variant="secondary" data-size="sm">编辑</button>
+          <button type="button" class="blora-button" style="color:var(--destructive);"
+            data-admin-model-action="delete" data-model-id="${idAttr}" data-variant="secondary" data-size="sm">删除</button>
         </div>
       </div>
     `;
@@ -1966,9 +1966,9 @@ class AdminApp {
                         ${allSelected ? 'checked' : ''}>
                       全选本页
                     </label>
-                    <button type="button" class="btn btn-sm btn-secondary model-test-btn" style="padding:4px 8px;font-size:11px;"
+                    <button type="button" class="blora-button model-test-btn" style="padding:4px 8px;font-size:11px;"
                       title="${t('测试此供应商下当前筛选模型')}"
-                      data-admin-model-action="test-provider" data-provider-key="${keyAttr}">测试</button>
+                      data-admin-model-action="test-provider" data-provider-key="${keyAttr}" data-variant="secondary" data-size="sm">测试</button>
                     <span class="provider-model-count">${totalCount} 个模型${enabledCount != null && enabledCount !== totalCount ? ` · ${enabledCount}${t('启用')}` : ''}</span>
                   </div>
                 </div>
@@ -2790,7 +2790,7 @@ class AdminApp {
       setHTML(document.getElementById('adminProvidersList'), `
         <div class="admin-empty-state">
           <p style="color:var(--destructive);">${escapeHtml(error.message || t('加载供应商列表失败'))}</p>
-          <button class="btn btn-secondary btn-sm" style="margin-top:12px;" onclick="adminApp.loadProviders()">重试</button>
+          <button class="blora-button" style="margin-top:12px;" onclick="adminApp.loadProviders()" data-variant="secondary" data-size="sm">重试</button>
         </div>`);
     }
   }
@@ -2970,8 +2970,8 @@ class AdminApp {
           <li>同步模型列表</li>
         </ol>
         <div class="provider-empty-actions">
-          <button class="btn btn-primary" onclick="adminApp.showAddProviderWizard()">添加供应商</button>
-          <button class="btn btn-secondary" onclick="document.getElementById('importOpenCodeBtn')?.click()">导入配置</button>
+          <button class="blora-button" onclick="adminApp.showAddProviderWizard()" data-variant="primary">添加供应商</button>
+          <button class="blora-button" onclick="document.getElementById('importOpenCodeBtn')?.click()" data-variant="secondary">导入配置</button>
         </div>
       </div>`;
   }
@@ -2980,7 +2980,7 @@ class AdminApp {
     return `
       <div class="admin-empty-state">
         <p>未找到匹配的供应商</p>
-        <button class="btn btn-sm btn-secondary" style="margin-top:12px;" onclick="adminApp.clearProviderFilters()">清除筛选</button>
+        <button class="blora-button" style="margin-top:12px;" onclick="adminApp.clearProviderFilters()" data-variant="secondary" data-size="sm">清除筛选</button>
       </div>`;
   }
 
@@ -3156,10 +3156,10 @@ class AdminApp {
           <input type="checkbox" ${provider.enabled ? 'checked' : ''} onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)">
           <span class="toggle-slider"></span>
         </label>
-        <button class="btn btn-sm btn-secondary" title="${t('同步模型')}" onclick="adminApp.fetchProviderModels('${pid}')">同步模型</button>
-        <button class="btn btn-sm btn-secondary" title="${t('编辑')}" onclick="adminApp.editProviderById('${pid}')">编辑</button>
+        <button class="blora-button" title="${t('同步模型')}" onclick="adminApp.fetchProviderModels('${pid}')" data-variant="secondary" data-size="sm">同步模型</button>
+        <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editProviderById('${pid}')" data-variant="secondary" data-size="sm">编辑</button>
         <div class="provider-row-more-wrap">
-          <button type="button" class="btn btn-sm btn-secondary" data-row-menu-btn="${pid}" title="${t('更多操作')}" onclick="adminApp.toggleProviderRowMenu('${pid}', event)">更多 ▾</button>
+          <button type="button" class="blora-button" data-row-menu-btn="${pid}" title="${t('更多操作')}" onclick="adminApp.toggleProviderRowMenu('${pid}', event)" data-variant="secondary" data-size="sm">更多 ▾</button>
           <div class="provider-row-dropdown" id="provider-row-menu-${pid}" style="display:none;" role="menu">
             <button type="button" class="provider-more-item" id="${pingBtnId}" onclick="adminApp.pingProvider('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" role="menuitem">检测连通性</button>
             ${isScriptKey ? `<button type="button" class="provider-more-item" style="color:var(--warning);" onclick="adminApp.refreshProviderKey('${pid}');adminApp.toggleProviderRowMenu('${pid}\', event);" role="menuitem">${t('刷新密钥')}</button>` : ''}
@@ -3377,9 +3377,9 @@ class AdminApp {
               oninput="adminApp.onProviderApiKeyWeightInput(${index}, this.value)">
           </div>
           ${disableBtn}
-          <button type="button" class="btn btn-sm btn-secondary provider-api-key-remove"
+          <button type="button" class="blora-button provider-api-key-remove"
             style="${multi ? '' : 'visibility:hidden;'}"
-            onclick="adminApp.removeProviderApiKeyRow(${index})" title="${t('删除')}">删除</button>
+            onclick="adminApp.removeProviderApiKeyRow(${index})" title="${t('删除')}" data-variant="secondary" data-size="sm">删除</button>
         </div>`;
     }).join(''));
 
@@ -4029,7 +4029,7 @@ class AdminApp {
         setHTML(listContainer, `
           <div class="wizard-empty">
             <p style="color:var(--destructive);margin-bottom:8px;">${escapeHtml(loadError)}</p>
-            <button type="button" class="btn btn-sm btn-secondary" id="wizardRetryBtn">重试</button>
+            <button type="button" class="blora-button" id="wizardRetryBtn" data-variant="secondary" data-size="sm">重试</button>
           </div>`);
         document.getElementById('wizardRetryBtn')?.addEventListener('click', () => loadIndex());
         return;
@@ -4708,7 +4708,7 @@ class AdminApp {
       div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;font-size:13px;';
       setHTML(div, `
         <code style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.url.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
-        <button type="button" class="btn btn-icon" title="${t('删除')}" style="font-size:14px;color:var(--destructive);">🗑️</button>`);
+        <button type="button" class="blora-button" title="${t('删除')}" style="font-size:14px;color:var(--destructive);" data-variant="secondary" data-size="icon">🗑️</button>`);
       div.querySelector('button').onclick = () => this.removeGlobalProxy(p.id);
       fragment.appendChild(div);
     }
@@ -4936,7 +4936,7 @@ class AdminApp {
             <div style="font-weight:600;font-size:15px;">选择 AI 辅助模型</div>
             <div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">仅用于密钥脚本的分析/修复</div>
           </div>
-          <button type="button" id="scriptAiModelPickerClose" class="btn btn-sm btn-secondary" style="min-width:auto;">关闭</button>
+          <button type="button" id="scriptAiModelPickerClose" class="blora-button" style="min-width:auto;" data-variant="secondary" data-size="sm">关闭</button>
         </div>
         <div style="padding:12px 18px;">
           <input type="search" id="scriptAiModelSearch" class="input" placeholder="${t('搜索模型名称 / ID / 供应商...')}" style="width:100%;">
@@ -4945,7 +4945,7 @@ class AdminApp {
           ${pageLoadingHtml(t('加载中...'), { size: 'md', compact: true })}
         </div>
         <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="btn btn-secondary btn-sm" id="scriptAiModelClear">使用自动选择</button>
+          <button type="button" class="blora-button" id="scriptAiModelClear" data-variant="secondary" data-size="sm">使用自动选择</button>
           <span style="font-size:12px;color:var(--muted-foreground);align-self:center;">当前：${this._formatScriptAiModelLabel(selected)}</span>
         </div>
       </div>
@@ -5054,7 +5054,7 @@ class AdminApp {
             <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:2px;">AI 辅助模型</div>
             <div id="scriptAiModelLabel" style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._formatScriptAiModelLabel(this._scriptAiModel)}</div>
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" id="scriptAiSelectModelBtn">选择模型</button>
+          <button type="button" class="blora-button" id="scriptAiSelectModelBtn" data-variant="secondary" data-size="sm">选择模型</button>
         </div>
         <div id="aiAnalysisSection" style="display:none;">
           <div style="font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
@@ -5076,9 +5076,9 @@ class AdminApp {
       content: content,
       width: 600,
       footer: `
-        <button class="btn btn-primary" id="aiAnalyzeBtn">🤖 让 AI 分析错误并给出修改建议</button>
-        <button class="btn btn-success" id="aiFixBtn" style="display:none;">🔧 让 AI 修复错误</button>
-        <button class="btn btn-primary" id="aiApplyBtn" style="display:none;">✅ 应用修复代码</button>
+        <button class="blora-button" id="aiAnalyzeBtn" data-variant="primary">🤖 让 AI 分析错误并给出修改建议</button>
+        <button class="blora-button" id="aiFixBtn" style="display:none;" data-variant="secondary">🔧 让 AI 修复错误</button>
+        <button class="blora-button" id="aiApplyBtn" style="display:none;" data-variant="primary">✅ 应用修复代码</button>
       `
     });
 
@@ -7789,7 +7789,7 @@ async function(ctx) {
                 <td style="font-size:12px;">${escapeHtml(log.error_type || '-')}</td>
                 <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(msg)}">${escapeHtml(shortMsg || '-')}</td>
                 <td style="white-space:nowrap;">${log.latency_ms != null ? log.latency_ms + 'ms' : '-'}</td>
-                <td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();adminApp.showErrorDetail(${idx})">详情</button></td>
+                <td><button class="blora-button" onclick="event.stopPropagation();adminApp.showErrorDetail(${idx})" data-variant="secondary" data-size="sm">详情</button></td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -7941,7 +7941,7 @@ async function(ctx) {
       const truncNote = truncated ? ` <span style="color:var(--warning);font-size:12px;">(${t('已截断')})</span>` : '';
       const detail = `<span style="font-size:12px;color:var(--muted-foreground);">${sourceLabel}</span> <span style="font-size:12px;color:var(--muted-foreground);">${chars.toLocaleString()} ${t('字符')}</span>${truncNote}`;
       const contentPre = `<pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:8px 0 0;max-height:220px;overflow-y:auto;${truncated ? 'display:none;' : ''}" data-custom-inst-content="${idx}">${escapeHtml(String(item && item.content || ''))}</pre>`;
-      const toggleBtn = truncated ? `<button type="button" class="btn btn-sm btn-secondary" data-custom-inst-toggle="${idx}" style="margin-top:8px;">${t('查看全部')}</button>` : '';
+      const toggleBtn = truncated ? `<button type="button" class="blora-button" data-custom-inst-toggle="${idx}" style="margin-top:8px;" data-variant="secondary" data-size="sm">${t('查看全部')}</button>` : '';
       return `<div style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:8px;">
         <div style="font-size:13px;font-weight:600;word-break:break-all;">📄 ${file}</div>
         <div style="margin-top:2px;">${detail}</div>
@@ -8066,7 +8066,7 @@ async function(ctx) {
                 </td>
                 <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${costDisplay}</td>
                 <td style="white-space:nowrap;">${log.latency_ms != null ? `${log.latency_ms}ms` : '<span style="color:var(--muted-foreground);">-</span>'}</td>
-                <td class="cell-actions"><button type="button" class="btn btn-sm btn-secondary" data-usage-detail-idx="${idx}">详情</button></td>
+                <td class="cell-actions"><button type="button" class="blora-button" data-usage-detail-idx="${idx}" data-variant="secondary" data-size="sm">详情</button></td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -9310,13 +9310,13 @@ async function(ctx) {
             <div style="font-weight:500;">${icon.name}</div>
             <div style="font-size:12px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon.icon_url || t('未设置图标')}</div>
           </div>
-          <button class="btn btn-icon" title="${t('编辑')}" onclick="adminApp.editSeriesIcon('${icon.name}', '${icon.icon_url || ''}')">
+          <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editSeriesIcon('${icon.name}', '${icon.icon_url || ''}')" data-variant="secondary" data-size="icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
           </button>
-          <button class="btn btn-icon" title="${t('删除')}" onclick="adminApp.deleteSeriesIcon('${icon.name}')">
+          <button class="blora-button" title="${t('删除')}" onclick="adminApp.deleteSeriesIcon('${icon.name}')" data-variant="secondary" data-size="icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -9595,9 +9595,9 @@ async function(ctx) {
         <td>${new Date(g.created_at).toLocaleDateString()}</td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
           ${g.is_default
-            ? '<button class="btn btn-sm btn-secondary" disabled style="opacity:0.5;">' + t('✓ 默认') + '</button>'
-            : `<button class="btn btn-sm btn-secondary" onclick="adminApp.setDefaultGroup(${g.id})">${t('设为默认')}</button>`}
-          <button class="btn btn-sm btn-primary" onclick="adminApp.showUserGroupDetail(${g.id})">管理</button>
+            ? '<button class="blora-button" disabled style="opacity:0.5;" data-variant="secondary" data-size="sm">' + t('✓ 默认') + '</button>'
+            : `<button class="blora-button" onclick="adminApp.setDefaultGroup(${g.id})" data-variant="secondary" data-size="sm">${t('设为默认')}</button>`}
+          <button class="blora-button" onclick="adminApp.showUserGroupDetail(${g.id})" data-variant="primary" data-size="sm">管理</button>
         </td>
       </tr>`).join('')}</tbody></table>
       ${pg.totalPages > 1 ? this._renderPagination('userGroup', pg.page, pg.totalPages, pg.total) : ''}`);
@@ -9650,7 +9650,7 @@ async function(ctx) {
     const modal = Dialog.showModal({
       title: t('创建用户组'),
       content: content,
-      footer: `<button class="btn btn-primary" id="confirmCreateUserGroup">${t('创建')}</button>`
+      footer: `<button class="blora-button" id="confirmCreateUserGroup" data-variant="primary">${t('创建')}</button>`
     });
     console.log(t('[用户组] 弹窗已显示:'), modal);
 
@@ -9738,7 +9738,7 @@ async function(ctx) {
               <span class="rule-row-type">${r.rule_type === 'requests' ? t('请求次数') : t('Token 用量')}</span>
               <span class="rule-row-value">每 ${durationLabel} 最多 <strong>${Number(r.rule_value).toLocaleString()}</strong> ${unit}</span>
             </div>
-            <button class="btn btn-danger btn-sm" onclick="adminApp.deleteUserGroupRule(${groupId}, ${r.id})">删除</button>
+            <button class="blora-button" onclick="adminApp.deleteUserGroupRule(${groupId}, ${r.id})" data-variant="danger" data-size="sm">删除</button>
           </div>`;
       });
       html += '</div>';
@@ -9758,11 +9758,11 @@ async function(ctx) {
           <span class="rule-add-label">最多</span>
           <input type="number" id="ruleNewValue" class="form-input" style="width:120px;" min="1" placeholder="${t('限额')}">
           <span class="rule-add-label" id="ruleNewUnit">次请求</span>
-          <button class="btn btn-primary btn-sm" onclick="adminApp.addGroupRule(${groupId})">添加</button>
+          <button class="blora-button" onclick="adminApp.addGroupRule(${groupId})" data-variant="primary" data-size="sm">添加</button>
         </div>
         <div class="rule-presets">
           快捷设置：
-          ${durationPresets.map(p => `<button class="btn btn-ghost btn-sm" onclick="document.getElementById('ruleNewDuration').value=${p.hours}">${p.label}</button>`).join('')}
+          ${durationPresets.map(p => `<button class="blora-button" onclick="document.getElementById('ruleNewDuration').value=${p.hours}" data-variant="ghost" data-size="sm">${p.label}</button>`).join('')}
         </div>
       </div>`;
 
@@ -9870,7 +9870,7 @@ async function(ctx) {
       <td>${escapeHtml(m.username)}</td>
       <td>${escapeHtml(m.email || '-')}</td>
       <td>${parseFloat(m.balance || 0).toFixed(0)}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="adminApp.removeUserGroupMember(${groupId}, ${m.id})">移除</button></td>
+      <td><button class="blora-button" onclick="adminApp.removeUserGroupMember(${groupId}, ${m.id})" data-variant="danger" data-size="sm">移除</button></td>
     </tr>`).join('')}</tbody></table>
     ${pg.totalPages > 1 ? this._renderPagination('userGroupMember', pg.page, pg.totalPages, pg.total) : ''}`);
   }
@@ -9910,7 +9910,7 @@ async function(ctx) {
       const modal = Dialog.showModal({
         title: t('添加成员'),
         content: content,
-        footer: `<button class="btn btn-primary" id="confirmAddGroupMembers">${t('添加')}</button>`
+        footer: `<button class="blora-button" id="confirmAddGroupMembers" data-variant="primary">${t('添加')}</button>`
       });
 
       if (available.length) {
@@ -9979,7 +9979,7 @@ async function(ctx) {
       const modal = Dialog.showModal({
         title: t('编辑用户组'),
         content: content,
-        footer: `<button class="btn btn-primary" id="confirmEditGroup">${t('保存')}</button>`
+        footer: `<button class="blora-button" id="confirmEditGroup" data-variant="primary">${t('保存')}</button>`
       });
       document.getElementById('confirmEditGroup').onclick = async () => {
         const name = document.getElementById('editGroupNameInput').value.trim();
@@ -10245,7 +10245,7 @@ async function(ctx) {
         <p class="team-description">${escapeHtml(team.description || t('暂无描述'))}</p>
         <div class="team-card-footer">
           <span class="text-muted">${new Date(team.created_at).toLocaleDateString()}</span>
-          <button class="btn btn-sm btn-primary" onclick="adminApp.showTeamDetail(${team.id})">管理</button>
+          <button class="blora-button" onclick="adminApp.showTeamDetail(${team.id})" data-variant="primary" data-size="sm">管理</button>
         </div>
       </div>
     `;
@@ -10303,7 +10303,7 @@ async function(ctx) {
     const modal = Dialog.showModal({
       title: t('创建 Team'),
       content: content,
-      footer: `<button class="btn btn-primary" id="confirmCreateTeam">${t('创建')}</button>`
+      footer: `<button class="blora-button" id="confirmCreateTeam" data-variant="primary">${t('创建')}</button>`
     });
     document.getElementById('confirmCreateTeam').onclick = async () => {
       const name = document.getElementById('teamNameInput').value.trim();
@@ -10548,7 +10548,7 @@ async function(ctx) {
       <td>${escapeHtml(m.username)}</td>
       <td>${escapeHtml(m.email || '-')}</td>
       <td>${new Date(m.created_at).toLocaleDateString()}</td>
-      ${isPersonal ? '' : `<td><button class="btn btn-sm btn-danger" onclick="adminApp.removeTeamMember(${teamId}, ${m.id})">${t('移除')}</button></td>`}
+      ${isPersonal ? '' : `<td><button class="blora-button" onclick="adminApp.removeTeamMember(${teamId}, ${m.id})" data-variant="danger" data-size="sm">${t('移除')}</button></td>`}
     </tr>`).join('')}</tbody></table>
     ${pg.totalPages > 1 ? this._renderPagination('teamMember', pg.page, pg.totalPages, pg.total) : ''}`);
   }
@@ -10597,7 +10597,7 @@ async function(ctx) {
       const modal = Dialog.showModal({
         title: t('添加成员'),
         content: content,
-        footer: `<button class="btn btn-primary" id="confirmAddMembers">${t('添加')}</button>`
+        footer: `<button class="blora-button" id="confirmAddMembers" data-variant="primary">${t('添加')}</button>`
       });
 
       if (available.length) {
@@ -10789,8 +10789,8 @@ async function(ctx) {
           </div>
         </div>
         <div class="model-library-item-actions" style="margin-left:0;margin-top:10px;justify-content:flex-end;">
-          <button class="btn btn-sm ${m.enabled ? 'btn-secondary' : 'btn-primary'}"
-            onclick="adminApp.toggleTeamModel(${teamId}, '${safeModelId}', ${!m.enabled})">
+          <button class="blora-button ${m.enabled ? 'btn-secondary' : 'btn-primary'}"
+            onclick="adminApp.toggleTeamModel(${teamId}, '${safeModelId}', ${!m.enabled})" data-variant="secondary" data-size="sm">
             ${m.enabled ? t('禁用') : t('启用')}
           </button>
         </div>
@@ -10909,12 +10909,12 @@ async function(ctx) {
                     ${!group.providerEnabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('供应商已禁用') + '</span>' : ''}
                   </div>
                   <div class="model-library-provider-actions" onclick="event.stopPropagation()">
-                    <button type="button" class="btn btn-sm btn-primary" style="padding:3px 8px;font-size:11px;"
+                    <button type="button" class="blora-button" style="padding:3px 8px;font-size:11px;"
                       title="${t('一键启用该供应商下全部模型')}"
-                      onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', true)">全部启用</button>
-                    <button type="button" class="btn btn-sm btn-secondary" style="padding:3px 8px;font-size:11px;"
+                      onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', true)" data-variant="primary" data-size="sm">全部启用</button>
+                    <button type="button" class="blora-button" style="padding:3px 8px;font-size:11px;"
                       title="${t('一键禁用该供应商下全部模型')}"
-                      onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', false)">全部禁用</button>
+                      onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', false)" data-variant="secondary" data-size="sm">全部禁用</button>
                     <span class="provider-model-count" title="${countTitle}"
                       style="color:${countColor};font-weight:600;">${totalCount} 个模型 · ${enabledCount} 启用</span>
                   </div>
@@ -11088,7 +11088,7 @@ async function(ctx) {
     const modal = Dialog.showModal({
       title: t('按名称批量启用/禁用'),
       content,
-      footer: `<button class="btn btn-primary" id="confirmTeamModelBatchName">${t('执行')}</button>`
+      footer: `<button class="blora-button" id="confirmTeamModelBatchName" data-variant="primary">${t('执行')}</button>`
     });
 
     const input = document.getElementById('teamModelBatchNameInput');
@@ -11145,7 +11145,7 @@ async function(ctx) {
       const modal = Dialog.showModal({
         title: t('编辑 Team'),
         content: content,
-        footer: `<button class="btn btn-primary" id="confirmEditTeam">${t('保存')}</button>`
+        footer: `<button class="blora-button" id="confirmEditTeam" data-variant="primary">${t('保存')}</button>`
       });
       document.getElementById('confirmEditTeam').onclick = async () => {
         const name = document.getElementById('editTeamNameInput').value.trim();
@@ -11993,7 +11993,7 @@ async function(ctx) {
                 <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.user_count, 10) || 0).toLocaleString()}</td>
                 <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.first_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
                 <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.last_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
-                <td class="cell-actions"><button type="button" class="btn btn-sm btn-secondary" data-admin-prompt-view-idx="${idx}">${t('查看内容')}</button></td>
+                <td class="cell-actions"><button type="button" class="blora-button" data-admin-prompt-view-idx="${idx}" data-variant="secondary" data-size="sm">${t('查看内容')}</button></td>
               </tr>
             `).join('')}
           </tbody>
@@ -12170,8 +12170,8 @@ async function(ctx) {
     setHTML(banner, `
       <span>发现新版本 <strong>v${lat}</strong>（当前 v${cur}）。建议在系统设置中一键更新。</span>
       <span style="display:flex;gap:8px;">
-        <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.navigateTo('adminSettings')">查看详情</button>
-        <button type="button" class="btn btn-sm btn-primary" id="bannerUpdateApplyBtn" onclick="adminApp.applyUpdate()">一键更新</button>
+        <button type="button" class="blora-button" onclick="adminApp.navigateTo('adminSettings')" data-variant="secondary" data-size="sm">查看详情</button>
+        <button type="button" class="blora-button" id="bannerUpdateApplyBtn" onclick="adminApp.applyUpdate()" data-variant="primary" data-size="sm">一键更新</button>
       </span>
     `);
     banner.style.display = 'flex';
