@@ -1,0 +1,58 @@
+/* Blora dialog surfaces for admin forms and batch operations. */
+.blora-admin-page .modal-content {
+  border: 0;
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-4);
+}
+
+.blora-admin-page .modal-header {
+  border-bottom: 0;
+}
+
+.blora-admin-page .modal-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.blora-admin-page .modal-footer {
+  border-top: var(--blora-border-subtle);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-page .modal-body .input,
+.blora-admin-page .modal-body .select,
+.blora-admin-page .modal-body textarea {
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-admin-page .modal-footer .btn,
+.blora-admin-page .modal-footer .blora-button {
+  min-height: 2.25rem;
+}
+
+.blora-admin-page .dialog-btn,
+.blora-admin-page .dialog-btn-primary {
+  min-height: 2.25rem;
+  border: 0;
+  border-radius: var(--blora-radius-lg);
+  padding: var(--blora-button-pad-y, 0.6em) var(--blora-button-pad-x, 0.9em);
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+  cursor: pointer;
+}
+
+.blora-admin-page .dialog-btn:hover,
+.blora-admin-page .dialog-btn-primary:hover {
+  background: var(--blora-color-action-primary-hover);
+}
+
+@media (max-width: 640px) {
+  .blora-admin-page .modal-content {
+    width: calc(100vw - 1.5rem);
+    max-height: calc(100dvh - 2rem);
+  }
+}
