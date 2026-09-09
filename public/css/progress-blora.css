@@ -1,0 +1,36 @@
+/* Shared Blora progress/loading normalization. */
+.blora-page :is(.cache-hit-bar-container, .model-quota-bar, .model-test-progress-bar, .model-test-summary-bar, .rule-bar-bg, #updateProgressBox > div[style*="height:6px"], .batch-sync-progress-list + div[style*="height:6px"]) {
+  height: 0.5rem;
+  border-radius: var(--blora-radius-pill);
+  background: var(--blora-color-surface-raised);
+  border: var(--blora-border-subtle);
+  overflow: hidden;
+}
+
+.blora-page :is(.cache-hit-bar, .model-quota-bar-fill, .model-test-progress-fill, .model-test-summary-bar-fill, .rule-bar-fill, #updateProgressBar, #batchSyncProgressBar) {
+  min-width: 0;
+  height: 100%;
+  border-radius: var(--blora-radius-pill);
+  background: var(--blora-color-action-primary-default);
+  transition: width var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-page .loading-spinner {
+  border-color: color-mix(in srgb, var(--blora-color-border-default) 70%, transparent);
+  border-top-color: var(--blora-color-action-primary-default);
+}
+
+.blora-page .page-loading,
+.blora-page .model-quota-loading {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-page .model-uptime-spark,
+.blora-page .model-uptime-detail-spark {
+  border-radius: var(--blora-radius-sm);
+  overflow: hidden;
+}
+
+.blora-page .model-uptime-bar {
+  min-width: 1px;
+}
