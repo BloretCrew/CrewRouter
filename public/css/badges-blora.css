@@ -1,0 +1,40 @@
+/* Shared Blora badge/tag surface normalization. */
+.blora-page :is(.badge, .admin-card-badge, .status-pill, .status-badge, .model-item-badge, .model-test-badge, .provider-test-summary, .session-badge, .key-system-badge, .series-badge, .model-tag) {
+  border-radius: var(--blora-radius-pill);
+  line-height: 1.35;
+  font-size: var(--blora-text-xs);
+}
+
+.blora-page :is(.badge, .admin-card-badge, .status-pill, .status-badge, .model-item-badge, .model-test-badge, .provider-test-summary, .session-badge, .key-system-badge, .series-badge, .model-tag) {
+  border: var(--blora-border-subtle);
+}
+
+.blora-page :is(.model-item-badge, .series-badge, .model-tag) {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-page :is(.status-pill-on, .admin-card-badge.green, .model-test-badge.pass) {
+  background: color-mix(in srgb, var(--blora-color-status-success) 12%, transparent);
+  color: var(--blora-color-status-success);
+}
+
+.blora-page :is(.status-pill-off, .admin-card-badge.red, .model-test-badge.fail) {
+  background: color-mix(in srgb, var(--blora-color-status-danger) 12%, transparent);
+  color: var(--blora-color-status-danger);
+}
+
+.blora-page :is(.status-badge, .badge-info) {
+  background: color-mix(in srgb, var(--blora-color-status-info) 12%, transparent);
+  color: var(--blora-color-status-info);
+}
+
+.blora-page :is(.badge-warning, .status-badge.stale-badge, .session-badge.pressure-warning) {
+  background: color-mix(in srgb, var(--blora-color-status-warning) 14%, transparent);
+  color: var(--blora-color-status-warning);
+}
+
+.blora-page :is(.session-badge.pressure-critical, .tool-error-tag) {
+  background: color-mix(in srgb, var(--blora-color-status-danger) 12%, transparent);
+  color: var(--blora-color-status-danger);
+}
