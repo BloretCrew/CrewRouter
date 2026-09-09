@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-user-groups-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=1">
+  <link rel="stylesheet" href="/css/admin-providers-blora.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -506,7 +507,7 @@
       </div>
 
       <!-- 供应商管理页面 -->
-      <div id="adminProvidersPage" class="page">
+      <div id="adminProvidersPage" class="page blora-admin-providers-page">
         <!-- 滚动后悬浮顶栏：筛选 + 可拖拽标签（默认隐藏，由 JS 控制） -->
         <div id="adminProvidersStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
@@ -594,7 +595,7 @@
                 <button type="button" class="btn btn-sm btn-secondary" onclick="adminApp.clearProviderSelection()"><span data-i18n="清除选择">清除选择</span></button>
               </div>
               <button type="button" id="cleanupAllStaleModelsBtn" class="btn btn-secondary" onclick="adminApp.cleanupAllStaleModels()" title="对比各供应商上游列表，删除本地已下架模型记录" data-i18n-title="对比各供应商上游列表，删除本地已下架模型记录"><span data-i18n="清理所有已下架模型">清理所有已下架模型</span></button>
-              <button id="addProviderBtn" class="btn btn-primary"><span data-i18n="添加供应商">添加供应商</span></button>
+              <button type="button" id="addProviderBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="添加供应商">添加供应商</span></button>
               <div class="provider-view-toggle">
                 <button class="btn btn-sm btn-secondary" id="providerViewTableBtn" onclick="adminApp.setProviderView('table')" title="表格视图" data-i18n-title="表格视图" style="padding:6px 8px;">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -606,7 +607,7 @@
             </div>
           </div>
           <div class="admin-filter-bar" id="adminProvidersFilters">
-            <input type="text" id="providerSearchInput" class="input" placeholder="搜索供应商名称、Base URL 或备注..." data-i18n-placeholder="搜索供应商名称、Base URL 或备注..." oninput="adminApp.onAdminProviderFilterInput('search', this.value, 'main')">
+            <input type="search" id="providerSearchInput" class="blora-input input" placeholder="搜索供应商名称、Base URL 或备注..." data-i18n-placeholder="搜索供应商名称、Base URL 或备注..." oninput="adminApp.onAdminProviderFilterInput('search', this.value, 'main')">
             <select id="providerStatusFilter" class="select" onchange="adminApp.onAdminProviderFilterInput('status', this.value, 'main')">
               <option value=""><span data-i18n="所有状态">所有状态</span></option>
               <option value="enabled"><span data-i18n="已启用">已启用</span></option>
