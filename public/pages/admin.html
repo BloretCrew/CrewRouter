@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="/css/admin-user-groups-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=1">
+  <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=1">
   <script src="/js/i18n.js?v=2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
@@ -1095,7 +1096,7 @@
       </div>
 
       <!-- 调用错误记录页面 -->
-      <div id="adminErrorLogsPage" class="page">
+      <div id="adminErrorLogsPage" class="page blora-admin-error-logs-page">
         <div class="content-section">
           <div class="section-header">
             <div>
@@ -1103,11 +1104,11 @@
               <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="查看近期 API 调用失败记录，便于排查上游故障与用户问题">查看近期 API 调用失败记录，便于排查上游故障与用户问题</span></p>
             </div>
             <div class="section-actions">
-              <button type="button" class="btn btn-secondary" onclick="adminApp.loadErrorLogs()"><span data-i18n="刷新">刷新</span></button>
+              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.loadErrorLogs()"><span data-i18n="刷新">刷新</span></button>
             </div>
           </div>
           <div class="admin-filter-bar" style="margin-bottom:16px;">
-            <input type="text" id="errorLogUserFilter" class="input" placeholder="用户 ID 或用户名..." data-i18n-placeholder="用户 ID 或用户名..." style="min-width:140px;">
+            <input type="search" id="errorLogUserFilter" class="blora-input input" placeholder="用户 ID 或用户名..." data-i18n-placeholder="用户 ID 或用户名..." style="min-width:140px;">
             <input type="text" id="errorLogModelFilter" class="input" placeholder="模型名称..." data-i18n-placeholder="模型名称..." style="min-width:120px;">
             <input type="text" id="errorLogProviderFilter" class="input" placeholder="供应商..." data-i18n-placeholder="供应商..." style="min-width:120px;">
             <input type="number" id="errorLogStatusFilter" class="input" placeholder="状态码" data-i18n-placeholder="状态码" style="width:90px;" min="100" max="599">
@@ -1118,8 +1119,8 @@
               <input type="checkbox" id="errorLogFinalOnly" checked><span data-i18n="仅最终错误">
               仅最终错误
             </span></label>
-            <button class="btn btn-primary" onclick="adminApp.loadErrorLogs(1)"><span data-i18n="查询">查询</span></button>
-            <button class="btn btn-secondary" onclick="adminApp.clearErrorLogFilters()"><span data-i18n="清除">清除</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.loadErrorLogs(1)"><span data-i18n="查询">查询</span></button>
+            <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.clearErrorLogFilters()"><span data-i18n="清除">清除</span></button>
             <span id="errorLogCount" class="filter-info"></span>
           </div>
           <p id="errorLogRetentionHint" style="font-size:12px;color:var(--muted-foreground);margin:0 0 12px;"></p>
@@ -1127,9 +1128,9 @@
             <div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
           </div>
           <div style="display:flex;justify-content:center;gap:8px;margin-top:16px;">
-            <button id="errorLogPrevBtn" class="btn btn-secondary" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
+            <button type="button" id="errorLogPrevBtn" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage - 1)" disabled><span data-i18n="上一页">上一页</span></button>
             <span id="errorLogPageInfo" style="padding:8px 12px;color:var(--muted-foreground);"></span>
-            <button id="errorLogNextBtn" class="btn btn-secondary" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage + 1)"><span data-i18n="下一页">下一页</span></button>
+            <button type="button" id="errorLogNextBtn" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage + 1)"><span data-i18n="下一页">下一页</span></button>
           </div>
         </div>
       </div>

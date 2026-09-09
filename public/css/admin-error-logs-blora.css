@@ -1,0 +1,80 @@
+/* Blora surface migration for admin error logs. */
+.blora-admin-error-logs-page {
+  --error-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --error-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
+
+.blora-admin-error-logs-page > .content-section {
+  border: var(--error-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-admin-error-logs-page .section-header h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-admin-error-logs-page .admin-filter-bar {
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-3);
+  border: var(--error-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-error-logs-page .admin-filter-bar .input {
+  min-height: 2.5rem;
+  border-color: color-mix(in srgb, var(--border) 55%, transparent);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-error-logs-page #errorLogsList {
+  overflow-x: auto;
+  border: var(--error-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-admin-error-logs-page #errorLogsList table {
+  min-width: 64rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.blora-admin-error-logs-page #errorLogsList th {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
+  border-bottom: var(--error-border-soft);
+}
+
+.blora-admin-error-logs-page #errorLogsList td {
+  border-bottom: var(--error-border-soft);
+}
+
+.blora-admin-error-logs-page #errorLogsList tbody tr:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-admin-error-logs-page #errorLogRetentionHint {
+  color: var(--blora-color-text-subtle) !important;
+}
+
+.blora-admin-error-logs-page #errorLogPrevBtn,
+.blora-admin-error-logs-page #errorLogNextBtn {
+  min-height: 2.25rem;
+}
+
+@media (max-width: 640px) {
+  .blora-admin-error-logs-page > .content-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-admin-error-logs-page .admin-filter-bar .input,
+  .blora-admin-error-logs-page .admin-filter-bar .blora-button {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
