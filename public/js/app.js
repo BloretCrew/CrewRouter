@@ -10887,7 +10887,7 @@ ${extractorBody}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
             <div style="flex:1;"></div>
-            <button type="button" class="blora-button model-action-test" data-variant="outline" data-size="sm" onclick="event.stopPropagation();app.testTeamModels('${this._jsString(team.team_id)}')" title="${t('测试此 Team 下所有模型')}">
+            <button type="button" class="blora-button model-action-test" data-variant="ghost" data-size="sm" onclick="event.stopPropagation();app.testTeamModels('${this._jsString(team.team_id)}')" title="${t('测试此 Team 下所有模型')}">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               测试全部
             </button>

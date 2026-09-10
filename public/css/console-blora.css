@@ -1,0 +1,252 @@
+/* Console shell migration: align navigation and compact controls with Blora primitives. */
+.blora-page .sidebar {
+  width: 15.5rem;
+  border-right: 1px solid var(--blora-color-border-subtle);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-page .sidebar-header {
+  min-height: 4.5rem;
+  padding: var(--blora-space-5) var(--blora-space-4);
+  border-bottom: 1px solid var(--blora-color-border-subtle);
+}
+
+.blora-page .sidebar-header h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-lg);
+  letter-spacing: -0.01em;
+}
+
+.blora-page .sidebar-nav {
+  padding: var(--blora-space-3) var(--blora-space-2);
+}
+
+.blora-page .nav-section {
+  margin-bottom: var(--blora-space-4);
+}
+
+.blora-page .nav-section-title {
+  padding: var(--blora-space-2) var(--blora-space-3);
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-xs);
+  letter-spacing: 0.08em;
+}
+
+.blora-page .nav-item {
+  min-height: 2.5rem;
+  margin: 2px 0;
+  padding: var(--blora-space-2) var(--blora-space-3);
+  border-radius: var(--blora-radius-lg);
+  color: var(--blora-color-text-muted);
+  gap: var(--blora-space-3);
+  transition: background-color var(--blora-duration-fast) var(--blora-easing-standard), color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-page .nav-item:hover {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-page .nav-item.active {
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 12%, var(--blora-color-surface-default));
+  color: var(--blora-color-action-primary-default);
+  font-weight: 600;
+}
+
+.blora-page .nav-item .sf-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-right: 0;
+  opacity: 0.72;
+  filter: none;
+}
+
+.blora-page .nav-item.active .sf-icon,
+.blora-page .nav-item:hover .sf-icon {
+  opacity: 1;
+}
+
+.blora-page .sidebar-footer {
+  min-height: 4.5rem;
+  padding: var(--blora-space-3) var(--blora-space-4);
+  border-top: 1px solid var(--blora-color-border-subtle);
+  gap: var(--blora-space-2);
+}
+
+.blora-page .user-info {
+  min-width: 0;
+  flex: 1;
+  gap: var(--blora-space-2);
+}
+
+.blora-page .user-info span {
+  overflow: hidden;
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blora-page #logoutBtn {
+  flex: 0 0 2.25rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  border-radius: var(--blora-radius-lg);
+}
+
+.blora-page #logoutBtn .sf-icon {
+  width: 1rem;
+  height: 1rem;
+  filter: none;
+}
+
+.blora-page .blora-language-select {
+  flex: 0 0 auto;
+  min-width: 4.5rem;
+  height: 2.25rem;
+  padding-inline: var(--blora-space-2);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-model-library .model-library-key-chips {
+  align-items: center;
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-1) 0;
+}
+
+.blora-model-library .model-library-key-chip {
+  min-height: 2.25rem;
+  padding: var(--blora-space-2) var(--blora-space-3);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+  transition: background-color var(--blora-duration-fast) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard), color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-model-library .model-library-key-chip:hover {
+  border-color: var(--blora-color-border-accent);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-model-library .model-library-key-chip.active {
+  border-color: var(--blora-color-action-primary-default);
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 12%, var(--blora-color-surface-default));
+  color: var(--blora-color-action-primary-default);
+  font-weight: 600;
+}
+
+.blora-model-library .model-library-key-chip .key-model-badge,
+.blora-model-library .model-library-key-chip .key-harness-count {
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-pill);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-model-library .model-library-key-chip .key-model-badge {
+  padding: 1px var(--blora-space-2);
+}
+
+.blora-model-library .model-library-key-chip .key-harness-count {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  line-height: 1.25rem;
+}
+
+.blora-model-library .model-library-key-expand {
+  border-style: dashed;
+  background: transparent;
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-model-library .model-library-team-header > .model-action-test {
+  min-height: 2.25rem;
+  padding-inline: var(--blora-space-3);
+  border: 0;
+  border-radius: var(--blora-radius-lg);
+  color: var(--blora-color-text-muted);
+}
+
+.blora-model-library .model-library-team-header > .model-action-test:hover {
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-model-library .model-library-provider-title .model-provider-name {
+  max-width: min(100%, 16rem);
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blora-model-library .model-library-sticky-more-btn {
+  min-height: 2.25rem;
+  padding-inline: var(--blora-space-3);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-xs);
+  font-weight: 600;
+}
+
+.blora-model-library .model-library-sticky-more-btn:hover,
+.blora-model-library .model-library-sticky-more-btn.library-more-filters-active {
+  border-color: var(--blora-color-border-accent);
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 10%, var(--blora-color-surface-raised));
+  color: var(--blora-color-action-primary-default);
+}
+
+@media (max-width: 834px) {
+  .blora-page .sidebar {
+    width: 4.375rem;
+  }
+
+  .blora-page .sidebar-header {
+    padding: var(--blora-space-3);
+    justify-content: center;
+  }
+
+  .blora-page .sidebar-nav {
+    padding-inline: var(--blora-space-2);
+  }
+
+  .blora-page .nav-item {
+    justify-content: center;
+    padding-inline: var(--blora-space-2);
+  }
+
+  .blora-page .sidebar-footer {
+    padding-inline: var(--blora-space-2);
+    justify-content: center;
+  }
+
+  .blora-page .blora-language-select {
+    min-width: 0;
+    width: 2.25rem;
+    padding-inline: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .blora-model-library .model-library-key-selector-inner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .blora-model-library .model-library-key-chips {
+    width: 100%;
+  }
+}

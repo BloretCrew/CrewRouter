@@ -27,7 +27,7 @@
 
   function renderProviderNameTag(providerName) {
     const name = String(providerName ?? '').trim();
-    return name ? `<span class="model-provider-tag">${escapeHtml(name)}</span>` : '';
+    return name ? `<span class="model-provider-name">${escapeHtml(name)}</span>` : '';
   }
 
   /** 已信任的 HTML 片段（不会被二次 escape） */
