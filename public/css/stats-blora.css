@@ -20,6 +20,9 @@
 }
 
 .blora-stats-page .stats-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
   gap: var(--blora-space-3);
   padding: var(--blora-space-4);
   border: var(--stats-border-soft);
@@ -28,32 +31,87 @@
 }
 
 .blora-stats-page .stats-filter-group {
-  min-width: 10rem;
+  min-width: 0;
+  gap: var(--blora-space-1);
 }
 
 .blora-stats-page .stats-filter-label {
   color: var(--blora-color-text-subtle);
   font-family: var(--blora-font-body);
+  font-size: var(--blora-text-xs);
+  font-weight: 600;
 }
 
 .blora-stats-page .stats-filters .blora-select,
 .blora-stats-page .stats-filters .select {
+  width: 100%;
   min-height: 2.5rem;
 }
 
 .blora-stats-page .stats-overview-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--blora-space-3);
 }
 
 .blora-stats-page .stats-overview-card {
   min-height: 8.5rem;
+  padding: var(--blora-space-5);
   border: var(--stats-border-soft);
-  border-radius: var(--blora-radius-xl);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised) !important;
+  color: var(--blora-color-text-primary);
   box-shadow: var(--blora-shadow-1);
 }
 
+.blora-stats-page .stats-overview-card:nth-child(1) {
+  --stats-card-accent: var(--blora-color-info);
+}
+
+.blora-stats-page .stats-overview-card:nth-child(2) {
+  --stats-card-accent: var(--blora-color-support);
+}
+
+.blora-stats-page .stats-overview-card:nth-child(3) {
+  --stats-card-accent: var(--blora-color-success);
+}
+
+.blora-stats-page .stats-overview-card:nth-child(4) {
+  --stats-card-accent: var(--blora-color-warning);
+}
+
+.blora-stats-page .stats-overview-card:nth-child(5) {
+  --stats-card-accent: var(--blora-color-accent-secondary);
+}
+
+.blora-stats-page .stats-overview-card:nth-child(n + 6) {
+  --stats-card-accent: var(--blora-color-info);
+}
+
 .blora-stats-page .stats-overview-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--stats-card-accent) 22%, var(--blora-color-border-subtle));
   border-radius: var(--blora-radius-lg);
+  background: color-mix(in srgb, var(--stats-card-accent) 12%, var(--blora-color-surface-default));
+  color: var(--stats-card-accent);
+}
+
+.blora-stats-page .stats-overview-label {
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-sm);
+  opacity: 1;
+}
+
+.blora-stats-page .stats-overview-value {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-2xl);
+  font-weight: 600;
+}
+
+.blora-stats-page .stats-overview-sub {
+  color: var(--blora-color-text-subtle);
+  opacity: 1;
 }
 
 .blora-stats-page .content-section[style*="margin-top"] {
@@ -135,6 +193,10 @@
 
   .blora-stats-page .stats-overview-grid,
   .blora-stats-page .today-yesterday-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .blora-stats-page .stats-filters {
     grid-template-columns: 1fr;
   }
 
