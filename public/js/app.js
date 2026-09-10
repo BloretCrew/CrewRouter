@@ -11047,7 +11047,6 @@ ${extractorBody}
             ${subtitleHtml}
             ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
             ${isOwner ? '<span class="model-item-badge owner">' + t('我的') + '</span>' : ''}
-            ${isStarred ? '<span class="blora-badge" data-variant="warning">' + t('星标') + '</span>' : ''}
             ${isModelHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
           </div>
         </div>
