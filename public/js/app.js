@@ -6445,11 +6445,7 @@ class ConsoleApp {
   async loadDesktopSettingsEmbed() {
     const target = document.getElementById('desktopSettingsEmbed');
     const bridge = window.crewrouterDesktop;
-    if (!target) return;
-    if (!bridge?.getDesktopSettings) {
-      target.innerHTML = '<div class="settings-desktop-stack"><section class="settings-desktop-block"><h3>Desktop 设置</h3><p class="settings-muted">当前通过浏览器打开 CrewRouter。连接配置、桌面通知、本地 Server 和应用程序控制仅在 CrewRouter Desktop 中可用。</p><p class="settings-muted">请使用 CrewRouter Desktop 打开此实例，以管理 Desktop 设置。</p></section></div>';
-      return;
-    }
+    if (!target || !bridge?.getDesktopSettings) return;
     try {
       const data = await bridge.getDesktopSettings();
       const settings = data.settings || {};
