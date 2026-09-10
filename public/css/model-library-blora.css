@@ -77,6 +77,69 @@
   gap: var(--blora-space-2);
 }
 
+.blora-model-library .model-library-header-actions {
+  align-items: stretch;
+  flex-wrap: nowrap;
+}
+
+.blora-model-library .model-library-header-actions > .blora-button,
+.blora-model-library .model-library-header-actions .expand-dropdown > .blora-button {
+  min-height: 2.5rem;
+  padding-inline: var(--blora-space-4);
+  border-radius: var(--blora-radius-lg);
+  font-family: var(--blora-font-body);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+
+.blora-model-library .model-library-header-actions > .blora-button[data-variant="secondary"],
+.blora-model-library .model-library-header-actions .expand-dropdown > .blora-button[data-variant="secondary"] {
+  border-color: var(--blora-color-border-subtle);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-model-library .model-library-header-actions > .blora-button[data-variant="secondary"]:hover,
+.blora-model-library .model-library-header-actions .expand-dropdown > .blora-button[data-variant="secondary"]:hover {
+  border-color: var(--blora-color-border-accent);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-model-library .model-library-header-actions > .blora-button[data-variant="primary"] {
+  border-color: var(--blora-color-action-primary-default);
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+}
+
+.blora-model-library .model-library-header-actions > .blora-button[data-variant="primary"]:hover {
+  border-color: var(--blora-color-action-primary-hover);
+  background: var(--blora-color-action-primary-hover);
+}
+
+.blora-model-library .model-library-header-actions .expand-dropdown {
+  flex: 0 0 auto;
+}
+
+.blora-model-library .model-library-header-actions .expand-dropdown-menu {
+  border: var(--library-border);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-3);
+}
+
+.blora-model-library .model-library-header-actions .expand-dropdown-item {
+  min-height: 2.5rem;
+  padding: var(--blora-space-2) var(--blora-space-3);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-model-library .model-library-header-actions .expand-dropdown-item:hover {
+  background: var(--blora-color-surface-raised);
+}
+
 .blora-model-library .model-search-input,
 .blora-model-library .model-library-sticky-search .model-search-input {
   border-color: color-mix(in srgb, var(--border) 52%, transparent);
