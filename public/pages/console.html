@@ -23,7 +23,8 @@
   <script src="/js/blora-dialog.js?v=4"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css?v=25">
-  <link rel="stylesheet" href="/css/model-library-blora.css?v=1">
+  <link rel="stylesheet" href="/css/model-library-blora.css?v=2">
+  <link rel="stylesheet" href="/css/console-blora.css?v=1">
   <link rel="stylesheet" href="/css/badges-blora.css?v=1">
   <link rel="stylesheet" href="/css/progress-blora.css?v=1">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=1">
@@ -169,10 +170,10 @@
           <img id="userAvatar" src="" alt="头像" data-i18n-title="头像" class="avatar">
           <span id="username"></span>
         </div>
-        <button id="logoutBtn" class="blora-button" title="登出" data-i18n-title="登出" data-variant="secondary" data-size="icon">
-          <img src="https://img.bloret.net/SF/arrow.right.square?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.right.square">
+        <button id="logoutBtn" class="blora-button" title="登出" data-i18n-title="登出" data-variant="ghost" data-size="icon" aria-label="登出" data-i18n-aria-label="登出">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M21 3v18"/></svg>
         </button>
-        <blora-select id="langToggle" class="blora-input blora-language-select" data-size="sm" title="Language" style="width:auto;height:32px;padding:0 6px;font-size:12px;cursor:pointer;">
+        <blora-select id="langToggle" class="blora-input blora-language-select" data-size="sm" title="Language" aria-label="Language">
           <blora-option value="zh">中文</blora-option>
           <blora-option value="en">EN</blora-option>
         </blora-select>
