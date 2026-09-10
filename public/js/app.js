@@ -519,7 +519,6 @@ class ConsoleApp {
       case 'stats':
         await this.loadStats();
         await this.loadLiveActivity();
-        await this.loadTaskGroups();
         if (this._liveActivityTimer) clearInterval(this._liveActivityTimer);
         this._liveActivityTimer = setInterval(() => {
           this.loadLiveActivity();
@@ -3660,49 +3659,6 @@ class ConsoleApp {
 
   // ========== 统计信息 ==========
   _statsData = null;
-
-  // 任务是否包含可展开的子代理明细：有子代理会话，或拆分出多个子节点时展开
-  _taskTreeExpandable(tree) {
-    const children = (tree.children || []);
-    return children.some(c => c.subagent) || children.length > 1;
-  }
-
-  // 渲染任务树单棵；无子代理明细的任务渲染为不可展开的普通行
-  _renderTaskTree(tree) {
-    const totals = tree.totals || {};
-    const rootName = String(tree.taskKey || '');
-    const summary = `<span class="stats-insight-name" title="${escapeHtml(rootName)}">${escapeHtml(rootName.slice(0, 36))}</span>
-      <span>${Number(totals.requests || 0).toLocaleString()} ${t('请求')} · ${this._formatBigNumber(Number(totals.tokens || 0))} Token</span>
-      <span class="task-tree-label" title="${escapeHtml(String(tree.rootLabel || ''))}">${escapeHtml(String(tree.rootLabel || '').slice(0, 40))}</span>`;
-    if (!this._taskTreeExpandable(tree)) {
-      return `<div class="stats-insight-item" style="padding:12px 0;border-bottom:1px solid var(--border);">${summary}</div>`;
-    }
-    const childRows = (tree.children || []).map(c => `
-      <div class="task-tree-child">
-        <code title="${escapeHtml(c.sessionId)}">${escapeHtml(String(c.sessionId || '').slice(0, 24))}</code>
-        ${c.subagent ? `<span class="task-tree-subagent">${escapeHtml(c.subagent)}</span>` : `<span class="task-tree-subagent muted">${t('主任务会话')}</span>`}
-        <span>${Number(c.requestCount || 0).toLocaleString()} ${t('请求')}</span>
-        <span title="${Number(c.totalTokens || 0).toLocaleString()}">${this._formatBigNumber(Number(c.totalTokens || 0))} Token</span>
-      </div>`).join('');
-    return `<details class="task-tree-root stats-insight-item" style="padding:12px 0;border-bottom:1px solid var(--border);">
-      <summary>${summary}<span class="task-tree-chevron">▾</span></summary>
-      <div class="task-tree-children">${childRows}</div>
-    </details>`;
-  }
-
-  async loadTaskGroups() {
-    const section = document.getElementById('taskGroupsSection');
-    const list = document.getElementById('taskGroupsList');
-    if (!section || !list) return;
-    try {
-      const res = await fetch(`/api/user/task-tree?days=${encodeURIComponent(document.getElementById('statsTimeRange')?.value || '30')}`);
-      if (!res.ok) throw new Error(t('逻辑任务加载失败'));
-      const data = await res.json();
-      const trees = Array.isArray(data.taskTree) ? data.taskTree : [];
-      section.style.display = trees.length ? 'block' : 'none';
-      setHTML(list, trees.map(t => this._renderTaskTree(t)).join(''));
-    } catch (error) { section.style.display = 'none'; console.warn(error); }
-  }
 
   /** 实时活动看板：各客户端 hook 上报的最近事件（30s 轮询） */
   async loadLiveActivity() {
