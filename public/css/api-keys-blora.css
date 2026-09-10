@@ -22,6 +22,19 @@
   font-family: var(--blora-font-heading);
 }
 
+.blora-api-keys-page .section-header .blora-button[data-variant="primary"] {
+  min-height: 2.5rem;
+  padding-inline: var(--blora-space-4);
+  border-radius: var(--blora-radius-lg);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.blora-api-keys-page .section-header .blora-button svg {
+  flex: 0 0 auto;
+}
+
 .blora-api-keys-page .usage-overview {
   gap: var(--blora-space-3);
   margin-bottom: var(--blora-space-4);
@@ -60,39 +73,173 @@
 }
 
 .blora-api-keys-page .api-key-card {
+  min-height: 0;
+  padding: var(--blora-space-4);
   border: var(--key-border);
-  border-radius: var(--blora-radius-xl);
+  border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-default);
   box-shadow: var(--blora-shadow-1);
-  padding: var(--blora-space-5);
   transition: border-color var(--blora-duration-fast) var(--blora-easing-standard), box-shadow var(--blora-duration-base) var(--blora-easing-standard), transform var(--blora-duration-fast) var(--blora-easing-standard);
 }
 
 .blora-api-keys-page .api-key-card:hover {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  border-color: var(--blora-color-border-accent);
   box-shadow: var(--blora-shadow-2);
   transform: translateY(-1px);
 }
 
 .blora-api-keys-page .api-key-card::before {
+  top: var(--blora-space-4);
+  bottom: var(--blora-space-4);
+  width: 0.2rem;
   background: var(--blora-color-action-primary-default);
   border-radius: var(--blora-radius-pill);
 }
 
+.blora-api-keys-page .api-key-card.key-disabled {
+  opacity: 0.72;
+}
+
+.blora-api-keys-page .api-key-card.key-disabled::before {
+  background: var(--blora-color-danger, var(--blora-color-status-danger));
+}
+
 .blora-api-keys-page .api-key-header {
   gap: var(--blora-space-3);
-  margin-bottom: var(--blora-space-4);
+  margin-bottom: var(--blora-space-3);
+}
+
+.blora-api-keys-page .api-key-title {
+  gap: var(--blora-space-2);
+}
+
+.blora-api-keys-page .api-key-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border-radius: var(--blora-radius-md);
+  color: var(--blora-color-text-subtle);
+  font-size: 0.95rem;
+}
+
+.blora-api-keys-page .api-key-drag-handle:hover {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-api-keys-page .api-key-enable-toggle {
+  margin-top: 0.15rem;
+}
+
+.blora-api-keys-page .api-key-name-row {
+  gap: var(--blora-space-2);
 }
 
 .blora-api-keys-page .api-key-name {
   color: var(--blora-color-text-primary);
   font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-base);
+  font-weight: 600;
+}
+
+.blora-api-keys-page .api-key-chips {
+  gap: var(--blora-space-1);
+}
+
+.blora-api-keys-page .api-key-chip {
+  padding: 0.18rem var(--blora-space-2);
+  border-width: 1px;
+  font-size: var(--blora-text-xs);
+  line-height: 1.45;
+}
+
+.blora-api-keys-page .api-key-meta-divider {
+  background: var(--blora-color-border-subtle);
+}
+
+.blora-api-keys-page .api-key-subline {
+  gap: var(--blora-space-1) var(--blora-space-2);
+  margin-top: var(--blora-space-1);
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-api-keys-page .api-key-metric b {
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-api-keys-page .api-key-prefix {
+  min-height: 2.75rem;
+  margin-bottom: var(--blora-space-3);
+  padding: var(--blora-space-2) var(--blora-space-3);
+  border: var(--key-border-soft);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-api-keys-page .api-key-prefix code,
+.blora-api-keys-page .api-key-value {
+  color: var(--blora-color-text-emphasis);
+  font-size: var(--blora-text-xs);
+}
+
+.blora-api-keys-page .api-key-secret-actions {
+  gap: var(--blora-space-1);
+}
+
+.blora-api-keys-page .copy-btn {
+  min-height: 2rem;
+  padding: var(--blora-space-1) var(--blora-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--blora-radius-md);
+  color: var(--blora-color-text-muted);
+}
+
+.blora-api-keys-page .copy-btn:hover {
+  border-color: var(--blora-color-border-subtle);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-action-primary-default);
 }
 
 .blora-api-keys-page .api-key-footer {
   gap: var(--blora-space-3);
-  padding-top: var(--blora-space-4);
+  padding-top: var(--blora-space-3);
   border-top: var(--key-border-soft);
+}
+
+.blora-api-keys-page .api-key-route-pill-wrap {
+  margin-right: 0;
+}
+
+.blora-api-keys-page .api-key-route-pill {
+  height: 2.25rem;
+  padding: var(--blora-space-2) var(--blora-space-3);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-api-keys-page .api-key-route-pill:hover {
+  border-color: var(--blora-color-border-accent);
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 8%, var(--blora-color-surface-raised));
+}
+
+.blora-api-keys-page .api-key-route-pill.is-empty {
+  border-style: dashed;
+  background: transparent;
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-api-keys-page .api-key-route-pill-label {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-api-keys-page .api-key-route-pill-count {
+  border-color: color-mix(in srgb, var(--blora-color-action-primary-default) 35%, var(--blora-color-border-subtle));
+  color: var(--blora-color-action-primary-default);
 }
 
 .blora-api-keys-page .api-key-actions {
@@ -101,16 +248,17 @@
 
 .blora-api-keys-page .api-key-actions .blora-button {
   min-height: 2.25rem;
+  padding-inline: var(--blora-space-3);
+  border-radius: var(--blora-radius-lg);
   font-family: var(--blora-font-body);
 }
 
-.blora-api-keys-page .api-key-actions .btn {
-  flex: initial;
+.blora-api-keys-page .api-key-actions .blora-button[data-variant="primary"] {
+  box-shadow: none;
 }
 
 .blora-api-keys-page .api-key-more > .blora-button {
   min-width: 4.5rem;
-  border-radius: var(--blora-radius-lg);
 }
 
 .blora-api-keys-page .api-key-more-menu {
@@ -121,6 +269,7 @@
 }
 
 .blora-api-keys-page .api-key-more-item {
+  min-height: 2.25rem;
   border-radius: var(--blora-radius-md);
   color: var(--blora-color-text-emphasis);
 }
@@ -154,6 +303,7 @@
     align-items: stretch;
   }
 
+  .blora-api-keys-page .api-key-route-pill-wrap,
   .blora-api-keys-page .api-key-actions {
     width: 100%;
   }
