@@ -1,3 +1,218 @@
+/* Blora surface migration for the admin shell and statistics dashboard. */
+.blora-admin-page {
+  --background: var(--blora-color-surface-canvas);
+  --foreground: var(--blora-color-text-primary);
+  --card: var(--blora-color-surface-default);
+  --card-foreground: var(--blora-color-text-primary);
+  --popover: var(--blora-color-surface-default);
+  --popover-foreground: var(--blora-color-text-primary);
+  --secondary: var(--blora-color-surface-raised);
+  --secondary-foreground: var(--blora-color-text-secondary);
+  --muted: var(--blora-color-surface-sunken);
+  --muted-foreground: var(--blora-color-text-muted);
+  --accent: var(--blora-color-action-primary-soft);
+  --accent-foreground: var(--blora-color-action-primary-default);
+  --border: var(--blora-color-border-subtle);
+  --input: var(--blora-color-border-subtle);
+  --ring: var(--blora-color-action-primary-default);
+  --radius: var(--blora-radius-md);
+  --shadow-card: var(--blora-shadow-2);
+  background: var(--blora-color-surface-canvas);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-admin-page .mobile-topbar {
+  border-bottom: var(--blora-border-subtle);
+  background: color-mix(in srgb, var(--blora-color-surface-default) 92%, transparent);
+  box-shadow: var(--blora-shadow-1);
+  backdrop-filter: blur(16px);
+}
+
+.blora-admin-page .sidebar {
+  width: 15.5rem;
+  border-right: var(--blora-border-subtle);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-admin-page .sidebar-header {
+  min-height: 4.5rem;
+  padding: var(--blora-space-5) var(--blora-space-4);
+  border-bottom: var(--blora-border-subtle);
+}
+
+.blora-admin-page .sidebar-header h2 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-lg);
+  letter-spacing: -0.01em;
+}
+
+.blora-admin-page .sidebar-header > .badge {
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-pill);
+  background: var(--blora-color-action-primary-soft);
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-admin-page .sidebar-nav { padding: var(--blora-space-3) var(--blora-space-2); }
+.blora-admin-page .nav-section { margin-bottom: var(--blora-space-4); }
+.blora-admin-page .nav-section-title {
+  padding: var(--blora-space-2) var(--blora-space-3);
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-xs);
+  letter-spacing: 0.08em;
+}
+
+.blora-admin-page .nav-item {
+  min-height: 2.5rem;
+  margin: 2px 0;
+  padding: var(--blora-space-2) var(--blora-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--blora-radius-sm);
+  color: var(--blora-color-text-muted);
+  gap: var(--blora-space-3);
+  transition: background-color var(--blora-duration-fast) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard), color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-admin-page .nav-item:hover {
+  border-color: var(--blora-color-border-subtle);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-admin-page .nav-item.active {
+  border-color: color-mix(in srgb, var(--blora-color-action-primary-default) 20%, transparent);
+  background: var(--blora-color-action-primary-soft);
+  color: var(--blora-color-text-primary);
+  font-weight: 600;
+}
+
+.blora-admin-page .nav-item .sf-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-right: 0;
+  opacity: 0.72;
+  filter: none;
+}
+
+.blora-admin-page .nav-item.active .sf-icon,
+.blora-admin-page .nav-item:hover .sf-icon { opacity: 1; }
+
+.blora-admin-page .sidebar-footer {
+  min-height: 4.5rem;
+  padding: var(--blora-space-3) var(--blora-space-4);
+  border-top: var(--blora-border-subtle);
+  gap: var(--blora-space-2);
+}
+
+.blora-admin-page .user-info { min-width: 0; flex: 1; gap: var(--blora-space-2); }
+.blora-admin-page .user-info span { overflow: hidden; color: var(--blora-color-text-primary); font-size: var(--blora-text-sm); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.blora-admin-page #logoutBtn {
+  flex: 0 0 2.25rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-sm);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-secondary);
+  box-shadow: none;
+}
+
+.blora-admin-page #logoutBtn:hover {
+  border-color: var(--blora-color-action-primary-default);
+  background: var(--blora-color-action-primary-soft);
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-admin-page #logoutBtn .sf-icon { width: 1rem; height: 1rem; filter: none; }
+
+.blora-admin-page .main-content {
+  margin-left: 15.5rem;
+  padding: var(--blora-space-6) clamp(var(--blora-space-5), 4vw, var(--blora-space-9));
+  background: transparent;
+}
+
+.blora-admin-page .content-header {
+  min-height: 3rem;
+  margin-bottom: var(--blora-space-6);
+  padding-bottom: var(--blora-space-4);
+  border-bottom: var(--blora-border-subtle);
+}
+
+.blora-admin-page .content-header h1 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-2xl);
+  letter-spacing: -0.025em;
+}
+
+.blora-admin-page .theme-toggle .blora-language-select {
+  min-width: 4.5rem;
+  width: 4.5rem !important;
+  max-width: 4.5rem;
+  border-radius: var(--blora-radius-sm);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-admin-page .content-section {
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-admin-page .stats-overview-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--blora-space-3);
+}
+
+.blora-admin-page .stats-overview-card {
+  min-height: 8.5rem;
+  padding: var(--blora-space-5);
+  border: var(--admin-stats-border-soft);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised) !important;
+  color: var(--blora-color-text-primary);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-admin-page .stats-overview-card:nth-child(1) { --stats-card-accent: var(--blora-color-info); }
+.blora-admin-page .stats-overview-card:nth-child(2) { --stats-card-accent: var(--blora-color-support); }
+.blora-admin-page .stats-overview-card:nth-child(3) { --stats-card-accent: var(--blora-color-success); }
+.blora-admin-page .stats-overview-card:nth-child(4) { --stats-card-accent: var(--blora-color-warning); }
+.blora-admin-page .stats-overview-card:nth-child(5) { --stats-card-accent: var(--blora-color-accent-secondary); }
+.blora-admin-page .stats-overview-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid color-mix(in srgb, var(--stats-card-accent) 22%, var(--blora-color-border-subtle));
+  border-radius: var(--blora-radius-lg);
+  background: color-mix(in srgb, var(--stats-card-accent) 12%, var(--blora-color-surface-default));
+  color: var(--stats-card-accent);
+}
+.blora-admin-page .stats-overview-label { color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); opacity: 1; }
+.blora-admin-page .stats-overview-value { color: var(--blora-color-text-primary); font-family: var(--blora-font-heading); font-size: var(--blora-text-2xl); font-weight: 600; }
+.blora-admin-page .stats-overview-sub { color: var(--blora-color-text-subtle); opacity: 1; }
+
+@media (max-width: 834px) {
+  .blora-admin-page .sidebar { width: 4.375rem; }
+  .blora-admin-page .main-content { margin-left: 4.375rem; padding: var(--blora-space-5); }
+  .blora-admin-page .sidebar-header { padding: var(--blora-space-3); justify-content: center; }
+  .blora-admin-page .sidebar-nav { padding-inline: var(--blora-space-2); }
+  .blora-admin-page .nav-item { justify-content: center; padding-inline: var(--blora-space-2); }
+  .blora-admin-page .sidebar-footer { padding-inline: var(--blora-space-2); justify-content: center; }
+}
+
+@media (max-width: 640px) {
+  .blora-admin-page .main-content { margin-left: 0; padding: calc(4.25rem + var(--blora-space-3)) var(--blora-space-3) var(--blora-space-5); }
+  .blora-admin-page .content-header { align-items: flex-start; margin-bottom: var(--blora-space-4); }
+  .blora-admin-page .content-header h1 { font-size: var(--blora-text-xl); }
+  .blora-admin-page .content-section { padding: var(--blora-space-4); border-radius: var(--blora-radius-md); }
+  .blora-admin-page .stats-overview-grid { grid-template-columns: 1fr; }
+}
+
 /* Blora surface migration for the admin statistics dashboard. */
 .blora-admin-stats-page {
   --admin-stats-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
