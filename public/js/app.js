@@ -4347,7 +4347,7 @@ class ConsoleApp {
     const rowsHtml = results.map(r => {
       if (r.ok) {
         const providerLabel = r.provider
-          ? `${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}`
+          ? `${renderProviderNameTag(r.provider, { tag: false })}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}`
           : '';
         return `
           <div class="model-test-row">
@@ -4375,7 +4375,7 @@ class ConsoleApp {
       } else {
         const modelLabel = r.model || r.modelId || t('未知模型');
         const providerLabel = r.provider
-          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
+          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${renderProviderNameTag(r.provider, { tag: false })}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
           : '';
         const errorText = r.error || t('失败');
         return `
@@ -10860,10 +10860,13 @@ ${extractorBody}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
             <div style="flex:1;"></div>
-            <button type="button" class="blora-button model-action-test" data-variant="ghost" data-size="sm" onclick="event.stopPropagation();app.testTeamModels('${this._jsString(team.team_id)}')" title="${t('测试此 Team 下所有模型')}">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              测试全部
-            </button>
+            ${this._renderLibraryMoreMenu([
+              {
+                label: t('测试全部'),
+                icon: 'test',
+                onClick: `app.testTeamModels('${this._jsString(team.team_id)}')`
+              }
+            ])}
           </div>
 
           <div class="model-library-team-content">
@@ -10880,6 +10883,11 @@ ${extractorBody}
                   : (provider.models ? provider.models.length : 0)));
             const providerMoreItems = [
               {
+                label: t('测试'),
+                icon: 'test',
+                onClick: `app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')`
+              },
+              {
                 label: isProviderHidden ? t('取消隐藏') : t('隐藏此供应商'),
                 icon: isProviderHidden ? 'eye' : 'eye-off',
                 onClick: `app.hideLibraryProvider('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}', ${isProviderHidden ? 'false' : 'true'})`
@@ -10891,7 +10899,7 @@ ${extractorBody}
               <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
                 <div class="model-library-provider-title">
                   <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                  ${renderProviderNameTag(provider.provider_name)}
+                  ${renderProviderNameTag(provider.provider_name, { tag: false })}
                   ${this._renderProviderTestSummary(provider)}
                   ${(provider.tags || []).map(t =>
                     `<span class="model-item-badge" style="background:${safeColor(t.color)}18;color:${safeColor(t.color)};border:1px solid ${safeColor(t.color)}44;">${escapeHtml(t.name)}</span>`
@@ -10902,10 +10910,6 @@ ${extractorBody}
                 </div>
                 <div class="model-library-provider-actions">
                   <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="font-size:12px;color:var(--muted-foreground);"></span>
-                  <button type="button" class="blora-button model-action-test" data-variant="outline" data-size="sm" title="${t('测试此供应商下所有模型')}" onclick="event.stopPropagation();app.testProviderModels('${this._jsString(team.team_id)}', '${this._jsString(provider.provider_id)}')">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    测试
-                  </button>
                   <button type="button" class="blora-button model-action-icon" data-variant="ghost" data-size="icon" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   </button>
@@ -10958,7 +10962,7 @@ ${extractorBody}
     const onClick = options.onClick || `app.selectModel('${this._jsString(modelId)}')`;
     const providerTagHtml = options.showProvider === false
       ? ''
-      : renderProviderNameTag(model.provider_name || model.provider);
+      : renderProviderNameTag(model.provider_name || model.provider, { tag: true });
     const subtitleHtml = options.subtitle || '';
 
     const testOk = model.test_ok;
@@ -10977,6 +10981,11 @@ ${extractorBody}
     }
 
     const modelMoreItems = isKeyPicker ? [] : [
+      {
+        label: t('测试'),
+        icon: 'test',
+        onClick: `app.testModel('${this._jsString(modelId)}')`
+      },
       {
         label: isStarred ? t('取消星标') : t('星标此模型'),
         icon: isStarred ? 'star' : 'star-off',
@@ -11041,10 +11050,6 @@ ${extractorBody}
               ? `<button type="button" class="blora-button model-action-bound" data-variant="secondary" data-size="sm" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
               : '<button type="button" class="blora-button model-action-primary" data-variant="primary" data-size="sm">' + t('加入队列') + '</button>')
           : `
-             <button type="button" class="blora-button model-action-test" data-variant="outline" data-size="sm" onclick="event.stopPropagation();app.testModel('${this._jsString(modelId)}', this)" title="${t('测试模型连通性')}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              测试
-            </button>
             ${isOwner
               ? ''
               : isCurrent
@@ -11261,6 +11266,9 @@ ${extractorBody}
     }
     if (name === 'star' || name === 'star-off') {
       return `<svg width="14" height="14" viewBox="0 0 24 24" fill="${name === 'star' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+    }
+    if (name === 'test') {
+      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
     }
     return '';
   }

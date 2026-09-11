@@ -25,9 +25,11 @@
       .replace(/'/g, '&#39;');
   }
 
-  function renderProviderNameTag(providerName) {
+  function renderProviderNameTag(providerName, options = {}) {
     const name = String(providerName ?? '').trim();
-    return name ? `<span class="model-provider-name">${escapeHtml(name)}</span>` : '';
+    if (!name) return '';
+    const className = options.tag === true ? 'model-provider-name model-provider-tag' : 'model-provider-name';
+    return `<span class="${className}">${escapeHtml(name)}</span>`;
   }
 
   /** 已信任的 HTML 片段（不会被二次 escape） */

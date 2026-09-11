@@ -195,6 +195,38 @@
   white-space: nowrap;
 }
 
+.blora-model-library .model-library-item-name .model-provider-name {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  max-width: min(100%, 12rem);
+  padding: 0 var(--blora-space-2);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-pill);
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-xs);
+  font-weight: 600;
+}
+
+.blora-model-library .model-library-item-actions .model-action-test {
+  display: none;
+}
+
+.blora-model-library .model-library-team-header > .library-more-menu {
+  flex: 0 0 auto;
+}
+
+.blora-model-library .model-library-team-header > .library-more-menu .library-more-trigger {
+  min-width: auto;
+  height: 2.25rem;
+  padding-inline: var(--blora-space-3);
+}
+
+.blora-model-library .model-library-provider-actions > .model-action-test {
+  display: none;
+}
+
 .blora-model-library .model-library-sticky-more-btn {
   min-height: 2.25rem;
   padding-inline: var(--blora-space-3);
@@ -203,6 +235,23 @@
   color: var(--blora-color-text-primary);
   font-size: var(--blora-text-xs);
   font-weight: 600;
+  align-self: center;
+}
+
+.blora-model-library .model-library-sticky-inner {
+  align-items: center;
+}
+
+.blora-model-library .model-library-sticky-inner > .model-library-sticky-select,
+.blora-model-library .model-library-sticky-inner > .model-library-sticky-search,
+.blora-model-library .model-library-sticky-inner > .model-library-sticky-more-btn,
+.blora-model-library .model-library-sticky-inner > .model-library-sticky-key-wrap {
+  min-height: 2.25rem;
+}
+
+.blora-model-library .model-library-sticky-search {
+  display: flex;
+  align-items: center;
 }
 
 .blora-model-library .model-library-sticky-more-btn:hover,
@@ -342,8 +391,12 @@
 .blora-page .nav-item.active {
   border-color: color-mix(in srgb, var(--blora-color-action-primary-default) 20%, transparent);
   background: var(--blora-color-action-primary-soft);
-  color: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-primary);
   font-weight: 600;
+}
+
+.blora-page .nav-item.active .sf-icon {
+  color: var(--blora-color-action-primary-default);
 }
 
 .blora-page .nav-item .sf-icon { width: 1.125rem; height: 1.125rem; margin-right: 0; opacity: .72; filter: none; }
