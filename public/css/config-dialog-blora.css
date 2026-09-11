@@ -60,9 +60,11 @@
 }
 
 #configToolSelectModal .config-tool-option img,
-#ccSwitchSubmenuModal .config-tool-option img {
+#ccSwitchSubmenuModal .config-tool-option img,
+#ccSwitchSubmenuModal .modal-body .blora-button > img {
   width: 2rem;
   height: 2rem;
+  max-width: 2rem;
   flex: 0 0 2rem;
   object-fit: contain;
   border-radius: var(--blora-radius-md);
