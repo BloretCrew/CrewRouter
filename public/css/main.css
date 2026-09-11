@@ -4433,13 +4433,58 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+.model-test-row-error-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  max-width: min(52%, 360px);
+}
 .model-test-row-error {
+  min-width: 0;
   color: var(--destructive);
   max-width: 260px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 12px;
+}
+.model-test-row-error-toggle {
+  flex: 0 0 auto;
+  min-height: 1.75rem;
+  padding: 2px 7px;
+  color: var(--destructive);
+  font-size: 11px;
+}
+.model-test-row-error-toggle:hover {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+}
+.model-test-row-error-full {
+  flex: 1 1 100%;
+  min-width: 0;
+  color: var(--destructive);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.model-test-row.is-error-expanded {
+  align-items: flex-start;
+}
+.model-test-row.is-error-expanded .model-test-row-error-wrap {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.model-test-row.is-error-expanded .model-test-row-error {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .model-test-row-error-wrap {
+    max-width: 100%;
+  }
 }
 
 .model-test-summary {

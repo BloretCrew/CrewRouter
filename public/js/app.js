@@ -4301,6 +4301,18 @@ class ConsoleApp {
     this._renderTestResults([{ modelId, ...result }]);
   }
 
+  toggleModelTestError(buttonEl) {
+    const row = buttonEl?.closest?.('.model-test-row');
+    const fullError = row?.querySelector?.('.model-test-row-error-full');
+    if (!row || !fullError) return;
+
+    const expanded = buttonEl.getAttribute('aria-expanded') === 'true';
+    buttonEl.setAttribute('aria-expanded', String(!expanded));
+    buttonEl.textContent = expanded ? t('展开') : t('收起');
+    fullError.hidden = expanded;
+    row.classList.toggle('is-error-expanded', !expanded);
+  }
+
   _renderTestResults(results, totalCount) {
     const body = document.getElementById('modelTestModalBody');
     if (!body) return;
@@ -4365,11 +4377,16 @@ class ConsoleApp {
         const providerLabel = r.provider
           ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
           : '';
+        const errorText = r.error || t('失败');
         return `
           <div class="model-test-row">
             <div class="model-test-row-icon model-test-result-fail">&#10007;</div>
             <div class="model-test-row-model">${escapeHtml(modelLabel)}${providerLabel}</div>
-            <div class="model-test-row-error" title="${escapeHtml(r.error || '')}">${escapeHtml(r.error || t('失败'))}</div>
+            <div class="model-test-row-error-wrap">
+              <div class="model-test-row-error" title="${escapeHtml(errorText)}">${escapeHtml(errorText)}</div>
+              <button type="button" class="blora-button model-test-row-error-toggle" data-variant="ghost" data-size="sm" aria-expanded="false" onclick="app.toggleModelTestError(this)">${t('展开')}</button>
+              <div class="model-test-row-error-full" hidden>${escapeHtml(errorText)}</div>
+            </div>
           </div>
         `;
       }
