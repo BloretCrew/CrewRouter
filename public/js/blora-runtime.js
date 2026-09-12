@@ -43,6 +43,9 @@ function init(root = document) {
           delete: () => window.adminApp?.batchDeleteModels()
         };
         actions[value]?.();
+      } else if (dropdown.id === 'adminTestDropdown') {
+        if (value === 'filtered') window.adminApp?.testAllFilteredModels();
+        if (value === 'selected') window.adminApp?.testSelectedModels();
       }
     });
   });

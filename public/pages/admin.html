@@ -459,17 +459,11 @@
                   <blora-dropdown-item value="delete" id="batchDeleteModelsBtn">批量删除</blora-dropdown-item>
                 </blora-dropdown>
               </div>
-              <div class="model-test-batch-btn expand-dropdown" id="adminTestDropdown" style="display:inline-block;position:relative;">
-                <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.toggleTestDropdown(event)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span data-i18n="一键测试">
-                  一键测试
-                  </span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="m6 9 6 6 6-6"/></svg>
-                </button>
-                <div id="adminTestDropdownMenu" class="dropdown-menu" style="display:none;">
-                  <div class="dropdown-item" onclick="adminApp.testAllFilteredModels()"><span data-i18n="测试当前筛选模型">测试当前筛选模型</span></div>
-                  <div class="dropdown-item" onclick="adminApp.testSelectedModels()"><span data-i18n="测试选中模型">测试选中模型</span></div>
-                </div>
-              </div>
+              <blora-dropdown id="adminTestDropdown" align="start">
+                <button slot="trigger" type="button" class="blora-button" data-variant="outline" data-size="sm"><span data-i18n="一键测试">一键测试</span></button>
+                <blora-dropdown-item value="filtered" id="adminTestFilteredItem">测试当前筛选模型</blora-dropdown-item>
+                <blora-dropdown-item value="selected" id="adminTestSelectedItem">测试选中模型</blora-dropdown-item>
+              </blora-dropdown>
               <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.showBatchJsonPricesModal()"><span data-i18n="JSON 定价">JSON 定价</span></button>
               <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.exportModelsCsv()"><span data-i18n="导出 CSV">导出 CSV</span></button>
               <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.showSeriesIconsModal()"><span data-i18n="系列图标">系列图标</span></button>
