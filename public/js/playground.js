@@ -690,13 +690,13 @@ class PlaygroundApp {
         this.removeWelcome();
         const retryEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
         const retryContent = retryEl.querySelector('.pg-msg-content');
-        setHTML(retryContent, `<div class="pg-msg-error">${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        setHTML(retryContent, `<div class="pg-msg-error">${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}</div><button type="button" class="blora-button pg-retry-btn" data-variant="secondary" data-size="sm">${this.escapeHtml(t('重试'))}</button>`);
         retryContent.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send(retryPayload));
       } else {
         rollbackRequest();
         this.removeWelcome();
         const errorEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
-        setHTML(errorEl.querySelector('.pg-msg-content'), `<div class="pg-msg-error">${this.escapeHtml(error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        setHTML(errorEl.querySelector('.pg-msg-content'), `<div class="pg-msg-error">${this.escapeHtml(error.message || t('请求失败'))}</div><button type="button" class="blora-button pg-retry-btn" data-variant="secondary" data-size="sm">${this.escapeHtml(t('重试'))}</button>`);
         errorEl.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send(retryPayload));
       }
     } finally {
