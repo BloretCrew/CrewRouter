@@ -12472,17 +12472,8 @@ ${extractorBody}
     const wrap = document.getElementById('libraryStickyKeyWrap');
     const btn = document.getElementById('libraryStickyKeyBtn');
     if (!menu || !wrap || !btn || btn.disabled) return;
-
-    const isOpen = menu.style.display === 'block';
-    if (isOpen) {
-      this.closeLibraryStickyKeyMenu();
-      return;
-    }
-
     this._renderLibraryStickyKeyMenu();
-    menu.style.display = 'block';
-    wrap.classList.add('open');
-    btn.setAttribute('aria-expanded', 'true');
+    menu.open?.();
 
     if (this._libraryStickyKeyMenuCloser) {
       document.removeEventListener('click', this._libraryStickyKeyMenuCloser);
@@ -12500,7 +12491,7 @@ ${extractorBody}
     const menu = document.getElementById('libraryStickyKeyMenu');
     const wrap = document.getElementById('libraryStickyKeyWrap');
     const btn = document.getElementById('libraryStickyKeyBtn');
-    if (menu) menu.style.display = 'none';
+    if (menu) menu.close?.();
     if (wrap) wrap.classList.remove('open');
     if (btn) btn.setAttribute('aria-expanded', 'false');
     if (this._libraryStickyKeyMenuCloser) {
