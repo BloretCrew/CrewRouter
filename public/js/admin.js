@@ -10322,17 +10322,11 @@ async function(ctx) {
     const id = section === 'models' ? 'teamModelsSection' : 'teamMembersSection';
     const el = document.getElementById(id);
     if (!el) return;
-    const collapsed = el.classList.toggle('collapsed');
-    const header = el.querySelector('.team-detail-section-header');
-    if (header) header.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-
-    // 模型权限折叠时隐藏悬浮顶栏；展开后重新绑定哨兵
+    if (typeof el.toggleAttribute === 'function') el.toggleAttribute('open');
+    const collapsed = !el.hasAttribute('open');
     if (section === 'models') {
-      if (collapsed) {
-        this._syncAdminTeamModelsStickyVisibility(false);
-      } else {
-        this._initAdminTeamModelsStickyBar();
-      }
+      if (collapsed) this._syncAdminTeamModelsStickyVisibility(false);
+      else this._initAdminTeamModelsStickyBar();
     }
   }
 
@@ -10340,14 +10334,8 @@ async function(ctx) {
   _resetTeamDetailSectionCollapse() {
     const members = document.getElementById('teamMembersSection');
     const models = document.getElementById('teamModelsSection');
-    if (members) {
-      members.classList.add('collapsed');
-      members.querySelector('.team-detail-section-header')?.setAttribute('aria-expanded', 'false');
-    }
-    if (models) {
-      models.classList.remove('collapsed');
-      models.querySelector('.team-detail-section-header')?.setAttribute('aria-expanded', 'true');
-    }
+    members?.removeAttribute('open');
+    models?.setAttribute('open', '');
   }
 
   async showTeamDetail(teamId) {
