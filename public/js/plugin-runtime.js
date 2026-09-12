@@ -536,7 +536,7 @@
       `${esc((r.method || 'GET').toUpperCase())} <code style="font-family:monospace;">/api/plugins/${esc(pl.id)}${esc(r.path)}</code> <span style="color:var(--muted-foreground);font-size:11px;">(${esc(r.auth || 'user')})</span>`
     ).join('<br>');
     const cronHtml = (pl.cron || []).map(c =>
-      `<code style="font-family:monospace;">${esc(c.expr || '-')}</code> <span style="color:var(--muted-foreground);font-size:11px;">→ ${esc(c.handler || '-')}</span>`
+      `<code style="font-family:monospace;">${esc(c.expr || '-')}</code> <span style="color:var(--muted-foreground);font-size:11px;"><img class="sf-icon" src="https://img.bloret.net/SF/arrow.right?color=black" alt="" data-sf-name="arrow.right"> ${esc(c.handler || '-')}</span>`
     ).join('<br>');
     const themesHtml = (pl.themes || []).map(th => esc(th.name || th.id)).join('、');
     const cfgText = esc(JSON.stringify(pl.config || {}, null, 2));
