@@ -6954,7 +6954,7 @@ class ConsoleApp {
       const label = document.createElement('span');
       const refresh = document.createElement('button');
       refresh.type = 'button';
-      refresh.className = 'btn btn-secondary btn-sm';
+      refresh.className = 'blora-button'; refresh.dataset.variant = 'secondary'; refresh.dataset.size = 'sm';
       refresh.textContent = t('重新生成');
       refresh.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); this.generateSessionSummary(true); });
       const body = document.createElement('div');

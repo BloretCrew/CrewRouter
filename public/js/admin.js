@@ -3084,8 +3084,8 @@ class AdminApp {
 
     const tableBtn = document.getElementById('providerViewTableBtn');
     const cardBtn = document.getElementById('providerViewCardBtn');
-    if (tableBtn) tableBtn.className = this.providerViewMode === 'table' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
-    if (cardBtn) cardBtn.className = this.providerViewMode === 'card' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    if (tableBtn) tableBtn.className = this.providerViewMode === 'table' ? 'blora-button' : 'blora-button';
+    if (cardBtn) cardBtn.className = this.providerViewMode === 'card' ? 'blora-button' : 'blora-button';
 
     const paginationHtml = totalPages > 1
       ? this._renderPagination('provider', this.providerPage, totalPages, total)
@@ -5969,7 +5969,7 @@ async function(ctx) {
     const tabs = document.querySelectorAll('#fetchedModelsTabs button');
     tabs.forEach(tab => {
       const isActive = tab.dataset.filter === (this.fetchedModelsFilter || 'all');
-      tab.className = isActive ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+      tab.className = 'blora-button';
     });
   }
 
@@ -10402,10 +10402,10 @@ async function(ctx) {
       const btn = document.getElementById('setDefaultTeamBtn');
       if (team && team.is_default) {
         btn.textContent = t('取消默认');
-        btn.className = 'btn btn-sm btn-secondary';
+        btn.className = 'blora-button'; btn.dataset.variant = 'secondary'; btn.dataset.size = 'sm';
       } else {
         btn.textContent = t('设为默认');
-        btn.className = 'btn btn-sm btn-warning';
+        btn.className = 'blora-button'; btn.dataset.variant = 'warning'; btn.dataset.size = 'sm';
       }
     } catch (e) {
       console.error(t('更新默认按钮状态失败:'), e);
@@ -10760,7 +10760,7 @@ async function(ctx) {
           </div>
         </div>
         <div class="model-library-item-actions" style="margin-left:0;margin-top:10px;justify-content:flex-end;">
-          <button class="blora-button ${m.enabled ? 'btn-secondary' : 'btn-primary'}"
+          <button class="blora-button" data-variant="${m.enabled ? 'secondary' : 'primary'}"
             onclick="adminApp.toggleTeamModel(${teamId}, '${safeModelId}', ${!m.enabled})" data-variant="secondary" data-size="sm">
             ${m.enabled ? t('禁用') : t('启用')}
           </button>
