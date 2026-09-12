@@ -260,10 +260,10 @@
   function themeOptionsHtml(selectedId, includeFollowOption, followLabel) {
     const opts = [];
     if (includeFollowOption) {
-      opts.push(`<option value="" ${!selectedId ? 'selected' : ''}>${esc(t('内置默认主题'))}</option>`);
+      opts.push(`<blora-option value="" ${!selectedId ? 'selected' : ''}>${esc(t('内置默认主题'))}</blora-option>`);
     }
     for (const th of state.themes) {
-      opts.push(`<option value="${esc(th.id)}" ${selectedId === th.id ? 'selected' : ''}>${esc(t(th.name))}</option>`);
+      opts.push(`<blora-option value="${esc(th.id)}" ${selectedId === th.id ? 'selected' : ''}>${esc(t(th.name))}</blora-option>`);
     }
     return opts.join('');
   }
@@ -271,14 +271,14 @@
   function unavailableBadge(selectedId) {
     if (!selectedId || findTheme(selectedId)) return '';
     return `<span style="font-size:12px;color:var(--destructive);margin-left:8px;">${esc(t('该主题的插件已停用，当前显示为默认样式'))}
-      <button class="btn btn-ghost btn-sm" style="padding:2px 8px;" onclick="window.CrewThemes.resetStale()">${esc(t('重置'))}</button></span>`;
+      <button type="button" class="blora-button" data-variant="ghost" data-size="sm" style="padding:2px 8px;" onclick="window.CrewThemes.resetStale()">${esc(t('重置'))}</button></span>`;
   }
 
   function renderUserThemePicker(container) {
     if (!container) return;
     container.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <select id="pluginThemeSelect" class="select" style="min-width:220px;">${themeOptionsHtml(state.userThemeId, true)}</select>
+        <blora-select id="pluginThemeSelect" style="min-width:220px;">${themeOptionsHtml(state.userThemeId, true)}</blora-select>
         <span id="pluginThemeStatus" style="font-size:13px;color:var(--muted-foreground);"></span>
       </div>
       <div style="margin-top:6px;">${unavailableBadge(state.userThemeId)}</div>
@@ -307,7 +307,7 @@
     if (!container) return;
     container.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <select id="pluginDefaultThemeSelect" class="select" style="min-width:220px;">${themeOptionsHtml(state.defaultThemeId, true)}</select>
+        <blora-select id="pluginDefaultThemeSelect" style="min-width:220px;">${themeOptionsHtml(state.defaultThemeId, true)}</blora-select>
         <span id="pluginDefaultThemeStatus" style="font-size:13px;color:var(--muted-foreground);"></span>
       </div>
       <p style="margin:6px 0 0;font-size:12px;color:var(--muted-foreground);">${esc(t('对未自行选择主题的用户生效；用户可在控制台「用户设置 → 界面主题」中覆盖。'))}</p>
@@ -522,10 +522,10 @@
         </div>
         <div style="margin-top:10px;">${capsHtml}</div>
         <div class="mmut">
-          ${pl.storeUpdateAvailable && pl.storeSource ? `<button class="btn btn-ghost btn-sm" style="color:var(--primary);" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')">${esc(t('更新'))}</button>` : ''}
-          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
-          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--destructive);" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
+          ${pl.storeUpdateAvailable && pl.storeSource ? `<button type="button" class="blora-button" data-variant="ghost" data-size="sm" style="color:var(--primary);" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')">${esc(t('更新'))}</button>` : ''}
+          <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
+          <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
+          <button type="button" class="blora-button" data-variant="ghost" data-size="sm" style="color:var(--destructive);" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
         </div>
         ${detail}
       </div>`;
@@ -551,13 +551,13 @@
         <div class="msec">${esc(t('插件配置'))}(config)</div>
         <textarea data-plugin-cfg="${esc(pl.id)}" rows="5" style="width:100%;font-family:monospace;font-size:12px;background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:8px;padding:8px;">${cfgText}</textarea>
         <div style="margin-top:6px;display:flex;gap:8px;">
-          <button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
+          <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
           <div data-plugin-cfg-msg="${esc(pl.id)}" style="font-size:12px;align-self:center;"></div>
         </div>
         <div class="msec">${esc(t('插件数据'))}(plugin_data)</div>
         <div data-plugin-data="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p></div>
         ${pl.lastError ? `<div class="msec">${esc(t('最近错误'))}</div><div style="font-size:12px;color:var(--destructive);">⚠ ${esc(pl.lastError)}</div>
-          <div style="margin-top:4px;"><button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')">${esc(t('清除错误并重载'))}</button></div>` : ''}
+          <div style="margin-top:4px;"><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')">${esc(t('清除错误并重载'))}</button></div>` : ''}
       </div>`;
   }
 
@@ -599,16 +599,16 @@
           <h2>${esc(t('插件管理'))}</h2>
           <p style="font-size:13px;color:var(--muted-foreground);margin:0;">${esc(t('安装方法：将插件目录放入服务器 plugins/ 目录，重启服务后在此启用。'))}</p>
         </div>
-        <div class="mmut" style="margin-top:0;"><button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
+        <div class="mmut" style="margin-top:0;"><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
       </div>
       <div class="mstat-grid">${stats}</div>
       <div class="msearch">
         <input type="search" id="pluginSearchInput" class="input" style="flex:1;min-width:200px;" placeholder="${esc(t('搜索插件名称、ID、作者或描述'))}" value="${esc(manageState.search)}" oninput="window.__pluginRT.search(this.value)">
-        <select id="pluginSortSelect" class="select" onchange="window.__pluginRT.sort(this.value)">
-          <option value="id" ${manageState.sort === 'id' ? 'selected' : ''}>${esc(t('按名称排序'))}</option>
-          <option value="name" ${manageState.sort === 'name' ? 'selected' : ''}>${esc(t('按显示名排序'))}</option>
-          <option value="enabled" ${manageState.sort === 'enabled' ? 'selected' : ''}>${esc(t('按状态排序'))}</option>
-        </select>
+        <blora-select id="pluginSortSelect" onchange="window.__pluginRT.sort(this.value)">
+          <blora-option value="id" ${manageState.sort === 'id' ? 'selected' : ''}>${esc(t('按名称排序'))}</blora-option>
+          <blora-option value="name" ${manageState.sort === 'name' ? 'selected' : ''}>${esc(t('按显示名排序'))}</blora-option>
+          <blora-option value="enabled" ${manageState.sort === 'enabled' ? 'selected' : ''}>${esc(t('按状态排序'))}</blora-option>
+        </blora-select>
       </div>
       ${rows ? rows : `<p style="color:var(--muted-foreground);font-size:14px;">${q ? esc(t('未找到匹配插件')) : esc(t('暂无插件。将插件目录放入 plugins/ 后重启服务即可在此看到。'))}</p>`}
     `;
@@ -660,7 +660,7 @@
             <td style="font-family:monospace;">${esc(r.key)}</td>
             <td style="font-family:monospace;max-width:320px;">${esc(JSON.stringify(r.value))}</td>
             <td style="white-space:nowrap;">${esc(String(r.updatedAt || '').slice(0, 19).replace('T', ' '))}</td>
-            <td><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px;" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')">${esc(t('删除'))}</button></td>
+            <td><button type="button" class="blora-button" data-variant="ghost" data-size="sm" style="font-size:11px;padding:1px 8px;" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')">${esc(t('删除'))}</button></td>
           </tr>`).join('')}
         </table>`;
       } catch (e) {

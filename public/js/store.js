@@ -190,7 +190,7 @@
     var html = '';
     html += '<div class="store-toolbar">' +
       '<input type="search" id="storeSearch" placeholder="' + esc(t('搜索插件、作者、标签...')) + '" value="' + esc(q) + '">' +
-      '<select id="storeSort" class="blora-button" data-size="sm">' +
+      '<blora-select id="storeSort">' +
         '<blora-option value="updated"' + (sort === 'updated' || !sort ? ' selected' : '') + '>' + esc(t('最新更新')) + '</blora-option>' +
         '<blora-option value="rating"' + (sort === 'rating' ? ' selected' : '') + '>' + esc(t('评分最高')) + '</blora-option>' +
         '<blora-option value="installs"' + (sort === 'installs' ? ' selected' : '') + '>' + esc(t('安装最多')) + '</blora-option>' +
@@ -563,7 +563,7 @@
       api('/plugins?scope=admin' + (statusFilter && statusFilter !== 'all' ? '&status=' + encodeURIComponent(statusFilter) : '')).then(function (data) {
         var html = '<div class="store-detail__title" style="margin:16px 0;">' + esc(t('审核')) + '</div>';
         html += '<div class="store-toolbar">' +
-          '<select id="adminStatus" class="blora-button" data-size="sm">' +
+          '<blora-select id="adminStatus">' +
             '<blora-option value="pending"' + (statusFilter === 'pending' ? ' selected' : '') + '>' + esc(t('待审核')) + '</blora-option>' +
             '<blora-option value="approved"' + (statusFilter === 'approved' ? ' selected' : '') + '>' + esc(t('已上架')) + '</blora-option>' +
             '<blora-option value="rejected"' + (statusFilter === 'rejected' ? ' selected' : '') + '>' + esc(t('已拒绝')) + '</blora-option>' +
