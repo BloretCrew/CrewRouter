@@ -393,6 +393,9 @@ class ConsoleApp {
     });
 
     // 模型测试徽章悬停动态时间提示
+    document.getElementById('modelLibraryContent')?.addEventListener('blora-select', (e) => {
+      this._handleLibraryMoreMenuSelect(e);
+    });
     document.getElementById('modelLibraryContent')?.addEventListener('mouseover', (e) => {
       const badge = e.target.closest('.model-test-badge');
       if (!badge) return;
@@ -2385,7 +2388,7 @@ class ConsoleApp {
             ${renderProviderNameTag(provider.provider_name)}
             ${this._renderProviderTestSummary(provider)}
             ${(provider.tags || []).map(t =>
-              `<span class="model-item-badge" style="background:${safeColor(t.color)}18;color:${safeColor(t.color)};border:1px solid ${safeColor(t.color)}44;">${escapeHtml(t.name)}</span>`
+              `<span class="blora-badge model-item-badge" data-variant="neutral" style="--badge-accent:${safeColor(t.color)};">${escapeHtml(t.name)}</span>`
             ).join('')}
             ${isProviderDisabled ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>' : ''}
           </div>
@@ -4049,7 +4052,7 @@ class ConsoleApp {
   _renderProviderTestSummary(provider) {
     const summary = this._computeProviderTestSummary(provider);
     const formatted = this._formatProviderTestSummary(summary);
-    return `<span class="provider-test-summary ${formatted.className}" title="${escapeHtml(formatted.title)}">${escapeHtml(formatted.text)}</span>`;
+    return `<span class="blora-badge provider-test-summary ${formatted.className}" data-variant="${formatted.className === 'pass' ? 'success' : formatted.className === 'fail' ? 'danger' : formatted.className === 'mixed' ? 'warning' : 'neutral'}" title="${escapeHtml(formatted.title)}">${escapeHtml(formatted.text)}</span>`;
   }
 
   _refreshProviderTestSummary(team, provider) {
@@ -10853,7 +10856,7 @@ ${extractorBody}
                   ${renderProviderNameTag(provider.provider_name, { tag: false })}
                   ${this._renderProviderTestSummary(provider)}
                   ${(provider.tags || []).map(t =>
-                    `<span class="model-item-badge" style="background:${safeColor(t.color)}18;color:${safeColor(t.color)};border:1px solid ${safeColor(t.color)}44;">${escapeHtml(t.name)}</span>`
+                    `<span class="blora-badge model-item-badge" data-variant="neutral" style="--badge-accent:${safeColor(t.color)};">${escapeHtml(t.name)}</span>`
                   ).join('')}
                   ${this._renderLibraryMoveControls('provider', team.team_id, provider.provider_id)}
                   ${isProviderDisabled ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>' : ''}
@@ -11224,11 +11227,11 @@ ${extractorBody}
     return '';
   }
 
-  // 渲染模型库「⋯」更多菜单
+  // 渲染模型库「⋯」更多菜单；动作通过 blora-select 统一分发，避免自定义菜单项重渲染后丢失事件。
   _renderLibraryMoreMenu(items = []) {
     if (!items || !items.length) return '';
     let separator = false;
-    const menuItems = items.map(item => {
+    const menuItems = items.map((item, index) => {
       if (item.type === 'divider') {
         separator = true;
         return '';
@@ -11237,7 +11240,8 @@ ${extractorBody}
       const dangerAttr = item.className === 'danger' ? ' data-variant="danger"' : '';
       const separatorAttr = separator ? ' separator' : '';
       separator = false;
-      return `<blora-dropdown-item value="${escapeHtml(item.label)}"${separatorAttr}${dangerAttr} onclick="event.stopPropagation();${item.onClick}">${icon}<span>${escapeHtml(item.label)}</span></blora-dropdown-item>`;
+      const action = encodeURIComponent(String(item.onClick || ''));
+      return `<blora-dropdown-item value="library-action:${action}"${separatorAttr}${dangerAttr}>${icon}<span>${escapeHtml(item.label)}</span></blora-dropdown-item>`;
     }).join('');
 
     return `
@@ -11248,6 +11252,18 @@ ${extractorBody}
         </button>
         ${menuItems}
       </blora-dropdown>`;
+  }
+
+  _handleLibraryMoreMenuSelect(event) {
+    const value = event.detail?.value;
+    if (!value || !String(value).startsWith('library-action:')) return;
+    const action = decodeURIComponent(String(value).slice('library-action:'.length));
+    if (!/^app\.[A-Za-z_$][\w$]*\(.*\)$/.test(action)) return;
+    try {
+      Function(`"use strict"; ${action}`).call(window);
+    } catch (error) {
+      console.error(t('模型库菜单操作失败:'), error);
+    }
   }
 
   closeLibraryMoreMenus() {

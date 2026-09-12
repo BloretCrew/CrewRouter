@@ -385,8 +385,8 @@
 
 .blora-model-library .model-item-badge {
   border: var(--library-border);
-  background: var(--blora-color-surface-raised) !important;
-  color: var(--blora-color-text-subtle) !important;
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
 }
 
 .blora-model-library .team-badge,

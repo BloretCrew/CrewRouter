@@ -14,14 +14,36 @@
   color: var(--blora-color-text-subtle);
 }
 
-.blora-page :is(.status-pill-on, .admin-card-badge.green, .model-test-badge.pass) {
+.blora-page .model-item-badge[style*="--badge-accent"] {
+  background: color-mix(in srgb, var(--badge-accent) 12%, transparent);
+  color: var(--badge-accent);
+  border-color: color-mix(in srgb, var(--badge-accent) 28%, transparent);
+}
+
+.blora-page :is(.status-pill-on, .admin-card-badge.green, .model-test-badge.pass, .provider-test-summary.pass) {
   background: color-mix(in srgb, var(--blora-color-status-success) 12%, transparent);
   color: var(--blora-color-status-success);
 }
 
-.blora-page :is(.status-pill-off, .admin-card-badge.red, .model-test-badge.fail) {
+.blora-page .provider-test-summary[data-variant="danger"],
+.blora-page .provider-test-summary[data-variant="warning"],
+.blora-page .provider-test-summary[data-variant="neutral"] {
+  border: var(--blora-border-subtle);
+}
+
+.blora-page :is(.status-pill-off, .admin-card-badge.red, .model-test-badge.fail, .provider-test-summary.fail) {
   background: color-mix(in srgb, var(--blora-color-status-danger) 12%, transparent);
   color: var(--blora-color-status-danger);
+}
+
+.blora-page .provider-test-summary.mixed {
+  background: color-mix(in srgb, var(--blora-color-status-warning) 14%, transparent);
+  color: var(--blora-color-status-warning);
+}
+
+.blora-page .provider-test-summary.untested {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-subtle);
 }
 
 .blora-page :is(.status-badge, .badge-info) {
