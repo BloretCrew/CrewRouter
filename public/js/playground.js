@@ -1106,15 +1106,7 @@ class PlaygroundApp {
   }
 
   showToast(msg) {
-    const toast = document.createElement('div');
-    toast.className = 'pg-toast';
-    toast.textContent = msg;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('show'));
-    setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => toast.remove(), 300);
-    }, 1500);
+    window.CrewBlora?.message?.info?.(String(msg));
   }
 
   // ========== Utils ==========

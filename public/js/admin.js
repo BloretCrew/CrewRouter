@@ -2662,15 +2662,7 @@ class AdminApp {
 
   // 供应商管理
   showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = 'admin-toast admin-toast-' + type;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => { toast.classList.add('admin-toast-show'); });
-    setTimeout(() => {
-      toast.classList.remove('admin-toast-show');
-      setTimeout(() => toast.remove(), 300);
-    }, 2800);
+    window.CrewBlora?.message?.[type === 'error' ? 'error' : type === 'success' ? 'success' : 'info']?.(String(message));
   }
 
   toggleProviderMoreMenu(e) {
