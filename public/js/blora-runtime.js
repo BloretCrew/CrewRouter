@@ -25,6 +25,27 @@ function initForms(root = document) {
 function init(root = document) {
   initTables(root);
   initForms(root);
+  root.querySelectorAll?.('blora-dropdown').forEach((dropdown) => {
+    if (dropdown.dataset.runtimeBound) return;
+    dropdown.dataset.runtimeBound = 'true';
+    dropdown.addEventListener('blora-select', (event) => {
+      const value = event.detail?.value;
+      if (dropdown.id === 'batchDropdownMenu') {
+        const actions = {
+          enable: () => window.adminApp?.batchUpdateModels(true),
+          disable: () => window.adminApp?.batchUpdateModels(false),
+          'set-prices': () => window.adminApp?.showBatchSetPricesModal(),
+          'adjust-prices': () => window.adminApp?.showBatchAdjustPricesModal(),
+          'adjust-reference': () => window.adminApp?.showBatchAdjustByRefModal(),
+          'rate-limit': () => window.adminApp?.showBatchSetRateLimitModal(),
+          description: () => window.adminApp?.showBatchEditDescModal(),
+          series: () => window.adminApp?.showBatchSetSeriesModal(),
+          delete: () => window.adminApp?.batchDeleteModels()
+        };
+        actions[value]?.();
+      }
+    });
+  });
 }
 
 window.CrewBlora = Object.assign(window.CrewBlora || {}, {

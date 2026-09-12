@@ -446,20 +446,18 @@
                 <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.toggleBatchDropdown(event)"><span data-i18n="批量操作">
                   批量操作 </span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:4px;"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
-                <div class="dropdown-menu" id="batchDropdownMenu">
-                  <button class="dropdown-item" id="batchEnableModelsBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.batchUpdateModels(true)" type="button"><span data-i18n="启用所选">启用所选</span></button>
-                  <button class="dropdown-item" id="batchDisableModelsBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.batchUpdateModels(false)" type="button"><span data-i18n="禁用所选">禁用所选</span></button>
-                  <div class="dropdown-divider"></div>
-                  <button class="dropdown-item" id="batchSetPricesBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchSetPricesModal()" type="button"><span data-i18n="设置价格">设置价格</span></button>
-                  <button class="dropdown-item" id="batchAdjustPricesBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchAdjustPricesModal()" type="button"><span data-i18n="调整价格">调整价格</span></button>
-                  <button class="dropdown-item" id="batchAdjustByRefBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchAdjustByRefModal()" type="button"><span data-i18n="按参考价设置">按参考价设置</span></button>
-                  <div class="dropdown-divider"></div>
-                  <button class="dropdown-item" id="batchSetRateLimitBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchSetRateLimitModal()" type="button"><span data-i18n="设置速率限制">设置速率限制</span></button>
-                  <button class="dropdown-item" id="batchEditDescBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchEditDescModal()" type="button"><span data-i18n="修改说明">修改说明</span></button>
-                  <button class="dropdown-item" id="batchSetSeriesBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.showBatchSetSeriesModal()" type="button"><span data-i18n="设置系列">设置系列</span></button>
-                  <div class="dropdown-divider"></div>
-                  <button class="dropdown-item danger" id="batchDeleteModelsBtn" onclick="adminApp.toggleBatchDropdown(event);adminApp.batchDeleteModels()" type="button"><span data-i18n="批量删除">批量删除</span></button>
-                </div>
+                <blora-dropdown id="batchDropdownMenu" class="admin-action-dropdown-menu" align="start">
+                  <button slot="trigger" type="button" class="blora-button" data-variant="outline" data-size="sm"><span data-i18n="批量操作">批量操作</span></button>
+                  <blora-dropdown-item value="enable" id="batchEnableModelsBtn">启用所选</blora-dropdown-item>
+                  <blora-dropdown-item value="disable" id="batchDisableModelsBtn">禁用所选</blora-dropdown-item>
+                  <blora-dropdown-item value="set-prices" id="batchSetPricesBtn">设置价格</blora-dropdown-item>
+                  <blora-dropdown-item value="adjust-prices" id="batchAdjustPricesBtn">调整价格</blora-dropdown-item>
+                  <blora-dropdown-item value="adjust-reference" id="batchAdjustByRefBtn">按参考价设置</blora-dropdown-item>
+                  <blora-dropdown-item value="rate-limit" id="batchSetRateLimitBtn">设置速率限制</blora-dropdown-item>
+                  <blora-dropdown-item value="description" id="batchEditDescBtn">修改说明</blora-dropdown-item>
+                  <blora-dropdown-item value="series" id="batchSetSeriesBtn">设置系列</blora-dropdown-item>
+                  <blora-dropdown-item value="delete" id="batchDeleteModelsBtn">批量删除</blora-dropdown-item>
+                </blora-dropdown>
               </div>
               <div class="model-test-batch-btn expand-dropdown" id="adminTestDropdown" style="display:inline-block;position:relative;">
                 <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.toggleTestDropdown(event)">
