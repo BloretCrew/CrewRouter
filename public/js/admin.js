@@ -9596,8 +9596,8 @@ async function(ctx) {
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
           ${g.is_default
             ? '<button class="blora-button" disabled style="opacity:0.5;" data-variant="secondary" data-size="sm">' + t('✓ 默认') + '</button>'
-            : `<button class="blora-button" onclick="adminApp.setDefaultGroup(${g.id})" data-variant="secondary" data-size="sm">${t('设为默认')}</button>`}
-          <button class="blora-button" onclick="adminApp.showUserGroupDetail(${g.id})" data-variant="primary" data-size="sm">管理</button>
+            : `<button class="blora-button" onclick="adminApp.setDefaultGroup(${g.id})" data-variant="secondary" data-size="sm"><span>${t('设为默认')}</span></button>`}
+          <button class="blora-button" onclick="adminApp.showUserGroupDetail(${g.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </td>
       </tr>`).join('')}</tbody></table>
       ${pg.totalPages > 1 ? this._renderPagination('userGroup', pg.page, pg.totalPages, pg.total) : ''}`);

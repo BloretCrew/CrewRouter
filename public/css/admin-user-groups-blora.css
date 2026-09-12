@@ -45,6 +45,25 @@
   background: var(--blora-color-surface-default);
 }
 
+.blora-admin-user-groups-page .section-actions .blora-button,
+.blora-admin-user-groups-page .models-table td .blora-button {
+  min-height: 2.5rem;
+  padding-inline: var(--blora-space-4);
+  border-radius: var(--blora-radius-md);
+  font-family: var(--blora-font-body);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+}
+
+.blora-admin-user-groups-page .section-actions .blora-button svg,
+.blora-admin-user-groups-page .models-table td .blora-button svg {
+  flex: 0 0 auto;
+}
+
+.blora-admin-user-groups-page .models-table td:last-child {
+  white-space: nowrap;
+}
+
 .blora-admin-user-groups-page .models-table,
 .blora-admin-user-groups-page .users-table,
 .blora-admin-user-groups-page .rules-list {
