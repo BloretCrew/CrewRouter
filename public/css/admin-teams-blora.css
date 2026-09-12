@@ -29,6 +29,25 @@
   box-shadow: var(--blora-shadow-2);
 }
 
+.blora-admin-teams-page .section-actions .blora-button,
+.blora-admin-teams-page .team-card-footer .blora-button {
+  min-height: 2.5rem;
+  padding-inline: var(--blora-space-4);
+  border-radius: var(--blora-radius-md);
+  font-family: var(--blora-font-body);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+}
+
+.blora-admin-teams-page .section-actions .blora-button svg,
+.blora-admin-teams-page .team-card-footer .blora-button svg {
+  flex: 0 0 auto;
+}
+
+.blora-admin-teams-page .team-card-header > .blora-badge {
+  flex: 0 0 auto;
+}
+
 .blora-admin-teams-page .admin-filter-bar,
 .blora-admin-teams-page .model-filter-bar {
   gap: var(--blora-space-2);

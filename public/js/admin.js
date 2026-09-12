@@ -10240,12 +10240,12 @@ async function(ctx) {
       <div class="team-card" data-team-id="${team.id}">
         <div class="team-card-header">
           <h3>${escapeHtml(team.name)}${team.is_default ? ' <span class="blora-badge" data-variant="warning">' + t('默认') + '</span>' : ''}${team.is_frontier ? ' <span class="blora-badge" data-variant="info">' + t('前沿') + '</span>' : ''}${team.is_personal ? ' <span class="blora-badge" data-variant="primary">' + t('个人') + '</span>' : ''}</h3>
-          <span class="badge">${team.member_count} 成员</span>
+          <span class="blora-badge" data-variant="neutral">${team.member_count} ${t('成员')}</span>
         </div>
         <p class="team-description">${escapeHtml(team.description || t('暂无描述'))}</p>
         <div class="team-card-footer">
           <span class="text-muted">${new Date(team.created_at).toLocaleDateString()}</span>
-          <button class="blora-button" onclick="adminApp.showTeamDetail(${team.id})" data-variant="primary" data-size="sm">管理</button>
+          <button class="blora-button" onclick="adminApp.showTeamDetail(${team.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </div>
       </div>
     `;
@@ -10261,7 +10261,7 @@ async function(ctx) {
           <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
             <svg class="collapse-icon" style="transition:transform .2s;transform:rotate(${personalCollapsed ? '-90deg' : '0deg'});" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             个人 Team
-            <span class="badge">${personalTeams.length}</span>
+            <span class="blora-badge" data-variant="neutral">${personalTeams.length}</span>
           </h3>
           <span class="text-muted" style="font-size:12px;">${personalCollapsed ? t('点击展开') : t('点击折叠')}</span>
         </button>
