@@ -1336,7 +1336,7 @@ class PlaygroundApp {
       r.messages.forEach(msg => {
         if (msg.role === 'system') return;
         html += `<div class="pg-detail-msg ${msg.role}">`;
-        html += `<div class="pg-detail-msg-role">${msg.role === 'user' ? t('👤 用户') : t('🤖 助手')}</div>`;
+        html += `<div class="pg-detail-msg-role">${msg.role === 'user' ? `<img class="sf-icon" src="https://img.bloret.net/SF/person?color=black" alt="" data-sf-name="person"> ${t('用户')}` : `<img class="sf-icon" src="https://img.bloret.net/SF/sparkles?color=black" alt="" data-sf-name="sparkles"> ${t('助手')}`}</div>`;
         html += `<div class="pg-detail-msg-content">${this.escapeHtml(msg.content || '')}</div>`;
         html += '</div>';
       });
@@ -1345,7 +1345,7 @@ class PlaygroundApp {
     // Reasoning content
     if (r.reasoningContent) {
       html += '<div class="pg-detail-msg reasoning">';
-      html +=  + '<div class="pg-detail-msg-role">' + t('💭 思考过程') + '</div>';
+      html += '<div class="pg-detail-msg-role"><img class="sf-icon" src="https://img.bloret.net/SF/brain.head.profile?color=black" alt="" data-sf-name="brain.head.profile"> ' + t('思考过程') + '</div>';
       html += `<div class="pg-detail-msg-content">${this.escapeHtml(r.reasoningContent)}</div>`;
       html += '</div>';
     }

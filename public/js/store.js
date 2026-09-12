@@ -130,46 +130,22 @@
   }
 
   function starHtml(score) {
-    var cls = ['', 'store-stars'];
-    var html = '<span class="' + cls[1] + '">';
-    for (var i = 1; i <= 5; i++) {
-      var on = i <= score ? ' on' : '';
-      html += '<span class="star' + on + '">★</span>';
-    }
-    html += '</span>';
-    return html;
+    return `<blora-rate value="${Math.max(0, Math.min(5, Number(score) || 0))}" readonly label="${esc(t('评分'))}"></blora-rate>`;
   }
 
   function starPicker(initialScore, onPick) {
     var score = Number(initialScore) || 0;
-    var html = '<span class="store-stars" data-star-picker="1" data-value="' + score + '">';
-    for (var i = 1; i <= 5; i++) {
-      html += '<span class="star' + (i <= score ? ' on' : '') + '" data-star="' + i + '">★</span>';
-    }
-    html += '</span>';
-    return html;
+    return `<blora-rate value="${Math.max(0, Math.min(5, score))}" label="${esc(t('评分'))}" data-store-rate-picker="1"></blora-rate>`;
   }
 
   function pickerInit(container, onPick) {
-    var root = container.querySelector('[data-star-picker]');
+    var root = container.querySelector('blora-rate[data-store-rate-picker]');
     if (!root) return;
-    var starsEls = root.querySelectorAll('.star');
-    function highlight(n) {
-      starsEls.forEach(function (el) { el.classList.toggle('on', Number(el.dataset.star) <= n); });
-    }
-    starsEls.forEach(function (el) {
-      el.addEventListener('click', function () {
-        var n = Number(el.dataset.star);
-        highlight(n);
-        if (onPick) onPick(n);
-      });
-      el.addEventListener('mouseenter', function () { highlight(Number(el.dataset.star)); });
+    root.addEventListener('change', function () {
+      var value = Number(root.value || 0);
+      root.setAttribute('value', String(value));
+      if (onPick) onPick(value);
     });
-    root.addEventListener('mouseleave', function () {
-      var cur = root.dataset.value ? Number(root.dataset.value) : 0;
-      highlight(cur);
-    });
-    root.dataset.value = root.dataset.value || '0';
   }
 
   function tagChips(tags) {
