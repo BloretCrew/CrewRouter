@@ -100,6 +100,8 @@ function sfIcon(name, size, className) {
   return `<img src="https://img.bloret.net/SF/${name}?color=${color}" alt="" width="${size || 20}" height="${size || 20}" class="${cls}" data-sf-name="${name}" style="display:inline-block;vertical-align:middle;">`;
 }
 
+window.sfIcon = sfIcon;
+
 // Initialize theme manager
 document.addEventListener('DOMContentLoaded', () => {
   window.themeManager = new ThemeManager();

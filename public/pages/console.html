@@ -19,6 +19,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <script type="module" src="/blora/auto.js?v=2.0.8"></script>
+  <script type="module" src="/js/blora-runtime.js?v=1"></script>
   <script src="/js/blora-foundation.js?v=2.0.8"></script>
   <script src="/js/blora-dialog.js?v=4"></script>
   <link rel="stylesheet" href="/css/themes.css">
@@ -477,10 +478,10 @@
             </div>
           </div>
 
-          <div class="my-upstream-tabs" role="tablist">
-            <button type="button" class="my-upstream-tab active" data-variant="ghost" data-upstream-tab="providers" onclick="app.switchMyUpstreamTab('providers')"><span data-i18n="供应商">供应商</span></button>
-            <button type="button" class="my-upstream-tab" data-variant="ghost" data-upstream-tab="models" onclick="app.switchMyUpstreamTab('models')"><span data-i18n="模型">模型</span></button>
-          </div>
+          <blora-tabs class="my-upstream-tabs" value="providers">
+            <blora-tab class="my-upstream-tab" value="providers" selected><span data-i18n="供应商">供应商</span></blora-tab>
+            <blora-tab class="my-upstream-tab" value="models"><span data-i18n="模型">模型</span></blora-tab>
+          </blora-tabs>
           <p class="my-upstream-hint" id="myUpstreamHint"><span data-i18n="管理自有上游供应商；导入的模型会出现在「模型」页签，也可在模型库中绑定到 API Key。">管理自有上游供应商；导入的模型会出现在「模型」页签，也可在模型库中绑定到 API Key。</span></p>
 
           <div id="myUpstreamProvidersPane" class="my-upstream-pane">

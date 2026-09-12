@@ -33,42 +33,10 @@ const Dialog = (() => {
     content.style.margin = '0';
     dialog.dataset.legacyPrepared = 'true';
 
-    const applyShadowCompatibility = () => {
-      const shadow = dialog.shadowRoot;
-      if (!shadow) return;
-      const header = shadow.querySelector('.blora-dialog__header');
-      const footer = shadow.querySelector('.blora-dialog__footer');
-      const body = shadow.querySelector('.blora-dialog__body');
-      if (header) header.style.setProperty('display', 'none', 'important');
-      if (footer) footer.style.setProperty('display', 'none', 'important');
-      if (body) {
-        body.style.setProperty('display', 'block', 'important');
-        body.style.padding = '0';
-        body.style.background = 'transparent';
-      }
-      const panel = shadow.querySelector('.blora-dialog__panel');
-      if (panel) {
-        panel.style.setProperty('display', 'block', 'important');
-        panel.style.maxWidth = 'none';
-        panel.style.maxHeight = '100%';
-        panel.style.width = '100%';
-        panel.style.background = 'transparent';
-        panel.style.boxShadow = 'none';
-        panel.style.borderRadius = '0';
-        panel.style.overflow = 'visible';
-      }
-
-      const maxWidth = content.style.maxWidth;
-      const maxHeight = content.style.maxHeight;
-      if (maxWidth) dialog.style.setProperty('--blora-dialog-max-width', maxWidth);
-      if (maxHeight) {
-        const panel = shadow.querySelector('.blora-dialog__panel');
-        if (panel) panel.style.maxHeight = maxHeight;
-      }
-    };
-
-    if (dialog.shadowRoot) applyShadowCompatibility();
-    else customElements.whenDefined('blora-dialog').then(applyShadowCompatibility);
+    const maxWidth = content.style.maxWidth;
+    const maxHeight = content.style.maxHeight;
+    if (maxWidth) dialog.style.setProperty('--blora-dialog-max-width', maxWidth);
+    if (maxHeight) dialog.style.setProperty('--blora-dialog-max-height', maxHeight);
     return dialog;
   }
 

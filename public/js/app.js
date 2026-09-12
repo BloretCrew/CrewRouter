@@ -8614,8 +8614,11 @@ ${extractorBody}
     const next = tab === 'models' ? 'models' : 'providers';
     this._myUpstreamTab = next;
 
+    const tabStrip = document.querySelector('.my-upstream-tabs');
+    if (tabStrip && tabStrip.value !== next) tabStrip.value = next;
     document.querySelectorAll('.my-upstream-tab').forEach(el => {
-      el.classList.toggle('active', el.getAttribute('data-upstream-tab') === next);
+      el.classList.toggle('active', el.getAttribute('data-upstream-tab') === next || el.getAttribute('value') === next);
+      el.setAttribute('aria-selected', String(el.getAttribute('value') === next));
     });
 
     const providersPane = document.getElementById('myUpstreamProvidersPane');
