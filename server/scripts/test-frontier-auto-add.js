@@ -33,7 +33,7 @@ function createDb({ settingRows = [], frontierIds = [], insertCounts = [] } = {}
   assert.strictEqual(parseSettingBoolean(undefined), false);
 
   const missingSettingDb = createDb();
-  assert.strictEqual(await isAutoAddEnabled(missingSettingDb), false, '旧库缺少配置时必须默认关闭');
+  assert.strictEqual(await isAutoAddEnabled(missingSettingDb), true, '旧库缺少配置时默认自动加入前沿 Team');
 
   const disabledDb = createDb({ settingRows: [{ value: false }], frontierIds: [1] });
   assert.strictEqual(await addModelsToFrontierTeams(disabledDb, ['m1']), 0);
@@ -55,7 +55,7 @@ function createDb({ settingRows = [], frontierIds = [], insertCounts = [] } = {}
   assert.strictEqual((adminSource.match(/await addModelsToFrontierTeams\(/g) || []).length, 5, '所有自动入口应统一调用开关包装器');
 
   const initSource = fs.readFileSync(path.join(__dirname, 'init-db.js'), 'utf8');
-  assert.match(initSource, /VALUES \('autoAddNewModelsToFrontier', 'false'::jsonb\)[\s\S]*?ON CONFLICT \(key\) DO NOTHING/, '新库和旧库必须幂等初始化为 FALSE');
+  assert.match(initSource, /VALUES \('autoAddNewModelsToFrontier', 'true'::jsonb\)[\s\S]*?ON CONFLICT \(key\) DO NOTHING/, '新库和旧库必须幂等初始化为 TRUE');
 
   console.log('frontier auto-add setting and idempotent mapping contracts passed');
 })().catch(error => {

@@ -16,7 +16,8 @@ function parseSettingBoolean(value) {
 
 async function isAutoAddEnabled(db) {
   const result = await db.query('SELECT value FROM settings WHERE key = $1', [SETTING_KEY]);
-  return result.rows.length > 0 && parseSettingBoolean(result.rows[0].value);
+  // 新模型默认自动加入前沿 Team；已有设置仍可通过管理后台显式关闭。
+  return result.rows.length === 0 || parseSettingBoolean(result.rows[0].value);
 }
 
 async function addModelsToFrontierTeams(db, modelIds) {

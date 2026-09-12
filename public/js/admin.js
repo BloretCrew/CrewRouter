@@ -8519,7 +8519,7 @@ async function(ctx) {
       const sysUrlEl = document.getElementById('systemProxyUrl');
       if (sysUrlEl) sysUrlEl.value = settings['system_proxy_url'] || '';
 
-      // 新模型自动加入前沿 Team（默认关闭）
+      // 新模型自动加入前沿 Team（默认开启）
       const autoAddFrontierEl = document.getElementById('autoAddNewModelsToFrontier');
       if (autoAddFrontierEl) autoAddFrontierEl.checked = settings['autoAddNewModelsToFrontier'] === true;
 

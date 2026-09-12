@@ -782,7 +782,7 @@ async function initDatabase() {
     `);
     await client.query(
       `INSERT INTO settings (key, value)
-       VALUES ('autoAddNewModelsToFrontier', 'false'::jsonb)
+       VALUES ('autoAddNewModelsToFrontier', 'true'::jsonb)
        ON CONFLICT (key) DO NOTHING`
     );
     Logger.info('[数据库初始化] 表 settings 已就绪');
