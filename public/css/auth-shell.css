@@ -2,87 +2,119 @@
 .blora-page {
   min-width: 320px;
   min-height: 100vh;
+  margin: 0;
   color: var(--blora-color-text-primary);
   background: var(--blora-color-surface-canvas);
   font-family: var(--blora-font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 .login-container {
-  position: relative;
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  padding: clamp(1.5rem, 5vw, 4rem) 1rem;
-  background:
-    radial-gradient(circle at 12% 12%, color-mix(in srgb, var(--blora-color-action-primary-default) 14%, transparent), transparent 30%),
-    radial-gradient(circle at 88% 86%, color-mix(in srgb, var(--blora-color-action-secondary-default) 12%, transparent), transparent 32%),
-    var(--blora-color-surface-canvas);
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--blora-space-6);
+  box-sizing: border-box;
 }
 
-.login-bg { position: absolute; inset: 0; pointer-events: none; opacity: .42; }
-.login-bg .grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--blora-color-text-primary) 3%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--blora-color-text-primary) 3%, transparent) 1px, transparent 1px);
-  background-size: 2.5rem 2.5rem;
-  mask-image: linear-gradient(to bottom, black, transparent 75%);
-}
-
-.public-navbar { position: absolute; top: 1rem; right: 1rem; left: 1rem; z-index: 2; }
-.login-card {
-  position: relative;
-  z-index: 1;
-  width: min(100%, 31rem);
-  max-width: 31rem;
-  padding: clamp(1.5rem, 5vw, 2.5rem);
+.login-bg { display: none; }
+.login-card,
+.setup-card,
+.oc-card {
   background: var(--blora-color-surface-default);
   border: var(--blora-border-subtle);
   border-radius: var(--blora-radius-lg);
   box-shadow: var(--blora-shadow-2);
-  animation: auth-card-enter .55s var(--blora-easing-standard) both;
 }
 
-@keyframes auth-card-enter { from { opacity: 0; transform: translateY(.75rem); } to { opacity: 1; transform: translateY(0); } }
-.login-card .logo { margin: 0; text-align: center; }
-.login-card .logo > div { display: block; }
-.auth-card__logo { display: grid; width: 3.5rem; height: 3.5rem; margin: 0 auto 1.25rem; place-items: center; overflow: hidden; border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-lg); background: var(--blora-color-surface-default); box-shadow: var(--blora-shadow-primary); }
+.auth-card.login-card {
+  width: min(100%, 24rem);
+  max-width: 24rem;
+  padding: var(--blora-space-8);
+  animation: none;
+}
+
+.auth-card__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blora-space-2);
+  margin-bottom: var(--blora-space-5);
+  text-align: center;
+}
+.auth-card__logo {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: var(--blora-space-1);
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--blora-radius-sm);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-primary);
+}
 .auth-card__logo img { width: 100%; height: 100%; object-fit: cover; }
-.login-card .logo h1 { margin: 0; color: var(--blora-color-text-primary); font-family: var(--blora-font-heading); font-size: clamp(1.65rem, 4vw, 2rem); letter-spacing: -.03em; }
-.login-card .logo p { margin: .55rem 0 0; color: var(--blora-color-text-muted); }
-
-.auth-mode { display: grid; grid-template-columns: repeat(2, 1fr); gap: .25rem; margin: 2rem 0 1.5rem; padding: .25rem; border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-inset); }
-.auth-native-tab { border: 0; border-radius: var(--blora-radius-sm); padding: .7rem 1rem; color: var(--blora-color-text-muted); background: transparent; font: inherit; cursor: pointer; transition: color .2s ease, background .2s ease, box-shadow .2s ease; }
-.auth-native-tab[aria-selected="true"] { color: var(--blora-color-text-primary); background: var(--blora-color-surface-default); box-shadow: var(--blora-shadow-1); }
-.auth-native-tab:focus-visible { outline: var(--blora-focus-ring-width-strong) solid var(--blora-color-action-primary-default); outline-offset: 2px; }
-#loginPanel[hidden], #registerPanel[hidden] { display: none; }
-.auth-form-shell .divider { margin-bottom: 1.25rem; }
-.auth-form-shell .form-group { margin-block-end: 1rem; }
-.auth-form-shell .form-group label { display: block; margin-bottom: .45rem; color: var(--blora-color-text-secondary); font-size: var(--blora-text-sm); }
-.auth-form-shell .form-group small { display: block; margin-top: .4rem; color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
-.auth-form-shell .login-btn { width: 100%; justify-content: center; }
-.auth-register-form .login-btn { margin-top: .25rem; }
-.login-form .login-alt-actions, .login-form .login-oauth { margin-block-start: .75rem; }
-.login-form .login-oauth { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--blora-color-border-subtle); }
-.login-form .login-oauth .login-btn { min-width: 0; }
-.login-btn-feishu { background: var(--blora-color-surface-default); color: var(--blora-color-text-primary); border-color: var(--blora-color-border-subtle); box-shadow: var(--blora-shadow-1); }
-.login-btn-feishu:hover { background: var(--blora-color-surface-raised); color: var(--blora-color-text-primary); border-color: var(--blora-color-text-subtle); }
-.auth-error { display: none; width: 100%; margin-block-end: 1rem; }
-.auth-error.show { display: flex; }
-.login-footer { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--blora-color-border-subtle); text-align: center; }
-.login-footer p { margin: 0 0 .8rem; color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
-.login-footer .links { display: flex; justify-content: center; gap: 1.25rem; }
-.login-footer a { color: var(--blora-color-text-secondary); }
-
-@media (max-width: 34rem) {
-  .public-navbar { top: .5rem; right: .5rem; left: .5rem; }
-  .login-container { padding: 4.5rem 1rem 1.25rem; }
-  .login-card { padding: 1.25rem; }
-  .login-form .login-oauth { grid-template-columns: 1fr; }
+.auth-card__header h1 {
+  margin: 0;
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-2xl);
+  font-weight: 700;
+  line-height: 1.2;
 }
-@media (prefers-reduced-motion: reduce) { .login-card { animation: none; } }
+.auth-card__header p {
+  margin: 0;
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+}
+
+.auth-card .auth-mode { margin-bottom: 0; }
+.auth-native-tabs { display: flex; gap: var(--blora-space-2); margin-bottom: var(--blora-space-5); }
+.auth-native-tab {
+  flex: 1;
+  min-height: 2.5rem;
+  padding: .4em 1em;
+  color: var(--blora-color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--blora-radius-full);
+  cursor: pointer;
+  font: inherit;
+}
+.auth-native-tab[aria-selected="true"] {
+  color: var(--blora-color-text-on-accent);
+  background: var(--blora-color-action-primary-default);
+}
+.auth-native-tab:focus-visible {
+  outline: var(--blora-focus-ring-width-strong) solid var(--blora-color-action-primary-default);
+  outline-offset: 2px;
+}
+.auth-card [role="tabpanel"][hidden] { display: none; }
+.auth-card .blora-field { margin-bottom: var(--blora-space-4); }
+.auth-card .blora-button svg { width: 16px; height: 16px; flex: none; display: block; }
+.auth-actions { display: flex; flex-direction: column; gap: var(--blora-space-3); margin-top: var(--blora-space-2); }
+.auth-actions .blora-button { width: 100%; box-sizing: border-box; }
+.auth-card .blora-divider[data-variant="text"] { margin-block: var(--blora-space-5); }
+.auth-oauth { display: grid; grid-template-columns: 1fr 1fr; gap: var(--blora-space-3); }
+.auth-oauth > * { min-width: 0; }
+.auth-oauth .blora-button { width: 100%; box-sizing: border-box; }
+.auth-lang-select { width: auto; min-width: 5rem; }
+.auth-simple-link { margin: var(--blora-space-4) 0 0; text-align: center; font-size: var(--blora-text-xs); }
+.auth-simple-link a { color: var(--blora-color-text-muted); }
+.auth-card__footer { display: flex; align-items: center; justify-content: center; gap: var(--blora-space-2); margin-top: var(--blora-space-5); }
+.auth-card__footer .blora-button { color: var(--blora-color-text-muted); }
+.auth-error { display: none; width: 100%; margin-block-end: var(--blora-space-4); }
+.auth-error.show { display: flex; }
+.login-btn { width: 100%; justify-content: center; }
+.login-btn-feishu { color: var(--blora-color-text-primary); }
+.login-alt-actions { width: 100%; }
+.login-footer { display: none; }
+
+@media (max-width: 480px) {
+  .auth-card.login-card { padding: var(--blora-space-6); }
+  .auth-oauth { grid-template-columns: 1fr; }
+}
 
 .setup-container { width: min(100% - (2 * var(--blora-space-4)), 32rem); margin: auto; padding: var(--blora-space-9) 0; }
 .setup-header { margin-block-end: var(--blora-space-6); }
