@@ -295,12 +295,16 @@ class AdminApp {
 
   bindEvents() {
     // 导航点击
-    const navItems = document.querySelectorAll('.nav-item[data-page]');
+    const navItems = document.querySelectorAll('.nav-item[data-page], blora-sidebar-nav-link[value]');
     navItems.forEach(item => {
       item.addEventListener('click', () => {
-        const page = item.dataset.page;
-        this.navigateTo(page);
+        const page = item.dataset.page || item.getAttribute('value');
+        if (page) this.navigateTo(page);
       });
+    });
+    document.querySelector('blora-sidebar-nav')?.addEventListener('blora-change', (event) => {
+      const page = event.detail?.value;
+      if (page) this.navigateTo(page);
     });
 
     document.querySelectorAll('[data-admin-settings-category]').forEach(item => {
@@ -531,6 +535,8 @@ class AdminApp {
       item.classList.remove('active');
     });
     document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
+    const sidebarNav = document.querySelector('blora-sidebar-nav');
+    if (sidebarNav && sidebarNav.value !== page) sidebarNav.value = page;
 
     // 更新页面显示
     document.querySelectorAll('.page').forEach(p => {

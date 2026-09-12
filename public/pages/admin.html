@@ -95,68 +95,25 @@
       </div>
       
       <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-item" data-page="adminUsers" data-capability="multiUser">
-            <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.2" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="用户管理">用户管理</span></span>
-          </div>
-          <div class="nav-item" data-page="adminTeams" data-capability="teamAdmin">
-            <img src="https://img.bloret.net/SF/person.3?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.3" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="Team 管理">Team 管理</span></span>
-          </div>
-          <div class="nav-item" data-page="adminUserGroups" data-capability="teamMembers">
-            <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.2" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="用户组管理">用户组管理</span></span>
-          </div>
-          <div class="nav-item" data-page="adminModels">
-            <img src="https://img.bloret.net/SF/cpu?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="cpu" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="模型管理">模型管理</span></span>
-          </div>
-          <div class="nav-item" data-page="adminProviders">
-            <img src="https://img.bloret.net/SF/antenna.radiowaves.left.and.right?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="antenna.radiowaves.left.and.right" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="供应商管理">供应商管理</span></span>
-          </div>
-          <div class="nav-item active" data-page="adminStats" data-capability="adminStats">
-            <img src="https://img.bloret.net/SF/chart.bar?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="chart.bar" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="统计信息">统计信息</span></span>
-          </div>
-          <div class="nav-item" data-page="adminErrorLogs">
-            <img src="https://img.bloret.net/SF/exclamationmark.triangle?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="exclamationmark.triangle" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="调用错误">调用错误</span></span>
-          </div>
-          <div class="nav-item" data-page="adminAuditLogs" data-capability="teamAuditLogs">
-            <img src="https://img.bloret.net/SF/list.bullet.clipboard?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="list.bullet.clipboard" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="操作日志">操作日志</span></span>
-          </div>
-          <div class="nav-item" data-page="adminPrompts">
-            <img src="https://img.bloret.net/SF/text.quote?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="text.quote" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="提示词">提示词</span></span>
-          </div>
-          <div class="nav-item" data-page="adminPlugins">
-            <img src="https://img.bloret.net/SF/puzzlepiece.extension?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="puzzlepiece.extension" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="插件管理">插件管理</span></span>
-          </div>
-          <div class="nav-item" onclick="window.open('https://crewrouter.bloret.net/store', '_blank')">
-            <img src="https://img.bloret.net/SF/bag?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="bag" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="插件商店">插件商店</span></span>
-          </div>
-        </div>
-
-
-        <div class="nav-section">
-          <div class="nav-section-title"><span data-i18n="系统">系统</span></div>
-          <div class="nav-item" data-page="adminSettings">
-            <img src="https://img.bloret.net/SF/gearshape?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="gearshape" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="系统设置">系统设置</span></span>
-          </div>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-item" onclick="window.location.href='/console'">
-            <img src="https://img.bloret.net/SF/arrow.backward?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.backward" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="返回用户控制台">返回用户控制台</span></span>
-          </div>
-        </div>
+        <blora-sidebar-nav label="管理后台导航" value="adminStats">
+          <blora-sidebar-nav-group label="管理">
+            <blora-sidebar-nav-link label="用户管理" value="adminUsers" data-capability="multiUser"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="Team 管理" value="adminTeams" data-capability="teamAdmin"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="用户组管理" value="adminUserGroups" data-capability="teamMembers"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="模型管理" value="adminModels"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="供应商管理" value="adminProviders"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="统计信息" value="adminStats" current data-capability="adminStats"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="调用错误" value="adminErrorLogs"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="操作日志" value="adminAuditLogs" data-capability="teamAuditLogs"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="提示词" value="adminPrompts"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="插件管理" value="adminPlugins"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="插件商店" href="https://crewrouter.bloret.net/store"></blora-sidebar-nav-link>
+          </blora-sidebar-nav-group>
+          <blora-sidebar-nav-group label="系统">
+            <blora-sidebar-nav-link label="系统设置" value="adminSettings"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="返回用户控制台" href="/console"></blora-sidebar-nav-link>
+          </blora-sidebar-nav-group>
+        </blora-sidebar-nav>
       </nav>
 
       <div class="sidebar-footer">
