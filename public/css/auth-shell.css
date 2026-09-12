@@ -107,8 +107,12 @@
 .auth-error { display: none; width: 100%; margin-block-end: var(--blora-space-4); }
 .auth-error.show { display: flex; }
 .login-btn { width: 100%; justify-content: center; }
-.login-btn-feishu { color: var(--blora-color-text-primary); }
 .login-alt-actions { width: 100%; }
+.auth-oauth .login-oauth-item { min-width: 0; }
+.auth-oauth .blora-button { width: 100%; }
+.auth-2fa-form .auth-actions .blora-button { width: 100%; }
+.login-form .inline-loading { display: inline-flex; align-items: center; }
+
 .login-footer { display: none; }
 
 @media (max-width: 480px) {

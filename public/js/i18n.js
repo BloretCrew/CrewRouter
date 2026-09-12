@@ -104,12 +104,19 @@
       var el = document.getElementById(id);
       if (!el || el.dataset.i18nWired) return;
       el.dataset.i18nWired = '1';
-      el.value = I18N.current();
-      el.addEventListener('change', function () {
-        I18N.load(el.value);
-        var other = document.getElementById(id === 'langToggle' ? 'langToggleMobile' : 'langToggle');
-        if (other) other.value = el.value;
-      });
+      if (el.tagName === 'SELECT') {
+        el.value = I18N.current();
+        el.addEventListener('change', function () {
+          I18N.load(el.value);
+          var other = document.getElementById(id === 'langToggle' ? 'langToggleMobile' : 'langToggle');
+          if (other && other.tagName === 'SELECT') other.value = el.value;
+        });
+      } else {
+        el.addEventListener('blora-select', function (event) {
+          var value = event.detail && event.detail.value;
+          if (value) I18N.load(value);
+        });
+      }
     });
   }
   if (document.readyState === 'loading') {
