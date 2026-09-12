@@ -303,33 +303,21 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="添加供应商">
               添加供应商
             </span></button>
-            <div class="expand-dropdown" id="libraryMoreDropdown">
-              <button class="blora-button" onclick="app.toggleLibraryMoreDropdown(event)" title="更多操作" data-i18n-title="更多操作" data-variant="secondary" data-size="sm" type="button"><span data-i18n="更多">
-                更多
-                </span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="m6 9 6 6 6-6"/></svg>
-              </button>
-              <div id="libraryMoreDropdownMenu" class="expand-dropdown-menu library-more-dropdown-menu" style="display:none;">
-                <div class="expand-dropdown-item" onclick="app.expandAllTeams();app.closeLibraryMoreDropdown();"><span data-i18n="展开全部 Team">展开全部 Team</span></div>
-                <div class="expand-dropdown-item" onclick="app.collapseAllTeams();app.closeLibraryMoreDropdown();"><span data-i18n="折叠全部 Team">折叠全部 Team</span></div>
-                <div class="expand-dropdown-item" onclick="app.expandAllProviders();app.closeLibraryMoreDropdown();"><span data-i18n="展开全部 供应商">展开全部 供应商</span></div>
-                <div class="expand-dropdown-item" onclick="app.collapseAllProviders();app.closeLibraryMoreDropdown();"><span data-i18n="折叠全部 供应商">折叠全部 供应商</span></div>
-                <div class="expand-dropdown-divider"></div>
-                <div class="expand-dropdown-item" onclick="app.testAllModels();app.closeLibraryMoreDropdown();"><span data-i18n="测试全部模型">测试全部模型</span></div>
-                <div class="expand-dropdown-item" onclick="app.testAllCurrentTeamModels();app.closeLibraryMoreDropdown();"><span data-i18n="测试当前 Team">测试当前 Team</span></div>
-                <div class="expand-dropdown-item" onclick="app.testAllCurrentProviderModels();app.closeLibraryMoreDropdown();"><span data-i18n="测试当前供应商">测试当前供应商</span></div>
-                <div class="expand-dropdown-divider"></div>
-                <div class="expand-dropdown-item" id="pingAllLibProvidersBtn" onclick="app.pingAllLibraryProviders();app.closeLibraryMoreDropdown();"><span data-i18n="一键检测连通性">一键检测连通性</span></div>
-                <div class="expand-dropdown-divider"></div>
-                <div class="expand-dropdown-item" id="libraryShowHiddenBtn" onclick="app.toggleLibraryShowHidden();">
-                  <span class="library-show-hidden-text"><span data-i18n="显示已隐藏">显示已隐藏</span></span>
-                </div>
-                <div class="expand-dropdown-item" id="libraryClearHiddenBtn" onclick="app.clearLibraryHidden();" style="display:none;"><span data-i18n="清除隐藏">清除隐藏</span></div>
-                <div class="expand-dropdown-item" id="libraryReorderBtn" onclick="app.toggleLibraryReorderMode();">
-                  <span class="library-reorder-text"><span data-i18n="排序模式">排序模式</span></span>
-                </div>
-                <div class="expand-dropdown-item" id="libraryResetOrderBtn" onclick="app.resetLibraryOrder();" style="display:none;"><span data-i18n="重置排序">重置排序</span></div>
-              </div>
-            </div>
+            <blora-dropdown id="libraryMoreDropdown" align="start">
+              <button slot="trigger" class="blora-button" type="button" data-variant="secondary" data-size="sm"><span data-i18n="更多">更多</span></button>
+              <blora-dropdown-item value="expand-teams">展开全部 Team</blora-dropdown-item>
+              <blora-dropdown-item value="collapse-teams">折叠全部 Team</blora-dropdown-item>
+              <blora-dropdown-item value="expand-providers">展开全部供应商</blora-dropdown-item>
+              <blora-dropdown-item value="collapse-providers">折叠全部供应商</blora-dropdown-item>
+              <blora-dropdown-item value="test-all">测试全部模型</blora-dropdown-item>
+              <blora-dropdown-item value="test-team">测试当前 Team</blora-dropdown-item>
+              <blora-dropdown-item value="test-provider">测试当前供应商</blora-dropdown-item>
+              <blora-dropdown-item value="ping-providers">一键检测连通性</blora-dropdown-item>
+              <blora-dropdown-item value="hidden">显示已隐藏</blora-dropdown-item>
+              <blora-dropdown-item value="clear-hidden">清除隐藏</blora-dropdown-item>
+              <blora-dropdown-item value="reorder">排序模式</blora-dropdown-item>
+              <blora-dropdown-item value="reset-order">重置排序</blora-dropdown-item>
+            </blora-dropdown>
             <!-- 兼容旧脚本引用的隐藏挂点（不再单独展示） -->
             <div id="expandDropdown" style="display:none;">
               <div id="expandDropdownMenu" style="display:none;"></div>
