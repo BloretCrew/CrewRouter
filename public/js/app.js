@@ -2737,7 +2737,7 @@ class ConsoleApp {
         <span class="key-model-queue-order">${index + 1}</span>
         <span class="key-model-queue-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}${index === 0 ? ' <em class="key-model-queue-primary">' + t('首选') + '</em>' : ''}</span>
         <div class="key-model-queue-actions">
-          <button type="button" class="blora-button" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title="${t('移除')}" data-variant="ghost" data-size="sm">×</button>
+          <button type="button" class="blora-button" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title="${t('移除')}" aria-label="${t('移除')}" data-variant="ghost" data-size="icon"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
         </div>
       </div>`;
     }).join(''));
@@ -3553,7 +3553,7 @@ class ConsoleApp {
         [t('最近活动'), date(summary.last_activity), t('最后一次工作')],
       ];
       setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="project-work-stat"><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${sub}</small></div>`).join(''));
-      setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)}${t('次 ·')}${fmtTok(p.tokens)}${t('Token · 最近')}${date(p.last_activity)}</small></span><span class="project-work-arrow">→</span></button>`).join(''));
+      setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)}${t('次 ·')}${fmtTok(p.tokens)}${t('Token · 最近')}${date(p.last_activity)}</small></span><img class="project-work-arrow sf-icon" src="https://img.bloret.net/SF/arrow.right?color=black" alt="" data-sf-name="arrow.right"></button>`).join(''));
       setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)}${t(')" title="' + t('复制工作区路径') + '">')}${escapeHtml(p.workspace_path)}${'</button></div></div><div class="project-work-project-metrics"><div><span>' + t('请求')}</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmtTok(p.tokens)}${'</strong></div><div><span>' + t('活跃')}</span><strong>${fmt(p.active_days)}${t('天')}</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || t('未标记客户端')}</span><span>${money(p.cost)}${t('积分')}</span></div></article>`).join(''));
       if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('AI 请求'), data: (data.daily || []).map(r => r.requests), borderColor: readCssVar('--chart-6', '#0f766e'), backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: t('活跃项目'), data: (data.daily || []).map(r => r.projects), borderColor: 'var(--warning)', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
     } catch (error) {
@@ -6250,7 +6250,7 @@ class ConsoleApp {
       try {
         const msgs = typeof log.messages === 'string' ? JSON.parse(log.messages) : log.messages;
         const formatted = (Array.isArray(msgs) ? msgs : [msgs]).map(m => {
-          const role = m.role === 'system' ? '🔧 System' : m.role === 'user' ? '👤 User' : '🤖 Assistant';
+          const role = m.role === 'system' ? `${sfIcon('wrench', 14, 'message-role-icon')} System` : m.role === 'user' ? `${sfIcon('person', 14, 'message-role-icon')} User` : `${sfIcon('sparkles', 14, 'message-role-icon')} Assistant`;
           const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content, null, 2);
           return `<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--muted-foreground);margin-bottom:2px;">${role}</div><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;">${escapeHtml(content)}</pre></div>`;
         }).join('');

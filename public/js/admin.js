@@ -931,7 +931,7 @@ class AdminApp {
             <tr>
               <td><strong>${escapeHtml(user.username)}</strong></td>
               <td style="color:var(--muted-foreground);font-size:12px;">${escapeHtml(user.email) || '-'}</td>
-              <td>${user.email_verified ? '<span style="color:var(--status-success);font-size:12px;">' + t('✓ 已验证') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('✗ 未验证') + '</span>'}</td>
+              <td>${user.email_verified ? '<span class="status-with-icon"><img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle">' + t('已验证') + '</span>' : '<span class="status-with-icon"><img class="sf-icon" src="https://img.bloret.net/SF/xmark.circle?color=black" alt="" data-sf-name="xmark.circle">' + t('未验证') + '</span>'}</td>
               <td style="font-variant-numeric:tabular-nums;">${parseFloat(user.balance || 0).toFixed(0)}</td>
               <td>${user.is_admin ? '<span class="blora-badge" data-variant="info">' + t('管理员') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('普通用户') + '</span>'}</td>
               <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>

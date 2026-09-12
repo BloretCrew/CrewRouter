@@ -196,7 +196,7 @@
         '<blora-option value="installs"' + (sort === 'installs' ? ' selected' : '') + '>' + esc(t('安装最多')) + '</blora-option>' +
       '</blora-select>' +
       '<button type="button" class="blora-button" data-variant="primary" data-size="sm" id="storeSearchBtn">' + esc(t('搜索')) + '</button>' +
-      (tag ? '<button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-active-tag="' + esc(tag) + '">#' + esc(tag) + ' ×</button>' : '') +
+      (tag ? '<button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-active-tag="' + esc(tag) + '">#' + esc(tag) + ' <img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>' : '') +
     '</div>';
 
     if (!plugins.length) {
@@ -249,7 +249,7 @@
       var p = data.plugin;
       var html = '';
       if (p.myRating) {
-        html += '<div class="store-banner store-banner--ok">' + esc(t('我的评分：')) + ' ' + p.myRating.stars + '★</div>';
+        html += '<div class="store-banner store-banner--ok">' + esc(t('我的评分：')) + ' ' + starHtml(p.myRating.stars) + '</div>';
       }
       html += '<a class="store-back" href="/store">← ' + esc(t('返回商店')) + '</a>';
       var ratingLabel = p.ratingCount
@@ -359,7 +359,7 @@
       // 更新「我要评分」顶部我的评分
       if (data.myRating) {
         var banner = viewBox.querySelector('.store-banner--ok');
-        if (banner) banner.textContent = t('我的评分：') + ' ' + data.myRating.stars + '★';
+        if (banner) { banner.innerHTML = esc(t('我的评分：')) + ' ' + starHtml(data.myRating.stars); }
       }
     }).catch(function () {});
   }
