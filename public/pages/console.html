@@ -210,12 +210,11 @@
             <button type="button" id="libraryStickyMoreFiltersBtn" class="blora-button model-library-sticky-more-btn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选" data-variant="secondary" data-size="sm"><span data-i18n="更多筛选">
               更多筛选
             </span></button>
-            <div class="model-library-sticky-key-wrap expand-dropdown" id="libraryStickyKeyWrap" style="display:none;">
-              <button type="button" id="libraryStickyKeyBtn" class="model-library-sticky-key-btn" aria-haspopup="menu" aria-expanded="false" onclick="app.toggleLibraryStickyKeyOrBubble(event)">
+            <blora-dropdown class="model-library-sticky-key-wrap" id="libraryStickyKeyMenu" align="end" style="display:none;">
+              <button slot="trigger" type="button" id="libraryStickyKeyBtn" class="model-library-sticky-key-btn" aria-haspopup="menu">
                 <span class="sticky-key-name">API Key</span>
               </button>
-              <div id="libraryStickyKeyMenu" class="expand-dropdown-menu model-library-sticky-key-menu" role="menu" style="display:none;"></div>
-            </div>
+            </blora-dropdown>
           </div>
           <div id="libraryStickyAdvancedFilters" class="model-library-sticky-advanced" style="display:none;" aria-hidden="true">
             <blora-select id="libraryStickySeriesFilter" class="model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选">

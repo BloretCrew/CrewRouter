@@ -12447,29 +12447,22 @@ ${extractorBody}
   _renderLibraryStickyKeyMenu() {
     const menu = document.getElementById('libraryStickyKeyMenu');
     if (!menu) return;
-    const keys = this._libraryKeys || [];
-    const otherKeys = keys.filter(k => k.id !== this._librarySelectedKeyId);
-
+    const otherKeys = (this._libraryKeys || []).filter(k => k.id !== this._librarySelectedKeyId);
+    menu.querySelectorAll('blora-dropdown-item').forEach(item => item.remove());
     if (!otherKeys.length) {
-      setHTML(menu, `<div class="expand-dropdown-item" style="cursor:default;opacity:0.7;">${t('没有其他 Key')}</div>`);
+      const empty = document.createElement('blora-dropdown-item');
+      empty.setAttribute('disabled', '');
+      empty.textContent = t('没有其他 Key');
+      menu.appendChild(empty);
       return;
     }
-
-    setHTML(menu, otherKeys.map(key => {
-      const name = key.name || 'API Key';
-      const modelName = key.current_model_name || '';
-      const tags = key.tags || [];
-      return `
-        <div class="expand-dropdown-item" role="menuitem"
-             data-key-id="${key.id}"
-             onclick="app.selectLibraryKeyFromSticky(${key.id})"
-             title="${escapeHtml(name)}${modelName ? ' → ' + escapeHtml(modelName) : ''}">
-          <span class="sticky-menu-key-name">${escapeHtml(name)}</span>
-          ${tags.map(t => `<span class="key-tag-dot" style="background:${safeColor(t.color)};" title="${escapeHtml(t.name)}"></span>`).join('')}
-          ${modelName ? `<span class="sticky-menu-model-capsule">${escapeHtml(modelName)}</span>` : ''}
-        </div>
-      `;
-    }).join(''));
+    otherKeys.forEach(key => {
+      const item = document.createElement('blora-dropdown-item');
+      item.value = String(key.id);
+      item.textContent = key.name || 'API Key';
+      item.title = `${key.name || 'API Key'}${key.current_model_name ? ' → ' + key.current_model_name : ''}`;
+      menu.appendChild(item);
+    });
   }
 
   toggleLibraryStickyKeyMenu(event) {
