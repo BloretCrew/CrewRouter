@@ -819,7 +819,6 @@ class ConsoleApp {
       hasSchedule ? this._renderApiKeyChip(t('定时'), 'info') : ''
     ].filter(Boolean).join('');
 
-    const safeName = this._jsString(key.name || 'API Key');
     const displayName = key.name || 'API Key';
     const isOwner = key.is_owner !== false;
     const ownerName = key.owner?.username || '';
@@ -833,7 +832,7 @@ class ConsoleApp {
       { label: t('Fusion 配置'), onClick: `app.showKeyFusionConfig(${key.id})` },
       { label: t('选项'), onClick: `app.showKeyOptions(${key.id})` },
       { label: t('签名设置'), onClick: `app.showKeySignature(${key.id})` },
-      { label: t('用量详情'), onClick: `app.showKeyUsage(${key.id}, '${safeName}')` },
+      { label: t('用量详情'), onClick: `window.location.href='/usage?keyId=${encodeURIComponent(String(key.id))}'` },
       ...(isOwner ? [
         { label: t('成员管理'), onClick: `app.showKeyMembers(${key.id})` },
         ...(/^crewrouter$/i.test(String(key.name || '')) ? [] : [
@@ -3463,54 +3462,6 @@ class ConsoleApp {
     } catch (error) {
       console.error(t('保存定时配置失败:'), error);
       alert(t('保存失败'));
-    }
-  }
-
-  async showKeyUsage(keyId, keyName) {
-    document.getElementById('keyUsageTitle').textContent = `${keyName}${t('- 用量详情')}`;
-    const container = document.getElementById('keyUsageContent');
-    setHTML(container, pageLoadingHtml(t('加载中...'), { compact: true }));
-    this.showModal('keyUsageModal');
-
-    try {
-      const res = await fetch(`/api/user/api-keys/${keyId}/usage`);
-      if (!res.ok) { setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:20px;">' + t('加载失败') + '</p>'); return; }
-      const usage = await res.json();
-      if (!Array.isArray(usage) || usage.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('暂无使用记录') + '</p>');
-        return;
-      }
-
-      const byDate = {};
-      usage.forEach(u => {
-        if (!byDate[u.date]) byDate[u.date] = { tokens: 0, cost: 0, requests: 0, models: {} };
-        byDate[u.date].tokens += parseInt(u.tokens) || 0;
-        byDate[u.date].cost += parseFloat(u.cost) || 0;
-        byDate[u.date].requests += parseInt(u.requests) || 0;
-        const modelName = u.model_name || t('(已删除)');
-        byDate[u.date].models[modelName] = (byDate[u.date].models[modelName] || 0) + parseInt(u.requests);
-      });
-
-      setHTML(container, `
-        <table class="usage-detail-table">
-          <thead>
-            <tr><th>日期</th><th>请求数</th><th>Token</th><th>费用</th><th>模型分布</th></tr>
-          </thead>
-          <tbody>
-            ${Object.entries(byDate).map(([date, d]) => `
-              <tr>
-                <td>${new Date(date).toLocaleDateString('zh-CN')}</td>
-                <td>${d.requests}</td>
-                <td title="${d.tokens.toLocaleString()}">${this._formatBigNumber(d.tokens)}</td>
-                <td>${Number(d.cost).toFixed(4)}</td>
-                <td>${Object.entries(d.models).map(([m, c]) => `<span class="model-tag">${m} (${c})</span>`).join(' ')}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `);
-    } catch (error) {
-      setHTML(container, '<p style="color:var(--destructive);">' + t('加载失败') + '</p>');
     }
   }
 

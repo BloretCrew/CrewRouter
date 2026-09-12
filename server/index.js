@@ -2664,6 +2664,10 @@ app.get('/console', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'pages/console.html'));
 });
 
+app.get('/usage', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'pages/usage.html'));
+});
+
 app.get('/purchase', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'pages/purchase.html'));
 });
