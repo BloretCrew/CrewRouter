@@ -5042,8 +5042,11 @@ class ConsoleApp {
   }
 
   switchStatsTab(tab) {
+    const statsTabs = document.querySelector('.stats-tab-bar');
+    if (statsTabs && statsTabs.value !== tab) statsTabs.value = tab;
     document.querySelectorAll('.stats-tab-bar button, .stats-tab').forEach(btn => {
-      btn.classList.remove('active');
+      btn.classList.toggle('active', btn.getAttribute('value') === tab || btn.getAttribute('data-tab') === tab);
+      btn.setAttribute('aria-selected', String(btn.getAttribute('value') === tab || btn.getAttribute('data-tab') === tab));
     });
     document.querySelectorAll('.stats-tab-content').forEach(c => { c.style.display = 'none'; });
 
