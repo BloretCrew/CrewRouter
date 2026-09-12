@@ -4799,7 +4799,7 @@ class AdminApp {
     const lines = [];
 
     if (manualCount > 0) {
-      lines.push(`<span style="color:var(--success);">✓</span> ${t('手动代理:')} <b>${manualCount}${'</b>' + t('个')}`);
+      lines.push(`<img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle"> ${t('手动代理:')} <b>${manualCount}${'</b>' + t('个')}`);
     } else {
       lines.push(`${'<span style="color:var(--muted-foreground);">' + '-' + '</span>' + t('手动代理: 0 个')}`);
     }
@@ -4817,15 +4817,15 @@ class AdminApp {
         const data = await res.json();
         lines.pop();
         if (res.ok && data.count > 0) {
-          lines.push(`<span style="color:var(--success);">✓</span> ${t('订阅地址:')} <b>${data.count}${'</b>' + t('个代理可用')}`);
+          lines.push(`<img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle"> ${t('订阅地址:')} <b>${data.count}${'</b>' + t('个代理可用')}`);
         } else if (res.ok && data.count === 0) {
           lines.push(`${'<span style="color:var(--warning);">' + '⚠' + '</span>' + t('订阅地址: 返回内容中未找到有效代理')}`);
         } else {
-          lines.push(`${'<span style="color:var(--destructive);">' + '✗' + '</span>' + t('订阅地址:')}${data.error || t('请求失败')}`);
+          lines.push(`${'<img class="sf-icon" src="https://img.bloret.net/SF/xmark.circle?color=black" alt="" data-sf-name="xmark.circle">' + t('订阅地址:')}${data.error || t('请求失败')}`);
         }
       } catch (e) {
         lines.pop();
-        lines.push(`${'<span style="color:var(--destructive);">' + '✗' + '</span>' + t('订阅地址:')}${e.message}`);
+        lines.push(`${'<img class="sf-icon" src="https://img.bloret.net/SF/xmark.circle?color=black" alt="" data-sf-name="xmark.circle">' + t('订阅地址:')}${e.message}`);
       }
     } else {
       lines.push(`${'<span style="color:var(--muted-foreground);">' + '-' + '</span>' + t('订阅地址: 未配置')}`);
@@ -8259,7 +8259,7 @@ async function(ctx) {
       try {
         const msgs = typeof log.messages === 'string' ? JSON.parse(log.messages) : log.messages;
         const formatted = msgs.map(m => {
-          const role = m.role === 'system' ? '🔧 System' : m.role === 'user' ? '👤 User' : '🤖 Assistant';
+          const role = m.role === 'system' ? `${sfIcon('wrench', 14, 'message-role-icon')} System` : m.role === 'user' ? `${sfIcon('person', 14, 'message-role-icon')} User` : `${sfIcon('sparkles', 14, 'message-role-icon')} Assistant`;
           const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content, null, 2);
           return `<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--muted-foreground);margin-bottom:2px;">${role}</div><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;">${escapeHtml(content)}</pre></div>`;
         }).join('');
@@ -9578,7 +9578,7 @@ async function(ctx) {
         <td>${new Date(g.created_at).toLocaleDateString()}</td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
           ${g.is_default
-            ? '<button class="blora-button" disabled style="opacity:0.5;" data-variant="secondary" data-size="sm">' + t('✓ 默认') + '</button>'
+            ? '<button class="blora-button" disabled style="opacity:0.5;" data-variant="secondary" data-size="sm">' + t('默认') + '</button>'
             : `<button class="blora-button" onclick="adminApp.setDefaultGroup(${g.id})" data-variant="secondary" data-size="sm"><span>${t('设为默认')}</span></button>`}
           <button class="blora-button" onclick="adminApp.showUserGroupDetail(${g.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </td>
