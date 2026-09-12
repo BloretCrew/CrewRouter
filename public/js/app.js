@@ -616,9 +616,9 @@ class ConsoleApp {
       ];
       if (checklist) setHTML(checklist, steps.map((step, index) => `
         <button type="button" class="personal-checklist-item ${step.done ? 'is-done' : ''}" onclick="${step.action}">
-          <span class="personal-checklist-number">${step.done ? '✓' : index + 1}</span>
+          <span class="personal-checklist-number">${step.done ? sfIcon('checkmark.circle', 16, 'personal-checklist-sf-icon') : index + 1}</span>
           <span>${escapeHtml(step.label)}</span>
-          <span class="personal-checklist-arrow">${step.done ? t('已完成') : '→'}</span>
+          ${step.done ? `<span class="personal-checklist-arrow">${t('已完成')}</span>` : `<img class="personal-checklist-arrow sf-icon" src="https://img.bloret.net/SF/arrow.right?color=black" alt="" data-sf-name="arrow.right">`}
         </button>
       `).join(''));
     } catch (error) {
@@ -1569,7 +1569,7 @@ class ConsoleApp {
         const has = currentTagIds.has(Number(tag.id));
         return `<div class="api-key-tag-assign-item${has ? ' is-on' : ''}"
                      onclick="app.toggleTagInDropdown(${keyId},${tag.id})">
-          <span style="color:${escapeHtml(tag.color)};">${has ? '✓' : '○'}</span>
+          ${has ? sfIcon('checkmark.circle', 14, 'tag-state-icon') : sfIcon('circle', 14, 'tag-state-icon')}
           <span>${escapeHtml(tag.name)}</span>
         </div>`;
       }).join(''));
