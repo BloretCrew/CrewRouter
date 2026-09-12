@@ -68,7 +68,7 @@
   </script>
 </head>
 <body class="blora-page">
-  <div class="login-container">
+  <main class="login-container auth-page">
     <div class="login-bg">
       <div class="grid"></div>
     </div>
@@ -95,18 +95,22 @@
       </blora-navbar-tool>
     </blora-navbar>
 
-    <div class="login-card">
-      <div class="logo">
-        <div>
-          <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">
-          <h1>CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
-        </div>
-        <p><span data-i18n="统一 AI 模型接入平台">统一 AI 模型接入平台</span></p>
+    <section class="login-card auth-card" aria-labelledby="auth-title">
+      <header class="logo auth-card__header">
+        <span class="auth-card__logo" aria-hidden="true"><img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt=""></span>
+        <h1 id="auth-title">Bloret PassPort <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
+        <p>使用你的 Bloret 账户继续</p>
+      </header>
+
+      <div class="auth-mode" role="tablist" aria-label="登录或注册">
+        <button id="loginTab" class="auth-native-tab" type="button" role="tab" aria-controls="loginPanel" aria-selected="true">登录</button>
+        <button id="registerTab" class="auth-native-tab" type="button" role="tab" aria-controls="registerPanel" aria-selected="false">注册</button>
       </div>
 
-      <div class="login-form">
+      <div class="login-form auth-form-shell">
         <div id="errorMessage" class="blora-message auth-error" data-variant="danger" role="alert"></div>
-        <div class="divider"><span><span data-i18n="安全登录">安全登录</span></span></div>
+        <section id="loginPanel" role="tabpanel" aria-labelledby="loginTab">
+          <div class="divider"><span>登录</span></div>
 
         <!-- 登录表单 -->
         <form id="loginForm" method="post" action="/auth/login?format=html" accept-charset="UTF-8" onsubmit="if (typeof handleLogin === 'function' && typeof window.fetch === 'function') { handleLogin(event); return false; } return true;">
@@ -125,6 +129,18 @@
             <span id="submitText"><span data-i18n="登录">登录</span></span>
           </button>
         </form>
+        </section>
+
+        <section id="registerPanel" role="tabpanel" aria-labelledby="registerTab" hidden>
+          <div class="divider"><span>注册</span></div>
+          <form id="registerForm" class="auth-register-form" method="post" action="/auth/register" novalidate>
+            <div class="form-group"><label for="registerUsername">用户名</label><input type="text" id="registerUsername" name="username" placeholder="请输入用户名" class="input blora-input" pattern="[a-z0-9_]+" required autocomplete="username"><small>仅允许小写字母、数字和下划线</small></div>
+            <div class="form-group"><label for="registerEmail">邮箱</label><input type="email" id="registerEmail" name="email" placeholder="请输入邮箱" class="input blora-input" required autocomplete="email"></div>
+            <div class="form-group"><label for="registerPassword">密码</label><input type="password" id="registerPassword" name="password" placeholder="请输入密码（至少6位）" class="input blora-input" minlength="6" required autocomplete="new-password"></div>
+            <div class="form-group"><label for="registerConfirm">确认密码</label><input type="password" id="registerConfirm" name="confirmPassword" placeholder="请再次输入密码" class="input blora-input" minlength="6" required autocomplete="new-password"></div>
+            <button type="submit" class="login-btn blora-button" data-variant="primary">注册</button>
+          </form>
+        </section>
 
         <!-- PassKey 登录 -->
         <div id="passkeyLoginSection" class="login-alt-actions" style="display: none;">
@@ -163,7 +179,7 @@
 
       </div>
 
-      <div class="login-footer">
+      <div class="login-footer auth-card__footer">
         <p><span data-i18n="登录即表示您同意我们的服务条款">登录即表示您同意我们的服务条款</span></p>
         <div class="links">
           <a href="#"><span data-i18n="服务条款">服务条款</span></a>
@@ -171,9 +187,32 @@
           <a href="#"><span data-i18n="帮助中心">帮助中心</span></a>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 
+  <script>
+    document.querySelectorAll('[data-auth-mode]').forEach(function () {});
+    document.getElementById('loginTab')?.addEventListener('click', function () {
+      document.getElementById('loginTab').setAttribute('aria-selected', 'true');
+      document.getElementById('registerTab').setAttribute('aria-selected', 'false');
+      document.getElementById('loginPanel').hidden = false;
+      document.getElementById('registerPanel').hidden = true;
+    });
+    document.getElementById('registerTab')?.addEventListener('click', function () {
+      document.getElementById('loginTab').setAttribute('aria-selected', 'false');
+      document.getElementById('registerTab').setAttribute('aria-selected', 'true');
+      document.getElementById('loginPanel').hidden = true;
+      document.getElementById('registerPanel').hidden = false;
+    });
+    document.getElementById('registerForm')?.addEventListener('submit', function (event) {
+      if (this.registerPassword.value !== this.registerConfirm.value) {
+        event.preventDefault();
+        const error = document.getElementById('errorMessage');
+        error.textContent = '密码和确认密码不匹配！';
+        error.classList.add('show');
+      }
+    });
+  </script>
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/theme.js?v=2"></script>
   <script src="/js/edition-badge.js?v=1"></script>

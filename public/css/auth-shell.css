@@ -8,113 +8,92 @@
 }
 
 .login-container {
-  min-height: 100vh;
-  padding: var(--blora-space-6) var(--blora-space-4);
+  position: relative;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
+  overflow: hidden;
+  padding: clamp(1.5rem, 5vw, 4rem) 1rem;
+  background:
+    radial-gradient(circle at 12% 12%, color-mix(in srgb, var(--blora-color-action-primary-default) 14%, transparent), transparent 30%),
+    radial-gradient(circle at 88% 86%, color-mix(in srgb, var(--blora-color-action-secondary-default) 12%, transparent), transparent 32%),
+    var(--blora-color-surface-canvas);
 }
 
-.login-bg { opacity: .22; }
+.login-bg { position: absolute; inset: 0; pointer-events: none; opacity: .42; }
 .login-bg .grid {
+  position: absolute;
+  inset: 0;
   background-image:
-    linear-gradient(color-mix(in srgb, var(--blora-color-border-subtle) 55%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--blora-color-border-subtle) 55%, transparent) 1px, transparent 1px);
-  background-size: 3.75rem 3.75rem;
+    linear-gradient(color-mix(in srgb, var(--blora-color-text-primary) 3%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--blora-color-text-primary) 3%, transparent) 1px, transparent 1px);
+  background-size: 2.5rem 2.5rem;
+  mask-image: linear-gradient(to bottom, black, transparent 75%);
 }
 
-.login-card,
-.setup-card,
-.oc-card {
+.public-navbar { position: absolute; top: 1rem; right: 1rem; left: 1rem; z-index: 2; }
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 31rem);
+  max-width: 31rem;
+  padding: clamp(1.5rem, 5vw, 2.5rem);
   background: var(--blora-color-surface-default);
   border: var(--blora-border-subtle);
   border-radius: var(--blora-radius-lg);
   box-shadow: var(--blora-shadow-2);
+  animation: auth-card-enter .55s var(--blora-easing-standard) both;
 }
 
-.login-card {
-  width: min(100%, 28rem);
-  max-width: 28rem;
-  padding: var(--blora-space-8) var(--blora-space-6);
-  box-sizing: border-box;
-}
+@keyframes auth-card-enter { from { opacity: 0; transform: translateY(.75rem); } to { opacity: 1; transform: translateY(0); } }
+.login-card .logo { margin: 0; text-align: center; }
+.login-card .logo > div { display: block; }
+.auth-card__logo { display: grid; width: 3.5rem; height: 3.5rem; margin: 0 auto 1.25rem; place-items: center; overflow: hidden; border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-lg); background: var(--blora-color-surface-default); box-shadow: var(--blora-shadow-primary); }
+.auth-card__logo img { width: 100%; height: 100%; object-fit: cover; }
+.login-card .logo h1 { margin: 0; color: var(--blora-color-text-primary); font-family: var(--blora-font-heading); font-size: clamp(1.65rem, 4vw, 2rem); letter-spacing: -.03em; }
+.login-card .logo p { margin: .55rem 0 0; color: var(--blora-color-text-muted); }
 
-.login-card .logo > div {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--blora-space-3);
-}
-
-.login-card .logo img {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--blora-radius-md);
-}
-
-.login-card .logo h1 {
-  margin: 0;
-  font-size: var(--blora-text-xl);
-  letter-spacing: normal;
-  color: var(--blora-color-text-primary);
-}
-
-.login-card .login-form,
-.login-card .login-footer {
-  width: 100%;
-}
-
-.login-form .form-group {
-  margin-block-end: var(--blora-space-3);
-}
-
-.login-form .login-btn {
-  width: 100%;
-  justify-content: center;
-}
-
-.login-form .login-alt-actions,
-.login-form .login-oauth {
-  margin-block-start: var(--blora-space-3);
-}
-
-.login-footer {
-  border-top: 1px solid var(--blora-color-border-subtle);
-  padding-block-start: var(--blora-space-4);
-}
-.login-form .divider { color: var(--blora-color-text-muted); }
-.login-form .divider::before,
-.login-form .divider::after,
-.login-footer { border-color: var(--blora-color-border-subtle); }
-.login-form label,
-.login-footer a { color: var(--blora-color-text-secondary); }
-.login-btn { width: 100%; background: var(--blora-color-action-primary-default); color: var(--blora-color-text-on-accent); border-color: var(--blora-color-action-primary-default); box-shadow: var(--blora-shadow-primary); }
-.login-btn:hover { background: var(--blora-color-action-primary-hover); border-color: var(--blora-color-action-primary-hover); }
-.login-btn-secondary { background: var(--blora-color-surface-raised); color: var(--blora-color-text-primary); border-color: var(--blora-color-border-subtle); box-shadow: var(--blora-shadow-1); }
-.login-btn-secondary:hover { background: var(--blora-color-surface-sunken); border-color: var(--blora-color-text-subtle); }
-.auth-error { display: none; width: 100%; margin-block-end: var(--blora-space-4); }
+.auth-mode { display: grid; grid-template-columns: repeat(2, 1fr); gap: .25rem; margin: 2rem 0 1.5rem; padding: .25rem; border: 1px solid var(--blora-color-border-subtle); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-inset); }
+.auth-native-tab { border: 0; border-radius: var(--blora-radius-sm); padding: .7rem 1rem; color: var(--blora-color-text-muted); background: transparent; font: inherit; cursor: pointer; transition: color .2s ease, background .2s ease, box-shadow .2s ease; }
+.auth-native-tab[aria-selected="true"] { color: var(--blora-color-text-primary); background: var(--blora-color-surface-default); box-shadow: var(--blora-shadow-1); }
+.auth-native-tab:focus-visible { outline: var(--blora-focus-ring-width-strong) solid var(--blora-color-action-primary-default); outline-offset: 2px; }
+#loginPanel[hidden], #registerPanel[hidden] { display: none; }
+.auth-form-shell .divider { margin-bottom: 1.25rem; }
+.auth-form-shell .form-group { margin-block-end: 1rem; }
+.auth-form-shell .form-group label { display: block; margin-bottom: .45rem; color: var(--blora-color-text-secondary); font-size: var(--blora-text-sm); }
+.auth-form-shell .form-group small { display: block; margin-top: .4rem; color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
+.auth-form-shell .login-btn { width: 100%; justify-content: center; }
+.auth-register-form .login-btn { margin-top: .25rem; }
+.login-form .login-alt-actions, .login-form .login-oauth { margin-block-start: .75rem; }
+.login-form .login-oauth { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--blora-color-border-subtle); }
+.login-form .login-oauth .login-btn { min-width: 0; }
+.login-btn-feishu { background: var(--blora-color-surface-default); color: var(--blora-color-text-primary); border-color: var(--blora-color-border-subtle); box-shadow: var(--blora-shadow-1); }
+.login-btn-feishu:hover { background: var(--blora-color-surface-raised); color: var(--blora-color-text-primary); border-color: var(--blora-color-text-subtle); }
+.auth-error { display: none; width: 100%; margin-block-end: 1rem; }
 .auth-error.show { display: flex; }
+.login-footer { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--blora-color-border-subtle); text-align: center; }
+.login-footer p { margin: 0 0 .8rem; color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
+.login-footer .links { display: flex; justify-content: center; gap: 1.25rem; }
+.login-footer a { color: var(--blora-color-text-secondary); }
+
+@media (max-width: 34rem) {
+  .public-navbar { top: .5rem; right: .5rem; left: .5rem; }
+  .login-container { padding: 4.5rem 1rem 1.25rem; }
+  .login-card { padding: 1.25rem; }
+  .login-form .login-oauth { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .login-card { animation: none; } }
 
 .setup-container { width: min(100% - (2 * var(--blora-space-4)), 32rem); margin: auto; padding: var(--blora-space-9) 0; }
 .setup-header { margin-block-end: var(--blora-space-6); }
-.setup-header p,
-.setup-card .step-desc,
-.setup-loading,
-.setup-success p { color: var(--blora-color-text-muted); }
+.setup-header p, .setup-card .step-desc, .setup-loading, .setup-success p { color: var(--blora-color-text-muted); }
 .setup-card { padding: var(--blora-space-6); margin-block-end: var(--blora-space-4); }
 .setup-form { gap: var(--blora-space-4); }
 .setup-form input { width: 100%; }
 .setup-actions { gap: var(--blora-space-3); }
 .setup-error { color: var(--blora-color-status-danger); }
-
 .oc-card { box-shadow: var(--blora-shadow-2); }
-
-@media (max-width: 480px) {
-  .login-container { padding: var(--blora-space-4); }
-  .login-card { padding: var(--blora-space-6) var(--blora-space-4); }
-  .setup-container { padding-block: var(--blora-space-6); }
-  .setup-card { padding: var(--blora-space-4); }
-}
-
+@media (max-width: 480px) { .setup-container { padding-block: var(--blora-space-6); } .setup-card { padding: var(--blora-space-4); } }
 .setup-choice-list { display: grid; gap: var(--blora-space-3); }
 .step-warning { color: var(--blora-color-status-danger); font-weight: 600; }
 .setup-success h2 { color: var(--blora-color-status-success); }
