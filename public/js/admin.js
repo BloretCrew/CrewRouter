@@ -4751,7 +4751,7 @@ class AdminApp {
       }
       urlInput.value = '';
       this.renderGlobalProxyPoolList();
-      alert(`${t('✅ 成功导入')}${added}${t('个代理')}`);
+      alert(`${t('成功导入')}${added}${t('个代理')}`);
     } catch (err) {
       alert(t('导入失败: ') + err.message);
     }
@@ -4776,7 +4776,7 @@ class AdminApp {
     }
     input.value = '';
     this.renderGlobalProxyPoolList();
-    alert(`${t('✅ 成功添加')}${added}${t('个代理')}`);
+    alert(`${t('成功添加')}${added}${t('个代理')}`);
   }
 
   // 删除全局代理
@@ -4840,7 +4840,7 @@ class AdminApp {
       const res = await fetch(`/api/admin/providers/${providerId}/refresh-key`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        alert(t('✅ 密钥刷新成功') + (data.expiresAt ? '\n' + t('过期时间: ') + new Date(data.expiresAt).toLocaleString('zh-CN') : ''));
+        alert(t('密钥刷新成功') + (data.expiresAt ? '\n' + t('过期时间: ') + new Date(data.expiresAt).toLocaleString('zh-CN') : ''));
         this.loadProviders();
       } else {
         const errMsg = data.error || t('未知错误');
@@ -4848,7 +4848,7 @@ class AdminApp {
         this._showScriptErrorDialog(providerId, errMsg);
       }
     } catch (error) {
-      alert(t('❌ 请求失败: ') + error.message);
+      alert(t('请求失败: ') + error.message);
       console.error(t('[密钥刷新请求失败]'), providerId, error);
     }
   }
@@ -5026,7 +5026,7 @@ class AdminApp {
     const content = `
       <div style="max-height:60vh;overflow-y:auto;">
         <div style="background:var(--destructive-bg,rgba(239,68,68,0.08));border:1px solid var(--destructive,var(--danger));border-radius:8px;padding:12px;margin-bottom:12px;">
-          <div style="font-weight:600;color:var(--destructive,var(--danger));margin-bottom:8px;">❌ 密钥刷新失败</div>
+          <div class="blora-message" data-variant="danger" style="margin-bottom:8px;">${t('密钥刷新失败')}</div>
           <pre style="white-space:pre-wrap;word-break:break-all;font-size:13px;margin:0;max-height:200px;overflow-y:auto;color:var(--foreground);">${escHtml(errMsg)}</pre>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:12px;border:1px solid var(--border);border-radius:8px;background:var(--card);">
@@ -5038,13 +5038,13 @@ class AdminApp {
         </div>
         <div id="aiAnalysisSection" style="display:none;">
           <div style="font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-            <span>🤖</span> AI 分析结果
+            <span><img class="sf-icon" src="https://img.bloret.net/SF/sparkles?color=black" alt="" data-sf-name="sparkles"></span> AI 分析结果
           </div>
           <div id="aiAnalysisContent" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto;"></div>
         </div>
         <div id="aiFixSection" style="display:none;margin-top:12px;">
           <div style="font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-            <span>🔧</span> AI 修复代码
+            <span><img class="sf-icon" src="https://img.bloret.net/SF/wrench?color=black" alt="" data-sf-name="wrench"></span> AI 修复代码
           </div>
           <div id="aiFixContent" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto;font-family:monospace;"></div>
         </div>
@@ -5056,9 +5056,9 @@ class AdminApp {
       content: content,
       width: 600,
       footer: `
-        <button class="blora-button" id="aiAnalyzeBtn" data-variant="primary">🤖 让 AI 分析错误并给出修改建议</button>
-        <button class="blora-button" id="aiFixBtn" style="display:none;" data-variant="secondary">🔧 让 AI 修复错误</button>
-        <button class="blora-button" id="aiApplyBtn" style="display:none;" data-variant="primary">✅ 应用修复代码</button>
+        <button class="blora-button" id="aiAnalyzeBtn" data-variant="primary"><img class="sf-icon" src="https://img.bloret.net/SF/sparkles?color=black" alt="" data-sf-name="sparkles"> 让 AI 分析错误并给出修改建议</button>
+        <button class="blora-button" id="aiFixBtn" style="display:none;" data-variant="secondary"><img class="sf-icon" src="https://img.bloret.net/SF/wrench?color=black" alt="" data-sf-name="wrench"> 让 AI 修复错误</button>
+        <button class="blora-button" id="aiApplyBtn" style="display:none;" data-variant="primary"><img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle"> 应用修复代码</button>
       `
     });
 
@@ -5101,7 +5101,7 @@ class AdminApp {
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: t('请求失败') }));
           setHTML(contentEl, `<span style="color:var(--destructive);">${escHtml(err.error || t('AI 分析失败'))}</span>`);
-          clearButtonLoading(btn, t('🤖 让 AI 分析错误并给出修改建议'));
+          clearButtonLoading(btn, t('让 AI 分析错误并给出修改建议'));
           btn.disabled = false;
           return;
         }
@@ -5131,13 +5131,13 @@ class AdminApp {
           }
         }
 
-        clearButtonLoading(btn, t('✅ 分析完成'));
+        clearButtonLoading(btn, t('分析完成'));
         // 显示修复按钮
         const fixBtn = document.getElementById('aiFixBtn');
         if (fixBtn) fixBtn.style.display = '';
       } catch (e) {
         setHTML(contentEl, `${'<span style="color:var(--destructive);">' + t('请求失败:')}${escHtml(e.message)}</span>`);
-        clearButtonLoading(btn, t('🤖 让 AI 分析错误并给出修改建议'));
+        clearButtonLoading(btn, t('让 AI 分析错误并给出修改建议'));
         btn.disabled = false;
       }
 
@@ -5176,7 +5176,7 @@ class AdminApp {
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: t('请求失败') }));
           if (fixContent) setHTML(fixContent, `<span style="color:var(--destructive);">${escHtml(err.error || t('AI 修复失败'))}</span>`);
-          clearButtonLoading(fixBtn, t('🔧 让 AI 修复错误'));
+          clearButtonLoading(fixBtn, t('让 AI 修复错误'));
           fixBtn.disabled = false;
           return;
         }
@@ -5218,7 +5218,7 @@ class AdminApp {
           fixedScript = fullText.replace(/^```(?:javascript|js)?\s*\n/i, '').replace(/\n```\s*$/, '').trim();
         }
 
-        clearButtonLoading(fixBtn, t('✅ 修复完成'));
+        clearButtonLoading(fixBtn, t('修复完成'));
 
         if (fixedScript) {
           // 显示应用按钮
@@ -5232,17 +5232,17 @@ class AdminApp {
                 scriptTextarea.value = fixedScript;
                 scriptTextarea.dispatchEvent(new Event('input', { bubbles: true }));
               }
-              alert(t('✅ AI 已修复脚本，请检查后保存'));
+              alert(t('AI 已修复脚本，请检查后保存'));
             };
           }
         } else {
           if (fixContent) appendHTML(fixContent, '<br><span style="color:var(--destructive);">' + t('⚠️ AI 未能生成修复代码') + '</span>');
-          clearButtonLoading(fixBtn, t('🔧 让 AI 修复错误'));
+          clearButtonLoading(fixBtn, t('让 AI 修复错误'));
           fixBtn.disabled = false;
         }
       } catch (e) {
         if (fixContent) setHTML(fixContent, `${'<span style="color:var(--destructive);">' + t('请求失败:')}${escHtml(e.message)}</span>`);
-        clearButtonLoading(fixBtn, t('🔧 让 AI 修复错误'));
+        clearButtonLoading(fixBtn, t('让 AI 修复错误'));
         fixBtn.disabled = false;
       }
     };
@@ -11645,7 +11645,7 @@ async function(ctx) {
         const color = tag.color || 'var(--info)';
         return `<div class="provider-tag-assign-item ${has ? 'is-on' : ''}"
                      onclick="adminApp.toggleProviderTagFromDropdown('${safePid}',${tag.id})">
-          <span style="color:${color};">${has ? '✓' : '○'}</span>
+          ${has ? '<img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle">' : '<img class="sf-icon" src="https://img.bloret.net/SF/circle?color=black" alt="" data-sf-name="circle">'}
           <span>${escapeHtml(tag.name)}</span>
         </div>`;
       }).join(''));
