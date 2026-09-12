@@ -40,12 +40,12 @@
   <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
 </head>
-<body class="blora-page">
+<body class="blora-page blora-scope">
 <blora-navbar brand-href="/" title="CrewRouter" variant="floating" class="public-navbar">
   <blora-navbar-tool>
-    <select id="langToggle" class="blora-input" data-size="sm" title="Language" aria-label="Language">
-      <option value="zh">中文</option><option value="en">EN</option>
-    </select>
+    <blora-select id="langToggle" class="blora-input" data-size="sm" title="Language" aria-label="Language">
+      <blora-option value="zh">中文</blora-option><blora-option value="en">EN</blora-option>
+    </blora-select>
   </blora-navbar-tool>
 </blora-navbar>
   <div class="setup-container">
@@ -62,8 +62,8 @@
       <h2>选择安装版本 / Choose edition</h2>
       <p class="step-desc step-warning">安装后不可修改，请谨慎选择。 / This choice is permanent.</p>
       <div class="setup-choice-list">
-        <button class="btn btn-primary blora-button" data-variant="primary" type="button" onclick="setup.chooseEdition('personal')">Personal Edition（个人版）</button>
-        <button class="btn btn-primary blora-button" data-variant="primary" type="button" onclick="setup.chooseEdition('team')">Team Edition（团队版）</button>
+        <button class="blora-button" data-variant="primary" type="button" onclick="setup.chooseEdition('personal')">Personal Edition（个人版）</button>
+        <button class="blora-button" data-variant="primary" type="button" onclick="setup.chooseEdition('team')">Team Edition（团队版）</button>
       </div>
       <div class="blora-message setup-error" data-variant="danger" id="editionError" role="alert"></div>
     </div>
@@ -72,8 +72,8 @@
       <h2>选择账号系统模式</h2>
       <p class="step-desc step-warning">选择后不可修改，请谨慎选择。</p>
       <div class="setup-choice-list">
-        <button class="btn btn-primary blora-button" data-variant="primary" onclick="setup.chooseMode('passport')">Bloret PassPort 模式</button>
-        <button class="btn btn-primary blora-button" data-variant="primary" onclick="setup.chooseMode('feishu')">飞书模式</button>
+        <button class="blora-button" data-variant="primary" onclick="setup.chooseMode('passport')" type="button">Bloret PassPort 模式</button>
+        <button class="blora-button" data-variant="primary" onclick="setup.chooseMode('feishu')" type="button">飞书模式</button>
       </div>
       <div class="blora-message setup-error" data-variant="danger" id="modeError" role="alert"></div>
     </div>
@@ -82,7 +82,7 @@
       <div class="setup-success">
         <h2>PassPort 首次授权</h2>
         <p>请使用管理员身份完成 Bloret PassPort 授权，授权成功后将自动创建管理员账号并进入控制台。</p>
-        <button class="btn btn-primary blora-button" data-variant="primary" type="button" onclick="setup.startPassportAuth()">前往 PassPort 授权</button>
+        <button class="blora-button" data-variant="primary" type="button" onclick="setup.startPassportAuth()">前往 PassPort 授权</button>
       </div>
     </div>
 
@@ -105,7 +105,7 @@
       </div>
       <div class="blora-message setup-error" data-variant="danger" id="step1Error" role="alert"></div>
       <div class="setup-actions">
-        <button class="btn btn-primary blora-button" data-variant="primary" id="submitBtn" onclick="setup.submit()"><span data-i18n="完成初始化">完成初始化</span></button>
+        <button class="blora-button" data-variant="primary" id="submitBtn" onclick="setup.submit()" type="button"><span data-i18n="完成初始化">完成初始化</span></button>
       </div>
     </div>
 
@@ -113,7 +113,7 @@
       <div class="setup-success">
         <h2><span data-i18n="✅ 设置完成！">✅ 设置完成！</span></h2>
         <p><span data-i18n="管理员账号已创建，请登录开始使用">管理员账号已创建，请登录开始使用</span></p>
-        <button class="btn btn-primary blora-button" data-variant="primary" onclick="window.location.href='/'"><span data-i18n="前往登录">前往登录</span></button>
+        <button class="blora-button" data-variant="primary" onclick="window.location.href='/'" type="button"><span data-i18n="前往登录">前往登录</span></button>
       </div>
     </div>
 
@@ -121,7 +121,7 @@
       <div class="setup-success">
         <h2><span data-i18n="系统已初始化">系统已初始化</span></h2>
         <p><span data-i18n="无需重复配置，可直接登录">无需重复配置，可直接登录</span></p>
-        <button class="btn btn-primary blora-button" data-variant="primary" onclick="window.location.href='/'"><span data-i18n="前往登录">前往登录</span></button>
+        <button class="blora-button" data-variant="primary" onclick="window.location.href='/'" type="button"><span data-i18n="前往登录">前往登录</span></button>
       </div>
     </div>
   </div>

@@ -41,7 +41,7 @@
   <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
 </head>
-<body class="blora-page">
+<body class="blora-page blora-scope">
   <div class="pi-wrap">
     <div class="pi-brand">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></div>
     <div id="pi-root" class="blora-card pi-card">
@@ -120,8 +120,8 @@
         html += '<div class="pi-section"><h3>行为</h3><ul>' + behaviorHtml(info.behavior) + '</ul></div>';
         html += '<div class="blora-message pi-warn" data-variant="warning">安装后将立即启用该插件，并每日从插件商店检查是否有更新（若有更新会提醒系统管理员）。</div>';
         html += '<div class="pi-actions">' +
-          '<button class="blora-button" data-variant="primary" id="piConfirm">确认安装</button>' +
-          '<button class="blora-button" data-variant="outline" id="piCancel">取消</button>' +
+          '<button class="blora-button" data-variant="primary" id="piConfirm" type="button">确认安装</button>' +
+          '<button class="blora-button" data-variant="outline" id="piCancel" type="button">取消</button>' +
         '</div>';
 
         root.innerHTML = html;

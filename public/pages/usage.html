@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
 </head>
-<body class="blora-page usage-page">
+<body class="blora-page usage-page blora-scope">
   <main class="usage-shell">
     <header class="usage-header">
       <a class="usage-back-link" href="/console#apiKeys">
@@ -34,10 +34,10 @@
       </a>
       <div class="usage-language-wrap">
         <label for="langToggle" class="sr-only" data-i18n="语言">语言</label>
-        <select id="langToggle" class="usage-language-select" title="Language">
-          <option value="zh">中文</option>
-          <option value="en">EN</option>
-        </select>
+        <blora-select id="langToggle" class="usage-language-select" title="Language">
+          <blora-option value="zh">中文</blora-option>
+          <blora-option value="en">EN</blora-option>
+        </blora-select>
       </div>
     </header>
 

@@ -38,11 +38,11 @@
   <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
 </head>
-<body class="blora-page">
-<div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-      <option value="zh">中文</option>
-      <option value="en">EN</option>
-    </select></div>
+<body class="blora-page blora-scope">
+<div style="position:absolute;top:10px;right:12px;z-index:99;"><blora-select id="langToggle" class="" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
+      <blora-option value="zh">中文</blora-option>
+      <blora-option value="en">EN</blora-option>
+    </blora-select></div>
   <div class="pg-container" data-blora-state="ready">
     <!-- 移动端顶栏 -->
     <div class="pg-mobile-bar">
@@ -50,7 +50,7 @@
         <img src="https://img.bloret.net/SF/chevron.left?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="chevron.left" style="display:inline-block;vertical-align:middle;">
       </a>
       <span class="pg-mobile-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></span>
-      <button id="pgToggleSidebar" class="pg-mobile-menu">
+      <button id="pgToggleSidebar" class="pg-mobile-menu" type="button">
         <img src="https://img.bloret.net/SF/line.3.horizontal?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="line.3.horizontal" style="display:inline-block;vertical-align:middle;">
       </button>
     </div>
@@ -69,7 +69,7 @@
         </div>
         <div class="pg-history-header-row">
           <span class="pg-history-title"><span data-i18n="对话历史">对话历史</span></span>
-          <button id="pgNewChatBtn" class="pg-history-new-btn" title="新对话" data-i18n-title="新对话">
+          <button id="pgNewChatBtn" class="pg-history-new-btn" title="新对话" data-i18n-title="新对话" type="button">
           <img src="https://img.bloret.net/SF/plus?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="plus" style="display:inline-block;vertical-align:middle;"><span data-i18n="新对话">
           新对话
         </span></button>
@@ -96,7 +96,7 @@
       <div class="pg-reply-bar" id="pgReplyBar" style="display:none;">
         <img src="https://img.bloret.net/SF/chevron.left?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="chevron.left" style="display:inline-block;vertical-align:middle;">
         <span class="pg-reply-preview" id="pgReplyPreview"></span>
-        <button id="pgCancelReply" class="pg-reply-cancel">
+        <button id="pgCancelReply" class="pg-reply-cancel" type="button">
           <img src="https://img.bloret.net/SF/xmark?color=white" alt="" width="12" height="12" class="sf-icon" data-sf-name="xmark" style="display:inline-block;vertical-align:middle;">
         </button>
       </div>
@@ -111,7 +111,7 @@
           </button>
         </div>
         <div class="pg-input-footer">
-          <button id="pgClearBtn" class="pg-clear-btn"><span data-i18n="清空对话">清空对话</span></button>
+          <button id="pgClearBtn" class="pg-clear-btn" type="button"><span data-i18n="清空对话">清空对话</span></button>
           <span class="pg-balance-badge" id="pgBalanceBadge"><span data-i18n="0 积分">0 积分</span></span>
         </div>
       </div>
@@ -132,7 +132,7 @@
 
         <div class="pg-setting-group">
           <label>Temperature: <span id="pgTempVal">1.0</span></label>
-          <input type="range" id="pgTemperature" class="range-input" min="0" max="2" step="0.1" value="1.0">
+          <blora-slider id="pgTemperature" class="range-input" min="0" max="2" step="0.1" value="1.0"></blora-slider>
         </div>
 
         <div class="pg-setting-group">
@@ -144,7 +144,7 @@
           <label><span data-i18n="思考模式">思考模式</span></label>
           <div class="pg-thinking-controls">
             <label class="pg-toggle">
-              <input type="checkbox" id="pgThinkingToggle" checked>
+              <blora-checkbox id="pgThinkingToggle" checked></blora-checkbox>
               <span class="pg-toggle-slider"></span>
             </label>
             <span class="pg-thinking-label" id="pgThinkingLabel"><span data-i18n="已启用">已启用</span></span>
@@ -153,7 +153,7 @@
 
         <div class="pg-setting-group" id="pgThinkingBudgetGroup" style="display:none;">
           <label><span data-i18n="思考强度:">思考强度: </span><span id="pgThinkingBudgetVal">4096</span></label>
-          <input type="range" id="pgThinkingBudget" class="range-input" min="1024" max="32768" step="1024" value="4096">
+          <blora-slider id="pgThinkingBudget" class="range-input" min="1024" max="32768" step="1024" value="4096"></blora-slider>
         </div>
 
         <div class="pg-setting-group" id="pgReasoningEffortGroup" style="display:none;">
@@ -179,7 +179,7 @@
           <span>Tokens</span>
           <span id="pgTokens">0</span>
         </div>
-        <button id="pgHistoryToggleBtn" class="pg-history-toggle-btn" title="查看历史记录" data-i18n-title="查看历史记录">
+        <button id="pgHistoryToggleBtn" class="pg-history-toggle-btn" title="查看历史记录" data-i18n-title="查看历史记录" type="button">
           <img src="https://img.bloret.net/SF/clock?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="clock" style="display:inline-block;vertical-align:middle;"><span data-i18n="历史记录">
           历史记录
         </span></button>
@@ -189,7 +189,7 @@
     <!-- 右侧：历史记录面板 -->
     <aside class="pg-history-detail-panel" id="pgHistoryDetailPanel" style="display:none;">
       <div class="pg-history-detail-header">
-        <button id="pgHistoryBackBtn" class="pg-history-back-btn">
+        <button id="pgHistoryBackBtn" class="pg-history-back-btn" type="button">
           <img src="https://img.bloret.net/SF/chevron.left?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="chevron.left" style="display:inline-block;vertical-align:middle;"><span data-i18n="返回设置">
           返回设置
         </span></button>

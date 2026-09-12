@@ -57,10 +57,10 @@
   <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
 </head>
-<body class="blora-page">
+<body class="blora-page blora-scope">
   <!-- 移动端顶部导航栏 -->
   <div class="mobile-topbar">
-    <button class="mobile-hamburger" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单">
+    <button class="mobile-hamburger" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单" type="button">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
       </svg>
@@ -69,7 +69,7 @@
       <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">
     </div>
     <div class="mobile-topbar-title" id="mobilePageTitle"><span data-i18n="控制台">控制台</span></div>
-    <button id="themeToggleMobile" class="blora-button" title="切换主题" data-i18n-title="切换主题" style="width:32px;height:32px;" data-variant="secondary" data-size="icon">
+    <button id="themeToggleMobile" class="blora-button" title="切换主题" data-i18n-title="切换主题" style="width:32px;height:32px;" data-variant="secondary" data-size="icon" type="button">
       <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
       </svg>
@@ -166,7 +166,7 @@
           <img id="userAvatar" src="" alt="头像" data-i18n-title="头像" class="avatar">
           <span id="username"></span>
         </div>
-        <button id="logoutBtn" class="blora-button" title="登出" data-i18n-title="登出" data-variant="ghost" data-size="icon" aria-label="登出" data-i18n-aria-label="登出">
+        <button id="logoutBtn" class="blora-button" title="登出" data-i18n-title="登出" data-variant="ghost" data-size="icon" aria-label="登出" data-i18n-aria-label="登出" type="button">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M21 3v18"/></svg>
         </button>
       </div>
@@ -177,7 +177,7 @@
       <div class="content-header">
         <h1 id="pageTitle"><span data-i18n="控制台">控制台</span></h1>
         <div class="theme-toggle">
-          <button id="themeToggle" class="blora-button" title="切换主题" data-i18n-title="切换主题" data-variant="secondary" data-size="icon">
+          <button id="themeToggle" class="blora-button" title="切换主题" data-i18n-title="切换主题" data-variant="secondary" data-size="icon" type="button">
             <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="5"/>
               <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
@@ -294,16 +294,16 @@
             <span class="model-library-header-hint"><span data-i18n="点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定">点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定</span></span>
           </div>
           <div class="model-library-header-actions" id="modelLibraryHeaderActions">
-            <button class="blora-button" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型" data-variant="secondary" data-size="sm">
+            <button class="blora-button" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型" data-variant="secondary" data-size="sm" type="button">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span data-i18n="我的上游">
               我的上游
             </span></button>
-            <button class="blora-button" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商" data-variant="primary" data-size="sm">
+            <button class="blora-button" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商" data-variant="primary" data-size="sm" type="button">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="添加供应商">
               添加供应商
             </span></button>
             <div class="expand-dropdown" id="libraryMoreDropdown">
-              <button class="blora-button" onclick="app.toggleLibraryMoreDropdown(event)" title="更多操作" data-i18n-title="更多操作" data-variant="secondary" data-size="sm"><span data-i18n="更多">
+              <button class="blora-button" onclick="app.toggleLibraryMoreDropdown(event)" title="更多操作" data-i18n-title="更多操作" data-variant="secondary" data-size="sm" type="button"><span data-i18n="更多">
                 更多
                 </span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="m6 9 6 6 6-6"/></svg>
               </button>
@@ -522,7 +522,7 @@
             <div style="display:flex;flex-direction:column;gap:14px;">
               <div>
                 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                  <input type="checkbox" id="batchEditMyModelsEnabledCheck"><span data-i18n="启用状态"> 启用状态
+                  <blora-checkbox id="batchEditMyModelsEnabledCheck"></blora-checkbox><span data-i18n="启用状态"> 启用状态
                 </span></label>
                 <blora-select id="batchEditMyModelsEnabled" class="blora-select select" style="margin-top:4px;" disabled>
                   <blora-option value="true"><span data-i18n="启用">启用</span></blora-option>
@@ -531,32 +531,32 @@
               </div>
               <div>
                 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                  <input type="checkbox" id="batchEditMyModelsSeriesCheck"><span data-i18n="系列"> 系列
+                  <blora-checkbox id="batchEditMyModelsSeriesCheck"></blora-checkbox><span data-i18n="系列"> 系列
                 </span></label>
                 <input type="text" id="batchEditMyModelsSeries" class="blora-input input" placeholder="系列名称" data-i18n-placeholder="系列名称" style="margin-top:4px;" disabled>
               </div>
               <div>
                 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                  <input type="checkbox" id="batchEditMyModelsDescCheck"><span data-i18n="描述"> 描述
+                  <blora-checkbox id="batchEditMyModelsDescCheck"></blora-checkbox><span data-i18n="描述"> 描述
                 </span></label>
                 <textarea id="batchEditMyModelsDesc" class="blora-input input" rows="2" placeholder="模型描述" data-i18n-placeholder="模型描述" style="margin-top:4px;resize:vertical;" disabled></textarea>
               </div>
               <div>
                 <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                  <input type="checkbox" id="batchEditMyModelsAliasCheck"><span data-i18n="别名"> 别名
+                  <blora-checkbox id="batchEditMyModelsAliasCheck"></blora-checkbox><span data-i18n="别名"> 别名
                 </span></label>
                 <input type="text" id="batchEditMyModelsAlias" class="blora-input input" placeholder="模型别名" data-i18n-placeholder="模型别名" style="margin-top:4px;" disabled>
               </div>
               <div style="display:flex;gap:12px;">
                 <div style="flex:1;">
                   <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                    <input type="checkbox" id="batchEditMyModelsInputPriceCheck"><span data-i18n="输入价格"> 输入价格
+                    <blora-checkbox id="batchEditMyModelsInputPriceCheck"></blora-checkbox><span data-i18n="输入价格"> 输入价格
                   </span></label>
                   <input type="number" id="batchEditMyModelsInputPrice" class="blora-input input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>
                 </div>
                 <div style="flex:1;">
                   <label style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;">
-                    <input type="checkbox" id="batchEditMyModelsOutputPriceCheck"><span data-i18n="输出价格"> 输出价格
+                    <blora-checkbox id="batchEditMyModelsOutputPriceCheck"></blora-checkbox><span data-i18n="输出价格"> 输出价格
                   </span></label>
                   <input type="number" id="batchEditMyModelsOutputPrice" class="blora-input input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>
                 </div>
@@ -724,9 +724,9 @@
 
           <div id="statsCustomDateRange" style="display:none;gap:8px;align-items:center;margin-bottom:16px;padding:12px;background:var(--muted);border-radius:8px;">
             <label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="自定义范围：">自定义范围：</span></label>
-            <input type="date" id="statsStartDate" class="blora-input input" style="padding:6px 10px;height:36px;">
+            <blora-datepicker id="statsStartDate" class="blora-input input" style="padding:6px 10px;height:36px;"></blora-datepicker>
             <span style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="至">至</span></span>
-            <input type="date" id="statsEndDate" class="blora-input input" style="padding:6px 10px;height:36px;">
+            <blora-datepicker id="statsEndDate" class="blora-input input" style="padding:6px 10px;height:36px;"></blora-datepicker>
             <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.loadStats()"><span data-i18n="查询">查询</span></button>
           </div>
 
@@ -1167,8 +1167,8 @@
                 <blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
                 <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
               </blora-select>
-              <input type="date" id="usageLogStartDate" class="blora-input input">
-              <input type="date" id="usageLogEndDate" class="blora-input input">
+              <blora-datepicker id="usageLogStartDate" class="blora-input input"></blora-datepicker>
+              <blora-datepicker id="usageLogEndDate" class="blora-input input"></blora-datepicker>
               <button type="button" class="blora-button" onclick="app.loadUsageLogs()" data-variant="primary"><span data-i18n="查询">查询</span></button>
               <button type="button" class="blora-button" onclick="app.clearUsageLogFilters()" data-variant="secondary"><span data-i18n="清除">清除</span></button>
               <button type="button" class="blora-button" id="usageLogExportBtn" onclick="app.exportUsageLogs()" title="按当前筛选条件导出 CSV（最多 5 万条）" data-i18n-title="按当前筛选条件导出 CSV（最多 5 万条）" data-variant="secondary"><span data-i18n="导出 CSV">导出 CSV</span></button>
@@ -1407,7 +1407,7 @@
             <div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label><blora-select id="projectWorkSourceFilter" class="blora-select select" onchange="app.loadProjectWorkStats()"><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option></blora-select></div>
             <div class="stats-filter-group" style="align-self:flex-end;"><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.navigateTo('stats')"><span data-i18n="返回总统计">返回总统计</span></button></div>
           </div>
-          <div id="projectWorkCustomRange" style="display:none;gap:8px;align-items:center;margin-bottom:16px;padding:12px;background:var(--muted);border-radius:8px;"><label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="自定义范围：">自定义范围：</span></label><input type="date" id="projectWorkStartDate" class="blora-input input"><span style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="至">至</span></span><input type="date" id="projectWorkEndDate" class="blora-input input"><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.loadProjectWorkStats()"><span data-i18n="查询">查询</span></button></div>
+          <div id="projectWorkCustomRange" style="display:none;gap:8px;align-items:center;margin-bottom:16px;padding:12px;background:var(--muted);border-radius:8px;"><label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="自定义范围：">自定义范围：</span></label><blora-datepicker id="projectWorkStartDate" class="blora-input input"></blora-datepicker><span style="color:var(--muted-foreground);font-size:13px;"><span data-i18n="至">至</span></span><blora-datepicker id="projectWorkEndDate" class="blora-input input"></blora-datepicker><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.loadProjectWorkStats()"><span data-i18n="查询">查询</span></button></div>
           <div id="projectWorkSummary" class="project-work-summary"><div class="project-work-loading"><span data-i18n="正在读取项目活动...">正在读取项目活动...</span></div></div>
           <div class="project-work-grid"><div class="project-work-chart-card"><div class="project-work-card-title"><strong><span data-i18n="最近活动">最近活动</span></strong><span><span data-i18n="每日请求与活跃项目">每日请求与活跃项目</span></span></div><div class="project-work-chart"><canvas id="userProjectDailyChart"></canvas></div></div><div class="project-work-focus-card"><div class="project-work-card-title"><strong><span data-i18n="最近活跃项目">最近活跃项目</span></strong><span><span data-i18n="按最近活动排序">按最近活动排序</span></span></div><div id="projectWorkRecent" class="project-work-recent"><div class="project-work-loading"><span data-i18n="正在读取...">正在读取...</span></div></div></div></div>
           <div class="project-work-list-card"><div class="project-work-card-title"><strong><span data-i18n="项目工作台">项目工作台</span></strong><span><span data-i18n="点击项目可复制工作区路径">点击项目可复制工作区路径</span></span></div><div id="projectWorkProjects" class="project-work-projects"><div class="project-work-loading"><span data-i18n="正在读取项目...">正在读取项目...</span></div></div></div>
@@ -1853,13 +1853,13 @@ data: [DONE]</code></pre>
           <div style="padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div><label style="margin:0;"><span data-i18n="启用 Bark 通知">启用 Bark 通知</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="Bark 是 iOS 推送工具，请填写 Server Key。">Bark 是 iOS 推送工具，请填写 Server Key。</span></small></div>
-              <label class="pg-toggle"><input type="checkbox" id="barkEnabled"><span class="pg-toggle-slider"></span></label>
+              <label class="pg-toggle"><blora-checkbox id="barkEnabled"></blora-checkbox><span class="pg-toggle-slider"></span></label>
             </div>
             <div class="form-group"><label for="barkServerKey">Bark Server Key</label><input id="barkServerKey" class="blora-input input" type="password" placeholder="请输入 Bark Server Key" data-i18n-placeholder="请输入 Bark Server Key" autocomplete="off" form="notificationSettingsForm"></div>
             <div class="form-group"><label for="barkEndpoint"><span data-i18n="Bark 服务地址">Bark 服务地址</span></label><input id="barkEndpoint" class="blora-input input" value="https://api.day.app" placeholder="https://api.day.app"><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="使用自建 Bark 服务时可修改。">使用自建 Bark 服务时可修改。</span></small></div>
             <div style="display:flex;gap:20px;flex-wrap:wrap;margin:12px 0 16px;">
-              <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="notifyQuota"><span data-i18n="额度不足通知"> 额度不足通知</span></label>
-              <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="notifyErrors"><span data-i18n="请求异常通知"> 请求异常通知</span></label>
+              <label style="display:flex;align-items:center;gap:8px;"><blora-checkbox id="notifyQuota"></blora-checkbox><span data-i18n="额度不足通知"> 额度不足通知</span></label>
+              <label style="display:flex;align-items:center;gap:8px;"><blora-checkbox id="notifyErrors"></blora-checkbox><span data-i18n="请求异常通知"> 请求异常通知</span></label>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><button type="button" class="blora-button" onclick="app.saveNotificationSettings()" data-variant="primary"><span data-i18n="保存通知设置">保存通知设置</span></button><button type="button" class="blora-button" onclick="app.testBarkNotification()" data-variant="secondary"><span data-i18n="发送测试通知">发送测试通知</span></button><span id="notificationSettingsStatus" style="font-size:13px;"></span></div>
           </div>
@@ -1876,7 +1876,7 @@ data: [DONE]</code></pre>
           <div style="padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0;">
               <div><label style="margin:0;"><span data-i18n="允许插件读取我的偏好">允许插件读取我的偏好</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="开启后，声明 preferences:read 权限的插件可通过接口读取你的界面偏好；关闭后立即失效。">开启后，声明 preferences:read 权限的插件可通过接口读取你的界面偏好；关闭后立即失效。</span></small></div>
-              <label class="pg-toggle"><input type="checkbox" id="pluginPrefOptin" onchange="app.togglePluginPrefOptin(this.checked)"><span class="pg-toggle-slider"></span></label>
+              <label class="pg-toggle"><blora-checkbox id="pluginPrefOptin" onchange="app.togglePluginPrefOptin(this.checked)"></blora-checkbox><span class="pg-toggle-slider"></span></label>
             </div>
             <span id="pluginPrefOptinStatus" style="display:block;margin-top:8px;font-size:13px;"></span>
           </div>
@@ -1903,7 +1903,7 @@ data: [DONE]</code></pre>
           <div style="padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0;">
               <div><label style="margin:0;"><span data-i18n="启用事件推送">启用事件推送</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。">总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。</span></small></div>
-              <label class="pg-toggle"><input type="checkbox" id="hookNotifyPushEnabled" onchange="app.toggleHookNotifyPush(this.checked)"><span class="pg-toggle-slider"></span></label>
+              <label class="pg-toggle"><blora-checkbox id="hookNotifyPushEnabled" onchange="app.toggleHookNotifyPush(this.checked)"></blora-checkbox><span class="pg-toggle-slider"></span></label>
             </div>
             <button type="button" class="blora-button" style="margin-top:12px;" onclick="app.showHookNotifySelection()" data-variant="secondary"><span data-i18n="选择要推送的事件">选择要推送的事件</span></button>
           </div>
@@ -2007,7 +2007,7 @@ data: [DONE]</code></pre>
                 <p style="margin:4px 0 0;font-size:13px;color:var(--muted-foreground);"><span data-i18n="开启后，API 回复底部自动添加模型、Token、缓存、限额等信息">开启后，API 回复底部自动添加模型、Token、缓存、限额等信息</span></p>
               </div>
               <label class="pg-toggle">
-                <input type="checkbox" id="apiSignatureToggle">
+                <blora-checkbox id="apiSignatureToggle"></blora-checkbox>
                 <span class="pg-toggle-slider"></span>
               </label>
             </div>
@@ -2167,15 +2167,15 @@ data: [DONE]</code></pre>
         <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);"><span data-i18n="集中管理当前 API Key 的附加开关。">集中管理当前 API Key 的附加开关。</span></div>
         <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
           <label style="margin:0;"><span data-i18n="额度预警">额度预警</span></label>
-          <label class="pg-toggle"><input type="checkbox" id="keyOptionQuotaWarning"><span class="pg-toggle-slider"></span></label>
+          <label class="pg-toggle"><blora-checkbox id="keyOptionQuotaWarning"></blora-checkbox><span class="pg-toggle-slider"></span></label>
         </div>
         <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
           <label style="margin:0;"><span data-i18n="吞图">吞图</span></label>
-          <label class="pg-toggle"><input type="checkbox" id="keyOptionSwallowImages"><span class="pg-toggle-slider"></span></label>
+          <label class="pg-toggle"><blora-checkbox id="keyOptionSwallowImages"></blora-checkbox><span class="pg-toggle-slider"></span></label>
         </div>
         <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
           <label style="margin:0;"><span data-i18n="允许 @CrewRouter 指令">允许 @CrewRouter 指令</span></label>
-          <label class="pg-toggle"><input type="checkbox" id="keyOptionCrewRouterCommands"><span class="pg-toggle-slider"></span></label>
+          <label class="pg-toggle"><blora-checkbox id="keyOptionCrewRouterCommands"></blora-checkbox><span class="pg-toggle-slider"></span></label>
         </div>
       </div>
       <div class="modal-footer"><button type="button" class="blora-button" onclick="app.saveKeyOptions()" data-variant="primary"><span data-i18n="保存">保存</span></button></div>
@@ -2232,7 +2232,7 @@ data: [DONE]</code></pre>
         <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
           <label style="margin:0;"><span data-i18n="启用定时开关">启用定时开关</span></label>
           <label class="pg-toggle">
-            <input type="checkbox" id="scheduleEnabled">
+            <blora-checkbox id="scheduleEnabled"></blora-checkbox>
             <span class="pg-toggle-slider"></span>
           </label>
         </div>
@@ -2248,13 +2248,13 @@ data: [DONE]</code></pre>
           <div class="form-group">
             <label><span data-i18n="生效日期">生效日期</span></label>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="1" checked><span data-i18n="周一"> 周一</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="2" checked><span data-i18n="周二"> 周二</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="3" checked><span data-i18n="周三"> 周三</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="4" checked><span data-i18n="周四"> 周四</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="5" checked><span data-i18n="周五"> 周五</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="6" checked><span data-i18n="周六"> 周六</span></label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" class="schedule-day" value="0" checked><span data-i18n="周日"> 周日</span></label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><blora-checkbox class="schedule-day" value="1" checked></blora-checkbox><span data-i18n="周一"> 周一</span></label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><blora-checkbox class="schedule-day" value="2" checked></blora-checkbox><span data-i18n="周二"> 周二</span></label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><blora-checkbox class="schedule-day" value="3" checked></blora-checkbox><span data-i18n="周三"> 周三</span></label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><blora-checkbox class="schedule-day" value="4" checked></blora-checkbox><span data-i18n="周四"> 周四</span></label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><blora-checkbox class="schedule-day" value="5" checked></blora-checkbox><span data-i18n="周五"> 周五</span></label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><blora-checkbox class="schedule-day" value="6" checked></blora-checkbox><span data-i18n="周六"> 周六</span></label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><blora-checkbox class="schedule-day" value="0" checked></blora-checkbox><span data-i18n="周日"> 周日</span></label>
             </div>
           </div>
           <div class="form-group">
@@ -2408,7 +2408,7 @@ data: [DONE]</code></pre>
           <!-- 全选 -->
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-              <input type="checkbox" id="selectAllManageModels" onchange="app.toggleSelectAllManageModels(this.checked)">
+              <blora-checkbox id="selectAllManageModels" onchange="app.toggleSelectAllManageModels(this.checked)"></blora-checkbox>
               <span style="font-size:13px;"><span data-i18n="全选">全选</span></span>
             </label>
             <span id="manageModelsCount" style="font-size:13px;color:var(--muted-foreground);margin-left:auto;"></span>
@@ -2603,21 +2603,21 @@ data: [DONE]</code></pre>
             <div class="ccs-toggle-row" onclick="this.querySelector('input').click()">
               <span class="ccs-toggle-label"><span data-i18n="余额">余额</span></span>
               <label class="toggle-switch" onclick="event.stopPropagation()">
-                <input type="checkbox" id="ccsShowBalance" checked onchange="app.rebuildUsageScript()">
+                <blora-checkbox id="ccsShowBalance" checked onchange="app.rebuildUsageScript()"></blora-checkbox>
                 <span class="toggle-slider"></span>
               </label>
             </div>
             <div class="ccs-toggle-row" onclick="this.querySelector('input').click()">
               <span class="ccs-toggle-label"><span data-i18n="额外额度规则">额外额度规则</span></span>
               <label class="toggle-switch" onclick="event.stopPropagation()">
-                <input type="checkbox" id="ccsShowGroupRules" checked onchange="app.rebuildUsageScript()">
+                <blora-checkbox id="ccsShowGroupRules" checked onchange="app.rebuildUsageScript()"></blora-checkbox>
                 <span class="toggle-slider"></span>
               </label>
             </div>
             <div class="ccs-toggle-row" onclick="this.querySelector('input').click()">
               <span class="ccs-toggle-label"><span data-i18n="总用量统计">总用量统计</span></span>
               <label class="toggle-switch" onclick="event.stopPropagation()">
-                <input type="checkbox" id="ccsShowTotalUsage" checked onchange="app.rebuildUsageScript()">
+                <blora-checkbox id="ccsShowTotalUsage" checked onchange="app.rebuildUsageScript()"></blora-checkbox>
                 <span class="toggle-slider"></span>
               </label>
             </div>
@@ -2631,7 +2631,7 @@ data: [DONE]</code></pre>
             <div id="ccsBarOptions" style="display:none;margin-top:12px;">
               <div class="ccs-option-title"><span data-i18n="进度条长度">进度条长度</span></div>
               <div class="ccs-slider-wrap">
-                <input type="range" class="ccs-slider" id="ccsBarLength" min="6" max="20" value="12" oninput="document.getElementById('ccsBarLenVal').textContent=this.value;app.rebuildUsageScript();">
+                <blora-slider class="ccs-slider" id="ccsBarLength" min="6" max="20" value="12" oninput="document.getElementById('ccsBarLenVal').textContent=this.value;app.rebuildUsageScript();"></blora-slider>
                 <span class="ccs-slider-value" id="ccsBarLenVal">12</span>
               </div>
             </div>
@@ -2640,7 +2640,7 @@ data: [DONE]</code></pre>
               <div class="ccs-toggle-row" onclick="this.querySelector('input').click()" style="padding:8px 0;">
                 <span class="ccs-toggle-label"><span data-i18n="显示用户名">显示用户名</span></span>
                 <label class="toggle-switch" onclick="event.stopPropagation()">
-                  <input type="checkbox" id="ccsShowUsername" checked onchange="app.rebuildUsageScript()">
+                  <blora-checkbox id="ccsShowUsername" checked onchange="app.rebuildUsageScript()"></blora-checkbox>
                   <span class="toggle-slider"></span>
                 </label>
               </div>

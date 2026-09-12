@@ -35,7 +35,96 @@
 }
 
 .blora-admin-providers-page .provider-toolbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 30rem);
   gap: var(--blora-space-2);
+}
+
+.blora-admin-providers-page .provider-toolbar > *,
+.blora-admin-providers-page .provider-toolbar .provider-more-menu,
+.blora-admin-providers-page .provider-toolbar .provider-batch-bar {
+  min-width: 0;
+}
+
+.blora-admin-providers-page .provider-toolbar > .blora-button,
+.blora-admin-providers-page .provider-toolbar .provider-more-menu > .blora-button,
+.blora-admin-providers-page .provider-toolbar .provider-batch-bar > .blora-button {
+  width: 100%;
+  min-height: 2.5rem;
+  padding-inline: var(--blora-space-3);
+  border-radius: var(--blora-radius-md);
+  font-family: var(--blora-font-body);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.blora-admin-providers-page .provider-toolbar .provider-more-dropdown {
+  min-width: min(20rem, calc(100vw - 2rem));
+}
+
+.blora-admin-providers-page .admin-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 1fr)) auto;
+  align-items: center;
+}
+
+.blora-admin-providers-page .admin-filter-bar .input,
+.blora-admin-providers-page .admin-filter-bar blora-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.blora-admin-providers-page .provider-row-actions {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.blora-admin-providers-page .provider-row-actions > .blora-button {
+  min-height: 2.25rem;
+  padding-inline: var(--blora-space-3);
+  border-radius: var(--blora-radius-md);
+  font-family: var(--blora-font-body);
+  font-size: var(--blora-text-xs);
+  white-space: nowrap;
+}
+
+.blora-admin-providers-page .provider-row-actions .provider-row-more-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.blora-admin-providers-page .provider-row-actions .provider-row-dropdown {
+  max-width: min(20rem, calc(100vw - 2rem));
+}
+
+.blora-admin-providers-page .provider-enabled-toggle,
+.blora-admin-providers-page .provider-quota-toggle,
+.blora-admin-providers-page .provider-select-cb,
+.blora-admin-providers-page #providerSelectAllPage {
+  flex: 0 0 auto;
+}
+
+.blora-admin-providers-page .provider-select-all-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  min-height: 2.5rem;
+  margin-bottom: var(--blora-space-3);
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-admin-providers-page .provider-entity-tags,
+.blora-admin-providers-page .provider-tag-chip {
+  border-radius: var(--blora-radius-pill);
+}
+
+.blora-admin-providers-page .provider-tag-chip[style*="--badge-accent"] {
+  background: color-mix(in srgb, var(--badge-accent) 12%, transparent);
+  color: var(--badge-accent);
+  border-color: color-mix(in srgb, var(--badge-accent) 34%, transparent);
 }
 
 .blora-admin-providers-page .admin-filter-bar {
@@ -74,15 +163,38 @@
   box-shadow: var(--blora-shadow-3);
 }
 
+@media (max-width: 900px) {
+  .blora-admin-providers-page .provider-toolbar {
+    width: 100%;
+  }
+
+  .blora-admin-providers-page .admin-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .blora-admin-providers-page .admin-filter-bar .input {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 640px) {
   .blora-admin-providers-page > .content-section {
     padding: var(--blora-space-4);
   }
 
+  .blora-admin-providers-page .provider-toolbar {
+    grid-template-columns: 1fr;
+  }
+
   .blora-admin-providers-page .provider-toolbar .blora-button,
   .blora-admin-providers-page .admin-filter-bar .input,
-  .blora-admin-providers-page .admin-filter-bar .select {
+  .blora-admin-providers-page .admin-filter-bar .select,
+  .blora-admin-providers-page .admin-filter-bar blora-select {
     width: 100%;
     flex: 1 1 100%;
+  }
+
+  .blora-admin-providers-page .admin-filter-bar {
+    grid-template-columns: 1fr;
   }
 }

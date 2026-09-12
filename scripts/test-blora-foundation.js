@@ -22,7 +22,7 @@ assert.match(server, /require\('\.\/blora-resources'\)/);
 const resources = require(path.join(root, 'server/blora-resources.js'));
 assert.strictEqual(resources.EXPECTED_VERSION, '2.0.8');
 const pageNames = fs.readdirSync(path.join(root, 'public/pages')).filter((n) => n.endsWith('.html') && !n.endsWith('.bak'));
-assert.strictEqual(pageNames.length, 13);
+assert.strictEqual(pageNames.length, 14);
 for (const name of pageNames) {
   const html = fs.readFileSync(path.join(root, 'public/pages', name), 'utf8');
   for (const marker of ['/blora/blora.css?v=2.0.8', '/blora/tokens.dark.css?v=2.0.8', '/blora/auto.js?v=2.0.8', '/js/blora-foundation.js']) assert.ok(html.includes(marker), `${name} missing ${marker}`);
