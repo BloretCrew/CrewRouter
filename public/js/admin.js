@@ -3146,19 +3146,14 @@ class AdminApp {
         <blora-checkbox class="provider-enabled-toggle" label="${provider.enabled ? t('已启用') : t('已禁用')}" ${provider.enabled ? 'checked' : ''} onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)"></blora-checkbox>
         <button class="blora-button" title="${t('同步模型')}" onclick="adminApp.fetchProviderModels('${pid}')" data-variant="secondary" data-size="sm">同步模型</button>
         <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editProviderById('${pid}')" data-variant="secondary" data-size="sm">编辑</button>
-        <div class="provider-row-more-wrap">
-          <button type="button" class="blora-button" data-row-menu-btn="${pid}" title="${t('更多操作')}" onclick="adminApp.toggleProviderRowMenu('${pid}', event)" data-variant="secondary" data-size="sm">更多 ▾</button>
-          <div class="provider-row-dropdown" id="provider-row-menu-${pid}" style="display:none;" role="menu">
-            <button type="button" class="provider-more-item" id="${pingBtnId}" onclick="adminApp.pingProvider('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" role="menuitem">检测连通性</button>
-            ${isScriptKey ? `<button type="button" class="provider-more-item" style="color:var(--warning);" onclick="adminApp.refreshProviderKey('${pid}');adminApp.toggleProviderRowMenu('${pid}\', event);" role="menuitem">${t('刷新密钥')}</button>` : ''}
-            <div class="provider-more-item provider-more-item-toggle" role="menuitem">
-              <span>额度查询</span>
-              <blora-checkbox class="provider-quota-toggle" label="额度查询" ${quotaEnabled ? 'checked' : ''} onchange="event.stopPropagation();adminApp.toggleProviderQuota('${pid}', this.checked)"></blora-checkbox>
-            </div>
-            <button type="button" class="provider-more-item" id="quota-btn-${pid}" onclick="adminApp.checkProviderQuota('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" ${!quotaEnabled ? 'disabled style="opacity:0.45;"' : ''} role="menuitem">查询额度</button>
-            <button type="button" class="provider-more-item provider-more-item-danger" onclick="adminApp.deleteProvider('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" role="menuitem">删除</button>
-          </div>
-        </div>
+        <blora-dropdown class="provider-row-more-wrap" id="provider-row-menu-${pid}" align="end">
+          <button slot="trigger" type="button" class="blora-button" title="${t('更多操作')}" data-variant="secondary" data-size="sm">更多</button>
+          <blora-dropdown-item value="ping">检测连通性</blora-dropdown-item>
+          ${isScriptKey ? '<blora-dropdown-item value="refresh">' + t('刷新密钥') + '</blora-dropdown-item>' : ''}
+          <blora-dropdown-item value="quota">额度查询</blora-dropdown-item>
+          <blora-dropdown-item value="check-quota" ${!quotaEnabled ? 'disabled' : ''}>查询额度</blora-dropdown-item>
+          <blora-dropdown-item value="delete">删除</blora-dropdown-item>
+        </blora-dropdown>
       </div>`;
   }
 
