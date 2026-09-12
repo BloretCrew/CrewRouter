@@ -1168,10 +1168,11 @@ class AdminApp {
 
     root.addEventListener('change', (e) => {
       const t = e.target;
-      if (!t || t.type !== 'checkbox') return;
-      if (t.classList.contains('admin-models-provider-select-all')) {
-        const providerKey = t.getAttribute('data-provider-key') || '';
-        if (providerKey) this.toggleAdminModelProviderSelectAll(providerKey, t.checked);
+      if (!t) return;
+      const checkbox = t.closest?.('.admin-models-provider-select-all');
+      if (checkbox) {
+        const providerKey = checkbox.getAttribute('data-provider-key') || '';
+        if (providerKey) this.toggleAdminModelProviderSelectAll(providerKey, checkbox.checked);
       }
     });
   }
@@ -1626,9 +1627,9 @@ class AdminApp {
     let testBadgeHtml = '';
     if (model.test_ok === true) {
       const tpsText = model.test_tokens_per_second ? ` · ${model.test_tokens_per_second} t/s` : '';
-      testBadgeHtml = `<span class="model-test-badge pass" title="${escapeHtml(this._formatTestTooltip(model.test_tested_at))}">${model.test_latency_ms}ms${tpsText}</span>`;
+      testBadgeHtml = `<span class="blora-badge model-test-badge pass" data-variant="success" title="${escapeHtml(this._formatTestTooltip(model.test_tested_at))}">${model.test_latency_ms}ms${tpsText}</span>`;
     } else if (model.test_ok === false) {
-      testBadgeHtml = `<span class="model-test-badge fail" title="${escapeHtml((model.test_error || t('失败')) + ' · ' + this._formatTestTooltip(model.test_tested_at))}">${t('失败')}</span>`;
+      testBadgeHtml = `<span class="blora-badge model-test-badge fail" data-variant="danger" title="${escapeHtml((model.test_error || t('失败')) + ' · ' + this._formatTestTooltip(model.test_tested_at))}">${t('失败')}</span>`;
     }
 
     return `
@@ -1649,9 +1650,9 @@ class AdminApp {
               ${renderProviderNameTag(model.provider_name || model.provider)}
               ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
               ${isDisabled
-                ? '<span class="model-item-badge" style="background:rgba(239,68,68,0.1);color:var(--destructive);">' + t('已禁用') + '</span>'
-                : '<span class="model-item-badge" style="background:rgba(16,185,129,0.1);color:var(--success);">' + t('启用') + '</span>'}
-              ${selected ? '<span class="model-item-badge owner">' + t('已选') + '</span>' : ''}
+                ? '<span class="blora-badge model-item-badge" data-variant="danger">' + t('已禁用') + '</span>'
+                : '<span class="blora-badge model-item-badge" data-variant="success">' + t('启用') + '</span>'}
+              ${selected ? '<span class="blora-badge model-item-badge owner" data-variant="info">' + t('已选') + '</span>' : ''}
             </div>
           </div>
           ${model.alias && model.alias !== displayName ? `<div class="model-library-item-desc">${escapeHtml(model.alias)}</div>` : ''}
@@ -1957,15 +1958,10 @@ class AdminApp {
                   <div class="model-library-provider-title">
                     <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                     ${renderProviderNameTag(p.name || key)}
-                    ${selectedCount > 0 ? `${'<span class="model-item-badge owner">' + t('已选')}${selectedCount}</span>` : ''}
+                    ${selectedCount > 0 ? `${'<span class="blora-badge model-item-badge owner" data-variant="info">' + t('已选')}${selectedCount}</span>` : ''}
                   </div>
                   <div class="model-library-provider-actions">
-                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:400;cursor:pointer;color:var(--muted-foreground);">
-                      <input type="checkbox" class="admin-models-provider-select-all"
-                        data-provider-key="${keyAttr}"
-                        ${allSelected ? 'checked' : ''}>
-                      全选本页
-                    </label>
+                    <blora-checkbox class="admin-models-provider-select-all" label="全选本页" data-provider-key="${keyAttr}" ${allSelected ? 'checked' : ''}></blora-checkbox>
                     <button type="button" class="blora-button model-test-btn" style="padding:4px 8px;font-size:11px;"
                       title="${t('测试此供应商下当前筛选模型')}"
                       data-admin-model-action="test-provider" data-provider-key="${keyAttr}" data-variant="secondary" data-size="sm">测试</button>
@@ -2140,7 +2136,7 @@ class AdminApp {
     if (title) {
       let badge = title.querySelector('.model-item-badge.owner');
       if (selectedCount > 0) {
-        if (!badge) title.insertAdjacentHTML('beforeend', `${'<span class="model-item-badge owner">' + t('已选')}${selectedCount}</span>`);
+        if (!badge) title.insertAdjacentHTML('beforeend', `${'<span class="blora-badge model-item-badge owner" data-variant="info">' + t('已选')}${selectedCount}</span>`);
         else badge.textContent = `${t('已选')}${selectedCount}`;
       } else if (badge) badge.remove();
     }
@@ -10765,8 +10761,8 @@ async function(ctx) {
                         <div class="model-item-badges">
               ${renderProviderNameTag(m.provider_name || m.provider)}
               ${m.series ? `<span class="model-item-badge series">${escapeHtml(m.series)}</span>` : ''}
-              ${isDisabled ? '<span class="model-item-badge" style="background:rgba(148,163,184,0.15);color:var(--muted-foreground);">' + t('未启用') + '</span>' : '<span class="model-item-badge" style="background:rgba(16,185,129,0.1);color:var(--success);">' + t('已启用') + '</span>'}
-              ${isProviderDisabled ? '<span class="model-item-badge" style="background:rgba(239,68,68,0.1);color:var(--destructive);">' + t('供应商禁用') + '</span>' : ''}
+              ${isDisabled ? '<span class="blora-badge model-item-badge" data-variant="neutral">' + t('未启用') + '</span>' : '<span class="blora-badge model-item-badge" data-variant="success">' + t('已启用') + '</span>'}
+              ${isProviderDisabled ? '<span class="blora-badge model-item-badge" data-variant="danger">' + t('供应商禁用') + '</span>' : ''}
             </div>
           </div>
           ${m.alias && m.alias !== displayName ? `<div class="model-library-item-desc">${escapeHtml(m.alias)}</div>` : ''}
