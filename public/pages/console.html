@@ -95,71 +95,28 @@
       </div>
 
       <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-item active" data-page="home" data-personal-only="true">
-            <img src="https://img.bloret.net/SF/rectangle.grid.2x2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="rectangle.grid.2x2">
-            <span><span data-i18n="个人工作台">个人工作台</span></span>
-          </div>
-          <div class="nav-item" data-page="modelLibrary">
-            <img src="https://img.bloret.net/SF/books.vertical?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="books.vertical">
-            <span><span data-i18n="模型库">模型库</span></span>
-          </div>
-          <div class="nav-item" data-page="myUpstream" data-capability="personalProviders">
-            <img src="https://img.bloret.net/SF/antenna.radiowaves.left.and.right?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="antenna.radiowaves.left.and.right">
-            <span><span data-i18n="我的上游">我的上游</span></span>
-          </div>
-          <div class="nav-item" data-page="apiKeys">
-            <img src="https://img.bloret.net/SF/key?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="key">
-            <span><span data-i18n="API Key与用量">API Key与用量</span></span>
-          </div>
-          <div class="nav-item" data-page="stats">
-            <img src="https://img.bloret.net/SF/chart.bar?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="chart.bar">
-            <span><span data-i18n="统计信息">统计信息</span></span>
-          </div>
-          <div class="nav-item" data-page="projectWork" data-capability="projects">
-            <img src="https://img.bloret.net/SF/folder?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="folder">
-            <span><span data-i18n="项目工作">项目工作</span></span>
-          </div>
-          <div class="nav-item" data-page="leaderboard">
-            <img src="https://img.bloret.net/SF/trophy?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="trophy">
-            <span><span data-i18n="排行榜">排行榜</span></span>
-          </div>
-          <div class="nav-item" data-page="docs">
-            <img src="https://img.bloret.net/SF/document?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="document">
-            <span><span data-i18n="接口文档">接口文档</span></span>
-          </div>
-          <div class="nav-item" data-page="balance">
-            <img src="https://img.bloret.net/SF/dollarsign.circle?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="dollarsign.circle">
-            <span><span data-i18n="积分">积分</span></span>
-          </div>
-          <div class="nav-item" data-page="auditLogs" data-capability="auditLogs">
-            <img src="https://img.bloret.net/SF/list.bullet.clipboard?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="list.bullet.clipboard">
-            <span><span data-i18n="操作日志">操作日志</span></span>
-          </div>
-          <div class="nav-item" data-page="prompts" id="promptsNav" style="display: none;">
-            <img src="https://img.bloret.net/SF/text.quote?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="text.quote">
-            <span><span data-i18n="提示词">提示词</span></span>
-          </div>
-          <div class="nav-item" data-page="sessions">
-            <img src="https://img.bloret.net/SF/bubble.left?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="bubble.left">
-            <span><span data-i18n="会话">会话</span></span>
-          </div>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title"><span data-i18n="设置">设置</span></div>
-          <div class="nav-item" data-page="settings">
-            <img src="https://img.bloret.net/SF/gearshape?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="gearshape">
-            <span><span data-i18n="用户设置">用户设置</span></span>
-          </div>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-item admin-link" id="adminLink" style="display: none;">
-            <img src="https://img.bloret.net/SF/shield?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="shield">
-            <span><span data-i18n="管理后台">管理后台</span></span>
-          </div>
-        </div>
+        <blora-sidebar-nav label="控制台导航" value="home">
+          <blora-sidebar-nav-group label="工作区">
+            <blora-sidebar-nav-link label="个人工作台" value="home" current data-personal-only="true"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="模型库" value="modelLibrary"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="我的上游" value="myUpstream" data-capability="personalProviders"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="API Key与用量" value="apiKeys"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="统计信息" value="stats"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="项目工作" value="projectWork" data-capability="projects"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="排行榜" value="leaderboard"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="接口文档" value="docs"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="积分" value="balance"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="操作日志" value="auditLogs" data-capability="auditLogs"></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="提示词" value="prompts" id="promptsNav" hidden></blora-sidebar-nav-link>
+            <blora-sidebar-nav-link label="会话" value="sessions"></blora-sidebar-nav-link>
+          </blora-sidebar-nav-group>
+          <blora-sidebar-nav-group label="设置">
+            <blora-sidebar-nav-link label="用户设置" value="settings"></blora-sidebar-nav-link>
+          </blora-sidebar-nav-group>
+          <blora-sidebar-nav-group label="管理">
+            <blora-sidebar-nav-link label="管理后台" value="admin" id="adminLink" hidden></blora-sidebar-nav-link>
+          </blora-sidebar-nav-group>
+        </blora-sidebar-nav>
       </nav>
 
       <div class="sidebar-footer">

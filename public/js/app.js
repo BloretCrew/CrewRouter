@@ -338,8 +338,13 @@ class ConsoleApp {
   }
 
   bindEvents() {
-    document.querySelectorAll('.nav-item[data-page]').forEach(item => {
-      item.addEventListener('click', () => this.navigateTo(item.dataset.page));
+    document.querySelectorAll('.nav-item[data-page], blora-sidebar-nav-link[value]').forEach(item => {
+      item.addEventListener('click', () => this.navigateTo(item.dataset.page || item.getAttribute('value')));
+    });
+    document.querySelector('blora-sidebar-nav')?.addEventListener('blora-change', (event) => {
+      const page = event.detail?.value;
+      if (page && page !== 'admin') this.navigateTo(page);
+      if (page === 'admin') window.location.href = '/admin';
     });
 
     document.querySelectorAll('[data-settings-category]').forEach(item => {
@@ -448,6 +453,8 @@ class ConsoleApp {
     }
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelector(`.nav-item[data-page="${targetPage}"]`)?.classList.add('active');
+    const sidebarNav = document.querySelector('blora-sidebar-nav');
+    if (sidebarNav && sidebarNav.value !== targetPage) sidebarNav.value = targetPage;
 
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(`${targetPage}Page`)?.classList.add('active');
