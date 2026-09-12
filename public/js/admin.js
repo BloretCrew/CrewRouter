@@ -843,7 +843,7 @@ class AdminApp {
         <div class="form-group"><label>加入 Team</label><blora-select id="inviteTeamId" class="input"><blora-option value="">不指定</blora-option>${teamOptions}</blora-select></div>
         <div class="form-group"><label>加入用户组</label><blora-select id="inviteGroupId" class="input"><blora-option value="">不指定</blora-option>${groupOptions}</blora-select></div>
       </div>`;
-    const footer = `<button type="button" class="dialog-btn dialog-btn-primary" id="inviteGenerateBtn">生成</button>`;
+    const footer = `<button type="button" class="blora-button" data-variant="primary" id="inviteGenerateBtn">生成</button>`;
     const modal = Dialog.showModal({ title: '生成邀请链接', content, footer, width: 480 });
     document.getElementById('inviteGenerateBtn')?.addEventListener('click', async () => {
       try {

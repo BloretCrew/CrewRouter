@@ -48,6 +48,19 @@
   background: var(--blora-color-surface-default);
 }
 
+.blora-admin-users-page .admin-filter-bar .blora-button {
+  min-height: 2.5rem;
+  padding-inline: var(--blora-space-4);
+  border-radius: var(--blora-radius-md);
+  font-family: var(--blora-font-body);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+}
+
+.blora-admin-users-page .admin-filter-bar .blora-button svg {
+  flex: 0 0 auto;
+}
+
 .blora-admin-users-page .users-table {
   overflow-x: auto;
   border: var(--users-border-soft);

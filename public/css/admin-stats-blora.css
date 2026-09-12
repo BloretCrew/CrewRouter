@@ -48,11 +48,8 @@
   letter-spacing: -0.01em;
 }
 
-.blora-admin-page .sidebar-header > .badge {
-  border: var(--blora-border-subtle);
-  border-radius: var(--blora-radius-pill);
-  background: var(--blora-color-action-primary-soft);
-  color: var(--blora-color-action-primary-default);
+.blora-admin-page .sidebar-header > .blora-badge {
+  flex: 0 0 auto;
 }
 
 .blora-admin-page .sidebar-nav { padding: var(--blora-space-3) var(--blora-space-2); }
@@ -149,12 +146,11 @@
 }
 
 .blora-admin-page .theme-toggle .blora-language-select {
+  width: 4.5rem;
   min-width: 4.5rem;
-  width: 4.5rem !important;
   max-width: 4.5rem;
+  height: 2.25rem;
   border-radius: var(--blora-radius-sm);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-primary);
 }
 
 .blora-admin-page .content-section {

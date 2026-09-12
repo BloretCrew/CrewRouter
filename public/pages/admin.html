@@ -90,7 +90,7 @@
           <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo" style="width:28px;height:28px;border-radius:6px;">
           <h2>CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h2>
         </div>
-        <span class="badge"><span data-i18n="管理员">管理员</span></span>
+        <span class="blora-badge" data-variant="info"><span data-i18n="管理员">管理员</span></span>
       </div>
       
       <nav class="sidebar-nav">
@@ -174,10 +174,10 @@
       <div class="content-header">
         <h1 id="pageTitle"><span data-i18n="统计信息">统计信息</span></h1>
         <div class="theme-toggle">
-          <blora-select id="langToggle" class="blora-input blora-language-select" data-size="sm" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-          <blora-option value="zh">中文</blora-option>
-          <blora-option value="en">EN</blora-option>
-    </blora-select>
+          <blora-select id="langToggle" class="blora-language-select" value="zh" title="Language" aria-label="Language">
+            <blora-option value="zh">中文</blora-option>
+            <blora-option value="en">EN</blora-option>
+          </blora-select>
           <button id="themeToggle" class="blora-button" title="切换主题" data-i18n-title="切换主题" data-variant="secondary" data-size="icon">
             <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="5"/>
@@ -200,7 +200,7 @@
           <div id="userStatsCards" class="admin-stat-cards"></div>
           <div class="admin-filter-bar">
             <input type="search" id="userSearchInput" class="blora-input input" placeholder="搜索用户名或邮箱..." data-i18n-placeholder="搜索用户名或邮箱..." oninput="adminApp.filterUsers(this.value)">
-            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.openInviteDialog()">生成邀请链接</button>
+            <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="adminApp.openInviteDialog()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07.07l2-2a5 5 0 0 0-7.07-7.07l-1.15 1.15"/><path d="M14 11a5 5 0 0 0-7.07-.07l-2 2A5 5 0 0 0 12 20l1.15-1.15"/></svg><span data-i18n="生成邀请链接">生成邀请链接</span></button>
           </div>
           <div id="usersList" class="users-table">
             <!-- 用户列表将通过JS动态加载 -->
