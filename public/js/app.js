@@ -2042,7 +2042,7 @@ class ConsoleApp {
         </div>
         <div class="model-filter-bar">
           <div class="model-search-box">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/magnifyingglass?color=black" alt="" data-sf-name="magnifyingglass" width="16" height="16">
             <input type="text" id="keyModelPickerSearch" placeholder="${escapeHtml(t('搜索模型、供应商、Team...'))}" class="blora-input model-search-input">
           </div>
           <div class="model-filter-selects">
@@ -2364,7 +2364,7 @@ class ConsoleApp {
       return `
         <div class="model-library-team" data-picker-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
           <div class="model-library-team-header" onclick="app.toggleKeyModelPickerTeam(${teamIndex})">
-            <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            <img class="collapse-icon sf-icon" src="https://img.bloret.net/SF/chevron.down?color=black" alt="" data-sf-name="chevron.down" width="16" height="16">
             <h3>${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
@@ -2391,7 +2391,7 @@ class ConsoleApp {
         ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
         <div class="model-library-provider-header" onclick="app.toggleKeyModelPickerProvider(${teamIndex}, ${providerIndex})">
           <div class="model-library-provider-title">
-            <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            <img class="collapse-icon sf-icon" src="https://img.bloret.net/SF/chevron.down?color=black" alt="" data-sf-name="chevron.down" width="14" height="14">
             ${renderProviderNameTag(provider.provider_name)}
             ${this._renderProviderTestSummary(provider)}
             ${(provider.tags || []).map(t =>
@@ -10818,7 +10818,7 @@ ${extractorBody}
       return `
         <div class="model-library-team" data-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
           <div class="model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
-            <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            <img class="collapse-icon sf-icon" src="https://img.bloret.net/SF/chevron.down?color=black" alt="" data-sf-name="chevron.down" width="16" height="16">
             <h3>${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
@@ -10862,7 +10862,7 @@ ${extractorBody}
               ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
               <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
                 <div class="model-library-provider-title">
-                  <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                  <img class="collapse-icon sf-icon" src="https://img.bloret.net/SF/chevron.down?color=black" alt="" data-sf-name="chevron.down" width="14" height="14">
                   ${renderProviderNameTag(provider.provider_name, { tag: false })}
                   ${this._renderProviderTestSummary(provider)}
                   ${(provider.tags || []).map(t =>
@@ -11248,7 +11248,7 @@ ${extractorBody}
       <blora-dropdown class="library-more-menu" align="end" onclick="event.stopPropagation()">
         <button slot="trigger" type="button" class="blora-button library-more-trigger" data-variant="outline" data-size="sm" aria-label="${t('更多操作')}">
           <span>${t('更多操作')}</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <img class="sf-icon" src="https://img.bloret.net/SF/chevron.down?color=black" alt="" data-sf-name="chevron.down" width="14" height="14">
         </button>
         ${menuItems}
       </blora-dropdown>`;
