@@ -3952,7 +3952,7 @@ class AdminApp {
 
     if (btn) {
       btn.disabled = false;
-      setHTML(btn, '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> 检测本页连通性');
+      setHTML(btn, '<img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle"> 检测本页连通性');
     }
   }
 

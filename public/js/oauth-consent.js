@@ -53,7 +53,7 @@
     (scopes || []).forEach(function (s) {
       var descKey = SCOPE_I18N_KEYS[s];
       html += '<li>'
-        + '<span class="oc-scope-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>'
+        + '<span class="oc-scope-check"><img class="sf-icon" src="https://img.bloret.net/SF/checkmark?color=black" alt="" data-sf-name="checkmark"></span>'
         + '<span>' + esc(t(descKey || s)) + ' <code>' + esc(s) + '</code></span>'
         + '</li>';
     });
