@@ -198,9 +198,9 @@
     const padding = opts.padding || (compact ? '20px 12px' : '32px 16px');
     const extraClass = compact ? ' page-loading-compact' : '';
     return (
-      `<div class="page-loading${extraClass}" style="min-height:${escapeHtml(minHeight)};padding:${escapeHtml(padding)};">` +
-      loadingSpinnerHtml(size) +
-      `<div class="page-loading-text">${escapeHtml(label)}</div>` +
+      `<div class="page-loading${extraClass} blora-loading-state" style="min-height:${escapeHtml(minHeight)};padding:${escapeHtml(padding)};" role="status" aria-live="polite">` +
+      `<span class="blora-spinner ${size ? `blora-spinner-${size}` : ''}" aria-hidden="true"></span>` +
+      `<span class="page-loading-text">${escapeHtml(label)}</span>` +
       `</div>`
     );
   }
@@ -215,8 +215,8 @@
     const label = text == null ? '' : String(text);
     const s = size === undefined || size === null ? 'sm' : size;
     return (
-      `<span class="inline-loading">` +
-      loadingSpinnerHtml(s) +
+      `<span class="inline-loading blora-loading-state" role="status" aria-live="polite">` +
+      `<span class="blora-spinner ${s ? `blora-spinner-${s}` : ''}" aria-hidden="true"></span>` +
       (label ? `<span class="inline-loading-text">${escapeHtml(label)}</span>` : '') +
       `</span>`
     );
