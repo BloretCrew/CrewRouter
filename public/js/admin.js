@@ -3730,14 +3730,8 @@ class AdminApp {
         将依次从上游拉取模型列表并同步到本地，共 <strong>${items.length}</strong> 个${scopeLabel}供应商。
       </p>
       <div class="batch-sync-options">
-        <label>
-          <input type="checkbox" id="batchSyncEnableNew" class="checkbox" checked>
-          <span>新增上游模型默认<strong>启用</strong></span>
-        </label>
-        <label>
-          <input type="checkbox" id="batchSyncDisableStale" class="checkbox">
-          <span>上游已下架的模型自动<strong>禁用</strong>（默认保留）</span>
-        </label>
+        <blora-checkbox id="batchSyncEnableNew" label="新增上游模型默认启用" checked></blora-checkbox>
+        <blora-checkbox id="batchSyncDisableStale" label="上游已下架的模型自动禁用（默认保留）"></blora-checkbox>
       </div>
       <div id="batchSyncProgressMeta" style="font-size:13px;color:var(--muted-foreground);margin-top:4px;">准备就绪，点击开始</div>
       <div style="margin-top:8px;height:6px;background:var(--muted);border-radius:3px;overflow:hidden;">
@@ -5896,7 +5890,7 @@ async function(ctx) {
 
       return `
         <div class="model-check-item" data-model-id="${model.id}" data-model-name="${model.name || ''}" data-status="${statusClass}"${extraAttrs?.attrs || ''}>
-          <input type="checkbox" class="checkbox" id="fetchedModel_${index}" value="${model.id}" ${isEnabled ? 'checked' : ''} onchange="adminApp.updateFetchedModelsCount()">
+          <blora-checkbox class="checkbox" id="fetchedModel_${index}" value="${model.id}" label="${escapeHtml(model.name || model.id)}" ${isEnabled ? 'checked' : ''} onchange="adminApp.updateFetchedModelsCount()"></blora-checkbox>
           <label for="fetchedModel_${index}">
             <span class="model-name">${model.name || model.id}</span>
             ${model.name && model.name !== model.id ? `<span class="model-id">${model.id}</span>` : ''}
@@ -9894,8 +9888,7 @@ async function(ctx) {
             : available;
           setHTML(listEl, rows.map(u => `
             <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
-              <input type="checkbox" value="${u.id}" class="group-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
-              <span>${escapeHtml(u.username)}</span>
+              <blora-checkbox value="${u.id}" class="group-member-checkbox" label="${escapeHtml(u.username)}" ${selected.has(u.id) ? 'checked' : ''}></blora-checkbox>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
             </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.group-member-checkbox').forEach(cb => {
@@ -10569,8 +10562,7 @@ async function(ctx) {
             : available;
           setHTML(listEl, rows.map(u => `
             <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
-              <input type="checkbox" value="${u.id}" class="team-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
-              <span>${escapeHtml(u.username)}</span>
+              <blora-checkbox value="${u.id}" class="team-member-checkbox" label="${escapeHtml(u.username)}" ${selected.has(u.id) ? 'checked' : ''}></blora-checkbox>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
               ${u.team_name ? `<span class="badge">${escapeHtml(u.team_name)}</span>` : ''}
             </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
@@ -11038,8 +11030,7 @@ async function(ctx) {
         </div>
         <div class="form-group" style="margin:0;">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" id="teamModelBatchNameDisable" >
-            <span>改为批量禁用（取消勾选则为启用）</span>
+            <blora-checkbox id="teamModelBatchNameDisable" label="改为批量禁用（取消勾选则为启用）"></blora-checkbox>
           </label>
         </div>
       </div>
@@ -11095,8 +11086,7 @@ async function(ctx) {
           </div>
           <div class="form-group">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-              <input type="checkbox" id="editTeamDefaultInput" ${team.is_default ? 'checked' : ''}>
-              <span>设为默认 Team（新用户自动加入）</span>
+              <blora-checkbox id="editTeamDefaultInput" label="设为默认 Team（新用户自动加入）" ${team.is_default ? 'checked' : ''}></blora-checkbox>
             </label>
           </div>
         </div>

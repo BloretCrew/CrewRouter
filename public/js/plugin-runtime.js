@@ -517,7 +517,7 @@
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
             <div>${statusChips}</div>
-            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" ${pl.enabled ? 'checked' : ''} onchange="window.__pluginRT.toggle('${esc(pl.id)}', this.checked)"> ${esc(t('启用'))}</label>
+            <blora-switch label="${esc(t('启用'))}" ${pl.enabled ? 'checked' : ''} onchange="window.__pluginRT.toggle('${esc(pl.id)}', this.checked)"></blora-switch>
           </div>
         </div>
         <div style="margin-top:10px;">${capsHtml}</div>
