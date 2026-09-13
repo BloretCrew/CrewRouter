@@ -136,8 +136,8 @@
       }
 
       function renderError(title, msg, href) {
-        root.innerHTML = '<div class="pi-err"><strong>' + esc(title) + '</strong>' + esc(msg) +
-          (href ? '<div style="margin-top:10px;"><a class="pi-link" href="' + esc(href) + '">去登录</a></div>' : '') + '</div>';
+        root.innerHTML = '<blora-alert variant="danger" title="' + esc(title) + '" description="' + esc(msg) + '"></blora-alert>' +
+          (href ? '<div style="margin-top:10px;"><a class="pi-link blora-button" data-variant="secondary" href="' + esc(href) + '">去登录</a></div>' : '');
       }
 
       function confirmInstall() {
@@ -151,8 +151,7 @@
           return r.json().then(function (d) { return { ok: r.ok, data: d }; });
         }).then(function (res) {
           if (res.ok) {
-            root.innerHTML = '<div class="pi-err"><strong style="color:var(--primary,#2563eb);">安装成功</strong>' +
-              esc(res.data.name || pluginId) + ' v' + esc(res.data.version || '') + ' 已启用。</div>' +
+            root.innerHTML = '<blora-alert variant="success" title="安装成功" description="' + esc((res.data.name || pluginId) + ' v' + (res.data.version || '') + ' 已启用。') + '"></blora-alert>' +
               '<div class="pi-actions"><a class="blora-button" data-variant="primary" href="/admin">前往插件管理</a></div>';
           } else {
             throw new Error((res.data && res.data.error) || ('HTTP ' + res.status));
