@@ -714,9 +714,7 @@ class PlaygroundApp {
     if (this.messages.length === 0) {
       setHTML(container, `
         <div class="pg-welcome">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.6;">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
+          <img class="sf-icon" src="https://img.bloret.net/SF/bubble.left?color=black" alt="" data-sf-name="bubble.left" width="48" height="48" style="margin-bottom:16px;opacity:0.6;">
           <h2>Crant AI Playground</h2>
           <p>选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。</p>
         </div>`);
@@ -954,29 +952,29 @@ class PlaygroundApp {
     menu.className = 'pg-context-menu';
     setHTML(menu, `
       <div class="pg-context-menu-item" data-action="copy-text">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <img class="sf-icon" src="https://img.bloret.net/SF/doc.on.doc?color=black" alt="" data-sf-name="doc.on.doc" width="14" height="14">
         复制纯文本
       </div>
       <div class="pg-context-menu-item" data-action="copy-rich">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <img class="sf-icon" src="https://img.bloret.net/SF/doc.on.doc?color=black" alt="" data-sf-name="doc.on.doc" width="14" height="14">
         复制富文本
       </div>
       <div class="pg-context-menu-item" data-action="copy-md">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <img class="sf-icon" src="https://img.bloret.net/SF/doc.on.doc?color=black" alt="" data-sf-name="doc.on.doc" width="14" height="14">
         复制 Markdown
       </div>
       <div class="pg-context-menu-separator"></div>
       <div class="pg-context-menu-item" data-action="reply">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+        <img class="sf-icon" src="https://img.bloret.net/SF/arrow.uturn.left?color=black" alt="" data-sf-name="arrow.uturn.left" width="14" height="14">
         回复
       </div>
       <div class="pg-context-menu-item" data-action="fork">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/></svg>
+        <img class="sf-icon" src="https://img.bloret.net/SF/arrow.triangle.branch?color=black" alt="" data-sf-name="arrow.triangle.branch" width="14" height="14">
         Fork 对话
       </div>
       <div class="pg-context-menu-separator"></div>
       <div class="pg-context-menu-item pg-context-menu-danger" data-action="delete">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <img class="sf-icon" src="https://img.bloret.net/SF/trash?color=black" alt="" data-sf-name="trash" width="14" height="14">
         删除消息
       </div>
     `);
