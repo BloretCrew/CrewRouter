@@ -458,12 +458,12 @@
       updateNav();
       var html = '<div class="store-detail__title" style="margin:16px 0;">' + esc(t('提交插件')) + '</div>';
       if (!me.config.configured) {
-        html += '<div class="store-empty">' + esc(t('PassPort 尚未配置，无法提交插件')) + '</div>';
+        html += emptyHtml(t('PassPort 尚未配置，无法提交插件'));
         viewBox.innerHTML = html;
         return;
       }
       if (!me.loggedIn) {
-        html += '<div class="store-empty"><a class="blora-button" data-variant="primary" href="' + AUTH + '/login?return_to=' + encodeURIComponent('/store#/submit') + '">' + esc(t('登录后提交')) + '</a></div>';
+        html += loginEmptyHtml(t('登录后提交'), AUTH + '/login?return_to=' + encodeURIComponent('/store#/submit'));
         viewBox.innerHTML = html;
         return;
       }
@@ -480,7 +480,7 @@
         wireSubmitForm(editId, p);
         wireManifestUpload(editId);
       }).catch(function (e) {
-        viewBox.innerHTML = '<div class="store-error">' + esc(e.message) + '</div>';
+        viewBox.innerHTML = errorHtml(e.message);
       });
     });
   }
@@ -522,17 +522,17 @@
       me = mm;
       updateNav();
       if (!me.config.configured) {
-        viewBox.innerHTML = '<div class="store-empty">' + esc(t('PassPort 尚未配置，无法查看我的插件')) + '</div>';
+        viewBox.innerHTML = emptyHtml(t('PassPort 尚未配置，无法查看我的插件'));
         return;
       }
       if (!me.loggedIn) {
-        viewBox.innerHTML = '<div class="store-empty"><a class="blora-button" data-variant="primary" href="' + AUTH + '/login?return_to=' + encodeURIComponent('/store#/mine') + '">' + esc(t('登录后查看')) + '</a></div>';
+        viewBox.innerHTML = loginEmptyHtml(t('登录后查看'), AUTH + '/login?return_to=' + encodeURIComponent('/store#/mine'));
         return;
       }
       api('/plugins?scope=mine').then(function (data) {
         var html = '<div class="store-detail__title" style="margin:16px 0;">' + esc(t('我的插件')) + '</div>';
         if (!data.plugins.length) {
-          html += '<div class="store-empty">' + esc(t('还没有提交过插件')) + '</div>';
+          html += emptyHtml(t('还没有提交过插件'));
         } else {
           html += data.plugins.map(function (p) {
             var statusText = p.status === 'approved' ? t('已上架') : p.status === 'rejected' ? t('已拒绝') : t('待审核');
@@ -556,11 +556,11 @@
       me = mm;
       updateNav();
       if (!me.config.configured) {
-        viewBox.innerHTML = '<div class="store-empty">' + esc(t('PassPort 尚未配置，无法审核')) + '</div>';
+        viewBox.innerHTML = emptyHtml(t('PassPort 尚未配置，无法审核'));
         return;
       }
       if (!me.loggedIn || !me.user.admin) {
-        viewBox.innerHTML = '<div class="store-empty">' + esc(t('需要管理员权限')) + '</div>';
+        viewBox.innerHTML = emptyHtml(t('需要管理员权限'));
         return;
       }
       var statusFilter = (viewAdmin.currentStatus || 'pending');
@@ -645,7 +645,7 @@
       var html = '<div class="store-modal-mask" id="storeInstallMask"><div class="store-modal">';
       html += '<div class="store-modal__head"><h3>' + esc(t('安装到 CrewRouter')) + '</h3><button type="button" class="blora-button" data-variant="secondary" data-size="sm" id="storeModalClose">' + esc(t('关闭')) + '</button></div>';
       if (!targets.length) {
-        html += '<div class="store-empty">' + esc(t('未检测到你登录过的 CrewRouter')) + '</div>';
+        html += emptyHtml(t('未检测到你登录过的 CrewRouter'));
       } else {
         html += '<div class="store-modal__list">' + targets.map(function (tg) {
           var note = tg.isAdmin ? '' : '<div class="store-target__note">' + esc(t('没有管理员权限')) + '</div>';
