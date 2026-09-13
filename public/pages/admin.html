@@ -354,7 +354,7 @@
 <div aria-label="模型管理操作" class="model-library-header-actions" role="toolbar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
 <div class="admin-action-dropdown" id="batchActionsGroup" style="display:none;">
 <button class="blora-button" data-size="sm" data-variant="outline" onclick="adminApp.toggleBatchDropdown(event)" type="button"><span data-i18n="批量操作">
-                  批量操作 </span><svg fill="none" height="12" stroke="currentColor" stroke-width="2" style="margin-left:4px;" viewbox="0 0 24 24" width="12"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  批量操作 </span><img class="sf-icon" src="https://img.bloret.net/SF/chevron.down?color=black" alt="" data-sf-name="chevron.down" width="12" height="12">
 </button>
 <blora-dropdown align="start" class="admin-action-dropdown-menu" id="batchDropdownMenu">
 <button class="blora-button" data-size="sm" data-variant="outline" slot="trigger" type="button"><span data-i18n="批量操作">批量操作</span></button>
@@ -471,7 +471,7 @@
 <div class="provider-more-menu" id="providerMoreMenu">
 <button aria-expanded="false" aria-haspopup="true" class="blora-button" data-i18n-title="更多操作" data-variant="secondary" id="providerMoreMenuBtn" onclick="adminApp.toggleProviderMoreMenu(event)" title="更多操作" type="button"><span data-i18n="更多">
                   更多
-                  </span><svg fill="none" height="12" stroke="currentColor" stroke-width="2" style="margin-left:4px;" viewbox="0 0 24 24" width="12"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </span><img class="sf-icon" src="https://img.bloret.net/SF/chevron.down?color=black" alt="" data-sf-name="chevron.down" width="12" height="12">
 </button>
 <div class="provider-more-dropdown" id="providerMoreDropdown" role="menu" style="display:none;">
 <button class="provider-more-item" id="pingAllProvidersBtn" onclick="adminApp.pingAllProviders();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
@@ -511,8 +511,7 @@
 <button class="blora-button" data-i18n-title="表格视图" data-size="sm" data-variant="secondary" id="providerViewTableBtn" onclick="adminApp.setProviderView('table')" style="padding:6px 8px;" title="表格视图" type="button">
 <img class="sf-icon" src="https://img.bloret.net/SF/trash?color=black" alt="" data-sf-name="trash" width="14" height="14">
 </button>
-<button class="blora-button" data-i18n-title="卡片视图" data-size="sm" data-variant="secondary" id="providerViewCardBtn" onclick="adminApp.setProviderView('card')" style="padding:6px 8px;" title="卡片视图" type="button">
-<svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><rect height="14" rx="2" ry="2" width="20" x="2" y="3"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
+<button class="blora-button" data-i18n-title="卡片视图" data-size="sm" data-variant="secondary" id="providerViewCardBtn" onclick="adminApp.setProviderView('card')" style="padding:6px 8px;" title="卡片视图" type="button"><img class="sf-icon" src="https://img.bloret.net/SF/square.grid.2x2?color=black" alt="" data-sf-name="square.grid.2x2" width="14" height="14">
 </button>
 </div>
 </div>

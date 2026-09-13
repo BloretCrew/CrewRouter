@@ -8541,7 +8541,7 @@ ${extractorBody}
                 </td>
                 <td>
                   <button type="button" class="blora-button upstream-action" data-variant="outline" data-size="sm" onclick="app.showManageModelsModal('${this._jsString(p.id)}')" title="${t('管理模型')}">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                    <img class="sf-icon" src="https://img.bloret.net/SF/line.3.horizontal?color=black" alt="" data-sf-name="line.3.horizontal" width="12" height="12">
                     模型
                   </button>
                 </td>

@@ -937,11 +937,7 @@ class AdminApp {
               <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
               <td style="color:var(--muted-foreground);font-size:12px;">${new Date(user.created_at).toLocaleDateString('zh-CN')}</td>
               <td>
-                <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editUserById(${user.id})" data-variant="secondary" data-size="icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
+                <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editUserById(${user.id})" data-variant="secondary" data-size="icon"><img class="sf-icon" src="https://img.bloret.net/SF/pencil?color=black" alt="" data-sf-name="pencil" width="16" height="16">
                 </button>
               </td>
             </tr>
@@ -9293,17 +9289,9 @@ async function(ctx) {
             <div style="font-weight:500;">${icon.name}</div>
             <div style="font-size:12px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon.icon_url || t('未设置图标')}</div>
           </div>
-          <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editSeriesIcon('${icon.name}', '${icon.icon_url || ''}')" data-variant="secondary" data-size="icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
+          <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editSeriesIcon('${icon.name}', '${icon.icon_url || ''}')" data-variant="secondary" data-size="icon"><img class="sf-icon" src="https://img.bloret.net/SF/pencil?color=black" alt="" data-sf-name="pencil" width="16" height="16">
           </button>
-          <button class="blora-button" title="${t('删除')}" onclick="adminApp.deleteSeriesIcon('${icon.name}')" data-variant="secondary" data-size="icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
+          <button class="blora-button" title="${t('删除')}" onclick="adminApp.deleteSeriesIcon('${icon.name}')" data-variant="secondary" data-size="icon"><img class="sf-icon" src="https://img.bloret.net/SF/trash?color=black" alt="" data-sf-name="trash" width="16" height="16">
           </button>
         </div>
       `).join(''));
