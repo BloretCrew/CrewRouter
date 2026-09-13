@@ -8513,7 +8513,7 @@ ${extractorBody}
         <table>
           <thead>
             <tr>
-              <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllProviders(this.checked)"></th>
+              <th style="width:40px;"><blora-checkbox aria-label="全选供应商" onchange="app.toggleSelectAllProviders(this.checked)"></blora-checkbox></th>
               <th>名称</th>
               <th>Base URL</th>
               <th>格式</th>
@@ -8525,7 +8525,7 @@ ${extractorBody}
           <tbody>
             ${providers.map(p => `
               <tr data-provider-id="${escapeHtml(p.id)}">
-                <td><input type="checkbox" class="blora-input provider-checkbox" value="${escapeHtml(p.id)}" onchange="app.updateBatchButtons()"></td>
+                <td><blora-checkbox class="provider-checkbox" value="${escapeHtml(p.id)}" aria-label="选择供应商" onchange="app.updateBatchButtons()"></blora-checkbox></td>
                 <td>
                   <div style="font-weight:500;">${escapeHtml(p.name)}</div>
                   <div style="font-size:11px;color:var(--muted-foreground);font-family:monospace;">${escapeHtml(p.id)}</div>
@@ -8869,7 +8869,7 @@ ${extractorBody}
 
     setHTML(container, models.map((model, index) => `
       <div class="blora-card model-check-item" data-model-id="${escapeHtml(String(model.id))}" data-model-name="${escapeHtml(model.name || '')}">
-        <input type="checkbox" class="blora-input manage-model-checkbox" id="manageModel_${index}" value="${escapeHtml(String(model.id))}" onchange="app._updateManageModelsBatchBar()">
+        <blora-checkbox class="manage-model-checkbox" id="manageModel_${index}" value="${escapeHtml(String(model.id))}" label="${escapeHtml(model.name || model.id)}" onchange="app._updateManageModelsBatchBar()"></blora-checkbox>
         <label for="manageModel_${index}" style="flex:1;cursor:pointer;">
           <span style="font-weight:500;">${escapeHtml(model.name || model.id)}</span>
           ${model.name && model.name !== model.id ? `<span style="font-size:12px;color:var(--muted-foreground);margin-left:8px;">${escapeHtml(model.id)}</span>` : ''}
@@ -9121,7 +9121,7 @@ ${extractorBody}
       <table>
         <thead>
           <tr>
-            <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></th>
+            <th style="width:40px;"><blora-checkbox aria-label="全选模型" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></blora-checkbox></th>
             <th>模型名称</th>
             <th>上游模型ID</th>
             <th>供应商</th>
@@ -9134,7 +9134,7 @@ ${extractorBody}
         <tbody>
           ${models.map(m => `
             <tr data-model-id="${escapeHtml(m.id)}">
-              <td><input type="checkbox" class="blora-input my-team-model-checkbox" value="${escapeHtml(m.id)}" onchange="app.updateMyModelsBatchButtons()"></td>
+              <td><blora-checkbox class="my-team-model-checkbox" value="${escapeHtml(m.id)}" aria-label="选择模型" onchange="app.updateMyModelsBatchButtons()"></blora-checkbox></td>
               <td>
                 <div style="font-weight:500;">${escapeHtml(m.alias || m.name || m.id)}</div>
                 ${m.description ? `<div style="font-size:11px;color:var(--muted-foreground);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
