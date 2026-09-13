@@ -64,9 +64,7 @@
 <!-- 移动端顶部导航栏 -->
 <div class="mobile-topbar">
 <button aria-label="打开菜单" class="mobile-hamburger" data-i18n-title="打开菜单" id="sidebarToggle" type="button">
-<svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-width="2" viewbox="0 0 24 24" width="20">
-<line x1="3" x2="21" y1="6" y2="6"></line><line x1="3" x2="21" y1="12" y2="12"></line><line x1="3" x2="21" y1="18" y2="18"></line>
-</svg>
+<img class="sf-icon" src="https://img.bloret.net/SF/line.3.horizontal?color=black" alt="" data-sf-name="line.3.horizontal" width="20" height="20">
 </button>
 <div class="mobile-topbar-logo">
 <img alt="Logo" src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918"/>
@@ -116,7 +114,7 @@
 <span id="username"></span>
 </div>
 <button aria-label="登出" class="blora-button" data-i18n-aria-label="登出" data-i18n-title="登出" data-size="icon" data-variant="secondary" id="logoutBtn" title="登出" type="button">
-<svg aria-hidden="true" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M21 3v18"></path></svg>
+<img class="sf-icon" src="https://img.bloret.net/SF/rectangle.portrait.and.arrow.right?color=black" alt="" data-sf-name="rectangle.portrait.and.arrow.right" width="16" height="16">
 </button>
 </div>
 </aside>
@@ -143,7 +141,7 @@
 <div class="admin-stat-cards" id="userStatsCards"></div>
 <div class="admin-filter-bar">
 <input class="blora-input input" data-i18n-placeholder="搜索用户名或邮箱..." id="userSearchInput" oninput="adminApp.filterUsers(this.value)" placeholder="搜索用户名或邮箱..." type="search"/>
-<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.openInviteDialog()" type="button"><svg aria-hidden="true" fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M10 13a5 5 0 0 0 7.07.07l2-2a5 5 0 0 0-7.07-7.07l-1.15 1.15"></path><path d="M14 11a5 5 0 0 0-7.07-.07l-2 2A5 5 0 0 0 12 20l1.15-1.15"></path></svg><span data-i18n="生成邀请链接">生成邀请链接</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.openInviteDialog()" type="button"><img class="sf-icon" src="https://img.bloret.net/SF/link?color=black" alt="" data-sf-name="link" width="14" height="14"><span data-i18n="生成邀请链接">生成邀请链接</span></button>
 </div>
 <div class="users-table" id="usersList">
 <!-- 用户列表将通过JS动态加载 -->
@@ -191,7 +189,7 @@
 <div class="admin-stat-cards" id="teamStatsCards"></div>
 <div class="admin-page-header">
 <div class="section-actions">
-<button class="blora-button" data-size="sm" data-variant="secondary" id="createTeamBtn" type="button"><svg aria-hidden="true" fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M12 5v14M5 12h14"></path></svg><span data-i18n="创建 Team">创建 Team</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" id="createTeamBtn" type="button"><img class="sf-icon" src="https://img.bloret.net/SF/plus?color=black" alt="" data-sf-name="plus" width="14" height="14"><span data-i18n="创建 Team">创建 Team</span></button>
 </div>
 </div>
 <div class="admin-filter-bar" id="adminTeamsFilters">
@@ -264,7 +262,7 @@
 <div class="admin-stat-cards" id="userGroupStatsCards"></div>
 <div class="admin-page-header">
 <div class="section-actions">
-<button class="blora-button" data-size="sm" data-variant="secondary" id="createUserGroupBtn" type="button"><svg aria-hidden="true" fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M12 5v14M5 12h14"></path></svg><span data-i18n="创建用户组">创建用户组</span></button>
+<button class="blora-button" data-size="sm" data-variant="secondary" id="createUserGroupBtn" type="button"><img class="sf-icon" src="https://img.bloret.net/SF/plus?color=black" alt="" data-sf-name="plus" width="14" height="14"><span data-i18n="创建用户组">创建用户组</span></button>
 </div>
 </div>
 <div class="admin-filter-bar">
@@ -386,7 +384,7 @@
 <!-- 筛选器（模型库风格） -->
 <div class="model-filter-bar admin-models-filter-bar" id="adminModelsFilters">
 <div class="model-search-box">
-<svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<img class="sf-icon" src="https://img.bloret.net/SF/plus?color=black" alt="" data-sf-name="plus" width="16" height="16">
 <input class="blora-input model-search-input" data-i18n-placeholder="搜索模型名称、上游 ID、系列..." id="modelSearchInput" oninput="adminApp.onAdminModelFilterInput('search', this.value, 'main')" placeholder="搜索模型名称、上游 ID、系列..." type="search"/>
 </div>
 <div class="model-filter-selects admin-models-filter-selects">
@@ -477,27 +475,27 @@
 </button>
 <div class="provider-more-dropdown" id="providerMoreDropdown" role="menu" style="display:none;">
 <button class="provider-more-item" id="pingAllProvidersBtn" onclick="adminApp.pingAllProviders();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
-<svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg><span data-i18n="检测本页连通性">
+<img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle" width="14" height="14"><span data-i18n="检测本页连通性">
                     检测本页连通性
                   </span></button>
 <button class="provider-more-item" onclick="adminApp.exportProvidersCsv();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
-<svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg><span data-i18n="导出 CSV">
+<img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle" width="14" height="14"><span data-i18n="导出 CSV">
                     导出 CSV
                   </span></button>
 <button class="provider-more-item" onclick="adminApp.refreshPageQuotas();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
-<svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span data-i18n="刷新本页额度">
+<img class="sf-icon" src="https://img.bloret.net/SF/arrow.down.doc?color=black" alt="" data-sf-name="arrow.down.doc" width="14" height="14"><span data-i18n="刷新本页额度">
                     刷新本页额度
                   </span></button>
 <button class="provider-more-item" onclick="adminApp.batchSyncPageProviders();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
-<svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 16h5v5"></path></svg><span data-i18n="同步本页模型">
+<img class="sf-icon" src="https://img.bloret.net/SF/arrow.clockwise?color=black" alt="" data-sf-name="arrow.clockwise" width="14" height="14"><span data-i18n="同步本页模型">
                     同步本页模型
                   </span></button>
 <button class="provider-more-item" onclick="adminApp.batchSyncSelectedProviders();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
-<svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span data-i18n="批量同步选中">
+<img class="sf-icon" src="https://img.bloret.net/SF/arrow.triangle.2.circlepath?color=black" alt="" data-sf-name="arrow.triangle.2.circlepath" width="14" height="14"><span data-i18n="批量同步选中">
                     批量同步选中
                   </span></button>
 <button class="provider-more-item provider-more-item-danger" onclick="adminApp.cleanupAllStaleModels();adminApp.hideProviderMoreMenu();" role="menuitem" type="button">
-<svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg><span data-i18n="清理所有已下架模型">
+<img class="sf-icon" src="https://img.bloret.net/SF/checkmark.square?color=black" alt="" data-sf-name="checkmark.square" width="14" height="14"><span data-i18n="清理所有已下架模型">
                     清理所有已下架模型
                   </span></button>
 </div>
@@ -511,7 +509,7 @@
 <button class="blora-button" data-size="sm" data-variant="primary" id="addProviderBtn" type="button"><span data-i18n="添加供应商">添加供应商</span></button>
 <div class="provider-view-toggle">
 <button class="blora-button" data-i18n-title="表格视图" data-size="sm" data-variant="secondary" id="providerViewTableBtn" onclick="adminApp.setProviderView('table')" style="padding:6px 8px;" title="表格视图" type="button">
-<svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><rect height="7" width="7" x="3" y="3"></rect><rect height="7" width="7" x="14" y="3"></rect><rect height="7" width="7" x="3" y="14"></rect><rect height="7" width="7" x="14" y="14"></rect></svg>
+<img class="sf-icon" src="https://img.bloret.net/SF/trash?color=black" alt="" data-sf-name="trash" width="14" height="14">
 </button>
 <button class="blora-button" data-i18n-title="卡片视图" data-size="sm" data-variant="secondary" id="providerViewCardBtn" onclick="adminApp.setProviderView('card')" style="padding:6px 8px;" title="卡片视图" type="button">
 <svg fill="none" height="14" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="14"><rect height="14" rx="2" ry="2" width="20" x="2" y="3"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
@@ -614,7 +612,7 @@
 <div class="stats-overview-grid" style="margin-bottom:24px;">
 <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--info),#2563eb);">
 <div class="stats-overview-icon">
-<svg fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+<img class="sf-icon" src="https://img.bloret.net/SF/bubble.left.and.bubble.right?color=black" alt="" data-sf-name="bubble.left.and.bubble.right" width="24" height="24">
 </div>
 <div class="stats-overview-content">
 <span class="stats-overview-label"><span data-i18n="总请求数">总请求数</span></span>
@@ -1625,7 +1623,7 @@
 <div style="margin-top:12px;padding:12px;background:var(--background);border:1px solid var(--border);border-radius:10px;">
 <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
 <button class="blora-button" data-size="sm" data-variant="secondary" onclick="adminApp.copyKeyScriptDoc()" style="font-size:12px;" type="button">
-<svg fill="none" height="12" stroke="currentColor" stroke-width="2" style="margin-right:4px;" viewbox="0 0 24 24" width="12"><rect height="13" rx="2" width="13" x="9" y="9"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span data-i18n="复制文档">
+<img class="sf-icon" src="https://img.bloret.net/SF/doc.on.doc?color=black" alt="" data-sf-name="doc.on.doc" width="12" height="12"><span data-i18n="复制文档">
                       复制文档
                     </span></button>
 </div>

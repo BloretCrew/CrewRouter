@@ -65,9 +65,7 @@
   <!-- 移动端顶部导航栏 -->
   <div class="mobile-topbar">
     <button class="mobile-hamburger" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单" type="button">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-      </svg>
+      <img class="sf-icon" src="https://img.bloret.net/SF/line.3.horizontal?color=black" alt="" data-sf-name="line.3.horizontal" width="20" height="20">
     </button>
     <div class="mobile-topbar-logo">
       <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">
@@ -122,7 +120,7 @@
           <span id="username"></span>
         </div>
         <button id="logoutBtn" class="blora-button" title="登出" data-i18n-title="登出" data-variant="ghost" data-size="icon" aria-label="登出" data-i18n-aria-label="登出" type="button">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M21 3v18"/></svg>
+          <img class="sf-icon" src="https://img.bloret.net/SF/rectangle.portrait.and.arrow.right?color=black" alt="" data-sf-name="rectangle.portrait.and.arrow.right" width="16" height="16">
         </button>
       </div>
     </aside>
@@ -242,11 +240,11 @@
           </div>
           <div class="model-library-header-actions" id="modelLibraryHeaderActions">
             <button class="blora-button" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型" data-variant="secondary" data-size="sm" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span data-i18n="我的上游">
+              <img class="sf-icon" src="https://img.bloret.net/SF/plus?color=black" alt="" data-sf-name="plus" width="14" height="14"><span data-i18n="我的上游">
               我的上游
             </span></button>
             <button class="blora-button" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商" data-variant="primary" data-size="sm" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="添加供应商">
+              <img class="sf-icon" src="https://img.bloret.net/SF/plus?color=black" alt="" data-sf-name="plus" width="14" height="14"><span data-i18n="添加供应商">
               添加供应商
             </span></button>
             <blora-dropdown id="libraryMoreDropdown" align="start">
@@ -329,7 +327,7 @@
         <!-- 搜索和筛选：默认只露搜索 + 供应商，其余折叠 -->
         <div class="model-filter-bar" id="modelLibraryFilters" style="display:none;">
           <div class="model-search-box">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/arrow.counterclockwise?color=black" alt="" data-sf-name="arrow.counterclockwise" width="16" height="16">
             <input type="text" id="librarySearchInput" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..." class="model-search-input">
           </div>
           <div class="model-filter-selects">
@@ -406,7 +404,7 @@
                 批量删除
               </span></button>
               <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showAddModelModal()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="添加模型">
+                <img class="sf-icon" src="https://img.bloret.net/SF/plus?color=black" alt="" data-sf-name="plus" width="14" height="14"><span data-i18n="添加模型">
                 添加模型
               </span></button>
             </div>
@@ -511,7 +509,7 @@
           <div class="model-library-sticky-inner">
             <span class="page-sticky-title"><span data-i18n="API 密钥">API 密钥</span></span>
             <span class="page-sticky-hint"><span data-i18n="拖拽标签到下方密钥卡片">拖拽标签到下方密钥卡片</span></span>
-            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showModal('createApiKeyModal')" style="margin-left:auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>
+            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showModal('createApiKeyModal')" style="margin-left:auto;"><img class="sf-icon" src="https://img.bloret.net/SF/key?color=black" alt="" data-sf-name="key" width="14" height="14"><span data-i18n="创建密钥">创建密钥</span></button>
           </div>
           <div class="page-sticky-tag-row" aria-label="密钥标签" data-i18n-title="密钥标签">
             <span class="page-sticky-tag-label" title="拖拽标签到密钥卡片进行分配" data-i18n-title="拖拽标签到密钥卡片进行分配"><span data-i18n="标签">标签</span></span>
@@ -522,7 +520,7 @@
         <div class="content-section">
           <div class="section-header">
             <h2><span data-i18n="API 密钥">API 密钥</span></h2>
-            <button type="button" id="createApiKeyBtn" class="blora-button" data-variant="primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>
+            <button type="button" id="createApiKeyBtn" class="blora-button" data-variant="primary"><img class="sf-icon" src="https://img.bloret.net/SF/key?color=black" alt="" data-sf-name="key" width="14" height="14"><span data-i18n="创建密钥">创建密钥</span></button>
           </div>
 
           <!-- 我的 Key 用量概览（不含他人发起的 Co-Key） -->
@@ -651,7 +649,7 @@
             </div>
             <div class="stats-filter-group" style="align-self:flex-end;">
               <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.resetStatsFilters()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg><span data-i18n="重置">
+                <img class="sf-icon" src="https://img.bloret.net/SF/arrow.counterclockwise?color=black" alt="" data-sf-name="arrow.counterclockwise" width="14" height="14"><span data-i18n="重置">
                 重置
               </span></button>
             </div>
@@ -669,7 +667,7 @@
           <div class="stats-overview-grid">
             <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--info),#2563eb);">
               <div class="stats-overview-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <img class="sf-icon" src="https://img.bloret.net/SF/square.grid.2x2?color=black" alt="" data-sf-name="square.grid.2x2" width="24" height="24">
               </div>
               <div class="stats-overview-content">
                 <span class="stats-overview-label"><span data-i18n="总请求数">总请求数</span></span>
@@ -811,35 +809,35 @@
           <!-- 图表标签页 -->
           <blora-tabs class="stats-tab-bar" value="overview">
             <blora-tab class="stats-tab" value="overview" selected>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span data-i18n="概览">
+              <img class="sf-icon" src="https://img.bloret.net/SF/square.grid.2x2?color=black" alt="" data-sf-name="square.grid.2x2" width="16" height="16"><span data-i18n="概览">
               概览
             </span></blora-tab>
             <blora-tab class="stats-tab" value="daily" >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span data-i18n="每日趋势">
+              <img class="sf-icon" src="https://img.bloret.net/SF/square.grid.2x2?color=black" alt="" data-sf-name="square.grid.2x2" width="16" height="16"><span data-i18n="每日趋势">
               每日趋势
             </span></blora-tab>
             <blora-tab class="stats-tab" value="hourly" >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span data-i18n="时段分布">
+              <img class="sf-icon" src="https://img.bloret.net/SF/square.grid.2x2?color=black" alt="" data-sf-name="square.grid.2x2" width="16" height="16"><span data-i18n="时段分布">
               时段分布
             </span></blora-tab>
             <blora-tab class="stats-tab" value="model" >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg><span data-i18n="模型分析">
+              <img class="sf-icon" src="https://img.bloret.net/SF/chart.line.uptrend.xyaxis?color=black" alt="" data-sf-name="chart.line.uptrend.xyaxis" width="16" height="16"><span data-i18n="模型分析">
               模型分析
             </span></blora-tab>
             <blora-tab class="stats-tab" value="apikey" >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg><span data-i18n="密钥分析">
+              <img class="sf-icon" src="https://img.bloret.net/SF/cube?color=black" alt="" data-sf-name="cube" width="16" height="16"><span data-i18n="密钥分析">
               密钥分析
             </span></blora-tab>
             <blora-tab class="stats-tab" value="source" >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span data-i18n="客户端">
+              <img class="sf-icon" src="https://img.bloret.net/SF/key?color=black" alt="" data-sf-name="key" width="16" height="16"><span data-i18n="客户端">
               客户端
             </span></blora-tab>
             <blora-tab class="stats-tab" value="messages" >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H5l-1 4V4z"/><path d="M8 8h8M8 12h5"/></svg><span data-i18n="消息分析">
+              <img class="sf-icon" src="https://img.bloret.net/SF/person.2?color=black" alt="" data-sf-name="person.2" width="16" height="16"><span data-i18n="消息分析">
               消息分析
             </span></blora-tab>
             <blora-tab class="stats-tab" value="logs" >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span data-i18n="调用记录">
+              <img class="sf-icon" src="https://img.bloret.net/SF/square.grid.2x2?color=black" alt="" data-sf-name="square.grid.2x2" width="16" height="16"><span data-i18n="调用记录">
               调用记录
             </span></blora-tab>
           </blora-tabs>
