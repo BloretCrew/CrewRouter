@@ -1,0 +1,253 @@
+/* Blora Design 2.0 - Theming add-on (palette picker + scheme helpers) */
+
+html[data-blora-color-scheme="dark"],
+html[data-blora-color-scheme="dark"] body,
+html[data-blora-color-scheme="dark"] .blora-scope {
+  background-color: var(--blora-color-surface-canvas) !important;
+  color: var(--blora-color-text-secondary);
+}
+
+html[data-blora-color-scheme="dark"] .blora-scope {
+  min-height: 100%;
+}
+
+html[data-blora-color-scheme="light"],
+html[data-blora-color-scheme="light"] body,
+html[data-blora-color-scheme="light"] .blora-scope {
+  background-color: var(--blora-color-surface-canvas);
+  color: var(--blora-color-text-secondary);
+}
+
+.blora-palette-picker {
+  position: relative;
+}
+
+.blora-navbar .blora-palette-picker__menu,
+.blora-navbar__tools .blora-palette-picker__menu {
+  inset-inline: auto 0;
+}
+
+blora-palette-picker,
+blora-color-scheme-toggle {
+  display: inline-block;
+  line-height: var(--blora-leading-normal);
+  vertical-align: middle;
+}
+
+.blora-color-scheme-toggle__button {
+  --blora-button-icon-size: 1.125rem;
+  --blora-button-radius: 50%;
+  --blora-button-corner: round;
+
+  box-sizing: border-box;
+  width: var(--blora-button-height);
+  min-inline-size: var(--blora-button-height);
+  height: var(--blora-button-height);
+  max-height: none;
+  padding: 0;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+/* Navbar sm tools are locked to --blora-space-6 (32px). Keep this control
+   on that token so it lines up with Coral, but drop the leftover inline
+   padding that left only ~13px for the glyph. */
+.blora-navbar .blora-color-scheme-toggle__button.blora-button[data-size="sm"] {
+  width: var(--blora-space-6);
+  min-inline-size: var(--blora-space-6);
+  height: var(--blora-space-6);
+  max-height: none;
+  padding: 0;
+}
+
+.blora-palette-picker__trigger {
+  white-space: nowrap;
+
+  /* Keep label readable at any canvas width (do not collapse to empty pill) */
+  max-width: min(12rem, 100%);
+  overflow: hidden;
+
+  --blora-button-icon-size: 1.125rem;
+}
+
+.blora-palette-picker__trigger[data-icon-only] {
+  --blora-button-icon-size: 1.125rem;
+  --blora-button-radius: 50%;
+  --blora-button-corner: round;
+
+  box-sizing: border-box;
+  width: var(--blora-button-height);
+  min-inline-size: var(--blora-button-height);
+  height: var(--blora-button-height);
+  max-height: none;
+  padding: 0;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.blora-navbar .blora-palette-picker__trigger[data-icon-only][data-size="sm"] {
+  width: var(--blora-space-6);
+  min-inline-size: var(--blora-space-6);
+  height: var(--blora-space-6);
+}
+
+.blora-palette-picker__trigger svg,
+.blora-color-scheme-toggle__button svg {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.blora-palette-picker__label {
+  display: inline-block;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  line-height: var(--blora-leading-normal);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blora-palette-picker__menu {
+  position: absolute;
+  top: calc(100% + var(--blora-space-2));
+  inset-inline-start: 0;
+  z-index: var(--blora-z-dropdown);
+  width: min(20rem, calc(100vw - 2 * var(--blora-space-4)));
+  padding: var(--blora-space-3);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-3);
+  line-height: var(--blora-leading-normal);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-0.35em);
+  transition:
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard),
+    visibility 0s linear var(--blora-duration-base);
+  transition-behavior: allow-discrete;
+}
+
+/* Top-layer popover: beat the UA defaults (position: fixed; inset: 0;
+   margin: auto) so placeMenu coordinates drive placement, and escape
+   transformed ancestors such as the mobile drawer's aside. */
+.blora-palette-picker__menu[popover] {
+  position: fixed;
+  margin: 0;
+}
+
+.blora-palette-picker[data-open] .blora-palette-picker__menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+
+@starting-style {
+  .blora-palette-picker[data-open] .blora-palette-picker__menu {
+    opacity: 0;
+    transform: translateY(-0.35em);
+  }
+}
+
+.blora-palette-picker__head {
+  padding: var(--blora-space-1) var(--blora-space-1) var(--blora-space-3);
+}
+
+.blora-palette-picker__title {
+  display: block;
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+}
+
+.blora-palette-picker__hint {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--blora-color-text-emphasis);
+  font-size: var(--blora-text-xs);
+}
+
+.blora-palette-picker__list {
+  display: grid;
+  gap: var(--blora-space-2);
+  max-height: min(22rem, 60vh);
+  overflow: auto;
+}
+
+.blora-palette-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blora-space-3);
+  width: 100%;
+  padding: var(--blora-space-2) var(--blora-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--blora-radius-md);
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+}
+
+.blora-palette-card:hover {
+  background: var(--blora-color-surface-raised);
+  border-color: var(--blora-color-border-subtle);
+}
+
+.blora-palette-card[aria-selected="true"] {
+  background: var(--blora-color-action-primary-tint);
+  border-color: color-mix(in srgb, var(--blora-color-action-primary-default) 38%, transparent);
+}
+
+.blora-palette-card__copy {
+  min-width: 0;
+}
+
+.blora-palette-card__name {
+  display: block;
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+}
+
+.blora-palette-card__desc {
+  display: block;
+  margin-top: 0.1rem;
+  overflow: hidden;
+  color: var(--blora-color-text-emphasis);
+  font-size: var(--blora-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blora-palette-card__colors {
+  display: flex;
+  flex: none;
+}
+
+.blora-palette-card__color {
+  width: 1.25rem;
+  height: 2rem;
+  margin-inline-start: -0.2rem;
+  border: 2px solid var(--blora-color-surface-default);
+  border-radius: var(--blora-radius-sm);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-palette-card:hover .blora-palette-card__color {
+  border-color: var(--blora-color-surface-raised);
+}
+
+@media (max-width: 560px) {
+  /* Keep label visible — hiding left an empty outline pill with no icon */
+  .blora-palette-picker__label {
+    display: inline-block;
+    max-width: 8rem;
+  }
+}

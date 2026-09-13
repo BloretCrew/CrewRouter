@@ -9,10 +9,13 @@ for (const name of pages) {
   assert.match(html, /blora-page/ , `${name}: missing Blora page`);
   assert.match(html, /blora-scope/, `${name}: missing Blora scope`);
   assert.match(html, /\/js\/blora-theme\.js\?v=1/, `${name}: missing shared theme bridge`);
+  assert.match(html, /\/blora\/blora-theming\.js\?v=2.0.8/, `${name}: missing vendored theming add-on`);
+  assert.match(html, /\/blora\/theming\.css\?v=2.0.8/, `${name}: missing theming CSS`);
   assert.doesNotMatch(html, /<select\b/i, `${name}: native select remains`);
 }
 const js = fs.readFileSync(path.join(root, 'public/js/blora-theme.js'), 'utf8');
 assert.match(js, /data-blora-color-scheme/);
+assert.match(js, /coral|indigo|graphite|mono|circuit|dusk/);
 assert.match(js, /prefers-color-scheme/);
 assert.match(js, /direction === 'rtl'/);
 console.log(`Blora completion static checks passed for ${pages.length} pages.`);

@@ -1,36 +1,33 @@
-/* Shared Blora theme bridge. The theming add-on is vendored with blora-design. */
+/* CrewRouter adapter for the vendored Blora Theming add-on. */
 (function () {
   'use strict';
-  var THEMES = ['system', 'light', 'dark'];
-  function resolve(mode) {
-    return mode === 'system' ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : mode;
+  var THEMES = ['coral', 'indigo', 'graphite', 'mono', 'circuit', 'dusk'];
+  function resolveColorScheme() {
+    var mode = localStorage.getItem('color-scheme') || localStorage.getItem('theme') || 'system';
+    return mode === 'dark' || (mode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
   }
-  function apply(mode, persist) {
-    mode = THEMES.includes(mode) ? mode : 'system';
-    var resolved = resolve(mode);
+  function applyCompat(mode) {
     var root = document.documentElement;
-    root.classList.toggle('dark', resolved === 'dark');
-    root.classList.toggle('light', resolved !== 'dark');
-    root.setAttribute('data-blora-color-scheme', resolved);
-    root.setAttribute('data-blora-theme', mode);
-    if (persist !== false) localStorage.setItem('theme', mode);
-    document.querySelectorAll('.theme-toggle-control').forEach(function (el) {
-      el.setAttribute('aria-label', mode === 'dark' ? '当前：深色' : mode === 'light' ? '当前：浅色' : '当前：跟随系统');
-    });
+    var scheme = resolveColorScheme();
+    root.setAttribute('data-blora-theme', THEMES.includes(mode) ? mode : (localStorage.getItem('blora-theme') || 'graphite'));
+    root.setAttribute('data-blora-color-scheme', scheme);
+    root.classList.toggle('dark', scheme === 'dark');
+    root.classList.toggle('light', scheme !== 'dark');
+    root.dir = root.dir || 'ltr';
   }
-  window.CrewBloraTheme = {
-    get: function () { return localStorage.getItem('theme') || 'system'; },
-    apply: apply,
-    toggle: function () { var current = this.get(); apply(THEMES[(THEMES.indexOf(current) + 1) % THEMES.length]); },
-    setDirection: function (direction) { var dir = direction === 'rtl' ? 'rtl' : 'ltr'; document.documentElement.dir = dir; }
-  };
-  apply(window.CrewBloraTheme.get(), false);
+  function cycleTheme() {
+    var current = localStorage.getItem('blora-theme') || 'graphite';
+    var next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
+    localStorage.setItem('blora-theme', next);
+    applyCompat(next);
+    window.dispatchEvent(new CustomEvent('blora-theme-change', { detail: { theme: next } }));
+  }
+  window.CrewBloraTheme = { get: function () { return localStorage.getItem('blora-theme') || 'graphite'; }, apply: applyCompat, toggle: cycleTheme, setDirection: function (direction) { document.documentElement.dir = direction === 'rtl' ? 'rtl' : 'ltr'; } };
+  applyCompat(window.CrewBloraTheme.get());
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('#themeToggle, #themeToggleMobile').forEach(function (button) {
       button.classList.add('theme-toggle-control');
-      button.addEventListener('click', function () { window.CrewBloraTheme.toggle(); });
+      button.addEventListener('click', cycleTheme);
     });
-    var media = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
-    media && media.addEventListener && media.addEventListener('change', function () { if (window.CrewBloraTheme.get() === 'system') apply('system', false); });
   });
 }());
