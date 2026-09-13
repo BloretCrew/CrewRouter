@@ -1371,12 +1371,12 @@
 </div>
 <!-- 编辑用户模态框 -->
 <blora-dialog aria-modal="true" id="editUserModal" role="dialog">
-<div class="modal-content">
-<div class="modal-header">
+<div>
+<div slot="header">
 <h3><span data-i18n="编辑用户">编辑用户</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <input id="editUserId" type="hidden"/>
 <div class="form-group">
 <label for="editUserEmail"><span data-i18n="邮箱">邮箱</span></label>
@@ -1419,19 +1419,19 @@
 <input class="input" id="editUserRateLimitTpm" min="0" type="number" value="0"/>
 </div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-size="sm" data-variant="primary" id="saveUserBtn" type="button"><span data-i18n="保存">保存</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- 添加模型模态框 -->
 <blora-dialog aria-modal="true" id="addModelModal" role="dialog">
-<div class="modal-content">
-<div class="modal-header">
+<div>
+<div slot="header">
 <h3><span data-i18n="添加模型">添加模型</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <input id="modelId" type="hidden"/>
 <div class="form-group">
 <label for="upstreamModelId"><span data-i18n="上游模型ID">上游模型ID</span></label>
@@ -1532,19 +1532,19 @@
 </div>
 </div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-size="sm" data-variant="primary" id="saveModelBtn" type="button"><span data-i18n="保存">保存</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- 添加/编辑供应商模态框 -->
 <blora-dialog aria-modal="true" id="addProviderModal" role="dialog">
-<div class="modal-content modal-content-lg">
-<div class="modal-header">
+<div class="modal-content-lg">
+<div slot="header">
 <h3 id="providerModalTitle"><span data-i18n="添加供应商">添加供应商</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <input id="providerId" type="hidden"/>
 <!-- 基础字段（始终可见） -->
 <div class="provider-form-basics">
@@ -1858,19 +1858,19 @@
 </div>
 </details>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-size="sm" data-variant="primary" id="saveProviderBtn" type="button"><span data-i18n="保存">保存</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- 导入 OpenCode 配置模态框 -->
 <blora-dialog aria-modal="true" id="importOpenCodeModal" role="dialog">
-<div class="modal-content">
-<div class="modal-header">
+<div>
+<div slot="header">
 <h3><span data-i18n="导入配置">导入配置</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <p style="color: var(--muted-foreground); margin-bottom: 16px; font-size: 14px;"><span data-i18n="支持 OpenCode auth.json 和 Claude Code 配置两种格式，自动识别并导入供应商 API Key 和 Base URL。">
           支持 OpenCode auth.json 和 Claude Code 配置两种格式，自动识别并导入供应商 API Key 和 Base URL。
         </span></p>
@@ -1904,19 +1904,19 @@
 <div id="importPreviewContent" style="background: var(--muted); padding: 12px; border-radius: 8px; font-size: 13px; max-height: 200px; overflow-y: auto; color: var(--muted-foreground);"></div>
 </div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-variant="primary" id="confirmImportOpenCodeBtn" type="button"><span data-i18n="导入">导入</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- 选择模型对话框 -->
 <blora-dialog aria-modal="true" id="fetchModelsModal" role="dialog">
-<div class="modal-content model-picker-modal">
-<div class="modal-header">
+<div class="model-picker-modal">
+<div slot="header">
 <h3 id="fetchModelsTitle"><span data-i18n="获取模型列表">获取模型列表</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <div id="fetchModelsLoading" style="text-align:center;padding:20px;color:var(--muted-foreground);">
 <div class="page-loading"><div aria-label="加载中" class="loading-spinner" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="正在获取模型列表...">正在获取模型列表...</span></div></div>
 </div>
@@ -1943,7 +1943,7 @@
 <div class="model-picker-scroll model-picker-flat" id="fetchedModelsList"></div>
 </div>
 </div>
-<div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;" slot="footer">
 <button class="blora-button" data-i18n-title="删除上游已不存在的本地模型记录" data-variant="secondary" id="cleanupStaleModelsBtn" onclick="adminApp.cleanupStaleModelsInFetchModal()" style="display:none;color:var(--destructive);" title="删除上游已不存在的本地模型记录" type="button"><span data-i18n="清理已下架模型">清理已下架模型</span></button>
 <div style="display:flex;gap:8px;margin-left:auto;">
 <button class="blora-button" data-variant="primary" id="saveFetchedModelsBtn" onclick="adminApp.saveFetchedModels()" style="display:none;" type="button"><span data-i18n="保存">保存</span></button>
@@ -1953,12 +1953,12 @@
 </blora-dialog>
 <!-- 批量设置固定价格模态框 -->
 <blora-dialog aria-modal="true" id="batchSetPricesModal" role="dialog">
-<div class="modal-content">
-<div class="modal-header">
+<div>
+<div slot="header">
 <h3><span data-i18n="批量设置固定价格">批量设置固定价格</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将为选中的">将为选中的 </span><strong id="batchSetPricesCount">0</strong><span data-i18n="个模型设置以下价格："> 个模型设置以下价格：</span></p>
 <div class="form-group">
 <label for="batchSetInputPrice"><span data-i18n="输入价格（人民币/百万Token）">输入价格（人民币/百万Token）</span></label>
@@ -1969,19 +1969,19 @@
 <input class="input" id="batchSetOutputPrice" step="0.000001" type="number" value="0.01"/>
 </div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchSetPrices()" type="button"><span data-i18n="确认设置">确认设置</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- JSON 批量定价模态框 -->
 <blora-dialog aria-modal="true" id="batchJsonPricesModal" role="dialog">
-<div class="modal-content" style="max-width: 560px;">
-<div class="modal-header">
+<div style="max-width: 560px;">
+<div slot="header">
 <h3><span data-i18n="JSON 批量定价">JSON 批量定价</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="使用 JSON 格式为不同模型设置不同价格，单位：">使用 JSON 格式为不同模型设置不同价格，单位：</span><strong><span data-i18n="¥/百万Token">¥/百万Token</span></strong></p>
 <div style="background:var(--muted);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted-foreground);">
 <div style="font-weight:600;margin-bottom:6px;color:var(--foreground);"><span data-i18n="格式说明">格式说明</span></div>
@@ -1994,19 +1994,19 @@
 <textarea class="textarea textarea-mono" id="batchJsonPricesInput" placeholder='{\n  "model-id": {"in": 2.0, "out": 4.0}\n}' style="height:200px;"></textarea>
 <div id="batchJsonPricesResult" style="margin-top:8px;font-size:12px;display:none;"></div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchJsonPrices()" type="button"><span data-i18n="应用价格">应用价格</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- JSON 批量定参考价模态框 -->
 <blora-dialog aria-modal="true" id="batchJsonRefPricesModal" role="dialog">
-<div class="modal-content" style="max-width: 560px;">
-<div class="modal-header">
+<div style="max-width: 560px;">
+<div slot="header">
 <h3><span data-i18n="JSON 批量定参考价">JSON 批量定参考价</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"><span data-i18n="使用 JSON 格式为不同模型设置参考价格，单位：">使用 JSON 格式为不同模型设置参考价格，单位：</span><strong><span data-i18n="¥/百万Token">¥/百万Token</span></strong></p>
 <div style="background:var(--muted);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted-foreground);">
 <div style="font-weight:600;margin-bottom:6px;color:var(--foreground);"><span data-i18n="格式说明">格式说明</span></div>
@@ -2019,38 +2019,38 @@
 <textarea class="textarea textarea-mono" id="batchJsonRefPricesInput" placeholder='{\n  "model-id": {"in": 2.0, "out": 4.0}\n}' style="height:200px;"></textarea>
 <div id="batchJsonRefPricesResult" style="margin-top:8px;font-size:12px;display:none;"></div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchJsonRefPrices()" type="button"><span data-i18n="应用参考价">应用参考价</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- 批量调整价格（按比例）模态框 -->
 <blora-dialog aria-modal="true" id="batchAdjustPricesModal" role="dialog">
-<div class="modal-content">
-<div class="modal-header">
+<div>
+<div slot="header">
 <h3><span data-i18n="批量按比例调整价格">批量按比例调整价格</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将对选中的">将对选中的 </span><strong id="batchAdjustPricesCount">0</strong><span data-i18n="个模型的价格按比例调整："> 个模型的价格按比例调整：</span></p>
 <div class="form-group">
 <label for="batchAdjustPercentage"><span data-i18n="调整百分比（正数为涨价，负数为降价）">调整百分比（正数为涨价，负数为降价）</span></label>
 <input class="input" data-i18n-placeholder="例如: 10 表示涨价10%，-20 表示降价20%" id="batchAdjustPercentage" placeholder="例如: 10 表示涨价10%，-20 表示降价20%" step="1" type="number" value="10"/>
 </div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchAdjustPrices()" type="button"><span data-i18n="确认调整">确认调整</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- 批量设置速率限制模态框 -->
 <blora-dialog aria-modal="true" id="batchSetRateLimitModal" role="dialog">
-<div class="modal-content">
-<div class="modal-header">
+<div>
+<div slot="header">
 <h3><span data-i18n="批量设置速率限制">批量设置速率限制</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将为选中的">将为选中的 </span><strong id="batchSetRateLimitCount">0</strong><span data-i18n="个模型设置以下速率限制："> 个模型设置以下速率限制：</span></p>
 <div class="form-group">
 <label for="batchRateLimitRpm"><span data-i18n="每分钟请求数（0=不限制）">每分钟请求数（0=不限制）</span></label>
@@ -2061,19 +2061,19 @@
 <input class="input" id="batchRateLimitTpm" min="0" type="number" value="0"/>
 </div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchSetRateLimit()" type="button"><span data-i18n="确认设置">确认设置</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- 批量修改说明模态框 -->
 <blora-dialog aria-modal="true" id="batchEditDescModal" role="dialog">
-<div class="modal-content" style="max-width: 600px;">
-<div class="modal-header">
+<div style="max-width: 600px;">
+<div slot="header">
 <h3><span data-i18n="批量修改模型说明">批量修改模型说明</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将为选中的">将为选中的 </span><strong id="batchEditDescCount">0</strong><span data-i18n="个模型修改说明："> 个模型修改说明：</span></p>
 <div id="batchEditDescModelsList" style="margin-bottom: 16px; max-height: 200px; overflow-y: auto; padding: 12px; background: var(--muted); border-radius: 8px; font-size: 13px;">
 </div>
@@ -2091,19 +2091,19 @@
 </div>
 <div id="batchEditDescStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchEditDesc()" type="button"><span data-i18n="确认修改">确认修改</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- 批量设置系列模态框 -->
 <blora-dialog aria-modal="true" id="batchSetSeriesModal" role="dialog">
-<div class="modal-content" style="max-width: 500px;">
-<div class="modal-header">
+<div style="max-width: 500px;">
+<div slot="header">
 <h3><span data-i18n="批量设置系列">批量设置系列</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将为选中的">将为选中的 </span><strong id="batchSetSeriesCount">0</strong><span data-i18n="个模型设置系列："> 个模型设置系列：</span></p>
 <div id="batchSetSeriesModelsList" style="margin-bottom: 16px; max-height: 200px; overflow-y: auto; padding: 12px; background: var(--muted); border-radius: 8px; font-size: 13px;">
 </div>
@@ -2114,19 +2114,19 @@
 </div>
 <div id="batchSetSeriesStatus" style="display:none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;"></div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-variant="primary" onclick="adminApp.executeBatchSetSeries()" type="button"><span data-i18n="确认设置">确认设置</span></button>
 </div>
 </div>
 </blora-dialog>
 <!-- 系列图标管理模态框 -->
 <blora-dialog aria-modal="true" id="seriesIconsModal" role="dialog">
-<div class="modal-content" style="max-width: 600px;">
-<div class="modal-header">
+<div style="max-width: 600px;">
+<div slot="header">
 <h3><span data-i18n="系列图标管理">系列图标管理</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="为每个系列设置图标，图标将显示在用户控制台的模型卡片上。">为每个系列设置图标，图标将显示在用户控制台的模型卡片上。</span></p>
 <div style="display:flex;gap:8px;margin-bottom:16px;">
 <blora-select class="select" id="newSeriesName" style="flex:1;">
@@ -2142,12 +2142,12 @@
 </blora-dialog>
 <!-- 按参考价百分比批量设置价格模态框 -->
 <blora-dialog aria-modal="true" id="batchAdjustByRefModal" role="dialog">
-<div class="modal-content" style="max-width: 800px;">
-<div class="modal-header">
+<div style="max-width: 800px;">
+<div slot="header">
 <h3><span data-i18n="按参考价百分比设置价格">按参考价百分比设置价格</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:16px;"><span data-i18n="将选中的">将选中的 </span><strong id="batchAdjustByRefCount">0</strong><span data-i18n="个模型的实际价格设置为参考价的指定百分比："> 个模型的实际价格设置为参考价的指定百分比：</span></p>
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
 <div class="form-group" style="margin-bottom:0;">
@@ -2180,7 +2180,7 @@
 </div>
 <div id="batchAdjustByRefStatus" style="display:none;margin-top:12px;padding:12px;border-radius:8px;font-size:13px;"></div>
 </div>
-<div class="modal-footer">
+<div slot="footer">
 <button class="blora-button" data-variant="secondary" onclick="adminApp.previewBatchAdjustByRef()" type="button"><span data-i18n="预览">预览</span></button>
 <button class="blora-button" data-variant="primary" id="batchAdjustByRefConfirmBtn" onclick="adminApp.executeBatchAdjustByRef()" style="display:none;" type="button"><span data-i18n="确认执行">确认执行</span></button>
 </div>
@@ -2188,12 +2188,12 @@
 </blora-dialog>
 <!-- 供应商额度查询模态框 -->
 <blora-dialog aria-modal="true" id="providerQuotaModal" role="dialog">
-<div class="modal-content" style="max-width: 560px;">
-<div class="modal-header">
+<div style="max-width: 560px;">
+<div slot="header">
 <h3><span data-i18n="供应商额度查询">供应商额度查询</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <!-- Loading -->
 <div id="quotaLoading" style="text-align:center;padding:32px 0;">
 <div class="page-loading"><div aria-label="加载中" class="loading-spinner" data-i18n-title="加载中" role="status"></div><div class="page-loading-text" id="quotaLoadingText"><span data-i18n="正在查询供应商额度，请稍候...">正在查询供应商额度，请稍候...</span></div></div>
@@ -2254,7 +2254,7 @@
 </div>
 </div>
 </div>
-<div class="modal-footer" id="quotaModalFooter">
+<div id="quotaModalFooter" slot="footer">
 <button class="blora-button" data-variant="secondary" id="quotaEditBtn" onclick="adminApp.editQuotaScript()" type="button"><span data-i18n="编辑脚本">编辑脚本</span></button>
 <button class="blora-button" data-variant="primary" id="quotaSaveBtn" onclick="adminApp.saveQuotaScript()" style="display:none;" type="button"><span data-i18n="保存并查询">保存并查询</span></button>
 <button class="blora-button" data-variant="secondary" id="quotaCancelEditBtn" onclick="adminApp.checkProviderQuota(adminApp._quotaProviderId)" style="display:none;" type="button"><span data-i18n="取消">取消</span></button>
@@ -2263,24 +2263,24 @@
 </blora-dialog>
 <!-- 用量详情模态框 -->
 <blora-dialog aria-modal="true" id="usageDetailModal" role="dialog">
-<div class="modal-content modal-wide">
-<div class="modal-header">
+<div class="modal-wide">
+<div slot="header">
 <h3><span data-i18n="用量详情">用量详情</span></h3>
 <button class="modal-close" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <div id="usageDetailContent"></div>
 </div>
 </div>
 </blora-dialog>
 <!-- 调用错误详情模态框 -->
 <blora-dialog aria-modal="true" id="errorDetailModal" role="dialog">
-<div class="modal-content modal-wide">
-<div class="modal-header">
+<div class="modal-wide">
+<div slot="header">
 <h3><span data-i18n="调用错误详情">调用错误详情</span></h3>
 <button class="modal-close" onclick="adminApp.closeErrorDetailModal()" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body">
+<div>
 <div id="errorDetailContent"></div>
 </div>
 </div>
@@ -2358,36 +2358,36 @@
 <!-- 模型测试结果弹窗 -->
 <blora-dialog aria-modal="true" id="adminTestResultModal" role="dialog">
 <div class="modal-overlay" onclick="adminApp.closeTestResultModal()"></div>
-<div class="modal-content" style="max-width:640px;">
-<div class="modal-header">
+<div style="max-width:640px;">
+<div slot="header">
 <h3><span data-i18n="模型测试结果">模型测试结果</span></h3>
 <button class="modal-close" onclick="adminApp.closeTestResultModal()" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body" id="adminTestResultBody">
+<div id="adminTestResultBody">
 <div class="page-loading page-loading-compact"><div aria-label="加载中" class="loading-spinner md" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
 </div>
 </div>
 </blora-dialog>
 <!-- 模型调用可用率详情 -->
 <blora-dialog aria-modal="true" id="modelUptimeModal" role="dialog">
-<div class="modal-content" style="max-width:720px;">
-<div class="modal-header">
+<div style="max-width:720px;">
+<div slot="header">
 <h3 id="modelUptimeModalTitle"><span data-i18n="模型调用状态">模型调用状态</span></h3>
 <button class="modal-close" onclick="adminApp.closeModals()" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body" id="modelUptimeModalBody">
+<div id="modelUptimeModalBody">
 <div class="page-loading page-loading-compact"><div aria-label="加载中" class="loading-spinner md" data-i18n-title="加载中" role="status"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
 </div>
 </div>
 </blora-dialog>
 <!-- 提示词详情弹窗 -->
 <blora-dialog aria-modal="true" id="adminPromptDetailModal" role="dialog">
-<div class="modal-content modal-wide">
-<div class="modal-header">
+<div class="modal-wide">
+<div slot="header">
 <h3 id="adminPromptDetailTitle"><span data-i18n="提示词详情">提示词详情</span></h3>
 <button class="modal-close" onclick="adminApp.closeModals()" type="button" aria-label="关闭"><img class="sf-icon" src="https://img.bloret.net/SF/xmark?color=black" alt="" data-sf-name="xmark"></button>
 </div>
-<div class="modal-body" id="adminPromptDetailBody"></div>
+<div id="adminPromptDetailBody"></div>
 </div>
 </blora-dialog>
 <script>

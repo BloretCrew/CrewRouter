@@ -440,12 +440,12 @@
 
       <!-- 批量编辑模型模态框 -->
       <blora-dialog id="batchEditMyModelsModal" role="dialog" aria-modal="true" aria-labelledby="batchEditMyModelsTitle">
-        <div class="blora-dialog__panel modal-content" style="max-width:500px;">
-          <div class="modal-header">
+        <div class="blora-dialog__panel" style="max-width:500px;">
+          <div slot="header">
             <h3 id="batchEditMyModelsTitle"><span data-i18n="批量编辑模型">批量编辑模型</span></h3>
             <button type="button" class="blora-button modal-close" onclick="app.closeModals()" aria-label="关闭">&times;</button>
           </div>
-          <div class="modal-body">
+          <div>
             <p id="batchEditMyModelsInfo" style="font-size:13px;color:var(--muted-foreground);margin-bottom:16px;"></p>
             <div style="display:flex;flex-direction:column;gap:14px;">
               <div>
@@ -491,7 +491,7 @@
               </div>
             </div>
           </div>
-          <div class="modal-footer">
+          <div slot="footer">
         <button type="button" class="blora-button" onclick="app.saveBatchEditMyModels()" data-variant="primary"><span data-i18n="保存">保存</span></button>
           </div>
     </div>
@@ -1607,16 +1607,16 @@ data: [DONE]</code></pre>
 
       <!-- 文档编辑弹窗 -->
       <blora-dialog id="docsEditorModal" role="dialog" aria-modal="true">
-        <div class="modal-content" style="max-width:800px;">
-          <div class="modal-header">
+        <div style="max-width:800px;">
+          <div slot="header">
             <h3><span data-i18n="编辑文档">编辑文档</span></h3>
             <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
           </div>
-          <div class="modal-body">
+          <div>
             <p style="margin-bottom:12px;color:var(--muted-foreground);font-size:13px;"><span data-i18n="使用 HTML 格式编辑当前页面内容。">使用 HTML 格式编辑当前页面内容。</span></p>
             <textarea id="docsEditorContent" class="blora-textarea textarea textarea-mono" style="min-height:400px;"></textarea>
           </div>
-          <div class="modal-footer">
+          <div slot="footer">
         <button type="button" class="blora-button" onclick="saveDocsContent()" data-variant="primary"><span data-i18n="保存">保存</span></button>
           </div>
     </div>
@@ -1963,12 +1963,12 @@ data: [DONE]</code></pre>
 
   <!-- 创建API密钥模态框 -->
   <blora-dialog id="createApiKeyModal" role="dialog" aria-modal="true" aria-labelledby="createApiKeyModalTitle">
-    <div class="blora-dialog__panel modal-content">
-      <div class="modal-header">
+    <div class="blora-dialog__panel">
+      <div slot="header">
         <h3 id="createApiKeyModalTitle"><span data-i18n="创建 API 密钥">创建 API 密钥</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div class="form-group">
           <label for="apiKeyName"><span data-i18n="密钥名称（可选）">密钥名称（可选）</span></label>
           <input type="text" id="apiKeyName" class="blora-input input" placeholder="例如：生产环境、开发测试" data-i18n-placeholder="例如：生产环境、开发测试">
@@ -1983,7 +1983,7 @@ data: [DONE]</code></pre>
           </blora-select>
         </div>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" id="confirmCreateApiKey" class="blora-button" data-variant="primary"><span data-i18n="创建">创建</span></button>
       </div>
     </div>
@@ -1991,12 +1991,12 @@ data: [DONE]</code></pre>
 
   <!-- 统计上报授权模态框（仅管理员首次进入时展示） -->
         <blora-dialog id="hookNotifySelectModal" role="dialog" aria-modal="true" aria-labelledby="hookNotifySelectTitle">
-          <div class="blora-dialog__panel modal-content" style="max-width:480px;">
-            <div class="modal-header">
+          <div class="blora-dialog__panel" style="max-width:480px;">
+            <div slot="header">
               <h3 id="hookNotifySelectTitle"><span data-i18n="选择要推送的事件">选择要推送的事件</span></h3>
               <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
             </div>
-            <div class="modal-body">
+            <div>
               <div style="margin-bottom:14px;">
                 <strong style="font-size:13px;"><span data-i18n="客户端（harness）">客户端（harness）</span></strong>
                 <div id="hookNotifyHarnessChecks" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;"></div>
@@ -2007,15 +2007,15 @@ data: [DONE]</code></pre>
               </div>
               <small style="color:var(--muted-foreground);"><span data-i18n="不勾选任何项表示推送全部。">不勾选任何项表示推送全部。</span></small>
             </div>
-            <div class="modal-footer">
+            <div slot="footer">
               <button type="button" class="blora-button" onclick="app.closeModals()" data-variant="secondary"><span data-i18n="取消">取消</span></button>
               <button type="button" class="blora-button" onclick="app.saveHookNotifySelection()" data-variant="primary"><span data-i18n="保存">保存</span></button>
             </div>
           </div>
         </blora-dialog>
   <blora-dialog id="sessionSummaryModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:640px;">
-      <div class="modal-header">
+    <div style="max-width:640px;">
+      <div slot="header">
         <div>
           <h3 id="sessionSummaryTitle"><span data-i18n="会话总结">会话总结</span> <code id="sessionSummaryKey"></code></h3>
           <div class="session-summary-modal-meta"><span id="sessionSummaryTime"></span></div>
@@ -2026,24 +2026,24 @@ data: [DONE]</code></pre>
           <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
         </div>
       </div>
-      <div class="modal-body">
+      <div>
         <div id="sessionSummaryBody" class="session-summary-md summary-modal-body"></div>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" class="blora-button" id="sessionSummaryRegenBtn" onclick="app.regenerateSessionSummary()" data-variant="secondary"><span data-i18n="重新生成">重新生成</span></button>
         <button type="button" class="blora-button" onclick="app.copySessionSummary()" data-variant="primary"><span data-i18n="复制">复制</span></button>
       </div>
     </div>
   </blora-dialog>
   <blora-dialog id="statsConsentModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:560px;">
-      <div class="modal-header">
+    <div style="max-width:560px;">
+      <div slot="header">
         <h3 id="hookNotifySelectTitle"><span data-i18n="允许统计上报吗？">允许统计上报吗？</span></h3>
       </div>
-      <div class="modal-body">
+      <div>
         <p style="line-height:1.8;color:var(--muted-foreground);"><span data-i18n="本实例将向官方服务器发送匿名聚合的使用统计，仅包含请求量、Token 消耗、成本、活跃用户/密钥数量、模型与用量分布等计数信息；不含任何用户名、邮箱、IP、API 密钥、上游密钥、请求内容与回复内容。可随时在管理后台关闭。">本实例将向官方服务器发送匿名聚合的使用统计，仅包含请求量、Token 消耗、成本、活跃用户/密钥数量、模型与用量分布等计数信息；不含任何用户名、邮箱、IP、API 密钥、上游密钥、请求内容与回复内容。可随时在管理后台关闭。</span></p>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" class="blora-button" id="statsConsentReject" data-variant="secondary"><span data-i18n="拒绝上报">拒绝上报</span></button>
         <button type="button" class="blora-button" id="statsConsentAllow" data-variant="primary"><span data-i18n="允许上报">允许上报</span></button>
       </div>
@@ -2052,12 +2052,12 @@ data: [DONE]</code></pre>
 
   <!-- Co-Key 成员管理模态框 -->
   <blora-dialog id="keyMembersModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:520px;">
-      <div class="modal-header">
+    <div style="max-width:520px;">
+      <div slot="header">
         <h3><span data-i18n="Co-Key 成员管理">Co-Key 成员管理</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <p style="margin:0 0 14px;color:var(--muted-foreground);font-size:13px;line-height:1.6;"><span data-i18n="共同成员可以查看完整 Key、用量并管理配置；只有发起者可以管理成员和删除 Key。调用费用及模型权限仍归发起者。">共同成员可以查看完整 Key、用量并管理配置；只有发起者可以管理成员和删除 Key。调用费用及模型权限仍归发起者。</span></p>
         <div style="display:flex;gap:8px;margin-bottom:16px;">
           <input id="keyMemberIdentity" class="blora-input input" type="text" placeholder="输入完整用户名或邮箱" data-i18n-placeholder="输入完整用户名或邮箱" style="flex:1;">
@@ -2070,15 +2070,15 @@ data: [DONE]</code></pre>
 
   <!-- API密钥模型管理模态框（支持有序模型队列） -->
   <blora-dialog id="keyModelsModal" role="dialog" aria-modal="true" aria-labelledby="keyModelsTitle">
-    <div id="keyModelsModalContent" class="blora-dialog__panel modal-content" style="max-width:720px;">
-      <div class="modal-header">
+    <div id="keyModelsModalContent" class="blora-dialog__panel" style="max-width:720px;">
+      <div slot="header">
         <h3 id="keyModelsTitle"><span data-i18n="管理可用模型">管理可用模型</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div id="keyModelsContent" data-blora-state="loading"></div>
       </div>
-      <div id="keyModelsFooter" class="modal-footer">
+      <div id="keyModelsFooter" slot="footer">
         <button type="button" id="keyModelsSaveBtn" class="blora-button" onclick="app.saveKeyModels()" data-variant="primary"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
@@ -2086,12 +2086,12 @@ data: [DONE]</code></pre>
 
   <!-- API Key 选项设置模态框 -->
   <blora-dialog id="keyOptionsModal" role="dialog" aria-modal="true" aria-labelledby="keyOptionsTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:500px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:500px;">
+      <div slot="header">
         <h3 id="keyOptionsTitle"><span data-i18n="API Key 选项">API Key 选项</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);"><span data-i18n="集中管理当前 API Key 的附加开关。">集中管理当前 API Key 的附加开关。</span></div>
         <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
           <label style="margin:0;"><span data-i18n="额度预警">额度预警</span></label>
@@ -2106,18 +2106,18 @@ data: [DONE]</code></pre>
           <label class="pg-toggle"><blora-checkbox id="keyOptionCrewRouterCommands"></blora-checkbox><span class="pg-toggle-slider"></span></label>
         </div>
       </div>
-      <div class="modal-footer"><button type="button" class="blora-button" onclick="app.saveKeyOptions()" data-variant="primary"><span data-i18n="保存">保存</span></button></div>
+      <div slot="footer"><button type="button" class="blora-button" onclick="app.saveKeyOptions()" data-variant="primary"><span data-i18n="保存">保存</span></button></div>
     </div>
   </blora-dialog>
 
   <!-- API Key 签名设置模态框 -->
   <blora-dialog id="keySignatureModal" role="dialog" aria-modal="true" aria-labelledby="keySignatureTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:500px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:500px;">
+      <div slot="header">
         <h3 id="keySignatureTitle"><span data-i18n="API Key 签名设置">API Key 签名设置</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);"><span data-i18n="为当前 API Key 单独设置签名策略，覆盖用户默认设置。如选择&quot;继承&quot;，则使用用户默认签名配置。">
           为当前 API Key 单独设置签名策略，覆盖用户默认设置。如选择"继承"，则使用用户默认签名配置。
         </span></div>
@@ -2140,7 +2140,7 @@ data: [DONE]</code></pre>
         </div>
         <div id="keySignaturePreview" style="margin-top:12px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);font-family:monospace;white-space:pre-wrap;min-height:36px;"></div>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" class="blora-button" onclick="app.saveKeySignature()" data-variant="primary"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
@@ -2148,12 +2148,12 @@ data: [DONE]</code></pre>
 
   <!-- 定时开关设置弹窗 -->
   <blora-dialog id="keyScheduleModal" role="dialog" aria-modal="true" aria-labelledby="keyScheduleTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:500px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:500px;">
+      <div slot="header">
         <h3 id="keyScheduleTitle"><span data-i18n="定时开关设置">定时开关设置</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div style="margin-bottom:16px;padding:12px;border-radius:8px;background:var(--muted);font-size:13px;color:var(--muted-foreground);"><span data-i18n="设置自动启用/禁用的时间表。到达开启时间时密钥自动启用，到达关闭时间时自动禁用。">
           设置自动启用/禁用的时间表。到达开启时间时密钥自动启用，到达关闭时间时自动禁用。
         </span></div>
@@ -2199,7 +2199,7 @@ data: [DONE]</code></pre>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" class="blora-button" onclick="app.saveKeySchedule()" data-variant="primary"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
@@ -2207,12 +2207,12 @@ data: [DONE]</code></pre>
 
   <!-- 添加供应商向导模态框 -->
   <blora-dialog id="addProviderModal" role="dialog" aria-modal="true" aria-labelledby="addProviderModalTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:550px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:550px;">
+      <div slot="header">
         <h3 id="addProviderModalTitle"><span data-i18n="添加供应商">添加供应商</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div id="addProviderError" data-blora-state="error" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
 
         <!-- 步骤 1: 选择供应商 -->
@@ -2270,12 +2270,12 @@ data: [DONE]</code></pre>
   <!-- 编辑供应商模态框 -->
   <form id="editProviderForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
   <blora-dialog id="editProviderModal" role="dialog" aria-modal="true" aria-labelledby="editProviderModalTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:500px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:500px;">
+      <div slot="header">
         <h3 id="editProviderModalTitle"><span data-i18n="编辑供应商">编辑供应商</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div id="editProviderError" data-blora-state="error" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
         <input type="hidden" id="editProviderId">
         <div class="form-group">
@@ -2299,7 +2299,7 @@ data: [DONE]</code></pre>
           </blora-select>
         </div>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" class="blora-button" onclick="app.updateProvider()" data-variant="primary"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
@@ -2307,12 +2307,12 @@ data: [DONE]</code></pre>
 
   <!-- 管理模型模态框 -->
   <blora-dialog id="manageModelsModal" role="dialog" aria-modal="true" aria-labelledby="manageModelsTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:700px;max-height:80vh;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:700px;max-height:80vh;">
+      <div slot="header">
         <h3 id="manageModelsTitle"><span data-i18n="管理模型">管理模型</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body" style="overflow-y:auto;">
+      <div style="overflow-y:auto;">
         <div id="manageModelsLoading" data-blora-state="loading" style="text-align:center;padding:40px;">
           <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
         </div>
@@ -2350,12 +2350,12 @@ data: [DONE]</code></pre>
 
   <!-- 批量设置价格对话框 -->
   <blora-dialog id="batchPriceModal" role="dialog" aria-modal="true" aria-labelledby="batchPriceTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:400px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:400px;">
+      <div slot="header">
         <h3 id="batchPriceTitle"><span data-i18n="批量设置价格">批量设置价格</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <p style="font-size:13px;color:var(--muted-foreground);margin-bottom:16px;"><span data-i18n="为选中的模型设置统一价格（人民币/百万Token）">为选中的模型设置统一价格（人民币/百万Token）</span></p>
         <div class="form-group">
           <label for="batchInputPrice"><span data-i18n="输入价格">输入价格</span></label>
@@ -2370,7 +2370,7 @@ data: [DONE]</code></pre>
           <input type="number" id="batchCachedPrice" class="blora-input input" step="0.000001" min="0" placeholder="留空则不修改" data-i18n-placeholder="留空则不修改">
         </div>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" class="blora-button" onclick="app.executeBatchSetPrices()" data-variant="primary"><span data-i18n="应用">应用</span></button>
       </div>
     </div>
@@ -2378,15 +2378,15 @@ data: [DONE]</code></pre>
 
   <!-- 选择 API Key 模态框 -->
   <blora-dialog id="selectKeyModal" role="dialog" aria-modal="true" aria-labelledby="selectKeyTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:400px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:400px;">
+      <div slot="header">
         <h3 id="selectKeyTitle"><span data-i18n="选择 API Key">选择 API Key</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div id="selectKeyContent" data-blora-state="idle"></div>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" class="blora-button" onclick="app.confirmSelectKey()" data-variant="primary"><span data-i18n="确认">确认</span></button>
       </div>
     </div>
@@ -2394,12 +2394,12 @@ data: [DONE]</code></pre>
 
   <!-- 配置工具选择模态框 -->
   <blora-dialog id="configToolSelectModal" role="dialog" aria-modal="true" aria-labelledby="configToolSelectTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:420px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:420px;">
+      <div slot="header">
         <h3 id="configToolSelectTitle"><span data-i18n="生成配置">生成配置</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <p style="color:var(--muted-foreground);margin-bottom:16px;font-size:13px;"><span data-i18n="选择你要配置的工具：">选择你要配置的工具：</span></p>
         <div class="config-tool-list">
           <button type="button" class="config-tool-option" onclick="app.generateToolConfig('claude')">
@@ -2456,12 +2456,12 @@ data: [DONE]</code></pre>
 
   <!-- CC Switch 子菜单模态框 -->
   <blora-dialog id="ccSwitchSubmenuModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:420px;">
-      <div class="modal-header">
+    <div style="max-width:420px;">
+      <div slot="header">
         <h3 id="configToolSelectTitle"><span data-i18n="CC Switch 一键导入">CC Switch 一键导入</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <p style="color:var(--muted-foreground);margin-bottom:16px;font-size:13px;"><span data-i18n="选择要导入的目标应用：">选择要导入的目标应用：</span></p>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <button type="button" class="blora-button" style="justify-content:flex-start;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;" onclick="app.generateCcSwitchLink('claude')" data-variant="secondary">
@@ -2483,12 +2483,12 @@ data: [DONE]</code></pre>
 
   <!-- CC Switch 链接结果模态框 -->
   <blora-dialog id="ccSwitchResultModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:500px;">
-      <div class="modal-header">
+    <div style="max-width:500px;">
+      <div slot="header">
         <h3 id="ccSwitchResultTitle">CC Switch</h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <p id="ccSwitchResultDesc" style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;"></p>
         <div style="position:relative;">
           <textarea id="ccSwitchResultLink" class="blora-textarea textarea" rows="3" readonly style="width:100%;font-family:monospace;font-size:12px;resize:none;padding-right:56px;"></textarea>
@@ -2499,16 +2499,16 @@ data: [DONE]</code></pre>
     </div>
   </blora-dialog>
   <blora-dialog id="configOutputModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:700px;">
-      <div class="modal-header">
+    <div style="max-width:700px;">
+      <div slot="header">
         <h3 id="configOutputTitle"><span data-i18n="配置">配置</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <p id="configOutputDesc" style="color:var(--muted-foreground);margin-bottom:12px;font-size:13px;"></p>
         <textarea id="configOutputContent" class="blora-input input" rows="28" readonly style="font-family:monospace;font-size:12px;resize:vertical;width:100%;white-space:pre;"></textarea>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" class="blora-button" onclick="app.copyConfigOutput()" data-variant="primary"><span data-i18n="复制配置">复制配置</span></button>
       </div>
     </div>
@@ -2516,12 +2516,12 @@ data: [DONE]</code></pre>
 
   <!-- cc-switch 额度查询脚本模态框 -->
   <blora-dialog id="usageScriptModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:760px;">
-      <div class="modal-header">
+    <div style="max-width:760px;">
+      <div slot="header">
         <h3><span data-i18n="cc-switch 额度查询脚本">cc-switch 额度查询脚本</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <p style="color:var(--muted-foreground);margin-bottom:20px;font-size:13px;"><span data-i18n="自定义展示内容，脚本会实时生成。将最终结果粘贴到 cc-switch 的「自定义查询脚本」中即可。">
           自定义展示内容，脚本会实时生成。将最终结果粘贴到 cc-switch 的「自定义查询脚本」中即可。
         </span></p>
@@ -2597,7 +2597,7 @@ data: [DONE]</code></pre>
         </div>
         <textarea id="usageScriptOutput" class="blora-input input" rows="20" style="font-family:'SF Mono','Fira Code',monospace;font-size:12px;resize:vertical;width:100%;white-space:pre;line-height:1.5;"></textarea>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" class="blora-button" onclick="app.copyUsageScript()" data-variant="primary"><span data-i18n="复制脚本">复制脚本</span></button>
       </div>
     </div>
@@ -2605,12 +2605,12 @@ data: [DONE]</code></pre>
 
   <!-- 添加/编辑模型模态框 -->
   <blora-dialog id="addEditModelModal" role="dialog" aria-modal="true" aria-labelledby="addEditModelTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:600px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:600px;">
+      <div slot="header">
         <h3 id="addEditModelTitle"><span data-i18n="添加模型">添加模型</span></h3>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div id="addEditModelError" data-blora-state="error" style="display:none;color:var(--destructive);font-size:13px;margin-bottom:12px;padding:8px;background:var(--destructive-light,#fef2f2);border-radius:6px;"></div>
         <input type="hidden" id="editModelId">
         <input type="hidden" id="modelFormId">
@@ -2696,7 +2696,7 @@ data: [DONE]</code></pre>
           </blora-select>
         </div>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" id="confirmAddEditModel" class="blora-button" data-variant="primary"><span data-i18n="添加">添加</span></button>
       </div>
     </div>
@@ -2919,12 +2919,12 @@ data: [DONE]</code></pre>
   <!-- 模型测试结果弹窗 -->
   <blora-dialog id="modelTestModal" role="dialog" aria-modal="true" aria-labelledby="modelTestTitle">
     <div class="modal-overlay" onclick="app.closeModelTestModal()"></div>
-    <div class="blora-dialog__panel modal-content" style="max-width:640px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:640px;">
+      <div slot="header">
         <h3 id="modelTestTitle"><span data-i18n="模型测试结果">模型测试结果</span></h3>
         <button type="button" class="blora-button modal-close" onclick="app.closeModelTestModal()" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body" id="modelTestModalBody" data-blora-state="loading">
+      <div id="modelTestModalBody" data-blora-state="loading">
 <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
       </div>
 </div>
@@ -2932,12 +2932,12 @@ data: [DONE]</code></pre>
 
   <!-- 模型调用可用率详情 -->
   <blora-dialog id="modelUptimeModal" role="dialog" aria-modal="true" aria-labelledby="modelUptimeModalTitle">
-    <div class="blora-dialog__panel modal-content" style="max-width:720px;">
-      <div class="modal-header">
+    <div class="blora-dialog__panel" style="max-width:720px;">
+      <div slot="header">
         <h3 id="modelUptimeModalTitle"><span data-i18n="模型调用状态">模型调用状态</span></h3>
         <button type="button" class="blora-button modal-close" onclick="app.closeModals()" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body" id="modelUptimeModalBody" data-blora-state="loading">
+      <div id="modelUptimeModalBody" data-blora-state="loading">
 <div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
       </div>
     </div>
@@ -2945,12 +2945,12 @@ data: [DONE]</code></pre>
 
   <!-- 调用记录详情 -->
   <blora-dialog id="usageDetailModal" role="dialog" aria-modal="true" aria-labelledby="usageDetailTitle">
-    <div class="blora-dialog__panel modal-content modal-wide">
-      <div class="modal-header">
+    <div class="blora-dialog__panel modal-wide">
+      <div slot="header">
         <h3 id="usageDetailTitle"><span data-i18n="调用详情">调用详情</span></h3>
         <button type="button" class="blora-button modal-close" onclick="app.closeModals()" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div id="usageDetailContent" data-blora-state="loading"></div>
       </div>
     </div>
@@ -2958,12 +2958,12 @@ data: [DONE]</code></pre>
 
   <!-- 注入提示词编辑弹窗 -->
   <blora-dialog id="injectPromptModal" role="dialog" aria-modal="true">
-    <div class="modal-content" style="max-width:640px;">
-      <div class="modal-header">
+    <div style="max-width:640px;">
+      <div slot="header">
         <h3 id="injectPromptModalTitle"><span data-i18n="新建条目">新建条目</span></h3>
         <button type="button" class="blora-button modal-close" onclick="app.closeModals()" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;"><span data-i18n="名称">名称</span></label>
         <input type="text" id="injectPromptName" class="blora-input input" style="width:100%;margin-bottom:14px;" placeholder="例如：项目代码规范" data-i18n-placeholder="例如：项目代码规范">
         <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;"><span data-i18n="内容">内容</span></label>
@@ -2972,7 +2972,7 @@ data: [DONE]</code></pre>
         <label style="display:block;font-size:13px;font-weight:500;margin-bottom:6px;"><span data-i18n="生效范围">生效范围</span></label>
         <div id="injectPromptKeyList" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px 12px;"></div>
       </div>
-      <div class="modal-footer">
+      <div slot="footer">
         <button type="button" class="blora-button" onclick="app.closeModals()" data-variant="secondary"><span data-i18n="取消">取消</span></button>
         <button type="button" class="blora-button" onclick="app.saveInjectPrompt()" data-variant="primary"><span data-i18n="保存">保存</span></button>
       </div>
@@ -2980,12 +2980,12 @@ data: [DONE]</code></pre>
   </blora-dialog>
 
   <blora-dialog id="promptDetailModal" role="dialog" aria-modal="true">
-    <div class="modal-content modal-wide">
-      <div class="modal-header">
+    <div class="modal-wide">
+      <div slot="header">
         <h3 id="promptDetailTitle"><span data-i18n="提示词详情">提示词详情</span></h3>
         <button type="button" class="blora-button modal-close" onclick="app.closeModals()" aria-label="关闭">&times;</button>
       </div>
-      <div class="modal-body">
+      <div>
         <div id="promptDetailContent"></div>
       </div>
     </div>
