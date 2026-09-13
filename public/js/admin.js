@@ -2408,7 +2408,7 @@ class AdminApp {
       });
       this.renderModels();
     } else {
-      document.querySelectorAll('#adminModelsList tbody input[type="checkbox"]').forEach(cb => {
+      document.querySelectorAll('#adminModelsList tbody input[type="checkbox"], blora-checkbox').forEach(cb => {
         cb.checked = checked;
         if (checked) this.selectedModels.add(cb.value);
         else this.selectedModels.delete(cb.value);
@@ -3749,8 +3749,8 @@ class AdminApp {
     `;
 
     const footer = `
-      <button type="button" class="dialog-btn dialog-btn-cancel" id="batchSyncCancelBtn">关闭</button>
-      <button type="button" class="dialog-btn dialog-btn-primary" id="batchSyncStartBtn">开始同步</button>
+      <button type="button" class="blora-button dialog-btn" data-variant="secondary" id="batchSyncCancelBtn">关闭</button>
+      <button type="button" class="blora-button dialog-btn" data-variant="primary" id="batchSyncStartBtn">开始同步</button>
     `;
 
     const modal = Dialog.showModal({
@@ -4084,9 +4084,9 @@ class AdminApp {
         <input type="password" class="wizard-apikey-input" id="wizardApiKey" placeholder="${t('输入 API Key，可留空稍后编辑补全')}">
       `,
       footer: `
-        <button class="wizard-back-btn" id="wizardBackBtn">← 返回</button>
+        <button class="blora-button wizard-back-btn" data-variant="secondary" id="wizardBackBtn">← 返回</button>
         <div style="flex:1"></div>
-        <button class="dialog-btn dialog-btn-primary" id="wizardSaveBtn">添加</button>
+        <button class="blora-button dialog-btn" data-variant="primary" id="wizardSaveBtn">添加</button>
       `,
       width: 420
     });
@@ -4156,9 +4156,9 @@ class AdminApp {
         <p style="color:var(--muted-foreground);font-size:13px;margin:0;">建议下一步同步模型列表，导入后即可在模型管理中启用。</p>
       `,
       footer: `
-        <button class="dialog-btn dialog-btn-cancel" id="providerSuccessLater">稍后再说</button>
-        <button class="dialog-btn dialog-btn-cancel" id="providerSuccessPing" ${providerId ? '' : 'disabled'}>检测连通性</button>
-        <button class="dialog-btn dialog-btn-primary" id="providerSuccessSync" ${providerId ? '' : 'disabled'}>同步模型</button>
+        <button class="blora-button dialog-btn" data-variant="secondary" id="providerSuccessLater">稍后再说</button>
+        <button class="blora-button dialog-btn" data-variant="secondary" id="providerSuccessPing" ${providerId ? '' : 'disabled'}>检测连通性</button>
+        <button class="blora-button dialog-btn" data-variant="primary" id="providerSuccessSync" ${providerId ? '' : 'disabled'}>同步模型</button>
       `,
       width: 440
     });
@@ -6003,7 +6003,7 @@ async function(ctx) {
     const items = document.querySelectorAll('#fetchedModelsList .model-check-item');
     items.forEach(item => {
       if (item.style.display !== 'none') {
-        const cb = item.querySelector('input[type="checkbox"]');
+        const cb = item.querySelector('input[type="checkbox"], blora-checkbox');
         if (cb) cb.checked = checked;
       }
     });
@@ -6011,14 +6011,14 @@ async function(ctx) {
   }
 
   updateFetchedModelsCount() {
-    const checked = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]:checked').length;
-    const total = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]').length;
+    const checked = document.querySelectorAll('#fetchedModelsList input[type="checkbox"], blora-checkbox:checked').length;
+    const total = document.querySelectorAll('#fetchedModelsList input[type="checkbox"], blora-checkbox').length;
     document.getElementById('selectAllFetchedModels').checked = checked > 0 && checked === total;
   }
 
   async saveFetchedModels() {
     const providerId = this.currentFetchProviderId;
-    const checkboxes = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]');
+    const checkboxes = document.querySelectorAll('#fetchedModelsList input[type="checkbox"], blora-checkbox');
     const enabledModelIds = [];
     checkboxes.forEach(cb => {
       if (cb.checked) {
