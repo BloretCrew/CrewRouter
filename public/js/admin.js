@@ -738,7 +738,7 @@ class AdminApp {
         setHTML(statsContainer, `
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon blue">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <img class="sf-icon" src="https://img.bloret.net/SF/person.2?color=black" alt="" data-sf-name="person.2" width="20" height="20">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${totalUsers}</span>
@@ -747,7 +747,7 @@ class AdminApp {
           </div>
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon purple">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <img class="sf-icon" src="https://img.bloret.net/SF/shield?color=black" alt="" data-sf-name="shield" width="20" height="20">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${adminCount}</span>
@@ -756,7 +756,7 @@ class AdminApp {
           </div>
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon green">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle" width="20" height="20">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${verifiedCount}</span>
@@ -765,7 +765,7 @@ class AdminApp {
           </div>
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon amber">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <img class="sf-icon" src="https://img.bloret.net/SF/plus.circle?color=black" alt="" data-sf-name="plus.circle" width="20" height="20">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${Number(totalBalance).toFixed(0)}</span>
@@ -1358,7 +1358,7 @@ class AdminApp {
           </div>
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon green">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle" width="20" height="20">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${enabledCount}</span>
@@ -1646,7 +1646,7 @@ class AdminApp {
           <div class="model-library-item-name">
             <span class="admin-add-model-check ${selected ? 'checked' : ''}" aria-hidden="true">
               ${selected
-                ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
+                ? '<img class="sf-icon" src="https://img.bloret.net/SF/checkmark?color=black" alt="" data-sf-name="checkmark" width="12" height="12">'
                 : ''}
             </span>
             ${model.icon_url ? `<img src="${escapeHtml(model.icon_url)}" onerror="this.style.display='none'" alt="">` : ''}
@@ -1757,7 +1757,7 @@ class AdminApp {
     else if (label === 'Outage') checkClass = 'bad';
     const checkSvg = label === 'No data'
       ? ''
-      : `<span class="model-uptime-check ${checkClass}" title="${escapeHtml(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
+      : `<span class="model-uptime-check ${checkClass}" title="${escapeHtml(label)}"><img class="sf-icon" src="https://img.bloret.net/SF/checkmark?color=black" alt="" data-sf-name="checkmark" width="14" height="14"></span>`;
     return `<div class="model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title="${t('近 24 小时调用可用率（每 15 分钟）· 点击查看详情')}" role="button" tabindex="0">
       <div class="model-uptime-spark">${barHtml}</div>
       <span class="model-uptime-pct">${escapeHtml(pct)}</span>
@@ -1865,7 +1865,7 @@ class AdminApp {
     else if (label === 'Outage') checkClass = 'bad';
     const check = label === 'No data'
       ? ''
-      : `<span class="model-uptime-check ${checkClass}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
+      : `<span class="model-uptime-check ${checkClass}"><img class="sf-icon" src="https://img.bloret.net/SF/checkmark?color=black" alt="" data-sf-name="checkmark" width="14" height="14"></span>`;
     const rangeLeft = timeMode ? t('24 小时前') : t('开始');
     const rangeRight = timeMode ? t('现在') : t('今天');
     return `
@@ -2187,7 +2187,7 @@ class AdminApp {
       if (check) {
         check.classList.toggle('checked', selected);
         setHTML(check, selected
-          ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
+          ? '<img class="sf-icon" src="https://img.bloret.net/SF/checkmark?color=black" alt="" data-sf-name="checkmark" width="12" height="12">'
           : '');
       }
       const badges = card.querySelector('.model-item-badges');
@@ -3026,7 +3026,7 @@ class AdminApp {
         </div>
         <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'user' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('user')" title="${t('筛选用户供应商')}">
           <div class="admin-stat-card-icon purple">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/person.2?color=black" alt="" data-sf-name="person.2" width="20" height="20">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${userCount}</span>
@@ -3035,7 +3035,7 @@ class AdminApp {
         </div>
         <div class="admin-stat-card admin-stat-card-clickable ${statusVal === 'enabled' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('enabled')" title="${t('筛选已启用')}">
           <div class="admin-stat-card-icon green">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle" width="20" height="20">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${enabledCount}</span>
@@ -9519,7 +9519,7 @@ async function(ctx) {
         </div>
         <div class="admin-stat-card">
           <div class="admin-stat-card-icon green">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/checkmark.circle?color=black" alt="" data-sf-name="checkmark.circle" width="20" height="20">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${defaultCount}</span>
@@ -10162,7 +10162,7 @@ async function(ctx) {
       setHTML(statsContainer, `
         <div class="admin-stat-card">
           <div class="admin-stat-card-icon blue">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/person.2?color=black" alt="" data-sf-name="person.2" width="20" height="20">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${all.length}</span>
