@@ -22,21 +22,15 @@ const Dialog = (() => {
     if (!dialog || dialog.dataset.legacyPrepared === 'true') return dialog;
     const content = dialog.querySelector(':scope > .modal-content');
     if (!content) return dialog;
-
-    // Existing pages already provide their own header/body/footer. Keeping the
-    // inner panel class would create a second panel inside Blora's shadow panel.
+    // Normalize legacy panel geometry at the host boundary; application code does not query component internals.
     content.classList.remove('blora-dialog__panel');
-    content.style.width = '100%';
-    content.style.maxWidth = '100%';
-    content.style.maxHeight = '100%';
-    content.style.boxSizing = 'border-box';
-    content.style.margin = '0';
-    dialog.dataset.legacyPrepared = 'true';
-
     const maxWidth = content.style.maxWidth;
     const maxHeight = content.style.maxHeight;
     if (maxWidth) dialog.style.setProperty('--blora-dialog-max-width', maxWidth);
     if (maxHeight) dialog.style.setProperty('--blora-dialog-max-height', maxHeight);
+    content.style.width = '100%';
+    content.style.boxSizing = 'border-box';
+    dialog.dataset.legacyPrepared = 'true';
     return dialog;
   }
 
