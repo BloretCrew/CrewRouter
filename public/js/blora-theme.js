@@ -22,7 +22,7 @@
     get: function () { return localStorage.getItem('theme') || 'system'; },
     apply: apply,
     toggle: function () { var current = this.get(); apply(THEMES[(THEMES.indexOf(current) + 1) % THEMES.length]); },
-    setDirection: function (direction) { document.documentElement.dir = direction === 'rtl' ? 'rtl' : 'ltr'; }
+    setDirection: function (direction) { var dir = direction === 'rtl' ? 'rtl' : 'ltr'; document.documentElement.dir = dir; }
   };
   apply(window.CrewBloraTheme.get(), false);
   document.addEventListener('DOMContentLoaded', function () {
