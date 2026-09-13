@@ -2997,11 +2997,7 @@ class ConsoleApp {
             <div style="font-size:14px;font-weight:500;">启用 Fusion</div>
             <div style="font-size:12px;color:var(--muted-foreground);">禁用后，请求 fusion 模型将回退到当前绑定模型</div>
           </div>
-          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
-            <input type="checkbox" id="fusionEnabledToggle" ${fusionEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-            <span style="position:absolute;inset:0;background:${fusionEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
-            <span style="position:absolute;top:2px;${fusionEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
-          </label>
+          <blora-switch id="fusionEnabledToggle" label="启用 Fusion" ${fusionEnabled ? 'checked' : ''}></blora-switch>
         </div>
 
         <div id="fusionConfigBody" style="${fusionEnabled ? '' : 'opacity:0.4;pointer-events:none;'}">
@@ -3010,11 +3006,7 @@ class ConsoleApp {
             <div style="font-size:14px;font-weight:500;">${t('启用 Fusion 综合提示')}</div>
             <div id="fusionSynthesisPromptRisk" style="font-size:12px;color:${synthesisPromptEnabled ? 'var(--muted-foreground)' : 'var(--destructive)'};">${synthesisPromptEnabled ? t('开启时，Panel 仅作为不可信结构化参考，不会拼入 system prompt。') : t('关闭后会保留原始 Panel 内容，但内容未经净化，存在提示注入风险。')}</div>
           </div>
-          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex:none;">
-            <input type="checkbox" id="fusionSynthesisPromptToggle" ${synthesisPromptEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-            <span style="position:absolute;inset:0;background:${synthesisPromptEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
-            <span style="position:absolute;top:2px;${synthesisPromptEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
-          </label>
+          <blora-switch id="fusionSynthesisPromptToggle" label="启用 Fusion 综合提示" ${synthesisPromptEnabled ? 'checked' : ''}></blora-switch>
         </div>
         <div style="margin-bottom:16px;">
           <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:8px;">Panel 模型（多选，并行调用）</div>
@@ -3031,8 +3023,7 @@ class ConsoleApp {
                   const checked = selectedPanels.has(m.id) ? 'checked' : '';
                   return `
                     <label class="blora-card fusion-panel-item" data-search="${escapeHtml((label + ' ' + m.id).toLowerCase())}" style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:4px;font-size:13px;">
-                      <input type="checkbox" class="blora-input fusion-panel-cb" value="${escapeHtml(String(m.id))}" ${checked}>
-                      <span>${escapeHtml(label)}</span>
+                      <blora-checkbox class="fusion-panel-cb" value="${escapeHtml(String(m.id))}" label="${escapeHtml(label)}" ${checked}></blora-checkbox>
                     </label>
                   `;
                 }).join('')}
@@ -6577,11 +6568,11 @@ class ConsoleApp {
     if (!hWrap || !eWrap) return;
     hWrap.innerHTML = harnesses.map(h => {
       const on = sel.harnesses.includes(h) ? ' checked' : '';
-      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-harness" value="${h}"${on}> ${h}</label>`;
+      return `<blora-checkbox class="hn-harness" value="${h}" label="${h}" ${on}></blora-checkbox>`;
     }).join('');
     eWrap.innerHTML = events.map(([v, label]) => {
       const on = sel.eventTypes.includes(v) ? ' checked' : '';
-      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-event" value="${v}"${on}> ${t(label)}</label>`;
+      return `<blora-checkbox class="hn-event" value="${v}" label="${t(label)}" ${on}></blora-checkbox>`;
     }).join('');
     this.showModal('hookNotifySelectModal');
   }
