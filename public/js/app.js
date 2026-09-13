@@ -8548,7 +8548,7 @@ ${extractorBody}
                 <td>
                   <div style="display:flex;gap:6px;">
                     <button type="button" class="blora-button upstream-icon-action" data-variant="ghost" data-size="icon" onclick="app.pingUserProvider('${this._jsString(p.id)}')" title="${t('检测连通性')}" aria-label="${t('检测连通性')}">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <img class="sf-icon" src="https://img.bloret.net/SF/info.circle?color=black" alt="" data-sf-name="info.circle" width="12" height="12">
                     </button>
                     <button type="button" class="blora-button upstream-action" data-variant="outline" data-size="sm" onclick="app.editMyProvider('${this._jsString(p.id)}')">编辑</button>
                     <button type="button" class="blora-button upstream-action" data-variant="danger" data-size="sm" onclick="app.deleteMyProvider('${this._jsString(p.id)}')">删除</button>
@@ -10164,7 +10164,7 @@ ${extractorBody}
     return `
       <div class="model-library-team model-library-starred" data-starred-section="1">
         <div class="model-library-team-header" style="cursor:default;">
-          <svg class="model-star-heading-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <img class="sf-icon" src="https://img.bloret.net/SF/star.fill?color=black" alt="" data-sf-name="star.fill">
           <h3>星标</h3>
           <div style="flex:1;"></div>
           <span class="provider-model-count">${starredModels.length} 个模型</span>
@@ -10769,12 +10769,7 @@ ${extractorBody}
     if ((!libraryData.teams || libraryData.teams.length === 0) && !starredModels.length) {
       setHTML(container, `
         <div class="empty-state model-library-empty" style="padding:60px 20px;text-align:center;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
+          <img class="sf-icon" src="https://img.bloret.net/SF/person?color=black" alt="" data-sf-name="person">
           <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
           <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">请联系管理员添加模型或加入 Team，也可添加自己的供应商</p>
           <div class="model-library-empty-actions">
@@ -10875,7 +10870,7 @@ ${extractorBody}
                 <div class="model-library-provider-actions">
                   <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="font-size:12px;color:var(--muted-foreground);"></span>
                   <button type="button" class="blora-button model-action-icon" data-variant="ghost" data-size="icon" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <img class="sf-icon" src="https://img.bloret.net/SF/info.circle?color=black" alt="" data-sf-name="info.circle" width="12" height="12">
                   </button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
                   <span class="provider-model-count">${displayCount} 个模型</span>
@@ -10983,7 +10978,7 @@ ${extractorBody}
       <div class="model-library-item-info">
         <div class="model-library-item-name">
           ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" data-variant="ghost" data-size="icon" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-label="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/star.fill?color=black" alt="" data-sf-name="star.fill">
           </button>`}
           ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
           <span>${escapeHtml(model.name)}</span>
@@ -11087,7 +11082,7 @@ ${extractorBody}
     else if (label === 'Outage') checkClass = 'bad';
     const checkSvg = label === 'No data'
       ? ''
-      : `<span class="model-uptime-check ${checkClass}" title="${escapeHtml(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
+      : `<span class="model-uptime-check ${checkClass}" title="${escapeHtml(label)}"><img class="sf-icon" src="https://img.bloret.net/SF/checkmark?color=black" alt="" data-sf-name="checkmark" width="14" height="14"></span>`;
     return `<div class="model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title="${t('近 24 小时调用可用率（每 15 分钟）· 点击查看详情')}" onclick="event.stopPropagation();app.showModelUptimeDetailFromEl(this)">
       <div class="model-uptime-spark">${barHtml}</div>
       <span class="model-uptime-pct">${escapeHtml(pct)}</span>
@@ -11193,7 +11188,7 @@ ${extractorBody}
     else if (label === 'Outage') checkClass = 'bad';
     const check = label === 'No data'
       ? ''
-      : `<span class="model-uptime-check ${checkClass}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
+      : `<span class="model-uptime-check ${checkClass}"><img class="sf-icon" src="https://img.bloret.net/SF/checkmark?color=black" alt="" data-sf-name="checkmark" width="14" height="14"></span>`;
     const rangeLeft = timeMode ? t('24 小时前') : t('开始');
     const rangeRight = timeMode ? t('现在') : t('今天');
     return `

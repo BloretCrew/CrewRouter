@@ -1962,7 +1962,7 @@ class AdminApp {
                    data-admin-provider-key="${keyAttr}">
                 <div class="model-library-provider-header" style="cursor:pointer;">
                   <div class="model-library-provider-title">
-                    <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                    <img class="collapse-icon sf-icon" src="https://img.bloret.net/SF/chevron.down?color=black" alt="" data-sf-name="chevron.down" width="14" height="14">
                     ${renderProviderNameTag(p.name || key)}
                     ${selectedCount > 0 ? `${'<span class="blora-badge model-item-badge owner" data-variant="info">' + t('已选')}${selectedCount}</span>` : ''}
                   </div>
@@ -3017,7 +3017,7 @@ class AdminApp {
       setHTML(statsContainer, `
         <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'global' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('global')" title="${t('筛选全局供应商')}">
           <div class="admin-stat-card-icon blue">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/waveform.path.ecg?color=black" alt="" data-sf-name="waveform.path.ecg">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${globalCount}</span>
@@ -3346,8 +3346,8 @@ class AdminApp {
             <button type="button" class="provider-api-key-toggle" data-key-index="${index}"
               onclick="adminApp.toggleProviderApiKeyVisibility(${index}, this)"
               title="${t('显示 Key')}" aria-label="${t('显示 Key')}">
-              <svg class="provider-api-key-eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              <svg class="provider-api-key-eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              <img class="provider-api-key-eye-show sf-icon" src="https://img.bloret.net/SF/eye?color=black" alt="" data-sf-name="eye" width="16" height="16">
+              <img class="provider-api-key-eye-hide sf-icon" src="https://img.bloret.net/SF/eye.slash?color=black" alt="" data-sf-name="eye.slash" width="16" height="16" style="display:none;">
             </button>
           </div>
           <div class="provider-api-key-main-badge-wrap">${mainBadge}</div>
@@ -9537,7 +9537,7 @@ async function(ctx) {
         </div>
         <div class="admin-stat-card">
           <div class="admin-stat-card-icon purple">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/person?color=black" alt="" data-sf-name="person">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${totalMembers}</span>
@@ -9580,7 +9580,7 @@ async function(ctx) {
           ${g.is_default
             ? '<button class="blora-button" disabled style="opacity:0.5;" data-variant="secondary" data-size="sm">' + t('默认') + '</button>'
             : `<button class="blora-button" onclick="adminApp.setDefaultGroup(${g.id})" data-variant="secondary" data-size="sm"><span>${t('设为默认')}</span></button>`}
-          <button class="blora-button" onclick="adminApp.showUserGroupDetail(${g.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="blora-button" onclick="adminApp.showUserGroupDetail(${g.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><img class="sf-icon" src="https://img.bloret.net/SF/arrow.right?color=black" alt="" data-sf-name="arrow.right" width="14" height="14"></button>
         </td>
       </tr>`).join('')}</tbody></table>
       ${pg.totalPages > 1 ? this._renderPagination('userGroup', pg.page, pg.totalPages, pg.total) : ''}`);
@@ -10171,7 +10171,7 @@ async function(ctx) {
         </div>
         <div class="admin-stat-card">
           <div class="admin-stat-card-icon amber">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/star.fill?color=black" alt="" data-sf-name="star.fill">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${defaultCount}</span>
@@ -10180,7 +10180,7 @@ async function(ctx) {
         </div>
         <div class="admin-stat-card">
           <div class="admin-stat-card-icon purple">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/bolt?color=black" alt="" data-sf-name="bolt">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${frontierCount}</span>
@@ -10228,7 +10228,7 @@ async function(ctx) {
         <p class="team-description">${escapeHtml(team.description || t('暂无描述'))}</p>
         <div class="team-card-footer">
           <span class="text-muted">${new Date(team.created_at).toLocaleDateString()}</span>
-          <button class="blora-button" onclick="adminApp.showTeamDetail(${team.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="blora-button" onclick="adminApp.showTeamDetail(${team.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><img class="sf-icon" src="https://img.bloret.net/SF/arrow.right?color=black" alt="" data-sf-name="arrow.right" width="14" height="14"></button>
         </div>
       </div>
     `;
@@ -10242,7 +10242,7 @@ async function(ctx) {
         <button type="button" class="section-header" style="width:100%;border:0;background:transparent;padding:16px;cursor:pointer;text-align:left;"
           onclick="adminApp.togglePersonalTeams()" aria-expanded="${(!personalCollapsed).toString()}">
           <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-            <svg class="collapse-icon" style="transition:transform .2s;transform:rotate(${personalCollapsed ? '-90deg' : '0deg'});" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            <img class="collapse-icon sf-icon" src="https://img.bloret.net/SF/chevron.down?color=black" alt="" data-sf-name="chevron.down" width="14" height="14">
             个人 Team
             <span class="blora-badge" data-variant="neutral">${personalTeams.length}</span>
           </h3>
@@ -10875,7 +10875,7 @@ async function(ctx) {
                    data-provider-key="${escapeHtml(group.key)}">
                 <div class="model-library-provider-header" onclick="adminApp.toggleTeamModelProvider('${safeCollapsedKey}')">
                   <div class="model-library-provider-title">
-                    <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                    <img class="collapse-icon sf-icon" src="https://img.bloret.net/SF/chevron.down?color=black" alt="" data-sf-name="chevron.down" width="14" height="14">
                     ${renderProviderNameTag(group.label)}
                     ${!group.providerEnabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('供应商已禁用') + '</span>' : ''}
                   </div>
