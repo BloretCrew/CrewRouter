@@ -864,8 +864,7 @@ class ConsoleApp {
               ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)">⠿</span>
             ${/^crewrouter$/i.test(String(key.name || '')) ? '' : `
             <label class="pg-toggle api-key-enable-toggle" title="${isEnabled ? t('点击禁用') : t('点击启用')}">
-              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)">
-              <span class="pg-toggle-slider"></span>
+              <blora-switch label="${isEnabled ? t('已启用') : t('已禁用')}" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)"></blora-switch>
             </label>`}
             <div class="api-key-title-text">
               <div class="api-key-name-row">
@@ -5897,8 +5896,7 @@ class ConsoleApp {
       </div>
       <div class="model-library-item-actions">
         <label class="toggle-switch" onclick="event.stopPropagation()" title="${item.enabled ? t('点击停用') : t('点击启用')}">
-          <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)">
-          <span class="toggle-slider"></span>
+          <blora-switch label="${item.enabled ? t('已启用') : t('已禁用')}" ${item.enabled ? 'checked' : ''} onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)"></blora-switch>
         </label>
         <button type="button" class="blora-button" onclick="app.showInjectPromptModal(${parseInt(item.id, 10)})" data-variant="secondary" data-size="sm">${t('编辑')}</button>
         <button type="button" class="blora-button" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})" data-variant="secondary" data-size="sm">${t('删除')}</button>
