@@ -106,7 +106,7 @@
     html += '<div class="store-modal__head"><h3>' + esc(t('选择要登录的 CrewRouter')) + '</h3></div>';
     html += '<p style="color:var(--muted-foreground);font-size:13px;margin:0 0 14px;">' + esc(t('请选择你要登录的 CrewRouter，登录完成后会回到桌面应用。')) + '</p>';
     if (!targets.length) {
-      html += '<div class="store-empty">' + esc(t('未检测到你登录过的 CrewRouter，请先在目标实例登录一次。')) + '</div>';
+      html += emptyHtml(t('未检测到你登录过的 CrewRouter，请先在目标实例登录一次。'));
     } else {
       html += '<div class="store-modal__list">' + targets.map(function (target) {
         var routerUrl = 'https://' + target.domain;
@@ -128,6 +128,9 @@
     var mask = document.getElementById('storeHelperLoginMask');
     if (mask) mask.addEventListener('click', function (event) { if (event.target === mask) mask.remove(); });
   }
+
+  function emptyHtml(text) { return '<blora-empty title="' + esc(text) + '"></blora-empty>'; }
+  function errorHtml(text) { return '<blora-alert variant="danger" title="' + esc(text) + '"></blora-alert>'; }
 
   function starHtml(score) {
     return `<blora-rate value="${Math.max(0, Math.min(5, Number(score) || 0))}" readonly label="${esc(t('评分'))}"></blora-rate>`;
@@ -182,7 +185,7 @@
       renderListResult(data.plugins, q, tag, sort);
     }).catch(function (e) {
       setBanner('err', e.message);
-      viewBox.innerHTML = '<div class="store-error">' + esc(e.message || t('加载失败')) + '</div>';
+      viewBox.innerHTML = errorHtml(e.message || t('加载失败'));
     });
   }
 
@@ -200,7 +203,7 @@
     '</div>';
 
     if (!plugins.length) {
-      html += '<div class="store-empty">' + esc(t('暂无插件')) + '</div>';
+      html += emptyHtml(t('暂无插件'));
     } else {
       html += '<div class="store-grid">' + plugins.map(cardHtml).join('') + '</div>';
     }
@@ -225,12 +228,12 @@
       renderListResult(data.plugins, '', '', 'updated');
     }).catch(function (e) {
       setBanner('err', e.message);
-      viewBox.innerHTML = '<div class="store-error">' + esc(e.message || t('加载失败')) + '</div>';
+      viewBox.innerHTML = errorHtml(e.message || t('加载失败'));
     });
   }
 
   function ratingListHtml(ratings) {
-    if (!ratings || !ratings.length) return '<div class="store-empty" style="padding:20px;">' + esc(t('暂无评分')) + '</div>';
+    if (!ratings || !ratings.length) return emptyHtml(t('暂无评分'));
     return ratings.map(function (r) {
       var replies = (r.replies || []).map(function (rp) {
         return '<div class="store-rating-item" style="margin:8px 0 0; "><div class="store-rating-item__head"><strong>' + esc(rp.username) + '</strong><span>' + esc(fmtDate(rp.createdAt)) + '</span></div><div>' + esc(rp.body) + '</div></div>';
@@ -341,7 +344,7 @@
       loadRatingsInto(p.id);
     }).catch(function (e) {
       setBanner('err', e.message);
-      viewBox.innerHTML = '<div class="store-error">' + esc(e.message || t('加载失败')) + '</div>';
+      viewBox.innerHTML = errorHtml(e.message || t('加载失败'));
     });
   }
 
@@ -570,7 +573,7 @@
             '<blora-option value="all"' + (statusFilter === 'all' ? ' selected' : '') + '>' + esc(t('全部')) + '</blora-option>' +
           '</blora-select></div>';
         if (!data.plugins.length) {
-          html += '<div class="store-empty">' + esc(t('暂无插件')) + '</div>';
+          html += emptyHtml(t('暂无插件'));
         } else {
           html += data.plugins.map(function (p) {
             var needsReview = p.status === 'pending' || p.hasPendingUpdate;
