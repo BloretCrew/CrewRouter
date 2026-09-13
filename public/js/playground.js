@@ -171,9 +171,7 @@ class PlaygroundApp {
     if (this.conversations.length === 0) {
       setHTML(list, `
         <div class="pg-history-empty">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:8px;">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
+          <img class="sf-icon" src="https://img.bloret.net/SF/bubble.left?color=black" alt="" data-sf-name="bubble.left" width="32" height="32" style="opacity:0.3;margin-bottom:8px;">
           <span>暂无对话记录</span>
         </div>`);
       return;
@@ -187,9 +185,7 @@ class PlaygroundApp {
       return `
         <div class="pg-history-item${isActive ? ' active' : ''}" data-id="${Number.isSafeInteger(convId) ? convId : ''}">
           <div class="pg-history-item-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
+            <img class="sf-icon" src="https://img.bloret.net/SF/bubble.left?color=black" alt="" data-sf-name="bubble.left" width="16" height="16">
           </div>
           <div class="pg-history-item-info">
             <div class="pg-history-item-title">${this.escapeHtml(conv.title)}</div>
@@ -197,14 +193,10 @@ class PlaygroundApp {
           </div>
           <div class="pg-history-item-actions">
             <button type="button" class="rename-btn" data-id="${Number.isSafeInteger(convId) ? convId : ''}" title="${this.escapeHtml(t('重命名'))}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-              </svg>
+              <img class="sf-icon" src="https://img.bloret.net/SF/pencil?color=black" alt="" data-sf-name="pencil" width="12" height="12">
             </button>
             <button type="button" class="delete-btn" data-id="${Number.isSafeInteger(convId) ? convId : ''}" title="${this.escapeHtml(t('删除'))}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              </svg>
+              <img class="sf-icon" src="https://img.bloret.net/SF/trash?color=black" alt="" data-sf-name="trash" width="12" height="12">
             </button>
           </div>
         </div>`;
