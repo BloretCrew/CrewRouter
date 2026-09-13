@@ -131,6 +131,7 @@
 
   function emptyHtml(text) { return '<blora-empty title="' + esc(text) + '"></blora-empty>'; }
   function errorHtml(text) { return '<blora-alert variant="danger" title="' + esc(text) + '"></blora-alert>'; }
+  function loginEmptyHtml(text, href) { return '<blora-empty title="' + esc(text) + '" action-label="' + esc(t('登录')) + '" data-login-href="' + esc(href || '') + '"></blora-empty>'; }
 
   function starHtml(score) {
     return `<blora-rate value="${Math.max(0, Math.min(5, Number(score) || 0))}" readonly label="${esc(t('评分'))}"></blora-rate>`;
@@ -336,9 +337,9 @@
           });
         });
       } else if (!me.config.configured) {
-        box.innerHTML = '<div class="store-empty" style="padding:16px;">' + esc(t('PassPort 未配置，暂不能评分')) + '</div>';
+        box.innerHTML = emptyHtml(t('PassPort 未配置，暂不能评分'));
       } else {
-        box.innerHTML = '<div class="store-empty" style="padding:16px;"><a class="blora-button" data-variant="secondary" data-size="sm" href="' + AUTH + '/login?return_to=' + encodeURIComponent(location.pathname + location.hash) + '">' + esc(t('登录后评分')) + '</a></div>';
+        box.innerHTML = loginEmptyHtml(t('登录后评分'), AUTH + '/login?return_to=' + encodeURIComponent(location.pathname + location.hash));
       }
 
       loadRatingsInto(p.id);
