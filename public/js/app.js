@@ -3094,7 +3094,7 @@ class ConsoleApp {
       // 绑定 panel checkbox 变化事件
       container.querySelectorAll('.fusion-panel-cb').forEach(cb => {
         cb.addEventListener('change', () => {
-          const count = container.querySelectorAll('.fusion-panel-cb:checked').length;
+          const count = [...container.querySelectorAll('.fusion-panel-cb')].filter(cb => cb.checked).length;
           document.getElementById('fusionPanelCount').textContent = `${count}${t('个模型已选')}`;
         });
       });
@@ -3102,7 +3102,7 @@ class ConsoleApp {
       // 存储 keyId 并重写保存逻辑
       this._editingKeyModelsId = keyId;
       this._saveKeyModelsOverride = async () => {
-        const panelModels = Array.from(container.querySelectorAll('.fusion-panel-cb:checked')).map(cb => cb.value);
+        const panelModels = Array.from(container.querySelectorAll('.fusion-panel-cb')).filter(cb => cb.checked).map(cb => cb.value);
         const judgeModelId = document.getElementById('fusionJudgeSelect').value;
         const outerModelId = document.getElementById('fusionOuterSelect').value;
 
@@ -3147,7 +3147,7 @@ class ConsoleApp {
     const visible = document.querySelectorAll('#fusionPanelList .fusion-panel-item:not([style*="display: none"]) .fusion-panel-cb');
     const allChecked = Array.from(visible).every(cb => cb.checked);
     visible.forEach(cb => cb.checked = !allChecked);
-    const count = document.querySelectorAll('#fusionPanelList .fusion-panel-cb:checked').length;
+    const count = [...document.querySelectorAll('#fusionPanelList .fusion-panel-cb')].filter(cb => cb.checked).length;
     document.getElementById('fusionPanelCount').textContent = `${count}${t('个模型已选')}`;
   }
 
@@ -5929,10 +5929,7 @@ class ConsoleApp {
       setHTML(keyListEl, `
         <p style="font-size:12px;color:var(--muted-foreground);margin:0 0 4px;">${t('不勾选任何 Key 时对所有 Key 全局生效；勾选后仅对所选 Key 生效')}</p>
         ${keys.map(k => `
-          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);">
-            <input type="checkbox" class="inject-key-check" value="${escapeHtml(k.id)}" ${bound.has(String(k.id)) ? 'checked' : ''}>
-            <span>${escapeHtml(k.name)}${k.key_prefix ? `&nbsp;<code style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(k.key_prefix)}…</code>` : ''}</span>
-          </label>`).join('')}
+          <blora-checkbox class="inject-key-check" value="${escapeHtml(k.id)}" label="${escapeHtml(k.name)}" ${bound.has(String(k.id)) ? 'checked' : ''}></blora-checkbox>`).join('')}
       `);
     }
 
@@ -5959,7 +5956,7 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('保存失败'));
 
       // 绑定选择随条目一起保存
-      const keyIds = [...document.querySelectorAll('#injectPromptKeyList .inject-key-check:checked')].map(cb => parseInt(cb.value, 10));
+      const keyIds = [...document.querySelectorAll('#injectPromptKeyList .inject-key-check')].filter(cb => cb.checked).map(cb => parseInt(cb.value, 10));
       await this.saveInjectPromptKeys(data.item?.id || id, keyIds);
 
       this.closeModals();
