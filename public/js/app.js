@@ -3910,7 +3910,7 @@ class ConsoleApp {
     } finally {
       if (buttonEl) {
         buttonEl.disabled = false;
-        setHTML(buttonEl, '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> 测试');
+        setHTML(buttonEl, '<img class="sf-icon" src="https://img.bloret.net/SF/questionmark.circle?color=black" alt="" data-sf-name="questionmark.circle" width="12" height="12"> 测试');
       }
     }
   }
