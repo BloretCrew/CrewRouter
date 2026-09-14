@@ -23,7 +23,7 @@
   <script src="/js/blora-dialog.js?v=4"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css?v=25">
-  <link rel="stylesheet" href="/css/model-library-blora.css?v=2">
+  <link rel="stylesheet" href="/css/model-library-blora.css?v=3">
   <link rel="stylesheet" href="/css/console-blora.css?v=2">
   <link rel="stylesheet" href="/css/badges-blora.css?v=1">
   <link rel="stylesheet" href="/css/progress-blora.css?v=1">
@@ -245,18 +245,12 @@
             <blora-select id="libraryStickyProviderFilter" class="model-library-sticky-select" aria-label="供应商筛选" data-i18n-title="供应商筛选">
               <blora-option value="all">全部供应商</blora-option>
             </blora-select>
-            <div class="model-search-box model-library-sticky-search">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              <input type="text" id="libraryStickySearchInput" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..." class="model-search-input" autocomplete="off">
-            </div>
-            <button type="button" id="libraryStickyMoreFiltersBtn" class="blora-button model-library-sticky-more-btn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选" data-variant="secondary" data-size="sm"><span data-i18n="更多筛选">
-              更多筛选
-            </span></button>
-            <div class="model-library-sticky-key-wrap expand-dropdown" id="libraryStickyKeyWrap" style="display:none;">
-              <button type="button" id="libraryStickyKeyBtn" class="model-library-sticky-key-btn" aria-haspopup="menu" aria-expanded="false" onclick="app.toggleLibraryStickyKeyOrBubble(event)">
+            <blora-search id="libraryStickySearchInput" class="model-library-sticky-search" label="搜索模型" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..."></blora-search>
+            <button type="button" id="libraryStickyMoreFiltersBtn" class="blora-button model-library-sticky-more-btn" onclick="app.toggleLibraryMoreFilters()" title="更多筛选" data-i18n-title="更多筛选" data-variant="secondary" data-size="sm"><span data-i18n="更多筛选">更多筛选</span></button>
+            <div class="model-library-sticky-key-wrap" id="libraryStickyKeyWrap" style="display:none;">
+              <button type="button" id="libraryStickyKeyBtn" class="blora-button model-library-sticky-key" data-variant="outline" data-size="sm" aria-haspopup="menu" aria-expanded="false" onclick="app.toggleLibraryStickyKeyOrBubble(event)">
                 <span class="sticky-key-name">API Key</span>
               </button>
-              <div id="libraryStickyKeyMenu" class="expand-dropdown-menu model-library-sticky-key-menu" role="menu" style="display:none;"></div>
             </div>
           </div>
           <div id="libraryStickyAdvancedFilters" class="model-library-sticky-advanced" style="display:none;" aria-hidden="true">
@@ -287,48 +281,16 @@
 
         <div id="traceReportsBanner" class="trace-reports-banner" style="display:none;"></div>
 
-        <!-- 顶部操作栏：主路径常驻，高级能力收入「更多」 -->
+        <!-- 顶部操作栏：主路径常驻，高级能力收入「更多」（blora-dropdown，由 app.js 渲染） -->
         <div class="model-library-header">
           <div class="model-library-header-left">
-            <h2 style="margin:0;font-size:20px;"><span data-i18n="模型库">模型库</span></h2>
+            <h2><span data-i18n="模型库">模型库</span></h2>
             <span class="model-library-header-hint"><span data-i18n="点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定">点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定</span></span>
           </div>
           <div class="model-library-header-actions" id="modelLibraryHeaderActions">
-            <button class="blora-button" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型" data-variant="secondary" data-size="sm">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span data-i18n="我的上游">
-              我的上游
-            </span></button>
-            <button class="blora-button" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商" data-variant="primary" data-size="sm">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="添加供应商">
-              添加供应商
-            </span></button>
-            <div class="expand-dropdown" id="libraryMoreDropdown">
-              <button class="blora-button" onclick="app.toggleLibraryMoreDropdown(event)" title="更多操作" data-i18n-title="更多操作" data-variant="secondary" data-size="sm"><span data-i18n="更多">
-                更多
-                </span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:2px;"><path d="m6 9 6 6 6-6"/></svg>
-              </button>
-              <div id="libraryMoreDropdownMenu" class="expand-dropdown-menu library-more-dropdown-menu" style="display:none;">
-                <div class="expand-dropdown-item" onclick="app.expandAllTeams();app.closeLibraryMoreDropdown();"><span data-i18n="展开全部 Team">展开全部 Team</span></div>
-                <div class="expand-dropdown-item" onclick="app.collapseAllTeams();app.closeLibraryMoreDropdown();"><span data-i18n="折叠全部 Team">折叠全部 Team</span></div>
-                <div class="expand-dropdown-item" onclick="app.expandAllProviders();app.closeLibraryMoreDropdown();"><span data-i18n="展开全部 供应商">展开全部 供应商</span></div>
-                <div class="expand-dropdown-item" onclick="app.collapseAllProviders();app.closeLibraryMoreDropdown();"><span data-i18n="折叠全部 供应商">折叠全部 供应商</span></div>
-                <div class="expand-dropdown-divider"></div>
-                <div class="expand-dropdown-item" onclick="app.testAllModels();app.closeLibraryMoreDropdown();"><span data-i18n="测试全部模型">测试全部模型</span></div>
-                <div class="expand-dropdown-item" onclick="app.testAllCurrentTeamModels();app.closeLibraryMoreDropdown();"><span data-i18n="测试当前 Team">测试当前 Team</span></div>
-                <div class="expand-dropdown-item" onclick="app.testAllCurrentProviderModels();app.closeLibraryMoreDropdown();"><span data-i18n="测试当前供应商">测试当前供应商</span></div>
-                <div class="expand-dropdown-divider"></div>
-                <div class="expand-dropdown-item" id="pingAllLibProvidersBtn" onclick="app.pingAllLibraryProviders();app.closeLibraryMoreDropdown();"><span data-i18n="一键检测连通性">一键检测连通性</span></div>
-                <div class="expand-dropdown-divider"></div>
-                <div class="expand-dropdown-item" id="libraryShowHiddenBtn" onclick="app.toggleLibraryShowHidden();">
-                  <span class="library-show-hidden-text"><span data-i18n="显示已隐藏">显示已隐藏</span></span>
-                </div>
-                <div class="expand-dropdown-item" id="libraryClearHiddenBtn" onclick="app.clearLibraryHidden();" style="display:none;"><span data-i18n="清除隐藏">清除隐藏</span></div>
-                <div class="expand-dropdown-item" id="libraryReorderBtn" onclick="app.toggleLibraryReorderMode();">
-                  <span class="library-reorder-text"><span data-i18n="排序模式">排序模式</span></span>
-                </div>
-                <div class="expand-dropdown-item" id="libraryResetOrderBtn" onclick="app.resetLibraryOrder();" style="display:none;"><span data-i18n="重置排序">重置排序</span></div>
-              </div>
-            </div>
+            <button type="button" class="blora-button" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型" data-variant="secondary" data-size="sm"><img src="https://img.bloret.net/SF/shippingbox?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="shippingbox"><span data-i18n="我的上游">我的上游</span></button>
+            <button type="button" class="blora-button" onclick="app.showAddProviderModal()" title="添加自己的供应商" data-i18n-title="添加自己的供应商" data-variant="primary" data-size="sm"><span data-i18n="添加供应商">添加供应商</span></button>
+            <div class="model-library-header-more" id="libraryMoreDropdown"></div>
             <!-- 兼容旧脚本引用的隐藏挂点（不再单独展示） -->
             <div id="expandDropdown" style="display:none;">
               <div id="expandDropdownMenu" style="display:none;"></div>
@@ -344,13 +306,13 @@
           <div class="model-library-binding-main">
             <div class="model-library-binding-label"><span data-i18n="当前 Key">当前 Key</span></div>
             <div id="modelLibraryBindingSummary" class="model-library-binding-summary">
-              <span class="binding-placeholder"><span class="inline-loading"><div class="loading-spinner sm" role="status" aria-label="加载中" data-i18n-title="加载中"></div><span class="inline-loading-text"><span data-i18n="加载中...">加载中...</span></span></span></span>
+              <span class="binding-placeholder library-inline-loading" role="status"><span class="blora-spinner" data-size="sm" aria-hidden="true"></span><span data-i18n="加载中...">加载中...</span></span>
             </div>
           </div>
           <div id="modelLibraryKeySelector" class="model-library-key-selector" style="display:none;">
             <div class="model-library-key-selector-inner">
               <div class="model-library-key-label"><span data-i18n="切换 Key">切换 Key</span></div>
-              <div class="model-library-key-chips" id="libraryKeyChips"></div>
+              <div class="blora-filter model-library-key-chips" id="libraryKeyChips" role="radiogroup" aria-label="切换 Key"></div>
             </div>
           </div>
         </div>
@@ -362,9 +324,7 @@
               <h3><span data-i18n="供应商额度">供应商额度</span></h3>
               <p><span data-i18n="显示上次刷新（定时 / 手动）的结果">显示上次刷新（定时 / 手动）的结果</span></p>
             </div>
-            <button type="button" id="providerQuotaRefreshBtn" class="model-quota-refresh" onclick="app.refreshProviderQuota()" title="刷新额度" data-i18n-title="刷新额度" aria-label="刷新额度" data-i18n-title="刷新额度">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-14.9-4L3 9m0 0V4m0 5h5M4 13a8.1 8.1 0 0 0 14.9 4L21 15m0 0v5m0-5h-5"/></svg>
-            </button>
+            <button type="button" id="providerQuotaRefreshBtn" class="blora-button model-quota-refresh" data-variant="ghost" data-size="icon" onclick="app.refreshProviderQuota()" title="刷新额度" data-i18n-title="刷新额度" aria-label="刷新额度"><img src="https://img.bloret.net/SF/arrow.clockwise?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.clockwise"></button>
           </div>
           <div id="providerQuotaGrid" data-blora-state="idle" class="model-quota-grid"></div>
         </div>
@@ -372,8 +332,8 @@
         <!-- 排序模式工具条：拖拽 + 一键按测试结果排序 -->
         <div id="libraryReorderToolbar" class="library-reorder-toolbar" style="display:none;">
           <div class="library-reorder-toolbar-main">
-            <span class="library-reorder-toolbar-badge"><span data-i18n="排序模式">排序模式</span></span>
-            <span class="library-reorder-toolbar-hint"><span data-i18n="拖拽 ⠿ 调整顺序，或一键按测试结果写入自定义排序">拖拽 ⠿ 调整顺序，或一键按测试结果写入自定义排序</span></span>
+            <span class="blora-badge" data-variant="info"><span data-i18n="排序模式">排序模式</span></span>
+            <span class="library-reorder-toolbar-hint"><span data-i18n="拖拽手柄调整顺序，或一键按测试结果写入自定义排序">拖拽手柄调整顺序，或一键按测试结果写入自定义排序</span></span>
           </div>
           <div class="library-reorder-toolbar-actions">
             <button type="button" class="blora-button" onclick="app.applyLibraryOrderByTest('test_latency_asc')" title="通过的模型优先，延迟从低到高" data-i18n-title="通过的模型优先，延迟从低到高" data-variant="secondary" data-size="sm"><span data-i18n="延迟快→慢">
@@ -393,10 +353,7 @@
 
         <!-- 搜索和筛选：默认只露搜索 + 供应商，其余折叠 -->
         <div class="model-filter-bar" id="modelLibraryFilters" style="display:none;">
-          <div class="model-search-box">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" id="librarySearchInput" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..." class="model-search-input">
-          </div>
+          <blora-search id="librarySearchInput" class="model-library-search" label="搜索模型" placeholder="搜索模型、供应商、Team..." data-i18n-placeholder="搜索模型、供应商、Team..."></blora-search>
           <div class="model-filter-selects">
             <blora-select id="libraryProviderFilter">
               <blora-option value="all">全部供应商</blora-option>
@@ -434,13 +391,11 @@
         <div id="modelLibraryStickySentinel" class="model-library-sticky-sentinel" aria-hidden="true"></div>
 
         <!-- 模型数量提示 -->
-        <div id="modelLibraryCount" style="display:none;margin-bottom:12px;font-size:13px;color:var(--muted-foreground);"></div>
+        <div id="modelLibraryCount" class="model-library-count" style="display:none;"></div>
 
         <!-- 模型列表 -->
         <div id="modelLibraryContent" data-blora-state="loading" class="model-library-grid">
-          <div class="empty-state">
-            <div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
-          </div>
+          <div class="model-library-loading" role="status"><span class="blora-spinner" data-size="lg" aria-hidden="true"></span><span data-i18n="加载中...">加载中...</span></div>
         </div>
       </div>
 
@@ -2781,7 +2736,7 @@ data: [DONE]</code></pre>
   <script src="/js/session-tool-groups.js?v=2"></script>
   <script src="/js/vendor/marked.min.js"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/app.js?v=55"></script>
+  <script src="/js/app.js?v=56"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

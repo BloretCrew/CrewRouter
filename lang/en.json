@@ -246,7 +246,7 @@
   "切换 Key": "Switch Key",
   "供应商额度": "Provider quota",
   "显示上次刷新（定时 / 手动）的结果": "Show results from the last refresh (scheduled / manual)",
-  "拖拽 ⠿ 调整顺序，或一键按测试结果写入自定义排序": "Drag ⠿ to reorder, or apply a custom order from test results in one click",
+  "拖拽手柄调整顺序，或一键按测试结果写入自定义排序": "Drag the handle to reorder, or apply a custom order from test results in one click",
   "延迟快→慢": "Latency fast→slow",
   "延迟慢→快": "Latency slow→fast",
   "吞吐高→低": "Throughput high→low",

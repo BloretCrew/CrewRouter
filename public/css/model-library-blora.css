@@ -1,17 +1,18 @@
-/* Model library surface migration: keep behavior in app.js and use Blora primitives for visual surfaces. */
+/* 模型库区块：只保留布局；控件视觉全部来自 Blora 2.0.8（按钮 / 搜索 / 下拉 / 徽章 / 标签 / 进度 / 空态 / 加载）。 */
 .blora-model-library {
   --library-gap: var(--blora-space-4);
-  --library-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --library-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
 }
 
+/* ---------- 区块表面 ---------- */
 .blora-model-library .model-library-header,
 .blora-model-library .model-library-binding-bar,
 .blora-model-library .model-quota-section,
 .blora-model-library .library-reorder-toolbar,
-.blora-model-library .model-filter-bar {
-  border: var(--library-border);
-  border-radius: var(--blora-radius-xl);
+.blora-model-library .model-filter-bar,
+.blora-model-library .model-library-team,
+.blora-model-library .model-library-empty {
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-default);
   box-shadow: var(--blora-shadow-1);
 }
@@ -19,16 +20,29 @@
 .blora-model-library .model-library-header {
   padding: var(--blora-space-5) var(--blora-space-6);
   gap: var(--blora-space-5);
+  margin-bottom: var(--library-gap);
 }
 
 .blora-model-library .model-library-header h2 {
-  color: var(--blora-color-text-primary) !important;
-  font-family: var(--blora-font-heading);
+  margin: 0;
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-xl);
+  font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
-.blora-model-library .model-library-header-hint {
-  color: var(--blora-color-text-subtle);
+.blora-model-library .model-library-header-hint,
+.blora-model-library .model-quota-section-header p,
+.blora-model-library .library-reorder-toolbar-hint,
+.blora-model-library .model-library-count,
+.blora-model-library .lib-ping,
+.blora-model-library .provider-model-count,
+.blora-model-library .model-quota-updated,
+.blora-model-library .model-quota-period-reset,
+.blora-model-library .model-quota-credits {
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
 }
 
 .blora-model-library .model-library-binding-bar,
@@ -36,128 +50,207 @@
 .blora-model-library .library-reorder-toolbar,
 .blora-model-library .model-filter-bar {
   padding: var(--blora-space-4) var(--blora-space-5);
-}
-
-.blora-model-library .model-library-binding-bar,
-.blora-model-library .model-quota-section {
   margin-bottom: var(--library-gap);
 }
 
 .blora-model-library .model-library-binding-label,
 .blora-model-library .model-quota-section-header h3,
 .blora-model-library .model-library-team-header h3 {
+  margin: 0;
   color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
 }
 
-.blora-model-library .model-library-binding-summary,
-.blora-model-library .model-library-header-hint,
-.blora-model-library .model-quota-section-header p,
-.blora-model-library .library-reorder-toolbar-hint,
-.blora-model-library #modelLibraryCount {
-  color: var(--blora-color-text-subtle) !important;
+.blora-model-library .model-library-binding-summary {
+  color: var(--blora-color-text-secondary);
 }
+
+.blora-model-library .model-library-count {
+  margin-bottom: var(--blora-space-3);
+}
+
+/* ---------- 顶部操作栏 / 筛选栏 ---------- */
+.blora-model-library .model-library-header-actions,
+.blora-model-library .model-filter-selects,
+.blora-model-library .library-reorder-toolbar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--blora-space-2);
+}
+
+.blora-model-library .model-library-header-more { flex: 0 0 auto; }
 
 .blora-model-library .model-filter-bar {
   display: flex;
   align-items: center;
   gap: var(--blora-space-3);
   flex-wrap: wrap;
-  margin-bottom: var(--library-gap);
 }
 
-.blora-model-library .model-filter-bar .model-search-box {
-  flex: 1 1 260px;
-  max-width: none;
-}
-
-.blora-model-library .model-filter-selects,
-.blora-model-library .model-library-header-actions,
-.blora-model-library .library-reorder-toolbar-actions {
-  gap: var(--blora-space-2);
-}
-
-.blora-model-library .model-library-header-actions {
-  align-items: stretch;
-  flex-wrap: nowrap;
-}
-
-.blora-model-library .model-library-header-actions > .blora-button,
-.blora-model-library .model-library-header-actions .expand-dropdown > .blora-button {
-  min-height: 2.5rem;
-  padding-inline: var(--blora-space-4);
-  border-radius: var(--blora-radius-lg);
-  font-family: var(--blora-font-body);
-  font-size: var(--blora-text-sm);
-  font-weight: 600;
-  letter-spacing: 0;
-  box-shadow: none;
-}
-
-.blora-model-library .model-library-header-actions > .blora-button[data-variant="secondary"],
-.blora-model-library .model-library-header-actions .expand-dropdown > .blora-button[data-variant="secondary"] {
-  border-color: var(--blora-color-border-subtle);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-primary);
-}
-
-.blora-model-library .model-library-header-actions > .blora-button[data-variant="secondary"]:hover,
-.blora-model-library .model-library-header-actions .expand-dropdown > .blora-button[data-variant="secondary"]:hover {
-  border-color: var(--blora-color-border-accent);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-primary);
-}
-
-.blora-model-library .model-library-header-actions > .blora-button[data-variant="primary"] {
-  border-color: var(--blora-color-action-primary-default);
-  background: var(--blora-color-action-primary-default);
-  color: var(--blora-color-text-on-accent);
-}
-
-.blora-model-library .model-library-header-actions > .blora-button[data-variant="primary"]:hover {
-  border-color: var(--blora-color-action-primary-hover);
-  background: var(--blora-color-action-primary-hover);
-}
-
-.blora-model-library .model-library-header-actions .expand-dropdown {
-  flex: 0 0 auto;
-}
-
-.blora-model-library .model-library-header-actions .expand-dropdown-menu {
-  border: var(--library-border);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-3);
-}
-
-.blora-model-library .model-library-header-actions .expand-dropdown-item {
-  min-height: 2.5rem;
-  padding: var(--blora-space-2) var(--blora-space-3);
-  color: var(--blora-color-text-primary);
-}
-
-.blora-model-library .model-library-header-actions .expand-dropdown-item:hover {
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-model-library .model-search-input,
-.blora-model-library .model-library-sticky-search .model-search-input {
-  border-color: color-mix(in srgb, var(--border) 52%, transparent);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-primary);
+.blora-model-library blora-search {
+  display: block;
+  flex: 1 1 16rem;
+  min-width: 12rem;
 }
 
 .blora-model-library blora-select {
   min-width: 9rem;
 }
 
+.blora-model-library .model-library-sticky-search {
+  flex: 1 1 14rem;
+  min-width: 10rem;
+}
+
+.blora-model-library .model-library-sticky-key-wrap { position: static; }
+.blora-model-library .model-library-sticky-key { max-width: 22rem; gap: var(--blora-space-2); }
+.blora-model-library .model-library-sticky-key .sticky-key-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.blora-model-library .model-library-sticky-key .blora-badge { flex: none; max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- SF 图标 ---------- */
+.blora-model-library .sf-icon { display: inline-block; flex: none; vertical-align: middle; }
+.blora-model-library .collapse-icon { transition: transform var(--blora-duration-base) var(--blora-easing-standard); }
+.blora-model-library .model-star-heading-icon { opacity: .85; }
+.blora-model-library .model-quota-refresh[data-loading] .sf-icon { display: none; }
+.blora-model-library .binding-arrow { display: inline-flex; align-items: center; color: var(--blora-color-text-subtle); }
+.blora-model-library .library-drag-handle .sf-icon { opacity: .7; }
+
+/* ---------- 加载 / 空态 ---------- */
+.blora-model-library .library-inline-loading,
+.blora-model-library .model-quota-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-model-library .model-library-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blora-space-3);
+  min-height: 12rem;
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+}
+
+.blora-model-library .model-library-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blora-space-4);
+  padding: var(--blora-space-8) var(--blora-space-5);
+}
+
+.blora-model-library .model-library-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--blora-space-2);
+}
+
+/* ---------- 当前 Key 绑定 / Key 芯片（官方 Filter 模式） ---------- */
+.blora-model-library .model-library-key-chips {
+  padding: var(--blora-space-1) 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.blora-model-library .model-library-key-chips .blora-filter__label {
+  gap: var(--blora-space-2);
+  max-width: 100%;
+}
+
+.blora-model-library .model-library-key-chips .key-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blora-model-library .model-library-key-chips .key-tag-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border-radius: var(--blora-radius-full);
+}
+
+.blora-model-library .model-library-key-chip-ellipsis {
+  align-self: center;
+  color: var(--blora-color-text-subtle);
+}
+
+/* ---------- 供应商额度 ---------- */
+.blora-model-library .model-quota-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--blora-space-3);
+  margin-bottom: var(--blora-space-3);
+}
+
+.blora-model-library .model-quota-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-3);
+  padding: var(--blora-space-4);
+}
+
+.blora-model-library .model-quota-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blora-space-2);
+}
+
+.blora-model-library .model-quota-name {
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+}
+
+.blora-model-library .model-quota-periods {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-3);
+}
+
+.blora-model-library .model-quota-period {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-2);
+}
+
+.blora-model-library .model-quota-period-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blora-space-2);
+  color: var(--blora-color-text-secondary);
+  font-size: var(--blora-text-xs);
+}
+
+.blora-model-library .model-quota-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: var(--blora-space-1);
+  color: var(--blora-color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.blora-model-library .model-quota-remaining { font-size: var(--blora-text-xl); font-weight: 700; }
+.blora-model-library .model-quota-total { color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
+.blora-model-library .model-quota-credits { display: flex; flex-wrap: wrap; gap: var(--blora-space-3); }
+
+/* ---------- Team / 供应商 / 模型卡片 ---------- */
 .blora-model-library .model-library-team {
   margin-bottom: var(--library-gap);
   padding: 0;
-  border: var(--library-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
   overflow: hidden;
 }
 
@@ -166,20 +259,21 @@
   gap: var(--blora-space-3);
   padding: var(--blora-space-4) var(--blora-space-5);
   background: var(--blora-color-surface-raised);
-  border-bottom: var(--library-border-soft);
+  border-bottom: var(--blora-border-subtle);
 }
 
 .blora-model-library .model-library-team-content {
   padding: var(--blora-space-4);
 }
 
-.blora-model-library .model-library-team-content .model-library-provider + .model-library-provider {
+.blora-model-library .model-library-team-content .model-library-provider + .model-library-provider,
+.blora-model-library .model-library-provider + .model-library-provider {
   margin-top: var(--blora-space-3);
 }
 
 .blora-model-library .model-library-provider {
   padding: 0;
-  border-color: color-mix(in srgb, var(--border) 52%, transparent);
+  border: var(--blora-border-subtle);
   border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-default);
   box-shadow: none;
@@ -198,10 +292,6 @@
   border-radius: var(--blora-radius-lg);
 }
 
-.blora-model-library .model-library-provider + .model-library-provider {
-  margin-top: var(--blora-space-3);
-}
-
 .blora-model-library .model-library-provider-header {
   min-height: 3.5rem;
   padding: var(--blora-space-3) var(--blora-space-4);
@@ -214,21 +304,10 @@
   align-items: center;
 }
 
-.blora-model-library .model-library-provider-actions .model-action-test {
-  min-width: 3.5rem;
-  height: 2rem;
-  padding-inline: var(--blora-space-2);
-}
-
-.blora-model-library .model-library-provider-actions .model-action-icon {
-  width: 2rem;
-  min-width: 2rem;
-  height: 2rem;
-}
-
-.blora-model-library .model-library-provider-actions .library-more-trigger {
-  height: 2rem;
-  min-width: 5.5rem;
+/* 供应商标签：颜色由用户定义（业务数据），落在 Blora tag 表面上 */
+.blora-model-library .model-provider-tag-chip[style*="--badge-accent"] {
+  border-color: var(--badge-accent);
+  color: var(--badge-accent);
 }
 
 .blora-model-library .model-library-list {
@@ -242,26 +321,15 @@
 .blora-model-library .model-library-item {
   min-height: 12rem;
   padding: var(--blora-space-4);
-  border: var(--library-border);
+  border: var(--blora-border-subtle);
   border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-default);
   box-shadow: none;
-  transition: box-shadow var(--blora-duration-base) var(--blora-easing-standard), transform var(--blora-duration-base) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard);
-}
-
-.blora-model-library .model-library-item:hover {
-  border-color: color-mix(in srgb, var(--primary) 52%, var(--border));
-  box-shadow: var(--blora-shadow-2);
-  transform: translateY(-1px);
 }
 
 .blora-model-library .model-library-item.selected {
-  border-color: var(--blora-color-border-accent);
+  border-color: var(--blora-color-action-primary-default);
   box-shadow: var(--blora-shadow-2);
-}
-
-.blora-model-library .model-library-item-name > span {
-  color: var(--blora-color-text-primary);
 }
 
 .blora-model-library .model-library-item-name {
@@ -269,8 +337,16 @@
   row-gap: var(--blora-space-2);
 }
 
-.blora-model-library .model-library-item-name > span:not(.model-test-badge) {
+.blora-model-library .model-library-item-name > span {
+  color: var(--blora-color-text-primary);
   line-height: 1.3;
+}
+
+.blora-model-library .model-item-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-1);
 }
 
 .blora-model-library .model-test-badge,
@@ -281,67 +357,26 @@
 .blora-model-library .model-library-item-desc,
 .blora-model-library .model-price-label,
 .blora-model-library .model-library-item-price {
-  color: var(--blora-color-text-subtle);
+  color: var(--blora-color-text-muted);
 }
 
 .blora-model-library .model-library-item-price {
   margin-top: auto;
   padding-top: var(--blora-space-3);
-  border-top: var(--library-border-soft);
+  border-top: var(--blora-border-subtle);
 }
 
 .blora-model-library .model-library-item-actions {
   margin-top: var(--blora-space-4);
   margin-inline-start: 0;
   padding-top: var(--blora-space-3);
-  border-top: var(--library-border-soft);
+  border-top: var(--blora-border-subtle);
   flex-wrap: wrap;
   gap: var(--blora-space-2);
-  min-height: 2.25rem;
-}
-
-.blora-model-library .model-library-item-actions .model-action-test,
-.blora-model-library .model-library-item-actions .model-action-primary,
-.blora-model-library .model-library-item-actions .model-action-bound,
-.blora-model-library .model-library-item-actions .model-action-disabled {
-  min-width: 3.5rem;
-  height: 2.25rem;
-  padding-inline: var(--blora-space-3);
-  border-radius: var(--blora-radius-lg);
-}
-
-.blora-model-library .model-library-item-actions .model-action-test {
-  --blora-button-bd: var(--blora-color-border-strong);
-}
-
-.blora-model-library .model-library-item-actions .model-action-icon,
-.blora-model-library .model-library-item-actions .library-more-menu {
-  height: 2.25rem;
-}
-
-.blora-model-library .model-library-item-actions .model-action-icon {
-  width: 2.25rem;
-  min-width: 2.25rem;
 }
 
 .blora-model-library .model-library-item-actions .library-more-menu {
   margin-inline-start: auto;
-}
-
-.blora-model-library .model-library-item-actions .library-more-menu > .blora-dropdown,
-.blora-model-library .model-library-item-actions .library-more-menu {
-  display: inline-flex;
-  align-items: center;
-}
-
-.blora-model-library .model-library-item-actions .blora-button,
-.blora-model-library .model-library-header-actions .blora-button,
-.blora-model-library .library-reorder-toolbar-actions .blora-button {
-  font-family: var(--blora-font-body);
-}
-
-.blora-model-library .model-library-item-actions .blora-button {
-  min-height: 2rem;
 }
 
 .blora-model-library .library-more-menu {
@@ -351,64 +386,15 @@
 }
 
 .blora-model-library .library-more-trigger {
-  min-width: 5.5rem;
-  height: 2.25rem;
-  padding-inline: var(--blora-space-3);
-  border-radius: var(--blora-radius-lg);
-}
-
-.blora-model-library .library-more-trigger svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-.blora-model-library .library-more-menu blora-dropdown-item {
-  display: block;
-}
-
-.blora-model-library .model-star-btn {
-  margin-inline-end: var(--blora-space-1);
-  color: var(--blora-color-text-subtle);
+  gap: var(--blora-space-1);
 }
 
 .blora-model-library .model-star-btn.starred {
-  color: var(--blora-color-status-warning, var(--blora-color-action-primary));
-}
-
-.blora-model-library .model-item-badge,
-.blora-model-library .team-badge,
-.blora-model-library .library-star-badge,
-.blora-model-library .library-hidden-badge,
-.blora-model-library .provider-test-summary {
-  border-radius: var(--blora-radius-pill);
-}
-
-.blora-model-library .model-item-badge {
-  border: var(--library-border);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-subtle);
-}
-
-.blora-model-library .team-badge,
-.blora-model-library .library-star-badge,
-.blora-model-library .library-hidden-badge {
-  padding: var(--blora-space-1) var(--blora-space-2);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-subtle);
-}
-
-.blora-model-library .model-library-starred {
-  border-color: color-mix(in srgb, var(--status-warning, #d99a20) 34%, var(--border));
+  color: var(--blora-color-status-warning);
 }
 
 .blora-model-library .model-library-starred > .model-library-team-header {
   background: color-mix(in srgb, var(--blora-color-status-warning) 10%, var(--blora-color-surface-raised));
-}
-
-.blora-model-library .empty-state {
-  border: var(--library-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
 }
 
 @media (max-width: 640px) {

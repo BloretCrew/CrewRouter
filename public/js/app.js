@@ -393,9 +393,10 @@ class ConsoleApp {
     });
 
     // 模型测试徽章悬停动态时间提示
-    document.getElementById('modelLibraryContent')?.addEventListener('blora-select', (e) => {
+    document.getElementById('modelLibraryPage')?.addEventListener('blora-select', (e) => {
       this._handleLibraryMoreMenuSelect(e);
     });
+    this._renderLibraryHeaderMoreMenu();
     document.getElementById('modelLibraryContent')?.addEventListener('mouseover', (e) => {
       const badge = e.target.closest('.model-test-badge');
       if (!badge) return;
@@ -575,6 +576,14 @@ class ConsoleApp {
   getSFIcon(name, size) {
     const color = (window.themeManager?.resolvedTheme || 'dark') === 'dark' ? 'white' : 'black';
     return `<img src="https://img.bloret.net/SF/${name}?color=${color}" alt="" width="${size || 18}" height="${size || 18}" class="sf-icon" data-sf-name="${name}" style="display:inline-block;vertical-align:middle;">`;
+  }
+
+  // 模型库用 SF 图标（随主题换色，可附加 class，例如 collapse-icon）
+  _libIcon(name, size, className) {
+    const color = (window.themeManager?.resolvedTheme || 'dark') === 'dark' ? 'white' : 'black';
+    const s = Number(size) || 14;
+    const cls = className ? `sf-icon ${className}` : 'sf-icon';
+    return `<img src="https://img.bloret.net/SF/${encodeURIComponent(name)}?color=${color}" alt="" width="${s}" height="${s}" class="${cls}" data-sf-name="${escapeHtml(name)}" aria-hidden="true">`;
   }
 
   async loadPersonalHome() {
@@ -8425,7 +8434,7 @@ ${extractorBody}
     } catch (error) {
       console.error(t('加载模型库失败:'), error);
       setBloraState('modelLibraryContent', 'error');
-      setHTML(document.getElementById('modelLibraryContent'), '<div class="empty-state"><p>' + t('加载失败，请刷新重试') + '</p></div>');
+      setHTML(document.getElementById('modelLibraryContent'), `<blora-empty class="model-library-empty" title="${escapeHtml(t('加载失败，请刷新重试'))}"></blora-empty>`);
       this._updateLibraryBindingBar();
       this._syncLibraryStickyVisibility(false);
     }
@@ -8746,21 +8755,24 @@ ${extractorBody}
   }
 
   async pingAllLibraryProviders() {
-    const item = document.getElementById('pingAllLibProvidersBtn');
-    const prevText = item?.textContent;
-    if (item) setHTML(item, inlineLoadingHtml(t('检测中...'), 'sm'));
+    if (this._libraryPingingAll) return;
+    this._libraryPingingAll = true;
+    this._renderLibraryHeaderMoreMenu();
 
-    const pingBtns = document.querySelectorAll('.lib-ping[data-provider-id]');
-    const providerIds = [...new Set(Array.from(pingBtns).map(el => el.dataset.providerId))];
+    try {
+      const pingBtns = document.querySelectorAll('.lib-ping[data-provider-id]');
+      const providerIds = [...new Set(Array.from(pingBtns).map(el => el.dataset.providerId))];
 
-    if (!providerIds.length) {
-      this.showToast(t('暂无可检测的供应商，请先展开列表'), 'info');
-    } else {
-      await Promise.allSettled(providerIds.map(id => this.pingUserProvider(id)));
-      this.showToast(`${t('已检测')}${providerIds.length}${t('个供应商')}`, 'success');
+      if (!providerIds.length) {
+        this.showToast(t('暂无可检测的供应商，请先展开列表'), 'info');
+      } else {
+        await Promise.allSettled(providerIds.map(id => this.pingUserProvider(id)));
+        this.showToast(`${t('已检测')}${providerIds.length}${t('个供应商')}`, 'success');
+      }
+    } finally {
+      this._libraryPingingAll = false;
+      this._renderLibraryHeaderMoreMenu();
     }
-
-    if (item) item.textContent = prevText || t('一键检测连通性');
   }
 
   async deleteMyProvider(providerId) {
@@ -9817,25 +9829,11 @@ ${extractorBody}
 
   toggleLibraryMoreDropdown(event) {
     event?.stopPropagation();
-    const menu = document.getElementById('libraryMoreDropdownMenu');
-    if (!menu) return;
-    const isVisible = menu.style.display === 'block';
-    menu.style.display = isVisible ? 'none' : 'block';
-    if (!isVisible) {
-      const close = (e) => {
-        const dropdown = document.getElementById('libraryMoreDropdown');
-        if (dropdown && !dropdown.contains(e.target)) {
-          menu.style.display = 'none';
-          document.removeEventListener('click', close);
-        }
-      };
-      setTimeout(() => document.addEventListener('click', close), 0);
-    }
+    document.querySelector('#libraryMoreDropdown blora-dropdown')?.toggle?.();
   }
 
   closeLibraryMoreDropdown() {
-    const menu = document.getElementById('libraryMoreDropdownMenu');
-    if (menu) menu.style.display = 'none';
+    document.querySelector('#libraryMoreDropdown blora-dropdown')?.close?.();
   }
 
   toggleLibraryMoreFilters() {
@@ -9900,20 +9898,8 @@ ${extractorBody}
   }
 
   _updateLibraryHiddenButtons() {
-    const showBtn = document.getElementById('libraryShowHiddenBtn');
-    if (showBtn) {
-      showBtn.classList.toggle('library-show-hidden-active', this.libraryShowHidden);
-      const text = showBtn.querySelector('.library-show-hidden-text');
-      if (text) text.textContent = this.libraryShowHidden ? t('隐藏已隐藏项') : t('显示已隐藏');
-    }
-    const clearBtn = document.getElementById('libraryClearHiddenBtn');
-    if (clearBtn) {
-      const counts = this._countLibraryHidden();
-      clearBtn.style.display = (this.libraryShowHidden && counts.total > 0) ? 'block' : 'none';
-      if (counts.total > 0) {
-        clearBtn.title = `${t('清除全部隐藏偏好（供应商')}${counts.providers}${t('/ 模型')}${counts.models}）`;
-      }
-    }
+    // 「更多」菜单为 blora-dropdown，标签随状态整体重绘
+    this._renderLibraryHeaderMoreMenu();
   }
 
   toggleLibraryShowHidden() {
@@ -10147,14 +10133,14 @@ ${extractorBody}
         is_personal: model.is_personal
       };
       const isDisabled = model.provider_enabled === false;
-      const subtitle = model.team_name ? `<span class="model-item-badge series">${escapeHtml(model.team_name)}</span>` : '';
+      const subtitle = model.team_name ? `<span class="blora-tag" data-variant="neutral">${escapeHtml(model.team_name)}</span>` : '';
       return this._renderModelLibraryItem(model, team, currentModel, isDisabled, { subtitle });
     }).join('');
 
     return `
       <div class="model-library-team model-library-starred" data-starred-section="1">
         <div class="model-library-team-header" style="cursor:default;">
-          <svg class="model-star-heading-icon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          ${this._libIcon('star.fill', 16, 'model-star-heading-icon')}
           <h3>星标</h3>
           <div style="flex:1;"></div>
           <span class="provider-model-count">${starredModels.length} 个模型</span>
@@ -10164,14 +10150,7 @@ ${extractorBody}
   }
 
   _updateLibraryReorderButtons() {
-    const reorderBtn = document.getElementById('libraryReorderBtn');
-    if (reorderBtn) {
-      reorderBtn.classList.toggle('library-reorder-mode-active', this.libraryReorderMode);
-      const text = reorderBtn.querySelector('.library-reorder-text');
-      if (text) text.textContent = this.libraryReorderMode ? t('退出排序') : t('排序模式');
-    }
-    const resetBtn = document.getElementById('libraryResetOrderBtn');
-    if (resetBtn) resetBtn.style.display = this.libraryReorderMode ? 'block' : 'none';
+    this._renderLibraryHeaderMoreMenu();
     const toolbar = document.getElementById('libraryReorderToolbar');
     if (toolbar) toolbar.style.display = this.libraryReorderMode ? 'flex' : 'none';
     this._setLibraryReorderToolbarBusy(!!this._librarySavingOrder || !!this._libraryApplyingTestOrder);
@@ -10287,14 +10266,16 @@ ${extractorBody}
   _renderLibraryMoveControls(type, id1, id2) {
     if (!this.libraryReorderMode) return '';
     const draggableAttr = `draggable="true" data-drag-type="${type}"`;
+    const handle = this._libIcon('line.3.horizontal', 14);
+    const label = escapeHtml(t('拖拽调整顺序'));
     if (type === 'team') {
-      return `<span class="library-drag-handle" ${draggableAttr} data-team-id="${escapeHtml(String(id1))}" onclick="event.stopPropagation()">⠿</span>`;
+      return `<span class="library-drag-handle" ${draggableAttr} data-team-id="${escapeHtml(String(id1))}" title="${label}" onclick="event.stopPropagation()">${handle}</span>`;
     }
     if (type === 'provider') {
-      return `<span class="library-drag-handle" ${draggableAttr} data-team-id="${escapeHtml(String(id1))}" data-provider-id="${escapeHtml(String(id2))}" onclick="event.stopPropagation()">⠿</span>`;
+      return `<span class="library-drag-handle" ${draggableAttr} data-team-id="${escapeHtml(String(id1))}" data-provider-id="${escapeHtml(String(id2))}" title="${label}" onclick="event.stopPropagation()">${handle}</span>`;
     }
     if (type === 'model') {
-      return `<span class="library-drag-handle" ${draggableAttr} data-team-id="${escapeHtml(String(id1))}" data-provider-id="${escapeHtml(String(id2))}" onclick="event.stopPropagation()">⠿</span>`;
+      return `<span class="library-drag-handle" ${draggableAttr} data-team-id="${escapeHtml(String(id1))}" data-provider-id="${escapeHtml(String(id2))}" title="${label}" onclick="event.stopPropagation()">${handle}</span>`;
     }
     return '';
   }
@@ -10541,7 +10522,7 @@ ${extractorBody}
     setBloraState('providerQuotaGrid', 'loading');
     const grid = document.getElementById('providerQuotaGrid');
     if (grid && !(this._providerQuotaLoadedOnce)) {
-      setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>' + t('正在加载供应商额度缓存...') + '</span></div>');
+      setHTML(grid, '<div class="model-quota-loading library-inline-loading" role="status"><span class="blora-spinner" data-size="sm" aria-hidden="true"></span><span>' + t('正在加载供应商额度缓存...') + '</span></div>');
     }
     const section = document.getElementById('providerQuotaSection');
     if (section && !(this._providerQuotaLoadedOnce)) section.style.display = 'block';
@@ -10562,12 +10543,13 @@ ${extractorBody}
     setBloraState('providerQuotaGrid', 'loading');
     const refreshButton = document.getElementById('providerQuotaRefreshBtn');
     if (refreshButton) {
-      refreshButton.classList.add('is-loading');
+      refreshButton.setAttribute('data-loading', '');
+      refreshButton.setAttribute('aria-busy', 'true');
       refreshButton.disabled = true;
     }
     const grid = document.getElementById('providerQuotaGrid');
     if (grid) {
-      setHTML(grid, '<div class="model-quota-loading" role="status"><span class="loading-spinner sm"></span><span>' + t('正在刷新供应商额度，请稍候...') + '</span></div>');
+      setHTML(grid, '<div class="model-quota-loading library-inline-loading" role="status"><span class="blora-spinner" data-size="sm" aria-hidden="true"></span><span>' + t('正在刷新供应商额度，请稍候...') + '</span></div>');
     }
     const section = document.getElementById('providerQuotaSection');
     if (section) section.style.display = 'block';
@@ -10583,7 +10565,8 @@ ${extractorBody}
       console.warn(t('刷新供应商额度失败:'), e);
     } finally {
       if (refreshButton) {
-        refreshButton.classList.remove('is-loading');
+        refreshButton.removeAttribute('data-loading');
+        refreshButton.removeAttribute('aria-busy');
         refreshButton.disabled = false;
       }
     }
@@ -10660,14 +10643,22 @@ ${extractorBody}
       return;
     }
 
+    const usageBadge = (pct) => {
+      const variant = pct >= 90 ? 'danger' : pct >= 70 ? 'warning' : 'success';
+      return `<span class="blora-badge" data-variant="${variant}">${t('已用')} ${pct}%</span>`;
+    };
+    const progressBar = (pct, label) => `<blora-progress class="model-quota-progress" value="${Math.max(0, Math.min(100, Number(pct) || 0))}" label="${escapeHtml(label)}"></blora-progress>`;
+
     section.style.display = 'block';
     setHTML(grid, providers.map(p => {
       if (p.error) {
         return `
-          <div class="model-quota-card error">
-            <div class="model-quota-name">${escapeHtml(p.name)}</div>
-            <div style="font-size:12px;color:var(--destructive);">查询失败</div>
-          </div>`;
+          <article class="blora-card model-quota-card error" data-variant="flat">
+            <div class="model-quota-header">
+              <span class="model-quota-name">${escapeHtml(p.name)}</span>
+              <span class="blora-badge" data-variant="danger">${t('查询失败')}</span>
+            </div>
+          </article>`;
       }
 
       const q = p.quota;
@@ -10678,10 +10669,6 @@ ${extractorBody}
       const pct = Number.isFinite(currentPercent)
         ? Math.round(currentPercent)
         : (total > 0 ? Math.round(used / total * 100) : 0);
-
-      let barColor = 'var(--primary)';
-      if (pct >= 90) barColor = 'var(--destructive)';
-      else if (pct >= 70) barColor = 'var(--warning)';
 
       const credits = q.credits || {};
       const resetCredits = q.rateLimitResetCredits?.available_count;
@@ -10695,10 +10682,7 @@ ${extractorBody}
         <div class="model-quota-periods">
           ${periods.map(period => {
             const periodPct = Math.max(0, Math.min(100, Number(period.percent) || 0));
-            let periodColor = 'var(--primary)';
-            if (periodPct >= 90) periodColor = 'var(--destructive)';
-            else if (periodPct >= 70) periodColor = 'var(--warning)';
-            const resetText = period.resetsAt ? this.formatQuotaResetTime(period.resetsAt) : '';
+            const periodLabel = period.label || period.key || t('额度');
             const resetTitle = period.resetsAt ? new Date(period.resetsAt).toLocaleString('zh-CN', { hour12: false }) : '';
             const periodRange = period.startsAt || period.resetsAt
               ? `${period.startsAt ? this.formatQuotaResetTime(period.startsAt) : ''}${period.startsAt && period.resetsAt ? t(' 至 ') : ''}${period.resetsAt ? this.formatQuotaResetTime(period.resetsAt) : t('未知')}`
@@ -10706,26 +10690,27 @@ ${extractorBody}
             return `
               <div class="model-quota-period">
                 <div class="model-quota-period-header">
-                  <span>${escapeHtml(period.label || period.key || t('额度'))}</span>
-                  <span>已用 ${periodPct}%</span>
+                  <span>${escapeHtml(periodLabel)}</span>
+                  ${usageBadge(periodPct)}
                 </div>
-                <div class="model-quota-bar">
-                  <div class="model-quota-bar-fill" style="width:${periodPct}%;background:${periodColor};"></div>
-                </div>
+                ${progressBar(periodPct, periodLabel)}
                 ${periodRange ? `<div class="model-quota-period-reset" title="${escapeHtml(resetTitle)}">${t('周期：')}${escapeHtml(periodRange)}</div>` : ''}
               </div>`;
           }).join('')}
         </div>` : `
-        <div class="model-quota-bar">
-          <div class="model-quota-bar-fill" style="width:${Math.min(pct, 100)}%;background:${barColor};"></div>
-        </div>
-        <div class="model-quota-pct">已用 ${pct}%</div>`;
+        <div class="model-quota-period">
+          <div class="model-quota-period-header">
+            <span>${t('额度')}</span>
+            ${usageBadge(Math.min(pct, 100))}
+          </div>
+          ${progressBar(pct, t('额度'))}
+        </div>`;
 
       return `
-        <div class="model-quota-card">
+        <article class="blora-card model-quota-card" data-variant="flat">
           <div class="model-quota-header">
             <span class="model-quota-name">${escapeHtml(p.name)}</span>
-            <span class="model-quota-plan">${escapeHtml(q.planName || '')}</span>
+            ${q.planName ? `<span class="blora-tag model-quota-plan" data-variant="neutral">${escapeHtml(q.planName)}</span>` : ''}
           </div>
           ${periods.length ? periodHtml : `
           <div class="model-quota-numbers">
@@ -10735,7 +10720,7 @@ ${extractorBody}
           ${periodHtml}`}
           ${creditsHtml}
           ${p.checked_at ? `${'<div class="model-quota-updated">' + t('更新于')}${escapeHtml(this._formatQuotaCheckedAt(p.checked_at))}</div>` : ''}
-        </div>`;
+        </article>`;
     }).join(''));
   }
 
@@ -10758,19 +10743,12 @@ ${extractorBody}
     // 检查是否有 Team
     if ((!libraryData.teams || libraryData.teams.length === 0) && !starredModels.length) {
       setHTML(container, `
-        <div class="empty-state model-library-empty" style="padding:60px 20px;text-align:center;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
-          <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">请联系管理员添加模型或加入 Team，也可添加自己的供应商</p>
+        <div class="model-library-empty">
+          <blora-empty title="${escapeHtml(t('暂无可用模型'))}" description="${escapeHtml(t('请联系管理员添加模型或加入 Team，也可添加自己的供应商'))}"></blora-empty>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button class="blora-button" onclick="app.navigateTo(\'apiKeys\')" data-variant="primary" data-size="sm">' + t('创建 API Key') + '</button>' : ''}
-            <button class="blora-button" onclick="app.showAddProviderModal()" data-variant="secondary" data-size="sm">添加供应商</button>
-            <button class="blora-button" onclick="app.navigateTo(\'myUpstream\')" data-variant="secondary" data-size="sm">管理我的上游</button>
+            ${noKeys ? '<button type="button" class="blora-button" onclick="app.navigateTo(\'apiKeys\')" data-variant="primary" data-size="sm">' + t('创建 API Key') + '</button>' : ''}
+            <button type="button" class="blora-button" onclick="app.showAddProviderModal()" data-variant="secondary" data-size="sm">${t('添加供应商')}</button>
+            <button type="button" class="blora-button" onclick="app.navigateTo('myUpstream')" data-variant="secondary" data-size="sm">${t('管理我的上游')}</button>
           </div>
         </div>
       `);
@@ -10781,17 +10759,11 @@ ${extractorBody}
     const hasModels = (libraryData.teams || []).some(t => t.providers && t.providers.length > 0);
     if (!hasModels && !starredModels.length) {
       setHTML(container, `
-        <div class="empty-state model-library-empty" style="padding:60px 20px;text-align:center;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-            <line x1="12" y1="22.08" x2="12" y2="12"/>
-          </svg>
-          <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无可用模型</p>
-          <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 16px;opacity:0.7;">可调整筛选，或添加自己的上游供应商导入模型</p>
+        <div class="model-library-empty">
+          <blora-empty title="${escapeHtml(t('暂无可用模型'))}" description="${escapeHtml(t('可调整筛选，或添加自己的上游供应商导入模型'))}"></blora-empty>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button class="blora-button" onclick="app.navigateTo(\'apiKeys\')" data-variant="primary" data-size="sm">' + t('创建 API Key') + '</button>' : ''}
-            <button class="blora-button" onclick="app.showAddProviderModal()" data-variant="secondary" data-size="sm">添加供应商</button>
+            ${noKeys ? '<button type="button" class="blora-button" onclick="app.navigateTo(\'apiKeys\')" data-variant="primary" data-size="sm">' + t('创建 API Key') + '</button>' : ''}
+            <button type="button" class="blora-button" onclick="app.showAddProviderModal()" data-variant="secondary" data-size="sm">${t('添加供应商')}</button>
           </div>
         </div>
       `);
@@ -10808,7 +10780,7 @@ ${extractorBody}
       return `
         <div class="model-library-team" data-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
           <div class="model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
-            <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            ${this._libIcon('chevron.down', 16, 'collapse-icon')}
             <h3>${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
@@ -10852,21 +10824,19 @@ ${extractorBody}
               ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
               <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
                 <div class="model-library-provider-title">
-                  <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                  ${this._libIcon('chevron.down', 14, 'collapse-icon')}
                   ${renderProviderNameTag(provider.provider_name, { tag: false })}
                   ${this._renderProviderTestSummary(provider)}
                   ${(provider.tags || []).map(t =>
-                    `<span class="blora-badge model-item-badge" data-variant="neutral" style="--badge-accent:${safeColor(t.color)};">${escapeHtml(t.name)}</span>`
+                    `<span class="blora-tag model-provider-tag-chip" data-variant="neutral" style="--badge-accent:${safeColor(t.color)};">${escapeHtml(t.name)}</span>`
                   ).join('')}
                   ${this._renderLibraryMoveControls('provider', team.team_id, provider.provider_id)}
                   ${isProviderDisabled ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>' : ''}
                   ${isProviderHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
                 </div>
                 <div class="model-library-provider-actions">
-                  <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="font-size:12px;color:var(--muted-foreground);"></span>
-                  <button type="button" class="blora-button model-action-icon" data-variant="ghost" data-size="icon" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  </button>
+                  <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}"></span>
+                  <button type="button" class="blora-button model-action-icon" data-variant="ghost" data-size="icon" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">${this._libIcon('dot.radiowaves.left.and.right', 14)}</button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
                   <span class="provider-model-count">${displayCount} 个模型</span>
                 </div>
@@ -10929,9 +10899,9 @@ ${extractorBody}
     let testBadgeHtml = '';
     if (testOk === true) {
       const tpsText = testTpsText ? ` - ${testTpsText} t/s` : '';
-      testBadgeHtml = `<span class="model-test-badge pass" data-tested-at="${escapeHtml(testTestedAt || '')}">${testLatency}ms${tpsText}</span>`;
+      testBadgeHtml = `<span class="blora-badge model-test-badge pass" data-variant="success" data-tested-at="${escapeHtml(testTestedAt || '')}">${testLatency}ms${tpsText}</span>`;
     } else if (testOk === false) {
-      testBadgeHtml = `<span class="model-test-badge fail" data-tested-at="${escapeHtml(testTestedAt || '')}">${t('失败')}</span>`;
+      testBadgeHtml = `<span class="blora-badge model-test-badge fail" data-variant="danger" data-tested-at="${escapeHtml(testTestedAt || '')}">${t('失败')}</span>`;
     }
 
     const modelMoreItems = isKeyPicker ? [] : [
@@ -10972,17 +10942,15 @@ ${extractorBody}
     <div class="blora-card model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-variant="hover" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
       <div class="model-library-item-info">
         <div class="model-library-item-name">
-          ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" data-variant="ghost" data-size="icon" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-label="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="${isStarred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          </button>`}
+          ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" data-variant="ghost" data-size="icon" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-label="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">${this._libIcon(isStarred ? 'star.fill' : 'star', 14)}</button>`}
           ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
           <span>${escapeHtml(model.name)}</span>
           ${testBadgeHtml}
           <div class="model-item-badges">
             ${providerTagHtml}
             ${subtitleHtml}
-            ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
-            ${isOwner ? '<span class="model-item-badge owner">' + t('我的') + '</span>' : ''}
+            ${model.series ? `<span class="blora-tag" data-variant="neutral">${escapeHtml(model.series)}</span>` : ''}
+            ${isOwner ? '<span class="blora-tag" data-variant="info">' + t('我的') + '</span>' : ''}
             ${isModelHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
           </div>
         </div>
@@ -11077,7 +11045,7 @@ ${extractorBody}
     else if (label === 'Outage') checkClass = 'bad';
     const checkSvg = label === 'No data'
       ? ''
-      : `<span class="model-uptime-check ${checkClass}" title="${escapeHtml(label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
+      : `<span class="model-uptime-check ${checkClass}" title="${escapeHtml(label)}">${this._libIcon('checkmark', 10)}</span>`;
     return `<div class="model-uptime" data-uptime-model="${escapeHtml(modelId)}" data-uptime-name="${escapeHtml(modelName || modelId || '')}" title="${t('近 24 小时调用可用率（每 15 分钟）· 点击查看详情')}" onclick="event.stopPropagation();app.showModelUptimeDetailFromEl(this)">
       <div class="model-uptime-spark">${barHtml}</div>
       <span class="model-uptime-pct">${escapeHtml(pct)}</span>
@@ -11183,7 +11151,7 @@ ${extractorBody}
     else if (label === 'Outage') checkClass = 'bad';
     const check = label === 'No data'
       ? ''
-      : `<span class="model-uptime-check ${checkClass}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>`;
+      : `<span class="model-uptime-check ${checkClass}">${this._libIcon('checkmark', 10)}</span>`;
     const rangeLeft = timeMode ? t('24 小时前') : t('开始');
     const rangeRight = timeMode ? t('现在') : t('今天');
     return `
@@ -11211,47 +11179,59 @@ ${extractorBody}
       </div>`;
   }
 
-  _libraryMoreMenuIcon(name) {
-    if (name === 'eye') {
-      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-    }
-    if (name === 'eye-off') {
-      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-    }
-    if (name === 'star' || name === 'star-off') {
-      return `<svg width="14" height="14" viewBox="0 0 24 24" fill="${name === 'star' ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
-    }
-    if (name === 'test') {
-      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-    }
-    return '';
-  }
-
-  // 渲染模型库「⋯」更多菜单；动作通过 blora-select 统一分发，避免自定义菜单项重渲染后丢失事件。
-  _renderLibraryMoreMenu(items = []) {
+  // 渲染模型库「更多」菜单（blora-dropdown）；动作通过 blora-select 事件统一分发，避免自定义菜单项重渲染后丢失事件。
+  _renderLibraryMoreMenu(items = [], options = {}) {
     if (!items || !items.length) return '';
     let separator = false;
-    const menuItems = items.map((item, index) => {
+    const menuItems = items.map((item) => {
       if (item.type === 'divider') {
         separator = true;
         return '';
       }
-      const icon = item.icon ? this._libraryMoreMenuIcon(item.icon) : '';
       const dangerAttr = item.className === 'danger' ? ' data-variant="danger"' : '';
       const separatorAttr = separator ? ' separator' : '';
+      const disabledAttr = item.disabled ? ' disabled' : '';
       separator = false;
       const action = encodeURIComponent(String(item.onClick || ''));
-      return `<blora-dropdown-item value="library-action:${action}"${separatorAttr}${dangerAttr}>${icon}<span>${escapeHtml(item.label)}</span></blora-dropdown-item>`;
+      return `<blora-dropdown-item value="library-action:${action}"${separatorAttr}${dangerAttr}${disabledAttr}>${escapeHtml(item.label)}</blora-dropdown-item>`;
     }).join('');
 
+    const triggerLabel = options.label || t('更多操作');
+    const variant = options.variant || 'outline';
+    const extraClass = options.className ? ` ${options.className}` : '';
     return `
-      <blora-dropdown class="library-more-menu" align="end" onclick="event.stopPropagation()">
-        <button slot="trigger" type="button" class="blora-button library-more-trigger" data-variant="outline" data-size="sm" aria-label="${t('更多操作')}">
-          <span>${t('更多操作')}</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <blora-dropdown class="library-more-menu${extraClass}" align="end" onclick="event.stopPropagation()">
+        <button slot="trigger" type="button" class="blora-button library-more-trigger" data-variant="${variant}" data-size="sm" aria-label="${escapeHtml(triggerLabel)}">
+          <span>${escapeHtml(triggerLabel)}</span>
+          ${this._libIcon('chevron.down', 12)}
         </button>
         ${menuItems}
       </blora-dropdown>`;
+  }
+
+  // 顶部操作栏「更多」菜单：标签随显示已隐藏 / 排序模式 / 连通性检测状态整体重绘
+  _renderLibraryHeaderMoreMenu() {
+    const host = document.getElementById('libraryMoreDropdown');
+    if (!host) return;
+    const hiddenCount = this._libraryData ? this._countLibraryHidden().total : 0;
+    const items = [
+      { label: t('展开全部 Team'), onClick: 'app.expandAllTeams()' },
+      { label: t('折叠全部 Team'), onClick: 'app.collapseAllTeams()' },
+      { label: t('展开全部 供应商'), onClick: 'app.expandAllProviders()' },
+      { label: t('折叠全部 供应商'), onClick: 'app.collapseAllProviders()' },
+      { type: 'divider' },
+      { label: t('测试全部模型'), onClick: 'app.testAllModels()' },
+      { label: t('测试当前 Team'), onClick: 'app.testAllCurrentTeamModels()' },
+      { label: t('测试当前供应商'), onClick: 'app.testAllCurrentProviderModels()' },
+      { type: 'divider' },
+      { label: this._libraryPingingAll ? t('检测中...') : t('一键检测连通性'), onClick: 'app.pingAllLibraryProviders()', disabled: !!this._libraryPingingAll },
+      { type: 'divider' },
+      { label: this.libraryShowHidden ? t('隐藏已隐藏项') : t('显示已隐藏'), onClick: 'app.toggleLibraryShowHidden()' },
+      ...(this.libraryShowHidden && hiddenCount > 0 ? [{ label: t('清除隐藏'), onClick: 'app.clearLibraryHidden()' }] : []),
+      { label: this.libraryReorderMode ? t('退出排序') : t('排序模式'), onClick: 'app.toggleLibraryReorderMode()' },
+      ...(this.libraryReorderMode ? [{ label: t('重置排序'), onClick: 'app.resetLibraryOrder()' }] : []),
+    ];
+    setHTML(host, this._renderLibraryMoreMenu(items, { label: t('更多'), variant: 'secondary', className: 'library-header-more' }));
   }
 
   _handleLibraryMoreMenuSelect(event) {
@@ -11807,12 +11787,12 @@ ${extractorBody}
           </div>
           <div class="binding-key-row">
             <span class="binding-key-name">${keyName}</span>
-            <span class="binding-arrow">→</span>
+            <span class="binding-arrow" aria-hidden="true">${this._libIcon('arrow.right', 12)}</span>
             <span class="binding-harness-tag" style="color:${harnessMeta.color};border-color:${harnessMeta.color};">
               ${this._harnessIconHtml(bindTarget, 12)}
               ${escapeHtml(harnessMeta.label)}
             </span>
-            <span class="binding-arrow">→</span>
+            <span class="binding-arrow" aria-hidden="true">${this._libIcon('arrow.right', 12)}</span>
             ${boundName
               ? `<span class="binding-model-name">${escapeHtml(boundName)}</span>`
               : `<span class="binding-model-unset">${t('跟随默认 · 点击下方模型单独绑定')}</span>`}
@@ -11852,7 +11832,7 @@ ${extractorBody}
               data-key-id="${key.id}"
               onclick="app.selectLibraryKey(${key.id}, event)"
               title="${t('再次点击打开菜单')}">${keyName}</button>
-            <span class="binding-arrow">→</span>
+            <span class="binding-arrow" aria-hidden="true">${this._libIcon('arrow.right', 12)}</span>
             <span class="binding-model-unset">尚未绑定模型</span>
           </div>
           ${harnessChips}
@@ -11878,8 +11858,8 @@ ${extractorBody}
             data-key-id="${key.id}"
             onclick="app.selectLibraryKey(${key.id}, event)"
             title="${t('再次点击打开菜单')}">${keyName}</button>
-          <span class="binding-arrow">→</span>
-          ${providerName ? `${renderProviderNameTag(providerName)}<span class="binding-arrow">→</span>` : ''}
+          <span class="binding-arrow" aria-hidden="true">${this._libIcon('arrow.right', 12)}</span>
+          ${providerName ? `${renderProviderNameTag(providerName)}<span class="binding-arrow" aria-hidden="true">${this._libIcon('arrow.right', 12)}</span>` : ''}
           <span class="binding-model-name">${escapeHtml(modelName)}</span>
           ${testCapsule}
         </div>
@@ -11923,16 +11903,20 @@ ${extractorBody}
       const tip = isActive
         ? `${name}${modelName ? ' → ' + modelName : ''}${t('（再次点击打开工具菜单）')}`
         : `${name}${modelName ? ' → ' + modelName : ''}`;
+      // 官方 Filter 模式（radio 芯片）；label 的 click 先交给业务处理，再次点击同一 Key 打开工具气泡
       return `
-        <div class="model-library-key-chip ${isActive ? 'active' : ''}"
+        <label class="blora-filter__item model-library-key-chip ${isActive ? 'active' : ''}"
              data-key-id="${key.id}"
-             onclick="app.selectLibraryKey(${key.id}, event)"
+             onclick="event.preventDefault();app.selectLibraryKey(${key.id}, event)"
              title="${escapeHtml(tip)}">
-          <span class="key-name">${escapeHtml(name)}</span>
-          ${tags.map(t => `<span class="key-tag-dot" style="background:${safeColor(t.color)};" title="${escapeHtml(t.name)}"></span>`).join('')}
-          ${modelName ? `<span class="key-model-badge">${escapeHtml(modelName)}</span>` : ''}
-          ${harnessCount ? `<span class="key-harness-count" title="${harnessCount}${t('个工具单独绑定">')}${harnessCount}</span>` : ''}
-        </div>
+          <input type="radio" name="libraryKeyChip" value="${key.id}"${isActive ? ' checked' : ''}>
+          <span class="blora-filter__label">
+            <span class="key-name">${escapeHtml(name)}</span>
+            ${tags.map(t => `<span class="key-tag-dot" style="background:${safeColor(t.color)};" title="${escapeHtml(t.name)}"></span>`).join('')}
+            ${modelName ? `<span class="blora-badge key-model-badge" data-variant="neutral">${escapeHtml(modelName)}</span>` : ''}
+            ${harnessCount ? `<span class="blora-badge" data-variant="info" title="${harnessCount}${escapeHtml(t('个工具单独绑定'))}">${harnessCount}</span>` : ''}
+          </span>
+        </label>
       `;
     };
 
@@ -11944,24 +11928,24 @@ ${extractorBody}
       const selectedVisible = selectedKey && visibleKeys.some(k => k.id === selectedKey.id);
       html = visibleKeys.map(renderChip).join('');
       if (selectedKey && !selectedVisible) {
-        html += `<div class="model-library-key-chip-ellipsis">…</div>${renderChip(selectedKey)}`;
+        html += `<span class="model-library-key-chip-ellipsis" aria-hidden="true">…</span>${renderChip(selectedKey)}`;
       }
       const hiddenCount = keys.length - KEY_VISIBLE_COUNT - (selectedKey && !selectedVisible ? 1 : 0);
       html += `
-        <button type="button" class="model-library-key-chip model-library-key-expand"
+        <button type="button" class="blora-button model-library-key-expand" data-variant="ghost" data-size="sm"
                 onclick="app.toggleLibraryKeysExpand()"
-                title="' + t('展开余下的') + ' ${hiddenCount} ' + t('个key') + '">
-          <span class="key-name">展开余下的 ${hiddenCount} 个key</span>
+                title="${escapeHtml(t('展开余下的'))} ${hiddenCount} ${escapeHtml(t('个key'))}">
+          ${escapeHtml(t('展开余下的'))} ${hiddenCount} ${escapeHtml(t('个key'))}
         </button>`;
     } else {
       html = keys.map(renderChip).join('');
       // 展开态：Key 数仍超阈值时，末尾提供「收起」
       if (keys.length > KEY_COLLAPSE_THRESHOLD) {
         html += `
-          <button type="button" class="model-library-key-chip model-library-key-expand"
+          <button type="button" class="blora-button model-library-key-expand" data-variant="ghost" data-size="sm"
                   onclick="app.toggleLibraryKeysExpand()"
-                  title="${t('收起')}">
-            <span class="key-name">收起</span>
+                  title="${escapeHtml(t('收起'))}">
+            ${escapeHtml(t('收起'))}
           </button>`;
       }
     }
@@ -12081,7 +12065,7 @@ ${extractorBody}
       </button>
     `);
 
-    const anchor = anchorEl?.closest?.('.model-library-key-chip, .binding-key-trigger, .model-library-sticky-key-btn')
+    const anchor = anchorEl?.closest?.('.model-library-key-chip, .binding-key-trigger, .model-library-sticky-key')
       || anchorEl
       || document.querySelector(`.model-library-key-chip[data-key-id="${keyId}"]`)
       || document.querySelector('.binding-key-trigger');
@@ -12415,12 +12399,12 @@ ${extractorBody}
     setHTML(btn, `
       <span class="sticky-key-name">${keyName}</span>
       ${bindTarget !== 'default'
-        ? `<span class="sticky-key-harness-capsule">${this._harnessIconHtml(bindTarget, 12)} ${escapeHtml(this._harnessLabel(bindTarget))}</span>`
+        ? `<span class="blora-badge sticky-key-harness-capsule" data-variant="info">${this._harnessIconHtml(bindTarget, 12)} ${escapeHtml(this._harnessLabel(bindTarget))}</span>`
         : ''}
       ${modelName
-        ? `<span class="sticky-key-model-capsule">${escapeHtml(modelName)}</span>`
-        : `<span class="sticky-key-model-unset">${t('未绑定')}</span>`}
-      <svg class="sticky-key-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        ? `<span class="blora-badge sticky-key-model-capsule" data-variant="neutral">${escapeHtml(modelName)}</span>`
+        : `<span class="blora-badge sticky-key-model-unset" data-variant="warning">${t('未绑定')}</span>`}
+      ${this._libIcon('chevron.down', 12, 'sticky-key-chevron')}
     `);
   }
 
@@ -12434,65 +12418,6 @@ ${extractorBody}
     this._openLibraryKeyBubble(keyId, event?.currentTarget || document.getElementById('libraryStickyKeyBtn'));
   }
 
-  _renderLibraryStickyKeyMenu() {
-    const menu = document.getElementById('libraryStickyKeyMenu');
-    if (!menu) return;
-    const keys = this._libraryKeys || [];
-    const otherKeys = keys.filter(k => k.id !== this._librarySelectedKeyId);
-
-    if (!otherKeys.length) {
-      setHTML(menu, `<div class="expand-dropdown-item" style="cursor:default;opacity:0.7;">${t('没有其他 Key')}</div>`);
-      return;
-    }
-
-    setHTML(menu, otherKeys.map(key => {
-      const name = key.name || 'API Key';
-      const modelName = key.current_model_name || '';
-      const tags = key.tags || [];
-      return `
-        <div class="expand-dropdown-item" role="menuitem"
-             data-key-id="${key.id}"
-             onclick="app.selectLibraryKeyFromSticky(${key.id})"
-             title="${escapeHtml(name)}${modelName ? ' → ' + escapeHtml(modelName) : ''}">
-          <span class="sticky-menu-key-name">${escapeHtml(name)}</span>
-          ${tags.map(t => `<span class="key-tag-dot" style="background:${safeColor(t.color)};" title="${escapeHtml(t.name)}"></span>`).join('')}
-          ${modelName ? `<span class="sticky-menu-model-capsule">${escapeHtml(modelName)}</span>` : ''}
-        </div>
-      `;
-    }).join(''));
-  }
-
-  toggleLibraryStickyKeyMenu(event) {
-    event?.stopPropagation();
-    event?.preventDefault();
-    const menu = document.getElementById('libraryStickyKeyMenu');
-    const wrap = document.getElementById('libraryStickyKeyWrap');
-    const btn = document.getElementById('libraryStickyKeyBtn');
-    if (!menu || !wrap || !btn || btn.disabled) return;
-
-    const isOpen = menu.style.display === 'block';
-    if (isOpen) {
-      this.closeLibraryStickyKeyMenu();
-      return;
-    }
-
-    this._renderLibraryStickyKeyMenu();
-    menu.style.display = 'block';
-    wrap.classList.add('open');
-    btn.setAttribute('aria-expanded', 'true');
-
-    if (this._libraryStickyKeyMenuCloser) {
-      document.removeEventListener('click', this._libraryStickyKeyMenuCloser);
-      this._libraryStickyKeyMenuCloser = null;
-    }
-    const closer = (e) => {
-      if (wrap.contains(e.target)) return;
-      this.closeLibraryStickyKeyMenu();
-    };
-    this._libraryStickyKeyMenuCloser = closer;
-    setTimeout(() => document.addEventListener('click', closer), 0);
-  }
-
   closeLibraryStickyKeyMenu() {
     const menu = document.getElementById('libraryStickyKeyMenu');
     const wrap = document.getElementById('libraryStickyKeyWrap');
@@ -12504,13 +12429,6 @@ ${extractorBody}
       document.removeEventListener('click', this._libraryStickyKeyMenuCloser);
       this._libraryStickyKeyMenuCloser = null;
     }
-  }
-
-  selectLibraryKeyFromSticky(keyId) {
-    this.closeLibraryStickyKeyMenu();
-    this.closeLibraryKeyBubble();
-    // 从 sticky 切换菜单选 Key：只选中，不立刻弹气泡
-    this.selectLibraryKey(keyId, null, { forceSelect: true });
   }
 
   async _expandProviderForSelectedKey(keyId) {

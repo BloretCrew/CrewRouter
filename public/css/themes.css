@@ -183,10 +183,14 @@
 /* ============================================
    Global Reset & Base
    ============================================ */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* 通用 reset 放进最低优先级的 cascade layer：Blora 组件样式位于 @layer blora.*，
+   未分层的 * { margin:0; padding:0 } 会压过它们，导致 Blora 控件失去内边距。 */
+@layer legacy-reset {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html {
