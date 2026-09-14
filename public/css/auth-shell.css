@@ -72,6 +72,19 @@
 .auth-card .auth-mode { display: block; width: 100%; margin-bottom: var(--blora-space-5); }
 .auth-card .auth-panel[hidden] { display: none; }
 .auth-inline-loading { display: inline-flex; align-items: center; gap: var(--blora-space-2); }
+.auth-intro { display: flex; flex-direction: column; align-items: center; gap: var(--blora-space-2); margin-bottom: var(--blora-space-5); text-align: center; }
+.auth-intro__icon {
+  display: grid;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: var(--blora-space-2);
+  place-items: center;
+  border-radius: var(--blora-radius-full);
+  background: var(--blora-color-action-primary-default);
+}
+.auth-intro__icon img { width: 1.75rem; height: 1.75rem; display: block; }
+.auth-intro__title { margin: 0; color: var(--blora-color-text-primary); font-size: var(--blora-text-sm); }
+.auth-intro__desc { margin: 0; color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); line-height: 1.6; }
 .auth-card .blora-field { margin-bottom: var(--blora-space-4); }
 .auth-card .blora-button .sf-icon { width: 1.125rem; height: 1.125rem; flex: none; display: block; }
 .auth-actions { display: flex; flex-direction: column; gap: var(--blora-space-3); margin-top: var(--blora-space-2); }
