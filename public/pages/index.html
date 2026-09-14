@@ -24,7 +24,7 @@
   <script src="/js/blora-foundation.js?v=2.0.8"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="/css/auth-shell.css?v=3">
+  <link rel="stylesheet" href="/css/auth-shell.css?v=4">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <script>
     // Prevent FOUC - apply theme immediately
@@ -76,39 +76,22 @@
         <p>统一 AI 模型接入平台</p>
       </header>
 
-      <blora-segmented id="authMode" class="auth-mode" value="login" aria-label="登录或注册">
-        <blora-segment value="login" selected>登录</blora-segment>
-        <blora-segment value="register">注册</blora-segment>
-      </blora-segmented>
+      <div id="errorMessage" class="blora-message auth-error" data-variant="danger" role="alert"></div>
 
-      <section id="loginPanel" class="auth-panel">
-        <form id="loginForm" method="post" action="/auth/login?format=html" accept-charset="UTF-8" onsubmit="if (typeof handleLogin === 'function' && typeof window.fetch === 'function') { handleLogin(event); return false; } return true;">
-          <blora-field id="loginInput" label="用户名或邮箱" name="login" type="text" autocomplete="username" placeholder="请输入用户名或邮箱" required></blora-field>
-          <blora-field id="password" label="密码" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" minlength="6" required></blora-field>
-          <div class="auth-actions">
-            <button class="blora-button login-btn" data-variant="primary" type="submit" id="submitBtn"><span id="submitText">登录</span></button>
-            <div id="passkeyLoginSection" class="login-alt-actions" style="display: none;"><button class="blora-button" data-variant="outline" data-block type="button" id="passkeyLoginBtn"><span id="passkeyLoginText">使用通行密钥登录</span></button></div>
-          </div>
-        </form>
-      </section>
+      <form id="loginForm" method="post" action="/auth/login?format=html" accept-charset="UTF-8" onsubmit="if (typeof handleLogin === 'function' && typeof window.fetch === 'function') { handleLogin(event); return false; } return true;">
+        <blora-field id="loginInput" label="用户名或邮箱" name="login" type="text" autocomplete="username" placeholder="请输入用户名或邮箱" required></blora-field>
+        <blora-field id="password" label="密码" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" minlength="6" required></blora-field>
+        <div class="auth-actions">
+          <button class="blora-button login-btn" data-variant="primary" type="submit" id="submitBtn"><span id="submitText">登录</span></button>
+          <div id="passkeyLoginSection" class="login-alt-actions" style="display: none;"><button class="blora-button" data-variant="outline" data-block type="button" id="passkeyLoginBtn"><span id="passkeyLoginText">使用通行密钥登录</span></button></div>
+        </div>
+      </form>
 
       <form id="twoFactorForm" class="auth-2fa-form" style="display: none;" onsubmit="handle2FAVerify(event)">
         <blora-field id="tfaCode" label="请输入验证码" type="text" placeholder="6位验证码" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code" required></blora-field>
         <div class="auth-actions"><button type="submit" class="blora-button" data-variant="primary" data-block id="tfaSubmitBtn">验证</button><button type="button" class="blora-button" data-variant="outline" onclick="cancel2FA()">取消</button></div>
       </form>
 
-      <section id="registerPanel" class="auth-panel" hidden>
-        <form id="registerForm" class="auth-register-form" method="post" action="/auth/register" novalidate>
-          <blora-field id="registerUsername" label="用户名" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="请输入用户名" pattern="[a-z0-9_]+" hint="仅允许小写字母、数字和下划线" required></blora-field>
-          <blora-field id="registerNickname" label="昵称" name="nickname" type="text" autocomplete="nickname" placeholder="留空则同用户名"></blora-field>
-          <blora-field id="registerEmail" label="邮箱" name="email" type="email" autocomplete="email" placeholder="请输入邮箱" required></blora-field>
-          <blora-field id="registerPassword" label="密码" name="password" type="password" autocomplete="new-password" placeholder="请输入密码" minlength="6" required></blora-field>
-          <blora-field id="registerConfirm" label="确认密码" name="confirmPassword" type="password" autocomplete="new-password" placeholder="请再次输入密码" minlength="6" required></blora-field>
-          <div class="auth-actions"><button class="blora-button" data-variant="primary" data-block type="submit">注册</button></div>
-        </form>
-      </section>
-
-      <div id="errorMessage" class="blora-message auth-error" data-variant="danger" role="alert"></div>
       <div class="blora-divider" data-variant="text">或使用其他方式</div>
       <div class="auth-oauth">
         <div id="passportLoginSection" class="login-oauth-item" style="display: none;"><a href="/auth/passport" id="passportLoginLink" class="blora-button" data-variant="outline">Bloret PassPort 登录</a></div>
@@ -123,25 +106,6 @@
     </section>
   </main>
 
-  <script>
-    document.getElementById('authMode')?.addEventListener('blora-change', function (event) {
-      const mode = (event.detail && event.detail.value) || 'login';
-      document.getElementById('loginPanel').hidden = mode !== 'login';
-      document.getElementById('registerPanel').hidden = mode !== 'register';
-      document.getElementById('errorMessage').classList.remove('show');
-    });
-    document.getElementById('registerForm')?.addEventListener('submit', function (event) {
-      const password = document.querySelector('#registerPassword input')?.value || '';
-      const confirm = document.querySelector('#registerConfirm input')?.value || '';
-      if (password !== confirm) {
-        event.preventDefault();
-        const error = document.getElementById('errorMessage');
-        error.textContent = '密码和确认密码不匹配！';
-        error.classList.add('show');
-        document.getElementById('registerConfirm').setAttribute('aria-invalid', 'true');
-      }
-    });
-  </script>
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/theme.js?v=2"></script>
   <script src="/js/edition-badge.js?v=1"></script>

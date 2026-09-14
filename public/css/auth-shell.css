@@ -69,13 +69,6 @@
   font-size: var(--blora-text-sm);
 }
 
-.auth-card .auth-mode { display: block; width: 100%; margin-bottom: var(--blora-space-5); }
-/* 让分段控件轨道撑满卡片宽度，两段均分；官方默认是 inline-flex 收缩到内容宽 */
-.auth-card .auth-mode .blora-segmented { display: flex; width: 100%; box-sizing: border-box; }
-.auth-card .auth-mode .blora-segmented__item { flex: 1 1 0; min-height: 2.25rem; text-align: center; font-weight: 500; }
-.auth-card .auth-mode .blora-segmented__indicator { border: var(--blora-border-subtle); box-shadow: var(--blora-shadow-2); }
-.auth-card .auth-mode .blora-segmented__item[data-active] { color: var(--blora-color-text-primary); font-weight: 600; }
-.auth-card .auth-panel[hidden] { display: none; }
 .auth-inline-loading { display: inline-flex; align-items: center; gap: var(--blora-space-2); }
 .auth-intro { display: flex; flex-direction: column; align-items: center; gap: var(--blora-space-2); margin-bottom: var(--blora-space-5); text-align: center; }
 .auth-intro__icon {
