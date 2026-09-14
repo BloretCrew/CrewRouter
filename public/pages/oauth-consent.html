@@ -19,9 +19,12 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <script type="module" src="/blora/auto.js?v=2.0.8"></script>
-  <script src="/js/blora-foundation.js"></script>
+  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
+  <script src="/js/blora-foundation.js?v=2.0.8"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="/css/auth-shell.css?v=2">
   <link rel="stylesheet" href="/css/edition-badge.css?v=1">
   <script>
     (function() {
@@ -33,112 +36,53 @@
       document.documentElement.classList.add(resolved);
     })();
   </script>
-  <style>
-    body {
-      font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", sans-serif);
-      background: var(--background, #f9fafb);
-      color: var(--foreground, #111827);
-      margin: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 16px;
-      box-sizing: border-box;
-    }
-    .oc-card {
-      width: 100%;
-      max-width: 440px;
-      background: var(--card, #fff);
-      border: 1px solid var(--border, #e5e7eb);
-      border-radius: var(--radius, 14px);
-      padding: 28px 26px;
-      box-shadow: var(--shadow-login, 0 8px 30px rgba(0,0,0,0.08));
-      box-sizing: border-box;
-    }
-    .oc-brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
-    .oc-brand img { width: 34px; height: 34px; border-radius: 8px; }
-    .oc-brand span { font-size: 17px; font-weight: 700; letter-spacing: 0.2px; }
-    .oc-title { font-size: 18px; font-weight: 700; text-align: center; margin: 0 0 6px; }
-    .oc-sub { font-size: 13.5px; color: var(--muted-foreground, #6b7280); text-align: center; margin: 0 0 18px; line-height: 1.6; }
-    .oc-sub strong { color: var(--foreground, #111827); }
-    .oc-section-label { font-size: 12.5px; font-weight: 600; color: var(--muted-foreground, #6b7280); margin: 16px 0 8px; }
-    .oc-scopes { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border, #e5e7eb); border-radius: 10px; overflow: hidden; }
-    .oc-scopes li { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; font-size: 13.5px; line-height: 1.55; }
-    .oc-scopes li + li { border-top: 1px solid var(--border, #e5e7eb); }
-    .oc-scopes code { background: var(--muted, #f3f4f6); padding: 1px 6px; border-radius: 4px; font-size: 11.5px; white-space: nowrap; }
-    .oc-scope-check { color: var(--brand-blue, #1456f0); flex-shrink: 0; margin-top: 1px; }
-    select.oc-select {
-      width: 100%; box-sizing: border-box; height: 38px; padding: 0 10px;
-      border: 1px solid var(--input, #e5e7eb); border-radius: 8px;
-      background: var(--card, #fff); color: var(--foreground, #111827);
-      font-size: 13.5px; cursor: pointer;
-    }
-    .oc-hint { font-size: 12px; color: var(--muted-foreground, #6b7280); margin-top: 6px; line-height: 1.5; }
-    .oc-actions { display: flex; gap: 10px; margin-top: 22px; }
-    .oc-btn { flex: 1; height: 40px; border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: opacity .15s ease; }
-    .oc-btn:hover { opacity: 0.88; }
-    .oc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .oc-btn-approve { background: var(--primary, #181e25); color: var(--primary-foreground, #fff); }
-    .oc-btn-deny { background: transparent; color: var(--muted-foreground, #6b7280); border-color: var(--border, #e5e7eb); }
-    .oc-error {
-      display: none; margin-bottom: 14px; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.6;
-      background: color-mix(in srgb, var(--destructive, #ef4444) 10%, transparent);
-      border: 1px solid color-mix(in srgb, var(--destructive, #ef4444) 35%, transparent);
-      color: var(--destructive, #ef4444);
-    }
-    .oc-loading { text-align: center; padding: 36px 0; color: var(--muted-foreground, #6b7280); font-size: 13.5px; }
-  </style>
-  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
-  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
 </head>
 <body class="blora-page">
-  <div style="position:absolute;top:10px;right:12px;z-index:99;">
-    <select id="langToggle" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;border:1px solid var(--border,#e5e7eb);border-radius:6px;background:var(--card,#fff);color:var(--foreground,#111827);" class="blora-input">
-      <option value="zh">中文</option>
-      <option value="en">EN</option>
-    </select>
-  </div>
+  <main class="auth-page login-container">
+    <section class="blora-card auth-card login-card oc-card" aria-labelledby="auth-title">
+      <header class="auth-card__header">
+        <span class="auth-card__logo" aria-hidden="true"><img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt=""></span>
+        <h1 id="auth-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
+        <p data-i18n="授权请求">授权请求</p>
+      </header>
 
-  <div class="oc-card">
-    <div class="oc-brand">
-      <img src="/favicon-32.png" alt="">
-      <span>CrewRouter</span><span class="brand-edition-badge" data-edition-badge hidden></span>
-    </div>
+      <div id="ocError" class="blora-message auth-error" data-variant="danger" role="alert"></div>
 
-    <div id="ocError" class="oc-error"></div>
+      <!-- 加载中 -->
+      <div id="ocLoading" class="oc-loading" role="status"><span class="blora-spinner" aria-hidden="true"></span><span data-i18n="加载中...">加载中...</span></div>
 
-    <!-- 加载中 -->
-    <div id="ocLoading" class="oc-loading"><span data-i18n="加载中...">加载中...</span></div>
+      <!-- 授权表单：原生提交 → 服务端 302 回 loopback 回调地址 -->
+      <form id="ocForm" method="POST" action="/oauth/authorize/approve" hidden>
+        <p class="oc-sub">
+          <strong id="ocAppName">-</strong>
+          <span data-i18n="正在请求访问你的 CrewRouter 账号">正在请求访问你的 CrewRouter 账号</span>
+        </p>
 
-    <!-- 授权表单：原生提交 → 服务端 302 回 loopback 回调地址 -->
-    <form id="ocForm" method="POST" action="/oauth/authorize/approve" style="display:none;">
-      <h1 class="oc-title" data-i18n="授权请求">授权请求</h1>
-      <p class="oc-sub">
-        <strong id="ocAppName">-</strong>
-        <span data-i18n="正在请求访问你的 CrewRouter 账号">正在请求访问你的 CrewRouter 账号</span>
-      </p>
+        <div class="oc-section-label" data-i18n="申请的权限">申请的权限</div>
+        <ul id="ocScopeList" class="blora-list oc-scopes"></ul>
 
-      <div class="oc-section-label" data-i18n="申请的权限">申请的权限</div>
-      <ul id="ocScopeList" class="oc-scopes"></ul>
+        <blora-select id="ocApiKeySelect" name="api_key_id" label="选择用于本次授权的 API Key" required></blora-select>
+        <div class="oc-hint" data-i18n="本次授权将以所选密钥的身份行事，用量与计费归属该密钥。">本次授权将以所选密钥的身份行事，用量与计费归属该密钥。</div>
 
-      <div class="oc-section-label" data-i18n="选择用于本次授权的 API Key">选择用于本次授权的 API Key</div>
-      <select id="ocApiKeySelect" name="api_key_id" class="oc-select blora-input"></select>
-      <div class="oc-hint" data-i18n="本次授权将以所选密钥的身份行事，用量与计费归属该密钥。">本次授权将以所选密钥的身份行事，用量与计费归属该密钥。</div>
+        <div id="ocHiddenFields"></div>
 
-      <div id="ocHiddenFields"></div>
+        <div class="oc-actions">
+          <button type="submit" name="decision" value="approve" id="ocApproveBtn" class="blora-button" data-variant="primary" data-i18n="同意授权">同意授权</button>
+          <button type="submit" name="decision" value="deny" id="ocDenyBtn" class="blora-button" data-variant="outline" data-i18n="拒绝">拒绝</button>
+        </div>
+      </form>
 
-      <div class="oc-actions">
-        <button type="submit" name="decision" value="approve" id="ocApproveBtn" class="oc-btn oc-btn-approve blora-button" data-i18n="同意授权">同意授权</button>
-        <button type="submit" name="decision" value="deny" id="ocDenyBtn" class="oc-btn oc-btn-deny blora-button" data-i18n="拒绝">拒绝</button>
-      </div>
-    </form>
-  </div>
+      <footer class="auth-card__footer">
+        <blora-dropdown id="langToggle" class="auth-lang" label="中文" align="center" aria-label="选择语言"><blora-dropdown-item value="zh" href="?lang=zh">中文</blora-dropdown-item><blora-dropdown-item value="en" href="?lang=en">EN</blora-dropdown-item></blora-dropdown>
+        <button id="themeToggle" class="blora-button" data-variant="ghost" data-size="sm" type="button" title="切换主题" data-i18n-title="切换主题" aria-label="切换主题"><img class="icon-sun sf-icon" src="https://img.bloret.net/SF/sun.max?color=white" alt="" width="18" height="18" data-sf-name="sun.max"><img class="icon-moon sf-icon" src="https://img.bloret.net/SF/moon?color=white" alt="" width="18" height="18" data-sf-name="moon" style="display:none"><img class="icon-system sf-icon" src="https://img.bloret.net/SF/desktopcomputer?color=white" alt="" width="18" height="18" data-sf-name="desktopcomputer" style="display:none"></button>
+      </footer>
+    </section>
+  </main>
 
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/theme.js?v=2"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/oauth-consent.js?v=1"></script>
+  <script src="/js/oauth-consent.js?v=2"></script>
   <script>
     // Page-level i18n: apply catalog to static DOM once ready.
     (function () {
@@ -147,11 +91,12 @@
         document.addEventListener('DOMContentLoaded', apply);
       } else { apply(); }
       document.addEventListener('i18n:ready', apply);
-      var el = document.getElementById('langToggle');
-      if (el && window.I18N) {
-        el.value = I18N.current();
-        el.addEventListener('change', function () { I18N.load(el.value); });
-      }
+      // 语言菜单保留当前查询参数，避免丢失授权请求参数
+      var qs = new URLSearchParams(window.location.search);
+      document.querySelectorAll('#langToggle blora-dropdown-item').forEach(function (item) {
+        qs.set('lang', item.getAttribute('value'));
+        item.setAttribute('href', window.location.pathname + '?' + qs.toString());
+      });
     })();
   </script>
 </body>

@@ -33,10 +33,10 @@
   }
 
   function showError(msgKey) {
-    loadingEl.style.display = 'none';
-    formEl.style.display = 'none';
+    loadingEl.hidden = true;
+    formEl.hidden = true;
     errorEl.textContent = t(msgKey);
-    errorEl.style.display = 'block';
+    errorEl.classList.add('show');
   }
 
   // 把授权请求原参数回填为表单隐藏域，approve 端点据此二次校验并落库
@@ -48,16 +48,21 @@
     hiddenWrap.innerHTML = html;
   }
 
+  function scopeCheckIcon() {
+    var color = (window.themeManager && window.themeManager.resolvedTheme) === 'light' ? 'black' : 'white';
+    return '<img src="https://img.bloret.net/SF/checkmark?color=' + color + '" alt="" width="14" height="14" class="sf-icon" data-sf-name="checkmark">';
+  }
+
   function renderScopes(scopes) {
     var html = '';
     (scopes || []).forEach(function (s) {
       var descKey = SCOPE_I18N_KEYS[s];
-      html += '<li>'
-        + '<span class="oc-scope-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>'
-        + '<span>' + esc(t(descKey || s)) + ' <code>' + esc(s) + '</code></span>'
+      html += '<li class="blora-list__item">'
+        + '<span class="oc-scope-check" aria-hidden="true">' + scopeCheckIcon() + '</span>'
+        + '<span class="blora-list__meta">' + esc(t(descKey || s)) + ' <code>' + esc(s) + '</code></span>'
         + '</li>';
     });
-    scopeListEl.innerHTML = html || '<li>-</li>';
+    scopeListEl.innerHTML = html || '<li class="blora-list__item">-</li>';
   }
 
   function renderKeys(apiKeys, defaultId) {
@@ -68,9 +73,11 @@
     var html = '';
     apiKeys.forEach(function (k) {
       var selected = defaultId != null && k.id === defaultId ? ' selected' : '';
-      html += '<option value="' + esc(k.id) + '"' + selected + '>' + esc(k.name || ('API Key #' + k.id)) + '</option>';
+      html += '<blora-option value="' + esc(k.id) + '"' + selected + '>' + esc(k.name || ('API Key #' + k.id)) + '</blora-option>';
     });
     keySelectEl.innerHTML = html;
+    var first = defaultId != null ? defaultId : apiKeys[0].id;
+    keySelectEl.setAttribute('value', String(first));
   }
 
   function init() {
@@ -85,8 +92,8 @@
       })
       .then(function (info) {
         if (!info) return;
-        loadingEl.style.display = 'none';
-        formEl.style.display = 'block';
+        loadingEl.hidden = true;
+        formEl.hidden = false;
         appNameEl.textContent = info.client && info.client.name ? info.client.name : (info.client && info.client.id) || '-';
         renderScopes(info.scopes);
         renderKeys(info.apiKeys, info.defaultApiKeyId);

@@ -122,6 +122,21 @@
 .setup-actions { gap: var(--blora-space-3); }
 .setup-error { color: var(--blora-color-status-danger); }
 .oc-card { box-shadow: var(--blora-shadow-2); }
+.oc-loading { display: flex; align-items: center; justify-content: center; gap: var(--blora-space-2); padding: var(--blora-space-8) 0; color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); }
+.oc-loading[hidden], #ocForm[hidden] { display: none; }
+.oc-sub { margin: 0 0 var(--blora-space-4); color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); text-align: center; line-height: 1.6; }
+.oc-sub strong { color: var(--blora-color-text-primary); }
+.oc-section-label { margin: var(--blora-space-4) 0 var(--blora-space-2); color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); font-weight: 600; }
+.oc-scopes { margin: 0 0 var(--blora-space-4); padding: 0; list-style: none; border: var(--blora-border-subtle); border-radius: var(--blora-radius-md); }
+.oc-scopes .blora-list__item { align-items: flex-start; font-size: var(--blora-text-sm); line-height: 1.55; }
+.oc-scopes .blora-list__meta { color: var(--blora-color-text-primary); }
+.oc-scopes code { padding: 0 var(--blora-space-1); border-radius: var(--blora-radius-sm); background: var(--blora-color-surface-raised); font-size: var(--blora-text-xs); white-space: nowrap; }
+.oc-scope-check { display: inline-flex; flex: none; margin-top: 0.15em; }
+.oc-scope-check img { width: 0.875rem; height: 0.875rem; display: block; }
+.oc-card blora-select { display: block; width: 100%; }
+.oc-hint { margin-top: var(--blora-space-2); color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); line-height: 1.5; }
+.oc-actions { display: flex; gap: var(--blora-space-3); margin-top: var(--blora-space-6); }
+.oc-actions .blora-button { flex: 1; }
 @media (max-width: 480px) { .setup-container { padding-block: var(--blora-space-6); } .setup-card { padding: var(--blora-space-4); } }
 .setup-choice-list { display: grid; gap: var(--blora-space-3); }
 .step-warning { color: var(--blora-color-status-danger); font-weight: 600; }
