@@ -69,30 +69,11 @@
   font-size: var(--blora-text-sm);
 }
 
-.auth-card .auth-mode { margin-bottom: 0; }
-.auth-native-tabs { display: flex; gap: var(--blora-space-2); margin-bottom: var(--blora-space-5); }
-.auth-native-tab {
-  flex: 1;
-  min-height: 2.5rem;
-  padding: .4em 1em;
-  color: var(--blora-color-text-muted);
-  background: transparent;
-  border: 0;
-  border-radius: var(--blora-radius-full);
-  cursor: pointer;
-  font: inherit;
-}
-.auth-native-tab[aria-selected="true"] {
-  color: var(--blora-color-text-on-accent);
-  background: var(--blora-color-action-primary-default);
-}
-.auth-native-tab:focus-visible {
-  outline: var(--blora-focus-ring-width-strong) solid var(--blora-color-action-primary-default);
-  outline-offset: 2px;
-}
-.auth-card [role="tabpanel"][hidden] { display: none; }
+.auth-card .auth-mode { display: block; width: 100%; margin-bottom: var(--blora-space-5); }
+.auth-card .auth-panel[hidden] { display: none; }
+.auth-inline-loading { display: inline-flex; align-items: center; gap: var(--blora-space-2); }
 .auth-card .blora-field { margin-bottom: var(--blora-space-4); }
-.auth-card .blora-button svg { width: 16px; height: 16px; flex: none; display: block; }
+.auth-card .blora-button .sf-icon { width: 1.125rem; height: 1.125rem; flex: none; display: block; }
 .auth-actions { display: flex; flex-direction: column; gap: var(--blora-space-3); margin-top: var(--blora-space-2); }
 .auth-actions .blora-button { width: 100%; box-sizing: border-box; }
 .auth-card .blora-divider[data-variant="text"] { margin-block: var(--blora-space-5); }
@@ -111,7 +92,6 @@
 .auth-oauth .login-oauth-item { min-width: 0; }
 .auth-oauth .blora-button { width: 100%; }
 .auth-2fa-form .auth-actions .blora-button { width: 100%; }
-.login-form .inline-loading { display: inline-flex; align-items: center; }
 
 .login-footer { display: none; }
 
