@@ -9859,7 +9859,9 @@ ${extractorBody}
     for (const id of ['libraryMoreFiltersBtn', 'libraryStickyMoreFiltersBtn']) {
       const btn = document.getElementById(id);
       if (!btn) continue;
-      btn.classList.toggle('library-more-filters-active', shouldOpen || this._hasLibraryAdvancedFiltersActive());
+      const highlight = shouldOpen || this._hasLibraryAdvancedFiltersActive();
+      btn.setAttribute('aria-pressed', highlight ? 'true' : 'false');
+      btn.setAttribute('data-variant', highlight ? 'primary' : 'secondary');
       btn.textContent = shouldOpen ? t('收起筛选') : t('更多筛选');
       btn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
     }
@@ -9879,7 +9881,9 @@ ${extractorBody}
       const btn = document.getElementById(id);
       if (!btn) continue;
       const highlight = open || this._hasLibraryAdvancedFiltersActive();
-      btn.classList.toggle('library-more-filters-active', highlight);
+      // Blora 按钮没有自定义高亮 class：用 aria-pressed + variant 表达筛选生效态
+      btn.setAttribute('aria-pressed', highlight ? 'true' : 'false');
+      btn.setAttribute('data-variant', highlight ? 'primary' : 'secondary');
       if (!open) btn.textContent = t('更多筛选');
     }
   }
@@ -11828,7 +11832,7 @@ ${extractorBody}
       setHTML(summary, `
         <div class="binding-active">
           <div class="binding-key-row">
-            <button type="button" class="blora-button binding-key-name binding-key-trigger"
+            <button type="button" class="blora-button binding-key-button" data-variant="secondary" data-size="sm"
               data-key-id="${key.id}"
               onclick="app.selectLibraryKey(${key.id}, event)"
               title="${t('再次点击打开菜单')}">${keyName}</button>
@@ -11854,7 +11858,7 @@ ${extractorBody}
     setHTML(summary, `
       <div class="binding-active">
         <div class="binding-key-row">
-          <button type="button" class="blora-button binding-key-name binding-key-trigger"
+          <button type="button" class="blora-button binding-key-button" data-variant="secondary" data-size="sm"
             data-key-id="${key.id}"
             onclick="app.selectLibraryKey(${key.id}, event)"
             title="${t('再次点击打开菜单')}">${keyName}</button>
@@ -11905,7 +11909,7 @@ ${extractorBody}
         : `${name}${modelName ? ' → ' + modelName : ''}`;
       // 官方 Filter 模式（radio 芯片）；label 的 click 先交给业务处理，再次点击同一 Key 打开工具气泡
       return `
-        <label class="blora-filter__item model-library-key-chip ${isActive ? 'active' : ''}"
+        <label class="blora-filter__item model-library-key-item ${isActive ? 'active' : ''}"
              data-key-id="${key.id}"
              onclick="event.preventDefault();app.selectLibraryKey(${key.id}, event)"
              title="${escapeHtml(tip)}">
@@ -12065,10 +12069,10 @@ ${extractorBody}
       </button>
     `);
 
-    const anchor = anchorEl?.closest?.('.model-library-key-chip, .binding-key-trigger, .model-library-sticky-key')
+    const anchor = anchorEl?.closest?.('.model-library-key-item, .binding-key-button, .model-library-sticky-key')
       || anchorEl
-      || document.querySelector(`.model-library-key-chip[data-key-id="${keyId}"]`)
-      || document.querySelector('.binding-key-trigger');
+      || document.querySelector(`.model-library-key-item[data-key-id="${keyId}"]`)
+      || document.querySelector('.binding-key-button');
 
     // 先以收起态显示，测量尺寸后再定位并播放打开动画
     menu.hidden = false;

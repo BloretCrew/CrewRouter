@@ -60,6 +60,15 @@
   color: var(--blora-color-text-primary);
   font-size: var(--blora-text-sm);
   font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.blora-model-library .binding-key-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--blora-space-2);
 }
 
 .blora-model-library .model-library-binding-summary {
@@ -110,6 +119,8 @@
 .blora-model-library .model-library-sticky-key .blora-badge { flex: none; max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ---------- SF 图标 ---------- */
+/* SF 图标是 SVG 图片：Blora 按钮默认按图片固有尺寸放置图标，这里用官方 icon-size token 定尺寸；图标按钮沿用 Blora 默认 */
+.blora-model-library .blora-button:not([data-size="icon"]) { --blora-button-icon-size: 0.875rem; }
 .blora-model-library .sf-icon { display: inline-block; flex: none; vertical-align: middle; }
 .blora-model-library .collapse-icon { transition: transform var(--blora-duration-base) var(--blora-easing-standard); }
 .blora-model-library .model-star-heading-icon { opacity: .85; }
