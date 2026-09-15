@@ -5181,7 +5181,7 @@ class ConsoleApp {
       if (input) input.value = '';
     }
     setBloraState('sessionsList', 'loading');
-    setHTML(container, pageLoadingHtml(t('加载会话...'), { compact: true }));
+    setHTML(container, this._sessionLoadingHtml(t('加载会话...')));
 
     const days = (document.getElementById('sessionDaysFilter')?.value || '7').trim();
     const source = (document.getElementById('sessionSourceFilter')?.value || '').trim();
@@ -5197,24 +5197,41 @@ class ConsoleApp {
       const totalPages = Math.ceil(total / (data.pageSize || 20)) || 1;
       const countEl = document.getElementById('sessionsCountInfo');
       if (countEl) countEl.textContent = `${t('共')} ${total} ${t('个会话')}`;
-      const prevBtn = document.getElementById('sessionsPrevBtn');
-      const nextBtn = document.getElementById('sessionsNextBtn');
-      if (prevBtn) { prevBtn.disabled = this._sessionsPage <= 1; }
-      if (nextBtn) { nextBtn.disabled = this._sessionsPage >= totalPages; }
-      const pageInfoEl = document.getElementById('sessionsPageInfo');
-      if (pageInfoEl) pageInfoEl.textContent = `${t('第')}${this._sessionsPage} / ${totalPages}${t('页')}`;
+      this._syncSessionsPagination(this._sessionsPage, totalPages);
 
       if (!data.items || !data.items.length) {
         setBloraState('sessionsList', 'empty');
-        setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc" style="text-align:center;">${t('所选时间范围内暂无会话')}</div></div></div>`);
+        setHTML(container, `<div class="session-list__notice"><blora-empty title="${escapeHtml(t('所选时间范围内暂无会话'))}"></blora-empty></div>`);
         return;
       }
       setHTML(container, data.items.map(item => this.renderSessionCard(item)).join(''));
       setBloraState('sessionsList', 'success');
     } catch (error) {
       setBloraState('sessionsList', 'error');
-      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('会话加载失败'))}<div style="margin-top:10px;"><button type="button" class="blora-button" onclick="app.loadSessions(${this._sessionsPage || 1})" data-variant="secondary" data-size="sm">${t('重试')}</button></div></div></div></div>`);
+      setHTML(container, `<div class="session-list__notice"><blora-empty title="${escapeHtml(error.message || t('会话加载失败'))}"></blora-empty><button type="button" class="blora-button" onclick="app.loadSessions(${this._sessionsPage || 1})" data-variant="secondary" data-size="sm">${t('重试')}</button></div>`);
     }
+  }
+
+  /** 会话列表分页（blora-pagination）：同步页码并只绑定一次翻页事件 */
+  _syncSessionsPagination(page, totalPages) {
+    const pager = document.getElementById('sessionsPagination');
+    const wrap = document.getElementById('sessionsPager');
+    if (!pager) return;
+    if (!pager.dataset.bound) {
+      pager.dataset.bound = '1';
+      pager.addEventListener('blora-change', (event) => {
+        const next = Number(event.detail?.page);
+        if (Number.isFinite(next) && next >= 1 && next !== this._sessionsPage) this.loadSessions(next);
+      });
+    }
+    pager.setAttribute('total', String(Math.max(totalPages, 1)));
+    pager.setAttribute('page', String(Math.max(page, 1)));
+    if (wrap) wrap.hidden = totalPages <= 1;
+  }
+
+  /** 会话区块内的加载态（blora-spinner） */
+  _sessionLoadingHtml(text) {
+    return `<div class="session-list__notice session-loading" role="status"><span class="blora-spinner" data-size="lg" aria-hidden="true"></span><span>${escapeHtml(text || t('加载中...'))}</span></div>`;
   }
 
   renderSessionCard(item) {
@@ -5223,37 +5240,37 @@ class ConsoleApp {
     const harnessMeta = this._usageRequestSourceMeta(item.harness);
     const cached = Number(item.totalCachedTokens || 0);
     const summaryBadge = item.summaryCreatedAt
-      ? `<span class="session-badge cached" title="${t('最近更新')} ${escapeHtml(new Date(item.summaryCreatedAt).toLocaleString())}">${t('缓存摘要')} · ${escapeHtml(this.formatRelativeTime(item.summaryCreatedAt))}</span>`
+      ? `<span class="blora-badge" data-variant="success" title="${t('最近更新')} ${escapeHtml(new Date(item.summaryCreatedAt).toLocaleString())}">${t('缓存摘要')} · ${escapeHtml(this.formatRelativeTime(item.summaryCreatedAt))}</span>`
       : '';
     const previewSource = item.summary || item.lastMessagePreview || '';
     const previewText = String(previewSource).split(/[。.!！？?\n]/)[0].slice(0, 60);
-    const preview = previewText ? `<div class="session-card-preview" title="${escapeHtml(previewSource)}">${escapeHtml(previewText)}</div>` : '';
+    const preview = previewText ? `<div class="session-card__preview" title="${escapeHtml(previewSource)}">${escapeHtml(previewText)}</div>` : '';
     const pressureBadge = item.pressureLevel === 'critical'
-      ? `<span class="session-badge pressure-critical" title="${t('上下文压力')}">${t('高压')}</span>`
+      ? `<span class="blora-badge" data-variant="danger" title="${t('上下文压力')}">${t('高压')}</span>`
       : item.pressureLevel === 'warning'
-        ? `<span class="session-badge pressure-warning" title="${t('上下文压力')}">${t('注意')}</span>`
+        ? `<span class="blora-badge" data-variant="warning" title="${t('上下文压力')}">${t('注意')}</span>`
         : '';
-    const range = `${this.formatRelativeTime(item.firstSeen)} → ${this.formatRelativeTime(item.lastSeen)}`;
-    const cwdText = item.cwd ? `<div class="model-library-item-desc" style="-webkit-line-clamp:1;" title="${escapeHtml(item.cwd)}">${this._sfIcon('folder.fill', '9ca3af')} ${escapeHtml(String(item.cwd).slice(-80))}</div>` : '';
+    const range = `${escapeHtml(this.formatRelativeTime(item.firstSeen))} ${this._libIcon('arrow.right', 10)} ${escapeHtml(this.formatRelativeTime(item.lastSeen))}`;
+    const cwdText = item.cwd ? `<div class="session-card__cwd" title="${escapeHtml(item.cwd)}">${this._libIcon('folder.fill', 12)} <span>${escapeHtml(String(item.cwd).slice(-80))}</span></div>` : '';
     const lastTool = item.lastToolName ? ` · ${t('最近')}: ${item.lastToolName}` : '';
     return `
-      <button type="button" class="model-library-item" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
-        <div class="model-library-item-info">
-          <div class="model-library-item-name">
+      <button type="button" class="blora-card session-card" data-variant="hover" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
+        <div class="session-card__body">
+          <div class="session-card__title">
             ${this._harnessIconHtml(item.harness, 16)}
-            <span>${escapeHtml(harnessMeta.label)}</span>
-            <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;" title="${escapeHtml(key)}">${escapeHtml(key.slice(0, 18))}…</span>
+            <span class="session-card__harness">${escapeHtml(harnessMeta.label)}</span>
+            <span class="session-card__key" title="${escapeHtml(key)}">${escapeHtml(key.slice(0, 18))}…</span>
           </div>
           ${cwdText}
           ${preview}
           <div class="session-card-meta">
-            <span>${escapeHtml(range)}</span>
+            <span class="session-card__range">${range}</span>
             <span>${Number(item.requestCount || 0)} ${t('次请求')} · ${Number(item.toolCallCount || 0)} ${t('工具调用')}${escapeHtml(lastTool)}</span>
           </div>
         </div>
-        <div class="model-library-item-actions model-item-badges">
-          <span class="model-item-badge" title="${t('总 Token')}">${this._formatBigNumber(Number(item.totalTokens || 0))}</span>
-          ${cached ? `<span class="model-item-badge series session-badge-cached" style="background:rgba(16,185,129,.12);color:var(--success);" title="${t('缓存命中 Token')}">${t('缓存')} ${this._formatBigNumber(cached)}</span>` : ''}
+        <div class="session-card__badges">
+          <span class="blora-badge" data-variant="neutral" title="${t('总 Token')}">${this._formatBigNumber(Number(item.totalTokens || 0))}</span>
+          ${cached ? `<span class="blora-badge" data-variant="success" title="${t('缓存命中 Token')}">${t('缓存')} ${this._formatBigNumber(cached)}</span>` : ''}
           ${summaryBadge}
           ${pressureBadge}
         </div>
@@ -5272,12 +5289,10 @@ class ConsoleApp {
 
     const days = (document.getElementById('sessionDaysFilter')?.value || '7').trim();
     wrap.style.display = '';
-    if (listEl) {
-      listEl.style.display = 'none';
-      const pager = listEl.nextElementSibling;
-      if (pager && pager.querySelector('#sessionsPrevBtn')) pager.style.display = 'none';
-    }
-    setHTML(container, pageLoadingHtml(t('搜索中...'), { compact: true }));
+    if (listEl) listEl.style.display = 'none';
+    const pagerWrap = document.getElementById('sessionsPager');
+    if (pagerWrap) pagerWrap.style.display = 'none';
+    setHTML(container, this._sessionLoadingHtml(t('搜索中...')));
     const infoEl = document.getElementById('sessionsSearchInfo');
 
     try {
@@ -5288,12 +5303,12 @@ class ConsoleApp {
       const results = Array.isArray(data.results) ? data.results : [];
       if (infoEl) infoEl.textContent = `${t('共')} ${Number(data.totalSessions || 0)} ${t('个匹配会话')}`;
       if (!results.length) {
-        setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc" style="text-align:center;">${t('无匹配结果')}</div></div></div>`);
+        setHTML(container, `<div class="session-list__notice"><blora-empty title="${escapeHtml(t('无匹配结果'))}"></blora-empty></div>`);
         return;
       }
       setHTML(container, results.map(item => this.renderSessionSearchResult(item)).join(''));
     } catch (error) {
-      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('搜索失败'))}</div></div></div>`);
+      setHTML(container, `<div class="session-list__notice"><blora-empty title="${escapeHtml(error.message || t('搜索失败'))}"></blora-empty></div>`);
     }
   }
 
@@ -5309,27 +5324,27 @@ class ConsoleApp {
     const key = String(item.sessionKey || '');
     const keyAttr = key.replace(/'/g, '\\&#39;');
     const harnessMeta = this._usageRequestSourceMeta(item.harness);
-    const range = `${this.formatRelativeTime(item.firstSeen)} → ${this.formatRelativeTime(item.lastSeen)}`;
+    const range = `${escapeHtml(this.formatRelativeTime(item.firstSeen))} ${this._libIcon('arrow.right', 10)} ${escapeHtml(this.formatRelativeTime(item.lastSeen))}`;
     const previews = (Array.isArray(item.previews) ? item.previews : [])
       .map(p => `
         <div class="session-search-excerpt">
-          <span style="color:var(--muted-foreground);opacity:.75;">${escapeHtml(new Date(p.ts).toLocaleString())} · </span>${this._renderSearchExcerpt(p.excerpt)}
+          <span class="session-search-excerpt__time">${escapeHtml(new Date(p.ts).toLocaleString())} · </span>${this._renderSearchExcerpt(p.excerpt)}
         </div>`).join('');
     return `
-      <button type="button" class="model-library-item" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
-        <div class="model-library-item-info">
-          <div class="model-library-item-name">
+      <button type="button" class="blora-card session-card" data-variant="hover" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
+        <div class="session-card__body">
+          <div class="session-card__title">
             ${this._harnessIconHtml(item.harness, 16)}
-            <span>${escapeHtml(harnessMeta.label)}</span>
-            <span style="font-weight:400;color:var(--muted-foreground);font-size:12px;" title="${escapeHtml(key)}">${escapeHtml(key.slice(0, 18))}…</span>
+            <span class="session-card__harness">${escapeHtml(harnessMeta.label)}</span>
+            <span class="session-card__key" title="${escapeHtml(key)}">${escapeHtml(key.slice(0, 18))}…</span>
           </div>
           <div class="session-card-meta">
-            <span>${escapeHtml(range)}</span>
+            <span class="session-card__range">${range}</span>
           </div>
           ${previews}
         </div>
-        <div class="model-library-item-actions model-item-badges">
-          <span class="model-item-badge session-badge-cached" style="background:rgba(245,158,11,.14);color:var(--warning);" title="${t('命中请求数')}">${Number(item.matchCount || 0)} ${t('条命中')}</span>
+        <div class="session-card__badges">
+          <span class="blora-badge" data-variant="warning" title="${t('命中请求数')}">${Number(item.matchCount || 0)} ${t('条命中')}</span>
         </div>
       </button>`;
   }
@@ -5341,11 +5356,9 @@ class ConsoleApp {
     const wrap = document.getElementById('sessionsSearchResultsWrap');
     if (wrap) wrap.style.display = 'none';
     const listEl = document.getElementById('sessionsList');
-    if (listEl) {
-      listEl.style.display = '';
-      const pager = listEl.nextElementSibling;
-      if (pager && pager.querySelector('#sessionsPrevBtn')) pager.style.display = '';
-    }
+    if (listEl) listEl.style.display = '';
+    const pagerWrap = document.getElementById('sessionsPager');
+    if (pagerWrap) pagerWrap.style.display = '';
     this.loadSessions(this._sessionsPage || 1);
   }
 
@@ -5380,7 +5393,7 @@ class ConsoleApp {
     listWrap.style.display = 'none';
     detailWrap.style.display = '';
     setHTML(document.getElementById('sessionTimeline'), '');
-    setHTML(document.getElementById('sessionDetailMetaBar'), pageLoadingHtml(t('加载会话...'), { compact: true }));
+    setHTML(document.getElementById('sessionDetailMetaBar'), `<span class="session-loading session-loading--inline" role="status"><span class="blora-spinner" data-size="sm" aria-hidden="true"></span><span>${escapeHtml(t('加载会话...'))}</span></span>`);
     const moreBtn = document.getElementById('sessionMoreBtn');
     this._updateSessionMoreButton(moreBtn, 'more');
     window.scrollTo({ top: 0 });
@@ -5400,7 +5413,7 @@ class ConsoleApp {
     const previousScrollY = page > 1 ? window.scrollY : 0;
     let requestSucceeded = false;
     if (page === 1) {
-      setHTML(timeline, `<li class="session-detail-skeleton"><div class="skeleton-bar" style="width:65%"></div><div class="skeleton-bar" style="width:90%"></div><div class="skeleton-bar" style="width:78%"></div></li>`);
+      setHTML(timeline, `<li class="session-detail-skeleton" aria-busy="true"><div class="blora-skeleton" data-variant="text" style="width:65%"></div><div class="blora-skeleton" data-variant="text" style="width:90%"></div><div class="blora-skeleton" data-variant="text" style="width:78%"></div></li>`);
     } else if (moreBtn) {
       this._updateSessionMoreButton(moreBtn, 'loading');
     }
@@ -5427,11 +5440,11 @@ class ConsoleApp {
         const harnessMeta = this._usageRequestSourceMeta(records[0]?.harness || 'unknown');
         setHTML(metaBar, `
           <span>${this._harnessIconHtml(records[0]?.harness || 'unknown', 14)} ${escapeHtml(harnessMeta.label)}</span>
-          <span class="session-badge">${records[0]?.model ? escapeHtml(String(records[0].model).slice(0, 24)) : t('未知模型')}</span>
+          <span class="blora-badge" data-variant="neutral">${records[0]?.model ? escapeHtml(String(records[0].model).slice(0, 24)) : t('未知模型')}</span>
           <span>${this._detailTotal} ${t('次请求')}</span>
-          <span class="session-badge" title="${t('本页 Token 合计')}">${t('Token')} ${this._formatBigNumber(totalTokens)}</span>
-          ${totalCached ? `<span class="session-badge cached">${t('缓存')} ${this._formatBigNumber(totalCached)}</span>` : ''}
-          <span>${escapeHtml(records.length ? `${new Date(records[0].ts).toLocaleString()} → ${new Date(records[records.length - 1].ts).toLocaleString()}` : '')}</span>
+          <span class="blora-badge" data-variant="neutral" title="${t('本页 Token 合计')}">${t('Token')} ${this._formatBigNumber(totalTokens)}</span>
+          ${totalCached ? `<span class="blora-badge" data-variant="success">${t('缓存')} ${this._formatBigNumber(totalCached)}</span>` : ''}
+          ${records.length ? `<span class="session-card__range">${escapeHtml(new Date(records[0].ts).toLocaleString())} ${this._libIcon('arrow.right', 10)} ${escapeHtml(new Date(records[records.length - 1].ts).toLocaleString())}</span>` : ''}
         `);
         setHTML(timeline, '');
         // refresh / 首次加载都从空白时间线开始。
@@ -5471,9 +5484,9 @@ class ConsoleApp {
           <li>
             <div class="timeline-record-head">
               <span title="${escapeHtml(new Date(record.ts).toISOString())}">${escapeHtml(new Date(record.ts).toLocaleTimeString())}</span>
-              <span>${this._sfIcon('text.bubble', '10b981')} ${escapeHtml(record.model ? String(record.model).slice(0, 20) : '-')}</span>
+              <span>${this._libIcon('text.bubble', 12)} ${escapeHtml(record.model ? String(record.model).slice(0, 20) : '-')}</span>
               <span>${this._formatBigNumber(Number(record.tokens || 0))} Token</span>
-              ${Number(record.cachedTokens || 0) ? `<span style="color:var(--success);">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
+              ${Number(record.cachedTokens || 0) ? `<span class="timeline-record-cached">${t('缓存')} ${this._formatBigNumber(Number(record.cachedTokens || 0))}</span>` : ''}
               ${record.latencyMs != null ? `<span>${(record.latencyMs / 1000).toFixed(1)}s</span>` : ''}
               ${record.eventsTruncated ? `<span class="merged-tag">${t('已折叠 {count} 个旧事件', { count: suppressed })}</span>` : suppressed > 0 ? `<span class="merged-tag">${t('上下文重放')} +${suppressed}</span>` : `${evts.length} ${t('个事件')}`}${Number(record.repeatCount || 0) > 1 ? ` · <span class="merged-tag">${t('重复')} ×${record.repeatCount}</span>` : ''}
             </div>
@@ -5495,16 +5508,16 @@ class ConsoleApp {
       }
 
       if (page === 1 && !records.length) {
-        setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${t('该会话暂无消息明细')}</div></li>`);
+        setHTML(timeline, `<li class="session-timeline__notice"><blora-empty title="${escapeHtml(t('该会话暂无消息明细'))}"></blora-empty></li>`);
       }
     } catch (error) {
       if (requestSeq !== this._detailRequestSeq || sessionKey !== this._detailSessionKey) return;
-      const retry = `<button class="blora-button" onclick="app.loadSessionMessages('${this._jsString(sessionKey)}', ${page})" data-variant="secondary" data-size="sm">${t('重试')}</button>`;
+      const retry = `<button type="button" class="blora-button" onclick="app.loadSessionMessages('${this._jsString(sessionKey)}', ${page})" data-variant="secondary" data-size="sm">${t('重试')}</button>`;
       if (page > 1 && timeline.children.length) {
         this._removeDetailLoadError();
-        timeline.insertAdjacentHTML('beforeend', `<li class="session-detail-load-error"><div class="timeline-event-text" style="text-align:center;color:var(--destructive);padding:16px;">${escapeHtml(error.message || t('会话详情加载失败'))}<div style="margin-top:8px;">${retry}</div></div></li>`);
+        timeline.insertAdjacentHTML('beforeend', `<li class="session-timeline__notice session-detail-load-error"><div class="blora-message" data-variant="danger" role="alert">${escapeHtml(error.message || t('会话详情加载失败'))}</div>${retry}</li>`);
       } else {
-        setHTML(timeline, `<li><div class="timeline-event-text" style="text-align:center;color:var(--muted-foreground);padding:24px;">${escapeHtml(error.message || t('会话详情加载失败'))}<div style="margin-top:8px;">${retry}</div></div></li>`);
+        setHTML(timeline, `<li class="session-timeline__notice"><div class="blora-message" data-variant="danger" role="alert">${escapeHtml(error.message || t('会话详情加载失败'))}</div>${retry}</li>`);
       }
     } finally {
       if (requestSeq === this._detailRequestSeq) this._detailLoading = false;
@@ -5533,10 +5546,6 @@ class ConsoleApp {
     button.classList.toggle('session-more-done', state === 'done');
   }
 
-  /** 时间线内联 SF 小图标（12px，随文基线对齐） */
-  _sfIcon(name, color) {
-    return `<img src="https://img.bloret.net/SF/${encodeURIComponent(name)}?color=${encodeURIComponent(color)}" alt="" class="sf-icon" data-sf-name="${escapeHtml(name)}" style="display:inline-block;vertical-align:-2px;width:12px;height:12px;">`;
-  }
 
   /** 时间线单事件：文本 / 工具调用 / 工具结果 / 思考 */
   renderToolSummaryRow(group) {
@@ -5545,7 +5554,7 @@ class ConsoleApp {
     return `
       <li class="timeline-event type-tool_summary">
         <details class="tool-block">
-          <summary class="tool-call-line"><span class="tool-dot" style="color:var(--info);">⏺</span> <span class="tool-summary-text">${sentence}</span><span class="tool-args">${count} ${t('次操作')}</span></summary>
+          <summary class="tool-call-line"><span class="tool-dot">${this._libIcon('circle.fill', 10)}</span> <span class="tool-summary-text">${sentence}</span><span class="tool-args">${count} ${t('次操作')}</span></summary>
           ${group.events.map(e => this.renderTimelineEvent(e)).join('')}
         </details>
       </li>`;
@@ -5557,7 +5566,7 @@ class ConsoleApp {
     return `
       <li class="timeline-event type-thinking_summary">
         <details class="thinking-block">
-          <summary title="${t('点击展开全部')}" aria-label="${t('点击展开全部')}">${this._sfIcon('brain.head.profile', 'ec4899')} ${t('已深度思考')}<span class="tool-args">${count} ${t('段思考')} · ${t('展开全部')}</span></summary>
+          <summary title="${t('点击展开全部')}" aria-label="${t('点击展开全部')}">${this._libIcon('brain.head.profile', 12)} ${t('已深度思考')}<span class="tool-args">${count} ${t('段思考')} · ${t('展开全部')}</span></summary>
           ${group.events.map(e => this.renderTimelineEvent(e)).join('')}
         </details>
       </li>`;
@@ -5576,7 +5585,7 @@ class ConsoleApp {
       return `
         <li class="timeline-event type-tool_call">
           <details class="tool-block">
-            <summary class="tool-call-line"><span class="tool-dot">${this._sfIcon('hammer.fill', 'f59e0b')}</span> <span class="tool-name">${escapeHtml(name)}</span><span class="tool-args">${escapeHtml(argsLine)}</span></summary>
+            <summary class="tool-call-line"><span class="tool-dot">${this._libIcon('hammer.fill', 12)}</span> <span class="tool-name">${escapeHtml(name)}</span><span class="tool-args">${escapeHtml(argsLine)}</span></summary>
             ${evt.argsPreview ? `<pre class="tool-args-full">${escapeHtml(evt.argsPreview)}${evt.truncated ? '\n…' : ''}</pre>` : ''}
           </details>
         </li>`;
@@ -5588,7 +5597,7 @@ class ConsoleApp {
       return `
         <li class="timeline-event type-tool_result${errCls}">
           <details class="tool-block tool-result-block" ${evt.is_error ? 'open' : ''}>
-            <summary class="tool-result-line"><span class="tool-result-icon">${this._sfIcon('arrow.turn.down.right', '8b5cf6')}</span> ${errTag}<span class="tool-result-owner">${escapeHtml(evt.name || t('工具结果'))}</span></summary>
+            <summary class="tool-result-line"><span class="tool-result-icon">${this._libIcon('arrow.turn.down.right', 12)}</span> ${errTag}<span class="tool-result-owner">${escapeHtml(evt.name || t('工具结果'))}</span></summary>
             ${evt.resultPreview ? `<pre class="tool-result-text">${escapeHtml(evt.resultPreview)}${evt.resultPreview.length >= 800 ? '\n…' : ''}</pre>` : ''}
           </details>
         </li>`;
@@ -5598,16 +5607,16 @@ class ConsoleApp {
       return `
         <li class="timeline-event type-thinking">
           <details class="thinking-block">
-            <summary>${this._sfIcon('brain.head.profile', 'ec4899')} ${t('思考')}</summary>
+            <summary>${this._libIcon('brain.head.profile', 12)} ${t('思考')}</summary>
             <div class="timeline-event-text thinking-text">${escapeHtml(evt.preview || '')}${evt.truncated ? '\n…' : ''}</div>
           </details>
         </li>`;
     }
     // —— 正文：user 高亮气泡 / assistant 常规 / system 弱化 ——
     const roleMap = {
-      user: { label: `${this._sfIcon('person.crop.circle', '3b82f6')} ${t('用户')}`, color: 'var(--info)' },
-      assistant: { label: `${this._sfIcon('text.bubble', '10b981')} ${t('助手')}`, color: 'var(--success)' },
-      system: { label: `${this._sfIcon('gearshape.fill', '9ca3af')} ${t('系统')}`, color: 'var(--muted-foreground)' },
+      user: { label: `${this._libIcon('person.crop.circle', 12)} ${t('用户')}` },
+      assistant: { label: `${this._libIcon('text.bubble', 12)} ${t('助手')}` },
+      system: { label: `${this._libIcon('gearshape.fill', 12)} ${t('系统')}` },
     };
     const meta = roleMap[evt.role] || roleMap.system;
     // assistant 正文渲染 Markdown（白名单清洗）；user/system 保持纯文本
@@ -5619,7 +5628,7 @@ class ConsoleApp {
     }
     return `
       <li class="timeline-event role-${escapeHtml(evt.role || 'system')}">
-        <span class="timeline-event-tag" style="color:${meta.color};">${meta.label}</span>
+        <span class="timeline-event-tag">${meta.label}</span>
         <div class="timeline-event-text timeline-md-body role-${escapeHtml(evt.role || 'system')}-text">${bodyHtml}</div>
       </li>`;
   }
@@ -6788,9 +6797,9 @@ class ConsoleApp {
       const sessionKey = String(payload.sessionKey || this._summaryTaskSessionKey || '');
       if (sessionKey) this._summaryTaskSessionKey = sessionKey;
       setHTML(bar, `
-        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid var(--border);border-radius:12px;background:var(--card);">
-          <div class="summary-spinner"></div>
-          <span style="font-size:13px;color:var(--muted-foreground);">${t('正在生成会话总结...')}<small style="margin-left:6px;opacity:.7;">${t('可离开此页，完成后在此查看')}</small></span>
+        <div class="blora-card session-task-bar" data-variant="flat">
+          <span class="blora-spinner" data-size="sm" aria-hidden="true"></span>
+          <span class="session-task-bar__text">${t('正在生成会话总结...')}<small>${t('可离开此页，完成后在此查看')}</small></span>
           ${sessionKey ? `<button type="button" class="blora-button" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')" data-variant="secondary" data-size="sm">${t('查看总结')}</button>` : ''}
         </div>`);
       return;
@@ -6803,13 +6812,13 @@ class ConsoleApp {
       bar.dataset.sessionKey = sessionKey;
       bar.style.display = '';
       setHTML(bar, `
-        <div style="padding:14px 16px;border:1px solid var(--border);border-left:3px solid var(--success);border-radius:12px;background:var(--card);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <strong style="font-size:13px;">${t('会话总结已生成')}</strong>
-            <button type="button" class="blora-button" onclick="app.dismissModelLibraryTaskBar()" title="${t('关闭')}" style="padding:2px 8px;" data-variant="secondary" data-size="sm">✕</button>
+        <div class="blora-card session-task-bar session-task-bar--done" data-variant="flat">
+          <div class="session-task-bar__head">
+            <strong>${t('会话总结已生成')}</strong>
+            <button type="button" class="blora-button" onclick="app.dismissModelLibraryTaskBar()" title="${t('关闭')}" aria-label="${t('关闭')}" data-variant="ghost" data-size="icon">${this._libIcon('xmark', 12)}</button>
           </div>
-          <div class="session-summary-md" style="max-height:180px;overflow-y:auto;">${this._renderSafeMarkdown(text)}</div>
-          <div style="margin-top:10px;display:flex;gap:8px;">
+          <div class="session-summary-md session-task-bar__body">${this._renderSafeMarkdown(text)}</div>
+          <div class="session-task-bar__actions">
             <button type="button" class="blora-button" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')" data-variant="primary" data-size="sm">${t('查看总结')}</button>
             <button type="button" class="blora-button" onclick="app.showSessionDetail('${this._jsString(sessionKey)}')" data-variant="secondary" data-size="sm">${t('跳到该会话')}</button>
             <button type="button" class="blora-button" onclick="app.copySessionSummary('${this._jsString(sessionKey)}')" data-variant="secondary" data-size="sm">${t('复制')}</button>
@@ -6846,7 +6855,7 @@ class ConsoleApp {
     const content = text ? `<div class="session-summary-md" style="margin-top:12px;">${this._renderSafeMarkdown(text)}</div>` : '';
     setHTML(bodyEl, `
       <div class="summary-loading">
-        <div class="summary-spinner"></div>
+        <span class="blora-spinner" data-size="sm" aria-hidden="true"></span>
         <span class="summary-loading-stage">${t(phase === 'generating' ? '正在生成...' : '正在阅读会话...')}</span>
       </div>${content}`);
   }
@@ -6943,27 +6952,32 @@ class ConsoleApp {
     el.style.display = '';
     if (!el.dataset.built) {
       el.dataset.built = '1';
-      const details = document.createElement('details');
-      details.className = 'session-summary-inline';
-      details.open = true;
-      const summary = document.createElement('summary');
+      // 总结卡片：默认常驻展开（流式生成中实时更新），不再手写折叠交互
+      const card = document.createElement('section');
+      card.className = 'blora-card session-summary-inline';
+      card.dataset.variant = 'inset';
+      card.setAttribute('aria-live', 'polite');
+      const head = document.createElement('div');
+      head.className = 'session-summary-inline__head';
       const spinner = document.createElement('span');
-      spinner.className = 'summary-spinner';
-      spinner.style.cssText = 'width:16px;height:16px;border-width:2px;flex:none;';
-      const label = document.createElement('span');
+      spinner.className = 'blora-spinner';
+      spinner.dataset.size = 'sm';
+      spinner.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('strong');
       const refresh = document.createElement('button');
       refresh.type = 'button';
-      refresh.className = 'btn btn-secondary btn-sm';
+      refresh.className = 'blora-button';
+      refresh.dataset.variant = 'secondary';
+      refresh.dataset.size = 'sm';
       refresh.textContent = t('重新生成');
       refresh.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); this.generateSessionSummary(true); });
       const body = document.createElement('div');
       body.className = 'summary-inline-body session-summary-md';
       const time = document.createElement('small');
       time.className = 'summary-inline-time';
-      summary.append(spinner, label, refresh);
-      details.append(summary, time, body);
-      el.append(details);
-      el._details = details;
+      head.append(spinner, label, refresh);
+      card.append(head, time, body);
+      el.append(card);
       el._spinner = spinner;
       el._label = label;
       el._refresh = refresh;
@@ -6973,8 +6987,8 @@ class ConsoleApp {
     if (state === 'error') {
       el._label.textContent = t('总结生成失败');
       el._spinner.style.display = 'none';
+      el._refresh.style.display = '';
       el._body.textContent = errMsg || t('总结生成失败');
-      el._details.open = true;
       return;
     }
     el._label.textContent = state === 'done' ? t('会话总结') : t('正在生成会话总结...');
@@ -6983,7 +6997,6 @@ class ConsoleApp {
     el._time.textContent = state === 'done' && createdAt ? `${t('最近更新')} ${this.formatRelativeTime(createdAt)}` : '';
     if (state === 'done') setHTML(el._body, this._renderSafeMarkdown(text || ''));
     else el._body.textContent = text || '';
-    el._details.open = true;
   }
 
   async toggleHookNotifyPush(enabled) {
