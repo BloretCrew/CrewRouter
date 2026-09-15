@@ -1,14 +1,15 @@
+/* 版本徽章（TEAM / PERSONAL 等）：跟随 Blora 主色与圆角 token；未加载 Blora 的页面回退到黑白。 */
 .brand-edition-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 18px;
+  min-height: 1.125rem;
   box-sizing: border-box;
-  padding: 2px 6px;
-  border: 1px solid #000;
-  border-radius: 2px;
-  background: #000;
-  color: #fff;
-  font-size: 9px;
+  padding: 0.125rem 0.375rem;
+  border: 1px solid var(--blora-color-action-primary-default, #000);
+  border-radius: var(--blora-radius-full, 999px);
+  background: var(--blora-color-action-primary-default, #000);
+  color: var(--blora-color-text-on-accent, #fff);
+  font-size: 0.5625rem;
   font-weight: 700;
   letter-spacing: .08em;
   line-height: 1;
@@ -20,7 +21,7 @@
 .brand-edition-badge[hidden] { display: none; }
 
 @media (max-width: 600px) {
-  .brand-edition-badge { padding-inline: 5px; font-size: 8px; letter-spacing: .06em; }
+  .brand-edition-badge { padding-inline: 0.3125rem; font-size: 0.5rem; letter-spacing: .06em; }
   .topnav-brand, .store-brand { min-width: 0; }
   .topnav-brand .brand-edition-badge, .store-brand .brand-edition-badge { flex-shrink: 0; }
   .store-brand { flex-wrap: wrap; }
@@ -31,9 +32,9 @@
   .data-nav__link { flex-shrink: 0; }
 }
 
-/* themes.css applies the dark class to the document root. */
+/* 深色模式由 Blora 的 tokens.dark.css 接管；未加载 Blora 时保留黑白反转。 */
 .dark .brand-edition-badge {
-  border-color: #fff;
-  background: #fff;
-  color: #000;
+  border-color: var(--blora-color-action-primary-default, #fff);
+  background: var(--blora-color-action-primary-default, #fff);
+  color: var(--blora-color-text-on-accent, #000);
 }
