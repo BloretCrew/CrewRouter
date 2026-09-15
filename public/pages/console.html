@@ -41,7 +41,7 @@
   <link rel="stylesheet" href="/css/audit-logs-blora.css?v=1">
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/settings-blora.css?v=1">
-  <link rel="stylesheet" href="/css/sessions-blora.css?v=2">
+  <link rel="stylesheet" href="/css/sessions-blora.css?v=3">
   <link rel="stylesheet" href="/css/prompts-blora.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=2">
   <script>
@@ -1208,11 +1208,11 @@
             </div>
           </div>
           <div class="session-filter-bar">
-            <blora-select id="sessionDaysFilter" name="days" aria-label="时间范围">
+            <blora-select id="sessionDaysFilter" name="days" value="7" aria-label="时间范围">
               <blora-option value="1"><span data-i18n="最近 1 天">最近 1 天</span></blora-option>
-              <blora-option value="7" selected><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
+              <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
             </blora-select>
-            <blora-select id="sessionSourceFilter" name="source" aria-label="客户端来源" title="客户端来源" data-i18n-title="客户端来源">
+            <blora-select id="sessionSourceFilter" name="source" placeholder="全部客户端" data-i18n-placeholder="全部客户端" aria-label="客户端来源" title="客户端来源" data-i18n-title="客户端来源">
               <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
               <blora-option value="grok">Grok</blora-option>
               <blora-option value="codex">Codex</blora-option>
@@ -2655,7 +2655,7 @@ data: [DONE]</code></pre>
   <script src="/js/session-tool-groups.js?v=2"></script>
   <script src="/js/vendor/marked.min.js"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/app.js?v=58"></script>
+  <script src="/js/app.js?v=59"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

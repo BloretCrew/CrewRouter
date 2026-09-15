@@ -457,7 +457,7 @@ class ConsoleApp {
       'dashboard': t('控制台'), 'home': t('个人工作台'), 'modelLibrary': t('模型库'), 'myUpstream': t('我的上游'),
       'myProviders': t('我的上游'), 'myTeamModels': t('我的上游'),
       'apiKeys': t('API Key 与用量'), 'stats': t('统计信息'), 'projectWork': t('项目工作'), 'leaderboard': t('排行榜'), 'docs': t('接口文档'),
-      'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志'), 'prompts': t('提示词')
+      'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志'), 'prompts': t('提示词'), 'sessions': t('会话')
     };
     const pageTitleEl = document.getElementById('pageTitle');
     if (pageTitleEl) pageTitleEl.textContent = titles[targetPage] || targetPage;

@@ -63,6 +63,11 @@
   min-width: 9rem;
 }
 
+/* 「全部客户端」是未选择态的占位文案，按正文色显示而非禁用色 */
+.blora-sessions-page .session-filter-bar .blora-select__trigger[data-placeholder] {
+  color: var(--blora-color-text-secondary);
+}
+
 .blora-sessions-page .session-filter-info,
 .blora-sessions-page .session-search-excerpt__time {
   color: var(--blora-color-text-muted);
