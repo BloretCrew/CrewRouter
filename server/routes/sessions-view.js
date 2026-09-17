@@ -17,6 +17,7 @@ const config = require('../config-loader');
 const { expandSessionMessages } = require('../utils/usage-compress');
 const { getInternalAccessToken } = require('../utils/internal-oauth');
 const { resolveSummaryApiKeyId } = require('../utils/model-selection');
+const { formatSummaryError } = require('../utils/summary-error');
 
 const DEFAULT_DAYS = 7;
 const MAX_DAYS = 90;
@@ -860,7 +861,7 @@ async function callInternalLLM(promptText, userId, apiKeyId = null, modelId = nu
     signal: AbortSignal.timeout(120000),
   });
   const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(j.error?.message || `上游 ${res.status}`);
+  if (!res.ok) throw new Error(formatSummaryError(j, res.status));
   const signatureHeader = res.headers.get('x-crewrouter-signature');
   const content = j.choices?.[0]?.message?.content || '';
   if (!content && signatureHeader) return '';
@@ -903,7 +904,7 @@ async function* streamInternalLLM(promptText, userId, apiKeyId = null, modelId =
   });
   if (!res.ok) {
     const j = await res.json().catch(() => ({}));
-    throw new Error(j.error?.message || `上游 ${res.status}`);
+    throw new Error(formatSummaryError(j, res.status));
   }
   const decoder = new TextDecoder();
   let buf = '';
@@ -915,11 +916,11 @@ async function* streamInternalLLM(promptText, userId, apiKeyId = null, modelId =
       const data = dataLines.join('\n').trim();
       dataLines = [];
       if (data === '[DONE]') return 'done';
-      try {
-        const j = JSON.parse(data);
-        const delta = j.choices?.[0]?.delta?.content;
-        if (delta) yield delta;
-      } catch (_) { /* ignore malformed upstream event */ }
+      let j;
+      try { j = JSON.parse(data); } catch (_) { return; }
+      if (j.error) throw new Error(formatSummaryError(j, j.error?.code));
+      const delta = j.choices?.[0]?.delta?.content;
+      if (delta) yield delta;
       return;
     }
     if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
