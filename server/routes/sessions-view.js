@@ -798,7 +798,30 @@ function buildDetailRecords(rawRows) {
 
 // ========== 会话总结 ==========
 
-// 总结固定使用当前会话最后一条记录所属 Key 的默认绑定模型。
+// 总结模型目标：优先用户名下「CrewRouter」Key（与内部 OAuth 令牌默认 Key 一致）的
+// 模型队列/当前模型；回退到会话最后一条记录所属 Key 的默认绑定模型。
+async function resolveSummaryTarget(userId, records) {
+  const own = await pool.query(
+    `SELECT ak.id, ak.current_model_id,
+            (SELECT akm.model_id FROM api_key_models akm
+              JOIN models m ON m.id = akm.model_id
+             WHERE akm.api_key_id = ak.id AND akm.enabled IS DISTINCT FROM FALSE
+             ORDER BY akm.sort_order ASC, akm.id ASC LIMIT 1) AS queued_model_id
+       FROM api_keys ak
+      WHERE ak.user_id = $1 AND ak.enabled = TRUE AND ak.name ILIKE 'crewrouter'
+      ORDER BY ak.id ASC LIMIT 1`,
+    [userId]
+  );
+  const ownKey = own.rows[0];
+  if (ownKey) {
+    const ownModelId = String(ownKey.queued_model_id || ownKey.current_model_id || '').trim();
+    if (ownModelId) return { apiKeyId: Number(ownKey.id), modelId: ownModelId };
+  }
+  const apiKeyId = resolveSummaryApiKeyId(records);
+  return { apiKeyId, modelId: await resolveSummaryModelId(apiKeyId) };
+}
+
+// 回退路径：会话最后一条记录所属 Key 的默认绑定模型。
 async function resolveSummaryModelId(apiKeyId) {
   if (!apiKeyId) return null;
   const queued = await pool.query(
@@ -813,7 +836,11 @@ async function resolveSummaryModelId(apiKeyId) {
   return current.rows[0]?.current_model_id ? String(current.rows[0].current_model_id) : null;
 }
 
-// 内部推理：本地网关 + 当前会话 Key 的绑定模型
+// 内部推理：本地网关 + 当前会话 Key 的绑定模型。
+// max_tokens 需容纳推理型模型的思考开销；正文为空时网关可能把 API 签名当作正文返回，
+// 因此这里显式要求网关按「仅响应头」模式投放签名，避免签名污染总结正文。
+const INTERNAL_LLM_MAX_TOKENS = 8000;
+
 async function callInternalLLM(promptText, userId, apiKeyId = null, modelId = null) {
   // 用 OAuth access token 调用本地网关，避免读取 API Key 原文
   const accessToken = await getInternalAccessToken(userId, apiKeyId);
@@ -823,17 +850,21 @@ async function callInternalLLM(promptText, userId, apiKeyId = null, modelId = nu
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${accessToken}`,
+      'X-CrewRouter-Signature-Mode': 'header',
     },
     body: JSON.stringify({
       model: modelId,
       messages: [{ role: 'user', content: promptText }],
-      max_tokens: 1200,
+      max_tokens: INTERNAL_LLM_MAX_TOKENS,
     }),
     signal: AbortSignal.timeout(120000),
   });
   const j = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(j.error?.message || `上游 ${res.status}`);
-  return j.choices?.[0]?.message?.content || '';
+  const signatureHeader = res.headers.get('x-crewrouter-signature');
+  const content = j.choices?.[0]?.message?.content || '';
+  if (!content && signatureHeader) return '';
+  return content;
 }
 
 // 读取 web ReadableStream（Node 18+）
@@ -859,11 +890,13 @@ async function* streamInternalLLM(promptText, userId, apiKeyId = null, modelId =
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${accessToken}`,
       'Accept': 'text/event-stream',
+      // 网关在空正文时会把 API 签名追加为正文；总结只接受真实内容，改为仅头模式
+      'X-CrewRouter-Signature-Mode': 'header',
     },
     body: JSON.stringify({
       model: modelId,
       messages: [{ role: 'user', content: promptText }],
-      max_tokens: 1200,
+      max_tokens: INTERNAL_LLM_MAX_TOKENS,
       stream: true,
     }),
     signal: AbortSignal.timeout(120000),
@@ -955,9 +988,10 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
         WHERE u.user_id = $1 AND ${summaryWhere}
         ORDER BY created_at ASC, id ASC LIMIT 1000`,
       [uid, sessionKey]);
-    const summaryApiKeyId = resolveSummaryApiKeyId(recRes.rows);
+    const summaryTarget = await resolveSummaryTarget(uid, recRes.rows);
+    const summaryApiKeyId = summaryTarget.apiKeyId;
     if (!summaryApiKeyId) return res.status(400).json({ error: '会话没有可用的 API Key' });
-    const summaryModelId = await resolveSummaryModelId(summaryApiKeyId);
+    const summaryModelId = summaryTarget.modelId;
     if (!summaryModelId) return res.status(400).json({ error: '当前会话 API Key 没有可用模型绑定' });
     const allEvents = [];
     for (const row of recRes.rows) {
@@ -993,6 +1027,7 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
         return res.status(502).json({ error: err.message || '总结生成失败' });
       }
       if (!summary) return res.status(502).json({ error: '模型未返回内容' });
+      if (/·.*tokens·.*缓存命中/.test(summary)) return res.status(502).json({ error: '模型未返回内容（仅收到签名行）' });
       await persistSummary(summary);
       const saved = await pool.query(
         'SELECT created_at FROM session_summaries WHERE user_id = $1 AND session_key = $2',
@@ -1019,6 +1054,11 @@ router.post('/sessions/:sessionKey/summary', requireAuth, async (req, res) => {
       }
       if (!full.trim()) {
         writeEvent({ type: 'error', error: '模型未返回内容' });
+        return res.end();
+      }
+      // 空正文场景已被签名污染（历史上把「模型 · tokens · 缓存命中」签名行当成总结落库）
+      if (/·.*tokens·.*缓存命中/.test(full) || /^[^a-zA-Z0-9\u4e00-\u9fa5#\-*|`\s]*$/.test(full.slice(0, 20))) {
+        writeEvent({ type: 'error', error: '模型未返回内容（仅收到签名行）' });
         return res.end();
       }
       await persistSummary(full);

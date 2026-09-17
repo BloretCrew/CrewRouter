@@ -55,8 +55,10 @@ assert.strictEqual(
 );
 
 const sessionsViewSource = require('fs').readFileSync(require('path').join(__dirname, '..', 'routes', 'sessions-view.js'), 'utf8');
-assert.match(sessionsViewSource, /resolveSummaryModelId\(summaryApiKeyId\)/);
+assert.match(sessionsViewSource, /resolveSummaryTarget\(uid, recRes\.rows\)/);
 assert.match(sessionsViewSource, /model: modelId/);
 assert.match(sessionsViewSource, /\[uid, sessionKey, summary, summaryModelId\]/);
+// 内部调用必须屏蔽签名注入（仅头模式），避免空正文时签名被当成总结落库
+assert.match(sessionsViewSource, /'X-CrewRouter-Signature-Mode': 'header'/);
 
 console.log('PASS session summary model selection regression');
