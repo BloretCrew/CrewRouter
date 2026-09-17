@@ -2323,15 +2323,9 @@ app.set('trust proxy', 1);
 
 // 网关先执行请求体限制，再由全局 50MB parser 解析其他请求。
 // 编码工具（Claude Code/Codex 等）长上下文请求常达数 MB，限制必须与全局一致，过低会误杀正常请求。
-const GATEWAY_BODY_LIMIT = '50mb';
-const gatewayBodyLimit = express.json({ limit: GATEWAY_BODY_LIMIT });
-app.use((req, res, next) => {
-  const pathName = req.path || '';
-  const isGateway = pathName.startsWith('/v1/')
-    || /^\/api\/(chat|messages|responses|models)(\/|$)/.test(pathName);
-  if (!isGateway) return next();
-  return gatewayBodyLimit(req, res, next);
-});
+const { createGatewayBodyParser, gatewayBodyError } = require('./middleware/gateway-body');
+app.use(createGatewayBodyParser());
+app.use(gatewayBodyError);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use((err, req, res, next) => {
