@@ -119,7 +119,7 @@ async function refreshAccessToken(refreshToken, provider) {
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
       client_id: CLIENT_ID,
-    }),
+    }).toString(),
     signal: AbortSignal.timeout(15000),
   }, provider);
   const text = await response.text();
