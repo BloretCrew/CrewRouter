@@ -11241,7 +11241,7 @@ async function(ctx) {
   }
 
   _confirmTest() {
-    return confirm(t('模型测试将发送一条真实请求（"Hi"，max_tokens=5）到该模型，\n并按照正常用量扣除积分。是否继续？'));
+    return confirm(t('模型测试将发送一条真实请求（"Hi"，max_tokens=16）到该模型，\n并按照正常用量扣除积分。是否继续？'));
   }
 
   _formatTestTooltip(testedAt) {

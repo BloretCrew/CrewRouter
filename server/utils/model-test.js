@@ -25,7 +25,7 @@ function buildTestBody(upstreamModel, format) {
     return {
       model: upstreamModel,
       messages: [{ role: 'user', content: 'Hi' }],
-      max_tokens: 5,
+      max_tokens: 16,
       stream: false
     };
   }
@@ -41,7 +41,7 @@ function buildTestBody(upstreamModel, format) {
   return {
     model: upstreamModel,
     messages: [{ role: 'user', content: 'Hi' }],
-    max_tokens: 5,
+    max_tokens: 16,
     stream: false
   };
 }
