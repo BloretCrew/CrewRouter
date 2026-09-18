@@ -66,6 +66,16 @@ async function main() {
     requests.length = 0;
     await fetchCodexUsage(provider, { saveTokens: async () => assert.fail('有效令牌不应刷新') });
     assert.equal(requests.length, 1);
+    const rejected = loadIsolated('../utils/codex-usage.js', {
+      './quota-http': { quotaRequest: async () => ({
+        ok: false, status: 400,
+        text: async () => JSON.stringify({ error: { code: 'invalid_refresh_token', message: 'Invalid refresh token.' } }),
+      }) },
+    });
+    await assert.rejects(
+      () => rejected.fetchCodexUsage({ oauth_access_token: 'e', oauth_refresh_token: 'b' }),
+      error => /Invalid refresh token\./.test(error.message) && !/\[object Object\]/.test(error.message)
+    );
     console.log('PASS Codex quota: expired token → form POST over axios transport → persist rotated token → retry usage; valid token unchanged');
   } finally {
     agent.destroy();

@@ -111,6 +111,13 @@ async function requestUsage(accessToken, accountId, provider) {
   return { response, data };
 }
 
+function describeErrorField(error) {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  if (typeof error === 'object') return error.message || error.code || error.error_description || JSON.stringify(error);
+  return String(error);
+}
+
 async function refreshAccessToken(refreshToken, provider) {
   const response = await quotaRequest(TOKEN_URL, {
     method: 'POST',
@@ -126,7 +133,7 @@ async function refreshAccessToken(refreshToken, provider) {
   let data;
   try { data = text ? JSON.parse(text) : {}; } catch (_) { data = {}; }
   if (!response.ok || !data.access_token) {
-    const detail = data.error_description || data.error || `HTTP ${response.status}`;
+    const detail = data.error_description || describeErrorField(data.error) || `HTTP ${response.status}`;
     throw new Error(`Codex Token 刷新失败（${detail}）`);
   }
   return data;
@@ -153,7 +160,7 @@ async function fetchCodexUsage(provider, { saveTokens } = {}) {
   }
 
   if (!result.response.ok) {
-    const suffix = result.data?.detail || result.data?.error || result.data?.error_description || `HTTP ${result.response.status}`;
+    const suffix = result.data?.detail || describeErrorField(result.data?.error) || result.data?.error_description || `HTTP ${result.response.status}`;
     throw new Error(`Codex 用量查询失败（${suffix}）`);
   }
   return normalizeWhamUsage(result.data);
