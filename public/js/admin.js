@@ -6333,10 +6333,13 @@ async function(ctx) {
     const textarea = document.getElementById('providerCodexConfigText');
     const isCodex = mode === 'codex_wham';
     const isGrok = mode === 'grok_billing';
+    const isCommandCode = mode === 'commandcode';
     if (section) section.style.display = isCodex || isGrok ? 'block' : 'none';
     if (hint) hint.textContent = isGrok
       ? t('SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化')
-      : t('Codex WHAM 使用导入的 OAuth Token 查询 ChatGPT Codex 的 5 小时与 7 天窗口，接口为非公开接口，字段可能变化');
+      : isCommandCode
+        ? t('Command Code 使用供应商 API Key 调用 /alpha/* 接口查询 5 小时、每周与月度额度，Base URL 只取域名（官方为 https://api.commandcode.ai）；Go 套餐不含 API 权限，四个端点全部 404')
+        : t('Codex WHAM 使用导入的 OAuth Token 查询 ChatGPT Codex 的 5 小时与 7 天窗口，接口为非公开接口，字段可能变化');
     if (label) label.textContent = isGrok ? 'SuperGrok auth.json' : 'Codex auth.json';
     if (authHint) authHint.innerHTML = isGrok
       ? t('文件通常位于') + ' <code>~/.grok/auth.json</code>' + t('，即 Linux/macOS 下的') + '<code>' + t('/home/你的用户名/.grok/auth.json') + '</code>' + t('。Token 会保存到当前供应商，请勿上传给第三方。')

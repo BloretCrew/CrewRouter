@@ -1658,6 +1658,8 @@
   "旧版月额度": "旧版月额度",
   "重置失败: ": "重置失败: ",
   "SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化": "SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化",
+  "Command Code 使用供应商 API Key 调用 /alpha/* 接口查询 5 小时、每周与月度额度，Base URL 只取域名（官方为 https://api.commandcode.ai）；Go 套餐不含 API 权限，四个端点全部 404": "Command Code 使用供应商 API Key 调用 /alpha/* 接口查询 5 小时、每周与月度额度，Base URL 只取域名（官方为 https://api.commandcode.ai）；Go 套餐不含 API 权限，四个端点全部 404",
+  "Command Code GOAT（/alpha/* API）": "Command Code GOAT（/alpha/* API）",
   "/home/你的用户名/.grok/auth.json": "/home/你的用户名/.grok/auth.json",
   "JSON 格式错误: ": "JSON 格式错误: ",
   "绑定失败": "绑定失败",

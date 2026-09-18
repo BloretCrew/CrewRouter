@@ -131,4 +131,73 @@ const timeout = describeNetworkError(Object.assign(new Error('fetch failed'), { 
 assert.match(timeout, /chatgpt.com/);
 assert.match(timeout, /代理/);
 
+// ── Command Code GOAT ──
+const { normalizeCommandCodeUsage, subscriptionPlanInfo, originOf } = require('../utils/commandcode-usage');
+
+assert.strictEqual(subscriptionPlanInfo('individual-goat').name, 'GOAT');
+assert.strictEqual(subscriptionPlanInfo('individual-goat').monthlyCredits, 70);
+assert.strictEqual(subscriptionPlanInfo('INDIVIDUAL_PRO_V1').monthlyCredits, 80);
+assert.strictEqual(subscriptionPlanInfo('unknown-plan'), undefined);
+assert.strictEqual(originOf('https://api.commandcode.ai/provider/v1'), 'https://api.commandcode.ai');
+assert.strictEqual(originOf('not a url'), 'https://api.commandcode.ai');
+
+// GOAT 典型响应：usage/credits/subscription 三端点 + 5h/周窗口
+const goat = normalizeCommandCodeUsage({
+  usage: { totalCredits: 12.5, totalCount: 341, completedCount: 330, failedCount: 11, totalTokensIn: 1000, totalTokensOut: 2000, periodBasis: 'month' },
+  credits: {
+    credits: { monthlyCredits: 57.73, planId: 'individual-goat', freeCredits: 70, purchasedCredits: 0 },
+    windowLimits: {
+      fiveHour: { used: 5, cap: 14, exceeded: false, resetAt: 1786800000000 },
+      weekly: { used: 20, cap: 35, exceeded: false, resetAt: 1787400000000 },
+    },
+  },
+  subscription: { data: { planId: 'individual-goat', status: 'active', currentPeriodEnd: '2026-09-30T00:00:00Z' } },
+  user: { name: 'Tester', userName: 'tester' },
+});
+assert.strictEqual(goat.planName, 'GOAT');
+assert.strictEqual(goat.periods.length, 3);
+assert.strictEqual(goat.periods[0].key, '5 小时窗口');
+assert.strictEqual(goat.periods[0].percent, 5 / 14 * 100);
+assert.strictEqual(goat.periods[1].key, '每周窗口');
+assert.strictEqual(goat.periods[1].percent, 20 / 35 * 100);
+assert.strictEqual(goat.periods[2].key, 'monthly');
+// 月度上限 = 已用 12.5 + 剩余 57.73 = 70.23，与名义 70 偏差在容差内
+assert.strictEqual(goat.monthly.cap.toFixed(2), '70.23');
+assert.strictEqual(goat.monthly.capSuspect, false);
+assert.strictEqual(goat.used, goat.periods[0].percent);
+assert.strictEqual(goat.unit, 'percent');
+assert.match(goat.extra, /Plan GOAT/);
+assert.match(goat.extra, /341/);
+
+// 套餐未知时 planName 回退 planId；monthly 剩余缺失时用名义额度兜底
+const fallback = normalizeCommandCodeUsage({
+  usage: { totalCredits: 3 },
+  credits: { credits: { planId: 'individual-max' }, windowLimits: {} },
+  subscription: { data: { planId: 'individual-max' } },
+});
+assert.strictEqual(fallback.planName, 'Max');
+assert.strictEqual(fallback.periods[0].key, 'monthly');
+assert.strictEqual(fallback.periods[0].percent, 3 / 150 * 100);
+assert.strictEqual(fallback.monthly.cap, 150);
+
+// 跨账期边界：used 与 remaining 拼出的上限偏离名义额度 → capSuspect 且不给月度百分比
+const suspect = normalizeCommandCodeUsage({
+  usage: { totalCredits: 70 },
+  credits: { credits: { monthlyCredits: 70, planId: 'individual-goat' }, windowLimits: {} },
+  subscription: { data: { planId: 'individual-goat' } },
+});
+assert.strictEqual(suspect.monthly.capSuspect, true);
+assert.strictEqual(suspect.monthly.percent, null);
+
+// Go 套餐（无 API 权限）特征：全部端点 404 会在 fetch 层抛错，归一化层只处理成功响应
+const goPlan = normalizeCommandCodeUsage({
+  usage: {},
+  credits: { credits: {}, windowLimits: {} },
+  subscription: { data: { planId: 'individual-go' } },
+});
+assert.strictEqual(goPlan.planName, 'Go');
+assert.strictEqual(goPlan.periods.length, 1);
+assert.strictEqual(goPlan.periods[0].percent, 0);
+
+console.log('command code quota tests passed');
 console.log('quota usage tests passed');

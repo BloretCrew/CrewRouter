@@ -1657,6 +1657,8 @@
   "旧版月额度": "Legacy monthly quota",
   "重置失败: ": "Reset failed: ",
   "SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化": "SuperGrok queries the subscription weekly pool, on-demand quota and prepaid credits via ~/.grok/auth.json. Unofficial endpoint; fields may change.",
+  "Command Code 使用供应商 API Key 调用 /alpha/* 接口查询 5 小时、每周与月度额度，Base URL 只取域名（官方为 https://api.commandcode.ai）；Go 套餐不含 API 权限，四个端点全部 404": "Command Code queries the 5-hour, weekly and monthly windows via its /alpha/* endpoints using the provider API key. The base URL host is used (official: https://api.commandcode.ai); the Go plan has no API access — all four endpoints return 404.",
+  "Command Code GOAT（/alpha/* API）": "Command Code GOAT (/alpha/* API)",
   "/home/你的用户名/.grok/auth.json": "/home/<your-username>/.grok/auth.json",
   "JSON 格式错误: ": "Invalid JSON: ",
   "绑定失败": "Linking failed",
