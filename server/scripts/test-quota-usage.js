@@ -199,5 +199,54 @@ assert.strictEqual(goPlan.planName, 'Go');
 assert.strictEqual(goPlan.periods.length, 1);
 assert.strictEqual(goPlan.periods[0].percent, 0);
 
+// ── new-api / one-api ──
+const { normalizeNewApiUsage, rootOf, pickNumber, extractError } = require('../utils/newapi-usage');
+
+assert.strictEqual(rootOf('https://gw.example.com'), 'https://gw.example.com');
+assert.strictEqual(rootOf('https://gw.example.com/v1'), 'https://gw.example.com');
+assert.strictEqual(rootOf('https://gw.example.com/openai/v1/'), 'https://gw.example.com');
+assert.strictEqual(pickNumber('12.5'), 12.5);
+assert.strictEqual(pickNumber({ amount: '3' }), 3);
+assert.strictEqual(pickNumber('abc'), undefined);
+
+// 错误提取：new-api 报错返回 HTTP 200 + {"error":{...}}
+assert.strictEqual(extractError({ error: { message: '无效的令牌', type: 'new_api_error' } }, 200), 'HTTP 200: 无效的令牌');
+assert.strictEqual(extractError({ error: 'access denied' }, 403), 'HTTP 403: access denied');
+assert.strictEqual(extractError({}, 404), 'HTTP 404');
+assert.strictEqual(extractError({}, 200), null);
+
+// 典型响应：总额度 $57.73（subscription），已用 $12.5（usage 美分 1250）
+const na = normalizeNewApiUsage({
+  subscription: { object: 'billing_subscription', hard_limit_usd: 57.73, soft_limit_usd: 57.73, system_hard_limit_usd: 57.73, access_until: 0 },
+  usage: { object: 'list', total_usage: 1250 },
+  providerName: '我的 new-api',
+});
+assert.strictEqual(na.planName, '我的 new-api');
+assert.strictEqual(na.unit, 'balance');
+assert.strictEqual(na.total.toFixed(2), '57.73');
+assert.strictEqual(na.used.toFixed(2), '12.50');
+assert.strictEqual(na.remaining.toFixed(2), '45.23');
+assert.strictEqual(na.periods.length, 0);
+
+// usage 端点未开放（部分站点 404）：已用按 0 计，extra 提示
+const naNoUsage = normalizeNewApiUsage({
+  subscription: { hard_limit_usd: 20 },
+  usage: null,
+  providerName: 'one-api',
+});
+assert.strictEqual(naNoUsage.used, 0);
+assert.strictEqual(naNoUsage.remaining, 20);
+assert.match(naNoUsage.extra, /usage/);
+
+// 无限额度令牌（≥1 亿）与过期时间提示
+const naUnlimited = normalizeNewApiUsage({
+  subscription: { hard_limit_usd: 100000000, access_until: 1786800000 },
+  usage: { total_usage: 500000 },
+  providerName: 'unlimited',
+});
+assert.match(naUnlimited.extra, /无限额度/);
+assert.match(naUnlimited.extra, /过期/);
+
+console.log('new-api quota tests passed');
 console.log('command code quota tests passed');
 console.log('quota usage tests passed');

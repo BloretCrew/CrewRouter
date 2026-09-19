@@ -2039,7 +2039,7 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
     const finalProxyUrl = typeof proxy_url === 'string' ? proxy_url.trim() : '';
     const finalProxyUseSystem = proxy_use_system === true || proxy_use_system === 'true';
     const normalizedQuotaMode = String(quota_mode || 'script').toLowerCase();
-    const finalQuotaMode = ['opencode_go', 'codex_wham', 'grok_billing', 'ark_inference', 'ark_afp', 'commandcode'].includes(normalizedQuotaMode) ? normalizedQuotaMode : 'script';
+    const finalQuotaMode = ['opencode_go', 'codex_wham', 'grok_billing', 'ark_inference', 'ark_afp', 'commandcode', 'newapi'].includes(normalizedQuotaMode) ? normalizedQuotaMode : 'script';
     const testUaProvided = Object.prototype.hasOwnProperty.call(req.body, 'test_user_agent');
     const finalTestUserAgent = normalizeTestUserAgent(test_user_agent);
     const scheduleProvided = Object.prototype.hasOwnProperty.call(req.body, 'quota_schedule_enabled')

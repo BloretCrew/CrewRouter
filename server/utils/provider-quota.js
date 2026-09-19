@@ -8,6 +8,7 @@ const { fetchCodexUsage } = require('./codex-usage');
 const { fetchGrokUsage } = require('./grok-usage');
 const { fetchArkUsage } = require('./volcengine-ark-usage');
 const { fetchCommandCodeUsage } = require('./commandcode-usage');
+const { fetchNewApiUsage } = require('./newapi-usage');
 
 const QUOTA_SCHEDULE_INTERVALS = Object.freeze([
   { value: 600, label: '每 10 分钟' },
@@ -195,6 +196,21 @@ async function queryProviderQuotaInternal(provider) {
       };
     } catch (error) {
       Logger.warn(`[查询 Command Code 额度] ${provider.id} 失败: ${error.message}`);
+      return { ok: false, status: 502, error: error.message, provider: meta };
+    }
+  }
+
+  if (provider.quota_mode === 'newapi') {
+    try {
+      const quota = await fetchNewApiUsage(provider);
+      return {
+        ok: true,
+        status: 200,
+        provider: { ...meta, type: 'newapi' },
+        quota
+      };
+    } catch (error) {
+      Logger.warn(`[查询 new-api 额度] ${provider.id} 失败: ${error.message}`);
       return { ok: false, status: 502, error: error.message, provider: meta };
     }
   }
