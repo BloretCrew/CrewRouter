@@ -3815,6 +3815,24 @@
   flex-shrink: 0;
 }
 
+.provider-api-key-label-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.provider-api-key-label-wrap label {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin: 0;
+  font-weight: normal;
+}
+
+.provider-api-key-label-wrap input {
+  width: 96px;
+}
+
 .provider-api-keys-list.is-weight-mode .provider-api-key-weight-wrap {
   display: flex;
 }

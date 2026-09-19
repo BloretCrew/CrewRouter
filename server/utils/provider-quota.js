@@ -341,7 +341,7 @@ function maskKeyEntry(entry, index) {
   const key = entry?.key || '';
   return {
     index,
-    label: entry?.label || '',
+    label: entry?.label || `Key ${index + 1}`,
     masked_key: maskApiKey(key),
     weight: entry?.weight || 1,
     enabled: entry?.enabled !== false,

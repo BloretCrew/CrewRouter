@@ -36,6 +36,13 @@ function normalizeWeight(w) {
   return Math.min(n, 1000000);
 }
 
+/** Key 显示名称：非空字符串且不等于默认占位时保留，截断到 50 字符 */
+function normalizeKeyLabel(label, index) {
+  const text = typeof label === 'string' ? label.trim() : '';
+  if (!text) return `Key ${index + 1}`;
+  return text.slice(0, 50);
+}
+
 /**
  * 从供应商行解析 Key 列表（固定密钥模式用）
  * @param {object} provider
@@ -46,15 +53,15 @@ function normalizeProviderKeyEntries(provider) {
   const fromJson = parseApiKeysRaw(provider.api_keys);
   if (fromJson && fromJson.length > 0) {
     const entries = fromJson
-      .map((item) => {
+      .map((item, index) => {
         if (typeof item === 'string') {
           const key = decryptSecret(String(item || '').trim());
-          return key ? { key, weight: 1, enabled: true } : null;
+          return key ? { key, weight: 1, enabled: true, label: `Key ${index + 1}` } : null;
         }
         if (item && typeof item === 'object') {
           const key = decryptSecret(String(item.key || item.api_key || '').trim());
           if (!key) return null;
-          return { key, weight: normalizeWeight(item.weight), enabled: item.enabled !== false };
+          return { key, weight: normalizeWeight(item.weight), enabled: item.enabled !== false, label: normalizeKeyLabel(item.label, index) };
         }
         return null;
       })
@@ -62,7 +69,7 @@ function normalizeProviderKeyEntries(provider) {
     if (entries.length > 0) return entries;
   }
   const single = decryptSecret(String(provider.api_key || '').trim());
-  return single ? [{ key: single, weight: 1, enabled: true }] : [];
+  return single ? [{ key: single, weight: 1, enabled: true, label: 'Key 1' }] : [];
 }
 
 /**
@@ -147,15 +154,20 @@ function buildKeyAttemptOrder(provider) {
 function normalizeKeysInput(apiKeys, fallbackApiKey) {
   if (Array.isArray(apiKeys)) {
     const entries = apiKeys
-      .map((item) => {
+      .map((item, index) => {
         if (typeof item === 'string') {
           const key = decryptSecret(String(item || '').trim());
-          return key ? { key, weight: 1, enabled: true } : null;
+          return key ? { key, weight: 1, enabled: true, label: `Key ${index + 1}` } : null;
         }
         if (item && typeof item === 'object') {
           const key = decryptSecret(String(item.key || item.api_key || '').trim());
           if (!key) return null;
-          return { key, weight: normalizeWeight(item.weight), enabled: item.enabled !== false };
+          return {
+            key,
+            weight: normalizeWeight(item.weight),
+            enabled: item.enabled !== false,
+            label: normalizeKeyLabel(item.label, index)
+          };
         }
         return null;
       })
@@ -165,13 +177,13 @@ function normalizeKeysInput(apiKeys, fallbackApiKey) {
     return null;
   }
   const single = String(fallbackApiKey || '').trim();
-  if (single) return [{ key: single, weight: 1, enabled: true }];
+  if (single) return [{ key: single, weight: 1, enabled: true, label: 'Key 1' }];
   return null;
 }
 
 /**
  * 写入 DB 时：主 Key + JSON 列表
- * @param {{ key: string, weight: number, enabled?: boolean }[]} entries
+ * @param {{ key: string, weight: number, enabled?: boolean, label?: string }[]} entries
  */
 function toStorageFields(entries) {
   const list = Array.isArray(entries) ? entries.filter((e) => e && e.key) : [];
@@ -193,6 +205,7 @@ function countProviderApiKeys(provider) {
 module.exports = {
   parseApiKeysRaw,
   normalizeWeight,
+  normalizeKeyLabel,
   normalizeProviderKeyEntries,
   getPrimaryApiKey,
   getApiKeySelectMode,

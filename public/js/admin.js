@@ -3315,19 +3315,24 @@ class AdminApp {
   }
 
   /**
-   * @param {{ key?: string, weight?: number, enabled?: boolean }[]} [entries]
+   * @param {{ key?: string, weight?: number, enabled?: boolean, label?: string }[]} [entries]
    */
   renderProviderApiKeysEditor(entries) {
     const list = document.getElementById('providerApiKeysList');
     if (!list) return;
-    let items = Array.isArray(entries) ? entries.map(e => ({
+    let items = Array.isArray(entries) ? entries.map((e, i) => ({
       key: e?.key || e?.api_key || '',
       weight: e?.weight > 0 ? e.weight : 1,
-      enabled: e?.enabled !== false
+      enabled: e?.enabled !== false,
+      label: typeof e?.label === 'string' ? e.label : `Key ${i + 1}`
     })) : [];
-    if (items.length === 0) items = [{ key: '', weight: 1, enabled: true }];
+    if (items.length === 0) items = [{ key: '', weight: 1, enabled: true, label: 'Key 1' }];
     this._providerApiKeyEditorItems = items;
     this._renderProviderApiKeyRows();
+  }
+
+  _defaultKeyLabel(index) {
+    return `Key ${index + 1}`;
   }
 
   _renderProviderApiKeyRows() {
@@ -3353,6 +3358,14 @@ class AdminApp {
       return `
         <div class="provider-api-key-row${enabled ? '' : ' is-disabled'}" data-key-index="${index}" draggable="${multi && enabled ? 'true' : 'false'}">
           <span class="provider-api-key-drag" title="${multi ? t('拖动排序') : t('仅 1 个 Key 时无需排序')}" aria-hidden="true">⋮⋮</span>
+          <div class="provider-api-key-label-wrap">
+            <label>名称</label>
+            <input type="text" class="input provider-api-key-label" data-key-index="${index}"
+              value="${escapeHtml(item.label || this._defaultKeyLabel(index))}"
+              placeholder="${escapeHtml(this._defaultKeyLabel(index))}"
+              maxlength="50" autocomplete="off" spellcheck="false"
+              oninput="adminApp.onProviderApiKeyLabelInput(${index}, this.value)">
+          </div>
           <div class="provider-api-key-input-wrap">
             <input type="password" class="input provider-api-key-input" data-key-index="${index}"
               value="${escapeHtml(item.key || '')}"
@@ -3393,6 +3406,12 @@ class AdminApp {
     if (hidden && index === 0) hidden.value = value;
   }
 
+  onProviderApiKeyLabelInput(index, value) {
+    if (!this._providerApiKeyEditorItems) this._providerApiKeyEditorItems = [];
+    if (!this._providerApiKeyEditorItems[index]) this._providerApiKeyEditorItems[index] = { key: '', weight: 1 };
+    this._providerApiKeyEditorItems[index].label = value;
+  }
+
   /** 切换 API Key 输入框明文/密文显示 */
   toggleProviderApiKeyVisibility(index, btn) {
     const list = document.getElementById('providerApiKeysList');
@@ -3419,8 +3438,8 @@ class AdminApp {
   }
 
   addProviderApiKeyRow() {
-    if (!this._providerApiKeyEditorItems) this._providerApiKeyEditorItems = [{ key: '', weight: 1, enabled: true }];
-    this._providerApiKeyEditorItems.push({ key: '', weight: 1, enabled: true });
+    if (!this._providerApiKeyEditorItems) this._providerApiKeyEditorItems = [{ key: '', weight: 1, enabled: true, label: this._defaultKeyLabel(0) }];
+    this._providerApiKeyEditorItems.push({ key: '', weight: 1, enabled: true, label: this._defaultKeyLabel(this._providerApiKeyEditorItems.length) });
     this._renderProviderApiKeyRows();
   }
 
@@ -3504,21 +3523,29 @@ class AdminApp {
     rows.forEach((row, index) => {
       const keyInput = row.querySelector('.provider-api-key-input');
       const weightInput = row.querySelector('.provider-api-key-weight-wrap input');
+      const labelInput = row.querySelector('.provider-api-key-label');
       const key = (keyInput?.value || '').trim();
       const weight = parseFloat(weightInput?.value);
       if (!key) return;
       items.push({
         key,
+        label: (labelInput?.value || '').trim() || this._defaultKeyLabel(index),
         weight: Number.isFinite(weight) && weight > 0 ? weight : 1,
         enabled: !row.classList.contains('is-disabled')
       });
     });
     // 若 DOM 为空但内存有值
     if (items.length === 0 && Array.isArray(this._providerApiKeyEditorItems)) {
-      for (const e of this._providerApiKeyEditorItems) {
+      for (let i = 0; i < this._providerApiKeyEditorItems.length; i++) {
+        const e = this._providerApiKeyEditorItems[i];
         const key = String(e?.key || '').trim();
         if (!key) continue;
-        items.push({ key, weight: e.weight > 0 ? e.weight : 1, enabled: e.enabled !== false });
+        items.push({
+          key,
+          label: String(e?.label || '').trim() || this._defaultKeyLabel(i),
+          weight: e.weight > 0 ? e.weight : 1,
+          enabled: e.enabled !== false
+        });
       }
     }
     return items;
@@ -4264,7 +4291,7 @@ class AdminApp {
     const keyIntervalEl = document.getElementById('providerKeyRefreshInterval');
     if (keyIntervalEl) keyIntervalEl.value = '3600';
     this._setProviderKeySelectMode('order');
-    this.renderProviderApiKeysEditor([{ key: '', weight: 1 }]);
+    this.renderProviderApiKeysEditor([{ key: '', weight: 1, label: this._defaultKeyLabel(0) }]);
     this.toggleKeyMode();
 
     this._setProviderProxyForm({
@@ -4360,12 +4387,12 @@ class AdminApp {
     let keyEntries = Array.isArray(provider.api_keys) ? provider.api_keys : null;
     if (!keyEntries || keyEntries.length === 0) {
       if (provider.api_key) {
-        keyEntries = [{ key: provider.api_key, weight: 1 }];
+        keyEntries = [{ key: provider.api_key, weight: 1, label: 'Key 1' }];
       } else if (provider.has_api_key) {
         // 无明文时放空占位，保存时若不填则后端保留原值
-        keyEntries = [{ key: '', weight: 1 }];
+        keyEntries = [{ key: '', weight: 1, label: 'Key 1' }];
       } else {
-        keyEntries = [{ key: '', weight: 1 }];
+        keyEntries = [{ key: '', weight: 1, label: 'Key 1' }];
       }
     }
     this.renderProviderApiKeysEditor(keyEntries);
