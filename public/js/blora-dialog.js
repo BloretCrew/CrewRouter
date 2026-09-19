@@ -42,28 +42,52 @@ const Dialog = (() => {
       if (header) header.style.setProperty('display', 'none', 'important');
       if (footer) footer.style.setProperty('display', 'none', 'important');
       if (body) {
-        body.style.setProperty('display', 'block', 'important');
-        body.style.padding = '0';
-        body.style.background = 'transparent';
+        body.style.setProperty('display', 'flex', 'important');
+        body.style.setProperty('flex-direction', 'column', 'important');
+        body.style.setProperty('min-height', '0', 'important');
+        body.style.setProperty('overflow', 'hidden', 'important');
+        body.style.setProperty('padding', '0', 'important');
+        body.style.setProperty('background', 'transparent', 'important');
       }
       const panel = shadow.querySelector('.blora-dialog__panel');
       if (panel) {
-        panel.style.setProperty('display', 'block', 'important');
+        panel.style.setProperty('display', 'flex', 'important');
+        panel.style.setProperty('flex-direction', 'column', 'important');
         panel.style.maxWidth = 'none';
-        panel.style.maxHeight = '100%';
         panel.style.width = '100%';
         panel.style.background = 'transparent';
         panel.style.boxShadow = 'none';
         panel.style.borderRadius = '0';
-        panel.style.overflow = 'visible';
+        // 滚动交给内层 .modal-body（见下），面板自身保持 hidden 防止双滚动条
+        panel.style.overflow = 'hidden';
       }
 
-      const maxWidth = content.style.maxWidth;
-      const maxHeight = content.style.maxHeight;
-      if (maxWidth) dialog.style.setProperty('--blora-dialog-max-width', maxWidth);
-      if (maxHeight) {
-        const panel = shadow.querySelector('.blora-dialog__panel');
-        if (panel) panel.style.maxHeight = maxHeight;
+      // 宽度：优先用内容节点上的内联 max-width（如 style="max-width:720px"）
+      // 高度：绝不要把内容的 "100%" 回写到面板——百分比在未定高父级上会解析为 none，
+      // 面板应保留组件 CSS 的 calc(100dvh - …) 上限。
+      const contentMaxWidth = content.style.maxWidth;
+      if (contentMaxWidth && contentMaxWidth !== '100%' && contentMaxWidth !== 'none') {
+        dialog.style.setProperty('--blora-dialog-max-width', contentMaxWidth);
+      }
+
+      // 旧版内容自带 header/body/footer。高度链路：
+      // 面板（组件 CSS max-height + flex 列）→ shadow body（flex:1, min-height:0）
+      // → .modal-content（flex:1）→ .modal-body（overflow-y:auto）滚动。
+      if (body) {
+        body.style.setProperty('flex', '1 1 auto', 'important');
+      }
+      content.style.display = 'flex';
+      content.style.flexDirection = 'column';
+      content.style.minHeight = '0';
+      content.style.maxHeight = '100%';
+      content.style.overflow = 'hidden';
+      content.style.flex = '1 1 auto';
+      const innerBody = content.querySelector('.modal-body');
+      if (innerBody) {
+        innerBody.style.setProperty('flex', '1 1 auto', 'important');
+        innerBody.style.setProperty('min-height', '0', 'important');
+        innerBody.style.setProperty('overflow-y', 'auto', 'important');
+        innerBody.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
       }
     };
 
