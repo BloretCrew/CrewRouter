@@ -66,7 +66,7 @@ router.put('/teams/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `更新 Team #${req.params.id}`,
 }), async (req, res) => {
-  const { name, description, is_default, is_frontier } = req.body;
+  const { name, description, is_default, is_frontier, hide_provider_quota } = req.body;
   try {
     // 如果设置为默认 Team，先取消其他默认
     if (is_default === true) {
@@ -79,9 +79,10 @@ router.put('/teams/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
         description = COALESCE($2, description),
         is_default = COALESCE($3, is_default),
         is_frontier = COALESCE($4, is_frontier),
+        hide_provider_quota = COALESCE($5, hide_provider_quota),
         updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5 RETURNING *`,
-      [name, description, is_default !== undefined ? is_default : null, is_frontier !== undefined ? is_frontier : null, req.params.id]
+       WHERE id = $6 RETURNING *`,
+      [name, description, is_default !== undefined ? is_default : null, is_frontier !== undefined ? is_frontier : null, hide_provider_quota !== undefined ? hide_provider_quota : null, req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Team 不存在' });

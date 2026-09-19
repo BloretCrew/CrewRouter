@@ -3420,6 +3420,10 @@ router.get('/providers/quota', requireAuth, async (req, res) => {
       JOIN team_models tm ON tm.model_id = m.id
       JOIN user_teams ut ON ut.team_id = tm.team_id
       WHERE ut.user_id = $1 AND p.quota_enabled = TRUE AND p.enabled = TRUE
+        AND NOT EXISTS (
+          SELECT 1 FROM teams ht
+          WHERE ht.id = ut.team_id AND ht.hide_provider_quota = TRUE
+        )
       ORDER BY p.name
     `, [userId]);
 
@@ -3468,6 +3472,10 @@ router.post('/providers/quota/refresh', requireAuth, async (req, res) => {
       JOIN team_models tm ON tm.model_id = m.id
       JOIN user_teams ut ON ut.team_id = tm.team_id
       WHERE ut.user_id = $1 AND p.quota_enabled = TRUE AND p.enabled = TRUE
+        AND NOT EXISTS (
+          SELECT 1 FROM teams ht
+          WHERE ht.id = ut.team_id AND ht.hide_provider_quota = TRUE
+        )
       ORDER BY p.name
     `, [userId]);
 

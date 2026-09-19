@@ -2707,5 +2707,7 @@
   "个 Key 可用": "keys available",
   "逐 Key 额度": "Per-key quota",
   "个 Key": "keys",
-  "Key": "Key"
+  "Key": "Key",
+  "隐藏供应商额度（本 Team 成员在模型库不显示供应商额度区块）": "Hide provider quota (members of this team will not see the provider quota section in the model library)",
+  "启用后，有权限的用户可在模型库页面查看该供应商的剩余额度；Team 设置可按 Team 隐藏": "When enabled, authorized users can view this provider’s remaining quota in the model library; team settings can hide it per team"
 }

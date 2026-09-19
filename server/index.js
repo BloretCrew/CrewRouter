@@ -1056,6 +1056,16 @@ async function ensureTeamsTables() {
       Logger.info('[迁移] 已为 teams 表添加 is_frontier 字段');
     }
 
+    // 为 teams 添加 hide_provider_quota 字段（本 Team 成员不可见供应商额度）
+    const hideProviderQuotaCol = await pool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'teams' AND column_name = 'hide_provider_quota'
+    `);
+    if (hideProviderQuotaCol.rows.length === 0) {
+      await pool.query(`ALTER TABLE teams ADD COLUMN hide_provider_quota BOOLEAN DEFAULT FALSE`);
+      Logger.info('[迁移] 已为 teams 表添加 hide_provider_quota 字段');
+    }
+
     // 为 users 添加 team_id 字段（保留兼容）
     const teamIdCol = await pool.query(`
       SELECT column_name FROM information_schema.columns

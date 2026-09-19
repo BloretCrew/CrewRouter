@@ -11195,6 +11195,12 @@ async function(ctx) {
               <span>设为默认 Team（新用户自动加入）</span>
             </label>
           </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="editTeamHideQuotaInput" ${team.hide_provider_quota ? 'checked' : ''}>
+              <span>${t('隐藏供应商额度（本 Team 成员在模型库不显示供应商额度区块）')}</span>
+            </label>
+          </div>
         </div>
       `;
       const modal = Dialog.showModal({
@@ -11206,12 +11212,13 @@ async function(ctx) {
         const name = document.getElementById('editTeamNameInput').value.trim();
         const description = document.getElementById('editTeamDescInput').value.trim();
         const is_default = document.getElementById('editTeamDefaultInput').checked;
+        const hide_provider_quota = document.getElementById('editTeamHideQuotaInput').checked;
         if (!name) { alert(t('名称不能为空')); return; }
         try {
           await fetch(`/api/admin/teams/${teamId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, description, is_default })
+            body: JSON.stringify({ name, description, is_default, hide_provider_quota })
           });
           modal.close();
           this.loadTeams();
