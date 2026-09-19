@@ -660,7 +660,7 @@
   "活跃项目": "Active projects",
   "个工作区": "workspaces",
   "活跃天数": "Active days",
-  "天": "days",
+  "天": "Days",
   "AI 请求": "AI requests",
   "次调用": "calls",
   "总投入": "Total invested",
@@ -1241,7 +1241,6 @@
   "立即压缩（dry-run）": "Run compression (dry-run)",
   "立即清除（dry-run）": "Run purge (dry-run)",
   "压缩和删除按时长或表大小任一条件触发；输入 0 表示禁用该条件，删除阈值为 0 表示永不删除。": "Compression and deletion trigger when either the age or table-size threshold is met; enter 0 to disable a condition, and 0 for deletion means never delete.",
-  "天": "Days",
   "GB": "GB",
   "数据保留配置必须是非负整数": "Retention values must be non-negative integers",
   "压缩天数必须小于删除天数": "Compression days must be less than deletion days",
@@ -2599,7 +2598,6 @@
   "工具结果": "Tool result",
   "加载更多": "Load more",
   "加载更多（向上翻更早）": "Load earlier messages",
-  "加载中...": "Loading...",
   "已到最早消息": "Reached earliest message",
   "跳到该会话": "Jump to session",
   "事件通知": "Event Notifications",
@@ -2705,5 +2703,9 @@
   "条命中": "hits",
   "命中请求数": "Matched requests",
   "新模型自动加入前沿 Team": "Automatically add new models to Frontier teams",
-  "默认开启。新建、导入、同步或批量启用的模型会自动补充到前沿 Team；关闭不会删除已有 Team/模型映射。": "On by default. Newly created, imported, synchronized, or batch-enabled models are added to Frontier teams. Turning it off does not remove existing team/model mappings."
+  "默认开启。新建、导入、同步或批量启用的模型会自动补充到前沿 Team；关闭不会删除已有 Team/模型映射。": "On by default. Newly created, imported, synchronized, or batch-enabled models are added to Frontier teams. Turning it off does not remove existing team/model mappings.",
+  "个 Key 可用": "keys available",
+  "逐 Key 额度": "Per-key quota",
+  "个 Key": "keys",
+  "Key": "Key"
 }

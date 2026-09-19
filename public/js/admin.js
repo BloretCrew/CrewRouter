@@ -5570,20 +5570,26 @@ async function(ctx) {
         return;
       }
 
-      const q = data.quota;
-      const total = parseFloat(q.total) || 0;
-      const pct = total > 0 ? Math.round((parseFloat(q.used) || 0) / total * 100) : 0;
+      const q = data.quota || {};
+      const agg = data.aggregated || null;
+      const keys = Array.isArray(data.keys) ? data.keys : [];
+      const shown = agg || q;
+      const total = parseFloat(shown.total) || 0;
+      const pct = total > 0 ? Math.round((parseFloat(shown.used) || 0) / total * 100) : 0;
 
       let barColor = 'var(--brand-blue)';
       if (pct >= 90) barColor = 'var(--destructive)';
       else if (pct >= 70) barColor = 'var(--warning)';
 
+      const keysInline = keys.length > 1 ? `<div style="font-size:10px;color:var(--muted-foreground);margin-top:2px;" title="${escapeHtml(keys.map(k => `${k.masked_key || ('#' + (k.index + 1))}: ${k.ok ? t('成功') : (k.error || t('失败'))}`).join('\n'))}">${keys.filter(k => k.ok).length}/${keys.length} ${t('个 Key 可用')}</div>` : '';
+
       const html = `
-        <div style="font-size:13px;font-weight:600;">${escapeHtml(String(q.remaining ?? ''))}</div>
+        <div style="font-size:13px;font-weight:600;">${escapeHtml(String(shown.remaining ?? ''))}</div>
         <div style="height:3px;background:var(--border);border-radius:2px;margin:3px 0;width:80px;">
           <div style="height:100%;width:${Math.min(pct, 100)}%;background:${barColor};border-radius:2px;"></div>
         </div>
-        <div style="font-size:10px;color:var(--muted-foreground);">${escapeHtml(q.extra || q.planName || '')}</div>
+        <div style="font-size:10px;color:var(--muted-foreground);">${escapeHtml(shown.extra || shown.planName || '')}</div>
+        ${keysInline}
       `;
       els.forEach(el => setHTML(el, html));
     } catch (e) {
@@ -6145,20 +6151,22 @@ async function(ctx) {
       }
 
       // 显示结果
-      const q = data.quota;
+      const q = data.quota || {};
+      const keys = Array.isArray(data.keys) ? data.keys : [];
+      const agg = data.aggregated || null;
       const isGrok = q.providerType === 'grok' || q.planName?.toLowerCase().includes('grok');
-      const currentPercent = Number(q.currentPercent ?? q.periods?.find(period => period.key === 'current_period')?.percent);
+      const currentPercent = Number((agg || q).currentPercent ?? (agg || q).periods?.find(period => period.key === 'current_period')?.percent);
       const hasCurrentPercent = isGrok && Number.isFinite(currentPercent);
-      const total = parseFloat(q.total) || 0;
-      const used = parseFloat(q.used) || 0;
-      const remaining = parseFloat(q.remaining) || 0;
+      const total = parseFloat((agg || q).total) || 0;
+      const used = parseFloat((agg || q).used) || 0;
+      const remaining = parseFloat((agg || q).remaining) || 0;
       const pct = hasCurrentPercent
         ? Math.round(currentPercent)
         : (total > 0 ? Math.round(used / total * 100) : 0);
 
       document.getElementById('quotaProviderName').textContent = data.provider.name;
       document.getElementById('quotaPlanName').textContent = q.planName || data.provider.name;
-      const periods = Array.isArray(q.periods) ? q.periods : [];
+      const periods = Array.isArray((agg || q).periods) ? (agg || q).periods : [];
       const credits = q.credits || {};
       const resetCredits = q.rateLimitResetCredits?.available_count;
       const detailParts = periods.map(period => `${period.label || period.key}: ${period.percent}%${period.resetsAt ? `${t('，重置于')} ${period.resetsAt}` : ''}${period.resetAfterSeconds > 0 ? `${t('（约')} ${Math.ceil(period.resetAfterSeconds / 3600)} ${t('小时后）')}` : ''}`);
@@ -6166,13 +6174,14 @@ async function(ctx) {
         detailParts.push(`Credits: ${credits.unlimited ? t('无限') : credits.balance ?? '0'}`);
       }
       if (resetCredits !== undefined) detailParts.push(`${t('可手动重置:')}${resetCredits}${t('次')}`);
-      document.getElementById('quotaExtra').textContent = detailParts.length ? detailParts.join(' | ') : (q.extra || '');
+      document.getElementById('quotaExtra').textContent = detailParts.length ? detailParts.join(' | ') : ((agg || q).extra || '');
 
       this.renderGrokQuotaDetails(q, isGrok);
+      this.renderPerKeyQuotaDetails(keys);
 
-      document.getElementById('quotaTotal').textContent = q.total;
-      document.getElementById('quotaUsed').textContent = q.used;
-      document.getElementById('quotaRemaining').textContent = q.remaining;
+      document.getElementById('quotaTotal').textContent = (agg || q).total;
+      document.getElementById('quotaUsed').textContent = (agg || q).used;
+      document.getElementById('quotaRemaining').textContent = (agg || q).remaining;
 
       const bar = document.getElementById('quotaBar');
       bar.style.width = `${Math.min(pct, 100)}%`;
@@ -6214,6 +6223,50 @@ async function(ctx) {
         setHTML(quotaButton, previousQuotaButtonHtml || t('查询额度'));
       }
     }
+  }
+
+  /** 逐 Key 额度明细：仅多 Key 供应商显示 */
+  renderPerKeyQuotaDetails(keys) {
+    const container = document.getElementById('quotaKeysDetails');
+    if (!container) return;
+    if (!Array.isArray(keys) || keys.length <= 1) {
+      container.style.display = 'none';
+      setHTML(container, '');
+      return;
+    }
+    const rows = keys.map(key => {
+      const keyLabel = key.label || key.masked_key || `#${key.index + 1}`;
+      if (!key.ok) {
+        return `
+          <div style="padding:10px 12px;background:var(--muted);border-radius:8px;">
+            <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;">
+              <code style="font-size:12px;">${escapeHtml(keyLabel)}</code>
+              <span style="color:var(--destructive);font-size:12px;" title="${escapeHtml(key.error || '')}">${t('查询失败')}</span>
+            </div>
+            ${key.error ? `<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);word-break:break-all;">${escapeHtml(key.error)}</div>` : ''}
+          </div>`;
+      }
+      const kq = key.quota || {};
+      const kTotal = parseFloat(kq.total) || 0;
+      const kUsed = parseFloat(kq.used) || 0;
+      const kPct = kTotal > 0 ? Math.min(100, Math.round(kUsed / kTotal * 100)) : 0;
+      const kCurrent = Number(kq.currentPercent ?? kPct);
+      const shownPct = Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct));
+      const barColor = shownPct >= 90 ? 'var(--destructive)' : shownPct >= 70 ? 'var(--warning)' : 'var(--brand-blue)';
+      return `
+        <div style="padding:10px 12px;background:var(--muted);border-radius:8px;">
+          <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;">
+            <code style="font-size:12px;">${escapeHtml(keyLabel)}</code>
+            <span>${shownPct}%</span>
+          </div>
+          <div style="height:5px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:8px;">
+            <div style="height:100%;width:${shownPct}%;background:${barColor};border-radius:4px;"></div>
+          </div>
+          ${kTotal > 0 ? `<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">${t('剩余')} ${escapeHtml(String(kq.remaining ?? 0))} / ${escapeHtml(String(kTotal))}${kq.extra ? ` · ${escapeHtml(kq.extra)}` : ''}</div>` : (kq.extra ? `<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">${escapeHtml(kq.extra)}</div>` : '')}
+        </div>`;
+    }).join('');
+    container.style.display = 'block';
+    setHTML(container, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('逐 Key 额度')}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;">${rows}</div>`);
   }
 
   renderGrokQuotaDetails(q, isGrok) {

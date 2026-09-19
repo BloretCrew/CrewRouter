@@ -3,7 +3,7 @@
 const Logger = require('../logger');
 const { pool } = require('../models/database');
 const { validateUrl } = require('./url-validator');
-const { getPrimaryApiKey } = require('./provider-keys');
+const { getPrimaryApiKey, normalizeProviderKeyEntries } = require('./provider-keys');
 const { fetchCodexUsage } = require('./codex-usage');
 const { fetchGrokUsage } = require('./grok-usage');
 const { fetchArkUsage } = require('./volcengine-ark-usage');
@@ -27,6 +27,7 @@ const SCHEDULER_TICK_MS = 60 * 1000;
 let schedulerTimer = null;
 let schedulerRunning = false;
 const quotaInFlight = new Map();
+const perKeyQuotaInFlight = new Map();
 
 function normalizeQuotaScheduleInterval(value) {
   const n = parseInt(value, 10);
@@ -326,6 +327,112 @@ async function queryProviderQuota(provider) {
   }
 }
 
+// 按 Key 独立计费的上游模式：多 Key 供应商应逐 Key 查询额度
+const PER_KEY_QUOTA_MODES = new Set(['script', 'opencode_go', 'commandcode', 'newapi']);
+
+/** Key 脱敏展示：前 6 位 + **** + 后 4 位，不足 10 位全部掩码 */
+function maskApiKey(key) {
+  const text = String(key || '');
+  if (text.length < 10) return '****';
+  return `${text.slice(0, 6)}****${text.slice(-4)}`;
+}
+
+function maskKeyEntry(entry, index) {
+  const key = entry?.key || '';
+  return {
+    index,
+    label: entry?.label || '',
+    masked_key: maskApiKey(key),
+    weight: entry?.weight || 1,
+    enabled: entry?.enabled !== false,
+  };
+}
+
+/**
+ * 多 Key 供应商逐 Key 查询额度：
+ * - 每个 Key 用独立 provider 克隆（api_key/api_keys 仅含该 Key）走同一查询链路
+ * - 结果数组顺序与 Key 列表一致；单 Key 失败不影响其他 Key
+ * - balance 单位的结果做聚合汇总（percent 单位无聚合意义，置空顶层）
+ * @returns {{ ok: boolean, status: number, keys: Array, aggregated: object|null, provider: object }}
+ */
+async function queryProviderQuotaPerKey(provider) {
+  const providerId = provider?.id;
+  if (!providerId) return queryProviderQuotaPerKeyInternal(provider);
+  const current = perKeyQuotaInFlight.get(providerId);
+  if (current) return current;
+  const promise = queryProviderQuotaPerKeyInternal(provider);
+  perKeyQuotaInFlight.set(providerId, promise);
+  try {
+    return await promise;
+  } finally {
+    if (perKeyQuotaInFlight.get(providerId) === promise) perKeyQuotaInFlight.delete(providerId);
+  }
+}
+
+async function queryProviderQuotaPerKeyInternal(provider) {
+  const meta = { id: provider.id, name: provider.name };
+  const entries = normalizeProviderKeyEntries(provider).filter((e) => e.enabled !== false);
+  if (entries.length <= 1) {
+    const result = await queryProviderQuota(provider);
+    const single = result.ok && result.quota ? [{ ...maskKeyEntry(entries[0] || { key: getPrimaryApiKey(provider) }, 0), ok: true, quota: result.quota }] : [];
+    return {
+      ...result,
+      keys: single,
+      keyCount: Math.max(entries.length, 1),
+      aggregated: result.ok && result.quota?.unit === 'balance' ? result.quota : null,
+    };
+  }
+
+  // 各 Key 用独立克隆并发查询；必须绕过 queryProviderQuota 的 providerId
+  // 在途去重——同一 provider 的不同 Key 克隆应各自请求上游
+  const keyResults = await Promise.all(entries.map(async (entry, index) => {
+    const singleKeyProvider = {
+      ...provider,
+      api_key: entry.key,
+      api_keys: [{ key: entry.key, weight: entry.weight || 1, enabled: true }],
+    };
+    try {
+      const result = await queryProviderQuotaInternal(singleKeyProvider);
+      if (result.ok) {
+        return { ...maskKeyEntry(entry, index), ok: true, quota: result.quota };
+      }
+      return { ...maskKeyEntry(entry, index), ok: false, error: result.error || '查询失败' };
+    } catch (err) {
+      return { ...maskKeyEntry(entry, index), ok: false, error: err.message || '查询失败' };
+    }
+  }));
+
+  const balanceResults = keyResults.filter((r) => r.ok && r.quota?.unit === 'balance'
+    && Number.isFinite(Number(r.quota.total)) && Number(r.quota.total) > 0);
+  let aggregated = null;
+  if (balanceResults.length > 0) {
+    const sum = (field) => balanceResults.reduce((s, r) => s + (Number(r.quota[field]) || 0), 0);
+    const total = sum('total');
+    const used = sum('used');
+    aggregated = {
+      planName: provider.name,
+      unit: 'balance',
+      total,
+      used,
+      remaining: sum('remaining'),
+      periods: [],
+      extra: `共 ${balanceResults.length} 个 Key 有效`,
+    };
+    if (total > 0) aggregated.currentPercent = Math.round(used / total * 100);
+  }
+
+  const anyOk = keyResults.some((r) => r.ok);
+  return {
+    ok: anyOk,
+    status: anyOk ? 200 : 502,
+    error: anyOk ? undefined : keyResults.find((r) => r.error)?.error,
+    provider: meta,
+    keys: keyResults,
+    keyCount: entries.length,
+    aggregated,
+  };
+}
+
 async function saveQuotaSnapshot(providerId, result) {
   if (!providerId) return;
   try {
@@ -339,13 +446,42 @@ async function saveQuotaSnapshot(providerId, result) {
       [
         providerId,
         !!result.ok,
-        result.ok ? JSON.stringify(result.quota || {}) : null,
+        result.ok ? JSON.stringify(serializeQuotaResult(result)) : null,
         result.ok ? null : String(result.error || '查询失败').slice(0, 1000)
       ]
     );
   } catch (err) {
     Logger.warn(`[额度快照] 保存失败 ${providerId}: ${err.message}`);
   }
+}
+
+/** 快照序列化：保留顶层 quota 与逐 Key 明细（keys 仅含脱敏标识与额度/错误） */
+function serializeQuotaResult(result) {
+  const quota = result.quota || {};
+  const payload = {
+    planName: quota.planName || '',
+    unit: quota.unit || 'balance',
+    total: quota.total ?? 0,
+    used: quota.used ?? 0,
+    remaining: quota.remaining ?? 0,
+    periods: Array.isArray(quota.periods) ? quota.periods : [],
+    extra: quota.extra || ''
+  };
+  if (quota.currentPercent !== undefined) payload.currentPercent = quota.currentPercent;
+  if (quota.providerType) payload.providerType = quota.providerType;
+  if (Array.isArray(result.keys)) {
+    payload.keys = result.keys.map((entry) => ({
+      index: entry.index,
+      masked_key: entry.masked_key,
+      label: entry.label || '',
+      enabled: entry.enabled !== false,
+      ok: !!entry.ok,
+      error: entry.ok ? undefined : String(entry.error || '查询失败').slice(0, 500),
+      quota: entry.ok ? entry.quota : undefined
+    }));
+  }
+  if (result.aggregated) payload.aggregated = result.aggregated;
+  return payload;
 }
 
 async function runDueQuotaSchedules() {
@@ -367,7 +503,7 @@ async function runDueQuotaSchedules() {
 
     for (const provider of due.rows) {
       try {
-        const result = await queryProviderQuota(provider);
+        const result = await queryProviderQuotaPerKey(provider);
         await saveQuotaSnapshot(provider.id, result);
         if (!result.ok) {
           Logger.warn(`[额度定时查询] ${provider.name}(${provider.id}) 失败: ${result.error}`);
@@ -404,7 +540,9 @@ module.exports = {
   normalizeQuotaScheduleInterval,
   generateDefaultQuotaScript,
   queryProviderQuota,
+  queryProviderQuotaPerKey,
   saveQuotaSnapshot,
   runDueQuotaSchedules,
-  startQuotaScheduler
+  startQuotaScheduler,
+  maskApiKey
 };

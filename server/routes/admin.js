@@ -45,6 +45,7 @@ const retentionRunner = require('../utils/retention-runner');
 const {
   generateDefaultQuotaScript,
   queryProviderQuota,
+  queryProviderQuotaPerKey,
   saveQuotaSnapshot,
   normalizeQuotaScheduleInterval
 } = require('../utils/provider-quota');
@@ -2931,7 +2932,7 @@ router.get('/providers/:id/check-quota', requireAuth, requireAdmin, async (req, 
       return res.status(404).json({ error: '供应商不存在' });
     }
     const provider = providerResult.rows[0];
-    const result = await queryProviderQuota(provider);
+    const result = await queryProviderQuotaPerKey(provider);
     await saveQuotaSnapshot(provider.id, result);
     if (!result.ok) {
       return res.status(result.status || 502).json({
@@ -2942,7 +2943,10 @@ router.get('/providers/:id/check-quota', requireAuth, requireAdmin, async (req, 
     res.json({
       success: true,
       provider: result.provider,
-      quota: result.quota
+      quota: result.quota,
+      keys: result.keys || [],
+      keyCount: result.keyCount || 1,
+      aggregated: result.aggregated || null
     });
   } catch (error) {
     Logger.error('[查询供应商额度] 错误:', error);

@@ -3405,6 +3405,10 @@ router.get('/models/:id/info', requireAuth, async (req, res) => {
 
 // 获取用户可访问的供应商额度（按 Team 关联过滤，仅返回 quota_enabled 的供应商）
 // 只读上次刷新（定时自动刷新 / 手动刷新）保存的缓存，不实时调用上游。
+function safeParseQuotaSnapshot(text) {
+  try { return JSON.parse(text); } catch { return null; }
+}
+
 router.get('/providers/quota', requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
@@ -3422,10 +3426,15 @@ router.get('/providers/quota', requireAuth, async (req, res) => {
     const results = [];
     for (const provider of providersResult.rows) {
       if (provider.quota_last_ok && provider.quota_last_result) {
+        const snapshot = typeof provider.quota_last_result === 'string'
+          ? safeParseQuotaSnapshot(provider.quota_last_result)
+          : provider.quota_last_result;
         results.push({
           id: provider.id,
           name: provider.name,
-          quota: provider.quota_last_result,
+          quota: snapshot,
+          keys: Array.isArray(snapshot?.keys) ? snapshot.keys : [],
+          aggregated: snapshot?.aggregated || null,
           cached: true,
           checked_at: provider.quota_last_checked_at
         });
@@ -3465,13 +3474,16 @@ router.post('/providers/quota/refresh', requireAuth, async (req, res) => {
     const results = [];
     for (const provider of providersResult.rows) {
       try {
-        const result = await queryProviderQuota(provider);
+        const result = await queryProviderQuotaPerKey(provider);
         await saveQuotaSnapshot(provider.id, result);
         if (result.ok) {
           results.push({
             id: provider.id,
             name: provider.name,
             quota: result.quota,
+            keys: result.keys || [],
+            keyCount: result.keyCount || 1,
+            aggregated: result.aggregated || null,
             cached: false,
             checked_at: new Date()
           });
@@ -3502,7 +3514,7 @@ router.post('/providers/quota/refresh', requireAuth, async (req, res) => {
   }
 });
 
-const { queryProviderQuota, saveQuotaSnapshot } = require('../utils/provider-quota');
+const { queryProviderQuota, queryProviderQuotaPerKey, saveQuotaSnapshot } = require('../utils/provider-quota');
 
 // 获取当前选择的模型
 router.get('/current-model', requireAuth, async (req, res) => {

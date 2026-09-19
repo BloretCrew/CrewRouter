@@ -10678,7 +10678,9 @@ ${extractorBody}
           </article>`;
       }
 
-      const q = p.quota;
+      const q = p.quota || {};
+      const keyEntries = Array.isArray(p.keys) ? p.keys.filter(k => k && (k.ok || k.error)) : [];
+      const agg = p.aggregated || q.aggregated || null;
       const total = parseFloat(q.total) || 0;
       const used = parseFloat(q.used) || 0;
       const periods = Array.isArray(q.periods) ? q.periods : [];
@@ -10723,18 +10725,52 @@ ${extractorBody}
           ${progressBar(pct, t('额度'))}
         </div>`;
 
+      // 多 Key 供应商：逐 Key 分块展示；balance 单位优先用服务端聚合值
+      const keysHtml = keyEntries.length > 1 ? `
+        <div class="model-quota-keys">
+          ${keyEntries.map(key => {
+            const kq = key.quota || {};
+            const kTotal = parseFloat(kq.total) || 0;
+            const kUsed = parseFloat(kq.used) || 0;
+            const kPct = kTotal > 0 ? Math.min(100, Math.round(kUsed / kTotal * 100)) : 0;
+            const keyLabel = key.label || key.masked_key || `${t('Key')} ${key.index + 1}`;
+            if (!key.ok) {
+              return `
+                <div class="model-quota-key" style="opacity:0.75;">
+                  <div class="model-quota-period-header">
+                    <span><code style="font-size:11px;">${escapeHtml(keyLabel)}</code></span>
+                    <span class="blora-badge" data-variant="danger">${t('查询失败')}</span>
+                  </div>
+                  ${key.error ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;" title="${escapeHtml(key.error)}">${escapeHtml(key.error.length > 60 ? key.error.slice(0, 60) + '…' : key.error)}</div>` : ''}
+                </div>`;
+            }
+            const kCurrent = Number(kq.currentPercent ?? kPct);
+            return `
+              <div class="model-quota-key">
+                <div class="model-quota-period-header">
+                  <span><code style="font-size:11px;">${escapeHtml(keyLabel)}</code></span>
+                  ${usageBadge(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct)))}
+                </div>
+                ${progressBar(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct)), keyLabel)}
+                ${kTotal > 0 ? `<div style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(String(kq.remaining ?? 0))} / ${escapeHtml(String(kTotal))}</div>` : ''}
+              </div>`;
+          }).join('')}
+        </div>` : '';
+
       return `
         <article class="blora-card model-quota-card" data-variant="flat">
           <div class="model-quota-header">
             <span class="model-quota-name">${escapeHtml(p.name)}</span>
             ${q.planName ? `<span class="blora-tag model-quota-plan" data-variant="neutral">${escapeHtml(q.planName)}</span>` : ''}
+            ${keyEntries.length > 1 ? `<span class="blora-tag model-quota-plan" data-variant="neutral">${t('共')} ${keyEntries.length} ${t('个 Key')}</span>` : ''}
           </div>
           ${periods.length ? periodHtml : `
           <div class="model-quota-numbers">
-            <span class="model-quota-remaining">${escapeHtml(String(q.remaining ?? 0))}</span>
-            <span class="model-quota-total">/ ${escapeHtml(String(q.total ?? 0))}</span>
+            <span class="model-quota-remaining">${escapeHtml(String((agg || q).remaining ?? 0))}</span>
+            <span class="model-quota-total">/ ${escapeHtml(String((agg || q).total ?? 0))}</span>
           </div>
           ${periodHtml}`}
+          ${keysHtml}
           ${creditsHtml}
           ${p.checked_at ? `${'<div class="model-quota-updated">' + t('更新于')}${escapeHtml(this._formatQuotaCheckedAt(p.checked_at))}</div>` : ''}
         </article>`;
