@@ -92,3 +92,10 @@
 ### 输出
 
 完成时报告：真实 commit、允许文件清单、build/两个脚本实际输出、临时端口/数据库与截图路径、Read 对截图的 `PASS/OLD RENDER/STALE` 判定；未验证或阻塞项必须明确写出。遇到 Grok 网关 429/520/ECONNRESET/usage limit，停止本轮，不要自己实现，也不要密集重试。
+
+### 当前续派状态（2026-09-21，改用 Grok Build CLI）
+- 已确认当前 HEAD 为 `f93f026 chore: 完成会话详情视觉验收`，此前 `7e151c7 fix: 完善会话详情标题与缓存刷新`；任务书记录的会话详情/时间线阶段已由先前执行器提交，但本轮必须由 Grok 重新检查真实 diff、验证证据和当前工作树，不能信任提交标题。
+- 当前工作树有大量明确禁止纳入本轮提交的 Desktop、`server/index.js`、`public/css/settings-blora.css`、`review-desktop*.md`、`blora-design/` 等并行改动；绝不 reset/stash/清理/切换分支，也不要覆盖它们。
+- 本轮使用 Grok Build CLI 执行。先检查 `git status --short`、`git diff --stat`、`git log --oneline -8`，再审查 `f93f026`/`7e151c7` 的实际改动范围；若会话详情/时间线已满足任务书且已有真实视觉与静态验证证据，则不要重复实现，进入下一独立 console 区块前先把缺口和允许文件范围写清楚。
+- 如需继续实现，只推进一个独立区块，并严格遵守一区块一 commit、build + 双验证 + 隔离临时环境 `:21003` 实际浏览器路径 + 截图 Read 判定；禁止使用生产页面/生产数据，禁止碰任务书红线文件或并行 `app.js` 改动，禁止 push。
+- Grok 输出必须包含真实 commit、改动文件、build/`test-request-source.js`/`test-usage-accuracy.js` 实际结果、临时 URL/数据库、截图路径和 Read 的 `PASS`/`OLD RENDER`/`STALE`；若网关 429/520/ECONNRESET/usage limit，立即停止并报告，不重试。
