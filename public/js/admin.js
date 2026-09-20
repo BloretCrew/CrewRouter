@@ -939,8 +939,20 @@ class AdminApp {
           `).join('')}
         </tbody>
       </table>
-      ${totalPages > 1 ? this._renderPagination('user', this.userPage, totalPages, total) : ''}
+      ${totalPages > 1 ? this._renderUserPagination(this.userPage, totalPages, total) : ''}
     `);
+    const pager = document.getElementById('usersPagination');
+    if (pager && !pager.dataset.bound) {
+      pager.dataset.bound = '1';
+      pager.addEventListener('blora-change', (event) => {
+        const next = Number(event.detail?.page);
+        if (Number.isFinite(next) && next >= 1 && next !== this.userPage + 1) this.userPageGo(next - 1);
+      });
+    }
+  }
+
+  _renderUserPagination(currentPage, totalPages, totalItems) {
+    return `<div class="admin-pagination" aria-label="${t('用户列表分页')}"><blora-pagination id="usersPagination" label="${t('用户列表分页')}" page="${currentPage + 1}" total="${totalPages}" variant="simple"></blora-pagination><span class="admin-pagination-summary">${t('共')} ${totalItems} ${t('项')}</span></div>`;
   }
 
   userPageGo(page) {
