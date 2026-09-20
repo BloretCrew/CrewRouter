@@ -5389,7 +5389,12 @@ class ConsoleApp {
     this._probeSessionSummaryCache(this._detailSessionKey);
     const listWrap = document.getElementById('sessionsListWrap');
     const detailWrap = document.getElementById('sessionDetailWrap');
+    const detailTitle = document.getElementById('sessionDetailTitle');
     if (!listWrap || !detailWrap) return;
+    if (detailTitle) {
+      detailTitle.textContent = t('会话详情');
+      detailTitle.title = this._detailSessionKey;
+    }
     listWrap.style.display = 'none';
     detailWrap.style.display = '';
     setHTML(document.getElementById('sessionTimeline'), '');
