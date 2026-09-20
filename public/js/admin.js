@@ -732,7 +732,7 @@ class AdminApp {
         setHTML(statsContainer, `
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon blue">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="person.2">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${totalUsers}</span>
@@ -741,7 +741,7 @@ class AdminApp {
           </div>
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon purple">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <img src="https://img.bloret.net/SF/shield?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="shield">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${adminCount}</span>
@@ -750,7 +750,7 @@ class AdminApp {
           </div>
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon green">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <img src="https://img.bloret.net/SF/checkmark.seal?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="checkmark.seal">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${verifiedCount}</span>
@@ -759,7 +759,7 @@ class AdminApp {
           </div>
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon amber">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <img src="https://img.bloret.net/SF/plus.circle?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="plus.circle">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${Number(totalBalance).toFixed(0)}</span>
@@ -931,11 +931,8 @@ class AdminApp {
               <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
               <td style="color:var(--muted-foreground);font-size:12px;">${new Date(user.created_at).toLocaleDateString('zh-CN')}</td>
               <td>
-                <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editUserById(${user.id})" data-variant="secondary" data-size="icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
+                <button class="blora-button" title="${t('编辑')}" aria-label="${t('编辑')}" onclick="adminApp.editUserById(${user.id})" data-variant="secondary" data-size="icon">
+                  <img src="https://img.bloret.net/SF/pencil?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="pencil">
                 </button>
               </td>
             </tr>
