@@ -356,6 +356,8 @@ class ConsoleApp {
 
     // Avatar upload
     document.getElementById('avatarFileInput')?.addEventListener('change', (e) => this.uploadAvatar(e));
+    document.getElementById('pluginPrefOptin')?.addEventListener('change', (e) => this.togglePluginPrefOptin(e.target.checked));
+    document.getElementById('hookNotifyPushEnabled')?.addEventListener('change', (e) => this.toggleHookNotifyPush(e.target.checked));
 
     // Change password
     document.getElementById('changePasswordBtn')?.addEventListener('click', () => this.changePassword());

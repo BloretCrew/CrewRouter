@@ -1727,13 +1727,13 @@ data: [DONE]</code></pre>
           <div style="padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
               <div><label style="margin:0;"><span data-i18n="启用 Bark 通知">启用 Bark 通知</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="Bark 是 iOS 推送工具，请填写 Server Key。">Bark 是 iOS 推送工具，请填写 Server Key。</span></small></div>
-              <label class="pg-toggle"><input type="checkbox" id="barkEnabled"><span class="pg-toggle-slider"></span></label>
+              <blora-switch id="barkEnabled" aria-label="启用 Bark 通知" data-i18n-aria-label="启用 Bark 通知"></blora-switch>
             </div>
             <div class="form-group"><label for="barkServerKey">Bark Server Key</label><input id="barkServerKey" class="blora-input input" type="password" placeholder="请输入 Bark Server Key" data-i18n-placeholder="请输入 Bark Server Key" autocomplete="off" form="notificationSettingsForm"></div>
             <div class="form-group"><label for="barkEndpoint"><span data-i18n="Bark 服务地址">Bark 服务地址</span></label><input id="barkEndpoint" class="blora-input input" value="https://api.day.app" placeholder="https://api.day.app"><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="使用自建 Bark 服务时可修改。">使用自建 Bark 服务时可修改。</span></small></div>
             <div style="display:flex;gap:20px;flex-wrap:wrap;margin:12px 0 16px;">
-              <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="notifyQuota"><span data-i18n="额度不足通知"> 额度不足通知</span></label>
-              <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="notifyErrors"><span data-i18n="请求异常通知"> 请求异常通知</span></label>
+              <label style="display:flex;align-items:center;gap:8px;"><blora-checkbox id="notifyQuota" aria-label="额度不足通知" data-i18n-aria-label="额度不足通知"></blora-checkbox><span data-i18n="额度不足通知">额度不足通知</span></label>
+              <label style="display:flex;align-items:center;gap:8px;"><blora-checkbox id="notifyErrors" aria-label="请求异常通知" data-i18n-aria-label="请求异常通知"></blora-checkbox><span data-i18n="请求异常通知">请求异常通知</span></label>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><button type="button" class="blora-button" onclick="app.saveNotificationSettings()" data-variant="primary"><span data-i18n="保存通知设置">保存通知设置</span></button><button type="button" class="blora-button" onclick="app.testBarkNotification()" data-variant="secondary"><span data-i18n="发送测试通知">发送测试通知</span></button><span id="notificationSettingsStatus" style="font-size:13px;"></span></div>
           </div>
@@ -1750,7 +1750,7 @@ data: [DONE]</code></pre>
           <div style="padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0;">
               <div><label style="margin:0;"><span data-i18n="允许插件读取我的偏好">允许插件读取我的偏好</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="开启后，声明 preferences:read 权限的插件可通过接口读取你的界面偏好；关闭后立即失效。">开启后，声明 preferences:read 权限的插件可通过接口读取你的界面偏好；关闭后立即失效。</span></small></div>
-              <label class="pg-toggle"><input type="checkbox" id="pluginPrefOptin" onchange="app.togglePluginPrefOptin(this.checked)"><span class="pg-toggle-slider"></span></label>
+              <blora-switch id="pluginPrefOptin" aria-label="允许插件读取我的偏好" data-i18n-aria-label="允许插件读取我的偏好"></blora-switch>
             </div>
             <span id="pluginPrefOptinStatus" style="display:block;margin-top:8px;font-size:13px;"></span>
           </div>
@@ -1777,7 +1777,7 @@ data: [DONE]</code></pre>
           <div style="padding:20px;border:1px solid var(--border);border-radius:12px;">
             <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0;">
               <div><label style="margin:0;"><span data-i18n="启用事件推送">启用事件推送</span></label><small style="display:block;color:var(--muted-foreground);margin-top:4px;"><span data-i18n="总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。">总开关关闭时不推送任何事件；Bark 推送还需在上方开启并配置 Server Key。</span></small></div>
-              <label class="pg-toggle"><input type="checkbox" id="hookNotifyPushEnabled" onchange="app.toggleHookNotifyPush(this.checked)"><span class="pg-toggle-slider"></span></label>
+              <blora-switch id="hookNotifyPushEnabled" aria-label="启用事件推送" data-i18n-aria-label="启用事件推送"></blora-switch>
             </div>
             <button type="button" class="blora-button" style="margin-top:12px;" onclick="app.showHookNotifySelection()" data-variant="secondary"><span data-i18n="选择要推送的事件">选择要推送的事件</span></button>
           </div>
@@ -1880,10 +1880,7 @@ data: [DONE]</code></pre>
                 <h3 style="margin:0;font-size:16px;"><span data-i18n="AI 回复签名">AI 回复签名</span></h3>
                 <p style="margin:4px 0 0;font-size:13px;color:var(--muted-foreground);"><span data-i18n="开启后，API 回复底部自动添加模型、Token、缓存、限额等信息">开启后，API 回复底部自动添加模型、Token、缓存、限额等信息</span></p>
               </div>
-              <label class="pg-toggle">
-                <input type="checkbox" id="apiSignatureToggle">
-                <span class="pg-toggle-slider"></span>
-              </label>
+              <blora-switch id="apiSignatureToggle" aria-label="启用 AI 回复签名" data-i18n-aria-label="启用 AI 回复签名"></blora-switch>
             </div>
 
             <div id="signatureTemplateGroup">
@@ -2655,7 +2652,7 @@ data: [DONE]</code></pre>
   <script src="/js/session-tool-groups.js?v=2"></script>
   <script src="/js/vendor/marked.min.js"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/app.js?v=60"></script>
+  <script src="/js/app.js?v=61"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航
