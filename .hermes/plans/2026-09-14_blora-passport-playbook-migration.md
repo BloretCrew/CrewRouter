@@ -84,6 +84,11 @@
 
 继续下一个单独区块：会话详情/时间线。先读现状和相关 API，按一区块一 commit 实现；同样 build + 双验证 + 实际临时环境截图 + Read 读图，完成一个区块就停手，不要顺带改 console.html 后续其他区块。
 
+### 第二阶段验收结果（2026-09-21）
+第一阶段实际结果：Grok 在临时环境 `http://127.0.0.1:21003/pages/console.html#sessions` 完成真实浏览器路径验收，截图 `/tmp/crewrouter-vnc-sessions-pass.png`，Read 判定 `PASS`。截图确认标题“会话”、默认筛选“最近 7 天”和“全部客户端”、无裁切/白屏/登录页/加载失败。`npm run build`、`node server/scripts/test-request-source.js`、`node server/scripts/test-usage-accuracy.js`、相关 node --check 均通过。会话区块无需修复，没有新增代码或 commit。`scripts/test-blora-public-batch-c.js` 仍有与本轮无关的旧模型库断言失败，不得借此改模型库。
+
+现在只推进下一个独立区块：会话详情/时间线。先检查当前工作树、最近提交和会话详情现状/API；不得 reset、stash、清理、切换分支或覆盖并行未提交改动。只允许修改会话详情/时间线相关文件，禁止顺带改 console.html 后续其他区块。按一区块一 commit 实现：使用现有 Blora 控件与 SF 图标，完成后运行 `npm run build`、`node server/scripts/test-request-source.js`、`node server/scripts/test-usage-accuracy.js`，在隔离临时环境（优先 :21003，临时数据库/夹具，不碰生产）按真实用户路径打开详情/时间线并截图，使用 Read 实际读图并输出 `PASS`/`OLD RENDER`/`STALE`。截图和静态验证都通过后，只提交本区块允许文件；提交前审查 `git diff --cached`，不要纳入 CrewRouter-Desktop、server/index.js、review-desktop*.md、public/css/settings-blora.css、blora-design/ 或并行 app.js 改动。禁止 push。完成本区块后停手并报告真实 commit、改动文件、命令输出、临时 URL/截图路径和 Read 判定；若网关 429/520/ECONNRESET/usage limit，停止并如实报告。禁用继续其他区块。
+
 ### 输出
 
 完成时报告：真实 commit、允许文件清单、build/两个脚本实际输出、临时端口/数据库与截图路径、Read 对截图的 `PASS/OLD RENDER/STALE` 判定；未验证或阻塞项必须明确写出。遇到 Grok 网关 429/520/ECONNRESET/usage limit，停止本轮，不要自己实现，也不要密集重试。
