@@ -10270,7 +10270,7 @@ async function(ctx) {
       setHTML(statsContainer, `
         <div class="admin-stat-card">
           <div class="admin-stat-card-icon blue">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="person.2">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${all.length}</span>
@@ -10279,7 +10279,7 @@ async function(ctx) {
         </div>
         <div class="admin-stat-card">
           <div class="admin-stat-card-icon amber">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <img src="https://img.bloret.net/SF/star.fill?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="star.fill">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${defaultCount}</span>
@@ -10288,7 +10288,7 @@ async function(ctx) {
         </div>
         <div class="admin-stat-card">
           <div class="admin-stat-card-icon purple">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <img src="https://img.bloret.net/SF/bolt.fill?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="bolt.fill">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${frontierCount}</span>
@@ -10297,7 +10297,7 @@ async function(ctx) {
         </div>
         <div class="admin-stat-card">
           <div class="admin-stat-card-icon green">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            <img src="https://img.bloret.net/SF/person.2.badge.plus?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="person.2.badge.plus">
           </div>
           <div class="admin-stat-card-info">
             <span class="admin-stat-card-value">${totalMembers}</span>
@@ -10336,7 +10336,7 @@ async function(ctx) {
         <p class="team-description">${escapeHtml(team.description || t('暂无描述'))}</p>
         <div class="team-card-footer">
           <span class="text-muted">${new Date(team.created_at).toLocaleDateString()}</span>
-          <button class="blora-button" onclick="adminApp.showTeamDetail(${team.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="blora-button" onclick="adminApp.showTeamDetail(${team.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><img src="https://img.bloret.net/SF/chevron.right?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="chevron.right"></button>
         </div>
       </div>
     `;
@@ -10350,7 +10350,7 @@ async function(ctx) {
         <button type="button" class="section-header" style="width:100%;border:0;background:transparent;padding:16px;cursor:pointer;text-align:left;"
           onclick="adminApp.togglePersonalTeams()" aria-expanded="${(!personalCollapsed).toString()}">
           <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-            <svg class="collapse-icon" style="transition:transform .2s;transform:rotate(${personalCollapsed ? '-90deg' : '0deg'});" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            <img class="collapse-icon sf-icon" style="transition:transform .2s;transform:rotate(${personalCollapsed ? '-90deg' : '0deg'});" src="https://img.bloret.net/SF/chevron.down?color=white" alt="" width="16" height="16" data-sf-name="chevron.down">
             个人 Team
             <span class="blora-badge" data-variant="neutral">${personalTeams.length}</span>
           </h3>

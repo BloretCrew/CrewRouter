@@ -215,7 +215,7 @@
           <div class="model-library-sticky-inner">
             <span class="page-sticky-title"><span data-i18n="Team 管理">Team 管理</span></span>
             <div class="model-search-box model-library-sticky-search">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <img src="https://img.bloret.net/SF/magnifyingglass?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="magnifyingglass">
               <input type="text" id="adminTeamsStickySearch" class="model-search-input" placeholder="搜索 Team 名称或描述..." data-i18n-placeholder="搜索 Team 名称或描述..." autocomplete="off" oninput="adminApp.onAdminTeamFilterInput(this.value, 'sticky')">
             </div>
             <span id="adminTeamsStickyCount" class="filter-info"></span>
@@ -228,7 +228,7 @@
           <div class="model-library-sticky-inner">
             <span class="page-sticky-title"><span data-i18n="模型权限">模型权限</span></span>
             <div class="model-search-box model-library-sticky-search">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <img src="https://img.bloret.net/SF/magnifyingglass?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="magnifyingglass">
               <input type="text" id="adminTeamModelsStickySearch" class="model-search-input" placeholder="搜索模型名称、上游 ID、系列或供应商..." data-i18n-placeholder="搜索模型名称、上游 ID、系列或供应商..." autocomplete="off" oninput="adminApp.onAdminTeamModelFilterInput('search', this.value, 'sticky')">
             </div>
             <blora-select id="adminTeamModelsStickyProvider" class="select model-library-sticky-select" aria-label="供应商筛选" data-i18n-title="供应商筛选" onchange="adminApp.onAdminTeamModelFilterInput('provider', this.value, 'sticky')">
@@ -251,7 +251,7 @@
           <div id="teamStatsCards" class="admin-stat-cards"></div>
           <div class="admin-page-header">
             <div class="section-actions">
-              <button type="button" id="createTeamBtn" class="blora-button" data-variant="secondary" data-size="sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建 Team">创建 Team</span></button>
+              <button type="button" id="createTeamBtn" class="blora-button" data-variant="secondary" data-size="sm"><img src="https://img.bloret.net/SF/plus.circle?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="plus"><span data-i18n="创建 Team">创建 Team</span></button>
             </div>
           </div>
           <div class="admin-filter-bar" id="adminTeamsFilters">
@@ -281,7 +281,7 @@
           <div class="content-section team-detail-section collapsed" id="teamMembersSection" data-team-section="members">
             <div class="section-header team-detail-section-header" role="button" tabindex="0" aria-expanded="false" aria-controls="teamMembersSectionBody" onclick="adminApp.toggleTeamDetailSection('members')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();adminApp.toggleTeamDetailSection('members');}">
               <h3 class="team-detail-section-title">
-                <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                <img class="collapse-icon sf-icon" src="https://img.bloret.net/SF/chevron.down?color=white" alt="" width="16" height="16" data-sf-name="chevron.down">
                 <span><span data-i18n="成员管理">成员管理</span></span>
               </h3>
               <button type="button" id="addTeamMemberBtn" class="blora-button" onclick="event.stopPropagation();" title="添加成员" data-i18n-title="添加成员" data-variant="primary" data-size="sm"><span data-i18n="添加成员">添加成员</span></button>
@@ -300,7 +300,7 @@
           <div class="content-section team-detail-section" id="teamModelsSection" data-team-section="models">
             <div class="section-header team-detail-section-header" role="button" tabindex="0" aria-expanded="true" aria-controls="teamModelsSectionBody" onclick="adminApp.toggleTeamDetailSection('models')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();adminApp.toggleTeamDetailSection('models');}">
               <h3 class="team-detail-section-title">
-                <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                <img class="collapse-icon sf-icon" src="https://img.bloret.net/SF/chevron.down?color=white" alt="" width="16" height="16" data-sf-name="chevron.down">
                 <span><span data-i18n="模型权限">模型权限</span></span>
               </h3>
               <div class="section-actions team-detail-section-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;" onclick="event.stopPropagation();">
@@ -315,7 +315,7 @@
               <p style="font-size:13px;color:var(--muted-foreground);margin:0 0 12px;"><span data-i18n="展示模型管理中已启用的全部模型；对本 Team 启用后，成员方可在模型库中使用。前沿 Team 会在系统加入新模型时自动启用。">展示模型管理中已启用的全部模型；对本 Team 启用后，成员方可在模型库中使用。前沿 Team 会在系统加入新模型时自动启用。</span></p>
               <div class="admin-filter-bar model-filter-bar" id="teamModelFilters" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
                 <div class="model-search-box" style="flex:1;min-width:200px;">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <img src="https://img.bloret.net/SF/magnifyingglass?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="magnifyingglass">
                   <input type="text" id="teamModelListSearchInput" class="model-search-input" placeholder="搜索模型名称、上游 ID、系列或供应商..." data-i18n-placeholder="搜索模型名称、上游 ID、系列或供应商..." oninput="adminApp.onAdminTeamModelFilterInput('search', this.value, 'main')">
                 </div>
                 <blora-select id="teamModelProviderFilter" class="select" onchange="adminApp.onAdminTeamModelFilterInput('provider', this.value, 'main')">

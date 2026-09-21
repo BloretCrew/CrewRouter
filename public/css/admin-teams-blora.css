@@ -4,6 +4,27 @@
   --teams-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
 }
 
+.blora-admin-teams-page .sf-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.blora-admin-teams-page .admin-stat-card-icon .sf-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.blora-admin-teams-page .section-actions .sf-icon,
+.blora-admin-teams-page .team-card-footer .sf-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.blora-admin-teams-page .collapse-icon {
+  transition: transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
 .blora-admin-teams-page .content-section {
   border: var(--teams-border);
   border-radius: var(--blora-radius-xl);
