@@ -9,6 +9,7 @@ const { fetchGrokUsage } = require('./grok-usage');
 const { fetchArkUsage } = require('./volcengine-ark-usage');
 const { fetchCommandCodeUsage } = require('./commandcode-usage');
 const { fetchNewApiUsage } = require('./newapi-usage');
+const { fetchCursorUsage } = require('./cursor-usage');
 
 const QUOTA_SCHEDULE_INTERVALS = Object.freeze([
   { value: 600, label: '每 10 分钟' },
@@ -216,6 +217,22 @@ async function queryProviderQuotaInternal(provider) {
     }
   }
 
+  if (provider.quota_mode === 'cursor') {
+    try {
+      const quota = await fetchCursorUsage(provider);
+      const primaryPercent = quota.periods?.[0]?.percent ?? 0;
+      return {
+        ok: true,
+        status: 200,
+        provider: { ...meta, type: 'cursor' },
+        quota: { ...quota, providerType: 'cursor', currentPercent: primaryPercent }
+      };
+    } catch (error) {
+      Logger.warn(`[查询 Cursor 额度] ${provider.id} 失败: ${error.message}`);
+      return { ok: false, status: 502, error: error.message, provider: meta };
+    }
+  }
+
   const baseUrl = provider.base_url?.replace(/\/+$/, '');
   const apiKey = getPrimaryApiKey(provider);
   if (!baseUrl) return { ok: false, status: 400, error: '供应商未配置 Base URL', provider: meta };
@@ -328,7 +345,7 @@ async function queryProviderQuota(provider) {
 }
 
 // 按 Key 独立计费的上游模式：多 Key 供应商应逐 Key 查询额度
-const PER_KEY_QUOTA_MODES = new Set(['script', 'opencode_go', 'commandcode', 'newapi']);
+const PER_KEY_QUOTA_MODES = new Set(['script', 'opencode_go', 'commandcode', 'newapi', 'cursor']);
 
 /** Key 脱敏展示：前 6 位 + **** + 后 4 位，不足 10 位全部掩码 */
 function maskApiKey(key) {

@@ -247,6 +247,39 @@ const naUnlimited = normalizeNewApiUsage({
 assert.match(naUnlimited.extra, /无限额度/);
 assert.match(naUnlimited.extra, /过期/);
 
+// ── Cursor Pro ──
+const { normalizeCursorUsage, hasPlanUsage, centsToUsd, jwtExpSec, sumAggregatedCents } = require('../utils/cursor-usage');
+
+assert.strictEqual(centsToUsd('1250'), 12.5);
+assert.strictEqual(hasPlanUsage({ planUsage: { totalSpend: 125 } }), true);
+assert.strictEqual(hasPlanUsage({}), false);
+assert.strictEqual(sumAggregatedCents({ aggregations: [{ totalCents: 20 }, { totalCents: '30.5' }] }), 50.5);
+assert.strictEqual(sumAggregatedCents({}), 0);
+assert.strictEqual(jwtExpSec('invalid'), 0);
+const cursorQuota = normalizeCursorUsage({
+  period: {
+    billingCycleEnd: '1784958141000',
+    planUsage: { totalSpend: 1250, includedSpend: 1000, remaining: 6000, limit: 7000, autoPercentUsed: 10, apiPercentUsed: 4, totalPercentUsed: 14 },
+  },
+  plan: { planInfo: { planName: 'Pro+', includedAmountCents: 7000 } },
+});
+assert.strictEqual(cursorQuota.planName, 'Pro+');
+assert.strictEqual(cursorQuota.total, 70);
+assert.strictEqual(cursorQuota.used, 10);
+assert.strictEqual(cursorQuota.remaining, 60);
+assert.deepStrictEqual(cursorQuota.periods.map(p => p.key), ['auto', 'api']);
+const cursorFallback = normalizeCursorUsage({
+  period: {},
+  plan: { planInfo: { planName: 'Pro', includedAmountCents: 2000 } },
+  aggregated: { aggregations: [{ totalCents: 350 }] },
+  hardLimit: { noUsageBasedAllowed: true, hardLimit: 50 },
+});
+assert.strictEqual(cursorFallback.total, 20);
+assert.strictEqual(cursorFallback.used, 3.5);
+assert.strictEqual(cursorFallback.remaining, 16.5);
+assert.match(cursorFallback.extra, /On-Demand 已关闭/);
+
+console.log('Cursor quota tests passed');
 console.log('new-api quota tests passed');
 console.log('command code quota tests passed');
 console.log('quota usage tests passed');

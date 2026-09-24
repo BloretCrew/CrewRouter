@@ -1660,6 +1660,8 @@
   "Command Code GOAT（/alpha/* API）": "Command Code GOAT (/alpha/* API)",
   "new-api / one-api 站点（/dashboard/billing）": "new-api / one-api site (/dashboard/billing)",
   "new-api / one-api 系站点使用令牌 Key 调用 /dashboard/billing/subscription 与 /usage 合并计算总额度与已用，Base URL 只取域名": "new-api / one-api sites query total and used quota by calling /dashboard/billing/subscription and /usage with the token key. The base URL host is used.",
+  "Cursor Pro（api2 DashboardService）": "Cursor Pro (api2 DashboardService)",
+  "Cursor Pro 使用 User API Key（crsr_）兑换 accessToken，再查 api2.cursor.sh 的 GetCurrentPeriodUsage。套餐字段缺失时改用按模型花费汇总。接口非公开，与聊天 Base URL 无关": "Cursor Pro exchanges a user API key (crsr_) for an access token, then reads GetCurrentPeriodUsage on api2.cursor.sh. If plan usage is missing, spend is summed from per-model events. The API is unofficial and ignores the chat base URL.",
   "/home/你的用户名/.grok/auth.json": "/home/<your-username>/.grok/auth.json",
   "JSON 格式错误: ": "Invalid JSON: ",
   "绑定失败": "Linking failed",
