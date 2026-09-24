@@ -7514,12 +7514,14 @@ class ConsoleApp {
         desc = t('将以下内容写入') + ' <code>~/.codex/config.toml</code>' + t('，然后重启 Codex CLI');
         content = `# ~/.codex/config.toml
 model = "claude-fable-5"
-provider = "custom"
+model_provider = "custom"
 
-[providers.custom]
-base_url = "${baseUrl}"
+[model_providers.custom]
+name = "CrewRouter"
+base_url = "${baseUrl}/v1"
 api_key = "${apiKey}"
-wire_api = "openai"`;
+wire_api = "responses"
+requires_openai_auth = false`;
       } else if (tool === 'opencode') {
         title = t('OpenCode 配置');
         desc = t('将以下 JSON 写入项目根目录的') + ' <code>opencode.json</code> ' + t('中');
