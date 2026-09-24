@@ -37,6 +37,13 @@ assert.strictEqual(team.adminStats, true);
   };
   csrfProtection(req, { status(code) { assert.strictEqual(code, 403); return this; }, json(body) { assert.strictEqual(body.type, 'csrf_failed'); } }, () => { nextCalled = true; });
   assert.strictEqual(nextCalled, false);
+
+  req.headers['x-api-key'] = 'cr_test_key';
+  csrfProtection(req, { status() { throw new Error('API key request should bypass CSRF'); }, json() {} }, () => { nextCalled = true; });
+  assert.strictEqual(nextCalled, true);
+  nextCalled = false;
+  delete req.headers['x-api-key'];
+
   req.headers.origin = 'https://example.test';
   req.app.locals.csrfAllowedOrigins = ['https://example.test'];
   csrfProtection(req, { status() { return this; }, json() {} }, () => { nextCalled = true; });
