@@ -473,6 +473,8 @@
 }
 
 @media (max-width: 640px) {
+  .blora-page .sidebar { width: 260px; }
+  .blora-page .sidebar.open { width: 260px; }
   .blora-page .main-content { margin-left: 0; padding: calc(4.25rem + var(--blora-space-3)) var(--blora-space-3) var(--blora-space-5); }
   .blora-page .content-header { align-items: flex-start; margin-bottom: var(--blora-space-4); }
   .blora-page .content-header h1 { font-size: var(--blora-text-xl); }
