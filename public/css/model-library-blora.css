@@ -104,21 +104,6 @@
   min-width: 12rem;
 }
 
-.blora-model-library .model-filter-bar > .model-filter-selects {
-  flex: 1 1 17rem;
-  min-width: 0;
-}
-
-.blora-model-library .model-filter-selects blora-select {
-  flex: 1 1 12rem;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.blora-model-library .model-filter-selects .blora-button {
-  flex: 0 0 auto;
-}
-
 .blora-model-library blora-select {
   min-width: 9rem;
 }
@@ -423,6 +408,31 @@
   background: color-mix(in srgb, var(--blora-color-status-warning) 10%, var(--blora-color-surface-raised));
 }
 
+@media (max-width: 834px) {
+  .blora-model-library #modelLibraryFilters {
+    flex-direction: column;
+    align-items: stretch;
+    align-content: stretch;
+  }
+
+  .blora-model-library #modelLibraryFilters > blora-search {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .blora-model-library #modelLibraryFilters > .model-filter-selects {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+  .blora-model-library #modelLibraryFilters > .model-filter-selects blora-select {
+    flex: 1 1 12rem;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 640px) {
   .blora-model-library .model-library-header,
   .blora-model-library .model-filter-bar,
@@ -440,10 +450,6 @@
   .blora-model-library .model-library-header-actions,
   .blora-model-library .model-filter-selects {
     width: 100%;
-  }
-
-  .blora-model-library .model-filter-bar > .model-filter-selects {
-    flex: 1 1 100%;
   }
 
   .blora-model-library .model-library-header-actions .blora-button,
