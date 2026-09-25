@@ -23,7 +23,7 @@
   <script src="/js/blora-dialog.js?v=5"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css?v=25">
-  <link rel="stylesheet" href="/css/model-library-blora.css?v=6">
+  <link rel="stylesheet" href="/css/model-library-blora.css?v=7">
   <link rel="stylesheet" href="/css/console-blora.css?v=3">
   <link rel="stylesheet" href="/css/badges-blora.css?v=1">
   <link rel="stylesheet" href="/css/progress-blora.css?v=1">
@@ -324,7 +324,7 @@
               <h3><span data-i18n="供应商额度">供应商额度</span></h3>
               <p><span data-i18n="显示上次刷新（定时 / 手动）的结果">显示上次刷新（定时 / 手动）的结果</span></p>
             </div>
-            <button type="button" id="providerQuotaRefreshBtn" class="blora-button model-quota-refresh" data-variant="ghost" data-size="icon" onclick="app.refreshProviderQuota()" title="刷新额度" data-i18n-title="刷新额度" aria-label="刷新额度"><img src="https://img.bloret.net/SF/arrow.clockwise?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.clockwise"></button>
+            <button type="button" id="providerQuotaRefreshBtn" class="blora-button model-quota-refresh" data-variant="ghost" data-size="icon" onclick="app.refreshProviderQuota()" title="刷新额度" data-i18n-title="刷新额度" aria-label="刷新额度"><img src="https://img.bloret.net/SF/arrow.clockwise?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.clockwise"><span class="loading-spinner sm" aria-hidden="true"></span></button>
           </div>
           <div id="providerQuotaGrid" data-blora-state="idle" class="model-quota-grid"></div>
         </div>
@@ -2652,7 +2652,7 @@ data: [DONE]</code></pre>
   <script src="/js/session-tool-groups.js?v=2"></script>
   <script src="/js/vendor/marked.min.js"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/app.js?v=62"></script>
+  <script src="/js/app.js?v=63"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

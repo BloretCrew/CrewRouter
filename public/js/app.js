@@ -10568,7 +10568,7 @@ ${extractorBody}
   _setQuotaRefreshLoading(loading) {
     const button = document.getElementById('providerQuotaRefreshBtn');
     if (!button) return;
-    button.toggleAttribute('data-loading', loading);
+    button.classList.toggle('is-loading', loading);
     if (loading) button.setAttribute('aria-busy', 'true');
     else button.removeAttribute('aria-busy');
     button.disabled = loading;

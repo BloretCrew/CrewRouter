@@ -124,7 +124,9 @@
 .blora-model-library .sf-icon { display: inline-block; flex: none; vertical-align: middle; }
 .blora-model-library .collapse-icon { transition: transform var(--blora-duration-base) var(--blora-easing-standard); }
 .blora-model-library .model-star-heading-icon { opacity: .85; }
-.blora-model-library .model-quota-refresh[data-loading] .sf-icon { animation: model-quota-spin 0.8s linear infinite; }
+.blora-model-library .model-quota-refresh .loading-spinner { display: none; }
+.blora-model-library .model-quota-refresh.is-loading .sf-icon { display: none; }
+.blora-model-library .model-quota-refresh.is-loading .loading-spinner { display: block; }
 .blora-model-library .binding-arrow { display: inline-flex; align-items: center; color: var(--blora-color-text-subtle); }
 .blora-model-library .library-drag-handle .sf-icon { opacity: .7; }
 
