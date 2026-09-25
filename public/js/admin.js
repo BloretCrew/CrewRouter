@@ -6757,6 +6757,9 @@ async function(ctx) {
     const seq = (this._statsLoadSeq = (this._statsLoadSeq || 0) + 1);
     try {
       const days = document.getElementById('adminStatsDays')?.value || '30';
+      if (document.getElementById('statsTabMulti')?.style.display === 'block') {
+        window.CrewRouterMultiDimension?.load('admin');
+      }
       const response = await fetch(`/api/admin/stats?days=${encodeURIComponent(days)}`);
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -6973,6 +6976,7 @@ async function(ctx) {
 
     if (tab === 'multi') {
       this.loadMultiStats();
+      window.CrewRouterMultiDimension?.load('admin');
     }
     if (tab === 'messages') {
       this.loadMessageStats();

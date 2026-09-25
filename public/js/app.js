@@ -3710,6 +3710,9 @@ class ConsoleApp {
       customRange.style.display = 'none';
       await this._fetchStats(`days=${range}${filterParams ? '&' + filterParams : ''}`);
     }
+    if (document.getElementById('statsTabMulti')?.style.display === 'block') {
+      window.CrewRouterMultiDimension?.load('user');
+    }
   }
 
   async _loadStatsFilters() {

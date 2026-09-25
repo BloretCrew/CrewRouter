@@ -1,6 +1,6 @@
 (function () {
   const dimensions = {
-    user: '成员', team: 'Team', project: '项目', source: '客户端', model: '模型', provider: '供应商'
+    user: '成员', team: 'Team', project: '项目', source: '客户端', model: '模型', provider: '供应商', key: '密钥'
   };
   const metrics = { requests: '请求数', tokens: 'Token', cost: '积分' };
   const instances = new Map();
@@ -46,6 +46,9 @@
     const seq = Number(root.dataset.requestSeq || 0) + 1;
     root.dataset.requestSeq = seq;
     if (!chosen.length) {
+      instances.get(targetId)?.destroy();
+      instances.delete(targetId);
+      document.getElementById(targetId).replaceChildren();
       status.textContent = '请至少选择一个维度';
       return;
     }
@@ -56,8 +59,18 @@
         days: scope === 'admin' ? (document.getElementById('adminStatsDays')?.value || '30') : (document.getElementById('statsTimeRange')?.value || '30')
       });
       if (scope === 'user' && params.get('days') === 'custom') {
-        status.textContent = '多维分析支持最近 7 至 365 天，请选择时间范围';
-        return;
+        const start = document.getElementById('statsStartDate')?.value;
+        const end = document.getElementById('statsEndDate')?.value;
+        if (!start || !end) {
+          instances.get(targetId)?.destroy();
+          instances.delete(targetId);
+          document.getElementById(targetId).replaceChildren();
+          status.textContent = '请选择自定义时间范围';
+          return;
+        }
+        params.delete('days');
+        params.set('start', start);
+        params.set('end', end);
       }
       const response = await fetch(`/api/${scope}/stats/multi-dimension?${params}`);
       const data = await response.json();
@@ -70,5 +83,18 @@
     }
   }
 
-  window.CrewRouterMultiDimension = { load };
+  function init() {
+    for (const scope of ['admin', 'user']) {
+      const root = document.getElementById(`${scope}MultiDimension`);
+      if (!root || root.dataset.autoLoadBound) continue;
+      root.dataset.autoLoadBound = 'true';
+      root.addEventListener('change', event => {
+        if (event.target.matches('input[name="dimension"], [name="metric"]')) load(scope);
+      });
+    }
+  }
+
+  window.CrewRouterMultiDimension = { load, init };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();

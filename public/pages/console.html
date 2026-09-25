@@ -870,13 +870,13 @@
             <section id="userMultiDimension" class="multi-dimension-panel" aria-label="自选多维分析">
               <h4>自选维度分析</h4>
               <div class="multi-dimension-choices" role="group" aria-label="分析维度">
-                <label><input type="checkbox" name="dimension" value="team">Team</label>
+                <label><input type="checkbox" name="dimension" value="key">密钥</label>
                 <label><input type="checkbox" name="dimension" value="project">项目</label>
                 <label><input type="checkbox" name="dimension" value="source">客户端</label>
                 <label><input type="checkbox" name="dimension" value="model" checked>模型</label>
                 <label><input type="checkbox" name="dimension" value="provider">供应商</label>
               </div>
-              <div class="multi-dimension-actions"><label>统计指标 <select name="metric" class="select"><option value="requests">请求数</option><option value="tokens">Token</option><option value="cost">积分</option></select></label><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="CrewRouterMultiDimension.load('user')">生成图表</button><span class="multi-dimension-status" role="status"></span></div>
+              <div class="multi-dimension-actions"><label>统计指标 <select name="metric" class="select"><option value="requests">请求数</option><option value="tokens">Token</option><option value="cost">积分</option></select></label><span class="multi-dimension-status" role="status"></span></div>
               <div id="userMultiDimensionResult"></div>
             </section>
           </div>
@@ -2669,8 +2669,8 @@ data: [DONE]</code></pre>
   <script src="/js/session-tool-groups.js?v=2"></script>
   <script src="/js/vendor/marked.min.js"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/multi-dimension-chart.js?v=1"></script>
-  <script src="/js/app.js?v=64"></script>
+  <script src="/js/multi-dimension-chart.js?v=2"></script>
+  <script src="/js/app.js?v=65"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航
