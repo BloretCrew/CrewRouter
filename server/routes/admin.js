@@ -1009,6 +1009,19 @@ router.post('/models/batch-adjust-by-reference', requireAuth, requireAdmin, asyn
   }
 });
 
+router.get('/stats/multi-dimension', requireAuth, requireAdmin, requireTeamAdminEdition, async (req, res) => {
+  try {
+    const { queryMultiDimensionStats } = require('../utils/multi-dimension-stats');
+    res.json(await queryMultiDimensionStats(pool, req.query, 'admin'));
+  } catch (error) {
+    if (error.message.startsWith('请选择') || error.message.startsWith('无效') || error.message.startsWith('时间范围')) {
+      return res.status(400).json({ error: error.message });
+    }
+    Logger.error('[管理多维分析] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // 多维统计筛选选项
 router.get('/stats/multi/filters', requireAuth, requireAdmin, async (req, res) => {
   try {

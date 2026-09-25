@@ -1311,6 +1311,19 @@ router.get('/usage', requireAuth, async (req, res) => {
 });
 
 // 获取用户详细统计数据（支持时间段筛选）
+router.get('/stats/multi-dimension', requireAuth, async (req, res) => {
+  try {
+    const { queryMultiDimensionStats } = require('../utils/multi-dimension-stats');
+    res.json(await queryMultiDimensionStats(pool, req.query, 'user', req.session.user.id));
+  } catch (error) {
+    if (error.message.startsWith('请选择') || error.message.startsWith('无效') || error.message.startsWith('时间范围')) {
+      return res.status(400).json({ error: error.message });
+    }
+    Logger.error('[用户多维分析] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 router.get('/stats', requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;

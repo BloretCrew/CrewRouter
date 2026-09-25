@@ -5065,6 +5065,9 @@ class ConsoleApp {
     const tabContent = document.getElementById('statsTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
     if (tabContent) tabContent.style.display = 'block';
 
+    if (tab === 'multi') {
+      window.CrewRouterMultiDimension?.load('user');
+    }
     if (tab === 'messages') {
       this.loadMessageStats();
     }

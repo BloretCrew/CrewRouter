@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=2">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=1">
   <link rel="stylesheet" href="/css/stats-blora.css?v=2">
+  <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=1">
   <link rel="stylesheet" href="/css/project-work.css?v=1">
   <link rel="stylesheet" href="/css/project-work-blora.css?v=1">
   <link rel="stylesheet" href="/css/leaderboard-blora.css?v=1">
@@ -834,6 +835,7 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span data-i18n="概览">
               概览
             </span></button>
+            <button type="button" onclick="app.switchStatsTab('multi')"><span>多维分析</span></button>
             <button type="button" onclick="app.switchStatsTab('daily')">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span data-i18n="每日趋势">
               每日趋势
@@ -862,6 +864,21 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span data-i18n="调用记录">
               调用记录
             </span></button>
+          </div>
+
+          <div id="statsTabMulti" class="stats-tab-content" style="display:none;">
+            <section id="userMultiDimension" class="multi-dimension-panel" aria-label="自选多维分析">
+              <h4>自选维度分析</h4>
+              <div class="multi-dimension-choices" role="group" aria-label="分析维度">
+                <label><input type="checkbox" name="dimension" value="team">Team</label>
+                <label><input type="checkbox" name="dimension" value="project">项目</label>
+                <label><input type="checkbox" name="dimension" value="source">客户端</label>
+                <label><input type="checkbox" name="dimension" value="model" checked>模型</label>
+                <label><input type="checkbox" name="dimension" value="provider">供应商</label>
+              </div>
+              <div class="multi-dimension-actions"><label>统计指标 <select name="metric" class="select"><option value="requests">请求数</option><option value="tokens">Token</option><option value="cost">积分</option></select></label><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="CrewRouterMultiDimension.load('user')">生成图表</button><span class="multi-dimension-status" role="status"></span></div>
+              <div id="userMultiDimensionResult"></div>
+            </section>
           </div>
 
           <!-- 概览标签页 -->
@@ -2652,7 +2669,8 @@ data: [DONE]</code></pre>
   <script src="/js/session-tool-groups.js?v=2"></script>
   <script src="/js/vendor/marked.min.js"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/app.js?v=63"></script>
+  <script src="/js/multi-dimension-chart.js?v=1"></script>
+  <script src="/js/app.js?v=64"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航
