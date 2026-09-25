@@ -10480,8 +10480,9 @@ async function(ctx) {
     try {
       const teamsRes = await fetch('/api/admin/teams');
       const teams = await teamsRes.json();
-      const team = teams.find(t => t.id === teamId);
+      const team = teams.find(t => Number(t.id) === Number(teamId));
       isPersonal = team?.is_personal || false;
+      if (team) document.getElementById('teamDetailTitle').textContent = team.name;
     } catch (e) { /* ignore */ }
     this.currentTeamIsPersonal = isPersonal;
 
@@ -11219,14 +11220,15 @@ async function(ctx) {
     try {
       const res = await fetch('/api/admin/teams');
       const teams = await res.json();
-      const team = teams.find(t => t.id === teamId);
+      if (!res.ok) throw new Error(t('加载 Team 信息失败'));
+      const team = teams.find(t => Number(t.id) === Number(teamId));
       if (!team) { alert(t('Team 不存在')); return; }
 
       const content = `
         <div style="display:grid;gap:12px;">
           <div class="form-group">
-            <label>Team 名称</label>
-            <input type="text" id="editTeamNameInput" class="form-input" value="${escapeHtml(team.name)}">
+            <label for="editTeamNameInput">Team 名称</label>
+            <input type="text" id="editTeamNameInput" class="form-input" value="${escapeHtml(team.name)}" maxlength="100" required>
           </div>
           <div class="form-group">
             <label>描述</label>
@@ -11257,16 +11259,24 @@ async function(ctx) {
         const is_default = document.getElementById('editTeamDefaultInput').checked;
         const hide_provider_quota = document.getElementById('editTeamHideQuotaInput').checked;
         if (!name) { alert(t('名称不能为空')); return; }
+        const saveBtn = document.getElementById('confirmEditTeam');
+        saveBtn.disabled = true;
         try {
-          await fetch(`/api/admin/teams/${teamId}`, {
+          const response = await fetch(`/api/admin/teams/${teamId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, description, is_default, hide_provider_quota })
           });
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            alert(error.error || t('保存失败'));
+            return;
+          }
           modal.close();
-          this.loadTeams();
-          this.showTeamDetail(teamId);
+          await this.loadTeams();
+          await this.showTeamDetail(teamId);
         } catch (e) { alert(t('保存失败')); }
+        finally { if (saveBtn.isConnected) saveBtn.disabled = false; }
       };
     } catch (e) { alert(t('加载 Team 信息失败')); }
   }

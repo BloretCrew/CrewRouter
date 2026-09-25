@@ -67,6 +67,9 @@ router.put('/teams/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
   descriptionFrom: (req) => `更新 Team #${req.params.id}`,
 }), async (req, res) => {
   const { name, description, is_default, is_frontier, hide_provider_quota } = req.body;
+  if (name !== undefined && (typeof name !== 'string' || !name.trim() || name.trim().length > 100)) {
+    return res.status(400).json({ error: 'Team 名称需为 1 至 100 个字符' });
+  }
   try {
     // 如果设置为默认 Team，先取消其他默认
     if (is_default === true) {
@@ -82,7 +85,7 @@ router.put('/teams/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
         hide_provider_quota = COALESCE($5, hide_provider_quota),
         updated_at = CURRENT_TIMESTAMP
        WHERE id = $6 RETURNING *`,
-      [name, description, is_default !== undefined ? is_default : null, is_frontier !== undefined ? is_frontier : null, hide_provider_quota !== undefined ? hide_provider_quota : null, req.params.id]
+      [name === undefined ? null : name.trim(), description, is_default !== undefined ? is_default : null, is_frontier !== undefined ? is_frontier : null, hide_provider_quota !== undefined ? hide_provider_quota : null, req.params.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Team 不存在' });
