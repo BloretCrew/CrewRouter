@@ -435,7 +435,50 @@
   }
 }
 
+@media (max-width: 834px) {
+  .blora-model-library #modelLibraryStickyBar .model-library-sticky-inner {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 640px) {
+  .blora-model-library #modelLibraryStickyBar .model-library-sticky-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--blora-space-2);
+  }
+
+  .blora-model-library #modelLibraryStickyBar .model-library-sticky-search {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .blora-model-library #modelLibraryStickyBar .model-library-sticky-select {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .blora-model-library #modelLibraryStickyBar .model-library-sticky-more-btn {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .blora-model-library #modelLibraryStickyBar .model-library-sticky-key-wrap {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .blora-model-library #modelLibraryStickyBar .model-library-sticky-key {
+    max-width: 100%;
+  }
+
   .blora-model-library .model-library-header,
   .blora-model-library .model-filter-bar,
   .blora-model-library .model-library-binding-bar,
