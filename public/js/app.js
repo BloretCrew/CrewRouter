@@ -10565,18 +10565,21 @@ ${extractorBody}
     }
   }
 
+  _setQuotaRefreshLoading(loading) {
+    const button = document.getElementById('providerQuotaRefreshBtn');
+    if (!button) return;
+    button.toggleAttribute('data-loading', loading);
+    if (loading) button.setAttribute('aria-busy', 'true');
+    else button.removeAttribute('aria-busy');
+    button.disabled = loading;
+    const label = loading ? t('正在刷新供应商额度，请稍候...') : t('刷新额度');
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  }
+
   async refreshProviderQuota() {
-    setBloraState('providerQuotaGrid', 'loading');
-    const refreshButton = document.getElementById('providerQuotaRefreshBtn');
-    if (refreshButton) {
-      refreshButton.setAttribute('data-loading', '');
-      refreshButton.setAttribute('aria-busy', 'true');
-      refreshButton.disabled = true;
-    }
-    const grid = document.getElementById('providerQuotaGrid');
-    if (grid) {
-      setHTML(grid, '<div class="model-quota-loading library-inline-loading" role="status"><span class="blora-spinner" data-size="sm" aria-hidden="true"></span><span>' + t('正在刷新供应商额度，请稍候...') + '</span></div>');
-    }
+    if (this._quotaRefreshPromise) return this._quotaRefreshPromise;
+    this._setQuotaRefreshLoading(true);
     const section = document.getElementById('providerQuotaSection');
     if (section) section.style.display = 'block';
     try {
@@ -10587,47 +10590,16 @@ ${extractorBody}
       this.renderProviderQuota(quotaData.providers || []);
       setBloraState('providerQuotaGrid', (quotaData.providers || []).length ? 'success' : 'empty');
     } catch (e) {
-      setBloraState('providerQuotaGrid', 'error');
       console.warn(t('刷新供应商额度失败:'), e);
     } finally {
-      if (refreshButton) {
-        refreshButton.removeAttribute('data-loading');
-        refreshButton.removeAttribute('aria-busy');
-        refreshButton.disabled = false;
-      }
+      this._setQuotaRefreshLoading(false);
     }
-  }
-
-  _setQuotaRefreshNotice(text) {
-    const grid = document.getElementById('providerQuotaGrid');
-    if (!grid || !text) return null;
-    const prev = document.getElementById('providerQuotaRefreshNotice');
-    if (prev) prev.remove();
-    const el = document.createElement('div');
-    el.id = 'providerQuotaRefreshNotice';
-    el.className = 'model-quota-loading';
-    el.setAttribute('role', 'status');
-    el.innerHTML = '<span class="loading-spinner sm"></span><span></span>';
-    el.lastElementChild.textContent = text;
-    grid.prepend(el);
-    return el;
-  }
-
-  _clearQuotaRefreshNotice() {
-    document.getElementById('providerQuotaRefreshNotice')?.remove();
   }
 
   _startQuotaBackgroundRefresh() {
     if (this._quotaRefreshPromise) return this._quotaRefreshPromise;
-    const grid = document.getElementById('providerQuotaGrid');
-    if (!grid) return null;
-    const hasContent = grid.querySelector('.model-quota-card, .model-quota-loading');
-    // 已有缓存卡片时，才需要“后台刷新”提示；首屏尚无内容时由 loadProviderQuota 负责骨架
-    if (!hasContent || grid.querySelector('.model-quota-card')) {
-      this._setQuotaRefreshNotice(t('正在后台刷新供应商额度...'));
-    }
-    const refreshBtn = document.getElementById('providerQuotaRefreshBtn');
-    if (refreshBtn) { refreshBtn.classList.add('is-loading'); refreshBtn.disabled = true; }
+    if (!document.getElementById('providerQuotaGrid')) return null;
+    this._setQuotaRefreshLoading(true);
     this._quotaRefreshPromise = fetch('/api/user/providers/quota/refresh', { method: 'POST' })
       .then(async (res) => {
         if (!res.ok) throw new Error(String(res.status));
@@ -10637,8 +10609,7 @@ ${extractorBody}
       })
       .catch((e) => { console.warn(t('后台刷新供应商额度失败:'), e); })
       .finally(() => {
-        this._clearQuotaRefreshNotice();
-        if (refreshBtn) { refreshBtn.classList.remove('is-loading'); refreshBtn.disabled = false; }
+        this._setQuotaRefreshLoading(false);
         this._quotaRefreshPromise = null;
       });
     return this._quotaRefreshPromise;
