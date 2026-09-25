@@ -8436,8 +8436,7 @@ async function(ctx) {
       'billing_mode': billingMode,
       'rate_price_per_request': parseFloat(document.getElementById('ratePricePerRequest').value) || 0,
       'stats_refresh_interval_sec': refreshSec,
-      'model_list': modelList,
-      'autoAddNewModelsToFrontier': document.getElementById('autoAddNewModelsToFrontier')?.checked === true
+      'model_list': modelList
     };
 
     // 登录状态上报开关（默认开启）
@@ -8616,10 +8615,6 @@ async function(ctx) {
       if (sysEnabledEl) sysEnabledEl.checked = !!settings['system_proxy_enabled'];
       const sysUrlEl = document.getElementById('systemProxyUrl');
       if (sysUrlEl) sysUrlEl.value = settings['system_proxy_url'] || '';
-
-      // 新模型自动加入前沿 Team（默认开启）
-      const autoAddFrontierEl = document.getElementById('autoAddNewModelsToFrontier');
-      if (autoAddFrontierEl) autoAddFrontierEl.checked = settings['autoAddNewModelsToFrontier'] === true;
 
       // 登录状态上报开关（默认开启）
       const loginReportEl = document.getElementById('loginReportEnabled');

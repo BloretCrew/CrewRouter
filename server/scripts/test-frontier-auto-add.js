@@ -3,20 +3,14 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const {
-  SETTING_KEY,
-  parseSettingBoolean,
-  isAutoAddEnabled,
-  addModelsToFrontierTeams,
-} = require('../utils/frontier-auto-add');
+const { addModelsToFrontierTeams } = require('../utils/frontier-auto-add');
 
-function createDb({ settingRows = [], frontierIds = [], insertCounts = [] } = {}) {
+function createDb({ frontierIds = [], insertCounts = [] } = {}) {
   const calls = [];
   return {
     calls,
     async query(sql, params) {
       calls.push({ sql, params });
-      if (sql.startsWith('SELECT value FROM settings')) return { rows: settingRows };
       if (sql.startsWith('SELECT id FROM teams')) return { rows: frontierIds.map(id => ({ id })) };
       if (sql.startsWith('INSERT INTO team_models')) return { rowCount: insertCounts.shift() || 0 };
       throw new Error(`unexpected query: ${sql}`);
@@ -25,22 +19,11 @@ function createDb({ settingRows = [], frontierIds = [], insertCounts = [] } = {}
 }
 
 (async () => {
-  assert.strictEqual(SETTING_KEY, 'autoAddNewModelsToFrontier');
-  assert.strictEqual(parseSettingBoolean(true), true);
-  assert.strictEqual(parseSettingBoolean('true'), true);
-  assert.strictEqual(parseSettingBoolean(false), false);
-  assert.strictEqual(parseSettingBoolean('false'), false);
-  assert.strictEqual(parseSettingBoolean(undefined), false);
-
-  const missingSettingDb = createDb();
-  assert.strictEqual(await isAutoAddEnabled(missingSettingDb), true, '旧库缺少配置时默认自动加入前沿 Team');
-
-  const disabledDb = createDb({ settingRows: [{ value: false }], frontierIds: [1] });
-  assert.strictEqual(await addModelsToFrontierTeams(disabledDb, ['m1']), 0);
-  assert.strictEqual(disabledDb.calls.length, 1, '关闭时不得查询 Team 或写入映射');
+  const noFrontierDb = createDb();
+  assert.strictEqual(await addModelsToFrontierTeams(noFrontierDb, ['m1']), 0);
+  assert.strictEqual(noFrontierDb.calls.length, 1, '没有前沿 Team 时不得写入映射');
 
   const enabledDb = createDb({
-    settingRows: [{ value: 'true' }],
     frontierIds: [10, 20],
     insertCounts: [2, 1],
   });
@@ -52,12 +35,12 @@ function createDb({ settingRows = [], frontierIds = [], insertCounts = [] } = {}
 
   const adminSource = fs.readFileSync(path.join(__dirname, '../routes/admin.js'), 'utf8');
   assert.match(adminSource, /router\.post\('\/models\/batch-update'[\s\S]*?if \(enabled === true\)[\s\S]*?addModelsToFrontierTeams\(ids\)/, '批量启用入口必须走统一开关');
-  assert.strictEqual((adminSource.match(/await addModelsToFrontierTeams\(/g) || []).length, 5, '所有自动入口应统一调用开关包装器');
+  assert.strictEqual((adminSource.match(/await addModelsToFrontierTeams\(/g) || []).length, 5, '所有系统模型自动入口应调用前沿 Team 映射');
 
-  const initSource = fs.readFileSync(path.join(__dirname, 'init-db.js'), 'utf8');
-  assert.match(initSource, /VALUES \('autoAddNewModelsToFrontier', 'true'::jsonb\)[\s\S]*?ON CONFLICT \(key\) DO NOTHING/, '新库和旧库必须幂等初始化为 TRUE');
+  assert.strictEqual(await addModelsToFrontierTeams(enabledDb, []), 0);
+  assert.ok(!enabledDb.calls.some(call => call.sql.includes('FROM settings')), '历史关闭设置不得阻断前沿 Team 自动启用');
 
-  console.log('frontier auto-add setting and idempotent mapping contracts passed');
+  console.log('frontier team auto-add and idempotent mapping contracts passed');
 })().catch(error => {
   console.error(error);
   process.exit(1);

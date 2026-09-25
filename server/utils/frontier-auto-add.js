@@ -1,30 +1,10 @@
 'use strict';
 
-const SETTING_KEY = 'autoAddNewModelsToFrontier';
-
-function parseSettingBoolean(value) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'string') {
-    try {
-      return JSON.parse(value) === true;
-    } catch {
-      return false;
-    }
-  }
-  return false;
-}
-
-async function isAutoAddEnabled(db) {
-  const result = await db.query('SELECT value FROM settings WHERE key = $1', [SETTING_KEY]);
-  // 新模型默认自动加入前沿 Team；已有设置仍可通过管理后台显式关闭。
-  return result.rows.length === 0 || parseSettingBoolean(result.rows[0].value);
-}
-
 async function addModelsToFrontierTeams(db, modelIds) {
   const ids = Array.isArray(modelIds)
     ? [...new Set(modelIds.filter(Boolean).map(String))]
     : (modelIds ? [String(modelIds)] : []);
-  if (ids.length === 0 || !(await isAutoAddEnabled(db))) return 0;
+  if (ids.length === 0) return 0;
 
   const frontier = await db.query('SELECT id FROM teams WHERE is_frontier = TRUE');
   if (frontier.rows.length === 0) return 0;
@@ -43,9 +23,4 @@ async function addModelsToFrontierTeams(db, modelIds) {
   return added;
 }
 
-module.exports = {
-  SETTING_KEY,
-  parseSettingBoolean,
-  isAutoAddEnabled,
-  addModelsToFrontierTeams,
-};
+module.exports = { addModelsToFrontierTeams };

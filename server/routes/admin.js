@@ -3173,7 +3173,7 @@ router.get('/settings', requireAuth, requireAdmin, async (req, res) => {
         settings[row.key] = row.value;
       }
     });
-    settings.autoAddNewModelsToFrontier = settings.autoAddNewModelsToFrontier === true;
+    delete settings.autoAddNewModelsToFrontier;
     // 敏感配置脱敏：飞书密钥勿经通用设置接口泄露
     if (settings.feishu_login && typeof settings.feishu_login === 'object') {
       settings.feishu_login = {
@@ -3213,8 +3213,8 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
         return res.status(400).json({ error: '设置不能为空' });
       }
       for (const [key, value] of entries) {
-        if (key === 'autoAddNewModelsToFrontier' && typeof value !== 'boolean') {
-          return res.status(400).json({ error: 'autoAddNewModelsToFrontier 必须是布尔值' });
+        if (key === 'autoAddNewModelsToFrontier') {
+          return res.status(400).json({ error: '前沿 Team 自动启用不支持关闭' });
         }
         // model_list 校验：必须保留至少一个非 fusion 模型（除非只配了 fusion）
         if (key === 'model_list' && Array.isArray(value)) {
@@ -3237,8 +3237,8 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
     if (!key) {
       return res.status(400).json({ error: '设置键不能为空' });
     }
-    if (key === 'autoAddNewModelsToFrontier' && typeof value !== 'boolean') {
-      return res.status(400).json({ error: 'autoAddNewModelsToFrontier 必须是布尔值' });
+    if (key === 'autoAddNewModelsToFrontier') {
+      return res.status(400).json({ error: '前沿 Team 自动启用不支持关闭' });
     }
     // model_list 校验：必须保留至少一个非 fusion 模型（除非只配了 fusion）
     if (key === 'model_list' && Array.isArray(value)) {
