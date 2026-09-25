@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/css/admin-users-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-user-groups-blora.css?v=1">
-  <link rel="stylesheet" href="/css/admin-models-blora.css?v=1">
+  <link rel="stylesheet" href="/css/admin-models-blora.css?v=2">
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=1">
   <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=1">
@@ -486,18 +486,18 @@
               <input type="search" id="modelSearchInput" class="blora-input model-search-input" placeholder="搜索模型名称、上游 ID、系列..." data-i18n-placeholder="搜索模型名称、上游 ID、系列..." oninput="adminApp.onAdminModelFilterInput('search', this.value, 'main')">
             </div>
             <div class="model-filter-selects admin-models-filter-selects">
-              <blora-select id="modelProviderFilter" class="select" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'main')">
+              <blora-select id="modelProviderFilter" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'main')">
                 <blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
               </blora-select>
-              <blora-select id="modelStatusFilter" class="select" onchange="adminApp.onAdminModelFilterInput('status', this.value, 'main')">
+              <blora-select id="modelStatusFilter" onchange="adminApp.onAdminModelFilterInput('status', this.value, 'main')">
                 <blora-option value=""><span data-i18n="全部状态">全部状态</span></blora-option>
                 <blora-option value="enabled"><span data-i18n="已启用">已启用</span></blora-option>
                 <blora-option value="disabled"><span data-i18n="已禁用">已禁用</span></blora-option>
               </blora-select>
-              <blora-select id="modelSeriesFilter" class="select" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'main')">
+              <blora-select id="modelSeriesFilter" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'main')">
                 <blora-option value=""><span data-i18n="全部系列">全部系列</span></blora-option>
               </blora-select>
-              <blora-select id="modelTestFilter" class="select" onchange="adminApp.onAdminModelFilterInput('test', this.value, 'main')">
+              <blora-select id="modelTestFilter" onchange="adminApp.onAdminModelFilterInput('test', this.value, 'main')">
                 <blora-option value=""><span data-i18n="全部测试状态">全部测试状态</span></blora-option>
                 <blora-option value="pass"><span data-i18n="测试通过">测试通过</span></blora-option>
                 <blora-option value="fail"><span data-i18n="测试失败">测试失败</span></blora-option>

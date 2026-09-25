@@ -98,6 +98,25 @@
   background: var(--blora-color-surface-raised);
 }
 
+.blora-admin-models-page .admin-models-filter-bar .model-search-box {
+  flex: 1 1 15rem;
+  height: 2.5rem;
+  max-width: none;
+}
+
+.blora-admin-models-page .admin-models-filter-bar .admin-models-filter-selects {
+  flex: 2 1 27rem;
+  min-width: 0;
+}
+
+.blora-admin-models-page .admin-models-filter-selects blora-select {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
 .blora-admin-models-page .model-search-input {
   min-height: 2.5rem;
   border-color: color-mix(in srgb, var(--border) 55%, transparent);
@@ -132,7 +151,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--blora-space-2);
-  width: min(100%, 27rem);
+  width: 100%;
 }
 
 .blora-admin-models-page .admin-models-filter-selects blora-select {
@@ -156,6 +175,12 @@
 }
 
 @media (max-width: 900px) {
+  .blora-admin-models-page .admin-models-filter-bar .model-search-box,
+  .blora-admin-models-page .admin-models-filter-bar .admin-models-filter-selects {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
   .blora-admin-models-page .model-library-header-actions,
   .blora-admin-models-page .admin-models-filter-selects {
     width: 100%;
