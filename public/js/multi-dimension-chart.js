@@ -42,7 +42,7 @@
     if (!root) return;
     const status = root.querySelector('.multi-dimension-status');
     const targetId = `${prefix}MultiDimensionResult`;
-    const chosen = [...root.querySelectorAll('input[name="dimension"]:checked')].map(el => el.value);
+    const chosen = [...root.querySelectorAll('blora-checkbox[checked]')].map(el => el.getAttribute('value'));
     const seq = Number(root.dataset.requestSeq || 0) + 1;
     root.dataset.requestSeq = seq;
     if (!chosen.length) {
@@ -89,7 +89,7 @@
       if (!root || root.dataset.autoLoadBound) continue;
       root.dataset.autoLoadBound = 'true';
       root.addEventListener('change', event => {
-        if (event.target.matches('input[name="dimension"], [name="metric"]')) load(scope);
+        if (event.target.closest('blora-checkbox, blora-select[name="metric"]')) load(scope);
       });
     }
   }

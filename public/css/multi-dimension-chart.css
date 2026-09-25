@@ -7,8 +7,8 @@
 }
 .multi-dimension-panel h4 { margin: 0 0 12px; }
 .multi-dimension-choices { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
-.multi-dimension-choices label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
-.multi-dimension-choices input { width: auto !important; }
+.multi-dimension-choices blora-checkbox { flex: 0 0 auto; }
+.multi-dimension-actions blora-select { display: block; min-width: 7rem; }
 .multi-dimension-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .multi-dimension-status { color: var(--muted-foreground); font-size: 13px; }
 .multi-dimension-chart-container { height: clamp(260px, 45vh, 500px); margin: 18px 0; }

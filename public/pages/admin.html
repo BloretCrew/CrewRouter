@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=2">
   <link rel="stylesheet" href="/css/admin-stats-blora.css?v=1">
-  <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=1">
+  <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=2">
   <link rel="stylesheet" href="/css/badges-blora.css?v=1">
   <link rel="stylesheet" href="/css/progress-blora.css?v=1">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=1">
@@ -887,14 +887,14 @@
             <section id="adminMultiDimension" class="multi-dimension-panel" aria-label="自选多维分析">
               <h4>自选维度分析</h4>
               <div class="multi-dimension-choices" role="group" aria-label="分析维度">
-                <label><input type="checkbox" name="dimension" value="user">成员</label>
-                <label><input type="checkbox" name="dimension" value="team">Team</label>
-                <label><input type="checkbox" name="dimension" value="project">项目</label>
-                <label><input type="checkbox" name="dimension" value="source">客户端</label>
-                <label><input type="checkbox" name="dimension" value="model" checked>模型</label>
-                <label><input type="checkbox" name="dimension" value="provider">供应商</label>
+                <blora-checkbox value="user" label="成员"></blora-checkbox>
+                <blora-checkbox value="team" label="Team"></blora-checkbox>
+                <blora-checkbox value="project" label="项目"></blora-checkbox>
+                <blora-checkbox value="source" label="客户端"></blora-checkbox>
+                <blora-checkbox value="model" label="模型" checked></blora-checkbox>
+                <blora-checkbox value="provider" label="供应商"></blora-checkbox>
               </div>
-              <div class="multi-dimension-actions"><label>统计指标 <select name="metric" class="select"><option value="requests">请求数</option><option value="tokens">Token</option><option value="cost">积分</option></select></label><span class="multi-dimension-status" role="status"></span></div>
+              <div class="multi-dimension-actions"><label>统计指标 <blora-select name="metric" value="requests" aria-label="统计指标"><blora-option value="requests">请求数</blora-option><blora-option value="tokens">Token</blora-option><blora-option value="cost">积分</blora-option></blora-select></label><span class="multi-dimension-status" role="status"></span></div>
               <div id="adminMultiDimensionResult"></div>
             </section>
             <div id="adminStatsMultiSummary" class="stats-overview-grid multi-stats-summary"></div>
@@ -2525,7 +2525,7 @@
   <script src="/js/theme.js?v=2"></script>
   <script src="/js/dom.js?v=3"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/multi-dimension-chart.js?v=2"></script>
+  <script src="/js/multi-dimension-chart.js?v=3"></script>
   <script src="/js/admin.js?v=21"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
