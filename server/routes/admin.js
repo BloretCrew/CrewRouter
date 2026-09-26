@@ -49,6 +49,7 @@ const {
   saveQuotaSnapshot,
   normalizeQuotaScheduleInterval
 } = require('../utils/provider-quota');
+const { quickAddSystemProvider, QuickAddError } = require('../utils/quick-add-provider');
 
 /**
  * 按系统开关将模型挂载到所有前沿 Team；仅补缺失映射。
@@ -2004,6 +2005,40 @@ async function ensureKeyModeColumn() {
     Logger.warn(`[供应商保存] 检查 key_mode 列失败: ${err.message}`);
   }
 }
+
+// 用当前管理员的 CrewRouter Key 绑定模型解析粘贴内容，并创建系统供应商
+router.post('/providers/quick-add', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_PROVIDER_CREATE, {
+  resourceType: 'provider',
+  resourceIdFrom: (req) => req.quickAddProviderId || null,
+  descriptionFrom: (req) => `快速添加供应商「${req.quickAddProviderName || '-'}」`,
+  detailsFrom: (req) => req.quickAddProviderDetails || null,
+}), async (req, res) => {
+  try {
+    const result = await quickAddSystemProvider({
+      userId: req.session.user.id,
+      text: req.body?.text,
+    });
+    req.quickAddProviderId = result.id;
+    req.quickAddProviderName = result.name;
+    req.quickAddProviderDetails = {
+      name: result.name,
+      base_url: result.base_url,
+      format: result.format,
+      has_api_key: result.has_api_key,
+    };
+    keyRefresher.registerProvider({ id: result.id, key_mode: 'fixed', key_refresh_interval: 3600 });
+    res.json(result);
+  } catch (error) {
+    const status = error instanceof QuickAddError ? error.status : 500;
+    if (!(error instanceof QuickAddError) || status >= 500) {
+      Logger.error('[快速添加供应商] 失败:', error instanceof QuickAddError ? error.message : (error.code || 'insert_failed'));
+    }
+    const message = error instanceof QuickAddError && error.expose
+      ? error.message
+      : '添加供应商失败';
+    res.status(status).json({ error: message });
+  }
+});
 
 // 创建/更新供应商
 router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_PROVIDER_CREATE, {

@@ -12,6 +12,19 @@
   padding: var(--blora-space-6);
 }
 
+.blora-admin-models-page .admin-models-quick-add-row,
+.blora-admin-models-page .admin-models-sticky-quick-add {
+  display: flex;
+}
+
+.blora-admin-models-page .admin-models-quick-add-row {
+  margin-bottom: 12px;
+}
+
+.blora-admin-models-page .admin-models-sticky-quick-add {
+  margin-bottom: 8px;
+}
+
 .blora-admin-models-page .model-library-header h2 {
   color: var(--blora-color-text-primary);
   font-family: var(--blora-font-heading);

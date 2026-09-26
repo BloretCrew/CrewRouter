@@ -4008,6 +4008,89 @@ class AdminApp {
     }
   }
 
+  async showQuickAddSystemProviderDialog() {
+    if (this._quickAddDialog) return;
+    const clipboardPromise = navigator.clipboard?.readText
+      ? navigator.clipboard.readText().catch(() => '')
+      : Promise.resolve('');
+    const content = `
+      <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 10px;line-height:1.5;">${escapeHtml(t('粘贴供应商接入信息。继续后会用你的 CrewRouter Key 当前模型解析，并添加为系统供应商。'))}</p>
+      <textarea id="quickAddProviderText" class="blora-input" rows="8" placeholder="${escapeHtml(t('例如名称、Base URL、API Key，或一段配置、curl、环境变量'))}" style="width:100%;box-sizing:border-box;resize:vertical;min-height:160px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:13px;line-height:1.5;"></textarea>
+      <p id="quickAddProviderError" style="display:none;color:var(--destructive);font-size:13px;margin:8px 0 0;"></p>
+    `;
+    const footer = `
+      <button type="button" class="blora-button" data-variant="outline" id="quickAddProviderCancelBtn">${escapeHtml(t('取消'))}</button>
+      <button type="button" class="blora-button" data-variant="primary" id="quickAddProviderContinueBtn">${escapeHtml(t('继续'))}</button>
+    `;
+    const modal = Dialog.showModal({
+      title: t('快速添加供应商到系统'),
+      content,
+      footer,
+      width: 560
+    });
+    this._quickAddDialog = modal;
+    modal.promise.finally(() => {
+      if (this._quickAddDialog === modal) this._quickAddDialog = null;
+    });
+
+    const input = document.getElementById('quickAddProviderText');
+    const showError = (message) => {
+      const el = document.getElementById('quickAddProviderError');
+      if (!el) return;
+      el.textContent = message || '';
+      el.style.display = message ? 'block' : 'none';
+    };
+    document.getElementById('quickAddProviderCancelBtn')?.addEventListener('click', () => modal.close());
+    const submit = async () => {
+      const text = input?.value?.trim() || '';
+      if (!text) {
+        showError(t('请粘贴供应商信息'));
+        input?.focus();
+        return;
+      }
+      const continueBtn = document.getElementById('quickAddProviderContinueBtn');
+      const cancelBtn = document.getElementById('quickAddProviderCancelBtn');
+      setButtonLoading(continueBtn, t('解析并添加中...'));
+      if (cancelBtn) cancelBtn.disabled = true;
+      if (input) input.disabled = true;
+      showError('');
+      try {
+        const response = await fetch('/api/admin/providers/quick-add', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || t('添加失败'));
+        if (!data.id) throw new Error(t('添加失败'));
+        modal.close();
+        this.showToast(`${data.name || t('供应商')}${t('已添加到系统')}`, 'success');
+        await this.fetchProviderModels(data.id);
+      } catch (error) {
+        if (cancelBtn) cancelBtn.disabled = false;
+        if (input) input.disabled = false;
+        clearButtonLoading(continueBtn);
+        showError(error.message || t('添加失败'));
+      }
+    };
+    document.getElementById('quickAddProviderContinueBtn')?.addEventListener('click', () => {
+      submit().catch((error) => showError(error.message || t('添加失败')));
+    });
+    input?.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault();
+        document.getElementById('quickAddProviderContinueBtn')?.click();
+      }
+    });
+
+    const pasted = await clipboardPromise;
+    if (input && !input.value && typeof pasted === 'string' && pasted.trim()) {
+      input.value = pasted;
+    }
+    input?.focus();
+  }
+
   async showAddProviderWizard() {
     const self = this;
     // Step 1: 显示供应商选择列表
