@@ -90,17 +90,22 @@ const adminRoute = fs.readFileSync(path.join(__dirname, '..', 'routes', 'admin.j
 const quickAdd = fs.readFileSync(path.join(__dirname, '..', 'utils', 'quick-add-provider.js'), 'utf8');
 const adminPage = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'pages', 'admin.html'), 'utf8');
 const adminJs = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'js', 'admin.js'), 'utf8');
+const consolePage = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'pages', 'console.html'), 'utf8');
+const consoleJs = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'js', 'app.js'), 'utf8');
 
 assert.match(adminRoute, /router\.post\('\/providers\/quick-add', requireAuth, requireAdmin/);
 assert.match(adminRoute, /quickAddSystemProvider\(\{/);
 assert.match(quickAdd, /ak\.name ILIKE 'crewrouter'/);
 assert.match(quickAdd, /'X-CrewRouter-Signature-Mode': 'header'/);
 assert.match(quickAdd, /created_by\s*\) VALUES/);
-assert.match(adminPage, /id="quickAddSystemProviderBtn"/);
-assert.match(adminPage, /快速添加供应商到系统/);
-assert.match(adminJs, /showQuickAddSystemProviderDialog/);
-assert.match(adminJs, /\/api\/admin\/providers\/quick-add/);
-assert.match(adminJs, /fetchProviderModels\(data\.id\)/);
-assert.match(adminJs, /navigator\.clipboard\?\.readText/);
+assert.doesNotMatch(adminPage, /quickAddSystemProvider/);
+assert.doesNotMatch(adminJs, /showQuickAddSystemProviderDialog/);
+assert.match(consolePage, /id="libraryQuickAddSystemProvider"[^>]*hidden/);
+assert.match(consolePage, /app\.showQuickAddSystemProviderDialog\(\)/);
+assert.match(consoleJs, /quickAdd\.hidden = this\.user\?\.isAdmin !== true/);
+assert.match(consoleJs, /\/api\/admin\/providers\/quick-add/);
+assert.match(consoleJs, /showQuickAddedProviderModels\(data\.id, data\.name\)/);
+assert.match(consoleJs, /navigator\.clipboard\?\.readText/);
+assert.match(consoleJs, /\/sync-models/);
 
 console.log('PASS quick add system provider');

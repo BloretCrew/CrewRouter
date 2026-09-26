@@ -285,6 +285,8 @@ class ConsoleApp {
   }
 
   checkAdminStatus() {
+    const quickAdd = document.getElementById('libraryQuickAddSystemProvider');
+    if (quickAdd) quickAdd.hidden = this.user?.isAdmin !== true;
     const adminLink = document.getElementById('adminLink');
     // Personal Edition 将个人管理能力收进控制台，不再把用户带到另一套后台。
     if (adminLink && this.instance?.edition === 'personal') {
@@ -12797,6 +12799,168 @@ ${extractorBody}
     } catch (error) {
       console.error(t('加载模型选项失败:'), error);
     }
+  }
+
+  async showQuickAddSystemProviderDialog() {
+    if (!this.user?.isAdmin || this._quickAddSystemProviderDialog) return;
+    const clipboardPromise = navigator.clipboard?.readText
+      ? navigator.clipboard.readText().catch(() => '')
+      : Promise.resolve('');
+    const modal = Dialog.showModal({
+      title: t('快速添加供应商到系统'),
+      content: `
+        <p style="color:var(--muted-foreground);font-size:13px;line-height:1.5;">${escapeHtml(t('粘贴供应商接入信息。继续后会用你的 CrewRouter Key 当前模型解析，并添加为系统供应商。'))}</p>
+        <textarea id="quickAddProviderText" class="blora-input" rows="8" placeholder="${escapeHtml(t('例如名称、Base URL、API Key，或一段配置、curl、环境变量'))}" style="width:100%;box-sizing:border-box;resize:vertical;min-height:160px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:13px;line-height:1.5;"></textarea>
+        <p id="quickAddProviderError" role="alert" style="display:none;color:var(--destructive);font-size:13px;"></p>
+      `,
+      footer: `
+        <button type="button" class="blora-button" data-variant="outline" id="quickAddProviderCancel">${escapeHtml(t('取消'))}</button>
+        <button type="button" class="blora-button" data-variant="primary" id="quickAddProviderContinue">${escapeHtml(t('继续'))}</button>
+      `,
+      width: 560
+    });
+    this._quickAddSystemProviderDialog = modal;
+    modal.promise.finally(() => {
+      if (this._quickAddSystemProviderDialog === modal) this._quickAddSystemProviderDialog = null;
+    });
+    const input = document.getElementById('quickAddProviderText');
+    const errorEl = document.getElementById('quickAddProviderError');
+    const cancelBtn = document.getElementById('quickAddProviderCancel');
+    const continueBtn = document.getElementById('quickAddProviderContinue');
+    const showError = (message) => {
+      errorEl.textContent = message || '';
+      errorEl.style.display = message ? 'block' : 'none';
+    };
+    cancelBtn.addEventListener('click', () => modal.close());
+    continueBtn.addEventListener('click', async () => {
+      if (continueBtn.disabled) return;
+      const text = input.value.trim();
+      if (!text) {
+        showError(t('请粘贴供应商信息'));
+        input.focus();
+        return;
+      }
+      showError('');
+      setButtonLoading(continueBtn, t('解析并添加中...'));
+      cancelBtn.disabled = true;
+      input.disabled = true;
+      try {
+        const response = await fetch('/api/admin/providers/quick-add', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || t('添加失败'));
+        if (!data.id) throw new Error(t('添加失败'));
+        modal.close();
+        this.showToast(`${data.name || t('供应商')}${t('已添加到系统')}`, 'success');
+        this.showQuickAddedProviderModels(data.id, data.name);
+      } catch (error) {
+        showError(error.message || t('添加失败'));
+      } finally {
+        clearButtonLoading(continueBtn);
+        cancelBtn.disabled = false;
+        input.disabled = false;
+      }
+    });
+    input.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault();
+        continueBtn.click();
+      }
+    });
+    const pasted = await clipboardPromise;
+    if (input.isConnected && !input.value && typeof pasted === 'string') input.value = pasted;
+    if (input.isConnected) input.focus();
+  }
+
+  showQuickAddedProviderModels(providerId, providerName) {
+    if (!this.user?.isAdmin) return;
+    const modal = Dialog.showModal({
+      title: t('获取模型列表'),
+      content: `
+        <p id="quickAddedProviderName" style="color:var(--muted-foreground);font-size:13px;"></p>
+        <div id="quickAddedModelsStatus" role="status" style="font-size:13px;"></div>
+        <div id="quickAddedModelsList" style="max-height:50vh;overflow:auto;"></div>
+      `,
+      footer: `
+        <button type="button" class="blora-button" data-variant="outline" id="quickAddedModelsRetry">${escapeHtml(t('重新获取'))}</button>
+        <button type="button" class="blora-button" data-variant="primary" id="quickAddedModelsSave" disabled>${escapeHtml(t('保存所选模型'))}</button>
+      `,
+      width: 600
+    });
+    const nameEl = document.getElementById('quickAddedProviderName');
+    const status = document.getElementById('quickAddedModelsStatus');
+    const list = document.getElementById('quickAddedModelsList');
+    const retry = document.getElementById('quickAddedModelsRetry');
+    const save = document.getElementById('quickAddedModelsSave');
+    nameEl.textContent = providerName || '';
+    const load = async () => {
+      retry.disabled = true;
+      save.disabled = true;
+      list.replaceChildren();
+      status.textContent = t('正在获取模型列表...');
+      try {
+        const res = await fetch(`/api/admin/providers/${encodeURIComponent(providerId)}/fetch-models`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || t('获取模型列表失败'));
+        const models = Array.isArray(data.models) ? data.models : [];
+        const enabledIds = new Set((data.existingModels || []).filter(model => model.enabled).map(model => String(model.id)));
+        if (!models.length) {
+          status.textContent = t('未获取到模型，可检查供应商配置后重试');
+          return;
+        }
+        status.textContent = `${t('共')}${models.length}${t('个模型')}`;
+        for (const model of models) {
+          const id = String(model.id || '');
+          if (!id) continue;
+          const label = document.createElement('label');
+          label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = id;
+          checkbox.checked = enabledIds.has(id);
+          label.append(checkbox, document.createTextNode(String(model.name || id)));
+          if (model.name && model.name !== id) {
+            const detail = document.createElement('small');
+            detail.textContent = id;
+            detail.style.color = 'var(--muted-foreground)';
+            label.append(detail);
+          }
+          list.append(label);
+        }
+        save.disabled = !list.querySelector('input');
+      } catch (error) {
+        status.textContent = error.message || t('获取模型列表失败');
+      } finally {
+        retry.disabled = false;
+      }
+    };
+    retry.addEventListener('click', load);
+    save.addEventListener('click', async () => {
+      setButtonLoading(save, t('保存中...'));
+      try {
+        const enabledModelIds = Array.from(list.querySelectorAll('input:checked'), el => el.value);
+        const res = await fetch(`/api/admin/providers/${encodeURIComponent(providerId)}/sync-models`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabledModelIds })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || t('保存失败'));
+        modal.close();
+        this.showToast(t('模型列表已保存'), 'success');
+        await this.loadModelLibrary();
+      } catch (error) {
+        status.textContent = error.message || t('保存失败');
+      } finally {
+        clearButtonLoading(save);
+      }
+    });
+    load();
   }
 
   // 供应商管理 - 向导式添加

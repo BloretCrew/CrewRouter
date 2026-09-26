@@ -23,7 +23,7 @@
   <script src="/js/blora-dialog.js?v=5"></script>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/main.css?v=25">
-  <link rel="stylesheet" href="/css/model-library-blora.css?v=8">
+  <link rel="stylesheet" href="/css/model-library-blora.css?v=9">
   <link rel="stylesheet" href="/css/console-blora.css?v=4">
   <link rel="stylesheet" href="/css/badges-blora.css?v=1">
   <link rel="stylesheet" href="/css/progress-blora.css?v=1">
@@ -281,6 +281,10 @@
         </div>
 
         <div id="traceReportsBanner" class="trace-reports-banner" style="display:none;"></div>
+
+        <div id="libraryQuickAddSystemProvider" class="library-quick-add-system-provider" hidden>
+          <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showQuickAddSystemProviderDialog()"><span data-i18n="快速添加供应商到系统">快速添加供应商到系统</span></button>
+        </div>
 
         <!-- 顶部操作栏：主路径常驻，高级能力收入「更多」（blora-dropdown，由 app.js 渲染） -->
         <div class="model-library-header">
@@ -2670,7 +2674,7 @@ data: [DONE]</code></pre>
   <script src="/js/vendor/marked.min.js"></script>
   <script src="/js/edition-badge.js?v=1"></script>
   <script src="/js/multi-dimension-chart.js?v=3"></script>
-  <script src="/js/app.js?v=65"></script>
+  <script src="/js/app.js?v=66"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

@@ -79,6 +79,14 @@
   margin-bottom: var(--blora-space-3);
 }
 
+.blora-model-library .library-quick-add-system-provider {
+  margin-bottom: var(--blora-space-3);
+}
+
+.blora-model-library .library-quick-add-system-provider[hidden] {
+  display: none;
+}
+
 /* ---------- 顶部操作栏 / 筛选栏 ---------- */
 .blora-model-library .model-library-header-actions,
 .blora-model-library .model-filter-selects,
