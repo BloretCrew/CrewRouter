@@ -2,7 +2,7 @@
  * 调用记录列表过滤 / JOIN（管理端与用户端共用）
  */
 
-const ALLOWED_REQUEST_TYPES = new Set(['chat', 'responses', 'fusion', 'playground']);
+const ALLOWED_REQUEST_TYPES = new Set(['chat', 'responses', 'fusion', 'playground', 'imagine', 'agent_manage']);
 const ALLOWED_REQUEST_SOURCES = new Set([
   'grok',
   'codex',

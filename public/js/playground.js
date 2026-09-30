@@ -43,7 +43,7 @@ class PlaygroundApp {
       const res = await fetch('/api/user/models');
       if (!res.ok) throw new Error(t('请求失败'));
       const data = await res.json();
-      this.models = Array.isArray(data) ? data : [];
+      this.models = (Array.isArray(data) ? data : []).filter(model => model.output_kind !== 'image');
       const select = document.getElementById('pgModel');
       if (this.models.length === 0) {
         setBloraState('pgModel', 'empty');

@@ -43,6 +43,7 @@
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/settings-blora.css?v=1">
   <link rel="stylesheet" href="/css/sessions-blora.css?v=3">
+  <link rel="stylesheet" href="/css/blora-agent.css?v=5">
   <link rel="stylesheet" href="/css/prompts-blora.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=2">
   <script>
@@ -143,6 +144,10 @@
           <div class="nav-item" data-page="sessions">
             <img src="https://img.bloret.net/SF/bubble.left?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="bubble.left">
             <span><span data-i18n="会话">会话</span></span>
+          </div>
+          <div class="nav-item" data-page="bloraAgent">
+            <img src="https://img.bloret.net/SF/sparkles?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="sparkles">
+            <span>Blora Agent</span>
           </div>
         </div>
 
@@ -1130,6 +1135,8 @@
                 <blora-option value="responses">responses</blora-option>
                 <blora-option value="fusion">fusion</blora-option>
                 <blora-option value="playground">playground</blora-option>
+                <blora-option value="imagine">Imagine</blora-option>
+                <blora-option value="agent_manage">Agent Manage</blora-option>
               </blora-select>
               <blora-select id="usageLogRequestSourceFilter" class="blora-input input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
                 <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
@@ -1282,6 +1289,58 @@
             <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.generateSessionSummary()"><span data-i18n="生成总结">生成总结</span></button>
           </div>
         </section>
+      </div>
+
+      <!-- Blora Agent：Chat / Imagine / Manage -->
+      <div id="bloraAgentPage" class="page blora-agent-page">
+        <div class="ba-top">
+          <div id="baModeSwitch"></div>
+          <blora-select id="baModel" name="model" aria-label="模型"></blora-select>
+          <span id="baBalance" class="ba-balance">0 积分</span>
+          <button type="button" id="baHistoryToggle" class="blora-button ba-history-toggle" data-variant="outline" data-size="sm"><span data-i18n="历史">历史</span></button>
+        </div>
+        <div class="ba-body">
+          <aside id="baHistory" class="ba-history">
+            <div class="ba-history__bar">
+              <strong id="baHistoryTitle"><span data-i18n="对话历史">对话历史</span></strong>
+              <button type="button" id="baNew" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="新对话">新对话</span></button>
+            </div>
+            <div id="baHistoryList" class="ba-history__list"></div>
+          </aside>
+          <div id="baOverlay" class="ba-overlay"></div>
+          <section class="ba-main">
+            <div id="baThread" class="ba-thread" aria-live="polite"></div>
+            <div id="baChatOptions" class="ba-options">
+              <label class="ba-option"><span data-i18n="系统提示词">系统提示词</span>
+                <textarea id="baSystem" class="blora-textarea" rows="2" data-i18n-placeholder="你是一个有用的助手" placeholder="你是一个有用的助手"></textarea>
+              </label>
+              <label class="ba-option ba-option--inline">Temperature <span id="baTempVal">1.0</span>
+                <input id="baTemperature" type="range" min="0" max="2" step="0.1" value="1">
+              </label>
+              <label class="ba-option ba-option--inline">Max Tokens
+                <input id="baMaxTokens" class="blora-input" type="number" min="1" max="128000" value="4096">
+              </label>
+              <label class="ba-option ba-option--inline" id="baThinkingWrap"><input id="baThinking" type="checkbox" checked> <span data-i18n="思考">思考</span></label>
+              <label class="ba-option ba-option--inline" id="baReasoningWrap" hidden><span data-i18n="推理强度">推理强度</span>
+                <blora-select id="baReasoning" name="reasoning_effort" aria-label="推理强度">
+                  <blora-option value="low"><span data-i18n="低">低</span></blora-option>
+                  <blora-option value="medium" selected><span data-i18n="中">中</span></blora-option>
+                  <blora-option value="high"><span data-i18n="高">高</span></blora-option>
+                </blora-select>
+              </label>
+            </div>
+            <form id="baComposer" class="ba-composer">
+              <textarea id="baInput" class="blora-textarea" rows="2" data-i18n-placeholder="输入消息，Enter 发送，Shift+Enter 换行" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea>
+              <blora-select id="baImageSize" name="size" aria-label="尺寸">
+                <blora-option value="1024x1024" selected>1024×1024</blora-option>
+                <blora-option value="1024x1792">1024×1792</blora-option>
+                <blora-option value="1792x1024">1792×1024</blora-option>
+              </blora-select>
+              <button type="submit" id="baSend" class="blora-button" data-variant="primary"><span data-i18n="发送">发送</span></button>
+              <button type="button" id="baStop" class="blora-button" data-variant="danger" hidden><span data-i18n="停止">停止</span></button>
+            </form>
+          </section>
+        </div>
       </div>
 
       <!-- 项目工作页面 -->
@@ -2674,7 +2733,8 @@ data: [DONE]</code></pre>
   <script src="/js/vendor/marked.min.js"></script>
   <script src="/js/edition-badge.js?v=1"></script>
   <script src="/js/multi-dimension-chart.js?v=3"></script>
-  <script src="/js/app.js?v=66"></script>
+  <script src="/js/app.js?v=68"></script>
+  <script src="/js/blora-agent.js?v=2"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航

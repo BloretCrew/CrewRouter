@@ -135,7 +135,7 @@ class ConsoleApp {
   _consolePageIds() {
     return new Set([
       'home', 'modelLibrary', 'myUpstream', 'apiKeys', 'stats', 'projectWork',
-      'leaderboard', 'docs', 'balance', 'settings', 'auditLogs', 'prompts', 'sessions'
+      'leaderboard', 'docs', 'balance', 'settings', 'auditLogs', 'prompts', 'sessions', 'bloraAgent'
     ]);
   }
 
@@ -145,12 +145,13 @@ class ConsoleApp {
    */
   _parseConsoleHash(hash) {
     const raw = String(hash || '').replace(/^#/, '').trim();
-    if (!raw) return { page: null, upstreamTab: null, docPage: null };
+    if (!raw) return { page: null, upstreamTab: null, docPage: null, agentMode: null };
 
     const [pagePart, extra] = raw.split('/');
     let page = pagePart || null;
     let upstreamTab = null;
     let docPage = null;
+    let agentMode = null;
 
     // 旧入口兼容
     if (page === 'dashboard') page = 'modelLibrary';
@@ -173,8 +174,11 @@ class ConsoleApp {
       ]);
       if (validDocs.has(extra)) docPage = extra;
     }
+    if (page === 'bloraAgent') {
+      agentMode = extra === 'imagine' || extra === 'manage' || extra === 'chat' ? extra : 'chat';
+    }
 
-    return { page, upstreamTab, docPage };
+    return { page, upstreamTab, docPage, agentMode };
   }
 
   _buildConsoleHash(page, options = {}) {
@@ -184,6 +188,12 @@ class ConsoleApp {
     }
     if (page === 'docs' && options.docPage && options.docPage !== 'overview') {
       return `#docs/${options.docPage}`;
+    }
+    if (page === 'bloraAgent') {
+      const mode = options.agentMode === 'imagine' || options.agentMode === 'manage' || options.agentMode === 'chat'
+        ? options.agentMode
+        : 'chat';
+      return `#bloraAgent/${mode}`;
     }
     return `#${page}`;
   }
@@ -205,7 +215,8 @@ class ConsoleApp {
       this.navigateTo(page, {
         skipHash: true,
         upstreamTab: restored.upstreamTab,
-        docPage: restored.docPage
+        docPage: restored.docPage,
+        agentMode: restored.agentMode
       });
     });
   }
@@ -239,7 +250,8 @@ class ConsoleApp {
     await this.navigateTo(startPage, {
       skipHash: true,
       upstreamTab: restored.upstreamTab,
-      docPage: restored.docPage
+      docPage: restored.docPage,
+      agentMode: restored.agentMode
     });
     // 若无 hash，写入默认 hash，便于复制链接
     if (!restored.page) {
@@ -461,7 +473,8 @@ class ConsoleApp {
       'dashboard': t('控制台'), 'home': t('个人工作台'), 'modelLibrary': t('模型库'), 'myUpstream': t('我的上游'),
       'myProviders': t('我的上游'), 'myTeamModels': t('我的上游'),
       'apiKeys': t('API Key 与用量'), 'stats': t('统计信息'), 'projectWork': t('项目工作'), 'leaderboard': t('排行榜'), 'docs': t('接口文档'),
-      'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志'), 'prompts': t('提示词'), 'sessions': t('会话')
+      'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志'), 'prompts': t('提示词'), 'sessions': t('会话'),
+      'bloraAgent': 'Blora Agent'
     };
     const pageTitleEl = document.getElementById('pageTitle');
     if (pageTitleEl) pageTitleEl.textContent = titles[targetPage] || targetPage;
@@ -482,6 +495,12 @@ class ConsoleApp {
     }
 
     // 写入 hash，刷新后可恢复；我的上游附带页签，文档附带子页
+    if (targetPage === 'bloraAgent') {
+      const requestedMode = options.agentMode === 'imagine' || options.agentMode === 'manage' || options.agentMode === 'chat'
+        ? options.agentMode
+        : 'chat';
+      this._agentMode = requestedMode === 'manage' && this.user?.isAdmin !== true ? 'chat' : requestedMode;
+    }
     if (!options.skipHash) {
       this._ignoreHashChange = true;
       this._writeConsoleHash(targetPage, {
@@ -490,7 +509,8 @@ class ConsoleApp {
           : null,
         docPage: targetPage === 'docs'
           ? (docPage || (typeof currentDocPage !== 'undefined' ? currentDocPage : 'overview'))
-          : null
+          : null,
+        agentMode: targetPage === 'bloraAgent' ? this._agentMode : null
       });
       queueMicrotask(() => { this._ignoreHashChange = false; });
     }
@@ -546,6 +566,9 @@ class ConsoleApp {
       case 'auditLogs': await this.loadAuditLogs(1); break;
       case 'prompts': await Promise.all([this.loadInjectPrompts(), this.loadCustomPrompts(1)]); break;
       case 'sessions': await this.loadSessions(this._sessionsPage || 1); break;
+      case 'bloraAgent':
+        if (window.BloraAgentPage) await window.BloraAgentPage.open(this._agentMode || 'chat');
+        break;
     }
   }
 
@@ -13338,3 +13361,4 @@ ${extractorBody}
 }
 
 const app = new ConsoleApp();
+window.app = app;

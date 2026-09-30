@@ -1,0 +1,246 @@
+.blora-agent-page.page.active {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 128px);
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.blora-agent-page [hidden] {
+  display: none !important;
+}
+
+.ba-top,
+.ba-history__bar,
+.ba-composer,
+.ba-options {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ba-top {
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ba-top blora-select,
+.ba-composer blora-select,
+#baReasoning {
+  min-width: 180px;
+}
+
+.ba-balance {
+  margin-left: auto;
+  color: var(--blora-color-text-muted, var(--muted-foreground));
+  font-size: 13px;
+}
+
+.ba-body {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.ba-history,
+.ba-main {
+  min-height: 0;
+  border: 1px solid var(--blora-color-border, var(--border));
+  border-radius: 12px;
+  background: var(--blora-color-surface, var(--card));
+}
+
+.ba-history {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+
+.ba-history__bar {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ba-history__list {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ba-history__item {
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.ba-history__item.is-active,
+.ba-history__item:hover {
+  background: color-mix(in srgb, var(--blora-color-primary, var(--primary)) 12%, transparent);
+}
+
+.ba-history__item small {
+  display: block;
+  color: var(--blora-color-text-muted, var(--muted-foreground));
+}
+
+.ba-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ba-thread {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ba-bubble {
+  max-width: min(760px, 100%);
+  padding: 10px 12px;
+  border-radius: 12px;
+  line-height: 1.5;
+}
+
+.ba-bubble--user {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--blora-color-primary, var(--primary)) 16%, transparent);
+}
+
+.ba-bubble--assistant,
+.ba-card {
+  align-self: flex-start;
+  background: color-mix(in srgb, var(--blora-color-text-muted, var(--muted-foreground)) 10%, transparent);
+}
+
+.ba-bubble pre {
+  overflow: auto;
+  padding: 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--blora-color-text, #000) 8%, transparent);
+}
+
+.ba-card {
+  width: min(640px, 100%);
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.ba-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.ba-card pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 12px;
+}
+
+.ba-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ba-image {
+  align-self: flex-start;
+  width: auto;
+  height: auto;
+  max-width: min(720px, 100%);
+  max-height: 60vh;
+  border-radius: 12px;
+}
+
+.ba-options,
+.ba-composer {
+  flex-shrink: 0;
+  padding: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.ba-options {
+  border-top: 1px solid var(--blora-color-border, var(--border));
+}
+
+.ba-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.ba-option--inline {
+  flex-direction: row;
+  align-items: center;
+}
+
+.ba-composer textarea {
+  flex: 1;
+  min-width: 180px;
+  resize: vertical;
+}
+
+.ba-thinking {
+  font-size: 13px;
+  color: var(--blora-color-text-muted, var(--muted-foreground));
+  margin-bottom: 6px;
+}
+
+.ba-overlay { display: none; }
+
+@media (max-width: 800px) {
+  .blora-agent-page.page.active {
+    height: calc(100dvh - 148px);
+    min-height: 0;
+    overflow: hidden;
+  }
+  .ba-body { grid-template-columns: 1fr; overflow: hidden; }
+  .ba-options { max-height: 34vh; overflow: auto; }
+  .ba-history {
+    position: fixed;
+    z-index: 30;
+    top: 0;
+    left: 0;
+    width: min(280px, 86vw);
+    height: 100vh;
+    transform: translateX(-105%);
+    transition: transform 160ms ease;
+  }
+  .ba-history.is-open { transform: none; }
+  .ba-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 29;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .ba-overlay.is-open { opacity: 1; pointer-events: auto; }
+  .ba-history-toggle { display: inline-flex; }
+}
+
+@media (min-width: 801px) {
+  .ba-history-toggle { display: none; }
+}

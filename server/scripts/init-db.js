@@ -853,6 +853,9 @@ async function initDatabase() {
     }
     Logger.info('[数据库初始化] 模型数据已同步');
 
+    const { ensureAgentSchema } = require('../utils/agent-schema');
+    await ensureAgentSchema(client);
+
     await client.query('COMMIT');
     Logger.success('[数据库初始化] 完成!');
   } catch (error) {

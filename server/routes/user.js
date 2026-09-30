@@ -124,7 +124,8 @@ router.get('/models', requireAuth, async (req, res) => {
         m.provider,
         p.name AS provider_name,
         m.input_price_per_1k_tokens,
-        m.output_price_per_1k_tokens
+        m.output_price_per_1k_tokens,
+        COALESCE(m.output_kind, 'chat') AS output_kind
        FROM models m
        JOIN providers p ON m.provider = p.id AND p.enabled = TRUE
        JOIN team_models tm ON tm.model_id = m.id AND tm.enabled = TRUE

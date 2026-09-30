@@ -2774,6 +2774,7 @@ if (isDemo) {
   app.use('/api/client-events', require('./routes/client-events'));
   app.use('/api/playground', require('./routes/playground'));
   app.use('/api/conversations', require('./routes/conversations'));
+  app.use('/api/agent', require('./routes/agent'));
   app.use('/api/2fa', require('./routes/two-factor'));
   app.use('/api/passkey', require('./routes/passkey'));
   // 自有 OAuth 2.0 授权服务（PKCE；含 /.well-known 元数据，故挂根路径；demo 不挂载）
@@ -2978,6 +2979,7 @@ async function runPendingMigrations() {
     ensureModelUptimeDailyTable,
     ensureProviderHeaderFields,
     ensureApiErrorRecordsTable,
+    require('./utils/agent-schema').ensureAgentSchema,
     ensurePluginsTables,
     // 须在 usage/fusion 表就绪后执行：UTC 墙钟 → 上海墙钟
     migrateUtcWallTimestampsToShanghai,

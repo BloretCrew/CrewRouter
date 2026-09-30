@@ -7980,7 +7980,9 @@ async function(ctx) {
       chat: { label: 'Chat', color: 'var(--info)' },
       responses: { label: 'Responses', color: 'var(--purple)' },
       fusion: { label: 'Fusion', color: 'var(--warning)' },
-      playground: { label: 'Playground', color: 'var(--success)' }
+      playground: { label: 'Playground', color: 'var(--success)' },
+      imagine: { label: 'Imagine', color: 'var(--chart-2)' },
+      agent_manage: { label: 'Agent Manage', color: 'var(--purple)' }
     };
     return map[t] || (t ? { label: type, color: 'var(--muted-foreground)' } : { label: '-', color: 'var(--muted-foreground)' });
   }
