@@ -145,19 +145,8 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
       Logger.warn('[OOBE] 默认注入提示词播种跳过:', e.message);
     }
 
-    // 自动分配默认用户组（SAVEPOINT：失败不污染主事务）
-    await client.query('SAVEPOINT sp_default_group');
-    try {
-      const defGroup = await client.query('SELECT id FROM user_groups WHERE is_default = TRUE LIMIT 1');
-      if (defGroup.rows.length > 0) {
-        await client.query('UPDATE users SET group_id = $1 WHERE id = $2', [defGroup.rows[0].id, adminId]);
-        Logger.info(`[OOBE] 已分配默认用户组 id=${defGroup.rows[0].id}`);
-      }
-      await client.query('RELEASE SAVEPOINT sp_default_group');
-    } catch (groupErr) {
-      await client.query('ROLLBACK TO SAVEPOINT sp_default_group');
-      Logger.warn('[OOBE] 分配默认用户组跳过:', groupErr.message);
-    }
+    // 分配默认 Team（若尚未配置则稍后使用个人 Team）
+    const defaultTeam = await client.query('SELECT id FROM teams WHERE is_default = TRUE LIMIT 1');
 
     // 自动创建默认 API Key（与普通 Key 无异，可删除）
     await client.query('SAVEPOINT sp_default_key');
@@ -176,20 +165,22 @@ router.post('/setup/admin', requireSetupMode, async (req, res) => {
       Logger.warn('[OOBE] 创建默认 API Key 跳过:', keyErr.message);
     }
 
-    // 自动创建个人账户 Team（SAVEPOINT）
+    // 分配唯一 Team（SAVEPOINT）
     await client.query('SAVEPOINT sp_personal_team');
     try {
-      const teamName = `${username.trim()} 的个人账户`;
-      const teamResult = await client.query(
-        'INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id',
-        [teamName, '个人账户，系统自动创建']
-      );
-      await client.query(
-        'INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2)',
-        [adminId, teamResult.rows[0].id]
-      );
+      let assignedTeamId = defaultTeam.rows[0]?.id || null;
+      let teamName = `${username.trim()} 的个人账户`;
+      if (!assignedTeamId) {
+        const teamResult = await client.query(
+          'INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id',
+          [teamName, '个人账户，系统自动创建']
+        );
+        assignedTeamId = teamResult.rows[0].id;
+      }
+      await client.query('INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2)', [adminId, assignedTeamId]);
+      await client.query('UPDATE users SET team_id = $1 WHERE id = $2', [assignedTeamId, adminId]);
       await client.query('RELEASE SAVEPOINT sp_personal_team');
-      Logger.info(`[OOBE] 已为管理员创建个人账户 Team: ${teamName}`);
+      Logger.info(`[OOBE] 已分配管理员 Team id=${assignedTeamId}`);
     } catch (teamErr) {
       await client.query('ROLLBACK TO SAVEPOINT sp_personal_team');
       Logger.warn('[OOBE] 创建个人账户 Team 跳过:', teamErr.message);

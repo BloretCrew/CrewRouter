@@ -98,7 +98,7 @@ async function authenticateOAuthAccessToken(req, res, next) {
     // 合成绑定 API Key 的身份对象（字段对齐 api.js getCachedApiKey 的产物）
     const keyRes = await pool.query(
       `SELECT ak.id, ak.user_id, ak.name AS key_name, ak.enabled, ak.expires_at,
-              u.username, u.balance, u.group_id
+              u.username, u.balance, u.team_id
          FROM api_keys ak
          JOIN users u ON ak.user_id = u.id
         WHERE ak.id = $1`,
@@ -129,7 +129,7 @@ async function authenticateOAuthAccessToken(req, res, next) {
       userId: key.user_id,
       username: key.username,
       keyId: key.id,
-      groupId: key.group_id,
+      teamId: key.team_id,
       balance: key.balance,
       keyName: key.key_name || '',
       enabled: key.enabled !== false,

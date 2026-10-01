@@ -33,3 +33,37 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* CrewRouter Desktop 内嵌设置：Blora 开关 / 选择器 / 对话框 */
+.settings-desktop-preferences blora-switch {
+  display: block;
+}
+
+.settings-desktop-pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blora-space-4);
+  padding-top: var(--blora-space-3);
+
+}
+
+.settings-desktop-pref-row blora-select {
+  width: min(100%, 12rem);
+}
+
+#desktopConfirmDialog .desktop-dialog-body p {
+  margin: 0;
+
+}
+
+#desktopConfirmDialog .desktop-dialog-body blora-field {
+  display: block;
+  margin-top: var(--blora-space-3);
+}
+
+.desktop-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--blora-space-3);
+}

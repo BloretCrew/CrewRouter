@@ -583,10 +583,10 @@ router.post('/chat', requireAuth, async (req, res) => {
 async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsCost, messages, response, normalized, reasoningContent, requestParams, finishReason, req) {
   try {
     // 与 API 一致：组配额未耗尽时实扣可为 0
-    let groupId = null;
+    let teamId = null;
     try {
-      const ug = await pool.query('SELECT group_id FROM users WHERE id = $1', [userId]);
-      groupId = ug.rows[0]?.group_id || null;
+      const membership = await pool.query('SELECT team_id FROM users WHERE id = $1', [userId]);
+      teamId = membership.rows[0]?.team_id || null;
     } catch (_) { /* ignore */ }
     const pluginHooks = require('../plugins/hooks');
     // billing:calculate 钩子可调整单次扣费
@@ -608,7 +608,7 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
     })();
     const pointsToDeduct = await calculatePointsToDeduct({
       userId,
-      groupId,
+      teamId,
       weightedTokens,
       pointsCost: billCost
     });
@@ -657,13 +657,13 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
       const promptTokens = normalized?.promptTokens || 0;
       const completionTokens = normalized?.completionTokens || 0;
       // 简化路径同样走配额实扣
-      let groupId = null;
+      let teamId = null;
       try {
-        const ug = await pool.query('SELECT group_id FROM users WHERE id = $1', [userId]);
-        groupId = ug.rows[0]?.group_id || null;
+        const membership = await pool.query('SELECT team_id FROM users WHERE id = $1', [userId]);
+        teamId = membership.rows[0]?.team_id || null;
       } catch (_) { /* ignore */ }
       const pointsToDeduct = await calculatePointsToDeduct({
-        userId, groupId, weightedTokens, pointsCost
+        userId, teamId, weightedTokens, pointsCost
       });
       const clientMeta = clientMetaFromReq(req || {});
       await pool.query(

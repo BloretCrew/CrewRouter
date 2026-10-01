@@ -63,17 +63,18 @@ async function seedPassportUser(client, user, username, invite = null) {
     `INSERT INTO api_keys (user_id, key_hash, key_value, key_prefix, name, custom_model_name) VALUES ($1, $2, $3, $4, 'CrewRouter', 'claude-fable-5')`,
     [user.id, require('../utils/key-hash').sha256Hex(rawKey), rawKey, rawKey.substring(0, 12)]
   );
-  const teamName = `${username} 的个人账户`;
-  const personal = await client.query('INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id', [teamName, '个人账户，系统自动创建']);
-  await client.query('INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [user.id, personal.rows[0].id]);
-  if (invite?.team_id) {
-    await client.query('INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [user.id, invite.team_id]);
+  const defaultTeam = await client.query('SELECT id FROM teams WHERE is_default = TRUE LIMIT 1');
+  const selectedTeamId = invite?.team_id || defaultTeam.rows[0]?.id || null;
+  let assignedTeamId = selectedTeamId;
+  if (!assignedTeamId) {
+    const teamName = `${username} 的个人账户`;
+    const personal = await client.query('INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id', [teamName, '个人账户，系统自动创建']);
+    assignedTeamId = personal.rows[0].id;
   }
-  if (invite?.group_id) {
-    await client.query('UPDATE users SET group_id = $1 WHERE id = $2', [invite.group_id, user.id]);
-  } else {
-    const group = await client.query('SELECT id FROM user_groups WHERE is_default = TRUE LIMIT 1');
-    if (group.rows.length) await client.query('UPDATE users SET group_id = $1 WHERE id = $2', [group.rows[0].id, user.id]);
+  await client.query('DELETE FROM user_teams WHERE user_id = $1', [user.id]);
+  if (assignedTeamId) {
+    await client.query('INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT (user_id, team_id) DO NOTHING', [user.id, assignedTeamId]);
+    await client.query('UPDATE users SET team_id = $1 WHERE id = $2', [assignedTeamId, user.id]);
   }
   await require('../utils/inject-prompt').seedDefaultPrompt(user.id, client);
 }

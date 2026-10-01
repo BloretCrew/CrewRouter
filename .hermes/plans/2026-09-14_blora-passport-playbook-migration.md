@@ -99,3 +99,9 @@
 - 本轮使用 Grok Build CLI 执行。先检查 `git status --short`、`git diff --stat`、`git log --oneline -8`，再审查 `f93f026`/`7e151c7` 的实际改动范围；若会话详情/时间线已满足任务书且已有真实视觉与静态验证证据，则不要重复实现，进入下一独立 console 区块前先把缺口和允许文件范围写清楚。
 - 如需继续实现，只推进一个独立区块，并严格遵守一区块一 commit、build + 双验证 + 隔离临时环境 `:21003` 实际浏览器路径 + 截图 Read 判定；禁止使用生产页面/生产数据，禁止碰任务书红线文件或并行 `app.js` 改动，禁止 push。
 - Grok 输出必须包含真实 commit、改动文件、build/`test-request-source.js`/`test-usage-accuracy.js` 实际结果、临时 URL/数据库、截图路径和 Read 的 `PASS`/`OLD RENDER`/`STALE`；若网关 429/520/ECONNRESET/usage limit，立即停止并报告，不重试。
+
+## 2026-09-20 Grok continuation gap
+- 已完成提交：1690d47、74e8f7b。构建、语法、双回归和 Blora 审计通过。
+- 当前硬缺口：管理后台用户页视觉验收仍为 STALE；隔离 :21003 实际展示营销首页，未进入 adminUsers。
+- 下一轮必须先修复/确认隔离测试实例路由与登录/测试夹具，再实际打开用户管理页截图验收；不要把营销首页截图当证据。
+- 视觉通过后继续下一个区块；每个区块单独 commit。

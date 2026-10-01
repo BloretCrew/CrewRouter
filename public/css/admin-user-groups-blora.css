@@ -1,7 +1,20 @@
-/* Blora surface migration for admin user group management. */
-.blora-admin-user-groups-page {
-  --groups-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --groups-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+
+
+.cr-admin-user-groups-page .app-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.cr-admin-user-groups-page .cr-admin-stat-icon .app-icon,
+.cr-admin-user-groups-page .cr-admin-table-host td .app-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.cr-admin-user-groups-page .section-actions .app-icon {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .cr-admin-user-groups-page .admin-stat-cards {

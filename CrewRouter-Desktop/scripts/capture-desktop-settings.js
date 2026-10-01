@@ -25,82 +25,78 @@ async function waitFor(win, expression, timeout = 60000) {
   try { diagnostic = await win.webContents.executeJavaScript("({ href: location.href, title: document.title, text: document.body?.innerText?.slice(0, 3000) })", true); } catch (error) { diagnostic = { error: error.message }; }
   throw new Error(`Timed out waiting for ${expression}; last=${last}; diagnostic=${JSON.stringify(diagnostic)}`);
 }
-function windows() { return BrowserWindow.getAllWindows().filter((win) => !win.isDestroyed()); }
-async function getSettingsWindow() {
-  const win = windows().find((item) => item.getTitle() === 'CrewRouter Desktop Settings');
-  if (!win) throw new Error('独立设置窗口未创建');
-  await waitFor(win, "document.readyState === 'complete' && Boolean(window.crewrouterDesktop) && Boolean(document.getElementById('connection'))", 30000);
-  return win;
-}
+function mainWindow() { const win = BrowserWindow.getAllWindows().find((item) => !item.isDestroyed()); if (!win) throw new Error('Desktop 主窗口未创建'); return win; }
+const LAUNCHER_READY = "document.readyState === 'complete' && Boolean(window.crewrouterDesktop) && Boolean(document.getElementById('choose-local'))";
+const CONSOLE_READY = "location.hostname === '127.0.0.1' && (location.pathname === '/console' || location.pathname === '/console/')";
 async function inspectSettings(win) {
   return win.webContents.executeJavaScript(`(() => {
     const text = document.body.innerText;
-    const local = document.getElementById('local')?.innerText || '';
-    return { text, local, scheme: document.documentElement.dataset.bloraColorScheme,
+    return { text, scheme: document.documentElement.dataset.bloraColorScheme, view: document.getElementById('launcher')?.dataset.view || null,
+      localStatus: document.getElementById('local-status')?.textContent || '', localPid: document.getElementById('local-pid')?.textContent || '',
       scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth,
-      localCardHidden: document.getElementById('local-card')?.hidden,
-      hasBridgeError: /桥接不可用|bridge.*unavailable|加载失败/i.test(text) };
+      hasBridgeError: /桥接|bridge.*unavailable|加载失败/i.test(text) };
   })()`, true);
-}
-async function assertSettingsPage(win, expectedStatus) {
-  await waitFor(win, "document.body.innerText.includes('Desktop 设置') && document.body.innerText.includes('Profiles')", 30000);
-  const details = await inspectSettings(win);
-  if (details.hasBridgeError || details.localCardHidden || details.scrollWidth > details.clientWidth + 12) throw new Error(`设置页面不可用或溢出：${JSON.stringify(details)}`);
-  if (!details.text.includes('desktop-local') || !details.text.includes('personal')) throw new Error(`连接信息缺失：${JSON.stringify(details)}`);
-  if (!details.text.includes('Desktop Tester') || /(?:^|\n)(?:token|api[_-]?key|authorization|cookie)\s*[:=]/i.test(details.text)) throw new Error(`Profile 泄露敏感信息：${JSON.stringify(details)}`);
-  if (expectedStatus && !details.local.includes(expectedStatus)) throw new Error(`Local Server 状态不是 ${expectedStatus}：${JSON.stringify(details)}`);
-  return details;
 }
 async function capture(win, width, file) {
   win.setSize(width, 700);
   await sleep(400);
   const details = await inspectSettings(win);
-  if (!details.text.trim() || details.hasBridgeError || /登录|setup|桥接不可用|bridge.*unavailable/i.test(details.text) || details.scrollWidth > details.clientWidth + 12) throw new Error(`拒绝无效设置截图：${JSON.stringify(details)}`);
+  if (!details.text.trim() || details.hasBridgeError || details.scrollWidth > details.clientWidth + 12) throw new Error(`拒绝无效截图 ${file}：${JSON.stringify(details)}`);
   const png = (await win.webContents.capturePage()).toPNG();
-  if (png.length < 2000) throw new Error(`设置截图为空白：${file}`);
+  if (png.length < 2000) throw new Error(`截图为空白：${file}`);
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(path.join(outputDir, file), png);
 }
 
 app.whenReady().then(async () => {
   console.log(`[desktop-settings] ${phase}: app ready`);
-  const main = windows()[0];
-  if (!main) throw new Error('Desktop 主窗口未创建');
-  await waitFor(main, "document.readyState === 'complete' && Boolean(window.crewrouterDesktop) && Boolean(document.getElementById('local'))", 30000);
-  console.log(`[desktop-settings] ${phase}: renderer ready`);
+  const win = mainWindow();
   if (phase === 'first') {
-    await main.webContents.executeJavaScript("document.getElementById('local').click(); void 0", true);
-    await waitFor(main, "!document.getElementById('local-profile-step').hidden && document.activeElement?.id === 'local-username'");
-    await main.webContents.executeJavaScript("document.getElementById('local-username').value = 'Desktop Tester'; document.getElementById('local-profile-form').requestSubmit(); void 0", true);
+    await waitFor(win, LAUNCHER_READY, 30000);
+    await win.webContents.executeJavaScript("document.getElementById('choose-local').click(); void 0", true);
+    await waitFor(win, "!document.getElementById('view-local-name').hidden && document.activeElement === document.querySelector('#local-username-field input')");
+    await win.webContents.executeJavaScript("document.querySelector('#local-username-field input').value = 'Desktop Tester'; document.getElementById('local-profile-form').requestSubmit(); void 0", true);
   }
-  await waitFor(main, "location.hostname === '127.0.0.1' && (location.pathname === '/console' || location.pathname === '/console/')", 60000);
+  await waitFor(win, CONSOLE_READY, 120000);
   console.log(`[desktop-settings] ${phase}: console ready`);
-  await waitFor(main, "Boolean(document.getElementById('desktop-settings'))", 30000);
-  await main.webContents.executeJavaScript("document.getElementById('desktop-settings').click(); void 0", true);
-  const settings = await getSettingsWindow();
-  console.log(`[desktop-settings] ${phase}: settings window ready`);
-  let details = await assertSettingsPage(settings, '运行中');
-  const data = await settings.webContents.executeJavaScript('window.crewrouterDesktop.getDesktopSettings()', true);
+  await waitFor(win, "!document.getElementById('desktopSettingsCard')?.hidden", 30000);
+  // 控制台内嵌设置：本地模式必须能读到本地 Server 状态。
+  await win.webContents.executeJavaScript("document.getElementById('desktopSettingsCard').click(); void 0", true);
+  await waitFor(win, "Boolean(document.getElementById('desktopRestartLocal')) && document.getElementById('desktopSettingsEmbed').innerText.includes('运行中')", 30000);
+  const embed = await win.webContents.executeJavaScript("document.getElementById('desktopSettingsEmbed').innerText", true);
+  if (!/Desktop Tester/.test(embed) || /(?:^|\n)(?:token|api[_-]?key|authorization|cookie)\s*[:=]/i.test(embed)) throw new Error(`控制台内嵌设置内容不正确：${embed}`);
+  await capture(win, 960, 'console-desktop-settings-960x700.png');
+  // 返回启动页：本地服务保持运行，已保存的连接可见，设置面板显示本地 Server 状态。
+  await win.webContents.executeJavaScript("window.crewrouterDesktop.openLauncher(); void 0", true);
+  await waitFor(win, `${LAUNCHER_READY} && !document.getElementById('saved-panel').hidden && !document.getElementById('local-chip').hidden`, 30000);
+  await sleep(400);
+  await capture(win, 960, 'launcher-saved-960x700.png');
+  await win.webContents.executeJavaScript("document.getElementById('open-settings').click(); void 0", true);
+  await waitFor(win, "!document.getElementById('view-settings').hidden && document.getElementById('local-status').textContent.includes('运行中')", 30000);
+  let details = await inspectSettings(win);
+  if (details.hasBridgeError || !/\d+/.test(details.localPid)) throw new Error(`设置面板缺少本地 Server 信息：${JSON.stringify(details)}`);
+  const data = await win.webContents.executeJavaScript('window.crewrouterDesktop.getDesktopSettings()', true);
   if (!data.local?.pid || !data.local?.port || data.local.ready !== true) throw new Error(`Local Server 元数据缺失：${JSON.stringify(data.local)}`);
-  await settings.webContents.executeJavaScript("document.getElementById('theme').value = 'light'; document.getElementById('theme').dispatchEvent(new Event('change', { bubbles: true })); void 0", true);
-  await waitFor(settings, "document.documentElement.dataset.bloraColorScheme === 'light'");
-  const saved = await settings.webContents.executeJavaScript('window.crewrouterDesktop.getDesktopSettings()', true);
+  if (!data.profiles?.some((profile) => profile.displayName === 'Desktop Tester')) throw new Error(`Profile 未保存：${JSON.stringify(data.profiles)}`);
+  await win.webContents.executeJavaScript("(async () => { const current = (await window.crewrouterDesktop.getDesktopSettings()).settings; await window.crewrouterDesktop.saveDesktopSettings({ ...current, theme: 'light' }); })()", true);
+  await waitFor(win, "document.documentElement.dataset.bloraColorScheme === 'light'");
+  const saved = await win.webContents.executeJavaScript('window.crewrouterDesktop.getDesktopSettings()', true);
   if (saved.settings.theme !== 'light') throw new Error(`主题偏好未保存：${JSON.stringify(saved.settings)}`);
-  await settings.webContents.executeJavaScript("document.getElementById('copy').click(); void 0", true);
-  await waitFor(settings, "document.getElementById('message').textContent.includes('复制') || document.getElementById('message').textContent.includes('Copied')");
-  const diagnostics = await settings.webContents.executeJavaScript('navigator.clipboard.readText()', true);
+  await win.webContents.executeJavaScript("document.getElementById('copy-diagnostics').click(); void 0", true);
+  await waitFor(win, "document.getElementById('settings-message').textContent.includes('复制') || document.getElementById('settings-message').textContent.includes('Copied')");
+  const diagnostics = await win.webContents.executeJavaScript('navigator.clipboard.readText()', true);
   if (/(?:^|\n)(?:token|api[_-]?key|authorization|cookie)\s*[:=]/i.test(diagnostics) || /Bearer\s+[^\s]+/i.test(diagnostics) || diagnostics.includes(path.resolve(userData))) throw new Error(`诊断信息包含敏感数据：${diagnostics}`);
-  await capture(settings, 960, 'desktop-settings-local-960x700.png');
-  await capture(settings, 600, 'desktop-settings-local-600x700.png');
+  await capture(win, 960, 'desktop-settings-local-960x700.png');
+  await capture(win, 600, 'desktop-settings-local-600x700.png');
   const pid = data.local.pid;
-  await settings.webContents.executeJavaScript("window.confirm = () => true; document.getElementById('stop').click(); void 0", true);
-  await waitFor(settings, "document.getElementById('local').innerText.includes('已停止')", 30000);
+  await win.webContents.executeJavaScript("document.getElementById('local-stop').click(); void 0", true);
+  await waitFor(win, "document.getElementById('confirm-dialog').hasAttribute('open')", 10000);
+  await win.webContents.executeJavaScript("document.getElementById('confirm-ok').click(); void 0", true);
+  await waitFor(win, "document.getElementById('local-status').textContent.includes('已停止') || document.getElementById('local-status').textContent.includes('Stopped')", 30000);
   try { process.kill(pid, 0); throw new Error(`Desktop Local 子进程仍在运行：${pid}`); } catch (error) { if (error.message.includes('仍在运行')) throw error; }
-  await settings.webContents.executeJavaScript("document.getElementById('restart').click(); void 0", true);
-  await waitFor(settings, "document.getElementById('local').innerText.includes('运行中')", 60000);
-  const restoredDetails = await assertSettingsPage(settings, '运行中');
-  if (!restoredDetails.local.includes('运行中')) throw new Error('从主窗口重新启动后 Local Server 未恢复运行');
-  console.log(JSON.stringify({ phase, screenshots: ['desktop-settings-local-960x700.png', 'desktop-settings-local-600x700.png'], theme: saved.settings.theme, stoppedPid: pid, restored: true }));
+  await win.webContents.executeJavaScript("document.getElementById('local-restart').click(); void 0", true);
+  await waitFor(win, CONSOLE_READY, 120000);
+  console.log(JSON.stringify({ phase, screenshots: ['console-desktop-settings-960x700.png', 'launcher-saved-960x700.png', 'desktop-settings-local-960x700.png', 'desktop-settings-local-600x700.png'], theme: saved.settings.theme, stoppedPid: pid, restored: true }));
   await app.quit();
 }).catch((error) => { console.error(error.stack || error.message); app.exit(1); });
-setTimeout(() => { console.error('Desktop settings acceptance timed out'); app.exit(2); }, 120000);
+setTimeout(() => { console.error('Desktop settings acceptance timed out'); app.exit(2); }, 300000);

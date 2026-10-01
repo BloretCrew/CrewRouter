@@ -1,5 +1,7 @@
 # CrewRouter-Desktop 实现审查报告
 
+> **状态：已过时（2026-09-15）。** 本报告针对的是早期原型。当前实现已把 LocalServerManager / ConnectionManager / url-policy 接入主流程，并完成主进程拆分、IPC 信任分级、官方站登录流、内置 PostgreSQL 与启动页重做；现状与验证矩阵见 `CrewRouter-Desktop/README.md`。
+
 > 审查范围：主仓库当前工作树中的 `/data/CrewRouter/CrewRouter-Desktop`，重点核验任务书中 LocalServerManager、ConnectionManager、redirect-flow 的实际接线，以及导航安全、DNS/内网防护、IPC、退出清理、配置隔离和 Local/Remote/Team 状态。
 >
 > 结论基于源码、任务书、README、全部 Desktop 测试文件及实际执行的 `npm test`、`npm run syntax`。本次未修改实现代码；只新增本报告。

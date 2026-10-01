@@ -434,13 +434,13 @@ async function refundBalance(userId, amount) {
  */
 async function deductPoints(userId, points, existingClient = null, quota = {}) {
   const requestedPoints = moneyToString(points);
-  const hasQuotaDecision = quota.groupId != null || quota.weightedTokens != null || quota.pointsCost != null;
+  const hasQuotaDecision = quota.teamId != null || quota.weightedTokens != null || quota.pointsCost != null;
   if (compareMoney(requestedPoints, 0) <= 0 && !hasQuotaDecision) return { ok: true, pointsToDeduct: 0 };
   const client = existingClient || await pool.connect();
   try {
     if (!existingClient) await client.query('BEGIN');
     const result = await client.query(
-      'SELECT balance, group_id FROM users WHERE id = $1 FOR UPDATE',
+      'SELECT balance, team_id FROM users WHERE id = $1 FOR UPDATE',
       [userId]
     );
     if (result.rows.length === 0) {
@@ -453,7 +453,7 @@ async function deductPoints(userId, points, existingClient = null, quota = {}) {
       // 用户行已 FOR UPDATE；在锁内查询 quota，避免并发请求依据旧额度重复消费。
       points = await calculatePointsToDeduct({
         userId,
-        groupId: quota.groupId == null ? result.rows[0].group_id : quota.groupId,
+        teamId: quota.teamId == null ? result.rows[0].team_id : quota.teamId,
         weightedTokens: quota.weightedTokens || 0,
         pointsCost: quota.pointsCost == null ? requestedPoints : quota.pointsCost
       }, { client });
@@ -501,14 +501,14 @@ async function getUserPoints(userId) {
   }
 }
 
-async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValues, userId, pointsToDeduct = 0, groupId = null, weightedTokens = 0, pointsCost = null }) {
+async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValues, userId, pointsToDeduct = 0, teamId = null, weightedTokens = 0, pointsCost = null }) {
   const client = await dbPool.connect();
   try {
     await client.query('BEGIN');
     const inserted = await client.query(usageQuery, usageValues);
     // deductPoints 已在事务内持有用户行锁，并会基于锁内最新 quota 决策实际扣款。
     const result = await deductPoints(userId, pointsToDeduct, client, {
-      groupId,
+      teamId,
       weightedTokens,
       pointsCost: pointsCost == null ? pointsToDeduct : pointsCost
     });

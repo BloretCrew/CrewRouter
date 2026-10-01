@@ -1275,7 +1275,6 @@
       <div id="bloraAgentPage" class="page cr-agent-page">
         <div class="ba-top">
           <div id="baModeSwitch"></div>
-          <blora-select id="baModel" name="model" aria-label="模型"></blora-select>
           <span id="baBalance" class="ba-balance">0 积分</span>
           <button type="button" id="baHistoryToggle" class="blora-button ba-history-toggle" data-variant="outline" data-size="sm"><span data-i18n="历史">历史</span></button>
         </div>
@@ -1290,7 +1289,9 @@
 
           <section class="ba-main">
             <div id="baThread" class="ba-thread" aria-live="polite"></div>
-            <div id="baChatOptions" class="ba-options">
+            <details id="baChatOptions" class="ba-settings">
+              <summary><span data-i18n="对话设置">对话设置</span></summary>
+              <div class="ba-options">
               <label class="ba-option"><span data-i18n="系统提示词">系统提示词</span>
                 <textarea id="baSystem" class="blora-textarea" rows="2" data-i18n-placeholder="你是一个有用的助手" placeholder="你是一个有用的助手"></textarea>
               </label>
@@ -1308,9 +1309,12 @@
                   <blora-option value="high"><span data-i18n="高">高</span></blora-option>
                 </blora-select>
               </label>
-            </div>
+              </div>
+            </details>
             <form id="baComposer" class="ba-composer">
               <blora-field label="消息"><textarea id="baInput" class="blora-textarea" rows="2" data-i18n-placeholder="输入消息，Enter 发送，Shift+Enter 换行" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea></blora-field>
+              <div class="ba-composer__tools">
+              <blora-select id="baModel" name="model" aria-label="模型"></blora-select>
               <blora-select id="baImageSize" name="size" aria-label="尺寸">
                 <blora-option value="1024x1024" selected>1024 / 1024</blora-option>
                 <blora-option value="1024x1792">1024 / 1792</blora-option>
@@ -1318,7 +1322,9 @@
               </blora-select>
               <button type="submit" id="baSend" class="blora-button" data-variant="primary"><span data-i18n="发送">发送</span></button>
               <button type="button" id="baStop" class="blora-button" data-variant="danger" hidden><span data-i18n="停止">停止</span></button>
+              </div>
             </form>
+            <p class="ba-input-hint"><span data-i18n="Enter 发送，Shift+Enter 换行">Enter 发送，Shift+Enter 换行</span></p>
           </section>
         </div>
       </div>
@@ -1643,8 +1649,8 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 用户组信息 -->
-        <div class="content-section" id="groupInfoSection" style="display:none;">
-          <h2><span data-i18n="用户组与限额">用户组与限额</span></h2>
+        <div class="cr-console-section blora-stack blora-stack--lg" id="groupInfoSection" style="display:none;" data-size="sm">
+          <h2 class="blora-card__title"><span data-i18n="Team 与限额">Team 与限额</span></h2>
           <div class="cr-console-group-info">
             <div class="group-header">
               <div class="group-name-row">

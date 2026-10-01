@@ -1,51 +1,71 @@
 # CrewRouter Desktop
 
-Electron shell，复用 CrewRouter Web UI。Local 模式启动真正的 CrewRouter Server，Remote 模式先进入已配置的官方 Demo 转向入口，再承载目标 Personal/Team Server 页面。
+Electron 壳，复用 CrewRouter Web UI。Local 模式在本机启动真正的 CrewRouter Server（含内置 PostgreSQL），Remote 模式通过官方站选择实例或直接输入服务器地址，页面本身由目标 CrewRouter 提供。
 
-## Blora Design 2.0
+## 结构
 
-启动连接页正式使用 `@bloret-crew/blora-design@2.0.8` 的发布 CSS、token 和组件样式。页面使用官方 `.blora-button`、`.blora-card`、`.blora-badge`、`.blora-input` 结构与 `data-variant`，页面专用 CSS 只负责布局，不复制官方 token 或组件实现。没有使用 Blora 1.x 的 `blora-btn`、`Blora.init()` 或 UMD 脚本。SF Symbols 图标优先使用远程图标地址，图标不可用时仍由本地字符 fallback 保证核心界面可用。详见 [`docs/blora-integration.md`](docs/blora-integration.md)。
-
-
-
-## 开发
-
-```bash
-npm install
-# 可选：指向父项目；未设置时使用仓库内 staging/server
-CREWROUTER_SERVER_ROOT=/path/to/CrewRouter npm start
+```
+src/main.js                 仅在 Electron 主进程中调用 createApp().bootstrap()
+src/app/create-app.js       组装状态模型、连接管理、窗口、IPC、官方站登录、菜单；接受注入的 electron 便于测试
+src/app/state.js            单一状态模型：idle | starting-local | connecting | awaiting-official-login | connected | error
+src/app/ipc.js              IPC 信任分级（launcher / localConsole / remoteConsole）与允许矩阵
+src/app/window.js           主窗口、导航白名单、加载失败回退
+src/app/official-login.js   官方站登录：PKCE + 回环回调 + TTL + 取消，成功后进入 ConnectionManager
+src/app/menu.js             最小应用菜单（返回启动页 / 打开日志目录 / 退出）
+src/server-manager.js       本地 Server 生命周期：隔离配置、动态端口、健康检查、进度/退出事件、本地 token
+src/postgres/               PostgreSQL provider：embedded-postgres（跨平台内置）或 Linux root 的系统 postgres 兜底
+src/connection-manager.js   /api/instance 校验与 profile 元数据
+src/profile-store.js        profiles.json（非敏感元数据 + 偏好）
+src/url-policy.js           远程 URL 策略：仅 http/https、禁止内网/凭据、DNS 解析校验
+src/preload.js              唯一 preload，暴露 window.crewrouterDesktop
+src/renderer/               启动页（OOBE + 已保存连接 + 设置），仅使用 Blora 2.0 官方组件
 ```
 
-Local 模式使用 `LocalServerManager` 在 `app.getPath('userData')` 下创建隔离的 runtime/config、data、logs，启动完整 CrewRouter Server（不是 demo/mock），明确使用 `runtime=desktop-local`、`edition=personal` 和 `auth.required=false` 的本地身份，因此不需要用户交互登录。服务端仍保留 login-report 和 stats-report 模块及其启用配置；这表示实例上报逻辑不因免登录而关闭，不会伪造用户登录事件。服务只监听 `127.0.0.1`，清理继承的 CR 配置/数据库环境变量并选择动态回环端口；退出时只停止本实例持有的子进程。服务端仍需要 PostgreSQL；Desktop 不修改父项目配置，也不会触碰生产端口。可通过 `CREWROUTER_SERVER_ROOT` 指向父项目，打包后则从 `resources/server` 查找 staged release。就绪检查依次验证 `/api/version`、`/api/setup/status` 和 `/api/instance`。
+## 启动页与状态
 
-## Remote 与 Demo 转向
+启动页只根据主进程推送的状态快照渲染：
 
-在连接页输入 `http(s)` 地址。Desktop 请求 `/api/instance` 读取服务器权威的 runtime、edition 和认证能力：Personal Server 仅 Passport，Team Server 保持密码与飞书两种方式。远程页面自身负责登录，Desktop 不硬编码登录界面、不伪造 OAuth、不交换或保存 Token/API Key；Local 仅使用本实例的本地免交互认证。
+| 状态 | 启动页 |
+|---|---|
+| `idle` | 欢迎页。有已保存连接时先显示“已保存的连接”列表（连接 / 重命名 / 删除），下方是“本地使用”与“连接服务器” |
+| `starting-local` / `connecting` | 进度面板（准备数据库 → 启动服务 → 检查就绪 → 打开页面），可取消 |
+| `awaiting-official-login` | “请在浏览器中继续”，可重新打开链接或取消；5 分钟未回调自动超时 |
+| `error` | `blora-result` 错误说明 + 重试 / 查看日志 / 返回；重试信息由主进程携带 |
+| `connected` | 主窗口已切换到目标 CrewRouter 页面 |
 
-设置 `CREWROUTER_DEMO_URL` 后，Remote 点击会先读取目标 `/api/instance`，再生成绑定目标的一次性、短时效 state，并通过系统浏览器打开已配置的官方 Demo 转向入口。当前仓库未发现服务端 Demo redirect endpoint，因此不能编造 `/connect` 接口；Desktop 不会在 Demo 配置缺失时静默直连。受支持的 `crewrouter://connect/` 或 `crewrouter://oauth/callback` 回调必须携带当前进程创建的 state，缺失、过期、未知和重放都会拒绝。Desktop 仅校验目标 origin 和 URL policy，不接受 code、Token、API Key 或其他敏感参数。目标服务器负责自己的登录：Personal 使用 Passport，Team 保持服务端现有认证方式。详细边界见 [`docs/remote-redirect.md`](docs/remote-redirect.md)。
+设置面板合并在启动页内（偏好、本地服务状态与重启/停止、诊断复制、重启/退出应用）。本地控制台的“CrewRouter Desktop 设置”卡片显示同样的内容；远程实例页面只能看到当前连接、返回启动页和重启/退出，不能读取其他已保存连接。
 
-## 验证
+## 本地模式
 
-安装依赖后，按以下顺序运行：
+- `LocalServerManager` 在 `app.getPath('userData')` 下生成隔离的 `runtime/config.json`、数据与日志目录，清理继承的 `CR_*` / `PG*` / `DATABASE_URL` 环境变量，只监听 `127.0.0.1` 的动态端口，退出时只停止自己持有的子进程。
+- PostgreSQL 由 `src/postgres` 提供：优先 `embedded-postgres`（数据目录 `userData/postgres/data`，随机密码写入 `userData/runtime/postgres.json`）；在 Linux root 且存在 `postgres` 系统用户时退回 `runuser` 方案（仅开发容器）。可用 `CREWROUTER_POSTGRES_PROVIDER=embedded|system` 强制选择。
+- 每次启动生成一次性 `CR_LOCAL_TOKEN`，主进程用 `session.webRequest` 为本地 origin 附加 `x-crewrouter-desktop-token`；服务端 desktop-local 中间件只为携带该 token 的回环请求建立免登录会话，本机其他进程无法冒用。
+- 就绪检查依次验证 `/api/version`、`/api/setup/status`、`/api/instance`，并要求 `runtime=desktop-local`、`edition=personal`、`auth={required:false,methods:['local']}`、`demo=false`。
+- 本地服务意外退出时回到启动页并提示重启；返回启动页不会停止本地服务，再次选择本地使用会直接复用。
 
-```bash
-npm test
-npm run syntax
-npm run test:local-server
-npm run build
-```
+## 远程模式
 
-`npm test` 覆盖 URL policy、RedirectFlow、ProfileStore、ConnectionManager、LocalServerManager，以及无需 Electron 的主进程入口。`test:packaged-server` 使用仓库内 `staging/server`、临时 PostgreSQL、临时 userData 和动态非生产端口验证完整 Server，并在结束时停止服务；开发模式也可用 `CREWROUTER_SERVER_ROOT` 覆盖 staged fallback。正式 Electron 运行从 `resources/server` 查找 bundle。
-
-## 打包与交付
-
-```bash
-npm run stage:server -- /path/to/release
-npm run pack
-```
-
-`stage-server.js` 只复制父项目 release 产物，明确排除 `node_modules`、`.env` 和 git 数据；正式发布包需要预先提供服务端运行依赖与 PostgreSQL。当前配置提供 Linux AppImage，可运行构建环境；Windows NSIS、macOS DMG 及 `crewrouter` 协议注册资源路径已预留，尚未在本机交叉验证。不要把密钥写入仓库或命令行 URL。
+- **官方站**：Desktop 打开 `https://crewrouter.bloret.net/store?helper_login=1&...`（PKCE S256，回调 `http://127.0.0.1:<动态端口>/callback`）。用户在官方站选择登录过的实例并完成授权后，Desktop 用授权码向目标实例 `POST /oauth/desktop-session` 交换 Web Session Cookie，写入 Electron session 后通过 `ConnectionManager` 保存 profile 并打开页面。回调 nonce 不匹配时拒绝但不中断等待；可用 `CREWROUTER_DEMO_URL` 覆盖官方站地址。
+- **自定义地址**：经 `url-policy` 校验后读取 `/api/instance`，登录由目标服务器页面完成。
+- `crewrouter://connect?serverUrl=...` 深链只在启动页预填地址，不会自动连接。
 
 ## 安全边界
 
-BrowserWindow 使用 `contextIsolation: true`、`nodeIntegration: false`、sandbox；preload 只暴露状态、模式、连接、外部打开、重启和退出 IPC。导航仅允许当前目标 origin；其他链接交给系统浏览器。单实例启动时，第二次进程的协议参数会转交首实例。
+`contextIsolation: true`、`nodeIntegration: false`、`sandbox: true`；导航只允许启动页文件与当前目标 origin，其他链接交给系统浏览器（同样经过 URL 策略）。IPC 按调用帧分级：启动页可调用全部；本地控制台可管理 profile/偏好/本地服务；远程控制台只能读取裁剪后的状态、返回启动页、重启/退出。
+
+## 开发与验证
+
+```bash
+npm install
+npm test                      # 行为测试：状态模型、IPC 矩阵、官方站登录、窗口、主进程编排、LocalServerManager
+npm run syntax                # node --check 遍历 src/scripts/test
+CREWROUTER_SERVER_ROOT=/path/to/CrewRouter npm run test:local-server   # 真实 Server + PostgreSQL provider，校验 token 门禁与进度事件
+npm run test:electron:local-username   # xvfb 下的 Electron 验收：OOBE → 本地控制台 → 内嵌设置 → 启动页设置面板，截图到 ../.hermes/screenshots
+npm run build                 # stage server + Linux AppImage
+```
+
+开发运行：`CREWROUTER_SERVER_ROOT=/path/to/CrewRouter npm start`（未设置时使用 `staging/server`）。
+
+## 打包
+
+`npm run stage:server` 只复制父项目 release 产物（排除 `node_modules`、`.env`、git 数据），`validate:server-bundle` 检查 bundle 与当前平台的 PostgreSQL 二进制。`embedded-postgres` 及其平台包通过 `asarUnpack` 解压，Windows/macOS 打包需要在各自平台运行以获得对应二进制。

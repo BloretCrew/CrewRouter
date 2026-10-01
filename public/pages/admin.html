@@ -98,10 +98,6 @@
           <button type="button" class="blora-button nav-item" data-page="adminTeams" data-capability="teamAdmin" data-variant="ghost">
             <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="users" aria-hidden="true"></span>
             <span><span data-i18n="Team 管理">Team 管理</span></span>
-          </div>
-          <div class="nav-item" data-page="adminUserGroups" data-capability="teamMembers">
-            <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.2" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="用户组管理">用户组管理</span></span>
           </button>
           <button type="button" class="blora-button nav-item" data-page="adminModels" data-variant="ghost">
             <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="cpu" aria-hidden="true"></span>
@@ -266,6 +262,16 @@
             </div>
           </div>
 
+          <div class="cr-admin-section team-detail-section blora-stack blora-stack--lg" id="teamQuotaRulesSection" data-team-section="rules">
+            <div class="section-header team-detail-section-header" role="button" tabindex="0" aria-expanded="true" aria-controls="teamQuotaRulesSectionBody" onclick="adminApp.toggleTeamDetailSection('rules')"  data-event-bind="admin-event-0">
+              <h3 class="team-detail-section-title blora-h4"><span data-i18n="速率规则">速率规则</span></h3>
+            </div>
+            <div class="team-detail-section-body" id="teamQuotaRulesSectionBody">
+              <p style="margin:0 0 12px;"><span data-i18n="设置请求次数或 Token 用量的时间窗口限额，支持多条规则叠加">设置请求次数或 Token 用量的时间窗口限额，支持多条规则叠加</span></p>
+              <div id="teamQuotaRulesList"></div>
+            </div>
+          </div>
+
           <!-- Team 成员管理（默认可折叠且默认折叠） -->
           <div class="cr-admin-section team-detail-section collapsed blora-stack blora-stack--lg" id="teamMembersSection" data-team-section="members">
             <div class="section-header team-detail-section-header" role="button" tabindex="0" aria-expanded="false" aria-controls="teamMembersSectionBody" onclick="adminApp.toggleTeamDetailSection('members')"  data-event-bind="admin-event-1">
@@ -328,61 +334,8 @@
     </div>
       </div>
 
-      <!-- 用户组管理页面 -->
-      <div id="adminUserGroupsPage" class="page cr-admin-user-groups-page">
-        <div class="content-section">
-          <h2><span data-i18n="用户组管理">用户组管理</span></h2>
-          <div id="userGroupStatsCards" class="admin-stat-cards"></div>
-          <div class="admin-page-header">
-            <div class="section-actions">
-              <button type="button" id="createUserGroupBtn" class="blora-button" data-variant="secondary" data-size="sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建用户组">创建用户组</span></button>
-            </div>
-          </div>
-          <div class="admin-filter-bar">
-            <input type="search" id="userGroupSearchInput" class="blora-input input" placeholder="搜索用户组名称或描述..." data-i18n-placeholder="搜索用户组名称或描述..." oninput="adminApp.filterUserGroups()">
-            <span id="userGroupCount" class="filter-info"></span>
-          </div>
-          <div id="userGroupsList" class="models-table">
-            <!-- 用户组列表将通过JS动态加载 -->
-          </div>
-        </div>
-
-        <!-- 用户组详情面板 -->
-        <div id="userGroupDetailPanel" class="content-section" style="display:none;">
-          <div class="section-header">
-            <h2 id="userGroupDetailTitle"><span data-i18n="用户组详情">用户组详情</span></h2>
-            <div class="section-actions">
-              <button id="editUserGroupBtn" class="blora-button" data-variant="secondary"><span data-i18n="编辑">编辑</span></button>
-              <button id="deleteUserGroupBtn" class="blora-button" data-variant="danger"><span data-i18n="删除">删除</span></button>
-            </div>
-          </div>
-
-          <!-- 用户组规则管理 -->
-          <div class="content-section">
-            <div class="section-header">
-              <h3><span data-i18n="速率规则">速率规则</span></h3>
-            </div>
-            <p style="font-size:13px;color:var(--muted-foreground);margin:0 0 12px;"><span data-i18n="设置请求次数或 Token 用量的时间窗口限额，支持多条规则叠加">设置请求次数或 Token 用量的时间窗口限额，支持多条规则叠加</span></p>
-            <div id="userGroupRulesList">
-              <!-- 规则卡片将通过JS动态加载 -->
-            </div>
-          </div>
-
-          <!-- 用户组成员管理 -->
-          <div class="content-section">
-            <div class="section-header">
-              <h3><span data-i18n="组内成员">组内成员</span></h3>
-              <button id="addUserGroupMemberBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="添加成员">添加成员</span></button>
-            </div>
-            <div class="admin-filter-bar">
-              <input type="text" id="userGroupMemberSearchInput" class="input" placeholder="搜索成员用户名或邮箱..." data-i18n-placeholder="搜索成员用户名或邮箱..." oninput="adminApp.filterUserGroupMembers()">
-            </div>
-            <div id="userGroupMembersList" class="users-table">
-              <!-- 成员列表将通过JS动态加载 -->
-            </div>
-          </div>
-    </div>
-      </div>
+      <!-- Legacy user-group hash resolves to Team management. -->
+      <div id="adminUserGroupsPage" class="page cr-admin-user-groups-page" style="display:none;"></div>
 
       <!-- 模型管理页面（界面与用户侧模型库对齐） -->
       <div id="adminModelsPage" class="page cr-admin-models-page">
@@ -713,8 +666,8 @@
               客户端
             </span></button>
             <button type="button" onclick="adminApp.switchStatsTab('members')" class="blora-button" data-variant="ghost">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 11a4 4 0 1 0 0-8"/><path d="M18 21a6 6 0 0 0-4-5.65"/></svg><span data-i18n="成员 / Team / 用户组">
-              成员 / Team / 用户组
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 11a4 4 0 1 0 0-8"/><path d="M18 21a6 6 0 0 0-4-5.65"/></svg><span data-i18n="成员 / Team">
+              成员 / Team
             </span></button>
             <button type="button" onclick="adminApp.switchStatsTab('messages')" class="blora-button" data-variant="ghost">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H5l-1 4V4z"/><path d="M8 8h8M8 12h5"/></svg><span data-i18n="消息分析">
@@ -862,14 +815,13 @@
               </div>
               <div class="multi-stats-legend"><span class="multi-stats-dot"></span><span data-i18n="当前统计周期">当前统计周期</span></div>
             </div>
-            <div class="admin-filter-bar multi-stats-filters" id="adminStatsMultiFilters">
-              <label><span data-i18n="成员">成员</span><blora-select id="multiStatsUser" class="input"><blora-option value=""><span data-i18n="全部成员">全部成员</span></blora-option></blora-select></label>
-              <label>Team<blora-select id="multiStatsTeam" class="input"><blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option></blora-select></label>
-              <label><span data-i18n="用户组">用户组</span><blora-select id="multiStatsGroup" class="input"><blora-option value=""><span data-i18n="全部用户组">全部用户组</span></blora-option></blora-select></label>
-              <label><span data-i18n="模型">模型</span><blora-select id="multiStatsModel" class="input"><blora-option value=""><span data-i18n="全部模型">全部模型</span></blora-option></blora-select></label>
-              <label><span data-i18n="供应商">供应商</span><blora-select id="multiStatsProvider" class="input"><blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option></blora-select></label>
-              <label><span data-i18n="客户端">客户端</span><blora-select id="multiStatsSource" class="input"><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option></blora-select></label>
-              <label><span data-i18n="项目">项目</span><blora-select id="multiStatsProject" class="input"><blora-option value=""><span data-i18n="全部项目">全部项目</span></blora-option></blora-select></label>
+            <div class="blora-row cr-admin-filters multi-stats-filters" id="adminStatsMultiFilters">
+              <label><span data-i18n="成员">成员</span><blora-select id="multiStatsUser" class="" aria-label="成员"><blora-option value=""><span data-i18n="全部成员">全部成员</span></blora-option></blora-select></label>
+              <label>Team<blora-select id="multiStatsTeam" class="" aria-label="Team"><blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option></blora-select></label>
+              <label><span data-i18n="模型">模型</span><blora-select id="multiStatsModel" class="" aria-label="模型"><blora-option value=""><span data-i18n="全部模型">全部模型</span></blora-option></blora-select></label>
+              <label><span data-i18n="供应商">供应商</span><blora-select id="multiStatsProvider" class="" aria-label="供应商"><blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option></blora-select></label>
+              <label><span data-i18n="客户端">客户端</span><blora-select id="multiStatsSource" class="" aria-label="客户端"><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option></blora-select></label>
+              <label><span data-i18n="项目">项目</span><blora-select id="multiStatsProject" class="" aria-label="项目"><blora-option value=""><span data-i18n="全部项目">全部项目</span></blora-option></blora-select></label>
               <div class="multi-stats-filter-actions"><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.loadMultiStats()"><span data-i18n="查询">查询</span></button><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="adminApp.resetMultiStatsFilters()"><span data-i18n="重置">重置</span></button></div>
             </div>
             <section id="adminMultiDimension" class="multi-dimension-panel" aria-label="自选多维分析">
@@ -1030,7 +982,7 @@
             <div class="cr-admin-chart"><h4 class="blora-h4"><span data-i18n="Harness 贡献">Harness 贡献</span></h4><div id="messageStatsSourceTable"></div></div>
           </div>
 
-          <!-- Tab: 成员 / Team / 用户组分析 -->
+          <!-- Tab: 成员与 Team 分析 -->
           <div id="statsTabMembers" class="stats-tab-content" style="display:none;">
             <div id="memberStatsSummary" class="stats-overview-grid blora-grid" style="margin-bottom:20px;"></div>
             <div class="responsive-grid-2" style="margin-bottom:20px;">
@@ -1048,16 +1000,12 @@
                 <h4 class="blora-card__title"><span data-i18n="Team 请求量排行">Team 请求量排行</span></h4>
                 <div class="chart-container"><canvas id="teamRequestsChart"></canvas></div>
               </div>
-              <div class="chart-card">
-                <h4><span data-i18n="用户组请求量排行">用户组请求量排行</span></h4>
-                <div class="chart-container"><canvas id="groupRequestsChart"></canvas></div>
-              </div>
+
             </div>
             <div class="responsive-grid-2" style="margin-bottom:20px;">
               <div class="cr-admin-chart"><h4 class="blora-h4"><span data-i18n="成员明细">成员明细</span></h4><div id="memberStatsTable"></div></div>
               <div class="cr-admin-chart"><h4 class="blora-h4"><span data-i18n="Team 明细">Team 明细</span></h4><div id="teamStatsTable"></div></div>
             </div>
-            <div class="chart-card"><h4><span data-i18n="用户组明细">用户组明细</span></h4><div id="groupStatsTable"></div></div>
           </div>
 
           <!-- Tab 5: 调用记录 -->
@@ -1247,9 +1195,9 @@
           <div id="adminSettingsDetailTitle" class="settings-detail-title"></div>
         </div>
 
-        <div class="content-section admin-settings-section admin-settings-category-auth" id="passportInvitesSection">
-          <h2>邀请链接</h2>
-          <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 12px;">生成时可设置使用人数、有效天数，以及加入的 Team 和用户组。</p>
+        <div class="cr-admin-section admin-settings-section admin-settings-category-auth blora-stack blora-stack--lg" id="passportInvitesSection">
+          <h2 class="blora-h4">邀请链接</h2>
+          <p style="margin:0 0 12px;">生成时可设置使用人数、有效天数，以及加入的 Team。</p>
           <div class="blora-row cr-admin-filters">
             <button class="blora-button" type="button" onclick="adminApp.openInviteDialog()" data-variant="primary">生成邀请链接</button>
           </div>
@@ -1568,9 +1516,9 @@
           </blora-field>
         </div>
         <div class="cr-admin-field-group blora-stack blora-stack--sm">
-          <label for="editUserGroup"><span data-i18n="用户组">用户组</span></label>
-          <blora-select id="editUserGroup" class="select">
-            <blora-option value=""><span data-i18n="无用户组">无用户组</span></blora-option>
+          <label for="editUserTeam"><span data-i18n="Team">Team</span></label>
+          <blora-select id="editUserTeam" class="" aria-label="Team">
+            <blora-option value=""><span data-i18n="无 Team">无 Team</span></blora-option>
           </blora-select>
         </div>
         <div class="cr-admin-field-group blora-stack blora-stack--sm">

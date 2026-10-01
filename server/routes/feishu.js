@@ -274,30 +274,13 @@ router.get('/feishu/callback', async (req, res) => {
           const defaultTeam = await pool.query('SELECT id FROM teams WHERE is_default = TRUE LIMIT 1');
           if (defaultTeam.rows.length > 0) {
             const teamId = defaultTeam.rows[0].id;
-            await pool.query(
-              'INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT (user_id, team_id) DO NOTHING',
-              [user.id, teamId]
-            );
-            await pool.query(
-              'UPDATE users SET team_id = $1 WHERE id = $2 AND team_id IS NULL',
-              [teamId, user.id]
-            );
+            await require('../utils/team-membership').setUserTeam(pool, user.id, teamId);
             Logger.info(`[飞书注册] 用户 ${feishuName} 已自动加入默认 Team (id=${teamId})`);
           }
         } catch (teamErr) {
           Logger.error('[飞书注册] 自动加入默认 Team 失败:', teamErr);
         }
 
-        // 自动分配默认用户组
-        try {
-          const defGroup = await pool.query('SELECT id FROM user_groups WHERE is_default = TRUE LIMIT 1');
-          if (defGroup.rows.length > 0) {
-            await pool.query('UPDATE users SET group_id = $1 WHERE id = $2', [defGroup.rows[0].id, user.id]);
-            Logger.info(`[飞书注册] 用户 ${feishuName} 已自动加入默认用户组 (id=${defGroup.rows[0].id})`);
-          }
-        } catch (groupErr) {
-          Logger.error('[飞书注册] 自动分配默认用户组失败:', groupErr);
-        }
 
         // 自动创建默认 API Key（与普通 Key 无异，可删除）
         try {
@@ -313,20 +296,21 @@ router.get('/feishu/callback', async (req, res) => {
           Logger.error('[飞书注册] 创建默认 API Key 失败:', keyErr);
         }
 
-        // 自动创建个人账户 Team
+        // 无默认 Team 时创建个人账户 Team
         try {
+          const defaultTeam = await pool.query('SELECT id FROM teams WHERE is_default = TRUE LIMIT 1');
+          if (defaultTeam.rows.length) throw Object.assign(new Error('默认 Team 已分配'), { code: 'TEAM_ASSIGNED' });
+          const assigned = await pool.query('SELECT team_id FROM user_teams WHERE user_id = $1', [user.id]);
+          if (assigned.rows.length) throw Object.assign(new Error('用户已有 Team 归属'), { code: 'TEAM_ASSIGNED' });
           const teamName = `${feishuName} 的个人账户`;
           const teamResult = await pool.query(
             'INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id',
             [teamName, '个人账户，系统自动创建']
           );
-          await pool.query(
-            'INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2)',
-            [user.id, teamResult.rows[0].id]
-          );
+          await require('../utils/team-membership').setUserTeam(pool, user.id, teamResult.rows[0].id);
           Logger.info(`[飞书注册] 已为用户 ${feishuName} 创建个人账户 Team`);
         } catch (teamErr) {
-          Logger.error('[飞书注册] 创建个人账户 Team 失败:', teamErr);
+          if (teamErr.code !== 'TEAM_ASSIGNED') Logger.error('[飞书注册] 创建个人账户 Team 失败:', teamErr);
         }
       }
     }

@@ -24,7 +24,7 @@ const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
 const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-edition');
 
 const requireTeamAdminEdition = requireTeamEdition(() => loadPersistedEdition(pool));
-router.use(['/users', '/users/:id', '/user-groups', '/user-groups/:id', '/user-group-rules/:id', '/audit-logs', '/stats/multi', '/stats/multi/filters', '/stats', '/message-stats', '/usage-logs', '/usage-logs/export', '/usage-logs/:id'], requireTeamAdminEdition);
+router.use(['/users', '/users/:id', '/teams', '/teams/:id', '/teams/:id/rules', '/teams/:id/rules/:ruleId', '/user-groups', '/user-groups/:id', '/user-groups/:id/rules', '/user-group-rules/:id', '/audit-logs', '/stats/multi', '/stats/multi/filters', '/stats', '/message-stats', '/usage-logs', '/usage-logs/export', '/usage-logs/:id'], requireTeamAdminEdition);
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const {
   normalizeProviderKeyEntries,
@@ -63,17 +63,15 @@ async function addModelsToFrontierTeams(modelIds) {
 }
 
 // 获取所有用户列表（支持可选分页：?page=&limit=&q=）
-router.get('/users', requireAuth, requireAdmin, async (req, res) => {
+router.get('/users', requireAuth, requireAdmin, requireTeamAdminEdition, async (req, res) => {
   try {
     const baseFrom = `
        FROM users u
-       LEFT JOIN teams t ON u.team_id = t.id
-       LEFT JOIN user_groups ug ON u.group_id = ug.id`;
+       LEFT JOIN teams t ON u.team_id = t.id`;
     const selectCols = `
        SELECT u.id, u.username, u.email, u.email_verified, u.avatar, u.balance, u.refund_balance,
               u.is_admin, u.tags, u.rate_limit_rpm, u.rate_limit_tpm, u.created_at,
-              u.team_id, t.name AS team_name,
-              u.group_id, ug.name AS group_name`;
+              u.team_id, t.name AS team_name`;
 
     // 无 page 参数时保持旧行为（全量数组），兼容成员选择等场景
     if (req.query.page === undefined) {
@@ -132,13 +130,14 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // 更新用户状态（仅更新请求体中显式提供的字段，避免部分更新覆盖 is_admin 等关键属性）
-router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_USER_UPDATE, {
+router.put('/users/:id', requireAuth, requireAdmin, requireTeamAdminEdition, auditMiddleware(ACTIONS.ADMIN_USER_UPDATE, {
   resourceType: 'user',
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `更新用户 #${req.params.id}`,
-  detailsFrom: (req) => ({ username: req.body?.username, is_admin: req.body?.is_admin, balance: req.body?.balance, team_id: req.body?.team_id, group_id: req.body?.group_id }),
+  detailsFrom: (req) => ({ username: req.body?.username, is_admin: req.body?.is_admin, balance: req.body?.balance, team_id: req.body?.team_id }),
 }), async (req, res) => {
-  const { email, email_verified, isAdmin, balance, refundBalance, group_id, tags, rate_limit_rpm, rate_limit_tpm, team_id } = req.body;
+  const { email, email_verified, isAdmin, balance, refundBalance, tags, rate_limit_rpm, rate_limit_tpm, team_id } = req.body;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'group_id')) return res.status(400).json({ error: '请使用 team_id 设置唯一 Team 归属' });
   const userId = req.params.id;
 
   if (balance !== undefined && (typeof balance !== 'number' || isNaN(balance) || balance < 0 || balance >= 1000000)) {
@@ -164,18 +163,25 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
           return res.status(400).json({ error: error.message });
         }
       }
-    const sets = [];
-    const params = [userId];
-    let idx = 2;
+      if (team_id !== undefined && team_id !== null && team_id !== '') {
+        const team = await client.query('SELECT id FROM teams WHERE id = $1 FOR SHARE', [team_id]);
+        if (!team.rows.length) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Team 不存在' });
+        }
+      }
+      const sets = [];
+      const params = [userId];
+      let idx = 2;
 
-    if (email !== undefined) {
-      sets.push(`email = $${idx++}`);
-      params.push(normalizedEmail);
-    }
-    if (email_verified !== undefined) {
-      sets.push(`email_verified = $${idx++}`);
-      params.push(!!email_verified);
-    }
+      if (email !== undefined) {
+        sets.push(`email = $${idx++}`);
+        params.push(normalizedEmail);
+      }
+      if (email_verified !== undefined) {
+        sets.push(`email_verified = $${idx++}`);
+        params.push(!!email_verified);
+      }
     if (isAdmin !== undefined) {
       // 取消管理员前，确保系统至少保留一名管理员
       if (!isAdmin) {
@@ -204,10 +210,6 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
       sets.push(`refund_balance = $${idx++}`);
       params.push(refundBalance);
     }
-    if (group_id !== undefined) {
-      sets.push(`group_id = $${idx++}`);
-      params.push(group_id === null || group_id === '' ? null : group_id);
-    }
     if (tags !== undefined) {
       sets.push(`tags = $${idx++}`);
       params.push(Array.isArray(tags) ? tags : []);
@@ -222,7 +224,7 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
     }
     if (team_id !== undefined) {
       sets.push(`team_id = $${idx++}`);
-      params.push(team_id === null || team_id === '' ? null : team_id);
+      params.push(team_id === null || team_id === '' ? null : Number(team_id));
     }
 
     if (sets.length === 0) {
@@ -234,6 +236,10 @@ router.put('/users/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMI
       `UPDATE users SET ${sets.join(', ')} WHERE id = $1`,
       params
     );
+    if (team_id !== undefined) {
+      await require('../utils/team-membership').setUserTeam(client, userId, team_id);
+    }
+    require('./api').invalidateUserApiKeyCache(userId);
     if (result.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: '用户不存在' });
@@ -1026,10 +1032,9 @@ router.get('/stats/multi-dimension', requireAuth, requireAdmin, requireTeamAdmin
 // 多维统计筛选选项
 router.get('/stats/multi/filters', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const [users, teams, groups, models, providers, sources, projects] = await Promise.all([
+    const [users, teams, models, providers, sources, projects] = await Promise.all([
       pool.query('SELECT id, username AS name FROM users ORDER BY username'),
       pool.query('SELECT id, name FROM teams ORDER BY name'),
-      pool.query('SELECT id, name FROM user_groups ORDER BY name'),
       pool.query('SELECT id, name FROM models ORDER BY name'),
       pool.query('SELECT id, name FROM providers ORDER BY name'),
       pool.query("SELECT DISTINCT COALESCE(NULLIF(request_source, ''), 'unknown') AS id FROM usage_records ORDER BY id"),
@@ -1039,7 +1044,6 @@ router.get('/stats/multi/filters', requireAuth, requireAdmin, async (req, res) =
     res.json({
       users: users.rows,
       teams: teams.rows,
-      groups: groups.rows,
       models: models.rows,
       providers: providers.rows,
       sources: sources.rows.map(row => ({ id: row.id, name: sourceLabel(row.id) })),
@@ -1073,7 +1077,7 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
     };
     addFilter(req.query.user_id, 'u.user_id = ?::int');
     addFilter(req.query.team_id, 'usr.team_id = ?::int');
-    addFilter(req.query.group_id, 'usr.group_id = ?::int');
+
     addFilter(req.query.model_id, 'u.model_id = ?');
     addFilter(req.query.provider_id, 'u.provider_id = ?');
     addFilter(req.query.request_source, "COALESCE(NULLIF(u.request_source, ''), 'unknown') = ?");
@@ -1084,7 +1088,6 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
       FROM usage_records u
       LEFT JOIN users usr ON usr.id = u.user_id
       LEFT JOIN teams t ON t.id = usr.team_id
-      LEFT JOIN user_groups ug ON ug.id = usr.group_id
       LEFT JOIN providers p ON p.id = u.provider_id
       LEFT JOIN usage_message_analysis uma ON uma.usage_id = u.id
       LEFT JOIN LATERAL (
@@ -1100,8 +1103,6 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
       COALESCE(usr.username, '未知成员') AS user_name,
       usr.team_id,
       COALESCE(t.name, '未分配 Team') AS team_name,
-      usr.group_id,
-      COALESCE(ug.name, '未分配用户组') AS group_name,
       COALESCE(NULLIF(TRIM(uma.workspace_path), ''), '__unknown__') AS workspace_path,
       COALESCE(NULLIF(u.request_source, ''), 'unknown') AS request_source,
       u.model_id,
@@ -1117,7 +1118,7 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
       AVG(u.latency_ms)::numeric AS avg_latency,
       MAX(u.created_at) AS last_activity`;
     const combinations = await pool.query(`SELECT ${baseSelect} ${from} ${where}
-      GROUP BY u.user_id, usr.username, usr.team_id, t.name, usr.group_id, ug.name,
+      GROUP BY u.user_id, usr.username, usr.team_id, t.name,
         COALESCE(NULLIF(TRIM(uma.workspace_path), ''), '__unknown__'),
         COALESCE(NULLIF(u.request_source, ''), 'unknown'), u.model_id,
         COALESCE(NULLIF(mdl.name, ''), '未知模型'), u.provider_id, COALESCE(NULLIF(p.name, ''), '未知供应商'),
@@ -1128,7 +1129,6 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
     const summary = await pool.query(`SELECT COUNT(*)::int AS requests, COALESCE(SUM(u.tokens_used), 0)::bigint AS tokens,
       COALESCE(SUM(u.cost), 0)::numeric AS cost, AVG(u.latency_ms)::numeric AS avg_latency,
       COUNT(DISTINCT u.user_id)::int AS active_users, COUNT(DISTINCT usr.team_id)::int AS active_teams,
-      COUNT(DISTINCT usr.group_id)::int AS active_groups,
       COUNT(DISTINCT NULLIF(TRIM(uma.workspace_path), ''))::int AS active_projects,
       COUNT(DISTINCT COALESCE(mdl.id, u.model_id))::int AS active_models,
       COUNT(DISTINCT u.provider_id)::int AS active_providers,
@@ -1149,7 +1149,7 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
     };
     const { sourceLabel } = require('../utils/request-source');
     const relationLabelKey = (key) => ({
-      user_id: 'user_name', team_id: 'team_name', group_id: 'group_name',
+      user_id: 'user_name', team_id: 'team_name',
       model_id: 'model_name', provider_id: 'provider_name',
       workspace_path: 'workspace_path', request_source: 'request_source'
     }[key] || key);
@@ -1175,7 +1175,7 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
       summary: summary.rows[0] || {},
       combinations: rows,
       dimensions: {
-        users: aggregate('user_id'), teams: aggregate('team_id'), groups: aggregate('group_id'),
+        users: aggregate('user_id'), teams: aggregate('team_id'),
         projects: aggregate('workspace_path'),
         models: aggregate('model_id').map(row => ({ ...row, name: row.name || '未知模型' })),
         providers: aggregate('provider_id').map(row => ({ ...row, name: row.name || '未知供应商' })),
@@ -1185,12 +1185,12 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
       relationships: {
         user_model: relation('user_id', 'model_id'),
         team_model: relation('team_id', 'model_id'),
-        group_source: relation('group_id', 'request_source'),
+
         project_source: relation('workspace_path', 'request_source'),
         model_provider: relation('model_id', 'provider_id'),
         user_project: relation('user_id', 'workspace_path')
       },
-      caveats: ['Team 按成员当前主 Team 归属统计；用户组按当前成员关系回溯历史用量；项目未完成消息分析的记录归入未识别项目。']
+      caveats: ['Team 按成员当前归属统计；项目未完成消息分析的记录归入未识别项目。']
     });
   } catch (error) {
     Logger.error('[获取多维关联统计] 错误:', error);
@@ -1326,30 +1326,14 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
         SUM(u.cost) AS cost,
         AVG(u.latency_ms) AS avg_latency
       FROM usage_records u
-      LEFT JOIN user_teams ut ON ut.user_id = u.user_id
-      LEFT JOIN teams t ON t.id = ut.team_id
+      LEFT JOIN users usr ON usr.id = u.user_id
+      LEFT JOIN teams t ON t.id = usr.team_id
       ${whereUsage}
       GROUP BY t.id, COALESCE(t.name, '未分配 Team')
       ORDER BY requests DESC
       LIMIT 100
     `, baseParams);
-    const byGroupResult = await pool.query(`
-      SELECT
-        ug.id AS group_id,
-        COALESCE(ug.name, '未分配用户组') AS group_name,
-        COUNT(*) AS requests,
-        SUM(u.tokens_used) AS tokens,
-        SUM(u.cached_tokens) AS cached_tokens,
-        SUM(u.cost) AS cost,
-        AVG(u.latency_ms) AS avg_latency
-      FROM usage_records u
-      LEFT JOIN users usr ON usr.id = u.user_id
-      LEFT JOIN user_groups ug ON ug.id = usr.group_id
-      ${whereUsage}
-      GROUP BY ug.id, COALESCE(ug.name, '未分配用户组')
-      ORDER BY requests DESC
-      LIMIT 100
-    `, baseParams);
+
     const dailyBySourceResult = await pool.query(`
       SELECT
         to_char(u.created_at, 'YYYY-MM-DD') as date,
@@ -1399,7 +1383,6 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
       bySourceModel: bySourceModelResult.rows,
       byUser: byUserResult.rows,
       byTeam: byTeamResult.rows,
-      byGroup: byGroupResult.rows,
       sourceSummary
     });
   } catch (error) {
@@ -1424,7 +1407,7 @@ router.get('/message-stats', requireAuth, requireAdmin, async (req, res) => {
     }
     const source = String(req.query.request_source || '').trim().toLowerCase();
     if (source) { where.push(`request_source = $${idx++}`); params.push(source); }
-    if (req.query.workspace_path) { where.push(`workspace_path = $${idx++}`); params.push(String(req.query.workspace_path)); }
+    if (req.query.workspace_path) { where.push(`md5(workspace_path) = md5($${idx++}::text) AND workspace_path = $${idx - 1}`); params.push(String(req.query.workspace_path)); }
     if (req.query.block) {
       const block = String(req.query.block).replace(/[^a-z0-9_-]/gi, '');
       if (block) { where.push(`COALESCE((block_counts ->> $${idx++})::int, 0) > 0`); params.push(block); }
@@ -3847,174 +3830,16 @@ router.post('/import-opencode', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// ========== 用户组管理 ==========
-
-// 获取所有用户组
-router.get('/user-groups', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT ug.*,
-        (SELECT COUNT(*) FROM users WHERE group_id = ug.id) AS member_count,
-        (SELECT COUNT(*) FROM user_group_rules WHERE group_id = ug.id) AS rule_count
-      FROM user_groups ug
-      ORDER BY ug.created_at DESC
-    `);
-    res.json(result.rows);
-  } catch (error) {
-    Logger.error('[获取用户组列表] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 创建用户组
-router.post('/user-groups', requireAuth, requireAdmin, async (req, res) => {
-  const { name, description } = req.body;
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: '用户组名称不能为空' });
-  }
-  try {
-    const result = await pool.query(
-      'INSERT INTO user_groups (name, description) VALUES ($1, $2) RETURNING *',
-      [name.trim(), description || '']
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    if (error.code === '23505') {
-      return res.status(400).json({ error: '用户组名称已存在' });
-    }
-    Logger.error('[创建用户组] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 更新用户组
-router.put('/user-groups/:id', requireAuth, requireAdmin, async (req, res) => {
-  const { name, description } = req.body;
-  try {
-    const result = await pool.query(
-      'UPDATE user_groups SET name = COALESCE($1, name), description = COALESCE($2, description), updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
-      [name, description, req.params.id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '用户组不存在' });
-    }
-    res.json(result.rows[0]);
-  } catch (error) {
-    if (error.code === '23505') {
-      return res.status(400).json({ error: '用户组名称已存在' });
-    }
-    Logger.error('[更新用户组] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 设置默认用户组
-router.put('/user-groups/:id/set-default', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    // 先清除所有默认标记
-    await pool.query('UPDATE user_groups SET is_default = FALSE WHERE is_default = TRUE');
-    // 设置新的默认组
-    const result = await pool.query(
-      'UPDATE user_groups SET is_default = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
-      [req.params.id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '用户组不存在' });
-    }
-    Logger.info(`[用户组] 已将 "${result.rows[0].name}" 设为默认用户组`);
-    res.json(result.rows[0]);
-  } catch (error) {
-    Logger.error('[设置默认用户组] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 删除用户组
-router.delete('/user-groups/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    // 先将该用户组的用户 group_id 置空
-    await pool.query('UPDATE users SET group_id = NULL WHERE group_id = $1', [req.params.id]);
-    const result = await pool.query('DELETE FROM user_groups WHERE id = $1 RETURNING id', [req.params.id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '用户组不存在' });
-    }
-    res.json({ success: true });
-  } catch (error) {
-    Logger.error('[删除用户组] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 获取用户组规则
-router.get('/user-groups/:id/rules', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM user_group_rules WHERE group_id = $1 ORDER BY created_at DESC',
-      [req.params.id]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    Logger.error('[获取用户组规则] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 添加用户组规则
-router.post('/user-groups/:id/rules', requireAuth, requireAdmin, async (req, res) => {
-  const { rule_type, rule_value, duration_hours, description } = req.body;
-  if (!rule_type || rule_value === undefined) {
-    return res.status(400).json({ error: '规则类型和值不能为空' });
-  }
-  try {
-    // 验证用户组存在
-    const groupCheck = await pool.query('SELECT id FROM user_groups WHERE id = $1', [req.params.id]);
-    if (groupCheck.rows.length === 0) {
-      return res.status(404).json({ error: '用户组不存在' });
-    }
-    const result = await pool.query(
-      `INSERT INTO user_group_rules (group_id, rule_type, rule_value, duration_hours, description)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [req.params.id, rule_type, rule_value, duration_hours || null, description || '']
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    Logger.error('[添加用户组规则] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 更新用户组规则
-router.put('/user-group-rules/:id', requireAuth, requireAdmin, async (req, res) => {
-  const { rule_value, duration_hours, description } = req.body;
-  if (rule_value === undefined) {
-    return res.status(400).json({ error: '限制值不能为空' });
-  }
-  try {
-    const result = await pool.query(
-      `UPDATE user_group_rules SET rule_value = $1, duration_hours = COALESCE($2, duration_hours),
-       description = COALESCE($3, description) WHERE id = $4 RETURNING *`,
-      [rule_value, duration_hours ?? null, description ?? null, req.params.id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '规则不存在' });
-    }
-    res.json(result.rows[0]);
-  } catch (error) {
-    Logger.error('[更新用户组规则] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
-
-// 删除用户组规则
-router.delete('/user-group-rules/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM user_group_rules WHERE id = $1', [req.params.id]);
-    res.json({ success: true });
-  } catch (error) {
-    Logger.error('[删除用户组规则] 错误:', error);
-    res.status(500).json({ error: '服务器错误' });
-  }
-});
+// 旧用户组 API 返回弃用状态，避免客户端继续写入分离的用户组数据。
+router.get('/user-groups', requireAuth, requireAdmin, async (req, res) => res.status(410).json({ error: '用户组已并入 Team，请使用 /api/admin/teams' }));
+router.post('/user-groups', requireAuth, requireAdmin, async (req, res) => res.status(410).json({ error: '用户组已并入 Team，请使用 /api/admin/teams' }));
+router.put('/user-groups/:id', requireAuth, requireAdmin, async (req, res) => res.status(410).json({ error: '用户组已并入 Team，请使用 /api/admin/teams' }));
+router.put('/user-groups/:id/set-default', requireAuth, requireAdmin, async (req, res) => res.status(410).json({ error: '用户组已并入 Team，请更新 Team 默认设置' }));
+router.delete('/user-groups/:id', requireAuth, requireAdmin, async (req, res) => res.status(410).json({ error: '用户组已并入 Team，请使用 /api/admin/teams' }));
+router.get('/user-groups/:id/rules', requireAuth, requireAdmin, async (req, res) => res.status(410).json({ error: '用户组已并入 Team，请使用 /api/admin/teams/:id/rules' }));
+router.post('/user-groups/:id/rules', requireAuth, requireAdmin, async (req, res) => res.status(410).json({ error: '用户组已并入 Team，请使用 /api/admin/teams/:id/rules' }));
+router.put('/user-group-rules/:id', requireAuth, requireAdmin, async (req, res) => res.status(410).json({ error: '用户组已并入 Team，请更新 Team 规则' }));
+router.delete('/user-group-rules/:id', requireAuth, requireAdmin, async (req, res) => res.status(410).json({ error: '用户组已并入 Team，请更新 Team 规则' }));
 
 // ==================== AI 脚本分析与修复 ====================
 

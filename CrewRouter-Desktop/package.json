@@ -10,22 +10,21 @@
     "test": "node --test test/*.test.js",
     "dev": "NODE_ENV=development electron .",
     "prepare:renderer": "node scripts/prepare-blora-assets.js",
-    "test": "node --test test/*.test.js",
-    "syntax": "node --check src/url-policy.js && node --check src/profile-store.js && node --check src/connection-manager.js && node --check src/redirect-flow.js && node --check src/server-manager.js && node --check src/main.js && node --check src/preload.js && node --check src/renderer/renderer.js && node --check scripts/stage-server.js && node --check scripts/test-local-server.js && node --check test/core.test.js && node --check test/main.test.js && node --check test/server-manager.test.js",
+    "syntax": "node scripts/check-syntax.js",
     "test:local-server": "node scripts/test-local-server.js",
     "test:packaged-server": "node scripts/test-local-server.js --packaged",
     "test:electron:local-username": "node scripts/run-electron-acceptance.js",
     "test:electron:real-pages": "node scripts/run-real-page-acceptance.js",
     "validate:server-bundle": "node scripts/validate-server-bundle.js",
     "stage:server": "node scripts/stage-server.js",
-    "pack": "npm run stage:server && npm run validate:server-bundle && electron-builder",
-    "pack:linux": "npm run stage:server && npm run validate:server-bundle && electron-builder --linux AppImage",
-    "pack:win": "npm run stage:server && npm run validate:server-bundle && electron-builder --win nsis",
-    "pack:mac": "npm run stage:server && npm run validate:server-bundle && electron-builder --mac dmg",
-    "build": "npm run stage:server && npm run validate:server-bundle && electron-builder --linux AppImage"
+    "pack": "npm run stage:server && npm run validate:server-bundle && electron-builder --publish never",
+    "pack:linux": "npm run stage:server && npm run validate:server-bundle && electron-builder --linux AppImage --publish never",
+    "pack:win": "npm run stage:server && npm run validate:server-bundle && electron-builder --win nsis --publish never",
+    "pack:mac": "npm run stage:server && npm run validate:server-bundle && electron-builder --mac dmg --publish never",
+    "build": "npm run stage:server && npm run validate:server-bundle && electron-builder --linux AppImage --publish never"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "devDependencies": {
     "electron": "^31.7.7",
@@ -38,12 +37,19 @@
     "directories": {
       "output": "dist"
     },
+    "icon": "build/icons/crewrouter.png",
     "files": [
       "src/**/*",
       "scripts/**/*",
       "package.json",
       "README.md",
-      "node_modules/@bloret-crew/blora-design/**/*"
+      "node_modules/@bloret-crew/blora-design/**/*",
+      "node_modules/embedded-postgres/**/*",
+      "node_modules/@embedded-postgres/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/embedded-postgres/**/*",
+      "node_modules/@embedded-postgres/**/*"
     ],
     "extraResources": [
       {
@@ -55,6 +61,7 @@
       }
     ],
     "linux": {
+      "icon": "build/icons/crewrouter.png",
       "target": [
         "AppImage"
       ],
@@ -63,21 +70,19 @@
     "protocols": [
       {
         "name": "CrewRouter Desktop Link",
-        "schemes": ["crewrouter"]
+        "schemes": [
+          "crewrouter"
+        ]
       }
     ],
     "win": {
+      "icon": "build/icons/crewrouter.ico",
       "target": [
         "nsis"
-      ],
-      "extraResources": [
-        {
-          "from": "staging/server",
-          "to": "server"
-        }
       ]
     },
     "mac": {
+      "icon": "build/icons/crewrouter.png",
       "target": [
         "dmg"
       ],

@@ -28,12 +28,12 @@ function formatCost(n) {
 }
 
 /**
- * Fetch user's group name from user_groups table.
+ * Fetch the Team name used by the legacy group_name signature variable.
  */
-async function getGroupName(groupId) {
-  if (!groupId) return null;
+async function getGroupName(teamId) {
+  if (!teamId) return null;
   try {
-    const r = await pool.query('SELECT name FROM user_groups WHERE id = $1', [groupId]);
+    const r = await pool.query('SELECT name FROM teams WHERE id = $1', [teamId]);
     return r.rows[0]?.name || null;
   } catch (err) {
     Logger.warn(`[Signature] 获取用户组名失败: ${err.message}`);
@@ -91,7 +91,7 @@ async function getTodayStats(userId) {
 }
 
 /**
- * Compute a user's quota usage percentages from user_group_rules.
+ * Compute a user's quota usage percentages from their Team rules.
  *
  * @param {number} userId
  * @returns {Promise<string|null>} - Quota string, or null if no rules.
@@ -126,25 +126,24 @@ async function getOpenCodeGoQuotaWarning(provider, enabled = false) {
 
 async function getQuotaInfo(userId) {
   try {
-    const userRes = await pool.query('SELECT group_id FROM users WHERE id = $1', [userId]);
-    const groupId = userRes.rows[0]?.group_id;
-    if (!groupId) return null;
+    const userRes = await pool.query('SELECT team_id FROM users WHERE id = $1', [userId]);
+    const teamId = userRes.rows[0]?.team_id;
+    if (!teamId) return null;
 
-    const rulesRes = await pool.query(
-      'SELECT rule_type, rule_value, duration_hours FROM user_group_rules WHERE group_id = $1',
-      [groupId]
-    );
-    if (rulesRes.rows.length === 0) return null;
+    const rulesRes = await pool.query('SELECT quota_rules FROM teams WHERE id = $1', [teamId]);
+    let rules = rulesRes.rows[0]?.quota_rules || [];
+    if (typeof rules === 'string') rules = JSON.parse(rules || '[]');
+    if (!Array.isArray(rules) || rules.length === 0) return null;
 
     const parts = [];
-    for (const rule of rulesRes.rows) {
+    for (const rule of rules) {
       const { rule_type, rule_value, duration_hours } = rule;
       if (!rule_value || rule_value <= 0) continue;
 
       const since = new Date(Date.now() - (duration_hours || 0) * 3600 * 1000);
-      const col = rule_type === 'requests' ? 'count' : 'token_used';
+      const aggregate = rule_type === 'requests' ? 'COUNT(*)' : 'COALESCE(SUM(weighted_tokens), 0)';
       const r = await pool.query(
-        `SELECT COALESCE(SUM(${col}), 0) AS total FROM quota_data WHERE user_id = $1 AND created_at >= $2`,
+        `SELECT ${aggregate} AS total FROM usage_records WHERE user_id = $1 AND created_at >= $2`,
         [userId, since]
       );
       let used = parseInt(r.rows[0].total);
@@ -153,7 +152,7 @@ async function getQuotaInfo(userId) {
       const userBuffer = getUserQuotaBuffer(userId);
       for (const entry of userBuffer) {
         if (entry.created_at >= since) {
-          used += rule_type === 'requests' ? entry.count : entry.token_used;
+          used += rule_type === 'requests' ? entry.count : (entry.weighted_tokens || entry.token_used);
         }
       }
 
@@ -238,7 +237,7 @@ async function buildSignature({ enabled, template, meta, userId, preloaded }) {
     if (preloaded && preloaded.groupName !== undefined) {
       groupName = preloaded.groupName;
     } else {
-      groupName = meta.groupId ? await getGroupName(meta.groupId) : null;
+      groupName = meta.teamId ? await getGroupName(meta.teamId) : null;
     }
     result = result.replace(/\{group_name\}/g, groupName || '');
   }
@@ -609,7 +608,7 @@ async function buildSignatureForRequest(req, {
       username: req.apiUser.username,
       keyName: req.apiUser.keyName,
       balance: req.apiUser.balance,
-      groupId: req.apiUser.groupId,
+      teamId: req.apiUser.teamId,
       cost: (promptTokens / 1000) * (req.apiUser._inputPrice || 0)
         + (completionTokens / 1000) * (req.apiUser._outputPrice || 0)
     },

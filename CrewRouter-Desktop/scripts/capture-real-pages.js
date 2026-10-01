@@ -2,8 +2,9 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, session } = require('electron');
 const { LocalServerManager } = require('../src/server-manager');
+const { LOCAL_TOKEN_HEADER } = require('../src/app/create-app');
 
 const output = process.env.CREWROUTER_CAPTURE_OUTPUT || path.resolve(__dirname, '../../.hermes/screenshots');
 const teamUrl = process.env.CREWROUTER_TEAM_URL;
@@ -35,13 +36,17 @@ async function capture(win, baseUrl, filename, width, height, theme, expectedTex
   await app.whenReady();
   const win = new BrowserWindow({ show: false, width: 1280, height: 800, webPreferences: { sandbox: false } });
   const personalData = fs.mkdtempSync(path.join(os.tmpdir(), 'crewrouter-real-pages-'));
-  const manager = new LocalServerManager({ mode: 'development', userData: personalData, startupTimeoutMs: 30000 });
+  const manager = new LocalServerManager({ mode: 'development', userData: personalData, startupTimeoutMs: 90000, displayName: 'Desktop Tester' });
   try {
     const results = {};
     results.teamLight = await capture(win, teamUrl, 'team-light-real.png', 1280, 800, 'light', '2 个模型');
     results.teamDark = await capture(win, teamUrl, 'team-dark-real.png', 1280, 800, 'dark', '2 个模型');
     results.teamNarrow = await capture(win, teamUrl, 'team-narrow-real.png', 600, 800, 'light', '2 个模型');
     const personal = await manager.start();
+    // 本地免登录需要携带一次性 token，与 Desktop 主进程的做法一致。
+    session.defaultSession.webRequest.onBeforeSendHeaders({ urls: [`${personal.baseUrl}/*`] }, (details, callback) => {
+      callback({ requestHeaders: { ...details.requestHeaders, [LOCAL_TOKEN_HEADER]: manager.localToken } });
+    });
     const personalEmptyState = /还没有配置 Provider|还没有配置供应商|暂无可用模型/;
     results.personalLight = await capture(win, personal.baseUrl, 'personal-light-real.png', 1280, 800, 'light', personalEmptyState);
     results.personalDark = await capture(win, personal.baseUrl, 'personal-dark-real.png', 1280, 800, 'dark', personalEmptyState);
@@ -54,4 +59,4 @@ async function capture(win, baseUrl, filename, width, height, theme, expectedTex
     app.quit();
   }
 })().catch(error => { console.error(error.stack || error.message); app.exit(1); });
-setTimeout(() => { console.error('real page capture timed out'); app.exit(2); }, 120000);
+setTimeout(() => { console.error('real page capture timed out'); app.exit(2); }, 240000);

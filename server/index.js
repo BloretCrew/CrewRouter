@@ -914,7 +914,7 @@ async function ensureUsageMessageAnalysisTable() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_uma_created ON usage_message_analysis(created_at)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_uma_user_created ON usage_message_analysis(user_id, created_at)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_uma_source_created ON usage_message_analysis(request_source, created_at)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_uma_workspace ON usage_message_analysis(workspace_path)`);
+    await require('./utils/message-analysis-store').ensureWorkspacePathIndex(pool);
     Logger.info('[迁移] 表 usage_message_analysis 已就绪');
   } catch (err) {
     Logger.error(`[迁移] usage_message_analysis 表迁移跳过: ${err.message}`);
@@ -1066,6 +1066,7 @@ async function ensureTeamsTables() {
       Logger.info('[迁移] 已为 teams 表添加 hide_provider_quota 字段');
     }
 
+
     // 为 users 添加 team_id 字段（保留兼容）
     const teamIdCol = await pool.query(`
       SELECT column_name FROM information_schema.columns
@@ -1075,6 +1076,7 @@ async function ensureTeamsTables() {
       await pool.query(`ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL`);
       Logger.info('[迁移] 已为 users 表添加 team_id 字段');
     }
+
 
     // 创建 user_teams 表（用户与 Team 多对多关系）
     await pool.query(`
@@ -1087,25 +1089,24 @@ async function ensureTeamsTables() {
       )
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_teams_user ON user_teams(user_id)`);
+    await pool.query(`ALTER TABLE user_teams ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_teams_team ON user_teams(team_id)`);
     Logger.info('[迁移] 表 user_teams 已就绪');
 
+
     // 迁移旧数据：将 users.team_id 复制到 user_teams
     try {
-      const hasOldData = await pool.query(`
-        SELECT 1 FROM users WHERE team_id IS NOT NULL LIMIT 1
+      await pool.query(`
+        INSERT INTO user_teams (user_id, team_id)
+        SELECT u.id, u.team_id FROM users u
+        WHERE u.team_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM user_teams ut WHERE ut.user_id = u.id)
+        ON CONFLICT (user_id, team_id) DO NOTHING
       `);
-      if (hasOldData.rows.length > 0) {
-        await pool.query(`
-          INSERT INTO user_teams (user_id, team_id)
-          SELECT id, team_id FROM users WHERE team_id IS NOT NULL
-          ON CONFLICT (user_id, team_id) DO NOTHING
-        `);
-        Logger.info('[迁移] 已将 users.team_id 数据迁移到 user_teams');
-      }
     } catch (e) {
       // 忽略迁移错误
     }
+
 
     // 创建 team_models 表（Team 可用的模型映射）
     await pool.query(`

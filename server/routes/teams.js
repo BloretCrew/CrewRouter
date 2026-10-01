@@ -2,16 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../models/database');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireTeamEdition } = require('../utils/instance-edition');
+const requireTeamAdminEdition = requireTeamEdition(() => require('../utils/instance-edition').loadPersistedEdition(pool));
 const Logger = require('../logger');
 const { invalidateApiKeyCacheByKeyId } = require('./api');
 const { ACTIONS, auditMiddleware } = require('../utils/audit-log');
-const { requireTeamEdition } = require('../utils/instance-edition');
+
 
 // Team surfaces are unavailable in Personal Edition. Existing auth and admin checks remain intact.
-router.use(requireTeamEdition(async () => {
-  const { loadPersistedEdition } = require('../utils/instance-edition');
-  return loadPersistedEdition(pool);
-}));
+router.use(requireTeamAdminEdition);
 
 // ==================== Team CRUD ====================
 
@@ -19,7 +18,8 @@ router.use(requireTeamEdition(async () => {
 router.get('/teams', requireAuth, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT t.*, COALESCE(member_count.count, 0) AS member_count
+      SELECT t.*, COALESCE(member_count.count, 0) AS member_count,
+             jsonb_array_length(COALESCE(t.quota_rules, '[]'::jsonb)) AS rule_count
       FROM teams t
       LEFT JOIN (
         SELECT team_id, COUNT(*) AS count
@@ -47,8 +47,8 @@ router.post('/teams', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_T
   }
   try {
     const result = await pool.query(
-      'INSERT INTO teams (name, description) VALUES ($1, $2) RETURNING *',
-      [name.trim(), description || '']
+      'INSERT INTO teams (name, description, quota_rules) VALUES ($1, $2, $3::jsonb) RETURNING *',
+      [name.trim(), description || '', '[]']
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -134,6 +134,7 @@ router.delete('/teams/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.A
     if (teamCheck.rows[0].is_personal) {
       return res.status(403).json({ error: '个人账户 Team 不可删除' });
     }
+    await pool.query('DELETE FROM user_group_team_map WHERE team_id = $1', [req.params.id]);
     // 先将该 Team 的用户 team_id 置空
     await pool.query('UPDATE users SET team_id = NULL WHERE team_id = $1', [req.params.id]);
     await pool.query('DELETE FROM teams WHERE id = $1', [req.params.id]);
@@ -152,8 +153,7 @@ router.get('/teams/:id/members', requireAuth, requireAdmin, async (req, res) => 
     const result = await pool.query(
       `SELECT u.id, u.username, u.email, u.avatar, u.created_at
        FROM users u
-       JOIN user_teams ut ON u.id = ut.user_id
-       WHERE ut.team_id = $1
+       WHERE u.team_id = $1
        ORDER BY u.username`,
       [req.params.id]
     );
@@ -193,17 +193,13 @@ router.post('/teams/:id/members', requireAuth, requireAdmin, auditMiddleware(ACT
       await client.query('SELECT id FROM teams WHERE id = $1 FOR UPDATE', [teamId]);
       const existingUsers = await client.query('SELECT id FROM users WHERE id = ANY($1::int[])', [normalizedUserIds]);
       if (existingUsers.rows.length !== normalizedUserIds.length) throw Object.assign(new Error('用户不存在'), { status: 400 });
-      const result = await client.query(
-        `INSERT INTO user_teams (user_id, team_id)
-         SELECT unnest($1::int[]), $2
-         ON CONFLICT (user_id, team_id) DO NOTHING`,
-        [normalizedUserIds, teamId]
-      );
-      await client.query(
-        'UPDATE users SET team_id = $1 WHERE id = ANY($2::int[]) AND team_id IS NULL',
-        [teamId, normalizedUserIds]
-      );
+      for (const userId of normalizedUserIds) {
+        await require('../utils/team-membership').setUserTeam(client, userId, teamId);
+      }
+      const result = { rowCount: normalizedUserIds.length };
       await client.query('COMMIT');
+      const { invalidateUserApiKeyCache } = require('./api');
+      for (const userId of normalizedUserIds) invalidateUserApiKeyCache(userId);
       res.json({ success: true, added: result.rowCount });
     } catch (error) {
       try { await client.query('ROLLBACK'); } catch (_) {}
@@ -238,13 +234,10 @@ router.delete('/teams/:id/members/:userId', requireAuth, requireAdmin, auditMidd
     try {
       await client.query('BEGIN');
       await client.query('SELECT id FROM teams WHERE id = $1 FOR UPDATE', [teamId]);
-      await client.query('DELETE FROM user_teams WHERE user_id = $1 AND team_id = $2', [userId, teamId]);
-      await client.query(
-        `UPDATE users u SET team_id = COALESCE((SELECT ut.team_id FROM user_teams ut WHERE ut.user_id = u.id ORDER BY ut.created_at ASC LIMIT 1), NULL)
-         WHERE u.id = $1 AND u.team_id = $2`,
-        [userId, teamId]
-      );
+      const membership = await client.query('SELECT 1 FROM user_teams WHERE user_id = $1 AND team_id = $2', [userId, teamId]);
+      if (membership.rows.length) await require('../utils/team-membership').setUserTeam(client, userId, null);
       await client.query('COMMIT');
+      require('./api').invalidateUserApiKeyCache(userId);
       res.json({ success: true });
     } catch (error) {
       try { await client.query('ROLLBACK'); } catch (_) {}
@@ -252,6 +245,54 @@ router.delete('/teams/:id/members/:userId', requireAuth, requireAdmin, auditMidd
     } finally { client.release(); }
   } catch (error) {
     Logger.error('[移除Team成员] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// ==================== Team 限额规则 ====================
+
+router.get('/teams/:id/rules', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT quota_rules FROM teams WHERE id = $1', [req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Team 不存在' });
+    let rules = result.rows[0].quota_rules || [];
+    if (typeof rules === 'string') rules = JSON.parse(rules || '[]');
+    res.json(Array.isArray(rules) ? rules : []);
+  } catch (error) {
+    Logger.error('[获取Team规则] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+router.post('/teams/:id/rules', requireAuth, requireAdmin, async (req, res) => {
+  const { rule_type, rule_value, duration_hours, description } = req.body;
+  if (!['requests', 'tokens'].includes(rule_type) || !Number.isFinite(Number(rule_value)) || Number(rule_value) <= 0 || !Number.isFinite(Number(duration_hours)) || Number(duration_hours) <= 0) {
+    return res.status(400).json({ error: '请输入有效的规则类型、限额和时间窗口' });
+  }
+  try {
+    const rule = { id: `team-rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, rule_type, rule_value: Number(rule_value), duration_hours: Number(duration_hours), description: description || '' };
+    const result = await pool.query(
+      `UPDATE teams SET quota_rules = COALESCE(quota_rules, '[]'::jsonb) || $1::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING quota_rules`,
+      [JSON.stringify([rule]), req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Team 不存在' });
+    res.json(rule);
+  } catch (error) {
+    Logger.error('[添加Team规则] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+router.delete('/teams/:id/rules/:ruleId', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE teams SET quota_rules = COALESCE((SELECT jsonb_agg(rule) FROM jsonb_array_elements(COALESCE(quota_rules, '[]'::jsonb)) rule WHERE rule->>'id' <> $1), '[]'::jsonb), updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id`,
+      [req.params.ruleId, req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Team 不存在' });
+    res.json({ success: true });
+  } catch (error) {
+    Logger.error('[删除Team规则] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
 });

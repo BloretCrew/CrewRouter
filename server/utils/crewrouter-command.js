@@ -218,7 +218,7 @@ async function assertOwnerCanUseModel(modelId, ownerId) {
     `SELECT m.id, m.name, p.enabled AS provider_enabled, p.name AS provider_name,
             EXISTS (
               SELECT 1 FROM team_models tm
-              JOIN user_teams ut ON ut.team_id = tm.team_id
+              JOIN user_teams ut ON ut.team_id = tm.team_id AND ut.team_id = (SELECT team_id FROM users WHERE id = ut.user_id)
               WHERE tm.model_id = m.id AND tm.enabled = TRUE AND ut.user_id = $2
             ) AS owner_can_use
      FROM models m JOIN providers p ON m.provider = p.id

@@ -8,104 +8,219 @@
   <style>@layer legacy, blora;</style>
   <link rel="stylesheet" href="vendor/blora-design/blora.css">
   <link rel="stylesheet" href="vendor/blora-design/tokens.dark.css">
-  <link rel="stylesheet" href="vendor/blora-design/components/card/card.css">
-  <link rel="stylesheet" href="vendor/blora-design/components/badge/badge.css">
-  <link rel="stylesheet" href="vendor/blora-design/components/input/input.css">
-  <link rel="stylesheet" href="vendor/blora-design/components/field/field.css">
-  <link rel="stylesheet" href="vendor/blora-design/components/button/button.css">
-  <link rel="stylesheet" href="vendor/blora-design/components/hero/hero.css">
-  <link rel="stylesheet" href="vendor/blora-design/components/steps/steps.css">
-  <link rel="stylesheet" href="vendor/blora-design/components/result/result.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="blora-page blora-scope">
   <noscript><p class="desktop-fallback-message">CrewRouter Desktop 需要启用 JavaScript。</p></noscript>
-  <main class="oobe-shell" aria-labelledby="page-title">
-    <header class="oobe-header">
-      <button id="settings" class="blora-button" data-variant="ghost" data-size="sm" type="button">
-        <span class="button-icon" data-icon="settings" aria-hidden="true"></span><span>设置</span>
-      </button>
-      <a class="desktop-brand" href="#page-title" aria-label="CrewRouter Desktop 首页">
+  <main class="launcher" id="launcher" data-view="welcome" aria-labelledby="hero-title">
+    <header class="launcher__header">
+      <a class="desktop-brand" href="#hero-title" aria-label="CrewRouter Desktop">
         <span class="blora-avatar" data-size="sm" data-shape="square" data-variant="primary" aria-hidden="true">CR</span>
         <span><strong>CrewRouter</strong><small>DESKTOP</small></span>
       </a>
-      <span class="blora-badge" data-variant="soft">安全连接</span>
+      <div class="launcher__header-tools">
+        <span id="local-chip" class="blora-badge" data-variant="success" data-shape="pill" hidden data-i18n="chip.localRunning">本地服务运行中</span>
+        <button id="open-settings" class="blora-button" data-variant="ghost" data-size="sm" type="button">
+          <span class="button-icon" data-icon="settings" aria-hidden="true"></span><span data-i18n="nav.settings">设置</span>
+        </button>
+      </div>
     </header>
 
-    <section class="blora-hero oobe-hero" data-size="compact" aria-describedby="intro">
-      <div class="blora-hero__content">
-        <p class="desktop-eyebrow">首次启动</p>
-        <h1 id="page-title">开始使用 CrewRouter</h1>
-        <p id="intro">选择本地使用，或连接已有服务器。</p>
+    <blora-alert id="inline-alert" class="launcher__inline-alert" variant="danger" title="" description="" hidden></blora-alert>
+
+    <section class="launcher__view" data-view="welcome" id="view-welcome">
+      <div class="launcher__hero">
+        <p class="desktop-eyebrow blora-text-caps blora-text-muted" id="hero-eyebrow" data-i18n="hero.first">首次启动</p>
+        <h1 class="blora-h2" id="hero-title" data-i18n="hero.title">开始使用 CrewRouter</h1>
+        <p class="launcher__lead blora-text-lead" id="hero-lead" data-i18n="hero.lead">在这台电脑上本地使用，或连接已有的 CrewRouter 服务器。登录由目标服务器负责，Desktop 不保存凭据。</p>
+      </div>
+      <div id="saved-panel" class="launcher__block" hidden>
+        <div class="launcher__block-head">
+          <h2 class="blora-h4" data-i18n="saved.title">已保存的连接</h2>
+          <span id="saved-count" class="blora-badge" data-variant="neutral"></span>
+        </div>
+        <div id="profile-list" class="blora-list launcher__profiles blora-card" data-variant="content" role="list"></div>
+      </div>
+      <div class="launcher__block">
+        <div class="launcher__block-head"><h2 class="blora-h4" id="choices-title" data-i18n="choices.title">选择一种方式</h2></div>
+        <div class="launcher__choices">
+          <button id="choose-local" class="blora-button launcher__choice" data-variant="outline" type="button">
+            <span class="launcher__choice-icon" data-icon="home" aria-hidden="true"></span>
+            <span class="launcher__choice-copy"><strong class="blora-card__title" data-i18n="choice.local">本地使用</strong><small class="blora-text-muted" data-i18n="choice.localDesc">在这台电脑上运行 CrewRouter，无需登录</small></span>
+            <span class="launcher__choice-arrow" data-icon="chevron-right" aria-hidden="true"></span>
+          </button>
+          <button id="choose-remote" class="blora-button launcher__choice" data-variant="outline" type="button">
+            <span class="launcher__choice-icon" data-icon="globe" aria-hidden="true"></span>
+            <span class="launcher__choice-copy"><strong class="blora-card__title" data-i18n="choice.remote">连接服务器</strong><small class="blora-text-muted" data-i18n="choice.remoteDesc">通过官方站选择实例，或直接输入服务器地址</small></span>
+            <span class="launcher__choice-arrow" data-icon="chevron-right" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
     </section>
 
-    <nav class="oobe-progress" aria-label="设置进度">
-      <blora-steps id="oobe-steps" current="0" clickable="false">
-        <blora-step title="选择方式" description="选择本地或远程连接"></blora-step>
-        <blora-step title="完成设置" description="填写必要信息"></blora-step>
-        <blora-step title="开始使用" description="进入 CrewRouter"></blora-step>
-      </blora-steps>
-    </nav>
-
-    <section id="welcome-panel" class="oobe-panel" aria-labelledby="welcome-heading">
-      <div class="oobe-panel__heading">
-        <div><p class="desktop-eyebrow">第一步</p><h2 id="welcome-heading">选择一种方式</h2></div>
-      </div>
-      <p class="oobe-description">本地使用无需登录；连接服务器时，登录由目标服务器负责。</p>
-      <div class="oobe-choice-grid">
-        <button id="local" class="blora-card oobe-choice" data-variant="hover" type="button">
-          <span class="oobe-choice__icon" data-icon="home" aria-hidden="true"></span>
-          <span class="oobe-choice__copy"><strong>本地使用</strong><small>启动本地服务，无需登录</small></span>
-          <span class="oobe-choice__arrow" data-icon="chevron-right" aria-hidden="true"></span>
-        </button>
-        <button id="remote-choice" class="blora-card oobe-choice" data-variant="hover" type="button">
-          <span class="oobe-choice__icon" data-icon="globe" aria-hidden="true"></span>
-          <span class="oobe-choice__copy"><strong>连接服务器</strong><small>连接官方站或自定义服务器</small></span>
-          <span class="oobe-choice__arrow" data-icon="chevron-right" aria-hidden="true"></span>
-        </button>
+    <section class="launcher__view" data-view="local-name" id="view-local-name" hidden>
+      <div class="blora-card blora-stack launcher__panel">
+        <div class="launcher__panel-head">
+          <div><p class="desktop-eyebrow blora-text-caps blora-text-muted" data-i18n="local.eyebrow">本地使用</p><h2 class="blora-h4" data-i18n="local.title">设置你的用户名</h2></div>
+          <button id="local-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="nav.back">返回</span></button>
+        </div>
+        <p class="launcher__muted blora-text-muted" data-i18n="local.desc">只需设置一次，用于显示在本地控制台和资料中；本地数据保存在这台电脑上。</p>
+        <form id="local-profile-form" class="launcher__form" novalidate>
+          <blora-field id="local-username-field" label="用户名" name="local-username" hint="可使用普通文字、数字或短横线，最多 64 个字符。" maxlength="64" autocomplete="nickname" required data-i18n-label="local.field" data-i18n-hint="local.hint"></blora-field>
+          <div class="launcher__actions">
+            <button id="local-continue" class="blora-button" data-variant="primary" data-size="lg" type="submit"><span data-i18n="local.submit">启动本地服务</span> <span class="button-icon" data-icon="arrow-right" aria-hidden="true"></span></button>
+          </div>
+        </form>
       </div>
     </section>
 
-    <section id="local-profile-panel" class="oobe-panel blora-card" data-variant="content" aria-labelledby="local-profile-heading" hidden>
-      <div class="oobe-panel__heading"><div><p class="desktop-eyebrow">第二步</p><h2 id="local-profile-heading">设置你的用户名</h2></div><button id="local-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
-      <p class="oobe-description">只需设置一次，用于显示在本地控制台和资料中。</p>
-      <form id="local-profile-form" class="oobe-form" novalidate>
-        <blora-field id="local-username-field" label="用户名" name="local-username" hint="可使用普通文字、数字或短横线，最多 64 个字符。" maxlength="64" autocomplete="nickname" required></blora-field>
-        <p id="local-username-error" class="oobe-field-error" role="alert"></p>
-        <div class="oobe-actions"><button id="local-continue" class="blora-button" data-variant="primary" data-size="lg" type="submit">继续进入本地控制台 <span class="button-icon" data-icon="arrow-right" aria-hidden="true"></span></button></div>
-      </form>
-    </section>
-
-    <section id="remote-method-panel" class="oobe-panel blora-card" data-variant="content" aria-labelledby="remote-method-heading" hidden>
-      <div class="oobe-panel__heading"><div><p class="desktop-eyebrow">第二步</p><h2 id="remote-method-heading">连接服务器</h2></div><button id="choice-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
-      <p class="oobe-description">选择连接方式。Personal / Team 由目标服务器自动识别。</p>
-      <div class="oobe-choice-list">
-        <button id="official-remote" class="blora-card oobe-choice" data-variant="hover" type="button"><span class="oobe-choice__icon" data-icon="external-link" aria-hidden="true"></span><span class="oobe-choice__copy"><strong>通过官方站连接</strong><small>打开官方站，在官方页面选择或输入服务器</small></span><span class="oobe-choice__arrow" data-icon="chevron-right" aria-hidden="true"></span></button>
-        <button id="custom-remote" class="blora-card oobe-choice" data-variant="hover" type="button"><span class="oobe-choice__icon" data-icon="search" aria-hidden="true"></span><span class="oobe-choice__copy"><strong>输入服务器地址</strong><small>直接打开你填写的服务器，不经过官方站</small></span><span class="oobe-choice__arrow" data-icon="chevron-right" aria-hidden="true"></span></button>
+    <section class="launcher__view" data-view="remote-method" id="view-remote-method" hidden>
+      <div class="blora-card blora-stack launcher__panel">
+        <div class="launcher__panel-head">
+          <div><p class="desktop-eyebrow blora-text-caps blora-text-muted" data-i18n="remote.eyebrow">连接服务器</p><h2 class="blora-h4" data-i18n="remote.title">选择连接方式</h2></div>
+          <button id="remote-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="nav.back">返回</span></button>
+        </div>
+        <p class="launcher__muted blora-text-muted" data-i18n="remote.desc">Personal / Team 由目标服务器自动识别；登录在目标服务器完成。</p>
+        <div class="launcher__choice-list">
+          <button id="official-remote" class="blora-button launcher__choice" data-variant="outline" type="button">
+            <span class="launcher__choice-icon" data-icon="external-link" aria-hidden="true"></span>
+            <span class="launcher__choice-copy"><strong class="blora-card__title" data-i18n="remote.official">通过官方站连接</strong><small class="blora-text-muted" data-i18n="remote.officialDesc">在浏览器中打开官方站，选择你登录过的 CrewRouter</small></span>
+            <span class="launcher__choice-arrow" data-icon="chevron-right" aria-hidden="true"></span>
+          </button>
+          <button id="custom-remote" class="blora-button launcher__choice" data-variant="outline" type="button">
+            <span class="launcher__choice-icon" data-icon="search" aria-hidden="true"></span>
+            <span class="launcher__choice-copy"><strong class="blora-card__title" data-i18n="remote.custom">输入服务器地址</strong><small class="blora-text-muted" data-i18n="remote.customDesc">直接打开你填写的服务器，不经过官方站</small></span>
+            <span class="launcher__choice-arrow" data-icon="chevron-right" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
     </section>
 
-    <section id="custom-target-panel" class="oobe-panel blora-card" data-variant="content" aria-labelledby="custom-target-heading" hidden>
-      <div class="oobe-panel__heading"><div><p class="desktop-eyebrow">第三步</p><h2 id="custom-target-heading">输入服务器地址</h2></div><button id="custom-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
-      <p class="oobe-description">登录由目标服务器负责，Desktop 不保存凭据。</p>
-      <form id="connection-form" class="oobe-form" novalidate>
-        <blora-field id="custom-url-field" label="服务器地址" name="remote-url" type="url" placeholder="https://server.example.com" hint="仅支持 http:// 或 https:// 地址。" autocomplete="url" inputmode="url" required></blora-field>
-        <p id="url-error" class="oobe-field-error" role="alert"></p>
-        <div class="oobe-actions"><button id="remote" class="blora-button" data-variant="primary" data-size="lg" type="submit">直接连接服务器 <span class="button-icon" data-icon="external-link" aria-hidden="true"></span></button></div>
-      </form>
+    <section class="launcher__view" data-view="custom-url" id="view-custom-url" hidden>
+      <div class="blora-card blora-stack launcher__panel">
+        <div class="launcher__panel-head">
+          <div><p class="desktop-eyebrow blora-text-caps blora-text-muted" data-i18n="remote.eyebrow">连接服务器</p><h2 class="blora-h4" data-i18n="custom.title">输入服务器地址</h2></div>
+          <button id="custom-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="nav.back">返回</span></button>
+        </div>
+        <p class="launcher__muted blora-text-muted" data-i18n="custom.desc">仅支持 http:// 或 https:// 的公网地址；Desktop 不保存凭据。</p>
+        <form id="connection-form" class="launcher__form" novalidate>
+          <blora-field id="custom-url-field" label="服务器地址" name="remote-url" type="url" placeholder="https://server.example.com" hint="仅支持 http:// 或 https:// 地址。" autocomplete="url" inputmode="url" required data-i18n-label="custom.field" data-i18n-hint="custom.hint"></blora-field>
+          <div class="launcher__actions">
+            <button id="custom-connect" class="blora-button" data-variant="primary" data-size="lg" type="submit"><span data-i18n="custom.submit">连接</span> <span class="button-icon" data-icon="arrow-right" aria-hidden="true"></span></button>
+          </div>
+        </form>
+      </div>
     </section>
 
-    <section id="status-panel" class="oobe-status" aria-live="polite" aria-atomic="true" hidden>
-      <blora-result id="status-result" variant="info" title="正在处理" description=""></blora-result>
-      <p id="runtime-error" class="oobe-field-error" role="alert"></p>
-      <p id="status" class="oobe-status__text" role="status"></p>
+    <section class="launcher__view" data-view="progress" id="view-progress" hidden>
+      <div class="blora-card blora-stack launcher__panel launcher__panel--center" aria-live="polite" aria-atomic="true">
+        <p class="desktop-eyebrow blora-text-caps blora-text-muted" id="progress-eyebrow" data-i18n="progress.eyebrow">请稍候</p>
+        <h2 class="blora-h4" id="progress-title"></h2>
+        <div id="progress-bar-wrap"><blora-progress id="progress-bar" value="0" label="进度"></blora-progress></div>
+        <p id="progress-label" class="launcher__muted blora-text-muted"></p>
+        <div id="official-wait" hidden>
+          <blora-alert variant="info" title="请在浏览器中继续" description="已在系统浏览器打开官方站。选择要登录的 CrewRouter 并完成授权后，Desktop 会自动打开它。" data-i18n-title="official.waitTitle" data-i18n-description="official.waitDesc"></blora-alert>
+          <div class="launcher__actions launcher__actions--center">
+            <button id="reopen-login" class="blora-button" data-variant="outline" type="button"><span class="button-icon" data-icon="external-link" aria-hidden="true"></span><span data-i18n="official.reopen">重新打开浏览器链接</span></button>
+          </div>
+        </div>
+        <div class="launcher__actions launcher__actions--center">
+          <button id="cancel-pending" class="blora-button" data-variant="text" type="button" data-i18n="nav.cancel">取消</button>
+        </div>
+      </div>
     </section>
 
-    <footer class="oobe-footer"><small>远程页面负责登录；Desktop 不接管凭据。</small><button id="quit" class="blora-button" data-variant="text" data-size="sm" type="button">退出应用 <kbd>⌘Q</kbd></button></footer>
+    <section class="launcher__view" data-view="error" id="view-error" hidden>
+      <div class="blora-card blora-stack launcher__panel launcher__panel--center">
+        <blora-result id="error-result" variant="error" title="出了点问题" description="" data-i18n-title="error.title"></blora-result>
+        <div class="launcher__actions launcher__actions--center">
+          <button id="retry" class="blora-button" data-variant="primary" type="button"><span class="button-icon" data-icon="refresh-cw" aria-hidden="true"></span><span data-i18n="error.retry">重试</span></button>
+          <button id="error-open-logs" class="blora-button" data-variant="outline" type="button" hidden data-i18n="error.logs">查看日志</button>
+          <button id="dismiss-error" class="blora-button" data-variant="text" type="button" data-i18n="nav.back">返回</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="launcher__view" data-view="settings" id="view-settings" hidden>
+      <div class="launcher__panel-head launcher__panel-head--bare">
+        <div><p class="desktop-eyebrow blora-text-caps blora-text-muted">CrewRouter Desktop</p><h2 class="blora-h4" data-i18n="settings.title">Desktop 设置</h2></div>
+        <button id="settings-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="nav.back">返回</span></button>
+      </div>
+      <div class="blora-card blora-stack launcher__panel">
+        <h3 class="blora-card__title" data-i18n="settings.preferences">偏好</h3>
+        <div class="launcher__prefs">
+          <blora-switch id="pref-autoConnect" label="启动时自动连接上次的连接" data-i18n-label="settings.autoConnect"></blora-switch>
+          <blora-switch id="pref-notifications" label="启用桌面通知" data-i18n-label="settings.notifications"></blora-switch>
+          <blora-switch id="pref-updateChecks" label="检查更新" data-i18n-label="settings.updateChecks"></blora-switch>
+          <div class="launcher__pref-row"><span data-i18n="settings.theme">主题</span>
+            <blora-select id="pref-theme" value="system" aria-label="主题"><blora-option value="system" data-i18n="settings.themeSystem">跟随系统</blora-option><blora-option value="light" data-i18n="settings.themeLight">浅色</blora-option><blora-option value="dark" data-i18n="settings.themeDark">深色</blora-option></blora-select>
+          </div>
+          <div class="launcher__pref-row"><span data-i18n="settings.language">语言</span>
+            <blora-select id="pref-language" value="zh" aria-label="Language"><blora-option value="zh">中文</blora-option><blora-option value="en">English</blora-option></blora-select>
+          </div>
+        </div>
+      </div>
+      <div class="blora-card blora-stack launcher__panel" id="local-server-card">
+        <h3 class="blora-card__title" data-i18n="settings.localServer">本地服务</h3>
+        <div class="launcher__descriptions-wrap">
+        <table class="blora-descriptions launcher__descriptions"><tbody>
+          <tr><th data-i18n="settings.status">状态</th><td id="local-status"></td></tr>
+          <tr><th data-i18n="settings.pid">进程 ID</th><td id="local-pid"></td></tr>
+          <tr><th data-i18n="settings.port">端口</th><td id="local-port"></td></tr>
+          <tr><th data-i18n="settings.version">版本</th><td id="local-version"></td></tr>
+          <tr><th data-i18n="settings.logs">日志目录</th><td id="local-logs"></td></tr>
+        </tbody></table>
+        </div>
+        <div class="launcher__actions">
+          <button id="local-restart" class="blora-button" data-variant="secondary" type="button" data-i18n="settings.restartLocal">重启本地服务</button>
+          <button id="local-stop" class="blora-button" data-variant="danger" type="button" data-i18n="settings.stopLocal">停止</button>
+          <button id="local-open-logs" class="blora-button" data-variant="outline" type="button" data-i18n="settings.openLogs">打开日志目录</button>
+        </div>
+      </div>
+      <div class="blora-card blora-stack launcher__panel">
+        <h3 class="blora-card__title" data-i18n="settings.diagnostics">诊断</h3>
+        <p class="launcher__muted blora-text-muted" data-i18n="settings.diagnosticsHint">仅包含安全白名单字段，不包含 Token、Cookie 或 API Key。</p>
+        <div class="launcher__actions">
+          <button id="copy-diagnostics" class="blora-button" data-variant="outline" type="button" data-i18n="settings.copy">复制诊断信息</button>
+          <output id="settings-message" class="launcher__output blora-text-muted" role="status"></output>
+        </div>
+      </div>
+      <div class="blora-card blora-stack launcher__panel">
+        <h3 class="blora-card__title" data-i18n="settings.app">应用</h3>
+        <p class="launcher__muted blora-text-muted" data-i18n="settings.appHint">重启会重新加载 Desktop；退出会停止桌面应用及其管理的本地服务。</p>
+        <div class="launcher__actions">
+          <button id="restart-app" class="blora-button" data-variant="secondary" type="button" data-i18n="settings.restartApp">重启 Desktop</button>
+          <button id="quit-app" class="blora-button" data-variant="danger" type="button" data-i18n="settings.quit">退出</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="launcher__footer">
+      <small class="blora-text-muted" data-i18n="footer.note">登录由目标服务器负责；Desktop 不接管凭据。</small>
+      <small class="blora-text-muted" id="app-version"></small>
+    </footer>
   </main>
+
+  <blora-dialog id="confirm-dialog" aria-label="确认操作" close-on-outside-click="false">
+    <span slot="title" id="confirm-title"></span>
+    <p id="confirm-text"></p>
+    <div slot="footer" class="launcher__dialog-actions">
+      <button id="confirm-cancel" class="blora-button" data-variant="text" type="button" data-i18n="nav.cancel">取消</button>
+      <button id="confirm-ok" class="blora-button" data-variant="danger" type="button" data-i18n="nav.confirm">确定</button>
+    </div>
+  </blora-dialog>
+  <blora-dialog id="rename-dialog" aria-label="重命名连接">
+    <span slot="title" data-i18n="profile.renameTitle">重命名连接</span>
+    <blora-field id="rename-field" label="名称" maxlength="64" required data-i18n-label="profile.nameField"></blora-field>
+    <div slot="footer" class="launcher__dialog-actions">
+      <button id="rename-cancel" class="blora-button" data-variant="text" type="button" data-i18n="nav.cancel">取消</button>
+      <button id="rename-ok" class="blora-button" data-variant="primary" type="button" data-i18n="nav.save">保存</button>
+    </div>
+  </blora-dialog>
+
   <script src="vendor/blora-design/blora.global.js"></script>
   <script src="vendor/blora-design/icons-full.global.js"></script>
-  <script src="renderer.js"></script>
+  <script src="i18n.js"></script>
+  <script src="launcher.js"></script>
 </body>
 </html>

@@ -413,6 +413,7 @@ async function initDatabase() {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_user_teams_user ON user_teams(user_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_user_teams_team ON user_teams(team_id)`);
+    await client.query(`ALTER TABLE teams ADD COLUMN IF NOT EXISTS quota_rules JSONB NOT NULL DEFAULT '[]'::jsonb`);
     Logger.info('[数据库初始化] 表 user_teams 已就绪');
 
     await client.query(`

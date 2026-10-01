@@ -1674,7 +1674,7 @@ router.get('/message-stats', requireAuth, async (req, res) => {
     }
     const source = String(req.query.request_source || '').trim().toLowerCase();
     if (source) { where.push(`request_source = $${idx++}`); params.push(source); }
-    if (req.query.workspace_path) { where.push(`workspace_path = $${idx++}`); params.push(String(req.query.workspace_path)); }
+    if (req.query.workspace_path) { where.push(`md5(workspace_path) = md5($${idx++}::text) AND workspace_path = $${idx - 1}`); params.push(String(req.query.workspace_path)); }
     if (req.query.block) {
       const block = String(req.query.block).replace(/[^a-z0-9_-]/gi, '');
       if (block) { where.push(`COALESCE((block_counts ->> $${idx++})::int, 0) > 0`); params.push(block); }
@@ -1706,7 +1706,7 @@ router.get('/message-stats', requireAuth, async (req, res) => {
 router.get('/balance', requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT balance, group_id, rate_limit_rpm, rate_limit_tpm FROM users WHERE id = $1',
+      'SELECT balance, team_id, rate_limit_rpm, rate_limit_tpm FROM users WHERE id = $1',
       [req.session.user.id]
     );
     const row = result.rows[0] || {};
@@ -1718,18 +1718,17 @@ router.get('/balance', requireAuth, async (req, res) => {
       [req.session.user.id]
     );
 
-    // 获取用户组信息和规则
+    // 获取用户所属 Team 的限额规则和当前用量
     let group = null;
-    if (row.group_id) {
-      const groupResult = await pool.query(
-        'SELECT id, name, description FROM user_groups WHERE id = $1',
-        [row.group_id]
+    if (row.team_id) {
+      const teamResult = await pool.query(
+        'SELECT id, name, description, quota_rules AS rules FROM teams WHERE id = $1',
+        [row.team_id]
       );
-      if (groupResult.rows.length > 0) {
-        const rulesResult = await pool.query(
-          'SELECT rule_type, rule_value, duration_hours, description FROM user_group_rules WHERE group_id = $1 ORDER BY rule_type',
-          [row.group_id]
-        );
+      if (teamResult.rows.length > 0) {
+        let teamRules = teamResult.rows[0].rules || [];
+        if (typeof teamRules === 'string') teamRules = JSON.parse(teamRules || '[]');
+        const rulesResult = { rows: Array.isArray(teamRules) ? teamRules : [] };
 
         // 计算每个规则的当前用量
         const rulesWithUsage = await Promise.all(rulesResult.rows.map(async (rule) => {
@@ -1756,7 +1755,7 @@ router.get('/balance', requireAuth, async (req, res) => {
         }));
 
         group = {
-          ...groupResult.rows[0],
+          ...teamResult.rows[0],
           rules: rulesWithUsage
         };
       }
@@ -1789,7 +1788,7 @@ router.post('/usage', async (req, res) => {
 
     // 查找用户
     const keyResult = await pool.query(
-      `SELECT u.id, u.username, u.balance, u.group_id
+      `SELECT u.id, u.username, u.balance, u.team_id
        FROM api_keys ak JOIN users u ON ak.user_id = u.id
        WHERE ak.key_value = $1 OR ak.key_hash = $2`,
       [apiKey, require('../utils/key-hash').sha256Hex(apiKey)]
@@ -1799,20 +1798,17 @@ router.post('/usage', async (req, res) => {
     }
     const user = keyResult.rows[0];
 
-    // 获取用户组规则和当前用量
+    // 获取用户 Team 规则和当前用量
     let groupInfo = null;
-    if (user.group_id) {
-      const groupResult = await pool.query(
-        'SELECT id, name, description FROM user_groups WHERE id = $1',
-        [user.group_id]
+    if (user.team_id) {
+      const teamResult = await pool.query(
+        'SELECT id, name, description, quota_rules FROM teams WHERE id = $1',
+        [user.team_id]
       );
-      if (groupResult.rows.length > 0) {
-        const rulesResult = await pool.query(
-          'SELECT rule_type, rule_value, duration_hours FROM user_group_rules WHERE group_id = $1',
-          [user.group_id]
-        );
-
-        const rules = await Promise.all(rulesResult.rows.map(async (rule) => {
+      if (teamResult.rows.length > 0) {
+        let teamRules = teamResult.rows[0].quota_rules || [];
+        if (typeof teamRules === 'string') teamRules = JSON.parse(teamRules || '[]');
+        const rules = await Promise.all((Array.isArray(teamRules) ? teamRules : []).map(async (rule) => {
           const hours = rule.duration_hours || 24;
           let used = 0;
           try {
@@ -1841,7 +1837,7 @@ router.post('/usage', async (req, res) => {
           };
         }));
 
-        groupInfo = { name: groupResult.rows[0].name, rules };
+        groupInfo = { id: teamResult.rows[0].id, name: teamResult.rows[0].name, rules };
       }
     }
 

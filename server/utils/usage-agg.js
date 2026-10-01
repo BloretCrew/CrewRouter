@@ -532,7 +532,7 @@ function startDailyAggScheduler() {
  * @param {object} opts { start, end, userId, userIds, modelId, requestSource, teamId, providerId }
  * @returns {Promise<Array>} 每行一个（天,用户,模型,密钥,客户端）聚合组
  */
-async function fetchAggRows({ start, end, userId = null, userIds = null, userTeamId = null, userGroupId = null, modelId = null, requestSource = null, teamId = null, providerId = null } = {}) {
+async function fetchAggRows({ start, end, userId = null, userIds = null, userTeamId = null, modelId = null, requestSource = null, teamId = null, providerId = null } = {}) {
   const params = [start, end];
   let sql = `
     SELECT
@@ -546,8 +546,6 @@ async function fetchAggRows({ start, end, userId = null, userIds = null, userTea
       COALESCE(usr.username, '未知成员') AS user_name,
       usr.team_id,
       COALESCE(t.name, '未分配 Team') AS team_name,
-      ug.id AS group_id,
-      COALESCE(ug.name, '未分配用户组') AS group_name,
       COALESCE(ak.name, '') AS key_name,
       ak.key_prefix
     FROM ${AGG_TABLE} a
@@ -555,7 +553,6 @@ async function fetchAggRows({ start, end, userId = null, userIds = null, userTea
     LEFT JOIN providers p ON p.id = m.provider
     LEFT JOIN users usr ON usr.id = a.user_id
     LEFT JOIN teams t ON t.id = usr.team_id
-    LEFT JOIN user_groups ug ON ug.id = usr.group_id
     LEFT JOIN api_keys ak ON ak.id = a.api_key_id
     WHERE a.agg_date >= $1 AND a.agg_date <= $2`;
   if (userId) {
@@ -570,10 +567,6 @@ async function fetchAggRows({ start, end, userId = null, userIds = null, userTea
     // users.team_id（成员当前主 Team）维度的过滤：与 admin /stats/multi 的团队筛选同域
     params.push(userTeamId);
     sql += ` AND usr.team_id = $${params.length}::int`;
-  }
-  if (userGroupId) {
-    params.push(userGroupId);
-    sql += ` AND usr.group_id = $${params.length}::int`;
   }
   if (modelId) {
     params.push(modelId);
@@ -799,13 +792,7 @@ function foldAggByTeam(rows) {
   ], { latency: true });
 }
 
-/** 用户组（byGroup 形状） */
-function foldAggByGroup(rows) {
-  return foldAgg(rows, 'group_id', 'group_name', [
-    ['request_count', 'requests'], ['tokens_used', 'tokens'],
-    ['cached_tokens', 'cached_tokens'], ['cost', 'cost'],
-  ], { latency: true });
-}
+
 
 /** API Key（byApiKey 形状） */
 function foldAggByApiKey(rows) {
@@ -907,7 +894,6 @@ module.exports = {
   foldAggBySource,
   foldAggByUser,
   foldAggByTeam,
-  foldAggByGroup,
   foldAggByApiKey,
   mergeGrouped,
   mergeDaily,

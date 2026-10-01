@@ -247,6 +247,14 @@ const naUnlimited = normalizeNewApiUsage({
 assert.match(naUnlimited.extra, /无限额度/);
 assert.match(naUnlimited.extra, /过期/);
 
+// ── Team migration decision rules ──
+const { chooseTeamForUser, normalizeTeamRules } = require('../utils/quota-migration');
+assert.strictEqual(chooseTeamForUser({ groupTeamId: 9, legacyTeamId: 2, memberships: [{ team_id: 3 }] }), 9);
+assert.strictEqual(chooseTeamForUser({ groupTeamId: null, legacyTeamId: 8, memberships: [{ team_id: 3 }] }), 8);
+assert.strictEqual(chooseTeamForUser({ legacyTeamId: null, memberships: [{ team_id: 3, created_at: '2026-01-02' }, { team_id: 2, created_at: '2026-01-01' }] }), 2);
+assert.deepStrictEqual(normalizeTeamRules('[{"rule_type":"tokens"}]'), [{ rule_type: 'tokens' }]);
+assert.deepStrictEqual(normalizeTeamRules('bad'), []);
+
 // ── Cursor Pro ──
 const { normalizeCursorUsage, hasPlanUsage, centsToUsd, jwtExpSec, sumAggregatedCents } = require('../utils/cursor-usage');
 

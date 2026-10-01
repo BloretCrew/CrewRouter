@@ -1,5 +1,7 @@
+'use strict';
+
 /**
- * 统一配额检查与实扣积分计算（API / Playground 共用）
+ * Team 限额规则检查与实扣积分计算（API / Playground 共用）
  */
 
 const { pool } = require('../models/database');
@@ -7,86 +9,70 @@ const { getUserQuotaBuffer } = require('./quota-data');
 const { moneyToApiNumber, moneyToString } = require('./money');
 
 /**
- * 检查用户组额度规则
- * @param {number} userId
- * @param {number|null} groupId
- * @returns {Promise<Array|null>}
+ * 检查用户所属 Team 的额度规则。
  */
-async function checkQuotaRules(userId, groupId, client = null) {
-  if (!groupId) return null;
+async function checkQuotaRules(userId, teamId, client = null) {
+  if (!teamId) return null;
   const db = client || pool;
-
-  const rulesResult = await db.query(
-    'SELECT rule_type, rule_value, duration_hours FROM user_group_rules WHERE group_id = $1',
-    [groupId]
-  );
+  let rules = [];
+  try {
+    const result = await db.query('SELECT quota_rules FROM teams WHERE id = $1', [teamId]);
+    const raw = result.rows[0]?.quota_rules;
+    if (Array.isArray(raw)) rules = raw;
+    else if (typeof raw === 'string') rules = JSON.parse(raw || '[]');
+  } catch (_) { return null; }
+  if (!rules.length) return null;
 
   const results = [];
-
-  for (const rule of rulesResult.rows) {
+  for (const rule of rules) {
     const { rule_type, rule_value, duration_hours } = rule;
-    const since = new Date(Date.now() - duration_hours * 3600 * 1000);
-
+    const hours = Number(duration_hours) || 0;
+    const since = new Date(Date.now() - hours * 3600 * 1000);
     let used = 0;
     if (rule_type === 'requests') {
-      const r = await db.query(
-        'SELECT COALESCE(SUM(count), 0) AS total FROM quota_data WHERE user_id = $1 AND created_at >= $2',
+      const result = await db.query(
+        'SELECT COUNT(*) AS total FROM usage_records WHERE user_id = $1 AND created_at >= $2',
         [userId, since]
       );
-      used = parseInt(r.rows[0].total, 10) || 0;
+      used = parseInt(result.rows[0].total, 10) || 0;
     } else if (rule_type === 'tokens') {
-      const r = await db.query(
-        'SELECT COALESCE(SUM(weighted_tokens), 0) AS total FROM quota_data WHERE user_id = $1 AND created_at >= $2',
+      const result = await db.query(
+        'SELECT COALESCE(SUM(weighted_tokens), 0) AS total FROM usage_records WHERE user_id = $1 AND created_at >= $2',
         [userId, since]
       );
-      used = parseInt(r.rows[0].total, 10) || 0;
+      used = parseInt(result.rows[0].total, 10) || 0;
     }
-
-    const userBuffer = getUserQuotaBuffer(userId);
-    for (const entry of userBuffer) {
+    for (const entry of getUserQuotaBuffer(userId)) {
       if (entry.created_at >= since) {
         used += rule_type === 'requests' ? entry.count : (entry.weighted_tokens || entry.token_used);
       }
     }
-
+    const limit = Number(rule_value) || 0;
     results.push({
       rule_type,
-      limit: rule_value,
+      limit,
       used,
-      remaining: Math.max(0, rule_value - used),
-      exceeded: used >= rule_value,
-      duration_hours
+      remaining: Math.max(0, limit - used),
+      exceeded: used >= limit,
+      duration_hours: hours,
     });
   }
-
-  return results.length > 0 ? results : null;
+  return results.length ? results : null;
 }
 
 /**
- * 根据配额情况决定实际扣除积分。
- * 任一配额仍有余量 → 实扣 0（消耗配额）；全部耗尽 → 按加权 token 扣积分。
- *
- * @param {object} params
- * @param {number} params.userId
- * @param {number|null} params.groupId
- * @param {number} params.weightedTokens
- * @param {number} params.pointsCost 理论积分
- * @param {object} [deps] 可注入 checkQuotaRules 便于单测
- * @returns {Promise<number>}
+ * 任一规则仍有余量时按额度消费；全部耗尽后按加权 Token 扣积分。
  */
 async function calculatePointsToDeduct(
-  { userId, groupId, weightedTokens, pointsCost },
+  { userId, teamId, weightedTokens, pointsCost },
   deps = {}
 ) {
-  if (!groupId) return moneyToApiNumber(moneyToString(pointsCost));
+  if (!teamId) return moneyToApiNumber(moneyToString(pointsCost));
   const check = deps.checkQuotaRules || checkQuotaRules;
-  const rules = await check(userId, groupId, deps.client);
+  const rules = await check(userId, teamId, deps.client);
   if (!rules) return moneyToApiNumber(moneyToString(pointsCost));
-  if (rules.some(r => !r.exceeded)) return 0;
+  if (rules.some(rule => !rule.exceeded)) return 0;
   return moneyToApiNumber(moneyToString(Math.max(0, (weightedTokens || 0) / 1000000)));
 }
 
-module.exports = {
-  checkQuotaRules,
-  calculatePointsToDeduct
-};
+module.exports = { checkQuotaRules, calculatePointsToDeduct };

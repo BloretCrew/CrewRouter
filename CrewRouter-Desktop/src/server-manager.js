@@ -4,80 +4,17 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const fsp = fs.promises;
 const http = require('node:http');
-const https = require('node:https');
 const os = require('node:os');
 const path = require('node:path');
-const net = require('node:net');
-const { execFileSync } = require('node:child_process');
+const { EventEmitter } = require('node:events');
 const { spawn } = require('node:child_process');
-
-const SECRET_KEYS = /(secret|password|token|api[_-]?key|master[_-]?key|authorization|cookie)/i;
-
-function runAsPostgres(command, args, options = {}) {
-  return execFileSync('runuser', ['-u', 'postgres', '--', command, ...args], { stdio: 'inherit', ...options });
-}
-
-async function startIsolatedPostgres(userData, host = '127.0.0.1') {
-  const postgresUid = Number(execFileSync('id', ['-u', 'postgres'], { encoding: 'utf8' }).trim());
-  const postgresGid = Number(execFileSync('id', ['-g', 'postgres'], { encoding: 'utf8' }).trim());
-  const runtimeDir = path.join(userData, 'runtime');
-  const postgresKey = crypto.createHash('sha256').update(path.resolve(userData)).digest('hex').slice(0, 16);
-  // PostgreSQL runs as postgres and cannot traverse root-owned home directories such as /root/.config.
-  const postgresRoot = path.join(os.tmpdir(), `crewrouter-desktop-postgres-${postgresKey}`);
-  const dataDir = path.join(postgresRoot, 'data');
-  const logPath = path.join(postgresRoot, 'postgres.log');
-  const pgCtl = process.env.PG_CTL || 'pg_ctl';
-  const psql = process.env.PSQL || 'psql';
-  const databaseName = `crewrouter_desktop_${postgresKey}`;
-  let stopped = false;
-  await fsp.mkdir(runtimeDir, { recursive: true });
-  await fsp.mkdir(postgresRoot, { recursive: true, mode: 0o755 });
-  await fsp.chown(postgresRoot, postgresUid, postgresGid);
-  if (!fs.existsSync(path.join(dataDir, 'PG_VERSION'))) {
-    await fsp.mkdir(dataDir, { recursive: true });
-    await fsp.chown(dataDir, postgresUid, postgresGid);
-    runAsPostgres(process.env.PG_INITDB || 'initdb', ['--no-locale', '--encoding=UTF8', '--auth=trust', '-D', dataDir]);
-  }
-  const port = await findFreePort(host);
-  try {
-    try {
-      runAsPostgres(pgCtl, ['-D', dataDir, 'status'], { stdio: 'ignore' });
-      runAsPostgres(pgCtl, ['-D', dataDir, 'stop', '-m', 'immediate'], { stdio: 'ignore' });
-    } catch {}
-    runAsPostgres(pgCtl, ['-D', dataDir, '-o', `-h ${host} -p ${port}`, '-l', logPath, 'start']);
-    const databases = execFileSync('runuser', ['-u', 'postgres', '--', psql, '-h', host, '-p', String(port), '-d', 'postgres', '-At', '-c', `SELECT 1 FROM pg_database WHERE datname = '${databaseName}'`], { encoding: 'utf8' });
-    if (!databases.trim()) runAsPostgres(psql, ['-h', host, '-p', String(port), '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-c', `CREATE DATABASE ${databaseName}`]);
-  } catch (error) {
-    try { runAsPostgres(pgCtl, ['-D', dataDir, 'stop', '-m', 'immediate']); } catch {}
-    throw error;
-  }
-  return {
-    dataDir,
-    port,
-    config: { host, port, name: databaseName, user: 'postgres', password: '' },
-    stop: async () => {
-      if (stopped) return;
-      stopped = true;
-      try { runAsPostgres(pgCtl, ['-D', dataDir, 'stop', '-m', 'fast']); } catch {}
-    },
-  };
-}
+const { findFreePort } = require('./util/free-port');
+const { resolvePostgresProvider } = require('./postgres');
 
 function redact(value) {
   return String(value)
     .replace(/((?:secret|password|token|api[_-]?key|master[_-]?key|authorization|cookie)\s*[=:]\s*)([^\s,;]+)/gi, '$1[REDACTED]')
     .replace(/Bearer\s+[^\s]+/gi, 'Bearer [REDACTED]');
-}
-
-function findFreePort(host = '127.0.0.1', netModule = net) {
-  return new Promise((resolve, reject) => {
-    const server = netModule.createServer();
-    server.once('error', reject);
-    server.listen({ host, port: 0 }, () => {
-      const port = server.address().port;
-      server.close((error) => error ? reject(error) : resolve(port));
-    });
-  });
 }
 
 function mergeConfig(base, overrides) {
@@ -157,22 +94,39 @@ function requestJson(url, timeoutMs, request = http) {
   });
 }
 
-class LocalServerManager {
+// 启动阶段进度：数据库 → 启动进程 → 等待就绪（第 4 步“打开控制台”由主进程完成）。
+const PROGRESS = Object.freeze({
+  database: { step: 1, total: 4, label: '正在准备本地数据库' },
+  databaseInit: { step: 1, total: 4, label: '正在初始化本地数据库（首次需要一些时间）' },
+  spawn: { step: 2, total: 4, label: '正在启动本地服务' },
+  ready: { step: 3, total: 4, label: '正在检查服务就绪' },
+});
+
+const INHERITED_CONFIG_KEYS = /^(?:CR(?:W)?_|CREWROUTER_(?:SERVER_ROOT|PACKAGED_SERVER_ROOT)$|DATABASE_URL$|PG(?:HOST|PORT|USER|PASSWORD|DATABASE)$)/;
+
+function emptyStatus() {
+  return { pid: null, port: null, baseUrl: null, ready: false, runtime: null, edition: null, auth: null, demo: null, capabilities: {}, version: null, logsDir: null, logPath: null, setup: null, database: null };
+}
+
+class LocalServerManager extends EventEmitter {
   constructor(options = {}) {
+    super();
     this.options = { mode: 'development', host: '127.0.0.1', startupTimeoutMs: 30000, pollIntervalMs: 150, requestTimeoutMs: 1500, ...options };
     this.child = null;
-    this.status = { pid: null, port: null, baseUrl: null, ready: false, runtime: null, edition: null, auth: null, demo: null, capabilities: {}, version: null };
+    this.status = emptyStatus();
     this.runtime = null;
     this.database = null;
     this.childNonce = null;
+    this.localToken = null;
+    this.aborted = false;
+    this.serverEntry = null;
   }
 
-  async start() {
-    if (this.child) throw new Error('Local server is already running');
+  progress(key) { this.emit('progress', { ...PROGRESS[key] }); }
+
+  _configOverrides() {
     const opts = this.options;
-    const userData = opts.userData || path.join(os.tmpdir(), 'crewrouter-desktop');
-    const port = opts.port || await (opts.findFreePort || findFreePort)(opts.host);
-    this.runtime = await createRuntimeConfig(userData, {
+    return {
       ...(opts.config || {}),
       ...(typeof opts.runtime === 'string' ? { runtime: opts.runtime } : {}),
       ...(opts.edition ? { edition: opts.edition } : {}),
@@ -180,23 +134,31 @@ class LocalServerManager {
       ...(opts.demo !== undefined ? { demo: opts.demo } : {}),
       ...(opts.localIdentityId ? { localIdentityId: opts.localIdentityId } : {}),
       ...(opts.displayName ? { displayName: opts.displayName } : {}),
-      ...(opts.database ? { database: opts.database } : {}),
-    });
-      if (!opts.database && opts.createDatabase !== false && process.platform === 'linux' && (() => { try { execFileSync('id', ['-u', 'postgres']); return true; } catch { return false; } })()) {
-      this.database = await startIsolatedPostgres(userData, opts.host);
-      this.runtime = await createRuntimeConfig(userData, {
-        ...(opts.config || {}),
-        ...(typeof opts.runtime === 'string' ? { runtime: opts.runtime } : {}),
-        ...(opts.edition ? { edition: opts.edition } : {}),
-        ...(opts.auth ? { auth: opts.auth } : {}),
-        ...(opts.demo !== undefined ? { demo: opts.demo } : {}),
-        ...(opts.localIdentityId ? { localIdentityId: opts.localIdentityId } : {}),
-        ...(opts.displayName ? { displayName: opts.displayName } : {}),
-        database: this.database.config,
+    };
+  }
+
+  async start() {
+    if (this.child) throw new Error('Local server is already running');
+    const opts = this.options;
+    this.aborted = false;
+    const userData = opts.userData || path.join(os.tmpdir(), 'crewrouter-desktop');
+    const port = opts.port || await (opts.findFreePort || findFreePort)(opts.host);
+    let database = opts.database || null;
+    if (!database && opts.createDatabase !== false) {
+      this.progress('database');
+      const provider = opts.postgres || resolvePostgresProvider();
+      this.database = await provider.start({
+        userData,
+        host: opts.host,
+        findFreePort: opts.findFreePort || findFreePort,
+        logger: opts.logger,
+        onProgress: (phase) => this.progress(phase === 'init' ? 'databaseInit' : 'database'),
       });
+      database = this.database.config;
     }
     let entry;
     try {
+      this.runtime = await createRuntimeConfig(userData, { ...this._configOverrides(), ...(database ? { database } : {}) });
       entry = resolveServerEntry(opts.mode, opts);
       this.serverEntry = entry;
     } catch (error) {
@@ -204,26 +166,48 @@ class LocalServerManager {
       this.database = null;
       throw error;
     }
+    this.progress('spawn');
     const logPath = path.join(this.runtime.logsDir, 'server.log');
     const logStream = fs.createWriteStream(logPath, { flags: 'a', mode: 0o600 });
     const inherited = { ...process.env };
-    // Do not let a desktop child accidentally use the parent's production listener/config.
-    const inheritedConfigKeys = /^(?:CR(?:W)?_|CREWROUTER_(?:SERVER_ROOT|PACKAGED_SERVER_ROOT)$|DATABASE_URL$|PG(?:HOST|PORT|USER|PASSWORD|DATABASE)$)/;
-    for (const key of Object.keys(inherited)) if (inheritedConfigKeys.test(key)) delete inherited[key];
+    // 不允许子进程意外继承父项目的生产监听/配置。
+    for (const key of Object.keys(inherited)) if (INHERITED_CONFIG_KEYS.test(key)) delete inherited[key];
     const env = { ...inherited };
     for (const [key, value] of Object.entries(opts.env || {})) {
-      if (!inheritedConfigKeys.test(key)) env[key] = value;
+      if (!INHERITED_CONFIG_KEYS.test(key)) env[key] = value;
     }
-    const database = this.runtime.config.database;
-    Object.assign(env, { CR_APP_HOST: opts.host, CR_APP_PORT: String(port), CR_CONFIG_PATH: this.runtime.configPath, CR_DATA_DIR: this.runtime.dataDir, CR_LOG_DIR: this.runtime.logsDir, CR_RUNTIME: this.runtime.config.runtime || 'desktop-local', CR_EDITION: this.runtime.config.edition || 'personal', CR_AUTH_REQUIRED: String(this.runtime.config.auth?.required ?? false), CR_AUTH_METHODS: Array.isArray(this.runtime.config.auth?.methods) ? this.runtime.config.auth.methods.join(',') : 'local', CR_LOGIN_REPORT_ENABLED: String(this.runtime.config.loginReport?.enabled ?? true), CR_STATS_REPORT_ENABLED: String(this.runtime.config.statsReport?.enabled ?? true), CR_DEMO: String(this.runtime.config.demo === true), CR_LOCAL_ID: this.runtime.config.localIdentityId || '', CR_LOCAL_DISPLAY_NAME: this.runtime.config.displayName || '', CR_DB_HOST: database.host, CR_DB_PORT: String(database.port), CR_DB_NAME: database.name, CR_DB_USER: database.user, CR_DB_PASSWORD: database.password });
-    // A packaged Electron executable must be switched to Node mode for the bundled Server child.
+    const db = this.runtime.config.database;
+    this.localToken = crypto.randomBytes(24).toString('hex');
+    Object.assign(env, {
+      CR_APP_HOST: opts.host,
+      CR_APP_PORT: String(port),
+      CR_CONFIG_PATH: this.runtime.configPath,
+      CR_DATA_DIR: this.runtime.dataDir,
+      CR_LOG_DIR: this.runtime.logsDir,
+      CR_RUNTIME: this.runtime.config.runtime || 'desktop-local',
+      CR_EDITION: this.runtime.config.edition || 'personal',
+      CR_AUTH_REQUIRED: String(this.runtime.config.auth?.required ?? false),
+      CR_AUTH_METHODS: Array.isArray(this.runtime.config.auth?.methods) ? this.runtime.config.auth.methods.join(',') : 'local',
+      CR_LOGIN_REPORT_ENABLED: String(this.runtime.config.loginReport?.enabled ?? true),
+      CR_STATS_REPORT_ENABLED: String(this.runtime.config.statsReport?.enabled ?? true),
+      CR_DEMO: String(this.runtime.config.demo === true),
+      CR_LOCAL_ID: this.runtime.config.localIdentityId || '',
+      CR_LOCAL_DISPLAY_NAME: this.runtime.config.displayName || '',
+      CR_LOCAL_TOKEN: this.localToken,
+      CR_DB_HOST: db.host,
+      CR_DB_PORT: String(db.port),
+      CR_DB_NAME: db.name,
+      CR_DB_USER: db.user,
+      CR_DB_PASSWORD: db.password,
+    });
+    // 打包后的 Electron 可执行文件需要切换到 Node 模式才能运行 Server 子进程。
     if (process.versions.electron && opts.runAsNode !== false) env.ELECTRON_RUN_AS_NODE = '1';
     let child;
     try {
       child = (opts.spawn || spawn)(process.execPath, [entry], { cwd: this.runtime.runtimeDir, env, stdio: ['ignore', 'pipe', 'pipe'] });
       this.child = child;
       this.childNonce = crypto.randomUUID();
-      this.status = { pid: child.pid || null, ownerNonce: this.childNonce, port, baseUrl: `http://${opts.host}:${port}`, ready: false, runtime: null, edition: null, auth: null, demo: null, capabilities: {}, version: null, setup: null };
+      this.status = { ...emptyStatus(), pid: child.pid || null, ownerNonce: this.childNonce, port, baseUrl: `http://${opts.host}:${port}`, logsDir: this.runtime.logsDir, logPath, database: this.database ? { provider: this.database.provider, port: this.database.port } : null };
       const write = (chunk) => logStream.write(redact(chunk));
       child.stdout?.on('data', write); child.stderr?.on('data', write);
       let exitError;
@@ -231,11 +215,15 @@ class LocalServerManager {
         logStream.end();
         exitError = new Error(`Local server exited before becoming ready (code ${code}, signal ${signal || 'none'}); see ${logPath}`);
         exitError.code = code;
-        if (this.child === child) { this.child = null; this.status.ready = false; this.status.exit = { code, signal }; }
+        if (this.child === child) {
+          const wasReady = this.status.ready;
+          this.child = null; this.status.ready = false; this.status.exit = { code, signal };
+          this.emit('exit', { code, signal, wasReady, aborted: this.aborted, logPath });
+        }
       });
       if (opts.waitForReady !== false) {
-          await this.waitUntilReady(child, () => exitError);
-        await this.ensureLocalPrincipalReady();
+        this.progress('ready');
+        await this.waitUntilReady(child, () => exitError);
       }
       return this.getStatus();
     } catch (error) {
@@ -248,31 +236,12 @@ class LocalServerManager {
     }
   }
 
-  async ensureLocalPrincipalReady() {
-    if (this.runtime?.config.runtime !== 'desktop-local') return;
-    let me;
-    try { me = await requestJson(`${this.status.baseUrl}/auth/me`, this.options.requestTimeoutMs, this.options.request || http); }
-    catch (error) {
-      // Older or minimal test servers may not expose the optional identity endpoint.
-      if (error.statusCode === 401 || error.statusCode === 404) return;
-      throw new Error(`本地身份初始化检查失败：${error.message}`);
-    }
-    if (!me.body?.needsPasswordSetup) return;
-    const bcryptPath = path.join(path.dirname(this.serverEntry || ''), 'node_modules', 'bcryptjs');
-    let bcrypt;
-    try { bcrypt = require(bcryptPath); } catch (error) { throw new Error(`本地身份初始化依赖缺失：${error.message}`); }
-    const passwordHash = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 10);
-    const database = this.runtime.config.database;
-    const sql = "UPDATE users SET password_hash = :'passwordHash' WHERE username = 'desktop-local' AND (password_hash IS NULL OR password_hash = '')";
-    const psql = this.options.psql || process.env.PSQL || 'psql';
-    execFileSync('runuser', ['-u', 'postgres', '--', psql, '-h', database.host, '-p', String(database.port), '-d', database.name, '-v', `passwordHash=${passwordHash}`, '-v', 'ON_ERROR_STOP=1', '-c', sql], { stdio: 'ignore' });
-  }
-
   async waitUntilReady(child = this.child, getExitError = () => null) {
     if (!this.status.baseUrl) throw new Error('Local server has not been started');
     const deadline = Date.now() + this.options.startupTimeoutMs;
     let lastError = null;
     while (Date.now() < deadline) {
+      if (this.aborted) { const cancelled = new Error('本地服务启动已取消'); cancelled.cancelled = true; throw cancelled; }
       const exitError = getExitError();
       if (exitError || (child && child.exitCode !== null)) throw (exitError || new Error(`Local server exited before becoming ready (code ${child.exitCode})`));
       try {
@@ -299,9 +268,21 @@ class LocalServerManager {
     throw error;
   }
 
+  // 取消进行中的启动：waitUntilReady 会以 cancelled 错误退出，随后由 start() 的清理逻辑停止子进程与数据库。
+  abort() {
+    this.aborted = true;
+    const child = this.child;
+    if (child && child.exitCode === null && !child.killed) child.kill('SIGTERM');
+  }
+
   async stop(expectedNonce = this.childNonce) {
     const child = this.child;
-    if (!child) { this.childNonce = null; this.status.ready = false; this.status.ownerNonce = null; return; }
+    if (!child) {
+      this.childNonce = null; this.status.ready = false; this.status.ownerNonce = null;
+      await this.database?.stop().catch(() => {});
+      this.database = null;
+      return;
+    }
     if (expectedNonce !== this.childNonce || child.pid !== this.status.pid || child !== this.child) throw new Error('Local server ownership check failed');
     this.child = null; this.childNonce = null;
     if (child && child.exitCode === null && !child.killed) {
@@ -320,4 +301,4 @@ class LocalServerManager {
   getStatus() { return { ...this.status }; }
 }
 
-module.exports = { LocalServerManager, findFreePort, createRuntimeConfig, resolveServerEntry, redact, requestJson };
+module.exports = { LocalServerManager, findFreePort, createRuntimeConfig, resolveServerEntry, redact, requestJson, PROGRESS };

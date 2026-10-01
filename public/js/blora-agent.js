@@ -92,7 +92,7 @@
         this.send();
       });
       document.getElementById('baInput')?.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' && !event.shiftKey) {
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
           event.preventDefault();
           this.send();
         }
@@ -335,12 +335,14 @@
     renderThread() {
       const thread = document.getElementById('baThread');
       if (!thread) return;
+      document.getElementById('bloraAgentPage')?.classList.toggle('is-empty', !this.messages.length);
       if (!this.messages.length) {
-        const title = this.mode === 'imagine' ? 'Imagine' : (this.mode === 'manage' ? 'Manage' : 'Chat');
+        const title = this.mode === 'imagine' ? '让想象，成为画面' : (this.mode === 'manage' ? '一起打理你的实例' : '你好，今天想聊些什么？');
         const description = this.mode === 'imagine'
           ? '选择图像模型，描述想要的画面。'
-          : (this.mode === 'manage' ? '用对话管理实例。写入操作需要你点允许。' : '选择模型，开始对话。');
-        setHTML(thread, `<blora-empty title="${title}" description="${Dom.escapeHtml(description)}"></blora-empty>`);
+          : (this.mode === 'manage' ? '查看状态、调整配置。每项写入操作都由你确认。' : '从一个问题、一个想法，或一段代码开始。');
+        setHTML(thread, `<div class="ba-welcome"><span class="ba-welcome__mark" data-icon="sparkles" aria-hidden="true"></span><h2 class="ba-welcome__title blora-h3">${Dom.escapeHtml(title)}</h2><p class="ba-welcome__description blora-text-muted">${Dom.escapeHtml(description)}</p></div>`);
+        window.Blora?.hydrateIcons?.(thread);
         return;
       }
       let html = this.messages.map(message => this.bubbleHtml(message)).join('');

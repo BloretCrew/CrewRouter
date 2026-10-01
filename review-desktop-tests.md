@@ -1,5 +1,7 @@
 # CrewRouter Desktop 测试与交付质量审查
 
+> **状态：已过时（2026-09-15）。** 本报告针对的是早期原型；当前的行为测试、真实 Local 集成与 Electron 验收流程见 `CrewRouter-Desktop/README.md` 的“开发与验证”。
+
 - 审查范围：`/data/CrewRouter/CrewRouter-Desktop`
 - 审查方式：阅读 package/build、源码、测试、README、实施任务书，并实际运行测试/语法检查/真实 Local integration/build。
 - 审查结论：**不建议按“本轮完成定义”交付（需要修复后再交付）**。

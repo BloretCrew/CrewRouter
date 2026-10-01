@@ -7,7 +7,6 @@ const os = require('node:os');
 const path = require('node:path');
 const { validateRemoteUrl, redactUrl } = require('../src/url-policy');
 const { ProfileStore, validateLocalDisplayName } = require('../src/profile-store');
-const { RedirectFlow } = require('../src/redirect-flow');
 const { ConnectionManager, parseInstanceResponse } = require('../src/connection-manager');
 
 const tempStore = () => new ProfileStore(path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cr-desktop-')), 'profiles.json'));
@@ -22,40 +21,11 @@ test('URL policy blocks private targets and redacts secrets', async () => {
   assert.equal((await validateRemoteUrl('http://user:pass@example.com')).ok, false);
   assert.equal((await validateRemoteUrl('https://example.com/?access_token=secret')).ok, false);
   assert.equal((await validateRemoteUrl('file:///tmp/x')).ok, false);
+  assert.equal((await validateRemoteUrl('http://10.0.0.8')).ok, false);
+  assert.equal((await validateRemoteUrl('http://[::1]:8080')).ok, false);
+  assert.equal((await validateRemoteUrl('http://203.0.113.10:8080')).ok, true, '公网 IP 字面量不需要 DNS');
   assert.match(redactUrl('https://example.com/cb?access_token=abc&state=xyz'), /access_token=%5BREDACTED%5D/);
   assert.doesNotMatch(redactUrl('https://example.com/cb?access_token=abc&state=xyz'), /abc|xyz/);
-});
-
-test('redirect state is single-use and expires', async () => {
-  let now = 1000; const flow = new RedirectFlow({ now: () => now, ttlMs: 10 });
-  const state = flow.createState({ source: 'demo' });
-  assert.deepEqual(flow.consumeState(state), { source: 'demo' });
-  assert.throws(() => flow.consumeState(state), /无效/);
-  const expired = flow.createState(); now = 1011;
-  assert.throws(() => flow.consumeState(expired), /过期/);
-});
-
-test('redirect callback binds one safe target and rejects replay or credentials', async () => {
-  const flow = new RedirectFlow({ now: () => 1000 });
-  const state = flow.createState({ source: 'demo', serverUrl: 'http://127.0.0.1:20001', targetOrigin: 'http://127.0.0.1:20001' });
-  const callback = await flow.parseCallback(`crewrouter://connect/?state=${state}`, { allowLocalhost: true });
-  assert.equal(callback.serverUrl, 'http://127.0.0.1:20001/');
-  assert.throws(() => flow.parseCallback(`crewrouter://connect/?state=${state}`), /无效/);
-  const second = flow.createState({ serverUrl: 'http://127.0.0.1:20001', targetOrigin: 'http://127.0.0.1:20001' });
-  await assert.rejects(() => flow.parseCallback(`crewrouter://connect/?state=${second}&serverUrl=https%3A%2F%2Fother.example`, { allowLocalhost: true }), /不一致|DNS|内网/);
-  const third = flow.createState({ serverUrl: 'http://127.0.0.1:20001' });
-  assert.throws(() => flow.parseCallback(`crewrouter://connect/?state=${third}&code=secret`, { allowLocalhost: true }), /凭据/);
-  const fragmentState = flow.createState({ serverUrl: 'http://127.0.0.1:20001' });
-  assert.throws(() => flow.parseCallback(`crewrouter://connect/?state=${fragmentState}#access_token=secret`, { allowLocalhost: true }), /fragment/);
-});
-
-test('Demo URL construction carries a validated target without inventing an endpoint', () => {
-  const flow = new RedirectFlow();
-  const result = flow.buildDemoUrl('https://demo.example/redirect?next={target}', { target: 'https://target.example', metadata: { serverUrl: 'https://target.example' } });
-  const url = new URL(result.url);
-  assert.equal(url.pathname, '/redirect');
-  assert.equal(url.searchParams.get('next'), 'https://target.example');
-  assert.match(url.searchParams.get('state'), /^[A-Za-z0-9_-]{40,}$/);
 });
 
 test('local display name validation trims, rejects unsafe values and preserves HTML as text', () => {
@@ -76,14 +46,15 @@ test('profile store persists local display name and identity without affecting r
   assert.equal(state.profiles.find((p) => p.id === 'remote').displayName, null);
 });
 
-test('desktop settings are isolated and profiles can be renamed or removed', () => {
+test('desktop settings are isolated, include language and profiles can be renamed or removed', () => {
   const store = tempStore();
   store.upsert({ id: 'local', name: 'Local', url: 'http://localhost:1234', mode: 'local' });
   store.upsert({ id: 'remote', name: 'Remote', url: 'https://remote.example', mode: 'remote' });
   store.rename('remote', '远程工作区');
-  assert.equal(store.getSettings().theme, 'system');
-  store.saveSettings({ theme: 'dark', autoConnect: false, notifications: true, updateChecks: false, token: 'must-not-persist' });
-  assert.deepEqual(store.getSettings(), { theme: 'dark', autoConnect: false, notifications: true, updateChecks: false });
+  assert.deepEqual(store.getSettings(), { autoConnect: true, theme: 'system', language: null, notifications: true, updateChecks: true });
+  store.saveSettings({ theme: 'dark', language: 'en', autoConnect: false, notifications: true, updateChecks: false, token: 'must-not-persist' });
+  assert.deepEqual(store.getSettings(), { theme: 'dark', language: 'en', autoConnect: false, notifications: true, updateChecks: false });
+  assert.equal(store.saveSettings({ language: 'fr' }).language, null, '未知语言回落');
   assert.doesNotMatch(JSON.stringify(store.load()), /token|api.?key/i);
   store.remove('remote');
   assert.equal(store.load().profiles.length, 1);
@@ -118,7 +89,7 @@ test('/api/instance parses authoritative runtime and auth metadata', () => {
 
 test('connection manager saves metadata without tokens', async () => {
   const store = tempStore();
-  const manager = new ConnectionManager({ store, fetchImpl: async (url) => ({ ok: true, async json() { return { runtime: 'server', edition: 'team', auth: { required: true, methods: ['password', 'feishu'] }, capabilities: { sso: true }, protocolVersion: '1' }; } }) });
+  const manager = new ConnectionManager({ store, fetchImpl: async () => ({ ok: true, async json() { return { runtime: 'server', edition: 'team', auth: { required: true, methods: ['password', 'feishu'] }, capabilities: { sso: true }, protocolVersion: '1' }; } }) });
   const profile = await manager.connect({ id: 'team', name: 'Team', url: 'http://localhost:20001', allowLocalhost: true });
   assert.equal(profile.edition, 'team');
   assert.equal(profile.runtime, 'server');

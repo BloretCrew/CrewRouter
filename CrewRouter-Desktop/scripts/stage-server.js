@@ -35,16 +35,6 @@ function copyDirectory(relative) {
   });
 }
 
-function patchDesktopInstancePayload() {
-  const appPath = path.join(destination, 'public', 'js', 'app.js');
-  if (!fs.existsSync(appPath)) throw new Error('Expected public/js/app.js in Server bundle');
-  const sourceText = fs.readFileSync(appPath, 'utf8').replace(/\r\n/g, '\n');
-  const instanceMarker = "      this.instance = window.CrewRouterEditionBadge\n        ? await window.CrewRouterEditionBadge.load()\n        : null;";
-  const instanceReplacement = "      const instancePayload = window.CrewRouterEditionBadge\n        ? await window.CrewRouterEditionBadge.load()\n        : null;\n      this.instance = instancePayload?.data && typeof instancePayload.data === 'object'\n        ? instancePayload.data\n        : instancePayload;";
-  if (!sourceText.includes(instanceMarker)) throw new Error('Expected instance bootstrap was not found in staged app.js');
-  fs.writeFileSync(appPath, sourceText.replace(instanceMarker, instanceReplacement));
-}
-
 function assertSafeBundle() {
   const unsafe = [];
   function walk(dir) {
@@ -67,7 +57,7 @@ if (!fs.existsSync(source)) {
     fs.mkdirSync(destination, { recursive: true });
     files.forEach(copyFile);
     directories.forEach(copyDirectory);
-    patchDesktopInstancePayload();
+    // Server 端 public/js/app.js 已自行归一化 /api/instance 的 data 包装，不再需要文本补丁。
     const npmArgs = ['install', '--omit=dev', '--ignore-scripts', '--no-package-lock', '--no-audit', '--no-fund'];
     const npmCommand = process.platform === 'win32'
       ? (process.env.npm_node_execpath || process.execPath)

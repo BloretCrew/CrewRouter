@@ -7,11 +7,11 @@ const SCHEMA_VERSION = 1;
 const USERNAME_MAX_LENGTH = 64;
 const DANGEROUS_USERNAME_CHARS = /[<>"'`\\/\u0000-\u001f\u007f]/;
 const PROFILE_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
-const emptyState = () => ({ schemaVersion: SCHEMA_VERSION, activeProfileId: null, profiles: [], settings: { autoConnect: true, theme: 'system', notifications: true, updateChecks: true } });
-const SETTINGS_KEYS = ['autoConnect', 'theme', 'notifications', 'updateChecks'];
+const emptyState = () => ({ schemaVersion: SCHEMA_VERSION, activeProfileId: null, profiles: [], settings: { autoConnect: true, theme: 'system', language: null, notifications: true, updateChecks: true } });
+const SETTINGS_KEYS = ['autoConnect', 'theme', 'language', 'notifications', 'updateChecks'];
 const normalizeSettings = (value) => {
   const source = value && typeof value === 'object' ? value : {};
-  return { autoConnect: source.autoConnect !== false, theme: ['system', 'light', 'dark'].includes(source.theme) ? source.theme : 'system', notifications: source.notifications !== false, updateChecks: source.updateChecks !== false };
+  return { autoConnect: source.autoConnect !== false, theme: ['system', 'light', 'dark'].includes(source.theme) ? source.theme : 'system', language: ['zh', 'en'].includes(source.language) ? source.language : null, notifications: source.notifications !== false, updateChecks: source.updateChecks !== false };
 };
 
 function validateLocalDisplayName(value) {

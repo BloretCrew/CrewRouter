@@ -31,20 +31,11 @@ function inviteStatus(row) {
   return 'active';
 }
 
-async function resolveInviteTargets(teamId, groupId) {
-  let team = null;
-  let group = null;
-  if (teamId) {
-    const result = await pool.query('SELECT id, name FROM teams WHERE id = $1', [teamId]);
-    if (!result.rows.length) throw new Error('指定的 Team 不存在');
-    team = result.rows[0];
-  }
-  if (groupId) {
-    const result = await pool.query('SELECT id, name FROM user_groups WHERE id = $1', [groupId]);
-    if (!result.rows.length) throw new Error('指定的用户组不存在');
-    group = result.rows[0];
-  }
-  return { team, group };
+async function resolveInviteTargets(teamId) {
+  if (!teamId) return { team: null };
+  const result = await pool.query('SELECT id, name FROM teams WHERE id = $1', [teamId]);
+  if (!result.rows.length) throw new Error('指定的 Team 不存在');
+  return { team: result.rows[0] };
 }
 
 router.post('/auth-invites', requireAdmin, async (req, res) => {
@@ -52,15 +43,15 @@ router.post('/auth-invites', requireAdmin, async (req, res) => {
     const maxUses = Math.max(1, Math.min(10000, parseInt(req.body?.maxUses || req.body?.max_uses || 1, 10) || 1));
     const days = Math.max(1, Math.min(365, parseInt(req.body?.days || 7, 10) || 7));
     const teamId = req.body?.teamId ? parseInt(req.body.teamId, 10) : null;
-    const groupId = req.body?.groupId ? parseInt(req.body.groupId, 10) : null;
-    const { team, group } = await resolveInviteTargets(Number.isInteger(teamId) ? teamId : null, Number.isInteger(groupId) ? groupId : null);
+    if (req.body?.groupId) return res.status(400).json({ error: '邀请仅支持设置一个 Team' });
+    const { team } = await resolveInviteTargets(Number.isInteger(teamId) ? teamId : null);
     const token = crypto.randomBytes(32).toString('base64url');
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
     const inserted = await pool.query(
-      `INSERT INTO auth_invites (token_hash, created_by, expires_at, max_uses, used_count, team_id, group_id)
-       VALUES ($1, $2, $3, $4, 0, $5, $6)
-       RETURNING id, created_at, expires_at, max_uses, used_count, team_id, group_id`,
-      [hashToken(token), req.session.user.id, expiresAt, maxUses, team?.id || null, group?.id || null]
+      `INSERT INTO auth_invites (token_hash, created_by, expires_at, max_uses, used_count, team_id)
+       VALUES ($1, $2, $3, $4, 0, $5)
+       RETURNING id, created_at, expires_at, max_uses, used_count, team_id`,
+      [hashToken(token), req.session.user.id, expiresAt, maxUses, team?.id || null]
     );
     const origin = getPublicOrigin(req);
     const row = inserted.rows[0];
@@ -73,8 +64,6 @@ router.post('/auth-invites', requireAdmin, async (req, res) => {
       used_count: row.used_count,
       team_id: row.team_id,
       team_name: team?.name || null,
-      group_id: row.group_id,
-      group_name: group?.name || null,
       status: 'active',
     });
   } catch (err) {
@@ -86,10 +75,10 @@ router.get('/auth-invites', requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT i.id, i.created_by, i.created_at, i.expires_at, i.used, i.used_by, i.used_at,
-             i.max_uses, i.used_count, i.team_id, i.group_id,
+             i.max_uses, i.used_count, i.team_id,
              creator.username AS created_by_name,
              used_user.username AS used_by_name,
-             t.name AS team_name, g.name AS group_name,
+             t.name AS team_name,
              CASE
                WHEN i.expires_at <= CURRENT_TIMESTAMP THEN 'expired'
                WHEN COALESCE(i.used_count, 0) >= COALESCE(i.max_uses, 1) OR i.used THEN 'used'
@@ -99,7 +88,6 @@ router.get('/auth-invites', requireAdmin, async (req, res) => {
       LEFT JOIN users creator ON creator.id = i.created_by
       LEFT JOIN users used_user ON used_user.id = i.used_by
       LEFT JOIN teams t ON t.id = i.team_id
-      LEFT JOIN user_groups g ON g.id = i.group_id
       ORDER BY i.created_at DESC
     `);
     res.json(result.rows);

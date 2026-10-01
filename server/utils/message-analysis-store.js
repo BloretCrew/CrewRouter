@@ -7,6 +7,18 @@ const { analyzeMessages } = require('./message-analysis');
 let workerTimer = null;
 let scanRunning = false;
 
+async function ensureWorkspacePathIndex(db = pool) {
+  const index = await db.query(`
+    SELECT indexdef FROM pg_indexes
+    WHERE schemaname = current_schema() AND indexname = 'idx_uma_workspace'
+  `);
+  const definition = index.rows[0]?.indexdef || '';
+  if (definition && !/md5\s*\(\s*workspace_path\s*\)/i.test(definition)) {
+    await db.query('DROP INDEX IF EXISTS idx_uma_workspace');
+  }
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_uma_workspace ON usage_message_analysis (md5(workspace_path)) WHERE workspace_path IS NOT NULL`);
+}
+
 async function ensureMessageAnalysisTable() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS usage_message_analysis (
@@ -35,7 +47,7 @@ async function ensureMessageAnalysisTable() {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_uma_created ON usage_message_analysis(created_at)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_uma_user_created ON usage_message_analysis(user_id, created_at)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_uma_source_created ON usage_message_analysis(request_source, created_at)');
-  await pool.query('CREATE INDEX IF NOT EXISTS idx_uma_workspace ON usage_message_analysis(workspace_path)');
+  await ensureWorkspacePathIndex(pool);
 }
 
 async function scanPendingMessageAnalysis(options = {}) {
@@ -129,4 +141,4 @@ async function getMessageAnalysisStatus(userId = null) {
   };
 }
 
-module.exports = { scanPendingMessageAnalysis, startMessageAnalysisWorker, getMessageAnalysisStatus };
+module.exports = { scanPendingMessageAnalysis, startMessageAnalysisWorker, getMessageAnalysisStatus, ensureWorkspacePathIndex };
