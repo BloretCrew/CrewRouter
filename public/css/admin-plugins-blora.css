@@ -1,12 +1,7 @@
 /* Blora surface migration for admin plugin management. */
-.cr-admin-plugins-page > .content-section {
+.cr-admin-plugins-page > .cr-admin-section {
   min-height: 12rem;
-
-  padding: var(--blora-space-6);
 }
 
 @media (max-width: 640px) {
-  .cr-admin-plugins-page > .content-section {
-    padding: var(--blora-space-4);
-  }
 }

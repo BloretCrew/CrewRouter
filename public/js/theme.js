@@ -39,16 +39,10 @@ class ThemeManager {
   }
 
   updateIcons() {
-    // 三态互斥显示：跟随系统只用电脑图标，避免与太阳/月亮叠在一起
-    const mode = this.theme; // light | dark | system
-    document.querySelectorAll('.icon-sun').forEach(icon => {
-      icon.style.display = mode === 'light' ? 'block' : 'none';
-    });
-    document.querySelectorAll('.icon-moon').forEach(icon => {
-      icon.style.display = mode === 'dark' ? 'block' : 'none';
-    });
-    document.querySelectorAll('.icon-system').forEach(icon => {
-      icon.style.display = mode === 'system' ? 'block' : 'none';
+    const mode = this.theme;
+    const icon = { light: 'sun', dark: 'moon', system: 'monitor' }[mode] || 'monitor';
+    document.querySelectorAll('#themeToggle, #themeToggleMobile').forEach(button => {
+      button.dataset.icon = icon;
     });
     // 更新按钮 title，便于辨识当前模式
     const titles = {

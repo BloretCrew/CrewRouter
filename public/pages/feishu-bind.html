@@ -19,11 +19,10 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script src="/blora/icons-full.global.js?v=2.1.0"></script>
   <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js"></script>
-  <style>@import url("/css/themes.css") layer(legacy);</style>
-  <style>@import url("/css/main.css") layer(legacy);</style>
-  <link rel="stylesheet" href="/css/auth-shell.css">
+  <link rel="stylesheet" href="/css/auth-shell.css?v=correction-2">
   <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function() {
@@ -42,7 +41,7 @@
 <body class="blora-page blora-scope">
 <blora-navbar brand-href="/" title="CrewRouter" variant="floating" class="public-navbar">
   <blora-navbar-tool>
-    <blora-select id="langToggle" data-size="sm" aria-label="Language" aria-label="Language">
+    <blora-select id="langToggle" data-size="sm" aria-label="Language">
       <blora-option value="zh">中文</blora-option><blora-option value="en">EN</blora-option>
     </blora-select>
   </blora-navbar-tool>
@@ -52,16 +51,16 @@
       <div class="grid"></div>
     </div>
 
-    <div class="login-card auth-card blora-card">
-      <div class="logo">
+    <div class="login-card auth-card blora-card blora-stack">
+      <div class="auth-card__header blora-stack">
         <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
           <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo" style="width:40px;height:40px;">
-          <h1>CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
+          <h1 class="blora-h2">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
         </div>
         <p><span data-i18n="绑定已有账号">绑定已有账号</span></p>
       </div>
 
-      <div class="login-form">
+      <div class="login-form blora-stack">
         <div id="errorMessage" class="blora-message auth-error" data-variant="danger" role="alert"></div>
 
         <div style="text-align:center;padding:16px 0;">
@@ -93,7 +92,7 @@
   </div>
 
   <script src="/js/i18n.js?v=2"></script>
-  <script src="/js/theme.js?v=2"></script>
+  <script src="/js/theme.js?v=correction-2"></script>
   <script src="/js/edition-badge.js?v=1"></script>
   <script>
     async function init() {

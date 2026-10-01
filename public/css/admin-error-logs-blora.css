@@ -1,17 +1,12 @@
 
 
-.cr-admin-error-logs-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
-.cr-admin-error-logs-page .admin-filter-bar {
+.cr-admin-error-logs-page .cr-admin-filters {
   gap: var(--blora-space-2);
   padding: var(--blora-space-3);
 
 }
 
-.cr-admin-error-logs-page .admin-filter-bar .input {
+.cr-admin-error-logs-page .cr-admin-filters .input {
   min-height: 2.5rem;
 
 }
@@ -32,13 +27,4 @@
 }
 
 @media (max-width: 640px) {
-  .cr-admin-error-logs-page > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .cr-admin-error-logs-page .admin-filter-bar .input,
-  .cr-admin-error-logs-page .admin-filter-bar .blora-button {
-    width: 100%;
-    flex: 1 1 100%;
-  }
 }

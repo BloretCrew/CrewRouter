@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>CrewRouter Desktop Settings</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self';">
+  <style>@layer legacy, blora;</style>
   <link rel="stylesheet" href="vendor/blora-design/blora.css">
   <link rel="stylesheet" href="vendor/blora-design/tokens.dark.css">
   <link rel="stylesheet" href="settings.css">
@@ -12,15 +13,15 @@
 <body class="blora-page blora-scope">
   <main class="settings-shell" aria-labelledby="settings-title">
     <header class="settings-header">
-      <div><p class="desktop-eyebrow">CREWROUTER DESKTOP</p><h1 id="settings-title" data-i18n="title">Desktop 设置</h1></div>
+      <div><p class="desktop-eyebrow blora-text-caps blora-text-muted">CREWROUTER DESKTOP</p><h1 class="blora-h2" id="settings-title" data-i18n="title">Desktop 设置</h1></div>
       <label class="language-picker" for="language"><span class="visually-hidden">Language</span><blora-select id="language" aria-label="Language"><blora-option value="zh">中文</blora-option><blora-option value="en">English</blora-option></blora-select></label>
     </header>
-    <p id="remote-note" class="settings-note" data-i18n="remoteNote" hidden></p>
-    <section class="blora-card settings-card" data-variant="content"><h2 data-i18n="connection">当前连接</h2><dl id="connection" class="settings-details"></dl></section>
-    <section class="blora-card settings-card" data-variant="content"><h2 data-i18n="profiles">连接 Profiles</h2><div id="profiles" class="profile-list"></div></section>
-    <section class="blora-card settings-card local-only" id="local-card" data-variant="content"><h2 data-i18n="localServer">Local Server</h2><dl id="local" class="settings-details"></dl><div class="settings-actions"><button type="button" id="restart" class="blora-button" data-variant="secondary" data-i18n="restart">安全重启</button><button type="button" id="stop" class="blora-button" data-variant="danger" data-i18n="stop">停止</button></div></section>
-    <section class="blora-card settings-card" data-variant="content"><h2 data-i18n="preferences">Desktop 偏好</h2><div class="preference-list"><blora-switch id="autoConnect" label="启动时自动连接上次 Profile" data-i18n-label="autoConnect"></blora-switch><blora-switch id="notifications" label="启用桌面通知" data-i18n-label="notifications"></blora-switch><blora-switch id="updateChecks" label="检查更新" data-i18n-label="updateChecks"></blora-switch><label class="theme-picker"><span data-i18n="theme">主题</span><blora-select id="theme" aria-label="主题"><blora-option value="system" data-i18n="system">跟随系统</blora-option><blora-option value="light" data-i18n="light">浅色</blora-option><blora-option value="dark" data-i18n="dark">深色</blora-option></blora-select></label></div></section>
-    <section class="blora-card settings-card" data-variant="content"><h2 data-i18n="diagnostics">诊断信息</h2><p class="settings-muted" data-i18n="diagnosticsHint">仅包含安全白名单字段，不包含 Token 或 API Key。</p><button type="button" id="copy" class="blora-button" data-variant="outline" data-i18n="copy">复制诊断信息</button><output id="message" class="settings-output" role="status"></output></section>
+    <blora-alert id="remote-note" class="settings-note" variant="info" description="" hidden></blora-alert>
+    <section class="blora-card settings-card" data-size="sm"><h2 class="blora-card__title" data-i18n="connection">当前连接</h2><dl id="connection" class="settings-details"></dl></section>
+    <section class="blora-card settings-card" data-size="sm"><h2 class="blora-card__title" data-i18n="profiles">连接 Profiles</h2><div id="profiles" class="profile-list"></div></section>
+    <section class="blora-card settings-card local-only" id="local-card" data-size="sm"><h2 class="blora-card__title" data-i18n="localServer">Local Server</h2><dl id="local" class="settings-details"></dl><div class="settings-actions"><button type="button" id="restart" class="blora-button" data-variant="secondary" data-i18n="restart">安全重启</button><button type="button" id="stop" class="blora-button" data-variant="danger" data-i18n="stop">停止</button></div></section>
+    <section class="blora-card settings-card" data-size="sm"><h2 class="blora-card__title" data-i18n="preferences">Desktop 偏好</h2><div class="preference-list"><blora-switch id="autoConnect" label="启动时自动连接上次 Profile" data-i18n-label="autoConnect"></blora-switch><blora-switch id="notifications" label="启用桌面通知" data-i18n-label="notifications"></blora-switch><blora-switch id="updateChecks" label="检查更新" data-i18n-label="updateChecks"></blora-switch><label class="theme-picker"><span data-i18n="theme">主题</span><blora-select id="theme" aria-label="主题"><blora-option value="system" data-i18n="system">跟随系统</blora-option><blora-option value="light" data-i18n="light">浅色</blora-option><blora-option value="dark" data-i18n="dark">深色</blora-option></blora-select></label></div></section>
+    <section class="blora-card settings-card" data-size="sm"><h2 class="blora-card__title" data-i18n="diagnostics">诊断信息</h2><p class="settings-muted blora-text-muted" data-i18n="diagnosticsHint">仅包含安全白名单字段，不包含 Token 或 API Key。</p><button type="button" id="copy" class="blora-button" data-variant="outline" data-i18n="copy">复制诊断信息</button><output id="message" class="settings-output blora-text-muted" role="status"></output></section>
   </main>
   <blora-dialog id="settings-dialog" size="sm">
     <span slot="title" id="dialog-title"></span>

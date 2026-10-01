@@ -1,0 +1,8 @@
+[config-loader] 已加载配置: /data/CrewRouter/config.json
+[36m[INFO][0m [数据库] 演示模式，跳过数据库连接
+[36m[INFO][0m [ProxyPool] 代理 proxy-a 收到 429，进入冷却期
+[90m[DEBUG][0m [proxyAnthropic] 已补充第四个缓存断点
+attribution, affinity, and fourth-breakpoint assertions passed
+[36m[INFO][0m [余额] 表 balance_preconsumes 已就绪
+
+TIMEOUT 90s

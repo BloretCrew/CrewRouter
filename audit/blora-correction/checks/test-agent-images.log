@@ -1,0 +1,7 @@
+  PASS non-image models are rejected
+  PASS oversized images are rejected
+  PASS test-image is a small png and usage falls back to 1000 completion tokens
+  PASS stored images can be read only by their creator
+  PASS oversized bytes are not stored
+
+5 assertions passed

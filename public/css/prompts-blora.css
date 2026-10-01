@@ -1,10 +1,5 @@
 
 
-.cr-prompts-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
 .cr-prompts-page .admin-filter-bar {
   gap: var(--blora-space-2);
   padding: var(--blora-space-3);
@@ -34,14 +29,11 @@
 
 .cr-prompts-page #injectPromptsList .model-library-item {
   min-height: 0;
-  padding: var(--blora-space-5);
+
 
 }
 
 @media (max-width: 720px) {
-  .cr-prompts-page > .content-section {
-    padding: var(--blora-space-4);
-  }
 
   .cr-prompts-page .admin-filter-bar {
     align-items: stretch;

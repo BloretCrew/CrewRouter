@@ -1,0 +1,6 @@
+{
+  "blora": "2.1.0",
+  "build": "node deploy/build/build-release.js release",
+  "typecheck": null,
+  "lint": null
+}

@@ -1,0 +1,20 @@
+'use strict';
+const fs = require('fs');
+const vm = require('vm');
+const assert = require('assert');
+const path = require('path');
+const source = fs.readFileSync(path.join(__dirname, '../public/js/plugin-runtime.js'), 'utf8');
+const start = source.indexOf('  async function waitForApp');
+const end = source.indexOf('\n  async function init()', start);
+const context = vm.createContext({ window: {}, adminApp: { ready: true }, setTimeout });
+vm.runInContext(source.slice(start, end) + "\nthis.result = waitForApp(() => window.adminApp || (typeof adminApp !== 'undefined' ? adminApp : null));", context);
+context.result.then(value => {
+  assert.equal(value.ready, true);
+  assert.match(source, /waitForApp\(\(\) => window\.adminApp \|\| \(typeof adminApp/);
+  assert.match(source, /container\.dataset\.bloraState = 'error'/);
+  assert.match(source, /<blora-empty/);
+  assert.match(source, /<blora-search id="pluginSearchInput"/);
+  assert.match(source, /<blora-switch/);
+  assert.doesNotMatch(source, /<input type="checkbox"/);
+  console.log('Plugin bootstrap resolves lexical app; error/empty/search/switch use official APIs.');
+}).catch(error => { console.error(error); process.exitCode = 1; });

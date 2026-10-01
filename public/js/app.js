@@ -34,6 +34,21 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function formatQuotaNumber(value) {
+  const number = Number(value);
+  if (value === null || value === undefined || value === '' || !Number.isFinite(number)) return '—';
+  const magnitude = Math.abs(number);
+  const options = magnitude > 0 && magnitude < 1
+    ? { maximumSignificantDigits: 3 }
+    : { maximumFractionDigits: 2 };
+  return number.toLocaleString('zh-CN', options);
+}
+
+function formatQuotaPercent(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.min(100, number)).toLocaleString('zh-CN', { maximumFractionDigits: 1 }) : '—';
+}
+
 function requestBloraValue(label, value = '') {
   const field = document.createElement('blora-field');
   field.setAttribute('label', label);
@@ -716,10 +731,10 @@ class ConsoleApp {
 
       const overview = document.getElementById('usageOverview');
       if (apiKeys.length > 0) {
-        overview.style.display = 'flex';
+        overview.style.display = 'grid';
         document.getElementById('totalRequests').textContent = totalReqs.toLocaleString();
         document.getElementById('totalTokens').textContent = this._formatBigNumber(totalTokens);
-        document.getElementById('totalCost').textContent = `${totalCost.toFixed(4)}${t('积分')}`;
+        document.getElementById('totalCost').textContent = `${formatQuotaNumber(totalCost)} ${t('积分')}`;
       } else {
         overview.style.display = 'none';
       }
@@ -734,12 +749,12 @@ class ConsoleApp {
       const coKeys = apiKeys.filter(key => key.key_type === 'co_key');
       const renderGroup = (title, hint, keys, groupClass) => !keys.length ? '' : `
         <section class="api-key-group ${groupClass}">
-          <div class="api-key-group-header">
+          <div class="blora-row blora-row--between api-key-group-header">
             <div>
               <h3 class="api-key-group-title">${title}</h3>
               <p class="api-key-group-hint">${hint}</p>
             </div>
-            <span class="api-key-group-count">${keys.length}</span>
+            <span class="blora-badge api-key-group-count" data-variant="neutral">${keys.length}</span>
           </div>
           <div class="api-keys-list">${keys.map(key => this._renderApiKeyCard(key)).join('')}</div>
         </section>`;
@@ -815,7 +830,7 @@ class ConsoleApp {
       .map(s => this._renderApiKeyChip(s, 'info')).join('');
     return `
       <section class="api-key-group api-key-group-normal">
-        <div class="api-key-group-header">
+        <div class="blora-row blora-row--between api-key-group-header">
           <div>
             <h3 class="api-key-group-title">${escapeHtml(a.client_name || a.client_id)}</h3>
             <p class="api-key-group-hint"><code>${escapeHtml(a.client_id)}</code></p>
@@ -864,9 +879,6 @@ class ConsoleApp {
       ? (tokens / 1000000).toFixed(1) + 'M'
       : tokens >= 1000 ? (tokens / 1000).toFixed(1) + 'K' : String(tokens);
     const fullKey = key.key_value || '';
-    const maskedKey = fullKey
-      ? (fullKey.length > 16 ? fullKey.slice(0, 10) + ' ··· ' + fullKey.slice(-4) : fullKey.slice(0, 12) + '····')
-      : '—';
     const modelDisplay = key.current_model_name || '';
     const queue = Array.isArray(key.model_queue) ? key.model_queue : [];
     const queueLen = queue.length;
@@ -924,7 +936,7 @@ class ConsoleApp {
     return `
       <div class="blora-card api-key-card ${isEnabled ? '' : 'key-disabled'}" data-key-id="${key.id}"
            ondragover="app.handleApiKeyDragOver(event);app.handleApiKeySortOver(event)" ondragleave="app.handleApiKeyDragLeave(event);app.handleApiKeySortLeave(event)" ondrop="app.handleApiKeyDrop(event, ${key.id});app.handleApiKeySortDrop(event, ${key.id})" data-size="sm">
-        <div class="api-key-header">
+        <div class="blora-card__header api-key-header">
           <div class="api-key-title">
             <span class="api-key-drag-handle" draggable="true" title="${t('拖拽调整顺序')}" aria-hidden="true"
               ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)"><span data-icon="grip" aria-hidden="true"></span></span>
@@ -935,13 +947,13 @@ class ConsoleApp {
             </div>`}
             <div class="api-key-title-text">
               <div class="api-key-name-row">
-                <span class="api-key-name" data-key-id="${key.id}">${escapeHtml(displayName)}</span>
+                <span class="blora-card__title api-key-name" data-key-id="${key.id}">${escapeHtml(displayName)}</span>
                 ${/^crewrouter$/i.test(String(key.name || '')) ? '<span class="key-system-badge" title="' + t('系统依赖密钥，不可删除/改名/启停') + '">' + t('系统') + '</span>' : ''}
                 <div class="api-key-chips">${chips}</div>
                 <span class="api-key-meta-divider" aria-hidden="true"></span>
                 ${this.renderApiKeyTags(key)}
               </div>
-              <div class="api-key-subline">
+              <div class="blora-card__desc api-key-subline">
                 ${key.last_used_at
                   ? `${'<span>' + t('最近')}${escapeHtml(this.formatRelativeTime(key.last_used_at))}</span>`
                   : '<span class="api-key-sub-muted">' + t('尚未使用') + '</span>'}
@@ -953,7 +965,7 @@ class ConsoleApp {
                 <span class="api-key-metrics">
                   <span class="api-key-metric"><b>${reqs.toLocaleString()}</b> 次</span>
                   <span class="api-key-metric"><b>${escapeHtml(tokenDisplay)}</b> Token</span>
-                  <span class="api-key-metric"><b>${cost.toFixed(4)}</b> 积分</span>
+                  <span class="api-key-metric"><b>${formatQuotaNumber(cost)}</b> 积分</span>
                 </span>
               </div>
             </div>
@@ -961,20 +973,10 @@ class ConsoleApp {
         </div>
 
         <div class="api-key-prefix">
-          <code class="api-key-value" data-visible="false" data-fullkey="${escapeHtml(fullKey)}"
-                onclick="app.toggleKeyVisibility(this)" title="${t('点击显示/隐藏完整密钥')}">${escapeHtml(maskedKey)}</code>
-          ${fullKey ? `<div class="api-key-secret-actions">
-            <button type="button" class="copy-btn" onclick="app.toggleKeyVisibility(this.closest('.api-key-prefix').querySelector('.api-key-value'))" title="${t('显示/隐藏')}">
-              ${this.getSFIcon('eye', 14)}
-            </button>
-            <button type="button" class="copy-btn" onclick="app.copyFullKey(this.closest('.api-key-prefix').querySelector('.api-key-value').dataset.fullkey, this)" title="${t('复制密钥')}">
-              ${this.getSFIcon('document.on.document', 14)}
-              <span>复制</span>
-            </button>
-          </div>` : ''}
+          ${fullKey ? `<blora-copy text="${escapeHtml(fullKey)}" masked label="${escapeHtml(t('复制密钥'))}"></blora-copy>` : '<span class="blora-text-muted">—</span>'}
         </div>
 
-        <div class="api-key-footer">
+        <div class="blora-card__foot api-key-footer">
           ${this._renderApiKeyRoutePill(key, modelDisplay, queueLen)}
           <div class="api-key-actions">
             <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showKeyModels(${key.id})">模型队列</button>
@@ -1157,7 +1159,7 @@ class ConsoleApp {
         <span class="edit-tag-def" onclick="event.stopPropagation();app.showEditKeyTagPopover(${tag.id}, this)" title="${t('编辑标签')}">✎</span>
         <span class="remove-tag-def" onclick="event.stopPropagation();app.deleteKeyTag(${tag.id})" title="${t('删除此标签')}">&times;</span>
       </div>`
-    ).join('') + `<div class="key-tag-chip key-tag-add-btn" onclick="app.showCreateKeyTagPopover(this)" title="${t('创建标签')}">+</div>`;
+    ).join('') + `<button type="button" class="blora-button key-tag-add-btn" data-variant="outline" data-size="icon" data-icon="plus" onclick="app.showCreateKeyTagPopover(this)" title="${t('创建标签')}" aria-label="${t('创建标签')}"></button>`;
   }
 
   renderKeyTagBar() {
@@ -1247,17 +1249,17 @@ class ConsoleApp {
       submitBtn.onclick = onSubmit;
     }
     document.getElementById('createKeyTagName').value = name || '';
-    document.querySelectorAll('#createKeyTagColors .color-dot').forEach(d => {
-      d.classList.toggle('selected', d.dataset.color === (color || 'var(--info)'));
-    });
-    if (!document.querySelector('#createKeyTagColors .color-dot.selected')) {
-      document.querySelector('#createKeyTagColors .color-dot')?.classList.add('selected');
+    const colors = document.getElementById('createKeyTagColors');
+    const selectedColor = color || 'var(--info)';
+    const options = Array.from(colors.querySelectorAll('blora-option'));
+    if (!options.some(option => option.getAttribute('value') === selectedColor)) {
+      const option = document.createElement('blora-option');
+      option.setAttribute('value', selectedColor);
+      option.textContent = t('当前颜色');
+      colors.appendChild(option);
     }
-    const rect = btnEl.getBoundingClientRect();
-    pop.style.top = (rect.bottom + 8) + 'px';
-    pop.style.left = Math.max(8, rect.left - 80) + 'px';
-    pop.style.display = 'block';
-    setTimeout(() => document.getElementById('createKeyTagName').focus(), 100);
+    colors.value = selectedColor;
+    pop.show();
   }
 
   showCreateKeyTagPopover(btnEl) {
@@ -1287,7 +1289,7 @@ class ConsoleApp {
   hideCreateKeyTagPopover() {
     this._editingKeyTagId = null;
     const pop = document.getElementById('createKeyTagPopover');
-    if (pop) pop.style.display = 'none';
+    if (pop) pop.close();
   }
 
   selectTagColor(el) {
@@ -1298,8 +1300,7 @@ class ConsoleApp {
   async saveKeyTag() {
     const name = document.getElementById('createKeyTagName').value.trim();
     if (!name) { this.showToast(t('请输入标签名称'), 'error'); return; }
-    const colorEl = document.querySelector('#createKeyTagColors .color-dot.selected');
-    const color = colorEl ? colorEl.dataset.color : 'var(--info)';
+    const color = document.getElementById('createKeyTagColors').value || 'var(--info)';
     const editingId = this._editingKeyTagId;
     try {
       const res = editingId
@@ -2353,9 +2354,9 @@ class ConsoleApp {
       if (!container) return;
       setBloraState('keyModelsContent', 'success');
       setHTML(container, [...teamMap.values()].map(team => `
-        <div class="model-library-team model-search-team">
-          <div class="model-library-team-header" style="cursor:default;">
-            <h3>${escapeHtml(team.team_name)}</h3>
+        <div class="blora-stack model-library-team model-search-team">
+          <div class="blora-row model-library-team-header" style="cursor:default;">
+            <h3 class="blora-h4">${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="team-badge">' + t('个人') + '</span>' : ''}
           </div>
           <div class="model-library-list model-search-list">
@@ -2428,14 +2429,14 @@ class ConsoleApp {
     setHTML(container, libraryData.teams.map((team, teamIndex) => {
       if (!team.providers || team.providers.length === 0) return '';
       return `
-        <div class="model-library-team" data-picker-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
-          <div class="model-library-team-header" onclick="app.toggleKeyModelPickerTeam(${teamIndex})">
-            <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-            <h3>${escapeHtml(team.team_name)}</h3>
+        <div class="blora-stack model-library-team" data-picker-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
+          <div class="blora-row model-library-team-header" onclick="app.toggleKeyModelPickerTeam(${teamIndex})">
+            ${this._libIcon('chevron-down', 16, 'collapse-icon')}
+            <h3 class="blora-h4">${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
           </div>
-          <div class="model-library-team-content">
+          <div class="blora-list model-library-team-content" role="list">
             ${team.providers.map((provider, providerIndex) => this._renderKeyPickerProvider(team, provider, teamIndex, providerIndex)).join('')}
           </div>
         </div>
@@ -2449,14 +2450,14 @@ class ConsoleApp {
     const hasModels = provider.models_loaded && provider.models && provider.models.length > 0;
     const totalCount = provider.model_count != null ? provider.model_count : (provider.pagination?.total ?? (provider.models ? provider.models.length : 0));
     return `
-      <div class="blora-stack model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}" data-variant="hover"
+      <div class="model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}" role="listitem"
            data-picker-provider-index="${teamIndex}-${providerIndex}"
            data-team-id="${escapeHtml(String(team.team_id))}"
            data-provider-id="${escapeHtml(String(provider.provider_id))}"
            style="${isProviderDisabled ? 'position:relative;' : ''};" data-size="sm">
         ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
-        <div class="model-library-provider-header" onclick="app.toggleKeyModelPickerProvider(${teamIndex}, ${providerIndex})">
-          <div class="model-library-provider-title">
+        <div class="blora-list__item model-library-provider-header" onclick="app.toggleKeyModelPickerProvider(${teamIndex}, ${providerIndex})">
+          <div class="blora-list__meta model-library-provider-title">
             <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             ${renderProviderNameTag(provider.provider_name)}
             ${this._renderProviderTestSummary(provider)}
@@ -2465,7 +2466,7 @@ class ConsoleApp {
             ).join('')}
             ${isProviderDisabled ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>' : ''}
           </div>
-          <div class="model-library-provider-actions">
+          <div class="blora-actions model-library-provider-actions">
             <span class="provider-model-count">${totalCount} 个模型</span>
           </div>
         </div>
@@ -3618,7 +3619,7 @@ class ConsoleApp {
         ['Token', fmtTok(summary.tokens), t('总投入')],
         [t('最近活动'), date(summary.last_activity), t('最后一次工作')],
       ];
-      setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="project-work-stat"><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${sub}</small></div>`).join(''));
+      setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="cr-console-project-stat blora-stat"><span class="blora-stat__label">${escapeHtml(label)}</span><strong class="blora-stat__value">${value}</strong><small class="blora-text-muted">${sub}</small></div>`).join(''));
       setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)}${t('次 ·')}${fmtTok(p.tokens)}${t('Token · 最近')}${date(p.last_activity)}</small></span><span class="project-work-arrow"><span data-icon="arrow-right" aria-hidden="true"></span></span></button>`).join(''));
       setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)}${t(')" title="' + t('复制工作区路径') + '">')}${escapeHtml(p.workspace_path)}${'</button></div></div><div class="project-work-project-metrics"><div><span>' + t('请求')}</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmtTok(p.tokens)}${'</strong></div><div><span>' + t('活跃')}</span><strong>${fmt(p.active_days)}${t('天')}</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || t('未标记客户端')}</span><span>${money(p.cost)}${t('积分')}</span></div></article>`).join(''));
       if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('AI 请求'), data: (data.daily || []).map(r => r.requests), borderColor: readCssVar('--chart-6', '#0f766e'), backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: t('活跃项目'), data: (data.daily || []).map(r => r.projects), borderColor: 'var(--warning)', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
@@ -4490,7 +4491,7 @@ class ConsoleApp {
       const cacheHitRate = totalPrompt > 0 ? (totalCached / totalPrompt * 100) : 0;
       const savedTokens = totalCached; // 缓存命中的 token 本应按原价计费，命中后节省了 90%
       document.getElementById('cacheHitPercent').textContent = cacheHitRate.toFixed(1) + '%';
-      document.getElementById('cacheHitBar').style.width = Math.min(cacheHitRate, 100) + '%';
+      document.getElementById('cacheHitBar').setAttribute('value', String(Math.max(0, Math.min(cacheHitRate, 100))));
       document.getElementById('cacheHitTokens').textContent = this._formatBigNumber(totalCached);
       document.getElementById('cacheTotalPrompt').textContent = this._formatBigNumber(totalPrompt);
       document.getElementById('cacheSavedTokens').textContent = this._formatBigNumber(savedTokens);
@@ -5953,9 +5954,9 @@ class ConsoleApp {
       this._injectPrompts = data.items || [];
       setHTML(container, this._injectPrompts.length
         ? this._injectPrompts.map(item => this.renderInjectPromptCard(item)).join('')
-        : `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc" style="text-align:center;">${t('暂无注入条目，点击右上角「新建条目」创建')}</div></div></div>`);
+        : `<blora-empty title="${escapeHtml(t('暂无注入条目，点击右上角「新建条目」创建'))}"></blora-empty>`);
     } catch (error) {
-      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('加载失败'))}</div></div></div>`);
+      setHTML(container, `<div class="blora-stack"><blora-alert variant="danger" title="${escapeHtml(error.message || t('加载失败'))}"></blora-alert><button type="button" class="blora-button" data-variant="outline" onclick="app.loadInjectPrompts()">${t('重试')}</button></div>`);
     }
   }
 
@@ -5966,25 +5967,25 @@ class ConsoleApp {
     const scopeBadge = !item.enabled
       ? ''
       : (boundCount > 0
-        ? `<span class="model-item-badge" >${t('{n} 个 Key', { n: boundCount })}</span>`
-        : `<span class="model-item-badge" >${t('全局生效')}</span>`);
-    const disabledBadge = item.enabled ? '' : `<span class="blora-tag model-item-badge series" data-variant="neutral">${t('已停用')}</span>`;
+        ? `<span class="blora-badge model-item-badge" data-variant="info">${t('{n} 个 Key', { n: boundCount })}</span>`
+        : `<span class="blora-badge model-item-badge" data-variant="info">${t('全局生效')}</span>`);
+    const disabledBadge = item.enabled ? '' : `<span class="blora-badge model-item-badge" data-variant="neutral">${t('已停用')}</span>`;
     return `
-    <div class="model-library-item ${item.enabled ? '' : 'model-hidden'}" data-inject-id="${escapeHtml(item.id)}" style="cursor:default;">
+    <div class="blora-card model-library-item ${item.enabled ? '' : 'model-hidden'}" data-size="sm" data-inject-id="${escapeHtml(item.id)}" style="cursor:default;">
       <div class="model-library-item-info">
         <div class="model-library-item-name">
           <span>${escapeHtml(item.name)}</span>
           <div class="model-item-badges">${scopeBadge}${disabledBadge}</div>
         </div>
-        <div class="model-library-item-desc" style="-webkit-line-clamp:1;">${escapeHtml(preview)}</div>
+        <div class="blora-card__desc model-library-item-desc" style="-webkit-line-clamp:1;">${escapeHtml(preview)}</div>
       </div>
-      <div class="model-library-item-actions">
+      <div class="blora-card__foot blora-actions model-library-item-actions">
         <div class="control-toggle-row" onclick="event.stopPropagation()" title="${item.enabled ? t('点击停用') : t('点击启用')}">
           <blora-checkbox ${item.enabled ? 'checked' : ''} data-control-action="app-dynamic-1" data-control-arg0="${escapeHtml(String(parseInt(item.id, 10)))}"></blora-checkbox>
 
         </div>
         <button type="button" class="blora-button" onclick="app.showInjectPromptModal(${parseInt(item.id, 10)})" data-variant="secondary" data-size="sm">${t('编辑')}</button>
-        <button type="button" class="blora-button" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})" data-variant="secondary" data-size="sm">${t('删除')}</button>
+        <button type="button" class="blora-button" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})" data-variant="danger" data-size="sm">${t('删除')}</button>
       </div>
     </div>`;
   }
@@ -6445,7 +6446,7 @@ class ConsoleApp {
     const detail = document.getElementById('settingsDetail');
     if (overview) overview.hidden = false;
     if (detail) detail.hidden = true;
-    document.querySelectorAll('.settings-section').forEach(section => { section.hidden = true; });
+    document.querySelectorAll('.cr-console-settings-section').forEach(section => { section.hidden = true; });
   }
 
   showSettingsCategory(category) {
@@ -6457,7 +6458,7 @@ class ConsoleApp {
     if (overview) overview.hidden = true;
     if (detail) detail.hidden = false;
     if (title) title.textContent = document.querySelector(`[data-settings-category="${category}"] strong`)?.textContent || '';
-    document.querySelectorAll('.settings-section').forEach(item => { item.hidden = !sections.includes(item); });
+    document.querySelectorAll('.cr-console-settings-section').forEach(item => { item.hidden = !sections.includes(item); });
     sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
     if (category === 'desktop') this.loadDesktopSettingsEmbed();
   }
@@ -8587,22 +8588,13 @@ ${extractorBody}
       }
       if (!providers.length) {
         setBloraState('myProvidersTable', 'empty');
-        setHTML(container, `
-          <div class="empty-state" style="padding:60px 20px;text-align:center;">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-            </svg>
-            <p style="margin:0;">暂无供应商</p>
-            <p style="margin:8px 0 0;">点击上方${t('添加供应商')}按钮开始</p>
-          </div>
-        `);
+        setHTML(container, `<blora-empty title="${escapeHtml(t('暂无供应商'))}" description="${escapeHtml(t('点击上方添加供应商按钮开始'))}"></blora-empty>`);
         return;
       }
 
       setBloraState('myProvidersTable', 'success');
       setHTML(container, `
-        <table>
+        <table class="blora-table">
           <thead>
             <tr>
               <th style="width:40px;"><blora-checkbox class="" data-control-action="app-dynamic-2"></blora-checkbox></th>
@@ -8619,26 +8611,26 @@ ${extractorBody}
               <tr data-provider-id="${escapeHtml(p.id)}">
                 <td><blora-checkbox class=" provider-checkbox" value="${escapeHtml(p.id)}" data-control-action="app-dynamic-3"></blora-checkbox></td>
                 <td>
-                  <div >${escapeHtml(p.name)}</div>
-                  <div >${escapeHtml(p.id)}</div>
+                  <div class="blora-list__title">${escapeHtml(p.name)}</div>
+                  <div class="blora-text-muted blora-text-mono">${escapeHtml(p.id)}</div>
                 </td>
                 <td>
                   <div style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(p.base_url)}">${escapeHtml(p.base_url)}</div>
                 </td>
-                <td><span >${escapeHtml(formatDisplayName(p.format))}</span></td>
+                <td><span class="blora-tag" data-variant="neutral">${escapeHtml(formatDisplayName(p.format))}</span></td>
                 <td>
                   <div id="user-ping-page-${escapeHtml(String(p.id))}" style="min-width:60px;">-</div>
                 </td>
                 <td>
                   <button type="button" class="blora-button upstream-action" data-variant="outline" data-size="sm" onclick="app.showManageModelsModal('${this._jsString(p.id)}')" title="${t('管理模型')}">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                    ${this._libIcon('list', 14)}
                     模型
                   </button>
                 </td>
                 <td>
                   <div style="display:flex;gap:6px;">
                     <button type="button" class="blora-button upstream-icon-action" data-variant="ghost" data-size="icon" onclick="app.pingUserProvider('${this._jsString(p.id)}')" title="${t('检测连通性')}" aria-label="${t('检测连通性')}">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      ${this._libIcon('radio', 14)}
                     </button>
                     <button type="button" class="blora-button upstream-action" data-variant="outline" data-size="sm" onclick="app.editMyProvider('${this._jsString(p.id)}')">编辑</button>
                     <button type="button" class="blora-button upstream-action" data-variant="danger" data-size="sm" onclick="app.deleteMyProvider('${this._jsString(p.id)}')">删除</button>
@@ -9666,9 +9658,9 @@ ${extractorBody}
         });
       }).join('');
       return `
-        <div class="model-library-team model-search-team">
-          <div class="model-library-team-header" style="cursor:default;">
-            <h3>${escapeHtml(team.team_name)}</h3>
+        <div class="blora-stack model-library-team model-search-team">
+          <div class="blora-row model-library-team-header" style="cursor:default;">
+            <h3 class="blora-h4">${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
             <div style="flex:1;"></div>
@@ -10230,8 +10222,8 @@ ${extractorBody}
     }).join('');
 
     return `
-      <div class="model-library-team model-library-starred" data-starred-section="1">
-        <div class="model-library-team-header" style="cursor:default;">
+      <div class="blora-stack model-library-team model-library-starred" data-starred-section="1">
+        <div class="blora-row model-library-team-header" style="cursor:default;">
           ${this._libIcon('star.fill', 16, 'model-star-heading-icon')}
           <h3>星标</h3>
           <div style="flex:1;"></div>
@@ -10708,7 +10700,7 @@ ${extractorBody}
 
     const usageBadge = (pct) => {
       const variant = pct >= 90 ? 'danger' : pct >= 70 ? 'warning' : 'success';
-      return `<span class="blora-badge" data-variant="${variant}">${t('已用')} ${pct}%</span>`;
+      return `<span class="blora-badge" data-variant="${variant}">${t('已用')} ${formatQuotaPercent(pct)}%</span>`;
     };
     const progressBar = (pct, label) => `<blora-progress class="model-quota-progress" value="${Math.max(0, Math.min(100, Number(pct) || 0))}" label="${escapeHtml(label)}"></blora-progress>`;
 
@@ -10717,8 +10709,8 @@ ${extractorBody}
       if (p.error) {
         return `
           <article class="blora-card model-quota-card error" data-variant="flat" data-size="sm">
-            <div class="model-quota-header">
-              <span class="model-quota-name blora-card__title">${escapeHtml(p.name)}</span>
+            <div class="blora-card__header model-quota-header">
+              <h4 class="model-quota-name blora-card__title">${escapeHtml(p.name)}</h4>
               <span class="blora-badge" data-variant="danger">${t('查询失败')}</span>
             </div>
           </article>`;
@@ -10732,14 +10724,14 @@ ${extractorBody}
       const periods = Array.isArray(q.periods) ? q.periods : [];
       const currentPercent = Number(q.currentPercent ?? periods.find(period => period.key === 'current_period')?.percent);
       const pct = Number.isFinite(currentPercent)
-        ? Math.round(currentPercent)
-        : (total > 0 ? Math.round(used / total * 100) : 0);
+        ? currentPercent
+        : (total > 0 ? used / total * 100 : 0);
 
       const credits = q.credits || {};
       const resetCredits = q.rateLimitResetCredits?.available_count;
       const creditsHtml = (credits.hasCredits || credits.unlimited || credits.balance !== undefined || resetCredits !== undefined) ? `
         <div class="model-quota-credits">
-          <span>Credits：${escapeHtml(credits.unlimited ? t('无限') : String(credits.balance ?? '0'))}</span>
+          <span>Credits：${escapeHtml(credits.unlimited ? t('无限') : formatQuotaNumber(credits.balance ?? 0))}</span>
           ${resetCredits !== undefined ? `${'<span>' + t('可手动重置：')}${escapeHtml(String(resetCredits))}${t('次')}</span>` : ''}
         </div>` : '';
 
@@ -10759,7 +10751,7 @@ ${extractorBody}
                   ${usageBadge(periodPct)}
                 </div>
                 ${progressBar(periodPct, periodLabel)}
-                ${periodRange ? `<div class="model-quota-period-reset" title="${escapeHtml(resetTitle)}">${t('周期：')}${escapeHtml(periodRange)}</div>` : ''}
+                ${periodRange ? `<div class="blora-text-muted model-quota-period-reset" title="${escapeHtml(resetTitle)}">${t('周期：')}${escapeHtml(periodRange)}</div>` : ''}
               </div>`;
           }).join('')}
         </div>` : `
@@ -10778,7 +10770,7 @@ ${extractorBody}
             const kq = key.quota || {};
             const kTotal = parseFloat(kq.total) || 0;
             const kUsed = parseFloat(kq.used) || 0;
-            const kPct = kTotal > 0 ? Math.min(100, Math.round(kUsed / kTotal * 100)) : 0;
+            const kPct = kTotal > 0 ? Math.min(100, kUsed / kTotal * 100) : 0;
             const keyLabel = key.label || key.masked_key || `${t('Key')} ${key.index + 1}`;
             if (!key.ok) {
               return `
@@ -10795,30 +10787,30 @@ ${extractorBody}
               <div class="model-quota-key">
                 <div class="model-quota-period-header">
                   <span><code >${escapeHtml(keyLabel)}</code></span>
-                  ${usageBadge(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct)))}
+                  ${usageBadge(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? kCurrent : kPct)))}
                 </div>
-                ${progressBar(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct)), keyLabel)}
-                ${kTotal > 0 ? `<div >${escapeHtml(String(kq.remaining ?? 0))} / ${escapeHtml(String(kTotal))}</div>` : ''}
+                ${progressBar(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? kCurrent : kPct)), keyLabel)}
+                ${kTotal > 0 ? `<div class="model-quota-numbers" title="${escapeHtml(String(kq.remaining ?? 0))} / ${escapeHtml(String(kq.total))}">${escapeHtml(formatQuotaNumber(kq.remaining ?? 0))} / ${escapeHtml(formatQuotaNumber(kTotal))}</div>` : ''}
               </div>`;
           }).join('')}
         </div>` : '';
 
       return `
         <article class="blora-card model-quota-card" data-variant="flat" data-size="sm">
-          <div class="model-quota-header">
-            <span class="model-quota-name blora-card__title">${escapeHtml(p.name)}</span>
+          <div class="blora-card__header model-quota-header">
+            <h4 class="model-quota-name blora-card__title">${escapeHtml(p.name)}</h4>
             ${q.planName ? `<span class="blora-tag model-quota-plan" data-variant="neutral">${escapeHtml(q.planName)}</span>` : ''}
             ${keyEntries.length > 1 ? `<span class="blora-tag model-quota-plan" data-variant="neutral">${t('共')} ${keyEntries.length} ${t('个 Key')}</span>` : ''}
           </div>
           ${periods.length ? periodHtml : `
-          <div class="model-quota-numbers">
-            <span class="model-quota-remaining">${escapeHtml(String((agg || q).remaining ?? 0))}</span>
-            <span class="model-quota-total">/ ${escapeHtml(String((agg || q).total ?? 0))}</span>
+          <div class="model-quota-numbers" title="${escapeHtml(String((agg || q).remaining ?? 0))} / ${escapeHtml(String((agg || q).total ?? 0))}">
+            <span class="model-quota-remaining">${escapeHtml(formatQuotaNumber((agg || q).remaining ?? 0))}</span>
+            <span class="model-quota-total">/ ${escapeHtml(formatQuotaNumber((agg || q).total ?? 0))}</span>
           </div>
           ${periodHtml}`}
           ${keysHtml}
           ${creditsHtml}
-          ${p.checked_at ? `${'<div class="model-quota-updated">' + t('更新于')}${escapeHtml(this._formatQuotaCheckedAt(p.checked_at))}</div>` : ''}
+          ${p.checked_at ? `${'<div class="blora-text-muted model-quota-updated">' + t('更新于')}${escapeHtml(this._formatQuotaCheckedAt(p.checked_at))}</div>` : ''}
         </article>`;
     }).join(''));
   }
@@ -10877,10 +10869,10 @@ ${extractorBody}
       }
 
       return `
-        <div class="model-library-team" data-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
-          <div class="model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
+        <div class="blora-stack model-library-team" data-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
+          <div class="blora-row model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
             ${this._libIcon('chevron.down', 16, 'collapse-icon')}
-            <h3>${escapeHtml(team.team_name)}</h3>
+            <h3 class="blora-h4">${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
@@ -10894,7 +10886,7 @@ ${extractorBody}
             ])}
           </div>
 
-          <div class="model-library-team-content">
+          <div class="blora-list model-library-team-content" role="list">
           ${team.providers.map((provider, providerIndex) => {
             const isProviderDisabled = provider.provider_enabled === false;
             const isProviderHidden = !!provider.is_hidden;
@@ -10919,12 +10911,12 @@ ${extractorBody}
               }
             ];
             return `
-            <div class="blora-stack model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-variant="hover" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''};" data-size="sm">
+            <div class="model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" role="listitem" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''};" data-size="sm">
               ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
-              <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
-                <div class="model-library-provider-title">
+              <div class="blora-list__item model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
+                <div class="blora-list__meta model-library-provider-title">
                   ${this._libIcon('chevron.down', 14, 'collapse-icon')}
-                  ${renderProviderNameTag(provider.provider_name, { tag: false })}
+                  <span class="blora-list__title">${renderProviderNameTag(provider.provider_name, { tag: false })}</span>
                   ${this._renderProviderTestSummary(provider)}
                   ${(provider.tags || []).map(t =>
                     `<span class="blora-tag model-provider-tag-chip" data-variant="neutral" style="--badge-accent:${safeColor(t.color)};">${escapeHtml(t.name)}</span>`
@@ -10933,7 +10925,7 @@ ${extractorBody}
                   ${isProviderDisabled ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>' : ''}
                   ${isProviderHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
                 </div>
-                <div class="model-library-provider-actions">
+                <div class="blora-actions model-library-provider-actions">
                   <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}"></span>
                   <button type="button" class="blora-button model-action-icon" data-variant="ghost" data-size="icon" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">${this._libIcon('dot.radiowaves.left.and.right', 14)}</button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
@@ -11043,9 +11035,10 @@ ${extractorBody}
         <div class="model-library-item-name">
           ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" data-variant="ghost" data-size="icon" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-label="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">${this._libIcon(isStarred ? 'star.fill' : 'star', 14)}</button>`}
           ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
-          <button type="button" class="model-library-item blora-button model-library-select" data-variant="text" ${isProviderDisabled ? 'disabled' : `onclick="${onClick}"`}>${escapeHtml(model.name)}</button>
+          <button type="button" class="blora-button blora-card__title model-library-select" data-variant="text" ${isProviderDisabled ? 'disabled' : `onclick="${onClick}"`}>${escapeHtml(model.name)}</button>
           ${testBadgeHtml}
           <div class="model-item-badges">
+            ${isCurrent ? `<span class="blora-badge" data-variant="primary">${isKeyPicker ? (queueIndex >= 0 ? `${t('队列 #')}${queueIndex + 1}` : t('已加入队列')) : t('已绑定')}</span>` : ''}
             ${providerTagHtml}
             ${subtitleHtml}
             ${model.series ? `<span class="blora-tag" data-variant="neutral">${escapeHtml(model.series)}</span>` : ''}
@@ -11053,7 +11046,7 @@ ${extractorBody}
             ${isModelHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
           </div>
         </div>
-        ${model.description ? `<div class="model-library-item-desc">${escapeHtml(model.description)}</div>` : ''}
+        ${model.description ? `<div class="blora-card__desc model-library-item-desc">${escapeHtml(model.description)}</div>` : ''}
         <div class="model-library-item-price">
           <span class="model-price-item">
             <span class="model-price-label">倍率</span>
@@ -11062,7 +11055,7 @@ ${extractorBody}
         </div>
         ${this._renderModelUptimeSlot(modelId, model.name)}
       </div>
-      <div class="model-library-item-actions">
+      <div class="blora-card__foot blora-actions model-library-item-actions">
         ${isKeyPicker ? '' : this._renderLibraryMoveControls('model', team.team_id, providerId)}
         ${isProviderDisabled
           ? '<button type="button" class="blora-button model-action-disabled" data-variant="secondary" data-size="sm" disabled>' + t('供应商已禁用') + '</button>'
@@ -13452,3 +13445,28 @@ document.getElementById('ccsBarLength')?.addEventListener('input', (event) => {
 document.addEventListener('click', (event) => {
   if (event.target.closest('blora-dropdown.library-more-menu')) event.stopPropagation();
 });
+
+(function enhanceResourceLists() {
+  const headers = '.model-library-team-header[onclick], .model-library-provider-header[onclick]';
+  const roots = '.cr-model-library, .cr-api-keys-page, .cr-upstream-page, .key-model-picker';
+  const sync = () => {
+    document.querySelectorAll(headers).forEach((header) => {
+      const group = header.closest('.model-library-provider, .model-library-team');
+      header.setAttribute('role', 'button');
+      header.setAttribute('tabindex', '0');
+      header.setAttribute('aria-expanded', String(!group.classList.contains('collapsed')));
+    });
+  };
+  document.addEventListener('keydown', (event) => {
+    if (!event.target.matches?.(headers) || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    event.target.click();
+  });
+  sync();
+  new MutationObserver(sync).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  Promise.all([import('/blora/icons-full.js?v=2.1.0'), import('/blora/index.js?v=2.1.0')]).then(([, { hydrateIcons, observeIcons }]) => {
+    const hydrate = () => document.querySelectorAll(roots).forEach((root) => hydrateIcons(root));
+    hydrate();
+    observeIcons(document);
+  }).catch((error) => console.error('Blora resource icons unavailable', error));
+})();

@@ -1,0 +1,167 @@
+{
+  "phase": "baseline",
+  "pages": [
+    "admin",
+    "console",
+    "data",
+    "feishu-bind",
+    "index",
+    "oauth-consent",
+    "playground",
+    "plugin-install",
+    "purchase",
+    "set-password",
+    "setup",
+    "showcase",
+    "store",
+    "usage"
+  ],
+  "routes": [
+    "console#modelLibrary",
+    "admin#adminProviders"
+  ],
+  "themes": [
+    {
+      "id": "default",
+      "file": null
+    },
+    {
+      "id": "ocean",
+      "pluginId": "example-theme",
+      "qualifiedId": "example-theme/ocean",
+      "file": "plugins/example-theme/frontend/ocean.css"
+    },
+    {
+      "id": "linear",
+      "pluginId": "theme-linear",
+      "qualifiedId": "theme-linear/linear",
+      "file": "plugins/theme-linear/frontend/linear.css"
+    },
+    {
+      "id": "paper",
+      "pluginId": "theme-paper",
+      "qualifiedId": "theme-paper/paper",
+      "file": "plugins/theme-paper/frontend/paper.css"
+    },
+    {
+      "id": "terminal",
+      "pluginId": "theme-terminal",
+      "qualifiedId": "theme-terminal/terminal",
+      "file": "plugins/theme-terminal/frontend/terminal.css"
+    },
+    {
+      "id": "raycast",
+      "pluginId": "theme-raycast",
+      "qualifiedId": "theme-raycast/raycast",
+      "file": "plugins/theme-raycast/frontend/raycast.css"
+    },
+    {
+      "id": "classic",
+      "pluginId": "crewrouter-classic",
+      "qualifiedId": "crewrouter-classic/classic",
+      "file": "plugins/crewrouter-classic/frontend/classic.css"
+    }
+  ],
+  "combinations": 8,
+  "fixture": {
+    "providers": [
+      {
+        "id": "openai",
+        "name": "OpenAI — Production international enterprise provider with an unusually long name",
+        "quota": {
+          "total": 500.1234567890123,
+          "used": 312.7123456789012,
+          "remaining": 187.4111111101111,
+          "unit": "USD",
+          "credits": {
+            "balance": 12345.678901234567
+          }
+        },
+        "aggregated": {
+          "total": 500.1234567890123,
+          "used": 312.7123456789012,
+          "remaining": 187.4111111101111,
+          "unit": "USD",
+          "credits": {
+            "balance": 12345.678901234567
+          }
+        },
+        "keys": [
+          {
+            "ok": true,
+            "index": 0,
+            "label": "Production primary international key",
+            "quota": {
+              "total": 500.1234567890123,
+              "used": 312.7123456789012,
+              "remaining": 187.4111111101111,
+              "unit": "USD",
+              "credits": {
+                "balance": 12345.678901234567
+              }
+            }
+          },
+          {
+            "ok": true,
+            "index": 1,
+            "label": "Secondary disaster recovery key",
+            "quota": {
+              "total": 500.1234567890123,
+              "used": 312.7123456789012,
+              "remaining": 71.71234567890123,
+              "unit": "USD",
+              "credits": {
+                "balance": 12345.678901234567
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "anthropic",
+        "name": "Anthropic — Long subscription provider name / Command Code GOAT",
+        "quota": {
+          "total": 500.1234567890123,
+          "used": 312.7123456789012,
+          "remaining": 187.4111111101111,
+          "unit": "USD",
+          "credits": {
+            "balance": 12345.678901234567
+          },
+          "planName": "GOAT enterprise subscription",
+          "currentPercent": 62.54321098765432,
+          "periods": [
+            {
+              "key": "current_period",
+              "label": "当前周期",
+              "percent": 62.54321098765432
+            },
+            {
+              "key": "weekly",
+              "label": "每周额度",
+              "percent": 87.12345678901234
+            }
+          ]
+        }
+      },
+      {
+        "id": "deepseek",
+        "name": "DeepSeek",
+        "quota": {
+          "total": 100,
+          "used": 28.3,
+          "remaining": 71.71234567890123
+        }
+      }
+    ]
+  },
+  "base": "http://127.0.0.1:18571",
+  "debugging": "http://127.0.0.1:18572",
+  "db": "127.0.0.1:1",
+  "coverage": "All entry pages and console/admin routes: default four combinations; other themes: representative API keys controls only.",
+  "limitations": [
+    "Test-wrapper only: demo API keys receive normal key_type; audit logs use items/logs and 123 rows with real query pagination; admin users get 123 searchable rows.",
+    "Store public listing/detail uses existing plugin manifests; protected store routes remain unauthenticated, with no mocked permissions.",
+    "Plugin runtime/theme endpoints are isolated metadata fixtures; CSS is served from existing plugins and injected as-is, without synthesized token overrides; existing production palette mapping and official tokens.themes.css are used on pages without plugin runtime."
+  ]
+}

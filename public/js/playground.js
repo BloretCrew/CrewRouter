@@ -15,6 +15,7 @@ class PlaygroundApp {
   }
 
   async init() {
+    await this.initResponsiveDrawers();
     await this.loadUserInfo();
     await this.loadModels();
     await this.loadThinkingCapabilities();
@@ -45,7 +46,9 @@ class PlaygroundApp {
       const data = await res.json();
       this.models = (Array.isArray(data) ? data : []).filter(model => model.output_kind !== 'image');
       const select = document.getElementById('pgModel');
+      document.getElementById('pgModelFeedback').replaceChildren();
       if (this.models.length === 0) {
+        setHTML(document.getElementById('pgModelFeedback'), '<blora-empty title="' + this.escapeHtml(t('暂无可用模型')) + '"></blora-empty>');
         setBloraState('pgModel', 'empty');
         setHTML(select, '<blora-option value="" disabled selected>' + this.escapeHtml(t('暂无可用模型')) + '</blora-option>');
         return;
@@ -93,6 +96,8 @@ class PlaygroundApp {
       this.updateThinkingControls();
     } catch (error) {
       console.error(t('加载模型失败:'), error);
+      setHTML(document.getElementById('pgModelFeedback'), '<blora-alert variant="danger" title="' + this.escapeHtml(t('加载失败')) + '"></blora-alert><button type="button" class="blora-button" data-variant="outline" id="pgModelRetry">' + this.escapeHtml(t('重试')) + '</button>');
+      document.getElementById('pgModelRetry').addEventListener('click', () => this.loadModels());
       const select = document.getElementById('pgModel');
       if (select) { setBloraState('pgModel', 'error'); setHTML(select, '<blora-option value="" disabled selected>' + this.escapeHtml(t('加载失败')) + '</blora-option>'); }
     }
@@ -145,7 +150,7 @@ class PlaygroundApp {
       if (typeof pageLoadingHtml === 'function') {
         setHTML(list, pageLoadingHtml(t('加载对话...'), { size: 'md', compact: true, minHeight: '120px' }));
       } else {
-        setHTML(list, '<div class="page-loading page-loading-compact"><div class="loading-spinner md"></div><div class="page-loading-text">' + t('加载对话...') + '</div></div>');
+        setHTML(list, '<div class="page-loading page-loading-compact"><div class="blora-spinner"></div><div class="page-loading-text">' + t('加载对话...') + '</div></div>');
       }
     }
     try {
@@ -155,14 +160,12 @@ class PlaygroundApp {
         this.conversations = Array.isArray(data) ? data : [];
         this.renderHistoryList();
       } else {
-        console.error(t('加载对话历史失败:'), res.status, await res.text());
-        this.conversations = [];
-        this.renderHistoryList();
+        throw new Error(t('加载对话历史失败:') + ' HTTP ' + res.status);
       }
     } catch (err) {
       console.error(t('加载对话历史异常:'), err);
-      this.conversations = [];
-      this.renderHistoryList();
+      setHTML(list, '<blora-alert variant="danger" title="' + this.escapeHtml(t('加载失败')) + '"></blora-alert><button type="button" class="blora-button" data-variant="outline" id="pgHistoryRetry">' + this.escapeHtml(t('重试')) + '</button>');
+      document.getElementById('pgHistoryRetry').addEventListener('click', () => this.loadConversations());
     }
   }
 
@@ -179,32 +182,27 @@ class PlaygroundApp {
       const isActive = conv.id === this.activeConvId;
       const convId = Number(conv.id);
       return `
-        <div class="pg-history-item${isActive ? ' active' : ''}" data-id="${Number.isSafeInteger(convId) ? convId : ''}">
+        <div class="pg-history-item blora-list__item${isActive ? ' active' : ''}" tabindex="0" role="button" aria-pressed="${isActive}" data-id="${Number.isSafeInteger(convId) ? convId : ''}">
           <div class="pg-history-item-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
+            <span data-icon="copy" aria-hidden="true"></span>
           </div>
           <div class="pg-history-item-info">
-            <div class="pg-history-item-title">${this.escapeHtml(conv.title)}</div>
-            <div class="pg-history-item-date">${dateStr}</div>
+            <div class="pg-history-item-title blora-text-lead">${this.escapeHtml(conv.title)}</div>
+            <div class="pg-history-item-date blora-text-muted">${dateStr}</div>
           </div>
           <div class="pg-history-item-actions">
             <button type="button" class="rename-btn" data-id="${Number.isSafeInteger(convId) ? convId : ''}" title="${this.escapeHtml(t('重命名'))}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-              </svg>
+              <span data-icon="copy" aria-hidden="true"></span>
             </button>
             <button type="button" class="delete-btn" data-id="${Number.isSafeInteger(convId) ? convId : ''}" title="${this.escapeHtml(t('删除'))}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              </svg>
+              <span data-icon="copy" aria-hidden="true"></span>
             </button>
           </div>
         </div>`;
     }).join(''));
 
     list.querySelectorAll('.pg-history-item').forEach(el => {
+      el.addEventListener('keydown', event => { if (event.target === el && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); el.click(); } });
       el.addEventListener('click', (e) => {
         if (e.target.closest('.pg-history-item-actions')) return;
         this.loadConversation(parseInt(el.dataset.id));
@@ -347,7 +345,7 @@ class PlaygroundApp {
 
     const input = document.createElement('input');
     input.type = 'text';
-    input.className = 'pg-rename-input';
+    input.className = 'pg-rename-input blora-input';
     input.value = conv.title;
     titleEl.replaceWith(input);
     input.focus();
@@ -480,7 +478,7 @@ class PlaygroundApp {
     };
     const assistantEl = this.appendMessage('assistant', '', undefined, meta);
     const contentEl = assistantEl.querySelector('.pg-msg-content');
-    setHTML(contentEl, '<div class="pg-typing"><span></span><span></span><span></span></div>');
+    setHTML(contentEl, '<div class="blora-skeleton" data-variant="text" aria-label="生成中"></div>');
 
     this.setStreaming(true);
 
@@ -684,13 +682,13 @@ class PlaygroundApp {
         this.removeWelcome();
         const retryEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
         const retryContent = retryEl.querySelector('.pg-msg-content');
-        setHTML(retryContent, `<blora-alert variant="danger" title="${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}"></blora-alert><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        setHTML(retryContent, `<blora-alert variant="danger" title="${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}"></blora-alert><button type="button" class="blora-button pg-retry-btn" data-variant="outline">${this.escapeHtml(t('重试'))}</button>`);
         retryContent.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send(retryPayload));
       } else {
         rollbackRequest();
         this.removeWelcome();
         const errorEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
-        setHTML(errorEl.querySelector('.pg-msg-content'), `<blora-alert variant="danger" title="${this.escapeHtml(error.message || t('请求失败'))}"></blora-alert><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        setHTML(errorEl.querySelector('.pg-msg-content'), `<blora-alert variant="danger" title="${this.escapeHtml(error.message || t('请求失败'))}"></blora-alert><button type="button" class="blora-button pg-retry-btn" data-variant="outline">${this.escapeHtml(t('重试'))}</button>`);
         errorEl.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send(retryPayload));
       }
     } finally {
@@ -716,10 +714,8 @@ class PlaygroundApp {
     if (this.messages.length === 0) {
       setHTML(container, `
         <div class="pg-welcome">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--blora-color-action-primary-default)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.6;">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          <h2>Crant AI Playground</h2>
+          <span data-icon="copy" aria-hidden="true"></span>
+          <h2 class="blora-h4">Crant AI Playground</h2>
           <p>选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。</p>
         </div>`);
       return;
@@ -736,6 +732,8 @@ class PlaygroundApp {
     const container = document.getElementById('pgMessages');
     const el = document.createElement('div');
     el.className = `pg-msg ${role}`;
+    el.tabIndex = 0;
+    el.setAttribute('aria-label', t('消息操作'));
     if (msgIndex !== undefined) el.dataset.msgIndex = msgIndex;
 
     const msg = msgIndex !== undefined ? this.messages[msgIndex] : null;
@@ -766,13 +764,11 @@ class PlaygroundApp {
     if (msg?.reasoning) {
       thinkingHtml = `
         <div class="pg-thinking pg-thinking-collapsed">
-          <div class="pg-thinking-toggle" onclick="this.parentElement.classList.toggle('pg-thinking-expanded')">
-            <svg class="pg-thinking-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
+          <button type="button" class="pg-thinking-toggle blora-button" data-variant="ghost" aria-expanded="false" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded') !== 'true');this.parentElement.classList.toggle('pg-thinking-expanded')">
+            <span class="pg-thinking-icon" data-icon="chevron-down" aria-hidden="true"></span>
             <span>思考过程</span>
             <span class="pg-thinking-status">已完成</span>
-          </div>
+          </button>
           <div class="pg-thinking-content">${this.renderMarkdown(msg.reasoning)}</div>
         </div>`;
     }
@@ -783,13 +779,13 @@ class PlaygroundApp {
       const tokenStr = m.tokens ? `${this._fmtBig(m.tokens)} tokens` : '';
       const costStr = m.cost ? `${m.cost.toFixed(4)}${t('积分')}` : '';
       const parts = [m.modelDisplayName || m.model, tokenStr, costStr].filter(Boolean);
-      metaFooter = `<div class="pg-msg-meta">${this.escapeHtml(parts.join(' · '))}${t('· AI 也可能犯错，请核实重要信息。')}</div>`;
+      metaFooter = `<div class="pg-msg-meta blora-text-muted">${this.escapeHtml(parts.join(' · '))}${t('· AI 也可能犯错，请核实重要信息。')}</div>`;
     }
 
     setHTML(el, `
-      <div class="pg-msg-avatar">${avatarHtml}</div>
-      <div class="pg-msg-body">
-        <div class="pg-msg-role">${this.escapeHtml(role === 'user' ? userName : modelName)}</div>
+      <div class="pg-msg-avatar blora-avatar">${avatarHtml}</div>
+      <div class="pg-msg-body blora-stack blora-stack--sm">
+        <div class="pg-msg-role blora-text-muted">${this.escapeHtml(role === 'user' ? userName : modelName)}</div>
         ${thinkingHtml}
         <div class="pg-msg-content">${content ? this.renderMarkdown(content) : ''}</div>
         ${metaFooter}
@@ -840,11 +836,11 @@ class PlaygroundApp {
 
     // Code blocks: ```lang\n...\n```
     html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-      return `<pre><code class="lang-${lang}">${code.trimEnd()}</code></pre>`;
+      return `<pre class="blora-code"><code class="lang-${lang}">${code.trimEnd()}</code></pre>`;
     });
 
     // Inline code: `...`
-    html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    html = html.replace(/`([^`\n]+)`/g, '<code class="blora-code">$1</code>');
 
     // Headers: ### / ## / #
     html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
@@ -861,7 +857,7 @@ class PlaygroundApp {
     html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
 
     // Blockquote: > ...
-    html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+    html = html.replace(/^&gt; (.+)$/gm, '<blockquote class="blora-quote">$1</blockquote>');
     // Merge adjacent blockquotes
     html = html.replace(/<\/blockquote>\n<blockquote>/g, '\n');
 
@@ -880,7 +876,7 @@ class PlaygroundApp {
     });
 
     // Horizontal rule: --- or ***
-    html = html.replace(/^[\-\*]{3,}$/gm, '<hr>');
+    html = html.replace(/^[\-\*]{3,}$/gm, '<hr class="blora-divider">');
 
     // Links: [text](url)
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
@@ -902,13 +898,11 @@ class PlaygroundApp {
   renderThinking(reasoning) {
     return `
       <div class="pg-thinking pg-thinking-expanded">
-        <div class="pg-thinking-toggle" onclick="this.parentElement.classList.toggle('pg-thinking-expanded')">
-          <svg class="pg-thinking-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
+        <button type="button" class="pg-thinking-toggle blora-button" data-variant="ghost" aria-expanded="false" onclick="this.setAttribute('aria-expanded', this.getAttribute('aria-expanded') !== 'true');this.parentElement.classList.toggle('pg-thinking-expanded')">
+          <span class="pg-thinking-icon" data-icon="chevron-down" aria-hidden="true"></span>
           <span>思考过程</span>
           <span class="pg-thinking-status">思考中...</span>
-        </div>
+        </button>
         <div class="pg-thinking-content">${this.renderMarkdown(reasoning)}</div>
       </div>
       <div class="pg-response-content"></div>
@@ -949,83 +943,119 @@ class PlaygroundApp {
 
   // ========== Context Menu ==========
 
-  initContextMenu() {
-    // Create context menu element
-    const menu = document.createElement('div');
-    menu.id = 'pgContextMenu';
-    menu.className = 'pg-context-menu';
-    setHTML(menu, `
-      <div class="pg-context-menu-item" data-action="copy-text">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        复制纯文本
-      </div>
-      <div class="pg-context-menu-item" data-action="copy-rich">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        复制富文本
-      </div>
-      <div class="pg-context-menu-item" data-action="copy-md">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        复制 Markdown
-      </div>
-      <div class="pg-context-menu-separator"></div>
-      <div class="pg-context-menu-item" data-action="reply">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-        回复
-      </div>
-      <div class="pg-context-menu-item" data-action="fork">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/></svg>
-        Fork 对话
-      </div>
-      <div class="pg-context-menu-separator"></div>
-      <div class="pg-context-menu-item pg-context-menu-danger" data-action="delete">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        删除消息
-      </div>
-    `);
-    document.body.appendChild(menu);
-
-    // Right-click on messages
-    document.getElementById('pgMessages').addEventListener('contextmenu', (e) => {
-      const msgEl = e.target.closest('.pg-msg');
-      if (!msgEl) return;
-      e.preventDefault();
-
-      const msgIndex = parseInt(msgEl.dataset.msgIndex);
-      if (isNaN(msgIndex)) return;
-
-      this.contextMenuTarget = { el: msgEl, index: msgIndex, role: this.messages[msgIndex]?.role };
-      this.showContextMenu(e.clientX, e.clientY);
+  async initResponsiveDrawers() {
+    await customElements.whenDefined('blora-drawer');
+    const historyPanel = document.getElementById('pgHistoryPanel');
+    const settingsPanel = document.getElementById('pgSettingsPanel');
+    const detailPanel = document.getElementById('pgHistoryDetailPanel');
+    const panels = [historyPanel, settingsPanel, detailPanel];
+    const homes = panels.map(panel => {
+      const marker = document.createComment(panel.id);
+      panel.before(marker);
+      return marker;
     });
+    const createDrawer = (id, title, position) => {
+      const drawer = document.createElement('blora-drawer');
+      drawer.id = id;
+      drawer.setAttribute('title', t(title));
+      drawer.setAttribute('position', position);
+      drawer.setAttribute('close-label', t('关闭'));
+      const content = document.createElement('div');
+      content.className = 'pg-drawer-content blora-stack';
+      drawer.append(content);
+      document.body.append(drawer);
+      return { drawer, content };
+    };
+    const history = createDrawer('pgHistoryDrawer', '对话历史', 'left');
+    const settings = createDrawer('pgSettingsDrawer', '模型参数', 'right');
+    const historyMedia = matchMedia('(max-width: 834px)');
+    const settingsMedia = matchMedia('(max-width: 1024px)');
+    const place = (panel, home, mobile, target) => {
+      if (mobile) target.content.append(panel);
+      else home.after(panel);
+      panel.classList.toggle('pg-drawer-panel', mobile);
+    };
+    const sync = () => {
+      history.drawer.close();
+      settings.drawer.close();
+      place(historyPanel, homes[0], historyMedia.matches, history);
+      place(settingsPanel, homes[1], settingsMedia.matches, settings);
+      place(detailPanel, homes[2], settingsMedia.matches, settings);
+    };
+    historyMedia.addEventListener('change', sync);
+    settingsMedia.addEventListener('change', sync);
+    sync();
+    const historyTrigger = document.getElementById('pgToggleSidebar');
+    const settingsTrigger = document.getElementById('pgSettingsToggle');
+    historyTrigger.setAttribute('aria-controls', history.drawer.id);
+    settingsTrigger.setAttribute('aria-controls', settings.drawer.id);
+    historyTrigger.addEventListener('click', () => history.drawer.open());
+    settingsTrigger.addEventListener('click', () => settings.drawer.open());
+    const reflect = () => {
+      historyTrigger.setAttribute('aria-expanded', String(history.drawer.hasAttribute('open')));
+      settingsTrigger.setAttribute('aria-expanded', String(settings.drawer.hasAttribute('open')));
+    };
+    const observer = new MutationObserver(reflect);
+    observer.observe(history.drawer, { attributes: true, attributeFilter: ['open'] });
+    observer.observe(settings.drawer, { attributes: true, attributeFilter: ['open'] });
+    reflect();
+    window.addEventListener('pagehide', () => {
+      observer.disconnect();
+      historyMedia.removeEventListener('change', sync);
+      settingsMedia.removeEventListener('change', sync);
+    }, { once: true });
+  }
 
-    // Close on click outside
-    document.addEventListener('click', () => this.hideContextMenu());
-    document.addEventListener('scroll', () => this.hideContextMenu(), true);
-
-    // Menu item actions
-    menu.querySelectorAll('.pg-context-menu-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const action = item.dataset.action;
-        this.handleContextAction(action);
-      });
+  initContextMenu() {
+    const dialog = document.createElement('blora-dialog');
+    dialog.id = 'pgContextMenu';
+    dialog.setAttribute('size', 'sm');
+    dialog.setAttribute('aria-label', t('消息操作'));
+    const actions = document.createElement('div');
+    actions.className = 'blora-stack blora-stack--sm';
+    const definitions = [
+      ['copy-text', '复制纯文本', 'copy'],
+      ['copy-rich', '复制富文本', 'copy'],
+      ['copy-md', '复制 Markdown', 'file-text'],
+      ['reply', '回复', 'reply'],
+      ['fork', 'Fork 对话', 'git-fork'],
+      ['delete', '删除消息', 'trash-2']
+    ];
+    definitions.forEach(([action, label, icon]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'blora-button';
+      button.dataset.variant = action === 'delete' ? 'danger' : 'outline';
+      button.dataset.icon = icon;
+      button.dataset.action = action;
+      button.textContent = t(label);
+      button.addEventListener('click', () => this.handleContextAction(action));
+      actions.append(button);
+    });
+    dialog.append(actions);
+    document.body.append(dialog);
+    const messages = document.getElementById('pgMessages');
+    const openForMessage = event => {
+      const message = event.target.closest('.pg-msg');
+      if (!message) return;
+      const index = Number.parseInt(message.dataset.msgIndex, 10);
+      if (!Number.isInteger(index) || !this.messages[index]) return;
+      event.preventDefault();
+      this.contextMenuTarget = { el: message, index, role: this.messages[index].role };
+      this.showContextMenu();
+    };
+    messages.addEventListener('contextmenu', openForMessage);
+    messages.addEventListener('keydown', event => {
+      if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) openForMessage(event);
     });
   }
 
-  showContextMenu(x, y) {
-    const menu = document.getElementById('pgContextMenu');
-    menu.style.display = 'block';
-    menu.style.left = x + 'px';
-    menu.style.top = y + 'px';
-
-    // Adjust if goes off screen
-    const rect = menu.getBoundingClientRect();
-    if (rect.right > window.innerWidth) menu.style.left = (x - rect.width) + 'px';
-    if (rect.bottom > window.innerHeight) menu.style.top = (y - rect.height) + 'px';
+  showContextMenu() {
+    document.getElementById('pgContextMenu').show();
   }
 
   hideContextMenu() {
-    const menu = document.getElementById('pgContextMenu');
-    if (menu) menu.style.display = 'none';
+    document.getElementById('pgContextMenu')?.close();
   }
 
   handleContextAction(action) {
@@ -1134,9 +1164,6 @@ class PlaygroundApp {
     const clearBtn = document.getElementById('pgClearBtn');
     const tempSlider = document.getElementById('pgTemperature');
     const newChatBtn = document.getElementById('pgNewChatBtn');
-    const toggleBtn = document.getElementById('pgToggleSidebar');
-    const overlay = document.getElementById('pgOverlay');
-    const historyPanel = document.getElementById('pgHistoryPanel');
     const thinkingToggle = document.getElementById('pgThinkingToggle');
     const thinkingBudget = document.getElementById('pgThinkingBudget');
 
@@ -1175,20 +1202,6 @@ class PlaygroundApp {
     const cancelReplyBtn = document.getElementById('pgCancelReply');
     if (cancelReplyBtn) {
       cancelReplyBtn.addEventListener('click', () => this.cancelReply());
-    }
-
-    // Mobile sidebar toggle
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', () => {
-        historyPanel.classList.add('open');
-        overlay.classList.add('active');
-      });
-    }
-    if (overlay) {
-      overlay.addEventListener('click', () => {
-        historyPanel.classList.remove('open');
-        overlay.classList.remove('active');
-      });
     }
 
     // History panel toggle
@@ -1232,7 +1245,10 @@ class PlaygroundApp {
     } catch (error) {
       console.error(t('加载历史失败:'), error);
       const list = document.getElementById('pgHistoryDetailList');
-      if (list) setHTML(list, '<blora-alert variant="danger" title="' + this.escapeHtml(t('加载失败')) + '"></blora-alert>');
+      if (list) {
+        setHTML(list, '<blora-alert variant="danger" title="' + this.escapeHtml(t('加载失败')) + '"></blora-alert><button type="button" class="blora-button" data-variant="outline" id="pgDetailRetry">' + this.escapeHtml(t('重试')) + '</button>');
+        document.getElementById('pgDetailRetry').addEventListener('click', () => this.loadHistory());
+      }
     }
   }
 
@@ -1252,14 +1268,14 @@ class PlaygroundApp {
       const recordId = Number(r.id);
       return `<div class="pg-history-item" data-id="${Number.isSafeInteger(recordId) ? recordId : ''}">
         <div class="pg-history-item-header">
-          <span class="pg-history-item-model">${this.escapeHtml(r.model)}${hasThinking ? '<span class="pg-history-item-thinking-badge">' + this.escapeHtml(t('思考')) + '</span>' : ''}</span>
-          <span class="pg-history-item-time">${this.escapeHtml(time)}</span>
+          <span class="pg-history-item-model">${this.escapeHtml(r.model)}${hasThinking ? '<span class="pg-history-item-thinking-badge blora-badge">' + this.escapeHtml(t('思考')) + '</span>' : ''}</span>
+          <span class="pg-history-item-time blora-text-muted">${this.escapeHtml(time)}</span>
         </div>
-        <div class="pg-history-item-stats">
+        <div class="pg-history-item-stats blora-text-muted">
           <span>📝 ${this.escapeHtml(r.totalTokens?.toLocaleString() || 0)} tokens</span>
           <span>💰 ${this.escapeHtml(r.cost?.toFixed(4) || '0.0000')}${this.escapeHtml(t(' 积分'))}</span>
         </div>
-        <div class="pg-history-item-preview">${this.escapeHtml(preview)}</div>
+        <div class="pg-history-item-preview blora-text-muted">${this.escapeHtml(preview)}</div>
       </div>`;
     }).join(''));
 
@@ -1294,43 +1310,43 @@ class PlaygroundApp {
     let html = '';
 
     // Stats section
-    html += '<div class="pg-detail-section">';
-    html +=  + '<div class="pg-detail-section-title">' + t('统计信息') + '</div>';
+    html += '<div class="pg-detail-section blora-stack">';
+    html +=  '<div class="pg-detail-section-title blora-h4">' + t('统计信息') + '</div>';
     html += '<div class="pg-detail-stats">';
-    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('输入 Tokens')}</div><div class="pg-detail-stat-value">${r.promptTokens?.toLocaleString() || 0}</div></div>`;
-    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('输出 Tokens')}</div><div class="pg-detail-stat-value">${r.completionTokens?.toLocaleString() || 0}</div></div>`;
-    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('总计 Tokens')}</div><div class="pg-detail-stat-value">${r.totalTokens?.toLocaleString() || 0}</div></div>`;
-    html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${t('积分')}</div><div class="pg-detail-stat-value">${r.cost?.toFixed(4) || '0.0000'}</div></div>`;
+    html += `<div class="pg-detail-stat blora-stack blora-stack--sm"><div class="pg-detail-stat-label blora-text-muted">${t('输入 Tokens')}</div><div class="pg-detail-stat-value blora-text-lead">${r.promptTokens?.toLocaleString() || 0}</div></div>`;
+    html += `<div class="pg-detail-stat blora-stack blora-stack--sm"><div class="pg-detail-stat-label blora-text-muted">${t('输出 Tokens')}</div><div class="pg-detail-stat-value blora-text-lead">${r.completionTokens?.toLocaleString() || 0}</div></div>`;
+    html += `<div class="pg-detail-stat blora-stack blora-stack--sm"><div class="pg-detail-stat-label blora-text-muted">${t('总计 Tokens')}</div><div class="pg-detail-stat-value blora-text-lead">${r.totalTokens?.toLocaleString() || 0}</div></div>`;
+    html += `<div class="pg-detail-stat blora-stack blora-stack--sm"><div class="pg-detail-stat-label blora-text-muted">${t('积分')}</div><div class="pg-detail-stat-value blora-text-lead">${r.cost?.toFixed(4) || '0.0000'}</div></div>`;
     if (r.finishReason) {
-      html += `<div class="pg-detail-stat"><div class="pg-detail-stat-label">${this.escapeHtml(t('结束原因'))}</div><div class="pg-detail-stat-value">${this.escapeHtml(r.finishReason)}</div></div>`;
+      html += `<div class="pg-detail-stat blora-stack blora-stack--sm"><div class="pg-detail-stat-label blora-text-muted">${this.escapeHtml(t('结束原因'))}</div><div class="pg-detail-stat-value blora-text-lead">${this.escapeHtml(r.finishReason)}</div></div>`;
     }
     html += '</div></div>';
 
     // Request params section
     if (r.requestParams) {
-      html += '<div class="pg-detail-section">';
-      html +=  + '<div class="pg-detail-section-title">' + t('请求参数') + '</div>';
+      html += '<div class="pg-detail-section blora-stack">';
+      html +=  '<div class="pg-detail-section-title blora-h4">' + t('请求参数') + '</div>';
       html += '<div class="pg-detail-params">';
       const params = r.requestParams;
-      if (params.temperature !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">temp:</span> ${this.escapeHtml(params.temperature)}</span>`;
-      if (params.max_tokens) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">max:</span> ${this.escapeHtml(params.max_tokens)}</span>`;
-      if (params.top_p !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">top_p:</span> ${this.escapeHtml(params.top_p)}</span>`;
-      if (params.thinking !== undefined) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">thinking:</span> ${this.escapeHtml(params.thinking ? 'on' : 'off')}</span>`;
-      if (params.thinking_budget) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">budget:</span> ${this.escapeHtml(params.thinking_budget)}</span>`;
-      if (params.reasoning_effort) html += `<span class="pg-detail-param"><span class="pg-detail-param-label">effort:</span> ${this.escapeHtml(params.reasoning_effort)}</span>`;
+      if (params.temperature !== undefined) html += `<span class="pg-detail-param blora-tag"><span class="pg-detail-param-label">temp:</span> ${this.escapeHtml(params.temperature)}</span>`;
+      if (params.max_tokens) html += `<span class="pg-detail-param blora-tag"><span class="pg-detail-param-label">max:</span> ${this.escapeHtml(params.max_tokens)}</span>`;
+      if (params.top_p !== undefined) html += `<span class="pg-detail-param blora-tag"><span class="pg-detail-param-label">top_p:</span> ${this.escapeHtml(params.top_p)}</span>`;
+      if (params.thinking !== undefined) html += `<span class="pg-detail-param blora-tag"><span class="pg-detail-param-label">thinking:</span> ${this.escapeHtml(params.thinking ? 'on' : 'off')}</span>`;
+      if (params.thinking_budget) html += `<span class="pg-detail-param blora-tag"><span class="pg-detail-param-label">budget:</span> ${this.escapeHtml(params.thinking_budget)}</span>`;
+      if (params.reasoning_effort) html += `<span class="pg-detail-param blora-tag"><span class="pg-detail-param-label">effort:</span> ${this.escapeHtml(params.reasoning_effort)}</span>`;
       html += '</div></div>';
     }
 
     // Messages section
-    html += '<div class="pg-detail-section">';
-    html +=  + '<div class="pg-detail-section-title">' + t('对话内容') + '</div>';
+    html += '<div class="pg-detail-section blora-stack">';
+    html +=  '<div class="pg-detail-section-title blora-h4">' + t('对话内容') + '</div>';
     html += '<div class="pg-detail-messages">';
 
     if (r.messages && Array.isArray(r.messages)) {
       r.messages.forEach(msg => {
         if (msg.role === 'system') return;
-        html += `<div class="pg-detail-msg ${msg.role}">`;
-        html += `<div class="pg-detail-msg-role">${msg.role === 'user' ? t('👤 用户') : t('🤖 助手')}</div>`;
+        html += `<div class="pg-detail-msg ${msg.role} blora-list__item">`;
+        html += `<div class="pg-detail-msg-role blora-text-muted">${msg.role === 'user' ? t('用户') : t('助手')}</div>`;
         html += `<div class="pg-detail-msg-content">${this.escapeHtml(msg.content || '')}</div>`;
         html += '</div>';
       });
@@ -1338,8 +1354,8 @@ class PlaygroundApp {
 
     // Reasoning content
     if (r.reasoningContent) {
-      html += '<div class="pg-detail-msg reasoning">';
-      html +=  + '<div class="pg-detail-msg-role">' + t('💭 思考过程') + '</div>';
+      html += '<div class="pg-detail-msg reasoning blora-list__item">';
+      html +=  '<div class="pg-detail-msg-role blora-text-muted">' + t('思考过程') + '</div>';
       html += `<div class="pg-detail-msg-content">${this.escapeHtml(r.reasoningContent)}</div>`;
       html += '</div>';
     }

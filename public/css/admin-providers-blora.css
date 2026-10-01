@@ -1,10 +1,5 @@
 
 
-.cr-admin-providers-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
 .cr-admin-providers-page .admin-stat-cards {
   gap: var(--blora-space-3);
 }
@@ -13,14 +8,14 @@
   gap: var(--blora-space-2);
 }
 
-.cr-admin-providers-page .admin-filter-bar {
+.cr-admin-providers-page .cr-admin-filters {
   gap: var(--blora-space-2);
   padding: var(--blora-space-3);
 
 }
 
-.cr-admin-providers-page .admin-filter-bar .input,
-.cr-admin-providers-page .admin-filter-bar .select {
+.cr-admin-providers-page .cr-admin-filters .input,
+.cr-admin-providers-page .cr-admin-filters .select {
   min-height: 2.5rem;
 
 }
@@ -30,21 +25,11 @@
 
 }
 
-.cr-admin-providers-page .admin-card-footer,
+.cr-admin-providers-page .cr-admin-resource-footer,
 .cr-admin-providers-page .provider-row-actions {
 
   gap: var(--blora-space-2);
 }
 
 @media (max-width: 640px) {
-  .cr-admin-providers-page > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .cr-admin-providers-page .provider-toolbar .blora-button,
-  .cr-admin-providers-page .admin-filter-bar .input,
-  .cr-admin-providers-page .admin-filter-bar .select {
-    width: 100%;
-    flex: 1 1 100%;
-  }
 }

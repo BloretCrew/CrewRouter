@@ -1,0 +1,11 @@
+{
+  "state": "focused-stable-passed",
+  "report": "focused-review.json",
+  "finalStale": true,
+  "finalPass": false,
+  "screenshotsReviewed": 360,
+  "cleanupPending": false,
+  "focusedPass": true,
+  "focusedStale": false,
+  "focusedScreenshotsReviewed": 146
+}

@@ -1,10 +1,5 @@
 
 
-.cr-admin-audit-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
 .cr-admin-audit-page .section-header > div:last-child {
   gap: var(--blora-space-2) !important;
 }
@@ -14,15 +9,13 @@
 
 }
 
-.cr-admin-audit-page .audit-log-row {
+.cr-admin-audit-page .cr-admin-audit-row {
   gap: var(--blora-space-4) !important;
-  padding: var(--blora-space-4) !important;
 
 }
 
-.cr-admin-audit-page .audit-log-row pre {
+.cr-admin-audit-page .cr-admin-audit-row pre {
   margin-top: var(--blora-space-2) !important;
-  padding: var(--blora-space-3);
 
 }
 
@@ -33,9 +26,6 @@
 }
 
 @media (max-width: 640px) {
-  .cr-admin-audit-page > .content-section {
-    padding: var(--blora-space-4);
-  }
 
   .cr-admin-audit-page .section-header {
     align-items: flex-start;
@@ -44,11 +34,5 @@
 
   .cr-admin-audit-page .section-header > div:last-child {
     width: 100%;
-  }
-
-  .cr-admin-audit-page .section-header .input,
-  .cr-admin-audit-page .section-header .blora-button {
-    flex: 1 1 100%;
-    width: 100% !important;
   }
 }

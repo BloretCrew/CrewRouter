@@ -1,0 +1,5 @@
+PASS: production VM: number/percent formats, raw-data immutability, progress precision, multi-Key/error, resource identifiers/actions, current state, sensitive Copy, Co-Key permissions.
+PASS: Chrome official-component fixture: light/dark 1280/390, no horizontal overflow or nested Card, registered SVG drawn, masked reveal/hide.
+Blora SSE success/error/timeout/disconnect, billing spy and immutable retry payload assertions passed.
+Production Card: Enter/Space select actual model, picker queues model, disabled selection blocked.
+Blora public Batch C executable stream/retry and contract boundary checks passed.

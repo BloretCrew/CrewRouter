@@ -19,11 +19,10 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script src="/blora/icons-full.global.js?v=2.1.0"></script>
   <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js"></script>
-  <style>@import url("/css/themes.css") layer(legacy);</style>
-  <style>@import url("/css/main.css") layer(legacy);</style>
-  <link rel="stylesheet" href="/css/auth-shell.css">
+  <link rel="stylesheet" href="/css/auth-shell.css?v=correction-2">
   <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function() {
@@ -45,14 +44,14 @@
 <body class="blora-page blora-scope">
 <blora-navbar brand-href="/" title="CrewRouter" variant="floating" class="public-navbar">
   <blora-navbar-tool>
-    <blora-select id="langToggle" data-size="sm" aria-label="Language" aria-label="Language">
+    <blora-select id="langToggle" data-size="sm" aria-label="Language">
       <blora-option value="zh">中文</blora-option><blora-option value="en">EN</blora-option>
     </blora-select>
   </blora-navbar-tool>
 </blora-navbar>
-  <div class="setup-container">
-    <div class="setup-header">
-      <h1><span data-icon="rocket" aria-hidden="true"></span> CrewRouter <span class="brand-edition-badge" data-edition-badge style="display:none;"></span></h1>
+  <div class="setup-container blora-container blora-container--prose">
+    <div class="setup-header blora-stack">
+      <h1 class="blora-h2"><span data-icon="rocket" aria-hidden="true"></span> CrewRouter <span class="brand-edition-badge" data-edition-badge style="display:none;"></span></h1>
       <p><span data-i18n="首次使用，请创建管理员账号">首次使用，请创建管理员账号</span></p>
     </div>
 
@@ -61,65 +60,81 @@
     </div>
 
     <div class="setup-card blora-card blora-stack" data-size="sm" id="stepEdition" style="display:none;">
-      <h2>选择安装版本 / Choose edition</h2>
-      <p class="step-desc step-warning">安装后不可修改，请谨慎选择。 / This choice is permanent.</p>
+      <h2 class="blora-h4">选择安装版本 / Choose edition</h2>
+      <p class="step-desc step-warning blora-text-muted">安装后不可修改，请谨慎选择。 / This choice is permanent.</p>
       <div class="setup-choice-list">
-        <button class="btn btn-primary blora-button" data-variant="outline" type="button" id="publicAction0">Personal Edition（个人版）</button>
-        <button class="btn btn-primary blora-button" data-variant="outline" type="button" id="publicAction1">Team Edition（团队版）</button>
+        <button class="blora-button" data-variant="outline" type="button" id="publicAction0">Personal Edition（个人版）</button>
+        <button class="blora-button" data-variant="outline" type="button" id="publicAction1">Team Edition（团队版）</button>
       </div>
       <div class="blora-message setup-error" data-variant="danger" id="editionError" role="alert"></div>
     </div>
 
     <div class="setup-card blora-card blora-stack" data-size="sm" id="stepMode" style="display:none;">
-      <h2>选择账号系统模式</h2>
-      <p class="step-desc step-warning">选择后不可修改，请谨慎选择。</p>
+      <h2 class="blora-h4">选择账号系统模式</h2>
+      <p class="step-desc step-warning blora-text-muted">选择后不可修改，请谨慎选择。</p>
       <div class="setup-choice-list">
-        <button class="btn btn-primary blora-button" data-variant="outline" type="button" id="publicAction2">Bloret PassPort 模式</button>
-        <button class="btn btn-primary blora-button" data-variant="outline" type="button" id="publicAction3">飞书模式</button>
+        <button class="blora-button" data-variant="outline" type="button" id="publicAction2">Bloret PassPort 模式</button>
+        <button class="blora-button" data-variant="outline" type="button" id="publicAction3">飞书模式</button>
       </div>
       <div class="blora-message setup-error" data-variant="danger" id="modeError" role="alert"></div>
     </div>
 
     <div class="setup-card blora-card blora-stack" data-size="sm" id="stepPassport" style="display:none;">
       <div class="setup-success">
-        <h2>PassPort 首次授权</h2>
+        <h2 class="blora-h4">PassPort 首次授权</h2>
         <p>请使用管理员身份完成 Bloret PassPort 授权，授权成功后将自动创建管理员账号并进入控制台。</p>
-        <button class="btn btn-primary blora-button" data-variant="primary" type="button" id="publicAction4">前往 PassPort 授权</button>
+        <button class="blora-button" data-variant="primary" type="button" id="publicAction4">前往 PassPort 授权</button>
       </div>
     </div>
 
     <div class="setup-card blora-card blora-stack" data-size="sm" id="step1" style="display:none;">
-      <h2><span data-i18n="创建管理员账号">创建管理员账号</span></h2>
-      <p class="step-desc"><span data-i18n="数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。">数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。</span></p>
-      <div class="setup-form">
-        <blora-field label="用户名"><input type="text" id="adminUsername" placeholder="admin" autocomplete="username" class="blora-input"></blora-field>
+      <h2 class="blora-h4"><span data-i18n="创建管理员账号">创建管理员账号</span></h2>
+      <p class="step-desc blora-text-muted"><span data-i18n="数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。">数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。</span></p>
+      <div class="setup-form blora-stack">
+        <blora-field label="用户名"><input type="text" required id="adminUsername" placeholder="admin" autocomplete="username" class="blora-input"></blora-field>
         <blora-field label="邮箱（可选）"><input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email" class="blora-input"></blora-field>
-        <blora-field label="密码"><input type="password" id="adminPassword" placeholder="至少 6 位" data-i18n-placeholder="至少 6 位" autocomplete="new-password" class="blora-input"></blora-field>
+        <blora-field label="密码"><input type="password" required minlength="6" id="adminPassword" placeholder="至少 6 位" data-i18n-placeholder="至少 6 位" autocomplete="new-password" class="blora-input"></blora-field>
       </div>
       <div class="blora-message setup-error" data-variant="danger" id="step1Error" role="alert"></div>
-      <div class="setup-actions">
-        <button class="btn btn-primary blora-button" data-variant="primary" id="submitBtn" type="button"><span data-i18n="完成初始化">完成初始化</span></button>
+      <div class="setup-actions blora-actions">
+        <button class="blora-button" data-variant="primary" id="submitBtn" type="button"><span data-i18n="完成初始化">完成初始化</span></button>
       </div>
     </div>
 
     <div class="setup-card blora-card blora-stack" data-size="sm" id="stepDone" style="display:none;">
       <div class="setup-success">
-        <h2><span data-i18n="设置完成！">设置完成！</span></h2>
+        <h2 class="blora-h4"><span data-i18n="设置完成！">设置完成！</span></h2>
         <p><span data-i18n="管理员账号已创建，请登录开始使用">管理员账号已创建，请登录开始使用</span></p>
-        <button class="btn btn-primary blora-button" data-variant="primary" type="button" id="publicAction6"><span data-i18n="前往登录">前往登录</span></button>
+        <button class="blora-button" data-variant="primary" type="button" id="publicAction6"><span data-i18n="前往登录">前往登录</span></button>
       </div>
     </div>
 
     <div class="setup-card blora-card blora-stack" data-size="sm" id="stepReady" style="display:none;">
       <div class="setup-success">
-        <h2><span data-i18n="系统已初始化">系统已初始化</span></h2>
+        <h2 class="blora-h4"><span data-i18n="系统已初始化">系统已初始化</span></h2>
         <p><span data-i18n="无需重复配置，可直接登录">无需重复配置，可直接登录</span></p>
-        <button class="btn btn-primary blora-button" data-variant="primary" type="button" id="publicAction7"><span data-i18n="前往登录">前往登录</span></button>
+        <button class="blora-button" data-variant="primary" type="button" id="publicAction7"><span data-i18n="前往登录">前往登录</span></button>
       </div>
     </div>
   </div>
 
   <script>
+    function confirmEdition(message) {
+      return new Promise(async resolve => {
+        await customElements.whenDefined('blora-dialog');
+        const dialog = document.createElement('blora-dialog');
+        dialog.setAttribute('aria-label', '确认安装版本');
+        const text = document.createElement('p'); text.textContent = message;
+        const actions = document.createElement('div'); actions.slot = 'footer'; actions.className = 'blora-actions';
+        const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'blora-button'; cancel.dataset.variant = 'outline'; cancel.textContent = '取消';
+        const approve = document.createElement('button'); approve.type = 'button'; approve.className = 'blora-button'; approve.dataset.variant = 'primary'; approve.textContent = '确认版本';
+        let accepted = false;
+        cancel.addEventListener('click', () => dialog.close());
+        approve.addEventListener('click', () => { accepted = true; dialog.close(); });
+        dialog.addEventListener('blora-close', () => { dialog.remove(); resolve(accepted); }, { once: true });
+        actions.append(cancel, approve); dialog.append(text, actions); document.body.append(dialog); dialog.show();
+      });
+    }
     const setup = {
       async init() {
         try {
@@ -148,8 +163,8 @@
         } catch (e) {
           console.error('[OOBE] 状态检查失败:', e);
           const el = document.getElementById('stepLoading');
-          el.innerHTML = '<div class="blora-message setup-error" data-variant="danger" role="alert">无法连接服务器或数据库尚未就绪，请确认服务已启动并完成数据库初始化后刷新本页。<br><small>' +
-            (e && e.message ? e.message : '') + '</small></div>';
+          el.innerHTML = '<blora-alert variant="danger" title="无法连接服务器或数据库尚未就绪" description="请确认服务已启动并完成数据库初始化。"></blora-alert><button type="button" class="blora-button" data-variant="outline" id="setupRetry">重试</button>';
+          document.getElementById('setupRetry').addEventListener('click', () => { el.style.display = 'block'; this.init(); });
         }
       },
 
@@ -194,7 +209,7 @@
         try {
           let res = await fetch('/api/setup/edition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ edition }) });
           let data = await res.json().catch(() => ({}));
-          if (!res.ok && data.type === 'existing_installation_confirmation_required' && window.confirm(data.error + '\n\n继续后 edition 将永久固定，但不会删除或转换现有数据。')) {
+          if (!res.ok && data.type === 'existing_installation_confirmation_required' && await confirmEdition(data.error + '\n\n继续后 edition 将永久固定，但不会删除或转换现有数据。')) {
             res = await fetch('/api/setup/edition', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ edition, confirmExisting: true }) });
             data = await res.json().catch(() => ({}));
           }

@@ -1,0 +1,16 @@
+checked playground
+PASS: official history/settings Drawers Esc, same controls after resize, keyboard/right-click Dialog/reply/Esc
+{
+  "results": [
+    {
+      "name": "playground",
+      "url": "/playground",
+      "h1": 1,
+      "overflow": false,
+      "nested": 0,
+      "icons": true,
+      "title": "Playground"
+    }
+  ],
+  "errors": []
+}

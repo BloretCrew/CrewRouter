@@ -19,10 +19,9 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script src="/blora/icons-full.global.js?v=2.1.0"></script>
   <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js"></script>
-  <style>@import url("/css/themes.css") layer(legacy);</style>
-  <style>@import url("/css/main.css") layer(legacy);</style>
   <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function() {
@@ -34,24 +33,7 @@
       document.documentElement.classList.add(resolved);
     })();
   </script>
-  <style>
-@layer legacy, blora;
-@layer legacy {
-.purchase-card { background: var(--blora-color-surface-default); border: 1px solid var(--blora-color-border-subtle); border-radius: 16px; }
-.purchase-image { background: var(--blora-color-surface-sunken); }
-.purchase-image-placeholder { background: var(--blora-color-surface-sunken); color: var(--blora-color-text-muted); font-size: 48px; }
-.purchase-name { font-size: 22px; font-weight: 700; }
-.purchase-desc { font-size: 14px; color: var(--blora-color-text-muted); line-height: 1.6; }
-.purchase-btn { padding: 14px; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: var(--blora-color-action-primary-default); color: white; transition: opacity 0.2s; }
-.purchase-btn:hover { opacity: 0.9; }
-.purchase-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.back-link { font-size: 14px; color: var(--blora-color-text-muted); text-decoration: none; transition: color 0.2s; }
-.back-link:hover { color: var(--blora-color-text-primary); }
-.purchase-status { border-radius: 8px; font-size: 13px; }
-.loading-text { color: var(--blora-color-text-muted); }
-.error-text { color: var(--blora-color-status-danger); }
-}
-.purchase-container { max-width: 480px; margin: 60px auto; padding: 0 20px; }
+  <style>.purchase-container { max-width: 480px; margin: 60px auto; padding: 0 20px; }
 .purchase-card { overflow: hidden; }
 .purchase-image { width: 100%; height: 240px; object-fit: cover; }
 .purchase-image-placeholder { width: 100%; height: 240px; display: flex; align-items: center; justify-content: center; }
@@ -63,7 +45,7 @@
 .purchase-status { margin-top: 16px; padding: 12px; text-align: center; }
 .loading-text { text-align: center; padding: 60px 20px; }
 .error-text { text-align: center; padding: 60px 20px; }
-  </style>
+</style>
   <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
   <script type="module" src="/js/blora-services.js?v=2.1.0"></script>
@@ -73,47 +55,24 @@
       <blora-option value="zh">中文</blora-option>
       <blora-option value="en">EN</blora-option>
     </blora-select></div>
-  <div class="app-container">
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo" style="width:28px;height:28px;border-radius:6px;">
-          <h2>CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h2>
-        </div>
-      </div>
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <a class="nav-item blora-button" data-variant="ghost" href="/console">
-            <span data-icon="circle" aria-hidden="true"></span>
-            <span><span data-i18n="返回控制台">返回控制台</span></span>
-          </a>
-        </div>
-      </nav>
-    </aside>
-
-    <main class="main-content">
-      <div class="content-header">
-        <h1><span data-i18n="购买商品">购买商品</span></h1>
-      </div>
-
-      <div class="purchase-container" id="purchaseContent">
-        <div class="page-loading"><div class="blora-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
-      </div>
-    </main>
-  </div>
-
+  <main class="blora-container blora-container--prose blora-stack blora-stack--lg" style="padding-block:var(--blora-space-8)">
+    <header class="blora-stack"><a href="/console" class="blora-button" data-variant="ghost" data-icon="arrow-left">返回控制台</a><div class="blora-row"><h1 class="blora-h2" data-i18n="购买商品">购买商品</h1><span class="brand-edition-badge" data-edition-badge hidden></span></div></header>
+    <div id="purchaseContent" class="blora-stack"><div class="blora-skeleton" data-variant="text" aria-label="加载中"></div></div>
+  </main>
   <script src="/js/i18n.js?v=2"></script>
-  <script src="/js/theme.js?v=2"></script>
+  <script src="/js/theme.js?v=correction-2"></script>
   <script src="/js/edition-badge.js?v=1"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const productId = params.get('id');
 
+    function escapeProduct(value) { return String(value || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
     async function loadProduct() {
       const container = document.getElementById('purchaseContent');
 
       if (!productId) {
-        container.innerHTML = '<div class="error-text">商品ID不存在</div>';
+        container.innerHTML = '<blora-alert variant="danger" title="商品ID不存在"></blora-alert>';
         return;
       }
 
@@ -124,23 +83,23 @@
         const product = products.find(p => p.id === parseInt(productId));
 
         if (!product) {
-          container.innerHTML = '<div class="error-text">商品不存在或已下架</div>';
+          container.innerHTML = '<blora-alert variant="danger" title="商品不存在或已下架"></blora-alert>';
           return;
         }
 
         container.innerHTML = `
           <a href="/console" class="back-link">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            <span data-icon="check" aria-hidden="true"></span>
             返回余额
           </a>
           <div class="purchase-card blora-card" data-size="sm">
             ${product.image_url
-              ? `<img class="purchase-image" src="${product.image_url}" alt="${product.name}">`
+              ? `<img class="purchase-image" src="${escapeProduct(product.image_url)}" alt="${escapeProduct(product.name)}">`
               : `<div class="purchase-image-placeholder"><span data-icon="package" aria-hidden="true"></span></div>`
             }
-            <div class="purchase-info">
-              <div class="purchase-name blora-card__title">${product.name}</div>
-              ${product.description ? `<div class="purchase-desc blora-card__desc">${product.description}</div>` : ''}
+            <div class="purchase-info blora-stack">
+              <h2 class="blora-card__title">${escapeProduct(product.name)}</h2>
+              ${product.description ? `<div class="purchase-desc blora-card__desc">${escapeProduct(product.description)}</div>` : ''}
               <button class="purchase-btn blora-button" id="purchaseAction" data-variant="primary" type="button">立即购买</button>
               <div id="purchaseStatus" class="purchase-status" style="display:none;"></div>
             </div>
@@ -148,16 +107,15 @@
         `;
         document.getElementById('purchaseAction').addEventListener('click', handlePurchase);
       } catch (error) {
-        container.innerHTML = '<div class="error-text">加载商品信息失败</div>';
+        container.innerHTML = '<blora-alert variant="danger" title="加载商品信息失败"></blora-alert><button type="button" class="blora-button" data-variant="outline" id="purchaseRetry">重试</button>';
+        document.getElementById('purchaseRetry').addEventListener('click', loadProduct);
       }
     }
 
     function handlePurchase() {
       const statusEl = document.getElementById('purchaseStatus');
       statusEl.style.display = 'block';
-      statusEl.style.background = 'rgba(59,130,246,0.1)';
-      statusEl.style.color = 'var(--blora-color-action-primary-default)';
-      statusEl.textContent = '购买功能暂未开放，敬请期待';
+      statusEl.innerHTML = '<blora-alert variant="info" title="购买功能暂未开放，敬请期待"></blora-alert>';
     }
 
     loadProduct();

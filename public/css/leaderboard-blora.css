@@ -1,10 +1,5 @@
 
 
-.cr-leaderboard-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
 .cr-leaderboard-page .stats-filters {
   gap: var(--blora-space-3);
   padding: var(--blora-space-4);
@@ -27,9 +22,6 @@
 }
 
 @media (max-width: 640px) {
-  .cr-leaderboard-page > .content-section {
-    padding: var(--blora-space-4);
-  }
 
   .cr-leaderboard-page .stats-filter-group {
     width: 100%;

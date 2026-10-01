@@ -102,11 +102,11 @@
   }
 
   function renderHelperLoginTargets(targets, nonce, redirectUri, clientId, scope, challenge, challengeMethod) {
-    var html = '<div class="store-modal-mask" id="storeHelperLoginMask"><div class="store-modal">';
-    html += '<div class="store-modal__head"><h3>' + esc(t('选择要登录的 CrewRouter')) + '</h3></div>';
+    var html = '<blora-dialog id="storeHelperLoginMask" size="md" close-on-outside-click aria-label="选择要登录的 CrewRouter"><div class="store-modal blora-stack">';
+    html += '<div class="store-modal__head"><h2 class="blora-h4">' + esc(t('选择要登录的 CrewRouter')) + '</h2></div>';
     html += '<p style="margin:0 0 14px;">' + esc(t('请选择你要登录的 CrewRouter，登录完成后会回到桌面应用。')) + '</p>';
     if (!targets.length) {
-      html += '<div class="store-empty">' + esc(t('未检测到你登录过的 CrewRouter，请先在目标实例登录一次。')) + '</div>';
+      html += '<blora-empty title="' + esc(t('未检测到你登录过的 CrewRouter，请先在目标实例登录一次。')) + '"></blora-empty>';
     } else {
       html += '<div class="store-modal__list">' + targets.map(function (target) {
         var routerUrl = 'https://' + target.domain;
@@ -116,17 +116,18 @@
           redirect_uri: redirectUri, state: targetState,
           code_challenge: challenge, code_challenge_method: challengeMethod
         }).toString();
-        return '<a class="store-target store-target--ok" href="' + esc(authorizeUrl) + '">' +
+        return '<a class="store-target store-target--ok blora-button" href="' + esc(authorizeUrl) + '">' +
           '<div class="store-target__domain">' + esc(target.domain) + '</div>' +
-          '<div class="store-target__meta">' + esc(fmtDate(target.lastLogin)) + ' · ' + esc(String(target.logins)) + ' ' + esc(t('次登录')) + '</div></a>';
+          '<div class="store-target__meta blora-text-muted">' + esc(fmtDate(target.lastLogin)) + ' · ' + esc(String(target.logins)) + ' ' + esc(t('次登录')) + '</div></a>';
       }).join('') + '</div>';
     }
-    html += '</div></div>';
+    html += '</div></blora-dialog>';
     var wrap = document.createElement('div');
     wrap.innerHTML = html;
     document.body.appendChild(wrap.firstChild);
+    customElements.whenDefined('blora-dialog').then(function () { document.getElementById('storeHelperLoginMask').show(); });
     var mask = document.getElementById('storeHelperLoginMask');
-    if (mask) mask.addEventListener('click', function (event) { if (event.target === mask) mask.remove(); });
+    if (mask) mask.addEventListener('blora-close', function () { mask.remove(); });
   }
 
   function starHtml(score) {
@@ -159,12 +160,12 @@
     return (
       '<article class="store-card blora-card" data-size="sm">' +
         '<div class="store-card__cover">' + (p.icon ? '<img src="' + esc(p.icon) + '" alt="" style="width:64px;height:64px;object-fit:cover;">' : '<span data-icon="puzzle" aria-hidden="true"></span>') + '</div>' +
-        '<div class="store-card__body">' +
-          '<div class="store-card__name blora-card__title">' + esc(p.name) + '</div>' +
+        '<div class="store-card__body blora-stack">' +
+          '<h2 class="store-card__name blora-card__title">' + esc(p.name) + '</h2>' +
           '<div class="store-card__desc blora-card__desc">' + esc(p.description || '') + '</div>' +
           '<div class="store-card__tags">' + tagChips(p.tags.slice(0, 3)) + '</div>' +
-          '<div class="store-card__meta"><span>v' + esc(p.version) + '</span><span>' + esc(p.authorUsername || p.author) + '</span><span>' + rating + '</span></div>' +
-          '<div class="store-card__actions"><a class="btn btn-primary btn-sm blora-button" data-variant="primary" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + t('详情') + '</a></div>' +
+          '<div class="store-card__meta blora-text-muted"><span>v' + esc(p.version) + '</span><span>' + esc(p.authorUsername || p.author) + '</span><span>' + rating + '</span></div>' +
+          '<div class="store-card__actions"><a class="blora-button" data-variant="primary" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + t('详情') + '</a></div>' +
         '</div>' +
       '</article>'
     );
@@ -182,21 +183,22 @@
       renderListResult(data.plugins, q, tag, sort);
     }).catch(function (e) {
       setBanner('err', e.message);
-      viewBox.innerHTML = '<blora-alert variant="danger" title="' + esc(e.message || t('加载失败')) + '"></blora-alert>';
+      viewBox.innerHTML = '<blora-alert variant="danger" title="' + esc(e.message || t('加载失败')) + '"></blora-alert><button class="blora-button" data-variant="outline" type="button" id="storeRetry">' + esc(t('重试')) + '</button>';
+      document.getElementById('storeRetry').addEventListener('click', route);
     });
   }
 
   function renderListResult(plugins, q, tag, sort) {
-    var html = '';
-    html += '<div class="store-toolbar">' +
-      '<blora-field label="' + esc(t('搜索')) + '"><input class="blora-input" type="search" id="storeSearch" placeholder="' + esc(t('搜索插件、作者、标签...')) + '" value="' + esc(q) + '"></blora-field>' +
+    var html = '<h1 class="blora-h2">' + esc(t('插件商店')) + '</h1>';
+    html += '<div class="store-toolbar blora-actions">' +
+      '<blora-search id="storeSearch" label="' + esc(t('搜索')) + '" placeholder="' + esc(t('搜索插件、作者、标签...')) + '" value="' + esc(q) + '"></blora-search>' +
       '<blora-select id="storeSort" aria-label="排序">' +
         '<blora-option value="updated"' + (sort === 'updated' || !sort ? ' selected' : '') + '>' + esc(t('最新更新')) + '</blora-option>' +
         '<blora-option value="rating"' + (sort === 'rating' ? ' selected' : '') + '>' + esc(t('评分最高')) + '</blora-option>' +
         '<blora-option value="installs"' + (sort === 'installs' ? ' selected' : '') + '>' + esc(t('安装最多')) + '</blora-option>' +
       '</blora-select>' +
-      '<button class="btn btn-sm btn-primary blora-button" data-variant="primary" id="storeSearchBtn" type="button">' + esc(t('搜索')) + '</button>' +
-      (tag ? '<button class="btn btn-sm btn-secondary blora-button" data-variant="outline" data-active-tag="' + esc(tag) + '" type="button">#' + esc(tag) + ' <span data-icon="x" aria-hidden="true"></span></button>' : '') +
+      '<button class="blora-button" data-variant="primary" id="storeSearchBtn" type="button">' + esc(t('搜索')) + '</button>' +
+      (tag ? '<button class="blora-button" data-variant="outline" data-active-tag="' + esc(tag) + '" type="button">#' + esc(tag) + ' <span data-icon="x" aria-hidden="true"></span></button>' : '') +
     '</div>';
 
     if (!plugins.length) {
@@ -225,21 +227,22 @@
       renderListResult(data.plugins, '', '', 'updated');
     }).catch(function (e) {
       setBanner('err', e.message);
-      viewBox.innerHTML = '<blora-alert variant="danger" title="' + esc(e.message || t('加载失败')) + '"></blora-alert>';
+      viewBox.innerHTML = '<blora-alert variant="danger" title="' + esc(e.message || t('加载失败')) + '"></blora-alert><button class="blora-button" data-variant="outline" type="button" id="storeRetry">' + esc(t('重试')) + '</button>';
+      document.getElementById('storeRetry').addEventListener('click', route);
     });
   }
 
   function ratingListHtml(ratings) {
-    if (!ratings || !ratings.length) return '<div class="store-empty" style="padding:20px;">' + esc(t('暂无评分')) + '</div>';
+    if (!ratings || !ratings.length) return '<blora-empty title="' + esc(t('暂无评分')) + '"></blora-empty>';
     return ratings.map(function (r) {
       var replies = (r.replies || []).map(function (rp) {
-        return '<div class="store-rating-item" style="margin:8px 0 0; "><div class="store-rating-item__head"><strong>' + esc(rp.username) + '</strong><span>' + esc(fmtDate(rp.createdAt)) + '</span></div><div>' + esc(rp.body) + '</div></div>';
+        return '<div class="store-rating-item blora-list__item" style="margin:8px 0 0; "><div class="store-rating-item__head blora-text-muted"><strong>' + esc(rp.username) + '</strong><span>' + esc(fmtDate(rp.createdAt)) + '</span></div><div>' + esc(rp.body) + '</div></div>';
       }).join('');
-      return '<div class="store-rating-item">' +
-        '<div class="store-rating-item__head"><strong>' + esc(r.username) + '</strong>' + starHtml(r.stars) + '<span>' + esc(fmtDate(r.updatedAt || r.createdAt)) + '</span></div>' +
+      return '<div class="store-rating-item blora-list__item">' +
+        '<div class="store-rating-item__head blora-text-muted"><strong>' + esc(r.username) + '</strong>' + starHtml(r.stars) + '<span>' + esc(fmtDate(r.updatedAt || r.createdAt)) + '</span></div>' +
         (r.comment ? '<div style="margin-top:6px;">' + esc(r.comment) + '</div>' : '') +
         (replies ? '<div style="margin-top:8px;">' + replies + '</div>' : '') +
-        '<div style="margin-top:8px;"><button class="btn btn-sm btn-secondary blora-button" data-variant="outline" data-reply-user="' + esc(r.username) + '" type="button">' + esc(t('回复')) + '</button></div>' +
+        '<div style="margin-top:8px;"><button class="blora-button" data-variant="outline" data-reply-user="' + esc(r.username) + '" type="button">' + esc(t('回复')) + '</button></div>' +
       '</div>';
     }).join('');
   }
@@ -257,8 +260,8 @@
         : t('暂无评分');
       html += '<div class="store-detail__head">' +
         '<div class="store-detail__icon">' + (p.icon ? '<img src="' + esc(p.icon) + '" alt="">' : '<span data-icon="puzzle" aria-hidden="true"></span>') + '</div>' +
-        '<div class="store-detail__head-main">' +
-          '<div class="store-detail__title">' + esc(p.name) + '</div>' +
+        '<div class="store-detail__head-main blora-stack">' +
+          '<h1 class="store-detail__title blora-h2">' + esc(p.name) + '</h1>' +
           (p.description ? '<p class="store-detail__lead">' + esc(p.description) + '</p>' : '') +
           '<div class="store-detail__byline">v' + esc(p.version) + ' · ' + esc(p.authorUsername || p.author) + '</div>' +
           '<div class="store-detail__stats">' +
@@ -268,28 +271,28 @@
         '</div></div>';
       html += '<div class="store-detail__body">' +
         '<div class="store-detail__left">' +
-          '<div class="store-detail__section"><h3>' + esc(t('简介')) + '</h3><div class="store-detail__prose">' + esc(p.longDescription || p.description || t('暂无简介')) + '</div></div>' +
-          (p.screenshots && p.screenshots.length ? '<div class="store-detail__section"><h3>' + esc(t('截图')) + '</h3><div class="store-shots">' + p.screenshots.map(function (s) { return '<img src="' + esc(s.url) + '" alt="">'; }).join('') + '</div></div>' : '') +
-          '<div class="store-detail__section"><h3>' + esc(t('权限')) + '</h3><div class="store-related">' + (p.permissions && p.permissions.length ? tagChips(p.permissions) : '<span class="store-muted">' + esc(t('未声明额外权限')) + '</span>') + '</div></div>' +
-          '<div class="store-detail__section"><h3>' + esc(t('评分')) + '</h3>' + ratingListHtml([]) + '</div>' +
+          '<div class="store-detail__section blora-stack"><h2 class="blora-h4">' + esc(t('简介')) + '</h2><div class="store-detail__prose">' + esc(p.longDescription || p.description || t('暂无简介')) + '</div></div>' +
+          (p.screenshots && p.screenshots.length ? '<div class="store-detail__section blora-stack"><h2 class="blora-h4">' + esc(t('截图')) + '</h2><div class="store-shots">' + p.screenshots.map(function (s) { return '<img src="' + esc(s.url) + '" alt="">'; }).join('') + '</div></div>' : '') +
+          '<div class="store-detail__section blora-stack"><h2 class="blora-h4">' + esc(t('权限')) + '</h2><div class="store-related">' + (p.permissions && p.permissions.length ? tagChips(p.permissions) : '<span class="store-muted blora-text-muted">' + esc(t('未声明额外权限')) + '</span>') + '</div></div>' +
+          '<div class="store-detail__section blora-stack"><h2 class="blora-h4">' + esc(t('评分')) + '</h2>' + ratingListHtml([]) + '</div>' +
         '</div>' +
         '<aside class="store-detail__side">' +
-          '<div class="store-side-card blora-card" data-size="sm">' +
-            '<button class="btn btn-primary blora-button" data-variant="primary" id="installToRouterBtn" type="button">' + esc(t('安装到 CrewRouter')) + '</button>' +
-            (p.url ? '<a class="btn btn-secondary blora-button" data-variant="outline" href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(t('主页')) + '</a>' : '') +
+          '<div class="store-side-card blora-card blora-stack" data-size="sm">' +
+            '<button class="blora-button" data-variant="primary" id="installToRouterBtn" type="button">' + esc(t('安装到 CrewRouter')) + '</button>' +
+            (p.url ? '<a class="blora-button" data-variant="outline" href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(t('主页')) + '</a>' : '') +
             '<div class="store-side-card__meta">' +
               '<div><span>' + esc(t('版本')) + '</span><strong>' + esc(p.version) + '</strong></div>' +
               '<div><span>' + esc(t('作者')) + '</span><strong>' + esc(p.authorUsername || p.author || '—') + '</strong></div>' +
               '<div><span>' + esc(t('安装')) + '</span><strong>' + (p.installCount || 0) + '</strong></div>' +
             '</div>' +
-            (p.tags && p.tags.length ? '<div class="store-card__meta">' + esc(t('标签')) + '</div><div class="store-card__tags">' + tagChips(p.tags) + '</div>' : '') +
+            (p.tags && p.tags.length ? '<div class="store-card__meta blora-text-muted">' + esc(t('标签')) + '</div><div class="store-card__tags">' + tagChips(p.tags) + '</div>' : '') +
           '</div>' +
           '<div id="ratingBox"></div>' +
         '</aside>' +
       '</div>';
 
       if (p.related && p.related.length) {
-        html += '<div class="store-detail__section" style="margin-top:24px;"><h3>' + esc(t('相关插件')) + '</h3><div class="store-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));">' + p.related.slice(0, 6).map(cardHtml).join('') + '</div></div>';
+        html += '<div class="store-detail__section blora-stack" style="margin-top:24px;"><h2 class="blora-h4">' + esc(t('相关插件')) + '</h2><div class="store-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));">' + p.related.slice(0, 6).map(cardHtml).join('') + '</div></div>';
       }
 
       viewBox.innerHTML = html;
@@ -299,11 +302,11 @@
       // 评分区：需要登录且已配置
       var box = document.getElementById('ratingBox');
       if (me.loggedIn && me.config.configured) {
-        box.innerHTML = '<div class="store-detail__section"><h3>' + esc(t('我要评分')) + '</h3>' +
+        box.innerHTML = '<div class="store-detail__section blora-stack"><h2 class="blora-h4">' + esc(t('我要评分')) + '</h2>' +
           starPicker(p.myRating ? p.myRating.stars : 0, function () {}) +
-          '<blora-field label="' + esc(t('我要评分')) + '"><textarea class="blora-textarea" id="ratingComment" placeholder="' + esc(t('写下你的评价（可选，最多 500 字）')) + '" style="width:100%;margin-top:8px;min-height:60px;"></textarea></blora-field>' +
-          '<div style="margin-top:8px;display:flex;gap:8px;"><button class="btn btn-sm btn-primary blora-button" data-variant="primary" id="ratingSubmitBtn" type="button">' + esc(t('提交评分')) + '</button>' +
-          (p.myRating ? '<button class="btn btn-sm btn-secondary blora-button" data-variant="outline" id="ratingDeleteBtn" type="button">' + esc(t('删除评分')) + '</button>' : '') + '</div></div>';
+          '<blora-field label="' + esc(t('我要评分')) + '"><textarea class="blora-textarea" maxlength="500" id="ratingComment" placeholder="' + esc(t('写下你的评价（可选，最多 500 字）')) + '" style="width:100%;margin-top:8px;min-height:60px;"></textarea></blora-field>' +
+          '<div style="margin-top:8px;display:flex;gap:8px;"><button class="blora-button" data-variant="primary" id="ratingSubmitBtn" type="button">' + esc(t('提交评分')) + '</button>' +
+          (p.myRating ? '<button class="blora-button" data-variant="outline" id="ratingDeleteBtn" type="button">' + esc(t('删除评分')) + '</button>' : '') + '</div></div>';
         var picked = p.myRating ? p.myRating.stars : 0;
         var root = box.querySelector('[data-star-picker]');
         pickerInit(box, function (n) { picked = root.dataset.value = n; root.dataset.value = String(n); });
@@ -333,15 +336,16 @@
           });
         });
       } else if (!me.config.configured) {
-        box.innerHTML = '<div class="store-empty" style="padding:16px;">' + esc(t('PassPort 未配置，暂不能评分')) + '</div>';
+        box.innerHTML = '<blora-empty title="' + esc(t('PassPort 未配置，暂不能评分')) + '"></blora-empty>';
       } else {
-        box.innerHTML = '<div class="store-empty" style="padding:16px;"><a class="btn btn-sm btn-secondary blora-button" data-variant="outline" href="' + AUTH + '/login?return_to=' + encodeURIComponent(location.pathname + location.hash) + '">' + esc(t('登录后评分')) + '</a></div>';
+        box.innerHTML = '<div class="store-empty" style="padding:16px;"><a class="blora-button" data-variant="outline" href="' + AUTH + '/login?return_to=' + encodeURIComponent(location.pathname + location.hash) + '">' + esc(t('登录后评分')) + '</a></div>';
       }
 
       loadRatingsInto(p.id);
     }).catch(function (e) {
       setBanner('err', e.message);
-      viewBox.innerHTML = '<blora-alert variant="danger" title="' + esc(e.message || t('加载失败')) + '"></blora-alert>';
+      viewBox.innerHTML = '<blora-alert variant="danger" title="' + esc(e.message || t('加载失败')) + '"></blora-alert><button class="blora-button" data-variant="outline" type="button" id="storeRetry">' + esc(t('重试')) + '</button>';
+      document.getElementById('storeRetry').addEventListener('click', route);
     });
   }
 
@@ -353,7 +357,7 @@
       var target = Array.prototype.find.call(secs, function (s) { return s.querySelector('h3') && s.querySelector('h3').textContent === t('评分'); });
       if (target) {
         var body = target.querySelector('h3').nextElementSibling ? null : target;
-        target.innerHTML = '<h3>' + esc(t('评分')) + ' · ' + data.count + '</h3>' + ratingListHtml(data.ratings);
+        target.innerHTML = '<h2 class="blora-h4">' + esc(t('评分')) + ' · ' + data.count + '</h2>' + ratingListHtml(data.ratings);
         wireReplies(id);
       }
       // 更新「我要评分」顶部我的评分
@@ -381,30 +385,30 @@
   function submitFormHtml(editId, draft) {
     var d = draft || {};
     var actionLabel = editId ? t('保存修改') : t('提交插件');
-    return '<div class="store-form">' +
+    return '<div class="store-form blora-stack">' +
       '<div class="store-form__upload" style="padding:12px 14px;margin-bottom:14px;">' +
         '<div style="margin-bottom:8px;"><span data-icon="puzzle" aria-hidden="true"></span> ' + esc(t('从 plugin.json 快速填充')) + '</div>' +
         '<div class="form-group">' +
           '<label>' + esc(t('选择 plugin.json 文件')) + '</label>' +
           '<blora-upload id="manifestFile" accept=".json,application/json" variant="compact" prompt="' + esc(t('选择 plugin.json 文件')) + '"></blora-upload>' +
-          '<div class="form-help">' + esc(t('或粘贴 JSON 内容')) + '</div>' +
+          '<div class="form-help blora-text-muted">' + esc(t('或粘贴 JSON 内容')) + '</div>' +
           '<blora-field label="' + esc(t('或粘贴 JSON 内容')) + '"><textarea class="blora-textarea" id="manifestJson" style="min-height:70px;" placeholder="{\&quot;name\&quot;: \&quot;...\&quot;}"></textarea></blora-field>' +
         '</div>' +
-        '<button type="button" class="btn btn-sm btn-secondary blora-button" data-variant="outline" id="manifestApply">' + esc(t('解析并填充')) + '</button>' +
+        '<button type="button" class="blora-button" data-variant="outline" id="manifestApply">' + esc(t('解析并填充')) + '</button>' +
       '</div>' +
-      '<blora-field label="' + esc(t('插件 id（唯一，英文/数字/._-）')) + '" hint="' + esc(t('3–128 字符，仅字母数字与 ._-')) + '"><input class="blora-input" type="text" id="f_id" value="' + esc(d.id || '') + '" ' + (editId ? 'disabled' : '') + '></blora-field>' +
-      '<blora-field label="' + esc(t('插件名称')) + '"><input class="blora-input" type="text" id="f_name" value="' + esc(d.name || '') + '"></blora-field>' +
-      '<blora-field label="' + esc(t('版本号')) + '"><input class="blora-input" type="text" id="f_version" value="' + esc(d.version || '') + '"></blora-field>' +
+      '<blora-field label="' + esc(t('插件 id（唯一，英文/数字/._-）')) + '" hint="' + esc(t('3–128 字符，仅字母数字与 ._-')) + '"><input class="blora-input" type="text" minlength="3" maxlength="128" pattern="[a-zA-Z0-9._-]+" required id="f_id" value="' + esc(d.id || '') + '" ' + (editId ? 'disabled' : '') + '></blora-field>' +
+      '<blora-field label="' + esc(t('插件名称')) + '"><input class="blora-input" type="text" required id="f_name" value="' + esc(d.name || '') + '"></blora-field>' +
+      '<blora-field label="' + esc(t('版本号')) + '"><input class="blora-input" type="text" required id="f_version" value="' + esc(d.version || '') + '"></blora-field>' +
       '<blora-field label="' + esc(t('作者')) + '"><input class="blora-input" type="text" id="f_author" value="' + esc(d.author || '') + '"></blora-field>' +
       '<blora-field label="' + esc(t('简介')) + '"><textarea class="blora-textarea" id="f_description">' + esc(d.description || '') + '</textarea></blora-field>' +
       '<blora-field label="' + esc(t('详细描述')) + '"><textarea class="blora-textarea" id="f_long">' + esc(d.longDescription || '') + '</textarea></blora-field>' +
-      '<blora-field label="' + esc(t('下载地址（https ZIP 直链）')) + '"><input class="blora-input" type="text" id="f_download" value="' + esc(d.download || '') + '"></blora-field>' +
+      '<blora-field label="' + esc(t('下载地址（https ZIP 直链）')) + '"><input class="blora-input" type="url" required id="f_download" value="' + esc(d.download || '') + '"></blora-field>' +
       '<blora-field label="' + esc(t('SHA256（可选，64 位十六进制）')) + '"><input class="blora-input" type="text" id="f_sha256" value="' + esc(d.sha256 || '') + '"></blora-field>' +
       '<blora-field label="' + esc(t('主页 url（可选）')) + '"><input class="blora-input" type="text" id="f_url" value="' + esc(d.url || '') + '"></blora-field>' +
       '<blora-field label="' + esc(t('图标 url（可选）')) + '"><input class="blora-input" type="text" id="f_icon" value="' + esc(d.icon || '') + '"></blora-field>' +
       '<blora-field label="' + esc(t('标签（逗号分隔）')) + '"><input class="blora-input" type="text" id="f_tags" value="' + esc((d.tags || []).join(',')) + '"></blora-field>' +
       '<blora-field label="' + esc(t('权限（逗号分隔，如 gateway:observe, themes:register）')) + '"><input class="blora-input" type="text" id="f_permissions" value="' + esc((d.permissions || []).join(',')) + '"></blora-field>' +
-      '<div class="form-actions"><button class="btn btn-primary blora-button" data-variant="primary" id="submitBtn" type="button">' + esc(actionLabel) + '</button><a class="btn btn-secondary blora-button" data-variant="outline" href="/store">' + esc(t('取消')) + '</a></div>' +
+      '<div class="form-actions blora-actions"><button class="blora-button" data-variant="primary" id="submitBtn" type="button">' + esc(actionLabel) + '</button><a class="blora-button" data-variant="outline" href="/store">' + esc(t('取消')) + '</a></div>' +
     '</div>';
   }
 
@@ -452,14 +456,14 @@
     api('/me').then(function (mm) {
       me = mm;
       updateNav();
-      var html = '<div class="store-detail__title" style="margin:16px 0;">' + esc(t('提交插件')) + '</div>';
+      var html = '<h1 class="store-detail__title blora-h2" style="margin:16px 0;">' + esc(t('提交插件')) + '</h1>';
       if (!me.config.configured) {
-        html += '<div class="store-empty">' + esc(t('PassPort 尚未配置，无法提交插件')) + '</div>';
+        html += '<blora-empty title="' + esc(t('PassPort 尚未配置，无法提交插件')) + '"></blora-empty>';
         viewBox.innerHTML = html;
         return;
       }
       if (!me.loggedIn) {
-        html += '<div class="store-empty"><a class="btn btn-primary blora-button" data-variant="primary" href="' + AUTH + '/login?return_to=' + encodeURIComponent('/store#/submit') + '">' + esc(t('登录后提交')) + '</a></div>';
+        html += '<div class="store-empty"><a class="blora-button" data-variant="primary" href="' + AUTH + '/login?return_to=' + encodeURIComponent('/store#/submit') + '">' + esc(t('登录后提交')) + '</a></div>';
         viewBox.innerHTML = html;
         return;
       }
@@ -476,13 +480,23 @@
         wireSubmitForm(editId, p);
         wireManifestUpload(editId);
       }).catch(function (e) {
-        viewBox.innerHTML = '<blora-alert variant="danger" title="' + esc(e.message) + '"></blora-alert>';
+        viewBox.innerHTML = '<blora-alert variant="danger" title="' + esc(e.message) + '"></blora-alert><button type="button" class="blora-button" data-variant="outline" id="storeRetry">' + esc(t('重试')) + '</button>';
+      document.getElementById('storeRetry').addEventListener('click', route);
       });
     });
   }
 
   function wireSubmitForm(editId, current) {
     document.getElementById('submitBtn').addEventListener('click', function () {
+      var invalid = false;
+      document.querySelectorAll('.store-form blora-field').forEach(function (field) {
+        var control = field.querySelector('input, textarea');
+        if (!control) return;
+        field.removeAttribute('error');
+        field.removeAttribute('state');
+        if (!control.checkValidity()) { field.setAttribute('state', 'invalid'); field.setAttribute('error', control.validationMessage); invalid = true; }
+      });
+      if (invalid) return;
       var payload = {
         name: document.getElementById('f_name').value.trim(),
         version: document.getElementById('f_version').value.trim(),
@@ -518,27 +532,27 @@
       me = mm;
       updateNav();
       if (!me.config.configured) {
-        viewBox.innerHTML = '<div class="store-empty">' + esc(t('PassPort 尚未配置，无法查看我的插件')) + '</div>';
+        viewBox.innerHTML = '<blora-empty title="' + esc(t('PassPort 尚未配置，无法查看我的插件')) + '"></blora-empty>';
         return;
       }
       if (!me.loggedIn) {
-        viewBox.innerHTML = '<div class="store-empty"><a class="btn btn-primary blora-button" data-variant="primary" href="' + AUTH + '/login?return_to=' + encodeURIComponent('/store#/mine') + '">' + esc(t('登录后查看')) + '</a></div>';
+        viewBox.innerHTML = '<div class="store-empty"><a class="blora-button" data-variant="primary" href="' + AUTH + '/login?return_to=' + encodeURIComponent('/store#/mine') + '">' + esc(t('登录后查看')) + '</a></div>';
         return;
       }
       api('/plugins?scope=mine').then(function (data) {
-        var html = '<div class="store-detail__title" style="margin:16px 0;">' + esc(t('我的插件')) + '</div>';
+        var html = '<h1 class="store-detail__title blora-h2" style="margin:16px 0;">' + esc(t('我的插件')) + '</h1>';
         if (!data.plugins.length) {
-          html += '<div class="store-empty">' + esc(t('还没有提交过插件')) + '</div>';
+          html += '<blora-empty title="' + esc(t('还没有提交过插件')) + '"></blora-empty>';
         } else {
           html += data.plugins.map(function (p) {
             var statusText = p.status === 'approved' ? t('已上架') : p.status === 'rejected' ? t('已拒绝') : t('待审核');
             var draft = p.hasPendingUpdate ? ' · ' + t('待更新审核') : '';
             var reject = p.rejectReason ? ' · ' + esc(p.rejectReason) : '';
-            return '<div class="store-admin-row">' +
-              '<div class="store-admin-row__meta"><div><strong>' + esc(p.name) + '</strong> <span class="btn btn-sm btn-secondary blora-button" data-variant="outline">' + esc(statusText) + '</span>' + draft + reject + '</div>' +
+            return '<div class="store-admin-row blora-list__item">' +
+              '<div class="store-admin-row__meta"><div><strong>' + esc(p.name) + '</strong> <span class="blora-badge">' + esc(statusText) + '</span>' + draft + reject + '</div>' +
               '<div style="margin-top:4px;">v' + esc(p.version) + ' · ' + esc(p.id) + ' · ' + esc(t('安装')) + ' ' + (p.installCount || 0) + '</div></div>' +
-              '<div class="store-admin-row__actions"><a class="btn btn-sm btn-secondary blora-button" data-variant="outline" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + esc(t('查看')) + '</a>' +
-                '<a class="btn btn-sm btn-primary blora-button" data-variant="primary" href="/store#/submit/' + encodeURIComponent(p.id) + '">' + esc(t('编辑')) + '</a>' +
+              '<div class="store-admin-row__actions"><a class="blora-button" data-variant="outline" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + esc(t('查看')) + '</a>' +
+                '<a class="blora-button" data-variant="primary" href="/store#/submit/' + encodeURIComponent(p.id) + '">' + esc(t('编辑')) + '</a>' +
               '</div></div>';
           }).join('');
         }
@@ -552,17 +566,17 @@
       me = mm;
       updateNav();
       if (!me.config.configured) {
-        viewBox.innerHTML = '<div class="store-empty">' + esc(t('PassPort 尚未配置，无法审核')) + '</div>';
+        viewBox.innerHTML = '<blora-empty title="' + esc(t('PassPort 尚未配置，无法审核')) + '"></blora-empty>';
         return;
       }
       if (!me.loggedIn || !me.user.admin) {
-        viewBox.innerHTML = '<div class="store-empty">' + esc(t('需要管理员权限')) + '</div>';
+        viewBox.innerHTML = '<blora-empty title="' + esc(t('需要管理员权限')) + '"></blora-empty>';
         return;
       }
       var statusFilter = (viewAdmin.currentStatus || 'pending');
       api('/plugins?scope=admin' + (statusFilter && statusFilter !== 'all' ? '&status=' + encodeURIComponent(statusFilter) : '')).then(function (data) {
-        var html = '<div class="store-detail__title" style="margin:16px 0;">' + esc(t('审核')) + '</div>';
-        html += '<div class="store-toolbar">' +
+        var html = '<h1 class="store-detail__title blora-h2" style="margin:16px 0;">' + esc(t('审核')) + '</h1>';
+        html += '<div class="store-toolbar blora-actions">' +
           '<blora-select id="adminStatus" aria-label="审核状态">' +
             '<blora-option value="pending"' + (statusFilter === 'pending' ? ' selected' : '') + '>' + esc(t('待审核')) + '</blora-option>' +
             '<blora-option value="approved"' + (statusFilter === 'approved' ? ' selected' : '') + '>' + esc(t('已上架')) + '</blora-option>' +
@@ -575,15 +589,15 @@
           html += data.plugins.map(function (p) {
             var needsReview = p.status === 'pending' || p.hasPendingUpdate;
             var statusText = p.status === 'approved' ? t('已上架') : p.status === 'rejected' ? t('已拒绝') : t('待审核');
-            return '<div class="store-admin-row">' +
-              '<div class="store-admin-row__meta"><div><strong>' + esc(p.name) + '</strong> <span class="btn btn-sm btn-secondary blora-button" data-variant="outline">' + esc(statusText) + '</span> ' + (p.hasPendingUpdate ? t('待更新审核') : '') + '</div>' +
+            return '<div class="store-admin-row blora-list__item">' +
+              '<div class="store-admin-row__meta"><div><strong>' + esc(p.name) + '</strong> <span class="blora-badge">' + esc(statusText) + '</span> ' + (p.hasPendingUpdate ? t('待更新审核') : '') + '</div>' +
               '<div style="margin-top:4px;">v' + esc(p.version) + ' · ' + esc(p.id) + ' · ' + esc(p.authorUsername || p.author) + ' · ' + esc(t('安装')) + ' ' + (p.installCount || 0) + '</div>' +
               (p.rejectReason ? '<div style="margin-top:4px;">' + esc(t('拒绝原因')) + '：' + esc(p.rejectReason) + '</div>' : '') +
               '</div>' +
               '<div class="store-admin-row__actions">' +
-                '<a class="btn btn-sm btn-secondary blora-button" data-variant="outline" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + esc(t('查看')) + '</a>' +
-                (needsReview ? '<button class="btn btn-sm btn-primary blora-button" data-variant="primary" data-approve="' + encodeURIComponent(p.id) + '" type="button">' + esc(t('通过')) + '</button>' +
-                  '<button class="btn btn-sm btn-secondary blora-button" data-variant="outline" data-reject="' + encodeURIComponent(p.id) + '" type="button">' + esc(t('拒绝')) + '</button>' : '') +
+                '<a class="blora-button" data-variant="outline" href="/store#/plugin/' + encodeURIComponent(p.id) + '">' + esc(t('查看')) + '</a>' +
+                (needsReview ? '<button class="blora-button" data-variant="primary" data-approve="' + encodeURIComponent(p.id) + '" type="button">' + esc(t('通过')) + '</button>' +
+                  '<button class="blora-button" data-variant="outline" data-reject="' + encodeURIComponent(p.id) + '" type="button">' + esc(t('拒绝')) + '</button>' : '') +
               '</div></div>';
           }).join('');
         }
@@ -638,36 +652,38 @@
   function openInstallTargetsModal(pluginId) {
     api('/install-targets').then(function (data) {
       var targets = data.targets || [];
-      var html = '<div class="store-modal-mask" id="storeInstallMask"><div class="store-modal">';
-      html += '<div class="store-modal__head"><h3>' + esc(t('安装到 CrewRouter')) + '</h3><button class="btn btn-sm btn-secondary blora-button" data-variant="outline" id="storeModalClose" type="button">' + esc(t('关闭')) + '</button></div>';
+      var html = '<blora-dialog id="storeInstallMask" size="md" close-on-outside-click aria-label="安装到 CrewRouter"><div class="store-modal blora-stack">';
+      html += '<div class="store-modal__head"><h2 class="blora-h4">' + esc(t('安装到 CrewRouter')) + '</h2><button class="blora-button" data-variant="outline" id="storeModalClose" type="button">' + esc(t('关闭')) + '</button></div>';
       if (!targets.length) {
-        html += '<div class="store-empty">' + esc(t('未检测到你登录过的 CrewRouter')) + '</div>';
+        html += '<blora-empty title="' + esc(t('未检测到你登录过的 CrewRouter')) + '"></blora-empty>';
       } else {
         html += '<div class="store-modal__list">' + targets.map(function (tg) {
-          var note = tg.isAdmin ? '' : '<div class="store-target__note">' + esc(t('没有管理员权限')) + '</div>';
+          var note = tg.isAdmin ? '' : '<div class="store-target__note blora-badge">' + esc(t('没有管理员权限')) + '</div>';
           var attrs = '';
           if (tg.isAdmin) {
             var url = 'https://' + tg.domain + '/plugin-install?plugin=' + encodeURIComponent(pluginId) + '&source=' + encodeURIComponent(location.origin);
-            attrs = ' href="' + esc(url) + '"';
+            attrs = ' data-variant="outline" href="' + esc(url) + '"';
           }
-          var cls = 'store-target ' + (tg.isAdmin ? 'store-target--ok' : 'store-target--disabled');
+          var cls = 'store-target blora-button ' + (tg.isAdmin ? 'store-target--ok' : 'store-target--disabled');
           return '<a class="' + cls + '"' + attrs + '>' +
             '<div class="store-target__domain">' + esc(tg.domain) + '</div>' +
-            '<div class="store-target__meta">' + esc(fmtDate(tg.lastLogin)) + ' · ' + esc(String(tg.logins)) + ' ' + esc(t('次登录')) + '</div>' +
+            '<div class="store-target__meta blora-text-muted">' + esc(fmtDate(tg.lastLogin)) + ' · ' + esc(String(tg.logins)) + ' ' + esc(t('次登录')) + '</div>' +
             note +
           '</a>';
         }).join('') + '</div>';
       }
-      html += '</div></div>';
+      html += '</div></blora-dialog>';
 
       var wrap = document.createElement('div');
       wrap.innerHTML = html;
       var mask = wrap.firstChild;
       document.body.appendChild(mask);
+      customElements.whenDefined('blora-dialog').then(function () { mask.show(); });
+      mask.addEventListener('blora-close', function () { mask.remove(); });
 
       var close = document.getElementById('storeModalClose');
       if (close) close.addEventListener('click', removeModal);
-      mask.addEventListener('click', function (e) { if (e.target === mask) removeModal(); });
+      mask.addEventListener('click', function (e) { if (e.target === mask && !mask.open) removeModal(); });
       // 非管理员实例不可点：拦截默认跳转
       mask.querySelectorAll('a.store-target--disabled').forEach(function (a) {
         a.addEventListener('click', function (e) { e.preventDefault(); });

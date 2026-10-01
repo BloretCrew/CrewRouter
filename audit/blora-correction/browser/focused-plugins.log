@@ -1,0 +1,5 @@
+{"route":"admin#adminPlugins","width":1440,"theme":"light","skin":"default","failed":[]}
+{"route":"admin#adminPlugins","width":390,"theme":"light","skin":"default","failed":[]}
+{"route":"admin#adminPlugins","width":1440,"theme":"dark","skin":"default","failed":[]}
+{"route":"admin#adminPlugins","width":390,"theme":"dark","skin":"default","failed":[]}
+{"observations":4,"pages":1,"routes":10,"themes":["default","ocean","linear","paper","terminal","raycast","classic","all-capabilities-theme"],"screenshots":4,"passed":40,"failed":0,"errors":0,"sourceChanges":[],"stale":false,"limitations":["Demo only; mutations may not persist. No real OAuth, payment or inference acceptance.","All entry pages get default four combinations. Plugin themes use API keys representative page only.","Viewport screenshots and measured surfaces are not a proof of all offscreen visuals.","Surface evidence contains actual matched stylesheet rules, not an assertion that zero overflow means visual correctness."]}

@@ -1,10 +1,5 @@
 
 
-.cr-audit-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
 .cr-audit-page .section-header {
   gap: var(--blora-space-4);
   margin-bottom: var(--blora-space-5);
@@ -46,9 +41,6 @@
 }
 
 @media (max-width: 640px) {
-  .cr-audit-page > .content-section {
-    padding: var(--blora-space-4);
-  }
 
   .cr-audit-page .section-header {
     align-items: flex-start;

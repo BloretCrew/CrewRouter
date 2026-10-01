@@ -6,50 +6,34 @@
   vertical-align: middle;
 }
 
-.cr-admin-teams-page .admin-stat-card-icon .app-icon {
+.cr-admin-teams-page .cr-admin-stat-icon .app-icon {
   width: 1.125rem;
   height: 1.125rem;
 }
 
 .cr-admin-teams-page .section-actions .app-icon,
-.cr-admin-teams-page .team-card-footer .app-icon {
+.cr-admin-teams-page .cr-admin-team-footer .app-icon {
   width: 0.875rem;
   height: 0.875rem;
-}
-
-.cr-admin-teams-page .content-section {
-
-  padding: var(--blora-space-6);
 }
 
 .cr-admin-teams-page .admin-stat-cards {
   gap: var(--blora-space-3);
 }
 
-.cr-admin-teams-page .section-actions .blora-button,
-.cr-admin-teams-page .team-card-footer .blora-button {
-  min-height: 2.5rem;
-
-}
-
-.cr-admin-teams-page .section-actions .blora-button svg,
-.cr-admin-teams-page .team-card-footer .blora-button svg {
+.cr-admin-teams-page .cr-admin-team-header > .blora-badge {
   flex: 0 0 auto;
 }
 
-.cr-admin-teams-page .team-card-header > .blora-badge {
-  flex: 0 0 auto;
-}
-
-.cr-admin-teams-page .admin-filter-bar,
-.cr-admin-teams-page .model-filter-bar {
+.cr-admin-teams-page .cr-admin-filters,
+.cr-admin-teams-page .cr-admin-filters {
   gap: var(--blora-space-2);
   padding: var(--blora-space-3);
 
 }
 
-.cr-admin-teams-page .admin-filter-bar .input,
-.cr-admin-teams-page .model-filter-bar .model-search-input {
+.cr-admin-teams-page .cr-admin-filters .input,
+.cr-admin-teams-page .cr-admin-filters .model-search-input {
   min-height: 2.5rem;
 
 }
@@ -61,13 +45,4 @@
 }
 
 @media (max-width: 640px) {
-  .cr-admin-teams-page .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .cr-admin-teams-page .admin-filter-bar .input,
-  .cr-admin-teams-page .admin-filter-bar .blora-button {
-    width: 100%;
-    flex: 1 1 100%;
-  }
 }

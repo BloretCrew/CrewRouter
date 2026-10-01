@@ -11,7 +11,6 @@
 
 }
 
-.cr-model-library .model-library-binding-bar,
 .cr-model-library .model-quota-section,
 .cr-model-library .library-reorder-toolbar,
 .cr-model-library .model-filter-bar {
@@ -168,7 +167,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--blora-space-3);
-  padding: var(--blora-space-4);
 }
 
 .cr-model-library .model-quota-header {
@@ -210,23 +208,23 @@
 .cr-model-library .model-library-team {
   margin-bottom: var(--blora-space-5);
   padding: 0;
-  overflow: hidden;
+  min-width: 0;
 }
 
 .cr-model-library .model-library-team-header {
   min-height: 3.5rem;
   gap: var(--blora-space-3);
-  padding: var(--blora-space-4) var(--blora-space-5);
-
+  padding: var(--blora-space-3) 0;
+  flex-wrap: wrap;
 }
 
 .cr-model-library .model-library-team-content {
-  padding: var(--blora-space-4);
+  padding: 0;
 }
 
 .cr-model-library .model-library-team-content .model-library-provider + .model-library-provider,
 .cr-model-library .model-library-provider + .model-library-provider {
-  margin-top: var(--blora-space-3);
+  margin-top: 0;
 }
 
 .cr-model-library .model-library-provider {
@@ -259,9 +257,8 @@
   padding: 0;
 }
 
-.cr-model-library .model-library-item {
+.cr-model-library .model-library-item.blora-card {
   min-height: 12rem;
-  padding: var(--blora-space-4);
 
 }
 
@@ -377,8 +374,7 @@
 
   .cr-model-library .model-library-header,
   .cr-model-library .model-filter-bar,
-  .cr-model-library .model-library-binding-bar,
-  .cr-model-library .model-quota-section,
+    .cr-model-library .model-quota-section,
   .cr-model-library .library-reorder-toolbar {
     padding: var(--blora-space-4);
   }
@@ -406,7 +402,7 @@
     grid-template-columns: 1fr;
   }
 
-  .cr-model-library .model-library-item {
+  .cr-model-library .model-library-item.blora-card {
     min-height: 0;
   }
 
@@ -421,4 +417,84 @@
   min-height: 2.5rem;
   flex: 0 1 auto;
   margin: 0;
+}
+
+/* Resource groups are layout-only; official lists and cards own the surfaces. */
+.cr-model-library .model-library-provider-header {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.cr-model-library .model-library-provider-title {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.cr-model-library .model-library-provider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  margin-inline-start: auto;
+}
+
+.cr-model-library .model-quota-header,
+.cr-model-library .model-quota-period-header,
+.cr-model-library .model-quota-numbers {
+  flex-wrap: wrap;
+}
+
+.cr-model-library .model-quota-card,
+.cr-model-library .model-quota-card > *,
+.cr-model-library .model-quota-card .blora-badge,
+.cr-model-library .model-library-list > * {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.cr-model-library .model-quota-name {
+  margin: 0;
+  flex: 1 1 8rem;
+}
+
+.cr-model-library .model-quota-numbers {
+  font-variant-numeric: tabular-nums;
+}
+
+.cr-model-library .model-quota-numbers > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cr-model-library .model-quota-keys {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-4);
+}
+
+.cr-model-library .model-library-select {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+
+.cr-model-library .provider-test-summary {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.cr-model-library [role="button"]:focus-visible {
+  outline: var(--blora-focus-ring-width) solid var(--blora-color-action-primary-default);
+  outline-offset: var(--blora-focus-ring-offset);
+}
+
+@media (max-width: 640px) {
+  .cr-model-library .model-library-provider-actions {
+    width: 100%;
+    margin-inline-start: 0;
+  }
 }

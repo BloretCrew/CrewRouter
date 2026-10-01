@@ -1,0 +1,857 @@
+{
+  "bridge": "BrowserWindow + injected stub, no real preload/IPC/server",
+  "results": [
+    {
+      "name": "desktop-light-960-welcome",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "home",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        },
+        {
+          "name": "globe",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "light",
+      "view": "welcome"
+    },
+    {
+      "name": "desktop-light-960-local-error",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "arrow-right",
+          "filled": true
+        }
+      ],
+      "focus": "local-username-field-control",
+      "scheme": "light",
+      "view": "local-name"
+    },
+    {
+      "name": "desktop-light-960-loading",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "light",
+      "view": "progress"
+    },
+    {
+      "name": "desktop-light-960-error",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "refresh-cw",
+          "filled": true
+        }
+      ],
+      "focus": "retry",
+      "scheme": "light",
+      "view": "error"
+    },
+    {
+      "name": "desktop-light-960-remote",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "external-link",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        },
+        {
+          "name": "search",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        }
+      ],
+      "focus": "official-remote",
+      "scheme": "light",
+      "view": "remote-method"
+    },
+    {
+      "name": "desktop-light-960-custom",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "arrow-right",
+          "filled": true
+        }
+      ],
+      "focus": "custom-url-field-control",
+      "scheme": "light",
+      "view": "custom-url"
+    },
+    {
+      "name": "desktop-light-960-official",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "external-link",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "light",
+      "view": "progress"
+    },
+    {
+      "name": "desktop-light-960-settings",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        }
+      ],
+      "focus": "settings-back",
+      "scheme": "light",
+      "view": "settings"
+    },
+    {
+      "name": "desktop-light-960-standalone-settings",
+      "width": 960,
+      "scroll": 960,
+      "icons": [],
+      "focus": "",
+      "scheme": "light"
+    },
+    {
+      "name": "agent-light-960-empty",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "sparkles",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "light"
+    },
+    {
+      "name": "agent-light-960-messages",
+      "width": 960,
+      "scroll": 960,
+      "icons": [],
+      "focus": "",
+      "scheme": "light"
+    },
+    {
+      "name": "agent-light-960-history-error",
+      "width": 960,
+      "scroll": 960,
+      "icons": [],
+      "focus": "",
+      "scheme": "light"
+    },
+    {
+      "name": "desktop-light-390-welcome",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "home",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        },
+        {
+          "name": "globe",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "light",
+      "view": "welcome"
+    },
+    {
+      "name": "desktop-light-390-local-error",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "arrow-right",
+          "filled": true
+        }
+      ],
+      "focus": "local-username-field-control",
+      "scheme": "light",
+      "view": "local-name"
+    },
+    {
+      "name": "desktop-light-390-loading",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "light",
+      "view": "progress"
+    },
+    {
+      "name": "desktop-light-390-error",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "refresh-cw",
+          "filled": true
+        }
+      ],
+      "focus": "retry",
+      "scheme": "light",
+      "view": "error"
+    },
+    {
+      "name": "desktop-light-390-remote",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "external-link",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        },
+        {
+          "name": "search",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        }
+      ],
+      "focus": "official-remote",
+      "scheme": "light",
+      "view": "remote-method"
+    },
+    {
+      "name": "desktop-light-390-custom",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "arrow-right",
+          "filled": true
+        }
+      ],
+      "focus": "custom-url-field-control",
+      "scheme": "light",
+      "view": "custom-url"
+    },
+    {
+      "name": "desktop-light-390-official",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "external-link",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "light",
+      "view": "progress"
+    },
+    {
+      "name": "desktop-light-390-settings",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        }
+      ],
+      "focus": "settings-back",
+      "scheme": "light",
+      "view": "settings"
+    },
+    {
+      "name": "desktop-light-390-standalone-settings",
+      "width": 390,
+      "scroll": 390,
+      "icons": [],
+      "focus": "",
+      "scheme": "light"
+    },
+    {
+      "name": "agent-light-390-empty",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "sparkles",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "light"
+    },
+    {
+      "name": "agent-light-390-messages",
+      "width": 390,
+      "scroll": 390,
+      "icons": [],
+      "focus": "",
+      "scheme": "light"
+    },
+    {
+      "name": "agent-light-390-history-error",
+      "width": 390,
+      "scroll": 390,
+      "icons": [],
+      "focus": "",
+      "scheme": "light"
+    },
+    {
+      "name": "desktop-dark-960-welcome",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "home",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        },
+        {
+          "name": "globe",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "dark",
+      "view": "welcome"
+    },
+    {
+      "name": "desktop-dark-960-local-error",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "arrow-right",
+          "filled": true
+        }
+      ],
+      "focus": "local-username-field-control",
+      "scheme": "dark",
+      "view": "local-name"
+    },
+    {
+      "name": "desktop-dark-960-loading",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "dark",
+      "view": "progress"
+    },
+    {
+      "name": "desktop-dark-960-error",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "refresh-cw",
+          "filled": true
+        }
+      ],
+      "focus": "retry",
+      "scheme": "dark",
+      "view": "error"
+    },
+    {
+      "name": "desktop-dark-960-remote",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "external-link",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        },
+        {
+          "name": "search",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        }
+      ],
+      "focus": "official-remote",
+      "scheme": "dark",
+      "view": "remote-method"
+    },
+    {
+      "name": "desktop-dark-960-custom",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "arrow-right",
+          "filled": true
+        }
+      ],
+      "focus": "custom-url-field-control",
+      "scheme": "dark",
+      "view": "custom-url"
+    },
+    {
+      "name": "desktop-dark-960-official",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "external-link",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "dark",
+      "view": "progress"
+    },
+    {
+      "name": "desktop-dark-960-settings",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        }
+      ],
+      "focus": "settings-back",
+      "scheme": "dark",
+      "view": "settings"
+    },
+    {
+      "name": "desktop-dark-960-standalone-settings",
+      "width": 960,
+      "scroll": 960,
+      "icons": [],
+      "focus": "",
+      "scheme": "dark"
+    },
+    {
+      "name": "agent-dark-960-empty",
+      "width": 960,
+      "scroll": 960,
+      "icons": [
+        {
+          "name": "sparkles",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "dark"
+    },
+    {
+      "name": "agent-dark-960-messages",
+      "width": 960,
+      "scroll": 960,
+      "icons": [],
+      "focus": "",
+      "scheme": "dark"
+    },
+    {
+      "name": "agent-dark-960-history-error",
+      "width": 960,
+      "scroll": 960,
+      "icons": [],
+      "focus": "",
+      "scheme": "dark"
+    },
+    {
+      "name": "desktop-dark-390-welcome",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "home",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        },
+        {
+          "name": "globe",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "dark",
+      "view": "welcome"
+    },
+    {
+      "name": "desktop-dark-390-local-error",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "arrow-right",
+          "filled": true
+        }
+      ],
+      "focus": "local-username-field-control",
+      "scheme": "dark",
+      "view": "local-name"
+    },
+    {
+      "name": "desktop-dark-390-loading",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "dark",
+      "view": "progress"
+    },
+    {
+      "name": "desktop-dark-390-error",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "refresh-cw",
+          "filled": true
+        }
+      ],
+      "focus": "retry",
+      "scheme": "dark",
+      "view": "error"
+    },
+    {
+      "name": "desktop-dark-390-remote",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "external-link",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        },
+        {
+          "name": "search",
+          "filled": true
+        },
+        {
+          "name": "chevron-right",
+          "filled": true
+        }
+      ],
+      "focus": "official-remote",
+      "scheme": "dark",
+      "view": "remote-method"
+    },
+    {
+      "name": "desktop-dark-390-custom",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        },
+        {
+          "name": "arrow-right",
+          "filled": true
+        }
+      ],
+      "focus": "custom-url-field-control",
+      "scheme": "dark",
+      "view": "custom-url"
+    },
+    {
+      "name": "desktop-dark-390-official",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "external-link",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "dark",
+      "view": "progress"
+    },
+    {
+      "name": "desktop-dark-390-settings",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "settings",
+          "filled": true
+        },
+        {
+          "name": "chevron-left",
+          "filled": true
+        }
+      ],
+      "focus": "settings-back",
+      "scheme": "dark",
+      "view": "settings"
+    },
+    {
+      "name": "desktop-dark-390-standalone-settings",
+      "width": 390,
+      "scroll": 390,
+      "icons": [],
+      "focus": "",
+      "scheme": "dark"
+    },
+    {
+      "name": "agent-dark-390-empty",
+      "width": 390,
+      "scroll": 390,
+      "icons": [
+        {
+          "name": "sparkles",
+          "filled": true
+        }
+      ],
+      "focus": "",
+      "scheme": "dark"
+    },
+    {
+      "name": "agent-dark-390-messages",
+      "width": 390,
+      "scroll": 390,
+      "icons": [],
+      "focus": "",
+      "scheme": "dark"
+    },
+    {
+      "name": "agent-dark-390-history-error",
+      "width": 390,
+      "scroll": 390,
+      "icons": [],
+      "focus": "",
+      "scheme": "dark"
+    }
+  ]
+}

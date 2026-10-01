@@ -1,0 +1,49 @@
+{
+  "blora_version": "2.1.0",
+  "root_tasks_missing": [
+    "lint",
+    "typecheck"
+  ],
+  "blora_nine_navigation_batch_b_resource": "12/12 exit=0",
+  "real_browser_model_keyboard": "Chrome CDP Enter/Space passed in test-blora-public-batch-c.js",
+  "server_demo_tests": {
+    "total": 43,
+    "exit_zero": 37,
+    "nonzero": [
+      {
+        "file": "server/scripts/test-attribution-affinity-cache.js",
+        "exit": 124
+      },
+      {
+        "file": "server/scripts/test-edition-badge.js",
+        "exit": 1
+      },
+      {
+        "file": "server/scripts/test-instance-edition.js",
+        "exit": 1
+      },
+      {
+        "file": "server/scripts/test-plugin-capabilities.js",
+        "exit": 1
+      },
+      {
+        "file": "server/scripts/test-session-summary-model-selection.js",
+        "exit": 124
+      },
+      {
+        "file": "server/scripts/test-usage-accuracy.js",
+        "exit": 1
+      }
+    ]
+  },
+  "syntax_initial": {
+    "files": 251,
+    "failures": 0
+  },
+  "build_gate": "waiting /tmp/blora-correction-ready",
+  "modified_by_this_worker": [
+    "scripts/test-blora-public-batch-a.js",
+    "scripts/test-blora-resource-composition.js"
+  ],
+  "git": "not staged or committed per assignment"
+}

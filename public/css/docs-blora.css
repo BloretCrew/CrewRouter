@@ -40,7 +40,6 @@
 
 .cr-docs-page .doc-section {
   margin: 0 0 var(--blora-space-5);
-  padding: var(--blora-space-5);
 
 }
 
@@ -91,7 +90,4 @@
     padding: var(--blora-space-4);
   }
 
-  .cr-docs-page .doc-section {
-    padding: var(--blora-space-4);
-  }
 }

@@ -1,13 +1,13 @@
 
 
-.cr-admin-settings-page .settings-overview {
+.cr-admin-settings-page .cr-admin-settings-overview {
   max-width: none;
   padding: var(--blora-space-6);
 
 }
 
 @media (max-width: 640px) {
-  .cr-admin-settings-page .settings-overview,
+  .cr-admin-settings-page .cr-admin-settings-overview,
   .cr-admin-settings-page .settings-section {
     padding: var(--blora-space-4);
   }

@@ -1,0 +1,19 @@
+[config-loader] 已加载配置: /data/CrewRouter/config.json
+[36m[INFO][0m [数据库] 演示模式，跳过数据库连接
+[33m[WARN][0m [plugins] 插件 test-cap 声明了未知权限 "totally-unknown-perm"（将被忽略但不阻断加载）
+PASS manifest 未知权限不阻断
+PASS webhook 非 https 被拒绝
+PASS 权限门控正确
+FAIL AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(out.summary && 'tokens_used' in out.summary)
+
+    at /data/CrewRouter/server/scripts/test-plugin-capabilities.js:49:10
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: null,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

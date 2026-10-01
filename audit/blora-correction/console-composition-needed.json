@@ -1,0 +1,88 @@
+{
+  "version": "@bloret-crew/blora-design@2.1.0",
+  "scope": [
+    "stats",
+    "settings",
+    "sessions",
+    "audit-logs",
+    "balance",
+    "project-work",
+    "leaderboard",
+    "docs",
+    "prompts"
+  ],
+  "preserve": [
+    "id",
+    "data-page",
+    "permissions",
+    "API calls",
+    "desktop preferences"
+  ],
+  "class_replacements": {
+    "content-section": "cr-console-section",
+    "stats-overview-card": "cr-console-overview-card",
+    "stats-overview-icon": "cr-console-overview-icon",
+    "stats-overview-content": "blora-stat",
+    "stats-overview-label": "blora-stat__label",
+    "stats-overview-value": "blora-stat__value",
+    "stats-overview-sub": "blora-text-muted",
+    "chart-card": "cr-console-chart",
+    "stats-table-card": "cr-console-table-section",
+    "settings-overview": "cr-console-settings-overview",
+    "settings-version-card": "cr-console-settings-version",
+    "settings-category-card": "cr-console-settings-category",
+    "settings-section": "cr-console-settings-section",
+    "balance-info": "cr-console-balance-info",
+    "balance-current": "cr-console-balance-current",
+    "group-info-card": "cr-console-group-info",
+    "project-work-stat": "cr-console-project-stat",
+    "session-panel": "cr-console-session-panel"
+  },
+  "requirements": [
+    {
+      "selector": ".cr-console-section",
+      "action": "Remove blora-card/data-size from page section wrappers; add blora-stack blora-stack--lg. Keep cards only for metrics/resources/content that do not contain cards or tables."
+    },
+    {
+      "selector": ".blora-card",
+      "action": "For any ancestor of a table or dynamic table host remove Card classes; add blora-table-wrap only to the immediate table scroll host, table.blora-table."
+    },
+    {
+      "selector": ".stats-overview-grid, .stats-insight-grid, .project-work-summary",
+      "action": "Add official blora-grid. Metrics use blora-stat with blora-stat__label/value/suffix; keep original value IDs."
+    },
+    {
+      "selector": ".stats-overview-content",
+      "action": "Apply class replacement to DOM AND app.js dynamic templates; preserve textContent update IDs."
+    },
+    {
+      "selector": ".settings-category-card",
+      "action": "After class replacement retain blora-button ghost and official icon; no legacy surface classes."
+    },
+    {
+      "selector": ".form-group, .stats-filter-group",
+      "action": "Use blora-field label/hint with adopted native input/textarea. Field does not adopt blora-select: put labelled selects in blora-stack--sm with a blora-text-muted caption and matching aria-label; do not use Field internal classes or generate a phantom input. Preserve original controls/IDs."
+    },
+    {
+      "selector": ".cr-console-session-panel",
+      "action": "Remove outer Card when session cards are children; timeline metadata uses official descriptions/list/code and badge roles, not nested cards."
+    },
+    {
+      "selector": ".balance-info, .group-info-card, .project-work-stat",
+      "action": "Replace legacy surface classes using mapping; use one-level blora-card or blora-stat as appropriate."
+    },
+    {
+      "selector": "dynamic data hosts",
+      "action": "Existing loading branches render official spinner/skeleton, successful zero records render blora-empty, failed fetches render blora-alert variant=danger; do not disguise errors as empty or mock feedback."
+    }
+  ],
+  "browser_pending": [
+    "light/dark + 390px",
+    "table horizontal scroll",
+    "real long metric values",
+    "statistics API success/empty/error",
+    "settings save and desktop controls",
+    "sessions pagination/search/detail",
+    "permission-limited navigation"
+  ]
+}

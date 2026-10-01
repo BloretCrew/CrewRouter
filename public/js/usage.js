@@ -69,8 +69,8 @@
     if (content) {
       content.innerHTML = `
         <div class="usage-table-wrap blora-table-wrap">
-          <table class="usage-detail-table blora-table">
-            <thead><tr><th>${escapeHtml(translate('日期'))}</th><th>${escapeHtml(translate('请求数'))}</th><th>${escapeHtml(translate('Token'))}</th><th>${escapeHtml(translate('费用'))}</th><th>${escapeHtml(translate('模型分布'))}</th></tr></thead>
+          <table class="usage-detail-table blora-table"><caption class="blora-text-muted">${escapeHtml(translate('密钥用量详情'))}</caption>
+            <thead><tr><th scope="col">${escapeHtml(translate('日期'))}</th><th scope="col">${escapeHtml(translate('请求数'))}</th><th scope="col">${escapeHtml(translate('Token'))}</th><th scope="col">${escapeHtml(translate('费用'))}</th><th scope="col">${escapeHtml(translate('模型分布'))}</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
@@ -85,7 +85,7 @@
       return;
     }
 
-    setState('loading', `<div class="page-loading page-loading-compact"><div class="blora-spinner" role="status" aria-label="加载中"></div><div class="page-loading-text">${escapeHtml(translate('加载中...'))}</div></div>`);
+    setState('loading', `<div class="blora-skeleton" data-variant="text" aria-label="${escapeHtml(translate('加载中...'))}"></div>`);
     try {
       const response = await fetch(`/api/user/api-keys/${encodeURIComponent(keyId)}/usage`, { credentials: 'same-origin' });
       if (response.status === 401 || response.status === 403) {
@@ -96,7 +96,8 @@
       const usage = await response.json();
       renderUsage(usage);
     } catch (error) {
-      setState('error', `<blora-alert variant="danger" title="${escapeHtml(error.message || translate('加载失败'))}"></blora-alert>`);
+      setState('error', `<blora-alert variant="danger" title="${escapeHtml(error.message || translate('加载失败'))}"></blora-alert><button type="button" class="blora-button" data-variant="outline" id="usageRetry">${escapeHtml(translate('重试'))}</button>`);
+      document.getElementById('usageRetry').addEventListener('click', load);
     }
   }
 

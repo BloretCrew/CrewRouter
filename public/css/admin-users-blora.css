@@ -1,11 +1,6 @@
 
 
-.cr-admin-users-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
-.cr-admin-users-page > .content-section > h2 {
+.cr-admin-users-page > .cr-admin-section > h2 {
   margin-top: 0;
 
 }
@@ -14,44 +9,26 @@
   gap: var(--blora-space-3);
 }
 
-.cr-admin-users-page .admin-filter-bar {
+.cr-admin-users-page .cr-admin-filters {
   gap: var(--blora-space-2);
   padding: var(--blora-space-3);
 
 }
 
-.cr-admin-users-page .admin-filter-bar .input {
+.cr-admin-users-page .cr-admin-filters .input {
   min-height: 2.5rem;
 
 }
 
-.cr-admin-users-page .admin-filter-bar .blora-button {
-  min-height: 2.5rem;
-
-}
-
-.cr-admin-users-page .admin-filter-bar .blora-button svg {
-  flex: 0 0 auto;
-}
-
-.cr-admin-users-page .users-table {
+.cr-admin-users-page .cr-admin-table-host {
   overflow-x: auto;
 
 }
 
-.cr-admin-users-page .users-table table {
+.cr-admin-users-page .cr-admin-table-host table {
   min-width: 60rem;
 
 }
 
 @media (max-width: 640px) {
-  .cr-admin-users-page > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .cr-admin-users-page .admin-filter-bar .input,
-  .cr-admin-users-page .admin-filter-bar .blora-button {
-    width: 100%;
-    flex: 1 1 100%;
-  }
 }

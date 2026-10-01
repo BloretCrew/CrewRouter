@@ -38,9 +38,12 @@ for (const name of pageNames) {
 assert.match(fs.readFileSync(path.join(root, 'public/css/layers.css'), 'utf8'), /^@layer legacy, blora;\s*$/);
 const services = fs.readFileSync(path.join(root, 'public/js/blora-services.js'), 'utf8');
 assert.match(services, /import '\/blora\/icons-full\.js\?v=2\.1\.0'/);
-assert.match(services, /import \{ createFormController, createTableController, message \} from '\/blora\/index\.js\?v=2\.1\.0'/);
+assert.match(services, /import \{ createFormController, createTableController, message, hydrateIcons \} from '\/blora\/index\.js\?v=2\.1\.0'/);
 const publicApi = fs.readFileSync(path.join(root, 'node_modules/@bloret-crew/blora-design/dist/index.js'), 'utf8');
 for (const api of ['createFormController', 'createTableController', 'message']) assert.ok(publicApi.includes(api), `missing official public API ${api}`);
+assert.match(services, /hydrateIcons\(document\)/);
+assert.ok(services.indexOf("icons-full.js") < services.indexOf('hydrateIcons(document)'), 'register full icons before hydrating existing markup');
+assert.match(services, /aria-current/);
 assert.match(services, /window\.bloraMessage = message/);
 assert.match(services, /controller\.destroy\(\)/);
 assert.match(services, /observer\.disconnect\(\)/);

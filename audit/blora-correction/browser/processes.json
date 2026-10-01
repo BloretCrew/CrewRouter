@@ -1,0 +1,30 @@
+{
+  "serverTask": "01a0f60a-d75a-7672-afb8-81d038d617cc",
+  "chromeTask": "01a0f60a-d76c-7a52-8cae-d39df5251f9b",
+  "baselineTask": "01a0f60a-f607-7263-b4f8-a6b46efa0612",
+  "configPath": "/tmp/blora-correction-demo-Yxqul2/config.json",
+  "chromeProfile": "/tmp/blora-correction-chrome-DnpyMB",
+  "serverFinalFixtureTask": "01a0f60d-1182-78b1-b9c3-c6fb81d09e19",
+  "serverFinalFixturePid": 139829,
+  "chromeWrapperPid": 137870,
+  "chromePid": 137891,
+  "readyMonitorTask": "01a0f60d-2b73-7733-b45d-39df6f657ac3",
+  "additionalConfigPath": "/tmp/blora-correction-demo-YZJJIl/config.json",
+  "calibrationTask": "01a0f60f-dcd0-76f3-82bd-5a8f38c3b70e",
+  "finalRunnerTask": "01a0f612-03f9-7490-a075-668f78ed7e09",
+  "finalRunnerPid": 145214,
+  "themeCalibrationTask": "01a0f614-c85a-7ff3-b00b-0eb170aa983c",
+  "stableFinalTask": "01a0f628-9fb7-7ee1-9218-e111a9349b5d",
+  "cleanup": {
+    "serverStopped": true,
+    "chromeStopped": true,
+    "readyMonitorStopped": true,
+    "finalRunnersExited": true,
+    "removedTempDirectories": [
+      "/tmp/blora-correction-demo-Yxqul2",
+      "/tmp/blora-correction-demo-YZJJIl",
+      "/tmp/blora-correction-chrome-DnpyMB"
+    ],
+    "readyFileOwnedByParentNotRemoved": true
+  }
+}

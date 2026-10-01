@@ -19,12 +19,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script src="/blora/icons-full.global.js?v=2.1.0"></script>
   <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js"></script>
   <script src="/js/blora-dialog.js?v=5"></script>
-  <style>@import url("/css/themes.css") layer(legacy);</style>
-  <style>@import url("/css/main.css") layer(legacy);</style>
-  <link rel="stylesheet" href="/css/playground.css">
+  <link rel="stylesheet" href="/css/playground.css?v=correction-2">
   <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function() {
@@ -48,29 +47,26 @@
   <div class="pg-container" data-blora-state="ready">
     <!-- 移动端顶栏 -->
     <div class="pg-mobile-bar">
-      <a href="/console" class="pg-mobile-back">
+      <a href="/console" class="pg-mobile-back blora-button">
         <span data-icon="chevron-left" aria-hidden="true"></span>
       </a>
       <span class="pg-mobile-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></span>
-      <button id="pgToggleSidebar" class="pg-mobile-menu blora-button" type="button">
+      <button aria-label="打开对话历史" data-variant="ghost" data-size="icon" id="pgToggleSidebar" class="pg-mobile-menu blora-button" type="button">
         <span data-icon="menu" aria-hidden="true"></span>
       </button>
     </div>
 
-    <!-- 遮罩 -->
-    <div id="pgOverlay" class="pg-overlay"></div>
-
     <!-- 左侧：对话历史 -->
-    <aside class="pg-history-panel" id="pgHistoryPanel">
+    <aside class="pg-history-panel blora-card" id="pgHistoryPanel">
       <div class="pg-history-header">
         <div class="pg-history-header-top">
-          <a href="/console" class="pg-back-link">
+          <a href="/console" class="pg-back-link blora-button">
             <span data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="返回控制台">
             返回控制台
           </span></a>
         </div>
         <div class="pg-history-header-row">
-          <span class="pg-history-title"><span data-i18n="对话历史">对话历史</span></span>
+          <span class="pg-history-title blora-h4"><span data-i18n="对话历史">对话历史</span></span>
           <button id="pgNewChatBtn" class="pg-history-new-btn blora-button" title="新对话" data-i18n-title="新对话" type="button">
           <span data-icon="plus" aria-hidden="true"></span><span data-i18n="新对话">
           新对话
@@ -84,10 +80,11 @@
 
     <!-- 中间：聊天区 -->
     <main class="pg-main">
+      <header class="blora-row" style="padding:var(--blora-space-4)"><h1 class="blora-h2">Playground</h1><button type="button" id="pgSettingsToggle" class="blora-button" data-variant="outline" data-icon="settings">模型参数</button></header>
       <div class="pg-messages" id="pgMessages">
         <div class="pg-welcome">
           <span data-icon="message-square" aria-hidden="true"></span>
-          <h2>Crant AI Playground</h2>
+          <h2 class="blora-h4">Crant AI Playground</h2>
           <p><span data-i18n="选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。">选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。</span></p>
         </div>
       </div>
@@ -95,33 +92,33 @@
       <div class="pg-reply-bar" id="pgReplyBar" style="display:none;">
         <span data-icon="chevron-left" aria-hidden="true"></span>
         <span class="pg-reply-preview" id="pgReplyPreview"></span>
-        <button id="pgCancelReply" class="pg-reply-cancel blora-button" type="button">
+        <button aria-label="取消回复" data-variant="ghost" data-size="icon" id="pgCancelReply" class="pg-reply-cancel blora-button" type="button">
           <span data-icon="x" aria-hidden="true"></span>
         </button>
       </div>
       <div class="pg-input-area">
-        <div class="pg-input-wrapper">
-          <blora-field class="pg-composer-field" aria-label="输入消息"><textarea id="pgInput" rows="1" class="blora-textarea" aria-label="输入消息" placeholder="输入消息..." data-i18n-placeholder="输入消息..."></textarea></blora-field>
-          <button id="pgSendBtn" type="button" class="pg-send-btn blora-button" data-variant="primary" data-size="icon" title="发送" data-i18n-title="发送">
+        <div class="pg-input-wrapper blora-row">
+          <blora-field class="pg-composer-field" label="输入消息"><textarea id="pgInput" rows="1" class="blora-textarea" aria-label="输入消息" placeholder="输入消息..." data-i18n-placeholder="输入消息..."></textarea></blora-field>
+          <button aria-label="发送" id="pgSendBtn" type="button" class="pg-send-btn blora-button" data-variant="primary" data-size="icon" title="发送" data-i18n-title="发送">
             <span data-icon="send" aria-hidden="true"></span>
           </button>
-          <button id="pgStopBtn" type="button" class="pg-send-btn pg-stop-btn blora-button" data-variant="danger" data-size="icon" title="停止" data-i18n-title="停止" style="display:none;">
+          <button aria-label="停止" id="pgStopBtn" type="button" class="pg-send-btn pg-stop-btn blora-button" data-variant="danger" data-size="icon" title="停止" data-i18n-title="停止" style="display:none;">
             <span data-icon="circle-stop" aria-hidden="true"></span>
           </button>
         </div>
-        <div class="pg-input-footer">
+        <div class="pg-input-footer blora-row blora-row--between">
           <button id="pgClearBtn" class="pg-clear-btn blora-button" type="button"><span data-i18n="清空对话">清空对话</span></button>
-          <span class="pg-balance-badge" id="pgBalanceBadge"><span data-i18n="0 积分">0 积分</span></span>
+          <span class="pg-balance-badge blora-badge" id="pgBalanceBadge"><span data-i18n="0 积分">0 积分</span></span>
         </div>
       </div>
     </main>
 
     <!-- 右侧：模型参数 -->
-    <aside class="pg-settings-panel" id="pgSettingsPanel">
+    <aside class="pg-settings-panel blora-card" id="pgSettingsPanel">
       <div class="pg-settings-scroll blora-stack">
         <div class="pg-setting-group blora-stack blora-stack--sm">
           <span class="blora-text-muted" data-i18n="模型">模型</span>
-          <blora-select id="pgModel" name="model" aria-label="模型" data-blora-state="loading"></blora-select>
+          <div id="pgModelFeedback" class="blora-stack" aria-live="polite"><div class="blora-skeleton" data-variant="text" aria-label="加载模型"></div></div><blora-select id="pgModel" name="model" aria-label="模型" data-blora-state="loading"></blora-select>
         </div>
         <blora-field label="系统提示词"><textarea id="pgSystemPrompt" class="blora-textarea" rows="4" placeholder="你是一个有用的助手..." data-i18n-placeholder="你是一个有用的助手..."></textarea></blora-field>
         <div class="pg-setting-group blora-stack blora-stack--sm">
@@ -145,7 +142,7 @@
         </div>
       </div>
 
-      <div class="pg-settings-footer">
+      <div class="pg-settings-footer blora-stack">
         <div class="pg-stat">
           <span><span data-i18n="余额">余额</span></span>
           <span id="pgBalance">¥0.00</span>
@@ -166,13 +163,13 @@
     </aside>
 
     <!-- 右侧：历史记录面板 -->
-    <aside class="pg-history-detail-panel" id="pgHistoryDetailPanel" style="display:none;">
+    <aside class="pg-history-detail-panel blora-card" id="pgHistoryDetailPanel" style="display:none;">
       <div class="pg-history-detail-header">
         <button id="pgHistoryBackBtn" class="pg-history-back-btn blora-button" type="button">
           <span data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="返回设置">
           返回设置
         </span></button>
-        <span class="pg-history-detail-title"><span data-i18n="历史记录">历史记录</span></span>
+        <span class="pg-history-detail-title blora-h4"><span data-i18n="历史记录">历史记录</span></span>
       </div>
       <div class="pg-history-detail-list" id="pgHistoryDetailList">
         <blora-empty title="暂无历史记录"></blora-empty>
@@ -181,8 +178,8 @@
 
     <!-- 历史记录详情弹窗：Blora dialog contract -->
     <blora-dialog id="pgHistoryModal" class="pg-history-modal" size="lg" close-on-outside-click aria-labelledby="pgHistoryModalTitle">
-      <div slot="header" class="pg-history-modal-header">
-        <h3 id="pgHistoryModalTitle"><span data-i18n="对话详情">对话详情</span></h3>
+      <div slot="title" class="pg-history-modal-header">
+        <h3 class="blora-card__title" id="pgHistoryModalTitle"><span data-i18n="对话详情">对话详情</span></h3>
         <button id="pgHistoryModalClose" type="button" class="blora-button pg-modal-close" data-variant="ghost" data-size="icon" aria-label="关闭">
           <span data-icon="x" aria-hidden="true"></span>
         </button>
@@ -192,11 +189,11 @@
   </div>
 
   <script src="/js/i18n.js?v=2"></script>
-  <script src="/js/theme.js?v=2"></script>
+  <script src="/js/theme.js?v=correction-2"></script>
   <script src="/js/dom.js?v=3"></script>
   <script src="/js/edition-badge.js?v=1"></script>
   <script src="/js/playground-state.js?v=1"></script>
-  <script src="/js/playground.js?v=3"></script>
+  <script src="/js/playground.js?v=correction-2"></script>
 <script>
   // Page-level i18n: apply catalog to static DOM once ready.
   (function () {

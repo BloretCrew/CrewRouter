@@ -1,40 +1,9 @@
-/* Console shell migration: align navigation and compact controls with Blora primitives. */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* Shared console/admin shell: layout only; Button owns navigation appearance. */
 
 .cr-model-library .model-library-key-chips {
   align-items: center;
   gap: var(--blora-space-2);
   padding: var(--blora-space-1) 0;
-}
-
-.cr-model-library .model-library-team-header > .model-action-test {
-  min-height: 2.25rem;
-  padding-inline: var(--blora-space-3);
-
 }
 
 .cr-model-library .model-library-provider-title .model-provider-name {
@@ -83,30 +52,30 @@
 }
 
 @media (max-width: 834px) {
-  .cr-console-shell .sidebar {
+  :is(.cr-console-shell, .cr-admin-page) .sidebar {
     width: 4.375rem;
   }
 
-  .cr-console-shell .sidebar-header {
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-header {
     padding: var(--blora-space-3);
     justify-content: center;
   }
 
-  .cr-console-shell .sidebar-nav {
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-nav {
     padding-inline: var(--blora-space-2);
   }
 
-  .cr-console-shell .nav-item {
+  :is(.cr-console-shell, .cr-admin-page) .nav-item {
     justify-content: center;
     padding-inline: var(--blora-space-2);
   }
 
-  .cr-console-shell .sidebar-footer {
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-footer {
     padding-inline: var(--blora-space-2);
     justify-content: center;
   }
 
-  .cr-console-shell .cr-language-select {
+  :is(.cr-console-shell, .cr-admin-page) .cr-language-select {
     flex-basis: 2.25rem;
     min-width: 2.25rem;
     width: 2.25rem !important;
@@ -126,74 +95,68 @@
   }
 }
 
-.cr-console-shell .sidebar {
+:is(.cr-console-shell, .cr-admin-page) .sidebar {
   width: 15.5rem;
 
 }
 
-.cr-console-shell .sidebar-header {
+:is(.cr-console-shell, .cr-admin-page) .sidebar-header {
   min-height: 4.5rem;
   padding: var(--blora-space-5) var(--blora-space-4);
 
 }
 
-.cr-console-shell .sidebar-nav { padding: var(--blora-space-3) var(--blora-space-2); }
-.cr-console-shell .nav-section { margin-bottom: var(--blora-space-4); }
-.cr-console-shell .nav-section-title {
+:is(.cr-console-shell, .cr-admin-page) .sidebar-nav { padding: var(--blora-space-3) var(--blora-space-2); }
+:is(.cr-console-shell, .cr-admin-page) .nav-section { margin-bottom: var(--blora-space-4); }
+:is(.cr-console-shell, .cr-admin-page) .nav-section-title {
   padding: var(--blora-space-2) var(--blora-space-3);
 
 }
 
-.cr-console-shell .nav-item {
-  min-height: 2.5rem;
-  margin: 2px 0;
-  padding: var(--blora-space-2) var(--blora-space-3);
+:is(.cr-console-shell, .cr-admin-page) .nav-item {
+  width: 100%;
+  justify-content: flex-start;
+  margin: 0;
 
   gap: var(--blora-space-3);
 
 }
 
-.cr-console-shell .nav-item .app-icon { width: 1.125rem; height: 1.125rem; margin-right: 0;   }
+:is(.cr-console-shell, .cr-admin-page) .nav-item .app-icon { width: 1.125rem; height: 1.125rem; margin-right: 0;   }
 
-.cr-console-shell .sidebar-footer {
+:is(.cr-console-shell, .cr-admin-page) .sidebar-footer {
   min-height: 4.5rem;
   padding: var(--blora-space-3) var(--blora-space-4);
 
   gap: var(--blora-space-2);
 }
 
-.cr-console-shell .user-info { min-width: 0; flex: 1; gap: var(--blora-space-2); }
-.cr-console-shell .user-info .avatar { flex: 0 0 2rem; width: 2rem; height: 2rem; object-fit: cover; }
-.cr-console-shell .user-info span { overflow: hidden;    text-overflow: ellipsis; white-space: nowrap; }
-.cr-console-shell #logoutBtn { flex: 0 0 2.25rem; width: 2.25rem; height: 2.25rem; min-height: 2.25rem;  }
-.cr-console-shell #logoutBtn .app-icon { width: 1rem; height: 1rem;  }
-.cr-console-shell .cr-language-select { flex: 0 0 4.5rem; width: 4.5rem !important; min-width: 4.5rem; max-width: 4.5rem; height: 2.25rem; padding-inline: var(--blora-space-2);    }
+:is(.cr-console-shell, .cr-admin-page) .user-info { min-width: 0; flex: 1; gap: var(--blora-space-2); }
+:is(.cr-console-shell, .cr-admin-page) .user-info .avatar { flex: 0 0 2rem; width: 2rem; height: 2rem; object-fit: cover; }
+:is(.cr-console-shell, .cr-admin-page) .user-info span { overflow: hidden;    text-overflow: ellipsis; white-space: nowrap; }
+:is(.cr-console-shell, .cr-admin-page) #logoutBtn { flex: 0 0 2.25rem; width: 2.25rem; height: 2.25rem; min-height: 2.25rem;  }
+:is(.cr-console-shell, .cr-admin-page) #logoutBtn .app-icon { width: 1rem; height: 1rem;  }
+:is(.cr-console-shell, .cr-admin-page) .cr-language-select { flex: 0 0 4.5rem; width: 4.5rem !important; min-width: 4.5rem; max-width: 4.5rem; height: 2.25rem; padding-inline: var(--blora-space-2);    }
 
-.cr-console-shell .main-content {
+:is(.cr-console-shell, .cr-admin-page) .main-content {
   margin-left: 15.5rem;
   padding: var(--blora-space-6) clamp(var(--blora-space-5), 4vw, var(--blora-space-9));
 
 }
 
-.cr-console-shell .content-header {
+:is(.cr-console-shell, .cr-admin-page) .content-header {
   min-height: 3rem;
   margin-bottom: var(--blora-space-6);
   padding-bottom: var(--blora-space-4);
 
 }
 
-.cr-console-shell .content-section {
-  padding: var(--blora-space-6);
-  margin-bottom: var(--blora-space-4);
-}
-
-.cr-console-shell .section-header { margin-bottom: var(--blora-space-5); }
-.cr-console-shell .section-header h2 { margin-bottom: var(--blora-space-1);  }
-.cr-console-shell .stats-grid { gap: var(--blora-space-3); margin-bottom: var(--blora-space-6); }
-.cr-console-shell .stat-card { padding: var(--blora-space-5); }
+:is(.cr-console-shell, .cr-admin-page) .section-header { margin-bottom: var(--blora-space-5); }
+:is(.cr-console-shell, .cr-admin-page) .section-header h2 { margin-bottom: var(--blora-space-1);  }
+:is(.cr-console-shell, .cr-admin-page) .stats-grid { gap: var(--blora-space-3); margin-bottom: var(--blora-space-6); }
 
 /* The key binding popover is a Blora surface, including its menu states. */
-.cr-console-shell #libraryKeyBubbleMenu {
+:is(.cr-console-shell, .cr-admin-page) #libraryKeyBubbleMenu {
   min-width: 14rem;
   max-width: min(19rem, calc(100vw - 1rem));
   max-height: min(70vh, 24rem);
@@ -201,36 +164,35 @@
   overflow: auto;
 
 }
-.cr-console-shell #libraryKeyBubbleMenu .expand-dropdown-divider { margin: var(--blora-space-1) var(--blora-space-2);  }
-.cr-console-shell #libraryKeyBubbleMenu .library-key-bubble-section-label { padding: var(--blora-space-2) var(--blora-space-3) var(--blora-space-1);   }
-.cr-console-shell #libraryKeyBubbleMenu .library-key-bubble-item {
+:is(.cr-console-shell, .cr-admin-page) #libraryKeyBubbleMenu .expand-dropdown-divider { margin: var(--blora-space-1) var(--blora-space-2);  }
+:is(.cr-console-shell, .cr-admin-page) #libraryKeyBubbleMenu .library-key-bubble-section-label { padding: var(--blora-space-2) var(--blora-space-3) var(--blora-space-1);   }
+:is(.cr-console-shell, .cr-admin-page) #libraryKeyBubbleMenu .library-key-bubble-item {
   min-height: 2.25rem;
   padding: var(--blora-space-2) var(--blora-space-3);
 
 }
 
 @media (max-width: 834px) {
-  .cr-console-shell .sidebar { width: 4.375rem; }
-  .cr-console-shell .main-content { margin-left: 4.375rem; padding: var(--blora-space-5); }
-  .cr-console-shell .sidebar-header { padding: var(--blora-space-3); justify-content: center; }
-  .cr-console-shell .sidebar-nav { padding-inline: var(--blora-space-2); }
-  .cr-console-shell .nav-item { justify-content: center; padding-inline: var(--blora-space-2); }
-  .cr-console-shell .sidebar-footer { padding-inline: var(--blora-space-2); flex: 0 0 auto; flex-direction: column; justify-content: center; }
-  .cr-console-shell .sidebar-footer .user-info { flex: 0 0 auto; }
-  .cr-console-shell .cr-language-select { flex-basis: 2.25rem; min-width: 2.25rem; width: 2.25rem !important; max-width: 2.25rem; padding-inline: 0; }
+  :is(.cr-console-shell, .cr-admin-page) .sidebar { width: 4.375rem; }
+  :is(.cr-console-shell, .cr-admin-page) .main-content { margin-left: 4.375rem; padding: var(--blora-space-5); }
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-header { padding: var(--blora-space-3); justify-content: center; }
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-nav { padding-inline: var(--blora-space-2); }
+  :is(.cr-console-shell, .cr-admin-page) .nav-item { justify-content: center; }
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-footer { padding-inline: var(--blora-space-2); flex: 0 0 auto; flex-direction: column; justify-content: center; }
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-footer .user-info { flex: 0 0 auto; }
+  :is(.cr-console-shell, .cr-admin-page) .cr-language-select { flex-basis: 2.25rem; min-width: 2.25rem; width: 2.25rem !important; max-width: 2.25rem; padding-inline: 0; }
 }
 
 @media (max-width: 640px) {
-  .cr-console-shell .sidebar { width: 260px; }
-  .cr-console-shell .sidebar-footer { flex-direction: row; }
-  .cr-console-shell .sidebar-footer .user-info { flex: 1; }
-  .cr-console-shell .main-content { margin-left: 0; padding: calc(4.25rem + var(--blora-space-3)) var(--blora-space-3) var(--blora-space-5); }
-  .cr-console-shell .content-header { align-items: flex-start; margin-bottom: var(--blora-space-4); }
-  .cr-console-shell .content-section { padding: var(--blora-space-4);  }
-  .cr-console-shell .section-header { align-items: flex-start; flex-wrap: wrap; gap: var(--blora-space-3); }
-  .cr-console-shell .content-header .theme-toggle { gap: var(--blora-space-1); }
-}
+  :is(.cr-console-shell, .cr-admin-page) .sidebar { width: 260px; }
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-footer { flex-direction: row; }
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-footer .user-info { flex: 1; }
+  :is(.cr-console-shell, .cr-admin-page) .main-content { margin-left: 0; padding: calc(4.25rem + var(--blora-space-3)) var(--blora-space-3) var(--blora-space-5); }
+  :is(.cr-console-shell, .cr-admin-page) .content-header { align-items: flex-start; margin-bottom: var(--blora-space-4); }
 
+  :is(.cr-console-shell, .cr-admin-page) .section-header { align-items: flex-start; flex-wrap: wrap; gap: var(--blora-space-3); }
+  :is(.cr-console-shell, .cr-admin-page) .content-header .theme-toggle { gap: var(--blora-space-1); }
+}
 
 #mobileSidebarDrawer .sidebar {
   position: static;
@@ -256,3 +218,32 @@
 #mobileSidebarDrawer .nav-section-title {
   display: block;
 }
+
+/* The navigation is one full-width action per row at every breakpoint. */
+:is(.cr-console-shell, .cr-admin-page) .nav-section {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--blora-space-1);
+}
+:is(.cr-console-shell, .cr-admin-page) .sidebar-nav .nav-item { width: 100%; justify-content: flex-start; }
+:is(.cr-console-shell, .cr-admin-page) .sidebar-nav .app-icon { display: inline-flex; flex: 0 0 auto; }
+:is(.cr-console-shell, .cr-admin-page) .sidebar-nav .app-icon > svg { display: block; }
+:is(.cr-console-shell, .cr-admin-page) .main-content { min-width: 0; }
+:is(.cr-console-shell, .cr-admin-page) .main-content > .page,
+:is(.cr-console-shell, .cr-admin-page) .content-header { width: 100%; max-width: 1440px; margin-inline: auto; }
+:is(.cr-console-shell, .cr-admin-page) .page.active { display: flex; flex-direction: column; gap: var(--blora-space-6); }
+:is(.cr-console-shell, .cr-admin-page) .sidebar-nav .nav-item > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 601px) and (max-width: 834px) {
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-nav .nav-item { justify-content: center; }
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-nav .nav-item > span:last-child { display: none; }
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-nav .app-icon { display: inline-flex; }
+}
+@media (max-width: 600px) {
+  #mobileSidebarDrawer .sidebar-nav .nav-item { justify-content: flex-start; }
+  #mobileSidebarDrawer .sidebar-nav .nav-item > span:last-child { display: inline; }
+}
+
+:is(.cr-console-shell, .cr-admin-page) .content-section:not(.blora-card) { min-width: 0; }
+:is(.cr-console-shell, .cr-admin-page) .sidebar { top: 0; bottom: 0; z-index: var(--blora-z-sticky); }
+:is(.cr-console-shell, .cr-admin-page) .sidebar-footer .blora-avatar { flex-shrink: 0; }

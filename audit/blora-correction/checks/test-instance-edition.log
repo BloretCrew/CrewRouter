@@ -1,0 +1,194 @@
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /data-page="adminUserGroups" data-capability="teamMembers"/. Input:
+
+'<!DOCTYPE html>\n' +
+  '<html lang="zh-CN">\n' +
+  '<head>\n' +
+  '  <meta charset="UTF-8">\n' +
+  '  <link rel="stylesheet" href="/css/layers.css?v=2.1.0">\n' +
+  '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+  '  <script>\n' +
+  '    (function () {\n' +
+  "      var mode = localStorage.getItem('theme') || 'system';\n" +
+  "      var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);\n" +
+  "      document.documentElement.classList.toggle('dark', dark);\n" +
+  "      document.documentElement.classList.toggle('light', !dark);\n" +
+  "      document.documentElement.setAttribute('data-blora-color-scheme', dark ? 'dark' : 'light');\n" +
+  '    }());\n' +
+  '  </script>\n' +
+  '\n' +
+  '  <title data-i18n="管理后台 - CrewRouter">管理后台 - CrewRouter</title>\n' +
+  '  <link rel="icon" href="/favicon.ico" sizes="any">\n' +
+  '  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">\n' +
+  '  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">\n' +
+  '  <link rel="apple-touch-icon" href="/apple-touch-icon.png">\n' +
+  '  <script type="module" src="/blora/auto.js?v=2.1.0"></script>\n' +
+  '  <script src="/js/blora-foundation.js?v=2.1.0"></script>\n' +
+  '  <script src="/js/blora-dialog.js?v=5"></script>\n' +
+  '  <link rel="stylesheet" href="/css/themes.css">\n' +
+  '  <link rel="stylesheet" href="/css/main.css?v=25">\n' +
+  '  <link rel="stylesheet" href="/css/settings.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/edition-badge.css?v=2">\n' +
+  '  <link rel="stylesheet" href="/css/admin-stats-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=2">\n' +
+  '  <link rel="stylesheet" href="/css/badges-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/progress-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/sliders-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/toggles-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/admin-users-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/admin-teams-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/admin-user-groups-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/admin-models-blora.css?v=2">\n' +
+  '  <link rel="stylesheet" href="/css/admin-providers-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/admin-prompts-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/admin-settings-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/admin-plugins-blora.css?v=1">\n' +
+  '  <link rel="stylesheet" href="/css/admin-dialogs-blora.css?v=1">\n' +
+  '  <script src="/js/i18n.js?v=2"></script>\n' +
+  '  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>\n' +
+  '  <script>\n' +
+  '    (function() {\n' +
+  "      var theme = localStorage.getItem('theme') || 'system';\n" +
+  '      var resolved = theme;\n' +
+  "      if (theme === 'system') {\n" +
+  "        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n" +
+  '      }\n' +
+  '      document.documentElement.classList.add(resolved);\n' +
+  '    })();\n' +
+  '  </script>\n' +
+  '  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">\n' +
+  '  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">\n' +
+  '  <script type="module" src="/js/blora-services.js?v=2.1.0"></script>\n' +
+  '  <link rel="stylesheet" href="/css/console-blora.css?v=correction-1">\n' +
+  '</head>\n' +
+  '<body class="blora-page cr-admin-page blora-scope">\n' +
+  '  <!-- 移动端顶部导航栏 -->\n' +
+  '  <div class="mobile-topbar">\n' +
+  '    <button type="button" class="blora-button mobile-hamburger" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单" data-variant="ghost" data-icon="menu">\n' +
+  '      \n' +
+  '    </button>\n' +
+  '    <div class="mobile-topbar-logo">\n' +
+  '      <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">\n' +
+  '    </div>\n' +
+  '    <div class="mobile-topbar-title" id="mobilePageTitle"><span data-i18n="统计信息">统计信息</span></div>\n' +
+  '    <button type="button" id="themeToggleMobile" class="blora-button" title="切换主题" data-i18n-title="切换主题" style="width:32px;height:32px;" data-variant="outline" data-size="icon" data-icon="sun">\n' +
+  '      \n' +
+  '      \n' +
+  '      \n' +
+  '    </button>\n' +
+  '  </div>\n' +
+  '  <blora-drawer id="mobileSidebarDrawer" position="left" title="导航" close-label="关闭导航"></blora-drawer>\n' +
+  '\n' +
+  '  <div class="app-container">\n' +
+  '    <!-- 侧边栏 -->\n' +
+  '    <aside class="sidebar">\n' +
+  '      <div class="sidebar-header">\n' +
+  '        <div style="display:flex;align-items:center;gap:10px;">\n' +
+  '          <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo" style="width:28px;height:28px;">\n' +
+  '          <h2 class="blora-card__title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h2>\n' +
+  '        </div>\n' +
+  '        <span class="blora-badge" data-variant="info"><span data-i18n="管理员">管理员</span></span>\n' +
+  '      </div>\n' +
+  '\n' +
+  '      <nav class="sidebar-nav">\n' +
+  '        <div class="nav-section">\n' +
+  '          <button type="button" class="blora-button nav-item" data-page="adminUsers" data-capability="multiUser" data-variant="ghost">\n' +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="users" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="用户管理">用户管理</span></span>\n' +
+  '          </button>\n' +
+  '          <button type="button" class="blora-button nav-item" data-page="adminTeams" data-capability="teamAdmin" data-variant="ghost">\n' +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="users" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="Team 管理">Team 管理</span></span>\n' +
+  '          </button>\n' +
+  '          <button type="button" class="blora-button nav-item" data-page="adminModels" data-variant="ghost">\n' +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="cpu" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="模型管理">模型管理</span></span>\n' +
+  '          </button>\n' +
+  '          <button type="button" class="blora-button nav-item" data-page="adminProviders" data-variant="ghost">\n' +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="radio" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="供应商管理">供应商管理</span></span>\n' +
+  '          </button>\n' +
+  '          <button type="button" class="blora-button nav-item active" data-page="adminStats" data-capability="adminStats" data-variant="ghost">\n' +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="chart-no-axes-combined" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="统计信息">统计信息</span></span>\n' +
+  '          </button>\n' +
+  '          <button type="button" class="blora-button nav-item" data-page="adminErrorLogs" data-variant="ghost">\n' +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="triangle-alert" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="调用错误">调用错误</span></span>\n' +
+  '          </button>\n' +
+  '          <button type="button" class="blora-button nav-item" data-page="adminAuditLogs" data-capability="teamAuditLogs" data-variant="ghost">\n' +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="clipboard-list" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="操作日志">操作日志</span></span>\n' +
+  '          </button>\n' +
+  '          <button type="button" class="blora-button nav-item" data-page="adminPrompts" data-variant="ghost">\n' +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="quote" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="提示词">提示词</span></span>\n' +
+  '          </button>\n' +
+  '          <button type="button" class="blora-button nav-item" data-page="adminPlugins" data-variant="ghost">\n' +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="puzzle" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="插件管理">插件管理</span></span>\n' +
+  '          </button>\n' +
+  `          <button type="button" class="blora-button nav-item" onclick="window.open('https://crewrouter.bloret.net/store', '_blank')" data-variant="ghost">\n` +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="shopping-bag" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="插件商店">插件商店</span></span>\n' +
+  '          </button>\n' +
+  '        </div>\n' +
+  '\n' +
+  '\n' +
+  '        <div class="nav-section">\n' +
+  '          <div class="nav-section-title"><span data-i18n="系统">系统</span></div>\n' +
+  '          <button type="button" class="blora-button nav-item" data-page="adminSettings" data-variant="ghost">\n' +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="settings" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="系统设置">系统设置</span></span>\n' +
+  '          </button>\n' +
+  '        </div>\n' +
+  '\n' +
+  '        <div class="nav-section">\n' +
+  `          <button type="button" class="blora-button nav-item" onclick="window.location.href='/console'" data-variant="ghost">\n` +
+  '            <span class="app-icon" style="display:inline-block;vertical-align:middle;" data-icon="arrow-left" aria-hidden="true"></span>\n' +
+  '            <span><span data-i18n="返回用户控制台">返回用户控制台</span></span>\n' +
+  '          </button>\n' +
+  '        </div>\n' +
+  '      </nav>\n' +
+  '\n' +
+  '      <div class="sidebar-footer">\n' +
+  '        <div class="user-info">\n' +
+  '          <span class="blora-avatar" data-size="sm"><img id="userAvatar" src="" alt="头像" data-i18n-title="头像" class="avatar"></span>\n' +
+  '          <span id="username"></span>\n' +
+  '        </div>\n' +
+  '        <button type="button" id="logoutBtn" class="blora-button" title="登出" data-i18n-title="登出" data-variant="outline" data-size="icon" aria-label="登出" data-i18n-aria-label="登出" data-icon="log-out">\n' +
+  '          \n' +
+  '        </button>\n' +
+  '      </div>\n' +
+  '    </aside>\n' +
+  '\n' +
+  '    <!-- 主内容区 -->\n' +
+  '    <main class="main-content">\n' +
+  '      <div class="content-header">\n' +
+  '        <h1 id="pageTitle" class="blora-h2"><span data-i18n="统计信息">统计信息</span></h1>\n' +
+  '        <div class="theme-toggle">\n' +
+  '          <blora-select id="langToggle" class="cr-language-select" value="zh" title="Language" aria-label="Language">\n' +
+  '            <blora-option value="zh">中文</blora-option>\n' +
+  '            <blora-option value="en">EN</blora-option>\n' +
+  '          </blora-select>\n' +
+  '        '... 188673 more characters
+
+    at /data/CrewRouter/server/scripts/test-instance-edition.js:57:10 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '<!DOCTYPE html>\n' +
+    '<html lang="zh-CN">\n' +
+    '<head>\n' +
+    '  <meta charset="UTF-8">\n' +
+    '  <link rel="stylesheet" href="/css/layers.css?v=2.1.0">\n' +
+    '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+    '  <script>\n' +
+    '    (function () {\n' +
+    "      var mode = localStorage.getItem('theme') || 'system';\n" +
+    "      var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);\n" +
+    '...',
+  expected: /data-page="adminUserGroups" data-capability="teamMembers"/,
+  operator: 'match',
+  diff: 'simple'
+}

@@ -19,11 +19,12 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script src="/blora/icons-full.global.js?v=2.1.0"></script>
   <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
   <script src="/js/blora-foundation.js?v=2.1.0"></script>
-  <link rel="stylesheet" href="/css/auth-shell.css?v=5">
+  <link rel="stylesheet" href="/css/auth-shell.css?v=correction-2">
   <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function() {
@@ -39,10 +40,10 @@
 </head>
 <body class="blora-page blora-scope">
   <main class="auth-page login-container">
-    <section class="blora-card auth-card login-card oc-card" aria-labelledby="auth-title">
-      <header class="auth-card__header blora-card__header">
+    <section class="blora-card blora-stack auth-card login-card oc-card" aria-labelledby="auth-title">
+      <header class="auth-card__header blora-stack blora-stack--sm">
         <span class="auth-card__logo" aria-hidden="true"><img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt=""></span>
-        <h1 class="blora-card__title" id="auth-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
+        <h1 class="blora-h2" id="auth-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
         <p data-i18n="授权请求">授权请求</p>
       </header>
 
@@ -58,18 +59,18 @@
           <span data-i18n="正在请求访问你的 CrewRouter 账号">正在请求访问你的 CrewRouter 账号</span>
         </p>
 
-        <div class="oc-section-label" data-i18n="申请的权限">申请的权限</div>
+        <h2 class="blora-h4" data-i18n="申请的权限">申请的权限</h2>
         <ul id="ocScopeList" class="blora-list oc-scopes"></ul>
 
         <div class="oc-section-label" id="ocApiKeyLabel" data-i18n="选择用于本次授权的 API Key">选择用于本次授权的 API Key</div>
-        <blora-select id="ocApiKeySelect" name="api_key_id" required></blora-select>
+        <blora-select id="ocApiKeySelect" aria-labelledby="ocApiKeyLabel" name="api_key_id" required></blora-select>
         <div class="oc-hint" data-i18n="本次授权将以所选密钥的身份行事，用量与计费归属该密钥。">本次授权将以所选密钥的身份行事，用量与计费归属该密钥。</div>
 
         <div id="ocHiddenFields"></div>
 
         <div class="oc-actions">
           <button type="submit" name="decision" value="approve" id="ocApproveBtn" class="blora-button" data-variant="primary" data-i18n="同意授权">同意授权</button>
-          <button type="submit" name="decision" value="deny" id="ocDenyBtn" class="blora-button" data-variant="outline" data-i18n="拒绝">拒绝</button>
+          <button type="submit" name="decision" value="deny" formnovalidate id="ocDenyBtn" class="blora-button" data-variant="outline" data-i18n="拒绝">拒绝</button>
         </div>
       </form>
 
@@ -81,9 +82,9 @@
   </main>
 
   <script src="/js/i18n.js?v=2"></script>
-  <script src="/js/theme.js?v=2"></script>
+  <script src="/js/theme.js?v=correction-2"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/oauth-consent.js?v=2"></script>
+  <script src="/js/oauth-consent.js?v=correction-2"></script>
   <script>
     // Page-level i18n: apply catalog to static DOM once ready.
     (function () {

@@ -1,25 +1,20 @@
 
 
-.cr-balance-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
-.cr-balance-page > .content-section > h2 {
+.cr-balance-page > .cr-console-section > h2 {
   margin-top: 0;
 
 }
 
-.cr-balance-page .balance-info {
+.cr-balance-page .cr-console-balance-info {
 
   padding: var(--blora-space-5);
 }
 
-.cr-balance-page .balance-current {
+.cr-balance-page .cr-console-balance-current {
   padding: var(--blora-space-5) 0;
 }
 
-.cr-balance-page .group-info-card {
+.cr-balance-page .cr-console-group-info {
   padding: var(--blora-space-5);
 }
 
@@ -40,7 +35,5 @@
 }
 
 @media (max-width: 640px) {
-  .cr-balance-page > .content-section {
-    padding: var(--blora-space-4);
-  }
+
 }

@@ -420,7 +420,11 @@
       // 但原生的「插件管理」静态页需要给出明确提示
       if (area === 'admin') {
         const box = document.getElementById('adminPluginsContent');
-        if (box) box.innerHTML = `<p style="color:var(--muted-foreground);font-size:13px;">${esc(t('插件服务未就绪：请重启 CrewRouter 使插件系统生效。'))}</p>`;
+        if (box) {
+          box.dataset.bloraState = 'error';
+          box.innerHTML = `<blora-alert variant="warning" title="${esc(t('插件服务未就绪：请重启 CrewRouter 使插件系统生效。'))}"></blora-alert><button type="button" class="blora-button" data-variant="outline" data-plugin-runtime-retry>${esc(t('重试'))}</button>`;
+          box.querySelector('[data-plugin-runtime-retry]')?.addEventListener('click', init);
+        }
       }
       return;
     }
@@ -451,11 +455,20 @@
     injectPageContainers(area);
 
     const appObj = area === 'console'
-      ? await waitForApp(() => window.app)
-      : await waitForApp(() => window.adminApp);
+      ? await waitForApp(() => window.app || (typeof app !== 'undefined' ? app : null))
+      : await waitForApp(() => window.adminApp || (typeof adminApp !== 'undefined' ? adminApp : null));
     if (appObj) patchApp(appObj, area);
 
     state.ready = true;
+    let lastPage;
+    const pageObserver = new MutationObserver(() => {
+      const page = currentPage();
+      if (page === lastPage) return;
+      lastPage = page;
+      if (page === 'adminPlugins') renderPluginsAdmin(document.getElementById('adminPluginsContent'));
+    });
+    document.querySelectorAll('.page').forEach(page => pageObserver.observe(page, { attributes: true, attributeFilter: ['class'] }));
+    window.addEventListener('pagehide', () => pageObserver.disconnect(), { once: true });
 
     // 主题：拉取用户/默认选择并应用（含设置页选择器首渲）
     await initThemes();
@@ -493,80 +506,61 @@
   let manageState = { plugins: [], expanded: {}, search: '', sort: 'id' };
 
   const mstyle = `
-    .mstat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:14px 0;}
-    .mstat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
-    .mstat .v{font-size:22px;font-weight:700;line-height:1.1;}
-    .mstat .l{font-size:12px;color:var(--muted-foreground);margin-top:2px;}
-    .mstat.err .v{color:var(--destructive);}
-    .mstat.warn .v{color:var(--status-warn);}
-    .mcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
-    .mhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-    .mtitle{font-size:15px;font-weight:600;}
-    .mtag{font-size:11px;color:var(--muted-foreground);font-family:monospace;background:var(--muted);padding:1px 7px;border-radius:6px;}
-    .mdesc{font-size:13px;color:var(--muted-foreground);margin:6px 0 0;}
-    .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--muted);color:var(--muted-foreground);margin-right:6px;border:1px solid transparent;}
-    .chip.on{background:color-mix(in srgb,var(--status-success) 12%,transparent);color:var(--status-success);}
-    .chip.off{color:var(--muted-foreground);}
-    .chip.warn{background:color-mix(in srgb,var(--status-warn) 12%,transparent);color:var(--status-warn);}
-    .chip.perm{font-family:monospace;background:var(--muted);cursor:help;}
-    .chip.cap{background:var(--brand-blue-bg);color:var(--brand-blue);}
-    .msec{font-size:12px;color:var(--muted-foreground);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.04em;}
-    .mtable{width:100%;font-size:12px;border-collapse:collapse;}
-    .mtable th{text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--muted-foreground);font-weight:500;}
-    .mtable td{padding:4px 8px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-all;}
-    .msearch{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 14px;}
-    .mmut{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;}
+    .mstat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:var(--blora-space-4);}
+    .mhead{display:flex;align-items:flex-start;gap:var(--blora-space-3);flex-wrap:wrap;}
+    .msearch,.mmut{display:flex;gap:var(--blora-space-2);align-items:center;flex-wrap:wrap;}
+    .mcard{min-width:0;}
   `;
 
   function statCard(v, label, cls) {
-    return `<div class="mstat ${cls || ''}"><div class="v">${esc(String(v))}</div><div class="l">${esc(label)}</div></div>`;
+    return `<div class="blora-card blora-stat mstat ${cls || ''}" data-size="sm"><div class="blora-stat__value">${esc(String(v))}</div><div class="blora-stat__label">${esc(label)}</div></div>`;
   }
 
   function permChip(p) {
     const label = PERM_GLOSSARY[p] || p;
-    return `<span class="chip perm" title="${esc(label)}">${esc(p)}</span>`;
+    return `<span class="blora-tag" data-variant="neutral" title="${esc(label)}">${esc(p)}</span>`;
   }
 
   function pluginRow(pl) {
     const open = !!manageState.expanded[pl.id];
-    const perms = (pl.permissions || []).map(permChip).join('') || '<span class="chip off">-</span>';
+    const perms = (pl.permissions || []).map(permChip).join('') || '<span class="blora-badge" data-variant="neutral">-</span>';
 
     const statusChips = [
-      pl.enabled ? '<span class="chip on">● 已启用</span>' : '<span class="chip off">○ 已禁用</span>',
-      pl.onDisk ? '' : '<span class="chip warn">磁盘缺失</span>',
-      pl.loaded ? '<span class="chip on">运行中</span>' : '',
-      pl.errorCount > 0 || pl.lastError ? `<span class="chip warn">错误 ${esc(String(pl.errorCount))}</span>` : '',
-      pl.storeUpdateAvailable ? `<span class="chip warn">有更新 v${esc(String(pl.storeLatestVersion || ''))}</span>` : '',
+      pl.enabled ? '<span class="blora-badge" data-variant="success">已启用</span>' : '<span class="blora-badge" data-variant="neutral">已禁用</span>',
+      pl.onDisk ? '' : '<span class="blora-badge" data-variant="warning">磁盘缺失</span>',
+      pl.loaded ? '<span class="blora-badge" data-variant="success">运行中</span>' : '',
+      pl.errorCount > 0 || pl.lastError ? `<span class="blora-badge" data-variant="warning">错误 ${esc(String(pl.errorCount))}</span>` : '',
+      pl.storeUpdateAvailable ? `<span class="blora-badge" data-variant="warning">有更新 v${esc(String(pl.storeLatestVersion || ''))}</span>` : '',
     ].join('');
 
     const caps = [];
-    if (pl.pages?.length) caps.push(`<span class="chip cap">${esc(String(pl.pages.length))} 页面</span>`);
-    if (pl.slots?.length) caps.push(`<span class="chip cap">${esc(String(pl.slots.length))} 插槽</span>`);
-    if (pl.routes?.length) caps.push(`<span class="chip cap">${esc(String(pl.routes.length))} API</span>`);
-    if (pl.cron?.length) caps.push(`<span class="chip cap">${esc(String(pl.cron.length))} 定时任务</span>`);
-    if (pl.themes?.length) caps.push(`<span class="chip cap">${esc(String(pl.themes.length))} 主题</span>`);
-    const capsHtml = caps.join('') || '<span class="chip off">无能力注册</span>';
+    if (pl.pages?.length) caps.push(`<span class="blora-tag" data-variant="primary">${esc(String(pl.pages.length))} 页面</span>`);
+    if (pl.slots?.length) caps.push(`<span class="blora-tag" data-variant="primary">${esc(String(pl.slots.length))} 插槽</span>`);
+    if (pl.routes?.length) caps.push(`<span class="blora-tag" data-variant="primary">${esc(String(pl.routes.length))} API</span>`);
+    if (pl.cron?.length) caps.push(`<span class="blora-tag" data-variant="primary">${esc(String(pl.cron.length))} 定时任务</span>`);
+    if (pl.themes?.length) caps.push(`<span class="blora-tag" data-variant="primary">${esc(String(pl.themes.length))} 主题</span>`);
+    const capsHtml = caps.join('') || '<span class="blora-badge" data-variant="neutral">无能力注册</span>';
 
     const detail = open ? pluginDetail(pl, perms) : '';
     return `
-      <div class="mcard">
+      <div class="blora-card blora-stack mcard" data-size="sm">
         <div class="mhead">
           <div style="flex:1;min-width:260px;">
-            <div class="mtitle">🧩 ${esc(pl.name)} <span class="mtag">v${esc(pl.version || '-')} · ${esc(pl.id)}</span></div>
-            ${pl.author ? `<div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">作者：${esc(pl.author)}</div>` : ''}
-            ${pl.description ? `<div class="mdesc">${esc(pl.description)}</div>` : ''}
+            <div class="blora-card__title"><span data-icon="puzzle" aria-hidden="true"></span> ${esc(pl.name)} <span class="blora-tag" data-variant="neutral">v${esc(pl.version || '-')} · ${esc(pl.id)}</span></div>
+            ${pl.author ? `<div>作者：${esc(pl.author)}</div>` : ''}
+            ${pl.description ? `<div class="blora-card__desc">${esc(pl.description)}</div>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
             <div>${statusChips}</div>
-            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" ${pl.enabled ? 'checked' : ''} onchange="window.__pluginRT.toggle('${esc(pl.id)}', this.checked)"> ${esc(t('启用'))}</label>
+            <label><blora-switch ${pl.enabled ? 'checked' : ''} data-plugin-toggle="${esc(pl.id)}" label="${esc(t('启用'))}"></blora-switch> ${esc(t('启用'))}</label>
           </div>
         </div>
         <div style="margin-top:10px;">${capsHtml}</div>
         <div class="mmut">
-          ${pl.storeUpdateAvailable && pl.storeSource ? `<button class="btn btn-ghost btn-sm" style="color:var(--primary);" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')">${esc(t('更新'))}</button>` : ''}
-          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
-          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--destructive);" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
+          ${pl.storeUpdateAvailable && pl.storeSource ? `<button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')">${esc(t('更新'))}</button>` : ''}
+          <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
+          <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
+          <button type="button" class="blora-button" data-variant="danger" data-size="sm" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
         </div>
         ${detail}
       </div>`;
@@ -574,45 +568,48 @@
 
   function pluginDetail(pl, perms) {
     const routesHtml = (pl.routes || []).map(r =>
-      `${esc((r.method || 'GET').toUpperCase())} <code style="font-family:monospace;">/api/plugins/${esc(pl.id)}${esc(r.path)}</code> <span style="color:var(--muted-foreground);font-size:11px;">(${esc(r.auth || 'user')})</span>`
+      `${esc((r.method || 'GET').toUpperCase())} <code style="font-family:monospace;">/api/plugins/${esc(pl.id)}${esc(r.path)}</code> <span>(${esc(r.auth || 'user')})</span>`
     ).join('<br>');
     const cronHtml = (pl.cron || []).map(c =>
-      `<code style="font-family:monospace;">${esc(c.expr || '-')}</code> <span style="color:var(--muted-foreground);font-size:11px;">→ ${esc(c.handler || '-')}</span>`
+      `<code style="font-family:monospace;">${esc(c.expr || '-')}</code> <span>→ ${esc(c.handler || '-')}</span>`
     ).join('<br>');
     const themesHtml = (pl.themes || []).map(th => esc(th.name || th.id)).join('、');
     const cfgText = esc(JSON.stringify(pl.config || {}, null, 2));
 
     return `
-      <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:4px;">
-        <div class="msec">${esc(t('权限声明'))}</div>
+      <div>
+        <div class="blora-text-muted">${esc(t('权限声明'))}</div>
         <div>${perms}</div>
-        ${pl.routes?.length ? `<div class="msec">${esc(t('自有 API'))}</div><div style="font-size:12px;">${routesHtml}</div>` : ''}
-        ${pl.cron?.length ? `<div class="msec">${esc(t('定时任务'))}</div><div style="font-size:12px;">${cronHtml}</div>` : ''}
-        ${pl.themes?.length ? `<div class="msec">${esc(t('主题'))}</div><div style="font-size:12px;">${themesHtml}</div>` : ''}
-        <div class="msec">${esc(t('插件配置'))}(config)</div>
-        <textarea data-plugin-cfg="${esc(pl.id)}" rows="5" style="width:100%;font-family:monospace;font-size:12px;background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:8px;padding:8px;">${cfgText}</textarea>
+        ${pl.routes?.length ? `<div class="blora-text-muted">${esc(t('自有 API'))}</div><div>${routesHtml}</div>` : ''}
+        ${pl.cron?.length ? `<div class="blora-text-muted">${esc(t('定时任务'))}</div><div>${cronHtml}</div>` : ''}
+        ${pl.themes?.length ? `<div class="blora-text-muted">${esc(t('主题'))}</div><div>${themesHtml}</div>` : ''}
+        <div class="blora-text-muted">${esc(t('插件配置'))}(config)</div>
+        <blora-field label="${esc(t('插件配置'))}"><textarea class="blora-textarea" data-plugin-cfg="${esc(pl.id)}" rows="5">${cfgText}</textarea></blora-field>
         <div style="margin-top:6px;display:flex;gap:8px;">
-          <button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
-          <div data-plugin-cfg-msg="${esc(pl.id)}" style="font-size:12px;align-self:center;"></div>
+          <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
+          <div data-plugin-cfg-msg="${esc(pl.id)}"></div>
         </div>
-        <div class="msec">${esc(t('插件数据'))}(plugin_data)</div>
-        <div data-plugin-data="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p></div>
-        ${pl.lastError ? `<div class="msec">${esc(t('最近错误'))}</div><div style="font-size:12px;color:var(--destructive);">⚠ ${esc(pl.lastError)}</div>
-          <div style="margin-top:4px;"><button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')">${esc(t('清除错误并重载'))}</button></div>` : ''}
+        <div class="blora-text-muted">${esc(t('插件数据'))}(plugin_data)</div>
+        <div data-plugin-data="${esc(pl.id)}"><p>${esc(t('加载中...'))}</p></div>
+        ${pl.lastError ? `<div class="blora-text-muted">${esc(t('最近错误'))}</div><div><span data-icon="triangle-alert" aria-hidden="true"></span> ${esc(pl.lastError)}</div>
+          <div style="margin-top:4px;"><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')">${esc(t('清除错误并重载'))}</button></div>` : ''}
       </div>`;
   }
 
   async function renderPluginsAdmin(container, keepExpand) {
     if (!container) return;
-    if (!keepExpand) container.innerHTML = `<div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status"></div><div class="page-loading-text">${esc(t('加载中...'))}</div></div>`;
+    container.dataset.bloraState = 'loading';
+    if (!keepExpand) container.innerHTML = `<div class="page-loading page-loading-compact"><div class="blora-spinner" role="status"></div><div class="page-loading-text">${esc(t('加载中...'))}</div></div>`;
     let data;
     try {
       data = await helpers.fetchJSON('/api/admin/plugins');
     } catch (e) {
-      container.innerHTML = `<p style="color:var(--destructive)">${esc(t('加载失败'))}: ${esc(e.message)}</p>`;
+      container.dataset.bloraState = 'error';
+      container.innerHTML = `<div class="blora-stack"><blora-alert variant="danger" title="${esc(t('加载失败'))}" description="${esc(e.message)}"></blora-alert><button type="button" class="blora-button" data-variant="outline" onclick="window.__pluginRT.refresh()">${esc(t('重试'))}</button></div>`;
       return;
     }
-    manageState.plugins = data.plugins || [];
+    manageState.plugins = Array.isArray(data) ? data : (data.plugins || []);
+    container.dataset.bloraState = 'success';
 
     const q = manageState.search.trim().toLowerCase();
     const filtered = manageState.plugins.filter(pl =>
@@ -638,21 +635,24 @@
       <div class="section-header">
         <div>
           <h2>${esc(t('插件管理'))}</h2>
-          <p style="font-size:13px;color:var(--muted-foreground);margin:0;">${esc(t('安装方法：将插件目录放入服务器 plugins/ 目录，重启服务后在此启用。'))}</p>
+          <p>${esc(t('安装方法：将插件目录放入服务器 plugins/ 目录，重启服务后在此启用。'))}</p>
         </div>
-        <div class="mmut" style="margin-top:0;"><button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
+        <div class="mmut" style="margin-top:0;"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
       </div>
       <div class="mstat-grid">${stats}</div>
       <div class="msearch">
-        <input type="search" id="pluginSearchInput" class="input" style="flex:1;min-width:200px;" placeholder="${esc(t('搜索插件名称、ID、作者或描述'))}" value="${esc(manageState.search)}" oninput="window.__pluginRT.search(this.value)">
-        <select id="pluginSortSelect" class="select" onchange="window.__pluginRT.sort(this.value)">
-          <option value="id" ${manageState.sort === 'id' ? 'selected' : ''}>${esc(t('按名称排序'))}</option>
-          <option value="name" ${manageState.sort === 'name' ? 'selected' : ''}>${esc(t('按显示名排序'))}</option>
-          <option value="enabled" ${manageState.sort === 'enabled' ? 'selected' : ''}>${esc(t('按状态排序'))}</option>
-        </select>
+        <blora-search id="pluginSearchInput" label="${esc(t('搜索插件名称、ID、作者或描述'))}" placeholder="${esc(t('搜索插件名称、ID、作者或描述'))}" value="${esc(manageState.search)}"></blora-search>
+        <blora-select id="pluginSortSelect" aria-label="排序">
+          <blora-option value="id" ${manageState.sort === 'id' ? 'selected' : ''}>${esc(t('按名称排序'))}</blora-option>
+          <blora-option value="name" ${manageState.sort === 'name' ? 'selected' : ''}>${esc(t('按显示名排序'))}</blora-option>
+          <blora-option value="enabled" ${manageState.sort === 'enabled' ? 'selected' : ''}>${esc(t('按状态排序'))}</blora-option>
+        </blora-select>
       </div>
-      ${rows ? rows : `<p style="color:var(--muted-foreground);font-size:14px;">${q ? esc(t('未找到匹配插件')) : esc(t('暂无插件。将插件目录放入 plugins/ 后重启服务即可在此看到。'))}</p>`}
+      ${rows ? rows : `<blora-empty title="${q ? esc(t('未找到匹配插件')) : esc(t('暂无插件。将插件目录放入 plugins/ 后重启服务即可在此看到。'))}"></blora-empty>`}
     `;
+    container.querySelectorAll('[data-plugin-toggle]').forEach(control => control.addEventListener('change', () => window.__pluginRT.toggle(control.dataset.pluginToggle, control.checked)));
+    container.querySelector('#pluginSearchInput')?.addEventListener('input', event => window.__pluginRT.search(event.target.value));
+    container.querySelector('#pluginSortSelect')?.addEventListener('change', event => window.__pluginRT.sort(event.target.value));
   }
 
   function msg(id, text, ok) {
@@ -687,25 +687,25 @@
     async loadData(id) {
       const box = document.querySelector(`[data-plugin-data="${id}"]`);
       if (!box) return;
-      box.innerHTML = `<p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p>`;
+      box.innerHTML = `<p>${esc(t('加载中...'))}</p>`;
       try {
         const data = await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/data`);
         const rows = data.keys || [];
         if (!rows.length) {
-          box.innerHTML = `<p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('暂无数据'))}</p>`;
+          box.innerHTML = `<p>${esc(t('暂无数据'))}</p>`;
           return;
         }
-        box.innerHTML = `<table class="mtable">
+        box.innerHTML = `<table class="blora-table">
           <tr><th>${esc(t('键'))}</th><th>${esc(t('值'))}</th><th>${esc(t('更新时间'))}</th><th></th></tr>
           ${rows.map(r => `<tr>
             <td style="font-family:monospace;">${esc(r.key)}</td>
             <td style="font-family:monospace;max-width:320px;">${esc(JSON.stringify(r.value))}</td>
             <td style="white-space:nowrap;">${esc(String(r.updatedAt || '').slice(0, 19).replace('T', ' '))}</td>
-            <td><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px;" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')">${esc(t('删除'))}</button></td>
+            <td><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')">${esc(t('删除'))}</button></td>
           </tr>`).join('')}
         </table>`;
       } catch (e) {
-        box.innerHTML = `<p style="font-size:12px;color:var(--destructive);margin:0;">${esc(e.message)}</p>`;
+        box.innerHTML = `<p>${esc(e.message)}</p>`;
       }
     },
     async deleteData(id, key) {

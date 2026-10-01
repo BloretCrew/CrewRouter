@@ -19,11 +19,10 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script src="/blora/icons-full.global.js?v=2.1.0"></script>
   <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js"></script>
-  <style>@import url("/css/themes.css") layer(legacy);</style>
-  <style>@import url("/css/main.css") layer(legacy);</style>
-  <link rel="stylesheet" href="/css/store.css?v=1">
+  <link rel="stylesheet" href="/css/store.css?v=correction-2">
   <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function() {
@@ -45,39 +44,39 @@
       <blora-option value="en">EN</blora-option>
     </blora-select></div>
 
-  <div class="store-shell">
+  <div class="store-shell blora-container blora-stack">
     <header class="store-header">
       <div class="store-header__left">
-        <a class="store-brand" href="/store">
+        <a class="store-brand blora-button" href="/store">
           <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="CrewRouter" width="26" height="26" style="border-radius:6px;">
           <span class="store-brand__name">CrewRouter</span><span class="brand-edition-badge" data-edition-badge hidden></span>
           <span class="store-brand__tag blora-tag"><span data-i18n="插件商店">插件商店</span></span>
         </a>
       </div>
-      <nav class="store-nav">
-        <a class="store-nav__link" href="/store"><span data-i18n="浏览">浏览</span></a>
-        <a class="store-nav__link" id="navMine" href="/store#/mine" style="display:none;"><span data-i18n="我的插件">我的插件</span></a>
-        <a class="store-nav__link" id="navSubmit" href="/store#/submit"><span data-i18n="提交插件">提交插件</span></a>
-        <a class="store-nav__link" id="navAdmin" href="/store#/admin" style="display:none;"><span data-i18n="审核">审核</span></a>
-        <a class="store-nav__link" href="/data"><span data-i18n="统计">统计</span></a>
+      <nav class="store-nav blora-actions">
+        <a class="store-nav__link blora-button" href="/store"><span data-i18n="浏览">浏览</span></a>
+        <a class="store-nav__link blora-button" id="navMine" href="/store#/mine" style="display:none;"><span data-i18n="我的插件">我的插件</span></a>
+        <a class="store-nav__link blora-button" id="navSubmit" href="/store#/submit"><span data-i18n="提交插件">提交插件</span></a>
+        <a class="store-nav__link blora-button" id="navAdmin" href="/store#/admin" style="display:none;"><span data-i18n="审核">审核</span></a>
+        <a class="store-nav__link blora-button" href="/data"><span data-i18n="统计">统计</span></a>
         <span class="store-nav__spacer"></span>
         <span class="store-nav__user" id="storeUserBox" style="display:none;"></span>
-        <button class="btn btn-sm btn-secondary blora-button" id="storeLoginBtn" type="button"><span data-i18n="登录">登录</span></button>
-        <button class="btn btn-sm btn-outline blora-button" id="storeLogoutBtn" style="display:none;" type="button"><span data-i18n="登出">登出</span></button>
+        <button class="blora-button" id="storeLoginBtn" type="button"><span data-i18n="登录">登录</span></button>
+        <button class="blora-button" id="storeLogoutBtn" style="display:none;" type="button"><span data-i18n="登出">登出</span></button>
       </nav>
     </header>
 
     <div class="store-banner" id="storeBanner" style="display:none;"></div>
 
-    <main class="store-main" id="store-view">
+    <main class="store-main blora-stack blora-stack--xl" id="store-view">
       <div class="page-loading"><div class="blora-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
     </main>
   </div>
 
   <script src="/js/i18n.js?v=2"></script>
-  <script src="/js/theme.js?v=2"></script>
+  <script src="/js/theme.js?v=correction-2"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/store.js?v=5"></script>
+  <script src="/js/store.js?v=correction-2"></script>
   <script>
     (function () {
       function apply() { if (window.I18N) I18N.applyDom(); }

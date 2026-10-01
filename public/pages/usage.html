@@ -16,11 +16,10 @@
   <title data-i18n="密钥用量详情">密钥用量详情</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-  <style>@import url("/css/themes.css") layer(legacy);</style>
-  <style>@import url("/css/main.css?v=25") layer(legacy);</style>
   <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
-  <link rel="stylesheet" href="/css/usage.css?v=1">
+  <link rel="stylesheet" href="/css/usage.css?v=correction-2">
   <script src="/js/i18n.js?v=2"></script>
+  <script src="/blora/icons-full.global.js?v=2.1.0"></script>
   <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js?v=2.1.0"></script>
   <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
@@ -28,9 +27,9 @@
   <script type="module" src="/js/blora-services.js?v=2.1.0"></script>
 </head>
 <body class="blora-page blora-scope usage-page">
-  <main class="usage-shell">
-    <header class="usage-header">
-      <a class="usage-back-link" href="/console#apiKeys">
+  <main class="usage-shell blora-container blora-stack blora-stack--xl">
+    <header class="usage-header blora-row blora-row--between">
+      <a class="usage-back-link blora-button" href="/console#apiKeys">
         <span data-icon="chevron-left" aria-hidden="true"></span>
         <span data-i18n="返回 API Key 与用量">返回 API Key 与用量</span>
       </a>
@@ -46,7 +45,7 @@
     <section class="usage-card blora-stack" aria-labelledby="usageTitle">
       <div class="usage-title-row">
         <div>
-          <p class="usage-eyebrow" data-i18n="API Key 与用量">API Key 与用量</p>
+          <p class="usage-eyebrow blora-text-muted" data-i18n="API Key 与用量">API Key 与用量</p>
           <h1 class="blora-h2" id="usageTitle"><span data-i18n="密钥用量详情">密钥用量详情</span></h1>
         </div>
         <span class="brand-edition-badge" data-edition-badge hidden></span>
@@ -61,6 +60,6 @@
     </section>
   </main>
   <script src="/js/edition-badge.js?v=1"></script>
-  <script src="/js/usage.js?v=1"></script>
+  <script src="/js/usage.js?v=correction-2"></script>
 </body>
 </html>

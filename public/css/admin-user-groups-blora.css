@@ -4,50 +4,34 @@
   --groups-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
 }
 
-.cr-admin-user-groups-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
 .cr-admin-user-groups-page .admin-stat-cards {
   gap: var(--blora-space-3);
 }
 
-.cr-admin-user-groups-page .admin-filter-bar {
+.cr-admin-user-groups-page .cr-admin-filters {
   gap: var(--blora-space-2);
   padding: var(--blora-space-3);
 
 }
 
-.cr-admin-user-groups-page .admin-filter-bar .input {
+.cr-admin-user-groups-page .cr-admin-filters .input {
   min-height: 2.5rem;
 
 }
 
-.cr-admin-user-groups-page .section-actions .blora-button,
-.cr-admin-user-groups-page .models-table td .blora-button {
-  min-height: 2.5rem;
-
-}
-
-.cr-admin-user-groups-page .section-actions .blora-button svg,
-.cr-admin-user-groups-page .models-table td .blora-button svg {
-  flex: 0 0 auto;
-}
-
-.cr-admin-user-groups-page .models-table td:last-child {
+.cr-admin-user-groups-page .cr-admin-table-host td:last-child {
   white-space: nowrap;
 }
 
-.cr-admin-user-groups-page .models-table,
-.cr-admin-user-groups-page .users-table,
+.cr-admin-user-groups-page .cr-admin-table-host,
+.cr-admin-user-groups-page .cr-admin-table-host,
 .cr-admin-user-groups-page .rules-list {
   overflow-x: auto;
 
 }
 
-.cr-admin-user-groups-page .models-table table,
-.cr-admin-user-groups-page .users-table table {
+.cr-admin-user-groups-page .cr-admin-table-host table,
+.cr-admin-user-groups-page .cr-admin-table-host table {
   min-width: 52rem;
 
 }
@@ -58,14 +42,4 @@
 }
 
 @media (max-width: 640px) {
-  .cr-admin-user-groups-page > .content-section,
-  .cr-admin-user-groups-page #userGroupDetailPanel > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .cr-admin-user-groups-page .admin-filter-bar .input,
-  .cr-admin-user-groups-page .admin-filter-bar .blora-button {
-    width: 100%;
-    flex: 1 1 100%;
-  }
 }

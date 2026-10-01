@@ -1,10 +1,5 @@
 
 
-.cr-project-work-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
 .cr-project-work-page .project-work-heading {
   gap: var(--blora-space-5);
   margin-bottom: var(--blora-space-5);
@@ -16,19 +11,7 @@
   gap: var(--blora-space-3);
 }
 
-.cr-project-work-page .project-work-stat {
-  padding: var(--blora-space-5);
-}
-
-.cr-project-work-page .project-work-project-card:hover {
-
-  transform: translateY(-1px);
-}
-
 @media (max-width: 800px) {
-  .cr-project-work-page > .content-section {
-    padding: var(--blora-space-4);
-  }
 
   .cr-project-work-page .project-work-heading {
     padding: var(--blora-space-4);

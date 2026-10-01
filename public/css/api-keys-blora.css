@@ -40,13 +40,7 @@
 
 .cr-api-keys-page .api-key-card {
   min-height: 0;
-  padding: var(--blora-space-4);
 
-}
-
-.cr-api-keys-page .api-key-card:hover {
-
-  transform: translateY(-1px);
 }
 
 .cr-api-keys-page .api-key-card::before {
@@ -164,10 +158,6 @@
     padding: var(--blora-space-4);
   }
 
-  .cr-api-keys-page .api-key-card {
-    padding: var(--blora-space-4);
-  }
-
   .cr-api-keys-page .api-key-footer {
     align-items: stretch;
   }
@@ -180,4 +170,36 @@
   .cr-api-keys-page .api-key-actions .blora-button {
     flex: 1 1 auto;
   }
+}
+
+.cr-api-keys-page .api-key-card,
+.cr-api-keys-page .api-key-title-text,
+.cr-api-keys-page .api-key-prefix,
+.cr-api-keys-page .api-key-route-pill-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cr-api-keys-page .api-key-prefix blora-copy {
+  display: block;
+  min-width: 0;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.cr-api-keys-page .api-key-header,
+.cr-api-keys-page .api-key-name-row,
+.cr-api-keys-page .api-key-subline,
+.cr-api-keys-page .api-key-metrics,
+.cr-api-keys-page .api-key-footer {
+  flex-wrap: wrap;
+}
+
+.cr-api-keys-page .api-key-name,
+.cr-api-keys-page .api-key-subline {
+  overflow-wrap: anywhere;
+}
+
+.cr-api-keys-page .api-key-group-title {
+  margin: 0;
 }

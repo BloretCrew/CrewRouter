@@ -1,0 +1,8 @@
+{"route":"console#apiKeys","width":1440,"theme":"light","skin":"ocean","failed":[]}
+{"route":"console#apiKeys","width":1440,"theme":"light","skin":"linear","failed":[]}
+{"route":"console#apiKeys","width":1440,"theme":"light","skin":"paper","failed":["plugin-theme-loaded-official-token-change"]}
+{"route":"console#apiKeys","width":1440,"theme":"light","skin":"terminal","failed":[]}
+{"route":"console#apiKeys","width":1440,"theme":"light","skin":"raycast","failed":[]}
+{"route":"console#apiKeys","width":1440,"theme":"light","skin":"classic","failed":[]}
+{"route":"console#apiKeys","width":1440,"theme":"light","skin":"all-capabilities-theme","failed":[]}
+{"observations":7,"pages":1,"routes":6,"themes":["default","ocean","linear","paper","terminal","raycast","classic","all-capabilities-theme"],"screenshots":21,"passed":118,"failed":1,"errors":0,"sourceChanges":["public/js/app.js","public/js/blora-agent.js","public/pages/console.html"],"stale":true,"limitations":["Demo only; mutations may not persist. No real OAuth, payment or inference acceptance.","All entry pages get default four combinations. Plugin themes use API keys representative page only.","Viewport screenshots and measured surfaces are not a proof of all offscreen visuals.","Surface evidence contains actual matched stylesheet rules, not an assertion that zero overflow means visual correctness."]}

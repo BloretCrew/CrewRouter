@@ -35,7 +35,13 @@
   function showError(msgKey) {
     loadingEl.hidden = true;
     formEl.hidden = true;
-    errorEl.textContent = t(msgKey);
+    errorEl.innerHTML = '<blora-alert variant="danger" title="' + esc(t(msgKey)) + '"></blora-alert>';
+    if (msgKey === '加载失败') {
+      var retry = document.createElement('button');
+      retry.type = 'button'; retry.className = 'blora-button'; retry.dataset.variant = 'outline'; retry.textContent = t('重试');
+      retry.addEventListener('click', function () { errorEl.classList.remove('show'); loadingEl.hidden = false; init(); });
+      errorEl.appendChild(retry);
+    }
     errorEl.classList.add('show');
   }
 
@@ -61,7 +67,7 @@
         + '<span class="blora-list__meta">' + esc(t(descKey || s)) + ' <code class="blora-code">' + esc(s) + '</code></span>'
         + '</li>';
     });
-    scopeListEl.innerHTML = html || '<li class="blora-list__item">-</li>';
+    scopeListEl.innerHTML = html || '<li class="blora-list__item">' + esc(t('没有申请额外权限')) + '</li>';
   }
 
   function renderKeys(apiKeys, defaultId) {
@@ -75,7 +81,7 @@
       html += '<blora-option value="' + esc(k.id) + '"' + selected + '>' + esc(k.name || ('API Key #' + k.id)) + '</blora-option>';
     });
     keySelectEl.innerHTML = html;
-    var first = defaultId != null ? defaultId : apiKeys[0].id;
+    var first = apiKeys.some(function (key) { return String(key.id) === String(defaultId); }) ? defaultId : apiKeys[0].id;
     keySelectEl.setAttribute('value', String(first));
     customElements.whenDefined('blora-select').then(function () {
       requestAnimationFrame(function () { keySelectEl.value = String(first); });

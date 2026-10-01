@@ -1,0 +1,15 @@
+  PASS tool catalog is closed
+  PASS writes do not touch the database before approval
+  PASS deny does not change the database
+  PASS tool results omit secrets
+  PASS personal edition list_users does not throw
+  PASS unknown tools are rejected
+  PASS the same tool call stops on the third repeat
+  PASS manage loop asks before marking a model as image
+  PASS openai and anthropic tool calls both parse
+[config-loader] 已加载配置: /data/CrewRouter/config.json
+[36m[INFO][0m [数据库] 演示模式，跳过数据库连接
+  PASS manage routes require an admin and image routes do not
+  PASS agent API is mounted beside playground outside demo mode
+
+11 assertions passed

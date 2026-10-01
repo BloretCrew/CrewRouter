@@ -1,0 +1,164 @@
+node:assert:885
+    throw err;
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /var\(--blora-color-surface-default\)/. Input:
+
+'.blora-page {min-width: 320px; min-height: 100vh; margin: 0;}\n' +
+  '.login-container { min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; padding: var(--blora-space-6); box-sizing: border-box; }\n' +
+  '.login-bg { display: none; }\n' +
+  '.auth-card.login-card { width: min(100%, 42rem); max-width: 42rem; box-sizing: border-box; }\n' +
+  '.auth-card__header { display: flex; flex-direction: column; align-items: center; gap: var(--blora-space-2); margin-bottom: var(--blora-space-6); text-align: center; }\n' +
+  '.auth-card__logo { display: grid; width: 3rem; height: 3rem; margin-bottom: var(--blora-space-1); place-items: center; overflow: hidden; }\n' +
+  '.auth-card__logo img { width: 100%; height: 100%; object-fit: cover; display: block; }\n' +
+  '.auth-card .blora-field {margin-bottom: var(--blora-space-4);}\n' +
+  '.auth-inline-loading { display: inline-flex; align-items: center; gap: var(--blora-space-2); }\n' +
+  '.auth-actions { display: flex; flex-direction: column; gap: var(--blora-space-3); margin-top: var(--blora-space-5); }\n' +
+  '.auth-actions .blora-button {width: 100%; box-sizing: border-box;}\n' +
+  '.login-alt-actions { width: 100%; }\n' +
+  '.auth-card .blora-divider[data-variant="text"] {margin-block: var(--blora-space-6) var(--blora-space-4);}\n' +
+  '.auth-oauth { display: grid; grid-template-columns: 1fr; gap: var(--blora-space-3); }\n' +
+  '.auth-oauth .login-oauth-item { min-width: 0; }\n' +
+  '.auth-oauth .blora-button {width: 100%; box-sizing: border-box;}\n' +
+  '.auth-simple-link { margin: var(--blora-space-4) 0 0; text-align: center; }\n' +
+  '.auth-error { display: none; width: 100%; box-sizing: border-box; margin-block-end: var(--blora-space-4); }\n' +
+  '.auth-error.show { display: flex; }\n' +
+  '.auth-card__footer { display: flex; align-items: center; justify-content: center; gap: var(--blora-space-1); margin-top: var(--blora-space-6); }\n' +
+  '.auth-lang { display: inline-block; }\n' +
+  '.auth-lang-select { width: auto; min-width: 5rem; }\n' +
+  '.auth-intro { display: flex; flex-direction: column; align-items: center; gap: var(--blora-space-2); margin-bottom: var(--blora-space-5); text-align: center; }\n' +
+  '.auth-intro__icon { display: grid; width: 3.5rem; height: 3.5rem; margin-bottom: var(--blora-space-1); place-items: center; }\n' +
+  '.auth-intro__icon img { width: 1.5rem; height: 1.5rem; display: block; }\n' +
+  '.auth-intro__title { margin: 0; }\n' +
+  '.auth-intro__desc { margin: 0; }\n' +
+  '.login-footer { display: none; }\n' +
+  '.setup-container { width: min(100% - (2 * var(--blora-space-4)), 47.5rem); margin: auto; padding: var(--blora-space-9) 0; }\n' +
+  '.setup-header { margin-block-end: var(--blora-space-6); }\n' +
+  '.setup-card { margin-block-end: var(--blora-space-4); }\n' +
+  '.setup-form { gap: var(--blora-space-4); }\n' +
+  '.setup-actions { gap: var(--blora-space-3); }\n' +
+  '@media (max-width: 480px) {\n' +
+  '.setup-container { padding-block: var(--blora-space-6); }\n' +
+  '}\n' +
+  '.setup-choice-list { display: grid; gap: var(--blora-space-3); }\n' +
+  '.oc-loading { display: flex; align-items: center; justify-content: center; gap: var(--blora-space-2); padding: var(--blora-space-8) 0; }\n' +
+  '.oc-loading[hidden], #ocForm[hidden] { display: none; }\n' +
+  '.oc-sub { margin: 0 0 var(--blora-space-5); text-align: center; }\n' +
+  '.oc-section-label { margin: var(--blora-space-4) 0 var(--blora-space-2); }\n' +
+  '.oc-scopes { margin: 0; padding: 0; overflow: hidden; }\n' +
+  '.oc-scopes .blora-list__item {align-items: flex-start;}\n' +
+  '.oc-scopes code {  white-space: nowrap; }\n' +
+  '.oc-scope-check { display: inline-flex; flex: none; margin-top: 0.15em; }\n' +
+  '.oc-scope-check img { width: 0.875rem; height: 0.875rem; display: block; }\n' +
+  '.oc-card blora-select { display: block; width: 100%; }\n' +
+  '.oc-hint { margin-top: var(--blora-space-2); }\n' +
+  '.oc-actions { display: flex; gap: var(--blora-space-3); margin-top: var(--blora-space-6); }\n' +
+  '.oc-actions .blora-button {flex: 1;}\n' +
+  '\n' +
+  '.auth-card, .setup-card { min-width: 0; }\n' +
+  '.auth-card__header { width: 100%; }\n' +
+  '.auth-card__header .blora-h2 { overflow-wrap: anywhere; }\n' +
+  '.auth-card__footer { flex-wrap: wrap; }\n' +
+  '.auth-simple-link { overflow-wrap: anywhere; }\n' +
+  '.oc-scopes { overflow-wrap: anywhere; }\n' +
+  '.oc-actions { flex-wrap: wrap; }\n'
+
+    at Object.<anonymous> (/data/CrewRouter/scripts/test-blora-public-batch-a.js:41:8)
+    at Module._compile (node:internal/modules/cjs/loader:1804:14)
+    at Object..js (node:internal/modules/cjs/loader:1936:10)
+    at Module.load (node:internal/modules/cjs/loader:1525:32)
+    at Module._load (node:internal/modules/cjs/loader:1327:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '.blora-page {min-width: 320px; min-height: 100vh; margin: 0;}\n' +
+    '.login-container { min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; padding: var(--blora-space-6); box-sizing: border-box; }\n' +
+    '.login-bg { display: none; }\n' +
+    '.auth-card.login-card { width: min(100%, 42rem); max-width: 42rem; box-sizing: border-box; }\n' +
+    '.auth-card__header { display: flex; flex-direction: column; align-items: center; gap: var(--blora-space-2); margin-bottom: var(--blora-space-6); text-align: center; }\n' +
+    '.auth-card__logo { display: grid; width: 3rem; height: 3rem; margin-bottom: var(--blora-space-1); place-items: center; overflow: hidden; }\n' +
+    '.auth-card__logo img { width: 100%; height: 100%; object-fit: cover; display: block; }\n' +
+    '.auth-card .blora-field {margin-bottom: var(--blora-space-4);}\n' +
+    '.auth-inline-loading { display: inline-flex; align-items: center; gap: var(--blora-space-2); }\n' +
+    '.auth-actions { display: flex; flex-direction: column; gap: var(--blora-space-3); margin-top: var(--blora-space-5); }\n' +
+    '.auth-actions .blora-button {width: 100%; box-sizing: border-box;}\n' +
+    '.login-alt-actions { width: 100%; }\n' +
+    '.auth-card .blora-divider[data-variant="text"] {margin-block: var(--blora-space-6) var(--blora-space-4);}\n' +
+    '.auth-oauth { display: grid; grid-template-columns: 1fr; gap: var(--blora-space-3); }\n' +
+    '.auth-oauth .login-oauth-item { min-width: 0; }\n' +
+    '.auth-oauth .blora-button {width: 100%; box-sizing: border-box;}\n' +
+    '.auth-simple-link { margin: var(--blora-space-4) 0 0; text-align: center; }\n' +
+    '.auth-error { display: none; width: 100%; box-sizing: border-box; margin-block-end: var(--blora-space-4); }\n' +
+    '.auth-error.show { display: flex; }\n' +
+    '.auth-card__footer { display: flex; align-items: center; justify-content: center; gap: var(--blora-space-1); margin-top: var(--blora-space-6); }\n' +
+    '.auth-lang { display: inline-block; }\n' +
+    '.auth-lang-select { width: auto; min-width: 5rem; }\n' +
+    '.auth-intro { display: flex; flex-direction: column; align-items: center; gap: var(--blora-space-2); margin-bottom: var(--blora-space-5); text-align: center; }\n' +
+    '.auth-intro__icon { display: grid; width: 3.5rem; height: 3.5rem; margin-bottom: var(--blora-space-1); place-items: center; }\n' +
+    '.auth-intro__icon img { width: 1.5rem; height: 1.5rem; display: block; }\n' +
+    '.auth-intro__title { margin: 0; }\n' +
+    '.auth-intro__desc { margin: 0; }\n' +
+    '.login-footer { display: none; }\n' +
+    '.setup-container { width: min(100% - (2 * var(--blora-space-4)), 47.5rem); margin: auto; padding: var(--blora-space-9) 0; }\n' +
+    '.setup-header { margin-block-end: var(--blora-space-6); }\n' +
+    '.setup-card { margin-block-end: var(--blora-space-4); }\n' +
+    '.setup-form { gap: var(--blora-space-4); }\n' +
+    '.setup-actions { gap: var(--blora-space-3); }\n' +
+    '@media (max-width: 480px) {\n' +
+    '.setup-container { padding-block: var(--blora-space-6); }\n' +
+    '}\n' +
+    '.setup-choice-list { display: grid; gap: var(--blora-space-3); }\n' +
+    '.oc-loading { display: flex; align-items: center; justify-content: center; gap: var(--blora-space-2); padding: var(--blora-space-8) 0; }\n' +
+    '.oc-loading[hidden], #ocForm[hidden] { display: none; }\n' +
+    '.oc-sub { margin: 0 0 var(--blora-space-5); text-align: center; }\n' +
+    '.oc-section-label { margin: var(--blora-space-4) 0 var(--blora-space-2); }\n' +
+    '.oc-scopes { margin: 0; padding: 0; overflow: hidden; }\n' +
+    '.oc-scopes .blora-list__item {align-items: flex-start;}\n' +
+    '.oc-scopes code {  white-space: nowrap; }\n' +
+    '.oc-scope-check { display: inline-flex; flex: none; margin-top: 0.15em; }\n' +
+    '.oc-scope-check img { width: 0.875rem; height: 0.875rem; display: block; }\n' +
+    '.oc-card blora-select { display: block; width: 100%; }\n' +
+    '.oc-hint { margin-top: var(--blora-space-2); }\n' +
+    '.oc-actions { display: flex; gap: var(--blora-space-3); margin-top: var(--blora-space-6); }\n' +
+    '.oc-actions .blora-button {flex: 1;}\n' +
+    '\n' +
+    '.auth-card, .setup-card { min-width: 0; }\n' +
+    '.auth-card__header { width: 100%; }\n' +
+    '.auth-card__header .blora-h2 { overflow-wrap: anywhere; }\n' +
+    '.auth-card__footer { flex-wrap: wrap; }\n' +
+    '.auth-simple-link { overflow-wrap: anywhere; }\n' +
+    '.oc-scopes { overflow-wrap: anywhere; }\n' +
+    '.oc-actions { flex-wrap: wrap; }\n',
+  expected: /var\(--blora-color-surface-default\)/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v24.13.1
+node:child_process:964
+    throw err;
+    ^
+
+Error: Command failed: /root/.nvm/versions/node/v24.13.1/bin/node /data/CrewRouter/scripts/test-blora-public-batch-a.js
+    at genericNodeError (node:internal/errors:985:15)
+    at wrappedFn (node:internal/errors:539:14)
+    at checkExecSyncError (node:child_process:925:11)
+    at execFileSync (node:child_process:961:15)
+    at Object.<anonymous> (/data/CrewRouter/scripts/verify-blora-public-batch-a.js:14:1)
+    at Module._compile (node:internal/modules/cjs/loader:1804:14)
+    at Object..js (node:internal/modules/cjs/loader:1936:10)
+    at Module.load (node:internal/modules/cjs/loader:1525:32)
+    at Module._load (node:internal/modules/cjs/loader:1327:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14) {
+  status: 1,
+  signal: null,
+  output: [ null, null, null ],
+  pid: 149756,
+  stdout: null,
+  stderr: null
+}
+
+Node.js v24.13.1

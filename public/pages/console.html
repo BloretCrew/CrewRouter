@@ -22,30 +22,30 @@
   <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js?v=2.1.0"></script>
   <script src="/js/blora-dialog.js?v=5"></script>
-  <link rel="stylesheet" href="/css/themes.css">
-  <link rel="stylesheet" href="/css/main.css?v=25">
-  <link rel="stylesheet" href="/css/model-library-blora.css?v=9">
-  <link rel="stylesheet" href="/css/console-blora.css?v=4">
+  <link rel="stylesheet" href="/css/themes.css?v=correction-2">
+  <link rel="stylesheet" href="/css/main.css?v=correction-2">
+  <link rel="stylesheet" href="/css/model-library-blora.css?v=correction-2">
+  <link rel="stylesheet" href="/css/console-blora.css?v=correction-2">
   <link rel="stylesheet" href="/css/badges-blora.css?v=1">
   <link rel="stylesheet" href="/css/progress-blora.css?v=1">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=1">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=1">
-  <link rel="stylesheet" href="/css/upstream-blora.css?v=1">
-  <link rel="stylesheet" href="/css/api-keys-blora.css?v=2">
+  <link rel="stylesheet" href="/css/upstream-blora.css?v=correction-2">
+  <link rel="stylesheet" href="/css/api-keys-blora.css?v=correction-2">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=1">
-  <link rel="stylesheet" href="/css/stats-blora.css?v=2">
+  <link rel="stylesheet" href="/css/stats-blora.css?v=correction-2">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=2">
   <link rel="stylesheet" href="/css/project-work.css?v=1">
-  <link rel="stylesheet" href="/css/project-work-blora.css?v=1">
-  <link rel="stylesheet" href="/css/leaderboard-blora.css?v=1">
-  <link rel="stylesheet" href="/css/docs-blora.css?v=1">
-  <link rel="stylesheet" href="/css/balance-blora.css?v=1">
-  <link rel="stylesheet" href="/css/audit-logs-blora.css?v=1">
+  <link rel="stylesheet" href="/css/project-work-blora.css?v=correction-2">
+  <link rel="stylesheet" href="/css/leaderboard-blora.css?v=correction-2">
+  <link rel="stylesheet" href="/css/docs-blora.css?v=correction-2">
+  <link rel="stylesheet" href="/css/balance-blora.css?v=correction-2">
+  <link rel="stylesheet" href="/css/audit-logs-blora.css?v=correction-2">
   <link rel="stylesheet" href="/css/settings.css?v=1">
-  <link rel="stylesheet" href="/css/settings-blora.css?v=1">
-  <link rel="stylesheet" href="/css/sessions-blora.css?v=3">
-  <link rel="stylesheet" href="/css/blora-agent.css?v=5">
-  <link rel="stylesheet" href="/css/prompts-blora.css?v=1">
+  <link rel="stylesheet" href="/css/settings-blora.css?v=correction-2">
+  <link rel="stylesheet" href="/css/sessions-blora.css?v=correction-2">
+  <link rel="stylesheet" href="/css/blora-agent.css?v=correction-2">
+  <link rel="stylesheet" href="/css/prompts-blora.css?v=correction-2">
   <link rel="stylesheet" href="/css/edition-badge.css?v=2">
   <script>
     (function() {
@@ -64,25 +64,15 @@
 <body class="blora-page blora-scope cr-console-shell">
   <!-- 移动端顶部导航栏 -->
   <div class="mobile-topbar">
-    <button type="button" class="blora-button mobile-hamburger" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单" data-variant="ghost">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-      </svg>
-    </button>
+    <button type="button" class="blora-button mobile-hamburger" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单" data-variant="ghost" data-icon="menu"></button>
     <div class="mobile-topbar-logo">
       <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">
     </div>
     <div class="mobile-topbar-title" id="mobilePageTitle"><span data-i18n="控制台">控制台</span></div>
-    <button type="button" id="themeToggleMobile" class="blora-button" title="切换主题" data-i18n-title="切换主题" style="width:32px;height:32px;" data-variant="secondary" data-size="icon">
-      <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-      </svg>
-      <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-      </svg>
-      <svg class="icon-system" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
-        <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-      </svg>
+    <button type="button" id="themeToggleMobile" class="blora-button" title="切换主题" data-i18n-title="切换主题" style="width:32px;height:32px;" data-variant="secondary" data-size="icon" data-icon="sun">
+
+
+
     </button>
   </div>
   <blora-drawer id="mobileSidebarDrawer" position="left" title="导航" close-label="关闭导航"></blora-drawer>
@@ -171,11 +161,11 @@
 
       <div class="sidebar-footer">
         <div class="user-info">
-          <img id="userAvatar" src="" alt="头像" data-i18n-title="头像" class="avatar">
+          <span class="blora-avatar" data-size="sm"><img id="userAvatar" src="" alt="头像" data-i18n-title="头像" class="avatar"></span>
           <span id="username"></span>
         </div>
-        <button type="button" id="logoutBtn" class="blora-button" title="登出" data-i18n-title="登出" data-variant="ghost" data-size="icon" aria-label="登出" data-i18n-aria-label="登出">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M21 3v18"/></svg>
+        <button type="button" id="logoutBtn" class="blora-button" title="登出" data-i18n-title="登出" data-variant="ghost" data-size="icon" aria-label="登出" data-i18n-aria-label="登出" data-icon="log-out">
+
         </button>
       </div>
     </aside>
@@ -185,59 +175,50 @@
       <div class="content-header">
         <h1 id="pageTitle" class="blora-h2"><span data-i18n="控制台">控制台</span></h1>
         <div class="theme-toggle">
-          <button type="button" id="themeToggle" class="blora-button" title="切换主题" data-i18n-title="切换主题" data-variant="secondary" data-size="icon">
-            <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="5"/>
-              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-            </svg>
-            <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
-            <svg class="icon-system" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
-              <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
+          <button type="button" id="themeToggle" class="blora-button" title="切换主题" data-i18n-title="切换主题" data-variant="secondary" data-size="icon" data-icon="sun">
+
+
+
           </button>
         </div>
       </div>
 
       <!-- 个人工作台：个人版默认入口，集中展示状态与快捷管理 -->
       <div id="homePage" class="page personal-home-page">
-        <section class="personal-home-hero">
+        <section class="personal-home-hero blora-card" data-size="sm">
           <div>
-            <span class="personal-home-eyebrow"><span data-i18n="个人版工作台">个人版工作台</span></span>
+            <span class="personal-home-eyebrow blora-text-muted"><span data-i18n="个人版工作台">个人版工作台</span></span>
             <h2 class="blora-card__title"><span data-i18n="把模型接入、密钥管理和使用情况放在一个地方">把模型接入、密钥管理和使用情况放在一个地方</span></h2>
             <p><span data-i18n="无需切换管理后台，直接完成个人 AI 网关的日常配置。">无需切换管理后台，直接完成个人 AI 网关的日常配置。</span></p>
           </div>
-          <div class="personal-home-hero-mark" aria-hidden="true">
-            <span></span><span></span><span></span>
-          </div>
+
         </section>
 
-        <section class="personal-home-stats" aria-label="个人使用概览">
-          <div class="personal-home-stat-card"><span class="personal-home-stat-label"><span data-i18n="近 30 天请求">近 30 天请求</span></span><strong id="homeTotalRequests">—</strong><span id="homeRequestsHint" class="personal-home-stat-hint"><span data-i18n="等待数据">等待数据</span></span></div>
-          <div class="personal-home-stat-card"><span class="personal-home-stat-label"><span data-i18n="Token 消耗">Token 消耗</span></span><strong id="homeTotalTokens">—</strong><span id="homeTokensHint" class="personal-home-stat-hint"><span data-i18n="近 30 天">近 30 天</span></span></div>
-          <div class="personal-home-stat-card"><span class="personal-home-stat-label"><span data-i18n="积分消耗">积分消耗</span></span><strong id="homeTotalCost">—</strong><span class="personal-home-stat-hint"><span data-i18n="按当前统计周期">按当前统计周期</span></span></div>
-          <div class="personal-home-stat-card"><span class="personal-home-stat-label"><span data-i18n="已配置密钥">已配置密钥</span></span><strong id="homeKeyCount">—</strong><span class="personal-home-stat-hint"><span data-i18n="可随时创建或调整">可随时创建或调整</span></span></div>
+        <section class="personal-home-stats blora-grid blora-grid--4" aria-label="个人使用概览">
+          <div class="personal-home-stat-card blora-card blora-stat" data-size="sm"><span class="personal-home-stat-label blora-stat__label"><span data-i18n="近 30 天请求">近 30 天请求</span></span><strong class="blora-stat__value" id="homeTotalRequests">—</strong><span id="homeRequestsHint" class="personal-home-stat-hint blora-text-muted"><span data-i18n="等待数据">等待数据</span></span></div>
+          <div class="personal-home-stat-card blora-card blora-stat" data-size="sm"><span class="personal-home-stat-label blora-stat__label"><span data-i18n="Token 消耗">Token 消耗</span></span><strong class="blora-stat__value" id="homeTotalTokens">—</strong><span id="homeTokensHint" class="personal-home-stat-hint blora-text-muted"><span data-i18n="近 30 天">近 30 天</span></span></div>
+          <div class="personal-home-stat-card blora-card blora-stat" data-size="sm"><span class="personal-home-stat-label blora-stat__label"><span data-i18n="积分消耗">积分消耗</span></span><strong class="blora-stat__value" id="homeTotalCost">—</strong><span class="personal-home-stat-hint blora-text-muted"><span data-i18n="按当前统计周期">按当前统计周期</span></span></div>
+          <div class="personal-home-stat-card blora-card blora-stat" data-size="sm"><span class="personal-home-stat-label blora-stat__label"><span data-i18n="已配置密钥">已配置密钥</span></span><strong class="blora-stat__value" id="homeKeyCount">—</strong><span class="personal-home-stat-hint blora-text-muted"><span data-i18n="可随时创建或调整">可随时创建或调整</span></span></div>
         </section>
 
         <section class="personal-home-grid">
-          <div class="content-section personal-home-actions blora-card" data-size="sm">
+          <div class="cr-console-section personal-home-actions blora-stack blora-stack--lg" data-size="sm">
             <div class="section-header"><div><h2 class="blora-card__title"><span data-i18n="快速管理">快速管理</span></h2><p class="blora-card__desc"><span data-i18n="常用配置一步直达">常用配置一步直达</span></p></div></div>
             <div class="personal-action-grid">
-              <button type="button" class="blora-button personal-action-card" onclick="app.navigateTo('myUpstream')" data-variant="ghost"><span class="personal-action-icon">＋</span><span><strong data-i18n="接入供应商">接入供应商</strong><small data-i18n="添加自己的 API 上游">添加自己的 API 上游</small></span><span class="personal-action-arrow" data-icon="arrow-right"></span></button>
-              <button type="button" class="blora-button personal-action-card" onclick="app.navigateTo('apiKeys')" data-variant="ghost"><span class="personal-action-icon">⌁</span><span><strong data-i18n="管理 API Key">管理 API Key</strong><small data-i18n="创建密钥并绑定模型">创建密钥并绑定模型</small></span><span class="personal-action-arrow" data-icon="arrow-right"></span></button>
-              <button type="button" class="blora-button personal-action-card" onclick="app.navigateTo('modelLibrary')" data-variant="ghost"><span class="personal-action-icon">◇</span><span><strong data-i18n="浏览模型库">浏览模型库</strong><small data-i18n="选择并测试可用模型">选择并测试可用模型</small></span><span class="personal-action-arrow" data-icon="arrow-right"></span></button>
+              <button type="button" class="blora-button personal-action-card" onclick="app.navigateTo('myUpstream')" data-variant="ghost"><span class="personal-action-icon" data-icon="plus" aria-hidden="true"></span><span><strong data-i18n="接入供应商">接入供应商</strong><small data-i18n="添加自己的 API 上游">添加自己的 API 上游</small></span><span class="personal-action-arrow" data-icon="arrow-right"></span></button>
+              <button type="button" class="blora-button personal-action-card" onclick="app.navigateTo('apiKeys')" data-variant="ghost"><span class="personal-action-icon" data-icon="key" aria-hidden="true"></span><span><strong data-i18n="管理 API Key">管理 API Key</strong><small data-i18n="创建密钥并绑定模型">创建密钥并绑定模型</small></span><span class="personal-action-arrow" data-icon="arrow-right"></span></button>
+              <button type="button" class="blora-button personal-action-card" onclick="app.navigateTo('modelLibrary')" data-variant="ghost"><span class="personal-action-icon" data-icon="library" aria-hidden="true"></span><span><strong data-i18n="浏览模型库">浏览模型库</strong><small data-i18n="选择并测试可用模型">选择并测试可用模型</small></span><span class="personal-action-arrow" data-icon="arrow-right"></span></button>
               <button type="button" class="blora-button personal-action-card" onclick="app.navigateTo('stats')" data-variant="ghost"><span class="personal-action-icon" data-icon="external-link"></span><span><strong data-i18n="查看使用统计">查看使用统计</strong><small data-i18n="了解请求与消耗趋势">了解请求与消耗趋势</small></span><span class="personal-action-arrow" data-icon="arrow-right"></span></button>
             </div>
           </div>
-          <div class="content-section personal-home-status blora-card" data-size="sm">
+          <div class="cr-console-section personal-home-status blora-stack blora-stack--lg" data-size="sm">
             <div class="section-header"><div><h2 class="blora-card__title"><span data-i18n="配置状态">配置状态</span></h2><p class="blora-card__desc"><span data-i18n="完成这几步即可开始使用">完成这几步即可开始使用</span></p></div></div>
             <div id="homeSetupChecklist" class="personal-checklist"><div class="personal-checklist-loading"><span class="loading-spinner sm"></span><span data-i18n="正在检查配置...">正在检查配置...</span></div></div>
           </div>
         </section>
 
-        <section class="content-section personal-home-tip blora-card" data-size="sm">
-          <div class="personal-home-tip-mark">i</div>
+        <section class="cr-console-section personal-home-tip blora-stack blora-stack--lg" data-size="sm">
+          <span class="personal-home-tip-mark" data-icon="info" aria-hidden="true"></span>
           <div><strong data-i18n="个人版已将管理能力整合到控制台">个人版已将管理能力整合到控制台</strong><p data-i18n="供应商、模型、API Key、统计和日志都可以从左侧直接管理。">供应商、模型、API Key、统计和日志都可以从左侧直接管理。</p></div>
           <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.navigateTo('docs')"><span data-i18n="查看接口文档">查看接口文档</span></button>
         </section>
@@ -294,10 +275,10 @@
         </div>
 
         <!-- 顶部操作栏：主路径常驻，高级能力收入「更多」（blora-dropdown，由 app.js 渲染） -->
-        <div class="model-library-header">
-          <div class="model-library-header-left">
+        <div class="model-library-header blora-row blora-row--between">
+          <div class="model-library-header-left blora-stack blora-stack--sm">
             <h2 class="blora-card__title"><span data-i18n="模型库">模型库</span></h2>
-            <span class="model-library-header-hint"><span data-i18n="点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定">点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定</span></span>
+            <span class="model-library-header-hint blora-text-muted"><span data-i18n="点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定">点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定</span></span>
           </div>
           <div class="model-library-header-actions" id="modelLibraryHeaderActions">
             <button type="button" class="blora-button" onclick="app.navigateTo('myUpstream')" title="管理自有供应商与模型" data-i18n-title="管理自有供应商与模型" data-variant="secondary" data-size="sm"><span class="app-icon" style="width:14px;height:14px;" data-icon="package" aria-hidden="true"></span><span data-i18n="我的上游">我的上游</span></button>
@@ -314,7 +295,7 @@
         </div>
 
         <!-- 当前 Key 绑定状态（主任务焦点） -->
-        <div id="modelLibraryBindingBar" class="model-library-binding-bar">
+        <div id="modelLibraryBindingBar" class="model-library-binding-bar blora-card blora-stack" data-size="sm">
           <div class="model-library-binding-main">
             <div class="model-library-binding-label"><span data-i18n="当前 Key">当前 Key</span></div>
             <div id="modelLibraryBindingSummary" class="model-library-binding-summary">
@@ -331,14 +312,14 @@
 
         <!-- 供应商额度概览 -->
         <div id="providerQuotaSection" class="model-quota-section" style="display:none;">
-          <div class="model-quota-section-header">
+          <div class="model-quota-section-header blora-row blora-row--between">
             <div>
               <h3 class="blora-card__title"><span data-i18n="供应商额度">供应商额度</span></h3>
               <p><span data-i18n="显示上次刷新（定时 / 手动）的结果">显示上次刷新（定时 / 手动）的结果</span></p>
             </div>
             <button type="button" id="providerQuotaRefreshBtn" class="blora-button model-quota-refresh" data-variant="ghost" data-size="icon" onclick="app.refreshProviderQuota()" title="刷新额度" data-i18n-title="刷新额度" aria-label="刷新额度" data-icon="refresh-cw"><span class="loading-spinner sm" aria-hidden="true"></span></button>
           </div>
-          <div id="providerQuotaGrid" data-blora-state="idle" class="model-quota-grid"></div>
+          <div id="providerQuotaGrid" data-blora-state="idle" class="model-quota-grid blora-grid blora-grid--4"></div>
         </div>
 
         <!-- 排序模式工具条：拖拽 + 一键按测试结果排序 -->
@@ -413,7 +394,7 @@
 
       <!-- 我的上游（供应商 + 模型 合并页） -->
       <div id="myUpstreamPage" class="page cr-upstream-page">
-        <div class="content-section blora-card" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
             <h2 class="blora-card__title"><span data-i18n="我的上游">我的上游</span></h2>
             <div class="section-actions blora-actions" id="myUpstreamProviderActions">
@@ -491,7 +472,7 @@
                 <div style="display:flex;align-items:center;gap:6px;">
                   <blora-switch id="batchEditMyModelsEnabledCheck"></blora-switch><span data-i18n="启用状态"> 启用状态
                 </span></div>
-                <blora-select id="batchEditMyModelsEnabled" class="select" style="margin-top:4px;" disabled>
+                <blora-select id="batchEditMyModelsEnabled" style="margin-top:4px;" disabled>
                   <blora-option value="true"><span data-i18n="启用">启用</span></blora-option>
                   <blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>
                 </blora-select>
@@ -551,25 +532,25 @@
           </div>
         </div>
 
-        <div class="content-section blora-card" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
             <h2 class="blora-card__title"><span data-i18n="API 密钥">API 密钥</span></h2>
             <button type="button" id="createApiKeyBtn" class="blora-button" data-variant="primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>
           </div>
 
           <!-- 我的 Key 用量概览（不含他人发起的 Co-Key） -->
-          <div class="usage-overview" id="usageOverview" style="display:none;" title="仅统计由您发起的 API Key 用量" data-i18n-title="仅统计由您发起的 API Key 用量">
-            <div class="usage-overview-item">
-              <span class="usage-overview-label"><span data-i18n="我的 Key 调用次数">我的 Key 调用次数</span></span>
-              <span class="usage-overview-value" id="totalRequests">0</span>
+          <div class="usage-overview blora-grid blora-grid--3" id="usageOverview" style="display:none;" title="仅统计由您发起的 API Key 用量" data-i18n-title="仅统计由您发起的 API Key 用量">
+            <div class="usage-overview-item blora-card blora-stat" data-size="sm">
+              <span class="blora-stat__label"><span data-i18n="我的 Key 调用次数">我的 Key 调用次数</span></span>
+              <span class="blora-stat__value" id="totalRequests">0</span>
             </div>
-            <div class="usage-overview-item">
-              <span class="usage-overview-label"><span data-i18n="我的 Key Token 消耗">我的 Key Token 消耗</span></span>
-              <span class="usage-overview-value" id="totalTokens">0</span>
+            <div class="usage-overview-item blora-card blora-stat" data-size="sm">
+              <span class="blora-stat__label"><span data-i18n="我的 Key Token 消耗">我的 Key Token 消耗</span></span>
+              <span class="blora-stat__value" id="totalTokens">0</span>
             </div>
-            <div class="usage-overview-item">
-              <span class="usage-overview-label"><span data-i18n="我的 Key 积分消耗">我的 Key 积分消耗</span></span>
-              <span class="usage-overview-value" id="totalCost"><span data-i18n="0 积分">0 积分</span></span>
+            <div class="usage-overview-item blora-card blora-stat" data-size="sm">
+              <span class="blora-stat__label"><span data-i18n="我的 Key 积分消耗">我的 Key 积分消耗</span></span>
+              <span class="blora-stat__value" id="totalCost"><span data-i18n="0 积分">0 积分</span></span>
             </div>
           </div>
 
@@ -581,36 +562,36 @@
           <div id="apiKeysStickySentinel" class="model-library-sticky-sentinel" aria-hidden="true"></div>
 
           <!-- 创建/编辑标签浮层 -->
-          <div id="createKeyTagPopover" class="key-tag-popover" style="display:none;">
-            <div class="key-tag-popover-arrow"></div>
-            <div class="key-tag-popover-content">
-              <div id="keyTagPopoverTitle" style="margin-bottom:8px;"><span data-i18n="创建标签">创建标签</span></div>
-              <input type="text" id="createKeyTagName" class="blora-input input" placeholder="标签名称" data-i18n-placeholder="标签名称" style="width:100%;margin-bottom:10px;" maxlength="20">
-              <div style="margin-bottom:6px;"><span data-i18n="选择颜色">选择颜色</span></div>
-              <div class="color-picker color-picker-row" id="createKeyTagColors">
-                <div class="color-dot selected" data-color="var(--info)"  onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--success)"  onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--warning)"  onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--danger)"  onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--purple)"  onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--pink)"  onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="var(--cyan)"  onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#f97316"  onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#84cc16"  onclick="app.selectTagColor(this)"></div>
-                <div class="color-dot" data-color="#6366f1"  onclick="app.selectTagColor(this)"></div>
-              </div>
-              <div style="display:flex;gap:8px;margin-top:12px;">
-                <button type="button" class="blora-button" id="keyTagPopoverSubmit" onclick="app.saveKeyTag()" style="flex:1;" data-variant="primary" data-size="sm"><span data-i18n="创建">创建</span></button>
-                <button type="button" class="blora-button" onclick="app.hideCreateKeyTagPopover()" data-variant="secondary" data-size="sm"><span data-i18n="取消">取消</span></button>
+          <blora-dialog id="createKeyTagPopover" size="sm" aria-labelledby="keyTagPopoverTitle">
+            <span slot="title" id="keyTagPopoverTitle">创建标签</span>
+            <div class="blora-stack">
+              <blora-field label="标签名称" required maxlength="20">
+                <input type="text" id="createKeyTagName" class="blora-input" maxlength="20" required>
+              </blora-field>
+              <div class="blora-stack blora-stack--sm">
+                <span class="blora-text-muted" data-i18n="选择颜色">选择颜色</span>
+                <blora-select id="createKeyTagColors" value="var(--info)" aria-label="标签颜色">
+                  <blora-option value="var(--info)">信息</blora-option>
+                  <blora-option value="var(--success)">成功</blora-option>
+                  <blora-option value="var(--warning)">提醒</blora-option>
+                  <blora-option value="var(--danger)">危险</blora-option>
+                  <blora-option value="var(--purple)">支持</blora-option>
+                  <blora-option value="var(--pink)">分类</blora-option>
+                  <blora-option value="var(--cyan)">其他</blora-option>
+                </blora-select>
               </div>
             </div>
-          </div>
+            <div slot="footer" class="blora-actions blora-actions--end">
+              <button type="button" class="blora-button" onclick="app.hideCreateKeyTagPopover()" data-variant="outline"><span data-i18n="取消">取消</span></button>
+              <button type="button" class="blora-button" id="keyTagPopoverSubmit" onclick="app.saveKeyTag()" data-variant="primary"><span data-i18n="创建">创建</span></button>
+            </div>
+          </blora-dialog>
 
           <div id="apiKeysList" data-blora-state="loading" class="api-keys-list"></div>
     </div>
 
       <!-- 授权管理（自有 OAuth 服务签发的客户端授权，与 Passport 无关） -->
-      <div class="content-section blora-card" style="margin-top:16px;" data-size="sm">
+      <div class="cr-console-section blora-stack blora-stack--lg" style="margin-top:16px;" data-size="sm">
         <div class="section-header">
           <div>
             <h2 class="blora-card__title"><span data-i18n="授权管理">授权管理</span></h2>
@@ -624,7 +605,7 @@
 
       <!-- 统计信息页面 -->
       <div id="statsPage" class="page cr-stats-page">
-        <div class="content-section blora-stack">
+        <div class="cr-console-section blora-stack blora-stack--lg">
           <div class="section-header">
             <div>
               <h2 class="blora-card__title"><span data-i18n="使用统计">使用统计</span></h2>
@@ -637,9 +618,9 @@
 
           <!-- 筛选器区域 -->
           <div class="stats-filters">
-            <div class="stats-filter-group">
-              <label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label>
-              <blora-select id="statsTimeRange" class="select" >
+            <div class="stats-filter-group blora-stack blora-stack--sm">
+              <label class="stats-filter-label blora-text-muted"><span data-i18n="时间范围">时间范围</span></label>
+              <blora-select id="statsTimeRange" >
                 <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
                 <blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option>
                 <blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option>
@@ -648,27 +629,27 @@
                 <blora-option value="custom"><span data-i18n="自定义">自定义</span></blora-option>
               </blora-select>
             </div>
-            <div class="stats-filter-group">
-              <label class="stats-filter-label"><span data-i18n="模型">模型</span></label>
-              <blora-select id="statsModelFilter" class="select" >
+            <div class="stats-filter-group blora-stack blora-stack--sm">
+              <label class="stats-filter-label blora-text-muted"><span data-i18n="模型">模型</span></label>
+              <blora-select id="statsModelFilter" >
                 <blora-option value=""><span data-i18n="全部模型">全部模型</span></blora-option>
               </blora-select>
             </div>
-            <div class="stats-filter-group">
-              <label class="stats-filter-label"><span data-i18n="供应商">供应商</span></label>
-              <blora-select id="statsProviderFilter" class="select" >
+            <div class="stats-filter-group blora-stack blora-stack--sm">
+              <label class="stats-filter-label blora-text-muted"><span data-i18n="供应商">供应商</span></label>
+              <blora-select id="statsProviderFilter" >
                 <blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
               </blora-select>
             </div>
-            <div class="stats-filter-group">
-              <label class="stats-filter-label">Team</label>
-              <blora-select id="statsTeamFilter" class="select" >
+            <div class="stats-filter-group blora-stack blora-stack--sm">
+              <label class="stats-filter-label blora-text-muted">Team</label>
+              <blora-select id="statsTeamFilter" >
                 <blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option>
               </blora-select>
             </div>
-            <div class="stats-filter-group">
-              <label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label>
-              <blora-select id="statsSourceFilter" class="select"  title="按 harness / 客户端筛选" data-i18n-title="按 harness / 客户端筛选">
+            <div class="stats-filter-group blora-stack blora-stack--sm">
+              <label class="stats-filter-label blora-text-muted"><span data-i18n="客户端">客户端</span></label>
+              <blora-select id="statsSourceFilter"  title="按 harness / 客户端筛选" data-i18n-title="按 harness / 客户端筛选">
                 <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
                 <blora-option value="grok">Grok</blora-option>
                 <blora-option value="codex">Codex</blora-option>
@@ -681,7 +662,7 @@
                 <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
               </blora-select>
             </div>
-            <div class="stats-filter-group" style="align-self:flex-end;">
+            <div class="stats-filter-group blora-stack blora-stack--sm" style="align-self:flex-end;">
               <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.resetStatsFilters()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg><span data-i18n="重置">
                 重置
@@ -697,55 +678,55 @@
           </div>
 
           <!-- 概览卡片 -->
-          <div class="stats-overview-grid">
-            <div class="stats-overview-card blora-card"  data-size="sm">
-              <div class="stats-overview-icon">
+          <div class="stats-overview-grid blora-grid">
+            <div class="cr-console-overview-card blora-card"  data-size="sm">
+              <div class="cr-console-overview-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
               </div>
-              <div class="stats-overview-content">
-                <span class="stats-overview-label blora-stat__label"><span data-i18n="总请求数">总请求数</span></span>
-                <span class="stats-overview-value blora-stat__value" id="statsTotalRequests">0</span>
-                <span class="stats-overview-sub blora-text-muted" id="statsAvgDailyRequests"></span>
+              <div class="blora-stat">
+                <span class="blora-stat__label"><span data-i18n="总请求数">总请求数</span></span>
+                <span class="blora-stat__value" id="statsTotalRequests">0</span>
+                <span class="blora-text-muted" id="statsAvgDailyRequests"></span>
               </div>
             </div>
-            <div class="stats-overview-card blora-card"  data-size="sm">
-              <div class="stats-overview-icon">
+            <div class="cr-console-overview-card blora-card"  data-size="sm">
+              <div class="cr-console-overview-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               </div>
-              <div class="stats-overview-content">
-                <span class="stats-overview-label blora-stat__label"><span data-i18n="总 Token 消耗">总 Token 消耗</span></span>
-                <span class="stats-overview-value blora-stat__value" id="statsTotalTokens">0</span>
-                <span class="stats-overview-sub blora-text-muted" id="statsTokenBreakdown"></span>
+              <div class="blora-stat">
+                <span class="blora-stat__label"><span data-i18n="总 Token 消耗">总 Token 消耗</span></span>
+                <span class="blora-stat__value" id="statsTotalTokens">0</span>
+                <span class="blora-text-muted" id="statsTokenBreakdown"></span>
               </div>
             </div>
-            <div class="stats-overview-card blora-card"  data-size="sm">
-              <div class="stats-overview-icon">
+            <div class="cr-console-overview-card blora-card"  data-size="sm">
+              <div class="cr-console-overview-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               </div>
-              <div class="stats-overview-content">
-                <span class="stats-overview-label blora-stat__label"><span data-i18n="总积分消耗">总积分消耗</span></span>
-                <span class="stats-overview-value blora-stat__value" id="statsTotalCost"><span data-i18n="0 积分">0 积分</span></span>
-                <span class="stats-overview-sub blora-text-muted" id="statsAvgDailyCost"></span>
+              <div class="blora-stat">
+                <span class="blora-stat__label"><span data-i18n="总积分消耗">总积分消耗</span></span>
+                <span class="blora-stat__value" id="statsTotalCost"><span data-i18n="0 积分">0 积分</span></span>
+                <span class="blora-text-muted" id="statsAvgDailyCost"></span>
               </div>
             </div>
-            <div class="stats-overview-card blora-card"  data-size="sm">
-              <div class="stats-overview-icon">
+            <div class="cr-console-overview-card blora-card"  data-size="sm">
+              <div class="cr-console-overview-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               </div>
-              <div class="stats-overview-content">
-                <span class="stats-overview-label blora-stat__label"><span data-i18n="平均延迟">平均延迟</span></span>
-                <span class="stats-overview-value blora-stat__value" id="statsAvgLatency">0ms</span>
-                <span class="stats-overview-sub blora-text-muted" id="statsAvgTokensPerReq"></span>
+              <div class="blora-stat">
+                <span class="blora-stat__label"><span data-i18n="平均延迟">平均延迟</span></span>
+                <span class="blora-stat__value" id="statsAvgLatency">0ms</span>
+                <span class="blora-text-muted" id="statsAvgTokensPerReq"></span>
               </div>
             </div>
-            <div class="stats-overview-card blora-card"  title="已识别为已知 harness 的请求占比（排除未知/其他）" data-i18n-title="已识别为已知 harness 的请求占比（排除未知/其他）" data-size="sm">
-              <div class="stats-overview-icon">
+            <div class="cr-console-overview-card blora-card"  title="已识别为已知 harness 的请求占比（排除未知/其他）" data-i18n-title="已识别为已知 harness 的请求占比（排除未知/其他）" data-size="sm">
+              <div class="cr-console-overview-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </div>
-              <div class="stats-overview-content">
-                <span class="stats-overview-label blora-stat__label"><span data-i18n="客户端识别率">客户端识别率</span></span>
-                <span class="stats-overview-value blora-stat__value" id="statsIdentifiedRate">0%</span>
-                <span class="stats-overview-sub blora-text-muted" id="statsActiveSources"></span>
+              <div class="blora-stat">
+                <span class="blora-stat__label"><span data-i18n="客户端识别率">客户端识别率</span></span>
+                <span class="blora-stat__value" id="statsIdentifiedRate">0%</span>
+                <span class="blora-text-muted" id="statsActiveSources"></span>
               </div>
             </div>
           </div>
@@ -773,9 +754,7 @@
               </div>
               <span id="cacheHitPercent" class="cache-hit-percent">0%</span>
             </div>
-            <div class="cache-hit-bar-container">
-              <div id="cacheHitBar" class="cache-hit-bar"></div>
-            </div>
+            <blora-progress id="cacheHitBar" value="0" label="Prompt 缓存命中"></blora-progress>
             <div class="cache-hit-stats">
               <div class="cache-hit-stat">
                 <span class="cache-hit-stat-label"><span data-i18n="缓存命中 Token">缓存命中 Token</span></span>
@@ -954,19 +933,19 @@
           <!-- 每日趋势 -->
           <div id="statsTabDaily" class="stats-tab-content">
             <div class="responsive-grid-2">
-              <div class="chart-card blora-card" data-size="sm">
+              <div class="cr-console-chart blora-card" data-size="sm">
                 <h4 class="blora-card__title"><span data-i18n="每日请求数">每日请求数</span></h4>
                 <div class="chart-container"><canvas id="userDailyRequestsChart"></canvas></div>
               </div>
-              <div class="chart-card blora-card" data-size="sm">
+              <div class="cr-console-chart blora-card" data-size="sm">
                 <h4 class="blora-card__title"><span data-i18n="每日 Token 消耗">每日 Token 消耗</span></h4>
                 <div class="chart-container"><canvas id="userDailyTokensChart"></canvas></div>
               </div>
-              <div class="chart-card blora-card" data-size="sm">
+              <div class="cr-console-chart blora-card" data-size="sm">
                 <h4 class="blora-card__title"><span data-i18n="每日积分消耗">每日积分消耗</span></h4>
                 <div class="chart-container"><canvas id="userDailyCostChart"></canvas></div>
               </div>
-              <div class="chart-card blora-card" data-size="sm">
+              <div class="cr-console-chart blora-card" data-size="sm">
                 <h4 class="blora-card__title"><span data-i18n="平均延迟">平均延迟</span></h4>
                 <div class="chart-container"><canvas id="userDailyLatencyChart"></canvas></div>
               </div>
@@ -994,7 +973,7 @@
 
           <!-- 时段分布 -->
           <div id="statsTabHourly" class="stats-tab-content" style="display:none;">
-            <div class="chart-card blora-card" data-size="sm">
+            <div class="cr-console-chart blora-card" data-size="sm">
               <h4 class="blora-card__title"><span data-i18n="每小时请求分布（24小时）">每小时请求分布（24小时）</span></h4>
               <div class="chart-container"><canvas id="userHourlyChart"></canvas></div>
     </div>
@@ -1003,11 +982,11 @@
           <!-- 模型分析 -->
           <div id="statsTabModel" class="stats-tab-content" style="display:none;">
             <div class="responsive-grid-2">
-              <div class="chart-card blora-card" data-size="sm">
+              <div class="cr-console-chart blora-card" data-size="sm">
                 <h4 class="blora-card__title"><span data-i18n="模型请求数分布">模型请求数分布</span></h4>
                 <div class="chart-container"><canvas id="userModelRequestsChart"></canvas></div>
               </div>
-              <div class="chart-card blora-card" data-size="sm">
+              <div class="cr-console-chart blora-card" data-size="sm">
                 <h4 class="blora-card__title"><span data-i18n="模型积分分布">模型积分分布</span></h4>
                 <div class="chart-container"><canvas id="userModelCostChart"></canvas></div>
               </div>
@@ -1039,20 +1018,20 @@
               按 harness 客户端汇总用量。识别依赖 User-Agent / 专用头 / 提示词指纹；自定义 system 或历史数据可能显示为「未知/其他」。
             </span></p>
             <div class="responsive-grid-2" style="margin-bottom:20px;">
-              <div class="chart-card blora-card" data-size="sm">
+              <div class="cr-console-chart blora-card" data-size="sm">
                 <h4 class="blora-card__title"><span data-i18n="请求数分布">请求数分布</span></h4>
                 <div class="chart-container" style="max-height:320px;"><canvas id="userSourceRequestsChart"></canvas></div>
               </div>
-              <div class="chart-card blora-card" data-size="sm">
+              <div class="cr-console-chart blora-card" data-size="sm">
                 <h4 class="blora-card__title"><span data-i18n="积分分布">积分分布</span></h4>
                 <div class="chart-container" style="max-height:320px;"><canvas id="userSourceCostChart"></canvas></div>
               </div>
             </div>
-            <div class="chart-card blora-card" style="margin-bottom:20px;" data-size="sm">
+            <div class="cr-console-chart blora-card" style="margin-bottom:20px;" data-size="sm">
               <h4 class="blora-card__title"><span data-i18n="各客户端请求趋势（按日）">各客户端请求趋势（按日）</span></h4>
               <div class="chart-container"><canvas id="userSourceDailyChart"></canvas></div>
             </div>
-            <div class="chart-card blora-card" style="margin-bottom:20px;" data-size="sm">
+            <div class="cr-console-chart blora-card" style="margin-bottom:20px;" data-size="sm">
               <h4 class="blora-card__title"><span data-i18n="客户端明细">客户端明细</span></h4>
               <div style="overflow-x:auto;">
                 <table class="stats-table" id="statsSourceTable">
@@ -1074,7 +1053,7 @@
                 </table>
               </div>
             </div>
-            <div class="chart-card blora-card" data-size="sm">
+            <div class="cr-console-chart blora-card" data-size="sm">
               <h4 class="blora-card__title"><span data-i18n="客户端  /  模型">客户端  /  模型</span></h4>
               <div style="overflow-x:auto;">
                 <table class="stats-table" id="statsSourceModelTable">
@@ -1095,7 +1074,7 @@
 
           <!-- 密钥分析 -->
           <div id="statsTabApikey" class="stats-tab-content" style="display:none;">
-            <div class="chart-card blora-card" data-size="sm">
+            <div class="cr-console-chart blora-card" data-size="sm">
               <h4 class="blora-card__title"><span data-i18n="API Key 使用分布">API Key 使用分布</span></h4>
               <div class="chart-container"><canvas id="userApiKeyChart"></canvas></div>
             </div>
@@ -1122,15 +1101,15 @@
           <!-- 消息分析 -->
           <div id="statsTabMessages" class="stats-tab-content" style="display:none;">
             <p style="margin:0 0 12px;"><span data-i18n="只统计您自己的调用记录，直接读取 messages 中实际出现的工作区、Git 和上下文区块。">只统计您自己的调用记录，直接读取 messages 中实际出现的工作区、Git 和上下文区块。</span></p>
-            <div class="responsive-grid-2" style="margin-bottom:20px;"><div class="chart-card blora-card" data-size="sm"><h4 class="blora-card__title"><span data-i18n="项目活跃趋势">项目活跃趋势</span></h4><div class="chart-container"><canvas id="userMessageStatsDailyChart"></canvas></div></div><div class="chart-card blora-card" data-size="sm"><h4 class="blora-card__title"><span data-i18n="消息读取概要">消息读取概要</span></h4><div id="userMessageStatsSummary"></div></div></div>
-            <div class="responsive-grid-2"><div class="chart-card blora-card" data-size="sm"><h4 class="blora-card__title"><span data-i18n="项目结构区块">项目结构区块</span></h4><div id="userMessageStatsBlockTable"></div></div><div class="chart-card blora-card" data-size="sm"><h4 class="blora-card__title"><span data-i18n="Harness 消息结构">Harness 消息结构</span></h4><div id="userMessageStatsSourceTable"></div></div></div>
+            <div class="responsive-grid-2" style="margin-bottom:20px;"><div class="cr-console-chart blora-card" data-size="sm"><h4 class="blora-card__title"><span data-i18n="项目活跃趋势">项目活跃趋势</span></h4><div class="chart-container"><canvas id="userMessageStatsDailyChart"></canvas></div></div><div class="cr-console-chart blora-card" data-size="sm"><h4 class="blora-card__title"><span data-i18n="消息读取概要">消息读取概要</span></h4><div id="userMessageStatsSummary"></div></div></div>
+            <div class="responsive-grid-2"><div class="cr-console-chart blora-card" data-size="sm"><h4 class="blora-card__title"><span data-i18n="项目结构区块">项目结构区块</span></h4><div id="userMessageStatsBlockTable"></div></div><div class="cr-console-chart blora-card" data-size="sm"><h4 class="blora-card__title"><span data-i18n="Harness 消息结构">Harness 消息结构</span></h4><div id="userMessageStatsSourceTable"></div></div></div>
           </div>
 
           <!-- 调用记录 -->
           <div id="statsTabLogs" class="stats-tab-content" style="display:none;">
             <div class="admin-filter-bar" style="margin-bottom:16px;">
               <input type="text" id="usageLogModelFilter" class="blora-input input" placeholder="模型名称..." data-i18n-placeholder="模型名称..." style="min-width:140px;">
-              <blora-select id="usageLogRequestTypeFilter" class="blora-input input" style="min-width:130px;">
+              <blora-select id="usageLogRequestTypeFilter" style="min-width:130px;">
                 <blora-option value=""><span data-i18n="全部类型">全部类型</span></blora-option>
                 <blora-option value="chat">chat</blora-option>
                 <blora-option value="responses">responses</blora-option>
@@ -1139,7 +1118,7 @@
                 <blora-option value="imagine">Imagine</blora-option>
                 <blora-option value="agent_manage">Agent Manage</blora-option>
               </blora-select>
-              <blora-select id="usageLogRequestSourceFilter" class="blora-input input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
+              <blora-select id="usageLogRequestSourceFilter" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
                 <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
                 <blora-option value="grok">Grok</blora-option>
                 <blora-option value="codex">Codex</blora-option>
@@ -1173,7 +1152,7 @@
       <!-- 提示词页面（历史自定义提示词，重复合并） -->
       <div id="promptsPage" class="page cr-prompts-page">
         <!-- 注入提示词配置（模型库同款卡片风格） -->
-        <div class="content-section blora-card" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
             <div>
               <h2 class="blora-card__title"><span data-i18n="注入提示词">注入提示词</span></h2>
@@ -1186,7 +1165,7 @@
           </div>
         </div>
 
-        <div class="content-section blora-card" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
             <div>
               <h2 class="blora-card__title"><span data-i18n="提示词">提示词</span></h2>
@@ -1195,7 +1174,7 @@
           </div>
           <div class="admin-filter-bar" style="margin-bottom:16px;">
             <input type="text" id="promptSearchInput" class="blora-input input" placeholder="搜索文件名或内容..." data-i18n-placeholder="搜索文件名或内容..." style="min-width:200px;" >
-            <blora-select id="promptSourceFilter" class="blora-input input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
+            <blora-select id="promptSourceFilter" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
               <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
               <blora-option value="grok">Grok</blora-option>
               <blora-option value="codex">Codex</blora-option>
@@ -1207,7 +1186,7 @@
               <blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
               <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
             </blora-select>
-            <blora-select id="promptSortSelect" class="blora-input input" style="min-width:130px;">
+            <blora-select id="promptSortSelect" style="min-width:130px;">
               <blora-option value="count"><span data-i18n="按出现次数排序">按出现次数排序</span></blora-option>
               <blora-option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></blora-option>
               <blora-option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></blora-option>
@@ -1229,7 +1208,7 @@
 
       <!-- 会话页面（经网关的客户端会话聚合，只读） -->
       <div id="sessionsPage" class="page cr-sessions-page">
-        <section class="blora-card session-panel" id="sessionsListWrap" aria-labelledby="sessionsTitle" data-size="sm">
+        <section class="cr-console-session-panel blora-stack" id="sessionsListWrap" aria-labelledby="sessionsTitle" data-size="sm">
           <div class="session-panel__header">
             <div>
               <h2 id="sessionsTitle" class="blora-card__title"><span data-i18n="会话">会话</span></h2>
@@ -1273,7 +1252,7 @@
           </div>
         </section>
 
-        <section class="blora-card session-panel" id="sessionDetailWrap" style="display:none;" aria-labelledby="sessionDetailTitle" data-size="sm">
+        <section class="cr-console-session-panel blora-stack" id="sessionDetailWrap" style="display:none;" aria-labelledby="sessionDetailTitle" data-size="sm">
           <div class="session-panel__header session-detail__header">
             <div class="session-detail__title">
               <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.closeSessionDetail()" data-icon="chevron-left"><span data-i18n="返回会话列表">返回会话列表</span></button>
@@ -1308,7 +1287,7 @@
             </div>
             <div id="baHistoryList" class="ba-history__list"></div>
           </aside>
-          <div id="baOverlay" class="ba-overlay"></div>
+
           <section class="ba-main">
             <div id="baThread" class="ba-thread" aria-live="polite"></div>
             <div id="baChatOptions" class="ba-options">
@@ -1331,7 +1310,7 @@
               </label>
             </div>
             <form id="baComposer" class="ba-composer">
-              <textarea id="baInput" class="blora-textarea" rows="2" data-i18n-placeholder="输入消息，Enter 发送，Shift+Enter 换行" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea>
+              <blora-field label="消息"><textarea id="baInput" class="blora-textarea" rows="2" data-i18n-placeholder="输入消息，Enter 发送，Shift+Enter 换行" placeholder="输入消息，Enter 发送，Shift+Enter 换行"></textarea></blora-field>
               <blora-select id="baImageSize" name="size" aria-label="尺寸">
                 <blora-option value="1024x1024" selected>1024 / 1024</blora-option>
                 <blora-option value="1024x1792">1024 / 1792</blora-option>
@@ -1346,7 +1325,7 @@
 
       <!-- 项目工作页面 -->
       <div id="projectWorkPage" class="page cr-project-work-page">
-        <div class="content-section blora-card" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
             <div>
               <h2 class="blora-card__title"><span data-i18n="我的项目工作">我的项目工作</span></h2>
@@ -1358,12 +1337,12 @@
             <div id="projectWorkStatus" class="project-work-status"><span data-i18n="正在同步活动...">正在同步活动...</span></div>
           </div>
           <div class="stats-filters project-work-filters">
-            <div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label><blora-select id="projectWorkTimeRange" class="select" ><blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option><blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option><blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option><blora-option value="180"><span data-i18n="最近 180 天">最近 180 天</span></blora-option><blora-option value="365"><span data-i18n="最近 1 年">最近 1 年</span></blora-option><blora-option value="custom"><span data-i18n="自定义">自定义</span></blora-option></blora-select></div>
-            <div class="stats-filter-group"><label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label><blora-select id="projectWorkSourceFilter" class="select" ><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option></blora-select></div>
-            <div class="stats-filter-group" style="align-self:flex-end;"><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.navigateTo('stats')"><span data-i18n="返回总统计">返回总统计</span></button></div>
+            <div class="stats-filter-group blora-stack blora-stack--sm"><label class="stats-filter-label blora-text-muted"><span data-i18n="时间范围">时间范围</span></label><blora-select id="projectWorkTimeRange" ><blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option><blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option><blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option><blora-option value="180"><span data-i18n="最近 180 天">最近 180 天</span></blora-option><blora-option value="365"><span data-i18n="最近 1 年">最近 1 年</span></blora-option><blora-option value="custom"><span data-i18n="自定义">自定义</span></blora-option></blora-select></div>
+            <div class="stats-filter-group blora-stack blora-stack--sm"><label class="stats-filter-label blora-text-muted"><span data-i18n="客户端">客户端</span></label><blora-select id="projectWorkSourceFilter" ><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option></blora-select></div>
+            <div class="stats-filter-group blora-stack blora-stack--sm" style="align-self:flex-end;"><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="app.navigateTo('stats')"><span data-i18n="返回总统计">返回总统计</span></button></div>
           </div>
           <div id="projectWorkCustomRange" style="display:none;gap:8px;align-items:center;margin-bottom:16px;padding:12px;"><blora-datepicker id="projectWorkStartDate" ></blora-datepicker><span ><span data-i18n="至">至</span></span><blora-datepicker id="projectWorkEndDate" ></blora-datepicker><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.loadProjectWorkStats()"><span data-i18n="查询">查询</span></button></div>
-          <div id="projectWorkSummary" class="project-work-summary"><div class="project-work-loading"><span data-i18n="正在读取项目活动...">正在读取项目活动...</span></div></div>
+          <div id="projectWorkSummary" class="project-work-summary blora-grid"><div class="project-work-loading"><span data-i18n="正在读取项目活动...">正在读取项目活动...</span></div></div>
           <div class="project-work-grid"><div class="project-work-chart-card"><div class="project-work-card-title"><strong><span data-i18n="最近活动">最近活动</span></strong><span><span data-i18n="每日请求与活跃项目">每日请求与活跃项目</span></span></div><div class="project-work-chart"><canvas id="userProjectDailyChart"></canvas></div></div><div class="project-work-focus-card"><div class="project-work-card-title"><strong><span data-i18n="最近活跃项目">最近活跃项目</span></strong><span><span data-i18n="按最近活动排序">按最近活动排序</span></span></div><div id="projectWorkRecent" class="project-work-recent"><div class="project-work-loading"><span data-i18n="正在读取...">正在读取...</span></div></div></div></div>
           <div class="project-work-list-card"><div class="project-work-card-title"><strong><span data-i18n="项目工作台">项目工作台</span></strong><span><span data-i18n="点击项目可复制工作区路径">点击项目可复制工作区路径</span></span></div><div id="projectWorkProjects" class="project-work-projects"><div class="project-work-loading"><span data-i18n="正在读取项目...">正在读取项目...</span></div></div></div>
         </div>
@@ -1371,7 +1350,7 @@
 
       <!-- 排行榜页面 -->
       <div id="leaderboardPage" class="page cr-leaderboard-page">
-        <div class="content-section blora-card" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
             <div>
               <h2 class="blora-card__title"><span data-i18n="排行榜">排行榜</span></h2>
@@ -1381,18 +1360,18 @@
 
           <!-- 筛选区域 -->
           <div class="stats-filters">
-            <div class="stats-filter-group">
-              <label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label>
-              <blora-select id="leaderboardTimeRange" class="select" >
+            <div class="stats-filter-group blora-stack blora-stack--sm">
+              <label class="stats-filter-label blora-text-muted"><span data-i18n="时间范围">时间范围</span></label>
+              <blora-select id="leaderboardTimeRange" >
                 <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
                 <blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option>
                 <blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option>
                 <blora-option value="365"><span data-i18n="最近 1 年">最近 1 年</span></blora-option>
               </blora-select>
             </div>
-            <div class="stats-filter-group">
-              <label class="stats-filter-label"><span data-i18n="排序方式">排序方式</span></label>
-              <blora-select id="leaderboardSort" class="select" >
+            <div class="stats-filter-group blora-stack blora-stack--sm">
+              <label class="stats-filter-label blora-text-muted"><span data-i18n="排序方式">排序方式</span></label>
+              <blora-select id="leaderboardSort" >
                 <blora-option value="tokens"><span data-i18n="Token 数">Token 数</span></blora-option>
                 <blora-option value="requests"><span data-i18n="请求数">请求数</span></blora-option>
                 <blora-option value="points"><span data-i18n="消耗积分">消耗积分</span></blora-option>
@@ -1651,11 +1630,11 @@ data: [DONE]</code></pre>
 
       <!-- 积分页面 -->
       <div id="balancePage" class="page cr-balance-page">
-        <div class="content-section blora-card" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <h2 class="blora-card__title"><span data-i18n="积分">积分</span></h2>
-          <div class="balance-info">
+          <div class="cr-console-balance-info">
             <div class="responsive-flex-row">
-              <div class="balance-current" style="margin-top:0;">
+              <div class="cr-console-balance-current" style="margin-top:0;">
                 <span class="label"><span data-i18n="当前积分">当前积分</span></span>
                 <span class="amount" id="balanceDisplay">0</span>
               </div>
@@ -1666,7 +1645,7 @@ data: [DONE]</code></pre>
         <!-- 用户组信息 -->
         <div class="content-section" id="groupInfoSection" style="display:none;">
           <h2><span data-i18n="用户组与限额">用户组与限额</span></h2>
-          <div class="group-info-card">
+          <div class="cr-console-group-info">
             <div class="group-header">
               <div class="group-name-row">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1684,7 +1663,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 个人限额 -->
-        <div class="content-section blora-card" id="personalLimitsSection" style="display:none;" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" id="personalLimitsSection" style="display:none;" data-size="sm">
           <h2 class="blora-card__title"><span data-i18n="个人限额">个人限额</span></h2>
           <div class="limits-grid" id="personalLimits"></div>
     </div>
@@ -1692,11 +1671,11 @@ data: [DONE]</code></pre>
 
       <!-- 用户设置页面 -->
       <div id="auditLogsPage" class="page cr-audit-page">
-        <div class="content-section blora-card" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
-            <h2 class="blora-card__title"><span data-i18n="操作日志">操作日志</span></h2>
+            <h2 class="blora-h4"><span data-i18n="操作日志">操作日志</span></h2>
             <div style="display:flex;gap:8px;align-items:center;">
-              <blora-select id="auditLogActionFilter" class="blora-input input" style="width:auto;" >
+              <blora-select id="auditLogActionFilter" style="width:auto;" >
                 <blora-option value=""><span data-i18n="全部操作">全部操作</span></blora-option>
                 <blora-option value="api_key">API Key</blora-option>
                 <blora-option value="cokey">Co-Key</blora-option>
@@ -1715,41 +1694,41 @@ data: [DONE]</code></pre>
 
       <!-- 用户设置页面 -->
       <div id="settingsPage" class="page cr-settings-page">
-        <div id="settingsOverview" class="settings-overview blora-stack">
-          <div class="settings-version-card blora-card" data-size="sm">
+        <div id="settingsOverview" class="cr-console-settings-overview blora-stack">
+          <div class="cr-console-settings-version blora-card" data-size="sm">
             <img class="settings-brand-icon" src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="CrewRouter">
-            <div class="settings-version-info">
+            <div class="settings-version-info blora-stack blora-stack--sm">
               <strong>CrewRouter</strong>
               <span id="settingsVersionLabel">-</span>
               <div class="settings-link-list">
-                <a href="https://crewrouter.bloret.net/" target="_blank" rel="noopener" class="settings-link-button"><span class="settings-link-icon app-icon" data-icon="globe" aria-hidden="true"></span>Website</a>
-                <a href="https://github.com/BloretCrew/CrewRouter" target="_blank" rel="noopener" class="settings-link-button"><img class="settings-link-icon" src="https://img.bloret.net/img/1787928611714/4aa14a030498aaa1900006568a1f5163" alt="">Github</a>
-                <a href="https://www.npmjs.com/package/@bloret-crew/crewrouter-helper" target="_blank" rel="noopener" class="settings-link-button"><span class="settings-link-icon app-icon" data-icon="box" aria-hidden="true"></span>CrewRouterHelper</a>
-                <a href="https://qm.qq.com/q/kEt8fb41wc" target="_blank" rel="noopener" class="settings-link-button"><img src="https://img.bloret.net/img/1787927888716/0e4652ca34221ddf50433f4127aa9f68" alt="">QQ Discuss</a>
+                <a href="https://crewrouter.bloret.net/" target="_blank" rel="noopener" class="settings-link-button blora-button" data-variant="text" data-size="sm"><span class="settings-link-icon app-icon" data-icon="globe" aria-hidden="true"></span>Website</a>
+                <a href="https://github.com/BloretCrew/CrewRouter" target="_blank" rel="noopener" class="settings-link-button blora-button" data-variant="text" data-size="sm"><img class="settings-link-icon" src="https://img.bloret.net/img/1787928611714/4aa14a030498aaa1900006568a1f5163" alt="">Github</a>
+                <a href="https://www.npmjs.com/package/@bloret-crew/crewrouter-helper" target="_blank" rel="noopener" class="settings-link-button blora-button" data-variant="text" data-size="sm"><span class="settings-link-icon app-icon" data-icon="box" aria-hidden="true"></span>CrewRouterHelper</a>
+                <a href="https://qm.qq.com/q/kEt8fb41wc" target="_blank" rel="noopener" class="settings-link-button blora-button" data-variant="text" data-size="sm"><img src="https://img.bloret.net/img/1787927888716/0e4652ca34221ddf50433f4127aa9f68" alt="">QQ Discuss</a>
               </div>
             </div>
           </div>
           <p class="settings-overview-hint"><span data-i18n="选择一个类别以管理相关设置">选择一个类别以管理相关设置</span></p>
-          <div class="settings-category-grid">
-            <button type="button" class="blora-button settings-category-card" data-settings-category="profile" data-variant="ghost">
+          <div class="settings-category-grid blora-grid blora-grid--2">
+            <button type="button" class="blora-button cr-console-settings-category" data-settings-category="profile" data-variant="ghost">
               <span class="settings-category-icon app-icon" data-icon="circle-user" aria-hidden="true"></span><span><strong><span data-i18n="个人资料">个人资料</span></strong><small><span data-i18n="头像与界面主题">头像与界面主题</span></small></span><span class="settings-category-arrow" data-icon="chevron-right"></span>
             </button>
-            <button type="button" class="blora-button settings-category-card" data-settings-category="notifications" data-variant="ghost">
+            <button type="button" class="blora-button cr-console-settings-category" data-settings-category="notifications" data-variant="ghost">
               <span class="settings-category-icon app-icon" data-icon="bell" aria-hidden="true"></span><span><strong><span data-i18n="通知">通知</span></strong><small><span data-i18n="站内通知与 Bark 推送">站内通知与 Bark 推送</span></small></span><span class="settings-category-arrow" data-icon="chevron-right"></span>
             </button>
-            <button type="button" class="blora-button settings-category-card" data-settings-category="security" data-variant="ghost">
+            <button type="button" class="blora-button cr-console-settings-category" data-settings-category="security" data-variant="ghost">
               <span class="settings-category-icon app-icon" data-icon="shield-check" aria-hidden="true"></span><span><strong><span data-i18n="安全">安全</span></strong><small><span data-i18n="双重认证、通行密钥与密码">双重认证、通行密钥与密码</span></small></span><span class="settings-category-arrow" data-icon="chevron-right"></span>
             </button>
-            <button type="button" class="blora-button settings-category-card" data-settings-category="signature" data-variant="ghost">
+            <button type="button" class="blora-button cr-console-settings-category" data-settings-category="signature" data-variant="ghost">
               <span class="settings-category-icon app-icon" data-icon="signature" aria-hidden="true"></span><span><strong><span data-i18n="API 签名">API 签名</span></strong><small><span data-i18n="自定义 API 回复签名">自定义 API 回复签名</span></small></span><span class="settings-category-arrow" data-icon="chevron-right"></span>
             </button>
-            <button type="button" class="blora-button settings-category-card" data-settings-category="plugins" data-variant="ghost">
+            <button type="button" class="blora-button cr-console-settings-category" data-settings-category="plugins" data-variant="ghost">
               <span class="settings-category-icon app-icon" data-icon="puzzle" aria-hidden="true"></span><span><strong><span data-i18n="插件">插件</span></strong><small><span data-i18n="插件数据授权">插件数据授权</span></small></span><span class="settings-category-arrow" data-icon="chevron-right"></span>
             </button>
-            <button type="button" class="blora-button settings-category-card" data-settings-category="events" data-variant="ghost">
+            <button type="button" class="blora-button cr-console-settings-category" data-settings-category="events" data-variant="ghost">
               <span class="settings-category-icon app-icon" data-icon="list" aria-hidden="true"></span><span><strong><span data-i18n="事件通知">事件通知</span></strong><small><span data-i18n="客户端事件推送偏好">客户端事件推送偏好</span></small></span><span class="settings-category-arrow" data-icon="chevron-right"></span>
             </button>
-            <button type="button" class="blora-button settings-category-card desktop-settings-card" id="desktopSettingsCard" hidden data-variant="ghost">
+            <button type="button" class="blora-button cr-console-settings-category desktop-settings-card" id="desktopSettingsCard" hidden data-variant="ghost">
               <span class="settings-category-icon app-icon" data-icon="monitor" aria-hidden="true"></span><span><strong><span data-i18n="CrewRouter Desktop 设置">CrewRouter Desktop 设置</span></strong><small><span data-i18n="连接、配置文件与桌面应用行为">连接、配置文件与桌面应用行为</span></small></span><span class="settings-category-arrow" data-icon="chevron-right"></span>
             </button>
           </div>
@@ -1760,7 +1739,7 @@ data: [DONE]</code></pre>
           <div id="settingsDetailTitle" class="settings-detail-title"></div>
         </div>
 
-        <div class="content-section settings-section settings-category-profile blora-card" data-size="sm">
+        <div class="cr-console-section cr-console-settings-section settings-category-profile blora-stack blora-stack--lg" data-size="sm">
           <h2 class="blora-card__title"><span data-i18n="个人资料">个人资料</span></h2>
           <form id="settingsForm" class="settings-form">
             <div class="form-group">
@@ -1784,7 +1763,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 界面主题（插件主题，plugin-runtime.js 渲染选择器） -->
-        <div class="content-section settings-section settings-category-profile blora-card" style="margin-top:24px;" data-size="sm">
+        <div class="cr-console-section cr-console-settings-section settings-category-profile blora-stack blora-stack--lg" style="margin-top:24px;" data-size="sm">
           <div class="section-header">
             <div>
               <h2 class="blora-card__title"><span data-i18n="界面主题">界面主题</span></h2>
@@ -1798,7 +1777,7 @@ data: [DONE]</code></pre>
 
         <!-- 通知设置 -->
         <form id="notificationSettingsForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
-        <div class="content-section settings-section settings-category-notifications blora-card" style="margin-top:24px;" data-size="sm">
+        <div class="cr-console-section cr-console-settings-section settings-category-notifications blora-stack blora-stack--lg" style="margin-top:24px;" data-size="sm">
           <div class="section-header">
             <div>
               <h2 class="blora-card__title"><span data-i18n="通知设置">通知设置</span></h2>
@@ -1821,7 +1800,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 插件数据授权 -->
-        <div class="content-section settings-section settings-category-plugins blora-card" style="margin-top:24px;" data-size="sm">
+        <div class="cr-console-section cr-console-settings-section settings-category-plugins blora-stack blora-stack--lg" style="margin-top:24px;" data-size="sm">
           <div class="section-header">
             <div>
               <h2 class="blora-card__title"><span data-i18n="插件授权">插件授权</span></h2>
@@ -1837,18 +1816,18 @@ data: [DONE]</code></pre>
           </div>
         </div>
 
-        <div class="content-section blora-card" style="margin-top:24px;" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" style="margin-top:24px;" data-size="sm">
           <div class="section-header"><h2 class="blora-card__title"><span data-i18n="我的通知">我的通知</span></h2><button type="button" class="blora-button" onclick="app.clearNotifications()" data-variant="secondary"><span data-i18n="清空通知">清空通知</span></button></div>
           <div id="notificationsList"><div ><span data-i18n="加载中...">加载中...</span></div></div>
         </div>
 
         <!-- 事件通知（hook 上报事件推送开关） -->
-        <div class="content-section settings-section settings-category-desktop blora-card" id="desktopSettingsSection" style="margin-top:24px;" data-size="sm">
+        <div class="cr-console-section cr-console-settings-section settings-category-desktop blora-stack blora-stack--lg" id="desktopSettingsSection" style="margin-top:24px;" data-size="sm">
           <div class="section-header"><div><h2 class="blora-card__title"><span data-i18n="CrewRouter Desktop 设置">CrewRouter Desktop 设置</span></h2><p class="blora-card__desc" style="margin:4px 0 0;"><span data-i18n="连接、配置文件与桌面应用行为">连接、配置文件与桌面应用行为</span></p></div></div>
           <div class="settings-desktop-embed" id="desktopSettingsEmbed"><p style="margin:0;"><span data-i18n="Desktop 设置正在加载">Desktop 设置正在加载</span></p></div>
         </div>
 
-        <div class="content-section settings-section settings-category-events blora-card" style="margin-top:24px;" data-size="sm">
+        <div class="cr-console-section cr-console-settings-section settings-category-events blora-stack blora-stack--lg" style="margin-top:24px;" data-size="sm">
           <div class="section-header">
             <div>
               <h2 class="blora-card__title"><span data-i18n="事件通知">事件通知</span></h2>
@@ -1866,7 +1845,7 @@ data: [DONE]</code></pre>
 
 
         <!-- 安全设置 -->
-        <div class="content-section settings-section settings-category-security blora-card" style="margin-top:24px;" data-size="sm">
+        <div class="cr-console-section cr-console-settings-section settings-category-security blora-stack blora-stack--lg" style="margin-top:24px;" data-size="sm">
           <h2 class="blora-card__title"><span data-i18n="安全设置">安全设置</span></h2>
 
           <!-- 2FA 设置 -->
@@ -1931,7 +1910,7 @@ data: [DONE]</code></pre>
 
         </div>
 
-        <div class="content-section blora-card" style="margin-top:24px;" data-size="sm">
+        <div class="cr-console-section blora-stack blora-stack--lg" style="margin-top:24px;" data-size="sm">
           <h2 class="blora-card__title"><span data-i18n="修改密码">修改密码</span></h2>
           <form id="changePasswordForm" class="settings-form" onsubmit="return false;">
             <input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;">
@@ -1956,7 +1935,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- API 签名设置 -->
-        <div class="content-section settings-section settings-category-signature blora-card" style="margin-top:24px;" data-size="sm">
+        <div class="cr-console-section cr-console-settings-section settings-category-signature blora-stack blora-stack--lg" style="margin-top:24px;" data-size="sm">
           <h2 class="blora-card__title"><span data-i18n="API 签名设置">API 签名设置</span></h2>
           <div style="padding:20px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -2004,7 +1983,7 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="apiKeyExpiry"><span data-i18n="有效期">有效期</span></label>
-          <blora-select id="apiKeyExpiry" class="select">
+          <blora-select id="apiKeyExpiry">
             <blora-option value=""><span data-i18n="永不过期">永不过期</span></blora-option>
             <blora-option value="24"><span data-i18n="24 小时">24 小时</span></blora-option>
             <blora-option value="168"><span data-i18n="7 天">7 天</span></blora-option>
@@ -2152,7 +2131,7 @@ data: [DONE]</code></pre>
         </span></div>
         <div class="form-group">
           <label><span data-i18n="签名启用策略">签名启用策略</span></label>
-          <blora-select id="keySignatureMode" class="select" >
+          <blora-select id="keySignatureMode" >
             <blora-option value="inherit"><span data-i18n="继承用户默认设置">继承用户默认设置</span></blora-option>
             <blora-option value="enable"><span data-i18n="强制启用">强制启用</span></blora-option>
             <blora-option value="disable"><span data-i18n="强制禁用">强制禁用</span></blora-option>
@@ -2215,7 +2194,7 @@ data: [DONE]</code></pre>
           </div>
           <div class="form-group">
             <label><span data-i18n="时区">时区</span></label>
-            <blora-select id="scheduleTimezone" class="select" style="width:100%;">
+            <blora-select id="scheduleTimezone" style="width:100%;">
               <blora-option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</blora-option>
               <blora-option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</blora-option>
               <blora-option value="America/New_York">America/New_York (ET)</blora-option>
@@ -2276,7 +2255,7 @@ data: [DONE]</code></pre>
             </div>
             <div class="form-group">
               <label for="providerFormat"><span data-i18n="API 格式">API 格式</span></label>
-              <blora-select id="providerFormat" class="select">
+              <blora-select id="providerFormat">
                 <blora-option value="openai">Chat Completions</blora-option>
                 <blora-option value="responses">Responses</blora-option>
                 <blora-option value="anthropic">Anthropic Messages</blora-option>
@@ -2324,7 +2303,7 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="editProviderFormat"><span data-i18n="API 格式">API 格式</span></label>
-          <blora-select id="editProviderFormat" class="select">
+          <blora-select id="editProviderFormat">
             <blora-option value="openai">Chat Completions</blora-option>
             <blora-option value="responses">Responses</blora-option>
             <blora-option value="anthropic">Anthropic Messages</blora-option>
@@ -2663,7 +2642,7 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="modelFormProvider"><span data-i18n="提供商">提供商</span></label>
-          <blora-select id="modelFormProvider" class="select">
+          <blora-select id="modelFormProvider">
             <!-- 供应商列表将通过JS动态加载 -->
           </blora-select>
         </div>
@@ -2711,14 +2690,14 @@ data: [DONE]</code></pre>
           <div style="margin-bottom:12px;"><span data-i18n="模型路由（可选，用于根据思考模式自动切换模型）">模型路由（可选，用于根据思考模式自动切换模型）</span></div>
           <div class="form-group">
             <label for="modelFormThinkingModel"><span data-i18n="思考模式模型">思考模式模型</span></label>
-            <blora-select id="modelFormThinkingModel" class="select">
+            <blora-select id="modelFormThinkingModel">
               <blora-option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></blora-option>
             </blora-select>
             <small style="margin-top:4px;display:block;"><span data-i18n="开启思考模式时实际使用的模型">开启思考模式时实际使用的模型</span></small>
           </div>
           <div class="form-group">
             <label for="modelFormNonThinkingModel"><span data-i18n="非思考模式模型">非思考模式模型</span></label>
-            <blora-select id="modelFormNonThinkingModel" class="select">
+            <blora-select id="modelFormNonThinkingModel">
               <blora-option value=""><span data-i18n="不设置（使用自身）">不设置（使用自身）</span></blora-option>
             </blora-select>
             <small style="margin-top:4px;display:block;"><span data-i18n="关闭思考模式时实际使用的模型">关闭思考模式时实际使用的模型</span></small>
@@ -2736,7 +2715,7 @@ data: [DONE]</code></pre>
         </div>
         <div class="form-group">
           <label for="modelFormEnabled"><span data-i18n="启用状态">启用状态</span></label>
-          <blora-select id="modelFormEnabled" class="select">
+          <blora-select id="modelFormEnabled">
             <blora-option value="true"><span data-i18n="启用">启用</span></blora-option>
             <blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>
           </blora-select>
@@ -2749,15 +2728,15 @@ data: [DONE]</code></pre>
   </blora-dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="/js/theme.js?v=2"></script>
+  <script src="/js/theme.js?v=correction-2"></script>
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/dom.js?v=3"></script>
   <script src="/js/session-tool-groups.js?v=2"></script>
   <script src="/js/vendor/marked.min.js"></script>
   <script src="/js/edition-badge.js?v=1"></script>
   <script src="/js/multi-dimension-chart.js?v=3"></script>
-  <script src="/js/app.js?v=68"></script>
-  <script src="/js/blora-agent.js?v=2"></script>
+  <script src="/js/app.js?v=correction-2"></script>
+  <script src="/js/blora-agent.js?v=correction-2"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 文档分页导航
@@ -2852,13 +2831,21 @@ data: [DONE]</code></pre>
     // 移动端侧边栏切换
     document.addEventListener('DOMContentLoaded', () => {
       const sidebar = document.querySelector('.sidebar');
-      const drawer = document.getElementById('mobileSidebarDrawer');
+      const originalDrawer = document.getElementById('mobileSidebarDrawer');
+      const drawer = document.createElement('blora-drawer');
+      drawer.id = originalDrawer.id;
+      drawer.setAttribute('position', 'left');
+      drawer.setAttribute('title', '导航');
+      const drawerContent = document.createElement('div');
+      drawerContent.className = 'cr-navigation-drawer-content';
+      drawer.appendChild(drawerContent);
+      originalDrawer.replaceWith(drawer);
       const toggle = document.getElementById('sidebarToggle');
       const anchor = document.createComment('desktop-sidebar');
       sidebar.before(anchor);
       const mobile = matchMedia('(max-width: 600px)');
       const relocate = () => {
-        if (mobile.matches) drawer.appendChild(sidebar);
+        if (mobile.matches) drawerContent.appendChild(sidebar);
         else { drawer.close(); anchor.after(sidebar); }
       };
       customElements.whenDefined('blora-drawer').then(relocate);

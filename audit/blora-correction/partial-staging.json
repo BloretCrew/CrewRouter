@@ -1,0 +1,615 @@
+[
+  {
+    "file": "CrewRouter-Desktop/src/renderer/index.html",
+    "stagedHunks": 2,
+    "overlapHunks": [
+      {
+        "original": [
+          32,
+          34
+        ],
+        "current": [
+          33,
+          35
+        ]
+      },
+      {
+        "original": [
+          38,
+          38
+        ],
+        "current": [
+          39,
+          39
+        ]
+      },
+      {
+        "original": [
+          44,
+          44
+        ],
+        "current": [
+          45,
+          45
+        ]
+      },
+      {
+        "original": [
+          48,
+          48
+        ],
+        "current": [
+          49,
+          49
+        ]
+      },
+      {
+        "original": [
+          53,
+          53
+        ],
+        "current": [
+          54,
+          54
+        ]
+      },
+      {
+        "original": [
+          61,
+          61
+        ],
+        "current": [
+          62,
+          62
+        ]
+      },
+      {
+        "original": [
+          63,
+          63
+        ],
+        "current": [
+          64,
+          64
+        ]
+      },
+      {
+        "original": [
+          66,
+          66
+        ],
+        "current": [
+          67,
+          67
+        ]
+      },
+      {
+        "original": [
+          77,
+          77
+        ],
+        "current": [
+          78,
+          78
+        ]
+      },
+      {
+        "original": [
+          79,
+          79
+        ],
+        "current": [
+          80,
+          80
+        ]
+      },
+      {
+        "original": [
+          82,
+          82
+        ],
+        "current": [
+          83,
+          83
+        ]
+      },
+      {
+        "original": [
+          86,
+          86
+        ],
+        "current": [
+          87,
+          87
+        ]
+      },
+      {
+        "original": [
+          91,
+          91
+        ],
+        "current": [
+          92,
+          92
+        ]
+      },
+      {
+        "original": [
+          99,
+          99
+        ],
+        "current": [
+          100,
+          100
+        ]
+      },
+      {
+        "original": [
+          101,
+          101
+        ],
+        "current": [
+          102,
+          102
+        ]
+      },
+      {
+        "original": [
+          104,
+          104
+        ],
+        "current": [
+          105,
+          105
+        ]
+      },
+      {
+        "original": [
+          115,
+          117
+        ],
+        "current": [
+          116,
+          118
+        ]
+      },
+      {
+        "original": [
+          119,
+          119
+        ],
+        "current": [
+          120,
+          120
+        ]
+      },
+      {
+        "original": [
+          133,
+          133
+        ],
+        "current": [
+          134,
+          134
+        ]
+      },
+      {
+        "original": [
+          136,
+          136
+        ],
+        "current": [
+          137,
+          137
+        ]
+      },
+      {
+        "original": [
+          145,
+          145
+        ],
+        "current": [
+          146,
+          146
+        ]
+      },
+      {
+        "original": [
+          148,
+          149
+        ],
+        "current": [
+          149,
+          150
+        ]
+      },
+      {
+        "original": [
+          162,
+          163
+        ],
+        "current": [
+          163,
+          164
+        ]
+      },
+      {
+        "original": [
+          179,
+          181
+        ],
+        "current": [
+          180,
+          182
+        ]
+      },
+      {
+        "original": [
+          184,
+          184
+        ],
+        "current": [
+          185,
+          185
+        ]
+      },
+      {
+        "original": [
+          187,
+          189
+        ],
+        "current": [
+          188,
+          190
+        ]
+      },
+      {
+        "original": [
+          198,
+          199
+        ],
+        "current": [
+          199,
+          200
+        ]
+      }
+    ]
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/styles.css",
+    "stagedHunks": 4,
+    "overlapHunks": [
+      {
+        "original": [
+          4,
+          4
+        ],
+        "current": [
+          4,
+          3
+        ]
+      },
+      {
+        "original": [
+          24,
+          24
+        ],
+        "current": [
+          19,
+          19
+        ]
+      },
+      {
+        "original": [
+          27,
+          28
+        ],
+        "current": [
+          22,
+          23
+        ]
+      },
+      {
+        "original": [
+          30,
+          33
+        ],
+        "current": [
+          25,
+          28
+        ]
+      },
+      {
+        "original": [
+          39,
+          42
+        ],
+        "current": [
+          34,
+          35
+        ]
+      },
+      {
+        "original": [
+          45,
+          49
+        ],
+        "current": [
+          38,
+          40
+        ]
+      },
+      {
+        "original": [
+          53,
+          53
+        ],
+        "current": [
+          44,
+          44
+        ]
+      },
+      {
+        "original": [
+          57,
+          57
+        ],
+        "current": [
+          48,
+          48
+        ]
+      },
+      {
+        "original": [
+          66,
+          66
+        ],
+        "current": [
+          57,
+          57
+        ]
+      },
+      {
+        "original": [
+          71,
+          71
+        ],
+        "current": [
+          62,
+          62
+        ]
+      },
+      {
+        "original": [
+          73,
+          77
+        ],
+        "current": [
+          64,
+          67
+        ]
+      },
+      {
+        "original": [
+          81,
+          81
+        ],
+        "current": [
+          71,
+          70
+        ]
+      },
+      {
+        "original": [
+          83,
+          84
+        ],
+        "current": [
+          72,
+          72
+        ]
+      }
+    ]
+  },
+  {
+    "file": "public/css/admin-user-groups-blora.css",
+    "stagedHunks": 7,
+    "overlapHunks": [
+      {
+        "original": [
+          9,
+          10
+        ],
+        "current": [
+          9,
+          10
+        ]
+      }
+    ]
+  },
+  {
+    "file": "public/css/blora-agent.css",
+    "stagedHunks": 8,
+    "overlapHunks": [
+      {
+        "original": [
+          194,
+          194
+        ],
+        "current": [
+          193,
+          193
+        ]
+      },
+      {
+        "original": [
+          202,
+          202
+        ],
+        "current": [
+          201,
+          201
+        ]
+      },
+      {
+        "original": [
+          207,
+          207
+        ],
+        "current": [
+          206,
+          206
+        ]
+      },
+      {
+        "original": [
+          209,
+          211
+        ],
+        "current": [
+          208,
+          208
+        ]
+      }
+    ]
+  },
+  {
+    "file": "public/css/settings-blora.css",
+    "stagedHunks": 6,
+    "overlapHunks": []
+  },
+  {
+    "file": "public/js/admin.js",
+    "stagedHunks": 146,
+    "overlapHunks": [
+      {
+        "original": [
+          841,
+          841
+        ],
+        "current": [
+          841,
+          841
+        ]
+      },
+      {
+        "original": [
+          6774,
+          6774
+        ],
+        "current": [
+          6758,
+          6758
+        ]
+      },
+      {
+        "original": [
+          7686,
+          7686
+        ],
+        "current": [
+          7670,
+          7670
+        ]
+      },
+      {
+        "original": [
+          9624,
+          9624
+        ],
+        "current": [
+          9608,
+          9608
+        ]
+      }
+    ]
+  },
+  {
+    "file": "public/js/blora-agent.js",
+    "stagedHunks": 19,
+    "overlapHunks": [
+      {
+        "original": [
+          286,
+          286
+        ],
+        "current": [
+          344,
+          345
+        ]
+      }
+    ]
+  },
+  {
+    "file": "public/pages/admin.html",
+    "stagedHunks": 351,
+    "overlapHunks": [
+      {
+        "original": [
+          279,
+          279
+        ],
+        "current": [
+          265,
+          265
+        ]
+      },
+      {
+        "original": [
+          281,
+          281
+        ],
+        "current": [
+          267,
+          267
+        ]
+      },
+      {
+        "original": [
+          832,
+          838
+        ],
+        "current": [
+          818,
+          824
+        ]
+      },
+      {
+        "original": [
+          1212,
+          1213
+        ],
+        "current": [
+          1198,
+          1199
+        ]
+      },
+      {
+        "original": [
+          1534,
+          1534
+        ],
+        "current": [
+          1520,
+          1520
+        ]
+      }
+    ]
+  },
+  {
+    "file": "public/pages/console.html",
+    "stagedHunks": 121,
+    "overlapHunks": [
+      {
+        "original": [
+          1673,
+          1673
+        ],
+        "current": [
+          1652,
+          1652
+        ]
+      }
+    ]
+  }
+]

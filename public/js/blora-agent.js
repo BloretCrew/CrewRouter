@@ -23,7 +23,7 @@
       if (!this.admin && /\/manage$/.test(location.hash) && window.app?._writeConsoleHash) {
         window.app._writeConsoleHash('bloraAgent', { agentMode: 'chat' });
       }
-      this.bind();
+      await this.bind();
       this.renderModeSwitch();
       this.applyModeChrome();
       await Promise.all([this.loadModels(), this.loadBalance(), this.loadThinking()]);
@@ -33,9 +33,60 @@
       else this.renderThread();
     },
 
-    bind() {
+    async bind() {
       if (this.bound) return;
+      await customElements.whenDefined('blora-drawer');
       this.bound = true;
+      const history = document.getElementById('baHistory');
+      history?.classList.add('blora-card');
+      const drawer = document.createElement('blora-drawer');
+      drawer.setAttribute('position', 'left');
+      drawer.setAttribute('title', '历史');
+      const drawerObserver = new MutationObserver(() => {
+        if (!drawer.hasAttribute('open')) {
+          history?.classList.remove('is-open');
+          document.getElementById('baHistoryToggle')?.setAttribute('aria-expanded', 'false');
+        }
+      });
+      drawerObserver.observe(drawer, { attributes: true, attributeFilter: ['open'] });
+      window.addEventListener('pagehide', () => drawerObserver.disconnect(), { once: true });
+      const drawerContent = document.createElement('div');
+      drawerContent.className = 'ba-history-drawer-content';
+      drawer.appendChild(drawerContent);
+      document.getElementById('bloraAgentPage')?.appendChild(drawer);
+      this.historyDrawer = drawer;
+      const syncHistory = () => {
+        drawer.close();
+        this.toggleHistory(false);
+        if (window.matchMedia('(max-width: 800px)').matches) { history.dataset.variant = 'inset'; drawerContent.appendChild(history); }
+        else { history.removeAttribute('data-variant'); document.querySelector('.ba-body')?.prepend(history); }
+      };
+      const historyMedia = window.matchMedia('(max-width: 800px)');
+      historyMedia.addEventListener('change', syncHistory);
+      window.addEventListener('pagehide', () => historyMedia.removeEventListener('change', syncHistory), { once: true });
+      syncHistory();
+      document.getElementById('baComposer')?.classList.add('blora-card');
+      ['baSystem', 'baMaxTokens'].forEach((id) => {
+        const control = document.getElementById(id);
+        const label = control?.closest('label');
+        if (!label) return;
+        const field = document.createElement('blora-field');
+        field.className = label.className;
+        field.setAttribute('label', label.textContent.trim());
+        field.appendChild(control);
+        label.replaceWith(field);
+      });
+      document.getElementById('baBalance')?.classList.add('blora-text-muted');
+      document.querySelector('.ba-input-hint')?.classList.add('blora-text-muted');
+      const historyToggle = document.getElementById('baHistoryToggle');
+      historyToggle?.setAttribute('aria-controls', 'baHistory');
+      historyToggle?.setAttribute('aria-expanded', 'false');
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && document.getElementById('baHistory')?.classList.contains('is-open')) this.toggleHistory(false);
+      });
+      document.getElementById('baHistoryList')?.addEventListener('click', (event) => {
+        if (event.target.closest('[data-history-retry]')) this.loadHistory();
+      });
       document.getElementById('baComposer')?.addEventListener('submit', (event) => {
         event.preventDefault();
         this.send();
@@ -49,7 +100,7 @@
       document.getElementById('baStop')?.addEventListener('click', () => this.abort?.abort());
       document.getElementById('baNew')?.addEventListener('click', () => this.startNew());
       document.getElementById('baHistoryToggle')?.addEventListener('click', () => this.toggleHistory(true));
-      document.getElementById('baOverlay')?.addEventListener('click', () => this.toggleHistory(false));
+
       document.getElementById('baTemperature')?.addEventListener('input', (event) => {
         const label = document.getElementById('baTempVal');
         if (label) label.textContent = Number(event.target.value).toFixed(1);
@@ -169,25 +220,32 @@
     async loadHistory() {
       const list = document.getElementById('baHistoryList');
       if (!list) return;
+      list.setAttribute('aria-busy', 'true');
+      setHTML(list, '<span class="blora-spinner" role="status" aria-label="正在加载历史"></span>');
       try {
         if (this.mode === 'chat') {
           const response = await fetch('/api/conversations', { credentials: 'same-origin' });
-          this.conversations = response.ok ? await response.json() : [];
+          if (!response.ok) throw new Error('历史加载失败');
+          this.conversations = await response.json();
           this.renderHistory(this.conversations, item => item.title || '新对话', item => item.model || '');
         } else if (this.mode === 'imagine') {
           const response = await fetch('/api/agent/images', { credentials: 'same-origin' });
           if (response.status === 404) return this.showUnavailable();
-          this.images = response.ok ? await response.json() : [];
+          if (!response.ok) throw new Error('历史加载失败');
+          this.images = await response.json();
           this.renderHistory(this.images, item => (item.prompt || '图片').slice(0, 42), item => item.model_id || '');
         } else {
           const response = await fetch('/api/agent/manage/threads', { credentials: 'same-origin' });
           if (response.status === 403) return this.showUnavailable();
           if (response.status === 404) return this.showUnavailable();
-          this.threads = response.ok ? await response.json() : [];
+          if (!response.ok) throw new Error('历史加载失败');
+          this.threads = await response.json();
           this.renderHistory(this.threads, item => item.title || '新对话', item => item.model_id || '');
         }
       } catch (_) {
-        setHTML(list, `<blora-empty title="历史加载失败" description="请稍后重试。"></blora-empty>`);
+        setHTML(list, `<blora-alert variant="danger" title="历史加载失败" description="请稍后重试。"></blora-alert><button type="button" class="blora-button" data-variant="outline" data-history-retry>重试</button>`);
+      } finally {
+        list.removeAttribute('aria-busy');
       }
     },
 
@@ -201,9 +259,9 @@
         return;
       }
       setHTML(list, items.map(item => `
-        <button type="button" class="blora-button ba-history__item" data-variant="${Number(item.id) === Number(this.activeId) ? 'secondary' : 'ghost'}" data-id="${Number(item.id)}">
+        <button type="button" class="blora-button ba-history__item" data-variant="${Number(item.id) === Number(this.activeId) ? 'secondary' : 'ghost'}" aria-current="${Number(item.id) === Number(this.activeId) ? 'true' : 'false'}" data-id="${Number(item.id)}">
           ${Dom.escapeHtml(titleOf(item))}
-          <span class="ba-history__meta">${Dom.escapeHtml(metaOf(item))}</span>
+          <span class="ba-history__meta blora-text-muted">${Dom.escapeHtml(metaOf(item))}</span>
         </button>
       `).join(''));
       list.querySelectorAll('[data-id]').forEach(button => {
@@ -240,7 +298,7 @@
       const thread = document.getElementById('baThread');
       setHTML(thread, `
         <img class="ba-image" alt="" src="${Dom.escapeHtml(image.url)}">
-        <div class="ba-bubble ba-bubble--user">${this.renderRich(image.prompt || '')}</div>
+        <div class="ba-bubble ba-bubble--user blora-card">${this.renderRich(image.prompt || '')}</div>
       `);
       this.loadHistory();
     },
@@ -299,20 +357,20 @@
         return this.toolCard(message.tool_name || 'tool', message.content, pending);
       }
       const role = message.role === 'user' ? 'user' : 'assistant';
-      const reasoning = message.reasoning ? `<div class="ba-thinking">${this.renderRich(message.reasoning)}</div>` : '';
-      return `<div class="ba-bubble ba-bubble--${role}">${reasoning}${this.renderRich(message.content || '')}</div>`;
+      const reasoning = message.reasoning ? `<div class="ba-thinking blora-text-muted">${this.renderRich(message.reasoning)}</div>` : '';
+      return `<div class="ba-bubble ba-bubble--${role} blora-card" data-size="sm" data-variant="${role === 'user' ? 'inset' : 'flat'}">${reasoning}${this.renderRich(message.content || '')}</div>`;
     },
 
     toolCard(name, body, pending) {
       const actions = pending ? `<div class="ba-card__actions"><button type="button" class="blora-button" data-variant="primary" data-size="sm" data-decision="allow">允许</button><button type="button" class="blora-button" data-variant="outline" data-size="sm" data-decision="deny">拒绝</button></div>` : '';
-      return `<article class="ba-card"><header class="ba-card__header"><span>${Dom.escapeHtml(name || 'tool')}</span></header><pre class="ba-card__body">${Dom.escapeHtml(typeof body === 'string' ? body : JSON.stringify(body || {}, null, 2))}</pre>${actions}</article>`;
+      return `<article class="ba-card blora-card" data-size="sm"><header class="ba-card__header blora-card__header"><span class="blora-card__title">${Dom.escapeHtml(name || 'tool')}</span></header><pre class="ba-card__body blora-code">${Dom.escapeHtml(typeof body === 'string' ? body : JSON.stringify(body || {}, null, 2))}</pre>${actions}</article>`;
     },
 
     renderRich(text) {
       const blocks = [];
       let html = Dom.escapeHtml(text || '');
       html = html.replace(/```([\s\S]*?)```/g, (_, code) => {
-        blocks.push(`<pre class="ba-code"><code>${code.trim()}</code></pre>`);
+        blocks.push(`<pre class="ba-code blora-code"><code>${code.trim()}</code></pre>`);
         return `%%BLOCK${blocks.length - 1}%%`;
       });
       html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
@@ -345,7 +403,7 @@
       this.streaming = active;
       const send = document.getElementById('baSend');
       const stop = document.getElementById('baStop');
-      if (send) send.hidden = active;
+      if (send) { send.hidden = active; send.disabled = active; send.toggleAttribute('data-loading', active); send.setAttribute('aria-busy', String(active)); }
       if (stop) stop.hidden = !active;
     },
 
@@ -353,9 +411,10 @@
       const thread = document.getElementById('baThread');
       const empty = thread?.querySelector('blora-empty');
       if (empty) empty.remove();
-      const node = document.createElement('div');
-      node.className = 'ba-bubble ba-bubble--assistant';
-      node.textContent = message;
+      const node = document.createElement('blora-alert');
+      node.setAttribute('variant', 'danger');
+      node.setAttribute('title', '请求失败');
+      node.setAttribute('description', message);
       thread?.appendChild(node);
     },
 
@@ -593,8 +652,14 @@
     },
 
     toggleHistory(open) {
-      document.getElementById('baHistory')?.classList.toggle('is-open', open);
-      document.getElementById('baOverlay')?.classList.toggle('is-open', open);
+      const history = document.getElementById('baHistory');
+      history?.classList.toggle('is-open', open);
+
+      document.getElementById('baHistoryToggle')?.setAttribute('aria-expanded', String(open));
+      if (window.matchMedia('(max-width: 800px)').matches) {
+        if (open) this.historyDrawer?.open(); else this.historyDrawer?.close();
+      }
+
     }
   };
 

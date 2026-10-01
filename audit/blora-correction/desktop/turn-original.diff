@@ -1,0 +1,775 @@
+--- a/CrewRouter-Desktop/src/renderer/index.html
++++ b/CrewRouter-Desktop/src/renderer/index.html
+@@ -5,6 +5,7 @@
+   <meta name="viewport" content="width=device-width, initial-scale=1">
+   <meta name="theme-color" content="#17161C">
+   <title>CrewRouter Desktop</title>
++  <style>@layer legacy, blora;</style>
+   <link rel="stylesheet" href="vendor/blora-design/blora.css">
+   <link rel="stylesheet" href="vendor/blora-design/tokens.dark.css">
+   <link rel="stylesheet" href="styles.css">
+@@ -14,7 +15,7 @@
+   <main class="launcher" id="launcher" data-view="welcome" aria-labelledby="hero-title">
+     <header class="launcher__header">
+       <a class="desktop-brand" href="#hero-title" aria-label="CrewRouter Desktop">
+-        <span class="desktop-brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
++        <span class="blora-avatar" data-size="sm" data-shape="square" data-variant="primary" aria-hidden="true">CR</span>
+         <span><strong>CrewRouter</strong><small>DESKTOP</small></span>
+       </a>
+       <div class="launcher__header-tools">
+@@ -29,28 +30,28 @@
+ 
+     <section class="launcher__view" data-view="welcome" id="view-welcome">
+       <div class="launcher__hero">
+-        <p class="desktop-eyebrow" id="hero-eyebrow" data-i18n="hero.first">首次启动</p>
+-        <h1 id="hero-title" data-i18n="hero.title">开始使用 CrewRouter</h1>
+-        <p class="launcher__lead" id="hero-lead" data-i18n="hero.lead">在这台电脑上本地使用，或连接已有的 CrewRouter 服务器。登录由目标服务器负责，Desktop 不保存凭据。</p>
++        <p class="desktop-eyebrow blora-text-caps blora-text-muted" id="hero-eyebrow" data-i18n="hero.first">首次启动</p>
++        <h1 class="blora-h2" id="hero-title" data-i18n="hero.title">开始使用 CrewRouter</h1>
++        <p class="launcher__lead blora-text-lead" id="hero-lead" data-i18n="hero.lead">在这台电脑上本地使用，或连接已有的 CrewRouter 服务器。登录由目标服务器负责，Desktop 不保存凭据。</p>
+       </div>
+       <div id="saved-panel" class="launcher__block" hidden>
+         <div class="launcher__block-head">
+-          <h2 data-i18n="saved.title">已保存的连接</h2>
++          <h2 class="blora-h4" data-i18n="saved.title">已保存的连接</h2>
+           <span id="saved-count" class="blora-badge" data-variant="neutral"></span>
+         </div>
+         <div id="profile-list" class="blora-list launcher__profiles blora-card" data-variant="content" role="list"></div>
+       </div>
+       <div class="launcher__block">
+-        <div class="launcher__block-head"><h2 id="choices-title" data-i18n="choices.title">选择一种方式</h2></div>
++        <div class="launcher__block-head"><h2 class="blora-h4" id="choices-title" data-i18n="choices.title">选择一种方式</h2></div>
+         <div class="launcher__choices">
+           <button id="choose-local" class="blora-button launcher__choice" data-variant="outline" type="button">
+             <span class="launcher__choice-icon" data-icon="home" aria-hidden="true"></span>
+-            <span class="launcher__choice-copy"><strong data-i18n="choice.local">本地使用</strong><small data-i18n="choice.localDesc">在这台电脑上运行 CrewRouter，无需登录</small></span>
++            <span class="launcher__choice-copy"><strong class="blora-card__title" data-i18n="choice.local">本地使用</strong><small class="blora-text-muted" data-i18n="choice.localDesc">在这台电脑上运行 CrewRouter，无需登录</small></span>
+             <span class="launcher__choice-arrow" data-icon="chevron-right" aria-hidden="true"></span>
+           </button>
+           <button id="choose-remote" class="blora-button launcher__choice" data-variant="outline" type="button">
+             <span class="launcher__choice-icon" data-icon="globe" aria-hidden="true"></span>
+-            <span class="launcher__choice-copy"><strong data-i18n="choice.remote">连接服务器</strong><small data-i18n="choice.remoteDesc">通过官方站选择实例，或直接输入服务器地址</small></span>
++            <span class="launcher__choice-copy"><strong class="blora-card__title" data-i18n="choice.remote">连接服务器</strong><small class="blora-text-muted" data-i18n="choice.remoteDesc">通过官方站选择实例，或直接输入服务器地址</small></span>
+             <span class="launcher__choice-arrow" data-icon="chevron-right" aria-hidden="true"></span>
+           </button>
+         </div>
+@@ -58,12 +59,12 @@
+     </section>
+ 
+     <section class="launcher__view" data-view="local-name" id="view-local-name" hidden>
+-      <div class="blora-card launcher__panel" data-variant="content">
++      <div class="blora-card blora-stack launcher__panel">
+         <div class="launcher__panel-head">
+-          <div><p class="desktop-eyebrow" data-i18n="local.eyebrow">本地使用</p><h2 data-i18n="local.title">设置你的用户名</h2></div>
++          <div><p class="desktop-eyebrow blora-text-caps blora-text-muted" data-i18n="local.eyebrow">本地使用</p><h2 class="blora-h4" data-i18n="local.title">设置你的用户名</h2></div>
+           <button id="local-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="nav.back">返回</span></button>
+         </div>
+-        <p class="launcher__muted" data-i18n="local.desc">只需设置一次，用于显示在本地控制台和资料中；本地数据保存在这台电脑上。</p>
++        <p class="launcher__muted blora-text-muted" data-i18n="local.desc">只需设置一次，用于显示在本地控制台和资料中；本地数据保存在这台电脑上。</p>
+         <form id="local-profile-form" class="launcher__form" novalidate>
+           <blora-field id="local-username-field" label="用户名" name="local-username" hint="可使用普通文字、数字或短横线，最多 64 个字符。" maxlength="64" autocomplete="nickname" required data-i18n-label="local.field" data-i18n-hint="local.hint"></blora-field>
+           <div class="launcher__actions">
+@@ -74,21 +75,21 @@
+     </section>
+ 
+     <section class="launcher__view" data-view="remote-method" id="view-remote-method" hidden>
+-      <div class="blora-card launcher__panel" data-variant="content">
++      <div class="blora-card blora-stack launcher__panel">
+         <div class="launcher__panel-head">
+-          <div><p class="desktop-eyebrow" data-i18n="remote.eyebrow">连接服务器</p><h2 data-i18n="remote.title">选择连接方式</h2></div>
++          <div><p class="desktop-eyebrow blora-text-caps blora-text-muted" data-i18n="remote.eyebrow">连接服务器</p><h2 class="blora-h4" data-i18n="remote.title">选择连接方式</h2></div>
+           <button id="remote-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="nav.back">返回</span></button>
+         </div>
+-        <p class="launcher__muted" data-i18n="remote.desc">Personal / Team 由目标服务器自动识别；登录在目标服务器完成。</p>
++        <p class="launcher__muted blora-text-muted" data-i18n="remote.desc">Personal / Team 由目标服务器自动识别；登录在目标服务器完成。</p>
+         <div class="launcher__choice-list">
+           <button id="official-remote" class="blora-button launcher__choice" data-variant="outline" type="button">
+             <span class="launcher__choice-icon" data-icon="external-link" aria-hidden="true"></span>
+-            <span class="launcher__choice-copy"><strong data-i18n="remote.official">通过官方站连接</strong><small data-i18n="remote.officialDesc">在浏览器中打开官方站，选择你登录过的 CrewRouter</small></span>
++            <span class="launcher__choice-copy"><strong class="blora-card__title" data-i18n="remote.official">通过官方站连接</strong><small class="blora-text-muted" data-i18n="remote.officialDesc">在浏览器中打开官方站，选择你登录过的 CrewRouter</small></span>
+             <span class="launcher__choice-arrow" data-icon="chevron-right" aria-hidden="true"></span>
+           </button>
+           <button id="custom-remote" class="blora-button launcher__choice" data-variant="outline" type="button">
+             <span class="launcher__choice-icon" data-icon="search" aria-hidden="true"></span>
+-            <span class="launcher__choice-copy"><strong data-i18n="remote.custom">输入服务器地址</strong><small data-i18n="remote.customDesc">直接打开你填写的服务器，不经过官方站</small></span>
++            <span class="launcher__choice-copy"><strong class="blora-card__title" data-i18n="remote.custom">输入服务器地址</strong><small class="blora-text-muted" data-i18n="remote.customDesc">直接打开你填写的服务器，不经过官方站</small></span>
+             <span class="launcher__choice-arrow" data-icon="chevron-right" aria-hidden="true"></span>
+           </button>
+         </div>
+@@ -96,12 +97,12 @@
+     </section>
+ 
+     <section class="launcher__view" data-view="custom-url" id="view-custom-url" hidden>
+-      <div class="blora-card launcher__panel" data-variant="content">
++      <div class="blora-card blora-stack launcher__panel">
+         <div class="launcher__panel-head">
+-          <div><p class="desktop-eyebrow" data-i18n="remote.eyebrow">连接服务器</p><h2 data-i18n="custom.title">输入服务器地址</h2></div>
++          <div><p class="desktop-eyebrow blora-text-caps blora-text-muted" data-i18n="remote.eyebrow">连接服务器</p><h2 class="blora-h4" data-i18n="custom.title">输入服务器地址</h2></div>
+           <button id="custom-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="nav.back">返回</span></button>
+         </div>
+-        <p class="launcher__muted" data-i18n="custom.desc">仅支持 http:// 或 https:// 的公网地址；Desktop 不保存凭据。</p>
++        <p class="launcher__muted blora-text-muted" data-i18n="custom.desc">仅支持 http:// 或 https:// 的公网地址；Desktop 不保存凭据。</p>
+         <form id="connection-form" class="launcher__form" novalidate>
+           <blora-field id="custom-url-field" label="服务器地址" name="remote-url" type="url" placeholder="https://server.example.com" hint="仅支持 http:// 或 https:// 地址。" autocomplete="url" inputmode="url" required data-i18n-label="custom.field" data-i18n-hint="custom.hint"></blora-field>
+           <div class="launcher__actions">
+@@ -112,11 +113,11 @@
+     </section>
+ 
+     <section class="launcher__view" data-view="progress" id="view-progress" hidden>
+-      <div class="blora-card launcher__panel launcher__panel--center" data-variant="content" aria-live="polite" aria-atomic="true">
+-        <p class="desktop-eyebrow" id="progress-eyebrow" data-i18n="progress.eyebrow">请稍候</p>
+-        <h2 id="progress-title"></h2>
++      <div class="blora-card blora-stack launcher__panel launcher__panel--center" aria-live="polite" aria-atomic="true">
++        <p class="desktop-eyebrow blora-text-caps blora-text-muted" id="progress-eyebrow" data-i18n="progress.eyebrow">请稍候</p>
++        <h2 class="blora-h4" id="progress-title"></h2>
+         <div id="progress-bar-wrap"><blora-progress id="progress-bar" value="0" label="进度"></blora-progress></div>
+-        <p id="progress-label" class="launcher__muted"></p>
++        <p id="progress-label" class="launcher__muted blora-text-muted"></p>
+         <div id="official-wait" hidden>
+           <blora-alert variant="info" title="请在浏览器中继续" description="已在系统浏览器打开官方站。选择要登录的 CrewRouter 并完成授权后，Desktop 会自动打开它。" data-i18n-title="official.waitTitle" data-i18n-description="official.waitDesc"></blora-alert>
+           <div class="launcher__actions launcher__actions--center">
+@@ -130,10 +131,10 @@
+     </section>
+ 
+     <section class="launcher__view" data-view="error" id="view-error" hidden>
+-      <div class="blora-card launcher__panel launcher__panel--center" data-variant="content">
++      <div class="blora-card blora-stack launcher__panel launcher__panel--center">
+         <blora-result id="error-result" variant="error" title="出了点问题" description="" data-i18n-title="error.title"></blora-result>
+         <div class="launcher__actions launcher__actions--center">
+-          <button id="retry" class="blora-button" data-variant="primary" type="button"><span class="button-icon" data-icon="refresh" aria-hidden="true"></span><span data-i18n="error.retry">重试</span></button>
++          <button id="retry" class="blora-button" data-variant="primary" type="button"><span class="button-icon" data-icon="refresh-cw" aria-hidden="true"></span><span data-i18n="error.retry">重试</span></button>
+           <button id="error-open-logs" class="blora-button" data-variant="outline" type="button" hidden data-i18n="error.logs">查看日志</button>
+           <button id="dismiss-error" class="blora-button" data-variant="text" type="button" data-i18n="nav.back">返回</button>
+         </div>
+@@ -142,11 +143,11 @@
+ 
+     <section class="launcher__view" data-view="settings" id="view-settings" hidden>
+       <div class="launcher__panel-head launcher__panel-head--bare">
+-        <div><p class="desktop-eyebrow">CrewRouter Desktop</p><h2 data-i18n="settings.title">Desktop 设置</h2></div>
++        <div><p class="desktop-eyebrow blora-text-caps blora-text-muted">CrewRouter Desktop</p><h2 class="blora-h4" data-i18n="settings.title">Desktop 设置</h2></div>
+         <button id="settings-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="nav.back">返回</span></button>
+       </div>
+-      <div class="blora-card launcher__panel" data-variant="content">
+-        <h3 data-i18n="settings.preferences">偏好</h3>
++      <div class="blora-card blora-stack launcher__panel">
++        <h3 class="blora-card__title" data-i18n="settings.preferences">偏好</h3>
+         <div class="launcher__prefs">
+           <blora-switch id="pref-autoConnect" label="启动时自动连接上次的连接" data-i18n-label="settings.autoConnect"></blora-switch>
+           <blora-switch id="pref-notifications" label="启用桌面通知" data-i18n-label="settings.notifications"></blora-switch>
+@@ -159,8 +160,8 @@
+           </div>
+         </div>
+       </div>
+-      <div class="blora-card launcher__panel" data-variant="content" id="local-server-card">
+-        <h3 data-i18n="settings.localServer">本地服务</h3>
++      <div class="blora-card blora-stack launcher__panel" id="local-server-card">
++        <h3 class="blora-card__title" data-i18n="settings.localServer">本地服务</h3>
+         <div class="launcher__descriptions-wrap">
+         <table class="blora-descriptions launcher__descriptions"><tbody>
+           <tr><th data-i18n="settings.status">状态</th><td id="local-status"></td></tr>
+@@ -176,17 +177,17 @@
+           <button id="local-open-logs" class="blora-button" data-variant="outline" type="button" data-i18n="settings.openLogs">打开日志目录</button>
+         </div>
+       </div>
+-      <div class="blora-card launcher__panel" data-variant="content">
+-        <h3 data-i18n="settings.diagnostics">诊断</h3>
+-        <p class="launcher__muted" data-i18n="settings.diagnosticsHint">仅包含安全白名单字段，不包含 Token、Cookie 或 API Key。</p>
++      <div class="blora-card blora-stack launcher__panel">
++        <h3 class="blora-card__title" data-i18n="settings.diagnostics">诊断</h3>
++        <p class="launcher__muted blora-text-muted" data-i18n="settings.diagnosticsHint">仅包含安全白名单字段，不包含 Token、Cookie 或 API Key。</p>
+         <div class="launcher__actions">
+           <button id="copy-diagnostics" class="blora-button" data-variant="outline" type="button" data-i18n="settings.copy">复制诊断信息</button>
+-          <output id="settings-message" class="launcher__output" role="status"></output>
+-        </div>
+-      </div>
+-      <div class="blora-card launcher__panel" data-variant="content">
+-        <h3 data-i18n="settings.app">应用</h3>
+-        <p class="launcher__muted" data-i18n="settings.appHint">重启会重新加载 Desktop；退出会停止桌面应用及其管理的本地服务。</p>
++          <output id="settings-message" class="launcher__output blora-text-muted" role="status"></output>
++        </div>
++      </div>
++      <div class="blora-card blora-stack launcher__panel">
++        <h3 class="blora-card__title" data-i18n="settings.app">应用</h3>
++        <p class="launcher__muted blora-text-muted" data-i18n="settings.appHint">重启会重新加载 Desktop；退出会停止桌面应用及其管理的本地服务。</p>
+         <div class="launcher__actions">
+           <button id="restart-app" class="blora-button" data-variant="secondary" type="button" data-i18n="settings.restartApp">重启 Desktop</button>
+           <button id="quit-app" class="blora-button" data-variant="danger" type="button" data-i18n="settings.quit">退出</button>
+@@ -195,8 +196,8 @@
+     </section>
+ 
+     <footer class="launcher__footer">
+-      <small data-i18n="footer.note">登录由目标服务器负责；Desktop 不接管凭据。</small>
+-      <small id="app-version"></small>
++      <small class="blora-text-muted" data-i18n="footer.note">登录由目标服务器负责；Desktop 不接管凭据。</small>
++      <small class="blora-text-muted" id="app-version"></small>
+     </footer>
+   </main>
+ 
+--- a/CrewRouter-Desktop/src/renderer/styles.css
++++ b/CrewRouter-Desktop/src/renderer/styles.css
+@@ -1,60 +1,51 @@
+ /* Page composition only. Component chrome and tokens come from the vendored Blora package. */
+ @layer legacy, blora;
+ @layer legacy {
+-:root { font-family: var(--blora-font-sans); background: var(--blora-color-surface-canvas); color: var(--blora-color-text-primary); }
+ * { box-sizing: border-box; }
+ [hidden] { display: none !important; }
+-button, input { font: inherit; }
+ button, a { -webkit-tap-highlight-color: transparent; }
+-body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--blora-color-surface-canvas); color: var(--blora-color-text-primary); background-image: var(--blora-texture-background); }
++body { margin: 0; min-width: 320px; min-height: 100vh; }
+ }
+ .launcher { display: flex; flex-direction: column; width: min(calc(100% - (2 * var(--blora-space-6))), 860px); min-height: 100vh; margin: 0 auto; padding: var(--blora-space-5) 0 var(--blora-space-4); }
+ .launcher__header, .launcher__footer, .launcher__panel-head, .launcher__block-head { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-4); }
+ .launcher__header { min-height: 2.75rem; }
+ .launcher__header-tools { display: inline-flex; align-items: center; gap: var(--blora-space-3); }
+-.desktop-brand { display: inline-flex; align-items: center; gap: var(--blora-space-3); color: var(--blora-color-text-primary); text-decoration: none; }
+-.desktop-brand strong { display: block; font-size: var(--blora-text-sm); letter-spacing: 0; }
+-.desktop-brand small { display: block; margin-top: 2px; color: var(--blora-color-text-muted); font: 500 var(--blora-text-xs) var(--blora-font-mono); letter-spacing: var(--blora-tracking-caps); }
+-.desktop-brand-mark { display: flex; align-items: end; gap: 3px; width: 28px; height: 28px; padding: 5px; border: var(--blora-border-subtle); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-raised); }
+-.desktop-brand-mark span { display: block; width: 4px; border-radius: var(--blora-radius-xs); background: var(--blora-color-action-primary-default); }
+-.desktop-brand-mark span:nth-child(1) { height: 8px; } .desktop-brand-mark span:nth-child(2) { height: 13px; } .desktop-brand-mark span:nth-child(3) { height: 17px; }
+-[data-icon] { display: inline-flex; flex: none; }
+-[data-icon] svg { width: 1em; height: 1em; }
++.desktop-brand { display: inline-flex; align-items: center; gap: var(--blora-space-3); text-decoration: none; }
++.desktop-brand strong { display: block; }
++.desktop-brand small { display: block; margin-top: 2px; }
++.launcher [data-icon] { display: inline-flex; flex: none; }
++.launcher [data-icon] svg { width: 1em; height: 1em; }
+ .button-icon { display: inline-flex; align-items: center; }
+-.desktop-eyebrow { margin: 0 0 var(--blora-space-2); color: var(--blora-color-action-primary-default); font: 600 var(--blora-text-xs) var(--blora-font-mono); letter-spacing: var(--blora-tracking-caps); text-transform: uppercase; }
++.desktop-eyebrow { margin: 0 0 var(--blora-space-2); }
+ .launcher__inline-alert { display: block; margin-top: var(--blora-space-4); }
+ .launcher__view { display: flex; flex-direction: column; gap: var(--blora-space-6); margin-top: var(--blora-space-6); }
+-.launcher__hero h1 { max-width: 36rem; margin: 0; overflow-wrap: anywhere; font-family: var(--blora-font-heading); font-size: clamp(var(--blora-text-3xl), 4.5vw, var(--blora-text-5xl)); line-height: var(--blora-leading-tight); letter-spacing: 0; }
+-.launcher__lead { max-width: 44rem; margin: var(--blora-space-3) 0 0; color: var(--blora-color-text-muted); font-size: var(--blora-text-base); line-height: var(--blora-leading-normal); }
++.launcher__hero h1 { max-width: 36rem; margin: 0; overflow-wrap: anywhere; }
++.launcher__lead { max-width: 44rem; margin: var(--blora-space-3) 0 0; }
+ .launcher__block { display: grid; gap: var(--blora-space-3); }
+-.launcher__block-head h2, .launcher__panel-head h2 { margin: 0; font-family: var(--blora-font-heading); font-size: var(--blora-text-xl); font-weight: 600; line-height: var(--blora-leading-tight); letter-spacing: 0; }
+-.launcher__profiles { padding: 0; overflow: hidden; }
+-.launcher__profile { gap: var(--blora-space-4); padding: var(--blora-space-4) var(--blora-space-5); }
+-.launcher__profile-icon { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: var(--blora-radius-md); color: var(--blora-color-action-primary-default); background: var(--blora-color-surface-raised); }
++.launcher__block-head h2, .launcher__panel-head h2 { margin: 0; }
++.launcher__profiles { overflow: hidden; }
++.launcher__profile { gap: var(--blora-space-4); }
++.launcher__profile-icon { display: inline-flex; flex: none; }
+ .launcher__profile .blora-list__title { display: flex; align-items: center; gap: var(--blora-space-2); flex-wrap: wrap; }
+ .launcher__profile .blora-list__desc { overflow-wrap: anywhere; }
+ .launcher__profile-actions { display: inline-flex; align-items: center; gap: var(--blora-space-2); flex: none; }
+ .launcher__choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--blora-space-4); }
+ .launcher__choice-list { display: grid; gap: var(--blora-space-3); }
+-.launcher__choice { display: flex; align-items: center; width: 100%; min-height: 104px; padding: var(--blora-space-5); color: var(--blora-color-text-primary); text-align: left; white-space: normal; cursor: pointer; }
+-.launcher__choice:hover, .launcher__choice:focus-visible { border-color: var(--blora-color-action-primary-default); }
+-.launcher__choice:disabled { cursor: default; opacity: .6; }
+-.launcher__choice-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: none; margin-right: var(--blora-space-4); border-radius: var(--blora-radius-md); color: var(--blora-color-action-primary-default); background: var(--blora-color-surface-raised); }
++.launcher__choice { display: flex; align-items: center; width: 100%; min-height: 104px; height: auto; max-height: none; text-align: left; white-space: normal; }
++.launcher__choice-icon { display: inline-flex; flex: none; margin-right: var(--blora-space-4); }
+ .launcher__choice-icon svg { width: 20px; height: 20px; }
+ .launcher__choice-copy { display: grid; gap: var(--blora-space-1); min-width: 0; }
+-.launcher__choice-copy strong { font-family: var(--blora-font-heading); font-size: var(--blora-text-lg); font-weight: 600; letter-spacing: 0; }
+-.launcher__choice-copy small { color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); line-height: var(--blora-leading-normal); }
+-.launcher__choice-arrow { margin-left: auto; padding-left: var(--blora-space-3); color: var(--blora-color-action-primary-default); }
+-.launcher__panel { width: 100%; padding: var(--blora-space-6); }
+-.launcher__panel h3 { margin: 0 0 var(--blora-space-4); font-family: var(--blora-font-heading); font-size: var(--blora-text-lg); font-weight: 600; letter-spacing: 0; }
++.launcher__choice-arrow { margin-left: auto; padding-left: var(--blora-space-3); }
++.launcher__panel { width: 100%; }
++.launcher__panel h3 { margin: 0 0 var(--blora-space-4); }
+ .launcher__panel-head { align-items: flex-start; }
+ .launcher__panel-head--bare { margin-bottom: calc(-1 * var(--blora-space-2)); }
+ .launcher__panel--center { align-items: center; text-align: center; display: grid; justify-items: center; gap: var(--blora-space-4); }
+-.launcher__panel--center h2 { margin: 0; font-family: var(--blora-font-heading); font-size: var(--blora-text-2xl); font-weight: 600; letter-spacing: 0; }
++.launcher__panel--center h2 { margin: 0; }
+ .launcher__panel--center blora-progress, .launcher__panel--center #progress-bar-wrap { display: block; width: min(100%, 28rem); }
+ .launcher__panel--center blora-alert { display: block; width: min(100%, 32rem); text-align: left; }
+ .launcher__panel--center blora-result { display: block; }
+-.launcher__muted { max-width: 40rem; margin: var(--blora-space-3) 0 var(--blora-space-5); color: var(--blora-color-text-muted); font-size: var(--blora-text-sm); line-height: var(--blora-leading-loose); }
++.launcher__muted { max-width: 40rem; margin: var(--blora-space-3) 0 var(--blora-space-5); }
+ .launcher__panel--center .launcher__muted { margin: 0; }
+ .launcher__form { display: grid; gap: var(--blora-space-3); }
+ .launcher__form blora-field { display: block; }
+@@ -63,25 +54,22 @@
+ .launcher__form .launcher__actions .blora-button { min-width: 13rem; }
+ .launcher__prefs { display: grid; gap: var(--blora-space-3); }
+ .launcher__prefs blora-switch { display: block; }
+-.launcher__pref-row { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-4); padding-top: var(--blora-space-3); border-top: var(--blora-border-subtle); color: var(--blora-color-text-emphasis); font-size: var(--blora-text-sm); }
++.launcher__pref-row { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-4); padding-top: var(--blora-space-3); }
+ .launcher__pref-row blora-select { width: min(100%, 12rem); }
+ .launcher__descriptions-wrap { container-type: inline-size; }
+ .launcher__descriptions { table-layout: fixed; }
+ .launcher__descriptions td { overflow-wrap: anywhere; }
+-.launcher__output { display: block; min-height: 1.4rem; color: var(--blora-color-status-success); font-size: var(--blora-text-sm); }
++.launcher__output { display: block; min-height: 1.4rem; }
+ .launcher__dialog-actions { display: flex; justify-content: flex-end; gap: var(--blora-space-3); }
+-blora-dialog #confirm-text { margin: 0; color: var(--blora-color-text-emphasis); line-height: var(--blora-leading-normal); }
+-blora-dialog blora-field { display: block; }
+-.launcher__footer { margin-top: auto; padding-top: var(--blora-space-6); border-top: var(--blora-border-subtle); }
+-.launcher__footer small { color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
+-.desktop-fallback-message { margin: var(--blora-space-6) auto; width: min(680px, calc(100% - (2 * var(--blora-space-6)))); padding: var(--blora-space-5); color: var(--blora-color-text-primary); background: var(--blora-color-surface-raised); border: var(--blora-border-subtle); border-radius: var(--blora-radius-lg); }
++#confirm-dialog #confirm-text { margin: 0; }
++#rename-dialog blora-field { display: block; }
++.launcher__footer { margin-top: auto; padding-top: var(--blora-space-6); }
++.desktop-fallback-message { margin: var(--blora-space-6) auto; width: min(680px, calc(100% - (2 * var(--blora-space-6)))); padding: var(--blora-space-5); }
+ @media (max-width: 700px) {
+   .launcher { width: min(calc(100% - (2 * var(--blora-space-4))), 560px); padding-top: var(--blora-space-3); }
+   .launcher__view { margin-top: var(--blora-space-5); gap: var(--blora-space-5); }
+-  .launcher__hero h1 { font-size: var(--blora-text-3xl); }
+   .launcher__choices { grid-template-columns: 1fr; }
+-  .launcher__choice { min-height: 92px; padding: var(--blora-space-4); }
+-  .launcher__panel { padding: var(--blora-space-5); }
++  .launcher__choice { min-height: 92px; }
+   .launcher__profile { flex-wrap: wrap; }
+   .launcher__profile-actions { width: 100%; justify-content: flex-end; }
+   .launcher__actions { justify-content: stretch; }
+@@ -93,4 +81,4 @@
+   .launcher__view { margin-top: var(--blora-space-4); gap: var(--blora-space-4); }
+   .launcher__choice { min-height: 88px; }
+ }
+-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
++@media (prefers-reduced-motion: reduce) { .launcher, .launcher *, .launcher *::before, .launcher *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+--- a/CrewRouter-Desktop/src/renderer/launcher.js
++++ b/CrewRouter-Desktop/src/renderer/launcher.js
+@@ -31,7 +31,7 @@
+ function fieldControl(field) { return field?.querySelector?.('input, textarea') || null; }
+ function fieldValue(field) { return String(fieldControl(field)?.value ?? field?.value ?? '').trim(); }
+ function setFieldValue(field, value) { const control = fieldControl(field); if (control) control.value = value; field?.setAttribute('value', value); }
+-function setFieldError(field, message = '') { if (message) field.setAttribute('error', message); else field.removeAttribute('error'); }
++function setFieldError(field, message = '') { if (message) { field.setAttribute('error', message); field.setAttribute('state', 'invalid'); } else { field.removeAttribute('error'); field.removeAttribute('state'); } }
+ // 与主进程 validateLocalDisplayName 一致：拒绝 HTML/引号/斜杠与控制字符。
+ function hasUnsafeNameCharacter(value) {
+   if (/[<>"'`\\/]/.test(value)) return true;
+@@ -57,7 +57,7 @@
+   views.forEach((view) => { view.hidden = view.dataset.view !== next; });
+   hideInlineAlert();
+   if (!focus) return;
+-  const target = next === 'local-name' ? fieldControl($('local-username-field')) : next === 'custom-url' ? fieldControl($('custom-url-field')) : next === 'welcome' ? ($('saved-panel').hidden ? $('choose-local') : $('profile-list').querySelector('button')) : next === 'error' ? $('retry') : null;
++  const target = next === 'remote-method' ? $('official-remote') : next === 'settings' ? $('settings-back') : next === 'local-name' ? fieldControl($('local-username-field')) : next === 'custom-url' ? fieldControl($('custom-url-field')) : next === 'welcome' ? ($('saved-panel').hidden ? $('choose-local') : $('profile-list').querySelector('button')) : next === 'error' ? ($('retry').hidden ? $('dismiss-error') : $('retry')) : null;
+   window.requestAnimationFrame(() => target?.focus?.());
+ }
+ 
+@@ -83,7 +83,9 @@
+     row.setAttribute('role', 'listitem');
+     row.dataset.id = profile.id;
+     const icon = document.createElement('span');
+-    icon.className = 'launcher__profile-icon';
++    icon.className = 'launcher__profile-icon blora-avatar';
++    icon.dataset.size = 'sm';
++    icon.dataset.variant = 'primary';
+     icon.appendChild(createIcon(profile.mode === 'local' ? 'home' : 'globe', 18));
+     const meta = document.createElement('div');
+     meta.className = 'blora-list__meta';
+@@ -189,7 +191,8 @@
+   const busy = ['starting-local', 'connecting', 'awaiting-official-login', 'connected'].includes(status.mode);
+   state.busy = busy;
+   document.querySelectorAll('.launcher__view:not([data-view="progress"]) button').forEach((button) => { button.disabled = busy; });
+-  if (busy) { renderProgress(status); setView('progress', { focus: false }); return; }
++  ['local-username-field', 'custom-url-field'].forEach((id) => $(id).toggleAttribute('disabled', busy));
++  if (busy) { renderProgress(status); setView('progress', { focus: false }); if (document.activeElement?.closest('[hidden]')) $('cancel-pending').focus(); return; }
+   if (status.mode === 'error') { renderError(status); setView('error'); return; }
+   if (state.view === 'settings') renderSettings(status);
+   if (!IDLE_VIEWS.has(state.view)) setView('welcome');
+@@ -324,7 +327,7 @@
+   });
+ }
+ ['pref-autoConnect', 'pref-notifications', 'pref-updateChecks'].forEach((id) => $(id).addEventListener('change', savePreferences));
+-['pref-theme', 'pref-language'].forEach((id) => { $(id).addEventListener('change', savePreferences); $(id).addEventListener('blora-change', savePreferences); });
++['pref-theme', 'pref-language'].forEach((id) => { $(id).addEventListener('change', savePreferences); });
+ $('local-restart').addEventListener('click', async () => {
+   if (!state.status?.localServer?.ready) { run(() => api.startLocal()); return; }
+   if (await confirmDialog({ message: t('confirm.restartLocal'), okLabel: t('settings.restartLocal'), danger: false })) run(() => api.restartLocal());
+--- a/CrewRouter-Desktop/src/renderer/settings.html
++++ b/CrewRouter-Desktop/src/renderer/settings.html
+@@ -5,6 +5,7 @@
+   <meta name="viewport" content="width=device-width,initial-scale=1">
+   <title>CrewRouter Desktop Settings</title>
+   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self';">
++  <style>@layer legacy, blora;</style>
+   <link rel="stylesheet" href="vendor/blora-design/blora.css">
+   <link rel="stylesheet" href="vendor/blora-design/tokens.dark.css">
+   <link rel="stylesheet" href="settings.css">
+@@ -12,15 +13,15 @@
+ <body class="blora-page blora-scope">
+   <main class="settings-shell" aria-labelledby="settings-title">
+     <header class="settings-header">
+-      <div><p class="desktop-eyebrow">CREWROUTER DESKTOP</p><h1 id="settings-title" data-i18n="title">Desktop 设置</h1></div>
++      <div><p class="desktop-eyebrow blora-text-caps blora-text-muted">CREWROUTER DESKTOP</p><h1 class="blora-h2" id="settings-title" data-i18n="title">Desktop 设置</h1></div>
+       <label class="language-picker" for="language"><span class="visually-hidden">Language</span><blora-select id="language" aria-label="Language"><blora-option value="zh">中文</blora-option><blora-option value="en">English</blora-option></blora-select></label>
+     </header>
+-    <p id="remote-note" class="settings-note" data-i18n="remoteNote" hidden></p>
+-    <section class="blora-card settings-card" data-variant="content"><h2 data-i18n="connection">当前连接</h2><dl id="connection" class="settings-details"></dl></section>
+-    <section class="blora-card settings-card" data-variant="content"><h2 data-i18n="profiles">连接 Profiles</h2><div id="profiles" class="profile-list"></div></section>
+-    <section class="blora-card settings-card local-only" id="local-card" data-variant="content"><h2 data-i18n="localServer">Local Server</h2><dl id="local" class="settings-details"></dl><div class="settings-actions"><button type="button" id="restart" class="blora-button" data-variant="secondary" data-i18n="restart">安全重启</button><button type="button" id="stop" class="blora-button" data-variant="danger" data-i18n="stop">停止</button></div></section>
+-    <section class="blora-card settings-card" data-variant="content"><h2 data-i18n="preferences">Desktop 偏好</h2><div class="preference-list"><blora-switch id="autoConnect" label="启动时自动连接上次 Profile" data-i18n-label="autoConnect"></blora-switch><blora-switch id="notifications" label="启用桌面通知" data-i18n-label="notifications"></blora-switch><blora-switch id="updateChecks" label="检查更新" data-i18n-label="updateChecks"></blora-switch><label class="theme-picker"><span data-i18n="theme">主题</span><blora-select id="theme" aria-label="主题"><blora-option value="system" data-i18n="system">跟随系统</blora-option><blora-option value="light" data-i18n="light">浅色</blora-option><blora-option value="dark" data-i18n="dark">深色</blora-option></blora-select></label></div></section>
+-    <section class="blora-card settings-card" data-variant="content"><h2 data-i18n="diagnostics">诊断信息</h2><p class="settings-muted" data-i18n="diagnosticsHint">仅包含安全白名单字段，不包含 Token 或 API Key。</p><button type="button" id="copy" class="blora-button" data-variant="outline" data-i18n="copy">复制诊断信息</button><output id="message" class="settings-output" role="status"></output></section>
++    <blora-alert id="remote-note" class="settings-note" variant="info" description="" hidden></blora-alert>
++    <section class="blora-card settings-card" data-size="sm"><h2 class="blora-card__title" data-i18n="connection">当前连接</h2><dl id="connection" class="settings-details"></dl></section>
++    <section class="blora-card settings-card" data-size="sm"><h2 class="blora-card__title" data-i18n="profiles">连接 Profiles</h2><div id="profiles" class="profile-list"></div></section>
++    <section class="blora-card settings-card local-only" id="local-card" data-size="sm"><h2 class="blora-card__title" data-i18n="localServer">Local Server</h2><dl id="local" class="settings-details"></dl><div class="settings-actions"><button type="button" id="restart" class="blora-button" data-variant="secondary" data-i18n="restart">安全重启</button><button type="button" id="stop" class="blora-button" data-variant="danger" data-i18n="stop">停止</button></div></section>
++    <section class="blora-card settings-card" data-size="sm"><h2 class="blora-card__title" data-i18n="preferences">Desktop 偏好</h2><div class="preference-list"><blora-switch id="autoConnect" label="启动时自动连接上次 Profile" data-i18n-label="autoConnect"></blora-switch><blora-switch id="notifications" label="启用桌面通知" data-i18n-label="notifications"></blora-switch><blora-switch id="updateChecks" label="检查更新" data-i18n-label="updateChecks"></blora-switch><label class="theme-picker"><span data-i18n="theme">主题</span><blora-select id="theme" aria-label="主题"><blora-option value="system" data-i18n="system">跟随系统</blora-option><blora-option value="light" data-i18n="light">浅色</blora-option><blora-option value="dark" data-i18n="dark">深色</blora-option></blora-select></label></div></section>
++    <section class="blora-card settings-card" data-size="sm"><h2 class="blora-card__title" data-i18n="diagnostics">诊断信息</h2><p class="settings-muted blora-text-muted" data-i18n="diagnosticsHint">仅包含安全白名单字段，不包含 Token 或 API Key。</p><button type="button" id="copy" class="blora-button" data-variant="outline" data-i18n="copy">复制诊断信息</button><output id="message" class="settings-output blora-text-muted" role="status"></output></section>
+   </main>
+   <blora-dialog id="settings-dialog" size="sm">
+     <span slot="title" id="dialog-title"></span>
+--- a/CrewRouter-Desktop/src/renderer/settings.css
++++ b/CrewRouter-Desktop/src/renderer/settings.css
+@@ -1,38 +1,35 @@
+ /* Settings page composition; component chrome comes from Blora Design. */
+ @layer legacy, blora;
+ @layer legacy {
+-:root { color-scheme: light dark; font-family: var(--blora-font-sans); color: var(--blora-color-text-primary); background: var(--blora-color-surface-canvas); }
++:root { color-scheme: light dark; }
+ * { box-sizing: border-box; }
+-body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--blora-color-surface-canvas); }
+-button, input, select { font: inherit; }
++body { margin: 0; min-width: 320px; min-height: 100vh; }
+ }
+ .settings-shell { width: min(100% - (2 * var(--blora-space-6)), 760px); margin: 0 auto; padding: var(--blora-space-7) 0 var(--blora-space-10); }
+ .settings-header { display: flex; align-items: end; justify-content: space-between; gap: var(--blora-space-5); margin-bottom: var(--blora-space-6); }
+-.settings-header h1 { margin: 0; font-family: var(--blora-font-heading); font-size: clamp(var(--blora-text-3xl), 6vw, var(--blora-text-5xl)); line-height: var(--blora-leading-tight); letter-spacing: -.06em; }
++.settings-header h1 { margin: 0; }
+ .language-picker { width: 7rem; flex: none; }
+ .language-picker .blora-input, .theme-picker .blora-input { margin-top: 0; }
+-.settings-card { margin-top: var(--blora-space-4); padding: var(--blora-space-6); }
+-.settings-card h2 { margin: 0 0 var(--blora-space-4); font-family: var(--blora-font-heading); font-size: var(--blora-text-xl); letter-spacing: -.03em; }
+-.settings-details { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: var(--blora-space-2) var(--blora-space-4); margin: 0; font-size: var(--blora-text-sm); }
+-.settings-details dt { color: var(--blora-color-text-muted); }
+-.settings-details dd { min-width: 0; margin: 0; color: var(--blora-color-text-emphasis); overflow-wrap: anywhere; }
++.settings-card { margin-top: var(--blora-space-4); }
++.settings-card h2 { margin: 0 0 var(--blora-space-4); }
++.settings-details { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: var(--blora-space-2) var(--blora-space-4); margin: 0; }
++.settings-details dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+ .profile-list { display: grid; }
+-.profile { display: flex; align-items: center; gap: var(--blora-space-3); padding: var(--blora-space-3) 0; border-top: var(--blora-border-subtle); }
+-.profile:first-child { border-top: 0; padding-top: 0; }
++.profile { display: flex; align-items: center; gap: var(--blora-space-3); padding: var(--blora-space-3) 0; }
++.profile:first-child {  padding-top: 0; }
+ .profile span { display: grid; gap: var(--blora-space-1); min-width: 0; flex: 1; }
+-.profile small, .settings-muted, .muted { color: var(--blora-color-text-muted); overflow-wrap: anywhere; }
++.profile small, .settings-muted, .muted { overflow-wrap: anywhere; }
+ .profile button { flex: none; }
+ .settings-actions { display: flex; flex-wrap: wrap; gap: var(--blora-space-3); margin-top: var(--blora-space-5); }
+ .preference-list { display: grid; gap: var(--blora-space-3); }
+-.preference-list label { display: flex; align-items: center; gap: var(--blora-space-2); color: var(--blora-color-text-emphasis); font-size: var(--blora-text-sm); }
+-.theme-picker { align-items: center; justify-content: space-between; padding-top: var(--blora-space-2); border-top: var(--blora-border-subtle); }
++.preference-list label { display: flex; align-items: center; gap: var(--blora-space-2); }
++.theme-picker { align-items: center; justify-content: space-between; padding-top: var(--blora-space-2); }
+ .theme-picker .blora-input { width: auto; min-width: 10rem; }
+-.settings-note { margin: 0 0 var(--blora-space-4); padding: var(--blora-space-4); color: var(--blora-color-text-emphasis); background: var(--blora-color-action-primary-tint); border: var(--blora-border-primary); border-radius: var(--blora-radius-lg); font-size: var(--blora-text-sm); line-height: var(--blora-leading-normal); }
+-.settings-output { display: block; min-height: 1.4rem; margin-top: var(--blora-space-3); color: var(--blora-color-status-success); font-size: var(--blora-text-sm); }
+-.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+-@media (max-width: 600px) { .settings-shell { width: min(100% - (2 * var(--blora-space-4)), 520px); padding-top: var(--blora-space-5); } .settings-header { align-items: flex-start; flex-direction: column; } .language-picker { width: 100%; } .settings-card { padding: var(--blora-space-5); } .settings-details { grid-template-columns: 1fr; gap: var(--blora-space-1); } .settings-details dd + dt { margin-top: var(--blora-space-2); } .profile { align-items: flex-start; flex-wrap: wrap; } .profile span { flex-basis: 100%; } .theme-picker { align-items: flex-start; flex-direction: column; } .theme-picker .blora-input { width: 100%; } }
+-
+-.desktop-eyebrow { margin-bottom: var(--blora-space-2); color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
++.settings-note { margin: 0 0 var(--blora-space-4); padding: var(--blora-space-4); }
++.settings-output { display: block; min-height: 1.4rem; margin-top: var(--blora-space-3); }
++.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
++@media (max-width: 600px) { .settings-shell { width: min(100% - (2 * var(--blora-space-4)), 520px); padding-top: var(--blora-space-5); } .settings-header { align-items: flex-start; flex-direction: column; } .language-picker { width: 100%; } .settings-details { grid-template-columns: 1fr; gap: var(--blora-space-1); } .settings-details dd + dt { margin-top: var(--blora-space-2); } .profile { align-items: flex-start; flex-wrap: wrap; } .profile span { flex-basis: 100%; } .theme-picker { align-items: flex-start; flex-direction: column; } .theme-picker .blora-input { width: 100%; } }
++.desktop-eyebrow { margin-bottom: var(--blora-space-2); }
+ .language-picker blora-select, .theme-picker blora-select { display: block; min-width: 10rem; }
+ .preference-list blora-switch { display: block; }
+ [hidden] { display: none !important; }
+--- a/CrewRouter-Desktop/src/renderer/settings.js
++++ b/CrewRouter-Desktop/src/renderer/settings.js
+@@ -7,7 +7,7 @@
+ const $ = (id) => document.getElementById(id); const t = (key) => dict[lang][key] || key;
+ function escapeHtml(value) { return String(value).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+ function applyTheme(value) { const scheme = value === 'system' ? (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : value; document.documentElement.dataset.bloraColorScheme = scheme; }
+-function render() { if (!data) return; document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); }); document.querySelectorAll('[data-i18n-label]').forEach((el) => el.setAttribute('label', t(el.dataset.i18nLabel))); const s = data.status || {}; $('connection').innerHTML = [['mode', s.mode], ['target', s.target], ['runtime', s.runtime], ['edition', s.edition]].map(([k,v])=>`<dt>${t(k)}</dt><dd>${escapeHtml(v || t('none'))}</dd>`).join(''); const local = data.local; $('local-card').hidden = s.runtime !== 'desktop-local' && !data.status.localProfile; $('local').innerHTML = local ? `<dt>${t('pid')}</dt><dd>${escapeHtml(local.pid || t('none'))}</dd><dt>${t('port')}</dt><dd>${escapeHtml(local.port || t('none'))}</dd><dt>${t('status')}</dt><dd>${local.ready ? t('ready') : t('stopped')}</dd>` : `<dt>${t('status')}</dt><dd>${t('stopped')}</dd>`; $('profiles').innerHTML = data.profiles.map((p) => `<div class="profile"><span><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.url)} ${p.id === s.profile?.id ? t('active') : ''}</small></span><button type="button" class="blora-button" data-variant="text" data-size="sm" data-rename="${escapeHtml(p.id)}">${t('rename')}</button><button type="button" class="blora-button" data-variant="danger" data-size="sm" data-delete="${escapeHtml(p.id)}">${t('delete')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`; $('autoConnect').checked = data.settings.autoConnect; $('notifications').checked = data.settings.notifications; $('updateChecks').checked = data.settings.updateChecks; $('theme').value = data.settings.theme; applyTheme(data.settings.theme); $('remote-note').hidden = s.mode !== 'remote'; }
++function render() { if (!data) return; document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); }); document.querySelectorAll('[data-i18n-label]').forEach((el) => el.setAttribute('label', t(el.dataset.i18nLabel))); const s = data.status || {}; $('connection').innerHTML = [['mode', s.mode], ['target', s.target], ['runtime', s.runtime], ['edition', s.edition]].map(([k,v])=>`<dt class="blora-text-muted">${t(k)}</dt><dd>${escapeHtml(v || t('none'))}</dd>`).join(''); const local = data.local; $('local-card').hidden = s.runtime !== 'desktop-local' && !data.status.localProfile; $('local').innerHTML = local ? `<dt>${t('pid')}</dt><dd>${escapeHtml(local.pid || t('none'))}</dd><dt>${t('port')}</dt><dd>${escapeHtml(local.port || t('none'))}</dd><dt>${t('status')}</dt><dd>${local.ready ? t('ready') : t('stopped')}</dd>` : `<dt>${t('status')}</dt><dd>${t('stopped')}</dd>`; $('profiles').innerHTML = data.profiles.map((p) => `<div class="profile blora-list__item"><span><strong>${escapeHtml(p.name)}</strong><small class="blora-text-muted">${escapeHtml(p.url)} ${p.id === s.profile?.id ? t('active') : ''}</small></span><button type="button" class="blora-button" data-variant="text" data-size="sm" data-rename="${escapeHtml(p.id)}">${t('rename')}</button><button type="button" class="blora-button" data-variant="danger" data-size="sm" data-delete="${escapeHtml(p.id)}">${t('delete')}</button></div>`).join('') || `<p class="muted blora-text-muted">${t('none')}</p>`; $('autoConnect').checked = data.settings.autoConnect; $('notifications').checked = data.settings.notifications; $('updateChecks').checked = data.settings.updateChecks; $('theme').value = data.settings.theme; applyTheme(data.settings.theme); $('remote-note').setAttribute('description', t('remoteNote')); $('remote-note').hidden = s.mode !== 'remote'; }
+ async function action(fn) { try { return await fn(); } catch (error) { $('message').textContent = error?.message || String(error); return null; } }
+ async function reload() { data = await api.getDesktopSettings(); render(); }
+ function disableUnavailable() { document.querySelectorAll('button,blora-select,blora-switch,blora-field').forEach((el) => { el.disabled = true; }); $('message').textContent = t('unavailable'); }
+--- a/public/css/blora-agent.css
++++ b/public/css/blora-agent.css
+@@ -52,7 +52,6 @@
+ .ba-history {
+   display: flex;
+   flex-direction: column;
+-  padding: 12px;
+ }
+ 
+ .ba-history__bar {
+@@ -67,7 +66,7 @@
+   gap: 6px;
+ }
+ 
+-.ba-history__item {  overflow-wrap: anywhere; }
++.ba-history__item { display: flex; flex-direction: column; align-items: flex-start; width: 100%; white-space: normal; overflow-wrap: anywhere; }
+ 
+ .ba-history__meta {
+   display: block;
+@@ -92,8 +91,8 @@
+ }
+ 
+ .ba-bubble {
++  width: min(760px, 100%);
+   max-width: min(760px, 100%);
+-  padding: 10px 12px;
+ }
+ 
+ .ba-bubble--user {
+@@ -107,12 +106,10 @@
+ 
+ .ba-code {
+   overflow: auto;
+-  padding: 8px;
+ }
+ 
+ .ba-card {
+   width: min(640px, 100%);
+-  padding: 10px 12px;
+ }
+ 
+ .ba-card__header {
+@@ -125,6 +122,8 @@
+ .ba-card__body {
+   margin: 0;
+   white-space: pre-wrap;
++  overflow-wrap: anywhere;
++  max-width: 100%;
+ }
+ 
+ .ba-card__actions {
+@@ -191,7 +190,7 @@
+ .ba-option:first-child { flex: 1 0 100%; }
+ .ba-option :is(blora-textarea, textarea[id]) { width: 100%; resize: vertical; }
+ .ba-option :is(blora-number-input, input[type="number"]) { width: 100px; }
+-.ba-composer { display: flex; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 12px; width: 100%; max-width: 760px; margin: 0 auto; padding: 16px; }
++.ba-composer { display: flex; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 12px; width: 100%; max-width: 760px; margin: 0 auto; }
+ .ba-composer #baInput { width: 100%; min-width: 0; min-height: 72px; max-height: 180px; resize: vertical; }
+ .ba-composer__tools { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+ .ba-composer__tools #baModel { flex: 1; min-width: 0; max-width: 320px; }
+@@ -199,16 +198,14 @@
+ .ba-composer__tools #baSend, .ba-composer__tools #baStop { margin-left: auto; flex-shrink: 0; }
+ .ba-input-hint {  margin: 10px 0 0; flex-shrink: 0; }
+ .ba-bubble { overflow-wrap: anywhere; }
+-.ba-bubble--assistant { padding-left: 0; }
++
+ @media (max-width: 800px) {
+   .ba-main { padding: 0; }
+   .ba-top { gap: 8px; margin-bottom: 12px; }
+   .ba-welcome { padding: 20px 8px; }
+-  .ba-composer { padding: 12px; }
++
+   .ba-input-hint { display: none; }
+-  .ba-history { height: 100dvh; }
+-}
+-@media (prefers-reduced-motion: reduce) {
++
+ }
+ 
+ @media (max-width: 800px) {
+@@ -219,26 +216,8 @@
+   }
+   .ba-body { grid-template-columns: 1fr; overflow: hidden; }
+   .ba-options { max-height: 34vh; overflow: auto; }
+-  .ba-history {
+-    position: fixed;
+-    z-index: 30;
+-    top: 0;
+-    left: 0;
+-    width: min(280px, 86vw);
+-    height: 100vh;
+-    transform: translateX(-105%);
+-
+-  }
+-  .ba-history.is-open { transform: none; }
+-  .ba-overlay {
+-    display: block;
+-    position: fixed;
+-    inset: 0;
+-    z-index: 29;
+-
+-    pointer-events: none;
+-  }
+-  .ba-overlay.is-open {  pointer-events: auto; }
++  .ba-history { width: 100%; height: 100%; min-height: 0; }
++  .ba-overlay { display: none; }
+   .ba-history-toggle { display: inline-flex; }
+ }
+ 
+--- a/public/js/blora-agent.js
++++ b/public/js/blora-agent.js
+@@ -36,6 +36,49 @@
+     bind() {
+       if (this.bound) return;
+       this.bound = true;
++      const history = document.getElementById('baHistory');
++      history?.classList.add('blora-card');
++      const drawer = document.createElement('blora-drawer');
++      drawer.setAttribute('position', 'left');
++      drawer.setAttribute('title', '历史');
++      new MutationObserver(() => {
++        if (!drawer.hasAttribute('open')) {
++          history?.classList.remove('is-open');
++          document.getElementById('baHistoryToggle')?.setAttribute('aria-expanded', 'false');
++        }
++      }).observe(drawer, { attributes: true, attributeFilter: ['open'] });
++      document.getElementById('bloraAgentPage')?.appendChild(drawer);
++      this.historyDrawer = drawer;
++      const syncHistory = () => {
++        drawer.close();
++        this.toggleHistory(false);
++        if (window.matchMedia('(max-width: 800px)').matches) { history.dataset.variant = 'inset'; drawer.appendChild(history); }
++        else { history.removeAttribute('data-variant'); document.querySelector('.ba-body')?.prepend(history); }
++      };
++      window.matchMedia('(max-width: 800px)').addEventListener('change', syncHistory);
++      syncHistory();
++      document.getElementById('baComposer')?.classList.add('blora-card');
++      ['baSystem', 'baMaxTokens'].forEach((id) => {
++        const control = document.getElementById(id);
++        const label = control?.closest('label');
++        if (!label) return;
++        const field = document.createElement('blora-field');
++        field.className = label.className;
++        field.setAttribute('label', label.textContent.trim());
++        field.appendChild(control);
++        label.replaceWith(field);
++      });
++      document.getElementById('baBalance')?.classList.add('blora-text-muted');
++      document.querySelector('.ba-input-hint')?.classList.add('blora-text-muted');
++      const historyToggle = document.getElementById('baHistoryToggle');
++      historyToggle?.setAttribute('aria-controls', 'baHistory');
++      historyToggle?.setAttribute('aria-expanded', 'false');
++      document.addEventListener('keydown', (event) => {
++        if (event.key === 'Escape' && document.getElementById('baHistory')?.classList.contains('is-open')) this.toggleHistory(false);
++      });
++      document.getElementById('baHistoryList')?.addEventListener('click', (event) => {
++        if (event.target.closest('[data-history-retry]')) this.loadHistory();
++      });
+       document.getElementById('baComposer')?.addEventListener('submit', (event) => {
+         event.preventDefault();
+         this.send();
+@@ -169,25 +212,32 @@
+     async loadHistory() {
+       const list = document.getElementById('baHistoryList');
+       if (!list) return;
++      list.setAttribute('aria-busy', 'true');
++      setHTML(list, '<span class="blora-spinner" role="status" aria-label="正在加载历史"></span>');
+       try {
+         if (this.mode === 'chat') {
+           const response = await fetch('/api/conversations', { credentials: 'same-origin' });
+-          this.conversations = response.ok ? await response.json() : [];
++          if (!response.ok) throw new Error('历史加载失败');
++          this.conversations = await response.json();
+           this.renderHistory(this.conversations, item => item.title || '新对话', item => item.model || '');
+         } else if (this.mode === 'imagine') {
+           const response = await fetch('/api/agent/images', { credentials: 'same-origin' });
+           if (response.status === 404) return this.showUnavailable();
+-          this.images = response.ok ? await response.json() : [];
++          if (!response.ok) throw new Error('历史加载失败');
++          this.images = await response.json();
+           this.renderHistory(this.images, item => (item.prompt || '图片').slice(0, 42), item => item.model_id || '');
+         } else {
+           const response = await fetch('/api/agent/manage/threads', { credentials: 'same-origin' });
+           if (response.status === 403) return this.showUnavailable();
+           if (response.status === 404) return this.showUnavailable();
+-          this.threads = response.ok ? await response.json() : [];
++          if (!response.ok) throw new Error('历史加载失败');
++          this.threads = await response.json();
+           this.renderHistory(this.threads, item => item.title || '新对话', item => item.model_id || '');
+         }
+       } catch (_) {
+-        setHTML(list, `<blora-empty title="历史加载失败" description="请稍后重试。"></blora-empty>`);
++        setHTML(list, `<blora-alert variant="danger" title="历史加载失败" description="请稍后重试。"></blora-alert><button type="button" class="blora-button" data-variant="outline" data-history-retry>重试</button>`);
++      } finally {
++        list.removeAttribute('aria-busy');
+       }
+     },
+ 
+@@ -201,9 +251,9 @@
+         return;
+       }
+       setHTML(list, items.map(item => `
+-        <button type="button" class="blora-button ba-history__item" data-variant="${Number(item.id) === Number(this.activeId) ? 'secondary' : 'ghost'}" data-id="${Number(item.id)}">
++        <button type="button" class="blora-button ba-history__item" data-variant="${Number(item.id) === Number(this.activeId) ? 'secondary' : 'ghost'}" aria-current="${Number(item.id) === Number(this.activeId) ? 'true' : 'false'}" data-id="${Number(item.id)}">
+           ${Dom.escapeHtml(titleOf(item))}
+-          <span class="ba-history__meta">${Dom.escapeHtml(metaOf(item))}</span>
++          <span class="ba-history__meta blora-text-muted">${Dom.escapeHtml(metaOf(item))}</span>
+         </button>
+       `).join(''));
+       list.querySelectorAll('[data-id]').forEach(button => {
+@@ -240,7 +290,7 @@
+       const thread = document.getElementById('baThread');
+       setHTML(thread, `
+         <img class="ba-image" alt="" src="${Dom.escapeHtml(image.url)}">
+-        <div class="ba-bubble ba-bubble--user">${this.renderRich(image.prompt || '')}</div>
++        <div class="ba-bubble ba-bubble--user blora-card">${this.renderRich(image.prompt || '')}</div>
+       `);
+       this.loadHistory();
+     },
+@@ -283,7 +333,8 @@
+         const description = this.mode === 'imagine'
+           ? '选择图像模型，描述想要的画面。'
+           : (this.mode === 'manage' ? '查看状态、调整配置。每项写入操作都由你确认。' : '从一个问题、一个想法，或一段代码开始。');
+-        setHTML(thread, `<div class="ba-welcome"><span class="ba-welcome__mark" data-icon="sparkles" aria-hidden="true"></span><h2 class="ba-welcome__title">${Dom.escapeHtml(title)}</h2><p class="ba-welcome__description">${Dom.escapeHtml(description)}</p></div>`);
++        setHTML(thread, `<div class="ba-welcome"><span class="ba-welcome__mark" data-icon="sparkles" aria-hidden="true"></span><h2 class="ba-welcome__title blora-h3">${Dom.escapeHtml(title)}</h2><p class="ba-welcome__description blora-text-muted">${Dom.escapeHtml(description)}</p></div>`);
++        window.Blora?.hydrateIcons?.(thread);
+         return;
+       }
+       let html = this.messages.map(message => this.bubbleHtml(message)).join('');
+@@ -300,20 +351,20 @@
+         return this.toolCard(message.tool_name || 'tool', message.content, pending);
+       }
+       const role = message.role === 'user' ? 'user' : 'assistant';
+-      const reasoning = message.reasoning ? `<div class="ba-thinking">${this.renderRich(message.reasoning)}</div>` : '';
+-      return `<div class="ba-bubble ba-bubble--${role}">${reasoning}${this.renderRich(message.content || '')}</div>`;
++      const reasoning = message.reasoning ? `<div class="ba-thinking blora-text-muted">${this.renderRich(message.reasoning)}</div>` : '';
++      return `<div class="ba-bubble ba-bubble--${role} blora-card" data-size="sm" data-variant="${role === 'user' ? 'inset' : 'flat'}">${reasoning}${this.renderRich(message.content || '')}</div>`;
+     },
+ 
+     toolCard(name, body, pending) {
+       const actions = pending ? `<div class="ba-card__actions"><button type="button" class="blora-button" data-variant="primary" data-size="sm" data-decision="allow">允许</button><button type="button" class="blora-button" data-variant="outline" data-size="sm" data-decision="deny">拒绝</button></div>` : '';
+-      return `<article class="ba-card"><header class="ba-card__header"><span>${Dom.escapeHtml(name || 'tool')}</span></header><pre class="ba-card__body">${Dom.escapeHtml(typeof body === 'string' ? body : JSON.stringify(body || {}, null, 2))}</pre>${actions}</article>`;
++      return `<article class="ba-card blora-card" data-size="sm"><header class="ba-card__header blora-card__header"><span class="blora-card__title">${Dom.escapeHtml(name || 'tool')}</span></header><pre class="ba-card__body blora-code">${Dom.escapeHtml(typeof body === 'string' ? body : JSON.stringify(body || {}, null, 2))}</pre>${actions}</article>`;
+     },
+ 
+     renderRich(text) {
+       const blocks = [];
+       let html = Dom.escapeHtml(text || '');
+       html = html.replace(/```([\s\S]*?)```/g, (_, code) => {
+-        blocks.push(`<pre class="ba-code"><code>${code.trim()}</code></pre>`);
++        blocks.push(`<pre class="ba-code blora-code"><code>${code.trim()}</code></pre>`);
+         return `%%BLOCK${blocks.length - 1}%%`;
+       });
+       html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+@@ -346,7 +397,7 @@
+       this.streaming = active;
+       const send = document.getElementById('baSend');
+       const stop = document.getElementById('baStop');
+-      if (send) send.hidden = active;
++      if (send) { send.hidden = active; send.disabled = active; send.toggleAttribute('data-loading', active); send.setAttribute('aria-busy', String(active)); }
+       if (stop) stop.hidden = !active;
+     },
+ 
+@@ -354,9 +405,10 @@
+       const thread = document.getElementById('baThread');
+       const empty = thread?.querySelector('blora-empty');
+       if (empty) empty.remove();
+-      const node = document.createElement('div');
+-      node.className = 'ba-bubble ba-bubble--assistant';
+-      node.textContent = message;
++      const node = document.createElement('blora-alert');
++      node.setAttribute('variant', 'danger');
++      node.setAttribute('title', '请求失败');
++      node.setAttribute('description', message);
+       thread?.appendChild(node);
+     },
+ 
+@@ -594,8 +646,15 @@
+     },
+ 
+     toggleHistory(open) {
+-      document.getElementById('baHistory')?.classList.toggle('is-open', open);
++      const history = document.getElementById('baHistory');
++      history?.classList.toggle('is-open', open);
+       document.getElementById('baOverlay')?.classList.toggle('is-open', open);
++      document.getElementById('baHistoryToggle')?.setAttribute('aria-expanded', String(open));
++      if (window.matchMedia('(max-width: 800px)').matches) {
++        if (open) this.historyDrawer?.open(); else this.historyDrawer?.close();
++      }
++      if (open) document.getElementById('baNew')?.focus();
++      else if (history?.contains(document.activeElement)) document.getElementById('baHistoryToggle')?.focus();
+     }
+   };
+ 

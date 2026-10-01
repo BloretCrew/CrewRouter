@@ -5,11 +5,6 @@
   overflow-y: auto;
 }
 
-.cr-admin-page .modal-footer .btn,
-.cr-admin-page .modal-footer .blora-button {
-  min-height: 2.25rem;
-}
-
 .cr-admin-page .dialog-btn,
 .cr-admin-page .dialog-btn-primary {
   min-height: 2.25rem;

@@ -1,0 +1,25 @@
+{"route":"console#apiKeys","width":1440,"theme":"light","skin":"default","failed":["existing-key-copy"]}
+{"route":"console#auditLogs","width":1440,"theme":"light","skin":"default","failed":[]}
+{"route":"admin#adminAuditLogs","width":1440,"theme":"light","skin":"default","failed":["desktop-nav-full-row-single-column"]}
+{"route":"admin#adminUsers","width":1440,"theme":"light","skin":"default","failed":["desktop-nav-full-row-single-column"]}
+{"route":"console","width":1440,"theme":"light","skin":"default","failed":[]}
+{"route":"admin","width":1440,"theme":"light","skin":"default","failed":["desktop-nav-full-row-single-column"]}
+{"route":"console#apiKeys","width":390,"theme":"light","skin":"default","failed":["existing-key-copy"]}
+{"route":"console#auditLogs","width":390,"theme":"light","skin":"default","failed":[]}
+{"route":"admin#adminAuditLogs","width":390,"theme":"light","skin":"default","failed":[]}
+{"route":"admin#adminUsers","width":390,"theme":"light","skin":"default","failed":[]}
+{"route":"console","width":390,"theme":"light","skin":"default","failed":["mobile-navigation-closes-drawer"]}
+{"route":"admin","width":390,"theme":"light","skin":"default","failed":["mobile-navigation-closes-drawer"]}
+{"route":"console#apiKeys","width":1440,"theme":"dark","skin":"default","failed":["existing-key-copy"]}
+{"route":"console#auditLogs","width":1440,"theme":"dark","skin":"default","failed":[]}
+{"route":"admin#adminAuditLogs","width":1440,"theme":"dark","skin":"default","failed":["desktop-nav-full-row-single-column"]}
+{"route":"admin#adminUsers","width":1440,"theme":"dark","skin":"default","failed":["desktop-nav-full-row-single-column"]}
+{"route":"console","width":1440,"theme":"dark","skin":"default","failed":[]}
+{"route":"admin","width":1440,"theme":"dark","skin":"default","failed":["desktop-nav-full-row-single-column"]}
+{"route":"console#apiKeys","width":390,"theme":"dark","skin":"default","failed":["existing-key-copy"]}
+{"route":"console#auditLogs","width":390,"theme":"dark","skin":"default","failed":[]}
+{"route":"admin#adminAuditLogs","width":390,"theme":"dark","skin":"default","failed":[]}
+{"route":"admin#adminUsers","width":390,"theme":"dark","skin":"default","failed":[]}
+{"route":"console","width":390,"theme":"dark","skin":"default","failed":["quota-real-long-fixture-multiple-keys","mobile-navigation-closes-drawer"]}
+{"route":"admin","width":390,"theme":"dark","skin":"default","failed":["mobile-navigation-closes-drawer"]}
+{"observations":24,"pages":2,"routes":6,"themes":["default","ocean","linear","paper","terminal","raycast","classic","all-capabilities-theme"],"screenshots":60,"passed":265,"failed":15,"errors":0,"sourceChanges":["public/css/admin-audit-logs-blora.css","public/css/admin-error-logs-blora.css","public/css/admin-models-blora.css","public/css/admin-plugins-blora.css","public/css/admin-prompts-blora.css","public/css/admin-providers-blora.css","public/css/admin-stats-blora.css","public/css/admin-teams-blora.css","public/css/admin-user-groups-blora.css","public/css/admin-users-blora.css","public/css/api-keys-blora.css","public/css/auth-shell.css","public/css/main.css","public/css/model-library-blora.css","public/css/playground.css","public/css/store.css","public/css/themes.css","public/js/admin.js","public/js/app.js","public/js/playground.js","public/js/store.js","public/pages/admin.html","public/pages/feishu-bind.html","public/pages/playground.html","public/pages/plugin-install.html","public/pages/setup.html"],"stale":true,"limitations":["Demo only; mutations may not persist. No real OAuth, payment or inference acceptance.","All entry pages get default four combinations. Plugin themes use API keys representative page only.","Viewport screenshots and measured surfaces are not a proof of all offscreen visuals.","Surface evidence contains actual matched stylesheet rules, not an assertion that zero overflow means visual correctness."]}

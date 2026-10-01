@@ -1,0 +1,26 @@
+[config-loader] 已加载配置: /data/CrewRouter/config.json
+[36m[INFO][0m [数据库] 演示模式，跳过数据库连接
+== usage-logs-filter ==
+  PASS normalizeRequestType allows only known types
+  PASS admin filter without request_type is compatible
+  PASS admin filter request_type=playground
+  PASS admin filter request_type=chat with user_id
+  PASS admin filter provider_q
+  PASS user filter request_type=responses
+  PASS user filter without request_type
+  PASS allowed types include fusion
+== points-deduct ==
+  PASS no groupId → full pointsCost
+FAIL AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+1 !== 0
+
+    at main (/data/CrewRouter/server/scripts/test-usage-accuracy.js:88:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

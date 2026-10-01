@@ -1,10 +1,5 @@
 
 
-.cr-stats-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
 .cr-stats-page .stats-filters {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -30,27 +25,15 @@
   gap: var(--blora-space-3);
 }
 
-.cr-stats-page .stats-overview-card {
+.cr-stats-page .cr-console-overview-card {
   min-height: 8.5rem;
-  padding: var(--blora-space-5);
 
 }
 
-.cr-stats-page .stats-overview-icon {
+.cr-stats-page .cr-console-overview-icon {
   width: 2.75rem;
   height: 2.75rem;
 
-}
-
-.cr-stats-page .content-section[style*="margin-top"] {
-
-  padding: var(--blora-space-5);
-}
-
-.cr-stats-page .today-yesterday-card,
-.cr-stats-page .stats-insight-card,
-.cr-stats-page .chart-card {
-  padding: var(--blora-space-5);
 }
 
 .cr-stats-page .stats-tab-bar {
@@ -60,24 +43,14 @@
   overflow-x: auto;
 }
 
-.cr-stats-page .stats-tab-bar button {
-  min-height: 2.5rem;
-
-  padding: var(--blora-space-2) var(--blora-space-4);
-
-}
-
 .cr-stats-page .stats-table,
-.cr-stats-page .stats-table-card {
+.cr-stats-page .cr-console-table-section {
 
-  overflow: hidden;
+  overflow-x: auto;
 
 }
 
 @media (max-width: 640px) {
-  .cr-stats-page > .content-section {
-    padding: var(--blora-space-4);
-  }
 
   .cr-stats-page .stats-overview-grid,
   .cr-stats-page .today-yesterday-grid {
@@ -92,3 +65,8 @@
     width: 100%;
   }
 }
+
+.cr-stats-page .cr-console-section { min-width: 0; padding: 0; }
+.cr-stats-page .cr-console-overview-card { min-width: 0; display: flex; align-items: center; gap: var(--blora-space-4); }
+.cr-stats-page .blora-stat { min-width: 0; overflow-wrap: anywhere; }
+.cr-stats-page .cr-console-chart { min-width: 0; display: flex; flex-direction: column; gap: var(--blora-space-4); }

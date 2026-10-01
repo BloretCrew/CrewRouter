@@ -1,36 +1,33 @@
 
 
-.cr-settings-page .settings-overview {
+.cr-settings-page .cr-console-settings-overview {
   max-width: none;
   padding: var(--blora-space-6);
 
 }
 
-.cr-settings-page .settings-version-card {
-  padding: var(--blora-space-5);
-
+.cr-settings-page .cr-console-settings-category {
+  width: 100%;
+  justify-content: flex-start;
+  min-width: 0;
 }
-
-.cr-settings-page .settings-category-card {
-  min-height: 5.5rem;
-
+.cr-settings-page .cr-console-settings-category > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+  text-align: start;
 }
+.cr-settings-page .cr-console-settings-category strong { display: block; }
+.cr-settings-page .cr-console-settings-category small { display: none; }
+.cr-settings-page .cr-console-settings-category .settings-category-arrow { margin-inline-start: auto; }
+.cr-settings-page .cr-console-settings-version { display: flex; gap: var(--blora-space-4); align-items: flex-start; }
+.cr-settings-page .settings-link-list { display: flex; gap: var(--blora-space-2); flex-wrap: wrap; }
 
 .cr-settings-page .settings-detail {
   max-width: none;
   margin: var(--blora-space-5) 0;
 }
 
-.cr-settings-page .settings-section {
-
-  padding: var(--blora-space-6);
-}
-
 @media (max-width: 640px) {
-  .cr-settings-page .settings-overview,
-  .cr-settings-page .settings-section {
-    padding: var(--blora-space-4);
-  }
 
   .cr-settings-page .settings-category-grid {
     grid-template-columns: 1fr;

@@ -1,0 +1,22 @@
+{
+  "serverTask": "01a0f645-7ac5-7f50-b918-895d2fea0af4",
+  "chromeTask": "01a0f645-7b02-7642-b2a3-1438fdd42ec3",
+  "runnerTask": "01a0f645-c999-7951-b195-f8b87f5e3ebe",
+  "serverPid": 190639,
+  "chromeWrapperPid": 190642,
+  "runnerPid": 190986,
+  "configPath": "/tmp/blora-correction-demo-WSbtuC/config.json",
+  "chromeProfile": "/tmp/blora-correction-chrome-OUMRj8",
+  "pluginSupplementTask": "01a0f64b-e37f-77e0-8920-db3da41d3e7b",
+  "stableFocusedTask": "01a0f64d-621d-7812-a7cd-7be88c74b5a8",
+  "cleanup": {
+    "serverStopped": true,
+    "chromeStopped": true,
+    "runnersExited": true,
+    "removedTempDirectories": [
+      "/tmp/blora-correction-demo-WSbtuC",
+      "/tmp/blora-correction-chrome-OUMRj8"
+    ],
+    "parentReadyNotRemoved": true
+  }
+}

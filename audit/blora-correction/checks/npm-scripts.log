@@ -1,0 +1,76 @@
+Lifecycle scripts included in crewrouter@1.0.0:
+  start
+    node server/index.js
+available via `npm run`:
+  dev
+    nodemon server/index.js
+  init-db
+    node server/scripts/init-db.js
+  test:sessions-pagination
+    node server/scripts/test-sessions-pagination.js
+  test:session-identity
+    node server/scripts/test-session-identity.js
+  test:session-classification
+    node server/scripts/test-session-classification-static.js
+  test:usage-accuracy
+    node server/scripts/test-usage-accuracy.js
+  test:session-summary-model-selection
+    node server/scripts/test-session-summary-model-selection.js
+  test:before-upstream-policy
+    node server/scripts/test-before-upstream-policy.js
+  test:quota-usage
+    node server/scripts/test-quota-usage.js
+  test:reliability-closure
+    node server/scripts/test-reliability-closure-static.js
+  audit:team-consistency
+    node server/scripts/audit-team-consistency.js --dry-run
+  test:fusion-synthesis-prompt
+    node server/scripts/test-fusion-synthesis-prompt.js
+  test:frontier-auto-add
+    node server/scripts/test-frontier-auto-add.js
+  build
+    node deploy/build/build-release.js release
+  build:saas
+    node deploy/build/build-release.js saas
+  docker:build
+    docker build -f deploy/docker/Dockerfile -t crewrouter/crewrouter:latest .
+  docker:build:saas
+    docker build -f deploy/docker/Dockerfile.saas -t crewrouter/crewrouter-saas:latest .
+  docker:up
+    docker-compose -f docker-compose.yml up -d
+  docker:up:saas
+    docker-compose -f docker-compose.saas.yml up -d
+  test:money-precision
+    node server/scripts/test-money-precision.js
+  test:task5a-static
+    node server/scripts/test-task5a-static.js
+  test:request-policy
+    node server/scripts/test-request-policy.js
+  test:config-center
+    node server/scripts/test-config-center.js
+  test:instance-edition
+    node server/scripts/test-instance-edition.js && node server/scripts/test-instance-edition-persistence.js
+  test:edition-badge
+    node server/scripts/test-edition-badge.js
+  test:batch-e-permissions
+    node server/scripts/test-batch-e-permissions.js
+  test:email-toctou-static
+    node server/scripts/test-email-toctou-static.js
+  test:outbox
+    node server/scripts/test-outbox.js
+  audit:blora-pages
+    node scripts/audit-blora-pages.js --write
+  test:blora-foundation
+    node scripts/test-blora-foundation.js && node scripts/test-blora-audit-parser.js && node scripts/test-blora-http.js
+  test:blora-public-batch-a
+    node scripts/verify-blora-public-batch-a.js
+  test:blora-public-batch-c
+    node scripts/test-blora-public-batch-c.js
+  test:blora-navbar-runtime
+    node scripts/verify-blora-navbar-runtime.js
+  test:blora-runtime
+    cd CrewRouter-Desktop && xvfb-run -a node_modules/.bin/electron --disable-gpu --no-sandbox ../scripts/verify-blora-runtime.js
+  test:no-legacy-dialog
+    node scripts/test-no-legacy-dialog.js
+  money-precision:migrate
+    node scripts/migrate-money-precision.js

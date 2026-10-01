@@ -1,0 +1,59 @@
+
+> crewrouter-desktop@0.1.0 test
+> node --test test/*.test.js
+
+✔ URL policy blocks private targets and redacts secrets (13.697533ms)
+✔ local display name validation trims, rejects unsafe values and preserves HTML as text (0.951466ms)
+✔ profile store persists local display name and identity without affecting remote profiles (2.489516ms)
+✔ desktop settings are isolated, include language and profiles can be renamed or removed (1.730907ms)
+✔ profile store recovers corruption and switches profiles (0.998579ms)
+✔ /api/instance parses authoritative runtime and auth metadata (0.880027ms)
+✔ connection manager saves metadata without tokens (2.305759ms)
+✔ launcher main frame is trusted; other files, subframes and foreign contents are not (1.753ms)
+✔ connected consoles are classified by origin and runtime (0.677542ms)
+✔ allow matrix keeps profiles and settings away from remote consoles (1.008588ms)
+✔ registered handlers reject untrusted senders before touching actions (2.903504ms)
+✔ init opens the launcher, registers IPC and protocol handling (3.379463ms)
+✔ custom remote connection saves a profile, loads the target and trims the remote status (11.698603ms)
+✔ remote failure moves to the error state, keeps launcher trust and supports retry (2.044107ms)
+✔ local mode starts the server once, injects the token header and can be reused after returning to the launcher (4.297524ms)
+✔ local start failure and unexpected exit both land in the error state with a local retry (27.097145ms)
+✔ official login can be started from the launcher and cancelled (4.519155ms)
+✔ deep links only prefill the custom address (0.820571ms)
+✔ preferences drive native theme, language, menu and are persisted (1.336047ms)
+✔ profiles cannot be deleted while connected and auto connect restores the last local profile (4.845212ms)
+✔ official login opens the store picker with PKCE and a loopback callback (12.384791ms)
+✔ invalid callbacks are rejected without ending the pending login (14.025091ms)
+✔ valid callback exchanges the code, installs the session cookie and connects the target (56.863574ms)
+✔ exchange failure lands in the error state with a retry action (56.058815ms)
+✔ pending login expires after the TTL (91.694797ms)
+✔ parseSetCookie extracts the first cookie pair (0.521978ms)
+✔ launcher resolves the published Blora 2 package and loads vendored CSS only (3.564645ms)
+✔ launcher markup exposes one section per state and the controls the main process expects (1.370945ms)
+✔ launcher script renders from status snapshots and never writes HTML strings (2.030781ms)
+✔ i18n dictionaries are complete for both languages and switch the document language (1.50681ms)
+✔ launcher styles keep the two-column choice grid responsive and hidden views collapsed (0.210812ms)
+✔ findFreePort returns a bindable dynamic port (8.699192ms)
+✔ createRuntimeConfig creates isolated config, data and logs paths (9.275465ms)
+✔ resolveServerEntry supports development and packaged resources (2.978111ms)
+✔ redact removes credentials from log output (0.60514ms)
+✔ manager polls health endpoints, injects the local token and does not expose env secrets (82.627198ms)
+✔ manager uses an injected postgres provider and stops it with the server (65.72869ms)
+✔ unexpected child exit is reported and abort cancels a pending start (173.421657ms)
+✔ waitUntilReady reports non-2xx and timeout clearly (87.237711ms)
+✔ postgres provider resolution prefers embedded binaries and explains what is missing (6.836998ms)
+✔ state transitions cover begin, step, connected, fail and reset (2.003218ms)
+✔ state rejects unknown modes and pending kinds (0.713272ms)
+✔ remote console snapshot omits profiles, local server and pending details (0.315766ms)
+✔ runtime falls back to desktop-local when the local server is running but nothing is connected (0.188467ms)
+✔ navigation whitelist allows the launcher file before connecting and only the target origin after (1.911439ms)
+✔ background colour follows the resolved theme (0.236101ms)
+✔ main window blocks foreign navigation, denies popups and reports main-frame load failures (2.627195ms)
+ℹ tests 47
+ℹ suites 0
+ℹ pass 47
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1339.76084

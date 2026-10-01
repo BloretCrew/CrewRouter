@@ -97,18 +97,11 @@ html {
 }
 
 body {
-  font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--foreground);
-  background-color: var(--bg-base);
-  background-image:
-    radial-gradient(var(--dot-color) 1px, transparent 1px),
-    linear-gradient(145deg, var(--bg-gradient-start) 0%, var(--background) 48%, var(--bg-gradient-end) 100%);
-  background-position: 0 0, center;
-  background-size: 12px 12px, cover;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: var(--blora-font-sans);
+  font-size: var(--blora-text-sm);
+  line-height: var(--blora-leading-normal);
+  color: var(--blora-color-text-secondary);
+  background: var(--blora-color-surface-canvas);
 }
 
 /* ============================================
@@ -228,8 +221,6 @@ pre {
   background: var(--blora-color-surface-raised);
 }
 
-
-
 .btn-secondary {
   background: var(--secondary);
   color: var(--secondary-foreground);
@@ -241,8 +232,6 @@ pre {
 .btn-secondary:hover {
   background: var(--blora-color-surface-raised);
 }
-
-
 
 .btn-outline {
   background: var(--background);
@@ -550,8 +539,6 @@ pre {
   color: var(--brand-blue);
 }
 
-
-
 .badge-secondary {
   background: var(--secondary);
   color: var(--secondary-foreground);
@@ -569,15 +556,11 @@ pre {
   border: 1px solid color-mix(in srgb, var(--status-success) 30%, transparent);
 }
 
-
-
 .badge-warning {
   background: var(--status-warn-soft);
   color: var(--status-warn-strong);
   border: 1px solid color-mix(in srgb, var(--status-warn) 30%, transparent);
 }
-
-
 
 .badge-danger {
   background: var(--status-danger-soft);
@@ -585,23 +568,17 @@ pre {
   border: 1px solid color-mix(in srgb, var(--status-danger) 30%, transparent);
 }
 
-
-
 .badge-info {
   background: color-mix(in srgb, var(--status-info) 10%, transparent);
   color: var(--status-info);
   border: 1px solid color-mix(in srgb, var(--status-info) 30%, transparent);
 }
 
-
-
 .badge-violet {
   background: color-mix(in srgb, var(--purple) 10%, transparent);
   color: var(--purple);
   border: 1px solid color-mix(in srgb, var(--purple) 30%, transparent);
 }
-
-
 
 /* ============================================
    Dialog / Modal
@@ -699,8 +676,6 @@ pre {
   border-bottom: 1px solid var(--border);
 }
 
-
-
 .table td {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
@@ -713,8 +688,6 @@ pre {
 .table tr:hover td {
   background: var(--blora-color-surface-raised);
 }
-
-
 
 /* ============================================
    Navigation (TopNav)
@@ -729,8 +702,6 @@ pre {
   box-shadow: var(--shadow-nav);
   backdrop-filter: blur(12px);
 }
-
-
 
 .topnav-inner {
   display: flex;
@@ -862,37 +833,6 @@ pre {
   color: var(--muted-foreground);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 20px;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition: all 0.15s;
-  text-decoration: none;
-}
-
-.nav-item:hover {
-  background: var(--accent);
-  color: var(--accent-foreground);
-}
-
-.nav-item.active {
-  background: var(--blora-color-surface-raised);
-  color: var(--brand-blue);
-}
-
-.nav-item svg,
-.nav-item .sf-icon {
-  margin-right: 10px;
-  opacity: 0.7;
-}
-
-.nav-item.active svg,
-.nav-item.active .sf-icon {
-  opacity: 1;
 }
 
 .sidebar-footer {
@@ -1071,20 +1011,9 @@ pre {
    Content Sections
    ============================================ */
 .content-section {
-  background: var(--card);
-  border-radius: 16px;
-  padding: 24px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
-  margin-bottom: 16px;
   max-width: 100%;
   min-width: 0;
-  overflow-x: hidden;
   box-sizing: border-box;
-}
-
-.content-section h2 {
-  margin-bottom: 16px;
 }
 
 .section-header {
@@ -1344,64 +1273,15 @@ pre {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  color: var(--brand-blue);
-  background: color-mix(in srgb, var(--brand-blue) 12%, transparent);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.api-key-group-cokey .api-key-group-count {
-  color: var(--blora-color-text-secondary);
-  background: var(--blora-color-surface-raised);
 }
 
 .api-key-card {
   position: relative;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
   padding: 14px 16px;
   margin-bottom: 0;
-  box-shadow: var(--shadow-card);
-  transition: border-color 0.15s, box-shadow 0.15s;
   min-width: 0;
   display: flex;
   flex-direction: column;
-}
-
-.api-key-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  background: var(--brand-blue);
-  border-radius: 3px;
-}
-
-.api-key-card:hover {
-  border-color: color-mix(in srgb, var(--brand-blue) 45%, var(--border));
-}
-
-.api-key-card.api-key-drag-over {
-  border-color: var(--brand-blue);
-  box-shadow: 0 0 0 2px var(--blora-color-overlay-modal);
-  background: var(--blora-color-surface-raised);
-}
-
-.api-key-card.key-disabled {
-  opacity: 0.62;
-  border-color: var(--blora-color-border-subtle);
-}
-
-.api-key-card.key-disabled:hover {
-  border-color: var(--blora-color-border-subtle);
-}
-
-.api-key-card.key-disabled::before {
-  background: var(--status-danger);
 }
 
 /* API Key 拖拽排序 */
@@ -1426,18 +1306,6 @@ pre {
   cursor: grabbing;
 }
 
-.api-key-card.api-key-sort-dragging {
-  opacity: 0.45;
-}
-
-.api-key-card.api-key-sort-over-top {
-  box-shadow: 0 -2px 0 0 var(--brand-blue);
-}
-
-.api-key-card.api-key-sort-over-bottom {
-  box-shadow: 0 2px 0 0 var(--brand-blue);
-}
-
 /* 拖拽标签时卡片收成单行（仍保持两列网格） */
 .api-keys-compact-drag.api-keys-list,
 .api-keys-compact-drag .api-keys-list {
@@ -1446,9 +1314,7 @@ pre {
 
 .api-keys-compact-drag .api-key-card {
   padding: 10px 14px;
-  border-radius: 10px;
   margin-bottom: 0;
-  transition: all 0.2s ease;
 }
 
 .api-keys-compact-drag .api-key-card .api-key-prefix,
@@ -1468,13 +1334,10 @@ pre {
 }
 
 .api-keys-compact-drag .api-key-card::after {
-  content: '拖放标签到此处';
   position: absolute;
   right: 16px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 12px;
-  color: var(--muted-foreground);
   pointer-events: none;
 }
 
@@ -1802,17 +1665,10 @@ pre {
   gap: 8px;
   margin-bottom: 10px;
   padding: 8px 12px;
-  background: var(--muted);
-  border-radius: 10px;
-  border: 1px solid var(--border);
 }
 
 .api-key-prefix code,
 .api-key-value {
-  font-family: "SF Mono", ui-monospace, Menlo, monospace;
-  font-size: 12.5px;
-  color: var(--brand-blue);
-  letter-spacing: 0.2px;
   flex: 1;
   min-width: 0;
   word-break: break-all;
@@ -2611,61 +2467,13 @@ pre {
 /* ============================================
    Theme Toggle
    ============================================ */
-.theme-toggle {
-  position: relative;
-}
-
-.theme-toggle .btn-icon,
-#themeToggle,
-#themeToggleMobile {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 9999px;
-}
+.theme-toggle { display: flex; align-items: center; gap: var(--blora-space-2); }
 
 /* 图标互斥：默认隐藏，由 theme.js 按 light/dark/system 单独显示 */
-.theme-toggle .btn-icon svg,
-#themeToggle svg,
-#themeToggleMobile svg {
-  display: none;
-  flex-shrink: 0;
-}
 
 /* ============================================
    Usage Overview
    ============================================ */
-.usage-overview {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 20px;
-  background: var(--muted);
-  border-radius: 16px;
-  border: 1px solid var(--border);
-}
-
-.usage-overview-item {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  text-align: center;
-}
-
-.usage-overview-label {
-  font-size: 12px;
-  color: var(--muted-foreground);
-  margin-bottom: 4px;
-}
-
-.usage-overview-value {
-  font-size: 20px;
-  font-weight: 600;
-}
-
 /* ============================================
    Dropdown
    ============================================ */
@@ -3398,48 +3206,24 @@ pre {
     bottom: 0;
     width: 260px;
     z-index: 100;
-    transform: translateX(-100%);
-    transition: transform 0.25s ease;
+    display: none;
     box-shadow: none;
   }
 
-  .sidebar.open {
-    transform: translateX(0);
-    box-shadow: 4px 0 24px var(--blora-color-overlay-modal);
-  }
+
 
   /* Restore sidebar text when drawer is open */
-  .sidebar.open .sidebar-header h2,
-  .sidebar.open .sidebar-header .badge,
-  .sidebar.open .nav-item span,
-  .sidebar.open .nav-section-title,
-  .sidebar.open .sidebar-footer .user-info span {
-    display: block;
-  }
 
-  .sidebar.open .sidebar-header {
-    padding: 20px;
-    justify-content: flex-start;
-  }
 
-  .sidebar.open .nav-item {
-    justify-content: flex-start;
-    padding: 8px 20px;
-  }
 
-  .sidebar.open .nav-item svg,
-  .sidebar.open .nav-item .sf-icon {
-    margin-right: 10px;
-  }
 
-  .sidebar.open .sidebar-footer {
-    justify-content: space-between;
-    padding: 12px 20px;
-  }
 
-  .sidebar.open .sidebar-footer .user-info {
-    gap: 10px;
-  }
+
+
+
+
+
+
 
   .sidebar-overlay.active {
     display: block;

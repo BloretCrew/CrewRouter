@@ -1,0 +1,7 @@
+CrewRouter-Desktop/src/renderer/settings.css
+  9:150  warning  unlayered-global  4 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it.
+
+CrewRouter-Desktop/src/renderer/styles.css
+ 21:120  warning  unlayered-global  5 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it.
+
+✖ 2 problems (0 errors, 2 warnings)

@@ -1,0 +1,170 @@
+{
+  "results": [
+    {
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "icons": [
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "radio",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "star",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "grip",
+          "drawn": true
+        }
+      ],
+      "nested": 0,
+      "secret": false
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "icons": [
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "radio",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "star",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "grip",
+          "drawn": true
+        }
+      ],
+      "nested": 0,
+      "secret": false
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "icons": [
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "radio",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "star",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "grip",
+          "drawn": true
+        }
+      ],
+      "nested": 0,
+      "secret": false
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "icons": [
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "radio",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "star",
+          "drawn": true
+        },
+        {
+          "name": "chevron-down",
+          "drawn": true
+        },
+        {
+          "name": "grip",
+          "drawn": true
+        }
+      ],
+      "nested": 0,
+      "secret": false
+    }
+  ],
+  "errors": [],
+  "maskedReveal": "PASS"
+}

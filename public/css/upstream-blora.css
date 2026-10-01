@@ -106,3 +106,17 @@
     flex: 1 1 auto;
   }
 }
+
+.cr-upstream-page .models-table td {
+  overflow-wrap: anywhere;
+}
+
+.cr-upstream-page .models-table .app-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.cr-upstream-page .my-upstream-pane blora-empty {
+  display: block;
+  padding-block: var(--blora-space-6);
+}

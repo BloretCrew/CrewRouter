@@ -1,0 +1,42 @@
+[
+  {
+    "file": "/data/CrewRouter/CrewRouter-Desktop/src/renderer/index.html",
+    "added": 42,
+    "removed": 41
+  },
+  {
+    "file": "/data/CrewRouter/CrewRouter-Desktop/src/renderer/styles.css",
+    "added": 28,
+    "removed": 40
+  },
+  {
+    "file": "/data/CrewRouter/CrewRouter-Desktop/src/renderer/launcher.js",
+    "added": 8,
+    "removed": 5
+  },
+  {
+    "file": "/data/CrewRouter/CrewRouter-Desktop/src/renderer/settings.html",
+    "added": 8,
+    "removed": 7
+  },
+  {
+    "file": "/data/CrewRouter/CrewRouter-Desktop/src/renderer/settings.css",
+    "added": 17,
+    "removed": 20
+  },
+  {
+    "file": "/data/CrewRouter/CrewRouter-Desktop/src/renderer/settings.js",
+    "added": 1,
+    "removed": 1
+  },
+  {
+    "file": "/data/CrewRouter/public/css/blora-agent.css",
+    "added": 10,
+    "removed": 31
+  },
+  {
+    "file": "/data/CrewRouter/public/js/blora-agent.js",
+    "added": 76,
+    "removed": 17
+  }
+]

@@ -1,0 +1,7 @@
+claude -> [{"file":"/workspace/project/CLAUDE.md","source":"claude_md","chars":39,"pos":"first_user"},{"file":"/workspace/project/AGENTS.md","source":"agents_md","chars":24,"pos":"first_user"}]
+codex -> [{"file":"AGENTS.md","source":"agents_md","chars":59,"pos":"fragment"}]
+unknown -> [] true
+oversized -> skipped:size
+truncate -> true 40960 2048
+
+ALL_PASS
