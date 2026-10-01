@@ -1,0 +1,424 @@
+node:assert:885
+    throw err;
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /\/blora\/blora\.css\?v=2\.0\.8/. Input:
+
+'<!DOCTYPE html>\n' +
+  '<html lang="zh-CN">\n' +
+  '<head>\n' +
+  '  <meta charset="UTF-8">\n' +
+  '  <style>@layer legacy, blora;</style>\n' +
+  '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+  '  <script>\n' +
+  '    (function () {\n' +
+  "      var mode = localStorage.getItem('theme') || 'system';\n" +
+  "      var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);\n" +
+  "      document.documentElement.classList.toggle('dark', dark);\n" +
+  "      document.documentElement.classList.toggle('light', !dark);\n" +
+  "      document.documentElement.setAttribute('data-blora-color-scheme', dark ? 'dark' : 'light');\n" +
+  '    }());\n' +
+  '  </script>\n' +
+  '\n' +
+  '  <title>Playground - CrewRouter</title>\n' +
+  '  <link rel="icon" href="/favicon.ico" sizes="any">\n' +
+  '  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">\n' +
+  '  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">\n' +
+  '  <link rel="apple-touch-icon" href="/apple-touch-icon.png">\n' +
+  '  <script type="module" src="/blora/auto.js?v=2.1.0"></script>\n' +
+  '  <script src="/js/blora-foundation.js"></script>\n' +
+  '  <script src="/js/blora-dialog.js?v=5"></script>\n' +
+  '  <style>@import url("/css/themes.css") layer(legacy);</style>\n' +
+  '  <style>@import url("/css/main.css") layer(legacy);</style>\n' +
+  '  <link rel="stylesheet" href="/css/playground.css">\n' +
+  '  <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>\n' +
+  '  <script>\n' +
+  '    (function() {\n' +
+  "      var theme = localStorage.getItem('theme') || 'system';\n" +
+  '      var resolved = theme;\n' +
+  "      if (theme === 'system') {\n" +
+  "        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n" +
+  '      }\n' +
+  '      document.documentElement.classList.add(resolved);\n' +
+  '    })();\n' +
+  '  </script>\n' +
+  '  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">\n' +
+  '  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">\n' +
+  '</head>\n' +
+  '<body class="blora-page blora-scope">\n' +
+  '<div style="position:absolute;top:10px;right:12px;z-index:99;"><blora-select id="langToggle" aria-label="Language">\n' +
+  '      <blora-option value="zh">中文</blora-option>\n' +
+  '      <blora-option value="en">EN</blora-option>\n' +
+  '    </blora-select></div>\n' +
+  '  <div class="pg-container" data-blora-state="ready">\n' +
+  '    <!-- 移动端顶栏 -->\n' +
+  '    <div class="pg-mobile-bar">\n' +
+  '      <a href="/console" class="pg-mobile-back">\n' +
+  '        <span data-icon="chevron-left" aria-hidden="true"></span>\n' +
+  '      </a>\n' +
+  '      <span class="pg-mobile-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></span>\n' +
+  '      <button id="pgToggleSidebar" class="pg-mobile-menu blora-button" type="button">\n' +
+  '        <span data-icon="menu" aria-hidden="true"></span>\n' +
+  '      </button>\n' +
+  '    </div>\n' +
+  '\n' +
+  '    <!-- 遮罩 -->\n' +
+  '    <div id="pgOverlay" class="pg-overlay"></div>\n' +
+  '\n' +
+  '    <!-- 左侧：对话历史 -->\n' +
+  '    <aside class="pg-history-panel" id="pgHistoryPanel">\n' +
+  '      <div class="pg-history-header">\n' +
+  '        <div class="pg-history-header-top">\n' +
+  '          <a href="/console" class="pg-back-link">\n' +
+  '            <span data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="返回控制台">\n' +
+  '            返回控制台\n' +
+  '          </span></a>\n' +
+  '        </div>\n' +
+  '        <div class="pg-history-header-row">\n' +
+  '          <span class="pg-history-title"><span data-i18n="对话历史">对话历史</span></span>\n' +
+  '          <button id="pgNewChatBtn" class="pg-history-new-btn blora-button" title="新对话" data-i18n-title="新对话" type="button">\n' +
+  '          <span data-icon="plus" aria-hidden="true"></span><span data-i18n="新对话">\n' +
+  '          新对话\n' +
+  '        </span></button>\n' +
+  '        </div>\n' +
+  '      </div>\n' +
+  '      <div class="pg-history-list" id="pgHistoryList">\n' +
+  '        <div class="pg-history-empty">\n' +
+  '          <span data-icon="message-square" aria-hidden="true"></span>\n' +
+  '          <span><span data-i18n="暂无对话记录">暂无对话记录</span></span>\n' +
+  '        </div>\n' +
+  '      </div>\n' +
+  '    </aside>\n' +
+  '\n' +
+  '    <!-- 中间：聊天区 -->\n' +
+  '    <main class="pg-main">\n' +
+  '      <div class="pg-messages" id="pgMessages">\n' +
+  '        <div class="pg-welcome">\n' +
+  '          <span data-icon="message-square" aria-hidden="true"></span>\n' +
+  '          <h2>Crant AI Playground</h2>\n' +
+  '          <p><span data-i18n="选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。">选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。</span></p>\n' +
+  '        </div>\n' +
+  '      </div>\n' +
+  '\n' +
+  '      <div class="pg-reply-bar" id="pgReplyBar" style="display:none;">\n' +
+  '        <span data-icon="chevron-left" aria-hidden="true"></span>\n' +
+  '        <span class="pg-reply-preview" id="pgReplyPreview"></span>\n' +
+  '        <button id="pgCancelReply" class="pg-reply-cancel blora-button" type="button">\n' +
+  '          <span data-icon="x" aria-hidden="true"></span>\n' +
+  '        </button>\n' +
+  '      </div>\n' +
+  '      <div class="pg-input-area">\n' +
+  '        <div class="pg-input-wrapper">\n' +
+  '          <blora-field class="pg-composer-field" aria-label="输入消息"><textarea id="pgInput" rows="1" class="blora-textarea" aria-label="输入消息" placeholder="输入消息..." data-i18n-placeholder="输入消息..."></textarea></blora-field>\n' +
+  '          <button id="pgSendBtn" type="button" class="pg-send-btn blora-button" data-variant="primary" data-size="icon" title="发送" data-i18n-title="发送">\n' +
+  '            <span data-icon="send" aria-hidden="true"></span>\n' +
+  '          </button>\n' +
+  '          <button id="pgStopBtn" type="button" class="pg-send-btn pg-stop-btn blora-button" data-variant="danger" data-size="icon" title="停止" data-i18n-title="停止" style="display:none;">\n' +
+  '            <span data-icon="circle-stop" aria-hidden="true"></span>\n' +
+  '          </button>\n' +
+  '        </div>\n' +
+  '        <div class="pg-input-footer">\n' +
+  '          <button id="pgClearBtn" class="pg-clear-btn blora-button" type="button"><span data-i18n="清空对话">清空对话</span></button>\n' +
+  '          <span class="pg-balance-badge" id="pgBalanceBadge"><span data-i18n="0 积分">0 积分</span></span>\n' +
+  '        </div>\n' +
+  '      </div>\n' +
+  '    </main>\n' +
+  '\n' +
+  '    <!-- 右侧：模型参数 -->\n' +
+  '    <aside class="pg-settings-panel" id="pgSettingsPanel">\n' +
+  '      <div class="pg-settings-scroll blora-stack">\n' +
+  '        <div class="pg-setting-group blora-stack blora-stack--sm">\n' +
+  '          <span class="blora-text-muted" data-i18n="模型">模型</span>\n' +
+  '          <blora-select id="pgModel" name="model" aria-label="模型" data-blora-state="loading"></blora-select>\n' +
+  '        </div>\n' +
+  '        <blora-field label="系统提示词"><textarea id="pgSystemPrompt" class="blora-textarea" rows="4" placeholder="你是一个有用的助手..." data-i18n-placeholder="你是一个有用的助手..."></textarea></blora-field>\n' +
+  '        <div class="pg-setting-group blora-stack blora-stack--sm">\n' +
+  '          <label for="pgTemperature">Temperature: <span id="pgTempVal">1.0</span></label>\n' +
+  '          <blora-slider id="pgTemperature" aria-label="Temperature" min="0" max="2" step="0.1" value="1.0"></blora-slider>\n' +
+  '        </div>\n' +
+  '        <blora-field label="Max Tokens"><input type="number" id="pgMaxTokens" class="blora-input" min="1" max="128000" value="4096"></blora-field>\n' +
+  '        <div class="pg-setting-group blora-stack blora-stack--sm">\n' +
+  '          <blora-switch id="pgThinkingToggle" checked label="思考模式"></blora-switch>\n' +
+  '          <span class="pg-thinking-label blora-text-muted" id="pgThinkingLabel"><span data-i18n="已启用">已启用</span></span>\n' +
+  '        </div>\n' +
+  '        <div class="pg-setting-group blora-stack blora-stack--sm" id="pgThinkingBudgetGroup" style="display:none;">\n' +
+  '          <label for="pgThinkingBudget"><span data-i18n="思考强度:">思考强度: </span><span id="pgThinkingBudgetVal">4096</span></label>\n' +
+  '          <blora-slider id="pgThinkingBudget" aria-label="思考强度" min="1024" max="32768" step="1024" value="4096"></blora-slider>\n' +
+  '        </div>\n' +
+  '        <div class="pg-setting-group blora-stack blora-stack--sm" id="pgReasoningEffortGroup" style="display:none;">\n' +
+  '          <span class="blora-text-muted" data-i18n="推理强度">推理强度</span>\n' +
+  '          <blora-select id="pgReasoningEffort" name="reasoning_effort" aria-label="推理强度">\n' +
+  '            <blora-option value="low">低</blora-option><blora-option value="medium" selected>中</blora-option><blora-option value="high">高</blora-option>\n' +
+  '          </blora-select>\n' +
+  '        </div>\n' +
+  '      </div>\n' +
+  '\n' +
+  '      <div class="pg-settings-footer">\n' +
+  '        <div class="pg-stat">\n' +
+  '          <span><span data-i18n="余额">余额</span></span>\n' +
+  '          <span id="pgBalance">¥0.00</span>\n' +
+  '        </div>\n' +
+  '        <div class="pg-stat">\n' +
+  '          <span><span data-i18n="本次消耗">本次消耗</span></span>\n' +
+  '          <span id="pgCost">¥0.00</span>\n' +
+  '        </div>\n' +
+  '        <div class="pg-stat">\n' +
+  '          <span>Tokens</span>\n' +
+  '          <span id="pgTokens">0</span>\n' +
+  '        </div>\n' +
+  '        <button id="pgHistoryToggleBtn" class="pg-history-toggle-btn blora-button" title="查看历史记录" data-i18n-title="查看历史记录" type="button">\n' +
+  '          <span data-icon="clock" aria-hidden="true"></span><span data-i18n="历史记录">\n' +
+  '          历史记录\n' +
+  '        </span></button>\n' +
+  '      </div>\n' +
+  '    </aside>\n' +
+  '\n' +
+  '    <!-- 右侧：历史记录面板 -->\n' +
+  '    <aside class="pg-history-detail-panel" id="pgHistoryDetailPanel" style="display:none;">\n' +
+  '      <div class="pg-history-detail-header">\n' +
+  '        <button id="pgHistoryBackBtn" class="pg-history-back-btn blora-button" type="button">\n' +
+  '          <span data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="返回设置">\n' +
+  '          返回设置\n' +
+  '        </span></button>\n' +
+  '        <span class="pg-history-detail-title"><span data-i18n="历史记录">历史记录</span></span>\n' +
+  '      </div>\n' +
+  '      <div class="pg-history-detail-list" id="pgHistoryDetailList">\n' +
+  '        <div class="pg-history-detail-empty">\n' +
+  '          <span data-icon="clock" aria-hidden="true"></span>\n' +
+  '          <span><span data-i18n="暂无历史记录">暂无历史记录</span></span>\n' +
+  '        </div>\n' +
+  '      </div>\n' +
+  '    </aside>\n' +
+  '\n' +
+  '    <!-- 历史记录详情弹窗：Blora dialog contract -->\n' +
+  '    <blora-dialog id="pgHistoryModal" class="pg-history-modal" size="lg" close-on-outside-click aria-labelledby="pgHistoryModalTitle">\n' +
+  '      <div slot="header" class="pg-history-modal-header">\n' +
+  '        <h3 id="pgHistoryModalTitle"><span data-i18n="对话详情">对话详情</span></h3>\n' +
+  '        <button id="pgHistoryModalClose" type="button" class="blora-button pg-modal-close" data-variant="ghost" data-size="icon" aria-label="关闭">\n' +
+  '          <span data-icon="x" aria-hidden="true"></span>\n' +
+  '        </button>\n' +
+  '      </div>\n' +
+  '      <div class="pg-history-modal-body" id="pgHistoryModalBody"></div>\n' +
+  '    </blora-dialog>\n' +
+  '  </div>\n' +
+  '\n' +
+  '  <script src="/js/i18n.js?v=2"></script>\n' +
+  '  <script src="/js/theme.js?v=2"></scrip'... 754 more characters
+
+    at Object.<anonymous> (/data/CrewRouter/scripts/test-blora-public-batch-c.js:19:10)
+    at Module._compile (node:internal/modules/cjs/loader:1804:14)
+    at Object..js (node:internal/modules/cjs/loader:1936:10)
+    at Module.load (node:internal/modules/cjs/loader:1525:32)
+    at Module._load (node:internal/modules/cjs/loader:1327:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '<!DOCTYPE html>\n' +
+    '<html lang="zh-CN">\n' +
+    '<head>\n' +
+    '  <meta charset="UTF-8">\n' +
+    '  <style>@layer legacy, blora;</style>\n' +
+    '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+    '  <script>\n' +
+    '    (function () {\n' +
+    "      var mode = localStorage.getItem('theme') || 'system';\n" +
+    "      var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);\n" +
+    "      document.documentElement.classList.toggle('dark', dark);\n" +
+    "      document.documentElement.classList.toggle('light', !dark);\n" +
+    "      document.documentElement.setAttribute('data-blora-color-scheme', dark ? 'dark' : 'light');\n" +
+    '    }());\n' +
+    '  </script>\n' +
+    '\n' +
+    '  <title>Playground - CrewRouter</title>\n' +
+    '  <link rel="icon" href="/favicon.ico" sizes="any">\n' +
+    '  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">\n' +
+    '  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">\n' +
+    '  <link rel="apple-touch-icon" href="/apple-touch-icon.png">\n' +
+    '  <script type="module" src="/blora/auto.js?v=2.1.0"></script>\n' +
+    '  <script src="/js/blora-foundation.js"></script>\n' +
+    '  <script src="/js/blora-dialog.js?v=5"></script>\n' +
+    '  <style>@import url("/css/themes.css") layer(legacy);</style>\n' +
+    '  <style>@import url("/css/main.css") layer(legacy);</style>\n' +
+    '  <link rel="stylesheet" href="/css/playground.css">\n' +
+    '  <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>\n' +
+    '  <script>\n' +
+    '    (function() {\n' +
+    "      var theme = localStorage.getItem('theme') || 'system';\n" +
+    '      var resolved = theme;\n' +
+    "      if (theme === 'system') {\n" +
+    "        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n" +
+    '      }\n' +
+    '      document.documentElement.classList.add(resolved);\n' +
+    '    })();\n' +
+    '  </script>\n' +
+    '  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">\n' +
+    '  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">\n' +
+    '</head>\n' +
+    '<body class="blora-page blora-scope">\n' +
+    '<div style="position:absolute;top:10px;right:12px;z-index:99;"><blora-select id="langToggle" aria-label="Language">\n' +
+    '      <blora-option value="zh">中文</blora-option>\n' +
+    '      <blora-option value="en">EN</blora-option>\n' +
+    '    </blora-select></div>\n' +
+    '  <div class="pg-container" data-blora-state="ready">\n' +
+    '    <!-- 移动端顶栏 -->\n' +
+    '    <div class="pg-mobile-bar">\n' +
+    '      <a href="/console" class="pg-mobile-back">\n' +
+    '        <span data-icon="chevron-left" aria-hidden="true"></span>\n' +
+    '      </a>\n' +
+    '      <span class="pg-mobile-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></span>\n' +
+    '      <button id="pgToggleSidebar" class="pg-mobile-menu blora-button" type="button">\n' +
+    '        <span data-icon="menu" aria-hidden="true"></span>\n' +
+    '      </button>\n' +
+    '    </div>\n' +
+    '\n' +
+    '    <!-- 遮罩 -->\n' +
+    '    <div id="pgOverlay" class="pg-overlay"></div>\n' +
+    '\n' +
+    '    <!-- 左侧：对话历史 -->\n' +
+    '    <aside class="pg-history-panel" id="pgHistoryPanel">\n' +
+    '      <div class="pg-history-header">\n' +
+    '        <div class="pg-history-header-top">\n' +
+    '          <a href="/console" class="pg-back-link">\n' +
+    '            <span data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="返回控制台">\n' +
+    '            返回控制台\n' +
+    '          </span></a>\n' +
+    '        </div>\n' +
+    '        <div class="pg-history-header-row">\n' +
+    '          <span class="pg-history-title"><span data-i18n="对话历史">对话历史</span></span>\n' +
+    '          <button id="pgNewChatBtn" class="pg-history-new-btn blora-button" title="新对话" data-i18n-title="新对话" type="button">\n' +
+    '          <span data-icon="plus" aria-hidden="true"></span><span data-i18n="新对话">\n' +
+    '          新对话\n' +
+    '        </span></button>\n' +
+    '        </div>\n' +
+    '      </div>\n' +
+    '      <div class="pg-history-list" id="pgHistoryList">\n' +
+    '        <div class="pg-history-empty">\n' +
+    '          <span data-icon="message-square" aria-hidden="true"></span>\n' +
+    '          <span><span data-i18n="暂无对话记录">暂无对话记录</span></span>\n' +
+    '        </div>\n' +
+    '      </div>\n' +
+    '    </aside>\n' +
+    '\n' +
+    '    <!-- 中间：聊天区 -->\n' +
+    '    <main class="pg-main">\n' +
+    '      <div class="pg-messages" id="pgMessages">\n' +
+    '        <div class="pg-welcome">\n' +
+    '          <span data-icon="message-square" aria-hidden="true"></span>\n' +
+    '          <h2>Crant AI Playground</h2>\n' +
+    '          <p><span data-i18n="选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。">选择模型，开始对话。按 Enter 发送，Shift+Enter 换行。</span></p>\n' +
+    '        </div>\n' +
+    '      </div>\n' +
+    '\n' +
+    '      <div class="pg-reply-bar" id="pgReplyBar" style="display:none;">\n' +
+    '        <span data-icon="chevron-left" aria-hidden="true"></span>\n' +
+    '        <span class="pg-reply-preview" id="pgReplyPreview"></span>\n' +
+    '        <button id="pgCancelReply" class="pg-reply-cancel blora-button" type="button">\n' +
+    '          <span data-icon="x" aria-hidden="true"></span>\n' +
+    '        </button>\n' +
+    '      </div>\n' +
+    '      <div class="pg-input-area">\n' +
+    '        <div class="pg-input-wrapper">\n' +
+    '          <blora-field class="pg-composer-field" aria-label="输入消息"><textarea id="pgInput" rows="1" class="blora-textarea" aria-label="输入消息" placeholder="输入消息..." data-i18n-placeholder="输入消息..."></textarea></blora-field>\n' +
+    '          <button id="pgSendBtn" type="button" class="pg-send-btn blora-button" data-variant="primary" data-size="icon" title="发送" data-i18n-title="发送">\n' +
+    '            <span data-icon="send" aria-hidden="true"></span>\n' +
+    '          </button>\n' +
+    '          <button id="pgStopBtn" type="button" class="pg-send-btn pg-stop-btn blora-button" data-variant="danger" data-size="icon" title="停止" data-i18n-title="停止" style="display:none;">\n' +
+    '            <span data-icon="circle-stop" aria-hidden="true"></span>\n' +
+    '          </button>\n' +
+    '        </div>\n' +
+    '        <div class="pg-input-footer">\n' +
+    '          <button id="pgClearBtn" class="pg-clear-btn blora-button" type="button"><span data-i18n="清空对话">清空对话</span></button>\n' +
+    '          <span class="pg-balance-badge" id="pgBalanceBadge"><span data-i18n="0 积分">0 积分</span></span>\n' +
+    '        </div>\n' +
+    '      </div>\n' +
+    '    </main>\n' +
+    '\n' +
+    '    <!-- 右侧：模型参数 -->\n' +
+    '    <aside class="pg-settings-panel" id="pgSettingsPanel">\n' +
+    '      <div class="pg-settings-scroll blora-stack">\n' +
+    '        <div class="pg-setting-group blora-stack blora-stack--sm">\n' +
+    '          <span class="blora-text-muted" data-i18n="模型">模型</span>\n' +
+    '          <blora-select id="pgModel" name="model" aria-label="模型" data-blora-state="loading"></blora-select>\n' +
+    '        </div>\n' +
+    '        <blora-field label="系统提示词"><textarea id="pgSystemPrompt" class="blora-textarea" rows="4" placeholder="你是一个有用的助手..." data-i18n-placeholder="你是一个有用的助手..."></textarea></blora-field>\n' +
+    '        <div class="pg-setting-group blora-stack blora-stack--sm">\n' +
+    '          <label for="pgTemperature">Temperature: <span id="pgTempVal">1.0</span></label>\n' +
+    '          <blora-slider id="pgTemperature" aria-label="Temperature" min="0" max="2" step="0.1" value="1.0"></blora-slider>\n' +
+    '        </div>\n' +
+    '        <blora-field label="Max Tokens"><input type="number" id="pgMaxTokens" class="blora-input" min="1" max="128000" value="4096"></blora-field>\n' +
+    '        <div class="pg-setting-group blora-stack blora-stack--sm">\n' +
+    '          <blora-switch id="pgThinkingToggle" checked label="思考模式"></blora-switch>\n' +
+    '          <span class="pg-thinking-label blora-text-muted" id="pgThinkingLabel"><span data-i18n="已启用">已启用</span></span>\n' +
+    '        </div>\n' +
+    '        <div class="pg-setting-group blora-stack blora-stack--sm" id="pgThinkingBudgetGroup" style="display:none;">\n' +
+    '          <label for="pgThinkingBudget"><span data-i18n="思考强度:">思考强度: </span><span id="pgThinkingBudgetVal">4096</span></label>\n' +
+    '          <blora-slider id="pgThinkingBudget" aria-label="思考强度" min="1024" max="32768" step="1024" value="4096"></blora-slider>\n' +
+    '        </div>\n' +
+    '        <div class="pg-setting-group blora-stack blora-stack--sm" id="pgReasoningEffortGroup" style="display:none;">\n' +
+    '          <span class="blora-text-muted" data-i18n="推理强度">推理强度</span>\n' +
+    '          <blora-select id="pgReasoningEffort" name="reasoning_effort" aria-label="推理强度">\n' +
+    '            <blora-option value="low">低</blora-option><blora-option value="medium" selected>中</blora-option><blora-option value="high">高</blora-option>\n' +
+    '          </blora-select>\n' +
+    '        </div>\n' +
+    '      </div>\n' +
+    '\n' +
+    '      <div class="pg-settings-footer">\n' +
+    '        <div class="pg-stat">\n' +
+    '          <span><span data-i18n="余额">余额</span></span>\n' +
+    '          <span id="pgBalance">¥0.00</span>\n' +
+    '        </div>\n' +
+    '        <div class="pg-stat">\n' +
+    '          <span><span data-i18n="本次消耗">本次消耗</span></span>\n' +
+    '          <span id="pgCost">¥0.00</span>\n' +
+    '        </div>\n' +
+    '        <div class="pg-stat">\n' +
+    '          <span>Tokens</span>\n' +
+    '          <span id="pgTokens">0</span>\n' +
+    '        </div>\n' +
+    '        <button id="pgHistoryToggleBtn" class="pg-history-toggle-btn blora-button" title="查看历史记录" data-i18n-title="查看历史记录" type="button">\n' +
+    '          <span data-icon="clock" aria-hidden="true"></span><span data-i18n="历史记录">\n' +
+    '          历史记录\n' +
+    '        </span></button>\n' +
+    '      </div>\n' +
+    '    </aside>\n' +
+    '\n' +
+    '    <!-- 右侧：历史记录面板 -->\n' +
+    '    <aside class="pg-history-detail-panel" id="pgHistoryDetailPanel" style="display:none;">\n' +
+    '      <div class="pg-history-detail-header">\n' +
+    '        <button id="pgHistoryBackBtn" class="pg-history-back-btn blora-button" type="button">\n' +
+    '          <span data-icon="chevron-left" aria-hidden="true"></span><span data-i18n="返回设置">\n' +
+    '          返回设置\n' +
+    '        </span></button>\n' +
+    '        <span class="pg-history-detail-title"><span data-i18n="历史记录">历史记录</span></span>\n' +
+    '      </div>\n' +
+    '      <div class="pg-history-detail-list" id="pgHistoryDetailList">\n' +
+    '        <div class="pg-history-detail-empty">\n' +
+    '          <span data-icon="clock" aria-hidden="true"></span>\n' +
+    '          <span><span data-i18n="暂无历史记录">暂无历史记录</span></span>\n' +
+    '        </div>\n' +
+    '      </div>\n' +
+    '    </aside>\n' +
+    '\n' +
+    '    <!-- 历史记录详情弹窗：Blora dialog contract -->\n' +
+    '    <blora-dialog id="pgHistoryModal" class="pg-history-modal" size="lg" close-on-outside-click aria-labelledby="pgHistoryModalTitle">\n' +
+    '      <div slot="header" class="pg-history-modal-header">\n' +
+    '        <h3 id="pgHistoryModalTitle"><span data-i18n="对话详情">对话详情</span></h3>\n' +
+    '        <button id="pgHistoryModalClose" type="button" class="blora-button pg-modal-close" data-variant="ghost" data-size="icon" aria-label="关闭">\n' +
+    '          <span data-icon="x" aria-hidden="true"></span>\n' +
+    '        </button>\n' +
+    '      </div>\n' +
+    '      <div class="pg-history-modal-body" id="pgHistoryModalBody"></div>\n' +
+    '    </blora-dialog>\n' +
+    '  </div>\n' +
+    '\n' +
+    '  <script src="/js/i18n.js?v=2"></script>\n' +
+    '  <script src="/js/theme.js?v=2"></scrip'... 754 more characters,
+  expected: /\/blora\/blora\.css\?v=2\.0\.8/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v24.13.1

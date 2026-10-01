@@ -1,0 +1,134 @@
+[
+  {
+    "script": "server/scripts/test-agent-images.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-batch-e-permissions.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-before-upstream-policy.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-blora-console-batch-b.js",
+    "exit": 1
+  },
+  {
+    "script": "server/scripts/test-client-events.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-codex-quota-refresh.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-config-center.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-crewrouter-command.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-custom-instructions.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-edition-badge.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-email-toctou-static.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-financial-usage-static.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-frontier-auto-add.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-gateway-body-parser.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-inject-append.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-inject-scrub.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-instance-edition.js",
+    "exit": 1
+  },
+  {
+    "script": "server/scripts/test-instance-edition-persistence.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-message-analysis.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-money-precision.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-multi-dimension-stats.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-outbox.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-reliability-closure-static.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-request-lifecycle.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-request-policy.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-request-semantics.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-request-source.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-session-classification-static.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-session-identity.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-stream-and-compaction.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-summary-errors.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-task5a-static.js",
+    "exit": 0
+  },
+  {
+    "script": "server/scripts/test-upstream-url.js",
+    "exit": 0
+  }
+]

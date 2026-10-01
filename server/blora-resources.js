@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 
-const EXPECTED_VERSION = '2.0.8';
+const EXPECTED_VERSION = '2.1.0';
 const packageJsonPath = require.resolve('@bloret-crew/blora-design/package.json');
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 if (packageJson.version !== EXPECTED_VERSION) {

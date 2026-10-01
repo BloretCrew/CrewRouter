@@ -1,0 +1,578 @@
+
+> crewrouter@1.0.0 test:blora-public-batch-c
+> node scripts/test-blora-public-batch-c.js
+
+node:assert:885
+    throw err;
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /<button type="button" class="model-library-item"/. Input:
+
+'const TOOL_SUMMARY_RULES = [\n' +
+  "  [/^(bash|run_terminal_command|terminal|shell)$/i, (a) => String(a.command || a.cmd || '').split('\\n')[0].slice(0, 100)],\n" +
+  "  [/^read$/i, (a) => String(a.file_path || a.path || '')],\n" +
+  '  [/^(write|edit|multiedit|notebookedit)$/i, (a) => {\n' +
+  "    const p = String(a.file_path || a.path || '');\n" +
+  "    const lines = typeof a.content === 'string' ? a.content.split('\\n').length : '';\n" +
+  '    return lines ? `${p} (+${lines})` : p;\n' +
+  '  }],\n' +
+  '  [/^grep$/i, (a) => `"${String(a.pattern || \'\').slice(0, 60)}"${a.path ? \' in \' + a.path : \'\'}`],\n' +
+  '  [/^(websearch|web_fetch|fetch)$/i, (a) => `"${String(a.query || a.url || \'\').slice(0, 80)}"`],\n' +
+  "  [/^(todowrite|todo_write)$/i, (a) => `${Array.isArray(a.todos) ? a.todos.length + ' items' : ''}`.trim()],\n" +
+  "  [/^(glob|ls)$/i, (a) => String(a.pattern || a.path || '')],\n" +
+  '];\n' +
+  '\n' +
+  'function summarizeToolCall(name, argsObj, argsPreview) {\n' +
+  "  let args = argsObj && typeof argsObj === 'object' ? argsObj : null;\n" +
+  '  if (!args && argsPreview) { try { args = JSON.parse(argsPreview); } catch (_) {} }\n' +
+  "  if (!args || typeof args !== 'object') return '';\n" +
+  '  for (const [re, fn] of TOOL_SUMMARY_RULES) {\n' +
+  '    if (re.test(name)) {\n' +
+  "      try { return String(fn(args) || ''); } catch (_) { break; }\n" +
+  '    }\n' +
+  '  }\n' +
+  '  for (const k of Object.keys(args)) {\n' +
+  '    const v = args[k];\n' +
+  "    if (typeof v === 'string' || typeof v === 'number') return `${k}: ${String(v).slice(0, 90)}`;\n" +
+  '  }\n' +
+  "  return '';\n" +
+  '}\n' +
+  '\n' +
+  '\n' +
+  'function escapeHtml(str) {\n' +
+  "  if (!str) return '';\n" +
+  `  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');\n` +
+  '}\n' +
+  '\n' +
+  "function requestBloraValue(label, value = '') {\n" +
+  "  const field = document.createElement('blora-field');\n" +
+  "  field.setAttribute('label', label);\n" +
+  "  const input = document.createElement('input');\n" +
+  "  input.className = 'blora-input';\n" +
+  '  input.value = String(value);\n' +
+  '  field.appendChild(input);\n' +
+  '  const modal = Dialog.showModal({\n' +
+  '    title: escapeHtml(label),\n' +
+  "    content: '',\n" +
+  '    footer: `<button type="button" class="blora-button" data-variant="outline" data-value-cancel>${t(\'取消\')}</button><button type="button" class="blora-button" data-variant="primary" data-value-save>${t(\'确认\')}</button>`,\n' +
+  '    width: 420,\n' +
+  '  });\n' +
+  '  modal.element.appendChild(field);\n' +
+  "  modal.element.addEventListener('click', (event) => {\n" +
+  "    if (event.target.closest('[data-value-cancel]')) modal.close(null);\n" +
+  "    if (event.target.closest('[data-value-save]')) modal.close(input.value);\n" +
+  '  });\n' +
+  "  input.addEventListener('keydown', (event) => {\n" +
+  "    if (event.key === 'Enter') { event.preventDefault(); modal.close(input.value); }\n" +
+  '  });\n' +
+  "  customElements.whenDefined('blora-field').then(() => input.focus());\n" +
+  '  return modal.promise.then((result) => result === false ? null : result);\n' +
+  '}\n' +
+  '\n' +
+  '(function installFieldTranslations() {\n' +
+  '  if (!window.I18N || I18N.applyDom.crewrouterFields) return;\n' +
+  '  const applyDom = I18N.applyDom;\n' +
+  '  const translate = function (root = document) {\n' +
+  '    applyDom.call(this, root);\n' +
+  "    root.querySelectorAll('blora-field[data-field-label]').forEach((field) => {\n" +
+  "      field.setAttribute('label', this.t(field.dataset.fieldLabel));\n" +
+  '    });\n' +
+  '  };\n' +
+  '  translate.crewrouterFields = true;\n' +
+  '  I18N.applyDom = translate;\n' +
+  '  I18N.applyDom();\n' +
+  '})();\n' +
+  '\n' +
+  '\n' +
+  "function safeColor(value, fallback = 'var(--muted-foreground)') {\n" +
+  "  const raw = String(value ?? '').trim();\n" +
+  '  if (/^var\\(--[a-z0-9-]+\\)$/.test(raw) || /^#[0-9a-f]{3,8}$/i.test(raw) || /^(?:rgb|hsl)a?\\([0-9.,%\\s-]+\\)$/.test(raw)) return raw;\n' +
+  '  return fallback;\n' +
+  '}\n' +
+  '\n' +
+  'function setBloraState(id, state) {\n' +
+  '  const el = document.getElementById(id);\n' +
+  "  if (el) el.setAttribute('data-blora-state', state);\n" +
+  '  return el;\n' +
+  '}\n' +
+  '\n' +
+  'function safeHttpUrl(value) {\n' +
+  '  try {\n' +
+  "    const url = new URL(String(value ?? ''), window.location.origin);\n" +
+  "    return /^https?:$/.test(url.protocol) ? url.href : '';\n" +
+  "  } catch (_) { return ''; }\n" +
+  '}\n' +
+  '\n' +
+  'function formatDisplayName(format) {\n' +
+  '  switch (format) {\n' +
+  "    case 'openai': return 'Chat Completions';\n" +
+  "    case 'responses': return 'Responses';\n" +
+  "    case 'anthropic': return 'Anthropic Messages';\n" +
+  "    default: return format || '-';\n" +
+  '  }\n' +
+  '}\n' +
+  '\n' +
+  '// 用户控制台应用\n' +
+  'class ConsoleApp {\n' +
+  '  constructor() {\n' +
+  '    this.user = null;\n' +
+  '    this.instance = null;\n' +
+  "    this.currentPage = 'modelLibrary';\n" +
+  '    this._libraryData = null;\n' +
+  '    this._libraryCurrentModel = null;\n' +
+  '    this._libraryLoadingProviders = new Set(); // 正在加载模型明细的供应商 key\n' +
+  '    this._libraryLoadingProviderPromises = new Map();\n' +
+  "    this.librarySearch = '';\n" +
+  "    this.libraryProviderFilter = 'all';\n" +
+  "    this.librarySeriesFilter = 'all';\n" +
+  "    this.libraryTestFilter = 'all';\n" +
+  "    this.libraryProviderTagFilter = 'all';\n" +
+  "    this.librarySort = 'default';\n" +
+  '    this._libraryProviderPageSize = 50;\n' +
+  '    this.libraryReorderMode = false;\n' +
+  '    this._librarySavingOrder = false;\n' +
+  '    this._libraryApplyingTestOrder = false;\n' +
+  '    this.libraryShowHidden = false;\n' +
+  '    this._librarySavingHidden = false;\n' +
+  '    this._librarySavingStar = false;\n' +
+  '    this._librarySelectedKeyId = null;\n' +
+  '    this._libraryKeys = [];\n' +
+  "    /** 模型库绑定目标：'default' | harness id（如 claude_code） */\n" +
+  "    this._libraryBindTarget = 'default';\n" +
+  '    this._libraryKeyBubbleCloser = null;\n' +
+  '    this._libraryKeyBubbleCloseTimer = null;\n' +
+  '    this._keyModelPicker = null;\n' +
+  '    this._libraryGlobalSearchSeq = 0;\n' +
+  '    this._libraryGlobalSearchTimer = null;\n' +
+  '    this._libraryGlobalSearchMode = false;\n' +
+  '    this._libraryGlobalSearchResults = null;\n' +
+  '    this._libraryStickyObserver = null;\n' +
+  '    this._libraryStickyEventsBound = false;\n' +
+  '    this._libraryStickyKeyMenuCloser = null;\n' +
+  '    this._apiKeysStickyObserver = null;\n' +
+  "    this._myUpstreamTab = 'providers';\n" +
+  '    this._pendingUpstreamTab = null;\n' +
+  "    this._ccsStyle = 'compact';\n" +
+  '    this._providersIndex = [];\n' +
+  '    this._selectedProvider = null;\n' +
+  '    this._currentManageProviderId = null;\n' +
+  '    this._currentManageModels = [];\n' +
+  '    this._keyTags = [];\n' +
+  '    this._pendingProviderRenderRaf = null;\n' +
+  '    this._hashRouteBound = false;\n' +
+  '    this._ignoreHashChange = false;\n' +
+  '    // 会话总结状态（后台生成任务与切换会话隔离）\n' +
+  '    this._summaryPending = false;\n' +
+  '    this._summaryPendingKeys = new Set();\n' +
+  "    this._sessionSummaryText = '';\n" +
+  '    this._summaryDoneFor = null;\n' +
+  '    this._summaryError = null;\n' +
+  '    this._summarySeq = 0;\n' +
+  '    // per-session 总结缓存命中状态：cachedKeys 记录「已有缓存」的会话，checkedKeys 记录「已查过」的会话，避免重复查询\n' +
+  '    this._summaryCachedKeys = new Set();\n' +
+  '    this._summaryCheckedKeys = new Set();\n' +
+  '    this._summaryCacheTextMap = {};   // sessionKey -> 已确认的缓存文案，供顶部内联展示复用\n' +
+  '    this._summaryCacheTimeMap = {};   // sessionKey -> 缓存生成时间\n' +
+  '    this._summaryTaskSessionKey = null;\n' +
+  "    this._summaryTaskText = '';\n" +
+  '    this._summaryPhaseMap = Object.create(null);\n' +
+  '    this._detailCursor = null;\n' +
+  '    this._detailRequestSeq = 0;\n' +
+  '    this.init();\n' +
+  '  }\n' +
+  '\n' +
+  '  /** 控制台可路由页面 id */\n' +
+  '  _consolePageIds() {\n' +
+  '    return new Set([\n' +
+  "      'home', 'modelLibrary', 'myUpstream', 'apiKeys', 'stats', 'projectWork',\n" +
+  "      'leaderboard', 'docs', 'balance', 'settings', 'auditLogs', 'prompts', 'sessions', 'bloraAgent'\n" +
+  '    ]);\n' +
+  '  }\n' +
+  '\n' +
+  '  /**\n' +
+  '   * 解析 hash：#modelLibrary、#myUpstream/models、#docs/chat\n' +
+  '   * 兼容旧写法 #dashboard / #myProviders / #myTeamModels\n' +
+  '   */\n' +
+  '  _parseConsoleHash(hash) {\n' +
+  "    const raw = String(hash || '').replace(/^#/, '').trim();\n" +
+  '    if (!raw) return { page: null, upstreamTab: null, docPage: null, agentMode: null };\n' +
+  '\n' +
+  "    const [pagePart, extra] = raw.split('/');\n" +
+  '    let page = pagePart || null;\n' +
+  '    let upstreamTab = null;\n' +
+  '    let docPage = null;\n' +
+  '    let agentMode = null;\n' +
+  '\n' +
+  '    // 旧入口兼容\n' +
+  "    if (page === 'dashboard') page = 'modelLibrary';\n" +
+  "    if (page === 'myProviders') {\n" +
+  "      page = 'myUpstream';\n" +
+  "      upstreamTab = 'providers';\n" +
+  "    } else if (page === 'myTeamModels') {\n" +
+  "      page = 'myUpstream';\n" +
+  "      upstreamTab = 'models';\n" +
+  '    }\n' +
+  '\n' +
+  '    if (page && !this._consolePageIds().has(page)) page = null;\n' +
+  '\n' +
+  "    if (page === 'myUpstream' && extra) {\n" +
+  "      if (extra === 'models' || extra === 'providers') upstreamTab = extra;\n" +
+  '    }\n' +
+  "    if (page === 'docs' && extra) {\n" +
+  '      const validDocs = new Set([\n' +
+  "        'overview', 'chat', 'models', 'anthropic', 'user-api', 'conversations', 'errors'\n" +
+  '      ]);\n' +
+  '      if (validDocs.has(extra)) docPage = extra;\n' +
+  '    }\n' +
+  "    if (page === 'bloraAgent') {\n" +
+  "      agentMode = extra === 'imagine' || extra === 'manage' || extra === 'chat' ? extra : 'chat';\n" +
+  '    }\n' +
+  '\n' +
+  '    return { page, upstreamTab, docPage, agentMode };\n' +
+  '  }\n' +
+  '\n' +
+  '  _buildConsoleHash(page, options = {}) {\n' +
+  "    if (page === 'myUpstream') {\n" +
+  "      const tab = options.upstreamTab === 'models' ? 'models' : 'providers';\n" +
+  '      return `#myUpstream/${tab}`;\n' +
+  '    }\n' +
+  "    if (page === 'docs' && options.docPage && options.docPage !== 'overview') {\n" +
+  '      return `#docs/${options.docPage}`;\n' +
+  '    }\n' +
+  "    if (page === 'bloraAgent') {\n" +
+  "      const mode = options.agentMode === 'imagine' || options.agentMode === 'manage' || options.agentMode === 'chat'\n" +
+  '        ? options.agentMode\n' +
+  "        : 'chat';\n" +
+  '      return `#bloraAgent/${mode}`;\n' +
+  '    }\n' +
+  '    return `#${page}`;\n' +
+  '  }\n' +
+  '\n' +
+  '  _writeConsoleHash(page, options = {}) {\n' +
+  '    const next = this._buildConsoleHash(page, options);\n' +
+  '    if (location.hash === next) return;\n' +
+  '    // 统一 replace，避免侧边栏切换堆出大量历史记录\n' +
+  "    history.replaceState(null, '', `${location.pathname}${location.search}${next}`);\n" +
+  '  }\n' +
+  '\n' +
+  '  _bindHashRouting() {\n' +
+  '    if (this._hashRouteBound) return;\n' +
+  '    this._hashRouteBound = true;\n' +
+  "    window.addEventListener('hashchange', () => {\n" +
+  '      if (this._ignoreHashChange) return;\n' +
+  '      const restored = this._parseConsoleHash(location.hash);\n' +
+  "      const page = restored.page || 'modelLibrary';\n" +
+  '      this.navigateTo(page, {\n' +
+  '        skipHash: true,\n' +
+  '        upstreamTab: restored.upstreamTab,\n' +
+  '        docPage: restored.docPage,\n' +
+  '        agentMode: restored.agentMode\n' +
+  '      });\n' +
+  '    });\n' +
+  '  }\n' +
+  '\n' +
+  '  async init() {\n' +
+  '    await this.loadUserInfo();\n' +
+  '    if (!this.user) return;\n' +
+  '    try {\n' +
+  '      this.instance = window.CrewRouterEditionBadge\n' +
+  '        ? await window.CrewRouterEditionBadge.load()\n' +
+  '        : null;\n' +
+  "      if (this.instance?.edition !== 'personal') {\n" +
+  "        document.querySelectorAll('[data-personal-only]').forEach((el) => { el.style.display = 'none'; });\n" +
+  '      }\n' +
+  '      if (this.instance?.capabilities) {\n' +
+  "        document.querySelectorAll('[data-capability"... 593082 more characters
+
+    at Object.<anonymous> (/data/CrewRouter/scripts/test-blora-public-batch-c.js:32:8)
+    at Module._compile (node:internal/modules/cjs/loader:1804:14)
+    at Object..js (node:internal/modules/cjs/loader:1936:10)
+    at Module.load (node:internal/modules/cjs/loader:1525:32)
+    at Module._load (node:internal/modules/cjs/loader:1327:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'const TOOL_SUMMARY_RULES = [\n' +
+    "  [/^(bash|run_terminal_command|terminal|shell)$/i, (a) => String(a.command || a.cmd || '').split('\\n')[0].slice(0, 100)],\n" +
+    "  [/^read$/i, (a) => String(a.file_path || a.path || '')],\n" +
+    '  [/^(write|edit|multiedit|notebookedit)$/i, (a) => {\n' +
+    "    const p = String(a.file_path || a.path || '');\n" +
+    "    const lines = typeof a.content === 'string' ? a.content.split('\\n').length : '';\n" +
+    '    return lines ? `${p} (+${lines})` : p;\n' +
+    '  }],\n' +
+    '  [/^grep$/i, (a) => `"${String(a.pattern || \'\').slice(0, 60)}"${a.path ? \' in \' + a.path : \'\'}`],\n' +
+    '  [/^(websearch|web_fetch|fetch)$/i, (a) => `"${String(a.query || a.url || \'\').slice(0, 80)}"`],\n' +
+    "  [/^(todowrite|todo_write)$/i, (a) => `${Array.isArray(a.todos) ? a.todos.length + ' items' : ''}`.trim()],\n" +
+    "  [/^(glob|ls)$/i, (a) => String(a.pattern || a.path || '')],\n" +
+    '];\n' +
+    '\n' +
+    'function summarizeToolCall(name, argsObj, argsPreview) {\n' +
+    "  let args = argsObj && typeof argsObj === 'object' ? argsObj : null;\n" +
+    '  if (!args && argsPreview) { try { args = JSON.parse(argsPreview); } catch (_) {} }\n' +
+    "  if (!args || typeof args !== 'object') return '';\n" +
+    '  for (const [re, fn] of TOOL_SUMMARY_RULES) {\n' +
+    '    if (re.test(name)) {\n' +
+    "      try { return String(fn(args) || ''); } catch (_) { break; }\n" +
+    '    }\n' +
+    '  }\n' +
+    '  for (const k of Object.keys(args)) {\n' +
+    '    const v = args[k];\n' +
+    "    if (typeof v === 'string' || typeof v === 'number') return `${k}: ${String(v).slice(0, 90)}`;\n" +
+    '  }\n' +
+    "  return '';\n" +
+    '}\n' +
+    '\n' +
+    '\n' +
+    'function escapeHtml(str) {\n' +
+    "  if (!str) return '';\n" +
+    `  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');\n` +
+    '}\n' +
+    '\n' +
+    "function requestBloraValue(label, value = '') {\n" +
+    "  const field = document.createElement('blora-field');\n" +
+    "  field.setAttribute('label', label);\n" +
+    "  const input = document.createElement('input');\n" +
+    "  input.className = 'blora-input';\n" +
+    '  input.value = String(value);\n' +
+    '  field.appendChild(input);\n' +
+    '  const modal = Dialog.showModal({\n' +
+    '    title: escapeHtml(label),\n' +
+    "    content: '',\n" +
+    '    footer: `<button type="button" class="blora-button" data-variant="outline" data-value-cancel>${t(\'取消\')}</button><button type="button" class="blora-button" data-variant="primary" data-value-save>${t(\'确认\')}</button>`,\n' +
+    '    width: 420,\n' +
+    '  });\n' +
+    '  modal.element.appendChild(field);\n' +
+    "  modal.element.addEventListener('click', (event) => {\n" +
+    "    if (event.target.closest('[data-value-cancel]')) modal.close(null);\n" +
+    "    if (event.target.closest('[data-value-save]')) modal.close(input.value);\n" +
+    '  });\n' +
+    "  input.addEventListener('keydown', (event) => {\n" +
+    "    if (event.key === 'Enter') { event.preventDefault(); modal.close(input.value); }\n" +
+    '  });\n' +
+    "  customElements.whenDefined('blora-field').then(() => input.focus());\n" +
+    '  return modal.promise.then((result) => result === false ? null : result);\n' +
+    '}\n' +
+    '\n' +
+    '(function installFieldTranslations() {\n' +
+    '  if (!window.I18N || I18N.applyDom.crewrouterFields) return;\n' +
+    '  const applyDom = I18N.applyDom;\n' +
+    '  const translate = function (root = document) {\n' +
+    '    applyDom.call(this, root);\n' +
+    "    root.querySelectorAll('blora-field[data-field-label]').forEach((field) => {\n" +
+    "      field.setAttribute('label', this.t(field.dataset.fieldLabel));\n" +
+    '    });\n' +
+    '  };\n' +
+    '  translate.crewrouterFields = true;\n' +
+    '  I18N.applyDom = translate;\n' +
+    '  I18N.applyDom();\n' +
+    '})();\n' +
+    '\n' +
+    '\n' +
+    "function safeColor(value, fallback = 'var(--muted-foreground)') {\n" +
+    "  const raw = String(value ?? '').trim();\n" +
+    '  if (/^var\\(--[a-z0-9-]+\\)$/.test(raw) || /^#[0-9a-f]{3,8}$/i.test(raw) || /^(?:rgb|hsl)a?\\([0-9.,%\\s-]+\\)$/.test(raw)) return raw;\n' +
+    '  return fallback;\n' +
+    '}\n' +
+    '\n' +
+    'function setBloraState(id, state) {\n' +
+    '  const el = document.getElementById(id);\n' +
+    "  if (el) el.setAttribute('data-blora-state', state);\n" +
+    '  return el;\n' +
+    '}\n' +
+    '\n' +
+    'function safeHttpUrl(value) {\n' +
+    '  try {\n' +
+    "    const url = new URL(String(value ?? ''), window.location.origin);\n" +
+    "    return /^https?:$/.test(url.protocol) ? url.href : '';\n" +
+    "  } catch (_) { return ''; }\n" +
+    '}\n' +
+    '\n' +
+    'function formatDisplayName(format) {\n' +
+    '  switch (format) {\n' +
+    "    case 'openai': return 'Chat Completions';\n" +
+    "    case 'responses': return 'Responses';\n" +
+    "    case 'anthropic': return 'Anthropic Messages';\n" +
+    "    default: return format || '-';\n" +
+    '  }\n' +
+    '}\n' +
+    '\n' +
+    '// 用户控制台应用\n' +
+    'class ConsoleApp {\n' +
+    '  constructor() {\n' +
+    '    this.user = null;\n' +
+    '    this.instance = null;\n' +
+    "    this.currentPage = 'modelLibrary';\n" +
+    '    this._libraryData = null;\n' +
+    '    this._libraryCurrentModel = null;\n' +
+    '    this._libraryLoadingProviders = new Set(); // 正在加载模型明细的供应商 key\n' +
+    '    this._libraryLoadingProviderPromises = new Map();\n' +
+    "    this.librarySearch = '';\n" +
+    "    this.libraryProviderFilter = 'all';\n" +
+    "    this.librarySeriesFilter = 'all';\n" +
+    "    this.libraryTestFilter = 'all';\n" +
+    "    this.libraryProviderTagFilter = 'all';\n" +
+    "    this.librarySort = 'default';\n" +
+    '    this._libraryProviderPageSize = 50;\n' +
+    '    this.libraryReorderMode = false;\n' +
+    '    this._librarySavingOrder = false;\n' +
+    '    this._libraryApplyingTestOrder = false;\n' +
+    '    this.libraryShowHidden = false;\n' +
+    '    this._librarySavingHidden = false;\n' +
+    '    this._librarySavingStar = false;\n' +
+    '    this._librarySelectedKeyId = null;\n' +
+    '    this._libraryKeys = [];\n' +
+    "    /** 模型库绑定目标：'default' | harness id（如 claude_code） */\n" +
+    "    this._libraryBindTarget = 'default';\n" +
+    '    this._libraryKeyBubbleCloser = null;\n' +
+    '    this._libraryKeyBubbleCloseTimer = null;\n' +
+    '    this._keyModelPicker = null;\n' +
+    '    this._libraryGlobalSearchSeq = 0;\n' +
+    '    this._libraryGlobalSearchTimer = null;\n' +
+    '    this._libraryGlobalSearchMode = false;\n' +
+    '    this._libraryGlobalSearchResults = null;\n' +
+    '    this._libraryStickyObserver = null;\n' +
+    '    this._libraryStickyEventsBound = false;\n' +
+    '    this._libraryStickyKeyMenuCloser = null;\n' +
+    '    this._apiKeysStickyObserver = null;\n' +
+    "    this._myUpstreamTab = 'providers';\n" +
+    '    this._pendingUpstreamTab = null;\n' +
+    "    this._ccsStyle = 'compact';\n" +
+    '    this._providersIndex = [];\n' +
+    '    this._selectedProvider = null;\n' +
+    '    this._currentManageProviderId = null;\n' +
+    '    this._currentManageModels = [];\n' +
+    '    this._keyTags = [];\n' +
+    '    this._pendingProviderRenderRaf = null;\n' +
+    '    this._hashRouteBound = false;\n' +
+    '    this._ignoreHashChange = false;\n' +
+    '    // 会话总结状态（后台生成任务与切换会话隔离）\n' +
+    '    this._summaryPending = false;\n' +
+    '    this._summaryPendingKeys = new Set();\n' +
+    "    this._sessionSummaryText = '';\n" +
+    '    this._summaryDoneFor = null;\n' +
+    '    this._summaryError = null;\n' +
+    '    this._summarySeq = 0;\n' +
+    '    // per-session 总结缓存命中状态：cachedKeys 记录「已有缓存」的会话，checkedKeys 记录「已查过」的会话，避免重复查询\n' +
+    '    this._summaryCachedKeys = new Set();\n' +
+    '    this._summaryCheckedKeys = new Set();\n' +
+    '    this._summaryCacheTextMap = {};   // sessionKey -> 已确认的缓存文案，供顶部内联展示复用\n' +
+    '    this._summaryCacheTimeMap = {};   // sessionKey -> 缓存生成时间\n' +
+    '    this._summaryTaskSessionKey = null;\n' +
+    "    this._summaryTaskText = '';\n" +
+    '    this._summaryPhaseMap = Object.create(null);\n' +
+    '    this._detailCursor = null;\n' +
+    '    this._detailRequestSeq = 0;\n' +
+    '    this.init();\n' +
+    '  }\n' +
+    '\n' +
+    '  /** 控制台可路由页面 id */\n' +
+    '  _consolePageIds() {\n' +
+    '    return new Set([\n' +
+    "      'home', 'modelLibrary', 'myUpstream', 'apiKeys', 'stats', 'projectWork',\n" +
+    "      'leaderboard', 'docs', 'balance', 'settings', 'auditLogs', 'prompts', 'sessions', 'bloraAgent'\n" +
+    '    ]);\n' +
+    '  }\n' +
+    '\n' +
+    '  /**\n' +
+    '   * 解析 hash：#modelLibrary、#myUpstream/models、#docs/chat\n' +
+    '   * 兼容旧写法 #dashboard / #myProviders / #myTeamModels\n' +
+    '   */\n' +
+    '  _parseConsoleHash(hash) {\n' +
+    "    const raw = String(hash || '').replace(/^#/, '').trim();\n" +
+    '    if (!raw) return { page: null, upstreamTab: null, docPage: null, agentMode: null };\n' +
+    '\n' +
+    "    const [pagePart, extra] = raw.split('/');\n" +
+    '    let page = pagePart || null;\n' +
+    '    let upstreamTab = null;\n' +
+    '    let docPage = null;\n' +
+    '    let agentMode = null;\n' +
+    '\n' +
+    '    // 旧入口兼容\n' +
+    "    if (page === 'dashboard') page = 'modelLibrary';\n" +
+    "    if (page === 'myProviders') {\n" +
+    "      page = 'myUpstream';\n" +
+    "      upstreamTab = 'providers';\n" +
+    "    } else if (page === 'myTeamModels') {\n" +
+    "      page = 'myUpstream';\n" +
+    "      upstreamTab = 'models';\n" +
+    '    }\n' +
+    '\n' +
+    '    if (page && !this._consolePageIds().has(page)) page = null;\n' +
+    '\n' +
+    "    if (page === 'myUpstream' && extra) {\n" +
+    "      if (extra === 'models' || extra === 'providers') upstreamTab = extra;\n" +
+    '    }\n' +
+    "    if (page === 'docs' && extra) {\n" +
+    '      const validDocs = new Set([\n' +
+    "        'overview', 'chat', 'models', 'anthropic', 'user-api', 'conversations', 'errors'\n" +
+    '      ]);\n' +
+    '      if (validDocs.has(extra)) docPage = extra;\n' +
+    '    }\n' +
+    "    if (page === 'bloraAgent') {\n" +
+    "      agentMode = extra === 'imagine' || extra === 'manage' || extra === 'chat' ? extra : 'chat';\n" +
+    '    }\n' +
+    '\n' +
+    '    return { page, upstreamTab, docPage, agentMode };\n' +
+    '  }\n' +
+    '\n' +
+    '  _buildConsoleHash(page, options = {}) {\n' +
+    "    if (page === 'myUpstream') {\n" +
+    "      const tab = options.upstreamTab === 'models' ? 'models' : 'providers';\n" +
+    '      return `#myUpstream/${tab}`;\n' +
+    '    }\n' +
+    "    if (page === 'docs' && options.docPage && options.docPage !== 'overview') {\n" +
+    '      return `#docs/${options.docPage}`;\n' +
+    '    }\n' +
+    "    if (page === 'bloraAgent') {\n" +
+    "      const mode = options.agentMode === 'imagine' || options.agentMode === 'manage' || options.agentMode === 'chat'\n" +
+    '        ? options.agentMode\n' +
+    "        : 'chat';\n" +
+    '      return `#bloraAgent/${mode}`;\n' +
+    '    }\n' +
+    '    return `#${page}`;\n' +
+    '  }\n' +
+    '\n' +
+    '  _writeConsoleHash(page, options = {}) {\n' +
+    '    const next = this._buildConsoleHash(page, options);\n' +
+    '    if (location.hash === next) return;\n' +
+    '    // 统一 replace，避免侧边栏切换堆出大量历史记录\n' +
+    "    history.replaceState(null, '', `${location.pathname}${location.search}${next}`);\n" +
+    '  }\n' +
+    '\n' +
+    '  _bindHashRouting() {\n' +
+    '    if (this._hashRouteBound) return;\n' +
+    '    this._hashRouteBound = true;\n' +
+    "    window.addEventListener('hashchange', () => {\n" +
+    '      if (this._ignoreHashChange) return;\n' +
+    '      const restored = this._parseConsoleHash(location.hash);\n' +
+    "      const page = restored.page || 'modelLibrary';\n" +
+    '      this.navigateTo(page, {\n' +
+    '        skipHash: true,\n' +
+    '        upstreamTab: restored.upstreamTab,\n' +
+    '        docPage: restored.docPage,\n' +
+    '        agentMode: restored.agentMode\n' +
+    '      });\n' +
+    '    });\n' +
+    '  }\n' +
+    '\n' +
+    '  async init() {\n' +
+    '    await this.loadUserInfo();\n' +
+    '    if (!this.user) return;\n' +
+    '    try {\n' +
+    '      this.instance = window.CrewRouterEditionBadge\n' +
+    '        ? await window.CrewRouterEditionBadge.load()\n' +
+    '        : null;\n' +
+    "      if (this.instance?.edition !== 'personal') {\n" +
+    "        document.querySelectorAll('[data-personal-only]').forEach((el) => { el.style.display = 'none'; });\n" +
+    '      }\n' +
+    '      if (this.instance?.capabilities) {\n' +
+    "        document.querySelectorAll('[data-capability"... 593082 more characters,
+  expected: /<button type="button" class="model-library-item"/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v24.13.1

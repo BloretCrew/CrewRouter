@@ -20,22 +20,7 @@
   max-width: 1440px;
 }
 
-/* -- Stack (vertical flow) -- */
-.blora-stack > * + * {
-  margin-top: var(--blora-space-4);
-}
-
-.blora-stack--sm > * + * {
-  margin-top: var(--blora-space-2);
-}
-
-.blora-stack--lg > * + * {
-  margin-top: var(--blora-space-6);
-}
-
-.blora-stack--xl > * + * {
-  margin-top: var(--blora-space-8);
-}
+/* -- Stack (vertical flow) lives in stack.css, loaded in blora.utilities -- */
 
 /* -- Row (horizontal flex) -- */
 .blora-row {

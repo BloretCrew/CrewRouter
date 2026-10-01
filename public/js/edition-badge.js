@@ -15,6 +15,8 @@
     var label = resolveEditionBadge(instance);
     elements.forEach(function (element) {
       if (element.dataset.editionBadgeValue === label && element.hidden === !label) return;
+      element.classList.add('blora-tag');
+      element.setAttribute('data-variant', 'primary');
       element.textContent = label;
       element.hidden = !label;
       element.dataset.editionBadgeValue = label;

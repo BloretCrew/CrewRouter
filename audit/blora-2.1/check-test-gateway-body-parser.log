@@ -1,0 +1,10 @@
+plain json 200
+zstd json 200
+gzip json 200
+zstd non-json 415
+corrupt zstd 400
+zstd bad json 400
+zstd too large 413
+plain too large 413
+non-gateway 200
+gateway body parser tests passed

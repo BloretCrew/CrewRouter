@@ -23,7 +23,7 @@
   --blora-color-coral-success: #4F7368;
   --blora-color-coral-success-soft: #7F9A91;
   --blora-color-coral-support: #647C7C;
-  --blora-color-coral-warning: #7D6C52;
+  --blora-color-coral-warning: #8C6429;
   --blora-color-coral-accent-secondary: #716B7B;
   --blora-color-coral-on-accent: #FFFFFF;
   --blora-color-code-background: #161A1A;
@@ -142,7 +142,7 @@
   --blora-color-coral-primary: #9F5964;
   --blora-color-coral-primary-hover: #80464F;
   --blora-color-coral-primary-soft: #C07E86;
-  --blora-color-coral-danger: #9E5559;
+  --blora-color-coral-danger: #AF4A3F;
   --blora-color-coral-accent-neutral: #6E6975;
   --blora-color-coral-accent-neutral-soft: #9A95A0;
   --blora-color-coral-info: #5D6680;
@@ -150,7 +150,7 @@
   --blora-color-coral-success: #5B756B;
   --blora-color-coral-success-soft: #879C94;
   --blora-color-coral-support: #687C7B;
-  --blora-color-coral-warning: #806C4F;
+  --blora-color-coral-warning: #8C6429;
   --blora-color-coral-accent-secondary: #8B6571;
   --blora-color-coral-on-accent: #FFFFFF;
   --blora-color-coral-overlay-modal: rgba(48,49,67,0.52);
@@ -190,8 +190,8 @@
   --blora-color-action-primary-hover: #E0A3AB;
   --blora-color-coral-primary-soft: #B36F79;
   --blora-color-action-primary-soft: #B36F79;
-  --blora-color-coral-danger: #D27779;
-  --blora-color-status-danger: #D27779;
+  --blora-color-coral-danger: #E0715B;
+  --blora-color-status-danger: #E0715B;
   --blora-color-coral-accent-neutral: #99939E;
   --blora-color-status-neutral: #99939E;
   --blora-color-coral-accent-neutral-soft: #B5B0B9;
@@ -242,7 +242,7 @@
     --blora-color-coral-primary: #D18A94;
     --blora-color-coral-primary-hover: #E0A3AB;
     --blora-color-coral-primary-soft: #B36F79;
-    --blora-color-coral-danger: #D27779;
+    --blora-color-coral-danger: #E0715B;
     --blora-color-coral-accent-neutral: #99939E;
     --blora-color-coral-accent-neutral-soft: #B5B0B9;
     --blora-color-coral-info: #919AB4;
@@ -285,7 +285,7 @@
   --blora-color-coral-success: #5D746C;
   --blora-color-coral-success-soft: #899D96;
   --blora-color-coral-support: #70807C;
-  --blora-color-coral-warning: #806C4F;
+  --blora-color-coral-warning: #8C6429;
   --blora-color-coral-accent-secondary: #7E6B7A;
   --blora-color-coral-on-accent: #FFFFFF;
   --blora-color-code-background: #1D1B20;
@@ -412,7 +412,7 @@
   --blora-color-coral-success: #5B756B;
   --blora-color-coral-success-soft: #879C94;
   --blora-color-coral-support: #6D7C87;
-  --blora-color-coral-warning: #806C4F;
+  --blora-color-coral-warning: #8C6429;
   --blora-color-coral-accent-secondary: #7B6F78;
   --blora-color-coral-on-accent: #FFFFFF;
   --blora-color-coral-overlay-modal: rgba(23,26,31,0.52);
@@ -547,7 +547,7 @@
   --blora-color-coral-success: #55756F;
   --blora-color-coral-success-soft: #87A19C;
   --blora-color-coral-support: #718F78;
-  --blora-color-coral-warning: #AF8A55;
+  --blora-color-coral-warning: #8C6429;
   --blora-color-coral-accent-secondary: #C7A173;
 }
 

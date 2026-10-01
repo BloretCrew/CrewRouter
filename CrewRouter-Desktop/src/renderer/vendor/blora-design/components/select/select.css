@@ -9,8 +9,13 @@
 }
 
 :host([disabled]) {
-  opacity: 0.5;
   pointer-events: none;
+}
+
+/* Match .blora-input:disabled so sibling form controls read the same. */
+:host([disabled]) .blora-select__trigger {
+  background: var(--blora-color-surface-sunken);
+  color: var(--blora-color-text-disabled);
 }
 
 .blora-select__trigger {

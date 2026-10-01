@@ -4,30 +4,28 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>全能力示例 - CrewRouter 插件</title>
+  <link rel="stylesheet" href="/css/layers.css?v=2.1.0">
+  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
+  <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 24px; background: #0f1115; color: #e5e7eb; }
-    h1 { font-size: 20px; margin: 0 0 4px; }
-    .sub { color: #9ca3af; font-size: 13px; margin-bottom: 20px; }
-    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-    .badge { font-size: 12px; font-family: ui-monospace, monospace; padding: 4px 10px; border-radius: 999px; border: 1px solid #374151; background: #1f2430; }
-    .badge.on { background: rgba(22,163,74,.15); color: #4ade80; border-color: transparent; }
-    .card { background: #171b23; border: 1px solid #2a3140; border-radius: 12px; padding: 16px; }
-    button { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
-    button:hover { background: #1d4ed8; }
-    pre { margin-top: 12px; background: #0b0d11; border: 1px solid #2a3140; border-radius: 8px; padding: 12px; font-size: 12px; overflow: auto; max-height: 420px; white-space: pre-wrap; word-break: break-all; }
+    .plugin-page { padding: var(--blora-space-6); }
+    .plugin-output { overflow: auto; max-height: 26rem; white-space: pre-wrap; overflow-wrap: anywhere; }
   </style>
 </head>
-<body>
-  <h1>🧩 全能力示例（all-capabilities）</h1>
-  <div class="sub">演示插件系统全部 20 项权限与全部钩子。后端能力验证结果见服务日志。</div>
+<body class="blora-page blora-scope">
+  <main class="blora-container blora-stack plugin-page">
+  <h1 class="blora-h2"><span data-icon="puzzle" aria-hidden="true"></span> 全能力示例（all-capabilities）</h1>
+  <div class="blora-text-muted">演示插件系统全部 20 项权限与全部钩子。后端能力验证结果见服务日志。</div>
 
-  <div class="badges" id="badges"></div>
+  <div class="blora-row" id="badges"></div>
 
-  <div class="card">
-    <button id="loadUsage">GET /usage</button>
-    <pre id="usageOut">（点击按钮拉取 /api/plugins/all-capabilities/usage）</pre>
+  <div class="blora-card blora-stack" data-size="sm">
+    <button type="button" class="blora-button" data-variant="primary" id="loadUsage">GET /usage</button>
+    <pre class="blora-code plugin-output" id="usageOut">（点击按钮拉取 /api/plugins/all-capabilities/usage）</pre>
   </div>
 
+  </main>
   <script>
     (function () {
       var caps = [
@@ -38,7 +36,7 @@
         'meta:read', 'webhook:register', 'admin:view'
       ];
       document.getElementById('badges').innerHTML = caps.map(function (c) {
-        return '<span class="badge on">' + c + '</span>';
+        return '<span class="blora-tag" data-variant="primary">' + c + '</span>';
       }).join('');
 
       document.getElementById('loadUsage').addEventListener('click', async function () {

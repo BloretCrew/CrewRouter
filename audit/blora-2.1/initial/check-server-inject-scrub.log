@@ -1,0 +1,20 @@
+✅ 正文尾部完整注入块 → 剥离干净只剩正文
+✅ 整条消息就是注入块 → 返回空串标记
+✅ 不含注入块的文本 → 原样返回
+✅ 正文行中内联提及标题行 → 不误伤
+✅ 同一行内联 system-reminder → 不误伤
+✅ 换行后的独立 system-reminder → 净化
+✅ CRLF 后独立 system-reminder → 净化
+✅ 用户正文独立成行的标题（前有空行）→ 按锚点规则剥离（记录的已知误伤面）
+✅ 多条目回显 + exactText → 精确移除全剥
+✅ 多条目回显无 exactText → 新格式按闭合标签完整剥离
+✅ 模型复述时省略缓解前缀行 → exactText 派生候选仍可精确移除
+✅ CRLF 变体注入块 → 同样剥离
+✅ 空串与非字符串输入 → 原样返回
+✅ 剥离后仅剩空白 → 返回空串
+✅ scrubOpenAiChatCompletion：字符串 content / 数组 content / 多 choices
+✅ scrubAnthropicResponse：text 块净化、非 text 块不动
+✅ scrubResponsesApiResult：output_text 净化并同步汇总字段
+✅ 未启用注入（injectPrompt 为空）→ 三协议助手零开销直接跳过
+
+全部 18 个用例通过 ✅

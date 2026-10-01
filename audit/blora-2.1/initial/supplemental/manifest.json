@@ -1,0 +1,21 @@
+{
+  "packageVersion": "2.1.0",
+  "before": {
+    "public/js/app.js": "4fd6b493aa80e3846fbe7b4ca1e5281ec4748fb9fd004ac8490b76eb316fa169",
+    "public/js/admin.js": "bd78e047bbd789878c52d670ea799f735e974cafde76a04e60ee18c59838617a",
+    "public/pages/console.html": "94e30da900cd1cbb9eb635df6e3af905391ac268be824b8232c1f1a88939dab4",
+    "public/pages/admin.html": "0decc0667a844396e0305d50d143844466d313ce810a327774536227c974033c"
+  },
+  "routes": [
+    "admin#adminProviders",
+    "admin#adminSettings",
+    "admin#adminErrorLogs",
+    "console#docs/chat",
+    "playground",
+    "usage"
+  ],
+  "base": "http://127.0.0.1:18471",
+  "debugging": "http://127.0.0.1:18472",
+  "demo": true,
+  "externalNetworkBlocked": true
+}

@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="/css/layers.css?v=2.1.0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
     (function () {
@@ -18,10 +19,10 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <script type="module" src="/blora/auto.js?v=2.0.8"></script>
+  <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js"></script>
-  <link rel="stylesheet" href="/css/themes.css">
-  <link rel="stylesheet" href="/css/edition-badge.css?v=2">
+  <style>@import url("/css/themes.css") layer(legacy);</style>
+  <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
@@ -33,365 +34,197 @@
     })();
   </script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: var(--background);
-      color: var(--foreground);
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
-    a { color: var(--brand-blue); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    /* ===== Scroll Animation ===== */
-    .reveal {
-      opacity: 0; transform: translateY(24px);
-      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
-
-    /* ===== Theme Toggle ===== */
-    .theme-toggle { display: flex; }
-    .theme-toggle button {
-      width: 34px; height: 34px; border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
-      background: color-mix(in srgb, var(--secondary) 80%, transparent);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      border: 1px solid var(--border); color: var(--foreground);
-      cursor: pointer; transition: background 0.2s, transform 0.15s;
-    }
-    .theme-toggle button:hover { background: var(--accent); transform: scale(1.05); }
-    .theme-toggle .icon-moon { display: none; }
-    .dark .theme-toggle .icon-sun { display: none; }
-    .dark .theme-toggle .icon-moon { display: block; }
-
-    /* ===== Navigation ===== */
-    .showcase-nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      padding: 0 40px; height: 56px;
-      display: flex; align-items: center; justify-content: space-between;
-      background: color-mix(in srgb, var(--background) 75%, transparent);
-      backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border-bottom: 1px solid var(--border);
-      transition: box-shadow 0.3s;
-    }
-    .showcase-nav.scrolled { box-shadow: 0 1px 24px rgba(0,0,0,0.12); }
-    .nav-brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; color: var(--foreground); }
-    .nav-brand img { width: 26px; height: 26px; border-radius: 7px; }
-    .nav-links { display: flex; align-items: center; gap: 28px; }
-    .nav-links a { font-size: 13px; color: var(--muted-foreground); transition: color 0.2s; font-weight: 500; }
-    .nav-links a:hover { color: var(--foreground); text-decoration: none; }
-    .nav-right { display: flex; align-items: center; gap: 12px; }
-    .nav-cta {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 7px 18px; border-radius: 8px;
-      background: var(--brand-blue); color: #fff;
-      font-size: 13px; font-weight: 500; border: none; cursor: pointer;
-      transition: opacity 0.15s, transform 0.15s;
-    }
-    .nav-cta:hover { opacity: 0.9; transform: translateY(-1px); text-decoration: none; }
-
-    /* ===== Hero ===== */
-    .hero {
-      position: relative;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 160px 24px 80px; text-align: center;
-    }
-    .hero-bg { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
-    .hero-bg .grid {
-      position: absolute; inset: -50%;
-      background-image:
-        linear-gradient(var(--border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 64px 64px;
-      animation: gridMove 25s linear infinite;
-      opacity: 0.5;
-    }
-    @keyframes gridMove {
+@layer legacy, blora;
+@layer legacy {
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: var(--blora-color-surface-canvas); color: var(--blora-color-text-primary); line-height: 1.6; overflow-x: hidden; }
+a { color: var(--blora-color-action-primary-default); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.theme-toggle button { border-radius: 9px; background: color-mix(in srgb, var(--blora-color-surface-raised) 80%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid var(--blora-color-border-subtle); color: var(--blora-color-text-primary); cursor: pointer; transition: background 0.2s, transform 0.15s; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; }
+.theme-toggle button:hover { background: var(--blora-color-surface-raised); transform: scale(1.05); }
+.showcase-nav { background: color-mix(in srgb, var(--blora-color-surface-canvas) 75%, transparent); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); border-bottom: 1px solid var(--blora-color-border-subtle); transition: box-shadow 0.3s; }
+.showcase-nav.scrolled { box-shadow: 0 1px 24px var(--blora-color-overlay-modal); }
+.nav-brand { font-weight: 600; font-size: 15px; color: var(--blora-color-text-primary); }
+.nav-brand img { border-radius: 7px; }
+.nav-links a { font-size: 13px; color: var(--blora-color-text-muted); transition: color 0.2s; font-weight: 500; }
+.nav-links a:hover { color: var(--blora-color-text-primary); text-decoration: none; }
+.nav-cta { border-radius: 8px; background: var(--blora-color-action-primary-default); color: var(--blora-color-text-primary); font-size: 13px; font-weight: 500; border: none; cursor: pointer; transition: opacity 0.15s, transform 0.15s; }
+.nav-cta:hover { opacity: 0.9; transform: translateY(-1px); text-decoration: none; }
+.hero-bg .grid { background-image:
+        linear-gradient(var(--blora-color-border-subtle) 1px, transparent 1px),
+        linear-gradient(90deg, var(--blora-color-border-subtle) 1px, transparent 1px); background-size: 64px 64px; animation: gridMove 25s linear infinite; opacity: 0.5; }
+@keyframes gridMove {
       0% { transform: translate(0, 0); }
       100% { transform: translate(64px, 64px); }
     }
-    .hero-bg .glow {
-      position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
-      width: 1000px; height: 700px; border-radius: 50%;
-      background: radial-gradient(ellipse, rgba(59,130,246,0.12) 0%, rgba(139,92,246,0.06) 35%, transparent 65%);
-      filter: blur(80px);
-    }
-    .hero-bg .glow-2 {
-      position: absolute; top: 40%; left: 30%;
-      width: 600px; height: 400px; border-radius: 50%;
-      background: radial-gradient(ellipse, rgba(16,185,129,0.06) 0%, transparent 60%);
-      filter: blur(60px);
-    }
-    .hero-content { position: relative; z-index: 1; max-width: 780px; }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 5px 14px; border-radius: 20px;
-      background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.15);
-      font-size: 12px; font-weight: 500; color: var(--brand-blue); margin-bottom: 28px;
-      letter-spacing: 0.02em;
-    }
-    .hero h1 {
-      font-size: clamp(40px, 7vw, 68px); font-weight: 700;
-      letter-spacing: -0.04em; line-height: 1.05; margin-bottom: 20px;
-      background: linear-gradient(135deg, var(--foreground) 0%, var(--muted-foreground) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .hero p {
-      font-size: clamp(16px, 2vw, 19px); color: var(--muted-foreground);
-      max-width: 520px; margin: 0 auto 36px; line-height: 1.6;
-    }
-    .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 28px; border-radius: 10px;
-      background: var(--brand-blue); color: #fff;
-      font-size: 15px; font-weight: 500; border: none; cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
-      box-shadow: 0 4px 20px rgba(59,130,246,0.25);
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(59,130,246,0.35); text-decoration: none; color: #fff; }
-    .btn-secondary {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 28px; border-radius: 10px;
-      background: transparent; color: var(--foreground);
-      font-size: 15px; font-weight: 500;
-      border: 1px solid var(--border); cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .btn-secondary:hover { background: var(--secondary); border-color: color-mix(in srgb, var(--border) 50%, var(--foreground)); text-decoration: none; color: var(--foreground); }
+.hero-bg .glow { transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, var(--blora-color-action-primary-default) 0%, var(--blora-color-action-primary-default) 35%, transparent 65%); filter: blur(80px); }
+.hero-bg .glow-2 { border-radius: 50%; background: radial-gradient(ellipse, var(--blora-color-status-success) 0%, transparent 60%); filter: blur(60px); }
+.hero-badge { border-radius: 20px; background: var(--blora-color-action-primary-default); border: 1px solid var(--blora-color-action-primary-default); font-size: 12px; font-weight: 500; color: var(--blora-color-action-primary-default); letter-spacing: 0.02em; }
+.hero h1 { font-size: clamp(40px, 7vw, 68px); font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; background: linear-gradient(135deg, var(--blora-color-text-primary) 0%, var(--blora-color-text-muted) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 20px; }
+.hero p { font-size: clamp(16px, 2vw, 19px); color: var(--blora-color-text-muted); line-height: 1.6; max-width: 520px; margin: 0 auto 36px; }
+.btn-primary { padding: 12px 28px; border-radius: 10px; background: var(--blora-color-action-primary-default); color: var(--blora-color-text-primary); font-size: 15px; font-weight: 500; border: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 4px 20px var(--blora-color-action-primary-default); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--blora-color-action-primary-default); text-decoration: none; color: var(--blora-color-text-primary); }
+.btn-secondary { padding: 12px 28px; border-radius: 10px; background: transparent; color: var(--blora-color-text-primary); font-size: 15px; font-weight: 500; border: 1px solid var(--blora-color-border-subtle); cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.btn-secondary:hover { background: var(--blora-color-surface-raised); border-color: color-mix(in srgb, var(--blora-color-border-subtle) 50%, var(--blora-color-text-primary)); text-decoration: none; color: var(--blora-color-text-primary); }
+.console-preview { border-radius: 14px; border: 1px solid var(--blora-color-border-subtle); box-shadow: 0 32px 80px -12px var(--blora-color-overlay-modal), 0 0 0 1px var(--blora-color-text-primary); }
+.console-titlebar { background: var(--blora-color-surface-raised); border-bottom: 1px solid var(--blora-color-border-subtle); }
+.console-dot { border-radius: 50%; }
+.console-dot.red { background: var(--blora-color-status-danger); }
+.console-dot.yellow { background: var(--blora-color-status-warning); }
+.console-dot.green { background: var(--blora-color-status-success); }
+.console-titlebar span { font-size: 12px; color: var(--blora-color-text-muted); font-family: "SF Mono", "Fira Code", monospace; }
+.console-iframe-wrap { background: var(--blora-color-surface-canvas); }
+.console-iframe-wrap iframe { border: none; }
+.console-iframe-wrap .skeleton { background: var(--blora-color-surface-canvas); }
+.skeleton-bar { border-radius: 6px; background: linear-gradient(90deg, var(--blora-color-surface-raised) 25%, color-mix(in srgb, var(--blora-color-surface-raised) 50%, var(--blora-color-surface-canvas)) 50%, var(--blora-color-surface-raised) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.metrics-bar { border-top: 1px solid var(--blora-color-border-subtle); border-bottom: 1px solid var(--blora-color-border-subtle); }
+.metric-value { font-size: 36px; font-weight: 700; color: var(--blora-color-action-primary-default); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.metric-label { font-size: 13px; color: var(--blora-color-text-muted); font-weight: 500; }
+.section-header h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -0.03em; margin-bottom: 14px; }
+.section-header p { font-size: 16px; color: var(--blora-color-text-muted); max-width: 480px; margin: 0 auto; }
+.feature-card { padding: 32px 28px; border-radius: 14px; background: color-mix(in srgb, var(--blora-color-surface-canvas) 50%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--blora-color-border-subtle); transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s; }
+.feature-card:hover { border-color: var(--blora-color-action-primary-default); transform: translateY(-4px); box-shadow: 0 12px 40px -8px var(--blora-color-action-primary-default); }
+.feature-icon { border-radius: 11px; background: linear-gradient(135deg, var(--blora-color-action-primary-default) 0%, var(--blora-color-action-primary-default) 100%); }
+.feature-icon svg { color: var(--blora-color-action-primary-default); }
+.feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+.feature-card p { font-size: 14px; color: var(--blora-color-text-muted); line-height: 1.55; }
+.arch-code { border-radius: 12px; border: 1px solid var(--blora-color-border-subtle); background: color-mix(in srgb, var(--blora-color-surface-canvas) 60%, var(--blora-color-surface-raised)); }
+.arch-code-header { border-bottom: 1px solid var(--blora-color-border-subtle); }
+.arch-code-header span { font-size: 12px; color: var(--blora-color-text-muted); font-family: "SF Mono", "Fira Code", monospace; }
+.arch-code pre { font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace; font-size: 13px; line-height: 1.7; color: var(--blora-color-text-primary); }
+.arch-code .kw { color: var(--blora-color-action-primary-default); }
+.arch-code .str { color: var(--blora-color-status-success); }
+.arch-code .comment { color: var(--blora-color-text-muted); opacity: 0.6; }
+.arch-source { border-radius: 10px; background: var(--blora-color-surface-raised); border: 1px solid var(--blora-color-border-subtle); font-size: 13px; font-weight: 500; }
+.arch-arrow-icon { color: var(--blora-color-text-muted); }
+.arch-gateway { border-radius: 10px; background: var(--blora-color-action-primary-default); border: 1px solid var(--blora-color-action-primary-default); font-size: 14px; font-weight: 600; color: var(--blora-color-action-primary-default); }
+.arch-pill { border-radius: 20px; background: var(--blora-color-surface-raised); border: 1px solid var(--blora-color-border-subtle); font-size: 12px; font-weight: 500; color: var(--blora-color-text-muted); }
+.arch-tagline { font-size: 14px; color: var(--blora-color-text-muted); font-weight: 500; }
+.highlight-visual { border-radius: 14px; background: color-mix(in srgb, var(--blora-color-surface-canvas) 50%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--blora-color-border-subtle); }
+.highlight-visual-bar { background: var(--blora-color-surface-raised); border-bottom: 1px solid var(--blora-color-border-subtle); }
+.mock-code { font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; line-height: 1.8; }
+.mock-code .ln { color: var(--blora-color-text-muted); opacity: 0.4; user-select: none; }
+.mock-code .kc { color: var(--blora-color-action-primary-default); }
+.mock-code .fn { color: var(--blora-color-action-primary-default); }
+.mock-code .str { color: var(--blora-color-status-success); }
+.mock-code .cm { color: var(--blora-color-text-muted); opacity: 0.5; }
+.mock-table { border-collapse: collapse; }
+.mock-table th { font-size: 11px; font-weight: 600; color: var(--blora-color-text-muted); border-bottom: 1px solid var(--blora-color-border-subtle); }
+.mock-table td { font-size: 12px; border-bottom: 1px solid color-mix(in srgb, var(--blora-color-border-subtle) 50%, transparent); }
+.mock-badge { border-radius: 4px; font-size: 10px; font-weight: 600; }
+.mock-badge.green { background: var(--blora-color-status-success); color: var(--blora-color-status-success); }
+.mock-badge.blue { background: var(--blora-color-action-primary-default); color: var(--blora-color-action-primary-default); }
+.mock-badge.amber { background: var(--blora-color-status-warning); color: var(--blora-color-status-warning); }
+.mock-bar { border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--blora-color-action-primary-default) 0%, var(--blora-color-action-primary-default) 100%); }
+.mock-stat-row { border-bottom: 1px solid color-mix(in srgb, var(--blora-color-border-subtle) 40%, transparent); }
+.mock-stat-label { font-size: 12px; color: var(--blora-color-text-muted); }
+.mock-stat-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.highlight-text h3 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
+.highlight-text p { font-size: 15px; color: var(--blora-color-text-muted); line-height: 1.65; }
+.cta-section { background: linear-gradient(180deg, transparent 0%, var(--blora-color-action-primary-default) 40%, var(--blora-color-action-primary-default) 60%, transparent 100%); }
+.cta-section h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -0.03em; margin-bottom: 16px; }
+.cta-section p { font-size: 16px; color: var(--blora-color-text-muted); margin-bottom: 32px; }
+.showcase-footer { border-top: 1px solid var(--blora-color-border-subtle); font-size: 13px; color: var(--blora-color-text-muted); }
+.footer-links a { color: var(--blora-color-text-muted); font-size: 13px; font-weight: 500; }
+.footer-links a:hover { color: var(--blora-color-text-primary); }
+@media (max-width: 767px) {
+.metric-value { font-size: 28px; }
+}
+}
+.theme-toggle { display: flex; }
+.theme-toggle .icon-moon { display: none; }
 
-    /* ===== Console Preview ===== */
-    .console-preview {
-      position: relative; z-index: 1;
-      max-width: 960px; width: 100%; margin: 56px auto 0;
-      border-radius: 14px; overflow: hidden;
-      border: 1px solid var(--border);
-      box-shadow: 0 32px 80px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.02);
-    }
-    .console-titlebar {
-      display: flex; align-items: center; gap: 8px;
-      padding: 12px 16px;
-      background: var(--secondary);
-      border-bottom: 1px solid var(--border);
-    }
-    .console-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .console-dot.red { background: #ff5f57; }
-    .console-dot.yellow { background: #febc2e; }
-    .console-dot.green { background: #28c840; }
-    .console-titlebar span { margin-left: 8px; font-size: 12px; color: var(--muted-foreground); font-family: 'SF Mono', 'Fira Code', monospace; }
-    .console-iframe-wrap { width: 100%; height: 520px; background: var(--background); position: relative; }
-    .console-iframe-wrap iframe { width: 100%; height: 100%; border: none; }
-    .console-iframe-wrap .skeleton {
-      position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; padding: 20px;
-      background: var(--background);
-    }
-    .skeleton-bar {
-      height: 12px; border-radius: 6px;
-      background: linear-gradient(90deg, var(--secondary) 25%, color-mix(in srgb, var(--secondary) 50%, var(--background)) 50%, var(--secondary) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-    }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
-    /* ===== Metrics Bar ===== */
-    .metrics-bar {
-      display: flex; justify-content: center; gap: 64px; flex-wrap: wrap;
-      padding: 80px 24px;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-    .metric-item { text-align: center; }
-    .metric-value {
-      font-size: 36px; font-weight: 700; color: var(--brand-blue);
-      letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
-    }
-    .metric-label { font-size: 13px; color: var(--muted-foreground); margin-top: 6px; font-weight: 500; }
-
-    /* ===== Section Common ===== */
-    .section { max-width: 1100px; margin: 0 auto; padding: 120px 24px; }
-    .section-header { text-align: center; margin-bottom: 56px; }
-    .section-header h2 {
-      font-size: clamp(28px, 4vw, 40px); font-weight: 700;
-      letter-spacing: -0.03em; margin-bottom: 14px;
-    }
-    .section-header p {
-      font-size: 16px; color: var(--muted-foreground); max-width: 480px; margin: 0 auto;
-    }
-
-    /* ===== Feature Cards (Glass) ===== */
-    .features-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
-    }
-    .feature-card {
-      position: relative; padding: 32px 28px; border-radius: 14px;
-      background: color-mix(in srgb, var(--background) 50%, transparent);
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--border);
-      transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
-    }
-    .feature-card:hover {
-      border-color: rgba(59,130,246,0.35);
-      transform: translateY(-4px);
-      box-shadow: 0 12px 40px -8px rgba(59,130,246,0.12);
-    }
-    .feature-icon {
-      width: 44px; height: 44px; border-radius: 11px;
-      display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(139,92,246,0.08) 100%);
-      margin-bottom: 18px;
-    }
-    .feature-icon svg { width: 20px; height: 20px; color: var(--brand-blue); }
-    .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-    .feature-card p { font-size: 14px; color: var(--muted-foreground); line-height: 1.55; }
-
-    /* ===== Architecture (Code Block Style) ===== */
-    .arch-code {
-      max-width: 680px; margin: 0 auto 40px;
-      border-radius: 12px; overflow: hidden;
-      border: 1px solid var(--border);
-      background: color-mix(in srgb, var(--background) 60%, var(--secondary));
-    }
-    .arch-code-header {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .arch-code-header span { font-size: 12px; color: var(--muted-foreground); font-family: 'SF Mono', 'Fira Code', monospace; }
-    .arch-code pre {
-      padding: 20px; margin: 0; overflow-x: auto;
-      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-      font-size: 13px; line-height: 1.7; color: var(--foreground);
-    }
-    .arch-code .kw { color: #c084fc; }
-    .arch-code .str { color: #34d399; }
-    .arch-code .comment { color: var(--muted-foreground); opacity: 0.6; }
-    .arch-flow {
-      display: flex; align-items: center; justify-content: center; gap: 16px;
-      flex-wrap: wrap; margin-top: 32px;
-    }
-    .arch-source {
-      padding: 12px 20px; border-radius: 10px;
-      background: var(--secondary); border: 1px solid var(--border);
-      font-size: 13px; font-weight: 500;
-    }
-    .arch-arrow-icon { color: var(--muted-foreground); }
-    .arch-gateway {
-      padding: 12px 24px; border-radius: 10px;
-      background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
-      font-size: 14px; font-weight: 600; color: var(--brand-blue);
-    }
-    .arch-targets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-    .arch-pill {
-      padding: 8px 16px; border-radius: 20px;
-      background: var(--secondary); border: 1px solid var(--border);
-      font-size: 12px; font-weight: 500; color: var(--muted-foreground);
-      white-space: nowrap;
-    }
-    .arch-tagline {
-      text-align: center; font-size: 14px; color: var(--muted-foreground);
-      margin-top: 24px; font-weight: 500;
-    }
-
-    /* ===== Technical Highlights (Mock UI) ===== */
-    .highlights-list { display: flex; flex-direction: column; gap: 64px; }
-    .highlight-item { display: flex; align-items: center; gap: 48px; }
-    .highlight-item:nth-child(even) { flex-direction: row-reverse; }
-    .highlight-visual {
-      flex: 0 0 380px; min-height: 220px; border-radius: 14px;
-      background: color-mix(in srgb, var(--background) 50%, transparent);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border);
-      display: flex; flex-direction: column; overflow: hidden;
-    }
-    .highlight-visual-bar {
-      display: flex; align-items: center; gap: 6px;
-      padding: 10px 14px;
-      background: var(--secondary); border-bottom: 1px solid var(--border);
-    }
-    .highlight-visual-content { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
-
-    /* Mock code lines */
-    .mock-code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; line-height: 1.8; }
-    .mock-code .line { display: flex; gap: 8px; }
-    .mock-code .ln { color: var(--muted-foreground); opacity: 0.4; min-width: 20px; text-align: right; user-select: none; }
-    .mock-code .kc { color: #c084fc; }
-    .mock-code .fn { color: #60a5fa; }
-    .mock-code .str { color: #34d399; }
-    .mock-code .cm { color: var(--muted-foreground); opacity: 0.5; }
-
-    /* Mock table rows */
-    .mock-table { width: 100%; border-collapse: collapse; }
-    .mock-table th { font-size: 11px; font-weight: 600; text-align: left; color: var(--muted-foreground); padding: 6px 8px; border-bottom: 1px solid var(--border); }
-    .mock-table td { font-size: 12px; padding: 7px 8px; border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); }
-    .mock-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
-    .mock-badge.green { background: rgba(16,185,129,0.12); color: #10b981; }
-    .mock-badge.blue { background: rgba(59,130,246,0.12); color: #3b82f6; }
-    .mock-badge.amber { background: rgba(245,158,11,0.12); color: #f59e0b; }
-
-    /* Mock chart bars */
-    .mock-bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; padding: 8px 0; }
-    .mock-bar { flex: 1; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--brand-blue) 0%, rgba(59,130,246,0.4) 100%); min-width: 8px; }
-    .mock-stat-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent); }
-    .mock-stat-label { font-size: 12px; color: var(--muted-foreground); }
-    .mock-stat-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
-
-    .highlight-text { flex: 1; }
-    .highlight-text h3 { font-size: 22px; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.02em; }
-    .highlight-text p { font-size: 15px; color: var(--muted-foreground); line-height: 1.65; }
-
-    /* ===== CTA Section ===== */
-    .cta-section {
-      text-align: center; padding: 120px 24px;
-      background: linear-gradient(180deg, transparent 0%, rgba(59,130,246,0.04) 40%, rgba(59,130,246,0.06) 60%, transparent 100%);
-    }
-    .cta-section h2 {
-      font-size: clamp(28px, 4vw, 40px); font-weight: 700;
-      letter-spacing: -0.03em; margin-bottom: 16px;
-    }
-    .cta-section p { font-size: 16px; color: var(--muted-foreground); margin-bottom: 32px; }
-
-    /* ===== Footer ===== */
-    .showcase-footer {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 28px 40px;
-      border-top: 1px solid var(--border);
-      font-size: 13px; color: var(--muted-foreground);
-    }
-    .footer-links { display: flex; gap: 24px; }
-    .footer-links a { color: var(--muted-foreground); font-size: 13px; font-weight: 500; }
-    .footer-links a:hover { color: var(--foreground); }
-
-    /* ===== Responsive ===== */
-    @media (max-width: 1023px) {
-      .features-grid { grid-template-columns: repeat(2, 1fr); }
-      .highlight-visual { flex: 0 0 300px; min-height: 180px; }
-    }
-    @media (max-width: 767px) {
-      .showcase-nav { padding: 0 16px; }
-      .nav-links { display: none; }
-      .hero { padding: 120px 16px 48px; }
-      .hero-buttons { flex-direction: column; align-items: center; }
-      .metrics-bar { gap: 28px; padding: 48px 16px; }
-      .metric-value { font-size: 28px; }
-      .features-grid { grid-template-columns: 1fr; }
-      .highlight-item, .highlight-item:nth-child(even) { flex-direction: column; }
-      .highlight-visual { flex: none; width: 100%; min-height: 160px; }
-      .console-iframe-wrap { height: 360px; }
-      .arch-flow { flex-direction: column; }
-      .showcase-footer { flex-direction: column; gap: 12px; text-align: center; }
-      .section { padding: 80px 16px; }
-    }
+.showcase-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 0 40px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+.nav-brand { display: flex; align-items: center; gap: 10px; }
+.nav-brand img { width: 26px; height: 26px; }
+.nav-links { display: flex; align-items: center; gap: 28px; }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.nav-cta { display: inline-flex; align-items: center; gap: 6px; padding: 7px 18px; }
+.hero { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 160px 24px 80px; text-align: center; }
+.hero-bg { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
+.hero-bg .grid { position: absolute; inset: -50%; }
+.hero-bg .glow { position: absolute; top: 10%; left: 50%; width: 1000px; height: 700px; }
+.hero-bg .glow-2 { position: absolute; top: 40%; left: 30%; width: 600px; height: 400px; }
+.hero-content { position: relative; z-index: 1; max-width: 780px; }
+.hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; margin-bottom: 28px; }
+.hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn-primary { display: inline-flex; align-items: center; gap: 8px; }
+.btn-secondary { display: inline-flex; align-items: center; gap: 8px; }
+.console-preview { position: relative; z-index: 1; max-width: 960px; width: 100%; margin: 56px auto 0; overflow: hidden; }
+.console-titlebar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; }
+.console-dot { width: 10px; height: 10px; }
+.console-titlebar span { margin-left: 8px; }
+.console-iframe-wrap { width: 100%; height: 520px; position: relative; }
+.console-iframe-wrap iframe { width: 100%; height: 100%; }
+.console-iframe-wrap .skeleton { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px; padding: 20px; }
+.skeleton-bar { height: 12px; }
+.metrics-bar { display: flex; justify-content: center; gap: 64px; flex-wrap: wrap; padding: 80px 24px; }
+.metric-item { text-align: center; }
+.metric-label { margin-top: 6px; }
+.section { max-width: 1100px; margin: 0 auto; padding: 120px 24px; }
+.section-header { text-align: center; margin-bottom: 56px; }
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.feature-card { position: relative; }
+.feature-icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
+.feature-icon svg { width: 20px; height: 20px; }
+.arch-code { max-width: 680px; margin: 0 auto 40px; overflow: hidden; }
+.arch-code-header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; }
+.arch-code pre { padding: 20px; margin: 0; overflow-x: auto; }
+.arch-flow { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; margin-top: 32px; }
+.arch-source { padding: 12px 20px; }
+.arch-gateway { padding: 12px 24px; }
+.arch-targets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.arch-pill { padding: 8px 16px; white-space: nowrap; }
+.arch-tagline { text-align: center; margin-top: 24px; }
+.highlights-list { display: flex; flex-direction: column; gap: 64px; }
+.highlight-item { display: flex; align-items: center; gap: 48px; }
+.highlight-item:nth-child(even) { flex-direction: row-reverse; }
+.highlight-visual { flex: 0 0 380px; min-height: 220px; display: flex; flex-direction: column; overflow: hidden; }
+.highlight-visual-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; }
+.highlight-visual-content { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.mock-code .line { display: flex; gap: 8px; }
+.mock-code .ln { min-width: 20px; text-align: right; }
+.mock-table { width: 100%; }
+.mock-table th { text-align: left; padding: 6px 8px; }
+.mock-table td { padding: 7px 8px; }
+.mock-badge { display: inline-block; padding: 2px 8px; }
+.mock-bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; padding: 8px 0; }
+.mock-bar { flex: 1; min-width: 8px; }
+.mock-stat-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+.highlight-text { flex: 1; }
+.cta-section { text-align: center; padding: 120px 24px; }
+.showcase-footer { display: flex; align-items: center; justify-content: space-between; padding: 28px 40px; }
+.footer-links { display: flex; gap: 24px; }
+@media (max-width: 1023px) {
+.features-grid { grid-template-columns: repeat(2, 1fr); }
+.highlight-visual { flex: 0 0 300px; min-height: 180px; }
+}
+@media (max-width: 767px) {
+.showcase-nav { padding: 0 16px; }
+.nav-links { display: none; }
+.hero { padding: 120px 16px 48px; }
+.hero-buttons { flex-direction: column; align-items: center; }
+.metrics-bar { gap: 28px; padding: 48px 16px; }
+.features-grid { grid-template-columns: 1fr; }
+.highlight-item, .highlight-item:nth-child(even) { flex-direction: column; }
+.highlight-visual { flex: none; width: 100%; min-height: 160px; }
+.console-iframe-wrap { height: 360px; }
+.arch-flow { flex-direction: column; }
+.showcase-footer { flex-direction: column; gap: 12px; text-align: center; }
+.section { padding: 80px 16px; }
+}
   </style>
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
-  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
+  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
+  <script type="module" src="/js/blora-services.js?v=2.1.0"></script>
 </head>
-<body class="blora-page">
+<body class="blora-page blora-scope">
   <!-- Navigation -->
   <nav class="showcase-nav" id="showcaseNav">
     <div class="nav-brand">
@@ -407,11 +240,11 @@
     <div class="nav-right">
       <a href="/console" class="nav-cta"><span data-i18n="进入演示">进入演示</span></a>
       <div class="theme-toggle">
-        <select id="langToggle" class="btn btn-icon blora-input" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-        <option value="zh">中文</option>
-        <option value="en">EN</option>
-    </select>
-        <button id="themeToggle" title="切换主题" data-i18n-title="切换主题" class="blora-button">
+        <blora-select id="langToggle" aria-label="Language">
+        <blora-option value="zh">中文</blora-option>
+        <blora-option value="en">EN</blora-option>
+    </blora-select>
+        <button id="themeToggle" title="切换主题" data-i18n-title="切换主题" class="blora-button" type="button">
           <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
           </svg>
@@ -467,13 +300,13 @@
       </div>
       <div class="console-iframe-wrap">
         <div class="skeleton" id="consoleSkeleton">
-          <div class="skeleton-bar" style="width:60%"></div>
-          <div class="skeleton-bar" style="width:80%"></div>
-          <div class="skeleton-bar" style="width:45%"></div>
-          <div class="skeleton-bar" style="width:90%"></div>
-          <div class="skeleton-bar" style="width:70%"></div>
+          <div class="skeleton-bar blora-skeleton" data-variant="text" style="width:60%"></div>
+          <div class="skeleton-bar blora-skeleton" data-variant="text" style="width:80%"></div>
+          <div class="skeleton-bar blora-skeleton" data-variant="text" style="width:45%"></div>
+          <div class="skeleton-bar blora-skeleton" data-variant="text" style="width:90%"></div>
+          <div class="skeleton-bar blora-skeleton" data-variant="text" style="width:70%"></div>
         </div>
-        <iframe src="/console" loading="lazy" title="CrewRouter Console" onload="document.getElementById('consoleSkeleton').style.display='none'"></iframe>
+        <iframe src="/console" loading="lazy" title="CrewRouter Console" id="consolePreview"></iframe>
       </div>
     </div>
   </section>
@@ -586,7 +419,7 @@
       </div>
     </div>
     <div class="arch-tagline" style="margin-top:40px;">
-      <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:14px;font-weight:500;"><span data-i18n="兼容所有支持 OpenAI / Anthropic 格式的编程工具">兼容所有支持 OpenAI / Anthropic 格式的编程工具</span></div>
+      <div style="font-size:13px;color:var(--blora-color-text-muted);margin-bottom:14px;font-weight:500;"><span data-i18n="兼容所有支持 OpenAI / Anthropic 格式的编程工具">兼容所有支持 OpenAI / Anthropic 格式的编程工具</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
         <span class="arch-pill"><img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Claude Code</span>
         <span class="arch-pill"><img src="https://img.bloret.net/img/1781951398824/8e0b0a829f4bc5d09a90eeaf37adccf1" alt="" style="width:14px;height:14px;border-radius:3px;vertical-align:-2px;"> Claude Desktop</span>
@@ -616,7 +449,7 @@
         <div class="highlight-visual">
           <div class="highlight-visual-bar">
             <div class="console-dot red"></div><div class="console-dot yellow"></div><div class="console-dot green"></div>
-            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;">api_call.py</span>
+            <span style="font-size:11px;color:var(--blora-color-text-muted);margin-left:8px;">api_call.py</span>
           </div>
           <div class="highlight-visual-content">
             <div class="mock-code">
@@ -644,7 +477,7 @@
         <div class="highlight-visual">
           <div class="highlight-visual-bar">
             <div class="console-dot red"></div><div class="console-dot yellow"></div><div class="console-dot green"></div>
-            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;">Teams</span>
+            <span style="font-size:11px;color:var(--blora-color-text-muted);margin-left:8px;">Teams</span>
           </div>
           <div class="highlight-visual-content">
             <table class="mock-table">
@@ -669,7 +502,7 @@
         <div class="highlight-visual">
           <div class="highlight-visual-bar">
             <div class="console-dot red"></div><div class="console-dot yellow"></div><div class="console-dot green"></div>
-            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;"><span data-i18n="统计概览">统计概览</span></span>
+            <span style="font-size:11px;color:var(--blora-color-text-muted);margin-left:8px;"><span data-i18n="统计概览">统计概览</span></span>
           </div>
           <div class="highlight-visual-content">
             <div class="mock-bars">
@@ -686,7 +519,7 @@
             </div>
             <div class="mock-stat-row"><span class="mock-stat-label"><span data-i18n="本月请求">本月请求</span></span><span class="mock-stat-value">12,847</span></div>
             <div class="mock-stat-row"><span class="mock-stat-label"><span data-i18n="Token 用量">Token 用量</span></span><span class="mock-stat-value">8.2M</span></div>
-            <div class="mock-stat-row"><span class="mock-stat-label"><span data-i18n="缓存命中">缓存命中</span></span><span class="mock-stat-value" style="color:#10b981;">34.2%</span></div>
+            <div class="mock-stat-row"><span class="mock-stat-label"><span data-i18n="缓存命中">缓存命中</span></span><span class="mock-stat-value" style="color:var(--blora-color-status-success);">34.2%</span></div>
             <div class="mock-stat-row"><span class="mock-stat-label"><span data-i18n="本月成本">本月成本</span></span><span class="mock-stat-value">¥28.50</span></div>
           </div>
         </div>
@@ -701,26 +534,26 @@
         <div class="highlight-visual">
           <div class="highlight-visual-bar">
             <div class="console-dot red"></div><div class="console-dot yellow"></div><div class="console-dot green"></div>
-            <span style="font-size:11px;color:var(--muted-foreground);margin-left:8px;"><span data-i18n="密钥隔离">密钥隔离</span></span>
+            <span style="font-size:11px;color:var(--blora-color-text-muted);margin-left:8px;"><span data-i18n="密钥隔离">密钥隔离</span></span>
           </div>
           <div class="highlight-visual-content">
             <div style="display:flex;flex-direction:column;gap:10px;">
-              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--secondary);border:1px solid var(--border);">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--blora-color-surface-raised);border:1px solid var(--blora-color-border-subtle);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 <span style="font-size:12px;font-weight:500;"><span data-i18n="你的团队成员">你的团队成员</span></span>
-                <span style="font-size:11px;color:var(--muted-foreground);margin-left:auto;"><span data-i18n="仅获使用权">仅获使用权</span></span>
+                <span style="font-size:11px;color:var(--blora-color-text-muted);margin-left:auto;"><span data-i18n="仅获使用权">仅获使用权</span></span>
               </div>
-              <div style="display:flex;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
-              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <div style="display:flex;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blora-color-text-muted)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--blora-color-action-primary-default);border:1px solid var(--blora-color-action-primary-default);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blora-color-action-primary-default)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 <span style="font-size:12px;font-weight:500;"><span data-i18n="CrewRouter 网关">CrewRouter 网关</span></span>
-                <span style="font-size:11px;color:var(--muted-foreground);margin-left:auto;"><span data-i18n="密钥在此隔离">密钥在此隔离</span></span>
+                <span style="font-size:11px;color:var(--blora-color-text-muted);margin-left:auto;"><span data-i18n="密钥在此隔离">密钥在此隔离</span></span>
               </div>
-              <div style="display:flex;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
-              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--secondary);border:1px solid var(--border);">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--destructive)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+              <div style="display:flex;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blora-color-text-muted)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:var(--blora-color-surface-raised);border:1px solid var(--blora-color-border-subtle);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blora-color-status-danger)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                 <span style="font-size:12px;font-weight:500;"><span data-i18n="供应商 API Key">供应商 API Key</span></span>
-                <span style="font-size:11px;color:var(--destructive);margin-left:auto;"><span data-i18n="不可见">不可见</span></span>
+                <span style="font-size:11px;color:var(--blora-color-status-danger);margin-left:auto;"><span data-i18n="不可见">不可见</span></span>
               </div>
             </div>
           </div>
@@ -747,7 +580,7 @@
 
   <!-- Footer -->
   <footer class="showcase-footer">
-    <span>© 2025 CrewRouter. All rights reserved.</span>
+    <span>&copy; 2025 CrewRouter. All rights reserved.</span>
     <div class="footer-links">
       <a href="/console#docs"><span data-i18n="文档">文档</span></a>
       <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
@@ -825,5 +658,6 @@
     }
   })();
 </script>
+<script>document.getElementById('consolePreview').addEventListener('load', function () { document.getElementById('consoleSkeleton').style.display = 'none'; });</script>
 </body>
 </html>

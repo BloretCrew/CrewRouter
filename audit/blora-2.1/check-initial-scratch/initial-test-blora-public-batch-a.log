@@ -1,0 +1,426 @@
+node:assert:885
+    throw err;
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /\/blora\/auto\.js\?v=2\.0\.8/. Input:
+
+'<!DOCTYPE html>\n' +
+  '<html lang="zh-CN">\n' +
+  '<head>\n' +
+  '  <meta charset="UTF-8">\n' +
+  '  <style>@layer legacy, blora;</style>\n' +
+  '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+  '  <script>\n' +
+  '    (function () {\n' +
+  "      var mode = localStorage.getItem('theme') || 'system';\n" +
+  "      var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);\n" +
+  "      document.documentElement.classList.toggle('dark', dark);\n" +
+  "      document.documentElement.classList.toggle('light', !dark);\n" +
+  "      document.documentElement.setAttribute('data-blora-color-scheme', dark ? 'dark' : 'light');\n" +
+  '    }());\n' +
+  '  </script>\n' +
+  '\n' +
+  '  <title>CrewRouter</title>\n' +
+  '  <link rel="icon" href="/favicon.ico" sizes="any">\n' +
+  '  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">\n' +
+  '  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">\n' +
+  '  <link rel="apple-touch-icon" href="/apple-touch-icon.png">\n' +
+  '  <script type="module" src="/blora/auto.js?v=2.1.0"></script>\n' +
+  '  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">\n' +
+  '  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">\n' +
+  '  <script src="/js/blora-foundation.js?v=2.1.0"></script>\n' +
+  '  <link rel="stylesheet" href="/css/auth-shell.css?v=5">\n' +
+  '  <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>\n' +
+  '  <script>\n' +
+  '    // Prevent FOUC - apply theme immediately\n' +
+  '    (function() {\n' +
+  "      var theme = localStorage.getItem('theme') || 'system';\n" +
+  '      var resolved = theme;\n' +
+  "      if (theme === 'system') {\n" +
+  "        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n" +
+  '      }\n' +
+  '      document.documentElement.classList.add(resolved);\n' +
+  '    })();\n' +
+  '  </script>\n' +
+  '  <script>\n' +
+  '    // 检查是否需要 OOBE，然后检查登录状态\n' +
+  '    (async function() {\n' +
+  '      try {\n' +
+  '        // 先检查是否需要初始化（仅创建管理员一步）\n' +
+  "        const setupRes = await fetch('/api/setup/status');\n" +
+  '        if (setupRes.ok) {\n' +
+  '          const setupData = await setupRes.json();\n' +
+  '          if (setupData.needsSetup) {\n' +
+  "            window.location.replace('/setup');\n" +
+  '            return;\n' +
+  '          }\n' +
+  '        } else if (setupRes.status === 503) {\n' +
+  '          // 数据库尚未就绪时也进入 setup 页提示用户等待\n' +
+  "          window.location.replace('/setup');\n" +
+  '          return;\n' +
+  '        }\n' +
+  '      } catch {}\n' +
+  '      try {\n' +
+  "        const res = await fetch('/auth/me', { credentials: 'same-origin' });\n" +
+  '        if (res.ok) {\n' +
+  '          const data = await res.json();\n' +
+  '          if (data && data.id) {\n' +
+  "            window.location.replace('/console');\n" +
+  '          }\n' +
+  '        }\n' +
+  '      } catch {}\n' +
+  '    })();\n' +
+  '  </script>\n' +
+  '</head>\n' +
+  '<body class="blora-page blora-scope">\n' +
+  '  <main class="auth-page login-container">\n' +
+  '    <section class="blora-card auth-card login-card" aria-labelledby="auth-title">\n' +
+  '      <header class="auth-card__header blora-card__header">\n' +
+  '        <span class="auth-card__logo" aria-hidden="true"><img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt=""></span>\n' +
+  '        <h1 class="blora-card__title" id="auth-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>\n' +
+  '        <p class="blora-card__desc">统一 AI 模型接入平台</p>\n' +
+  '      </header>\n' +
+  '\n' +
+  '      <div id="errorMessage" class="blora-message auth-error" data-variant="danger" role="alert"></div>\n' +
+  '\n' +
+  '      <form id="loginForm" method="post" action="/auth/login?format=html" accept-charset="UTF-8">\n' +
+  '        <blora-field label="用户名或邮箱" required><input class="blora-input" id="loginInput" name="login" type="text" autocomplete="username" placeholder="请输入用户名或邮箱" required></blora-field>\n' +
+  '        <blora-field label="密码" required><input class="blora-input" id="password" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" minlength="6" required></blora-field>\n' +
+  '        <div class="auth-actions">\n' +
+  '          <button class="blora-button" data-variant="primary" type="submit" id="submitBtn"><span id="submitText">登录</span></button>\n' +
+  '          <div id="passkeyLoginSection" class="login-alt-actions" style="display: none;"><button class="blora-button" data-variant="outline" type="button" id="passkeyLoginBtn"><span id="passkeyLoginText">使用通行密钥登录</span></button></div>\n' +
+  '        </div>\n' +
+  '      </form>\n' +
+  '\n' +
+  '      <form id="twoFactorForm" class="auth-2fa-form" style="display: none;">\n' +
+  '        <blora-field label="请输入验证码" required><input class="blora-input" id="tfaCode" type="text" autocomplete="one-time-code" placeholder="6位验证码" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" required></blora-field>\n' +
+  '        <div class="auth-actions"><button type="submit" class="blora-button" data-variant="primary" id="tfaSubmitBtn">验证</button><button type="button" class="blora-button" data-variant="outline" id="publicAction2">取消</button></div>\n' +
+  '      </form>\n' +
+  '\n' +
+  '      <div class="blora-divider" data-variant="text">或使用其他方式</div>\n' +
+  '      <div class="auth-oauth">\n' +
+  '        <div id="passportLoginSection" class="login-oauth-item" style="display: none;"><a href="/auth/passport" id="passportLoginLink" class="blora-button" data-variant="outline">Bloret PassPort 登录</a></div>\n' +
+  '        <div id="feishuLoginSection" class="login-oauth-item" style="display: block;"><a href="/auth/feishu" class="blora-button" data-variant="outline"><span>飞书登录</span></a></div>\n' +
+  '      </div>\n' +
+  '      <p class="auth-simple-link blora-text-muted"><a href="/plain-login">使用简洁登录页</a></p>\n' +
+  '\n' +
+  '      <footer class="auth-card__footer">\n' +
+  '        <blora-dropdown id="langToggle" class="auth-lang" align="center" placement="top" aria-label="选择语言"><button slot="trigger" type="button" class="blora-button" data-variant="ghost" data-size="sm"><span data-icon="globe" aria-hidden="true"></span><span id="langToggleLabel">中文</span></button><blora-dropdown-item value="zh" href="/?lang=zh">中文</blora-dropdown-item><blora-dropdown-item value="en" href="/?lang=en">EN</blora-dropdown-item></blora-dropdown>\n' +
+  '        <button id="themeToggle" class="blora-button" data-variant="ghost" data-size="sm" type="button" title="切换主题" data-i18n-title="切换主题" aria-label="切换主题"><span class="icon-sun" data-icon="sun" aria-hidden="true"></span><span class="icon-moon" data-icon="moon" aria-hidden="true" style="display:none"></span><span class="icon-system" data-icon="monitor" aria-hidden="true" style="display:none"></span></button>\n' +
+  '      </footer>\n' +
+  '    </section>\n' +
+  '  </main>\n' +
+  '\n' +
+  '  <script src="/js/i18n.js?v=2"></script>\n' +
+  '  <script src="/js/theme.js?v=2"></script>\n' +
+  '  <script src="/js/edition-badge.js?v=1"></script>\n' +
+  '  <script>\n' +
+  '    (function () {\n' +
+  "      const invite = new URLSearchParams(window.location.search).get('invite');\n" +
+  '      if (invite && /^[A-Za-z0-9_-]{20,200}$/.test(invite)) {\n' +
+  "        sessionStorage.setItem('passportInvite', invite);\n" +
+  '        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);\n' +
+  '      }\n' +
+  '    })();\n' +
+  '    (async function () {\n' +
+  '      try {\n' +
+  "        const r = await fetch('/auth/status');\n" +
+  '        const d = await r.json();\n' +
+  "        const feishu = document.getElementById('feishuLoginSection');\n" +
+  "        const passport = document.getElementById('passportLoginSection');\n" +
+  "        if (d.authMode === 'passport') { if (passport) passport.style.display = 'block'; if (feishu) feishu.style.display = 'none'; }\n" +
+  "        else if (d.feishuEnabled && feishu) feishu.style.display = 'block';\n" +
+  "        const link = document.getElementById('passportLoginLink');\n" +
+  "        const storedInvite = sessionStorage.getItem('passportInvite');\n" +
+  '        if (link && storedInvite) link.href = `/auth/passport?invite=${encodeURIComponent(storedInvite)}`;\n' +
+  '      } catch (_) {}\n' +
+  '    })();\n' +
+  '  </script>\n' +
+  '  <script>\n' +
+  '    let pending2FAUserId = null;\n' +
+  '\n' +
+  '    async function handleLogin(e) {\n' +
+  '      e.preventDefault();\n' +
+  "      const loginInput = document.querySelector('#loginInput input')?.value || '';\n" +
+  "      const password = document.querySelector('#password input')?.value || '';\n" +
+  "      const submitBtn = document.getElementById('submitBtn');\n" +
+  "      const submitTextEl = document.getElementById('submitText');\n" +
+  "      const errorEl = document.getElementById('errorMessage');\n" +
+  '\n' +
+  '      submitBtn.disabled = true;\n' +
+  '      if (submitTextEl) submitTextEl.innerHTML = `<span class="auth-inline-loading"><span class="blora-spinner" data-size="sm" role="status" aria-label="加载中"></span><span>处理中...</span></span>`;\n' +
+  "      errorEl.classList.remove('show');\n" +
+  '\n' +
+  '      try {\n' +
+  "        const res = await fetch('/auth/login', {\n" +
+  "          method: 'POST',\n" +
+  "          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },\n" +
+  "          credentials: 'same-origin',\n" +
+  '          body: JSON.stringify({ login: loginInput, password })\n' +
+  '        });\n' +
+  '\n' +
+  '        const data = await res.json();\n' +
+  '\n' +
+  '        if (res.ok) {\n' +
+  '          if (data.require2FA) {\n' +
+  '            pending2FAUserId = data.userId;\n' +
+  "            document.getElementById('loginForm').style.display = 'none';\n" +
+  "            document.getElementById('twoFactorForm').style.display = 'block';\n" +
+  "            document.getElementById('tfaCode')?.focus();\n" +
+  '            return;\n' +
+  '          }\n' +
+  "          window.location.href = '/console';\n" +
+  '          return;\n' +
+  '        } else {\n' +
+  "          errorEl.textContent = data.error || '登录失败';\n" +
+  "          errorEl.classList.add('show');\n" +
+  '        }\n' +
+  '      } catch (err) {\n' +
+  "        errorEl.textContent = '网络错误，请稍后重试';\n" +
+  "        errorEl.classList.add('show');\n" +
+  '      } finally {\n' +
+  '        submitBtn.disabled = false;\n' +
+  "        if (submitTextEl) submitTextEl.textContent = '登录';\n" +
+  '      }\n' +
+  '    }\n' +
+  '\n' +
+  '    async function handle2FAVerify(e) {\n' +
+  '      e.preventDefault();\n' +
+  "      const code = document.querySelector('#tfaCode input')?.value || '';\n" +
+  "      const submitBtn = document.getElementById('tfaSubmitBtn');\n" +
+  "      const errorEl = document.getElementById('errorMessage');\n" +
+  '      \n' +
+  '      submitBtn.disabled = true;\n' +
+  "      errorEl.classList.remove('show');\n" +
+  '      \n' +
+  '      try {\n' +
+  "        const res = await fetch('/auth/login/2fa', {\n" +
+  "          method: 'POST',\n" +
+  "          headers: { 'Content-Type': 'application/json' },\n" +
+  "          credentials: 'same-origin',\n" +
+  '          body: JSON.stringify({ userId: pending2FAUserId, code })\n' +
+  '        });\n' +
+  '        \n' +
+  '        const data = await res.json();\n' +
+  '        \n' +
+  '        if (res.ok) {\n' +
+  '       '... 8776 more characters
+
+    at Object.<anonymous> (/data/CrewRouter/scripts/test-blora-public-batch-a.js:16:10)
+    at Module._compile (node:internal/modules/cjs/loader:1804:14)
+    at Object..js (node:internal/modules/cjs/loader:1936:10)
+    at Module.load (node:internal/modules/cjs/loader:1525:32)
+    at Module._load (node:internal/modules/cjs/loader:1327:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '<!DOCTYPE html>\n' +
+    '<html lang="zh-CN">\n' +
+    '<head>\n' +
+    '  <meta charset="UTF-8">\n' +
+    '  <style>@layer legacy, blora;</style>\n' +
+    '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+    '  <script>\n' +
+    '    (function () {\n' +
+    "      var mode = localStorage.getItem('theme') || 'system';\n" +
+    "      var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);\n" +
+    "      document.documentElement.classList.toggle('dark', dark);\n" +
+    "      document.documentElement.classList.toggle('light', !dark);\n" +
+    "      document.documentElement.setAttribute('data-blora-color-scheme', dark ? 'dark' : 'light');\n" +
+    '    }());\n' +
+    '  </script>\n' +
+    '\n' +
+    '  <title>CrewRouter</title>\n' +
+    '  <link rel="icon" href="/favicon.ico" sizes="any">\n' +
+    '  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">\n' +
+    '  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">\n' +
+    '  <link rel="apple-touch-icon" href="/apple-touch-icon.png">\n' +
+    '  <script type="module" src="/blora/auto.js?v=2.1.0"></script>\n' +
+    '  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">\n' +
+    '  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">\n' +
+    '  <script src="/js/blora-foundation.js?v=2.1.0"></script>\n' +
+    '  <link rel="stylesheet" href="/css/auth-shell.css?v=5">\n' +
+    '  <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>\n' +
+    '  <script>\n' +
+    '    // Prevent FOUC - apply theme immediately\n' +
+    '    (function() {\n' +
+    "      var theme = localStorage.getItem('theme') || 'system';\n" +
+    '      var resolved = theme;\n' +
+    "      if (theme === 'system') {\n" +
+    "        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';\n" +
+    '      }\n' +
+    '      document.documentElement.classList.add(resolved);\n' +
+    '    })();\n' +
+    '  </script>\n' +
+    '  <script>\n' +
+    '    // 检查是否需要 OOBE，然后检查登录状态\n' +
+    '    (async function() {\n' +
+    '      try {\n' +
+    '        // 先检查是否需要初始化（仅创建管理员一步）\n' +
+    "        const setupRes = await fetch('/api/setup/status');\n" +
+    '        if (setupRes.ok) {\n' +
+    '          const setupData = await setupRes.json();\n' +
+    '          if (setupData.needsSetup) {\n' +
+    "            window.location.replace('/setup');\n" +
+    '            return;\n' +
+    '          }\n' +
+    '        } else if (setupRes.status === 503) {\n' +
+    '          // 数据库尚未就绪时也进入 setup 页提示用户等待\n' +
+    "          window.location.replace('/setup');\n" +
+    '          return;\n' +
+    '        }\n' +
+    '      } catch {}\n' +
+    '      try {\n' +
+    "        const res = await fetch('/auth/me', { credentials: 'same-origin' });\n" +
+    '        if (res.ok) {\n' +
+    '          const data = await res.json();\n' +
+    '          if (data && data.id) {\n' +
+    "            window.location.replace('/console');\n" +
+    '          }\n' +
+    '        }\n' +
+    '      } catch {}\n' +
+    '    })();\n' +
+    '  </script>\n' +
+    '</head>\n' +
+    '<body class="blora-page blora-scope">\n' +
+    '  <main class="auth-page login-container">\n' +
+    '    <section class="blora-card auth-card login-card" aria-labelledby="auth-title">\n' +
+    '      <header class="auth-card__header blora-card__header">\n' +
+    '        <span class="auth-card__logo" aria-hidden="true"><img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt=""></span>\n' +
+    '        <h1 class="blora-card__title" id="auth-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>\n' +
+    '        <p class="blora-card__desc">统一 AI 模型接入平台</p>\n' +
+    '      </header>\n' +
+    '\n' +
+    '      <div id="errorMessage" class="blora-message auth-error" data-variant="danger" role="alert"></div>\n' +
+    '\n' +
+    '      <form id="loginForm" method="post" action="/auth/login?format=html" accept-charset="UTF-8">\n' +
+    '        <blora-field label="用户名或邮箱" required><input class="blora-input" id="loginInput" name="login" type="text" autocomplete="username" placeholder="请输入用户名或邮箱" required></blora-field>\n' +
+    '        <blora-field label="密码" required><input class="blora-input" id="password" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" minlength="6" required></blora-field>\n' +
+    '        <div class="auth-actions">\n' +
+    '          <button class="blora-button" data-variant="primary" type="submit" id="submitBtn"><span id="submitText">登录</span></button>\n' +
+    '          <div id="passkeyLoginSection" class="login-alt-actions" style="display: none;"><button class="blora-button" data-variant="outline" type="button" id="passkeyLoginBtn"><span id="passkeyLoginText">使用通行密钥登录</span></button></div>\n' +
+    '        </div>\n' +
+    '      </form>\n' +
+    '\n' +
+    '      <form id="twoFactorForm" class="auth-2fa-form" style="display: none;">\n' +
+    '        <blora-field label="请输入验证码" required><input class="blora-input" id="tfaCode" type="text" autocomplete="one-time-code" placeholder="6位验证码" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" required></blora-field>\n' +
+    '        <div class="auth-actions"><button type="submit" class="blora-button" data-variant="primary" id="tfaSubmitBtn">验证</button><button type="button" class="blora-button" data-variant="outline" id="publicAction2">取消</button></div>\n' +
+    '      </form>\n' +
+    '\n' +
+    '      <div class="blora-divider" data-variant="text">或使用其他方式</div>\n' +
+    '      <div class="auth-oauth">\n' +
+    '        <div id="passportLoginSection" class="login-oauth-item" style="display: none;"><a href="/auth/passport" id="passportLoginLink" class="blora-button" data-variant="outline">Bloret PassPort 登录</a></div>\n' +
+    '        <div id="feishuLoginSection" class="login-oauth-item" style="display: block;"><a href="/auth/feishu" class="blora-button" data-variant="outline"><span>飞书登录</span></a></div>\n' +
+    '      </div>\n' +
+    '      <p class="auth-simple-link blora-text-muted"><a href="/plain-login">使用简洁登录页</a></p>\n' +
+    '\n' +
+    '      <footer class="auth-card__footer">\n' +
+    '        <blora-dropdown id="langToggle" class="auth-lang" align="center" placement="top" aria-label="选择语言"><button slot="trigger" type="button" class="blora-button" data-variant="ghost" data-size="sm"><span data-icon="globe" aria-hidden="true"></span><span id="langToggleLabel">中文</span></button><blora-dropdown-item value="zh" href="/?lang=zh">中文</blora-dropdown-item><blora-dropdown-item value="en" href="/?lang=en">EN</blora-dropdown-item></blora-dropdown>\n' +
+    '        <button id="themeToggle" class="blora-button" data-variant="ghost" data-size="sm" type="button" title="切换主题" data-i18n-title="切换主题" aria-label="切换主题"><span class="icon-sun" data-icon="sun" aria-hidden="true"></span><span class="icon-moon" data-icon="moon" aria-hidden="true" style="display:none"></span><span class="icon-system" data-icon="monitor" aria-hidden="true" style="display:none"></span></button>\n' +
+    '      </footer>\n' +
+    '    </section>\n' +
+    '  </main>\n' +
+    '\n' +
+    '  <script src="/js/i18n.js?v=2"></script>\n' +
+    '  <script src="/js/theme.js?v=2"></script>\n' +
+    '  <script src="/js/edition-badge.js?v=1"></script>\n' +
+    '  <script>\n' +
+    '    (function () {\n' +
+    "      const invite = new URLSearchParams(window.location.search).get('invite');\n" +
+    '      if (invite && /^[A-Za-z0-9_-]{20,200}$/.test(invite)) {\n' +
+    "        sessionStorage.setItem('passportInvite', invite);\n" +
+    '        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);\n' +
+    '      }\n' +
+    '    })();\n' +
+    '    (async function () {\n' +
+    '      try {\n' +
+    "        const r = await fetch('/auth/status');\n" +
+    '        const d = await r.json();\n' +
+    "        const feishu = document.getElementById('feishuLoginSection');\n" +
+    "        const passport = document.getElementById('passportLoginSection');\n" +
+    "        if (d.authMode === 'passport') { if (passport) passport.style.display = 'block'; if (feishu) feishu.style.display = 'none'; }\n" +
+    "        else if (d.feishuEnabled && feishu) feishu.style.display = 'block';\n" +
+    "        const link = document.getElementById('passportLoginLink');\n" +
+    "        const storedInvite = sessionStorage.getItem('passportInvite');\n" +
+    '        if (link && storedInvite) link.href = `/auth/passport?invite=${encodeURIComponent(storedInvite)}`;\n' +
+    '      } catch (_) {}\n' +
+    '    })();\n' +
+    '  </script>\n' +
+    '  <script>\n' +
+    '    let pending2FAUserId = null;\n' +
+    '\n' +
+    '    async function handleLogin(e) {\n' +
+    '      e.preventDefault();\n' +
+    "      const loginInput = document.querySelector('#loginInput input')?.value || '';\n" +
+    "      const password = document.querySelector('#password input')?.value || '';\n" +
+    "      const submitBtn = document.getElementById('submitBtn');\n" +
+    "      const submitTextEl = document.getElementById('submitText');\n" +
+    "      const errorEl = document.getElementById('errorMessage');\n" +
+    '\n' +
+    '      submitBtn.disabled = true;\n' +
+    '      if (submitTextEl) submitTextEl.innerHTML = `<span class="auth-inline-loading"><span class="blora-spinner" data-size="sm" role="status" aria-label="加载中"></span><span>处理中...</span></span>`;\n' +
+    "      errorEl.classList.remove('show');\n" +
+    '\n' +
+    '      try {\n' +
+    "        const res = await fetch('/auth/login', {\n" +
+    "          method: 'POST',\n" +
+    "          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },\n" +
+    "          credentials: 'same-origin',\n" +
+    '          body: JSON.stringify({ login: loginInput, password })\n' +
+    '        });\n' +
+    '\n' +
+    '        const data = await res.json();\n' +
+    '\n' +
+    '        if (res.ok) {\n' +
+    '          if (data.require2FA) {\n' +
+    '            pending2FAUserId = data.userId;\n' +
+    "            document.getElementById('loginForm').style.display = 'none';\n" +
+    "            document.getElementById('twoFactorForm').style.display = 'block';\n" +
+    "            document.getElementById('tfaCode')?.focus();\n" +
+    '            return;\n' +
+    '          }\n' +
+    "          window.location.href = '/console';\n" +
+    '          return;\n' +
+    '        } else {\n' +
+    "          errorEl.textContent = data.error || '登录失败';\n" +
+    "          errorEl.classList.add('show');\n" +
+    '        }\n' +
+    '      } catch (err) {\n' +
+    "        errorEl.textContent = '网络错误，请稍后重试';\n" +
+    "        errorEl.classList.add('show');\n" +
+    '      } finally {\n' +
+    '        submitBtn.disabled = false;\n' +
+    "        if (submitTextEl) submitTextEl.textContent = '登录';\n" +
+    '      }\n' +
+    '    }\n' +
+    '\n' +
+    '    async function handle2FAVerify(e) {\n' +
+    '      e.preventDefault();\n' +
+    "      const code = document.querySelector('#tfaCode input')?.value || '';\n" +
+    "      const submitBtn = document.getElementById('tfaSubmitBtn');\n" +
+    "      const errorEl = document.getElementById('errorMessage');\n" +
+    '      \n' +
+    '      submitBtn.disabled = true;\n' +
+    "      errorEl.classList.remove('show');\n" +
+    '      \n' +
+    '      try {\n' +
+    "        const res = await fetch('/auth/login/2fa', {\n" +
+    "          method: 'POST',\n" +
+    "          headers: { 'Content-Type': 'application/json' },\n" +
+    "          credentials: 'same-origin',\n" +
+    '          body: JSON.stringify({ userId: pending2FAUserId, code })\n' +
+    '        });\n' +
+    '        \n' +
+    '        const data = await res.json();\n' +
+    '        \n' +
+    '        if (res.ok) {\n' +
+    '       '... 8776 more characters,
+  expected: /\/blora\/auto\.js\?v=2\.0\.8/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v24.13.1

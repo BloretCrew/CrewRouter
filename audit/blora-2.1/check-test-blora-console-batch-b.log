@@ -1,0 +1,43 @@
+Blora Batch B official CE/public title/footer slots passed for all dialogs.
+Blora console Batch B static contract/state/dynamic safety assertions passed.
+Blora Batch B executable edge-state, 5 escaping cases, checkbox change/select-all and dropdown action checks passed.
+node:assert:152
+  throw new AssertionError(obj);
+  ^
+
+AssertionError [ERR_ASSERTION]: destructive actions must use the public danger variant
++ actual - expected
+
++ [
++   'deleteMyTeamModel: semantic variant\n' +
++     '+ actual - expected\n' +
++     '\n' +
++     "+ 'secondary'\n" +
++     "- 'danger'\n"
++ ]
+- []
+
+    at Object.<anonymous> (/data/CrewRouter/server/scripts/test-blora-console-batch-b.js:176:8)
+    at Module._compile (node:internal/modules/cjs/loader:1804:14)
+    at Object..js (node:internal/modules/cjs/loader:1936:10)
+    at Module.load (node:internal/modules/cjs/loader:1525:32)
+    at Module._load (node:internal/modules/cjs/loader:1327:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    'deleteMyTeamModel: semantic variant\n' +
+      '+ actual - expected\n' +
+      '\n' +
+      "+ 'secondary'\n" +
+      "- 'danger'\n"
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.13.1

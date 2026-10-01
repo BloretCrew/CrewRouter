@@ -1,0 +1,44 @@
+node:assert:885
+    throw err;
+    ^
+
+AssertionError [ERR_ASSERTION]: index.html: official language/theme runtime smoke
+    at Object.<anonymous> (/data/CrewRouter/scripts/verify-blora-navbar-runtime.js:46:12)
+    at Module._compile (node:internal/modules/cjs/loader:1804:14)
+    at Object..js (node:internal/modules/cjs/loader:1936:10)
+    at Module.load (node:internal/modules/cjs/loader:1525:32)
+    at Module._load (node:internal/modules/cjs/loader:1327:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '<!DOCTYPE html>\n' +
+    `<html class="light" data-blora-color-scheme="light" data-smoke="dropdown does not open" style="color-scheme: light;"><head><meta charset="utf-8"><script>window.t=v=>v;</script><link rel="stylesheet" href="file:///data/CrewRouter/node_modules/@bloret-crew/blora-design/dist/blora.css"><script src="file:///data/CrewRouter/node_modules/@bloret-crew/blora-design/dist/blora.global.js"></script></head><body><blora-dropdown id="langToggle" class="auth-lang" align="center" placement="top" aria-label="选择语言"><div class="blora-dropdown" data-blora-generated="" data-align="center" data-placement="top" data-trigger="custom" data-open=""><button slot="trigger" type="button" class="blora-button" data-variant="ghost" data-size="sm" data-dropdown-trigger="" data-trigger="custom" role="button" tabindex="0" aria-haspopup="menu" id="blora-dropdown-trigger-j5as2be" aria-expanded="true"><span data-icon="globe" aria-hidden="true"></span><span id="langToggleLabel">中文</span></button><div class="blora-dropdown__menu" role="menu" aria-labelledby="blora-dropdown-trigger-j5as2be" aria-hidden="false"><a class="blora-dropdown__item" data-value="zh" href="/?lang=zh">中文</a><a class="blora-dropdown__item" data-value="en" href="/?lang=en">EN</a></div></div></blora-dropdown><button id="themeToggle" class="blora-button" data-variant="ghost" data-size="sm" type="button" title="当前：跟随系统 · 点击切换浅色" data-i18n-title="切换主题" aria-label="当前：跟随系统 · 点击切换浅色"><span class="icon-sun" data-icon="sun" aria-hidden="true" style="display: none;"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-blora-icon="sun"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></span><span class="icon-moon" data-icon="moon" aria-hidden="true" style="display:none"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-blora-icon="moon"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path></svg></span><span class="icon-system" data-icon="monitor" aria-hidden="true" style="display: block;"></span></button><script src="file:///data/CrewRouter/public/js/theme.js"></script><script>window.addEventListener('load',()=>{setTimeout(()=>{try {\n` +
+    "      const lang=document.querySelector('#langToggle');\n" +
+    "      if (!customElements.get(lang.localName)||!lang.getAttribute('aria-label')) throw Error('official language control or accessible name lost');\n" +
+    "      if (lang.localName==='blora-dropdown') {\n" +
+    `        const trigger=lang.querySelector('button[slot="trigger"]');\n` +
+    "        if (!trigger||trigger.type!=='button') throw Error('language trigger lost');\n" +
+    '        trigger.click();\n' +
+    "        if (!lang.hasAttribute('open')) throw Error('dropdown does not open');\n" +
+    "        const links=Array.from(lang.querySelectorAll('a[href]'));\n" +
+    "        if (!links.some(a=>a.getAttribute('href').includes('lang=zh'))||!links.some(a=>a.getAttribute('href').includes('lang=en'))) throw Error('language navigation lost');\n" +
+    '        lang.close();\n' +
+    '      } else {\n' +
+    "        if (!lang.querySelector('button')) throw Error('select enhancement failed');\n" +
+    "        lang.value='en';\n" +
+    "        if (lang.value!=='en') throw Error('language selection failed');\n" +
+    '      }\n' +
+    "      const button=document.querySelector('#themeToggle');\n" +
+    "      if(button){ localStorage.setItem('theme','light'); window.themeManager.theme='light'; window.themeManager.applyTheme(); button.click(); if(localStorage.getItem('theme')!=='dark'||document.documentElement.getAttribute('data-blora-color-scheme')!=='dark') throw Error('real theme action failed'); }\n" +
+    "      const navbar=document.querySelector('blora-navbar'); if(navbar&&!navbar.querySelector('.blora-navbar')) throw Error('navbar enhancement failed');\n" +
+    "      document.documentElement.dataset.smoke='ok';\n" +
+    '    } catch(error) { document.documentElement.dataset.smoke=error.message; }},100);});</script></body></html>\n',
+  expected: /data-smoke="ok"/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v24.13.1

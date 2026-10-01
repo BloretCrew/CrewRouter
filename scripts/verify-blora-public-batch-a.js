@@ -32,10 +32,10 @@ server.listen(0, '127.0.0.1', async () => {
       const response = await fetch(`http://127.0.0.1:${port}${page}`);
       assert.strictEqual(response.status, 200, `${page} should be served`);
       const html = await response.text();
-      assert.match(html, /\/blora\/auto\.js\?v=2\.0\.8/);
+      assert.match(html, /\/blora\/auto\.js\?v=2\.1\.0/);
       assert.doesNotMatch(html, /(?:password|token|secret)\s*[:=]\s*['"][^'"]+/i);
     }
-    for (const asset of ['/blora/blora.css?v=2.0.8', '/blora/tokens.dark.css?v=2.0.8', '/blora/auto.js?v=2.0.8', '/css/auth-shell.css']) {
+    for (const asset of ['/blora/blora.css?v=2.1.0', '/blora/tokens.dark.css?v=2.1.0', '/blora/auto.js?v=2.1.0', '/css/auth-shell.css']) {
       const response = await fetch(`http://127.0.0.1:${port}${asset}`);
       assert.strictEqual(response.status, 200, `${asset} should be served`);
     }

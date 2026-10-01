@@ -8,6 +8,11 @@
 .blora-avatar-wrap {
   position: relative;
   display: inline-block;
+
+  /* Shrink-wrap the avatar even as a stretched grid/flex item; otherwise
+     the corner badge and status dot anchor to the far edge of the row. */
+  width: fit-content;
+  vertical-align: middle;
 }
 
 .blora-avatar-wrap .blora-badge {
@@ -21,6 +26,14 @@
   box-shadow:
     0 0 0 2px var(--blora-color-surface-canvas),
     var(--blora-shadow-primary);
+}
+
+/* Presence dot sits on the avatar's bottom-end edge. */
+.blora-avatar-wrap .blora-dot {
+  position: absolute;
+  bottom: 0.1em;
+  inset-inline-end: 0.1em;
+  box-shadow: 0 0 0 2px var(--blora-color-surface-canvas);
 }
 
 /* -- Status dot -- */
@@ -58,7 +71,9 @@
   height: 2.5em;
   border-radius: 50%;
   background: var(--blora-color-surface-sunken);
-  color: var(--blora-color-text-muted);
+
+  /* text-muted on the sunken fill is ~3.7:1; initials must meet AA. */
+  color: var(--blora-color-text-emphasis);
   font-family: var(--blora-font-heading);
   font-weight: 600;
   font-size: 1em;

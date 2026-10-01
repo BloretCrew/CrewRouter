@@ -1,215 +1,171 @@
-/* Blora surface migration for admin model management. */
-.blora-admin-models-page {
-  --models-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --models-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
-}
 
-.blora-admin-models-page > .content-section {
-  border: var(--models-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
+
+.cr-admin-models-page > .content-section {
+
   padding: var(--blora-space-6);
 }
 
-.blora-admin-models-page .model-library-header h2 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-}
-
-.blora-admin-models-page .model-library-header-actions {
+.cr-admin-models-page .model-library-header-actions {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--blora-space-2) !important;
   width: min(100%, 27rem);
 }
 
-.blora-admin-models-page .model-library-header-actions > *,
-.blora-admin-models-page .model-library-header-actions .expand-dropdown,
-.blora-admin-models-page .model-library-header-actions .admin-action-dropdown {
+.cr-admin-models-page .model-library-header-actions > *,
+.cr-admin-models-page .model-library-header-actions .expand-dropdown,
+.cr-admin-models-page .model-library-header-actions .admin-action-dropdown {
   min-width: 0;
 }
 
-.blora-admin-models-page .model-library-header-actions > .blora-button,
-.blora-admin-models-page .model-library-header-actions .expand-dropdown > .blora-button,
-.blora-admin-models-page .model-library-header-actions .admin-action-dropdown > .blora-button {
+.cr-admin-models-page .model-library-header-actions > .blora-button,
+.cr-admin-models-page .model-library-header-actions .expand-dropdown > .blora-button,
+.cr-admin-models-page .model-library-header-actions .admin-action-dropdown > .blora-button {
   width: 100%;
   min-height: 2.5rem;
-  padding-inline: var(--blora-space-3);
-  border-radius: var(--blora-radius-md);
-  font-family: var(--blora-font-body);
-  font-size: var(--blora-text-sm);
-  font-weight: 600;
+
   white-space: nowrap;
 }
 
-.blora-admin-models-page .model-library-header-actions .dropdown-menu {
+.cr-admin-models-page .model-library-header-actions .dropdown-menu {
   max-width: min(20rem, calc(100vw - 2rem));
 }
 
-.blora-admin-models-page .model-library-header-actions .expand-dropdown,
-.blora-admin-models-page .model-library-header-actions .admin-action-dropdown {
+.cr-admin-models-page .model-library-header-actions .expand-dropdown,
+.cr-admin-models-page .model-library-header-actions .admin-action-dropdown {
   width: 100%;
 }
 
-.blora-admin-models-page .model-library-header-actions .expand-dropdown .dropdown-menu,
-.blora-admin-models-page .model-library-header-actions .admin-action-dropdown .dropdown-menu {
+.cr-admin-models-page .model-library-header-actions .expand-dropdown .dropdown-menu,
+.cr-admin-models-page .model-library-header-actions .admin-action-dropdown .dropdown-menu {
   min-width: 100%;
 }
 
-.blora-admin-models-page .model-library-header-actions .expand-dropdown .dropdown-item,
-.blora-admin-models-page .model-library-header-actions .admin-action-dropdown .dropdown-item {
+.cr-admin-models-page .model-library-header-actions .expand-dropdown .dropdown-item,
+.cr-admin-models-page .model-library-header-actions .admin-action-dropdown .dropdown-item {
   min-height: 2.25rem;
   box-sizing: border-box;
 }
 
-.blora-admin-models-page .model-library-header-actions .model-test-batch-btn {
+.cr-admin-models-page .model-library-header-actions .model-test-batch-btn {
   display: block !important;
 }
 
-.blora-admin-models-page .model-library-header-actions .model-test-batch-btn .dropdown-menu {
+.cr-admin-models-page .model-library-header-actions .model-test-batch-btn .dropdown-menu {
   right: 0;
 }
 
-.blora-admin-models-page .model-library-header-actions .model-test-batch-btn .dropdown-menu .dropdown-item {
+.cr-admin-models-page .model-library-header-actions .model-test-batch-btn .dropdown-menu .dropdown-item {
   width: 100%;
 }
 
-.blora-admin-models-page .model-library-header-actions .admin-action-dropdown .dropdown-menu {
+.cr-admin-models-page .model-library-header-actions .admin-action-dropdown .dropdown-menu {
   right: 0;
 }
 
-.blora-admin-models-page .admin-stat-cards {
+.cr-admin-models-page .admin-stat-cards {
   gap: var(--blora-space-3);
 }
 
-.blora-admin-models-page .admin-stat-card {
-  border: var(--models-border-soft);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-raised);
-  box-shadow: var(--blora-shadow-1);
-}
-
-.blora-admin-models-page .model-filter-bar {
+.cr-admin-models-page .model-filter-bar {
   gap: var(--blora-space-3);
   padding: var(--blora-space-4);
-  border: var(--models-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
+
 }
 
-.blora-admin-models-page .admin-models-filter-bar .model-search-box {
+.cr-admin-models-page .admin-models-filter-bar .model-search-box {
   flex: 1 1 15rem;
   height: 2.5rem;
   max-width: none;
 }
 
-.blora-admin-models-page .admin-models-filter-bar .admin-models-filter-selects {
+.cr-admin-models-page .admin-models-filter-bar .admin-models-filter-selects {
   flex: 2 1 27rem;
   min-width: 0;
 }
 
-.blora-admin-models-page .admin-models-filter-selects blora-select {
+.cr-admin-models-page .admin-models-filter-selects blora-select {
   display: block;
   padding: 0;
-  border: 0;
-  background: none;
-  box-shadow: none;
+
 }
 
-.blora-admin-models-page .model-search-input {
+.cr-admin-models-page .model-search-input {
   min-height: 2.5rem;
-  border-color: color-mix(in srgb, var(--border) 55%, transparent);
-  background: var(--blora-color-surface-default);
+
 }
 
-.blora-admin-models-page #adminModelsList .blora-card,
-.blora-admin-models-page #adminModelsList .admin-card {
-  border-color: color-mix(in srgb, var(--border) 52%, transparent);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
-}
+.cr-admin-models-page #adminModelsList .admin-card-footer {
 
-.blora-admin-models-page #adminModelsList .admin-card:hover {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
-  box-shadow: var(--blora-shadow-2);
-}
-
-.blora-admin-models-page #adminModelsList .admin-card-footer {
-  border-top-color: color-mix(in srgb, var(--border) 36%, transparent);
   gap: var(--blora-space-2);
 }
 
-.blora-admin-models-page #adminModelsList .admin-model-action {
+.cr-admin-models-page #adminModelsList .admin-model-action {
   min-height: 2.25rem;
   min-width: 3.5rem;
-  border-radius: var(--blora-radius-lg);
+
 }
 
-.blora-admin-models-page .admin-models-filter-selects {
+.cr-admin-models-page .admin-models-filter-selects {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--blora-space-2);
   width: 100%;
 }
 
-.blora-admin-models-page .admin-models-filter-selects blora-select {
+.cr-admin-models-page .admin-models-filter-selects blora-select {
   min-width: 0;
   width: 100%;
   min-height: 2.5rem;
 }
 
-.blora-admin-models-page .admin-models-filter-selects .blora-button {
+.cr-admin-models-page .admin-models-filter-selects .blora-button {
   min-height: 2.5rem;
-  padding-inline: var(--blora-space-3);
-  border-radius: var(--blora-radius-md);
-  font-family: var(--blora-font-body);
-  font-size: var(--blora-text-sm);
+
   white-space: nowrap;
 }
 
-.blora-admin-models-page .models-table,
-.blora-admin-models-page .model-library-grid {
+.cr-admin-models-page .models-table,
+.cr-admin-models-page .model-library-grid {
   min-width: 0;
 }
 
 @media (max-width: 900px) {
-  .blora-admin-models-page .admin-models-filter-bar .model-search-box,
-  .blora-admin-models-page .admin-models-filter-bar .admin-models-filter-selects {
+  .cr-admin-models-page .admin-models-filter-bar .model-search-box,
+  .cr-admin-models-page .admin-models-filter-bar .admin-models-filter-selects {
     flex: 0 0 auto;
     width: 100%;
   }
 
-  .blora-admin-models-page .model-library-header-actions,
-  .blora-admin-models-page .admin-models-filter-selects {
+  .cr-admin-models-page .model-library-header-actions,
+  .cr-admin-models-page .admin-models-filter-selects {
     width: 100%;
     max-width: none;
   }
 }
 
 @media (max-width: 640px) {
-  .blora-admin-models-page > .content-section {
+  .cr-admin-models-page > .content-section {
     padding: var(--blora-space-4);
   }
 
-  .blora-admin-models-page .model-library-header {
+  .cr-admin-models-page .model-library-header {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .blora-admin-models-page .model-library-header-actions,
-  .blora-admin-models-page .model-filter-selects {
+  .cr-admin-models-page .model-library-header-actions,
+  .cr-admin-models-page .model-filter-selects {
     width: 100%;
   }
 
-  .blora-admin-models-page .model-library-header-actions,
-  .blora-admin-models-page .admin-models-filter-selects {
+  .cr-admin-models-page .model-library-header-actions,
+  .cr-admin-models-page .admin-models-filter-selects {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .blora-admin-models-page .model-library-header-actions .blora-button,
-  .blora-admin-models-page .model-filter-selects .blora-button {
+  .cr-admin-models-page .model-library-header-actions .blora-button,
+  .cr-admin-models-page .model-filter-selects .blora-button {
     flex: 1 1 auto;
   }
 }

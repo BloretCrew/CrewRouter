@@ -95,5 +95,6 @@
 @import "./components/tree/tree.css" layer(blora.components);
 @import "./components/tree-select/tree-select.css" layer(blora.components);
 @import "./components/upload/upload.css" layer(blora.components);
+@import "./foundations/stack.css" layer(blora.utilities);
 @import "./foundations/utilities.css" layer(blora.utilities);
 @import "./tokens.themes.css" layer(blora.tokens);

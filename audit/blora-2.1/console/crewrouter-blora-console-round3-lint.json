@@ -1,0 +1,2098 @@
+[
+  {
+    "file": "public/pages/console.html",
+    "line": 102,
+    "column": 101,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler only violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 227,
+    "column": 79,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 228,
+    "column": 79,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 229,
+    "column": 79,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 230,
+    "column": 79,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 242,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 257,
+    "column": 119,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 259,
+    "column": 189,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 293,
+    "column": 92,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 303,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 304,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 339,
+    "column": 143,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 351,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 354,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 357,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 360,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 373,
+    "column": 83,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 420,
+    "column": 95,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 421,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 424,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 428,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 432,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 436,
+    "column": 95,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 440,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 448,
+    "column": 130,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 449,
+    "column": 120,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 485,
+    "column": 68,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 534,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 546,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 591,
+    "column": 75,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 592,
+    "column": 69,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 593,
+    "column": 69,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 594,
+    "column": 68,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 595,
+    "column": 68,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 596,
+    "column": 66,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 597,
+    "column": 66,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 598,
+    "column": 62,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 599,
+    "column": 62,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 600,
+    "column": 62,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 603,
+    "column": 85,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 604,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 619,
+    "column": 92,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 685,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 696,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 844,
+    "column": 63,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 848,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 849,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 853,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 857,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 861,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 865,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 869,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 873,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1156,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1157,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1158,
+    "column": 81,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1165,
+    "column": 79,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1167,
+    "column": 79,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1182,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1215,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1216,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1223,
+    "column": 113,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1225,
+    "column": 113,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1256,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1257,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1260,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1266,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1279,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1282,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1289,
+    "column": 114,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1290,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1369,
+    "column": 153,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1371,
+    "column": 374,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1425,
+    "column": 72,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1426,
+    "column": 61,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1427,
+    "column": 63,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1428,
+    "column": 66,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1429,
+    "column": 65,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1430,
+    "column": 70,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1431,
+    "column": 63,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1432,
+    "column": 79,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1653,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1714,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 1779,
+    "column": 43,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 2975,
+    "column": 32,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 2979,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 2992,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 3005,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 3018,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 3032,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 3033,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/console.html",
+    "line": 3042,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 137,
+    "column": 63,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 153,
+    "column": 63,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 202,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 221,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 241,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 242,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 243,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 280,
+    "column": 158,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 291,
+    "column": 156,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 296,
+    "column": 80,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 310,
+    "column": 154,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 315,
+    "column": 150,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 316,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 317,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 318,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 319,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 320,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 338,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 371,
+    "column": 124,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 374,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 386,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 387,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 388,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 401,
+    "column": 98,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 405,
+    "column": 102,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 406,
+    "column": 103,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 408,
+    "column": 99,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 409,
+    "column": 102,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 410,
+    "column": 101,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 412,
+    "column": 102,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 413,
+    "column": 98,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 414,
+    "column": 99,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 416,
+    "column": 109,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 420,
+    "column": 98,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 426,
+    "column": 46,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 427,
+    "column": 46,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 430,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 431,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 432,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 461,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 462,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 463,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 494,
+    "column": 119,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 497,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 510,
+    "column": 112,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 527,
+    "column": 85,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 532,
+    "column": 106,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 536,
+    "column": 81,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 540,
+    "column": 81,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 544,
+    "column": 81,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 548,
+    "column": 81,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 552,
+    "column": 107,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 560,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 561,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 563,
+    "column": 88,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 566,
+    "column": 86,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 569,
+    "column": 85,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 593,
+    "column": 107,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 606,
+    "column": 88,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 607,
+    "column": 91,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 608,
+    "column": 91,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 609,
+    "column": 90,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 610,
+    "column": 90,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 611,
+    "column": 88,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 612,
+    "column": 84,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 613,
+    "column": 84,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 616,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 617,
+    "column": 88,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 658,
+    "column": 63,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 662,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 666,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 670,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 674,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 678,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 682,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 686,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 690,
+    "column": 35,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 839,
+    "column": 136,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 839,
+    "column": 290,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 991,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1055,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1056,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1057,
+    "column": 81,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1058,
+    "column": 87,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1065,
+    "column": 79,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1067,
+    "column": 79,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1082,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1097,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1098,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1106,
+    "column": 115,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1108,
+    "column": 115,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1132,
+    "column": 96,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1166,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1167,
+    "column": 94,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1174,
+    "column": 118,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1176,
+    "column": 118,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1216,
+    "column": 56,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1261,
+    "column": 76,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1262,
+    "column": 76,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1269,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onsubmit violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1388,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onsubmit violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1417,
+    "column": 87,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1423,
+    "column": 77,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1477,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1481,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1485,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1664,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1665,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1666,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1667,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1668,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1669,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1670,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1671,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1672,
+    "column": 58,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1723,
+    "column": 82,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1770,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1799,
+    "column": 91,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1800,
+    "column": 91,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1801,
+    "column": 91,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1802,
+    "column": 91,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1963,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1964,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1965,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1966,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1967,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1968,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1969,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1970,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 1971,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2094,
+    "column": 76,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2095,
+    "column": 80,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2096,
+    "column": 81,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2097,
+    "column": 78,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2111,
+    "column": 101,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2113,
+    "column": 102,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2141,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2167,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2193,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2214,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2240,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2272,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2297,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2316,
+    "column": 54,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2368,
+    "column": 52,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2369,
+    "column": 106,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2437,
+    "column": 60,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2448,
+    "column": 70,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2449,
+    "column": 84,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2450,
+    "column": 98,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2473,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2556,
+    "column": 32,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2560,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2573,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/admin.html",
+    "line": 2586,
+    "column": 64,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/css/admin-error-logs-blora.css",
+    "line": 22,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "1 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/admin-models-blora.css",
+    "line": 13,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "1 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/admin-prompts-blora.css",
+    "line": 22,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "1 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/admin-stats-blora.css",
+    "line": 132,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "2 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/admin-user-groups-blora.css",
+    "line": 7,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "4 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/admin-users-blora.css",
+    "line": 6,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "2 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/balance-blora.css",
+    "line": 6,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "1 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/console-blora.css",
+    "line": 190,
+    "column": 75,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "2 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/docs-blora.css",
+    "line": 34,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "2 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/model-library-blora.css",
+    "line": 7,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "2 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/prompts-blora.css",
+    "line": 22,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "1 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/sessions-blora.css",
+    "line": 18,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "6 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/settings-blora.css",
+    "line": 56,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "1 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/stats-blora.css",
+    "line": 61,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "1 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/upstream-blora.css",
+    "line": 57,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "1 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  }
+]

@@ -1,0 +1,18 @@
+/* Plugin palette composition; component appearance remains owned by Blora. */
+:root[data-blora-theme].theme-theme-linear__linear {
+  --blora-color-surface-canvas: var(--blora-color-coral-background);
+  --blora-color-surface-default: var(--blora-color-coral-surface-1);
+  --blora-color-surface-raised: var(--blora-color-coral-surface-2);
+  --blora-color-surface-sunken: var(--blora-color-coral-surface-3);
+  --blora-color-text-primary: var(--blora-color-coral-text-strong);
+  --blora-color-text-secondary: var(--blora-color-coral-foreground);
+  --blora-color-text-emphasis: var(--blora-color-coral-text-emphasis);
+  --blora-color-text-muted: var(--blora-color-coral-text-muted);
+  --blora-color-text-subtle: var(--blora-color-coral-text-subtle);
+  --blora-color-text-disabled: var(--blora-color-coral-text-disabled);
+  --blora-color-text-on-accent: var(--blora-color-coral-on-accent);
+  --blora-color-border-subtle: var(--blora-color-coral-border-subtle);
+  --blora-color-action-primary-default: var(--blora-color-coral-primary);
+  --blora-color-action-primary-hover: var(--blora-color-coral-primary-hover);
+  --blora-color-action-primary-soft: var(--blora-color-coral-primary-soft);
+}

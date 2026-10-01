@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="/css/layers.css?v=2.1.0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
     (function () {
@@ -18,10 +19,10 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <script type="module" src="/blora/auto.js?v=2.0.8"></script>
+  <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js"></script>
-  <link rel="stylesheet" href="/css/themes.css">
-  <link rel="stylesheet" href="/css/edition-badge.css?v=2">
+  <style>@import url("/css/themes.css") layer(legacy);</style>
+  <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function () {
       var theme = localStorage.getItem('theme') || 'system';
@@ -30,82 +31,63 @@
     })();
   </script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: var(--background);
-      color: var(--foreground);
-      line-height: 1.6;
-      min-height: 100vh;
-    }
-    a { color: var(--brand-blue); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    .data-nav {
-      position: sticky; top: 0; z-index: 100;
-      display: flex; align-items: center; gap: 14px;
-      padding: 0 24px; height: 56px;
-      background: color-mix(in srgb, var(--background) 80%, transparent);
-      backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%);
-      border-bottom: 1px solid var(--border);
-    }
-    .data-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; color: var(--foreground); }
-    .data-brand img { width: 26px; height: 26px; border-radius: 7px; }
-    .data-nav__spacer { flex: 1; }
-    .data-nav__link {
-      font-size: 13px; padding: 6px 12px; border-radius: 8px; color: var(--muted-foreground);
-    }
-    .data-nav__link:hover { background: var(--secondary); color: var(--foreground); text-decoration: none; }
-
-    .theme-toggle { display: flex; }
-    .theme-toggle button {
-      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      background: color-mix(in srgb, var(--secondary) 80%, transparent);
-      color: var(--foreground); cursor: pointer;
-    }
-
-    .data-main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 60px; }
-    .data-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
-    .data-sub { font-size: 13px; color: var(--muted-foreground); margin-bottom: 20px; }
-
-    .metric-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 14px; margin-bottom: 26px;
-    }
-    .metric-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
-    }
-    .metric-label { font-size: 12px; color: var(--muted-foreground); margin-bottom: 6px; }
-    .metric-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-    .section-title { font-size: 15px; font-weight: 600; margin: 26px 0 12px; }
-    .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    thead th {
-      text-align: left; padding: 10px 14px; font-weight: 600; color: var(--muted-foreground);
-      border-bottom: 1px solid var(--border); white-space: nowrap;
-    }
-    tbody td { padding: 9px 14px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; white-space: nowrap; }
-    tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover { background: var(--secondary); }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
-    .muted { color: var(--muted-foreground); }
-    .empty { padding: 40px; text-align: center; color: var(--muted-foreground); }
-    .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--secondary); font-size: 12px; margin-right: 4px; }
-
-    .loading { text-align: center; color: var(--muted-foreground); padding: 60px 0; }
-
-    @media (max-width: 600px) {
-      .data-nav { padding: 0 12px; }
-      .data-main { padding: 20px 14px 40px; }
-    }
+@layer legacy, blora;
+@layer legacy {
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: var(--blora-color-surface-canvas); color: var(--blora-color-text-primary); line-height: 1.6; min-height: 100vh; }
+a { color: var(--blora-color-action-primary-default); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.data-nav { background: color-mix(in srgb, var(--blora-color-surface-canvas) 80%, transparent); backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); border-bottom: 1px solid var(--blora-color-border-subtle); }
+.data-brand { font-weight: 600; font-size: 15px; color: var(--blora-color-text-primary); }
+.data-brand img { border-radius: 7px; }
+.data-nav__link { font-size: 13px; border-radius: 8px; color: var(--blora-color-text-muted); }
+.data-nav__link:hover { background: var(--blora-color-surface-raised); color: var(--blora-color-text-primary); text-decoration: none; }
+.theme-toggle button { border-radius: 8px; border: 1px solid var(--blora-color-border-subtle); background: color-mix(in srgb, var(--blora-color-surface-raised) 80%, transparent); color: var(--blora-color-text-primary); cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+.data-title { font-size: 22px; font-weight: 700; }
+.data-sub { font-size: 13px; color: var(--blora-color-text-muted); }
+.metric-card { background: var(--blora-color-surface-default); border: 1px solid var(--blora-color-border-subtle); border-radius: 12px; padding: 16px 18px; }
+.metric-label { font-size: 12px; color: var(--blora-color-text-muted); }
+.metric-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.section-title { font-size: 15px; font-weight: 600; }
+.table-wrap { background: var(--blora-color-surface-default); border: 1px solid var(--blora-color-border-subtle); border-radius: 12px; }
+table { border-collapse: collapse; font-size: 13px; width: 100%; }
+thead th { font-weight: 600; color: var(--blora-color-text-muted); border-bottom: 1px solid var(--blora-color-border-subtle); text-align: left; padding: 10px 14px; white-space: nowrap; }
+tbody td { border-bottom: 1px solid var(--blora-color-border-subtle); font-variant-numeric: tabular-nums; padding: 9px 14px; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--blora-color-surface-raised); }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.muted { color: var(--blora-color-text-muted); }
+.empty { color: var(--blora-color-text-muted); }
+.chip { border-radius: 999px; background: var(--blora-color-surface-raised); font-size: 12px; }
+.loading { color: var(--blora-color-text-muted); }
+}
+.data-nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 14px; padding: 0 24px; height: 56px; }
+.data-brand { display: flex; align-items: center; gap: 8px; }
+.data-brand img { width: 26px; height: 26px; }
+.data-nav__spacer { flex: 1; }
+.data-nav__link { padding: 6px 12px; }
+.theme-toggle { display: flex; }
+.data-main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 60px; }
+.data-title { margin-bottom: 4px; }
+.data-sub { margin-bottom: 20px; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 26px; }
+.metric-label { margin-bottom: 6px; }
+.section-title { margin: 26px 0 12px; }
+.table-wrap { overflow-x: auto; }
+.empty { padding: 40px; text-align: center; }
+.chip { display: inline-block; padding: 2px 8px; margin-right: 4px; }
+.loading { text-align: center; padding: 60px 0; }
+@media (max-width: 600px) {
+.data-nav { padding: 0 12px; }
+.data-main { padding: 20px 14px 40px; }
+}
   </style>
   <script src="/js/edition-badge.js?v=1"></script>
-  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
-  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
+  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
+  <script type="module" src="/js/blora-services.js?v=2.1.0"></script>
 </head>
-<body class="blora-page">
+<body class="blora-page blora-scope">
   <nav class="data-nav">
     <a class="data-brand" href="/data">
       <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="CrewRouter">
@@ -114,11 +96,11 @@
     <span class="data-nav__spacer"></span>
     <a class="data-nav__link" href="/store"><span data-i18n="插件商店">插件商店</span></a>
     <div class="theme-toggle">
-      <select id="langToggle" class="btn btn-icon blora-input" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;background:var(--card);color:var(--foreground);border:1px solid var(--border);border-radius:8px;">
-        <option value="zh">中文</option>
-        <option value="en">EN</option>
-      </select>
-      <button id="themeToggle" title="切换主题" data-i18n-title="切换主题" class="blora-button">
+      <blora-select id="langToggle" aria-label="Language">
+        <blora-option value="zh">中文</blora-option>
+        <blora-option value="en">EN</blora-option>
+      </blora-select>
+      <button id="themeToggle" title="切换主题" data-i18n-title="切换主题" class="blora-button" type="button">
         <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
         </svg>
@@ -133,16 +115,17 @@
   </nav>
 
   <main class="data-main">
-    <h1 class="data-title" data-i18n="CrewRouter 实例统计">CrewRouter 实例统计</h1>
+    <h1 class="data-title blora-h2" data-i18n="CrewRouter 实例统计">CrewRouter 实例统计</h1>
     <p class="data-sub"><span data-i18n="自动刷新中 · 每 30 秒刷新">自动刷新中 · 每 30 秒刷新</span> · <span data-i18n="上次更新">上次更新</span>: <span id="updatedAt">-</span></p>
 
+    <div id="dataState" role="status" aria-live="polite"><div class="blora-skeleton" data-variant="text" aria-label="加载中"></div></div>
     <div id="metrics" class="metric-grid"></div>
 
-    <div class="section-title" data-i18n="实例明细">实例明细</div>
-    <div class="table-wrap"><div id="instancesTable"></div></div>
+    <div class="section-title blora-h4" data-i18n="实例明细">实例明细</div>
+    <div class="table-wrap blora-table-wrap"><div id="instancesTable"></div></div>
 
-    <div class="section-title" data-i18n="最近上报">最近上报</div>
-    <div class="table-wrap"><div id="recentTable"></div></div>
+    <div class="section-title blora-h4" data-i18n="最近上报">最近上报</div>
+    <div class="table-wrap blora-table-wrap"><div id="recentTable"></div></div>
   </main>
 
   <script src="/js/i18n.js?v=2"></script>
@@ -187,6 +170,7 @@
       }
 
       function render(data) {
+        document.getElementById('dataState').innerHTML = '';
         var s = data.summary || {};
         document.getElementById('updatedAt').textContent = fmtTime(s.updatedAt);
 
@@ -198,14 +182,14 @@
           { label: t('累计成本'), value: fmtCost(s.totalCost) }
         ];
         document.getElementById('metrics').innerHTML = metrics.map(function (m) {
-          return '<div class="metric-card"><div class="metric-label">' + esc(m.label) + '</div><div class="metric-value">' + esc(m.value) + '</div></div>';
+          return '<div class="metric-card blora-card" data-size="sm"><div class="metric-label blora-card__desc">' + esc(m.label) + '</div><div class="metric-value blora-h4">' + esc(m.value) + '</div></div>';
         }).join('');
 
         var instances = data.instances || [];
         if (!instances.length) {
-          document.getElementById('instancesTable').innerHTML = '<div class="empty">' + t('暂无数据') + '</div>';
+          document.getElementById('instancesTable').innerHTML = '<blora-empty title="' + esc(t('暂无数据')) + '"></blora-empty>';
         } else {
-          var ih = '<table><thead><tr>' +
+          var ih = '<table class="blora-table"><thead><tr>' +
             '<th>' + t('设备 ID') + '</th><th>' + t('域名') + '</th><th>' + t('版本') + '</th>' +
             '<th>' + t('上报次数') + '</th><th>' + t('请求数') + '</th><th>' + t('Token') + '</th>' +
             '<th>' + t('成本') + '</th><th>' + t('最后上报') + '</th></tr></thead><tbody>';
@@ -226,9 +210,9 @@
 
         var recent = data.recent || [];
         if (!recent.length) {
-          document.getElementById('recentTable').innerHTML = '<div class="empty">' + t('暂无数据') + '</div>';
+          document.getElementById('recentTable').innerHTML = '<blora-empty title="' + esc(t('暂无数据')) + '"></blora-empty>';
         } else {
-          var rh = '<table><thead><tr>' +
+          var rh = '<table class="blora-table"><thead><tr>' +
             '<th>' + t('时间') + '</th><th>' + t('设备 ID') + '</th><th>' + t('域名') + '</th>' +
             '<th>' + t('请求数') + '</th><th>' + t('Token') + '</th><th>' + t('成本') + '</th>' +
             '<th>' + t('活跃用户') + '</th><th>' + t('活跃密钥') + '</th><th>' + t('请求类型') + '</th></tr></thead><tbody>';
@@ -256,7 +240,10 @@
         fetch('/api/stats-report/overview')
           .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
           .then(render)
-          .catch(function (e) { console.error('加载统计数据失败:', e); })
+          .catch(function (e) {
+            document.getElementById('dataState').innerHTML = '<blora-alert variant="danger" title="' + esc(t('加载失败')) + '" description="' + esc(e.message) + '"></blora-alert>';
+            console.error('加载统计数据失败:', e);
+          })
           .finally(function () { loading = false; });
       }
 

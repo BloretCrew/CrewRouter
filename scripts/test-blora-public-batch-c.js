@@ -16,9 +16,9 @@ const streamState = require(path.join(root, 'server/utils/playground-stream-stat
 const playgroundState = require(path.join(root, 'public/js/playground-state.js'));
 
 for (const [name, html] of [['playground', playground], ['console', consolePage]]) {
-  assert.match(html, /\/blora\/blora\.css\?v=2\.0\.8/);
-  assert.match(html, /\/blora\/tokens\.dark\.css\?v=2\.0\.8/);
-  assert.match(html, /\/blora\/auto\.js\?v=2\.0\.8/);
+  assert.match(html, /\/blora\/blora\.css\?v=2\.1\.0/);
+  assert.match(html, /\/blora\/tokens\.dark\.css\?v=2\.1\.0/);
+  assert.match(html, /\/blora\/auto\.js\?v=2\.1\.0/);
   assert.doesNotMatch(html, /--blora-[\w-]+\s*:/, `${name}: custom Blora tokens are forbidden`);
 }
 assert.match(playground, /<blora-select\b[^>]*id="pgModel"/);
@@ -29,7 +29,9 @@ assert.match(consolePage, /<blora-select\b[^>]*id="sessionDaysFilter"[\s\S]*<blo
 assert.match(consolePage, /<blora-select\b[^>]*id="sessionSourceFilter"[\s\S]*<blora-option/);
 assert.match(appJs, /setBloraState\('sessionsList', 'loading'\)/);
 assert.match(appJs, /setBloraState\('sessionsList', 'error'\)/);
-assert.match(appJs, /<button type="button" class="model-library-item"/);
+const cardContract = require(path.join(root, 'node_modules/@bloret-crew/blora-design/contracts/card.contract.json'));
+assert.ok(cardContract.classes['blora-card']);
+assert.match(appJs, /<div class="blora-card model-library-item/);
 assert.match(playgroundJs, /PlaygroundState\.buildRetryPayload/);
 assert.doesNotMatch(playgroundJs, /<option\b/);
 assert.doesNotMatch(playgroundJs, /src="\$\{modelInfo\./);
@@ -154,9 +156,89 @@ assert.deepStrictEqual(retryPrepared.apiMessages, [{ role: 'user', content: 'ori
 assert.strictEqual(playgroundState.shouldRollback('failed'), true);
 assert.strictEqual(playgroundState.shouldRollback('completed'), false);
 
-runUsageSpyTest().then(() => {
+runUsageSpyTest().then(async () => {
 new vm.Script(playgroundJs, { filename: 'public/js/playground.js' });
 new vm.Script(appJs, { filename: 'public/js/app.js' });
 new vm.Script(serverJs, { filename: 'server/routes/playground.js' });
+console.log('Blora SSE success/error/timeout/disconnect, billing spy and immutable retry payload assertions passed.');
+await verifyModelKeyboard();
 console.log('Blora public Batch C executable stream/retry and contract boundary checks passed.');
-});
+}).catch((error) => { console.error(error); process.exitCode = 1; });
+
+
+async function verifyModelKeyboard() {
+  const os = require('os');
+  const { spawn } = require('child_process');
+  const source = appJs.match(/  _renderModelLibraryItem\([^]*?\n  \}/)?.[0];
+  assert.ok(source, 'production Card renderer exists');
+  const context = vm.createContext({
+    t: value => value,
+    escapeHtml: value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character])),
+    safeHttpUrl: () => '', renderProviderNameTag: () => '',
+  });
+  const renderer = vm.runInContext(`({${source}})._renderModelLibraryItem`, context);
+  const owner = { user: null, _jsString: value => String(value), _formatTestTps: () => '', _renderModelUptimeSlot: () => '', _renderLibraryMoveControls: () => '', _renderLibraryMoreMenu: () => '', _libIcon: () => '' };
+  const model = { id: 'model-keyboard', name: 'Keyboard model', provider_id: 'provider-a' };
+  const team = { team_id: 'team-a' };
+  const enabled = renderer.call(owner, model, team, null, false);
+  const disabled = renderer.call(owner, model, team, null, true);
+  const picker = renderer.call(owner, model, team, null, false, { mode: 'keyPicker', onClick: "app.addToQueue('model-keyboard')" });
+  const bound = renderer.call(owner, model, team, { id: model.id }, false);
+  for (const markup of [enabled, disabled, picker, bound]) {
+    assert.match(markup, /<div class="blora-card model-library-item/);
+    assert.match(markup, /data-variant="hover"/);
+    let buttonDepth = 0;
+    for (const tag of markup.matchAll(/<\/?button\b[^>]*>/g)) {
+      buttonDepth += tag[0].startsWith('</') ? -1 : 1;
+      assert.ok(buttonDepth >= 0 && buttonDepth <= 1, 'Card must not nest buttons');
+    }
+    assert.strictEqual(buttonDepth, 0);
+  }
+  assert.match(disabled, /<button[^>]*disabled/);
+  assert.match(bound, /<button[^>]*model-action-bound[^>]*disabled/);
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'crewrouter-blora-card-'));
+  const file = path.join(profile, 'card.html');
+  fs.writeFileSync(file, `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="file://${root}/node_modules/@bloret-crew/blora-design/dist/blora.css"><script>window.selections=[];window.queue=[];window.app={selectModel:id=>selections.push(id),addToQueue:id=>queue.push(id)};</script><section id="enabled">${enabled}</section><section id="disabled">${disabled}</section><section id="picker">${picker}</section><section id="bound">${bound}</section>`);
+  const browser = spawn('google-chrome', ['--headless=new', '--no-sandbox', '--disable-dev-shm-usage', '--allow-file-access-from-files', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' });
+  let socket;
+  try {
+    const portFile = path.join(profile, 'DevToolsActivePort');
+    for (let attempt = 0; !fs.existsSync(portFile) && attempt < 100; attempt++) await new Promise(resolve => setTimeout(resolve, 100));
+    assert.ok(fs.existsSync(portFile), 'headless browser must start');
+    const port = fs.readFileSync(portFile, 'utf8').split('\n')[0];
+    const target = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json();
+    socket = new WebSocket(target.webSocketDebuggerUrl);
+    await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
+    let sequence = 0;
+    const pending = new Map();
+    socket.onmessage = event => { const message = JSON.parse(event.data); if (message.id) { const entry = pending.get(message.id); if (entry) { clearTimeout(entry.timer); pending.delete(message.id); message.error ? entry.reject(new Error(JSON.stringify(message.error))) : entry.resolve(message.result); } } };
+    const send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++sequence; const timer = setTimeout(() => { pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, 10000); pending.set(id, { resolve, reject, timer }); socket.send(JSON.stringify({ id, method, params })); });
+    const evaluate = async expression => { const result = await send('Runtime.evaluate', { expression, returnByValue: true }); assert.ok(!result.exceptionDetails, JSON.stringify(result.exceptionDetails)); return result.result.value; };
+    await send('Page.enable');
+    await send('Page.navigate', { url: `file://${file}` });
+    await send('Page.bringToFront');
+    for (let attempt = 0; attempt < 100 && !await evaluate('!!document.querySelector("#enabled .model-action-primary")'); attempt++) await new Promise(resolve => setTimeout(resolve, 50));
+    const activate = async (selector, key, code, keyCode) => {
+      assert.strictEqual(await evaluate(`(() => { const button=document.querySelector(${JSON.stringify(selector)}); if(!button||button.tagName!=='BUTTON'||button.disabled) return false; button.focus(); return document.activeElement===button; })()`), true, 'selection must have a focusable native action');
+      await send('Input.dispatchKeyEvent', { type: 'keyDown', key, code, windowsVirtualKeyCode: keyCode, text: key === 'Enter' ? '\r' : ' ', unmodifiedText: key === 'Enter' ? '\r' : ' ' });
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode: keyCode });
+    };
+    await activate('#enabled .model-action-primary', 'Enter', 'Enter', 13);
+    assert.deepStrictEqual(await evaluate('selections'), ['model-keyboard']);
+    await activate('#enabled .model-action-primary', ' ', 'Space', 32);
+    assert.deepStrictEqual(await evaluate('selections'), ['model-keyboard', 'model-keyboard']);
+    await activate('#picker .model-action-primary', 'Enter', 'Enter', 13);
+    assert.deepStrictEqual(await evaluate('queue'), ['model-keyboard']);
+    await evaluate('document.querySelector("#disabled .model-action-disabled").click()');
+    assert.strictEqual(await evaluate('selections.length'), 2, 'disabled Card must not select a model');
+    await activate('#enabled .model-library-select', 'Enter', 'Enter', 13);
+    assert.strictEqual(await evaluate('selections.length'), 3, 'Card title action must select exactly once');
+    await evaluate('document.querySelector("#bound .model-action-bound").click()');
+    assert.strictEqual(await evaluate('selections.length'), 3, 'already-bound action must not select again');
+    console.log('Production Card: Enter/Space select actual model, picker queues model, disabled selection blocked.');
+  } finally {
+    socket?.close();
+    if (browser.exitCode === null) { const exited = new Promise(resolve => browser.once('exit', resolve)); browser.kill('SIGTERM'); await exited; }
+    fs.rmSync(profile, { recursive: true, force: true });
+  }
+}

@@ -18,7 +18,7 @@
   --blora-color-action-primary-hover: #E0A3AB;
   --blora-color-action-primary-soft: #B36F79;
   --blora-color-action-selection-bg: color-mix(in srgb, var(--blora-color-action-primary-default) 27%, var(--blora-color-surface-canvas));
-  --blora-color-status-danger: #D27779;
+  --blora-color-status-danger: #E0715B;
   --blora-color-status-neutral: #99939E;
   --blora-color-status-neutral-soft: #B5B0B9;
   --blora-color-status-info: #919AB4;
@@ -65,7 +65,7 @@
     --blora-color-action-primary-hover: #E0A3AB;
     --blora-color-action-primary-soft: #B36F79;
     --blora-color-action-selection-bg: color-mix(in srgb, var(--blora-color-action-primary-default) 27%, var(--blora-color-surface-canvas));
-    --blora-color-status-danger: #D27779;
+    --blora-color-status-danger: #E0715B;
     --blora-color-status-neutral: #99939E;
     --blora-color-status-neutral-soft: #B5B0B9;
     --blora-color-status-info: #919AB4;

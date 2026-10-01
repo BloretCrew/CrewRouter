@@ -1,0 +1,1317 @@
+[
+  {
+    "file": "public/pages/data.html",
+    "line": 117,
+    "column": 7,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <select>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/data.html",
+    "line": 121,
+    "column": 7,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/feishu-bind.html",
+    "line": 66,
+    "column": 74,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #3370ff; use a Blora token"
+  },
+  {
+    "file": "public/pages/feishu-bind.html",
+    "line": 72,
+    "column": 63,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #6b7280; use a Blora token"
+  },
+  {
+    "file": "public/pages/feishu-bind.html",
+    "line": 75,
+    "column": 63,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #6b7280; use a Blora token"
+  },
+  {
+    "file": "public/pages/feishu-bind.html",
+    "line": 43,
+    "column": 5,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <select>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/feishu-bind.html",
+    "line": 80,
+    "column": 29,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onsubmit violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/index.html",
+    "line": 79,
+    "column": 98,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onsubmit violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/index.html",
+    "line": 88,
+    "column": 77,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onsubmit violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/index.html",
+    "line": 90,
+    "column": 196,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 42,
+    "column": 64,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <select>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 135,
+    "column": 11,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <input>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 147,
+    "column": 15,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <input>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 156,
+    "column": 11,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <input>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 53,
+    "column": 7,
+    "severity": "warning",
+    "rule": "plain-button",
+    "message": "<button> without a Blora button class (blora-button/blora-fab/blora-swap)"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 53,
+    "column": 7,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 72,
+    "column": 11,
+    "severity": "warning",
+    "rule": "plain-button",
+    "message": "<button> without a Blora button class (blora-button/blora-fab/blora-swap)"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 72,
+    "column": 11,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 99,
+    "column": 9,
+    "severity": "warning",
+    "rule": "plain-button",
+    "message": "<button> without a Blora button class (blora-button/blora-fab/blora-swap)"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 99,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 114,
+    "column": 11,
+    "severity": "warning",
+    "rule": "plain-button",
+    "message": "<button> without a Blora button class (blora-button/blora-fab/blora-swap)"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 114,
+    "column": 11,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 182,
+    "column": 9,
+    "severity": "warning",
+    "rule": "plain-button",
+    "message": "<button> without a Blora button class (blora-button/blora-fab/blora-swap)"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 182,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 192,
+    "column": 9,
+    "severity": "warning",
+    "rule": "plain-button",
+    "message": "<button> without a Blora button class (blora-button/blora-fab/blora-swap)"
+  },
+  {
+    "file": "public/pages/playground.html",
+    "line": 192,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/plugin-install.html",
+    "line": 36,
+    "column": 27,
+    "severity": "error",
+    "rule": "unknown-token",
+    "message": "Unknown Blora token --blora-color-action-primary",
+    "suggestion": "--blora-color-coral-primary"
+  },
+  {
+    "file": "public/pages/plugin-install.html",
+    "line": 150,
+    "column": 86,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #2563eb; use a Blora token"
+  },
+  {
+    "file": "public/pages/plugin-install.html",
+    "line": 123,
+    "column": 12,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/plugin-install.html",
+    "line": 124,
+    "column": 12,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/purchase.html",
+    "line": 132,
+    "column": 64,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <select>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/purchase.html",
+    "line": 204,
+    "column": 15,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/purchase.html",
+    "line": 199,
+    "column": 58,
+    "severity": "warning",
+    "rule": "emoji-icon",
+    "message": "Emoji/glyph \"📦\" used as an icon; use a Blora icon instead"
+  },
+  {
+    "file": "public/pages/purchase.html",
+    "line": 146,
+    "column": 33,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/purchase.html",
+    "line": 204,
+    "column": 57,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/set-password.html",
+    "line": 55,
+    "column": 34,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onsubmit violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 46,
+    "column": 5,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <select>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 75,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 76,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 108,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 116,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 124,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 53,
+    "column": 11,
+    "severity": "warning",
+    "rule": "emoji-icon",
+    "message": "Emoji/glyph \"🚀\" used as an icon; use a Blora icon instead"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 114,
+    "column": 30,
+    "severity": "warning",
+    "rule": "emoji-icon",
+    "message": "Emoji/glyph \"✅\" used as an icon; use a Blora icon instead"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 114,
+    "column": 39,
+    "severity": "warning",
+    "rule": "emoji-icon",
+    "message": "Emoji/glyph \"✅\" used as an icon; use a Blora icon instead"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 65,
+    "column": 91,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 66,
+    "column": 91,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 75,
+    "column": 77,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 76,
+    "column": 77,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 85,
+    "column": 91,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 108,
+    "column": 92,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 116,
+    "column": 77,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/setup.html",
+    "line": 124,
+    "column": 77,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onclick violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 80,
+    "column": 53,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(0,0,0,0.12); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 90,
+    "column": 45,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #fff; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 120,
+    "column": 44,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.12); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 120,
+    "column": 70,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(139,92,246,0.06); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 126,
+    "column": 44,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(16,185,129,0.06); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 133,
+    "column": 19,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.08); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 133,
+    "column": 60,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.15); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 151,
+    "column": 45,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #fff; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 154,
+    "column": 30,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.25); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 156,
+    "column": 78,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.35); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 156,
+    "column": 131,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #fff; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 173,
+    "column": 37,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(0,0,0,0.25); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 173,
+    "column": 65,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(255,255,255,0.02); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 182,
+    "column": 36,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #ff5f57; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 183,
+    "column": 39,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #febc2e; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 184,
+    "column": 38,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #28c840; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 237,
+    "column": 21,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.35); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 239,
+    "column": 36,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.12); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 244,
+    "column": 43,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.12); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 244,
+    "column": 69,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(139,92,246,0.08); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 269,
+    "column": 29,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #c084fc; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 270,
+    "column": 30,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #34d399; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 284,
+    "column": 19,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.08); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 284,
+    "column": 60,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.2); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 321,
+    "column": 29,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #c084fc; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 322,
+    "column": 29,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #60a5fa; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 323,
+    "column": 30,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #34d399; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 331,
+    "column": 37,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(16,185,129,0.12); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 331,
+    "column": 67,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #10b981; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 332,
+    "column": 36,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.12); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 332,
+    "column": 66,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #3b82f6; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 333,
+    "column": 37,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(245,158,11,0.12); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 333,
+    "column": 67,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #f59e0b; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 337,
+    "column": 112,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.4); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 349,
+    "column": 59,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.04); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 349,
+    "column": 86,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.06); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 689,
+    "column": 154,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #10b981; use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 714,
+    "column": 113,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.06); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 714,
+    "column": 152,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.15); use a Blora token"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 67,
+    "column": 5,
+    "severity": "warning",
+    "rule": "dark-override",
+    "message": "Manual dark-mode override; Blora tokens already handle dark mode"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 68,
+    "column": 5,
+    "severity": "warning",
+    "rule": "dark-override",
+    "message": "Manual dark-mode override; Blora tokens already handle dark mode"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 410,
+    "column": 9,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <select>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 414,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 750,
+    "column": 11,
+    "severity": "warning",
+    "rule": "emoji-icon",
+    "message": "Emoji/glyph \"©\" used as an icon; use a Blora icon instead"
+  },
+  {
+    "file": "public/pages/showcase.html",
+    "line": 476,
+    "column": 74,
+    "severity": "warning",
+    "rule": "inline-handler",
+    "message": "Inline event handler onload violates CSP; bind in a module script"
+  },
+  {
+    "file": "public/pages/store.html",
+    "line": 41,
+    "column": 64,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <select>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/store.html",
+    "line": 63,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/store.html",
+    "line": 64,
+    "column": 9,
+    "severity": "warning",
+    "rule": "button-type",
+    "message": "<button> without an explicit type= attribute",
+    "suggestion": "type=\"button\""
+  },
+  {
+    "file": "public/pages/usage.html",
+    "line": 37,
+    "column": 9,
+    "severity": "warning",
+    "rule": "raw-control",
+    "message": "Raw native control <select>; use the Blora equivalent"
+  },
+  {
+    "file": "public/pages/usage.html",
+    "line": 32,
+    "column": 34,
+    "severity": "warning",
+    "rule": "emoji-icon",
+    "message": "Emoji/glyph \"‹\" used as an icon; use a Blora icon instead"
+  },
+  {
+    "file": "public/css/auth-shell.css",
+    "line": 60,
+    "column": 87,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "7 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/auth-shell.css",
+    "line": 2,
+    "column": 1,
+    "severity": "warning",
+    "rule": "override-blora",
+    "message": "App CSS overrides visual properties of Blora class .blora-page; restyle via tokens/variants instead of overriding the component"
+  },
+  {
+    "file": "public/css/auth-shell.css",
+    "line": 79,
+    "column": 12,
+    "severity": "warning",
+    "rule": "override-blora",
+    "message": "App CSS overrides visual properties of Blora class .blora-button; restyle via tokens/variants instead of overriding the component"
+  },
+  {
+    "file": "public/css/auth-shell.css",
+    "line": 114,
+    "column": 20,
+    "severity": "warning",
+    "rule": "override-blora",
+    "message": "App CSS overrides visual properties of Blora class .blora-button; restyle via tokens/variants instead of overriding the component"
+  },
+  {
+    "file": "public/css/auth-shell.css",
+    "line": 115,
+    "column": 20,
+    "severity": "warning",
+    "rule": "override-blora",
+    "message": "App CSS overrides visual properties of Blora class .blora-button; restyle via tokens/variants instead of overriding the component"
+  },
+  {
+    "file": "public/css/auth-shell.css",
+    "line": 163,
+    "column": 12,
+    "severity": "warning",
+    "rule": "override-blora",
+    "message": "App CSS overrides visual properties of Blora class .blora-list__item; restyle via tokens/variants instead of overriding the component"
+  },
+  {
+    "file": "public/css/auth-shell.css",
+    "line": 164,
+    "column": 12,
+    "severity": "warning",
+    "rule": "override-blora",
+    "message": "App CSS overrides visual properties of Blora class .blora-list__meta; restyle via tokens/variants instead of overriding the component"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 202,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(239, 68, 68, 0.1); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 403,
+    "column": 25,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.2); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 480,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #dc2626; use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 500,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(239, 68, 68, 0.1); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 533,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(239, 68, 68, 0.1); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 534,
+    "column": 21,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(239, 68, 68, 0.3); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 671,
+    "column": 25,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59,130,246,0.2); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 782,
+    "column": 17,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(0, 0, 0, 0.4); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 838,
+    "column": 26,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(0,0,0,0.25); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 878,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(239, 68, 68, 0.1); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1072,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(255, 255, 255, 0.06); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1073,
+    "column": 23,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(255, 255, 255, 0.12); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1076,
+    "column": 31,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(0, 0, 0, 0.15); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1087,
+    "column": 39,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #94a3b8; use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1090,
+    "column": 25,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(0, 0, 0, 0.3); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1094,
+    "column": 33,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #3b82f6; use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1101,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #fff; use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1102,
+    "column": 25,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(0, 0, 0, 0.2); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1114,
+    "column": 17,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(255, 255, 255, 0.15); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1119,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #2563eb; use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1123,
+    "column": 43,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #3b82f6; use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1123,
+    "column": 63,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59, 130, 246, 0.25); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1256,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59, 130, 246, 0.15); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1257,
+    "column": 10,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #3b82f6; use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1308,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(0, 0, 0, 0.6); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1416,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(59, 130, 246, 0.1); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1417,
+    "column": 26,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #3b82f6; use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1422,
+    "column": 26,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #10b981; use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1426,
+    "column": 15,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(168, 85, 247, 0.1); use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 1427,
+    "column": 26,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #a855f7; use a Blora token"
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 8,
+    "column": 108,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "16 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/playground.css",
+    "line": 3,
+    "column": 15,
+    "severity": "warning",
+    "rule": "override-blora",
+    "message": "App CSS overrides visual properties of Blora class .blora-button; restyle via tokens/variants instead of overriding the component"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 29,
+    "column": 35,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(245, 158, 11, 0.12); use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 29,
+    "column": 68,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #b45309; use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 29,
+    "column": 95,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(245, 158, 11, 0.35); use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 30,
+    "column": 33,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(16, 185, 129, 0.12); use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 30,
+    "column": 66,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #047857; use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 30,
+    "column": 93,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(16, 185, 129, 0.35); use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 31,
+    "column": 34,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(239, 68, 68, 0.12); use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 31,
+    "column": 66,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #b91c1c; use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 31,
+    "column": 93,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(239, 68, 68, 0.35); use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 79,
+    "column": 32,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #f59e0b; use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 100,
+    "column": 60,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(0,0,0,0.45); use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 101,
+    "column": 46,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #fff; use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 101,
+    "column": 196,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color rgba(0,0,0,0.3); use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 108,
+    "column": 87,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #f3f4f6; use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 111,
+    "column": 66,
+    "severity": "warning",
+    "rule": "hardcoded-color",
+    "message": "Hardcoded color #ef4444; use a Blora token"
+  },
+  {
+    "file": "public/css/store.css",
+    "line": 44,
+    "column": 61,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "6 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/css/usage.css",
+    "line": 56,
+    "column": 2,
+    "severity": "warning",
+    "rule": "unlayered-global",
+    "message": "4 unlayered global element rule(s); Blora CSS lives in @layer blora, so these override every component. Put legacy CSS in `@layer legacy` with `@layer legacy, blora;` declared first, or scope it."
+  },
+  {
+    "file": "public/js/playground.js",
+    "line": 324,
+    "column": 10,
+    "severity": "error",
+    "rule": "native-dialog",
+    "message": "Native confirm() is not allowed; use Blora dialog/message APIs"
+  },
+  {
+    "file": "public/js/playground.js",
+    "line": 435,
+    "column": 7,
+    "severity": "error",
+    "rule": "native-dialog",
+    "message": "Native alert() is not allowed; use Blora dialog/message APIs"
+  },
+  {
+    "file": "public/js/playground.js",
+    "line": 1061,
+    "column": 11,
+    "severity": "error",
+    "rule": "native-dialog",
+    "message": "Native alert() is not allowed; use Blora dialog/message APIs"
+  }
+]

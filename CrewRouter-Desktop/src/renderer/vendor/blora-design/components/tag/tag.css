@@ -20,34 +20,47 @@
   vertical-align: middle;
 }
 
+/* Semantic variants: a visible tint, a firmer edge and text pulled toward the
+   status hue. Mixing the hue with text-primary keeps AA contrast in light and
+   dark schemes while making success / warning / danger read at a glance. */
 .blora-tag[data-variant="primary"] {
-  background: var(--blora-color-action-primary-tint);
-  color: var(--blora-color-text-emphasis);
-  border-color: color-mix(in srgb, var(--blora-color-action-primary-default) 25%, transparent);
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 15%, transparent);
+  color: color-mix(
+    in srgb,
+    var(--blora-color-action-primary-default) 70%,
+    var(--blora-color-text-primary)
+  );
+  border-color: color-mix(in srgb, var(--blora-color-action-primary-default) 45%, transparent);
 }
 
 .blora-tag[data-variant="neutral"] {
-  background: color-mix(in srgb, var(--blora-color-status-neutral) 8%, transparent);
+  background: color-mix(in srgb, var(--blora-color-status-neutral) 10%, transparent);
   color: var(--blora-color-text-emphasis);
-  border-color: color-mix(in srgb, var(--blora-color-status-neutral) 25%, transparent);
+  border-color: color-mix(in srgb, var(--blora-color-status-neutral) 30%, transparent);
 }
 
 .blora-tag[data-variant="info"] {
-  background: color-mix(in srgb, var(--blora-color-status-info) 8%, transparent);
-  color: var(--blora-color-text-emphasis);
-  border-color: color-mix(in srgb, var(--blora-color-status-info) 25%, transparent);
+  background: color-mix(in srgb, var(--blora-color-status-info) 15%, transparent);
+  color: color-mix(in srgb, var(--blora-color-status-info) 70%, var(--blora-color-text-primary));
+  border-color: color-mix(in srgb, var(--blora-color-status-info) 45%, transparent);
 }
 
 .blora-tag[data-variant="success"] {
-  background: color-mix(in srgb, var(--blora-color-status-success) 8%, transparent);
-  color: var(--blora-color-text-emphasis);
-  border-color: color-mix(in srgb, var(--blora-color-status-success) 25%, transparent);
+  background: color-mix(in srgb, var(--blora-color-status-success) 15%, transparent);
+  color: color-mix(in srgb, var(--blora-color-status-success) 70%, var(--blora-color-text-primary));
+  border-color: color-mix(in srgb, var(--blora-color-status-success) 45%, transparent);
 }
 
 .blora-tag[data-variant="warning"] {
-  background: color-mix(in srgb, var(--blora-color-status-warning) 10%, transparent);
-  color: var(--blora-color-text-emphasis);
-  border-color: color-mix(in srgb, var(--blora-color-status-warning) 30%, transparent);
+  background: color-mix(in srgb, var(--blora-color-status-warning) 16%, transparent);
+  color: color-mix(in srgb, var(--blora-color-status-warning) 60%, var(--blora-color-text-primary));
+  border-color: color-mix(in srgb, var(--blora-color-status-warning) 48%, transparent);
+}
+
+.blora-tag[data-variant="danger"] {
+  background: color-mix(in srgb, var(--blora-color-status-danger) 15%, transparent);
+  color: color-mix(in srgb, var(--blora-color-status-danger) 70%, var(--blora-color-text-primary));
+  border-color: color-mix(in srgb, var(--blora-color-status-danger) 45%, transparent);
 }
 
 .blora-tag--removable {

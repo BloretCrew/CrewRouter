@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="/css/layers.css?v=2.1.0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
     (function () {
@@ -18,12 +19,12 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <script type="module" src="/blora/auto.js?v=2.0.8"></script>
-  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
-  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
-  <script src="/js/blora-foundation.js?v=2.0.8"></script>
+  <script type="module" src="/blora/auto.js?v=2.1.0"></script>
+  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
+  <script src="/js/blora-foundation.js?v=2.1.0"></script>
   <link rel="stylesheet" href="/css/auth-shell.css?v=5">
-  <link rel="stylesheet" href="/css/edition-badge.css?v=2">
+  <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     // Prevent FOUC - apply theme immediately
     (function() {
@@ -64,30 +65,31 @@
       } catch {}
     })();
   </script>
+  <script type="module" src="/js/blora-services.js?v=2.1.0"></script>
 </head>
-<body class="blora-page">
+<body class="blora-page blora-scope">
   <main class="auth-page login-container">
     <section class="blora-card auth-card login-card" aria-labelledby="auth-title">
-      <header class="auth-card__header">
+      <header class="auth-card__header blora-card__header">
         <span class="auth-card__logo" aria-hidden="true"><img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt=""></span>
-        <h1 id="auth-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
-        <p>统一 AI 模型接入平台</p>
+        <h1 class="blora-card__title" id="auth-title">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
+        <p class="blora-card__desc">统一 AI 模型接入平台</p>
       </header>
 
       <div id="errorMessage" class="blora-message auth-error" data-variant="danger" role="alert"></div>
 
-      <form id="loginForm" method="post" action="/auth/login?format=html" accept-charset="UTF-8" onsubmit="if (typeof handleLogin === 'function' && typeof window.fetch === 'function') { handleLogin(event); return false; } return true;">
-        <blora-field id="loginInput" label="用户名或邮箱" name="login" type="text" autocomplete="username" placeholder="请输入用户名或邮箱" required></blora-field>
-        <blora-field id="password" label="密码" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" minlength="6" required></blora-field>
+      <form id="loginForm" method="post" action="/auth/login?format=html" accept-charset="UTF-8">
+        <blora-field label="用户名或邮箱" required><input class="blora-input" id="loginInput" name="login" type="text" autocomplete="username" placeholder="请输入用户名或邮箱" required></blora-field>
+        <blora-field label="密码" required><input class="blora-input" id="password" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" minlength="6" required></blora-field>
         <div class="auth-actions">
           <button class="blora-button" data-variant="primary" type="submit" id="submitBtn"><span id="submitText">登录</span></button>
           <div id="passkeyLoginSection" class="login-alt-actions" style="display: none;"><button class="blora-button" data-variant="outline" type="button" id="passkeyLoginBtn"><span id="passkeyLoginText">使用通行密钥登录</span></button></div>
         </div>
       </form>
 
-      <form id="twoFactorForm" class="auth-2fa-form" style="display: none;" onsubmit="handle2FAVerify(event)">
-        <blora-field id="tfaCode" label="请输入验证码" type="text" placeholder="6位验证码" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code" required></blora-field>
-        <div class="auth-actions"><button type="submit" class="blora-button" data-variant="primary" id="tfaSubmitBtn">验证</button><button type="button" class="blora-button" data-variant="outline" onclick="cancel2FA()">取消</button></div>
+      <form id="twoFactorForm" class="auth-2fa-form" style="display: none;">
+        <blora-field label="请输入验证码" required><input class="blora-input" id="tfaCode" type="text" autocomplete="one-time-code" placeholder="6位验证码" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" required></blora-field>
+        <div class="auth-actions"><button type="submit" class="blora-button" data-variant="primary" id="tfaSubmitBtn">验证</button><button type="button" class="blora-button" data-variant="outline" id="publicAction2">取消</button></div>
       </form>
 
       <div class="blora-divider" data-variant="text">或使用其他方式</div>
@@ -95,11 +97,11 @@
         <div id="passportLoginSection" class="login-oauth-item" style="display: none;"><a href="/auth/passport" id="passportLoginLink" class="blora-button" data-variant="outline">Bloret PassPort 登录</a></div>
         <div id="feishuLoginSection" class="login-oauth-item" style="display: block;"><a href="/auth/feishu" class="blora-button" data-variant="outline"><span>飞书登录</span></a></div>
       </div>
-      <p class="auth-simple-link"><a href="/plain-login">使用简洁登录页</a></p>
+      <p class="auth-simple-link blora-text-muted"><a href="/plain-login">使用简洁登录页</a></p>
 
       <footer class="auth-card__footer">
-        <blora-dropdown id="langToggle" class="auth-lang" align="center" placement="top" aria-label="选择语言"><button slot="trigger" type="button" class="blora-button" data-variant="ghost" data-size="sm"><img class="sf-icon" src="https://img.bloret.net/SF/globe?color=white" alt="" width="16" height="16" data-sf-name="globe"><span id="langToggleLabel">中文</span></button><blora-dropdown-item value="zh" href="/?lang=zh">中文</blora-dropdown-item><blora-dropdown-item value="en" href="/?lang=en">EN</blora-dropdown-item></blora-dropdown>
-        <button id="themeToggle" class="blora-button" data-variant="ghost" data-size="sm" type="button" title="切换主题" data-i18n-title="切换主题" aria-label="切换主题"><img class="icon-sun sf-icon" src="https://img.bloret.net/SF/sun.max?color=white" alt="" width="18" height="18" data-sf-name="sun.max"><img class="icon-moon sf-icon" src="https://img.bloret.net/SF/moon?color=white" alt="" width="18" height="18" data-sf-name="moon" style="display:none"><img class="icon-system sf-icon" src="https://img.bloret.net/SF/desktopcomputer?color=white" alt="" width="18" height="18" data-sf-name="desktopcomputer" style="display:none"></button>
+        <blora-dropdown id="langToggle" class="auth-lang" align="center" placement="top" aria-label="选择语言"><button slot="trigger" type="button" class="blora-button" data-variant="ghost" data-size="sm"><span data-icon="globe" aria-hidden="true"></span><span id="langToggleLabel">中文</span></button><blora-dropdown-item value="zh" href="/?lang=zh">中文</blora-dropdown-item><blora-dropdown-item value="en" href="/?lang=en">EN</blora-dropdown-item></blora-dropdown>
+        <button id="themeToggle" class="blora-button" data-variant="ghost" data-size="sm" type="button" title="切换主题" data-i18n-title="切换主题" aria-label="切换主题"><span class="icon-sun" data-icon="sun" aria-hidden="true"></span><span class="icon-moon" data-icon="moon" aria-hidden="true" style="display:none"></span><span class="icon-system" data-icon="monitor" aria-hidden="true" style="display:none"></span></button>
       </footer>
     </section>
   </main>
@@ -422,6 +424,11 @@
       label.textContent = I18N.current() === 'en' ? 'EN' : '中文';
     }
   })();
+</script>
+<script>
+document.getElementById('loginForm').addEventListener('submit', function (event) { if (typeof handleLogin === 'function' && typeof window.fetch === 'function') handleLogin(event); });
+document.getElementById('twoFactorForm').addEventListener('submit', function (event) { handle2FAVerify(event) });
+document.getElementById('publicAction2').addEventListener('click', function (event) { cancel2FA() });
 </script>
 </body>
 </html>

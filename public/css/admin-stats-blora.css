@@ -1,325 +1,188 @@
-/* Blora surface migration for the admin shell and statistics dashboard. */
-.blora-admin-page {
-  --background: var(--blora-color-surface-canvas);
-  --foreground: var(--blora-color-text-primary);
-  --card: var(--blora-color-surface-default);
-  --card-foreground: var(--blora-color-text-primary);
-  --popover: var(--blora-color-surface-default);
-  --popover-foreground: var(--blora-color-text-primary);
-  --secondary: var(--blora-color-surface-raised);
-  --secondary-foreground: var(--blora-color-text-secondary);
-  --muted: var(--blora-color-surface-sunken);
-  --muted-foreground: var(--blora-color-text-muted);
-  --accent: var(--blora-color-action-primary-soft);
-  --accent-foreground: var(--blora-color-action-primary-default);
-  --border: var(--blora-color-border-subtle);
-  --input: var(--blora-color-border-subtle);
-  --ring: var(--blora-color-action-primary-default);
-  --radius: var(--blora-radius-md);
-  --shadow-card: var(--blora-shadow-2);
-  background: var(--blora-color-surface-canvas);
-  color: var(--blora-color-text-primary);
-}
 
-.blora-admin-page .mobile-topbar {
-  border-bottom: var(--blora-border-subtle);
-  background: color-mix(in srgb, var(--blora-color-surface-default) 92%, transparent);
-  box-shadow: var(--blora-shadow-1);
-  backdrop-filter: blur(16px);
-}
 
-.blora-admin-page .sidebar {
+.cr-admin-page .sidebar {
   width: 15.5rem;
-  border-right: var(--blora-border-subtle);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
+
 }
 
-.blora-admin-page .sidebar-header {
+.cr-admin-page .sidebar-header {
   min-height: 4.5rem;
   padding: var(--blora-space-5) var(--blora-space-4);
-  border-bottom: var(--blora-border-subtle);
+
 }
 
-.blora-admin-page .sidebar-header h2 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-  font-size: var(--blora-text-lg);
-  letter-spacing: -0.01em;
-}
-
-.blora-admin-page .sidebar-header > .blora-badge {
+.cr-admin-page .sidebar-header > .blora-badge {
   flex: 0 0 auto;
 }
 
-.blora-admin-page .sidebar-nav { padding: var(--blora-space-3) var(--blora-space-2); }
-.blora-admin-page .nav-section { margin-bottom: var(--blora-space-4); }
-.blora-admin-page .nav-section-title {
+.cr-admin-page .sidebar-nav { padding: var(--blora-space-3) var(--blora-space-2); }
+.cr-admin-page .nav-section { margin-bottom: var(--blora-space-4); }
+.cr-admin-page .nav-section-title {
   padding: var(--blora-space-2) var(--blora-space-3);
-  color: var(--blora-color-text-subtle);
-  font-size: var(--blora-text-xs);
-  letter-spacing: 0.08em;
+
 }
 
-.blora-admin-page .nav-item {
+.cr-admin-page .nav-item {
   min-height: 2.5rem;
   margin: 2px 0;
   padding: var(--blora-space-2) var(--blora-space-3);
-  border: 1px solid transparent;
-  border-radius: var(--blora-radius-sm);
-  color: var(--blora-color-text-muted);
+
   gap: var(--blora-space-3);
-  transition: background-color var(--blora-duration-fast) var(--blora-easing-standard), border-color var(--blora-duration-fast) var(--blora-easing-standard), color var(--blora-duration-fast) var(--blora-easing-standard);
+
 }
 
-.blora-admin-page .nav-item:hover {
-  border-color: var(--blora-color-border-subtle);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-primary);
-}
-
-.blora-admin-page .nav-item.active {
-  border-color: color-mix(in srgb, var(--blora-color-action-primary-default) 20%, transparent);
-  background: var(--blora-color-action-primary-soft);
-  color: var(--blora-color-text-primary);
-  font-weight: 600;
-}
-
-.blora-admin-page .nav-item .sf-icon {
+.cr-admin-page .nav-item .app-icon {
   width: 1.125rem;
   height: 1.125rem;
   margin-right: 0;
-  opacity: 0.72;
-  filter: none;
+
 }
 
-.blora-admin-page .nav-item.active .sf-icon,
-.blora-admin-page .nav-item:hover .sf-icon { opacity: 1; }
-
-.blora-admin-page .sidebar-footer {
+.cr-admin-page .sidebar-footer {
   min-height: 4.5rem;
   padding: var(--blora-space-3) var(--blora-space-4);
-  border-top: var(--blora-border-subtle);
+
   gap: var(--blora-space-2);
 }
 
-.blora-admin-page .user-info { min-width: 0; flex: 1; gap: var(--blora-space-2); }
-.blora-admin-page .user-info span { overflow: hidden; color: var(--blora-color-text-primary); font-size: var(--blora-text-sm); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.blora-admin-page #logoutBtn {
+.cr-admin-page .user-info { min-width: 0; flex: 1; gap: var(--blora-space-2); }
+.cr-admin-page .user-info span { overflow: hidden;    text-overflow: ellipsis; white-space: nowrap; }
+.cr-admin-page #logoutBtn {
   flex: 0 0 2.25rem;
   width: 2.25rem;
   height: 2.25rem;
   min-height: 2.25rem;
-  border: 1px solid var(--blora-color-border-subtle);
-  border-radius: var(--blora-radius-sm);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-secondary);
-  box-shadow: none;
+
 }
 
-.blora-admin-page #logoutBtn:hover {
-  border-color: var(--blora-color-action-primary-default);
-  background: var(--blora-color-action-primary-soft);
-  color: var(--blora-color-action-primary-default);
-}
+.cr-admin-page #logoutBtn .app-icon { width: 1rem; height: 1rem;  }
 
-.blora-admin-page #logoutBtn .sf-icon { width: 1rem; height: 1rem; filter: none; }
-
-.blora-admin-page .main-content {
+.cr-admin-page .main-content {
   margin-left: 15.5rem;
   padding: var(--blora-space-6) clamp(var(--blora-space-5), 4vw, var(--blora-space-9));
-  background: transparent;
+
 }
 
-.blora-admin-page .content-header {
+.cr-admin-page .content-header {
   min-height: 3rem;
   margin-bottom: var(--blora-space-6);
   padding-bottom: var(--blora-space-4);
-  border-bottom: var(--blora-border-subtle);
+
 }
 
-.blora-admin-page .content-header h1 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-  font-size: var(--blora-text-2xl);
-  letter-spacing: -0.025em;
-}
-
-.blora-admin-page .theme-toggle .blora-language-select {
+.cr-admin-page .theme-toggle .cr-language-select {
   width: 4.5rem;
   min-width: 4.5rem;
   max-width: 4.5rem;
   height: 2.25rem;
-  border-radius: var(--blora-radius-sm);
+
 }
 
-.blora-admin-page .content-section {
-  border: var(--blora-border-subtle);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
-}
-
-.blora-admin-page .stats-overview-grid {
+.cr-admin-page .stats-overview-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--blora-space-3);
 }
 
-.blora-admin-page .stats-overview-card {
+.cr-admin-page .stats-overview-card {
   min-height: 8.5rem;
   padding: var(--blora-space-5);
-  border: var(--admin-stats-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised) !important;
-  color: var(--blora-color-text-primary);
-  box-shadow: var(--blora-shadow-1);
-}
 
-.blora-admin-page .stats-overview-card:nth-child(1) { --stats-card-accent: var(--blora-color-info); }
-.blora-admin-page .stats-overview-card:nth-child(2) { --stats-card-accent: var(--blora-color-support); }
-.blora-admin-page .stats-overview-card:nth-child(3) { --stats-card-accent: var(--blora-color-success); }
-.blora-admin-page .stats-overview-card:nth-child(4) { --stats-card-accent: var(--blora-color-warning); }
-.blora-admin-page .stats-overview-card:nth-child(5) { --stats-card-accent: var(--blora-color-accent-secondary); }
-.blora-admin-page .stats-overview-icon {
+}
+.cr-admin-page .stats-overview-icon {
   width: 2.75rem;
   height: 2.75rem;
-  border: 1px solid color-mix(in srgb, var(--stats-card-accent) 22%, var(--blora-color-border-subtle));
-  border-radius: var(--blora-radius-lg);
-  background: color-mix(in srgb, var(--stats-card-accent) 12%, var(--blora-color-surface-default));
-  color: var(--stats-card-accent);
+
 }
-.blora-admin-page .stats-overview-label { color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); opacity: 1; }
-.blora-admin-page .stats-overview-value { color: var(--blora-color-text-primary); font-family: var(--blora-font-heading); font-size: var(--blora-text-2xl); font-weight: 600; }
-.blora-admin-page .stats-overview-sub { color: var(--blora-color-text-subtle); opacity: 1; }
 
 @media (max-width: 834px) {
-  .blora-admin-page .sidebar { width: 4.375rem; }
-  .blora-admin-page .main-content { margin-left: 4.375rem; padding: var(--blora-space-5); }
-  .blora-admin-page .sidebar-header { padding: var(--blora-space-3); justify-content: center; }
-  .blora-admin-page .sidebar-nav { padding-inline: var(--blora-space-2); }
-  .blora-admin-page .nav-item { justify-content: center; padding-inline: var(--blora-space-2); }
-  .blora-admin-page .sidebar-footer { padding-inline: var(--blora-space-2); justify-content: center; }
+  .cr-admin-page .sidebar { width: 4.375rem; }
+  .cr-admin-page .main-content { margin-left: 4.375rem; padding: var(--blora-space-5); }
+  .cr-admin-page .sidebar-header { padding: var(--blora-space-3); justify-content: center; }
+  .cr-admin-page .sidebar-nav { padding-inline: var(--blora-space-2); }
+  .cr-admin-page .nav-item { justify-content: center; padding-inline: var(--blora-space-2); }
+  .cr-admin-page .sidebar-footer { padding-inline: var(--blora-space-2); justify-content: center; }
 }
 
 @media (max-width: 640px) {
-  .blora-admin-page .main-content { margin-left: 0; padding: calc(4.25rem + var(--blora-space-3)) var(--blora-space-3) var(--blora-space-5); }
-  .blora-admin-page .content-header { align-items: flex-start; margin-bottom: var(--blora-space-4); }
-  .blora-admin-page .content-header h1 { font-size: var(--blora-text-xl); }
-  .blora-admin-page .content-section { padding: var(--blora-space-4); border-radius: var(--blora-radius-md); }
-  .blora-admin-page .stats-overview-grid { grid-template-columns: 1fr; }
+  .cr-admin-page .main-content { margin-left: 0; padding: calc(4.25rem + var(--blora-space-3)) var(--blora-space-3) var(--blora-space-5); }
+  .cr-admin-page .content-header { align-items: flex-start; margin-bottom: var(--blora-space-4); }
+  .cr-admin-page .content-section { padding: var(--blora-space-4);  }
+  .cr-admin-page .stats-overview-grid { grid-template-columns: 1fr; }
 }
 
-/* Blora surface migration for the admin statistics dashboard. */
-.blora-admin-stats-page {
-  --admin-stats-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
-  --admin-stats-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
-}
+.cr-admin-stats-page > .content-section {
 
-.blora-admin-stats-page > .content-section {
-  border: var(--admin-stats-border);
-  border-radius: var(--blora-radius-xl);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
   padding: var(--blora-space-6);
 }
 
-.blora-admin-stats-page .section-header h2,
-.blora-admin-stats-page h3,
-.blora-admin-stats-page h4 {
-  color: var(--blora-color-text-primary);
-  font-family: var(--blora-font-heading);
-}
-
-.blora-admin-stats-page .section-header > div:last-child {
+.cr-admin-stats-page .section-header > div:last-child {
   gap: var(--blora-space-2) !important;
 }
 
-.blora-admin-stats-page #adminStatsDays {
+.cr-admin-stats-page #adminStatsDays {
   min-height: 2.5rem;
-  border: var(--admin-stats-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
+
 }
 
-.blora-admin-stats-page .stats-tab-bar {
+.cr-admin-stats-page .stats-tab-bar {
   gap: var(--blora-space-1);
   padding: var(--blora-space-1);
-  border: var(--admin-stats-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
+
   overflow-x: auto;
 }
 
-.blora-admin-stats-page .stats-tab-bar button {
+.cr-admin-stats-page .stats-tab-bar button {
   min-height: 2.5rem;
-  border: 0;
-  border-radius: var(--blora-radius-md);
+
   padding: var(--blora-space-2) var(--blora-space-4);
-  color: var(--blora-color-text-subtle);
-  font-family: var(--blora-font-body);
+
 }
 
-.blora-admin-stats-page .stats-tab-bar button.active {
-  background: var(--blora-color-surface-default);
-  color: var(--blora-color-text-primary);
-  box-shadow: var(--blora-shadow-1);
-  border-bottom: 0;
-}
-
-.blora-admin-stats-page .stats-overview-card,
-.blora-admin-stats-page .chart-card,
-.blora-admin-stats-page .multi-stats-intro,
-.blora-admin-stats-page .multi-stats-table-card {
-  border: var(--admin-stats-border-soft);
-  border-radius: var(--blora-radius-xl);
-  box-shadow: var(--blora-shadow-1);
-}
-
-.blora-admin-stats-page .chart-card {
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-admin-stats-page .admin-filter-bar {
-  border: var(--admin-stats-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-admin-stats-page .multi-stats-filters {
+.cr-admin-stats-page .multi-stats-filters {
   gap: var(--blora-space-3);
 }
 
-.blora-admin-stats-page .multi-stats-filters label {
-  color: var(--blora-color-text-subtle);
-}
+.cr-admin-stats-page .stats-table {
 
-.blora-admin-stats-page .stats-table {
-  border: var(--admin-stats-border-soft);
-  border-radius: var(--blora-radius-lg);
   overflow: hidden;
 }
 
-.blora-admin-stats-page .stats-table th {
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-subtle);
-  border-bottom: var(--admin-stats-border-soft);
-}
-
-.blora-admin-stats-page .stats-table td {
-  border-bottom: var(--admin-stats-border-soft);
-}
-
 @media (max-width: 640px) {
-  .blora-admin-stats-page > .content-section {
+  .cr-admin-stats-page > .content-section {
     padding: var(--blora-space-4);
   }
 
-  .blora-admin-stats-page .section-header {
+  .cr-admin-stats-page .section-header {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .blora-admin-stats-page .section-header > div:last-child {
+  .cr-admin-stats-page .section-header > div:last-child {
     width: 100%;
   }
+}
+
+#mobileSidebarDrawer .sidebar {
+  position: static;
+  width: 100%;
+  height: auto;
+  min-height: 100%;
+  transform: none;
+  display: flex;
+}
+#mobileSidebarDrawer .nav-item {
+  justify-content: flex-start;
+  width: 100%;
+}
+#mobileSidebarDrawer .sidebar-footer {
+  flex-direction: row;
+}
+#mobileSidebarDrawer .sidebar-footer .user-info span {
+  display: inline;
+}
+
+#mobileSidebarDrawer .sidebar-header h2,
+#mobileSidebarDrawer .nav-item span,
+#mobileSidebarDrawer .nav-section-title {
+  display: block;
 }

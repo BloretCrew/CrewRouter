@@ -1,0 +1,38 @@
+[
+  {
+    "script": "scripts/test-blora-foundation.js",
+    "exit": 0
+  },
+  {
+    "script": "scripts/test-blora-audit-parser.js",
+    "exit": 0
+  },
+  {
+    "script": "scripts/test-blora-http.js",
+    "exit": 0
+  },
+  {
+    "script": "scripts/test-blora-public-batch-a.js",
+    "exit": 0
+  },
+  {
+    "script": "scripts/test-blora-public-batch-c.js",
+    "exit": 0
+  },
+  {
+    "script": "scripts/test-no-legacy-dialog.js",
+    "exit": 0
+  },
+  {
+    "script": "scripts/test-blora-dialog-results.js",
+    "exit": 0
+  },
+  {
+    "script": "scripts/verify-blora-public-batch-a.js",
+    "exit": 0
+  },
+  {
+    "script": "scripts/verify-blora-navbar-runtime.js",
+    "exit": 0
+  }
+]

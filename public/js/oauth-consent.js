@@ -49,8 +49,7 @@
   }
 
   function scopeCheckIcon() {
-    var color = (window.themeManager && window.themeManager.resolvedTheme) === 'light' ? 'black' : 'white';
-    return '<img src="https://img.bloret.net/SF/checkmark?color=' + color + '" alt="" width="14" height="14" class="sf-icon" data-sf-name="checkmark">';
+    return '<span data-icon="check" aria-hidden="true"></span>';
   }
 
   function renderScopes(scopes) {
@@ -59,7 +58,7 @@
       var descKey = SCOPE_I18N_KEYS[s];
       html += '<li class="blora-list__item">'
         + '<span class="oc-scope-check" aria-hidden="true">' + scopeCheckIcon() + '</span>'
-        + '<span class="blora-list__meta">' + esc(t(descKey || s)) + ' <code>' + esc(s) + '</code></span>'
+        + '<span class="blora-list__meta">' + esc(t(descKey || s)) + ' <code class="blora-code">' + esc(s) + '</code></span>'
         + '</li>';
     });
     scopeListEl.innerHTML = html || '<li class="blora-list__item">-</li>';
@@ -78,6 +77,9 @@
     keySelectEl.innerHTML = html;
     var first = defaultId != null ? defaultId : apiKeys[0].id;
     keySelectEl.setAttribute('value', String(first));
+    customElements.whenDefined('blora-select').then(function () {
+      requestAnimationFrame(function () { keySelectEl.value = String(first); });
+    });
   }
 
   function init() {

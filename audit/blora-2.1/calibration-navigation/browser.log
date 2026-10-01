@@ -1,0 +1,11 @@
+{"route":"admin","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":1}
+{"route":"admin#adminUsers","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"admin#adminTeams","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":1}
+{"route":"admin#adminUserGroups","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":1}
+{"route":"admin#adminModels","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":1}
+{"route":"admin#adminProviders","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"admin#adminPlugins","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":1}
+{"route":"admin#adminStats","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":1}
+{"route":"admin#adminErrorLogs","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"admin#adminAuditLogs","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":3}
+{"route":"admin#adminPrompts","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":3}

@@ -1,0 +1,191 @@
+{
+  "results": [
+    {
+      "page": "console",
+      "width": 1440,
+      "theme": "light",
+      "routes": 16,
+      "ceInline": 0,
+      "sfImages": 0,
+      "fieldNodes": true,
+      "maximum": 1440,
+      "viewport": 1440,
+      "messageReady": true
+    },
+    {
+      "page": "console",
+      "width": 1440,
+      "theme": "dark",
+      "routes": 16,
+      "ceInline": 0,
+      "sfImages": 0,
+      "fieldNodes": true,
+      "maximum": 1440,
+      "viewport": 1440,
+      "messageReady": true
+    },
+    {
+      "page": "console",
+      "width": 390,
+      "theme": "light",
+      "routes": 16,
+      "ceInline": 0,
+      "sfImages": 0,
+      "fieldNodes": true,
+      "maximum": 390,
+      "viewport": 390,
+      "messageReady": true
+    },
+    {
+      "page": "console",
+      "width": 390,
+      "theme": "dark",
+      "routes": 16,
+      "ceInline": 0,
+      "sfImages": 0,
+      "fieldNodes": true,
+      "maximum": 390,
+      "viewport": 390,
+      "messageReady": true
+    },
+    {
+      "page": "admin",
+      "width": 1440,
+      "theme": "light",
+      "routes": 11,
+      "ceInline": 0,
+      "sfImages": 0,
+      "fieldNodes": true,
+      "maximum": 1440,
+      "viewport": 1440,
+      "messageReady": true
+    },
+    {
+      "page": "admin",
+      "width": 1440,
+      "theme": "dark",
+      "routes": 11,
+      "ceInline": 0,
+      "sfImages": 0,
+      "fieldNodes": true,
+      "maximum": 1440,
+      "viewport": 1440,
+      "messageReady": true
+    },
+    {
+      "page": "admin",
+      "width": 390,
+      "theme": "light",
+      "routes": 11,
+      "ceInline": 0,
+      "sfImages": 0,
+      "fieldNodes": true,
+      "maximum": 390,
+      "viewport": 390,
+      "messageReady": true
+    },
+    {
+      "page": "admin",
+      "width": 390,
+      "theme": "dark",
+      "routes": 11,
+      "ceInline": 0,
+      "sfImages": 0,
+      "fieldNodes": true,
+      "maximum": 390,
+      "viewport": 390,
+      "messageReady": true
+    },
+    {
+      "behavior": {
+        "calls": [
+          "stats",
+          "search",
+          [
+            42,
+            true
+          ],
+          "m1"
+        ],
+        "selection": {
+          "button": "BUTTON",
+          "outerClick": false,
+          "nestedButton": false,
+          "icon": "<span class=\"app-icon \" data-icon=\"copy\" aria-hidden=\"true\" style=\"width:14px;height:14px;\"></span>"
+        },
+        "message": true,
+        "customToast": false,
+        "markup": "\n    <div class=\"blora-card model-library-item    \" data-variant=\"hover\" data-model-id=\"m1\" data-team-id=\"t1\" data-provider-id=\"\"  data-size=\"sm\">\n      <div class=\"model-library-item-info\">\n        <div class=\"model-library-item-name\">\n          \n          <img src=\"http://127.0.0.1:40741/\" alt=\"\" onerror=\"this.style.display='none'\">\n          <button type=\"button\" class=\"model-library-item blora-button model-library-select\" data-variant=\"text\" onclick=\"app.selectModel('m1')\">Test</button>\n          \n          <div class=\"model-item-badges\">\n            \n            \n            \n            \n            \n          </div>\n        </div>\n        \n        <div class=\"model-library-item-price\">\n          <span class=\"model-price-item\">\n            <span class=\"model-price-label\">倍率</span>\n            <span class=\"model-price-value\">×1.00</span>\n          </span>\n        </div>\n        \n      </div>\n      <div class=\"model-library-item-actions\">\n        \n        <button type=\"button\" class=\"blora-button model-action-primary\" data-variant=\"primary\" data-size=\"sm\" onclick=\"app.selectModel('m1')\">加入队列</button>\n        \n      </div>\n    </div>\n    "
+      }
+    },
+    {
+      "keyboardSetup": true,
+      "keyboard": [
+        "m1",
+        "m1"
+      ]
+    },
+    {
+      "routes": {
+        "parsedPrompts": "adminPrompts",
+        "parsedPlugins": "adminPlugins",
+        "prompts": "adminPrompts",
+        "plugins": "adminPlugins",
+        "called": [
+          "prompts"
+        ],
+        "ids": [
+          "adminUsers",
+          "adminTeams",
+          "adminUserGroups",
+          "adminModels",
+          "adminProviders",
+          "adminPlugins",
+          "adminStats",
+          "adminErrorLogs",
+          "adminAuditLogs",
+          "adminPrompts",
+          "adminSettings"
+        ]
+      }
+    },
+    {
+      "page": "console",
+      "navigation": {
+        "open": true,
+        "closed": true,
+        "button": "BUTTON",
+        "width": 358,
+        "raw": 34
+      }
+    },
+    {
+      "page": "admin",
+      "navigation": {
+        "open": true,
+        "closed": true,
+        "button": "BUTTON",
+        "width": 358,
+        "raw": 15
+      }
+    },
+    {
+      "controls": {
+        "days": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "slider": 16,
+        "checked": true,
+        "tag": "BLORA-SWITCH",
+        "dates": "BLORA-DATEPICKER",
+        "upload": "BLORA-UPLOAD"
+      }
+    }
+  ],
+  "failures": []
+}

@@ -17,6 +17,37 @@ blora-field {
   min-width: 0;
 }
 
+/* The bottom margin spaces fields stacked in plain blocks. Layout primitives
+   already provide gaps, so the margin there only doubled the spacing (and a
+   last field pushed its container's padding). */
+:where(
+    .blora-stack,
+    .blora-stack--sm,
+    .blora-stack--lg,
+    .blora-stack--xl,
+    .blora-grid,
+    .blora-row,
+    .blora-actions,
+    .blora-join
+  )
+  > :where(blora-field)
+  > .blora-field,
+:where(
+    .blora-stack,
+    .blora-stack--sm,
+    .blora-stack--lg,
+    .blora-stack--xl,
+    .blora-grid,
+    .blora-row,
+    .blora-actions,
+    .blora-join
+  )
+  > .blora-field,
+:where(blora-field:last-child) > .blora-field,
+:where(:not(blora-field)) > .blora-field:last-child {
+  margin-bottom: 0;
+}
+
 .blora-field__label {
   font-size: var(--blora-text-sm);
   font-weight: 500;

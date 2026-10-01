@@ -169,13 +169,7 @@ class PlaygroundApp {
   renderHistoryList() {
     const list = document.getElementById('pgHistoryList');
     if (this.conversations.length === 0) {
-      setHTML(list, `
-        <div class="pg-history-empty">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:8px;">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
-          <span>暂无对话记录</span>
-        </div>`);
+      setHTML(list, `<blora-empty title="${this.escapeHtml(t('暂无对话记录'))}"></blora-empty>`);
       return;
     }
 
@@ -321,7 +315,7 @@ class PlaygroundApp {
   }
 
   async deleteConversation(convId) {
-    if (!confirm(t('确定删除这个对话？'))) return;
+    if (!await Dialog.confirm(t('删除对话'), t('确定删除这个对话？'), { danger: true })) return;
     try {
       await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
       if (this.activeConvId === convId) {
@@ -432,7 +426,7 @@ class PlaygroundApp {
     const reasoningEffort = retryRequest?.reasoningEffort ?? document.getElementById('pgReasoningEffort').value;
 
     if (!model) {
-      alert(t('请先选择模型'));
+      Dialog.alert(t('提示'), t('请先选择模型'));
       return;
     }
 
@@ -690,13 +684,13 @@ class PlaygroundApp {
         this.removeWelcome();
         const retryEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
         const retryContent = retryEl.querySelector('.pg-msg-content');
-        setHTML(retryContent, `<div class="pg-msg-error">${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        setHTML(retryContent, `<blora-alert variant="danger" title="${this.escapeHtml(streamErrorMessage || error.message || t('请求失败'))}"></blora-alert><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
         retryContent.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send(retryPayload));
       } else {
         rollbackRequest();
         this.removeWelcome();
         const errorEl = this.appendMessage('assistant', '', undefined, { model, modelDisplayName: this.modelInfo?.[model]?.name || model });
-        setHTML(errorEl.querySelector('.pg-msg-content'), `<div class="pg-msg-error">${this.escapeHtml(error.message || t('请求失败'))}</div><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
+        setHTML(errorEl.querySelector('.pg-msg-content'), `<blora-alert variant="danger" title="${this.escapeHtml(error.message || t('请求失败'))}"></blora-alert><button type="button" class="blora-button btn btn-secondary btn-sm pg-retry-btn">${this.escapeHtml(t('重试'))}</button>`);
         errorEl.querySelector('.pg-retry-btn')?.addEventListener('click', () => this.send(retryPayload));
       }
     } finally {
@@ -722,7 +716,7 @@ class PlaygroundApp {
     if (this.messages.length === 0) {
       setHTML(container, `
         <div class="pg-welcome">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--brand-blue)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.6;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--blora-color-action-primary-default)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.6;">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
           <h2>Crant AI Playground</h2>
@@ -1058,7 +1052,7 @@ class PlaygroundApp {
         if (this.activeConvId) {
           this.forkConversation(this.activeConvId);
         } else {
-          alert(t('请先发送消息创建对话后再 Fork'));
+          Dialog.alert(t('提示'), t('请先发送消息创建对话后再 Fork'));
         }
         break;
       case 'delete':
@@ -1106,15 +1100,7 @@ class PlaygroundApp {
   }
 
   showToast(msg) {
-    const toast = document.createElement('div');
-    toast.className = 'pg-toast';
-    toast.textContent = msg;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('show'));
-    setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => toast.remove(), 300);
-    }, 1500);
+    window.bloraMessage.success(msg);
   }
 
   // ========== Utils ==========
@@ -1246,7 +1232,7 @@ class PlaygroundApp {
     } catch (error) {
       console.error(t('加载历史失败:'), error);
       const list = document.getElementById('pgHistoryDetailList');
-      if (list) setHTML(list, '<div class="pg-history-detail-empty"><span>' + t('加载失败') + '</span></div>');
+      if (list) setHTML(list, '<blora-alert variant="danger" title="' + this.escapeHtml(t('加载失败')) + '"></blora-alert>');
     }
   }
 
@@ -1255,7 +1241,7 @@ class PlaygroundApp {
     if (!list) return;
 
     if (records.length === 0) {
-      setHTML(list, '<div class="pg-history-detail-empty"><img src="https://img.bloret.net/SF/clock?color=white" alt="" width="32" height="32" class="sf-icon" data-sf-name="clock" style="display:inline-block;vertical-align:middle;opacity:0.3;margin-bottom:8px;"><span>' + t('暂无历史记录') + '</span></div>');
+      setHTML(list, '<blora-empty title="' + this.escapeHtml(t('暂无历史记录')) + '"></blora-empty>');
       return;
     }
 

@@ -13,14 +13,22 @@ for (const name of pages) {
   const html = fs.readFileSync(file, 'utf8');
   assert.match(html, /<body[^>]*class="[^"]*\bblora-page\b/);
   assert.match(html, /\/css\/auth-shell\.css/);
-  assert.match(html, /\/blora\/auto\.js\?v=2\.0\.8/);
-  assert.match(html, /<blora-navbar\b[^>]*variant="floating"/);
-  const navbar = html.match(/<blora-navbar\b[^>]*>([\s\S]*?)<\/blora-navbar>/i);
-  assert.ok(navbar, `${name} navbar contract root`);
-  const directChildren = navbar[1].replace(/<blora-navbar-tool\b[\s\S]*?<\/blora-navbar-tool>/gi, '').match(/<([a-z][\w-]*)\b[^>]*>/gi) || [];
-  assert.deepStrictEqual(directChildren, [], `${name} navbar has unsupported direct children`);
-  assert.strictEqual((navbar[1].match(/<blora-navbar-tool\b/g) || []).length, name === 'index.html' ? 2 : 1);
-  assert.strictEqual((navbar[1].match(/<blora-navbar-(?:link|action)\b/g) || []).length, 0);
+  assert.match(html, /\/blora\/auto\.js\?v=2\.1\.0/);
+  assert.match(html, /<(?:blora-select|blora-dropdown)\b[^>]*id="langToggle"[^>]*aria-label="[^"]+"/);
+  for (const language of ['zh', 'en']) assert.match(html, new RegExp(`<blora-(?:option|dropdown-item)\\b[^>]*value="${language}"`));
+  if (['index.html', 'set-password.html'].includes(name)) {
+    assert.match(html, /<button\b[^>]*id="themeToggle"[^>]*class="[^"]*blora-button[^>]*type="button"[^>]*aria-label="[^"]+"/);
+    assert.match(html, /<blora-dropdown\b[^>]*id="langToggle"/);
+    assert.match(html, /<button\b[^>]*slot="trigger"[^>]*type="button"/);
+  } else {
+    assert.match(html, /<blora-navbar\b[^>]*variant="floating"/);
+    const navbar = html.match(/<blora-navbar\b[^>]*>([\s\S]*?)<\/blora-navbar>/i);
+    assert.ok(navbar, `${name} navbar contract root`);
+    const directChildren = navbar[1].replace(/<blora-navbar-tool\b[\s\S]*?<\/blora-navbar-tool>/gi, '').match(/<([a-z][\w-]*)\b[^>]*>/gi) || [];
+    assert.deepStrictEqual(directChildren, [], `${name} navbar has unsupported direct children`);
+    assert.strictEqual((navbar[1].match(/<blora-navbar-tool\b/g) || []).length, 1);
+    assert.strictEqual((navbar[1].match(/<blora-navbar-(?:link|action)\b/g) || []).length, 0);
+  }
   assert.match(html, /class="[^"]*blora-input/);
   assert.match(html, /blora-button[^>]*data-variant="(primary|secondary)"/);
   assert.doesNotMatch(html, /--blora-[\w-]+\s*:/);
@@ -30,5 +38,6 @@ for (const name of pages) {
 }
 const css = fs.readFileSync(path.join(root, 'public/css/auth-shell.css'), 'utf8');
 assert.doesNotMatch(css, /--blora-[\w-]+\s*:/);
-assert.match(css, /var\(--blora-color-action-primary-default\)/);
+assert.match(css, /var\(--blora-color-surface-default\)/);
+assert.match(css, /var\(--blora-color-text-primary\)/);
 console.log('Blora public Batch A static checks passed.');

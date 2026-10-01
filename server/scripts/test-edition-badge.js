@@ -15,14 +15,14 @@ for (const page of pages) {
 }
 
 const css = fs.readFileSync(path.join(publicDir, 'css', 'edition-badge.css'), 'utf8');
-assert.match(css, /background:\s*#000/);
-assert.match(css, /color:\s*#fff/);
-assert.match(css, /\.dark \.brand-edition-badge[\s\S]*background:\s*#fff[\s\S]*color:\s*#000/);
-assert.doesNotMatch(css, /brand-blue|blue/i);
+assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|background:|border-radius:/i);
+assert.match(css, /\.brand-edition-badge\[hidden\]/);
 
 const source = fs.readFileSync(path.join(publicDir, 'js/edition-badge.js'), 'utf8');
 let ready;
-const elements = [{ textContent: '', hidden: true, dataset: {} }];
+const classes = new Set();
+const attrs = new Map();
+const elements = [{ textContent: '', hidden: true, dataset: {}, classList: { add: value => classes.add(value) }, setAttribute: (key, value) => attrs.set(key, value) }];
 const context = {
   window: {},
   document: {
@@ -44,6 +44,8 @@ assert.strictEqual(badge.resolve({ edition: '<img src=x onerror=alert(1)>' }), '
 
 badge.mount({ runtime: 'desktop-local', edition: 'personal' });
 assert.deepStrictEqual([elements[0].textContent, elements[0].hidden], ['LOCAL', false]);
+assert.ok(classes.has('blora-tag'));
+assert.strictEqual(attrs.get('data-variant'), 'primary');
 const firstDataset = elements[0].dataset.editionBadgeValue;
 badge.mount({ runtime: 'desktop-local', edition: 'personal' });
 assert.strictEqual(elements[0].dataset.editionBadgeValue, firstDataset, 'same label mount remains idempotent');

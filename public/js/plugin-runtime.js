@@ -83,7 +83,7 @@
       const item = document.createElement('div');
       item.className = 'nav-item';
       item.setAttribute('data-page', p.pageId);
-      item.innerHTML = `<img src="https://img.bloret.net/SF/puzzlepiece?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="puzzlepiece">
+      item.innerHTML = `<span data-icon="puzzle" aria-hidden="true"></span>
         <span><span>${esc(p.title)}</span></span>`;
       item.addEventListener('click', () => {
         if (area === 'admin' && window.adminApp) adminApp.navigateTo(p.pageId);
@@ -171,21 +171,22 @@
     appObj.navigateTo = async function (page, options) {
       await origNavigate(page, options);
       try {
-        const pluginPage = state.pages.find(x => x.pageId === page);
+        const activePage = currentPage() || page;
+        const pluginPage = state.pages.find(x => x.pageId === activePage);
         if (pluginPage) {
           setPageTitle(pluginPage.title);
-          await renderPluginPageIfAny(page);
+          await renderPluginPageIfAny(activePage);
           return;
         }
-        if (page === 'adminPlugins') {
+        if (activePage === 'adminPlugins') {
           renderPluginsAdmin(document.getElementById('adminPluginsContent'));
           return;
         }
         // 设置页渲染主题选择器
-        if (page === 'settings') renderUserThemePicker(document.getElementById('pluginThemePicker'));
-        if (page === 'adminSettings') renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
+        if (activePage === 'settings') await renderUserThemePicker(document.getElementById('pluginThemePicker'));
+        if (activePage === 'adminSettings') await renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
         // 常规页面激活后填充插槽
-        await renderSlotsFor(page);
+        await renderSlotsFor(activePage);
       } catch (e) { console.warn('[plugins] 导航后处理失败', e); }
     };
     appObj.__pluginPatched = true;
@@ -197,19 +198,67 @@
     return state.themes.find(t => t.id === id) || null;
   }
 
-  // 当前挂在 <html> 上的主题 class（切换/取消时移除）
+  const palettes = {
+    'all-capabilities/all-capabilities-theme': 'dusk',
+    'crewrouter-classic/classic': 'graphite',
+    'example-theme/ocean': 'circuit',
+    'theme-linear/linear': 'indigo',
+    'theme-paper/paper': 'coral',
+    'theme-raycast/raycast': 'dusk',
+    'theme-terminal/terminal': 'mono',
+  };
   let activeThemeClass = '';
+  let originalPalette;
+  let themeLoadSequence = 0;
+  let themePaletteStyles;
+
+  async function notifyTheme(variant, text) {
+    if (!window.bloraMessage) {
+      const { message } = await import('/blora/index.js?v=2.1.0');
+      window.bloraMessage = message;
+    }
+    window.bloraMessage[variant](String(text));
+  }
 
   function applyThemeClass(themeId) {
-    if (activeThemeClass) {
-      document.documentElement.classList.remove(activeThemeClass);
-      activeThemeClass = '';
-    }
+    const root = document.documentElement;
+    if (activeThemeClass) root.classList.remove(activeThemeClass);
+    activeThemeClass = '';
     if (themeId) {
-      const cls = `theme-${String(themeId).replace(/[^a-zA-Z0-9_-]/g, '-').replace(/\//g, '__')}`;
-      document.documentElement.classList.add(cls);
-      activeThemeClass = cls;
+      activeThemeClass = `theme-${String(themeId).replace(/\//g, '__').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+      root.classList.add(activeThemeClass);
     }
+  }
+
+  function applyThemePalette(themeId) {
+    const root = document.documentElement;
+    if (originalPalette === undefined) originalPalette = root.getAttribute('data-blora-theme');
+    const palette = palettes[themeId];
+    if (palette) root.setAttribute('data-blora-theme', palette);
+    else if (originalPalette) root.setAttribute('data-blora-theme', originalPalette);
+    else root.removeAttribute('data-blora-theme');
+  }
+
+  function loadThemeStyles(link) {
+    return new Promise((resolve, reject) => {
+      link.onload = () => resolve(link);
+      link.onerror = () => { link.remove(); reject(new Error(t('主题加载失败'))); };
+      document.head.appendChild(link);
+    });
+  }
+
+  function ensureThemePaletteStyles() {
+    if (!themePaletteStyles) {
+      const link = document.createElement('link');
+      link.id = 'crPluginThemePalettes';
+      link.rel = 'stylesheet';
+      link.href = '/blora/tokens.themes.css?v=2.1.0';
+      themePaletteStyles = loadThemeStyles(link).catch((error) => {
+        themePaletteStyles = null;
+        throw error;
+      });
+    }
+    return themePaletteStyles;
   }
 
   function applyThemeScript(theme) {
@@ -222,29 +271,36 @@
     document.head.appendChild(script);
   }
 
-  function applyThemeStyle(themeId) {
-    const el = document.getElementById('crPluginThemeStyle');
+  async function applyThemeStyle(themeId) {
+    const sequence = ++themeLoadSequence;
     const theme = themeId ? findTheme(themeId) : null;
     if (!theme) {
-      if (el) el.remove();
+      document.getElementById('crPluginThemeStyle')?.remove();
       applyThemeScript(null);
       applyThemeClass('');
+      applyThemePalette('');
       return;
     }
-    applyThemeClass(theme.id);
-    applyThemeScript(theme);
-    // 仅注入样式表，不改任何行为；重复应用先移除旧节点
-    if (el && el.href === theme.url) return;
-    if (el) el.remove();
+    await ensureThemePaletteStyles();
+    if (sequence !== themeLoadSequence) return;
+    const previous = document.getElementById('crPluginThemeStyle');
+    if (previous?.href === new URL(theme.url, location.href).href) {
+      applyThemePalette(theme.id);
+      applyThemeClass(theme.id);
+      return;
+    }
     const link = document.createElement('link');
-    link.id = 'crPluginThemeStyle';
     link.rel = 'stylesheet';
-    // 防闪烁：先用 print 媒体加载（不渲染、不阻塞），加载完成后再切换为 all，
-    // 避免样式表未就绪时短暂闪回默认主题
     link.media = 'print';
-    link.onload = () => { link.media = 'all'; };
     link.href = theme.url;
-    document.head.appendChild(link);
+    await loadThemeStyles(link);
+    if (sequence !== themeLoadSequence) { link.remove(); return; }
+    previous?.remove();
+    link.id = 'crPluginThemeStyle';
+    applyThemePalette(theme.id);
+    applyThemeClass(theme.id);
+    link.media = 'all';
+    applyThemeScript(theme);
   }
 
   async function initThemes() {
@@ -252,100 +308,85 @@
       const data = await helpers.fetchJSON('/api/plugins/user-theme');
       state.userThemeId = data.themeId || '';
       state.defaultThemeId = data.defaultThemeId || '';
-      applyThemeStyle(data.effective || '');
-      renderThemePickers();
+      await applyThemeStyle(data.effective || '');
+      await renderThemePickers();
     } catch { /* 未登录或后端未就绪时静默 */ }
   }
 
-  function themeOptionsHtml(selectedId, includeFollowOption, followLabel) {
-    const opts = [];
-    if (includeFollowOption) {
-      opts.push(`<option value="" ${!selectedId ? 'selected' : ''}>${esc(t('内置默认主题'))}</option>`);
+  function themeOptionsHtml(selectedId, followLabel) {
+    const opts = [`<blora-option value="" ${!selectedId ? 'selected' : ''}>${esc(t(followLabel))}</blora-option>`];
+    if (selectedId && !findTheme(selectedId)) {
+      opts.push(`<blora-option value="${esc(selectedId)}" selected disabled>${esc(t('该主题的插件已停用，当前显示为默认样式'))}</blora-option>`);
     }
-    for (const th of state.themes) {
-      opts.push(`<option value="${esc(th.id)}" ${selectedId === th.id ? 'selected' : ''}>${esc(t(th.name))}</option>`);
+    for (const theme of state.themes) {
+      opts.push(`<blora-option value="${esc(theme.id)}" ${selectedId === theme.id ? 'selected' : ''}>${esc(t(theme.name))}</blora-option>`);
     }
     return opts.join('');
   }
 
-  function unavailableBadge(selectedId) {
-    if (!selectedId || findTheme(selectedId)) return '';
-    return `<span style="font-size:12px;color:var(--destructive);margin-left:8px;">${esc(t('该主题的插件已停用，当前显示为默认样式'))}
-      <button class="btn btn-ghost btn-sm" style="padding:2px 8px;" onclick="window.CrewThemes.resetStale()">${esc(t('重置'))}</button></span>`;
-  }
-
-  function renderUserThemePicker(container) {
+  async function renderThemePicker(container, isDefault) {
     if (!container) return;
-    container.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <select id="pluginThemeSelect" class="select" style="min-width:220px;">${themeOptionsHtml(state.userThemeId, true)}</select>
-        <span id="pluginThemeStatus" style="font-size:13px;color:var(--muted-foreground);"></span>
-      </div>
-      <div style="margin-top:6px;">${unavailableBadge(state.userThemeId)}</div>
-    `;
-    const sel = container.querySelector('#pluginThemeSelect');
-    sel.addEventListener('change', async () => {
-      const v = sel.value;
+    const selectedId = isDefault ? state.defaultThemeId : state.userThemeId;
+    const id = isDefault ? 'pluginDefaultThemeSelect' : 'pluginThemeSelect';
+    container.innerHTML = `<blora-select id="${id}" aria-label="${esc(t('界面主题'))}" style="min-width:220px;">${themeOptionsHtml(selectedId, isDefault ? '内置默认主题' : '跟随默认主题')}</blora-select>`;
+    const select = container.querySelector(`#${id}`);
+    await customElements.whenDefined('blora-select');
+    if (!select.isConnected) return;
+    customElements.upgrade(select);
+    select.setAttribute('value', selectedId);
+    select.addEventListener('change', async () => {
+      const value = select.value;
+      select.setAttribute('disabled', '');
       try {
-        await helpers.fetchJSON('/api/plugins/user-theme', {
+        await helpers.fetchJSON(isDefault ? '/api/admin/settings' : '/api/plugins/user-theme', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ themeId: v }),
+          body: JSON.stringify(isDefault ? { default_theme: value } : { themeId: value }),
         });
-        state.userThemeId = v;
-        applyThemeStyle(v || state.defaultThemeId || '');
-        const st = container.querySelector('#pluginThemeStatus');
-        if (st) st.textContent = t('已保存并生效');
-      } catch (e) {
-        const st = container.querySelector('#pluginThemeStatus');
-        if (st) st.textContent = e.message;
+        if (isDefault) state.defaultThemeId = value;
+        else state.userThemeId = value;
+        await applyThemeStyle(state.userThemeId || state.defaultThemeId || '');
+        await notifyTheme('success', t(isDefault ? '已保存，刷新后对所有用户生效' : '已保存并生效'));
+      } catch (error) {
+        select.setAttribute('value', isDefault ? state.defaultThemeId : state.userThemeId);
+        await notifyTheme('error', error.message);
+      } finally {
+        select.removeAttribute('disabled');
       }
     });
+    if (!isDefault && selectedId && !findTheme(selectedId)) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'blora-button';
+      button.setAttribute('data-variant', 'outline');
+      button.textContent = t('重置');
+      button.addEventListener('click', () => window.CrewThemes.resetStale());
+      container.appendChild(button);
+    }
   }
 
-  function renderDefaultThemePicker(container) {
-    if (!container) return;
-    container.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <select id="pluginDefaultThemeSelect" class="select" style="min-width:220px;">${themeOptionsHtml(state.defaultThemeId, true)}</select>
-        <span id="pluginDefaultThemeStatus" style="font-size:13px;color:var(--muted-foreground);"></span>
-      </div>
-      <p style="margin:6px 0 0;font-size:12px;color:var(--muted-foreground);">${esc(t('对未自行选择主题的用户生效；用户可在控制台「用户设置 → 界面主题」中覆盖。'))}</p>
-    `;
-    const sel = container.querySelector('#pluginDefaultThemeSelect');
-    sel.addEventListener('change', async () => {
-      const v = sel.value;
-      try {
-        await helpers.fetchJSON('/api/admin/settings', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ default_theme: v }),
-        });
-        state.defaultThemeId = v;
-        const st = container.querySelector('#pluginDefaultThemeStatus');
-        if (st) st.textContent = t('已保存，刷新后对所有用户生效');
-      } catch (e) {
-        const st = container.querySelector('#pluginDefaultThemeStatus');
-        if (st) st.textContent = e.message;
-      }
-    });
-  }
+  function renderUserThemePicker(container) { return renderThemePicker(container, false); }
+  function renderDefaultThemePicker(container) { return renderThemePicker(container, true); }
 
   function renderThemePickers() {
-    renderUserThemePicker(document.getElementById('pluginThemePicker'));
-    renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
+    return Promise.all([
+      renderUserThemePicker(document.getElementById('pluginThemePicker')),
+      renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker')),
+    ]);
   }
 
   window.CrewThemes = {
     list: () => [...state.themes],
     effective: () => state.userThemeId || state.defaultThemeId || '',
-    apply: (id) => { state.userThemeId = id; applyThemeStyle(id || state.defaultThemeId || ''); },
+    apply: async (id) => { state.userThemeId = id; await applyThemeStyle(id || state.defaultThemeId || ''); },
     refreshPickers: renderThemePickers,
-    resetStale(area, themeId) {
-      // 清掉指向已停用插件的无效选择
-      this.apply('');
-      fetch('/api/plugins/user-theme', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ themeId: '' }) })
-        .then(() => renderThemePickers()).catch(() => {});
+    async resetStale() {
+      try {
+        await helpers.fetchJSON('/api/plugins/user-theme', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ themeId: '' }) });
+        await this.apply('');
+        await renderThemePickers();
+        await notifyTheme('success', t('已保存并生效'));
+      } catch (error) { await notifyTheme('error', error.message); }
     },
   };
 
@@ -417,7 +458,7 @@
     state.ready = true;
 
     // 主题：拉取用户/默认选择并应用（含设置页选择器首渲）
-    initThemes();
+    await initThemes();
 
     // 初始页面若是插件页/常规页，恢复一次渲染（hash 直达场景）
     const cur = currentPage();
@@ -425,8 +466,8 @@
       if (cur.startsWith('plugin_')) await renderPluginPageIfAny(cur);
       else if (cur === 'adminPlugins') renderPluginsAdmin(document.getElementById('adminPluginsContent'));
       else {
-        if (cur === 'settings') renderUserThemePicker(document.getElementById('pluginThemePicker'));
-        if (cur === 'adminSettings') renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
+        if (cur === 'settings') await renderUserThemePicker(document.getElementById('pluginThemePicker'));
+        if (cur === 'adminSettings') await renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
         await renderSlotsFor(cur);
       }
     }
@@ -630,7 +671,7 @@
       const pl = manageState.plugins.find(p => p.id === id);
       if (!pl || !pl.storeId || !pl.storeSource) return;
       const next = pl.storeLatestVersion || '最新';
-      if (!window.confirm(t('确定要将插件') + '「' + pl.name + '」' + t('更新到') + ' v' + next + t('吗？'))) return;
+      if (!await Dialog.confirm(esc(t('确定要将插件') + '「' + pl.name + '」' + t('更新到') + ' v' + next + t('吗？')))) return;
       try {
         await helpers.fetchJSON('/api/admin/plugins/install-from-store', {
           method: 'POST',
@@ -639,7 +680,7 @@
         });
         this.refresh();
       } catch (e) {
-        window.alert(t('更新失败') + '：' + e.message);
+        await Dialog.alert(esc(t('更新失败') + '：' + e.message));
       }
     },
     expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); if (manageState.expanded[id]) this.loadData(id); },
@@ -668,17 +709,17 @@
       }
     },
     async deleteData(id, key) {
-      if (!confirm(t('确定删除该插件数据键？'))) return;
+      if (!await Dialog.confirm(t('确定删除该插件数据键？'))) return;
       try {
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/data/${encodeURIComponent(key)}`, { method: 'DELETE' });
         this.loadData(id);
-      } catch (e) { alert(e.message); }
+      } catch (e) { await Dialog.alert(esc(e.message)); }
     },
     async toggle(id, enabled) {
       try {
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/toggle`, { method: 'POST' });
         this.refresh();
-      } catch (e) { alert(e.message); this.refresh(); }
+      } catch (e) { await Dialog.alert(esc(e.message)); this.refresh(); }
     },
     async reload(id) {
       try {
@@ -687,11 +728,11 @@
       } catch (e) { msg(id, e.message, false); }
     },
     async uninstall(id) {
-      if (!confirm(t('确定卸载该插件的记录？（需先禁用；插件目录不会被删除）'))) return;
+      if (!await Dialog.confirm(t('确定卸载该插件的记录？（需先禁用；插件目录不会被删除）'))) return;
       try {
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}`, { method: 'DELETE' });
         this.refresh();
-      } catch (e) { alert(e.message); }
+      } catch (e) { await Dialog.alert(esc(e.message)); }
     },
     async saveConfig(id) {
       const el = document.querySelector(`[data-plugin-cfg="${id}"]`);
@@ -712,7 +753,7 @@
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/reset-errors`, { method: 'POST' });
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/reload`, { method: 'POST' });
         this.refresh();
-      } catch (e) { alert(e.message); }
+      } catch (e) { await Dialog.alert(esc(e.message)); }
     },
   };
 

@@ -1,0 +1,7 @@
+
+> crewrouter@1.0.0 test:blora-foundation
+> node scripts/test-blora-foundation.js && node scripts/test-blora-audit-parser.js && node scripts/test-blora-http.js
+
+Blora foundation static checks passed.
+Blora audit parser regression checks passed.
+Blora ESM and production-route HTTP smoke checks passed.

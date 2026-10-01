@@ -1,0 +1,6 @@
+
+> crewrouter@1.0.0 test:blora-public-batch-a
+> node scripts/verify-blora-public-batch-a.js
+
+Blora public Batch A static checks passed.
+Blora public Batch A isolated HTTP smoke passed on 127.0.0.1.

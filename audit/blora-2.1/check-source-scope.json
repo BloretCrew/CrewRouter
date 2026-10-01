@@ -1,0 +1,17 @@
+{
+  "startedAt": "2026-10-01T12:32:35.936291+08:00",
+  "roots": [
+    "public",
+    "plugins",
+    "server/plugins",
+    "server"
+  ],
+  "rootFiles": [
+    "package.json",
+    "package-lock.json"
+  ],
+  "files": 336,
+  "exclusions": [
+    "node_modules"
+  ]
+}

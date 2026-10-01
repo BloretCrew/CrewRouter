@@ -1,0 +1,310 @@
+[
+  {
+    "file": "CrewRouter-Desktop/package-lock.json",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/package.json",
+    "stagedHunks": 2,
+    "overlapHunks": []
+  },
+  {
+    "file": "CrewRouter-Desktop/scripts/prepare-blora-assets.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/index.html",
+    "stagedHunks": 2,
+    "overlapHunks": [
+      [
+        9,
+        9,
+        9,
+        8
+      ],
+      [
+        11,
+        24,
+        10,
+        9
+      ],
+      [
+        31,
+        32,
+        16,
+        17
+      ],
+      [
+        47,
+        47,
+        32,
+        32
+      ],
+      [
+        54,
+        54,
+        39,
+        39
+      ],
+      [
+        61,
+        61,
+        46,
+        46
+      ],
+      [
+        66,
+        66,
+        51,
+        51
+      ],
+      [
+        78,
+        78,
+        63,
+        63
+      ],
+      [
+        94,
+        94,
+        79,
+        79
+      ],
+      [
+        99,
+        99,
+        84,
+        84
+      ],
+      [
+        104,
+        104,
+        89,
+        89
+      ],
+      [
+        116,
+        116,
+        101,
+        101
+      ],
+      [
+        131,
+        131,
+        116,
+        116
+      ],
+      [
+        160,
+        160,
+        145,
+        145
+      ]
+    ]
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/launcher.js",
+    "staged": false,
+    "reason": "先前未跟踪用户文件，保存round patch"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/settings.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/settings.html",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/settings.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/styles.css",
+    "stagedHunks": 1,
+    "overlapHunks": [
+      [
+        2,
+        1,
+        2,
+        3
+      ],
+      [
+        12,
+        18,
+        15,
+        20
+      ],
+      [
+        22,
+        22,
+        24,
+        24
+      ],
+      [
+        29,
+        29,
+        31,
+        30
+      ],
+      [
+        33,
+        34,
+        34,
+        34
+      ],
+      [
+        39,
+        39,
+        39,
+        39
+      ],
+      [
+        77,
+        77,
+        77,
+        77
+      ]
+    ]
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/auto.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/blora-element-Cn5j6OzD.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/blora.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/blora.global.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/alert/alert.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/avatar/avatar.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/badge/badge.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/button/button.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/button/index.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/card/card.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/copy/copy.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/dialog/index.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/field/field.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/list/list.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/navbar/navbar.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/select/index.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/select/select.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/statistic/statistic.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/table/index.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/tabs/tabs.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/tag/tag.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/components/textarea/textarea.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/dialog-D8W4uPbO.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/foundations.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/foundations/layout.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/foundations/stack.css",
+    "staged": "new official asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/i18n-Duo0HNK5.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/icons-PjqNgrW5.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/icons-full.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/icons-registry-BEZgQ6x-.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/index.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/timeline-CM8btlTR.js",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/tokens.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/tokens.dark.css",
+    "staged": "entire turn-only asset"
+  },
+  {
+    "file": "CrewRouter-Desktop/src/renderer/vendor/blora-design/tokens.themes.css",
+    "staged": "entire turn-only asset"
+  }
+]

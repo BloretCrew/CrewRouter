@@ -1,0 +1,29 @@
+
+DevTools listening on ws://127.0.0.1:18583/devtools/browser/d0b43e4c-a46f-47df-b792-2472226d5628
+[28036:28205:1001/120607.499610:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[28036:28205:1001/120607.530323:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[28036:28205:1001/120607.547961:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[28036:28205:1001/120607.801975:ERROR:google_apis/gcm/engine/mcs_client.cc:702]   Error code: 401  Error message: Authentication Failed: wrong_secret
+[28036:28205:1001/120607.802031:ERROR:google_apis/gcm/engine/mcs_client.cc:704] Failed to log in to GCM, resetting connection.
+Created TensorFlow Lite XNNPACK delegate for CPU.
+[28036:28205:1001/120636.890162:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[28036:28205:1001/120728.335606:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[28036:28205:1001/120731.049033:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[28036:28205:1001/120828.619549:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[28036:28036:1001/120901.354800:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 4 rejected by interface blink.mojom.WidgetHost
+Warning: maxDynamicUniformBuffersPerPipelineLayout artificially reduced from 500000 to 16 to fit dynamic offset allocation limit.
+Warning: maxDynamicStorageBuffersPerPipelineLayout artificially reduced from 500000 to 16 to fit dynamic offset allocation limit.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1790827742.655201   35672 environment.cc:523] Selected adapter: SwiftShader Device (Subzero), arch=swiftshader, vendor=google, backend=Vulkan, adapterType=CPU / Software
+[35672:35672:1001/120902.661366:ERROR:services/on_device_model/ml/chrome_ml.cc:101] Terminating On-Device Model Service: Failed creation: Failed to create device:
+Required limit (14336) is greater than the supported limit (8192).
+ - While validating maxTextureDimension2D
+ - While validating required limits
+
+[28036:28036:1001/120902.667491:ERROR:services/on_device_model/public/cpp/service_client.cc:37] Unexpected on_device_model service disconnect; reason: 0, description:
+[28036:28205:1001/120907.857920:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[28036:28205:1001/120928.936283:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[28036:28205:1001/121029.222845:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[28036:28205:1001/121129.521366:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[28036:28205:1001/121209.141413:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[28036:28205:1001/121229.796110:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2

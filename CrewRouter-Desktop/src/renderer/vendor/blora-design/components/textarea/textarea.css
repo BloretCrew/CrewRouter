@@ -42,6 +42,7 @@
   background: var(--blora-color-surface-sunken);
   color: var(--blora-color-text-disabled);
   cursor: not-allowed;
+  resize: none;
 }
 
 .blora-textarea[aria-invalid="true"] {

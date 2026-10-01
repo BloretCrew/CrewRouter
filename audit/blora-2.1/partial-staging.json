@@ -1,0 +1,385 @@
+[
+  {
+    "file": "public/pages/console.html",
+    "stagedHunks": 434,
+    "overlapHunks": [
+      {
+        "baseLines": [
+          1672,
+          1673
+        ],
+        "currentLines": [
+          1673,
+          1674
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      }
+    ]
+  },
+  {
+    "file": "public/pages/admin.html",
+    "stagedHunks": 375,
+    "overlapHunks": [
+      {
+        "baseLines": [
+          277,
+          278
+        ],
+        "currentLines": [
+          279,
+          280
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          282,
+          282
+        ],
+        "currentLines": [
+          284,
+          284
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          350,
+          350
+        ],
+        "currentLines": [
+          352,
+          352
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          1210,
+          1212
+        ],
+        "currentLines": [
+          1212,
+          1214
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      }
+    ]
+  },
+  {
+    "file": "public/js/admin.js",
+    "stagedHunks": 527,
+    "overlapHunks": [
+      {
+        "baseLines": [
+          197,
+          202
+        ],
+        "currentLines": [
+          237,
+          237
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          7673,
+          7673
+        ],
+        "currentLines": [
+          7707,
+          7707
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          9589,
+          9590
+        ],
+        "currentLines": [
+          9623,
+          9624
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          10253,
+          10253
+        ],
+        "currentLines": [
+          10287,
+          10287
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          10259,
+          10259
+        ],
+        "currentLines": [
+          10293,
+          10293
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          10263,
+          10263
+        ],
+        "currentLines": [
+          10297,
+          10297
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          10269,
+          10269
+        ],
+        "currentLines": [
+          10303,
+          10303
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      }
+    ]
+  },
+  {
+    "file": "public/css/admin-user-groups-blora.css",
+    "stagedHunks": 16,
+    "overlapHunks": [
+      {
+        "baseLines": [
+          1,
+          5
+        ],
+        "currentLines": [
+          1,
+          0
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          7,
+          7
+        ],
+        "currentLines": [
+          2,
+          3
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          13,
+          14
+        ],
+        "currentLines": [
+          9,
+          10
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          19,
+          19
+        ],
+        "currentLines": [
+          15,
+          15
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      }
+    ]
+  },
+  {
+    "file": "public/css/settings-blora.css",
+    "stagedHunks": 9,
+    "overlapHunks": [
+      {
+        "baseLines": [
+          122,
+          123
+        ],
+        "currentLines": [
+          51,
+          51
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          132,
+          132
+        ],
+        "currentLines": [
+          60,
+          60
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      }
+    ]
+  },
+  {
+    "file": "public/css/blora-agent.css",
+    "stagedHunks": 27,
+    "overlapHunks": [
+      {
+        "baseLines": [
+          212,
+          212
+        ],
+        "currentLines": [
+          176,
+          175
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          215,
+          215
+        ],
+        "currentLines": [
+          178,
+          177
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          217,
+          220
+        ],
+        "currentLines": [
+          179,
+          180
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          222,
+          227
+        ],
+        "currentLines": [
+          182,
+          186
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          229,
+          230
+        ],
+        "currentLines": [
+          188,
+          188
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          232,
+          232
+        ],
+        "currentLines": [
+          190,
+          190
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          234,
+          238
+        ],
+        "currentLines": [
+          192,
+          195
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          243,
+          245
+        ],
+        "currentLines": [
+          200,
+          202
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          249,
+          249
+        ],
+        "currentLines": [
+          206,
+          205
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          251,
+          252
+        ],
+        "currentLines": [
+          207,
+          207
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          254,
+          254
+        ],
+        "currentLines": [
+          209,
+          209
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      },
+      {
+        "baseLines": [
+          257,
+          257
+        ],
+        "currentLines": [
+          212,
+          211
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      }
+    ]
+  },
+  {
+    "file": "public/js/blora-agent.js",
+    "stagedHunks": 4,
+    "overlapHunks": [
+      {
+        "baseLines": [
+          286,
+          286
+        ],
+        "currentLines": [
+          286,
+          286
+        ],
+        "reason": "与用户先前未提交改动重叠，保留工作树并交付精确round patch"
+      }
+    ]
+  }
+]

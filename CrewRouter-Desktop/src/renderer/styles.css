@@ -1,24 +1,27 @@
 /* Page composition only. Component chrome comes from the vendored Blora package. */
+@layer legacy, blora;
+@layer legacy {
 :root { color-scheme: dark; font-family: var(--blora-font-sans); background: var(--blora-color-surface-canvas); color: var(--blora-color-text-primary); }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 button, input { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--blora-color-surface-canvas); color: var(--blora-color-text-primary); background-image: var(--blora-texture-background); }
+}
 .oobe-shell { display: flex; flex-direction: column; width: min(calc(100% - (2 * var(--blora-space-6))), 820px); min-height: 100vh; margin: 0 auto; padding: var(--blora-space-5) 0 var(--blora-space-4); }
 .oobe-header, .oobe-footer, .oobe-panel__heading { display: flex; align-items: center; justify-content: space-between; }
 .oobe-header { min-height: 2.75rem; }
 .oobe-header > .blora-button { align-self: center; }
 .oobe-header > .blora-badge { width: max-content; min-width: max-content; height: auto; padding: 0.2em 0.7em; border-radius: var(--blora-radius-full); }
-.blora-brand { display: inline-flex; align-items: center; gap: var(--blora-space-3); color: var(--blora-color-text-primary); text-decoration: none; }
-.blora-brand strong { display: block; font-size: var(--blora-text-sm); letter-spacing: 0; }
-.blora-brand small { display: block; margin-top: 2px; color: var(--blora-color-text-muted); font: 500 var(--blora-text-xs) var(--blora-font-mono); letter-spacing: var(--blora-tracking-caps); }
-.blora-brand-mark { display: flex; align-items: end; gap: 3px; width: 28px; height: 28px; padding: 5px; border: var(--blora-border-subtle); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-raised); }
-.blora-brand-mark span { display: block; width: 4px; border-radius: var(--blora-radius-xs); background: var(--blora-color-action-primary-default); }
-.blora-brand-mark span:nth-child(1) { height: 8px; } .blora-brand-mark span:nth-child(2) { height: 13px; } .blora-brand-mark span:nth-child(3) { height: 17px; }
+.desktop-brand { display: inline-flex; align-items: center; gap: var(--blora-space-3); color: var(--blora-color-text-primary); text-decoration: none; }
+.desktop-brand strong { display: block; font-size: var(--blora-text-sm); letter-spacing: 0; }
+.desktop-brand small { display: block; margin-top: 2px; color: var(--blora-color-text-muted); font: 500 var(--blora-text-xs) var(--blora-font-mono); letter-spacing: var(--blora-tracking-caps); }
+.desktop-brand-mark { display: flex; align-items: end; gap: 3px; width: 28px; height: 28px; padding: 5px; border: var(--blora-border-subtle); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-raised); }
+.desktop-brand-mark span { display: block; width: 4px; border-radius: var(--blora-radius-xs); background: var(--blora-color-action-primary-default); }
+.desktop-brand-mark span:nth-child(1) { height: 8px; } .desktop-brand-mark span:nth-child(2) { height: 13px; } .desktop-brand-mark span:nth-child(3) { height: 17px; }
 [data-icon] { display: inline-flex; flex: none; }
 [data-icon] svg { width: 1em; height: 1em; }
-.blora-eyebrow { margin: 0 0 var(--blora-space-2); color: var(--blora-color-action-primary-default); font: 600 var(--blora-text-xs) var(--blora-font-mono); letter-spacing: var(--blora-tracking-caps); text-transform: uppercase; }
+.desktop-eyebrow { margin: 0 0 var(--blora-space-2); color: var(--blora-color-action-primary-default); font: 600 var(--blora-text-xs) var(--blora-font-mono); letter-spacing: var(--blora-tracking-caps); text-transform: uppercase; }
 .oobe-hero { margin-top: var(--blora-space-7); }
 .oobe-hero h1 { max-width: 34rem; margin: 0; overflow-wrap: anywhere; font-size: clamp(var(--blora-text-3xl), 5vw, var(--blora-text-5xl)); letter-spacing: 0; }
 .oobe-hero p:last-child { max-width: 42rem; margin: var(--blora-space-3) 0 0; color: var(--blora-color-text-muted); font-size: var(--blora-text-base); line-height: var(--blora-leading-normal); }

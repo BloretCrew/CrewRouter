@@ -1,0 +1,5 @@
+
+> crewrouter@1.0.0 test:no-legacy-dialog
+> node scripts/test-no-legacy-dialog.js
+
+No Fluent dependency or legacy dialog entrypoint checks passed.

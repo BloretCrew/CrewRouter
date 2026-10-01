@@ -50,6 +50,13 @@
 @media (max-width: 560px) {
   .blora-list__item {
     align-items: flex-start;
+    flex-wrap: wrap;
     padding-inline: var(--blora-space-3);
+  }
+
+  /* Give the text a readable line before status and action controls wrap.
+     A zero flex basis squeezed titles into single-character columns. */
+  .blora-list__meta {
+    flex: 1 1 12ch;
   }
 }

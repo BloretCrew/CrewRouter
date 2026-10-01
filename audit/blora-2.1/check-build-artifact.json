@@ -1,0 +1,90 @@
+{
+  "publicFiles": 84,
+  "added": [],
+  "missing": [],
+  "changed": [],
+  "dependencyVersion": "2.1.0",
+  "dependenciesMatch": true,
+  "syntax": [
+    {
+      "file": "dist/public/js/admin.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/app.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/blora-agent.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/blora-dialog.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/blora-foundation.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/blora-services.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/dom.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/edition-badge.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/i18n.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/multi-dimension-chart.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/oauth-consent.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/playground-state.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/playground.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/plugin-runtime.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/session-tool-groups.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/store.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/theme.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/usage.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/public/js/vendor/marked.min.js",
+      "exit": 0
+    },
+    {
+      "file": "dist/server.js",
+      "exit": 0
+    }
+  ]
+}

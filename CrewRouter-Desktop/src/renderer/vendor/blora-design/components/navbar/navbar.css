@@ -140,9 +140,23 @@ blora-navbar > .blora-navbar {
   display: flex;
   gap: var(--blora-space-2);
   min-width: 0;
+
+  /* In a constrained container the menu scrolls instead of squeezing every
+     link into a one-character column. The padding/margin pair keeps focus
+     rings inside the scrollport without changing the bar's height. */
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: calc(var(--blora-focus-ring-width) + var(--blora-focus-ring-offset));
+  margin: calc(-1 * (var(--blora-focus-ring-width) + var(--blora-focus-ring-offset)));
+}
+
+.blora-navbar__menu::-webkit-scrollbar {
+  display: none;
 }
 
 .blora-navbar__link {
+  flex: none;
+  white-space: nowrap;
   padding: 0.4em 0.9em;
   font-size: var(--blora-text-sm);
   color: var(--blora-color-text-emphasis);

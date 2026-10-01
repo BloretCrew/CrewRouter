@@ -1,0 +1,463 @@
+{
+  "generatedAt": "2026-10-01T04:12:07.494556+00:00",
+  "method": "Manually viewed every contact sheet with read_file; every PNG is listed in manifest, including supplemental retry screenshots.",
+  "reviewedScreenshots": 296,
+  "sheets": [
+    {
+      "sheet": "contact-sheets/sheet-01.jpg",
+      "screenshots": [
+        "screenshots/admin-light-1440.png",
+        "screenshots/admin-adminStats-light-1440.png",
+        "screenshots/admin-adminUsers-light-1440.png",
+        "screenshots/admin-adminUsers-light-1440-filter.png",
+        "screenshots/admin-adminModels-light-1440.png",
+        "screenshots/admin-adminProviders-light-1440.png",
+        "screenshots/admin-adminSettings-light-1440.png",
+        "screenshots/admin-adminTeams-light-1440.png",
+        "screenshots/admin-adminErrorLogs-light-1440.png",
+        "screenshots/admin-adminAuditLogs-light-1440.png",
+        "screenshots/admin-adminPrompts-light-1440.png",
+        "screenshots/admin-adminPlugins-light-1440.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-02.jpg",
+      "screenshots": [
+        "screenshots/admin-adminTeams-1-light-1440.png",
+        "screenshots/admin-adminUserGroups-light-1440.png",
+        "screenshots/admin-adminUserGroups-1-light-1440.png",
+        "screenshots/admin-adminDashboard-light-1440.png",
+        "screenshots/console-light-1440.png",
+        "screenshots/console-light-1440-filter.png",
+        "screenshots/console-home-light-1440.png",
+        "screenshots/console-modelLibrary-light-1440.png",
+        "screenshots/console-modelLibrary-light-1440-filter.png",
+        "screenshots/console-myUpstream-light-1440.png",
+        "screenshots/console-apiKeys-light-1440.png",
+        "screenshots/console-apiKeys-light-1440-form.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-03.jpg",
+      "screenshots": [
+        "screenshots/console-stats-light-1440.png",
+        "screenshots/console-projectWork-light-1440.png",
+        "screenshots/console-leaderboard-light-1440.png",
+        "screenshots/console-docs-light-1440.png",
+        "screenshots/console-balance-light-1440.png",
+        "screenshots/console-settings-light-1440.png",
+        "screenshots/console-auditLogs-light-1440.png",
+        "screenshots/console-prompts-light-1440.png",
+        "screenshots/console-sessions-light-1440.png",
+        "screenshots/console-bloraAgent-light-1440.png",
+        "screenshots/console-myUpstream-models-light-1440.png",
+        "screenshots/console-myUpstream-providers-light-1440.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-04.jpg",
+      "screenshots": [
+        "screenshots/console-docs-overview-light-1440.png",
+        "screenshots/console-docs-chat-light-1440.png",
+        "screenshots/console-docs-models-light-1440.png",
+        "screenshots/console-docs-anthropic-light-1440.png",
+        "screenshots/console-docs-user-api-light-1440.png",
+        "screenshots/console-docs-conversations-light-1440.png",
+        "screenshots/console-docs-errors-light-1440.png",
+        "screenshots/console-bloraAgent-chat-light-1440.png",
+        "screenshots/console-bloraAgent-imagine-light-1440.png",
+        "screenshots/console-bloraAgent-manage-light-1440.png",
+        "screenshots/console-dashboard-light-1440.png",
+        "screenshots/console-dashboard-light-1440-filter.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-05.jpg",
+      "screenshots": [
+        "screenshots/console-myProviders-light-1440.png",
+        "screenshots/console-myTeamModels-light-1440.png",
+        "screenshots/data-light-1440.png",
+        "screenshots/feishu-bind-light-1440.png",
+        "screenshots/index-light-1440.png",
+        "screenshots/oauth-consent-light-1440.png",
+        "screenshots/playground-light-1440.png",
+        "screenshots/plugin-install-light-1440.png",
+        "screenshots/purchase-light-1440.png",
+        "screenshots/set-password-light-1440.png",
+        "screenshots/set-password-light-1440-filter.png",
+        "screenshots/setup-light-1440.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-06.jpg",
+      "screenshots": [
+        "screenshots/showcase-light-1440.png",
+        "screenshots/store-light-1440.png",
+        "screenshots/admin-dark-1440.png",
+        "screenshots/admin-adminStats-dark-1440.png",
+        "screenshots/admin-adminUsers-dark-1440.png",
+        "screenshots/admin-adminUsers-dark-1440-filter.png",
+        "screenshots/admin-adminModels-dark-1440.png",
+        "screenshots/admin-adminProviders-dark-1440.png",
+        "screenshots/admin-adminSettings-dark-1440.png",
+        "screenshots/admin-adminTeams-dark-1440.png",
+        "screenshots/admin-adminErrorLogs-dark-1440.png",
+        "screenshots/admin-adminAuditLogs-dark-1440.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-07.jpg",
+      "screenshots": [
+        "screenshots/admin-adminPrompts-dark-1440.png",
+        "screenshots/admin-adminPlugins-dark-1440.png",
+        "screenshots/admin-adminTeams-1-dark-1440.png",
+        "screenshots/admin-adminUserGroups-dark-1440.png",
+        "screenshots/admin-adminUserGroups-1-dark-1440.png",
+        "screenshots/admin-adminDashboard-dark-1440.png",
+        "screenshots/console-dark-1440.png",
+        "screenshots/console-dark-1440-filter.png",
+        "screenshots/console-home-dark-1440.png",
+        "screenshots/console-modelLibrary-dark-1440.png",
+        "screenshots/console-modelLibrary-dark-1440-filter.png",
+        "screenshots/console-myUpstream-dark-1440.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-08.jpg",
+      "screenshots": [
+        "screenshots/console-apiKeys-dark-1440.png",
+        "screenshots/console-apiKeys-dark-1440-form.png",
+        "screenshots/console-stats-dark-1440.png",
+        "screenshots/console-projectWork-dark-1440.png",
+        "screenshots/console-leaderboard-dark-1440.png",
+        "screenshots/console-docs-dark-1440.png",
+        "screenshots/console-balance-dark-1440.png",
+        "screenshots/console-settings-dark-1440.png",
+        "screenshots/console-auditLogs-dark-1440.png",
+        "screenshots/console-prompts-dark-1440.png",
+        "screenshots/console-sessions-dark-1440.png",
+        "screenshots/console-bloraAgent-dark-1440.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-09.jpg",
+      "screenshots": [
+        "screenshots/console-myUpstream-models-dark-1440.png",
+        "screenshots/console-myUpstream-providers-dark-1440.png",
+        "screenshots/console-docs-overview-dark-1440.png",
+        "screenshots/console-docs-chat-dark-1440.png",
+        "screenshots/console-docs-models-dark-1440.png",
+        "screenshots/console-docs-anthropic-dark-1440.png",
+        "screenshots/console-docs-user-api-dark-1440.png",
+        "screenshots/console-docs-conversations-dark-1440.png",
+        "screenshots/console-docs-errors-dark-1440.png",
+        "screenshots/console-bloraAgent-chat-dark-1440.png",
+        "screenshots/console-bloraAgent-imagine-dark-1440.png",
+        "screenshots/console-bloraAgent-manage-dark-1440.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-10.jpg",
+      "screenshots": [
+        "screenshots/console-dashboard-dark-1440.png",
+        "screenshots/console-dashboard-dark-1440-filter.png",
+        "screenshots/console-myProviders-dark-1440.png",
+        "screenshots/console-myTeamModels-dark-1440.png",
+        "screenshots/data-dark-1440.png",
+        "screenshots/feishu-bind-dark-1440.png",
+        "screenshots/index-dark-1440.png",
+        "screenshots/oauth-consent-dark-1440.png",
+        "screenshots/playground-dark-1440.png",
+        "screenshots/plugin-install-dark-1440.png",
+        "screenshots/purchase-dark-1440.png",
+        "screenshots/set-password-dark-1440.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-11.jpg",
+      "screenshots": [
+        "screenshots/set-password-dark-1440-filter.png",
+        "screenshots/setup-dark-1440.png",
+        "screenshots/showcase-dark-1440.png",
+        "screenshots/store-dark-1440.png",
+        "screenshots/admin-light-390.png",
+        "screenshots/admin-adminStats-light-390.png",
+        "screenshots/admin-adminUsers-light-390.png",
+        "screenshots/admin-adminUsers-light-390-filter.png",
+        "screenshots/admin-adminModels-light-390.png",
+        "screenshots/admin-adminProviders-light-390.png",
+        "screenshots/admin-adminSettings-light-390.png",
+        "screenshots/admin-adminTeams-light-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-12.jpg",
+      "screenshots": [
+        "screenshots/admin-adminErrorLogs-light-390.png",
+        "screenshots/admin-adminAuditLogs-light-390.png",
+        "screenshots/admin-adminPrompts-light-390.png",
+        "screenshots/admin-adminPlugins-light-390.png",
+        "screenshots/admin-adminTeams-1-light-390.png",
+        "screenshots/admin-adminUserGroups-light-390.png",
+        "screenshots/admin-adminUserGroups-1-light-390.png",
+        "screenshots/admin-adminDashboard-light-390.png",
+        "screenshots/console-light-390.png",
+        "screenshots/console-light-390-filter.png",
+        "screenshots/console-home-light-390.png",
+        "screenshots/console-modelLibrary-light-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-13.jpg",
+      "screenshots": [
+        "screenshots/console-modelLibrary-light-390-filter.png",
+        "screenshots/console-myUpstream-light-390.png",
+        "screenshots/console-apiKeys-light-390.png",
+        "screenshots/console-apiKeys-light-390-form.png",
+        "screenshots/console-stats-light-390.png",
+        "screenshots/console-projectWork-light-390.png",
+        "screenshots/console-leaderboard-light-390.png",
+        "screenshots/console-docs-light-390.png",
+        "screenshots/console-balance-light-390.png",
+        "screenshots/console-settings-light-390.png",
+        "screenshots/console-auditLogs-light-390.png",
+        "screenshots/console-prompts-light-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-14.jpg",
+      "screenshots": [
+        "screenshots/console-sessions-light-390.png",
+        "screenshots/console-bloraAgent-light-390.png",
+        "screenshots/console-myUpstream-models-light-390.png",
+        "screenshots/console-myUpstream-providers-light-390.png",
+        "screenshots/console-docs-overview-light-390.png",
+        "screenshots/console-docs-chat-light-390.png",
+        "screenshots/console-docs-models-light-390.png",
+        "screenshots/console-docs-anthropic-light-390.png",
+        "screenshots/console-docs-user-api-light-390.png",
+        "screenshots/console-docs-conversations-light-390.png",
+        "screenshots/console-docs-errors-light-390.png",
+        "screenshots/console-bloraAgent-chat-light-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-15.jpg",
+      "screenshots": [
+        "screenshots/console-bloraAgent-imagine-light-390.png",
+        "screenshots/console-bloraAgent-manage-light-390.png",
+        "screenshots/console-dashboard-light-390.png",
+        "screenshots/console-dashboard-light-390-filter.png",
+        "screenshots/console-myProviders-light-390.png",
+        "screenshots/console-myTeamModels-light-390.png",
+        "screenshots/data-light-390.png",
+        "screenshots/feishu-bind-light-390.png",
+        "screenshots/index-light-390.png",
+        "screenshots/oauth-consent-light-390.png",
+        "screenshots/playground-light-390.png",
+        "screenshots/plugin-install-light-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-16.jpg",
+      "screenshots": [
+        "screenshots/purchase-light-390.png",
+        "screenshots/set-password-light-390.png",
+        "screenshots/set-password-light-390-filter.png",
+        "screenshots/setup-light-390.png",
+        "screenshots/showcase-light-390.png",
+        "screenshots/store-light-390.png",
+        "screenshots/admin-dark-390.png",
+        "screenshots/admin-adminStats-dark-390.png",
+        "screenshots/admin-adminUsers-dark-390.png",
+        "screenshots/admin-adminUsers-dark-390-filter.png",
+        "screenshots/admin-adminModels-dark-390.png",
+        "screenshots/admin-adminProviders-dark-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-17.jpg",
+      "screenshots": [
+        "screenshots/admin-adminSettings-dark-390.png",
+        "screenshots/admin-adminTeams-dark-390.png",
+        "screenshots/admin-adminErrorLogs-dark-390.png",
+        "screenshots/admin-adminAuditLogs-dark-390.png",
+        "screenshots/admin-adminPrompts-dark-390.png",
+        "screenshots/admin-adminPlugins-dark-390.png",
+        "screenshots/admin-adminTeams-1-dark-390.png",
+        "screenshots/admin-adminUserGroups-dark-390.png",
+        "screenshots/admin-adminUserGroups-1-dark-390.png",
+        "screenshots/admin-adminDashboard-dark-390.png",
+        "screenshots/console-dark-390.png",
+        "screenshots/console-dark-390-filter.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-18.jpg",
+      "screenshots": [
+        "screenshots/console-home-dark-390.png",
+        "screenshots/console-modelLibrary-dark-390.png",
+        "screenshots/console-modelLibrary-dark-390-filter.png",
+        "screenshots/console-myUpstream-dark-390.png",
+        "screenshots/console-apiKeys-dark-390.png",
+        "screenshots/console-apiKeys-dark-390-form.png",
+        "screenshots/console-stats-dark-390.png",
+        "screenshots/console-projectWork-dark-390.png",
+        "screenshots/console-leaderboard-dark-390.png",
+        "screenshots/console-docs-dark-390.png",
+        "screenshots/console-balance-dark-390.png",
+        "screenshots/console-settings-dark-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-19.jpg",
+      "screenshots": [
+        "screenshots/console-auditLogs-dark-390.png",
+        "screenshots/console-prompts-dark-390.png",
+        "screenshots/console-sessions-dark-390.png",
+        "screenshots/console-bloraAgent-dark-390.png",
+        "screenshots/console-myUpstream-models-dark-390.png",
+        "screenshots/console-myUpstream-providers-dark-390.png",
+        "screenshots/console-docs-overview-dark-390.png",
+        "screenshots/console-docs-chat-dark-390.png",
+        "screenshots/console-docs-models-dark-390.png",
+        "screenshots/console-docs-anthropic-dark-390.png",
+        "screenshots/console-docs-user-api-dark-390.png",
+        "screenshots/console-docs-conversations-dark-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-20.jpg",
+      "screenshots": [
+        "screenshots/console-docs-errors-dark-390.png",
+        "screenshots/console-bloraAgent-chat-dark-390.png",
+        "screenshots/console-bloraAgent-imagine-dark-390.png",
+        "screenshots/console-bloraAgent-manage-dark-390.png",
+        "screenshots/console-dashboard-dark-390.png",
+        "screenshots/console-dashboard-dark-390-filter.png",
+        "screenshots/console-myProviders-dark-390.png",
+        "screenshots/console-myTeamModels-dark-390.png",
+        "screenshots/data-dark-390.png",
+        "screenshots/feishu-bind-dark-390.png",
+        "screenshots/index-dark-390.png",
+        "screenshots/oauth-consent-dark-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/sheet-21.jpg",
+      "screenshots": [
+        "screenshots/playground-dark-390.png",
+        "screenshots/plugin-install-dark-390.png",
+        "screenshots/purchase-dark-390.png",
+        "screenshots/set-password-dark-390.png",
+        "screenshots/set-password-dark-390-filter.png",
+        "screenshots/setup-dark-390.png",
+        "screenshots/showcase-dark-390.png",
+        "screenshots/store-dark-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/supplemental-01.jpg",
+      "screenshots": [
+        "supplemental/screenshots/admin-adminErrorLogs-dark-1440-filter.png",
+        "supplemental/screenshots/admin-adminErrorLogs-dark-1440.png",
+        "supplemental/screenshots/admin-adminErrorLogs-dark-390-filter.png",
+        "supplemental/screenshots/admin-adminErrorLogs-dark-390.png",
+        "supplemental/screenshots/admin-adminErrorLogs-light-1440-filter.png",
+        "supplemental/screenshots/admin-adminErrorLogs-light-1440.png",
+        "supplemental/screenshots/admin-adminErrorLogs-light-390-filter.png",
+        "supplemental/screenshots/admin-adminErrorLogs-light-390.png",
+        "supplemental/screenshots/admin-adminProviders-dark-1440-danger.png",
+        "supplemental/screenshots/admin-adminProviders-dark-1440-filter.png",
+        "supplemental/screenshots/admin-adminProviders-dark-1440.png",
+        "supplemental/screenshots/admin-adminProviders-dark-390-danger.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/supplemental-02.jpg",
+      "screenshots": [
+        "supplemental/screenshots/admin-adminProviders-dark-390-filter.png",
+        "supplemental/screenshots/admin-adminProviders-dark-390.png",
+        "supplemental/screenshots/admin-adminProviders-light-1440-danger.png",
+        "supplemental/screenshots/admin-adminProviders-light-1440-filter.png",
+        "supplemental/screenshots/admin-adminProviders-light-1440.png",
+        "supplemental/screenshots/admin-adminProviders-light-390-danger.png",
+        "supplemental/screenshots/admin-adminProviders-light-390-filter.png",
+        "supplemental/screenshots/admin-adminProviders-light-390.png",
+        "supplemental/screenshots/admin-adminSettings-dark-1440-copy.png",
+        "supplemental/screenshots/admin-adminSettings-dark-1440.png",
+        "supplemental/screenshots/admin-adminSettings-dark-390-copy.png",
+        "supplemental/screenshots/admin-adminSettings-dark-390.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/supplemental-03.jpg",
+      "screenshots": [
+        "supplemental/screenshots/admin-adminSettings-light-1440-copy.png",
+        "supplemental/screenshots/admin-adminSettings-light-1440.png",
+        "supplemental/screenshots/admin-adminSettings-light-390-copy.png",
+        "supplemental/screenshots/admin-adminSettings-light-390.png",
+        "supplemental/screenshots/console-docs-chat-dark-1440.png",
+        "supplemental/screenshots/console-docs-chat-dark-390.png",
+        "supplemental/screenshots/console-docs-chat-light-1440.png",
+        "supplemental/screenshots/console-docs-chat-light-390.png",
+        "supplemental/screenshots/playground-dark-1440-danger.png",
+        "supplemental/screenshots/playground-dark-1440-send.png",
+        "supplemental/screenshots/playground-dark-1440.png",
+        "supplemental/screenshots/playground-dark-390-danger.png"
+      ],
+      "reviewed": true
+    },
+    {
+      "sheet": "contact-sheets/supplemental-04.jpg",
+      "screenshots": [
+        "supplemental/screenshots/playground-dark-390-send.png",
+        "supplemental/screenshots/playground-dark-390.png",
+        "supplemental/screenshots/playground-light-1440-danger.png",
+        "supplemental/screenshots/playground-light-1440-send.png",
+        "supplemental/screenshots/playground-light-1440.png",
+        "supplemental/screenshots/playground-light-390-danger.png",
+        "supplemental/screenshots/playground-light-390-send.png",
+        "supplemental/screenshots/playground-light-390.png",
+        "supplemental/screenshots/usage-dark-1440.png",
+        "supplemental/screenshots/usage-dark-390.png",
+        "supplemental/screenshots/usage-light-1440.png",
+        "supplemental/screenshots/usage-light-390.png"
+      ],
+      "reviewed": true
+    }
+  ],
+  "visualFindings": [
+    "API Key summaries render but cards are missing with demo keys lacking key_type.",
+    "Audit log pages display Cannot read properties of undefined (reading length).",
+    "Early adminPrompts/adminPlugins/adminUserGroups hashes fall back to statistics.",
+    "Mobile tables have local clipped/scroll regions; document-level overflow was not detected.",
+    "Some remote logos/icons are broken because outbound HTTPS was deliberately blocked.",
+    "Light-mobile provider danger click had no dialog; other three variants display the real danger dialog.",
+    "Supplemental Playground sends show the fixed demo response, not real inference.",
+    "usage page was additionally inspected in all four variants and shows API Key access dialog without supplied Key."
+  ]
+}

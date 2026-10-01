@@ -1,0 +1,9 @@
+
+> crewrouter@1.0.0 test:blora-navbar-runtime
+> node scripts/verify-blora-navbar-runtime.js
+
+index.html: official language/theme controls passed.
+setup.html: official language/theme controls passed.
+feishu-bind.html: official language/theme controls passed.
+set-password.html: official language/theme controls passed.
+Blora public controls runtime DOM smoke passed.

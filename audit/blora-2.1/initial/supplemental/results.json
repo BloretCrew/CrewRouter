@@ -1,0 +1,3155 @@
+{
+  "schema": "crewrouter.blora-2.1-browser/v1",
+  "packageVersion": "2.1.0",
+  "demo": true,
+  "generatedAt": "2026-10-01T04:10:35.462Z",
+  "summary": {
+    "observations": 24,
+    "realPages": 6,
+    "routes": 6,
+    "screenshots": 44,
+    "errors": 0,
+    "consoleErrorObservations": 12,
+    "overflowObservations": 0,
+    "concurrentSourceChanges": [
+      "public/js/app.js",
+      "public/js/admin.js",
+      "public/pages/console.html",
+      "public/pages/admin.html"
+    ],
+    "limitations": [
+      "Demo automatically authenticates an admin; no real login acceptance.",
+      "Demo writes may return success without persisting; no production API or upstream inference acceptance.",
+      "Outbound HTTPS is blocked to avoid external OAuth, payment, reporting and model calls.",
+      "Setup redirects because demo needsSetup=false; OAuth, binding and install pages lack live authorization parameters.",
+      "Viewport screenshots cover the visible page, not every offscreen row."
+    ]
+  },
+  "results": [
+    {
+      "route": "admin#adminProviders",
+      "width": 1440,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "logoutBtn",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "provider-danger-confirm",
+          "menu": true,
+          "danger": true,
+          "dialogs": [
+            {
+              "id": "blora-dialog-1790827795732-1",
+              "text": "\u63d0\u793a\u5220\u9664\u6807\u7b7e\u786e\u5b9a\u5220\u9664\u6b64\u6807\u7b7e\uff1f\u4f9b\u5e94\u5546\u4e0a\u5df2\u6709\u7684\u8be5\u6807\u7b7e\u4e5f\u4f1a\u88ab\u79fb\u9664\u3002\u53d6\u6d88\u5220\u9664"
+            }
+          ]
+        },
+        {
+          "type": "provider-danger-cancel",
+          "open": 0
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminProviders-light-1440.png",
+        "screenshots/admin-adminProviders-light-1440-danger.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminProviders",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n\u7ba1\u7406\u5458\n\u7528\u6237\u7ba1\u7406\nTeam \u7ba1\u7406\n\u6a21\u578b\u7ba1\u7406\n\u4f9b\u5e94\u5546\u7ba1\u7406\n\u7edf\u8ba1\u4fe1\u606f\n\u8c03\u7528\u9519\u8bef\n\u64cd\u4f5c\u65e5\u5fd7\n\u63d0\u793a\u8bcd\n\u63d2\u4ef6\u7ba1\u7406\n\u63d2\u4ef6\u5546\u5e97\n\u7cfb\u7edf\n\u7cfb\u7edf\u8bbe\u7f6e\n\u8fd4\u56de\u7528\u6237\u63a7\u5236\u53f0\nDemo User\n\u4f9b\u5e94\u5546\u7ba1\u7406\n \n\u4f9b\u5e94\u5546\u7ba1\u7406\n\n\u8fde\u63a5\u4e0a\u6e38 API\uff0c\u5bfc\u5165\u6a21\u578b\u540e\u5373\u53ef\u5728\u6a21\u578b\u7ba1\u7406\u4e2d\u542f\u7528\u3002\n\n0\n\u5168\u5c40\u4f9b\u5e94\u5546\n0\n\u7528\u6237\u4f9b\u5e94\u5546\n0\n\u5df2\u542f\u7528\n0\n\u811a\u672c\u6a21\u5f0f\n\u5bfc\u5165\u914d\u7f6e\n\u66f4\u591a\n\u6e05\u7406\u6240\u6709\u5df2\u4e0b\u67b6\u6a21\u578b\n\u6dfb\u52a0\u4f9b\u5e94\u5546\n\u51713\u4e2a\n\u25cf\n\u4e3b\u529b\n\u270e\n\u00d7\n\u25cf\n\u5907\u7528\n\u270e\n\u00d7\n+\n\u5168\u9009\u672c\u9875\n\u52fe\u9009\u540e\u53ef\u6279\u91cf\u540c\u6b65\u6a21\u578b\n\u5168\u5c40\u4f9b\u5e94\u5546 (\u672c\u9875 3)\nOpenAI\n\u542f\u7528\nhttps://api.openai.com/v1\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nChat Completions\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be\nAnthropic\n\u542f\u7528\nhttps://api.anthropic.com\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nAnthropic Messages\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be\nDeepSeek\n\u542f\u7528\nhttps://api.deepseek.com/v1\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nChat Completions\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be",
+        "activePages": [
+          "adminProviders",
+          "adminProvidersPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 25,
+        "bloraElements": 285
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827794866.655,
+              "url": "http://127.0.0.1:18471/api/plugins/runtime",
+              "networkRequestId": "35180.238"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/plugins/runtime",
+          "status": 404
+        }
+      ],
+      "networkFailures": [
+        {
+          "requestId": "35180.100",
+          "timestamp": 4541.02075,
+          "type": "Script",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.197",
+          "timestamp": 4541.094973,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.198",
+          "timestamp": 4541.09517,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.199",
+          "timestamp": 4541.095195,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.200",
+          "timestamp": 4541.095222,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.201",
+          "timestamp": 4541.095242,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.202",
+          "timestamp": 4541.095259,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.203",
+          "timestamp": 4541.095287,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.204",
+          "timestamp": 4541.095312,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.205",
+          "timestamp": 4541.095341,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.206",
+          "timestamp": 4541.095369,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.207",
+          "timestamp": 4541.095392,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.208",
+          "timestamp": 4541.095418,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.209",
+          "timestamp": 4541.09544,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.210",
+          "timestamp": 4541.095455,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.211",
+          "timestamp": 4541.095474,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.212",
+          "timestamp": 4541.09549,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.213",
+          "timestamp": 4541.095511,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.214",
+          "timestamp": 4541.095529,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.215",
+          "timestamp": 4541.095542,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.216",
+          "timestamp": 4541.095557,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.217",
+          "timestamp": 4541.095574,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.218",
+          "timestamp": 4541.095593,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.219",
+          "timestamp": 4541.095614,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.220",
+          "timestamp": 4541.095628,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.221",
+          "timestamp": 4541.117789,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.222",
+          "timestamp": 4541.118059,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.223",
+          "timestamp": 4541.118102,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.224",
+          "timestamp": 4541.118126,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.245",
+          "timestamp": 4543.386293,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.246",
+          "timestamp": 4543.38637,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.247",
+          "timestamp": 4543.386393,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.248",
+          "timestamp": 4543.386415,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.249",
+          "timestamp": 4543.387326,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.250",
+          "timestamp": 4543.387401,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.251",
+          "timestamp": 4543.387446,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.252",
+          "timestamp": 4543.387471,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "admin#adminSettings",
+      "width": 1440,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "logoutBtn",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "actual-copy",
+          "button": {
+            "id": "feishuCopyRedirectBtn",
+            "text": "\u590d\u5236"
+          },
+          "clipboardLength": 40,
+          "clipboardRead": true
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminSettings-light-1440.png",
+        "screenshots/admin-adminSettings-light-1440-copy.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminSettings",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n\u7ba1\u7406\u5458\n\u7528\u6237\u7ba1\u7406\nTeam \u7ba1\u7406\n\u6a21\u578b\u7ba1\u7406\n\u4f9b\u5e94\u5546\u7ba1\u7406\n\u7edf\u8ba1\u4fe1\u606f\n\u8c03\u7528\u9519\u8bef\n\u64cd\u4f5c\u65e5\u5fd7\n\u63d0\u793a\u8bcd\n\u63d2\u4ef6\u7ba1\u7406\n\u63d2\u4ef6\u5546\u5e97\n\u7cfb\u7edf\n\u7cfb\u7edf\u8bbe\u7f6e\n\u8fd4\u56de\u7528\u6237\u63a7\u5236\u53f0\nDemo User\n\u7cfb\u7edf\u8bbe\u7f6e\n \nCrewRouter\n-\nWebsite\nGithub\nCrewRouterHelper\nQQ Discuss\n\n\u9009\u62e9\u4e00\u4e2a\u7c7b\u522b\u4ee5\u7ba1\u7406\u76f8\u5173\u8bbe\u7f6e\n\n\u5e38\u89c4\n\u7cfb\u7edf\u540d\u79f0\u3001\u79ef\u5206\u4e0e\u6a21\u578b\u5217\u8868\n\u5916\u89c2\n\u9ed8\u8ba4\u4e3b\u9898\u4e0e\u754c\u9762\u5916\u89c2\n\u7248\u672c\u4e0e\u66f4\u65b0\n\u68c0\u67e5\u7248\u672c\u4e0e\u4e00\u952e\u66f4\u65b0\n\u6570\u636e\u4fdd\u7559\n\u538b\u7f29\u3001\u6e05\u7406\u4e0e\u805a\u5408\u7b56\u7565\n\u767b\u5f55\u4e0e\u8ba4\u8bc1\n\u98de\u4e66\u767b\u5f55\u4e0e\u9080\u8bf7\u94fe\u63a5\n\u7f51\u7edc\n\u4ee3\u7406\u5730\u5740\u4e0e\u4ee3\u7406\u6c60",
+        "activePages": [
+          "adminSettings",
+          "adminSettingsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 8,
+        "bloraElements": 285
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827797074.915,
+              "url": "http://127.0.0.1:18471/api/auth-invites",
+              "networkRequestId": "35180.258"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/auth-invites",
+          "status": 404
+        }
+      ],
+      "networkFailures": [
+        {
+          "requestId": "35180.260",
+          "timestamp": 4544.768429,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.261",
+          "timestamp": 4544.768607,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.262",
+          "timestamp": 4544.768649,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.263",
+          "timestamp": 4544.768679,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.264",
+          "timestamp": 4544.769923,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.265",
+          "timestamp": 4544.769989,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.266",
+          "timestamp": 4544.770061,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.267",
+          "timestamp": 4544.770115,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "admin#adminErrorLogs",
+      "width": 1440,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "logoutBtn",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "filter",
+          "id": "errorLogUserFilter",
+          "before": "",
+          "result": {
+            "value": "",
+            "text": "\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t200ms\t\u8be6\u60c5\n2026/9/30 16:51:13\tDemo User\tGPT-4.1\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t173ms\t\u8be6\u60c5\n2026/9/30 13:31:25\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t324ms\t\u8be6\u60c5\n2026/9/30 15:46:56\tBob Wang\tDeepSeek V3\u91cd\u8bd5\tDeepSeek\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t439ms\t\u8be6\u60c5\n2026/9/30 04:31:00\tDemo User\tDeepSeek R1\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t340ms\t\u8be6\u60c5\n2026/9/30 19:57:31\tAlice Zhang\to4-mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t164ms\t\u8be6\u60c5\n2026/9/30 09:24:26\tBob Wang\tGPT-4.1 Mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t410ms\t\u8be6\u60c5\n\u4e0a\u4e00\u9875\n\u7b2c1 / 1\u9875\n\u4e0b\u4e00\u9875"
+          }
+        },
+        {
+          "type": "actual-pagination",
+          "blocked": "No enabled next-page control in demo data"
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminErrorLogs-light-1440.png",
+        "screenshots/admin-adminErrorLogs-light-1440-filter.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminErrorLogs",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n\u7ba1\u7406\u5458\n\u7528\u6237\u7ba1\u7406\nTeam \u7ba1\u7406\n\u6a21\u578b\u7ba1\u7406\n\u4f9b\u5e94\u5546\u7ba1\u7406\n\u7edf\u8ba1\u4fe1\u606f\n\u8c03\u7528\u9519\u8bef\n\u64cd\u4f5c\u65e5\u5fd7\n\u63d0\u793a\u8bcd\n\u63d2\u4ef6\u7ba1\u7406\n\u63d2\u4ef6\u5546\u5e97\n\u7cfb\u7edf\n\u7cfb\u7edf\u8bbe\u7f6e\n\u8fd4\u56de\u7528\u6237\u63a7\u5236\u53f0\nDemo User\n\u8c03\u7528\u9519\u8bef\n \n\u8c03\u7528\u9519\u8bef\u8bb0\u5f55\n\n\u67e5\u770b\u8fd1\u671f API \u8c03\u7528\u5931\u8d25\u8bb0\u5f55\uff0c\u4fbf\u4e8e\u6392\u67e5\u4e0a\u6e38\u6545\u969c\u4e0e\u7528\u6237\u95ee\u9898\n\n\u5237\u65b0\n\u4ec5\u6700\u7ec8\u9519\u8bef\n\u67e5\u8be2\n\u6e05\u9664\n\u517112\u6761\u8bb0\u5f55\n\n\u9ed8\u8ba4\u4fdd\u7559\u8fd114\u5929\u7684\u9519\u8bef\u8bb0\u5f55\uff0c\u4e2d\u95f4\u5931\u8d25\uff08\u961f\u5217\u56de\u9000\uff09\u4e0e\u6700\u7ec8\u8fd4\u56de\u5ba2\u6237\u7aef\u7684\u9519\u8bef\u5747\u53ef\u7b5b\u9009\u3002\n\n\u65f6\u95f4\t\u7528\u6237\t\u6a21\u578b\t\u4f9b\u5e94\u5546\t\u72b6\u6001\u7801\t\u7c7b\u578b\t\u9519\u8bef\u4fe1\u606f\t\u5ef6\u8fdf\t\n2026/10/1 12:09:57\tDemo User\tGPT-4.1\u91cd\u8bd5\tOpenAI\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t433ms\t\u8be6\u60c5\n2026/10/1 08:59:47\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t243ms\t\u8be6\u60c5\n2026/10/1 06:02:41\tBob Wang\tDeepSeek V3\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t368ms\t\u8be6\u60c5\n2026/10/1 07:30:33\tDemo User\tDeepSeek R1\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t547ms\t\u8be6\u60c5\n2026/10/1 01:47:30\tAlice Zhang\to4-mini\u91cd\u8bd5\tOpenAI\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t436ms\t\u8be6\u60c5\n2026/10/1 00:03:18\tBob Wang\tGPT-4.1 Mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t200ms\t\u8be6\u60c5\n2026/9/30 16:51:13\tDemo User\tGPT-4.1\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t173ms\t\u8be6\u60c5\n2026/9/30 13:31:25\tAlice Zhang",
+        "activePages": [
+          "adminErrorLogs",
+          "adminErrorLogsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 27,
+        "bloraElements": 285
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": [
+        {
+          "requestId": "35180.271",
+          "timestamp": 4546.17072,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.272",
+          "timestamp": 4546.170812,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.273",
+          "timestamp": 4546.17086,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.274",
+          "timestamp": 4546.170888,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.275",
+          "timestamp": 4546.171936,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.276",
+          "timestamp": 4546.172011,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.277",
+          "timestamp": 4546.172047,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.278",
+          "timestamp": 4546.172073,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "console#docs/chat",
+      "width": 1440,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "logoutBtn",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/console-docs-chat-light-1440.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/console#docs/chat",
+        "title": "\u63a7\u5236\u53f0 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n\u6a21\u578b\u5e93\n\u6211\u7684\u4e0a\u6e38\nAPI Key\u4e0e\u7528\u91cf\n\u7edf\u8ba1\u4fe1\u606f\n\u9879\u76ee\u5de5\u4f5c\n\u6392\u884c\u699c\n\u63a5\u53e3\u6587\u6863\n\u79ef\u5206\n\u64cd\u4f5c\u65e5\u5fd7\n\u63d0\u793a\u8bcd\n\u4f1a\u8bdd\nBlora Agent\n\u8bbe\u7f6e\n\u7528\u6237\u8bbe\u7f6e\n\u7ba1\u7406\u540e\u53f0\nDemo User\n\u63a5\u53e3\u6587\u6863\n\u6982\u89c8\u4e0e\u8ba4\u8bc1\n\u804a\u5929\u8865\u5168\n\u6a21\u578b\u5217\u8868\nAnthropic \u517c\u5bb9\n\u7528\u6237\u63a5\u53e3\n\u5bf9\u8bdd\u7ba1\u7406\n\u9519\u8bef\u7801\n\u270e \u7f16\u8f91\u6587\u6863\n\u804a\u5929\u8865\u5168 (Chat Completions)\nPOST\n/v1/chat/completions\n\n\u5b8c\u5168\u517c\u5bb9 OpenAI SDK \u548c API \u683c\u5f0f\u3002\n\n\u8bf7\u6c42\u53c2\u6570\n\u53c2\u6570\t\u7c7b\u578b\t\u5fc5\u586b\t\u8bf4\u660e\nmodel\tstring\t\u662f\t\u6a21\u578b ID\nmessages\tarray\t\u662f\t\u6d88\u606f\u6570\u7ec4\nstream\tboolean\t\u5426\t\u662f\u5426\u6d41\u5f0f\u8f93\u51fa\uff08\u9ed8\u8ba4 false\uff09\ntemperature\tnumber\t\u5426\t\u6e29\u5ea6\u53c2\u6570\uff080-2\uff09\nmax_tokens\tinteger\t\u5426\t\u6700\u5927\u751f\u6210 token \u6570\nthinking\tboolean\t\u5426\tDeepSeek \u601d\u8003\u6a21\u578b\u662f\u5426\u542f\u7528\u601d\u8003\uff08\u9ed8\u8ba4 true\uff09\n\u975e\u6d41\u5f0f\u8bf7\u6c42\u793a\u4f8b\ncurl -X POST https://studio.crantai.com/v1/chat/completions \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer sk-xxx\" \\\n  -d '{\n    \"model\": \"gpt-4o\",\n    \"messages\": [\n      {\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},\n      {\"role\": \"user\", \"content\": \"Hello!\"}\n    ],\n    \"temperature\": 0.7,\n    \"max_tokens\": 1000\n  }'\n\u6d41\u5f0f\u8f93\u51fa (SSE)\n\n\u8bbe\u7f6e\"stream\": true\uff0c\u670d\u52a1\u7aef\u8fd4\u56de Server-Sent Events\uff1a\n\ndata: {\"choices\":[{\"delta\":{\"c",
+        "activePages": [
+          "docs",
+          "docsPage",
+          "doc-chat"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 2,
+        "bloraElements": 273
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827799887.687,
+              "url": "http://127.0.0.1:18471/api/plugins/runtime",
+              "networkRequestId": "35180.507"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/plugins/runtime",
+          "status": 404
+        }
+      ],
+      "networkFailures": [
+        {
+          "requestId": "35180.475",
+          "timestamp": 4546.728716,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.476",
+          "timestamp": 4546.729287,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.478",
+          "timestamp": 4546.805938,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.479",
+          "timestamp": 4546.806068,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.480",
+          "timestamp": 4546.806107,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.481",
+          "timestamp": 4546.876393,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.482",
+          "timestamp": 4546.876528,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.483",
+          "timestamp": 4546.876567,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.484",
+          "timestamp": 4546.876604,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.485",
+          "timestamp": 4546.876642,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.486",
+          "timestamp": 4546.876674,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.487",
+          "timestamp": 4546.876699,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.488",
+          "timestamp": 4546.876732,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.489",
+          "timestamp": 4546.876769,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.490",
+          "timestamp": 4546.876816,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.491",
+          "timestamp": 4546.876846,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.492",
+          "timestamp": 4546.876872,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.493",
+          "timestamp": 4546.877158,
+          "type": "Script",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "playground",
+      "width": 1440,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BLORA-SELECT",
+            "id": "langToggle",
+            "outline": "none"
+          }
+        },
+        {
+          "type": "playground-demo-send",
+          "text": "\u8fd4\u56de\u63a7\u5236\u53f0\n\u5bf9\u8bdd\u5386\u53f2\n\u65b0\u5bf9\u8bdd\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:06\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\n\u5206\u6790 CrewRouter \u67b6\u6784\n10\u67081\u65e511:00\n\u4f18\u5316\u63d2\u4ef6\u5546\u5e97\u4f53\u9a8c\n10\u67081\u65e510:00\nDEMO USER\n\nBrowser demo acceptance\n\nAI\nGPT-4.1\n\u601d\u8003\u8fc7\u7a0b\n\u5df2\u5b8c\u6210\n\n\u8fd9\u662f\u6f14\u793a\u6a21\u5f0f\u7684\u56fa\u5b9a\u56de\u590d\u3002\u4f60\u53ef\u4ee5\u7ee7\u7eed\u4f53\u9a8c\u6d88\u606f\u53d1\u9001\u3001\u6d41\u5f0f\u663e\u793a\u3001\u601d\u8003\u8fc7\u7a0b\u548c\u7528\u91cf\u7edf\u8ba1\u3002\n\nGPT-4.1\u00b7 AI \u4e5f\u53ef\u80fd\u72af\u9519\uff0c\u8bf7\u6838\u5b9e\u91cd\u8981\u4fe1\u606f\u3002\n\u6e05\u7a7a\u5bf9\u8bdd\n9999\u79ef\u5206\n\u6a21\u578b\n\u7cfb\u7edf\u63d0\u793a\u8bcd\nTemperature: 1.0\n1\nMax Tokens\n\u601d\u8003\u6a21\u5f0f\n\u4e0d\u652f\u6301\n\u4f59\u989d\n\u00a50.00\n\u672c\u6b21\u6d88\u8017\n0.0000\u79ef\u5206\nTokens\n50\n\u5386\u53f2\u8bb0\u5f55"
+        },
+        {
+          "type": "conversation-danger-confirm",
+          "clicked": false,
+          "dialogs": []
+        },
+        {
+          "type": "conversation-danger-cancel",
+          "open": 0
+        }
+      ],
+      "screenshots": [
+        "screenshots/playground-light-1440.png",
+        "screenshots/playground-light-1440-send.png",
+        "screenshots/playground-light-1440-danger.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/playground",
+        "title": "Playground - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "\u8fd4\u56de\u63a7\u5236\u53f0\n\u5bf9\u8bdd\u5386\u53f2\n\u65b0\u5bf9\u8bdd\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:06\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\n\u5206\u6790 CrewRouter \u67b6\u6784\n10\u67081\u65e511:00\n\u4f18\u5316\u63d2\u4ef6\u5546\u5e97\u4f53\u9a8c\n10\u67081\u65e510:00\nCrant AI Playground\n\n\u9009\u62e9\u6a21\u578b\uff0c\u5f00\u59cb\u5bf9\u8bdd\u3002\u6309 Enter \u53d1\u9001\uff0cShift+Enter \u6362\u884c\u3002\n\n\u6e05\u7a7a\u5bf9\u8bdd\n9999\u79ef\u5206\n\u6a21\u578b\n\u7cfb\u7edf\u63d0\u793a\u8bcd\nTemperature: 1.0\n1\nMax Tokens\n\u601d\u8003\u6a21\u5f0f\n\u4e0d\u652f\u6301\n\u4f59\u989d\n\u00a50.00\n\u672c\u6b21\u6d88\u8017\n\u00a50.00\nTokens\n0\n\u5386\u53f2\u8bb0\u5f55",
+        "activePages": [],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 9,
+        "bloraElements": 23
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "usage",
+      "width": 1440,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "A",
+            "id": "",
+            "outline": "solid"
+          }
+        }
+      ],
+      "screenshots": [
+        "screenshots/usage-light-1440.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/usage",
+        "title": "\u5bc6\u94a5\u7528\u91cf\u8be6\u60c5",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "\u8fd4\u56de API Key \u4e0e\u7528\u91cf\n\u8bed\u8a00 \n\nAPI Key \u4e0e\u7528\u91cf\n\n\u5bc6\u94a5\u7528\u91cf\u8be6\u60c5\nTEAM\n\u65e0\u6548\u7684 API Key",
+        "activePages": [],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 0,
+        "bloraElements": 4
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminProviders",
+      "width": 1440,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "logoutBtn",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "provider-danger-confirm",
+          "menu": true,
+          "danger": true,
+          "dialogs": [
+            {
+              "id": "blora-dialog-1790827805061-1",
+              "text": "\u63d0\u793a\u5220\u9664\u6807\u7b7e\u786e\u5b9a\u5220\u9664\u6b64\u6807\u7b7e\uff1f\u4f9b\u5e94\u5546\u4e0a\u5df2\u6709\u7684\u8be5\u6807\u7b7e\u4e5f\u4f1a\u88ab\u79fb\u9664\u3002\u53d6\u6d88\u5220\u9664"
+            }
+          ]
+        },
+        {
+          "type": "provider-danger-cancel",
+          "open": 0
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminProviders-dark-1440.png",
+        "screenshots/admin-adminProviders-dark-1440-danger.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminProviders",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "CrewRouter TEAM\n\u7ba1\u7406\u5458\n\u7528\u6237\u7ba1\u7406\nTeam \u7ba1\u7406\n\u6a21\u578b\u7ba1\u7406\n\u4f9b\u5e94\u5546\u7ba1\u7406\n\u7edf\u8ba1\u4fe1\u606f\n\u8c03\u7528\u9519\u8bef\n\u64cd\u4f5c\u65e5\u5fd7\n\u63d0\u793a\u8bcd\n\u63d2\u4ef6\u7ba1\u7406\n\u63d2\u4ef6\u5546\u5e97\n\u7cfb\u7edf\n\u7cfb\u7edf\u8bbe\u7f6e\n\u8fd4\u56de\u7528\u6237\u63a7\u5236\u53f0\nDemo User\n\u4f9b\u5e94\u5546\u7ba1\u7406\n \n\u4f9b\u5e94\u5546\u7ba1\u7406\n\n\u8fde\u63a5\u4e0a\u6e38 API\uff0c\u5bfc\u5165\u6a21\u578b\u540e\u5373\u53ef\u5728\u6a21\u578b\u7ba1\u7406\u4e2d\u542f\u7528\u3002\n\n0\n\u5168\u5c40\u4f9b\u5e94\u5546\n0\n\u7528\u6237\u4f9b\u5e94\u5546\n0\n\u5df2\u542f\u7528\n0\n\u811a\u672c\u6a21\u5f0f\n\u5bfc\u5165\u914d\u7f6e\n\u66f4\u591a\n\u6e05\u7406\u6240\u6709\u5df2\u4e0b\u67b6\u6a21\u578b\n\u6dfb\u52a0\u4f9b\u5e94\u5546\n\u51713\u4e2a\n\u25cf\n\u4e3b\u529b\n\u270e\n\u00d7\n\u25cf\n\u5907\u7528\n\u270e\n\u00d7\n+\n\u5168\u9009\u672c\u9875\n\u52fe\u9009\u540e\u53ef\u6279\u91cf\u540c\u6b65\u6a21\u578b\n\u5168\u5c40\u4f9b\u5e94\u5546 (\u672c\u9875 3)\nOpenAI\n\u542f\u7528\nhttps://api.openai.com/v1\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nChat Completions\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be\nAnthropic\n\u542f\u7528\nhttps://api.anthropic.com\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nAnthropic Messages\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be\nDeepSeek\n\u542f\u7528\nhttps://api.deepseek.com/v1\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nChat Completions\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be",
+        "activePages": [
+          "adminProviders",
+          "adminProvidersPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 25,
+        "bloraElements": 285
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827804252.473,
+              "url": "http://127.0.0.1:18471/api/plugins/runtime",
+              "networkRequestId": "35180.1002"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/plugins/runtime",
+          "status": 404
+        }
+      ],
+      "networkFailures": [
+        {
+          "requestId": "35180.888",
+          "timestamp": 4550.798658,
+          "type": "Script",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.985",
+          "timestamp": 4550.910527,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.986",
+          "timestamp": 4550.910639,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.989",
+          "timestamp": 4550.931411,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.990",
+          "timestamp": 4550.931513,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.991",
+          "timestamp": 4550.931546,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "admin#adminSettings",
+      "width": 1440,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "logoutBtn",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "actual-copy",
+          "button": {
+            "id": "feishuCopyRedirectBtn",
+            "text": "\u590d\u5236"
+          },
+          "clipboardLength": 40,
+          "clipboardRead": true
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminSettings-dark-1440.png",
+        "screenshots/admin-adminSettings-dark-1440-copy.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminSettings",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "CrewRouter TEAM\n\u7ba1\u7406\u5458\n\u7528\u6237\u7ba1\u7406\nTeam \u7ba1\u7406\n\u6a21\u578b\u7ba1\u7406\n\u4f9b\u5e94\u5546\u7ba1\u7406\n\u7edf\u8ba1\u4fe1\u606f\n\u8c03\u7528\u9519\u8bef\n\u64cd\u4f5c\u65e5\u5fd7\n\u63d0\u793a\u8bcd\n\u63d2\u4ef6\u7ba1\u7406\n\u63d2\u4ef6\u5546\u5e97\n\u7cfb\u7edf\n\u7cfb\u7edf\u8bbe\u7f6e\n\u8fd4\u56de\u7528\u6237\u63a7\u5236\u53f0\nDemo User\n\u7cfb\u7edf\u8bbe\u7f6e\n \nCrewRouter\n-\nWebsite\nGithub\nCrewRouterHelper\nQQ Discuss\n\n\u9009\u62e9\u4e00\u4e2a\u7c7b\u522b\u4ee5\u7ba1\u7406\u76f8\u5173\u8bbe\u7f6e\n\n\u5e38\u89c4\n\u7cfb\u7edf\u540d\u79f0\u3001\u79ef\u5206\u4e0e\u6a21\u578b\u5217\u8868\n\u5916\u89c2\n\u9ed8\u8ba4\u4e3b\u9898\u4e0e\u754c\u9762\u5916\u89c2\n\u7248\u672c\u4e0e\u66f4\u65b0\n\u68c0\u67e5\u7248\u672c\u4e0e\u4e00\u952e\u66f4\u65b0\n\u6570\u636e\u4fdd\u7559\n\u538b\u7f29\u3001\u6e05\u7406\u4e0e\u805a\u5408\u7b56\u7565\n\u767b\u5f55\u4e0e\u8ba4\u8bc1\n\u98de\u4e66\u767b\u5f55\u4e0e\u9080\u8bf7\u94fe\u63a5\n\u7f51\u7edc\n\u4ee3\u7406\u5730\u5740\u4e0e\u4ee3\u7406\u6c60",
+        "activePages": [
+          "adminSettings",
+          "adminSettingsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 8,
+        "bloraElements": 285
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827806370.57,
+              "url": "http://127.0.0.1:18471/api/auth-invites",
+              "networkRequestId": "35180.1014"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/auth-invites",
+          "status": 404
+        }
+      ],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminErrorLogs",
+      "width": 1440,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "logoutBtn",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "filter",
+          "id": "errorLogUserFilter",
+          "before": "",
+          "result": {
+            "value": "",
+            "text": "\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t200ms\t\u8be6\u60c5\n2026/9/30 16:51:22\tDemo User\tGPT-4.1\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t173ms\t\u8be6\u60c5\n2026/9/30 13:31:34\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t324ms\t\u8be6\u60c5\n2026/9/30 15:47:05\tBob Wang\tDeepSeek V3\u91cd\u8bd5\tDeepSeek\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t439ms\t\u8be6\u60c5\n2026/9/30 04:31:09\tDemo User\tDeepSeek R1\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t340ms\t\u8be6\u60c5\n2026/9/30 19:57:40\tAlice Zhang\to4-mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t164ms\t\u8be6\u60c5\n2026/9/30 09:24:35\tBob Wang\tGPT-4.1 Mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t410ms\t\u8be6\u60c5\n\u4e0a\u4e00\u9875\n\u7b2c1 / 1\u9875\n\u4e0b\u4e00\u9875"
+          }
+        },
+        {
+          "type": "actual-pagination",
+          "blocked": "No enabled next-page control in demo data"
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminErrorLogs-dark-1440.png",
+        "screenshots/admin-adminErrorLogs-dark-1440-filter.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminErrorLogs",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "CrewRouter TEAM\n\u7ba1\u7406\u5458\n\u7528\u6237\u7ba1\u7406\nTeam \u7ba1\u7406\n\u6a21\u578b\u7ba1\u7406\n\u4f9b\u5e94\u5546\u7ba1\u7406\n\u7edf\u8ba1\u4fe1\u606f\n\u8c03\u7528\u9519\u8bef\n\u64cd\u4f5c\u65e5\u5fd7\n\u63d0\u793a\u8bcd\n\u63d2\u4ef6\u7ba1\u7406\n\u63d2\u4ef6\u5546\u5e97\n\u7cfb\u7edf\n\u7cfb\u7edf\u8bbe\u7f6e\n\u8fd4\u56de\u7528\u6237\u63a7\u5236\u53f0\nDemo User\n\u8c03\u7528\u9519\u8bef\n \n\u8c03\u7528\u9519\u8bef\u8bb0\u5f55\n\n\u67e5\u770b\u8fd1\u671f API \u8c03\u7528\u5931\u8d25\u8bb0\u5f55\uff0c\u4fbf\u4e8e\u6392\u67e5\u4e0a\u6e38\u6545\u969c\u4e0e\u7528\u6237\u95ee\u9898\n\n\u5237\u65b0\n\u4ec5\u6700\u7ec8\u9519\u8bef\n\u67e5\u8be2\n\u6e05\u9664\n\u517112\u6761\u8bb0\u5f55\n\n\u9ed8\u8ba4\u4fdd\u7559\u8fd114\u5929\u7684\u9519\u8bef\u8bb0\u5f55\uff0c\u4e2d\u95f4\u5931\u8d25\uff08\u961f\u5217\u56de\u9000\uff09\u4e0e\u6700\u7ec8\u8fd4\u56de\u5ba2\u6237\u7aef\u7684\u9519\u8bef\u5747\u53ef\u7b5b\u9009\u3002\n\n\u65f6\u95f4\t\u7528\u6237\t\u6a21\u578b\t\u4f9b\u5e94\u5546\t\u72b6\u6001\u7801\t\u7c7b\u578b\t\u9519\u8bef\u4fe1\u606f\t\u5ef6\u8fdf\t\n2026/10/1 12:10:07\tDemo User\tGPT-4.1\u91cd\u8bd5\tOpenAI\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t433ms\t\u8be6\u60c5\n2026/10/1 08:59:56\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t243ms\t\u8be6\u60c5\n2026/10/1 06:02:50\tBob Wang\tDeepSeek V3\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t368ms\t\u8be6\u60c5\n2026/10/1 07:30:43\tDemo User\tDeepSeek R1\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t547ms\t\u8be6\u60c5\n2026/10/1 01:47:39\tAlice Zhang\to4-mini\u91cd\u8bd5\tOpenAI\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t436ms\t\u8be6\u60c5\n2026/10/1 00:03:28\tBob Wang\tGPT-4.1 Mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t200ms\t\u8be6\u60c5\n2026/9/30 16:51:22\tDemo User\tGPT-4.1\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t173ms\t\u8be6\u60c5\n2026/9/30 13:31:34\tAlice Zhang",
+        "activePages": [
+          "adminErrorLogs",
+          "adminErrorLogsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 27,
+        "bloraElements": 285
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console#docs/chat",
+      "width": 1440,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "logoutBtn",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/console-docs-chat-dark-1440.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/console#docs/chat",
+        "title": "\u63a7\u5236\u53f0 - CrewRouter",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "CrewRouter TEAM\n\u6a21\u578b\u5e93\n\u6211\u7684\u4e0a\u6e38\nAPI Key\u4e0e\u7528\u91cf\n\u7edf\u8ba1\u4fe1\u606f\n\u9879\u76ee\u5de5\u4f5c\n\u6392\u884c\u699c\n\u63a5\u53e3\u6587\u6863\n\u79ef\u5206\n\u64cd\u4f5c\u65e5\u5fd7\n\u63d0\u793a\u8bcd\n\u4f1a\u8bdd\nBlora Agent\n\u8bbe\u7f6e\n\u7528\u6237\u8bbe\u7f6e\n\u7ba1\u7406\u540e\u53f0\nDemo User\n\u63a5\u53e3\u6587\u6863\n\u6982\u89c8\u4e0e\u8ba4\u8bc1\n\u804a\u5929\u8865\u5168\n\u6a21\u578b\u5217\u8868\nAnthropic \u517c\u5bb9\n\u7528\u6237\u63a5\u53e3\n\u5bf9\u8bdd\u7ba1\u7406\n\u9519\u8bef\u7801\n\u270e \u7f16\u8f91\u6587\u6863\n\u804a\u5929\u8865\u5168 (Chat Completions)\nPOST\n/v1/chat/completions\n\n\u5b8c\u5168\u517c\u5bb9 OpenAI SDK \u548c API \u683c\u5f0f\u3002\n\n\u8bf7\u6c42\u53c2\u6570\n\u53c2\u6570\t\u7c7b\u578b\t\u5fc5\u586b\t\u8bf4\u660e\nmodel\tstring\t\u662f\t\u6a21\u578b ID\nmessages\tarray\t\u662f\t\u6d88\u606f\u6570\u7ec4\nstream\tboolean\t\u5426\t\u662f\u5426\u6d41\u5f0f\u8f93\u51fa\uff08\u9ed8\u8ba4 false\uff09\ntemperature\tnumber\t\u5426\t\u6e29\u5ea6\u53c2\u6570\uff080-2\uff09\nmax_tokens\tinteger\t\u5426\t\u6700\u5927\u751f\u6210 token \u6570\nthinking\tboolean\t\u5426\tDeepSeek \u601d\u8003\u6a21\u578b\u662f\u5426\u542f\u7528\u601d\u8003\uff08\u9ed8\u8ba4 true\uff09\n\u975e\u6d41\u5f0f\u8bf7\u6c42\u793a\u4f8b\ncurl -X POST https://studio.crantai.com/v1/chat/completions \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer sk-xxx\" \\\n  -d '{\n    \"model\": \"gpt-4o\",\n    \"messages\": [\n      {\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},\n      {\"role\": \"user\", \"content\": \"Hello!\"}\n    ],\n    \"temperature\": 0.7,\n    \"max_tokens\": 1000\n  }'\n\u6d41\u5f0f\u8f93\u51fa (SSE)\n\n\u8bbe\u7f6e\"stream\": true\uff0c\u670d\u52a1\u7aef\u8fd4\u56de Server-Sent Events\uff1a\n\ndata: {\"choices\":[{\"delta\":{\"c",
+        "activePages": [
+          "docs",
+          "docsPage",
+          "doc-chat"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 2,
+        "bloraElements": 273
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827809107.748,
+              "url": "http://127.0.0.1:18471/api/plugins/runtime",
+              "networkRequestId": "35180.1247"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/plugins/runtime",
+          "status": 404
+        }
+      ],
+      "networkFailures": [
+        {
+          "requestId": "35180.1213",
+          "timestamp": 4556.059951,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1214",
+          "timestamp": 4556.060606,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1217",
+          "timestamp": 4556.094315,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1218",
+          "timestamp": 4556.094416,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1219",
+          "timestamp": 4556.094494,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1220",
+          "timestamp": 4556.094552,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1221",
+          "timestamp": 4556.094574,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1222",
+          "timestamp": 4556.094593,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1223",
+          "timestamp": 4556.094611,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1224",
+          "timestamp": 4556.09463,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1225",
+          "timestamp": 4556.094652,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1226",
+          "timestamp": 4556.094688,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1227",
+          "timestamp": 4556.094707,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1228",
+          "timestamp": 4556.094728,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1229",
+          "timestamp": 4556.094748,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1230",
+          "timestamp": 4556.094786,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1231",
+          "timestamp": 4556.094811,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1232",
+          "timestamp": 4556.095246,
+          "type": "Script",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "playground",
+      "width": 1440,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BLORA-SELECT",
+            "id": "langToggle",
+            "outline": "none"
+          }
+        },
+        {
+          "type": "playground-demo-send",
+          "text": "nce\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:06\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\n\u5206\u6790 CrewRouter \u67b6\u6784\n10\u67081\u65e511:00\n\u4f18\u5316\u63d2\u4ef6\u5546\u5e97\u4f53\u9a8c\n10\u67081\u65e510:00\nDEMO USER\n\nBrowser demo acceptance\n\nAI\nGPT-4.1\n\u601d\u8003\u8fc7\u7a0b\n\u5df2\u5b8c\u6210\n\n\u8fd9\u662f\u6f14\u793a\u6a21\u5f0f\u7684\u56fa\u5b9a\u56de\u590d\u3002\u4f60\u53ef\u4ee5\u7ee7\u7eed\u4f53\u9a8c\u6d88\u606f\u53d1\u9001\u3001\u6d41\u5f0f\u663e\u793a\u3001\u601d\u8003\u8fc7\u7a0b\u548c\u7528\u91cf\u7edf\u8ba1\u3002\n\nGPT-4.1\u00b7 AI \u4e5f\u53ef\u80fd\u72af\u9519\uff0c\u8bf7\u6838\u5b9e\u91cd\u8981\u4fe1\u606f\u3002\n\u6e05\u7a7a\u5bf9\u8bdd\n9999\u79ef\u5206\n\u6a21\u578b\n\u7cfb\u7edf\u63d0\u793a\u8bcd\nTemperature: 1.0\n1\nMax Tokens\n\u601d\u8003\u6a21\u5f0f\n\u4e0d\u652f\u6301\n\u4f59\u989d\n\u00a50.00\n\u672c\u6b21\u6d88\u8017\n0.0000\u79ef\u5206\nTokens\n50\n\u5386\u53f2\u8bb0\u5f55"
+        },
+        {
+          "type": "conversation-danger-confirm",
+          "clicked": false,
+          "dialogs": []
+        },
+        {
+          "type": "conversation-danger-cancel",
+          "open": 0
+        }
+      ],
+      "screenshots": [
+        "screenshots/playground-dark-1440.png",
+        "screenshots/playground-dark-1440-send.png",
+        "screenshots/playground-dark-1440-danger.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/playground",
+        "title": "Playground - CrewRouter",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "\u8fd4\u56de\u63a7\u5236\u53f0\n\u5bf9\u8bdd\u5386\u53f2\n\u65b0\u5bf9\u8bdd\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:06\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\n\u5206\u6790 CrewRouter \u67b6\u6784\n10\u67081\u65e511:00\n\u4f18\u5316\u63d2\u4ef6\u5546\u5e97\u4f53\u9a8c\n10\u67081\u65e510:00\nCrant AI Playground\n\n\u9009\u62e9\u6a21\u578b\uff0c\u5f00\u59cb\u5bf9\u8bdd\u3002\u6309 Enter \u53d1\u9001\uff0cShift+Enter \u6362\u884c\u3002\n\n\u6e05\u7a7a\u5bf9\u8bdd\n9999\u79ef\u5206\n\u6a21\u578b\n\u7cfb\u7edf\u63d0\u793a\u8bcd\nTemperature: 1.0\n1\nMax Tokens\n\u601d\u8003\u6a21\u5f0f\n\u4e0d\u652f\u6301\n\u4f59\u989d\n\u00a50.00\n\u672c\u6b21\u6d88\u8017\n\u00a50.00\nTokens\n0\n\u5386\u53f2\u8bb0\u5f55",
+        "activePages": [],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 9,
+        "bloraElements": 23
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "usage",
+      "width": 1440,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "A",
+            "id": "",
+            "outline": "solid"
+          }
+        }
+      ],
+      "screenshots": [
+        "screenshots/usage-dark-1440.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/usage",
+        "title": "\u5bc6\u94a5\u7528\u91cf\u8be6\u60c5",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "\u8fd4\u56de API Key \u4e0e\u7528\u91cf\n\u8bed\u8a00 \n\nAPI Key \u4e0e\u7528\u91cf\n\n\u5bc6\u94a5\u7528\u91cf\u8be6\u60c5\nTEAM\n\u65e0\u6548\u7684 API Key",
+        "activePages": [],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 0,
+        "bloraElements": 4
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminProviders",
+      "width": 390,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "sidebarToggle",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "provider-danger-confirm",
+          "menu": true,
+          "danger": true,
+          "dialogs": []
+        },
+        {
+          "type": "provider-danger-cancel",
+          "open": 0
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminProviders"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminProviders-light-390.png",
+        "screenshots/admin-adminProviders-light-390-danger.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminProviders",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "\u4f9b\u5e94\u5546\u7ba1\u7406\n\u7ba1\u7406\u5458\n\u4f9b\u5e94\u5546\u7ba1\u7406\n \n\u4f9b\u5e94\u5546\u7ba1\u7406\n\n\u8fde\u63a5\u4e0a\u6e38 API\uff0c\u5bfc\u5165\u6a21\u578b\u540e\u5373\u53ef\u5728\u6a21\u578b\u7ba1\u7406\u4e2d\u542f\u7528\u3002\n\n0\n\u5168\u5c40\u4f9b\u5e94\u5546\n0\n\u7528\u6237\u4f9b\u5e94\u5546\n0\n\u5df2\u542f\u7528\n0\n\u811a\u672c\u6a21\u5f0f\n\u5bfc\u5165\u914d\u7f6e\n\u66f4\u591a\n\u6e05\u7406\u6240\u6709\u5df2\u4e0b\u67b6\u6a21\u578b\n\u6dfb\u52a0\u4f9b\u5e94\u5546\n\u51713\u4e2a\n\u25cf\n\u4e3b\u529b\n\u270e\n\u00d7\n\u25cf\n\u5907\u7528\n\u270e\n\u00d7\n+\n\u5168\u9009\u672c\u9875\n\u52fe\u9009\u540e\u53ef\u6279\u91cf\u540c\u6b65\u6a21\u578b\n\u5168\u5c40\u4f9b\u5e94\u5546 (\u672c\u9875 3)\nOpenAI\n\u542f\u7528\nhttps://api.openai.com/v1\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nChat Completions\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be\nAnthropic\n\u542f\u7528\nhttps://api.anthropic.com\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nAnthropic Messages\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be\nDeepSeek\n\u542f\u7528\nhttps://api.deepseek.com/v1\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nChat Completions\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be",
+        "activePages": [
+          "adminProviders",
+          "adminProvidersPage"
+        ],
+        "width": 390,
+        "documentWidth": 375,
+        "overflow": [],
+        "controls": 27,
+        "bloraElements": 285
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827813294.613,
+              "url": "http://127.0.0.1:18471/api/plugins/runtime",
+              "networkRequestId": "35180.1742"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/plugins/runtime",
+          "status": 404
+        }
+      ],
+      "networkFailures": [
+        {
+          "requestId": "35180.1628",
+          "timestamp": 4560.147395,
+          "type": "Script",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1725",
+          "timestamp": 4560.224573,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1726",
+          "timestamp": 4560.225713,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1727",
+          "timestamp": 4560.226097,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1728",
+          "timestamp": 4560.226207,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1729",
+          "timestamp": 4560.226244,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "admin#adminSettings",
+      "width": 390,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "sidebarToggle",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "actual-copy",
+          "button": {
+            "id": "feishuCopyRedirectBtn",
+            "text": "\u590d\u5236"
+          },
+          "clipboardLength": 40,
+          "clipboardRead": true
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminSettings"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminSettings-light-390.png",
+        "screenshots/admin-adminSettings-light-390-copy.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminSettings",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "\u7cfb\u7edf\u8bbe\u7f6e\n\u7ba1\u7406\u5458\n\u7cfb\u7edf\u8bbe\u7f6e\n \nCrewRouter\n-\nWebsite\nGithub\nCrewRouterHelper\nQQ Discuss\n\n\u9009\u62e9\u4e00\u4e2a\u7c7b\u522b\u4ee5\u7ba1\u7406\u76f8\u5173\u8bbe\u7f6e\n\n\u5e38\u89c4\n\u7cfb\u7edf\u540d\u79f0\u3001\u79ef\u5206\u4e0e\u6a21\u578b\u5217\u8868\n\u5916\u89c2\n\u9ed8\u8ba4\u4e3b\u9898\u4e0e\u754c\u9762\u5916\u89c2\n\u7248\u672c\u4e0e\u66f4\u65b0\n\u68c0\u67e5\u7248\u672c\u4e0e\u4e00\u952e\u66f4\u65b0\n\u6570\u636e\u4fdd\u7559\n\u538b\u7f29\u3001\u6e05\u7406\u4e0e\u805a\u5408\u7b56\u7565\n\u767b\u5f55\u4e0e\u8ba4\u8bc1\n\u98de\u4e66\u767b\u5f55\u4e0e\u9080\u8bf7\u94fe\u63a5\n\u7f51\u7edc\n\u4ee3\u7406\u5730\u5740\u4e0e\u4ee3\u7406\u6c60",
+        "activePages": [
+          "adminSettings",
+          "adminSettingsPage"
+        ],
+        "width": 390,
+        "documentWidth": 390,
+        "overflow": [],
+        "controls": 10,
+        "bloraElements": 285
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827815400.731,
+              "url": "http://127.0.0.1:18471/api/auth-invites",
+              "networkRequestId": "35180.1753"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/auth-invites",
+          "status": 404
+        }
+      ],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminErrorLogs",
+      "width": 390,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "sidebarToggle",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "filter",
+          "id": "errorLogUserFilter",
+          "before": "",
+          "result": {
+            "value": "",
+            "text": "\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t200ms\t\u8be6\u60c5\n2026/9/30 16:51:31\tDemo User\tGPT-4.1\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t173ms\t\u8be6\u60c5\n2026/9/30 13:31:43\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t324ms\t\u8be6\u60c5\n2026/9/30 15:47:14\tBob Wang\tDeepSeek V3\u91cd\u8bd5\tDeepSeek\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t439ms\t\u8be6\u60c5\n2026/9/30 04:31:18\tDemo User\tDeepSeek R1\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t340ms\t\u8be6\u60c5\n2026/9/30 19:57:49\tAlice Zhang\to4-mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t164ms\t\u8be6\u60c5\n2026/9/30 09:24:44\tBob Wang\tGPT-4.1 Mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t410ms\t\u8be6\u60c5\n\u4e0a\u4e00\u9875\n\u7b2c1 / 1\u9875\n\u4e0b\u4e00\u9875"
+          }
+        },
+        {
+          "type": "actual-pagination",
+          "blocked": "No enabled next-page control in demo data"
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminErrorLogs"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminErrorLogs-light-390.png",
+        "screenshots/admin-adminErrorLogs-light-390-filter.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminErrorLogs",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "\u8c03\u7528\u9519\u8bef\n\u7ba1\u7406\u5458\n\u8c03\u7528\u9519\u8bef\n \n\u8c03\u7528\u9519\u8bef\u8bb0\u5f55\n\n\u67e5\u770b\u8fd1\u671f API \u8c03\u7528\u5931\u8d25\u8bb0\u5f55\uff0c\u4fbf\u4e8e\u6392\u67e5\u4e0a\u6e38\u6545\u969c\u4e0e\u7528\u6237\u95ee\u9898\n\n\u5237\u65b0\n\u4ec5\u6700\u7ec8\u9519\u8bef\n\u67e5\u8be2\n\u6e05\u9664\n\u517112\u6761\u8bb0\u5f55\n\n\u9ed8\u8ba4\u4fdd\u7559\u8fd114\u5929\u7684\u9519\u8bef\u8bb0\u5f55\uff0c\u4e2d\u95f4\u5931\u8d25\uff08\u961f\u5217\u56de\u9000\uff09\u4e0e\u6700\u7ec8\u8fd4\u56de\u5ba2\u6237\u7aef\u7684\u9519\u8bef\u5747\u53ef\u7b5b\u9009\u3002\n\n\u65f6\u95f4\t\u7528\u6237\t\u6a21\u578b\t\u4f9b\u5e94\u5546\t\u72b6\u6001\u7801\t\u7c7b\u578b\t\u9519\u8bef\u4fe1\u606f\t\u5ef6\u8fdf\t\n2026/10/1 12:10:16\tDemo User\tGPT-4.1\u91cd\u8bd5\tOpenAI\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t433ms\t\u8be6\u60c5\n2026/10/1 09:00:05\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t243ms\t\u8be6\u60c5\n2026/10/1 06:02:59\tBob Wang\tDeepSeek V3\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t368ms\t\u8be6\u60c5\n2026/10/1 07:30:52\tDemo User\tDeepSeek R1\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t547ms\t\u8be6\u60c5\n2026/10/1 01:47:48\tAlice Zhang\to4-mini\u91cd\u8bd5\tOpenAI\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t436ms\t\u8be6\u60c5\n2026/10/1 00:03:36\tBob Wang\tGPT-4.1 Mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t200ms\t\u8be6\u60c5\n2026/9/30 16:51:31\tDemo User\tGPT-4.1\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t173ms\t\u8be6\u60c5\n2026/9/30 13:31:43\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t324ms\t\u8be6\u60c5\n2026/9/30 15:47:14\tBob",
+        "activePages": [
+          "adminErrorLogs",
+          "adminErrorLogsPage"
+        ],
+        "width": 390,
+        "documentWidth": 375,
+        "overflow": [
+          {
+            "tag": "TABLE",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "THEAD",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 410
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 498
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 564
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 680
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 902
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 970
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TBODY",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 410
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 498
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "model-provider-name",
+            "right": 468
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 564
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "",
+            "right": 550
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 680
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 902
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 970
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "BUTTON",
+            "id": "",
+            "class": "blora-button",
+            "right": 1039
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 410
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 498
+          }
+        ],
+        "controls": 29,
+        "bloraElements": 285
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console#docs/chat",
+      "width": 390,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "sidebarToggle",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "target": "modelLibrary",
+          "after": "#docs/chat"
+        }
+      ],
+      "screenshots": [
+        "screenshots/console-docs-chat-light-390.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/console#docs/chat",
+        "title": "\u63a7\u5236\u53f0 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "\u63a5\u53e3\u6587\u6863\n\u63a5\u53e3\u6587\u6863\n\u6982\u89c8\u4e0e\u8ba4\u8bc1\n\u804a\u5929\u8865\u5168\n\u6a21\u578b\u5217\u8868\nAnthropic \u517c\u5bb9\n\u7528\u6237\u63a5\u53e3\n\u5bf9\u8bdd\u7ba1\u7406\n\u9519\u8bef\u7801\n\u270e \u7f16\u8f91\u6587\u6863\n\u804a\u5929\u8865\u5168 (Chat Completions)\nPOST\n/v1/chat/completions\n\n\u5b8c\u5168\u517c\u5bb9 OpenAI SDK \u548c API \u683c\u5f0f\u3002\n\n\u8bf7\u6c42\u53c2\u6570\n\u53c2\u6570\t\u7c7b\u578b\t\u5fc5\u586b\t\u8bf4\u660e\nmodel\tstring\t\u662f\t\u6a21\u578b ID\nmessages\tarray\t\u662f\t\u6d88\u606f\u6570\u7ec4\nstream\tboolean\t\u5426\t\u662f\u5426\u6d41\u5f0f\u8f93\u51fa\uff08\u9ed8\u8ba4 false\uff09\ntemperature\tnumber\t\u5426\t\u6e29\u5ea6\u53c2\u6570\uff080-2\uff09\nmax_tokens\tinteger\t\u5426\t\u6700\u5927\u751f\u6210 token \u6570\nthinking\tboolean\t\u5426\tDeepSeek \u601d\u8003\u6a21\u578b\u662f\u5426\u542f\u7528\u601d\u8003\uff08\u9ed8\u8ba4 true\uff09\n\u975e\u6d41\u5f0f\u8bf7\u6c42\u793a\u4f8b\ncurl -X POST https://studio.crantai.com/v1/chat/completions \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer sk-xxx\" \\\n  -d '{\n    \"model\": \"gpt-4o\",\n    \"messages\": [\n      {\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},\n      {\"role\": \"user\", \"content\": \"Hello!\"}\n    ],\n    \"temperature\": 0.7,\n    \"max_tokens\": 1000\n  }'\n\u6d41\u5f0f\u8f93\u51fa (SSE)\n\n\u8bbe\u7f6e\"stream\": true\uff0c\u670d\u52a1\u7aef\u8fd4\u56de Server-Sent Events\uff1a\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"Hi\"},\"index\":0}]}\ndata: {\"choices\":[{\"delta\":{\"content\":\" there\"},\"index\":0}]}\ndata: {\"choi",
+        "activePages": [
+          "docs",
+          "docsPage",
+          "doc-chat"
+        ],
+        "width": 390,
+        "documentWidth": 375,
+        "overflow": [
+          {
+            "tag": "TABLE",
+            "id": "",
+            "class": "docs-table",
+            "right": 620
+          },
+          {
+            "tag": "THEAD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TBODY",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "",
+            "right": 486
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "",
+            "right": 416
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "",
+            "right": 426
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "",
+            "right": 607
+          },
+          {
+            "tag": "CODE",
+            "id": "",
+            "class": "",
+            "right": 589
+          },
+          {
+            "tag": "CODE",
+            "id": "",
+            "class": "",
+            "right": 527
+          }
+        ],
+        "controls": 4,
+        "bloraElements": 273
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827819734.621,
+              "url": "http://127.0.0.1:18471/api/plugins/runtime",
+              "networkRequestId": "35180.1984"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/plugins/runtime",
+          "status": 404
+        }
+      ],
+      "networkFailures": [
+        {
+          "requestId": "35180.1950",
+          "timestamp": 4565.750608,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1951",
+          "timestamp": 4565.75071,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1955",
+          "timestamp": 4565.910763,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1956",
+          "timestamp": 4565.910941,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1957",
+          "timestamp": 4565.912456,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1958",
+          "timestamp": 4565.912619,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1959",
+          "timestamp": 4565.912686,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1960",
+          "timestamp": 4565.912718,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1961",
+          "timestamp": 4565.912741,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1962",
+          "timestamp": 4565.912767,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1963",
+          "timestamp": 4565.912794,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1964",
+          "timestamp": 4565.912817,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1965",
+          "timestamp": 4565.912839,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1966",
+          "timestamp": 4565.912859,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1967",
+          "timestamp": 4565.912881,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1968",
+          "timestamp": 4565.912904,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1969",
+          "timestamp": 4565.91298,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.1970",
+          "timestamp": 4565.914753,
+          "type": "Script",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "playground",
+      "width": 390,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BLORA-SELECT",
+            "id": "langToggle",
+            "outline": "none"
+          }
+        },
+        {
+          "type": "playground-demo-send",
+          "text": "CrewRouter TEAM\n\u8fd4\u56de\u63a7\u5236\u53f0\n\u5bf9\u8bdd\u5386\u53f2\n\u65b0\u5bf9\u8bdd\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:06\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\n\u5206\u6790 CrewRouter \u67b6\u6784\n10\u67081\u65e511:00\n\u4f18\u5316\u63d2\u4ef6\u5546\u5e97\u4f53\u9a8c\n10\u67081\u65e510:00\nDEMO USER\n\nBrowser demo acceptance\n\nAI\nGPT-4.1\n\u601d\u8003\u8fc7\u7a0b\n\u5df2\u5b8c\u6210\n\n\u8fd9\u662f\u6f14\u793a\u6a21\u5f0f\u7684\u56fa\u5b9a\u56de\u590d\u3002\u4f60\u53ef\u4ee5\u7ee7\u7eed\u4f53\u9a8c\u6d88\u606f\u53d1\u9001\u3001\u6d41\u5f0f\u663e\u793a\u3001\u601d\u8003\u8fc7\u7a0b\u548c\u7528\u91cf\u7edf\u8ba1\u3002\n\nGPT-4.1\u00b7 AI \u4e5f\u53ef\u80fd\u72af\u9519\uff0c\u8bf7\u6838\u5b9e\u91cd\u8981\u4fe1\u606f\u3002\n\u6e05\u7a7a\u5bf9\u8bdd\n9999\u79ef\u5206"
+        },
+        {
+          "type": "conversation-danger-confirm",
+          "clicked": false,
+          "dialogs": []
+        },
+        {
+          "type": "conversation-danger-cancel",
+          "open": 0
+        }
+      ],
+      "screenshots": [
+        "screenshots/playground-light-390.png",
+        "screenshots/playground-light-390-send.png",
+        "screenshots/playground-light-390-danger.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/playground",
+        "title": "Playground - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n\u8fd4\u56de\u63a7\u5236\u53f0\n\u5bf9\u8bdd\u5386\u53f2\n\u65b0\u5bf9\u8bdd\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:06\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\n\u5206\u6790 CrewRouter \u67b6\u6784\n10\u67081\u65e511:00\n\u4f18\u5316\u63d2\u4ef6\u5546\u5e97\u4f53\u9a8c\n10\u67081\u65e510:00\nCrant AI Playground\n\n\u9009\u62e9\u6a21\u578b\uff0c\u5f00\u59cb\u5bf9\u8bdd\u3002\u6309 Enter \u53d1\u9001\uff0cShift+Enter \u6362\u884c\u3002\n\n\u6e05\u7a7a\u5bf9\u8bdd\n9999\u79ef\u5206",
+        "activePages": [],
+        "width": 390,
+        "documentWidth": 390,
+        "overflow": [],
+        "controls": 5,
+        "bloraElements": 23
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "usage",
+      "width": 390,
+      "theme": "light",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "A",
+            "id": "",
+            "outline": "solid"
+          }
+        }
+      ],
+      "screenshots": [
+        "screenshots/usage-light-390.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/usage",
+        "title": "\u5bc6\u94a5\u7528\u91cf\u8be6\u60c5",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "\u8fd4\u56de API Key \u4e0e\u7528\u91cf\n\u8bed\u8a00 \n\nAPI Key \u4e0e\u7528\u91cf\n\n\u5bc6\u94a5\u7528\u91cf\u8be6\u60c5\nTEAM\n\u65e0\u6548\u7684 API Key",
+        "activePages": [],
+        "width": 390,
+        "documentWidth": 390,
+        "overflow": [],
+        "controls": 0,
+        "bloraElements": 4
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminProviders",
+      "width": 390,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "sidebarToggle",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "provider-danger-confirm",
+          "menu": true,
+          "danger": true,
+          "dialogs": [
+            {
+              "id": "blora-dialog-1790827825639-1",
+              "text": "\u63d0\u793a\u5220\u9664\u6807\u7b7e\u786e\u5b9a\u5220\u9664\u6b64\u6807\u7b7e\uff1f\u4f9b\u5e94\u5546\u4e0a\u5df2\u6709\u7684\u8be5\u6807\u7b7e\u4e5f\u4f1a\u88ab\u79fb\u9664\u3002\u53d6\u6d88\u5220\u9664"
+            }
+          ]
+        },
+        {
+          "type": "provider-danger-cancel",
+          "open": 0
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminProviders"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminProviders-dark-390.png",
+        "screenshots/admin-adminProviders-dark-390-danger.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminProviders",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "\u4f9b\u5e94\u5546\u7ba1\u7406\n\u7ba1\u7406\u5458\n\u4f9b\u5e94\u5546\u7ba1\u7406\n \n\u4f9b\u5e94\u5546\u7ba1\u7406\n\n\u8fde\u63a5\u4e0a\u6e38 API\uff0c\u5bfc\u5165\u6a21\u578b\u540e\u5373\u53ef\u5728\u6a21\u578b\u7ba1\u7406\u4e2d\u542f\u7528\u3002\n\n0\n\u5168\u5c40\u4f9b\u5e94\u5546\n0\n\u7528\u6237\u4f9b\u5e94\u5546\n0\n\u5df2\u542f\u7528\n0\n\u811a\u672c\u6a21\u5f0f\n\u5bfc\u5165\u914d\u7f6e\n\u66f4\u591a\n\u6e05\u7406\u6240\u6709\u5df2\u4e0b\u67b6\u6a21\u578b\n\u6dfb\u52a0\u4f9b\u5e94\u5546\n\u51713\u4e2a\n\u25cf\n\u4e3b\u529b\n\u270e\n\u00d7\n\u25cf\n\u5907\u7528\n\u270e\n\u00d7\n+\n\u5168\u9009\u672c\u9875\n\u52fe\u9009\u540e\u53ef\u6279\u91cf\u540c\u6b65\u6a21\u578b\n\u5168\u5c40\u4f9b\u5e94\u5546 (\u672c\u9875 3)\nOpenAI\n\u542f\u7528\nhttps://api.openai.com/v1\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nChat Completions\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be\nAnthropic\n\u542f\u7528\nhttps://api.anthropic.com\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nAnthropic Messages\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be\nDeepSeek\n\u542f\u7528\nhttps://api.deepseek.com/v1\n+\n\u5bc6\u94a5\u6a21\u5f0f\n\u56fa\u5b9a\n\u4ee3\u7406\n\u5173\u95ed\n\u989d\u5ea6\u67e5\u8be2\n\u672a\u542f\u7528\n\u683c\u5f0f\nChat Completions\n\u5ef6\u8fdf: -\n\u540c\u6b65\u6a21\u578b\n\u7f16\u8f91\n\u66f4\u591a \u25be",
+        "activePages": [
+          "adminProviders",
+          "adminProvidersPage"
+        ],
+        "width": 390,
+        "documentWidth": 375,
+        "overflow": [],
+        "controls": 27,
+        "bloraElements": 285
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827824751.907,
+              "url": "http://127.0.0.1:18471/api/plugins/runtime",
+              "networkRequestId": "35180.2469"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/plugins/runtime",
+          "status": 404
+        }
+      ],
+      "networkFailures": [
+        {
+          "requestId": "35180.2355",
+          "timestamp": 4571.204054,
+          "type": "Script",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2454",
+          "timestamp": 4571.300331,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2455",
+          "timestamp": 4571.300423,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2457",
+          "timestamp": 4571.394822,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2458",
+          "timestamp": 4571.394913,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2459",
+          "timestamp": 4571.394937,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "admin#adminSettings",
+      "width": 390,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "sidebarToggle",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "actual-copy",
+          "button": {
+            "id": "feishuCopyRedirectBtn",
+            "text": "\u590d\u5236"
+          },
+          "clipboardLength": 40,
+          "clipboardRead": true
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminSettings"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminSettings-dark-390.png",
+        "screenshots/admin-adminSettings-dark-390-copy.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminSettings",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "\u7cfb\u7edf\u8bbe\u7f6e\n\u7ba1\u7406\u5458\n\u7cfb\u7edf\u8bbe\u7f6e\n \nCrewRouter\n-\nWebsite\nGithub\nCrewRouterHelper\nQQ Discuss\n\n\u9009\u62e9\u4e00\u4e2a\u7c7b\u522b\u4ee5\u7ba1\u7406\u76f8\u5173\u8bbe\u7f6e\n\n\u5e38\u89c4\n\u7cfb\u7edf\u540d\u79f0\u3001\u79ef\u5206\u4e0e\u6a21\u578b\u5217\u8868\n\u5916\u89c2\n\u9ed8\u8ba4\u4e3b\u9898\u4e0e\u754c\u9762\u5916\u89c2\n\u7248\u672c\u4e0e\u66f4\u65b0\n\u68c0\u67e5\u7248\u672c\u4e0e\u4e00\u952e\u66f4\u65b0\n\u6570\u636e\u4fdd\u7559\n\u538b\u7f29\u3001\u6e05\u7406\u4e0e\u805a\u5408\u7b56\u7565\n\u767b\u5f55\u4e0e\u8ba4\u8bc1\n\u98de\u4e66\u767b\u5f55\u4e0e\u9080\u8bf7\u94fe\u63a5\n\u7f51\u7edc\n\u4ee3\u7406\u5730\u5740\u4e0e\u4ee3\u7406\u6c60",
+        "activePages": [
+          "adminSettings",
+          "adminSettingsPage"
+        ],
+        "width": 390,
+        "documentWidth": 390,
+        "overflow": [],
+        "controls": 10,
+        "bloraElements": 285
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827827260.307,
+              "url": "http://127.0.0.1:18471/api/auth-invites",
+              "networkRequestId": "35180.2480"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/auth-invites",
+          "status": 404
+        }
+      ],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminErrorLogs",
+      "width": 390,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "sidebarToggle",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "filter",
+          "id": "errorLogUserFilter",
+          "before": "",
+          "result": {
+            "value": "",
+            "text": "\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t200ms\t\u8be6\u60c5\n2026/9/30 16:51:43\tDemo User\tGPT-4.1\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t173ms\t\u8be6\u60c5\n2026/9/30 13:31:55\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t324ms\t\u8be6\u60c5\n2026/9/30 15:47:26\tBob Wang\tDeepSeek V3\u91cd\u8bd5\tDeepSeek\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t439ms\t\u8be6\u60c5\n2026/9/30 04:31:30\tDemo User\tDeepSeek R1\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t340ms\t\u8be6\u60c5\n2026/9/30 19:58:01\tAlice Zhang\to4-mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t164ms\t\u8be6\u60c5\n2026/9/30 09:24:56\tBob Wang\tGPT-4.1 Mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t410ms\t\u8be6\u60c5\n\u4e0a\u4e00\u9875\n\u7b2c1 / 1\u9875\n\u4e0b\u4e00\u9875"
+          }
+        },
+        {
+          "type": "actual-pagination",
+          "blocked": "No enabled next-page control in demo data"
+        },
+        {
+          "type": "navigation",
+          "target": "adminUsers",
+          "after": "#adminErrorLogs"
+        }
+      ],
+      "screenshots": [
+        "screenshots/admin-adminErrorLogs-dark-390.png",
+        "screenshots/admin-adminErrorLogs-dark-390-filter.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminErrorLogs",
+        "title": "\u7ba1\u7406\u540e\u53f0 - CrewRouter",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "\u8c03\u7528\u9519\u8bef\n\u7ba1\u7406\u5458\n\u8c03\u7528\u9519\u8bef\n \n\u8c03\u7528\u9519\u8bef\u8bb0\u5f55\n\n\u67e5\u770b\u8fd1\u671f API \u8c03\u7528\u5931\u8d25\u8bb0\u5f55\uff0c\u4fbf\u4e8e\u6392\u67e5\u4e0a\u6e38\u6545\u969c\u4e0e\u7528\u6237\u95ee\u9898\n\n\u5237\u65b0\n\u4ec5\u6700\u7ec8\u9519\u8bef\n\u67e5\u8be2\n\u6e05\u9664\n\u517112\u6761\u8bb0\u5f55\n\n\u9ed8\u8ba4\u4fdd\u7559\u8fd114\u5929\u7684\u9519\u8bef\u8bb0\u5f55\uff0c\u4e2d\u95f4\u5931\u8d25\uff08\u961f\u5217\u56de\u9000\uff09\u4e0e\u6700\u7ec8\u8fd4\u56de\u5ba2\u6237\u7aef\u7684\u9519\u8bef\u5747\u53ef\u7b5b\u9009\u3002\n\n\u65f6\u95f4\t\u7528\u6237\t\u6a21\u578b\t\u4f9b\u5e94\u5546\t\u72b6\u6001\u7801\t\u7c7b\u578b\t\u9519\u8bef\u4fe1\u606f\t\u5ef6\u8fdf\t\n2026/10/1 12:10:27\tDemo User\tGPT-4.1\u91cd\u8bd5\tOpenAI\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t433ms\t\u8be6\u60c5\n2026/10/1 09:00:17\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t243ms\t\u8be6\u60c5\n2026/10/1 06:03:11\tBob Wang\tDeepSeek V3\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t368ms\t\u8be6\u60c5\n2026/10/1 07:31:04\tDemo User\tDeepSeek R1\tDeepSeek\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t547ms\t\u8be6\u60c5\n2026/10/1 01:48:00\tAlice Zhang\to4-mini\u91cd\u8bd5\tOpenAI\t429\trate_limit\t\u6f14\u793a\uff1a\u4e0a\u6e38\u9650\u6d41\uff0c\u5df2\u5207\u6362\u5907\u7528 Key\t436ms\t\u8be6\u60c5\n2026/10/1 00:03:48\tBob Wang\tGPT-4.1 Mini\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t200ms\t\u8be6\u60c5\n2026/9/30 16:51:43\tDemo User\tGPT-4.1\tOpenAI\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t173ms\t\u8be6\u60c5\n2026/9/30 13:31:55\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t\u6f14\u793a\uff1a\u4e0a\u6e38\u670d\u52a1\u77ed\u6682\u4e0d\u53ef\u7528\t324ms\t\u8be6\u60c5\n2026/9/30 15:47:26\tBob",
+        "activePages": [
+          "adminErrorLogs",
+          "adminErrorLogsPage"
+        ],
+        "width": 390,
+        "documentWidth": 375,
+        "overflow": [
+          {
+            "tag": "TABLE",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "THEAD",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 410
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 498
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 564
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 680
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 902
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 970
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TBODY",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 410
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 498
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "model-provider-name",
+            "right": 468
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 564
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "",
+            "right": 550
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 680
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 902
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 970
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "BUTTON",
+            "id": "",
+            "class": "blora-button",
+            "right": 1039
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 1053
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 410
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 498
+          }
+        ],
+        "controls": 29,
+        "bloraElements": 285
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console#docs/chat",
+      "width": 390,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "sidebarToggle",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "target": "modelLibrary",
+          "after": "#docs/chat"
+        }
+      ],
+      "screenshots": [
+        "screenshots/console-docs-chat-dark-390.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/console#docs/chat",
+        "title": "\u63a7\u5236\u53f0 - CrewRouter",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "\u63a5\u53e3\u6587\u6863\n\u63a5\u53e3\u6587\u6863\n\u6982\u89c8\u4e0e\u8ba4\u8bc1\n\u804a\u5929\u8865\u5168\n\u6a21\u578b\u5217\u8868\nAnthropic \u517c\u5bb9\n\u7528\u6237\u63a5\u53e3\n\u5bf9\u8bdd\u7ba1\u7406\n\u9519\u8bef\u7801\n\u270e \u7f16\u8f91\u6587\u6863\n\u804a\u5929\u8865\u5168 (Chat Completions)\nPOST\n/v1/chat/completions\n\n\u5b8c\u5168\u517c\u5bb9 OpenAI SDK \u548c API \u683c\u5f0f\u3002\n\n\u8bf7\u6c42\u53c2\u6570\n\u53c2\u6570\t\u7c7b\u578b\t\u5fc5\u586b\t\u8bf4\u660e\nmodel\tstring\t\u662f\t\u6a21\u578b ID\nmessages\tarray\t\u662f\t\u6d88\u606f\u6570\u7ec4\nstream\tboolean\t\u5426\t\u662f\u5426\u6d41\u5f0f\u8f93\u51fa\uff08\u9ed8\u8ba4 false\uff09\ntemperature\tnumber\t\u5426\t\u6e29\u5ea6\u53c2\u6570\uff080-2\uff09\nmax_tokens\tinteger\t\u5426\t\u6700\u5927\u751f\u6210 token \u6570\nthinking\tboolean\t\u5426\tDeepSeek \u601d\u8003\u6a21\u578b\u662f\u5426\u542f\u7528\u601d\u8003\uff08\u9ed8\u8ba4 true\uff09\n\u975e\u6d41\u5f0f\u8bf7\u6c42\u793a\u4f8b\ncurl -X POST https://studio.crantai.com/v1/chat/completions \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer sk-xxx\" \\\n  -d '{\n    \"model\": \"gpt-4o\",\n    \"messages\": [\n      {\"role\": \"system\", \"content\": \"You are a helpful assistant.\"},\n      {\"role\": \"user\", \"content\": \"Hello!\"}\n    ],\n    \"temperature\": 0.7,\n    \"max_tokens\": 1000\n  }'\n\u6d41\u5f0f\u8f93\u51fa (SSE)\n\n\u8bbe\u7f6e\"stream\": true\uff0c\u670d\u52a1\u7aef\u8fd4\u56de Server-Sent Events\uff1a\n\ndata: {\"choices\":[{\"delta\":{\"content\":\"Hi\"},\"index\":0}]}\ndata: {\"choices\":[{\"delta\":{\"content\":\" there\"},\"index\":0}]}\ndata: {\"choi",
+        "activePages": [
+          "docs",
+          "docsPage",
+          "doc-chat"
+        ],
+        "width": 390,
+        "documentWidth": 375,
+        "overflow": [
+          {
+            "tag": "TABLE",
+            "id": "",
+            "class": "docs-table",
+            "right": 620
+          },
+          {
+            "tag": "THEAD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TH",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TBODY",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "",
+            "right": 486
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "",
+            "right": 416
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "",
+            "right": 426
+          },
+          {
+            "tag": "TR",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "TD",
+            "id": "",
+            "class": "",
+            "right": 620
+          },
+          {
+            "tag": "SPAN",
+            "id": "",
+            "class": "",
+            "right": 607
+          },
+          {
+            "tag": "CODE",
+            "id": "",
+            "class": "",
+            "right": 589
+          },
+          {
+            "tag": "CODE",
+            "id": "",
+            "class": "",
+            "right": 527
+          }
+        ],
+        "controls": 4,
+        "bloraElements": 273
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790827830135.423,
+              "url": "http://127.0.0.1:18471/api/plugins/runtime",
+              "networkRequestId": "35180.2711"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/plugins/runtime",
+          "status": 404
+        }
+      ],
+      "networkFailures": [
+        {
+          "requestId": "35180.2679",
+          "timestamp": 4576.945949,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2680",
+          "timestamp": 4576.946096,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2682",
+          "timestamp": 4576.989046,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2683",
+          "timestamp": 4576.989161,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2684",
+          "timestamp": 4576.989198,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2685",
+          "timestamp": 4577.006576,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2686",
+          "timestamp": 4577.006686,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2687",
+          "timestamp": 4577.006752,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2688",
+          "timestamp": 4577.006782,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2689",
+          "timestamp": 4577.006804,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2690",
+          "timestamp": 4577.006827,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2691",
+          "timestamp": 4577.006849,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2692",
+          "timestamp": 4577.006874,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2693",
+          "timestamp": 4577.006892,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2694",
+          "timestamp": 4577.014818,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2695",
+          "timestamp": 4577.014909,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2696",
+          "timestamp": 4577.015124,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "35180.2697",
+          "timestamp": 4577.015351,
+          "type": "Script",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "playground",
+      "width": 390,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BLORA-SELECT",
+            "id": "langToggle",
+            "outline": "none"
+          }
+        },
+        {
+          "type": "playground-demo-send",
+          "text": "ser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:06\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\n\u5206\u6790 CrewRouter \u67b6\u6784\n10\u67081\u65e511:00\n\u4f18\u5316\u63d2\u4ef6\u5546\u5e97\u4f53\u9a8c\n10\u67081\u65e510:00\nDEMO USER\n\nBrowser demo acceptance\n\nAI\nGPT-4.1\n\u601d\u8003\u8fc7\u7a0b\n\u5df2\u5b8c\u6210\n\n\u8fd9\u662f\u6f14\u793a\u6a21\u5f0f\u7684\u56fa\u5b9a\u56de\u590d\u3002\u4f60\u53ef\u4ee5\u7ee7\u7eed\u4f53\u9a8c\u6d88\u606f\u53d1\u9001\u3001\u6d41\u5f0f\u663e\u793a\u3001\u601d\u8003\u8fc7\u7a0b\u548c\u7528\u91cf\u7edf\u8ba1\u3002\n\nGPT-4.1\u00b7 AI \u4e5f\u53ef\u80fd\u72af\u9519\uff0c\u8bf7\u6838\u5b9e\u91cd\u8981\u4fe1\u606f\u3002\n\u6e05\u7a7a\u5bf9\u8bdd\n9999\u79ef\u5206"
+        },
+        {
+          "type": "conversation-danger-confirm",
+          "clicked": false,
+          "dialogs": []
+        },
+        {
+          "type": "conversation-danger-cancel",
+          "open": 0
+        }
+      ],
+      "screenshots": [
+        "screenshots/playground-dark-390.png",
+        "screenshots/playground-dark-390-send.png",
+        "screenshots/playground-dark-390-danger.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/playground",
+        "title": "Playground - CrewRouter",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "CrewRouter TEAM\n\u8fd4\u56de\u63a7\u5236\u53f0\n\u5bf9\u8bdd\u5386\u53f2\n\u65b0\u5bf9\u8bdd\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:10\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:08\nBrowser demo acceptance\n10\u67081\u65e512:06\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\nBrowser demo acceptance\n10\u67081\u65e512:05\n\u5206\u6790 CrewRouter \u67b6\u6784\n10\u67081\u65e511:00\n\u4f18\u5316\u63d2\u4ef6\u5546\u5e97\u4f53\u9a8c\n10\u67081\u65e510:00\nCrant AI Playground\n\n\u9009\u62e9\u6a21\u578b\uff0c\u5f00\u59cb\u5bf9\u8bdd\u3002\u6309 Enter \u53d1\u9001\uff0cShift+Enter \u6362\u884c\u3002\n\n\u6e05\u7a7a\u5bf9\u8bdd\n9999\u79ef\u5206",
+        "activePages": [],
+        "width": 390,
+        "documentWidth": 390,
+        "overflow": [],
+        "controls": 5,
+        "bloraElements": 24
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "usage",
+      "width": 390,
+      "theme": "dark",
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "A",
+            "id": "",
+            "outline": "solid"
+          }
+        }
+      ],
+      "screenshots": [
+        "screenshots/usage-dark-390.png"
+      ],
+      "details": {
+        "href": "http://127.0.0.1:18471/usage",
+        "title": "\u5bc6\u94a5\u7528\u91cf\u8be6\u60c5",
+        "theme": "dark",
+        "background": "rgb(23, 22, 28)",
+        "text": "\u8fd4\u56de API Key \u4e0e\u7528\u91cf\n\u8bed\u8a00 \n\nAPI Key \u4e0e\u7528\u91cf\n\n\u5bc6\u94a5\u7528\u91cf\u8be6\u60c5\nTEAM\n\u65e0\u6548\u7684 API Key",
+        "activePages": [],
+        "width": 390,
+        "documentWidth": 390,
+        "overflow": [],
+        "controls": 0,
+        "bloraElements": 4
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    }
+  ]
+}

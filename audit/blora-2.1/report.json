@@ -1,0 +1,242 @@
+{
+  "schema": "crewrouter.blora-2.1-final-report/v1",
+  "summary": {
+    "observations": 584,
+    "realPages": 14,
+    "routes": 62,
+    "screenshots": 684,
+    "errors": 0,
+    "consoleErrorObservations": 108,
+    "overflowObservations": 0,
+    "concurrentSourceChanges": [],
+    "stale": false,
+    "assertions": {
+      "passed": 2440,
+      "failed": 0
+    },
+    "themes": [
+      "default",
+      "ocean",
+      "linear",
+      "paper",
+      "terminal",
+      "raycast",
+      "classic"
+    ],
+    "fixtureDescription": [
+      "Test-wrapper only: demo API keys receive normal key_type; audit logs use items/logs and 123 rows with real query pagination; admin users get 123 searchable rows.",
+      "Store public listing/detail uses existing plugin manifests; protected store routes remain unauthenticated, with no mocked permissions.",
+      "Plugin runtime/theme endpoints are isolated metadata fixtures; CSS is served from existing plugins and injected as-is, without synthesized token overrides; existing production palette mapping and official tokens.themes.css are used on pages without plugin runtime."
+    ],
+    "limitations": [
+      "Demo automatically authenticates an admin; no real login acceptance.",
+      "Demo writes may return success without persisting; no production API or upstream inference acceptance.",
+      "Outbound HTTPS is blocked to avoid external OAuth, payment, reporting and model calls.",
+      "Setup shows initialized state; OAuth, binding, usage and install pages lack live authorization parameters. Store protected routes retain unauthenticated access (not permission E2E).",
+      "Viewport screenshots cover the visible page, not every offscreen row."
+    ]
+  },
+  "stablePublicSnapshotFiles": 92,
+  "sourceChangesAfterRun": [],
+  "coverage": {
+    "pages": [
+      "admin",
+      "console",
+      "data",
+      "feishu-bind",
+      "index",
+      "oauth-consent",
+      "playground",
+      "plugin-install",
+      "purchase",
+      "set-password",
+      "setup",
+      "showcase",
+      "store",
+      "usage"
+    ],
+    "routes": [
+      "admin",
+      "admin#adminUsers",
+      "admin#adminTeams",
+      "admin#adminUserGroups",
+      "admin#adminModels",
+      "admin#adminProviders",
+      "admin#adminPlugins",
+      "admin#adminStats",
+      "admin#adminErrorLogs",
+      "admin#adminAuditLogs",
+      "admin#adminPrompts",
+      "admin#adminSettings",
+      "admin#adminTeams/1",
+      "admin#adminUserGroups/1",
+      "admin#adminDashboard",
+      "console",
+      "console#home",
+      "console#modelLibrary",
+      "console#myUpstream",
+      "console#apiKeys",
+      "console#stats",
+      "console#projectWork",
+      "console#leaderboard",
+      "console#docs",
+      "console#balance",
+      "console#settings",
+      "console#auditLogs",
+      "console#prompts",
+      "console#sessions",
+      "console#bloraAgent",
+      "console#myUpstream/models",
+      "console#myUpstream/providers",
+      "console#docs/overview",
+      "console#docs/chat",
+      "console#docs/models",
+      "console#docs/anthropic",
+      "console#docs/user-api",
+      "console#docs/conversations",
+      "console#docs/errors",
+      "console#bloraAgent/chat",
+      "console#bloraAgent/imagine",
+      "console#bloraAgent/manage",
+      "console#dashboard",
+      "console#myProviders",
+      "console#myTeamModels",
+      "data",
+      "feishu-bind",
+      "index",
+      "oauth-consent",
+      "playground",
+      "plugin-install",
+      "purchase",
+      "set-password",
+      "setup",
+      "showcase",
+      "store",
+      "store#/plugin/example-theme",
+      "store#/submit",
+      "store#/mine",
+      "store#/admin",
+      "store#/submit/example-theme",
+      "usage"
+    ],
+    "storeRoutes": [
+      "store",
+      "store#/plugin/example-theme",
+      "store#/submit",
+      "store#/mine",
+      "store#/admin",
+      "store#/submit/example-theme"
+    ],
+    "defaultRouteObservations": 248,
+    "additionalThemeAllPageObservations": 336
+  },
+  "assertionCounts": {
+    "scheme": 584,
+    "document-overflow": 584,
+    "navigation-click": 128,
+    "uncaught-js-exceptions": 584,
+    "hash-routing": 172,
+    "provider-danger-opens": 4,
+    "provider-danger-cancel": 4,
+    "pagination-changes-data": 16,
+    "copy-clipboard": 4,
+    "key-copy": 4,
+    "key-form-opens": 4,
+    "key-form-escape-focus": 4,
+    "key-danger-opens": 4,
+    "key-danger-cancel": 4,
+    "playground-demo-response": 4,
+    "official-theme-token-change": 336
+  },
+  "themeComputedTokenChanges": [
+    {
+      "theme": "default",
+      "changed": false,
+      "observations": 248
+    },
+    {
+      "theme": "ocean",
+      "changed": true,
+      "observations": 56
+    },
+    {
+      "theme": "linear",
+      "changed": true,
+      "observations": 56
+    },
+    {
+      "theme": "paper",
+      "changed": false,
+      "observations": 56
+    },
+    {
+      "theme": "terminal",
+      "changed": true,
+      "observations": 56
+    },
+    {
+      "theme": "raycast",
+      "changed": true,
+      "observations": 56
+    },
+    {
+      "theme": "classic",
+      "changed": true,
+      "observations": 56
+    }
+  ],
+  "staticRegressionExitCodes": {
+    "foundation": 0,
+    "audit-parser": 0,
+    "http": 0,
+    "public-batch-a": 0,
+    "public-batch-c": 0,
+    "no-legacy-dialog": 0
+  },
+  "screenshotReview": {
+    "screenshots": 684,
+    "contactSheets": 57,
+    "allReviewed": true
+  },
+  "blocked": [
+    "Demo automatically authenticates admin and writes/inference are simulated; real authentication, persistence and inference not accepted.",
+    "Store submit/edit/mine/admin permission workflows remain unconfigured/unauthenticated; no synthetic privileged login was used.",
+    "Demo lacks OAuth authorizations, auth-invites, 2FA/passkeys, client events, agent image/manage APIs; console errors and HTTP responses are retained.",
+    "data stats-report requires a real store/reporting DB; isolated pool points at 127.0.0.1:1 and cannot query production.",
+    "OAuth consent/binding/install/usage need live request parameters/API key; setup only initialized state.",
+    "Plugin theme metadata is test-isolated; public pages without runtime use production mapping plus official palette stylesheet and existing CSS injection, not plugin permission/backend E2E.",
+    "User search typing alone does not prove server filter applied; pagination in audit/prompt fixture does exercise actual page requests and changed rows.",
+    "Playground conversation delete hover entry was not reachable in generic click probe; Key/provider dangerous confirmations passed instead.",
+    "No WCAG contrast calculation or every offscreen table-cell inspection; screenshots are viewport captures."
+  ],
+  "fixtureOnlyChanges": [
+    "Test-wrapper only: demo API keys receive normal key_type; audit logs use items/logs and 123 rows with real query pagination; admin users get 123 searchable rows.",
+    "Store public listing/detail uses existing plugin manifests; protected store routes remain unauthenticated, with no mocked permissions.",
+    "Plugin runtime/theme endpoints are isolated metadata fixtures; CSS is served from existing plugins and injected as-is, without synthesized token overrides; existing production palette mapping and official tokens.themes.css are used on pages without plugin runtime.",
+    "Test wrapper provides 63 custom instruction rows with proper page/pageSize and search fields."
+  ],
+  "processesStopped": true,
+  "portsClosed": {
+    "18471": true,
+    "18472": true
+  },
+  "scratchRemoved": [
+    "/tmp/blora-21-demo-sWKoNO",
+    "/tmp/blora-21-demo-ycavFj",
+    "/tmp/blora-21-demo-Z4BKqd",
+    "/tmp/blora-21-chrome-UcR7xn"
+  ],
+  "businessFilesEditedByThisAgent": false,
+  "commitCreatedByThisAgent": false,
+  "evidenceDirectories": {
+    "initial": "initial",
+    "preflight": "preflight",
+    "calibration": [
+      "calibration",
+      "calibration-navigation",
+      "calibration-palettes"
+    ],
+    "stale": "stale-rerun",
+    "final": "screenshots"
+  }
+}

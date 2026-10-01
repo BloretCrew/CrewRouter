@@ -1,0 +1,65 @@
+{"route":"admin#adminProviders","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"admin#adminSettings","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"console#apiKeys","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":3}
+{"route":"console#auditLogs","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"admin#adminAuditLogs","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"playground","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"admin#adminProviders","width":1440,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"admin#adminSettings","width":1440,"theme":"dark","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"console#apiKeys","width":1440,"theme":"dark","consoleErrors":1,"overflow":false,"screenshots":1}
+{"route":"console#auditLogs","width":1440,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":1}
+{"route":"admin#adminAuditLogs","width":1440,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"playground","width":1440,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"admin#adminProviders","width":390,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"admin#adminSettings","width":390,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"console#apiKeys","width":390,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":3}
+{"route":"console#auditLogs","width":390,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"admin#adminAuditLogs","width":390,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"playground","width":390,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"admin#adminProviders","width":390,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"admin#adminSettings","width":390,"theme":"dark","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"console#apiKeys","width":390,"theme":"dark","consoleErrors":1,"overflow":false,"screenshots":3}
+{"route":"console#auditLogs","width":390,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"admin#adminAuditLogs","width":390,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"playground","width":390,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":3}
+{
+  "observations": 24,
+  "realPages": 3,
+  "routes": 6,
+  "screenshots": 57,
+  "errors": 0,
+  "consoleErrorObservations": 8,
+  "overflowObservations": 0,
+  "concurrentSourceChanges": [
+    "public/js/admin.js",
+    "public/js/app.js",
+    "public/pages/admin.html",
+    "public/pages/console.html"
+  ],
+  "stale": true,
+  "assertions": {
+    "passed": 128,
+    "failed": 8
+  },
+  "themes": [
+    "default",
+    "ocean",
+    "linear",
+    "paper",
+    "terminal",
+    "raycast",
+    "classic"
+  ],
+  "fixtureDescription": [
+    "Test-wrapper only: demo API keys receive normal key_type; audit logs use items/logs and 123 rows with real query pagination; admin users get 123 searchable rows.",
+    "Store public listing/detail uses existing plugin manifests; protected store routes remain unauthenticated, with no mocked permissions.",
+    "Plugin runtime/theme endpoints are isolated metadata fixtures; CSS is served from existing plugins and injected as-is, without synthesized token overrides."
+  ],
+  "limitations": [
+    "Demo automatically authenticates an admin; no real login acceptance.",
+    "Demo writes may return success without persisting; no production API or upstream inference acceptance.",
+    "Outbound HTTPS is blocked to avoid external OAuth, payment, reporting and model calls.",
+    "Setup shows initialized state; OAuth, binding, usage and install pages lack live authorization parameters. Store protected routes retain unauthenticated access (not permission E2E).",
+    "Viewport screenshots cover the visible page, not every offscreen row."
+  ]
+}

@@ -25,7 +25,9 @@ blora-copy {
   flex: none;
   border: 0;
   background: transparent;
-  color: var(--blora-color-text-subtle);
+
+  /* text-subtle is ~2.7:1 on the light canvas; icon buttons need 3:1. */
+  color: var(--blora-color-text-muted);
   cursor: pointer;
   padding: 0.15em;
   border-radius: var(--blora-radius-sm);

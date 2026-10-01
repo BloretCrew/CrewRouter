@@ -1,0 +1,122 @@
+[
+  {
+    "page": "index",
+    "native": {
+      "tag": "INPUT",
+      "type": "password",
+      "autocomplete": "current-password",
+      "required": true,
+      "minlength": 6,
+      "adopted": true,
+      "count": 1,
+      "valid": false
+    },
+    "errors": []
+  },
+  {
+    "page": "set-password",
+    "native": {
+      "tag": "INPUT",
+      "type": "password",
+      "autocomplete": "new-password",
+      "required": true,
+      "minlength": 6,
+      "adopted": true,
+      "count": 1,
+      "valid": false
+    },
+    "errors": []
+  },
+  {
+    "page": "feishu-bind",
+    "native": {
+      "tag": "INPUT",
+      "type": "password",
+      "autocomplete": "current-password",
+      "required": true,
+      "minlength": 6,
+      "adopted": true,
+      "count": 1,
+      "valid": false
+    },
+    "errors": []
+  },
+  {
+    "page": "playground",
+    "controls": {
+      "temperature": 1.5,
+      "label": "1.5",
+      "checked": false,
+      "thinkingLabel": "已禁用"
+    },
+    "errors": []
+  },
+  {
+    "page": "oauth-consent",
+    "form": {
+      "action": "/oauth/authorize/approve",
+      "method": "post",
+      "entries": [
+        [
+          "api_key_id",
+          "1"
+        ],
+        [
+          "keyId",
+          "1"
+        ],
+        [
+          "plugin",
+          "demo"
+        ],
+        [
+          "id",
+          "1"
+        ]
+      ]
+    },
+    "errors": []
+  },
+  {
+    "page": "store",
+    "cards": {
+      "cards": 1,
+      "padding": "24px",
+      "search": true
+    },
+    "errors": []
+  },
+  {
+    "page": "store submit",
+    "fields": {
+      "count": 13,
+      "native": "INPUT",
+      "disabled": false,
+      "fields": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "errors": []
+  },
+  {
+    "page": "purchase",
+    "product": {
+      "button": "BUTTON",
+      "card": "purchase-card blora-card",
+      "title": "验收商品"
+    },
+    "errors": []
+  }
+]

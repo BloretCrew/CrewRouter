@@ -1,0 +1,27 @@
+
+> crewrouter@1.0.0 build
+> node deploy/build/build-release.js release
+
+[build] 构建模式: release
+[build] 目标目录: /data/CrewRouter/dist
+
+=== Step 1: esbuild 打包 ===
+
+[build] $ node deploy/build/bundle.js
+[bundle] 开始打包 server/ ...
+
+  dist/server.js  2.1mb ⚠️
+
+⚡ Done in 399ms
+[bundle] 打包完成
+[bundle] 输出: /data/CrewRouter/dist/server.js
+[bundle] 文件大小: 2198.3 KB
+
+=== Step 2: 代码混淆 ===
+
+[build] $ node --stack-size=65500 deploy/build/obfuscate.js
+[obfuscate] 开始混淆 ...
+[obfuscate] 输入文件大小: 2196.1 KB
+[obfuscate] 混淆完成: /data/CrewRouter/dist/server.obf.js
+[obfuscate] 输出文件大小: 3448.4 KB
+[obfuscate] 膨胀倍数: 1.6x

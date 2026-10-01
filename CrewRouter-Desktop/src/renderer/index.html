@@ -18,14 +18,14 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="blora-page blora-scope">
-  <noscript><p class="blora-fallback-message">CrewRouter Desktop 需要启用 JavaScript。</p></noscript>
+  <noscript><p class="desktop-fallback-message">CrewRouter Desktop 需要启用 JavaScript。</p></noscript>
   <main class="oobe-shell" aria-labelledby="page-title">
     <header class="oobe-header">
       <button id="settings" class="blora-button" data-variant="ghost" data-size="sm" type="button">
         <span class="button-icon" data-icon="settings" aria-hidden="true"></span><span>设置</span>
       </button>
-      <a class="blora-brand" href="#page-title" aria-label="CrewRouter Desktop 首页">
-        <span class="blora-brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <a class="desktop-brand" href="#page-title" aria-label="CrewRouter Desktop 首页">
+        <span class="desktop-brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
         <span><strong>CrewRouter</strong><small>DESKTOP</small></span>
       </a>
       <span class="blora-badge" data-variant="soft">安全连接</span>
@@ -33,7 +33,7 @@
 
     <section class="blora-hero oobe-hero" data-size="compact" aria-describedby="intro">
       <div class="blora-hero__content">
-        <p class="blora-eyebrow">首次启动</p>
+        <p class="desktop-eyebrow">首次启动</p>
         <h1 id="page-title">开始使用 CrewRouter</h1>
         <p id="intro">选择本地使用，或连接已有服务器。</p>
       </div>
@@ -49,7 +49,7 @@
 
     <section id="welcome-panel" class="oobe-panel" aria-labelledby="welcome-heading">
       <div class="oobe-panel__heading">
-        <div><p class="blora-eyebrow">第一步</p><h2 id="welcome-heading">选择一种方式</h2></div>
+        <div><p class="desktop-eyebrow">第一步</p><h2 id="welcome-heading">选择一种方式</h2></div>
       </div>
       <p class="oobe-description">本地使用无需登录；连接服务器时，登录由目标服务器负责。</p>
       <div class="oobe-choice-grid">
@@ -67,7 +67,7 @@
     </section>
 
     <section id="local-profile-panel" class="oobe-panel blora-card" data-variant="content" aria-labelledby="local-profile-heading" hidden>
-      <div class="oobe-panel__heading"><div><p class="blora-eyebrow">第二步</p><h2 id="local-profile-heading">设置你的用户名</h2></div><button id="local-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
+      <div class="oobe-panel__heading"><div><p class="desktop-eyebrow">第二步</p><h2 id="local-profile-heading">设置你的用户名</h2></div><button id="local-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
       <p class="oobe-description">只需设置一次，用于显示在本地控制台和资料中。</p>
       <form id="local-profile-form" class="oobe-form" novalidate>
         <blora-field id="local-username-field" label="用户名" name="local-username" hint="可使用普通文字、数字或短横线，最多 64 个字符。" maxlength="64" autocomplete="nickname" required></blora-field>
@@ -77,7 +77,7 @@
     </section>
 
     <section id="remote-method-panel" class="oobe-panel blora-card" data-variant="content" aria-labelledby="remote-method-heading" hidden>
-      <div class="oobe-panel__heading"><div><p class="blora-eyebrow">第二步</p><h2 id="remote-method-heading">连接服务器</h2></div><button id="choice-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
+      <div class="oobe-panel__heading"><div><p class="desktop-eyebrow">第二步</p><h2 id="remote-method-heading">连接服务器</h2></div><button id="choice-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
       <p class="oobe-description">选择连接方式。Personal / Team 由目标服务器自动识别。</p>
       <div class="oobe-choice-list">
         <button id="official-remote" class="blora-card oobe-choice" data-variant="hover" type="button"><span class="oobe-choice__icon" data-icon="external-link" aria-hidden="true"></span><span class="oobe-choice__copy"><strong>通过官方站连接</strong><small>打开官方站，在官方页面选择或输入服务器</small></span><span class="oobe-choice__arrow" data-icon="chevron-right" aria-hidden="true"></span></button>
@@ -86,7 +86,7 @@
     </section>
 
     <section id="custom-target-panel" class="oobe-panel blora-card" data-variant="content" aria-labelledby="custom-target-heading" hidden>
-      <div class="oobe-panel__heading"><div><p class="blora-eyebrow">第三步</p><h2 id="custom-target-heading">输入服务器地址</h2></div><button id="custom-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
+      <div class="oobe-panel__heading"><div><p class="desktop-eyebrow">第三步</p><h2 id="custom-target-heading">输入服务器地址</h2></div><button id="custom-back" class="blora-button" data-variant="text" data-size="sm" type="button"><span class="button-icon" data-icon="chevron-left" aria-hidden="true"></span>返回</button></div>
       <p class="oobe-description">登录由目标服务器负责，Desktop 不保存凭据。</p>
       <form id="connection-form" class="oobe-form" novalidate>
         <blora-field id="custom-url-field" label="服务器地址" name="remote-url" type="url" placeholder="https://server.example.com" hint="仅支持 http:// 或 https:// 地址。" autocomplete="url" inputmode="url" required></blora-field>
@@ -103,7 +103,8 @@
 
     <footer class="oobe-footer"><small>远程页面负责登录；Desktop 不接管凭据。</small><button id="quit" class="blora-button" data-variant="text" data-size="sm" type="button">退出应用 <kbd>⌘Q</kbd></button></footer>
   </main>
-  <script type="module" src="vendor/blora-design/auto.js"></script>
+  <script src="vendor/blora-design/blora.global.js"></script>
+  <script src="vendor/blora-design/icons-full.global.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

@@ -1,18 +1,18 @@
+@layer legacy {
 .multi-dimension-panel {
   margin: 16px 0;
   padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--card);
+
 }
 .multi-dimension-panel h4 { margin: 0 0 12px; }
 .multi-dimension-choices { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
 .multi-dimension-choices blora-checkbox { flex: 0 0 auto; }
 .multi-dimension-actions blora-select { display: block; min-width: 7rem; }
 .multi-dimension-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.multi-dimension-status { color: var(--muted-foreground); font-size: 13px; }
 .multi-dimension-chart-container { height: clamp(260px, 45vh, 500px); margin: 18px 0; }
 .multi-dimension-table-wrap { max-height: 350px; overflow: auto; }
-.multi-dimension-table-wrap table { width: 100%; border-collapse: collapse; }
-.multi-dimension-table-wrap th, .multi-dimension-table-wrap td { padding: 9px; border-bottom: 1px solid var(--border); text-align: left; }
+.multi-dimension-table-wrap table { width: 100%;  }
+.multi-dimension-table-wrap th, .multi-dimension-table-wrap td { padding: 9px;   }
 @media (max-width: 640px) { .multi-dimension-panel { padding: 14px; } .multi-dimension-actions > * { max-width: 100%; } }
+
+}

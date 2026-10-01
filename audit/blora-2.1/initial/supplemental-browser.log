@@ -1,0 +1,46 @@
+{"route":"admin#adminProviders","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"admin#adminSettings","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"admin#adminErrorLogs","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"console#docs/chat","width":1440,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":1}
+{"route":"playground","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"usage","width":1440,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":1}
+{"route":"admin#adminProviders","width":1440,"theme":"dark","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"admin#adminSettings","width":1440,"theme":"dark","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"admin#adminErrorLogs","width":1440,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"console#docs/chat","width":1440,"theme":"dark","consoleErrors":1,"overflow":false,"screenshots":1}
+{"route":"playground","width":1440,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"usage","width":1440,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":1}
+{"route":"admin#adminProviders","width":390,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"admin#adminSettings","width":390,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"admin#adminErrorLogs","width":390,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"console#docs/chat","width":390,"theme":"light","consoleErrors":1,"overflow":false,"screenshots":1}
+{"route":"playground","width":390,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"usage","width":390,"theme":"light","consoleErrors":0,"overflow":false,"screenshots":1}
+{"route":"admin#adminProviders","width":390,"theme":"dark","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"admin#adminSettings","width":390,"theme":"dark","consoleErrors":1,"overflow":false,"screenshots":2}
+{"route":"admin#adminErrorLogs","width":390,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":2}
+{"route":"console#docs/chat","width":390,"theme":"dark","consoleErrors":1,"overflow":false,"screenshots":1}
+{"route":"playground","width":390,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":3}
+{"route":"usage","width":390,"theme":"dark","consoleErrors":0,"overflow":false,"screenshots":1}
+{
+  "observations": 24,
+  "realPages": 13,
+  "routes": 6,
+  "screenshots": 44,
+  "errors": 0,
+  "consoleErrorObservations": 12,
+  "overflowObservations": 0,
+  "concurrentSourceChanges": [
+    "public/js/app.js",
+    "public/js/admin.js",
+    "public/pages/console.html",
+    "public/pages/admin.html"
+  ],
+  "limitations": [
+    "Demo automatically authenticates an admin; no real login acceptance.",
+    "Demo writes may return success without persisting; no production API or upstream inference acceptance.",
+    "Outbound HTTPS is blocked to avoid external OAuth, payment, reporting and model calls.",
+    "Setup redirects because demo needsSetup=false; OAuth, binding and install pages lack live authorization parameters.",
+    "Viewport screenshots cover the visible page, not every offscreen row."
+  ]
+}

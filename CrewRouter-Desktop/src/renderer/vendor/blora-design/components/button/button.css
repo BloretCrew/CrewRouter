@@ -43,7 +43,10 @@
   height: var(--blora-button-height);
   min-height: 0;
   max-height: var(--blora-button-height);
-  align-self: flex-start;
+
+  /* The definite width/height above already stop stretch. Leave cross-axis
+     alignment to the container: a hard align-self: flex-start pinned buttons
+     to the top of every align-items: center row (card headers, toolbars). */
   flex: 0 0 auto;
   padding: var(--blora-button-pad-y) var(--blora-button-pad-x);
   font-family: var(--blora-font-sans);
@@ -260,7 +263,8 @@
 }
 
 .blora-button[data-size="icon"][data-shape="square"] {
-  --blora-button-radius: var(--blora-radius-lg);
+  /* radius-lg on a ~40px box is nearly a circle; md keeps it a rounded square. */
+  --blora-button-radius: var(--blora-radius-md);
   --blora-button-corner: superellipse(1.2);
 }
 

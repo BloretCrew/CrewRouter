@@ -1,4 +1,4 @@
-.blora-agent-page.page.active {
+.cr-agent-page.page.active {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 128px);
@@ -7,7 +7,7 @@
   overflow: hidden;
 }
 
-.blora-agent-page [hidden] {
+.cr-agent-page [hidden] {
   display: none !important;
 }
 
@@ -33,8 +33,6 @@
 
 .ba-balance {
   margin-left: auto;
-  color: var(--blora-color-text-muted, var(--muted-foreground));
-  font-size: 13px;
 }
 
 .ba-body {
@@ -49,9 +47,6 @@
 .ba-history,
 .ba-main {
   min-height: 0;
-  border: 1px solid var(--blora-color-border, var(--border));
-  border-radius: 12px;
-  background: var(--blora-color-surface, var(--card));
 }
 
 .ba-history {
@@ -72,24 +67,10 @@
   gap: 6px;
 }
 
-.ba-history__item {
-  text-align: left;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  padding: 8px;
-  cursor: pointer;
-}
+.ba-history__item {  overflow-wrap: anywhere; }
 
-.ba-history__item.is-active,
-.ba-history__item:hover {
-  background: color-mix(in srgb, var(--blora-color-primary, var(--primary)) 12%, transparent);
-}
-
-.ba-history__item small {
+.ba-history__meta {
   display: block;
-  color: var(--blora-color-text-muted, var(--muted-foreground));
 }
 
 .ba-main {
@@ -113,46 +94,37 @@
 .ba-bubble {
   max-width: min(760px, 100%);
   padding: 10px 12px;
-  border-radius: 12px;
-  line-height: 1.5;
 }
 
 .ba-bubble--user {
   align-self: flex-end;
-  background: color-mix(in srgb, var(--blora-color-primary, var(--primary)) 16%, transparent);
 }
 
 .ba-bubble--assistant,
 .ba-card {
   align-self: flex-start;
-  background: color-mix(in srgb, var(--blora-color-text-muted, var(--muted-foreground)) 10%, transparent);
 }
 
-.ba-bubble pre {
+.ba-code {
   overflow: auto;
   padding: 8px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--blora-color-text, #000) 8%, transparent);
 }
 
 .ba-card {
   width: min(640px, 100%);
   padding: 10px 12px;
-  border-radius: 12px;
 }
 
-.ba-card header {
+.ba-card__header {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-weight: 600;
   margin-bottom: 6px;
 }
 
-.ba-card pre {
+.ba-card__body {
   margin: 0;
   white-space: pre-wrap;
-  font-size: 12px;
 }
 
 .ba-card__actions {
@@ -167,7 +139,6 @@
   height: auto;
   max-width: min(720px, 100%);
   max-height: 60vh;
-  border-radius: 12px;
 }
 
 .ba-options,
@@ -178,15 +149,10 @@
   flex-wrap: wrap;
 }
 
-.ba-options {
-  border-top: 1px solid var(--blora-color-border, var(--border));
-}
-
 .ba-option {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 13px;
   min-width: 0;
 }
 
@@ -195,22 +161,20 @@
   align-items: center;
 }
 
-.ba-composer textarea {
+.ba-composer :is(blora-textarea, textarea[id]) {
   flex: 1;
   min-width: 180px;
   resize: vertical;
 }
 
 .ba-thinking {
-  font-size: 13px;
-  color: var(--blora-color-text-muted, var(--muted-foreground));
   margin-bottom: 6px;
 }
 
 .ba-overlay { display: none; }
 
 @media (max-width: 800px) {
-  .blora-agent-page.page.active {
+  .cr-agent-page.page.active {
     height: calc(100dvh - 148px);
     min-height: 0;
     overflow: hidden;
@@ -225,19 +189,18 @@
     width: min(280px, 86vw);
     height: 100vh;
     transform: translateX(-105%);
-    transition: transform 160ms ease;
+
   }
   .ba-history.is-open { transform: none; }
   .ba-overlay {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.35);
     z-index: 29;
-    opacity: 0;
+
     pointer-events: none;
   }
-  .ba-overlay.is-open { opacity: 1; pointer-events: auto; }
+  .ba-overlay.is-open {  pointer-events: auto; }
   .ba-history-toggle { display: inline-flex; }
 }
 

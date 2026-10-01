@@ -13,6 +13,8 @@ async function main() {
   assert.strictEqual(packageJson.exports['./auto'].require, undefined);
   const auto = await import('@bloret-crew/blora-design/auto');
   assert.strictEqual(typeof auto.defineAllBloraElements, 'function');
+  const publicApi = await import('@bloret-crew/blora-design');
+  for (const name of ['createFormController', 'createTableController', 'message']) assert.strictEqual(typeof publicApi[name], 'function', `official public API ${name}`);
   const autoPath = path.join(path.dirname(require.resolve('@bloret-crew/blora-design/package.json')), 'dist/auto.js');
   assert.strictEqual((await import(pathToFileURL(autoPath).href)).defineAllBloraElements instanceof Function, true);
   const dist = path.dirname(autoPath);
@@ -51,14 +53,14 @@ async function main() {
     assert.ok(reachable.has('tokens.css'));
     assert.ok(reachable.has('components/button/button.css'));
     for (const file of reachable) {
-      const response = await request(`/blora/${file}?v=2.0.8`);
+      const response = await request(`/blora/${file}?v=2.1.0`);
       assert.strictEqual(response.status, 200, file);
       assert.match(response.type, file.endsWith('.css') ? /text\/css/ : /javascript/);
       assert.match(response.cache, /max-age=31536000/);
       assert.ok(response.body.length > 0);
     }
     for (const [file, type] of [['blora.css', 'text/css'], ['tokens.dark.css', 'text/css'], ['components/button/button.css', 'text/css'], ['auto.js', 'javascript']]) {
-      const response = await request(`/blora/${file}?v=2.0.8`);
+      const response = await request(`/blora/${file}?v=2.1.0`);
       assert.strictEqual(response.status, 200, file); assert.match(response.type, new RegExp(type)); assert.match(response.cache, /max-age=31536000/); assert.ok(response.body.length > 0);
     }
     for (const url of ['/blora/../package.json', '/blora/%2e%2e/package.json', '/blora/.package.json', '/blora/not-found.css']) {

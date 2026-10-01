@@ -1,0 +1,310 @@
+node:assert:885
+    throw err;
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /class="blora-dialog__panel\b/. Input:
+
+'<blora-dialog id="batchEditMyModelsModal" role="dialog" aria-modal="true" aria-labelledby="batchEditMyModelsTitle">\n' +
+  '        <div class="modal-content" style="max-width:500px;">\n' +
+  '          <div class="modal-header">\n' +
+  '            <h3 id="batchEditMyModelsTitle" class="blora-card__title"><span data-i18n="批量编辑模型">批量编辑模型</span></h3>\n' +
+  '            <button type="button" class="blora-button modal-close" onclick="app.closeModals()" aria-label="关闭" data-icon="x" data-size="icon"></button>\n' +
+  '          </div>\n' +
+  '          <div class="modal-body">\n' +
+  '            <p id="batchEditMyModelsInfo" style="margin-bottom:16px;"></p>\n' +
+  '            <div style="display:flex;flex-direction:column;gap:14px;">\n' +
+  '              <div>\n' +
+  '                <label style="display:flex;align-items:center;gap:6px;">\n' +
+  '                  <input type="checkbox" id="batchEditMyModelsEnabledCheck"><span data-i18n="启用状态"> 启用状态\n' +
+  '                </span></label>\n' +
+  '                <blora-select id="batchEditMyModelsEnabled" class="select" style="margin-top:4px;" disabled>\n' +
+  '                  <blora-option value="true"><span data-i18n="启用">启用</span></blora-option>\n' +
+  '                  <blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>\n' +
+  '                </blora-select>\n' +
+  '              </div>\n' +
+  '              <div>\n' +
+  '                <label style="display:flex;align-items:center;gap:6px;">\n' +
+  '                  <input type="checkbox" id="batchEditMyModelsSeriesCheck"><span data-i18n="系列"> 系列\n' +
+  '                </span></label>\n' +
+  '                <input type="text" id="batchEditMyModelsSeries" class="blora-input input" placeholder="系列名称" data-i18n-placeholder="系列名称" style="margin-top:4px;" disabled>\n' +
+  '              </div>\n' +
+  '              <div>\n' +
+  '                <label style="display:flex;align-items:center;gap:6px;">\n' +
+  '                  <input type="checkbox" id="batchEditMyModelsDescCheck"><span data-i18n="描述"> 描述\n' +
+  '                </span></label>\n' +
+  '                <textarea id="batchEditMyModelsDesc" class="blora-input input" rows="2" placeholder="模型描述" data-i18n-placeholder="模型描述" style="margin-top:4px;resize:vertical;" disabled></textarea>\n' +
+  '              </div>\n' +
+  '              <div>\n' +
+  '                <label style="display:flex;align-items:center;gap:6px;">\n' +
+  '                  <input type="checkbox" id="batchEditMyModelsAliasCheck"><span data-i18n="别名"> 别名\n' +
+  '                </span></label>\n' +
+  '                <input type="text" id="batchEditMyModelsAlias" class="blora-input input" placeholder="模型别名" data-i18n-placeholder="模型别名" style="margin-top:4px;" disabled>\n' +
+  '              </div>\n' +
+  '              <div style="display:flex;gap:12px;">\n' +
+  '                <div style="flex:1;">\n' +
+  '                  <label style="display:flex;align-items:center;gap:6px;">\n' +
+  '                    <input type="checkbox" id="batchEditMyModelsInputPriceCheck"><span data-i18n="输入价格"> 输入价格\n' +
+  '                  </span></label>\n' +
+  '                  <input type="number" id="batchEditMyModelsInputPrice" class="blora-input input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>\n' +
+  '                </div>\n' +
+  '                <div style="flex:1;">\n' +
+  '                  <label style="display:flex;align-items:center;gap:6px;">\n' +
+  '                    <input type="checkbox" id="batchEditMyModelsOutputPriceCheck"><span data-i18n="输出价格"> 输出价格\n' +
+  '                  </span></label>\n' +
+  '                  <input type="number" id="batchEditMyModelsOutputPrice" class="blora-input input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>\n' +
+  '                </div>\n' +
+  '              </div>\n' +
+  '            </div>\n' +
+  '          </div>\n' +
+  '          <div class="modal-footer">\n' +
+  '        <button type="button" class="blora-button" onclick="app.saveBatchEditMyModels()" data-variant="primary"><span data-i18n="保存">保存</span></button>\n' +
+  '          </div>\n' +
+  '    </div>\n' +
+  '      </blora-dialog>\n' +
+  '\n' +
+  '      <!-- API密钥页面 -->\n' +
+  '      <div id="apiKeysPage" class="page cr-api-keys-page">\n' +
+  '        <!-- 滚动后悬浮顶栏：创建密钥 + 可拖拽标签（默认隐藏，由 JS 控制） -->\n' +
+  '        <div id="apiKeysStickyBar" class="model-library-sticky-bar" aria-hidden="true">\n' +
+  '          <div class="model-library-sticky-inner">\n' +
+  '            <span class="page-sticky-title"><span data-i18n="API 密钥">API 密钥</span></span>\n' +
+  '            <span class="page-sticky-hint"><span data-i18n="拖拽标签到下方密钥卡片">拖拽标签到下方密钥卡片</span></span>\n' +
+  `            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showModal('createApiKeyModal')" style="margin-left:auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>\n` +
+  '          </div>\n' +
+  '          <div class="page-sticky-tag-row" aria-label="密钥标签" data-i18n-title="密钥标签">\n' +
+  '            <span class="page-sticky-tag-label" title="拖拽标签到密钥卡片进行分配" data-i18n-title="拖拽标签到密钥卡片进行分配"><span data-i18n="标签">标签</span></span>\n' +
+  '            <div id="apiKeysStickyTags" class="key-tag-chips page-sticky-tag-chips"></div>\n' +
+  '          </div>\n' +
+  '        </div>\n' +
+  '\n' +
+  '        <div class="content-section blora-card" data-size="sm">\n' +
+  '          <div class="section-header">\n' +
+  '            <h2 class="blora-card__title"><span data-i18n="API 密钥">API 密钥</span></h2>\n' +
+  '            <button type="button" id="createApiKeyBtn" class="blora-button" data-variant="primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>\n' +
+  '          </div>\n' +
+  '\n' +
+  '          <!-- 我的 Key 用量概览（不含他人发起的 Co-Key） -->\n' +
+  '          <div class="usage-overview" id="usageOverview" style="display:none;" title="仅统计由您发起的 API Key 用量" data-i18n-title="仅统计由您发起的 API Key 用量">\n' +
+  '            <div class="usage-overview-item">\n' +
+  '              <span class="usage-overview-label"><span data-i18n="我的 Key 调用次数">我的 Key 调用次数</span></span>\n' +
+  '              <span class="usage-overview-value" id="totalRequests">0</span>\n' +
+  '            </div>\n' +
+  '            <div class="usage-overview-item">\n' +
+  '              <span class="usage-overview-label"><span data-i18n="我的 Key Token 消耗">我的 Key Token 消耗</span></span>\n' +
+  '              <span class="usage-overview-value" id="totalTokens">0</span>\n' +
+  '            </div>\n' +
+  '            <div class="usage-overview-item">\n' +
+  '              <span class="usage-overview-label"><span data-i18n="我的 Key 积分消耗">我的 Key 积分消耗</span></span>\n' +
+  '              <span class="usage-overview-value" id="totalCost"><span data-i18n="0 积分">0 积分</span></span>\n' +
+  '            </div>\n' +
+  '          </div>\n' +
+  '\n' +
+  '          <!-- 标签筛选栏 -->\n' +
+  '          <div id="keyTagBar" class="key-tag-bar" style="display:none;margin-bottom:12px;">\n' +
+  '            <div class="key-tag-chips" id="keyTagChips"></div>\n' +
+  '          </div>\n' +
+  '          <!-- 悬浮顶栏显隐哨兵：滚出视口后显示 sticky bar -->\n' +
+  '          <div id="apiKeysStickySentinel" class="model-library-sticky-sentinel" aria-hidden="true"></div>\n' +
+  '\n' +
+  '          <!-- 创建/编辑标签浮层 -->\n' +
+  '          <div id="createKeyTagPopover" class="key-tag-popover" style="display:none;">\n' +
+  '            <div class="key-tag-popover-arrow"></div>\n' +
+  '            <div class="key-tag-popover-content">\n' +
+  '              <div id="keyTagPopoverTitle" style="margin-bottom:8px;"><span data-i18n="创建标签">创建标签</span></div>\n' +
+  '              <input type="text" id="createKeyTagName" class="blora-input input" placeholder="标签名称" data-i18n-placeholder="标签名称" style="width:100%;margin-bottom:10px;" maxlength="20">\n' +
+  '              <div style="margin-bottom:6px;"><span data-i18n="选择颜色">选择颜色</span></div>\n' +
+  '              <div class="color-picker color-picker-row" id="createKeyTagColors">\n' +
+  '                <div class="color-dot selected" data-color="var(--info)"  onclick="app.selectTagColor(this)"></div>\n' +
+  '                <div class="color-dot" data-color="var(--success)"  onclick="app.selectTagColor(this)"></div>\n' +
+  '                <div class="color-dot" data-color="var(--warning)"  onclick="app.selectTagColor(this)"></div>\n' +
+  '                <div class="color-dot" data-color="var(--danger)"  onclick="app.selectTagColor(this)"></div>\n' +
+  '                <div class="color-dot" data-color="var(--purple)"  onclick="app.selectTagColor(this)"></div>\n' +
+  '                <div class="color-dot" data-color="var(--pink)"  onclick="app.selectTagColor(this)"></div>\n' +
+  '                <div class="color-dot" data-color="var(--cyan)"  onclick="app.selectTagColor(this)"></div>\n' +
+  '                <div class="color-dot" data-color="#f97316"  onclick="app.selectTagColor(this)"></div>\n' +
+  '                <div class="color-dot" data-color="#84cc16"  onclick="app.selectTagColor(this)"></div>\n' +
+  '                <div class="color-dot" data-color="#6366f1"  onclick="app.selectTagColor(this)"></div>\n' +
+  '              </div>\n' +
+  '              <div style="display:flex;gap:8px;margin-top:12px;">\n' +
+  '                <button type="button" class="blora-button" id="keyTagPopoverSubmit" onclick="app.saveKeyTag()" style="flex:1;" data-variant="primary" data-size="sm"><span data-i18n="创建">创建</span></button>\n' +
+  '                <button type="button" class="blora-button" onclick="app.hideCreateKeyTagPopover()" data-variant="secondary" data-size="sm"><span data-i18n="取消">取消</span></button>\n' +
+  '              </div>\n' +
+  '            </div>\n' +
+  '          </div>\n' +
+  '\n' +
+  '          <div id="apiKeysList" data-blora-state="loading" class="api-keys-list"></div>\n' +
+  '    </div>\n' +
+  '\n' +
+  '      <!-- 授权管理（自有 OAuth 服务签发的客户端授权，与 Passport 无关） -->\n' +
+  '      <div class="content-section blora-card" style="margin-top:16px;" data-size="sm">\n' +
+  '        <div class="section-header">\n' +
+  '          <div>\n' +
+  '            <h2 class="blora-card__title"><span data-i18n="授权管理">授权管理</span></h2>\n' +
+  '            <p class="blora-card__desc" style="margin:0;"><span data-i18n="已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。">已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。</span></p>\n' +
+  '          </div>\n' +
+  '          <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadAuthorizations()"><span data-i18n="刷新授权列表">刷新授权列表</span></button>\n' +
+  '        </div>\n' +
+  '        <div id="oauthAuthorizationsList"></div>\n' +
+  '      </div>\n' +
+  '      </di'... 73040 more characters
+
+    at Object.<anonymous> (/data/CrewRouter/server/scripts/test-blora-console-batch-b.js:26:10)
+    at Module._compile (node:internal/modules/cjs/loader:1804:14)
+    at Object..js (node:internal/modules/cjs/loader:1936:10)
+    at Module.load (node:internal/modules/cjs/loader:1525:32)
+    at Module._load (node:internal/modules/cjs/loader:1327:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '<blora-dialog id="batchEditMyModelsModal" role="dialog" aria-modal="true" aria-labelledby="batchEditMyModelsTitle">\n' +
+    '        <div class="modal-content" style="max-width:500px;">\n' +
+    '          <div class="modal-header">\n' +
+    '            <h3 id="batchEditMyModelsTitle" class="blora-card__title"><span data-i18n="批量编辑模型">批量编辑模型</span></h3>\n' +
+    '            <button type="button" class="blora-button modal-close" onclick="app.closeModals()" aria-label="关闭" data-icon="x" data-size="icon"></button>\n' +
+    '          </div>\n' +
+    '          <div class="modal-body">\n' +
+    '            <p id="batchEditMyModelsInfo" style="margin-bottom:16px;"></p>\n' +
+    '            <div style="display:flex;flex-direction:column;gap:14px;">\n' +
+    '              <div>\n' +
+    '                <label style="display:flex;align-items:center;gap:6px;">\n' +
+    '                  <input type="checkbox" id="batchEditMyModelsEnabledCheck"><span data-i18n="启用状态"> 启用状态\n' +
+    '                </span></label>\n' +
+    '                <blora-select id="batchEditMyModelsEnabled" class="select" style="margin-top:4px;" disabled>\n' +
+    '                  <blora-option value="true"><span data-i18n="启用">启用</span></blora-option>\n' +
+    '                  <blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>\n' +
+    '                </blora-select>\n' +
+    '              </div>\n' +
+    '              <div>\n' +
+    '                <label style="display:flex;align-items:center;gap:6px;">\n' +
+    '                  <input type="checkbox" id="batchEditMyModelsSeriesCheck"><span data-i18n="系列"> 系列\n' +
+    '                </span></label>\n' +
+    '                <input type="text" id="batchEditMyModelsSeries" class="blora-input input" placeholder="系列名称" data-i18n-placeholder="系列名称" style="margin-top:4px;" disabled>\n' +
+    '              </div>\n' +
+    '              <div>\n' +
+    '                <label style="display:flex;align-items:center;gap:6px;">\n' +
+    '                  <input type="checkbox" id="batchEditMyModelsDescCheck"><span data-i18n="描述"> 描述\n' +
+    '                </span></label>\n' +
+    '                <textarea id="batchEditMyModelsDesc" class="blora-input input" rows="2" placeholder="模型描述" data-i18n-placeholder="模型描述" style="margin-top:4px;resize:vertical;" disabled></textarea>\n' +
+    '              </div>\n' +
+    '              <div>\n' +
+    '                <label style="display:flex;align-items:center;gap:6px;">\n' +
+    '                  <input type="checkbox" id="batchEditMyModelsAliasCheck"><span data-i18n="别名"> 别名\n' +
+    '                </span></label>\n' +
+    '                <input type="text" id="batchEditMyModelsAlias" class="blora-input input" placeholder="模型别名" data-i18n-placeholder="模型别名" style="margin-top:4px;" disabled>\n' +
+    '              </div>\n' +
+    '              <div style="display:flex;gap:12px;">\n' +
+    '                <div style="flex:1;">\n' +
+    '                  <label style="display:flex;align-items:center;gap:6px;">\n' +
+    '                    <input type="checkbox" id="batchEditMyModelsInputPriceCheck"><span data-i18n="输入价格"> 输入价格\n' +
+    '                  </span></label>\n' +
+    '                  <input type="number" id="batchEditMyModelsInputPrice" class="blora-input input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>\n' +
+    '                </div>\n' +
+    '                <div style="flex:1;">\n' +
+    '                  <label style="display:flex;align-items:center;gap:6px;">\n' +
+    '                    <input type="checkbox" id="batchEditMyModelsOutputPriceCheck"><span data-i18n="输出价格"> 输出价格\n' +
+    '                  </span></label>\n' +
+    '                  <input type="number" id="batchEditMyModelsOutputPrice" class="blora-input input" step="0.001" min="0" placeholder="每 1K tokens" data-i18n-placeholder="每 1K tokens" style="margin-top:4px;" disabled>\n' +
+    '                </div>\n' +
+    '              </div>\n' +
+    '            </div>\n' +
+    '          </div>\n' +
+    '          <div class="modal-footer">\n' +
+    '        <button type="button" class="blora-button" onclick="app.saveBatchEditMyModels()" data-variant="primary"><span data-i18n="保存">保存</span></button>\n' +
+    '          </div>\n' +
+    '    </div>\n' +
+    '      </blora-dialog>\n' +
+    '\n' +
+    '      <!-- API密钥页面 -->\n' +
+    '      <div id="apiKeysPage" class="page cr-api-keys-page">\n' +
+    '        <!-- 滚动后悬浮顶栏：创建密钥 + 可拖拽标签（默认隐藏，由 JS 控制） -->\n' +
+    '        <div id="apiKeysStickyBar" class="model-library-sticky-bar" aria-hidden="true">\n' +
+    '          <div class="model-library-sticky-inner">\n' +
+    '            <span class="page-sticky-title"><span data-i18n="API 密钥">API 密钥</span></span>\n' +
+    '            <span class="page-sticky-hint"><span data-i18n="拖拽标签到下方密钥卡片">拖拽标签到下方密钥卡片</span></span>\n' +
+    `            <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showModal('createApiKeyModal')" style="margin-left:auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>\n` +
+    '          </div>\n' +
+    '          <div class="page-sticky-tag-row" aria-label="密钥标签" data-i18n-title="密钥标签">\n' +
+    '            <span class="page-sticky-tag-label" title="拖拽标签到密钥卡片进行分配" data-i18n-title="拖拽标签到密钥卡片进行分配"><span data-i18n="标签">标签</span></span>\n' +
+    '            <div id="apiKeysStickyTags" class="key-tag-chips page-sticky-tag-chips"></div>\n' +
+    '          </div>\n' +
+    '        </div>\n' +
+    '\n' +
+    '        <div class="content-section blora-card" data-size="sm">\n' +
+    '          <div class="section-header">\n' +
+    '            <h2 class="blora-card__title"><span data-i18n="API 密钥">API 密钥</span></h2>\n' +
+    '            <button type="button" id="createApiKeyBtn" class="blora-button" data-variant="primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建密钥">创建密钥</span></button>\n' +
+    '          </div>\n' +
+    '\n' +
+    '          <!-- 我的 Key 用量概览（不含他人发起的 Co-Key） -->\n' +
+    '          <div class="usage-overview" id="usageOverview" style="display:none;" title="仅统计由您发起的 API Key 用量" data-i18n-title="仅统计由您发起的 API Key 用量">\n' +
+    '            <div class="usage-overview-item">\n' +
+    '              <span class="usage-overview-label"><span data-i18n="我的 Key 调用次数">我的 Key 调用次数</span></span>\n' +
+    '              <span class="usage-overview-value" id="totalRequests">0</span>\n' +
+    '            </div>\n' +
+    '            <div class="usage-overview-item">\n' +
+    '              <span class="usage-overview-label"><span data-i18n="我的 Key Token 消耗">我的 Key Token 消耗</span></span>\n' +
+    '              <span class="usage-overview-value" id="totalTokens">0</span>\n' +
+    '            </div>\n' +
+    '            <div class="usage-overview-item">\n' +
+    '              <span class="usage-overview-label"><span data-i18n="我的 Key 积分消耗">我的 Key 积分消耗</span></span>\n' +
+    '              <span class="usage-overview-value" id="totalCost"><span data-i18n="0 积分">0 积分</span></span>\n' +
+    '            </div>\n' +
+    '          </div>\n' +
+    '\n' +
+    '          <!-- 标签筛选栏 -->\n' +
+    '          <div id="keyTagBar" class="key-tag-bar" style="display:none;margin-bottom:12px;">\n' +
+    '            <div class="key-tag-chips" id="keyTagChips"></div>\n' +
+    '          </div>\n' +
+    '          <!-- 悬浮顶栏显隐哨兵：滚出视口后显示 sticky bar -->\n' +
+    '          <div id="apiKeysStickySentinel" class="model-library-sticky-sentinel" aria-hidden="true"></div>\n' +
+    '\n' +
+    '          <!-- 创建/编辑标签浮层 -->\n' +
+    '          <div id="createKeyTagPopover" class="key-tag-popover" style="display:none;">\n' +
+    '            <div class="key-tag-popover-arrow"></div>\n' +
+    '            <div class="key-tag-popover-content">\n' +
+    '              <div id="keyTagPopoverTitle" style="margin-bottom:8px;"><span data-i18n="创建标签">创建标签</span></div>\n' +
+    '              <input type="text" id="createKeyTagName" class="blora-input input" placeholder="标签名称" data-i18n-placeholder="标签名称" style="width:100%;margin-bottom:10px;" maxlength="20">\n' +
+    '              <div style="margin-bottom:6px;"><span data-i18n="选择颜色">选择颜色</span></div>\n' +
+    '              <div class="color-picker color-picker-row" id="createKeyTagColors">\n' +
+    '                <div class="color-dot selected" data-color="var(--info)"  onclick="app.selectTagColor(this)"></div>\n' +
+    '                <div class="color-dot" data-color="var(--success)"  onclick="app.selectTagColor(this)"></div>\n' +
+    '                <div class="color-dot" data-color="var(--warning)"  onclick="app.selectTagColor(this)"></div>\n' +
+    '                <div class="color-dot" data-color="var(--danger)"  onclick="app.selectTagColor(this)"></div>\n' +
+    '                <div class="color-dot" data-color="var(--purple)"  onclick="app.selectTagColor(this)"></div>\n' +
+    '                <div class="color-dot" data-color="var(--pink)"  onclick="app.selectTagColor(this)"></div>\n' +
+    '                <div class="color-dot" data-color="var(--cyan)"  onclick="app.selectTagColor(this)"></div>\n' +
+    '                <div class="color-dot" data-color="#f97316"  onclick="app.selectTagColor(this)"></div>\n' +
+    '                <div class="color-dot" data-color="#84cc16"  onclick="app.selectTagColor(this)"></div>\n' +
+    '                <div class="color-dot" data-color="#6366f1"  onclick="app.selectTagColor(this)"></div>\n' +
+    '              </div>\n' +
+    '              <div style="display:flex;gap:8px;margin-top:12px;">\n' +
+    '                <button type="button" class="blora-button" id="keyTagPopoverSubmit" onclick="app.saveKeyTag()" style="flex:1;" data-variant="primary" data-size="sm"><span data-i18n="创建">创建</span></button>\n' +
+    '                <button type="button" class="blora-button" onclick="app.hideCreateKeyTagPopover()" data-variant="secondary" data-size="sm"><span data-i18n="取消">取消</span></button>\n' +
+    '              </div>\n' +
+    '            </div>\n' +
+    '          </div>\n' +
+    '\n' +
+    '          <div id="apiKeysList" data-blora-state="loading" class="api-keys-list"></div>\n' +
+    '    </div>\n' +
+    '\n' +
+    '      <!-- 授权管理（自有 OAuth 服务签发的客户端授权，与 Passport 无关） -->\n' +
+    '      <div class="content-section blora-card" style="margin-top:16px;" data-size="sm">\n' +
+    '        <div class="section-header">\n' +
+    '          <div>\n' +
+    '            <h2 class="blora-card__title"><span data-i18n="授权管理">授权管理</span></h2>\n' +
+    '            <p class="blora-card__desc" style="margin:0;"><span data-i18n="已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。">已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。</span></p>\n' +
+    '          </div>\n' +
+    '          <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadAuthorizations()"><span data-i18n="刷新授权列表">刷新授权列表</span></button>\n' +
+    '        </div>\n' +
+    '        <div id="oauthAuthorizationsList"></div>\n' +
+    '      </div>\n' +
+    '      </di'... 73040 more characters,
+  expected: /class="blora-dialog__panel\b/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v24.13.1

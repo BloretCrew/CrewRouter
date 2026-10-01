@@ -197,13 +197,15 @@ function requireAuthHtml(req, res, next) {
 function renderAuthorizeError(res, desc) {
   res.status(400).send(
     `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">` +
-    `<link rel="stylesheet" href="/css/themes.css"><link rel="stylesheet" href="/css/main.css">` +
-    `<title>授权失败</title></head><body style="font-family:var(--font-sans,system-ui);` +
-    `background:var(--background,#f9fafb);display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">` +
-    `<div style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;` +
-    `padding:32px;max-width:420px;text-align:center;"><div style="font-size:16px;font-weight:600;margin-bottom:8px;">` +
-    `无法继续授权</div><div style="font-size:14px;color:var(--muted-foreground,#6b7280);">${desc}</div>` +
-    `</div></body></html>`
+    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<link rel="stylesheet" href="/css/layers.css?v=2.1.0">` +
+    `<link rel="stylesheet" href="/blora/blora.css?v=2.1.0">` +
+    `<link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">` +
+    `<title>授权失败</title></head><body class="blora-page blora-scope">` +
+    `<main class="blora-container blora-container--prose blora-stack">` +
+    `<h1 class="blora-h2">无法继续授权</h1><p class="blora-text-muted">${desc}</p>` +
+    `<a class="blora-button" data-variant="outline" href="/console">返回控制台</a>` +
+    `</main></body></html>`
   );
 }
 

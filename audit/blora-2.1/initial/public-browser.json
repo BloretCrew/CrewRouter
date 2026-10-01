@@ -1,0 +1,1138 @@
+[
+  {
+    "page": "index",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/index.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "用户名或邮箱",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "请输入验证码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "feishu-bind",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/feishu-bind.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "set-password",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/set-password.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "新密码",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "确认新密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "oauth-consent",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/oauth-consent.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option"
+      ],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "setup",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/setup.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "用户名",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "邮箱（可选）",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "playground",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/playground.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": null,
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "系统提示词",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "Max Tokens",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "plugin-install",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/plugin-install.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "purchase",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/purchase.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "showcase",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/showcase.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "data",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/data.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "store",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/store.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "搜索",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "usage",
+    "mode": "light",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/usage.html",
+      "theme": "light",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "index",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/index.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "用户名或邮箱",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "请输入验证码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "feishu-bind",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/feishu-bind.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "set-password",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/set-password.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "新密码",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "确认新密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "oauth-consent",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/oauth-consent.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option"
+      ],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "setup",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/setup.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "用户名",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "邮箱（可选）",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "playground",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/playground.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": null,
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "系统提示词",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "Max Tokens",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "plugin-install",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/plugin-install.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "purchase",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/purchase.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "showcase",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/showcase.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "data",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/data.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "store",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/store.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "搜索",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "usage",
+    "mode": "dark",
+    "viewport": 1280,
+    "dom": {
+      "url": "/pages/usage.html",
+      "theme": "dark",
+      "width": 1280,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "index",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/index.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "用户名或邮箱",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "请输入验证码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "feishu-bind",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/feishu-bind.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "set-password",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/set-password.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "新密码",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "确认新密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "oauth-consent",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/oauth-consent.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option"
+      ],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "setup",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/setup.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "用户名",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "邮箱（可选）",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "playground",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/playground.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": null,
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "系统提示词",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "Max Tokens",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "plugin-install",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/plugin-install.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "purchase",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/purchase.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "showcase",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/showcase.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "data",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/data.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "store",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/store.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "搜索",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "usage",
+    "mode": "light",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/usage.html",
+      "theme": "light",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "index",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/index.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "用户名或邮箱",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "请输入验证码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "feishu-bind",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/feishu-bind.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "set-password",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/set-password.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "新密码",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "确认新密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "oauth-consent",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/oauth-consent.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option"
+      ],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "setup",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/setup.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "用户名",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "邮箱（可选）",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "密码",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "playground",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/playground.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": null,
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "系统提示词",
+          "native": true,
+          "count": 1
+        },
+        {
+          "label": "Max Tokens",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "plugin-install",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/plugin-install.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [],
+      "cardPadding": "32px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "purchase",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/purchase.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "showcase",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/showcase.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  },
+  {
+    "page": "data",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/data.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "store",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/store.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [
+        {
+          "label": "搜索",
+          "native": true,
+          "count": 1
+        }
+      ],
+      "unregistered": [
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": "24px"
+    },
+    "exceptions": []
+  },
+  {
+    "page": "usage",
+    "mode": "dark",
+    "viewport": 390,
+    "dom": {
+      "url": "/pages/usage.html",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false,
+      "fields": [],
+      "unregistered": [
+        "blora-option",
+        "blora-option"
+      ],
+      "cardPadding": null
+    },
+    "exceptions": []
+  }
+]

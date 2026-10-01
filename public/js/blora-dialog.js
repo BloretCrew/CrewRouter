@@ -20,79 +20,30 @@ const Dialog = (() => {
 
   function prepareLegacyDialog(dialog) {
     if (!dialog || dialog.dataset.legacyPrepared === 'true') return dialog;
+    dialog.querySelectorAll(':scope > .modal-overlay').forEach((overlay) => overlay.remove());
     const content = dialog.querySelector(':scope > .modal-content');
     if (!content) return dialog;
 
-    // Existing pages already provide their own header/body/footer. Keeping the
-    // inner panel class would create a second panel inside Blora's shadow panel.
-    content.classList.remove('blora-dialog__panel');
+    const maxWidth = content.style.maxWidth;
+    if (maxWidth && maxWidth !== '100%' && maxWidth !== 'none') {
+      dialog.style.setProperty('--blora-dialog-max-width', maxWidth);
+    }
+    const header = content.querySelector(':scope > .modal-header');
+    const footer = content.querySelector(':scope > .modal-footer');
+    if (header) {
+      header.slot = 'title';
+      header.querySelectorAll('.modal-close').forEach((button) => { button.hidden = true; });
+      dialog.prepend(header);
+    }
+    if (footer) {
+      footer.slot = 'footer';
+      dialog.append(footer);
+    }
     content.style.width = '100%';
     content.style.maxWidth = '100%';
-    content.style.maxHeight = '100%';
-    content.style.boxSizing = 'border-box';
     content.style.margin = '0';
     dialog.dataset.legacyPrepared = 'true';
 
-    const applyShadowCompatibility = () => {
-      const shadow = dialog.shadowRoot;
-      if (!shadow) return;
-      const header = shadow.querySelector('.blora-dialog__header');
-      const footer = shadow.querySelector('.blora-dialog__footer');
-      const body = shadow.querySelector('.blora-dialog__body');
-      if (header) header.style.setProperty('display', 'none', 'important');
-      if (footer) footer.style.setProperty('display', 'none', 'important');
-      if (body) {
-        body.style.setProperty('display', 'flex', 'important');
-        body.style.setProperty('flex-direction', 'column', 'important');
-        body.style.setProperty('min-height', '0', 'important');
-        body.style.setProperty('overflow', 'hidden', 'important');
-        body.style.setProperty('padding', '0', 'important');
-        body.style.setProperty('background', 'transparent', 'important');
-      }
-      const panel = shadow.querySelector('.blora-dialog__panel');
-      if (panel) {
-        panel.style.setProperty('display', 'flex', 'important');
-        panel.style.setProperty('flex-direction', 'column', 'important');
-        panel.style.maxWidth = 'none';
-        panel.style.width = '100%';
-        panel.style.background = 'transparent';
-        panel.style.boxShadow = 'none';
-        panel.style.borderRadius = '0';
-        // 滚动交给内层 .modal-body（见下），面板自身保持 hidden 防止双滚动条
-        panel.style.overflow = 'hidden';
-      }
-
-      // 宽度：优先用内容节点上的内联 max-width（如 style="max-width:720px"）
-      // 高度：绝不要把内容的 "100%" 回写到面板——百分比在未定高父级上会解析为 none，
-      // 面板应保留组件 CSS 的 calc(100dvh - …) 上限。
-      const contentMaxWidth = content.style.maxWidth;
-      if (contentMaxWidth && contentMaxWidth !== '100%' && contentMaxWidth !== 'none') {
-        dialog.style.setProperty('--blora-dialog-max-width', contentMaxWidth);
-      }
-
-      // 旧版内容自带 header/body/footer。高度链路：
-      // 面板（组件 CSS max-height + flex 列）→ shadow body（flex:1, min-height:0）
-      // → .modal-content（flex:1）→ .modal-body（overflow-y:auto）滚动。
-      if (body) {
-        body.style.setProperty('flex', '1 1 auto', 'important');
-      }
-      content.style.display = 'flex';
-      content.style.flexDirection = 'column';
-      content.style.minHeight = '0';
-      content.style.maxHeight = '100%';
-      content.style.overflow = 'hidden';
-      content.style.flex = '1 1 auto';
-      const innerBody = content.querySelector('.modal-body');
-      if (innerBody) {
-        innerBody.style.setProperty('flex', '1 1 auto', 'important');
-        innerBody.style.setProperty('min-height', '0', 'important');
-        innerBody.style.setProperty('overflow-y', 'auto', 'important');
-        innerBody.style.setProperty('-webkit-overflow-scrolling', 'touch', 'important');
-      }
-    };
-
-    if (dialog.shadowRoot) applyShadowCompatibility();
-    else customElements.whenDefined('blora-dialog').then(applyShadowCompatibility);
     return dialog;
   }
 
@@ -165,41 +116,40 @@ const Dialog = (() => {
     });
   }
 
-  function alert(title, message, options = {}) {
+  function showAlert(title, message, options = {}) {
     return render({ title, message, confirmText: options.confirmText || t('知道了'), showCancel: false, danger: options.danger || false });
   }
 
-  function confirm(title, message, options = {}) {
-    return render({ title, message, confirmText: options.confirmText || t('确认'), cancelText: options.cancelText || t('取消'), showCancel: true, danger: options.danger || false });
+  function showConfirm(title, message, options = {}) {
+    return render({ title, message, confirmText: options.confirmText || t('确认'), cancelText: options.cancelText || t('取消'), showCancel: true, danger: options.danger !== false });
   }
 
   function showModal({ title, content, footer, width }) {
     const dialog = createDialog({ title, content, footer, width });
     let settled = false;
+    let result = false;
     let resolvePromise;
     const promise = new Promise((resolve) => { resolvePromise = resolve; });
-    const settle = (value) => {
+    const settle = () => {
       if (settled) return;
       settled = true;
       dialog.remove();
-      resolvePromise(value);
+      resolvePromise(result);
     };
     const close = (value) => {
       if (settled) return;
-      const remove = removeAfterClose(dialog, () => resolvePromise(value));
+      result = value;
       dialog.close('api');
-      if (!dialog.hasAttribute('open')) remove();
+      if (!dialog.hasAttribute('open')) settle();
     };
-    dialog.addEventListener('blora-close', () => settle(false));
+    dialog.addEventListener('blora-close', settle, { once: true });
     dialog.show();
     return { close, promise, element: dialog };
   }
 
-  return { alert, confirm, showModal, prepareAllDialogs };
+  return { alert: showAlert, confirm: showConfirm, showModal, prepareAllDialogs };
 })();
 
-window.alert = (msg) => Dialog.alert(String(msg));
-window.confirm = (msg) => Dialog.confirm(t('确认'), String(msg));
 
 (function installLegacyDialogCompatibility() {
   function scan(root) {
@@ -208,10 +158,12 @@ window.confirm = (msg) => Dialog.confirm(t('确认'), String(msg));
   scan(document);
   document.addEventListener('DOMContentLoaded', () => scan(document), { once: true });
   if (window.MutationObserver) {
-    new MutationObserver((records) => {
+    const observer = new MutationObserver((records) => {
       records.forEach((record) => record.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) scan(node);
       }));
-    }).observe(document.documentElement, { childList: true, subtree: true });
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    window.addEventListener('pagehide', () => observer.disconnect(), { once: true });
   }
 })();

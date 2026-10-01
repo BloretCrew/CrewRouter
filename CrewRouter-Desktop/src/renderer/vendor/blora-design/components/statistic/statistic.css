@@ -17,7 +17,18 @@ blora-statistic {
   font-size: var(--blora-text-xs);
   text-transform: uppercase;
   letter-spacing: var(--blora-tracking-caps);
-  color: var(--blora-color-text-subtle);
+
+  /* text-subtle is ~2.7:1; a 12px label needs text-muted for AA. */
+  color: var(--blora-color-text-muted);
+}
+
+/* Caps tracking is for short Latin labels; CJK labels such as "本月访问"
+   just look spaced out. */
+.blora-stat__label:lang(zh),
+.blora-stat__label:lang(ja),
+.blora-stat__label:lang(ko) {
+  text-transform: none;
+  letter-spacing: var(--blora-tracking-wide);
 }
 
 .blora-stat__value {

@@ -1,0 +1,18 @@
+Blora SSE success/error/timeout/disconnect, billing spy and immutable retry payload assertions passed.
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ []
+- [
+-   'model-keyboard'
+- ]
+
+    at verifyModelKeyboard (/data/CrewRouter/scripts/test-blora-public-batch-c.js:223:12)
+    at async /data/CrewRouter/scripts/test-blora-public-batch-c.js:164:1 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [],
+  expected: [Array],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}

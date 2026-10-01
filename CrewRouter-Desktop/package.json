@@ -93,6 +93,6 @@
     }
   },
   "dependencies": {
-    "@bloret-crew/blora-design": "2.0.8"
+    "@bloret-crew/blora-design": "2.1.0"
   }
 }

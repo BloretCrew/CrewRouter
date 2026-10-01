@@ -1,0 +1,27 @@
+public/js/admin.js exit=0
+public/js/app.js exit=0
+public/js/blora-agent.js exit=0
+public/js/blora-dialog.js exit=0
+public/js/blora-foundation.js exit=0
+public/js/blora-services.js exit=0
+public/js/dom.js exit=0
+public/js/edition-badge.js exit=0
+public/js/i18n.js exit=0
+public/js/multi-dimension-chart.js exit=0
+public/js/oauth-consent.js exit=0
+public/js/playground-state.js exit=0
+public/js/playground.js exit=0
+public/js/plugin-runtime.js exit=0
+public/js/session-tool-groups.js exit=0
+public/js/store.js exit=1
+/data/CrewRouter/public/js/store.js:209
+      viewBox.innerHTML = '<blora-alert variant="danger" title="\' + esc(e.message || t('加载失败')) + \'"></blora-alert>';
+                                                                                         ^^^^
+
+SyntaxError: Unexpected identifier '加载失败'
+    at wrapSafe (node:internal/modules/cjs/loader:1735:18)
+    at checkSyntax (node:internal/main/check_syntax:76:3)
+
+Node.js v24.13.1
+public/js/theme.js exit=0
+public/js/usage.js exit=0

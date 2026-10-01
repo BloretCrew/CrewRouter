@@ -1,0 +1,96 @@
+{"chromeProfile":"/tmp/blora-21-chrome-UcR7xn"}
+
+DevTools listening on ws://127.0.0.1:18472/devtools/browser/4c96374c-e77d-49ab-9e93-033bd1a41859
+[58728:58796:1001/122035.782469:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[58728:58796:1001/122035.799663:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[58728:58796:1001/122035.800005:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[58728:58796:1001/122036.075335:ERROR:google_apis/gcm/engine/mcs_client.cc:702]   Error code: 401  Error message: Authentication Failed: wrong_secret
+[58728:58796:1001/122036.075355:ERROR:google_apis/gcm/engine/mcs_client.cc:704] Failed to log in to GCM, resetting connection.
+Created TensorFlow Lite XNNPACK delegate for CPU.
+[58728:58796:1001/122102.536739:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[58728:58796:1001/122155.688791:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[58728:58796:1001/122203.519830:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/122303.797129:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/122325.442555:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+Warning: maxDynamicUniformBuffersPerPipelineLayout artificially reduced from 500000 to 16 to fit dynamic offset allocation limit.
+Warning: maxDynamicStorageBuffersPerPipelineLayout artificially reduced from 500000 to 16 to fit dynamic offset allocation limit.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1790828614.400862   60047 environment.cc:523] Selected adapter: SwiftShader Device (Subzero), arch=swiftshader, vendor=google, backend=Vulkan, adapterType=CPU / Software
+[60047:60047:1001/122334.444239:ERROR:services/on_device_model/ml/chrome_ml.cc:101] Terminating On-Device Model Service: Failed creation: Failed to create device:
+Required limit (14336) is greater than the supported limit (8192).
+ - While validating maxTextureDimension2D
+ - While validating required limits
+
+[58728:58728:1001/122334.451594:ERROR:services/on_device_model/public/cpp/service_client.cc:37] Unexpected on_device_model service disconnect; reason: 0, description:
+[58728:58796:1001/122404.078065:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/122504.362109:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/122604.636951:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/122704.929459:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/122717.054761:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[58728:58796:1001/122805.232435:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/122905.509570:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/123005.800678:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/123106.074006:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/123159.344454:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 2 rejected by interface blink.mojom.Widget
+[58728:58796:1001/123206.353019:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/123306.631261:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/123402.505751:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[58728:58796:1001/123406.891562:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/123507.209512:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/123511.100134:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 2 rejected by interface blink.mojom.Widget
+[58728:58728:1001/123511.100343:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 6 rejected by interface blink.mojom.WidgetHost
+[58728:58728:1001/123511.100414:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 7 rejected by interface blink.mojom.WidgetHost
+[58728:58796:1001/123607.532203:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/123646.412789:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 6 rejected by interface blink.mojom.WidgetHost
+[58728:58728:1001/123646.413319:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 7 rejected by interface blink.mojom.WidgetHost
+[58728:58796:1001/123707.854292:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/123808.287734:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/123908.580792:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/124008.906372:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/124023.562157:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 7 rejected by interface blink.mojom.WidgetHost
+[58728:58796:1001/124109.188991:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/124124.591415:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 2 rejected by interface blink.mojom.Widget
+[58728:58796:1001/124209.486580:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/124309.780965:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/124326.024155:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 7 rejected by interface blink.mojom.WidgetHost
+[58728:58796:1001/124410.281919:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/124510.549261:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/124610.820491:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/124645.340217:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 2 rejected by interface blink.mojom.Widget
+[58728:58796:1001/124711.122381:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/124718.383234:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 2 rejected by interface blink.mojom.Widget
+[58728:58796:1001/124811.452706:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/124911.763538:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/125012.047654:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/125112.333211:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/125212.636832:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/125312.930854:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/125413.243660:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/125513.639873:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/125613.930258:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/125710.398712:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 6 rejected by interface blink.mojom.WidgetHost
+[58728:58728:1001/125710.398855:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 7 rejected by interface blink.mojom.WidgetHost
+[58728:58796:1001/125714.236322:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/125814.501433:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/125914.767419:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/130015.057441:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/130115.369865:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/130215.647832:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/130315.945567:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/130416.282586:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/130516.550447:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/130556.455695:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 2 rejected by interface blink.mojom.Widget
+[58728:58728:1001/130556.455769:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 6 rejected by interface blink.mojom.WidgetHost
+[58728:58728:1001/130556.455826:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 7 rejected by interface blink.mojom.WidgetHost
+[58728:58796:1001/130616.835868:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/130717.119293:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/130817.396126:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58728:1001/130827.442040:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 6 rejected by interface blink.mojom.WidgetHost
+[58728:58728:1001/130827.442098:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 7 rejected by interface blink.mojom.WidgetHost
+[58728:58796:1001/130917.709354:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/131017.980963:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/131118.321982:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/131218.607391:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/131318.915603:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/131419.196109:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2
+[58728:58796:1001/131519.472557:ERROR:google_apis/gcm/engine/connection_factory_impl.cc:484] ConnectionHandler failed with net error: -2

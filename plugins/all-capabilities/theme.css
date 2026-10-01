@@ -1,35 +1,19 @@
-/* 全能力示例主题：演示 themes:register 权限
- *
- * 演示点：
- *  1. 全局 :root 变量覆盖（核心配色）
- *  2. html.theme-<pluginId>__<themeId> 作用域提权（plugin-runtime 自动加 class）
- *  3. 引用插件目录内的静态资产（/plugins/all-capabilities/bg-pattern.svg）
- *  4. 叠加语义变量（--status-* / --chart-*），覆盖 JS 动态 UI 的取色
- */
-
-/* 变量级覆盖：所有引用这些变量的组件都会跟随 */
-:root {
-  --primary: #7c3aed;
-  --brand-blue: #7c3aed;
-  --brand-blue-bg: rgba(124, 58, 237, 0.12);
-  --ring: #7c3aed;
-
-  /* 语义色（JS 动态 UI 的 var() 引用这里） */
-  --status-info: #7c3aed;
-  --chart-1: #a855f7;
-  --chart-2: #7c3aed;
-}
-
-/* 作用域提权：仅当启用本主题时生效（html 上的 theme- class 由运行时注入） */
-html.theme-all-capabilities__all-capabilities-theme body {
-  background-image: url('/plugins/all-capabilities/bg-pattern.svg');
-}
-
-html.theme-all-capabilities__all-capabilities-theme .badge {
-  border-radius: 6px;
-}
-
-/* 保留旧 class 写法兼容（先前版本的主题选择器） */
-.all-capabilities-theme .badge {
-  border-radius: 6px;
+/* Plugin palette composition; component appearance remains owned by Blora. */
+:root[data-blora-theme].theme-all-capabilities__all-capabilities-theme {
+  --blora-color-surface-canvas: var(--blora-color-coral-background);
+  --blora-color-surface-default: var(--blora-color-coral-surface-1);
+  --blora-color-surface-raised: var(--blora-color-coral-surface-2);
+  --blora-color-surface-sunken: var(--blora-color-coral-surface-3);
+  --blora-color-text-primary: var(--blora-color-coral-text-strong);
+  --blora-color-text-secondary: var(--blora-color-coral-foreground);
+  --blora-color-text-emphasis: var(--blora-color-coral-text-emphasis);
+  --blora-color-text-muted: var(--blora-color-coral-text-muted);
+  --blora-color-text-subtle: var(--blora-color-coral-text-subtle);
+  --blora-color-text-disabled: var(--blora-color-coral-text-disabled);
+  --blora-color-text-on-accent: var(--blora-color-coral-on-accent);
+  --blora-color-border-subtle: var(--blora-color-coral-border-subtle);
+  --blora-color-action-primary-default: var(--blora-color-coral-primary);
+  --blora-color-action-primary-hover: var(--blora-color-coral-primary-hover);
+  --blora-color-action-primary-soft: var(--blora-color-coral-primary-soft);
+  --blora-texture-background: radial-gradient(circle at top right, color-mix(in srgb, var(--blora-color-action-primary-default) 6%, transparent), transparent 60%);
 }

@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="/css/layers.css?v=2.1.0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
     (function () {
@@ -18,12 +19,12 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <script type="module" src="/blora/auto.js?v=2.0.8"></script>
+  <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js"></script>
-  <link rel="stylesheet" href="/css/themes.css">
-  <link rel="stylesheet" href="/css/main.css">
+  <style>@import url("/css/themes.css") layer(legacy);</style>
+  <style>@import url("/css/main.css") layer(legacy);</style>
   <link rel="stylesheet" href="/css/auth-shell.css">
-  <link rel="stylesheet" href="/css/edition-badge.css?v=2">
+  <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
@@ -37,91 +38,83 @@
 
   <script src="/js/i18n.js?v=2"></script>
   <script src="/js/edition-badge.js?v=1"></script>
-  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
-  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
+  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
+  <script type="module" src="/js/blora-services.js?v=2.1.0"></script>
 </head>
-<body class="blora-page">
+<body class="blora-page blora-scope">
 <blora-navbar brand-href="/" title="CrewRouter" variant="floating" class="public-navbar">
   <blora-navbar-tool>
-    <select id="langToggle" class="blora-input" data-size="sm" title="Language" aria-label="Language">
-      <option value="zh">中文</option><option value="en">EN</option>
-    </select>
+    <blora-select id="langToggle" data-size="sm" aria-label="Language" aria-label="Language">
+      <blora-option value="zh">中文</blora-option><blora-option value="en">EN</blora-option>
+    </blora-select>
   </blora-navbar-tool>
 </blora-navbar>
   <div class="setup-container">
     <div class="setup-header">
-      <h1>🚀 CrewRouter <span class="brand-edition-badge" data-edition-badge style="display:none;"></span></h1>
+      <h1><span data-icon="rocket" aria-hidden="true"></span> CrewRouter <span class="brand-edition-badge" data-edition-badge style="display:none;"></span></h1>
       <p><span data-i18n="首次使用，请创建管理员账号">首次使用，请创建管理员账号</span></p>
     </div>
 
-    <div class="setup-card" id="stepLoading">
-      <div class="setup-loading"><div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="正在检查系统状态…">正在检查系统状态…</span></div></div></div>
+    <div class="setup-card blora-card blora-stack" data-size="sm" id="stepLoading">
+      <div class="setup-loading"><div class="page-loading"><div class="blora-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="正在检查系统状态…">正在检查系统状态…</span></div></div></div>
     </div>
 
-    <div class="setup-card" id="stepEdition" style="display:none;">
+    <div class="setup-card blora-card blora-stack" data-size="sm" id="stepEdition" style="display:none;">
       <h2>选择安装版本 / Choose edition</h2>
       <p class="step-desc step-warning">安装后不可修改，请谨慎选择。 / This choice is permanent.</p>
       <div class="setup-choice-list">
-        <button class="btn btn-primary blora-button" data-variant="primary" type="button" onclick="setup.chooseEdition('personal')">Personal Edition（个人版）</button>
-        <button class="btn btn-primary blora-button" data-variant="primary" type="button" onclick="setup.chooseEdition('team')">Team Edition（团队版）</button>
+        <button class="btn btn-primary blora-button" data-variant="outline" type="button" id="publicAction0">Personal Edition（个人版）</button>
+        <button class="btn btn-primary blora-button" data-variant="outline" type="button" id="publicAction1">Team Edition（团队版）</button>
       </div>
       <div class="blora-message setup-error" data-variant="danger" id="editionError" role="alert"></div>
     </div>
 
-    <div class="setup-card" id="stepMode" style="display:none;">
+    <div class="setup-card blora-card blora-stack" data-size="sm" id="stepMode" style="display:none;">
       <h2>选择账号系统模式</h2>
       <p class="step-desc step-warning">选择后不可修改，请谨慎选择。</p>
       <div class="setup-choice-list">
-        <button class="btn btn-primary blora-button" data-variant="primary" onclick="setup.chooseMode('passport')">Bloret PassPort 模式</button>
-        <button class="btn btn-primary blora-button" data-variant="primary" onclick="setup.chooseMode('feishu')">飞书模式</button>
+        <button class="btn btn-primary blora-button" data-variant="outline" type="button" id="publicAction2">Bloret PassPort 模式</button>
+        <button class="btn btn-primary blora-button" data-variant="outline" type="button" id="publicAction3">飞书模式</button>
       </div>
       <div class="blora-message setup-error" data-variant="danger" id="modeError" role="alert"></div>
     </div>
 
-    <div class="setup-card" id="stepPassport" style="display:none;">
+    <div class="setup-card blora-card blora-stack" data-size="sm" id="stepPassport" style="display:none;">
       <div class="setup-success">
         <h2>PassPort 首次授权</h2>
         <p>请使用管理员身份完成 Bloret PassPort 授权，授权成功后将自动创建管理员账号并进入控制台。</p>
-        <button class="btn btn-primary blora-button" data-variant="primary" type="button" onclick="setup.startPassportAuth()">前往 PassPort 授权</button>
+        <button class="btn btn-primary blora-button" data-variant="primary" type="button" id="publicAction4">前往 PassPort 授权</button>
       </div>
     </div>
 
-    <div class="setup-card" id="step1" style="display:none;">
+    <div class="setup-card blora-card blora-stack" data-size="sm" id="step1" style="display:none;">
       <h2><span data-i18n="创建管理员账号">创建管理员账号</span></h2>
       <p class="step-desc"><span data-i18n="数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。">数据库已就绪。创建后即可登录管理面板，在后台配置供应商与模型。</span></p>
       <div class="setup-form">
-        <div class="form-group">
-          <label for="adminUsername"><span data-i18n="用户名">用户名</span></label>
-          <input type="text" id="adminUsername" placeholder="admin" autocomplete="username" class="blora-input">
-        </div>
-        <div class="form-group">
-          <label for="adminEmail"><span data-i18n="邮箱（可选）">邮箱（可选）</span></label>
-          <input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email" class="blora-input">
-        </div>
-        <div class="form-group">
-          <label for="adminPassword"><span data-i18n="密码">密码</span></label>
-          <input type="password" id="adminPassword" placeholder="至少 6 位" data-i18n-placeholder="至少 6 位" autocomplete="new-password" class="blora-input">
-        </div>
+        <blora-field label="用户名"><input type="text" id="adminUsername" placeholder="admin" autocomplete="username" class="blora-input"></blora-field>
+        <blora-field label="邮箱（可选）"><input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email" class="blora-input"></blora-field>
+        <blora-field label="密码"><input type="password" id="adminPassword" placeholder="至少 6 位" data-i18n-placeholder="至少 6 位" autocomplete="new-password" class="blora-input"></blora-field>
       </div>
       <div class="blora-message setup-error" data-variant="danger" id="step1Error" role="alert"></div>
       <div class="setup-actions">
-        <button class="btn btn-primary blora-button" data-variant="primary" id="submitBtn" onclick="setup.submit()"><span data-i18n="完成初始化">完成初始化</span></button>
+        <button class="btn btn-primary blora-button" data-variant="primary" id="submitBtn" type="button"><span data-i18n="完成初始化">完成初始化</span></button>
       </div>
     </div>
 
-    <div class="setup-card" id="stepDone" style="display:none;">
+    <div class="setup-card blora-card blora-stack" data-size="sm" id="stepDone" style="display:none;">
       <div class="setup-success">
-        <h2><span data-i18n="✅ 设置完成！">✅ 设置完成！</span></h2>
+        <h2><span data-i18n="设置完成！">设置完成！</span></h2>
         <p><span data-i18n="管理员账号已创建，请登录开始使用">管理员账号已创建，请登录开始使用</span></p>
-        <button class="btn btn-primary blora-button" data-variant="primary" onclick="window.location.href='/'"><span data-i18n="前往登录">前往登录</span></button>
+        <button class="btn btn-primary blora-button" data-variant="primary" type="button" id="publicAction6"><span data-i18n="前往登录">前往登录</span></button>
       </div>
     </div>
 
-    <div class="setup-card" id="stepReady" style="display:none;">
+    <div class="setup-card blora-card blora-stack" data-size="sm" id="stepReady" style="display:none;">
       <div class="setup-success">
         <h2><span data-i18n="系统已初始化">系统已初始化</span></h2>
         <p><span data-i18n="无需重复配置，可直接登录">无需重复配置，可直接登录</span></p>
-        <button class="btn btn-primary blora-button" data-variant="primary" onclick="window.location.href='/'"><span data-i18n="前往登录">前往登录</span></button>
+        <button class="btn btn-primary blora-button" data-variant="primary" type="button" id="publicAction7"><span data-i18n="前往登录">前往登录</span></button>
       </div>
     </div>
   </div>
@@ -251,7 +244,7 @@
         if (!password || password.length < 6) { this.showError('密码至少 6 位'); return; }
 
         btn.disabled = true;
-        btn.innerHTML = `<span class="inline-loading"><div class="loading-spinner sm" role="status" aria-label="加载中"></div><span class="inline-loading-text">创建中…</span></span>`;
+        btn.innerHTML = `<span class="inline-loading"><div class="blora-spinner" role="status" aria-label="加载中"></div><span class="inline-loading-text">创建中…</span></span>`;
         console.log('[OOBE] 提交管理员创建:', username);
 
         try {
@@ -301,6 +294,16 @@
       el.addEventListener('change', function () { I18N.load(el.value); });
     }
   })();
+</script>
+<script>
+document.getElementById('publicAction0').addEventListener('click', function (event) { setup.chooseEdition('personal') });
+document.getElementById('publicAction1').addEventListener('click', function (event) { setup.chooseEdition('team') });
+document.getElementById('publicAction2').addEventListener('click', function (event) { setup.chooseMode('passport') });
+document.getElementById('publicAction3').addEventListener('click', function (event) { setup.chooseMode('feishu') });
+document.getElementById('publicAction4').addEventListener('click', function (event) { setup.startPassportAuth() });
+document.getElementById('submitBtn').addEventListener('click', function (event) { setup.submit() });
+document.getElementById('publicAction6').addEventListener('click', function (event) { window.location.href='/' });
+document.getElementById('publicAction7').addEventListener('click', function (event) { window.location.href='/' });
 </script>
 </body>
 </html>

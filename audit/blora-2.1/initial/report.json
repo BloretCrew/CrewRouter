@@ -1,0 +1,124 @@
+{
+  "mainSummary": {
+    "observations": 224,
+    "realPages": 13,
+    "routes": 56,
+    "screenshots": 248,
+    "errors": 0,
+    "consoleErrorObservations": 60,
+    "overflowObservations": 0,
+    "concurrentSourceChanges": [
+      "public/js/app.js",
+      "public/pages/console.html",
+      "public/pages/admin.html"
+    ],
+    "limitations": [
+      "Demo automatically authenticates an admin; no real login acceptance.",
+      "Demo writes may return success without persisting; no production API or upstream inference acceptance.",
+      "Outbound HTTPS is blocked to avoid external OAuth, payment, reporting and model calls.",
+      "Setup redirects because demo needsSetup=false; OAuth, binding and install pages lack live authorization parameters.",
+      "Viewport screenshots cover the visible page, not every offscreen row."
+    ]
+  },
+  "supplementalSummary": {
+    "observations": 24,
+    "realPages": 6,
+    "routes": 6,
+    "screenshots": 44,
+    "errors": 0,
+    "consoleErrorObservations": 12,
+    "overflowObservations": 0,
+    "concurrentSourceChanges": [
+      "public/js/app.js",
+      "public/js/admin.js",
+      "public/pages/console.html",
+      "public/pages/admin.html"
+    ],
+    "limitations": [
+      "Demo automatically authenticates an admin; no real login acceptance.",
+      "Demo writes may return success without persisting; no production API or upstream inference acceptance.",
+      "Outbound HTTPS is blocked to avoid external OAuth, payment, reporting and model calls.",
+      "Setup redirects because demo needsSetup=false; OAuth, binding and install pages lack live authorization parameters.",
+      "Viewport screenshots cover the visible page, not every offscreen row."
+    ]
+  },
+  "screenshotReview": {
+    "count": 296,
+    "contactSheets": 25
+  },
+  "testExitCodesInitial": {
+    "foundation": 1,
+    "audit-parser": 0,
+    "http": 0,
+    "public-batch-a": 1,
+    "public-batch-c": 1,
+    "no-legacy-dialog": 0
+  },
+  "testExitCodesFinal": {
+    "foundation": 0,
+    "audit-parser": 0,
+    "http": 0,
+    "public-batch-a": 0,
+    "public-batch-c": 1,
+    "no-legacy-dialog": 0
+  },
+  "regressions": [
+    {
+      "classification": "demo-contract",
+      "issue": "API Key cards missing: demo keys omit key_type while frontend filters normal/co_key. Copy/Delete Key blocked."
+    },
+    {
+      "classification": "demo-contract",
+      "issue": "User/admin audit-log API returns logs; frontend expects a different array and shows length exception."
+    },
+    {
+      "classification": "runtime-early-observation",
+      "issue": "Playground setBloraState undefined in three main observations; latest supplemental has no uncaught exception and successfully returns demo reply."
+    },
+    {
+      "classification": "routing-early-observation",
+      "issue": "adminPrompts/adminPlugins/adminUserGroups fall back to stats in main matrix; concurrent routing edits require stable rerun."
+    },
+    {
+      "classification": "test-regression",
+      "issue": "Latest public-batch-c rerun passes SSE success/error/timeout/disconnect billing assertions but fails model keyboard selection: actual [] versus expected [model-keyboard]. Earlier literal button assertion was changed by another agent."
+    },
+    {
+      "classification": "mobile-interaction",
+      "issue": "390 light provider tag danger click did not open dialog; desktop light/dark and mobile dark did."
+    }
+  ],
+  "blocked": [
+    {
+      "category": "pagination",
+      "reason": "Demo users below page size; tested error log UI has no enabled next-page control. No real pagination acceptance."
+    },
+    {
+      "category": "API-Key-copy-danger",
+      "reason": "Demo key cards not rendered; other actual clipboard and danger-dialog paths tested."
+    },
+    {
+      "category": "production-API",
+      "reason": "Demo auth/writes/inference are simulated; store real pool forced to 127.0.0.1:1."
+    },
+    {
+      "category": "stable-snapshot",
+      "reason": "Other agents changed app.js/admin.js/console.html/admin.html during both runs."
+    }
+  ],
+  "passedInteractions": [
+    "Actual navigation mouse clicks and Tab focus recorded per observation (mobile offscreen sidebar clicks are not counted as passes).",
+    "Actual search typing/filter captures.",
+    "Create Key dialog input, Tab, Escape focus return, demo submit in all four variants.",
+    "Actual Feishu callback copy with clipboard read (40 chars) in all four variants.",
+    "Actual provider-tag danger dialog and Escape cancel in three variants.",
+    "Playground actual input/send fixed demo replies in four variants."
+  ],
+  "processesStopped": true,
+  "userFilesModified": false,
+  "commitCreated": false,
+  "portsClosed": {
+    "18471": true,
+    "18472": true
+  }
+}

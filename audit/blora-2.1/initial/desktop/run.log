@@ -1,0 +1,173 @@
+[
+  {
+    "noBridge": {
+      "view": false,
+      "description": "桌面桥接加载失败，请重启应用后重试。",
+      "version": "2.1.0"
+    }
+  },
+  {
+    "width": 1280,
+    "theme": "light",
+    "initial": {
+      "version": "2.1.0",
+      "field": true,
+      "overflow": false,
+      "scheme": "light",
+      "errors": []
+    },
+    "renameOpened": true,
+    "confirm": true,
+    "calls": [
+      [
+        "rename",
+        "p1",
+        "已重命名"
+      ],
+      [
+        "stop"
+      ]
+    ],
+    "exceptions": [],
+    "settings": {
+      "overflow": false,
+      "scheme": "light",
+      "disabled": false
+    },
+    "settingsRename": true,
+    "settingsCalls": [
+      [
+        "rename",
+        "p1",
+        "旧页重命名"
+      ],
+      [
+        "stop"
+      ]
+    ],
+    "settingsExceptions": []
+  },
+  {
+    "width": 1280,
+    "theme": "dark",
+    "initial": {
+      "version": "2.1.0",
+      "field": true,
+      "overflow": false,
+      "scheme": "dark",
+      "errors": []
+    },
+    "renameOpened": true,
+    "confirm": true,
+    "calls": [
+      [
+        "rename",
+        "p1",
+        "已重命名"
+      ],
+      [
+        "stop"
+      ]
+    ],
+    "exceptions": [],
+    "settings": {
+      "overflow": false,
+      "scheme": "dark",
+      "disabled": false
+    },
+    "settingsRename": true,
+    "settingsCalls": [
+      [
+        "rename",
+        "p1",
+        "旧页重命名"
+      ],
+      [
+        "stop"
+      ]
+    ],
+    "settingsExceptions": []
+  },
+  {
+    "width": 390,
+    "theme": "light",
+    "initial": {
+      "version": "2.1.0",
+      "field": true,
+      "overflow": false,
+      "scheme": "light",
+      "errors": []
+    },
+    "renameOpened": true,
+    "confirm": true,
+    "calls": [
+      [
+        "rename",
+        "p1",
+        "已重命名"
+      ],
+      [
+        "stop"
+      ]
+    ],
+    "exceptions": [],
+    "settings": {
+      "overflow": false,
+      "scheme": "light",
+      "disabled": false
+    },
+    "settingsRename": true,
+    "settingsCalls": [
+      [
+        "rename",
+        "p1",
+        "旧页重命名"
+      ],
+      [
+        "stop"
+      ]
+    ],
+    "settingsExceptions": []
+  },
+  {
+    "width": 390,
+    "theme": "dark",
+    "initial": {
+      "version": "2.1.0",
+      "field": true,
+      "overflow": false,
+      "scheme": "dark",
+      "errors": []
+    },
+    "renameOpened": true,
+    "confirm": true,
+    "calls": [
+      [
+        "rename",
+        "p1",
+        "已重命名"
+      ],
+      [
+        "stop"
+      ]
+    ],
+    "exceptions": [],
+    "settings": {
+      "overflow": false,
+      "scheme": "dark",
+      "disabled": false
+    },
+    "settingsRename": true,
+    "settingsCalls": [
+      [
+        "rename",
+        "p1",
+        "旧页重命名"
+      ],
+      [
+        "stop"
+      ]
+    ],
+    "settingsExceptions": []
+  }
+]

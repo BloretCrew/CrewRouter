@@ -45,8 +45,42 @@
 .blora-card__title {
   font-family: var(--blora-font-heading);
   font-size: var(--blora-text-lg);
+  font-weight: 600;
+  line-height: var(--blora-leading-tight);
   color: var(--blora-color-text-primary);
   margin-bottom: var(--blora-space-2);
+}
+
+/* Header row: title (+ description / status) on the start side, actions on
+   the end. Apps kept hand-rolling this flex row and fighting the title's
+   bottom margin, so the card owns it. */
+.blora-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--blora-space-3);
+  min-width: 0;
+  margin-bottom: var(--blora-space-4);
+}
+
+.blora-card__header > * {
+  min-width: 0;
+}
+
+.blora-card__header .blora-card__title {
+  margin-bottom: 0;
+}
+
+.blora-card__desc {
+  margin-top: var(--blora-space-1);
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-muted);
+}
+
+/* Dense grids (resource cards, statistics) */
+.blora-card[data-size="sm"] {
+  padding: var(--blora-space-5);
 }
 
 .blora-card__body {

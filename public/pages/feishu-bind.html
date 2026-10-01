@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="/css/layers.css?v=2.1.0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
     (function () {
@@ -18,12 +19,12 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <script type="module" src="/blora/auto.js?v=2.0.8"></script>
+  <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js"></script>
-  <link rel="stylesheet" href="/css/themes.css">
-  <link rel="stylesheet" href="/css/main.css">
+  <style>@import url("/css/themes.css") layer(legacy);</style>
+  <style>@import url("/css/main.css") layer(legacy);</style>
   <link rel="stylesheet" href="/css/auth-shell.css">
-  <link rel="stylesheet" href="/css/edition-badge.css?v=2">
+  <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
@@ -34,15 +35,16 @@
       document.documentElement.classList.add(resolved);
     })();
   </script>
-  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
-  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
+  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
+  <script type="module" src="/js/blora-services.js?v=2.1.0"></script>
 </head>
-<body class="blora-page">
+<body class="blora-page blora-scope">
 <blora-navbar brand-href="/" title="CrewRouter" variant="floating" class="public-navbar">
   <blora-navbar-tool>
-    <select id="langToggle" class="blora-input" data-size="sm" title="Language" aria-label="Language">
-      <option value="zh">中文</option><option value="en">EN</option>
-    </select>
+    <blora-select id="langToggle" data-size="sm" aria-label="Language" aria-label="Language">
+      <blora-option value="zh">中文</blora-option><blora-option value="en">EN</blora-option>
+    </blora-select>
   </blora-navbar-tool>
 </blora-navbar>
   <div class="login-container">
@@ -50,10 +52,10 @@
       <div class="grid"></div>
     </div>
 
-    <div class="login-card">
+    <div class="login-card auth-card blora-card">
       <div class="logo">
         <div style="display:flex;align-items:center;justify-content:center;gap:12px;">
-          <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo" style="width:40px;height:40px;border-radius:10px;">
+          <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo" style="width:40px;height:40px;">
           <h1>CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></h1>
         </div>
         <p><span data-i18n="绑定已有账号">绑定已有账号</span></p>
@@ -63,24 +65,21 @@
         <div id="errorMessage" class="blora-message auth-error" data-variant="danger" role="alert"></div>
 
         <div style="text-align:center;padding:16px 0;">
-          <div style="width:64px;height:64px;background:var(--brand-blue,#3370ff);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-            </svg>
+          <div style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <span data-icon="link" aria-hidden="true"></span>
           </div>
-          <p style="font-size:14px;color:var(--text-secondary,#6b7280);margin:0;"><span data-i18n="飞书账号">
+          <p style="margin:0;"><span data-i18n="飞书账号">
             飞书账号 </span><strong id="feishuName">-</strong>
           </p>
-          <p style="font-size:14px;color:var(--text-secondary,#6b7280);margin:8px 0 0;"><span data-i18n="系统中已存在同名账号">
+          <p style="margin:8px 0 0;"><span data-i18n="系统中已存在同名账号">
             系统中已存在同名账号 </span><strong id="existingName">-</strong><span data-i18n="，请输入密码验证后绑定">，请输入密码验证后绑定
           </span></p>
         </div>
 
-        <form id="bindForm" onsubmit="handleBind(event)">
-          <div class="form-group">
-            <input type="password" id="password" placeholder="请输入该账号的密码" data-i18n-placeholder="请输入该账号的密码" class="input blora-input" minlength="6" required>
-          </div>
+        <form id="bindForm">
+          <blora-field label="密码">
+            <input type="password" id="password" placeholder="请输入该账号的密码" data-i18n-placeholder="请输入该账号的密码" class="input blora-input" minlength="6" autocomplete="current-password" required>
+          </blora-field>
           <button type="submit" class="login-btn blora-button" data-variant="primary" id="submitBtn">
             <span id="submitText"><span data-i18n="验证并绑定">验证并绑定</span></span>
           </button>
@@ -120,7 +119,7 @@
       const errorEl = document.getElementById('errorMessage');
 
       btn.disabled = true;
-      btnText.innerHTML = `<span class="inline-loading"><div class="loading-spinner sm" role="status" aria-label="加载中"></div><span class="inline-loading-text">验证中...</span></span>`;
+      btnText.innerHTML = `<span class="inline-loading"><div class="blora-spinner" role="status" aria-label="加载中"></div><span class="inline-loading-text">验证中...</span></span>`;
       errorEl.classList.remove('show');
 
       try {
@@ -165,6 +164,9 @@
       el.addEventListener('change', function () { I18N.load(el.value); });
     }
   })();
+</script>
+<script>
+document.getElementById('bindForm').addEventListener('submit', function (event) { handleBind(event) });
 </script>
 </body>
 </html>

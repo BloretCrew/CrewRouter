@@ -74,24 +74,26 @@
   height: 1em;
 }
 
+/* Muted palettes need a perceptible tint: 6% fills were indistinguishable
+   (info vs success, warning vs danger) and vanished in dark mode. */
 .blora-alert[data-variant="info"] {
-  background: color-mix(in srgb, var(--blora-color-status-info) 6%, transparent);
-  border-color: color-mix(in srgb, var(--blora-color-status-info) 20%, transparent);
+  background: color-mix(in srgb, var(--blora-color-status-info) 11%, transparent);
+  border-color: color-mix(in srgb, var(--blora-color-status-info) 32%, transparent);
 }
 
 .blora-alert[data-variant="success"] {
-  background: color-mix(in srgb, var(--blora-color-status-success) 6%, transparent);
-  border-color: color-mix(in srgb, var(--blora-color-status-success) 20%, transparent);
+  background: color-mix(in srgb, var(--blora-color-status-success) 11%, transparent);
+  border-color: color-mix(in srgb, var(--blora-color-status-success) 32%, transparent);
 }
 
 .blora-alert[data-variant="warning"] {
-  background: color-mix(in srgb, var(--blora-color-status-warning) 8%, transparent);
-  border-color: color-mix(in srgb, var(--blora-color-status-warning) 30%, transparent);
+  background: color-mix(in srgb, var(--blora-color-status-warning) 13%, transparent);
+  border-color: color-mix(in srgb, var(--blora-color-status-warning) 38%, transparent);
 }
 
 .blora-alert[data-variant="danger"] {
-  background: color-mix(in srgb, var(--blora-color-status-danger) 6%, transparent);
-  border-color: color-mix(in srgb, var(--blora-color-status-danger) 20%, transparent);
+  background: color-mix(in srgb, var(--blora-color-status-danger) 11%, transparent);
+  border-color: color-mix(in srgb, var(--blora-color-status-danger) 32%, transparent);
 }
 
 .blora-alert[data-variant="info"] .blora-alert__icon {

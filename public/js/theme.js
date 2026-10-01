@@ -33,6 +33,7 @@ class ThemeManager {
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(resolved);
     document.documentElement.style.colorScheme = resolved;
+    document.documentElement.setAttribute('data-blora-color-scheme', resolved);
     this.updateIcons();
     this.updateSFIcons();
   }
@@ -63,13 +64,7 @@ class ThemeManager {
   }
 
   updateSFIcons() {
-    const color = this.resolvedTheme === 'dark' ? 'white' : 'black';
-    document.querySelectorAll('.sf-icon').forEach(img => {
-      const name = img.dataset.sfName;
-      if (name) {
-        img.src = `https://img.bloret.net/SF/${name}?color=${color}`;
-      }
-    });
+    window.crewrouterIcons?.enhance(document);
   }
 
   toggle() {
@@ -95,9 +90,9 @@ class ThemeManager {
 
 // Helper: create SF icon img element
 function sfIcon(name, size, className) {
-  const color = (window.themeManager?.resolvedTheme || 'dark') === 'dark' ? 'white' : 'black';
-  const cls = className ? `sf-icon ${className}` : 'sf-icon';
-  return `<img src="https://img.bloret.net/SF/${name}?color=${color}" alt="" width="${size || 20}" height="${size || 20}" class="${cls}" data-sf-name="${name}" style="display:inline-block;vertical-align:middle;">`;
+  const icon = window.crewrouterIcons?.name(name) || 'circle-help';
+  const cls = className ? `app-icon ${className}` : 'app-icon';
+  return `<span data-icon="${icon}" class="${cls}" aria-hidden="true"></span>`;
 }
 
 // Initialize theme manager

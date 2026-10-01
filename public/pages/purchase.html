@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <link rel="stylesheet" href="/css/layers.css?v=2.1.0">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script>
     (function () {
@@ -18,11 +19,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <script type="module" src="/blora/auto.js?v=2.0.8"></script>
+  <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js"></script>
-  <link rel="stylesheet" href="/css/themes.css">
-  <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="/css/edition-badge.css?v=2">
+  <style>@import url("/css/themes.css") layer(legacy);</style>
+  <style>@import url("/css/main.css") layer(legacy);</style>
+  <style>@import url("/css/edition-badge.css?v=2") layer(legacy);</style>
   <script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
@@ -34,105 +35,44 @@
     })();
   </script>
   <style>
-    .purchase-container {
-      max-width: 480px;
-      margin: 60px auto;
-      padding: 0 20px;
-    }
-    .purchase-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-    }
-    .purchase-image {
-      width: 100%;
-      height: 240px;
-      object-fit: cover;
-      background: var(--muted);
-    }
-    .purchase-image-placeholder {
-      width: 100%;
-      height: 240px;
-      background: var(--muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--muted-foreground);
-      font-size: 48px;
-    }
-    .purchase-info {
-      padding: 24px;
-    }
-    .purchase-name {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .purchase-desc {
-      font-size: 14px;
-      color: var(--muted-foreground);
-      margin-bottom: 20px;
-      line-height: 1.6;
-    }
-    .purchase-btn {
-      width: 100%;
-      padding: 14px;
-      font-size: 16px;
-      font-weight: 600;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      background: var(--brand-blue);
-      color: white;
-      transition: opacity 0.2s;
-    }
-    .purchase-btn:hover {
-      opacity: 0.9;
-    }
-    .purchase-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .back-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 20px;
-      font-size: 14px;
-      color: var(--muted-foreground);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-    .back-link:hover {
-      color: var(--foreground);
-    }
-    .purchase-status {
-      margin-top: 16px;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      text-align: center;
-    }
-    .loading-text {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted-foreground);
-    }
-    .error-text {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--destructive);
-    }
+@layer legacy, blora;
+@layer legacy {
+.purchase-card { background: var(--blora-color-surface-default); border: 1px solid var(--blora-color-border-subtle); border-radius: 16px; }
+.purchase-image { background: var(--blora-color-surface-sunken); }
+.purchase-image-placeholder { background: var(--blora-color-surface-sunken); color: var(--blora-color-text-muted); font-size: 48px; }
+.purchase-name { font-size: 22px; font-weight: 700; }
+.purchase-desc { font-size: 14px; color: var(--blora-color-text-muted); line-height: 1.6; }
+.purchase-btn { padding: 14px; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: var(--blora-color-action-primary-default); color: white; transition: opacity 0.2s; }
+.purchase-btn:hover { opacity: 0.9; }
+.purchase-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.back-link { font-size: 14px; color: var(--blora-color-text-muted); text-decoration: none; transition: color 0.2s; }
+.back-link:hover { color: var(--blora-color-text-primary); }
+.purchase-status { border-radius: 8px; font-size: 13px; }
+.loading-text { color: var(--blora-color-text-muted); }
+.error-text { color: var(--blora-color-status-danger); }
+}
+.purchase-container { max-width: 480px; margin: 60px auto; padding: 0 20px; }
+.purchase-card { overflow: hidden; }
+.purchase-image { width: 100%; height: 240px; object-fit: cover; }
+.purchase-image-placeholder { width: 100%; height: 240px; display: flex; align-items: center; justify-content: center; }
+.purchase-info { padding: 24px; }
+.purchase-name { margin-bottom: 8px; }
+.purchase-desc { margin-bottom: 20px; }
+.purchase-btn { width: 100%; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 20px; }
+.purchase-status { margin-top: 16px; padding: 12px; text-align: center; }
+.loading-text { text-align: center; padding: 60px 20px; }
+.error-text { text-align: center; padding: 60px 20px; }
   </style>
-  <link rel="stylesheet" href="/blora/blora.css?v=2.0.8">
-  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.0.8">
+  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
+  <script type="module" src="/js/blora-services.js?v=2.1.0"></script>
 </head>
-<body class="blora-page">
-<div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon blora-input" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-      <option value="zh">中文</option>
-      <option value="en">EN</option>
-    </select></div>
+<body class="blora-page blora-scope">
+<div style="position:absolute;top:10px;right:12px;z-index:99;"><blora-select id="langToggle" aria-label="Language">
+      <blora-option value="zh">中文</blora-option>
+      <blora-option value="en">EN</blora-option>
+    </blora-select></div>
   <div class="app-container">
     <aside class="sidebar">
       <div class="sidebar-header">
@@ -143,10 +83,10 @@
       </div>
       <nav class="sidebar-nav">
         <div class="nav-section">
-          <div class="nav-item" onclick="window.location.href='/console'">
-            <img src="https://img.bloret.net/SF/arrow.backward?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="arrow.backward">
+          <a class="nav-item blora-button" data-variant="ghost" href="/console">
+            <span data-icon="circle" aria-hidden="true"></span>
             <span><span data-i18n="返回控制台">返回控制台</span></span>
-          </div>
+          </a>
         </div>
       </nav>
     </aside>
@@ -157,7 +97,7 @@
       </div>
 
       <div class="purchase-container" id="purchaseContent">
-        <div class="page-loading"><div class="loading-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
+        <div class="page-loading"><div class="blora-spinner" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div>
       </div>
     </main>
   </div>
@@ -193,19 +133,20 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             返回余额
           </a>
-          <div class="purchase-card">
+          <div class="purchase-card blora-card" data-size="sm">
             ${product.image_url
               ? `<img class="purchase-image" src="${product.image_url}" alt="${product.name}">`
-              : `<div class="purchase-image-placeholder">📦</div>`
+              : `<div class="purchase-image-placeholder"><span data-icon="package" aria-hidden="true"></span></div>`
             }
             <div class="purchase-info">
-              <div class="purchase-name">${product.name}</div>
-              ${product.description ? `<div class="purchase-desc">${product.description}</div>` : ''}
-              <button class="purchase-btn blora-button" onclick="handlePurchase()">立即购买</button>
+              <div class="purchase-name blora-card__title">${product.name}</div>
+              ${product.description ? `<div class="purchase-desc blora-card__desc">${product.description}</div>` : ''}
+              <button class="purchase-btn blora-button" id="purchaseAction" data-variant="primary" type="button">立即购买</button>
               <div id="purchaseStatus" class="purchase-status" style="display:none;"></div>
             </div>
           </div>
         `;
+        document.getElementById('purchaseAction').addEventListener('click', handlePurchase);
       } catch (error) {
         container.innerHTML = '<div class="error-text">加载商品信息失败</div>';
       }
@@ -215,7 +156,7 @@
       const statusEl = document.getElementById('purchaseStatus');
       statusEl.style.display = 'block';
       statusEl.style.background = 'rgba(59,130,246,0.1)';
-      statusEl.style.color = 'var(--brand-blue)';
+      statusEl.style.color = 'var(--blora-color-action-primary-default)';
       statusEl.textContent = '购买功能暂未开放，敬请期待';
     }
 

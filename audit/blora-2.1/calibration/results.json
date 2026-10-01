@@ -1,0 +1,3736 @@
+{
+  "schema": "crewrouter.blora-2.1-browser/v1",
+  "packageVersion": "2.1.0",
+  "demo": true,
+  "results": [
+    {
+      "route": "admin",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminStats",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n统计信息\n \n统计信息\n\n系统全局使用情况、积分消耗和性能监控\n\n时间范围\n总览\n多维分析\n每日统计\n模型分析\n供应商分析\n客户端\n成员 / Team\n消息分析\n调用记录\n总请求数\n3,252\n日均 108\n总 Token 消耗\n1.48M\n日均 49.4K\n总积分消耗\n5.19 积分\n日均 ¥0.17\n活跃模型\n6\n供应商 3\n客户端识别率\n0.0%\n活跃0种 · 未知0次\n今日\n请求数\n135\n↓ 4.9%\nToken\n64.7K\n↑ 9.2%\n积分消耗\n0.23 积分\n↑ 9.2%\n昨日\n请求数\n142\nToken\n59.2K\n积分消耗\n0.21 积分\n每日请求量趋势\n每日Token消耗趋势\n每日积分趋势\n每日平均Token/请求",
+        "activePages": [
+          "adminStats",
+          "adminStatsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 23,
+        "bloraElements": 307
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": [
+        {
+          "requestId": "59414.77",
+          "timestamp": 5701.511856,
+          "type": "Script",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.174",
+          "timestamp": 5701.602934,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.175",
+          "timestamp": 5701.606021,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.176",
+          "timestamp": 5701.63516,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.177",
+          "timestamp": 5701.635246,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.178",
+          "timestamp": 5701.635276,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "admin#adminUsers",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminUsers",
+            "href": "http://127.0.0.1:18471/admin#adminUsers",
+            "active": [
+              "adminUsers",
+              "adminUsersPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "failed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminTeams",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "filter",
+          "id": "userSearchInput",
+          "before": "",
+          "result": {
+            "value": "GPT",
+            "text": "2025/1/10\t\n\nFixture User 43\tfixture-43@example.invalid\t已验证\t890\t普通用户\t不限制\t2025/1/15\t\n\nFixture User 44\tfixture-44@example.invalid\t已验证\t560\t普通用户\t不限制\t2025/2/1\t\n\nFixture User 45\tfixture-45@example.invalid\t已验证\t9999\t普通用户\t不限制\t2025/1/1\t\n\nFixture User 46\tfixture-46@example.invalid\t已验证\t1200\t普通用户\t不限制\t2025/1/10\t\n\nFixture User 47\tfixture-47@example.invalid\t已验证\t890\t普通用户\t不限制\t2025/1/15\t\n\nFixture User 48\tfixture-48@example.invalid\t已验证\t560\t普通用户\t不限制\t2025/2/1\t\n\nFixture User 49\tfixture-49@example.invalid\t已验证\t9999\t普通用户\t不限制\t2025/1/1\t\n\nFixture User 50\tfixture-50@example.invalid\t已验证\t1200\t普通用户\t不限制\t2025/1/10\t\n第 1 页\n共 123 项"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminTeams",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminUsers-light-1440.png",
+        "screenshots/default-admin-adminUsers-light-1440-filter.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminUsers",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n用户管理\n \n用户管理\n123\n总用户数\n0\n管理员\n50\n已验证\n162987\n总积分\n生成邀请链接\n用户名\t邮箱\t验证状态\t积分\t角色\t速率限制\t注册时间\t操作\nFixture User 1\tfixture-1@example.invalid\t已验证\t9999\t普通用户\t不限制\t2025/1/1\t\n\nFixture User 2\tfixture-2@example.invalid\t已验证\t1200\t普通用户\t不限制\t2025/1/10\t\n\nFixture User 3\tfixture-3@example.invalid\t已验证\t890\t普通用户\t不限制\t2025/1/15\t\n\nFixture User 4\tfixture-4@example.invalid\t已验证\t560\t普通用户\t不限制\t2025/2/1\t\n\nFixture User 5\tfixture-5@example.invalid\t已验证\t9999\t普通用户\t不限制\t2025/1/1\t\n\nFixture User 6\tfixture-6@example.invalid\t已验证\t1200\t普通用户\t不限制\t2025/1/10\t\n\nFixture User 7\tfixture-7@example.invalid\t已验证\t890\t普通用户\t不限制\t2025/1/15\t\n\nFixture User 8\tfixture-8@example.invalid\t已验证\t560\t普通用户\t不限制\t2025/2/1\t\n\nFixture User 9\tfixture-9@example.invalid\t已验证\t9999\t普通用户\t不限制\t2025/1/1\t\n\nFixture User 10\tfixture-10@example.invalid\t已验证\t1200\t普通用户\t不限制\t2025/1/10",
+        "activePages": [
+          "adminUsers",
+          "adminUsersPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 68,
+        "bloraElements": 308
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminTeams",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1440,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminTeams",
+            "href": "http://127.0.0.1:18471/admin#adminTeams",
+            "active": [
+              "adminTeams",
+              "adminTeamsPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminTeams-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminTeams",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\nTeam 管理\n \nTeam 管理\n1\n团队总数\n1\n默认团队\n0\n前沿团队\n0\n总成员数\n创建 Team\n共1个\n个人 Team\n1\n点击展开",
+        "activePages": [
+          "adminTeams",
+          "adminTeamsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 17,
+        "bloraElements": 307
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminUserGroups",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1440,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminUserGroups",
+            "href": "http://127.0.0.1:18471/admin#adminTeams",
+            "active": [
+              "adminTeams",
+              "adminTeamsPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminUserGroups-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminTeams",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\nTeam 管理\n \nTeam 管理\n1\n团队总数\n1\n默认团队\n0\n前沿团队\n0\n总成员数\n创建 Team\n共1个\n个人 Team\n1\n点击展开",
+        "activePages": [
+          "adminTeams",
+          "adminTeamsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 17,
+        "bloraElements": 315
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminModels",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1440,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminModels",
+            "href": "http://127.0.0.1:18471/admin#adminModels",
+            "active": [
+              "adminModels",
+              "adminModelsPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminModels-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminModels",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n模型管理\n \n模型管理\n按供应商分组浏览，点击卡片可多选后批量操作\n一键测试\nJSON 定价\n导出 CSV\n系列图标\n添加模型\n8\n总模型数\n0\n已启用\n0\n供应商数\n¥0.0000\n平均输入价\n清除筛选\n展开\n折叠\n共8个模型 ·0个供应商（展开后加载）\n\n暂无匹配的模型\n\n可调整筛选条件，或点击「添加模型」",
+        "activePages": [
+          "adminModels",
+          "adminModelsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 23,
+        "bloraElements": 315
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminProviders",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminProviders",
+            "href": "http://127.0.0.1:18471/admin#adminProviders",
+            "active": [
+              "adminProviders",
+              "adminProvidersPage"
+            ]
+          }
+        },
+        {
+          "name": "provider-danger-opens",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "type": "provider-danger-confirm",
+            "menu": true,
+            "danger": true,
+            "dialogs": [
+              {
+                "id": "blora-dialog-1790828962706-1",
+                "text": "提示删除标签确定删除此标签？供应商上已有的该标签也会被移除。取消删除"
+              }
+            ]
+          }
+        },
+        {
+          "name": "provider-danger-cancel",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "type": "provider-danger-cancel",
+            "open": 0
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "provider-danger-confirm",
+          "menu": true,
+          "danger": true,
+          "dialogs": [
+            {
+              "id": "blora-dialog-1790828962706-1",
+              "text": "提示删除标签确定删除此标签？供应商上已有的该标签也会被移除。取消删除"
+            }
+          ]
+        },
+        {
+          "type": "provider-danger-cancel",
+          "open": 0
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminProviders-light-1440.png",
+        "screenshots/default-admin-adminProviders-light-1440-danger.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminProviders",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n供应商管理\n \n供应商管理\n\n连接上游 API，导入模型后即可在模型管理中启用。\n\n0\n全局供应商\n0\n用户供应商\n0\n已启用\n0\n脚本模式\n导入配置\n更多\n清理所有已下架模型\n添加供应商\n共3个\n●\n主力\n✎\n×\n●\n备用\n✎\n×\n+\n全选本页\n勾选后可批量同步模型\n全局供应商 (本页 3)\nOpenAI\n启用\nhttps://api.openai.com/v1\n+\n密钥模式\n固定\n代理\n关闭\n额度查询\n未启用\n格式\nChat Completions\n延迟: -\n同步模型\n编辑\n更多 ▾\nAnthropic\n启用\nhttps://api.anthropic.com\n+\n密钥模式\n固定\n代理\n关闭\n额度查询\n未启用\n格式\nAnthropic Messages\n延迟: -\n同步模型\n编辑\n更多 ▾\nDeepSeek\n启用\nhttps://api.deepseek.com/v1\n+\n密钥模式\n固定\n代理\n关闭\n额度查询\n未启用\n格式\nChat Completions\n延迟: -\n同步模型\n编辑\n更多 ▾",
+        "activePages": [
+          "adminProviders",
+          "adminProvidersPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 37,
+        "bloraElements": 325
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminPlugins",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1440,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminPlugins",
+            "href": "http://127.0.0.1:18471/admin#adminPlugins",
+            "active": [
+              "adminPlugins",
+              "adminPluginsPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminPlugins-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminPlugins",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n插件管理\n \n加载中...",
+        "activePages": [
+          "adminPlugins",
+          "adminPluginsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 14,
+        "bloraElements": 325
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminStats",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminStats",
+            "href": "http://127.0.0.1:18471/admin#adminStats",
+            "active": [
+              "adminStats",
+              "adminStatsPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminStats-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminStats",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n统计信息\n \n统计信息\n\n系统全局使用情况、积分消耗和性能监控\n\n时间范围\n总览\n多维分析\n每日统计\n模型分析\n供应商分析\n客户端\n成员 / Team\n消息分析\n调用记录\n总请求数\n3,252\n日均 108\n总 Token 消耗\n1.48M\n日均 49.4K\n总积分消耗\n5.19 积分\n日均 ¥0.17\n活跃模型\n6\n供应商 3\n客户端识别率\n0.0%\n活跃0种 · 未知0次\n今日\n请求数\n135\n↓ 4.9%\nToken\n64.7K\n↑ 9.2%\n积分消耗\n0.23 积分\n↑ 9.2%\n昨日\n请求数\n142\nToken\n59.2K\n积分消耗\n0.21 积分\n每日请求量趋势\n每日Token消耗趋势\n每日积分趋势\n每日平均Token/请求",
+        "activePages": [
+          "adminStats",
+          "adminStatsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 23,
+        "bloraElements": 325
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminErrorLogs",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminErrorLogs",
+            "href": "http://127.0.0.1:18471/admin#adminErrorLogs",
+            "active": [
+              "adminErrorLogs",
+              "adminErrorLogsPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "filter",
+          "id": "errorLogUserFilter",
+          "before": "",
+          "result": {
+            "value": "GPT",
+            "text": "\t500\tupstream_error\t演示：上游服务短暂不可用\t200ms\t详情\n2026/9/30 17:10:41\tDemo User\tGPT-4.1\tOpenAI\t500\tupstream_error\t演示：上游服务短暂不可用\t173ms\t详情\n2026/9/30 13:50:52\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t演示：上游服务短暂不可用\t324ms\t详情\n2026/9/30 16:06:24\tBob Wang\tDeepSeek V3重试\tDeepSeek\t429\trate_limit\t演示：上游限流，已切换备用 Key\t439ms\t详情\n2026/9/30 04:50:28\tDemo User\tDeepSeek R1\tDeepSeek\t500\tupstream_error\t演示：上游服务短暂不可用\t340ms\t详情\n2026/9/30 20:16:59\tAlice Zhang\to4-mini\tOpenAI\t500\tupstream_error\t演示：上游服务短暂不可用\t164ms\t详情\n2026/9/30 09:43:54\tBob Wang\tGPT-4.1 Mini\tOpenAI\t500\tupstream_error\t演示：上游服务短暂不可用\t410ms\t详情\n上一页\n第1 / 1页\n下一页"
+          }
+        },
+        {
+          "type": "actual-pagination",
+          "blocked": "No enabled next-page control in demo data"
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminErrorLogs-light-1440.png",
+        "screenshots/default-admin-adminErrorLogs-light-1440-filter.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminErrorLogs",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n调用错误\n \n调用错误记录\n\n查看近期 API 调用失败记录，便于排查上游故障与用户问题\n\n刷新\n仅最终错误\n查询\n清除\n共12条记录\n\n默认保留近14天的错误记录，中间失败（队列回退）与最终返回客户端的错误均可筛选。\n\n时间\t用户\t模型\t供应商\t状态码\t类型\t错误信息\t延迟\t\n2026/10/1 12:29:25\tDemo User\tGPT-4.1重试\tOpenAI\t429\trate_limit\t演示：上游限流，已切换备用 Key\t433ms\t详情\n2026/10/1 09:19:15\tAlice Zhang\tClaude Sonnet 4\tAnthropic\t500\tupstream_error\t演示：上游服务短暂不可用\t243ms\t详情\n2026/10/1 06:22:09\tBob Wang\tDeepSeek V3\tDeepSeek\t500\tupstream_error\t演示：上游服务短暂不可用\t368ms\t详情\n2026/10/1 07:50:01\tDemo User\tDeepSeek R1\tDeepSeek\t500\tupstream_error\t演示：上游服务短暂不可用\t547ms\t详情\n2026/10/1 02:06:57\tAlice Zhang\to4-mini重试\tOpenAI\t429\trate_limit\t演示：上游限流，已切换备用 Key\t436ms\t详情\n2026/10/1 00:22:46\tBob Wang\tGPT-4.1 Mini\tOpenAI\t500\tupstream_error\t演示：上游服务短暂不可用\t200ms\t详情\n2026/9/30 17:10:41\tDemo User\tGPT-4.1\tOpenAI\t500\tupstream_error\t演示：上游服务短暂不可用\t173ms\t详情\n2026/9/30 13",
+        "activePages": [
+          "adminErrorLogs",
+          "adminErrorLogsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [
+          {
+            "tag": "DIV",
+            "id": "",
+            "class": "blora-datepicker__panel",
+            "right": 1455
+          }
+        ],
+        "controls": 41,
+        "bloraElements": 325
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminAuditLogs",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminAuditLogs",
+            "href": "http://127.0.0.1:18471/admin#adminAuditLogs",
+            "active": [
+              "adminAuditLogs",
+              "adminAuditLogsPage"
+            ]
+          }
+        },
+        {
+          "name": "pagination-changes-data",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "route": "admin#adminAuditLogs"
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "filter",
+          "id": "adminAuditLogSearch",
+          "before": "",
+          "result": {
+            "value": "GPT",
+            "text": "mo User\nBrowser fixture audit row 43\napi_key #43\n42分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 44\napi_key #44\n43分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 45\napi_key #45\n44分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 46\napi_key #46\n45分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 47\napi_key #47\n46分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 48\napi_key #48\n47分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 49\napi_key #49\n48分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 50\napi_key #50\n49分钟前\n上一页\n1 / 3\n下一页"
+          }
+        },
+        {
+          "type": "pagination",
+          "changed": true
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminAuditLogs-light-1440.png",
+        "screenshots/default-admin-adminAuditLogs-light-1440-filter.png",
+        "screenshots/default-admin-adminAuditLogs-light-1440-pagination.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminAuditLogs",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n操作日志\n \n操作日志\n刷新\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 1\napi_key #1\n刚刚\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 2\napi_key #2\n1分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 3\napi_key #3\n2分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 4\napi_key #4\n3分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 5\napi_key #5\n4分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 6\napi_key #6\n5分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 7\napi_key #7\n6分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 8\napi_key #8\n7分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 9\napi_key #9\n8分钟前\napi_key.create\n管理员\nDemo User\nBrowser fixture audit row 10\napi_key #10\n9分钟前\napi_key.create\n管理员\nDemo User\nBrowser f",
+        "activePages": [
+          "adminAuditLogs",
+          "adminAuditLogsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 18,
+        "bloraElements": 325
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminPrompts",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1440,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminPrompts",
+            "href": "http://127.0.0.1:18471/admin#adminPrompts",
+            "active": [
+              "adminPrompts",
+              "adminPromptsPage"
+            ]
+          }
+        },
+        {
+          "name": "pagination-changes-data",
+          "status": "failed",
+          "classification": "ui-regression",
+          "evidence": {
+            "route": "admin#adminPrompts"
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "filter",
+          "id": "adminPromptSearchInput",
+          "before": "",
+          "result": {
+            "value": "GPT",
+            "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n提示词\n \n提示词\n\n历史收集到的自定义提示词文件，相同内容自动合并显示\n\n查询\n清除\n共0条去重结果\n\n暂无提示词记录\n\n上一页\n第undefined / 1页\n下一页"
+          }
+        },
+        {
+          "type": "pagination",
+          "changed": false
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminPrompts-light-1440.png",
+        "screenshots/default-admin-adminPrompts-light-1440-filter.png",
+        "screenshots/default-admin-adminPrompts-light-1440-pagination.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminPrompts",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n提示词\n \n提示词\n\n历史收集到的自定义提示词文件，相同内容自动合并显示\n\n查询\n清除\n共0条去重结果\n\n暂无提示词记录\n\n上一页\n第undefined / 1页\n下一页",
+        "activePages": [
+          "adminPrompts",
+          "adminPromptsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 19,
+        "bloraElements": 325
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminSettings",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1440,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminSettings",
+            "href": "http://127.0.0.1:18471/admin#adminSettings",
+            "active": [
+              "adminSettings",
+              "adminSettingsPage"
+            ]
+          }
+        },
+        {
+          "name": "copy-clipboard",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "clipboardLength": 40
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "actual-copy",
+          "button": {
+            "id": "feishuCopyRedirectBtn",
+            "text": "复制"
+          },
+          "clipboardLength": 40,
+          "clipboardRead": true
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminSettings-light-1440.png",
+        "screenshots/default-admin-adminSettings-light-1440-copy.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminSettings",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n系统设置\n \nCrewRouter\n-\nWebsite\nGithub\nCrewRouterHelper\nQQ Discuss\n\n选择一个类别以管理相关设置\n\n常规\n系统名称、积分与模型列表\n外观\n默认主题与界面外观\n版本与更新\n检查版本与一键更新\n数据保留\n压缩、清理与聚合策略\n登录与认证\n飞书登录与邀请链接\n网络\n代理地址与代理池",
+        "activePages": [
+          "adminSettings",
+          "adminSettingsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 20,
+        "bloraElements": 325
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790828973637.934,
+              "url": "http://127.0.0.1:18471/api/auth-invites",
+              "networkRequestId": "59414.227"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/auth-invites",
+          "status": 404
+        }
+      ],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminTeams/1",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminTeams",
+            "href": "http://127.0.0.1:18471/admin#adminTeams/1",
+            "active": [
+              "adminTeams",
+              "adminTeamsPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminTeams-1-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminTeams/1",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\nTeam 管理\n \nTeam 管理\n1\n团队总数\n1\n默认团队\n0\n前沿团队\n0\n总成员数\n创建 Team\n共1个\n个人 Team\n1\n点击展开\nDemo Team\n取消默认\n设为前沿\n编辑\n速率规则\n\n设置请求次数或 Token 用量的时间窗口限额，支持多条规则叠加\n\n暂无规则\n每\n小时\n最多\n添加\n快捷设置：\n1 小时\n5 小时\n1 天\n1 周\n成员管理\n模型权限\n展开全部\n折叠全部\n按名称批量启用\n启用筛选结果\n禁用筛选结果\n\n展示模型管理中已启用的全部模型；对本 Team 启用后，成员方可在模型库中使用。前沿 Team 会在系统加入新模型时自动启用。\n\n \n清除筛选\n\n暂无已启用模型\n\n请先在「模型管理」中启用模型",
+        "activePages": [
+          "adminTeams",
+          "adminTeamsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 34,
+        "bloraElements": 328
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminUserGroups/1",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminUserGroups",
+            "href": "http://127.0.0.1:18471/admin#adminTeams/1",
+            "active": [
+              "adminTeams",
+              "adminTeamsPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminUserGroups-1-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminTeams/1",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\nTeam 管理\n \nTeam 管理\n1\n团队总数\n1\n默认团队\n0\n前沿团队\n0\n总成员数\n创建 Team\n共1个\n个人 Team\n1\n点击展开\nDemo Team\n取消默认\n设为前沿\n编辑\n速率规则\n\n设置请求次数或 Token 用量的时间窗口限额，支持多条规则叠加\n\n暂无规则\n每\n小时\n最多\n添加\n快捷设置：\n1 小时\n5 小时\n1 天\n1 周\n成员管理\n模型权限\n展开全部\n折叠全部\n按名称批量启用\n启用筛选结果\n禁用筛选结果\n\n展示模型管理中已启用的全部模型；对本 Team 启用后，成员方可在模型库中使用。前沿 Team 会在系统加入新模型时自动启用。\n\n \n清除筛选\n\n暂无已启用模型\n\n请先在「模型管理」中启用模型",
+        "activePages": [
+          "adminTeams",
+          "adminTeamsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 34,
+        "bloraElements": 328
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "admin#adminDashboard",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "adminDashboard",
+            "href": "http://127.0.0.1:18471/admin#adminDashboard",
+            "active": [
+              "adminStats",
+              "adminStatsPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "adminUsers",
+            "after": "#adminUsers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "adminUsers",
+          "after": "#adminUsers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-admin-adminDashboard-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/admin#adminDashboard",
+        "title": "管理后台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n管理员\n用户管理\n \nTeam 管理\n \n模型管理\n \n供应商管理\n \n统计信息\n \n调用错误\n \n操作日志\n \n提示词\n \n插件管理\n \n插件商店\n系统\n系统设置\n返回用户控制台\nDemo User\n统计信息\n \n统计信息\n\n系统全局使用情况、积分消耗和性能监控\n\n时间范围\n总览\n多维分析\n每日统计\n模型分析\n供应商分析\n客户端\n成员 / Team\n消息分析\n调用记录\n总请求数\n3,252\n日均 108\n总 Token 消耗\n1.48M\n日均 49.4K\n总积分消耗\n5.19 积分\n日均 ¥0.17\n活跃模型\n6\n供应商 3\n客户端识别率\n0.0%\n活跃0种 · 未知0次\n今日\n请求数\n135\n↓ 4.9%\nToken\n64.7K\n↑ 9.2%\n积分消耗\n0.23 积分\n↑ 9.2%\n昨日\n请求数\n142\nToken\n59.2K\n积分消耗\n0.21 积分\n每日请求量趋势\n每日Token消耗趋势\n每日积分趋势\n每日平均Token/请求",
+        "activePages": [
+          "adminStats",
+          "adminStatsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 23,
+        "bloraElements": 328
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "myUpstream",
+            "after": "#myUpstream/providers"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "myUpstream",
+          "after": "#myUpstream/providers"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#modelLibrary",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n模型库\n快速添加供应商到系统\n模型库\n点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n我的上游\n添加供应商\n更多\n展开全部 Team\n折叠全部 Team\n展开全部 供应商\n折叠全部 供应商\n测试全部模型\n测试当前 Team\n测试当前供应商\n一键检测连通性\n显示已隐藏\n排序模式\n当前 KEY\n生产环境 Key\nOpenAI\nGPT-4.1\n320ms · 45.2 t/s\n99.80%\n默认请求路由到此模型 · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n切换 Key\n生产环境 Key\nGPT-4.1\n测试环境 Key\nDeepSeek V3\n更多筛选\n星标\n2 个模型\n倍率\n×1.00\n99.80%\n绑定\n更多操作\n测试\n星标此模型\n隐藏此模型\n倍率\n×1.00\n—\n绑定\n更多操作\n测试\n星标此模型\n隐藏此模型\nDemo Team\n个人\n默认\n更多操作\n测试全部\nOpenAI\n全部成功 - 平均246ms - 43.1 t/s\n更多操作\n测试\n隐藏此供应商\n3 个模型\nAnthropic\n全部成功 - 平均246ms - 43.1 t/s\n更多操作\n测试\n隐藏此供应商\n3 个模型\nDeepSeek\n全部成功 - 平均214ms - 48.7 t/s\n更多操作\n测试\n隐藏此供应商\n2 个模型",
+        "activePages": [
+          "modelLibrary",
+          "modelLibraryPage",
+          "doc-overview"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 64,
+        "bloraElements": 341
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": [
+        {
+          "requestId": "59414.444",
+          "timestamp": 5725.554648,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.445",
+          "timestamp": 5725.554737,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.449",
+          "timestamp": 5725.631309,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.450",
+          "timestamp": 5725.631419,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.451",
+          "timestamp": 5725.631456,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.452",
+          "timestamp": 5725.631489,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.453",
+          "timestamp": 5725.631511,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.454",
+          "timestamp": 5725.631594,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.455",
+          "timestamp": 5725.631634,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.456",
+          "timestamp": 5725.63166,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.457",
+          "timestamp": 5725.631681,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.458",
+          "timestamp": 5725.631703,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.459",
+          "timestamp": 5725.631724,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.460",
+          "timestamp": 5725.631747,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.461",
+          "timestamp": 5725.632122,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.462",
+          "timestamp": 5725.632202,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.463",
+          "timestamp": 5725.632228,
+          "type": "Image",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        },
+        {
+          "requestId": "59414.464",
+          "timestamp": 5725.632801,
+          "type": "Script",
+          "errorText": "",
+          "canceled": false,
+          "blockedReason": "inspector"
+        }
+      ]
+    },
+    {
+      "route": "console#home",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "home",
+            "href": "http://127.0.0.1:18471/console#home",
+            "active": [
+              "home",
+              "homePage",
+              "doc-overview"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "modelLibrary",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-home-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#home",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n个人工作台\n个人版工作台\n把模型接入、密钥管理和使用情况放在一个地方\n\n无需切换管理后台，直接完成个人 AI 网关的日常配置。\n\n近 30 天请求\n3,252\n较上个周期持续累计\nToken 消耗\n1.39M\n输入与输出合计\n积分消耗\n4.8540 积分\n按当前统计周期\n已配置密钥\n2\n可随时创建或调整\n快速管理\n\n常用配置一步直达\n\n＋\n接入供应商\n添加自己的 API 上游\n⌁\n管理 API Key\n创建密钥并绑定模型\n◇\n浏览模型库\n选择并测试可用模型\n查看使用统计\n了解请求与消耗趋势\n配置状态\n\n完成这几步即可开始使用\n\n✓\n接入一个供应商\n已完成\n✓\n创建一个 API Key\n已完成\n✓\n完成第一次调用\n已完成\ni\n个人版已将管理能力整合到控制台\n\n供应商、模型、API Key、统计和日志都可以从左侧直接管理。\n\n查看接口文档",
+        "activePages": [
+          "home",
+          "homePage",
+          "doc-overview"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 24,
+        "bloraElements": 343
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console#modelLibrary",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "modelLibrary",
+            "href": "http://127.0.0.1:18471/console#modelLibrary",
+            "active": [
+              "modelLibrary",
+              "modelLibraryPage",
+              "doc-overview"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "failed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "myUpstream",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "myUpstream",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-modelLibrary-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#modelLibrary",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n模型库\n快速添加供应商到系统\n模型库\n点击模型绑定到当前 Key · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n我的上游\n添加供应商\n更多\n展开全部 Team\n折叠全部 Team\n展开全部 供应商\n折叠全部 供应商\n测试全部模型\n测试当前 Team\n测试当前供应商\n一键检测连通性\n显示已隐藏\n排序模式\n当前 KEY\n生产环境 Key\nOpenAI\nGPT-4.1\n320ms · 45.2 t/s\n99.80%\n默认请求路由到此模型 · 再次点击 Key 可为 Claude Code / Codex 等单独绑定\n切换 Key\n生产环境 Key\nGPT-4.1\n测试环境 Key\nDeepSeek V3\n更多筛选\n星标\n2 个模型\n倍率\n×1.00\n99.80%\n绑定\n更多操作\n测试\n星标此模型\n隐藏此模型\n倍率\n×1.00\n—\n绑定\n更多操作\n测试\n星标此模型\n隐藏此模型\nDemo Team\n个人\n默认\n更多操作\n测试全部\nOpenAI\n全部成功 - 平均246ms - 43.1 t/s\n更多操作\n测试\n隐藏此供应商\n3 个模型\nAnthropic\n全部成功 - 平均246ms - 43.1 t/s\n更多操作\n测试\n隐藏此供应商\n3 个模型\nDeepSeek\n全部成功 - 平均214ms - 48.7 t/s\n更多操作\n测试\n隐藏此供应商\n2 个模型",
+        "activePages": [
+          "modelLibrary",
+          "modelLibraryPage",
+          "doc-overview"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 64,
+        "bloraElements": 343
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console#myUpstream",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1440,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "myUpstream",
+            "href": "http://127.0.0.1:18471/console#myUpstream/providers",
+            "active": [
+              "myUpstream",
+              "myUpstreamPage",
+              "doc-overview"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "modelLibrary",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-myUpstream-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#myUpstream/providers",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n我的上游\n我的上游\n添加供应商\n供应商\n模型\n\n管理自有上游供应商；导入的模型会出现在「模型」页签，也可在模型库中绑定到 API Key。\n\n\t名称\tBASE URL\t格式\t延迟\t模型数\t操作\n\n\t\n本地演示上游\ndemo-local\n\t\nhttps://api.example.com/v1\n\tChat Completions\t\n-\n\t\n模型\t\n编辑\n删除",
+        "activePages": [
+          "myUpstream",
+          "myUpstreamPage",
+          "doc-overview"
+        ],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 25,
+        "bloraElements": 343
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console#apiKeys",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "apiKeys",
+            "href": "http://127.0.0.1:18471/console#apiKeys",
+            "active": [
+              "apiKeys",
+              "apiKeysPage",
+              "doc-overview"
+            ]
+          }
+        },
+        {
+          "name": "key-copy",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "clicked": true,
+            "clipboardDemoKey": true
+          }
+        },
+        {
+          "name": "key-form-opens",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "open": true,
+            "focus": "",
+            "focusTag": "BUTTON"
+          }
+        },
+        {
+          "name": "key-form-escape-focus",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "open": false,
+            "focus": "createApiKeyBtn",
+            "focusTag": "BUTTON"
+          }
+        },
+        {
+          "name": "key-danger-opens",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "type": "danger-confirm",
+            "clicked": true,
+            "result": {
+              "openDialogs": [
+                {
+                  "id": "blora-dialog-1790828986963-1",
+                  "text": "提示确认确定要删除此 API 密钥吗？此操作不可撤销。取消确认"
+                }
+              ],
+              "focus": "blora-dialog-1790828986963-1"
+            }
+          }
+        },
+        {
+          "name": "key-danger-cancel",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "type": "danger-cancel",
+            "openDialogs": 0
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "modelLibrary",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "copy",
+          "clicked": true,
+          "clipboardDemoKey": true
+        },
+        {
+          "type": "open-form",
+          "clicked": true,
+          "result": {
+            "open": true,
+            "focus": "",
+            "focusTag": "BUTTON"
+          }
+        },
+        {
+          "type": "dialog-tab",
+          "result": {
+            "open": true,
+            "focus": "apiKeyExpiry",
+            "focusTag": "BLORA-SELECT"
+          }
+        },
+        {
+          "type": "dialog-escape-focus-return",
+          "result": {
+            "open": false,
+            "focus": "createApiKeyBtn",
+            "focusTag": "BUTTON"
+          }
+        },
+        {
+          "type": "demo-form-submit",
+          "result": {
+            "open": false,
+            "focus": "createApiKeyBtn",
+            "focusTag": "BUTTON"
+          },
+          "persistenceVerified": false
+        },
+        {
+          "type": "danger-confirm",
+          "clicked": true,
+          "result": {
+            "openDialogs": [
+              {
+                "id": "blora-dialog-1790828986963-1",
+                "text": "提示确认确定要删除此 API 密钥吗？此操作不可撤销。取消确认"
+              }
+            ],
+            "focus": "blora-dialog-1790828986963-1"
+          }
+        },
+        {
+          "type": "danger-cancel",
+          "openDialogs": 0
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-apiKeys-light-1440.png",
+        "screenshots/default-console-apiKeys-light-1440-form.png",
+        "screenshots/default-console-apiKeys-light-1440-danger.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#apiKeys",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\nAPI Key 与用量\nAPI 密钥\n创建密钥\n我的 Key 调用次数\n4,700\n我的 Key Token 消耗\n1.7M\n我的 Key 积分消耗\n5.7700积分\n●\n生产\n✎\n×\n●\n测试\n✎\n×\n+\n普通 API Key\n\n仅自己管理的密钥\n\n2\n生产环境 Key\n有效\n签名关\n额度预警\n@CrewRouter\n+1\n+\n最近2025/6/28\n·\n创建于 2025/1/15\n·\n3,200 次\n1.3M Token\n4.8500 积分\nsk-demo-pr ··· xxxx\n复制\n路由\nGPT-4.1\n2\n模型队列\n更多\n测试环境 Key\n有效\n签名关\n额度预警\n@CrewRouter\n+1\n+\n最近2025/6/28\n·\n创建于 2025/2/1\n·\n1,500 次\n450.0K Token\n0.9200 积分\nsk-demo-te ··· xxxx\n复制\n路由\nDeepSeek V3\n模型队列\n更多\n授权管理\n\n已通过 OAuth 登录的客户端及其令牌状态，吊销后相关凭证立即失效。\n\n刷新授权列表",
+        "activePages": [
+          "apiKeys",
+          "apiKeysPage",
+          "doc-overview"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 32,
+        "bloraElements": 345
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790828982827.448,
+              "url": "http://127.0.0.1:18471/oauth/authorizations",
+              "networkRequestId": "59414.528"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/oauth/authorizations",
+          "status": 404
+        }
+      ],
+      "networkFailures": []
+    },
+    {
+      "route": "console#stats",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "stats",
+            "href": "http://127.0.0.1:18471/console#stats",
+            "active": [
+              "stats",
+              "statsPage",
+              "doc-overview"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "modelLibrary",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-stats-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#stats",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n统计信息\n使用统计\n\n查看您的 API 使用情况、积分消耗和性能指标\n\n时间范围\n模型\n供应商\nTeam\n客户端\n重置\n总请求数\n3,252\n日均 108\n总 Token 消耗\n1.39M\n输入865.2K/ 输出521.7K\n总积分消耗\n4.8540 积分\n日均 0.1618 积分\n平均延迟\n260ms\n平均 426 Token/请求\n客户端识别率\n0.0%\n活跃0种 · 未知0次\nPrompt 缓存命中\n26.4%\n缓存命中 Token\n228.2K\n总输入 Token\n865.2K\n节省 Token\n228.2K\n今日\n请求数\n135\n↓ 4.9%\nToken\n64.8K\n↓ 10.5%\n积分消耗\n0.2268 积分\n↓ 10.5%\n昨日\n请求数\n142\nToken\n72.4K\n积分消耗\n0.2535 积分\n概览\n多维分析\n每日趋势\n时段分布\n模型分析\n密钥分析\n客户端\n消息分析\n调用记录\n最常用模型\n🥇\nGPT-4.1\n715 次\n🥈\nClaude Sonnet 4\n585 次\n🥉\nDeepSeek V3\n813 次\n高峰时段\n🔥\n9:00 - 10:00\n115 次\n⚡\n14:00 - 15:00\n115 次\n📊\n10:00 - 11:00\n105 次\n积分消耗趋势\n💰\n最近 7 天\n0.9127 积分\n📅\n前 7 天\n1.1796 积分\n📉\n环比变化\n-22.6%\n关键指标\n📊\n日均请求\n108\n🎯\n平均 Token/请求\n426\n💵\n日均积分\n0.1618 积分\n⏱️\n平均延迟\n260ms\n客户端来源\n暂无数据\n插件维度\n暂无数据\n每日请求数\n每日 Token 消耗\n每日积分消耗\n平均延迟\n每日详细数据\n日期\t请求数\tPrompt Token\tCompletion Token\t缓存命中\t积分\t",
+        "activePages": [
+          "stats",
+          "statsPage",
+          "doc-overview"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 26,
+        "bloraElements": 357
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790828988281.446,
+              "url": "http://127.0.0.1:18471/api/client-events/live?window=300",
+              "networkRequestId": "59414.544"
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/client-events/live?window=300",
+          "status": 404
+        }
+      ],
+      "networkFailures": []
+    },
+    {
+      "route": "console#projectWork",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "projectWork",
+            "href": "http://127.0.0.1:18471/console#projectWork",
+            "active": [
+              "projectWork",
+              "projectWorkPage",
+              "doc-overview"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "modelLibrary",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-projectWork-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#projectWork",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n项目工作\n我的项目工作\n\n按项目查看你的 AI 工作活动、活跃天数和 Token 投入\n\nWORKSPACE ACTIVITY\n项目工作台\n\n系统会根据已保存的工作区信息，整理你的项目活动。\n\n已同步 · 最近更新10月1日\n时间范围\n客户端\n返回总统计\n活跃项目\n3\n个工作区\n活跃天数\n24\n天\nAI 请求\n2,470\n次调用\nToken\n6.97M\n总投入\n最近活动\n10月1日\n最后一次工作\n最近活动\n每日请求与活跃项目\n最近活跃项目\n按最近活动排序\n01\ncrewrouter\n1,280次 ·3.85MToken · 最近10月1日\n02\nplugin-lab\n760次 ·2.14MToken · 最近9月30日\n03\nanalytics-dashboard\n430次 ·980KToken · 最近9月28日\n项目工作台\n点击项目可复制工作区路径\nCR\ncrewrouter\n/workspace/crewrouter\n请求\n1,280\nToken\n3.85M\n活跃\n18天\n最近\n10月1日\ncodex · claude_code · opencode\n12.40积分\nPL\nplugin-lab\n/workspace/plugin-lab\n请求\n760\nToken\n2.14M\n活跃\n12天\n最近\n9月30日\nqwen_code · codex\n6.80积分\nAN\nanalytics-dashboard\n/workspace/analytics-dashboard\n请求\n430\nToken\n980K\n活跃\n8天\n最近\n9月28日\nhermes · openclaw\n3.10积分",
+        "activePages": [
+          "projectWork",
+          "projectWorkPage",
+          "doc-overview"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 23,
+        "bloraElements": 357
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console#leaderboard",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "leaderboard",
+            "href": "http://127.0.0.1:18471/console#leaderboard",
+            "active": [
+              "leaderboard",
+              "leaderboardPage",
+              "doc-overview"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "modelLibrary",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-leaderboard-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#leaderboard",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n排行榜\n排行榜\n\n查看全站用户使用数据排行\n\n时间范围\n排序方式\n排名\t用户\t请求数\tTOKEN 数\t消耗积分\t缓存命中率\t当前余额\n🥇\t\nA\nAlice Zhang\n\t58,200\t28.5M\t85.50\t42.3%\t1200.00\n🥈\t\nB\nBob Wang\n\t42,100\t19.8M\t62.40\t38.1%\t890.00\n🥉\t\nD\nDemo User\n我\n\t35,600\t15.2M\t48.20\t35.7%\t9999.00\n4\t\nC\nCarol Li\n\t28,900\t12.1M\t38.90\t31.2%\t560.00\n5\t\nD\nDavid Chen\n\t21,500\t8.9M\t28.10\t28.5%\t340.00\n6\t\nE\nEva Liu\n\t15,800\t6.2M\t19.80\t25.3%\t210.00\n7\t\nF\nFrank Wu\n\t9,200\t3.1M\t10.20\t22.1%\t150.00\n8\t\nG\nGrace Zhao\n\t4,500\t1.2M\t5.10\t18.9%\t80.00\n共 8 名活跃用户 · 您的排名：第 3名",
+        "activePages": [
+          "leaderboard",
+          "leaderboardPage",
+          "doc-overview"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 16,
+        "bloraElements": 357
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console#docs",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1440,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "docs",
+            "href": "http://127.0.0.1:18471/console#docs",
+            "active": [
+              "docs",
+              "docsPage",
+              "doc-overview"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "modelLibrary",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-docs-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#docs",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n接口文档\n概览与认证\n聊天补全\n模型列表\nAnthropic 兼容\n用户接口\n对话管理\n错误码\n✎ 编辑文档\nCrewRouter 演示接口文档：使用 /v1/chat/completions 兼容 OpenAI API。",
+        "activePages": [
+          "docs",
+          "docsPage",
+          "doc-overview"
+        ],
+        "width": 1440,
+        "documentWidth": 1440,
+        "overflow": [],
+        "controls": 16,
+        "bloraElements": 357
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console#balance",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "balance",
+            "href": "http://127.0.0.1:18471/console#balance",
+            "active": [
+              "balance",
+              "doc-overview",
+              "balancePage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "modelLibrary",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-balance-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#balance",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n积分\n积分\n当前积分\n9999\nTeam 与限额\n标准组\n标准用户组，适用于日常开发使用\n请求次数 · 每 1 天\n1,750 / 5,000 次\nToken 用量 · 每 1 天\n1.4M / 5M tokens\n请求次数 · 每 1 月\n35,000 / 100,000 次",
+        "activePages": [
+          "balance",
+          "doc-overview",
+          "balancePage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 16,
+        "bloraElements": 357
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    },
+    {
+      "route": "console#settings",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "settings",
+            "href": "http://127.0.0.1:18471/console#settings",
+            "active": [
+              "settings",
+              "doc-overview",
+              "settingsPage"
+            ]
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "modelLibrary",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-settings-light-1440.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#settings",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n用户设置\nCrewRouter\nv1.0.0\nWebsite\nGithub\nCrewRouterHelper\nQQ Discuss\n\n选择一个类别以管理相关设置\n\n个人资料\n头像与界面主题\n通知\n站内通知与 Bark 推送\n安全\n双重认证、通行密钥与密码\nAPI 签名\n自定义 API 回复签名\n插件\n插件数据授权\n事件通知\n客户端事件推送偏好\nCrewRouter Desktop 设置\n连接、配置文件与桌面应用行为\n我的通知\n清空通知\n演示通知\n1小时前\n删除\n标记已读\n修改密码\n当前密码\n新密码\n确认新密码\n修改密码",
+        "activePages": [
+          "settings",
+          "doc-overview",
+          "settingsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 30,
+        "bloraElements": 357
+      },
+      "consoleErrors": [
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790828993507.915,
+              "url": "http://127.0.0.1:18471/api/2fa/status",
+              "networkRequestId": "59414.595"
+            }
+          }
+        },
+        {
+          "method": "Log.entryAdded",
+          "params": {
+            "entry": {
+              "source": "network",
+              "level": "error",
+              "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "timestamp": 1790828993527.124,
+              "url": "http://127.0.0.1:18471/api/passkey/list",
+              "networkRequestId": "59414.596"
+            }
+          }
+        },
+        {
+          "method": "Runtime.consoleAPICalled",
+          "params": {
+            "type": "error",
+            "args": [
+              {
+                "type": "string",
+                "value": "加载 2FA 状态失败:"
+              },
+              {
+                "type": "object",
+                "subtype": "error",
+                "className": "Error",
+                "description": "Error: [object Object]\n    at ConsoleApp.load2FAStatus (http://127.0.0.1:18471/js/app.js?v=68:8036:26)",
+                "objectId": "6937221598567512674.3.1",
+                "preview": {
+                  "type": "object",
+                  "subtype": "error",
+                  "description": "Error: [object Object]\n    at ConsoleApp.load2FAStatus (http://127.0.0.1:18471/js/app.js?v=68:8036:26)",
+                  "overflow": false,
+                  "properties": [
+                    {
+                      "name": "stack",
+                      "type": "string",
+                      "value": "Error: [object Object]\n    at ConsoleApp.load2FASt…s (http://127.0.0.1:18471/js/app.js?v=68:8036:26)"
+                    },
+                    {
+                      "name": "message",
+                      "type": "string",
+                      "value": "[object Object]"
+                    }
+                  ]
+                }
+              }
+            ],
+            "executionContextId": 3,
+            "timestamp": 1790828993527.729,
+            "stackTrace": {
+              "callFrames": [
+                {
+                  "functionName": "load2FAStatus",
+                  "scriptId": "70",
+                  "url": "http://127.0.0.1:18471/js/app.js?v=68",
+                  "lineNumber": 8065,
+                  "columnNumber": 14
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "httpErrors": [
+        {
+          "url": "http://127.0.0.1:18471/api/2fa/status",
+          "status": 404
+        },
+        {
+          "url": "http://127.0.0.1:18471/api/passkey/list",
+          "status": 404
+        }
+      ],
+      "networkFailures": []
+    },
+    {
+      "route": "console#auditLogs",
+      "width": 1440,
+      "theme": "light",
+      "skin": "default",
+      "assertions": [
+        {
+          "name": "scheme",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "actual": "light",
+            "expected": "light"
+          }
+        },
+        {
+          "name": "document-overflow",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "documentWidth": 1425,
+            "width": 1440
+          }
+        },
+        {
+          "name": "hash-routing",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "expected": "auditLogs",
+            "href": "http://127.0.0.1:18471/console#auditLogs",
+            "active": [
+              "auditLogs",
+              "doc-overview",
+              "auditLogsPage"
+            ]
+          }
+        },
+        {
+          "name": "pagination-changes-data",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "route": "console#auditLogs"
+          }
+        },
+        {
+          "name": "navigation-click",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": {
+            "target": "modelLibrary",
+            "after": "#modelLibrary"
+          }
+        },
+        {
+          "name": "uncaught-js-exceptions",
+          "status": "passed",
+          "classification": "ui-regression",
+          "evidence": []
+        }
+      ],
+      "interactions": [
+        {
+          "type": "keyboard-tab",
+          "result": {
+            "tag": "BUTTON",
+            "id": "",
+            "outline": "solid"
+          }
+        },
+        {
+          "type": "pagination",
+          "changed": true
+        },
+        {
+          "type": "navigation",
+          "clicked": true,
+          "target": "modelLibrary",
+          "after": "#modelLibrary"
+        }
+      ],
+      "screenshots": [
+        "screenshots/default-console-auditLogs-light-1440.png",
+        "screenshots/default-console-auditLogs-light-1440-pagination.png"
+      ],
+      "themeEvidence": {
+        "id": "default",
+        "source": null,
+        "before": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "after": {
+          "--primary": "#9F5964",
+          "--background": "#FAF7F8",
+          "--blora-primary": "",
+          "--blora-background": "",
+          "--blora-color-action-primary-default": "#9F5964",
+          "--blora-color-surface-canvas": "#FAF7F8"
+        },
+        "legacyChanged": false,
+        "officialChanged": false,
+        "mode": "default",
+        "permissionsE2E": false
+      },
+      "details": {
+        "href": "http://127.0.0.1:18471/console#auditLogs",
+        "title": "控制台 - CrewRouter",
+        "theme": "light",
+        "background": "rgb(250, 247, 248)",
+        "text": "CrewRouter TEAM\n模型库\n \n我的上游\n \nAPI Key与用量\n \n统计信息\n \n项目工作\n \n排行榜\n \n接口文档\n \n积分\n \n操作日志\n提示词\n会话\n \nBlora Agent\n设置\n用户设置\n管理后台\nDemo User\n操作日志\n操作日志\n刷新\napi_key.create\nBrowser fixture audit row 1\napi_key #1\n刚刚\napi_key.create\nBrowser fixture audit row 2\napi_key #2\n1分钟前\napi_key.create\nBrowser fixture audit row 3\napi_key #3\n2分钟前\napi_key.create\nBrowser fixture audit row 4\napi_key #4\n3分钟前\napi_key.create\nBrowser fixture audit row 5\napi_key #5\n4分钟前\napi_key.create\nBrowser fixture audit row 6\napi_key #6\n5分钟前\napi_key.create\nBrowser fixture audit row 7\napi_key #7\n6分钟前\napi_key.create\nBrowser fixture audit row 8\napi_key #8\n7分钟前\napi_key.create\nBrowser fixture audit row 9\napi_key #9\n8分钟前\napi_key.create\nBrowser fixture audit row 10\napi_key #10\n9分钟前\napi_key.create\nBrowser fixture audit row 11\napi_key #11\n10分钟前\napi_key.create\nBrowser fixture audit row 12\napi_key #12\n11分钟前\napi_key.create\nBrowser fixture audit row 13\napi_ke",
+        "activePages": [
+          "auditLogs",
+          "doc-overview",
+          "auditLogsPage"
+        ],
+        "width": 1440,
+        "documentWidth": 1425,
+        "overflow": [],
+        "controls": 19,
+        "bloraElements": 357
+      },
+      "consoleErrors": [],
+      "httpErrors": [],
+      "networkFailures": []
+    }
+  ]
+}

@@ -201,9 +201,9 @@
         return;
       }
       setHTML(list, items.map(item => `
-        <button type="button" class="ba-history__item${Number(item.id) === Number(this.activeId) ? ' is-active' : ''}" data-id="${Number(item.id)}">
+        <button type="button" class="blora-button ba-history__item" data-variant="${Number(item.id) === Number(this.activeId) ? 'secondary' : 'ghost'}" data-id="${Number(item.id)}">
           ${Dom.escapeHtml(titleOf(item))}
-          <small>${Dom.escapeHtml(metaOf(item))}</small>
+          <span class="ba-history__meta">${Dom.escapeHtml(metaOf(item))}</span>
         </button>
       `).join(''));
       list.querySelectorAll('[data-id]').forEach(button => {
@@ -305,14 +305,14 @@
 
     toolCard(name, body, pending) {
       const actions = pending ? `<div class="ba-card__actions"><button type="button" class="blora-button" data-variant="primary" data-size="sm" data-decision="allow">允许</button><button type="button" class="blora-button" data-variant="outline" data-size="sm" data-decision="deny">拒绝</button></div>` : '';
-      return `<article class="ba-card"><header><span>${Dom.escapeHtml(name || 'tool')}</span></header><pre>${Dom.escapeHtml(typeof body === 'string' ? body : JSON.stringify(body || {}, null, 2))}</pre>${actions}</article>`;
+      return `<article class="ba-card"><header class="ba-card__header"><span>${Dom.escapeHtml(name || 'tool')}</span></header><pre class="ba-card__body">${Dom.escapeHtml(typeof body === 'string' ? body : JSON.stringify(body || {}, null, 2))}</pre>${actions}</article>`;
     },
 
     renderRich(text) {
       const blocks = [];
       let html = Dom.escapeHtml(text || '');
       html = html.replace(/```([\s\S]*?)```/g, (_, code) => {
-        blocks.push(`<pre><code>${code.trim()}</code></pre>`);
+        blocks.push(`<pre class="ba-code"><code>${code.trim()}</code></pre>`);
         return `%%BLOCK${blocks.length - 1}%%`;
       });
       html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');

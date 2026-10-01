@@ -1,0 +1,20 @@
+AssertionError [ERR_ASSERTION]: Card must not nest interactive controls inside a button
+    at verifyModelKeyboard (/data/CrewRouter/scripts/test-blora-public-batch-c.js:188:12)
+    at /data/CrewRouter/scripts/test-blora-public-batch-c.js:163:7 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '\n' +
+    `    <div class="blora-card model-library-item    " data-variant="hover" data-model-id="model-keyboard" data-team-id="team-a" data-provider-id="provider-a" onclick="app.selectModel('model-keyboard')" data-size="sm">\n` +
+    '      <div class="model-library-item-info">\n' +
+    '        <div class="model-library-item-name">\n' +
+    `          <button type="button" class="blora-button model-star-btn " data-variant="ghost" data-size="icon" title="星标此模型" aria-label="星标此模型" aria-pressed="false" onclick="event.stopPropagation();app.toggleLibraryStar('team-a', 'provider-a', 'model-keyboard', true)"></button>\n` +
+    '          \n' +
+    '          <span>Keyboard model</span>\n' +
+    '          \n' +
+    '          <div class="model-item-badges">\n' +
+    '            \n' +
+    '...',
+  expected: /<button[^>]*>[\s\S]*?<button/,
+  operator: 'doesNotMatch',
+  diff: 'simple'
+}
