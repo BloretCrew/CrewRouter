@@ -6,7 +6,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
-const output = path.resolve(root, '..', '.hermes', 'screenshots');
+const output = path.resolve(process.env.CREWROUTER_ACCEPTANCE_OUTPUT || path.join(root, '..', '.hermes', 'screenshots'));
 const electron = path.join(root, 'node_modules', '.bin', 'electron');
 if (path.relative(path.resolve(root, '..'), output).startsWith('..')) throw new Error(`Electron acceptance output must be in repository root: ${output}`);
 const electronArgs = ['--disable-gpu', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : [])];

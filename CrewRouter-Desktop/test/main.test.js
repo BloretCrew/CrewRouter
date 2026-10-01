@@ -66,6 +66,7 @@ test('custom remote connection saves a profile, loads the target and trims the r
   assert.equal(result.mode, 'connected');
   assert.equal(result.target, REMOTE_URL);
   assert.equal(win.loads.at(-1).url, REMOTE_URL);
+  assert.deepEqual(win.webContents.scripts, [], '远程控制台不得注入本地设置入口');
   const profiles = app.ctx.connection.listProfiles();
   assert.equal(profiles.length, 1);
   assert.equal(profiles[0].name, '203.0.113.10');
@@ -105,6 +106,9 @@ test('local mode starts the server once, injects the token header and can be reu
   assert.equal(result.runtime, 'desktop-local');
   assert.equal(result.localServer.pid, 777);
   assert.equal(win.loads.at(-1).url, `${LOCAL_BASE}/console`);
+  assert.equal(win.webContents.scripts.length, 1);
+  assert.match(win.webContents.scripts[0], /desktop-settings.*remove/);
+  assert.match(win.webContents.scripts[0], /desktopSettingsCard.*hidden = false/);
   assert.equal(managers.length, 1);
   assert.equal(managers[0].options.displayName, 'Ada');
   assert.equal(managers[0].options.runtime, 'desktop-local');

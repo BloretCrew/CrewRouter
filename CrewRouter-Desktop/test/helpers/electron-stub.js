@@ -6,11 +6,11 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 class FakeWebContents extends EventEmitter {
-  constructor(win) { super(); this.win = win; this.url = ''; this.sent = []; this.openHandler = null; }
+  constructor(win) { super(); this.win = win; this.url = ''; this.sent = []; this.openHandler = null; this.scripts = []; }
   send(channel, payload) { this.sent.push({ channel, payload }); }
   getURL() { return this.url; }
   setWindowOpenHandler(fn) { this.openHandler = fn; }
-  executeJavaScript() { return Promise.resolve(); }
+  executeJavaScript(source) { this.scripts.push(source); return Promise.resolve(); }
 }
 
 class FakeBrowserWindow extends EventEmitter {

@@ -104,6 +104,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
     state.set({ target, instance: profile, profile: summary, progress: { step: total, total, label: '正在打开页面' } });
     try {
       await ctx.window.loadTarget(local ? `${target}/console` : target);
+      if (local) await ctx.window.win.webContents.executeJavaScript(`(() => { document.getElementById('desktop-settings')?.remove(); const card = document.getElementById('desktopSettingsCard'); if (card) card.hidden = false; })()`, true);
     } catch (error) {
       state.set({ target: null });
       throw new Error(`页面加载失败：${error.message}`);
