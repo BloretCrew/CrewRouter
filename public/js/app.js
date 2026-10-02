@@ -4129,7 +4129,7 @@ class ConsoleApp {
   _renderProviderTestSummary(provider) {
     const summary = this._computeProviderTestSummary(provider);
     const formatted = this._formatProviderTestSummary(summary);
-    return `<span class="blora-badge provider-test-summary ${formatted.className}" data-variant="${formatted.className === 'pass' ? 'success' : formatted.className === 'fail' ? 'danger' : formatted.className === 'mixed' ? 'warning' : 'neutral'}" title="${escapeHtml(formatted.title)}">${escapeHtml(formatted.text)}</span>`;
+    return `<span class="provider-test-summary ${formatted.className}" data-variant="${formatted.className === 'pass' ? 'success' : formatted.className === 'fail' ? 'danger' : formatted.className === 'mixed' ? 'warning' : 'neutral'}" title="${escapeHtml(formatted.title)}">${escapeHtml(formatted.text)}</span>`;
   }
 
   _refreshProviderTestSummary(team, provider) {
@@ -5119,15 +5119,9 @@ class ConsoleApp {
   }
 
   switchStatsTab(tab) {
-    document.querySelectorAll('.stats-tab-bar button, .stats-tab').forEach(btn => {
-      btn.classList.remove('active');
-    });
+    document.getElementById('consoleStatsTabs')?.setAttribute('value', tab);
     document.querySelectorAll('.stats-tab-content').forEach(c => { c.style.display = 'none'; });
 
-    const activeBtn = document.querySelector(`.stats-tab-bar button[onclick*="${tab}"], .stats-tab[onclick*="${tab}"]`);
-    if (activeBtn) {
-      activeBtn.classList.add('active');
-    }
     const tabContent = document.getElementById('statsTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
     if (tabContent) tabContent.style.display = 'block';
 
@@ -13290,6 +13284,9 @@ const app = new ConsoleApp();
 window.app = app;
 
 (function bindBusinessControlEvents() {
+  document.addEventListener('blora-change', event => {
+    if (event.target.id === 'consoleStatsTabs' && event.detail?.value) app.switchStatsTab(event.detail.value);
+  });
   document.addEventListener('change', (event) => {
     const control = event.target.closest?.('blora-switch, blora-checkbox, blora-radio, blora-slider, blora-datepicker, blora-timepicker, blora-upload, blora-select, blora-search') || event.target;
     if (!(control instanceof Element)) return;

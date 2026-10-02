@@ -620,7 +620,7 @@
           <div class="stats-filters">
             <div class="stats-filter-group blora-stack blora-stack--sm">
               <label class="stats-filter-label blora-text-muted"><span data-i18n="时间范围">时间范围</span></label>
-              <blora-select id="statsTimeRange" >
+              <blora-select id="statsTimeRange" value="30" aria-label="统计时间范围">
                 <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
                 <blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option>
                 <blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option>
@@ -631,25 +631,25 @@
             </div>
             <div class="stats-filter-group blora-stack blora-stack--sm">
               <label class="stats-filter-label blora-text-muted"><span data-i18n="模型">模型</span></label>
-              <blora-select id="statsModelFilter" >
+              <blora-select id="statsModelFilter" placeholder="全部模型">
                 <blora-option value=""><span data-i18n="全部模型">全部模型</span></blora-option>
               </blora-select>
             </div>
             <div class="stats-filter-group blora-stack blora-stack--sm">
               <label class="stats-filter-label blora-text-muted"><span data-i18n="供应商">供应商</span></label>
-              <blora-select id="statsProviderFilter" >
+              <blora-select id="statsProviderFilter" placeholder="全部供应商">
                 <blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
               </blora-select>
             </div>
             <div class="stats-filter-group blora-stack blora-stack--sm">
               <label class="stats-filter-label blora-text-muted">Team</label>
-              <blora-select id="statsTeamFilter" >
+              <blora-select id="statsTeamFilter" placeholder="全部 Team">
                 <blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option>
               </blora-select>
             </div>
             <div class="stats-filter-group blora-stack blora-stack--sm">
               <label class="stats-filter-label blora-text-muted"><span data-i18n="客户端">客户端</span></label>
-              <blora-select id="statsSourceFilter"  title="按 harness / 客户端筛选" data-i18n-title="按 harness / 客户端筛选">
+              <blora-select id="statsSourceFilter" placeholder="全部客户端" title="按 harness / 客户端筛选" data-i18n-title="按 harness / 客户端筛选">
                 <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
                 <blora-option value="grok">Grok</blora-option>
                 <blora-option value="codex">Codex</blora-option>
@@ -819,6 +819,18 @@
           </div>
 
           <!-- 图表标签页 -->
+          <blora-tabs id="consoleStatsTabs" value="overview" variant="pills">
+            <blora-tab value="overview" label="概览"></blora-tab>
+            <blora-tab value="multi" label="多维分析"></blora-tab>
+            <blora-tab value="daily" label="每日趋势"></blora-tab>
+            <blora-tab value="hourly" label="时段分布"></blora-tab>
+            <blora-tab value="model" label="模型分析"></blora-tab>
+            <blora-tab value="apikey" label="密钥分析"></blora-tab>
+            <blora-tab value="source" label="客户端"></blora-tab>
+            <blora-tab value="messages" label="消息分析"></blora-tab>
+            <blora-tab value="logs" label="调用记录"></blora-tab>
+          </blora-tabs>
+          <!-- Retired statistics navigation.
           <div class="stats-tab-bar">
             <button type="button" class="blora-button active" onclick="app.switchStatsTab('overview')" data-variant="ghost">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span data-i18n="概览">
@@ -855,6 +867,7 @@
             </span></button>
           </div>
 
+          -->
           <div id="statsTabMulti" class="stats-tab-content" style="display:none;">
             <section id="userMultiDimension" class="multi-dimension-panel" aria-label="自选多维分析">
               <h4 class="blora-card__title">自选维度分析</h4>
@@ -1174,7 +1187,7 @@
           </div>
           <div class="admin-filter-bar" style="margin-bottom:16px;">
             <input type="text" id="promptSearchInput" class="blora-input input" placeholder="搜索文件名或内容..." data-i18n-placeholder="搜索文件名或内容..." style="min-width:200px;" >
-            <blora-select id="promptSourceFilter" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
+            <blora-select id="promptSourceFilter" placeholder="全部客户端" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
               <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
               <blora-option value="grok">Grok</blora-option>
               <blora-option value="codex">Codex</blora-option>
@@ -1186,7 +1199,7 @@
               <blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
               <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
             </blora-select>
-            <blora-select id="promptSortSelect" style="min-width:130px;">
+            <blora-select id="promptSortSelect" value="count" style="min-width:130px;">
               <blora-option value="count"><span data-i18n="按出现次数排序">按出现次数排序</span></blora-option>
               <blora-option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></blora-option>
               <blora-option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></blora-option>
@@ -1326,6 +1339,7 @@
                 <blora-option value="1024x1792">1024 / 1792</blora-option>
                 <blora-option value="1792x1024">1792 / 1024</blora-option>
               </blora-select>
+            <div><div class="project-work-kicker">WORKSPACE ACTIVITY</div><h3 class="blora-card__title"><span data-i18n="项目工作台">项目工作台</span></h3><p><span data-i18n="系统会根据已保存的工作区信息，整理你的项目活动。">系统会根据已保存的工作区信息，整理你的项目活动。</span></p></div>
               <button type="submit" id="baSend" class="blora-button" data-variant="primary"><span data-i18n="发送">发送</span></button>
               <button type="button" id="baStop" class="blora-button" data-variant="danger" hidden><span data-i18n="停止">停止</span></button>
               </div>
@@ -1339,7 +1353,6 @@
       <div id="projectWorkPage" class="page cr-project-work-page">
         <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
-            <div><div class="project-work-kicker">WORKSPACE ACTIVITY</div><h3 class="blora-card__title"><span data-i18n="项目工作台">项目工作台</span></h3><p><span data-i18n="系统会根据已保存的工作区信息，整理你的项目活动。">系统会根据已保存的工作区信息，整理你的项目活动。</span></p></div>
             <div>
               <h2 class="blora-card__title"><span data-i18n="我的项目工作">我的项目工作</span></h2>
               <p class="blora-card__desc" style="margin:0;"><span data-i18n="按项目查看你的 AI 工作活动、活跃天数和 Token 投入">按项目查看你的 AI 工作活动、活跃天数和 Token 投入</span></p>
