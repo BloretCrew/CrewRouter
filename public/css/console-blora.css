@@ -234,12 +234,12 @@
 :is(.cr-console-shell, .cr-admin-page) .content-header { width: 100%; max-width: 1440px; margin-inline: auto; }
 :is(.cr-console-shell, .cr-admin-page) .page.active { display: flex; flex-direction: column; gap: var(--blora-space-6); }
 :is(.cr-console-shell, .cr-admin-page) .sidebar-nav .nav-item > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (min-width: 601px) and (max-width: 834px) {
+@media (min-width: 641px) and (max-width: 834px) {
   :is(.cr-console-shell, .cr-admin-page) .sidebar-nav .nav-item { justify-content: center; }
   :is(.cr-console-shell, .cr-admin-page) .sidebar-nav .nav-item > span:last-child { display: none; }
   :is(.cr-console-shell, .cr-admin-page) .sidebar-nav .app-icon { display: inline-flex; }
 }
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   #mobileSidebarDrawer .sidebar-nav .nav-item { justify-content: flex-start; }
   #mobileSidebarDrawer .sidebar-nav .nav-item > span:last-child { display: inline; }
 }
@@ -247,3 +247,47 @@
 :is(.cr-console-shell, .cr-admin-page) .content-section:not(.blora-card) { min-width: 0; }
 :is(.cr-console-shell, .cr-admin-page) .sidebar { top: 0; bottom: 0; z-index: var(--blora-z-sticky); }
 :is(.cr-console-shell, .cr-admin-page) .sidebar-footer .blora-avatar { flex-shrink: 0; }
+
+/* Match the reference's quiet canvas without changing component surfaces. */
+:is(.cr-console-shell, .cr-admin-page) .sidebar {
+  height: 100dvh;
+  overflow: hidden;
+}
+:is(.cr-console-shell, .cr-admin-page) .sidebar-header,
+:is(.cr-console-shell, .cr-admin-page) .sidebar-footer { flex-shrink: 0; }
+:is(.cr-console-shell, .cr-admin-page) .sidebar-nav {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+:is(.cr-console-shell, .cr-admin-page) .content-header { gap: var(--blora-space-3); }
+:is(.cr-console-shell, .cr-admin-page) .content-header h1 {
+  margin: 0;
+  font-size: var(--blora-text-xl);
+  line-height: 1.3;
+}
+:is(.cr-console-shell, .cr-admin-page) .theme-toggle {
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+:is(.cr-console-shell, .cr-admin-page) .section-header {
+  gap: var(--blora-space-3);
+  flex-wrap: wrap;
+}
+:is(.cr-console-shell, .cr-admin-page) .page.active > .content-section {
+  margin-bottom: 0;
+}
+@media (min-width: 641px) and (max-width: 834px) {
+  :is(.cr-console-shell, .cr-admin-page) .sidebar-header > div { justify-content: center; }
+}
+@media (max-width: 640px) {
+  :is(.cr-console-shell, .cr-admin-page) .content-header .theme-toggle { display: none; }
+  :is(.cr-console-shell, .cr-admin-page) .main-content {
+    padding-top: calc(3.5rem + var(--blora-space-4));
+  }
+  #mobileSidebarDrawer .sidebar { height: auto; overflow: visible; }
+  #mobileSidebarDrawer .sidebar-nav { overflow: visible; }
+  #mobileSidebarDrawer .sidebar-header > div { min-width: 0; }
+  #mobileSidebarDrawer .sidebar-header h2 { font-size: var(--blora-text-base); }
+}

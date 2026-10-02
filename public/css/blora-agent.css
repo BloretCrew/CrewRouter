@@ -1,7 +1,8 @@
 .cr-agent-page.page.active {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 128px);
+  height: calc(100dvh - 152px);
+  gap: 0 !important;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
@@ -210,7 +211,7 @@
 
 @media (max-width: 800px) {
   .cr-agent-page.page.active {
-    height: calc(100dvh - 148px);
+    height: calc(100dvh - 152px);
     min-height: 0;
     overflow: hidden;
   }
@@ -223,4 +224,18 @@
 
 @media (min-width: 801px) {
   .ba-history-toggle { display: none; }
+}
+
+/* The composer stays inside the viewport; only the thread scrolls. */
+.ba-top { flex-shrink: 0; }
+.ba-welcome__title { font-size: var(--blora-text-xl); line-height: 1.4; }
+@media (max-width: 640px) {
+  .cr-agent-page.page.active { height: calc(100dvh - 132px); }
+  .ba-body { gap: var(--blora-space-3); }
+  .ba-thread { padding-block: var(--blora-space-3); }
+  .ba-welcome { padding: var(--blora-space-4) var(--blora-space-2); }
+  .ba-welcome__title { margin-block: var(--blora-space-3); }
+  .ba-composer { padding: var(--blora-space-3); }
+  .ba-composer #baInput { min-height: 64px; max-height: 120px; }
+  .ba-balance { font-size: var(--blora-text-sm); }
 }

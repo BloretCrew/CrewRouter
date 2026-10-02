@@ -7,7 +7,8 @@ const path = require('path');
 const { spawn } = require('child_process');
 const root = path.resolve(__dirname, '..');
 const phase = process.argv.includes('--focused') ? 'focused' : process.argv.includes('--baseline') ? 'baseline' : process.argv.includes('--theme-calibrate') ? 'theme-calibration' : process.argv.includes('--calibrate') ? 'calibration' : 'final';
-const output = path.join(root, 'audit/blora-correction/browser', process.argv.includes('--plugins-only') ? 'focused-plugins' : process.argv.includes('--stable-focused') ? 'focused-stable' : phase);
+const outputArg = process.argv.find(arg => arg.startsWith('--output='));
+const output = outputArg ? path.resolve(outputArg.slice('--output='.length)) : path.join(root, 'audit/blora-correction/browser', process.argv.includes('--plugins-only') ? 'focused-plugins' : process.argv.includes('--stable-focused') ? 'focused-stable' : phase);
 const base = process.env.BLORA_TEST_URL || 'http://127.0.0.1:18571';
 const debugging = process.env.BLORA_CDP_URL || 'http://127.0.0.1:18572';
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -201,6 +202,14 @@ async function main() {
   const readyEvidence=['final','focused'].includes(phase)?{path:'/tmp/blora-correction-ready',mtime:fs.statSync('/tmp/blora-correction-ready').mtime.toISOString(),content:fs.readFileSync('/tmp/blora-correction-ready','utf8')}:null;
   const routes=phase==='focused'?['console#apiKeys','console#modelLibrary','console#bloraAgent/chat','console#bloraAgent/imagine','console#bloraAgent/manage','console#sessions','purchase','admin#adminPlugins','console','admin']:phase==='baseline'?['console#modelLibrary','admin#adminProviders']:phase==='calibration'?['console#apiKeys','console#auditLogs','admin#adminAuditLogs','admin#adminUsers','console','admin']:actualRoutes();
   const runs=[...['light','dark'].flatMap(theme=>[1440,390].flatMap(width=>routes.map(route=>({theme,width,route,skin:themes[0]}))))];
+  if (process.argv.includes('--ui-sweep')) {
+    const selected = ['index','login','register','purchase','console#modelLibrary','console#myUpstream','console#apiKeys','console#stats','console#projectWork','console#leaderboard','console#docs/chat','console#balance','console#auditLogs','console#prompts','console#sessions','console#bloraAgent/chat','console#settings','admin#adminStats','admin#adminProviders','admin#adminModels','admin#adminUsers','admin#adminTeams','admin#adminSettings','admin#adminPlugins'];
+    runs.splice(0, runs.length, ...[1440, 390, 620, 768].flatMap(width => selected.map(route => ({theme:'light',width,route,skin:themes[0]}))));
+  }
+  if (process.argv.includes('--ui-fix')) {
+    const selected = ['console#modelLibrary', 'console#bloraAgent/chat', 'admin#adminProviders'];
+    runs.splice(0, runs.length, ...['light', 'dark'].flatMap(theme => [1440, 390, 620, 768].flatMap(width => selected.map(route => ({theme, width, route, skin: themes[0]})))));
+  }
   if(process.argv.includes('--plugins-only')){runs.splice(0,runs.length,...runs.filter(r=>r.route==='admin#adminPlugins'));}
   if(process.argv.includes('--theme-calibrate')){runs.length=0;for(const skin of themes.slice(1))runs.push({skin,theme:'light',width:1440,route:'console#apiKeys'});}
   if(['final','focused'].includes(phase)&&!process.argv.includes('--plugins-only'))for(const skin of themes.slice(1))for(const theme of ['light','dark'])for(const width of [1440,390])runs.push({skin,theme,width,route:'console#apiKeys'});
@@ -239,6 +248,14 @@ async function main() {
           const active=await cdp.evaluate(`[...document.querySelectorAll('.sidebar-nav .nav-item.active')].map(e=>({page:e.dataset.page,variant:e.dataset.variant,current:e.getAttribute('aria-current')}))`);
           assert('active-public-variant-aria-current',active.length===1&&active.every(a=>['primary','secondary','outline','ghost','danger','text'].includes(a.variant)&&a.current==='page'),active);
           if(route.includes('#')){const expected=route.split('#')[1].split('/')[0],aliases={home:'modelLibrary',dashboard:'modelLibrary',myProviders:'myUpstream',myTeamModels:'myUpstream',adminDashboard:'adminStats',adminUserGroups:'adminTeams'};assert('actual-route-active-page',row.details.activePages.includes(`${aliases[expected]||expected}Page`),row.details.activePages);}
+        }
+        if (route === 'console#bloraAgent/chat') {
+          const geometry = await cdp.evaluate(`(() => {const r=document.querySelector('.ba-composer').getBoundingClientRect();const p=document.querySelector('.cr-agent-page');return {bottom:r.bottom, viewport:innerHeight,gap:getComputedStyle(p).gap};})()`);
+          assert('agent-composer-inside-viewport', geometry.bottom <= geometry.viewport + 1 && geometry.gap === '0px', geometry);
+        }
+        if (width === 620 && (route.startsWith('console') || route.startsWith('admin'))) {
+          const toggleVisible = await cdp.evaluate(`document.getElementById('sidebarToggle').getClientRects().length > 0`);
+          assert('mobile-navigation-620-accessible', toggleVisible, {width});
         }
         assert('card-hierarchy-one-inset-level',row.details.cards.every(c=>c.ancestors===0||(c.ancestors===1&&c.variant==='inset')),row.details.cards);
         if(route.startsWith('console#docs/'))assert('docs-subroute-selected',await cdp.evaluate(`document.querySelector('.doc-page.active')?.id===${JSON.stringify('doc-'+route.split('/')[1])}`),{expected:route.split('/')[1]});
