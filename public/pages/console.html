@@ -1168,7 +1168,7 @@
         <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
             <div>
-              <h2 class="blora-card__title"><span data-i18n="提示词">提示词</span></h2>
+              <h2 class="blora-card__title"><span>历史提示词文件</span></h2>
               <p class="blora-card__desc" style="margin:0;"><span data-i18n="历史收集到的自定义提示词文件，相同内容自动合并显示">历史收集到的自定义提示词文件，相同内容自动合并显示</span></p>
             </div>
           </div>
@@ -1211,11 +1211,12 @@
         <section class="cr-console-session-panel blora-stack" id="sessionsListWrap" aria-labelledby="sessionsTitle" data-size="sm">
           <div class="session-panel__header">
             <div>
-              <h2 id="sessionsTitle" class="blora-card__title"><span data-i18n="会话">会话</span></h2>
+              <h2 id="sessionsTitle" class="blora-card__title"><span>客户端会话记录</span></h2>
               <p><span data-i18n="经过网关的客户端会话，按逻辑会话聚合展示消息时间线与工具调用">经过网关的客户端会话，按逻辑会话聚合展示消息时间线与工具调用</span></p>
             </div>
           </div>
           <div class="session-filter-bar">
+            <div class="session-conditions">
             <blora-select id="sessionDaysFilter" name="days" value="7" aria-label="时间范围">
               <blora-option value="1"><span data-i18n="最近 1 天">最近 1 天</span></blora-option>
               <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
@@ -1232,11 +1233,16 @@
               <blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
               <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
             </blora-select>
+            </div>
+            <div class="session-query-actions">
             <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.loadSessions(1)"><span data-i18n="查询">查询</span></button>
             <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.loadSessions(app._sessionsPage || 1)" title="刷新会话列表" data-i18n-title="刷新会话列表" data-icon="refresh-cw"><span data-i18n="刷新">刷新</span></button>
+            </div>
             <span id="sessionsCountInfo" class="session-filter-info"></span>
+            <div class="session-fulltext-search">
             <blora-search id="sessionsSearchInput" class="session-search" label="搜索会话内容" placeholder="搜索会话内容" data-i18n-placeholder="搜索会话内容" title="搜索会话内容（消息全文与回复，回车触发）" data-i18n-title="搜索会话内容（消息全文与回复，回车触发）" ></blora-search>
             <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.runSessionsSearch()"><span data-i18n="搜索">搜索</span></button>
+            </div>
           </div>
           <!-- 内容搜索结果视图（与正常列表互斥显示） -->
           <div id="sessionsSearchResultsWrap" class="session-search-results" style="display:none;">
@@ -1333,13 +1339,13 @@
       <div id="projectWorkPage" class="page cr-project-work-page">
         <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
+            <div><div class="project-work-kicker">WORKSPACE ACTIVITY</div><h3 class="blora-card__title"><span data-i18n="项目工作台">项目工作台</span></h3><p><span data-i18n="系统会根据已保存的工作区信息，整理你的项目活动。">系统会根据已保存的工作区信息，整理你的项目活动。</span></p></div>
             <div>
               <h2 class="blora-card__title"><span data-i18n="我的项目工作">我的项目工作</span></h2>
               <p class="blora-card__desc" style="margin:0;"><span data-i18n="按项目查看你的 AI 工作活动、活跃天数和 Token 投入">按项目查看你的 AI 工作活动、活跃天数和 Token 投入</span></p>
             </div>
           </div>
           <div class="project-work-heading">
-            <div><div class="project-work-kicker">WORKSPACE ACTIVITY</div><h3 class="blora-card__title"><span data-i18n="项目工作台">项目工作台</span></h3><p><span data-i18n="系统会根据已保存的工作区信息，整理你的项目活动。">系统会根据已保存的工作区信息，整理你的项目活动。</span></p></div>
             <div id="projectWorkStatus" class="project-work-status"><span data-i18n="正在同步活动...">正在同步活动...</span></div>
           </div>
           <div class="stats-filters project-work-filters">
@@ -1637,7 +1643,7 @@ data: [DONE]</code></pre>
       <!-- 积分页面 -->
       <div id="balancePage" class="page cr-balance-page">
         <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
-          <h2 class="blora-card__title"><span data-i18n="积分">积分</span></h2>
+          <h2 class="blora-card__title"><span>账户余额</span></h2>
           <div class="cr-console-balance-info">
             <div class="responsive-flex-row">
               <div class="cr-console-balance-current" style="margin-top:0;">
@@ -1679,9 +1685,9 @@ data: [DONE]</code></pre>
       <div id="auditLogsPage" class="page cr-audit-page">
         <div class="cr-console-section blora-stack blora-stack--lg" data-size="sm">
           <div class="section-header">
-            <h2 class="blora-h4"><span data-i18n="操作日志">操作日志</span></h2>
+            <h2 class="blora-h4"><span>操作记录</span></h2>
             <div style="display:flex;gap:8px;align-items:center;">
-              <blora-select id="auditLogActionFilter" style="width:auto;" >
+              <blora-select id="auditLogActionFilter" placeholder="全部操作" aria-label="操作类型">
                 <blora-option value=""><span data-i18n="全部操作">全部操作</span></blora-option>
                 <blora-option value="api_key">API Key</blora-option>
                 <blora-option value="cokey">Co-Key</blora-option>
@@ -1708,9 +1714,9 @@ data: [DONE]</code></pre>
               <span id="settingsVersionLabel">-</span>
               <div class="settings-link-list">
                 <a href="https://crewrouter.bloret.net/" target="_blank" rel="noopener" class="settings-link-button blora-button" data-variant="text" data-size="sm"><span class="settings-link-icon app-icon" data-icon="globe" aria-hidden="true"></span>Website</a>
-                <a href="https://github.com/BloretCrew/CrewRouter" target="_blank" rel="noopener" class="settings-link-button blora-button" data-variant="text" data-size="sm"><img class="settings-link-icon" src="https://img.bloret.net/img/1787928611714/4aa14a030498aaa1900006568a1f5163" alt="">Github</a>
+                <a href="https://github.com/BloretCrew/CrewRouter" target="_blank" rel="noopener" class="settings-link-button blora-button" data-variant="text" data-size="sm"><span data-icon="github" aria-hidden="true"></span>Github</a>
                 <a href="https://www.npmjs.com/package/@bloret-crew/crewrouter-helper" target="_blank" rel="noopener" class="settings-link-button blora-button" data-variant="text" data-size="sm"><span class="settings-link-icon app-icon" data-icon="box" aria-hidden="true"></span>CrewRouterHelper</a>
-                <a href="https://qm.qq.com/q/kEt8fb41wc" target="_blank" rel="noopener" class="settings-link-button blora-button" data-variant="text" data-size="sm"><img src="https://img.bloret.net/img/1787927888716/0e4652ca34221ddf50433f4127aa9f68" alt="">QQ Discuss</a>
+                <a href="https://qm.qq.com/q/kEt8fb41wc" target="_blank" rel="noopener" class="settings-link-button blora-button" data-variant="text" data-size="sm"><span data-icon="message-circle" aria-hidden="true"></span>QQ Discuss</a>
               </div>
             </div>
           </div>
