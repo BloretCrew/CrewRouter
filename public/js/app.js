@@ -10917,7 +10917,11 @@ ${extractorBody}
                 <div class="blora-list__meta model-library-provider-title">
                   ${this._libIcon('chevron.down', 14, 'collapse-icon')}
                   <span class="blora-list__title">${renderProviderNameTag(provider.provider_name, { tag: false })}</span>
+                </div>
+                <div class="model-library-provider-summary">
                   ${this._renderProviderTestSummary(provider)}
+                </div>
+                <div class="model-library-provider-tags">
                   ${(provider.tags || []).map(t =>
                     `<span class="blora-tag model-provider-tag-chip" data-variant="neutral" style="--badge-accent:${safeColor(t.color)};">${escapeHtml(t.name)}</span>`
                   ).join('')}
@@ -10932,15 +10936,7 @@ ${extractorBody}
                   <span class="provider-model-count">${displayCount} 个模型</span>
                 </div>
               </div>
-              <div class="model-library-list">
-                  ${hasModels
-                    ? `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}">
-                        <span class="placeholder-text">${provider.models.length} 个模型</span>
-                      </div>`
-                    : `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}">
-                        <span class="placeholder-text">${provider.models_loaded ? t('该供应商下暂无模型') : t('点击展开以加载模型')}</span>
-                      </div>`}
-              </div>
+              <div class="model-library-list"></div>
             </div>
           `;}).join('')}
           </div>
@@ -11999,7 +11995,8 @@ ${extractorBody}
       return `
         <label class="blora-filter__item model-library-key-item"
              data-key-id="${key.id}"
-             title="${escapeHtml(tip)}">
+             title="${escapeHtml(tip)}"
+             onclick="if(event.target.tagName !== 'INPUT'){event.preventDefault();app.selectLibraryKey(${key.id}, event)}">
           <input type="radio" name="libraryKeyChip" value="${key.id}"${isActive ? ' checked' : ''}
             onclick="app.selectLibraryKey(${key.id}, event)" />
           <span class="blora-filter__label">
@@ -12058,11 +12055,7 @@ ${extractorBody}
 
     // 再次点击同一 Key：切换气泡菜单（除非强制仅选中）
     if (isReselect && !forceSelect) {
-      if (this._isLibraryKeyBubbleOpen()) {
-        this.closeLibraryKeyBubble();
-      } else {
-        this._openLibraryKeyBubble(id, event?.currentTarget || event?.target);
-      }
+      this._openLibraryKeyBubble(id, event?.currentTarget || event?.target);
       return;
     }
 
@@ -12089,17 +12082,6 @@ ${extractorBody}
     }
   }
 
-  _ensureLibraryKeyBubbleEl() {
-    let menu = document.getElementById('libraryKeyBubbleMenu');
-    if (menu) return menu;
-    menu = document.createElement('blora-dialog');
-    menu.id = 'libraryKeyBubbleMenu';
-    menu.setAttribute('aria-label', t('按工具绑定'));
-    menu.setAttribute('title', t('按工具绑定'));
-    document.body.appendChild(menu);
-    return menu;
-  }
-
   _isLibraryKeyBubbleOpen() {
     const menu = document.getElementById('libraryKeyBubbleMenu');
     return !!menu?.hasAttribute('open');
@@ -12115,46 +12097,30 @@ ${extractorBody}
       this._libraryKeyBubbleCloseTimer = null;
     }
 
-    const menu = this._ensureLibraryKeyBubbleEl();
+    document.getElementById('libraryKeyBubbleMenu')?.remove();
+    const menu = document.createElement('blora-dropdown');
+    menu.id = 'libraryKeyBubbleMenu';
+    menu.setAttribute('align', 'start');
     const defaultModel = key.current_model_name || t('未绑定');
+    const item = (label, action) => `<blora-dropdown-item value="library-action:${encodeURIComponent(action)}">${escapeHtml(label)}</blora-dropdown-item>`;
     const harnessItems = this._libraryHarnessList().map(h => {
       const bound = this._getKeyHarnessBinding(key, h.id);
       const modelText = bound?.name || t('跟随默认');
-      const hasOverride = !!bound;
-      return `
-        <button type="button" class="blora-button" data-variant="ghost"
-                onclick="app.onLibraryKeyBubbleHarness('${h.id}')">
-          <span class="library-key-bubble-item-main">
-            ${this._harnessIconHtml(h.id, 14)}
-            <span>${escapeHtml(h.label)}</span>
-          </span>
-          <span class="library-key-bubble-item-meta ${hasOverride ? 'is-override' : ''}">${escapeHtml(modelText)}</span>
-        </button>`;
+      return item(`${h.label} · ${modelText}`, `app.onLibraryKeyBubbleHarness('${h.id}')`);
     }).join('');
 
     setHTML(menu, `
-      <button type="button" class="blora-button" data-variant="ghost"
-              onclick="app.onLibraryKeyBubbleLocate()">
-        <span class="library-key-bubble-item-main">跳转到绑定模型</span>
-        <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
-      </button>
-      <div class="expand-dropdown-divider"></div>
-      <button type="button" class="blora-button" data-variant="ghost"
-              onclick="app.onLibraryKeyBubbleDefault()">
-        <span class="library-key-bubble-item-main">默认绑定</span>
-        <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
-      </button>
-      <div class="library-key-bubble-section-label">按工具绑定</div>
+      <button slot="trigger" type="button" class="blora-button" data-variant="outline" data-size="sm">${escapeHtml(t('按工具绑定'))}</button>
+      ${item(`${t('跳转到绑定模型')} · ${defaultModel}`, 'app.onLibraryKeyBubbleLocate()')}
+      ${item(`${t('默认绑定')} · ${defaultModel}`, 'app.onLibraryKeyBubbleDefault()')}
       ${harnessItems}
-      <div class="expand-dropdown-divider"></div>
-      <button type="button" class="blora-button" data-variant="ghost"
-              onclick="app.onLibraryKeyBubbleExportConfig()">
-        <span class="library-key-bubble-item-main">导出客户端配置</span>
-      </button>
+      ${item(t('导出客户端配置'), 'app.onLibraryKeyBubbleExportConfig()')}
     `);
-
-    // The official dialog owns top-layer placement, focus return and Escape.
-    menu.show();
+    // Connect only after the complete official definitions are available.
+    document.getElementById('modelLibraryKeySelector').appendChild(menu);
+    customElements.whenDefined('blora-dropdown').then(() => {
+      if (menu.isConnected) menu.open();
+    });
   }
 
   closeLibraryKeyBubble() {
