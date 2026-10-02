@@ -1,205 +1,22 @@
-
-
-.cr-api-keys-page > .content-section {
-
-  padding: var(--blora-space-6);
-}
-
-.cr-api-keys-page .section-header {
-  gap: var(--blora-space-4);
-  margin-bottom: var(--blora-space-5);
-}
-
-.cr-api-keys-page .section-header .blora-button[data-variant="primary"] {
-  min-height: 2.5rem;
-
-}
-
-.cr-api-keys-page .section-header .blora-button svg {
-  flex: 0 0 auto;
-}
-
-.cr-api-keys-page .usage-overview {
-  gap: var(--blora-space-3);
-  margin-bottom: var(--blora-space-4);
-}
-
-.cr-api-keys-page .key-tag-bar {
-
-  padding: var(--blora-space-3) var(--blora-space-4);
-}
-
-.cr-api-keys-page .api-key-groups {
-  gap: var(--blora-space-6);
-}
-
-.cr-api-keys-page .api-key-group-header {
-  align-items: center;
-  margin-bottom: var(--blora-space-3);
-}
-
-.cr-api-keys-page .api-key-card {
-  min-height: 0;
-
-}
-
-.cr-api-keys-page .api-key-card::before {
-  top: var(--blora-space-4);
-  bottom: var(--blora-space-4);
-  width: 0.2rem;
-
-}
-
-.cr-api-keys-page .api-key-header {
-  gap: var(--blora-space-3);
-  margin-bottom: var(--blora-space-3);
-}
-
-.cr-api-keys-page .api-key-title {
-  gap: var(--blora-space-2);
-}
-
-.cr-api-keys-page .api-key-drag-handle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  padding: 0;
-
-}
-
-.cr-api-keys-page .api-key-enable-toggle {
-  margin-top: 0.15rem;
-}
-
-.cr-api-keys-page .api-key-name-row {
-  gap: var(--blora-space-2);
-}
-
-.cr-api-keys-page .api-key-chips {
-  gap: var(--blora-space-1);
-}
-
-.cr-api-keys-page .api-key-chip {
-  padding: 0.18rem var(--blora-space-2);
-
-}
-
-.cr-api-keys-page .api-key-subline {
-  gap: var(--blora-space-1) var(--blora-space-2);
-  margin-top: var(--blora-space-1);
-
-}
-
-.cr-api-keys-page .api-key-prefix {
-  min-height: 2.75rem;
-  margin-bottom: var(--blora-space-3);
-  padding: var(--blora-space-2) var(--blora-space-3);
-
-}
-
-.cr-api-keys-page .api-key-secret-actions {
-  gap: var(--blora-space-1);
-}
-
-.cr-api-keys-page .copy-btn {
-  min-height: 2rem;
-  padding: var(--blora-space-1) var(--blora-space-2);
-
-}
-
-.cr-api-keys-page .api-key-footer {
-  gap: var(--blora-space-3);
-  padding-top: var(--blora-space-3);
-
-}
-
-.cr-api-keys-page .api-key-route-pill-wrap {
-  margin-right: 0;
-}
-
-.cr-api-keys-page .api-key-route-pill {
-  height: 2.25rem;
-  padding: var(--blora-space-2) var(--blora-space-3);
-
-}
-
-.cr-api-keys-page .api-key-actions {
-  gap: var(--blora-space-2);
-}
-
-.cr-api-keys-page .api-key-actions .blora-button {
-  min-height: 2.25rem;
-
-}
-
-.cr-api-keys-page .api-key-more > .blora-button {
-  min-width: 4.5rem;
-}
-
-.cr-api-keys-page .api-key-more-item {
-  min-height: 2.25rem;
-
-}
-
-.cr-api-keys-page #oauthAuthorizationsList .api-key-group {
-
-  overflow: hidden;
-}
-
-.cr-api-keys-page #oauthAuthorizationsList .api-key-group-header,
-.cr-api-keys-page #oauthAuthorizationsList .api-key-group > div:last-child {
-  padding-inline: var(--blora-space-5);
-}
-
-@media (max-width: 640px) {
-  .cr-api-keys-page > .content-section {
-    padding: var(--blora-space-4);
-  }
-
-  .cr-api-keys-page .api-key-footer {
-    align-items: stretch;
-  }
-
-  .cr-api-keys-page .api-key-route-pill-wrap,
-  .cr-api-keys-page .api-key-actions {
-    width: 100%;
-  }
-
-  .cr-api-keys-page .api-key-actions .blora-button {
-    flex: 1 1 auto;
-  }
-}
-
-.cr-api-keys-page .api-key-card,
-.cr-api-keys-page .api-key-title-text,
-.cr-api-keys-page .api-key-prefix,
-.cr-api-keys-page .api-key-route-pill-wrap {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.cr-api-keys-page .api-key-prefix blora-copy {
-  display: block;
-  min-width: 0;
-  width: 100%;
-  overflow-wrap: anywhere;
-}
-
+/* API key business layout; official Card, Badge, Copy and Button own skins. */
+.cr-api-keys-page .section-header,
 .cr-api-keys-page .api-key-header,
 .cr-api-keys-page .api-key-name-row,
 .cr-api-keys-page .api-key-subline,
 .cr-api-keys-page .api-key-metrics,
-.cr-api-keys-page .api-key-footer {
-  flex-wrap: wrap;
-}
-
+.cr-api-keys-page .api-key-footer,
+.cr-api-keys-page .api-key-actions,
+.cr-api-keys-page .api-key-chips { display: flex; flex-wrap: wrap; gap: var(--blora-space-2); }
+.cr-api-keys-page .api-key-groups { display: flex; flex-direction: column; gap: var(--blora-space-5); }
+.cr-api-keys-page .api-key-card,
+.cr-api-keys-page .api-key-title-text,
+.cr-api-keys-page .api-key-prefix,
+.cr-api-keys-page .api-key-route-pill-wrap { min-width: 0; max-width: 100%; }
+.cr-api-keys-page .api-key-prefix blora-copy { display: block; min-width: 0; width: 100%; overflow-wrap: anywhere; }
 .cr-api-keys-page .api-key-name,
-.cr-api-keys-page .api-key-subline {
-  overflow-wrap: anywhere;
-}
-
-.cr-api-keys-page .api-key-group-title {
-  margin: 0;
+.cr-api-keys-page .api-key-subline { overflow-wrap: anywhere; }
+.cr-api-keys-page .api-key-group-title { margin: 0; }
+.cr-api-keys-page .api-key-footer { margin-top: var(--blora-space-3); }
+@media (max-width: 640px) {
+  .cr-api-keys-page .api-key-footer { flex-direction: column; align-items: flex-start; }
 }

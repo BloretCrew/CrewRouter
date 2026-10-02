@@ -11997,18 +11997,18 @@ ${extractorBody}
         : `${name}${modelName ? ' → ' + modelName : ''}`;
       // 官方 Filter 模式（radio 芯片）；label 的 click 先交给业务处理，再次点击同一 Key 打开工具气泡
       return `
-        <div class="blora-filter__item model-library-key-item ${isActive ? 'active' : ''}"
+        <label class="blora-filter__item model-library-key-item"
              data-key-id="${key.id}"
-             onclick="event.preventDefault();app.selectLibraryKey(${key.id}, event)"
              title="${escapeHtml(tip)}">
-          <blora-radio name="libraryKeyChip" value="${key.id}"${isActive ? ' checked' : ''}></blora-radio>
+          <input type="radio" name="libraryKeyChip" value="${key.id}"${isActive ? ' checked' : ''}
+            onclick="app.selectLibraryKey(${key.id}, event)" />
           <span class="blora-filter__label">
             <span class="key-name">${escapeHtml(name)}</span>
             ${tags.map(t => `<span class="key-tag-dot"  title="${escapeHtml(t.name)}"></span>`).join('')}
             ${modelName ? `<span class="blora-badge key-model-badge" data-variant="neutral">${escapeHtml(modelName)}</span>` : ''}
             ${harnessCount ? `<span class="blora-badge" data-variant="info" title="${harnessCount}${escapeHtml(t('个工具单独绑定'))}">${harnessCount}</span>` : ''}
           </span>
-        </div>
+        </label>
       `;
     };
 
@@ -12092,21 +12092,17 @@ ${extractorBody}
   _ensureLibraryKeyBubbleEl() {
     let menu = document.getElementById('libraryKeyBubbleMenu');
     if (menu) return menu;
-    menu = document.createElement('div');
+    menu = document.createElement('blora-dialog');
     menu.id = 'libraryKeyBubbleMenu';
-    menu.className = 'library-key-bubble-menu';
-    menu.setAttribute('role', 'menu');
-    menu.setAttribute('aria-hidden', 'true');
-    menu.hidden = true;
-    menu.style.position = 'fixed';
-    menu.style.zIndex = '1200';
+    menu.setAttribute('aria-label', t('按工具绑定'));
+    menu.setAttribute('title', t('按工具绑定'));
     document.body.appendChild(menu);
     return menu;
   }
 
   _isLibraryKeyBubbleOpen() {
     const menu = document.getElementById('libraryKeyBubbleMenu');
-    return !!(menu && menu.classList.contains('is-open') && !menu.classList.contains('is-closing'));
+    return !!menu?.hasAttribute('open');
   }
 
   _openLibraryKeyBubble(keyId, anchorEl) {
@@ -12126,7 +12122,7 @@ ${extractorBody}
       const modelText = bound?.name || t('跟随默认');
       const hasOverride = !!bound;
       return `
-        <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
+        <button type="button" class="blora-button" data-variant="ghost"
                 onclick="app.onLibraryKeyBubbleHarness('${h.id}')">
           <span class="library-key-bubble-item-main">
             ${this._harnessIconHtml(h.id, 14)}
@@ -12137,13 +12133,13 @@ ${extractorBody}
     }).join('');
 
     setHTML(menu, `
-      <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
+      <button type="button" class="blora-button" data-variant="ghost"
               onclick="app.onLibraryKeyBubbleLocate()">
         <span class="library-key-bubble-item-main">跳转到绑定模型</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
       </button>
       <div class="expand-dropdown-divider"></div>
-      <button type="button" class="blora-button library-key-bubble-item ${this._libraryBindTarget === 'default' ? 'active' : ''}" role="menuitem"
+      <button type="button" class="blora-button" data-variant="ghost"
               onclick="app.onLibraryKeyBubbleDefault()">
         <span class="library-key-bubble-item-main">默认绑定</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
@@ -12151,62 +12147,14 @@ ${extractorBody}
       <div class="library-key-bubble-section-label">按工具绑定</div>
       ${harnessItems}
       <div class="expand-dropdown-divider"></div>
-      <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
+      <button type="button" class="blora-button" data-variant="ghost"
               onclick="app.onLibraryKeyBubbleExportConfig()">
         <span class="library-key-bubble-item-main">导出客户端配置</span>
       </button>
     `);
 
-    const anchor = anchorEl?.closest?.('.model-library-key-item, .binding-key-button, .model-library-sticky-key')
-      || anchorEl
-      || document.querySelector(`.model-library-key-item[data-key-id="${keyId}"]`)
-      || document.querySelector('.binding-key-button');
-
-    // 先以收起态显示，测量尺寸后再定位并播放打开动画
-    menu.hidden = false;
-    menu.classList.remove('is-open', 'is-closing', 'origin-top-right');
-    menu.style.visibility = 'hidden';
-    menu.style.left = '0px';
-    menu.style.top = '0px';
-
-    const rect = anchor?.getBoundingClientRect?.();
-    const menuW = Math.max(menu.offsetWidth || 200, 200);
-    const menuH = Math.max(menu.offsetHeight || 200, 120);
-    let left = 16;
-    let top = 80;
-    let originRight = false;
-    if (rect) {
-      left = rect.left;
-      top = rect.bottom + 4;
-      if (left + menuW > window.innerWidth - 8) {
-        left = Math.max(8, rect.right - menuW);
-        originRight = true;
-      }
-      if (top + menuH > window.innerHeight - 8) {
-        top = Math.max(8, rect.top - 4 - menuH);
-      }
-    }
-    menu.style.left = `${Math.round(left)}px`;
-    menu.style.top = `${Math.round(top)}px`;
-    menu.classList.toggle('origin-top-right', originRight);
-    menu.style.visibility = '';
-    menu.setAttribute('aria-hidden', 'false');
-
-    // 强制 reflow，确保从收起态过渡到打开态
-    void menu.offsetWidth;
-    menu.classList.add('is-open');
-
-    if (this._libraryKeyBubbleCloser) {
-      document.removeEventListener('click', this._libraryKeyBubbleCloser);
-      this._libraryKeyBubbleCloser = null;
-    }
-    const closer = (e) => {
-      if (menu.contains(e.target)) return;
-      if (anchor && anchor.contains?.(e.target)) return;
-      this.closeLibraryKeyBubble();
-    };
-    this._libraryKeyBubbleCloser = closer;
-    setTimeout(() => document.addEventListener('click', closer), 0);
+    // The official dialog owns top-layer placement, focus return and Escape.
+    menu.show();
   }
 
   closeLibraryKeyBubble() {
@@ -12215,23 +12163,7 @@ ${extractorBody}
       document.removeEventListener('click', this._libraryKeyBubbleCloser);
       this._libraryKeyBubbleCloser = null;
     }
-    if (!menu || menu.hidden) return;
-
-    // 已在关闭中则不重复
-    if (menu.classList.contains('is-closing')) return;
-
-    menu.classList.remove('is-open');
-    menu.classList.add('is-closing');
-    menu.setAttribute('aria-hidden', 'true');
-
-    if (this._libraryKeyBubbleCloseTimer) {
-      clearTimeout(this._libraryKeyBubbleCloseTimer);
-    }
-    this._libraryKeyBubbleCloseTimer = setTimeout(() => {
-      this._libraryKeyBubbleCloseTimer = null;
-      menu.classList.remove('is-closing', 'is-open', 'origin-top-right');
-      menu.hidden = true;
-    }, 160);
+    menu?.close();
   }
 
   onLibraryKeyBubbleLocate() {

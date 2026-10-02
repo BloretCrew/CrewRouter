@@ -866,37 +866,11 @@
   }
 }
 
-.model-library-sticky-bar {
-  position: fixed;
-  top: 0;
-  left: 260px;
-  right: 0;
-  z-index: 45;
-  padding: 10px 32px;
-  box-sizing: border-box;
-  background: color-mix(in srgb, var(--card) 88%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 4px 16px var(--blora-color-overlay-modal);
-  /* 进出场过渡：勿用 display，否则无法动画 */
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateY(-100%);
-  transition:
-    opacity 0.22s ease,
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 0.28s,
-    box-shadow 0.22s ease;
-  will-change: transform, opacity;
-}
-
+/* Duplicate scroll toolbars are retired; primary controls remain in flow.
+   Applies to console and admin, without a custom overlay skin. */
+.model-library-sticky-bar,
 .model-library-sticky-bar.is-visible {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateY(0);
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1162,13 +1136,7 @@
 }
 
 /* 当前 Key 绑定条 */
-.model-library-binding-bar {
-  margin-bottom: 14px;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, var(--blora-color-surface-raised), var(--blora-color-surface-raised));
-  border: 1px solid var(--blora-color-border-subtle);
-  border-radius: 12px;
-}
+/* Binding surface and spacing are provided by official Card. */
 
 .model-library-binding-main {
   display: flex;
@@ -1221,13 +1189,7 @@
   color: var(--muted-foreground);
 }
 
-.model-library-binding-summary .binding-model-name {
-  font-weight: 600;
-  color: var(--primary);
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: var(--blora-color-surface-raised);
-}
+/* Bound model is business text; no manually constructed badge surface. */
 
 .model-library-binding-summary .binding-provider-name {
   font-weight: 600;
@@ -1286,11 +1248,7 @@
 }
 
 .model-library-binding-bar .model-library-key-selector {
-  margin: 12px 0 0;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
+  margin-top: var(--blora-space-3);
 }
 
 .library-more-dropdown-menu {
@@ -1835,13 +1793,7 @@
 }
 
 /* 模型库 Key 选择器 */
-.model-library-key-selector {
-  margin-bottom: 0;
-  padding: 10px 14px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
+/* Key selection uses the native official Filter pattern. */
 
 .model-library-key-selector-inner {
   display: flex;
@@ -1948,17 +1900,7 @@
   user-select: none;
 }
 
-.model-library-key-chips .model-library-key-expand {
-  border-style: solid;
-  color: var(--foreground);
-  background: var(--background);
-}
-
-.model-library-key-chips .model-library-key-expand:hover {
-  border-color: var(--primary);
-  background: var(--blora-color-surface-raised);
-  color: inherit;
-}
+/* Expand is an official ghost Button, without a second chip skin. */
 
 /* 绑定条：可点击 Key 名 */
 .model-library-binding-summary .binding-key-trigger {

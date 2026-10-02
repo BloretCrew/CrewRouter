@@ -1,500 +1,74 @@
-
-
-.cr-model-library .model-library-header {
-  padding: var(--blora-space-5) var(--blora-space-6);
-  gap: var(--blora-space-5);
-  margin-bottom: var(--blora-space-5);
-}
-
-.cr-model-library .model-library-header h2 {
-  margin: 0;
-
-}
-
-.cr-model-library .model-quota-section,
-.cr-model-library .library-reorder-toolbar,
-.cr-model-library .model-filter-bar {
-  padding: var(--blora-space-4) var(--blora-space-5);
-  margin-bottom: var(--blora-space-5);
-}
-
-.cr-model-library .model-library-binding-label,
-.cr-model-library .model-quota-section-header h3,
-.cr-model-library .model-library-team-header h3 {
-  margin: 0;
-
-}
-
-.cr-model-library .binding-key-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--blora-space-2);
-}
-
-.cr-model-library .model-library-count {
-  margin-bottom: var(--blora-space-3);
-}
-
-.cr-model-library .library-quick-add-system-provider {
-  margin-bottom: var(--blora-space-3);
-}
-
-.cr-model-library .library-quick-add-system-provider[hidden] {
-  display: none;
-}
-
-/* ---------- 顶部操作栏 / 筛选栏 ---------- */
+/* Business composition only. Blora owns every control and card surface. */
+.cr-model-library .model-library-header,
 .cr-model-library .model-library-header-actions,
+.cr-model-library .model-filter-bar,
 .cr-model-library .model-filter-selects,
-.cr-model-library .library-reorder-toolbar-actions {
+.cr-model-library .library-reorder-toolbar-actions,
+.cr-model-library .binding-key-row,
+.cr-model-library .model-library-key-selector-inner,
+.cr-model-library .model-library-provider-header,
+.cr-model-library .model-library-provider-title,
+.cr-model-library .model-library-provider-actions,
+.cr-model-library .model-library-item-name,
+.cr-model-library .model-item-badges,
+.cr-model-library .model-quota-header,
+.cr-model-library .model-quota-period-header,
+.cr-model-library .model-quota-numbers,
+.cr-model-library .model-quota-credits {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--blora-space-2);
+  min-width: 0;
 }
-
-.cr-model-library .model-library-header-more { flex: 0 0 auto; }
-
-.cr-model-library .model-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--blora-space-3);
-  flex-wrap: wrap;
-}
-
-.cr-model-library blora-search {
-  display: block;
-  flex: 1 1 16rem;
-  min-width: 12rem;
-}
-
-.cr-model-library blora-select {
-  min-width: 9rem;
-}
-
-.cr-model-library .model-library-sticky-search {
-  flex: 1 1 14rem;
-  min-width: 10rem;
-}
-
-.cr-model-library .model-library-sticky-key-wrap { position: static; }
-.cr-model-library .model-library-sticky-key { max-width: 22rem; gap: var(--blora-space-2); }
-.cr-model-library .model-library-sticky-key .sticky-key-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cr-model-library .model-library-sticky-key .blora-badge { flex: none; max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cr-model-library .app-icon { display: inline-block; flex: none; vertical-align: middle; }
+.cr-model-library .model-library-header,
+.cr-model-library .model-library-provider-header,
+.cr-model-library .model-quota-header,
+.cr-model-library .model-quota-period-header { justify-content: space-between; }
+.cr-model-library .model-library-header-left { min-width: 0; }
+.cr-model-library .model-library-header h2,
+.cr-model-library .model-library-team-header h3,
+.cr-model-library .model-quota-name { margin: 0; }
+.cr-model-library .model-library-header,
+.cr-model-library .model-filter-bar,
+.cr-model-library .model-quota-section,
+.cr-model-library .library-reorder-toolbar { margin: 0; }
+.cr-model-library .model-library-key-selector-inner { align-items: flex-start; }
+.cr-model-library .model-library-key-chips { flex: 1; min-width: 0; }
+.cr-model-library .model-library-provider-title { flex: 1 1 12rem; }
+.cr-model-library .model-library-provider-actions { margin-inline-start: auto; }
+.cr-model-library .model-library-team,
+.cr-model-library .model-library-provider,
+.cr-model-library .model-library-list { min-width: 0; }
+.cr-model-library .model-library-team-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-3); }
+.cr-model-library .model-library-team-content { min-width: 0; }
+.cr-model-library .model-library-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--blora-space-4); }
+.cr-model-library .model-library-item-info { display: flex; flex-direction: column; gap: var(--blora-space-3); min-width: 0; }
+.cr-model-library .model-library-item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--blora-space-2); margin: var(--blora-space-3) 0 0; }
+.cr-model-library .library-more-menu { margin-inline-start: auto; }
+.cr-model-library .model-library-item-price { display: flex; flex-wrap: wrap; gap: var(--blora-space-3); margin: 0; }
+.cr-model-library .model-quota-card,
+.cr-model-library .model-quota-periods,
+.cr-model-library .model-quota-period,
+.cr-model-library .model-quota-keys { display: flex; flex-direction: column; gap: var(--blora-space-3); min-width: 0; }
+.cr-model-library .model-quota-card > *,
+.cr-model-library .model-quota-numbers > * { min-width: 0; overflow-wrap: anywhere; }
+.cr-model-library .model-library-loading,
+.cr-model-library .model-library-empty { display: flex; flex-direction: column; align-items: center; gap: var(--blora-space-3); }
+.cr-model-library .model-library-empty-actions { display: flex; flex-wrap: wrap; gap: var(--blora-space-2); }
+.cr-model-library .library-inline-loading,
+.cr-model-library .model-quota-loading { display: inline-flex; align-items: center; gap: var(--blora-space-2); }
 .cr-model-library .model-quota-refresh .loading-spinner { display: none; }
 .cr-model-library .model-quota-refresh.is-loading .app-icon { display: none; }
 .cr-model-library .model-quota-refresh.is-loading .loading-spinner { display: block; }
-.cr-model-library .binding-arrow { display: inline-flex; align-items: center;  }
-
-/* ---------- 加载 / 空态 ---------- */
-.cr-model-library .library-inline-loading,
-.cr-model-library .model-quota-loading {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--blora-space-2);
-
-}
-
-.cr-model-library .model-library-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--blora-space-3);
-  min-height: 12rem;
-
-}
-
-.cr-model-library .model-library-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--blora-space-4);
-  padding: var(--blora-space-8) var(--blora-space-5);
-}
-
-.cr-model-library .model-library-empty-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--blora-space-2);
-}
-
-/* ---------- 当前 Key 绑定 / Key 芯片（官方 Filter 模式） ---------- */
-.cr-model-library .model-library-key-chips {
-  padding: var(--blora-space-1) 0;
-  flex: 1;
-  min-width: 0;
-}
-
-.cr-model-library .model-library-key-chips .blora-filter__label {
-  gap: var(--blora-space-2);
-  max-width: 100%;
-}
-
-.cr-model-library .model-library-key-chips .key-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cr-model-library .model-library-key-chips .key-tag-dot {
-  display: inline-block;
-  width: 0.5rem;
-  height: 0.5rem;
-  flex: none;
-
-}
-
-.cr-model-library .model-library-key-chip-ellipsis {
-  align-self: center;
-
-}
-
-/* ---------- 供应商额度 ---------- */
-.cr-model-library .model-quota-section-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--blora-space-3);
-  margin-bottom: var(--blora-space-3);
-}
-
-.cr-model-library .model-quota-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--blora-space-3);
-}
-
-.cr-model-library .model-quota-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--blora-space-2);
-}
-
-.cr-model-library .model-quota-periods {
-  display: flex;
-  flex-direction: column;
-  gap: var(--blora-space-3);
-}
-
-.cr-model-library .model-quota-period {
-  display: flex;
-  flex-direction: column;
-  gap: var(--blora-space-2);
-}
-
-.cr-model-library .model-quota-period-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--blora-space-2);
-
-}
-
-.cr-model-library .model-quota-numbers {
-  display: flex;
-  align-items: baseline;
-  gap: var(--blora-space-1);
-
-}
-.cr-model-library .model-quota-credits { display: flex; flex-wrap: wrap; gap: var(--blora-space-3); }
-
-/* ---------- Team / 供应商 / 模型卡片 ---------- */
-.cr-model-library .model-library-team {
-  margin-bottom: var(--blora-space-5);
-  padding: 0;
-  min-width: 0;
-}
-
-.cr-model-library .model-library-team-header {
-  min-height: 3.5rem;
-  gap: var(--blora-space-3);
-  padding: var(--blora-space-3) 0;
-  flex-wrap: wrap;
-}
-
-.cr-model-library .model-library-team-content {
-  padding: 0;
-}
-
-.cr-model-library .model-library-team-content .model-library-provider + .model-library-provider,
-.cr-model-library .model-library-provider + .model-library-provider {
-  margin-top: 0;
-}
-
-.cr-model-library .model-library-provider {
-  padding: 0;
-
-}
-
-.cr-model-library .model-library-provider > .model-library-provider-header,
-.cr-model-library .model-library-provider > .model-library-list {
-  min-width: 0;
-}
-
-.cr-model-library .model-library-provider-header {
-  min-height: 3.5rem;
-  padding: var(--blora-space-3) var(--blora-space-4);
-
-}
-
-.cr-model-library .model-library-provider-title,
-.cr-model-library .model-library-provider-actions {
-  gap: var(--blora-space-2);
-  align-items: center;
-}
-
-.cr-model-library .model-library-list {
-  padding: var(--blora-space-3);
-}
-
-.cr-model-library .model-library-provider.collapsed .model-library-list {
-  padding: 0;
-}
-
-.cr-model-library .model-library-item.blora-card {
-  min-height: 12rem;
-
-}
-
-.cr-model-library .model-library-item-name {
-  align-items: flex-start;
-  row-gap: var(--blora-space-2);
-}
-
-.cr-model-library .model-item-badges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--blora-space-1);
-}
-
-.cr-model-library .model-library-item-price {
-  margin-top: auto;
-  padding-top: var(--blora-space-3);
-
-}
-
-.cr-model-library .model-library-item-actions {
-  margin-top: var(--blora-space-4);
-  margin-inline-start: 0;
-  padding-top: var(--blora-space-3);
-
-  flex-wrap: wrap;
-  gap: var(--blora-space-2);
-}
-
-.cr-model-library .model-library-item-actions .library-more-menu {
-  margin-inline-start: auto;
-}
-
-.cr-model-library .library-more-menu {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-}
-
-.cr-model-library .library-more-trigger {
-  gap: var(--blora-space-1);
-}
-
+.cr-model-library .library-quick-add-system-provider[hidden] { display: none; }
 @media (max-width: 834px) {
-  .cr-model-library #modelLibraryFilters {
-    flex-direction: column;
-    align-items: stretch;
-    align-content: stretch;
-  }
-
-  .cr-model-library #modelLibraryFilters > blora-search {
-    flex: 0 0 auto;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .cr-model-library #modelLibraryFilters > .model-filter-selects {
-    width: 100%;
-    flex: 0 0 auto;
-  }
-
-  .cr-model-library #modelLibraryFilters > .model-filter-selects blora-select {
-    flex: 1 1 12rem;
-    min-width: 0;
-    max-width: 100%;
-  }
+  .cr-model-library .model-filter-bar { align-items: stretch; flex-direction: column; }
+  .cr-model-library .model-filter-selects { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .cr-model-library .model-filter-advanced { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-
-@media (max-width: 834px) {
-  .cr-model-library #modelLibraryStickyBar .model-library-sticky-inner {
-    flex-wrap: wrap;
-  }
-}
-
 @media (max-width: 640px) {
-  .cr-model-library #modelLibraryStickyBar .model-library-sticky-inner {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--blora-space-2);
-  }
-
-  .cr-model-library #modelLibraryStickyBar .model-library-sticky-search {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .cr-model-library #modelLibraryStickyBar .model-library-sticky-select {
-    grid-column: 1;
-    grid-row: 2;
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-  }
-
-  .cr-model-library #modelLibraryStickyBar .model-library-sticky-more-btn {
-    grid-column: 2;
-    grid-row: 2;
-  }
-
-  .cr-model-library #modelLibraryStickyBar .model-library-sticky-key-wrap {
-    grid-column: 1 / -1;
-    grid-row: 3;
-    max-width: 100%;
-    min-width: 0;
-  }
-
-  .cr-model-library #modelLibraryStickyBar .model-library-sticky-key {
-    max-width: 100%;
-  }
-
-  .cr-model-library .model-library-header,
-  .cr-model-library .model-filter-bar,
-    .cr-model-library .model-quota-section,
-  .cr-model-library .library-reorder-toolbar {
-    padding: var(--blora-space-4);
-  }
-
-  .cr-model-library .model-library-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .cr-model-library .model-library-header-actions,
-  .cr-model-library .model-filter-selects {
-    width: 100%;
-  }
-
-  .cr-model-library .model-library-header-actions .blora-button,
-  .cr-model-library .model-filter-selects blora-select {
-    flex: 1 1 auto;
-  }
-
-  .cr-model-library .model-library-team-content {
-    padding: var(--blora-space-3);
-  }
-
-  .cr-model-library .model-library-list {
-    grid-template-columns: 1fr;
-  }
-
-  .cr-model-library .model-library-item.blora-card {
-    min-height: 0;
-  }
-
-  .cr-model-library .model-library-item-actions .library-more-menu {
-    margin-inline-start: 0;
-  }
-}
-
-.cr-model-library .model-library-select {
-  display: inline-flex;
-  width: auto;
-  min-height: 2.5rem;
-  flex: 0 1 auto;
-  margin: 0;
-}
-
-/* Resource groups are layout-only; official lists and cards own the surfaces. */
-.cr-model-library .model-library-provider-header {
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.cr-model-library .model-library-provider-title {
-  display: flex;
-  flex-wrap: wrap;
-  min-width: 0;
-  flex: 1 1 16rem;
-}
-
-.cr-model-library .model-library-provider-actions {
-  display: flex;
-  flex-wrap: wrap;
-  margin-inline-start: auto;
-}
-
-.cr-model-library .model-quota-header,
-.cr-model-library .model-quota-period-header,
-.cr-model-library .model-quota-numbers {
-  flex-wrap: wrap;
-}
-
-.cr-model-library .model-quota-card,
-.cr-model-library .model-quota-card > *,
-.cr-model-library .model-quota-card .blora-badge,
-.cr-model-library .model-library-list > * {
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.cr-model-library .model-quota-name {
-  margin: 0;
-  flex: 1 1 8rem;
-}
-
-.cr-model-library .model-quota-numbers {
-  font-variant-numeric: tabular-nums;
-}
-
-.cr-model-library .model-quota-numbers > * {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.cr-model-library .model-quota-keys {
-  display: flex;
-  flex-direction: column;
-  gap: var(--blora-space-4);
-}
-
-.cr-model-library .model-library-select {
-  min-width: 0;
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  text-align: start;
-}
-
-.cr-model-library .provider-test-summary {
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.cr-model-library [role="button"]:focus-visible {
-  outline: var(--blora-focus-ring-width) solid var(--blora-color-action-primary-default);
-  outline-offset: var(--blora-focus-ring-offset);
-}
-
-@media (max-width: 640px) {
-  .cr-model-library .model-library-provider-actions {
-    width: 100%;
-    margin-inline-start: 0;
-  }
+  .cr-model-library .model-library-header { align-items: flex-start; flex-direction: column; }
+  .cr-model-library .model-library-key-selector-inner { flex-direction: column; }
+  .cr-model-library .model-library-provider-actions { margin-inline-start: 0; }
 }

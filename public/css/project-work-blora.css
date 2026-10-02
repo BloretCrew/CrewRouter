@@ -1,19 +1,7 @@
-
-
-.cr-project-work-page .project-work-heading {
-  gap: var(--blora-space-5);
-  margin-bottom: var(--blora-space-5);
-  padding: var(--blora-space-5);
-
-}
-
-.cr-project-work-page .project-work-summary {
-  gap: var(--blora-space-3);
-}
-
-@media (max-width: 800px) {
-
-  .cr-project-work-page .project-work-heading {
-    padding: var(--blora-space-4);
-  }
+/* Project-work business groups have no secondary control surface. */
+.cr-project-work-page .project-work-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--blora-space-3); margin: 0; }
+.cr-project-work-page .project-work-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; gap: var(--blora-space-3); }
+.cr-project-work-page .project-work-summary { gap: var(--blora-space-3); margin: 0; }
+@media (max-width: 640px) {
+  .cr-project-work-page .project-work-filters { grid-template-columns: minmax(0, 1fr); }
 }
