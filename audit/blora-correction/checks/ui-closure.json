@@ -1,0 +1,47 @@
+{
+  "reference": {
+    "repository": "https://github.com/BloretCrew/blora-agent",
+    "commit": "2950dab2fb062568a21e33ab7a65d98a5462f60b",
+    "file": "web/app.css",
+    "evidence": [
+      ".ba-shell: grid-template-rows auto auto minmax(0, 1fr); min-height 0; overflow hidden",
+      ".ba-session: grid-template-rows minmax(0, 1fr) auto; min-height 0; overflow hidden",
+      ".ba-thread: overflow auto; min-height 0; max-width 48rem; margin 0 auto",
+      ".ba-composer: width min(48rem, 100%); margin 0 auto; token-based spacing",
+      "At max-width 720px session and toolbar use narrower token-based padding"
+    ]
+  },
+  "uiFixCommit": "091bc9a98d735b147958a39bc4a092568a69b20c",
+  "screenshotCommit": "8d75939867d3766006000e2d1f531fbeed1494f6",
+  "reusedAcceptance": {
+    "file": "/data/CrewRouter/audit/blora-correction/browser/ui-fix-after/results.json",
+    "observations": 24,
+    "screenshots": 40,
+    "passed": 266,
+    "failed": 0,
+    "errors": 0,
+    "sourceChanges": [],
+    "currentCssHashesMatch": true,
+    "actualRoutes": ["console#bloraAgent/chat", "console#modelLibrary", "admin#adminProviders"],
+    "actualWidths": [1440, 390, 620, 768],
+    "actualSchemes": ["light", "dark"],
+    "actualThemes": ["default"],
+    "metadataCaveat": "Historical summary incorrectly reports 2 routes and all available themes; results contain 3 actual routes and default theme only. Verification script metadata corrected without altering historical results."
+  },
+  "additionalVerification": {
+    "npm run build:saas": "passed, 42.7 seconds, 5.31 MB output",
+    "node scripts/test-blora-agent-registration.js": "passed",
+    "node scripts/test-blora-resource-composition.js": "passed",
+    "visualInspection": [
+      "Desktop Agent light 1440: history rail, centered welcome/composer and complete send controls",
+      "Narrow Agent light 390: header, welcome and composer visible; no cropped send button",
+      "Narrow admin providers light 390: mobile navigation trigger and stacked provider cards visible"
+    ]
+  },
+  "limitations": [
+    "Fresh optional capture could not reach the separately started local demo server, including after one network-permission retry; existing successful post-fix captures were reused after matching CSS SHA256 hashes.",
+    "Demo-only acceptance; real inference, payment, OAuth and persistent mutations not validated.",
+    "Browser desktop-width captures are not new native Electron runtime acceptance.",
+    "Existing baseline artifacts and the untracked blora-design checkout were not modified or staged."
+  ]
+}

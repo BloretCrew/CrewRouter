@@ -214,7 +214,16 @@ async function main() {
   if(process.argv.includes('--plugins-only')){runs.splice(0,runs.length,...runs.filter(r=>r.route==='admin#adminPlugins'));}
   if(process.argv.includes('--theme-calibrate')){runs.length=0;for(const skin of themes.slice(1))runs.push({skin,theme:'light',width:1440,route:'console#apiKeys'});}
   if(['final','focused'].includes(phase)&&!process.argv.includes('--plugins-only'))for(const skin of themes.slice(1))for(const theme of ['light','dark'])for(const width of [1440,390])runs.push({skin,theme,width,route:'console#apiKeys'});
-  fs.writeFileSync(path.join(output,'manifest.json'),JSON.stringify({phase,readyEvidence,pages,routes,themes,combinations:runs.length,fixture:quotaFixture(),base,debugging,db:'127.0.0.1:1',coverage:phase==='focused'?'Affected routes only in four combinations; API keys in default plus seven plugin themes four combinations.':'All entry pages and console/admin routes: default four combinations; other themes: representative API keys controls only.',limitations:fixtureDescription},null,2));
+  const coveredRoutes = [...new Set(runs.map(run => run.route))];
+  const coveredThemes = themes.filter(theme => runs.some(run => run.skin.id === theme.id));
+  const coverage = process.argv.includes('--ui-fix')
+    ? 'Agent chat, model library and admin providers: light/dark at 1440, 390, 620 and 768 pixels; default theme only.'
+    : process.argv.includes('--ui-sweep')
+      ? 'Selected UI routes: light at 1440, 390, 620 and 768 pixels; additional theme runs, if any, are listed in results.'
+      : phase === 'focused'
+        ? 'Affected routes only in four combinations; API keys in default plus seven plugin themes four combinations.'
+        : 'Routes and themes listed in this manifest are the actual scheduled combinations.';
+  fs.writeFileSync(path.join(output,'manifest.json'),JSON.stringify({phase,readyEvidence,pages,routes:coveredRoutes,themes:coveredThemes,combinations:runs.length,fixture:quotaFixture(),base,debugging,db:'127.0.0.1:1',coverage,limitations:fixtureDescription},null,2));
   try {
     for(const domain of ['Page','Runtime','Network','DOM','CSS','Log'])await cdp.send(`${domain}.enable`);
     await cdp.send('Browser.grantPermissions',{origin:base,permissions:['clipboardReadWrite','clipboardSanitizedWrite']});
@@ -284,7 +293,7 @@ async function main() {
       console.log(JSON.stringify({route,width,theme,skin:skin.id,error:row.error,failed:row.assertions.filter(a=>a.status==='failed').map(a=>a.name)}));
     }
     const after=snapshot(),changes=Object.keys(before).filter(f=>before[f]!==after[f]);
-    const summary={observations:results.length,pages:new Set(results.map(r=>r.route.split('#')[0])).size,routes:routes.length,themes:themes.map(t=>t.id),screenshots:results.reduce((n,r)=>n+r.screenshots.length,0),passed:results.flatMap(r=>r.assertions).filter(a=>a.status==='passed').length,failed:results.flatMap(r=>r.assertions).filter(a=>a.status==='failed').length,errors:results.filter(r=>r.error).length,sourceChanges:changes,stale:changes.length>0,limitations:['Demo only; mutations may not persist. No real OAuth, payment or inference acceptance.','All entry pages get default four combinations. Plugin themes use API keys representative page only.','Viewport screenshots and measured surfaces are not a proof of all offscreen visuals.','Surface evidence contains actual matched stylesheet rules, not an assertion that zero overflow means visual correctness.']};
+    const summary={observations:results.length,pages:new Set(results.map(r=>r.route.split('#')[0])).size,routes:coveredRoutes.length,themes:coveredThemes.map(t=>t.id),screenshots:results.reduce((n,r)=>n+r.screenshots.length,0),passed:results.flatMap(r=>r.assertions).filter(a=>a.status==='passed').length,failed:results.flatMap(r=>r.assertions).filter(a=>a.status==='failed').length,errors:results.filter(r=>r.error).length,sourceChanges:changes,stale:changes.length>0,limitations:['Demo only; mutations may not persist. No real OAuth, payment or inference acceptance.',coverage,'Viewport screenshots and measured surfaces are not a proof of all offscreen visuals.','Surface evidence contains actual matched stylesheet rules, not an assertion that zero overflow means visual correctness.']};
     fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({phase,generatedAt:new Date().toISOString(),before,after,summary,results},null,2));
     console.log(JSON.stringify(summary));if(summary.failed||summary.errors||summary.stale)process.exitCode=1;
   }finally{await cdp.send('Page.close').catch(()=>{});cdp.ws.close();}
