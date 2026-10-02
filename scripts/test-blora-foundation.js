@@ -43,7 +43,10 @@ const publicApi = fs.readFileSync(path.join(root, 'node_modules/@bloret-crew/blo
 for (const api of ['createFormController', 'createTableController', 'message']) assert.ok(publicApi.includes(api), `missing official public API ${api}`);
 assert.match(services, /hydrateIcons\(document\)/);
 assert.ok(services.indexOf("icons-full.js") < services.indexOf('hydrateIcons(document)'), 'register full icons before hydrating existing markup');
-assert.match(services, /aria-current/);
+// SidebarNav owns aria-current; the consumer selects through its public value.
+assert.match(services, /document\.createElement\('blora-sidebar-nav'\)/);
+assert.match(services, /navigation\.value = selectedPage/);
+assert.doesNotMatch(services, /setAttribute\('aria-current'/);
 assert.match(services, /window\.bloraMessage = message/);
 assert.match(services, /controller\.destroy\(\)/);
 assert.match(services, /observer\.disconnect\(\)/);
