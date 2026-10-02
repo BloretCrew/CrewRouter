@@ -1,39 +1,6 @@
-
-
-.cr-balance-page > .cr-console-section > h2 {
-  margin-top: 0;
-
-}
-
-.cr-balance-page .cr-console-balance-info {
-
-  padding: var(--blora-space-5);
-}
-
-.cr-balance-page .cr-console-balance-current {
-  padding: var(--blora-space-5) 0;
-}
-
-.cr-balance-page .cr-console-group-info {
-  padding: var(--blora-space-5);
-}
-
-.cr-balance-page .group-header {
-
-  padding-bottom: var(--blora-space-4);
-}
-
-.cr-balance-page .group-rules {
-  padding-top: var(--blora-space-4);
-}
-
-.cr-balance-page .limits-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: var(--blora-space-3);
-  padding: var(--blora-space-4);
-}
-
-@media (max-width: 640px) {
-
-}
+/* Account information: one spacing owner per business group. */
+.cr-balance-page > .cr-console-section > h2 { margin: 0; }
+.cr-balance-page .cr-console-balance-info,
+.cr-balance-page .cr-console-group-info { display: flex; flex-direction: column; gap: var(--blora-space-3); }
+.cr-balance-page .cr-console-balance-current { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--blora-space-3); }
+.cr-balance-page .limits-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: var(--blora-space-3); }

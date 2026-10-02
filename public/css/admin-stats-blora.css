@@ -112,11 +112,6 @@
   gap: var(--blora-space-2) !important;
 }
 
-.cr-admin-stats-page #adminStatsDays {
-  min-height: 2.5rem;
-
-}
-
 .cr-admin-stats-page .stats-tab-bar {
   gap: var(--blora-space-1);
   padding: var(--blora-space-1);

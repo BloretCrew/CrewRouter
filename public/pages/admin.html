@@ -626,7 +626,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
               <label ><span data-i18n="时间范围">时间范围</span></label>
-              <blora-select id="adminStatsDays" class="" style="min-width:120px;" >
+              <blora-select id="adminStatsDays" value="30" aria-label="统计时间范围">
                 <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
                 <blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option>
                 <blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option>
@@ -640,6 +640,18 @@
           <div data-cr-slot="admin-stats:top"></div>
 
           <!-- Tab 导航 -->
+          <blora-tabs id="adminStatsTabs" value="overview" variant="pills">
+            <blora-tab value="overview" label="总览"></blora-tab>
+            <blora-tab value="multi" label="多维分析"></blora-tab>
+            <blora-tab value="daily" label="每日统计"></blora-tab>
+            <blora-tab value="models" label="模型分析"></blora-tab>
+            <blora-tab value="providers" label="供应商分析"></blora-tab>
+            <blora-tab value="clients" label="客户端"></blora-tab>
+            <blora-tab value="members" label="成员 / Team"></blora-tab>
+            <blora-tab value="messages" label="消息分析"></blora-tab>
+            <blora-tab value="logs" label="调用记录"></blora-tab>
+          </blora-tabs>
+          <!-- Legacy statistics navigation removed.
           <div class="stats-tab-bar">
             <button type="button" class="blora-button active" onclick="adminApp.switchStatsTab('overview')" data-variant="ghost">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span data-i18n="总览">
@@ -679,6 +691,7 @@
             </span></button>
           </div>
 
+          -->
           <!-- Tab 1: 总览 -->
           <div id="statsTabOverview" class="stats-tab-content">
             <!-- 统计概要卡片 -->
