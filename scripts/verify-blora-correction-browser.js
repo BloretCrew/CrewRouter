@@ -200,7 +200,7 @@ async function main() {
   const target=await (await fetch(`${debugging}/json/new?about:blank`,{method:'PUT'})).json();
   const cdp=new CDP(target.webSocketDebuggerUrl),results=[],before=snapshot();
   const readyEvidence=['final','focused'].includes(phase)?{path:'/tmp/blora-correction-ready',mtime:fs.statSync('/tmp/blora-correction-ready').mtime.toISOString(),content:fs.readFileSync('/tmp/blora-correction-ready','utf8')}:null;
-  const routes=phase==='focused'?['console#apiKeys','console#modelLibrary','console#bloraAgent/chat','console#bloraAgent/imagine','console#bloraAgent/manage','console#sessions','purchase','admin#adminPlugins','console','admin']:phase==='baseline'?['console#modelLibrary','admin#adminProviders']:phase==='calibration'?['console#apiKeys','console#auditLogs','admin#adminAuditLogs','admin#adminUsers','console','admin']:actualRoutes();
+  let routes=phase==='focused'?['console#apiKeys','console#modelLibrary','console#bloraAgent/chat','console#bloraAgent/imagine','console#bloraAgent/manage','console#sessions','purchase','admin#adminPlugins','console','admin']:phase==='baseline'?['console#modelLibrary','admin#adminProviders']:phase==='calibration'?['console#apiKeys','console#auditLogs','admin#adminAuditLogs','admin#adminUsers','console','admin']:actualRoutes();
   const runs=[...['light','dark'].flatMap(theme=>[1440,390].flatMap(width=>routes.map(route=>({theme,width,route,skin:themes[0]}))))];
   if (process.argv.includes('--ui-sweep')) {
     const selected = ['index','login','register','purchase','console#modelLibrary','console#myUpstream','console#apiKeys','console#stats','console#projectWork','console#leaderboard','console#docs/chat','console#balance','console#auditLogs','console#prompts','console#sessions','console#bloraAgent/chat','console#settings','admin#adminStats','admin#adminProviders','admin#adminModels','admin#adminUsers','admin#adminTeams','admin#adminSettings','admin#adminPlugins'];
@@ -208,6 +208,7 @@ async function main() {
   }
   if (process.argv.includes('--ui-fix')) {
     const selected = ['console#modelLibrary', 'console#bloraAgent/chat', 'admin#adminProviders'];
+    routes = selected;
     runs.splice(0, runs.length, ...['light', 'dark'].flatMap(theme => [1440, 390, 620, 768].flatMap(width => selected.map(route => ({theme, width, route, skin: themes[0]})))));
   }
   if(process.argv.includes('--plugins-only')){runs.splice(0,runs.length,...runs.filter(r=>r.route==='admin#adminPlugins'));}
