@@ -1,5 +1,6 @@
 {
   "phase": "baseline",
+  "readyEvidence": null,
   "pages": [
     "admin",
     "console",
@@ -60,6 +61,12 @@
       "pluginId": "crewrouter-classic",
       "qualifiedId": "crewrouter-classic/classic",
       "file": "plugins/crewrouter-classic/frontend/classic.css"
+    },
+    {
+      "id": "all-capabilities-theme",
+      "pluginId": "all-capabilities",
+      "qualifiedId": "all-capabilities/all-capabilities-theme",
+      "file": "plugins/all-capabilities/theme.css"
     }
   ],
   "combinations": 8,
