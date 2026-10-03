@@ -54,7 +54,7 @@
 .provider-model-picker-footer [hidden] {
   display: none;
 }
-.provider-model-picker .model-check-item > blora-checkbox {
+.provider-model-picker .model-check-item > input[type="checkbox"] {
   flex-shrink: 0;
 }
 .provider-model-picker .model-check-item > label {

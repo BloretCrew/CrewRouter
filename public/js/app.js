@@ -12863,109 +12863,14 @@ ${extractorBody}
 
   showQuickAddedProviderModels(providerId, providerName) {
     if (!this.user?.isAdmin) return;
-    const modal = Dialog.showModal({
-      title: t('获取模型列表'),
-      content: `
-        <p id="quickAddedProviderName" style="color:var(--muted-foreground);font-size:13px;"></p>
-        <div id="quickAddedModelsStatus" role="status" style="font-size:13px;"></div>
-        <div id="quickAddedModelsList" style="max-height:50vh;overflow:auto;"></div>
-      `,
-      footer: `
-        <button type="button" class="blora-button" data-variant="outline" id="quickAddedModelsRetry">${escapeHtml(t('重新获取'))}</button>
-        <button type="button" class="blora-button" data-variant="primary" id="quickAddedModelsSave" disabled>${escapeHtml(t('保存所选模型'))}</button>
-      `,
-      width: 600
+    return ProviderModelPicker.open({
+      providerId,
+      providerName,
+      addOnly: true,
+      showToast: (message, type) => this.showToast(message, type),
+      onChanged: () => this.loadModelLibrary(),
+      onAddedModels: models => this.showQuickAddedModelsTeams(models)
     });
-    const nameEl = document.getElementById('quickAddedProviderName');
-    const status = document.getElementById('quickAddedModelsStatus');
-    const list = document.getElementById('quickAddedModelsList');
-    const retry = document.getElementById('quickAddedModelsRetry');
-    const save = document.getElementById('quickAddedModelsSave');
-    let busy = false;
-    // 保留首次成功获取的基线，保存响应丢失或部分写入后重试仍能恢复本次新增模型。
-    let initialExistingIds = null;
-    modal.element.addEventListener('blora-before-close', event => { if (busy) event.preventDefault(); });
-    nameEl.textContent = providerName || '';
-    const load = async () => {
-      if (busy) return;
-      busy = true;
-      retry.disabled = true;
-      save.disabled = true;
-      list.replaceChildren();
-      status.textContent = t('正在获取模型列表...');
-      try {
-        const res = await fetch(`/api/admin/providers/${encodeURIComponent(providerId)}/fetch-models`);
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || t('获取模型列表失败'));
-        const models = Array.isArray(data.models) ? data.models : [];
-        if (initialExistingIds === null) initialExistingIds = new Set((data.existingModels || []).map(model => String(model.id)));
-        const enabledIds = new Set((data.existingModels || []).filter(model => model.enabled).map(model => String(model.id)));
-        if (!models.length) {
-          status.textContent = t('未获取到模型，可检查供应商配置后重试');
-          return;
-        }
-        status.textContent = `${t('共')}${models.length}${t('个模型')}`;
-        for (const model of models) {
-          const id = String(model.id || '');
-          if (!id) continue;
-          const label = document.createElement('label');
-          label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;';
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.value = id;
-          checkbox.checked = enabledIds.has(id);
-          label.append(checkbox, document.createTextNode(String(model.name || id)));
-          if (model.name && model.name !== id) {
-            const detail = document.createElement('small');
-            detail.textContent = id;
-            detail.style.color = 'var(--muted-foreground)';
-            label.append(detail);
-          }
-          list.append(label);
-        }
-        save.disabled = !list.querySelector('input');
-      } catch (error) {
-        status.textContent = error.message || t('获取模型列表失败');
-      } finally {
-        retry.disabled = false;
-        busy = false;
-      }
-    };
-    retry.addEventListener('click', load);
-    save.addEventListener('click', async () => {
-      if (busy || save.disabled) return;
-      busy = true;
-      retry.disabled = true;
-      list.querySelectorAll('input').forEach(el => { el.disabled = true; });
-      setButtonLoading(save, t('保存中...'));
-      try {
-        const enabledModelIds = Array.from(list.querySelectorAll('input:checked'), el => el.value);
-        const res = await fetch(`/api/admin/providers/${encodeURIComponent(providerId)}/sync-models`, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabledModelIds, addOnly: true })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || t('保存失败'));
-        if (data.success !== true || !Array.isArray(data.selectedModels)) throw new Error(t('保存响应缺少新增模型信息，请刷新模型列表后确认'));
-        const selected = new Set(enabledModelIds);
-        const addedModels = data.selectedModels.filter(model => model.id && selected.has(model.upstream_model_id) && !initialExistingIds.has(model.upstream_model_id));
-        busy = false;
-        modal.close();
-        this.showQuickAddedModelsTeams(addedModels);
-        this.showToast(t('模型列表已保存'), 'success');
-        try { await this.loadModelLibrary(); } catch (error) { this.showToast(t('模型列表刷新失败'), 'error'); }
-      } catch (error) {
-        status.textContent = error.message || t('保存失败');
-      } finally {
-        clearButtonLoading(save);
-        retry.disabled = false;
-        list.querySelectorAll('input').forEach(el => { el.disabled = false; });
-        busy = false;
-      }
-    });
-    load();
   }
 
   async showQuickAddedModelsTeams(addedModels) {
