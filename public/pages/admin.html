@@ -33,7 +33,6 @@
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-users-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/admin-user-groups-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=restore-0930-20261003">
@@ -93,7 +92,7 @@
         </div>
         <span class="blora-badge" data-variant="info"><span data-i18n="管理员">管理员</span></span>
       </div>
-      
+
       <nav class="sidebar-nav">
         <div class="nav-section">
           <div class="nav-item" data-page="adminUsers" data-capability="multiUser">
@@ -104,10 +103,7 @@
             <img src="https://img.bloret.net/SF/person.3?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.3" style="display:inline-block;vertical-align:middle;">
             <span><span data-i18n="Team 管理">Team 管理</span></span>
           </div>
-          <div class="nav-item" data-page="adminUserGroups" data-capability="teamMembers">
-            <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.2" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="用户组管理">用户组管理</span></span>
-          </div>
+
           <div class="nav-item" data-page="adminModels">
             <img src="https://img.bloret.net/SF/cpu?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="cpu" style="display:inline-block;vertical-align:middle;">
             <span><span data-i18n="模型管理">模型管理</span></span>
@@ -341,60 +337,7 @@
       </div>
 
       <!-- 用户组管理页面 -->
-      <div id="adminUserGroupsPage" class="page blora-admin-user-groups-page">
-        <div class="content-section">
-          <h2><span data-i18n="用户组管理">用户组管理</span></h2>
-          <div id="userGroupStatsCards" class="admin-stat-cards"></div>
-          <div class="admin-page-header">
-            <div class="section-actions">
-              <button type="button" id="createUserGroupBtn" class="blora-button" data-variant="secondary" data-size="sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="创建用户组">创建用户组</span></button>
-            </div>
-          </div>
-          <div class="admin-filter-bar">
-            <input type="search" id="userGroupSearchInput" class="blora-input input" placeholder="搜索用户组名称或描述..." data-i18n-placeholder="搜索用户组名称或描述..." oninput="adminApp.filterUserGroups()">
-            <span id="userGroupCount" class="filter-info"></span>
-          </div>
-          <div id="userGroupsList" class="models-table">
-            <!-- 用户组列表将通过JS动态加载 -->
-          </div>
-        </div>
 
-        <!-- 用户组详情面板 -->
-        <div id="userGroupDetailPanel" class="content-section" style="display:none;">
-          <div class="section-header">
-            <h2 id="userGroupDetailTitle"><span data-i18n="用户组详情">用户组详情</span></h2>
-            <div class="section-actions">
-              <button id="editUserGroupBtn" class="blora-button" data-variant="secondary"><span data-i18n="编辑">编辑</span></button>
-              <button id="deleteUserGroupBtn" class="blora-button" data-variant="danger"><span data-i18n="删除">删除</span></button>
-            </div>
-          </div>
-
-          <!-- 用户组规则管理 -->
-          <div class="content-section">
-            <div class="section-header">
-              <h3><span data-i18n="速率规则">速率规则</span></h3>
-            </div>
-            <p style="font-size:13px;color:var(--muted-foreground);margin:0 0 12px;"><span data-i18n="设置请求次数或 Token 用量的时间窗口限额，支持多条规则叠加">设置请求次数或 Token 用量的时间窗口限额，支持多条规则叠加</span></p>
-            <div id="userGroupRulesList">
-              <!-- 规则卡片将通过JS动态加载 -->
-            </div>
-          </div>
-
-          <!-- 用户组成员管理 -->
-          <div class="content-section">
-            <div class="section-header">
-              <h3><span data-i18n="组内成员">组内成员</span></h3>
-              <button id="addUserGroupMemberBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="添加成员">添加成员</span></button>
-            </div>
-            <div class="admin-filter-bar">
-              <input type="text" id="userGroupMemberSearchInput" class="input" placeholder="搜索成员用户名或邮箱..." data-i18n-placeholder="搜索成员用户名或邮箱..." oninput="adminApp.filterUserGroupMembers()">
-            </div>
-            <div id="userGroupMembersList" class="users-table">
-              <!-- 成员列表将通过JS动态加载 -->
-            </div>
-          </div>
-    </div>
-      </div>
 
       <!-- 模型管理页面（界面与用户侧模型库对齐） -->
       <div id="adminModelsPage" class="page blora-admin-models-page">
@@ -725,8 +668,8 @@
               客户端
             </span></button>
             <button onclick="adminApp.switchStatsTab('members')">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 11a4 4 0 1 0 0-8"/><path d="M18 21a6 6 0 0 0-4-5.65"/></svg><span data-i18n="成员 / Team / 用户组">
-              成员 / Team / 用户组
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M16 11a4 4 0 1 0 0-8"/><path d="M18 21a6 6 0 0 0-4-5.65"/></svg><span data-i18n="成员 / Team">
+              成员 / Team
             </span></button>
             <button onclick="adminApp.switchStatsTab('messages')">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H5l-1 4V4z"/><path d="M8 8h8M8 12h5"/></svg><span data-i18n="消息分析">
@@ -840,7 +783,7 @@
                 </div>
     </div>
             </div>
-            
+
             <!-- 图表区域 -->
             <div class="responsive-grid-2" style="margin-bottom:20px;">
               <div class="chart-card">
@@ -877,7 +820,7 @@
             <div class="admin-filter-bar multi-stats-filters" id="adminStatsMultiFilters">
               <label><span data-i18n="成员">成员</span><blora-select id="multiStatsUser" class="input"><blora-option value=""><span data-i18n="全部成员">全部成员</span></blora-option></blora-select></label>
               <label>Team<blora-select id="multiStatsTeam" class="input"><blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option></blora-select></label>
-              <label><span data-i18n="用户组">用户组</span><blora-select id="multiStatsGroup" class="input"><blora-option value=""><span data-i18n="全部用户组">全部用户组</span></blora-option></blora-select></label>
+
               <label><span data-i18n="模型">模型</span><blora-select id="multiStatsModel" class="input"><blora-option value=""><span data-i18n="全部模型">全部模型</span></blora-option></blora-select></label>
               <label><span data-i18n="供应商">供应商</span><blora-select id="multiStatsProvider" class="input"><blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option></blora-select></label>
               <label><span data-i18n="客户端">客户端</span><blora-select id="multiStatsSource" class="input"><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option></blora-select></label>
@@ -1042,7 +985,7 @@
             <div class="chart-card"><h4><span data-i18n="Harness 贡献">Harness 贡献</span></h4><div id="messageStatsSourceTable"></div></div>
           </div>
 
-          <!-- Tab: 成员 / Team / 用户组分析 -->
+          <!-- Tab: 成员 / Team分析 -->
           <div id="statsTabMembers" class="stats-tab-content" style="display:none;">
             <div id="memberStatsSummary" class="stats-overview-grid" style="margin-bottom:20px;"></div>
             <div class="responsive-grid-2" style="margin-bottom:20px;">
@@ -1060,16 +1003,13 @@
                 <h4><span data-i18n="Team 请求量排行">Team 请求量排行</span></h4>
                 <div class="chart-container"><canvas id="teamRequestsChart"></canvas></div>
               </div>
-              <div class="chart-card">
-                <h4><span data-i18n="用户组请求量排行">用户组请求量排行</span></h4>
-                <div class="chart-container"><canvas id="groupRequestsChart"></canvas></div>
-              </div>
+
             </div>
             <div class="responsive-grid-2" style="margin-bottom:20px;">
               <div class="chart-card"><h4><span data-i18n="成员明细">成员明细</span></h4><div id="memberStatsTable"></div></div>
               <div class="chart-card"><h4><span data-i18n="Team 明细">Team 明细</span></h4><div id="teamStatsTable"></div></div>
             </div>
-            <div class="chart-card"><h4><span data-i18n="用户组明细">用户组明细</span></h4><div id="groupStatsTable"></div></div>
+
           </div>
 
           <!-- Tab 5: 调用记录 -->
@@ -1261,7 +1201,7 @@
 
         <div class="content-section admin-settings-section admin-settings-category-auth" id="passportInvitesSection">
           <h2>邀请链接</h2>
-          <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 12px;">生成时可设置使用人数、有效天数，以及加入的 Team 和用户组。</p>
+          <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 12px;">生成时可设置使用人数、有效天数，以及加入的 Team。</p>
           <div class="admin-filter-bar">
             <button class="blora-button" type="button" onclick="adminApp.openInviteDialog()" data-variant="primary">生成邀请链接</button>
           </div>
@@ -1569,9 +1509,9 @@
           <input type="number" id="editUserBalance" class="input" step="1">
         </div>
         <div class="form-group">
-          <label for="editUserGroup"><span data-i18n="用户组">用户组</span></label>
-          <blora-select id="editUserGroup" class="select">
-            <blora-option value=""><span data-i18n="无用户组">无用户组</span></blora-option>
+          <label for="editUserTeam"><span data-i18n="Team">Team</span></label>
+          <blora-select id="editUserTeam" class="select">
+            <blora-option value=""><span data-i18n="未指定 Team">未指定 Team</span></blora-option>
           </blora-select>
         </div>
         <div class="form-group">
@@ -2521,7 +2461,7 @@
   <script src="/js/dom.js?v=restore-0930-20261003"></script>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
   <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
-  <script src="/js/admin.js?v=restore-0930-20261003"></script>
+  <script src="/js/admin.js?v=restore-0930-no-groups-20261003"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
     // 移动端侧边栏切换

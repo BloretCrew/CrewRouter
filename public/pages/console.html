@@ -1663,24 +1663,7 @@ data: [DONE]</code></pre>
         </div>
 
         <!-- 用户组信息 -->
-        <div class="content-section" id="groupInfoSection" style="display:none;">
-          <h2><span data-i18n="用户组与限额">用户组与限额</span></h2>
-          <div class="group-info-card">
-            <div class="group-header">
-              <div class="group-name-row">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                <span class="group-name" id="groupName">-</span>
-              </div>
-              <span class="group-desc" id="groupDesc"></span>
-            </div>
-            <div class="group-rules" id="groupRules"></div>
-    </div>
-        </div>
+
 
         <!-- 个人限额 -->
         <div class="content-section" id="personalLimitsSection" style="display:none;">
@@ -1867,7 +1850,7 @@ data: [DONE]</code></pre>
         <!-- 安全设置 -->
         <div class="content-section settings-section settings-category-security" style="margin-top:24px;">
           <h2><span data-i18n="安全设置">安全设置</span></h2>
-          
+
           <!-- 2FA 设置 -->
           <form id="twoFactorForm" onsubmit="return false;"><input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none;"></form>
           <div style="margin-bottom:24px;padding:20px;border:1px solid var(--border);border-radius:12px;">
@@ -1881,7 +1864,7 @@ data: [DONE]</code></pre>
                 <button type="button" id="tfaStartBtn" class="blora-button" onclick="app.generate2FA()" style="display:none;" data-variant="secondary"><span data-i18n="启用 2FA">启用 2FA</span></button>
               </div>
             </div>
-            
+
             <div id="twoFactorSetup" style="display:none;">
               <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
                 <div>
@@ -1901,7 +1884,7 @@ data: [DONE]</code></pre>
                 </div>
               </div>
             </div>
-            
+
             <div id="twoFactorDisable" style="display:none;">
               <p style="margin-bottom:12px;font-size:14px;"><span data-i18n="您已启用双重认证。如需关闭，请验证密码：">您已启用双重认证。如需关闭，请验证密码：</span></p>
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -1921,7 +1904,7 @@ data: [DONE]</code></pre>
               </div>
               <button type="button" class="blora-button" onclick="app.registerPasskey()" data-variant="secondary"><span data-i18n="添加新设备">添加新设备</span></button>
             </div>
-            
+
             <ul id="passkeyList" style="list-style:none;padding:0;margin:0;">
               <li style="list-style:none;"><div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中" data-i18n-title="加载中"></div><div class="page-loading-text"><span data-i18n="加载中...">加载中...</span></div></div></li>
             </ul>
@@ -1968,7 +1951,7 @@ data: [DONE]</code></pre>
                 <label for="apiSignatureTemplate"><span data-i18n="签名模板">签名模板</span></label>
                 <textarea id="apiSignatureTemplate" class="blora-input input" style="width:100%;min-height:60px;font-family:monospace;font-size:13px;resize:vertical;" placeholder="{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}" data-i18n-placeholder="{model} · {tokens} · 缓存命中 {cache_hit}% · {quota_info}"></textarea>
                 <p style="font-size:12px;color:var(--muted-foreground);margin:6px 0 0;line-height:1.6;"><span data-i18n="可用变量：">
-                  可用变量：</span><code>{model}</code><span data-i18n="模型 ·"> 模型 · </span><code>{tokens}</code><span data-i18n="Token 数 ·"> Token 数 · </span><code>{cache_hit}</code><span data-i18n="缓存命中率 ·"> 缓存命中率 · </span><code>{cached_tokens}</code><span data-i18n="缓存命中 Token 数 ·"> 缓存命中 Token 数 · </span><code>{provider}</code><span data-i18n="供应商 ·"> 供应商 · </span><code>{cost}</code><span data-i18n="费用 ·"> 费用 · </span><code>{username}</code><span data-i18n="用户名 ·"> 用户名 · </span><code>{key_name}</code><span data-i18n="API Key 名称 ·"> API Key 名称 · </span><code>{balance}</code><span data-i18n="积分 ·"> 积分 · </span><code>{group_name}</code><span data-i18n="用户组 ·"> 用户组 · </span><code>{team_name}</code> Team · <code>{quota_info}</code><span data-i18n="限额 ·"> 限额 · </span><code>{today_requests}</code><span data-i18n="今日调用次数 ·"> 今日调用次数 · </span><code>{today_tokens}</code><span data-i18n="今日 Token 数"> 今日 Token 数
+                  可用变量：</span><code>{model}</code><span data-i18n="模型 ·"> 模型 · </span><code>{tokens}</code><span data-i18n="Token 数 ·"> Token 数 · </span><code>{cache_hit}</code><span data-i18n="缓存命中率 ·"> 缓存命中率 · </span><code>{cached_tokens}</code><span data-i18n="缓存命中 Token 数 ·"> 缓存命中 Token 数 · </span><code>{provider}</code><span data-i18n="供应商 ·"> 供应商 · </span><code>{cost}</code><span data-i18n="费用 ·"> 费用 · </span><code>{username}</code><span data-i18n="用户名 ·"> 用户名 · </span><code>{key_name}</code><span data-i18n="API Key 名称 ·"> API Key 名称 · </span><code>{balance}</code><span data-i18n="积分 ·"> 积分 · </span><code>{team_name}</code> Team · <code>{quota_info}</code><span data-i18n="限额 ·"> 限额 · </span><code>{today_requests}</code><span data-i18n="今日调用次数 ·"> 今日调用次数 · </span><code>{today_tokens}</code><span data-i18n="今日 Token 数"> 今日 Token 数
                 </span></p>
               </div>
               <div style="display:flex;align-items:center;gap:12px;">
@@ -2157,7 +2140,7 @@ data: [DONE]</code></pre>
             <label for="keySignatureTemplate"><span data-i18n="自定义签名模板（可选）">自定义签名模板（可选）</span></label>
             <textarea id="keySignatureTemplate" class="blora-input input" style="width:100%;min-height:60px;font-family:monospace;font-size:13px;resize:vertical;" placeholder="留空则使用用户默认模板" data-i18n-placeholder="留空则使用用户默认模板"></textarea>
             <p style="font-size:12px;color:var(--muted-foreground);margin:6px 0 0;line-height:1.6;"><span data-i18n="可用变量：">
-              可用变量：</span><code>{model}</code><span data-i18n="模型 ·"> 模型 · </span><code>{tokens}</code><span data-i18n="Token 数 ·"> Token 数 · </span><code>{cache_hit}</code><span data-i18n="缓存命中率 ·"> 缓存命中率 · </span><code>{cached_tokens}</code><span data-i18n="缓存命中 Token 数 ·"> 缓存命中 Token 数 · </span><code>{provider}</code><span data-i18n="供应商 ·"> 供应商 · </span><code>{cost}</code><span data-i18n="费用 ·"> 费用 · </span><code>{username}</code><span data-i18n="用户名 ·"> 用户名 · </span><code>{key_name}</code><span data-i18n="API Key 名称 ·"> API Key 名称 · </span><code>{balance}</code><span data-i18n="积分 ·"> 积分 · </span><code>{group_name}</code><span data-i18n="用户组 ·"> 用户组 · </span><code>{team_name}</code> Team · <code>{quota_info}</code><span data-i18n="限额 ·"> 限额 · </span><code>{today_requests}</code><span data-i18n="今日调用次数 ·"> 今日调用次数 · </span><code>{today_tokens}</code><span data-i18n="今日 Token 数"> 今日 Token 数
+              可用变量：</span><code>{model}</code><span data-i18n="模型 ·"> 模型 · </span><code>{tokens}</code><span data-i18n="Token 数 ·"> Token 数 · </span><code>{cache_hit}</code><span data-i18n="缓存命中率 ·"> 缓存命中率 · </span><code>{cached_tokens}</code><span data-i18n="缓存命中 Token 数 ·"> 缓存命中 Token 数 · </span><code>{provider}</code><span data-i18n="供应商 ·"> 供应商 · </span><code>{cost}</code><span data-i18n="费用 ·"> 费用 · </span><code>{username}</code><span data-i18n="用户名 ·"> 用户名 · </span><code>{key_name}</code><span data-i18n="API Key 名称 ·"> API Key 名称 · </span><code>{balance}</code><span data-i18n="积分 ·"> 积分 · </span><code>{team_name}</code> Team · <code>{quota_info}</code><span data-i18n="限额 ·"> 限额 · </span><code>{today_requests}</code><span data-i18n="今日调用次数 ·"> 今日调用次数 · </span><code>{today_tokens}</code><span data-i18n="今日 Token 数"> 今日 Token 数
             </span></p>
           </div>
         </div>
@@ -2733,7 +2716,7 @@ data: [DONE]</code></pre>
   <script src="/js/vendor/marked.min.js?v=restore-0930-20261003"></script>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
   <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
-  <script src="/js/app.js?v=restore-0930-20261003"></script>
+  <script src="/js/app.js?v=restore-0930-no-groups-20261003"></script>
   <script src="/js/blora-agent.js?v=restore-0930-20261003"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
@@ -2746,10 +2729,10 @@ data: [DONE]</code></pre>
       currentDocPage = pageId;
       document.querySelectorAll('.doc-page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.docs-nav-item[data-doc-page]').forEach(n => n.classList.remove('active'));
-      
+
       const page = document.getElementById('doc-' + pageId);
       if (page) page.classList.add('active');
-      
+
       const navItem = document.querySelector(`.docs-nav-item[data-doc-page="${pageId}"]`);
       if (navItem) navItem.classList.add('active');
 
@@ -2800,14 +2783,14 @@ data: [DONE]</code></pre>
     async function saveDocsContent() {
       const content = document.getElementById('docsEditorContent').value;
       docsContent[currentDocPage] = content;
-      
+
       try {
         const res = await fetch('/api/admin/settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ docs_content: docsContent })
         });
-        
+
         if (res.ok) {
           const page = document.getElementById('doc-' + currentDocPage);
           if (page) page.innerHTML = content;

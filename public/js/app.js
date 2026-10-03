@@ -6346,44 +6346,6 @@ class ConsoleApp {
 
       document.getElementById('balanceDisplay').textContent = Number(data.balance || 0).toFixed(0);
 
-      // 用户组信息
-      const groupSection = document.getElementById('groupInfoSection');
-      if (data.group) {
-        document.getElementById('groupName').textContent = data.group.name;
-        document.getElementById('groupDesc').textContent = data.group.description || '';
-
-        const rulesContainer = document.getElementById('groupRules');
-        if (data.group.rules && data.group.rules.length > 0) {
-          setHTML(rulesContainer, data.group.rules.map(rule => {
-            const limit = Number(rule.rule_value);
-            const current = Number(rule.current || 0);
-            const pct = limit > 0 ? Math.min(100, (current / limit) * 100) : 0;
-            const isWarning = pct >= 80;
-            const isOver = pct >= 100;
-            const barColor = isOver ? 'var(--destructive, var(--danger))' : isWarning ? 'var(--warning)' : 'var(--brand-blue, var(--info))';
-            const isRequests = rule.rule_type === 'requests';
-            const unit = isRequests ? t('次') : 'tokens';
-            const typeLabel = isRequests ? t('请求次数') : t('Token 用量');
-            const duration = this.formatRuleDuration(rule.duration_hours);
-            return `
-              <div class="rule-item">
-                <div class="rule-top">
-                  <span class="rule-label">${typeLabel} · 每 ${duration}</span>
-                  <span class="rule-value">${isRequests ? `${current.toLocaleString()} / ${limit.toLocaleString()}` : `${this._formatBigNumber(current)} / ${this._formatBigNumber(limit)}`} ${unit}</span>
-                </div>
-                <div class="rule-bar-bg">
-                  <div class="rule-bar-fill" style="width:${pct}%;background:${barColor}"></div>
-                </div>
-              </div>`;
-          }).join(''));
-        } else {
-          setHTML(rulesContainer, '<div class="rule-item"><span class="rule-label" style="color:var(--muted-foreground)">' + t('暂无限额规则') + '</span></div>');
-        }
-        groupSection.style.display = 'block';
-      } else {
-        groupSection.style.display = 'none';
-      }
-
       // 个人限额
       const personalSection = document.getElementById('personalLimitsSection');
       const personalContainer = document.getElementById('personalLimits');

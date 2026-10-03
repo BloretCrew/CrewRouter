@@ -63,11 +63,7 @@ class AdminApp {
     this.teamPage = 0;
     this.teamPageSize = 50;
     this._teamsData = [];
-    this.userGroupPage = 0;
-    this.userGroupPageSize = 50;
-    this._userGroupsData = [];
     this.teamMemberPage = 0;
-    this.userGroupMemberPage = 0;
     this.memberPageSize = 50;
     this.teamModelPage = 0;
     this.teamModelPageSize = 50;
@@ -276,7 +272,7 @@ class AdminApp {
   updateUserInfo() {
     const usernameEl = document.getElementById('username');
     const avatarEl = document.getElementById('userAvatar');
-    
+
     if (usernameEl) usernameEl.textContent = this.user.username;
     if (avatarEl) {
       avatarEl.src = this.user.avatar || '';
@@ -523,6 +519,7 @@ class AdminApp {
   }
 
   async navigateTo(page, options = {}) {
+    if (page === 'adminUserGroups') page = 'adminTeams';
     // 兼容旧「仪表盘」入口，统一到统计信息
     if (page === 'adminDashboard') page = 'adminStats';
 
@@ -547,7 +544,6 @@ class AdminApp {
       'adminErrorLogs': t('调用错误'),
       'adminSettings': t('系统设置'),
       'adminTeams': t('Team 管理'),
-      'adminUserGroups': t('用户组管理'),
       'adminAuditLogs': t('操作日志'),
       'adminPrompts': t('提示词'),
       'adminPlugins': t('插件管理')
@@ -685,9 +681,6 @@ class AdminApp {
           this._syncAdminTeamModelsStickyVisibility(false);
         }
         break;
-      case 'adminUserGroups':
-        await this.loadUserGroups();
-        break;
       case 'adminErrorLogs':
         await this.loadErrorLogs(1);
         break;
@@ -801,16 +794,16 @@ class AdminApp {
     const list = document.getElementById('inviteList');
     if (!list) return;
     if (!rows.length) {
-      list.innerHTML = `<p style="color:var(--muted-foreground);padding:24px;text-align:center;">暂无邀请链接</p>`;
+      list.innerHTML = `<blora-empty title="暂无邀请链接"></blora-empty>`;
       return;
     }
     const statusLabel = { active: '有效', used: '已用完', expired: '已过期' };
     const fmt = (value) => value ? new Date(value).toLocaleString() : '-';
-    list.innerHTML = `<table><thead><tr><th>ID</th><th>状态</th><th>使用人数</th><th>有效期</th><th>Team</th><th>用户组</th><th>创建人</th><th>创建时间</th><th>最近使用</th><th>操作</th></tr></thead><tbody>${rows.map((row) => {
+    list.innerHTML = `<table class="blora-table"><thead><tr><th>ID</th><th>状态</th><th>使用人数</th><th>有效期</th><th>Team</th><th>创建人</th><th>创建时间</th><th>最近使用</th><th>操作</th></tr></thead><tbody>${rows.map((row) => {
       const status = statusLabel[row.status] || row.status;
       const actions = [
-        this._inviteUrlMap?.[row.id] ? `<button class="blora-button" type="button" onclick="adminApp.copyInviteUrl(${row.id})" data-variant="secondary" data-size="sm">复制链接</button>` : '',
-        row.status === 'active' ? `<button class="blora-button" type="button" onclick="adminApp.revokeInvite(${row.id})" data-variant="secondary" data-size="sm">撤销</button>` : '',
+        this._inviteUrlMap?.[row.id] ? `<button class="blora-button" type="button" onclick="adminApp.copyInviteUrl(${row.id})" data-variant="outline" data-size="sm">复制链接</button>` : '',
+        row.status === 'active' ? `<button class="blora-button" type="button" onclick="adminApp.revokeInvite(${row.id})" data-variant="outline" data-size="sm">撤销</button>` : '',
       ].filter(Boolean).join(' ');
       return `<tr>
         <td>#${row.id}</td>
@@ -818,7 +811,6 @@ class AdminApp {
         <td>${Number(row.used_count || 0)} / ${Number(row.max_uses || 1)}</td>
         <td>${fmt(row.expires_at)}</td>
         <td>${escapeHtml(row.team_name || '未指定')}</td>
-        <td>${escapeHtml(row.group_name || '未指定')}</td>
         <td>${escapeHtml(row.created_by_name || '-')}</td>
         <td>${fmt(row.created_at)}</td>
         <td>${fmt(row.used_at)}</td>
@@ -830,18 +822,13 @@ class AdminApp {
   async openInviteDialog() {
     const instance = this._instance || await window.CrewRouterEditionBadge?.load?.();
     if (instance?.capabilities?.teamAdmin === false) return;
-    const [teams, groups] = await Promise.all([
-      fetch('/api/admin/teams').then((r) => r.ok ? r.json() : []).catch(() => []),
-      fetch('/api/admin/user-groups').then((r) => r.ok ? r.json() : []).catch(() => []),
-    ]);
+    const teams = await fetch('/api/admin/teams').then(r => r.ok ? r.json() : []).catch(() => []);
     const teamOptions = (Array.isArray(teams) ? teams : []).map((t) => `<blora-option value="${t.id}">${escapeHtml(t.name)}</blora-option>`).join('');
-    const groupOptions = (Array.isArray(groups) ? groups : []).map((g) => `<blora-option value="${g.id}">${escapeHtml(g.name)}</blora-option>`).join('');
     const content = `
       <div class="setup-form" style="display:grid;gap:12px;">
         <div class="form-group"><label>使用人数 *</label><input id="inviteMaxUses" class="input" type="number" min="1" max="10000" value="1" required></div>
         <div class="form-group"><label>有效天数 *</label><input id="inviteDays" class="input" type="number" min="1" max="365" value="7" required></div>
         <div class="form-group"><label>加入 Team</label><blora-select id="inviteTeamId" class="input"><blora-option value="">不指定</blora-option>${teamOptions}</blora-select></div>
-        <div class="form-group"><label>加入用户组</label><blora-select id="inviteGroupId" class="input"><blora-option value="">不指定</blora-option>${groupOptions}</blora-select></div>
       </div>`;
     const footer = `<button type="button" class="blora-button" data-variant="primary" id="inviteGenerateBtn">生成</button>`;
     const modal = Dialog.showModal({ title: '生成邀请链接', content, footer, width: 480 });
@@ -855,7 +842,6 @@ class AdminApp {
           maxUses,
           days,
           teamId: document.getElementById('inviteTeamId')?.value || '',
-          groupId: document.getElementById('inviteGroupId')?.value || '',
         };
         const data = await this._inviteRequest('/api/auth-invites', {
           method: 'POST',
@@ -984,22 +970,20 @@ class AdminApp {
     document.getElementById('editUserRateLimitRpm').value = user.rate_limit_rpm || 0;
     document.getElementById('editUserRateLimitTpm').value = user.rate_limit_tpm || 0;
 
-    // 加载用户组列表
-    this.loadUserGroupsForSelect(user.group_id);
-
+    this.loadTeamsForUserSelect(user.team_id);
     this.showModal('editUserModal');
   }
 
-  async loadUserGroupsForSelect(selectedGroupId) {
+  async loadTeamsForUserSelect(selectedTeamId) {
     try {
-      const response = await fetch('/api/admin/user-groups');
+      const response = await fetch('/api/admin/teams');
       if (!response.ok) return;
-      const groups = await response.json();
-      const select = document.getElementById('editUserGroup');
-      setHTML(select, '<blora-option value="">' + t('无用户组') + '</blora-option>' +
-        groups.map(g => `<blora-option value="${g.id}" ${g.id === selectedGroupId ? 'selected' : ''}>${escapeHtml(g.name)}</blora-option>`).join(''));
+      const teams = await response.json();
+      const select = document.getElementById('editUserTeam');
+      setHTML(select, '<blora-option value="">' + t('无 Team') + '</blora-option>' +
+        teams.map(team => `<blora-option value="${team.id}" ${team.id === selectedTeamId ? 'selected' : ''}>${escapeHtml(team.name)}</blora-option>`).join(''));
     } catch (error) {
-      console.error(t('加载用户组列表失败:'), error);
+      console.error(t('加载 Team 列表失败:'), error);
     }
   }
 
@@ -1009,12 +993,12 @@ class AdminApp {
       const response = await fetch(`/api/admin/users/${userId}/code-balances`);
       if (!response.ok) throw new Error(t('加载失败'));
       const balances = await response.json();
-      
+
       if (balances.length === 0) {
         setHTML(container, '<span style="color:var(--muted-foreground)">' + t('无可退款余额') + '</span>');
         return;
       }
-      
+
       setHTML(container, balances.map(b => {
         const feePercent = (parseFloat(b.fee_rate) * 100).toFixed(0);
         const feeLabel = parseFloat(b.fee_rate) > 0 ? `${t('(费率')}${feePercent}%)` : '';
@@ -1032,25 +1016,25 @@ class AdminApp {
   async refundUser() {
     const userId = document.getElementById('editUserId').value;
     const refundAmount = parseFloat(document.getElementById('editUserRefundAmount').value);
-    
+
     if (isNaN(refundAmount) || refundAmount <= 0) {
       alert(t('请输入有效的退款金额'));
       return;
     }
-    
+
     if (!await confirm(`${t('确认为该用户退款 ¥')}${refundAmount.toFixed(2)}${t('？系统将按手续费从高到低扣除。')}`)) {
       return;
     }
-    
+
     try {
       const response = await fetch(`/api/admin/users/${userId}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refundAmount })
       });
-      
+
       const result = await response.json();
-      
+
       if (response.ok && result.success) {
         alert(`${t('退款成功！实际扣除 ¥')}${result.deductions.reduce((s, d) => s + d.deducted, 0).toFixed(2)}${t('，新可退款余额 ¥')}${result.newRefundBalance.toFixed(2)}`);
         document.getElementById('editUserRefundAmount').value = '';
@@ -1072,7 +1056,7 @@ class AdminApp {
     const email_verified = document.getElementById('editUserEmailVerified').value === 'true';
     const isAdmin = document.getElementById('editUserAdmin').value === 'true';
     const balance = parseFloat(document.getElementById('editUserBalance').value);
-    const group_id = document.getElementById('editUserGroup').value || null;
+    const team_id = document.getElementById('editUserTeam').value || null;
     const tagsStr = document.getElementById('editUserTags').value;
     const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()) : [];
     const rate_limit_rpm = parseInt(document.getElementById('editUserRateLimitRpm').value) || 0;
@@ -1082,7 +1066,7 @@ class AdminApp {
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, email_verified, isAdmin, balance, group_id, tags, rate_limit_rpm, rate_limit_tpm })
+        body: JSON.stringify({ email, email_verified, isAdmin, balance, team_id, tags, rate_limit_rpm, rate_limit_tpm })
       });
 
       if (response.ok) {
@@ -1090,11 +1074,11 @@ class AdminApp {
         this.loadUsers();
       } else {
         const result = await response.json().catch(() => ({}));
-        alert(result.error || t('保存失败'));
+        Dialog.alert(result.error || t('保存失败'));
       }
     } catch (error) {
       console.error(t('保存用户失败:'), error);
-      alert(t('保存失败'));
+      Dialog.alert(t('保存失败'));
     }
   }
 
@@ -2513,7 +2497,7 @@ class AdminApp {
     if (freEl) freEl.value = 'false';
     const testUaEl = document.getElementById('modelTestUserAgent');
     if (testUaEl) testUaEl.value = '';
-    
+
     this.loadProviderOptions().then(() => {
       document.getElementById('modelProvider').value = '';
       this.onModelProviderChange();
@@ -2536,7 +2520,7 @@ class AdminApp {
     if (freEl) freEl.value = (model.forward_reasoning_effort === true).toString();
     const testUaEl = document.getElementById('modelTestUserAgent');
     if (testUaEl) testUaEl.value = model.provider_test_user_agent || '';
-    
+
     this.loadProviderOptions().then(() => {
       document.getElementById('modelProvider').value = model.provider;
       const cachedUa = this._getProviderTestUserAgent(model.provider);
@@ -6513,7 +6497,7 @@ async function(ctx) {
     document.getElementById('openCodeConfigFile').value = '';
     document.getElementById('importPreview').style.display = 'none';
     clearChildren(document.getElementById('importPreviewContent'));
-    
+
     this.showModal('importOpenCodeModal');
   }
 
@@ -6535,22 +6519,22 @@ async function(ctx) {
       const config = JSON.parse(content);
       const preview = document.getElementById('importPreview');
       const previewContent = document.getElementById('importPreviewContent');
-      
+
       let html = '';
-      
+
       // Claude Code 格式（有 env 字段）
       if (config.env && typeof config.env === 'object') {
         const env = config.env;
         const key = env.ANTHROPIC_AUTH_TOKEN;
         const baseUrl = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com';
-        
+
         html += `<p style="color: var(--foreground); margin-bottom: 8px;"><strong>${t('Claude Code 配置')}</strong></p>`;
         html += `<div style="margin-left: 12px; margin-bottom: 4px;">
           <span style="color: var(--success);">anthropic</span>
           <span style="color: var(--muted-foreground);"> — ${baseUrl}</span>
           ${key ? `<span style="color: var(--success);"> (${key.substring(0, 8)}****)</span>` : '<span style="color: var(--destructive);">' + t('(无 Key)') + '</span>'}
         </div>`;
-        
+
         // 显示模型
         const modelKeys = ['ANTHROPIC_MODEL', 'ANTHROPIC_DEFAULT_HAIKU_MODEL', 'ANTHROPIC_DEFAULT_SONNET_MODEL', 'ANTHROPIC_DEFAULT_OPUS_MODEL'];
         const modelNames = [t('默认'), 'Haiku', 'Sonnet', 'Opus'];
@@ -6578,7 +6562,7 @@ async function(ctx) {
           html += '<p style="color: var(--muted-foreground); margin-left: 12px;">' + t('未找到有效的 API Key') + '</p>';
         }
       }
-      
+
       setHTML(previewContent, html);
       preview.style.display = 'block';
     } catch (error) {
@@ -6647,7 +6631,7 @@ async function(ctx) {
     const data = await res.json();
     const configs = [
       ['multiStatsUser', data.users, t('全部成员')], ['multiStatsTeam', data.teams, t('全部 Team')],
-      ['multiStatsGroup', data.groups, t('全部用户组')], ['multiStatsModel', data.models, t('全部模型')],
+      ['multiStatsModel', data.models, t('全部模型')],
       ['multiStatsProvider', data.providers, t('全部供应商')], ['multiStatsSource', data.sources, t('全部客户端')],
       ['multiStatsProject', data.projects, t('全部项目')]
     ];
@@ -6661,7 +6645,7 @@ async function(ctx) {
 
   _multiStatsParams() {
     const params = new URLSearchParams({ days: document.getElementById('adminStatsDays')?.value || '30' });
-    [['user_id', 'multiStatsUser'], ['team_id', 'multiStatsTeam'], ['group_id', 'multiStatsGroup'], ['model_id', 'multiStatsModel'], ['provider_id', 'multiStatsProvider'], ['request_source', 'multiStatsSource'], ['workspace_path', 'multiStatsProject']].forEach(([key, id]) => {
+    [['user_id', 'multiStatsUser'], ['team_id', 'multiStatsTeam'], ['model_id', 'multiStatsModel'], ['provider_id', 'multiStatsProvider'], ['request_source', 'multiStatsSource'], ['workspace_path', 'multiStatsProject']].forEach(([key, id]) => {
       const value = document.getElementById(id)?.value || '';
       if (value) params.set(key, value);
     });
@@ -6686,12 +6670,12 @@ async function(ctx) {
   }
 
   resetMultiStatsFilters() {
-    ['multiStatsUser', 'multiStatsTeam', 'multiStatsGroup', 'multiStatsModel', 'multiStatsProvider', 'multiStatsSource', 'multiStatsProject'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    ['multiStatsUser', 'multiStatsTeam', 'multiStatsModel', 'multiStatsProvider', 'multiStatsSource', 'multiStatsProject'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     this.loadMultiStats();
   }
 
   _multiStatsDrill(key, value) {
-    const map = { user_id: 'multiStatsUser', team_id: 'multiStatsTeam', group_id: 'multiStatsGroup', model_id: 'multiStatsModel', provider_id: 'multiStatsProvider', request_source: 'multiStatsSource', workspace_path: 'multiStatsProject' };
+    const map = { user_id: 'multiStatsUser', team_id: 'multiStatsTeam', model_id: 'multiStatsModel', provider_id: 'multiStatsProvider', request_source: 'multiStatsSource', workspace_path: 'multiStatsProject' };
     const el = document.getElementById(map[key]);
     if (el) { el.value = String(value); this.loadMultiStats(); }
   }
@@ -6747,9 +6731,9 @@ async function(ctx) {
   renderMultiStatsTable(rows) {
     const el = document.getElementById('adminStatsCombinationTable');
     if (!el) return;
-    if (!rows.length) { setHTML(el, '<p class="stats-insight-empty">' + t('当前筛选条件下暂无组合数据') + '</p>'); return; }
+    if (!rows.length) { setHTML(el, '<blora-empty title="' + t('当前筛选条件下暂无组合数据') + '"></blora-empty>'); return; }
     const sourceLabel = (source) => this._usageRequestSourceMeta(source).label;
-    setHTML(el, `<div style="overflow:auto;"><table><thead><tr><th>${t('成员')}</th><th>Team</th><th>用户组</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.group_name || t('未分配用户组'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${renderProviderNameTag(row.provider_name) || '<span class="model-provider-missing">' + t('未知供应商') + '</span>'}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
+    setHTML(el, `<div class="blora-table-wrap"><table class="blora-table"><thead><tr><th>${t('成员')}</th><th>Team</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${renderProviderNameTag(row.provider_name) || '<span class="model-provider-missing">' + t('未知供应商') + '</span>'}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
   }
 
   async loadStats() {
@@ -6767,7 +6751,7 @@ async function(ctx) {
       }
       if (seq !== this._statsLoadSeq) return; // 过期响应丢弃
       this.stats = await response.json();
-      
+
       this.renderStatsOverview();
       this.renderCharts();
       this.renderDailyBarCharts();
@@ -6776,7 +6760,7 @@ async function(ctx) {
       this.renderSourceCharts();
       this.renderMemberStatsCharts();
       this.renderMemberStatsTables();
-      
+
       const container = document.getElementById('detailedStats');
       if (!container) return;
       if (!this.stats.daily || this.stats.daily.length === 0) {
@@ -7618,7 +7602,6 @@ async function(ctx) {
     const groups = [
       { key: 'byUser', label: t('成员'), requests: 'memberRequestsChart', cost: 'memberCostChart', reqStore: '_memberReqChart', costStore: '_memberCostChart', name: 'user_name' },
       { key: 'byTeam', label: 'Team', requests: 'teamRequestsChart', reqStore: '_teamReqChart', name: 'team_name' },
-      { key: 'byGroup', label: t('用户组'), requests: 'groupRequestsChart', reqStore: '_groupReqChart', name: 'group_name' }
     ];
     const colors = [readCssVar('--status-info', '#2563eb'), readCssVar('--chart-2', '#a855f7'), readCssVar('--status-success', '#16a34a'), readCssVar('--status-warn', '#d97706'), readCssVar('--status-danger', '#dc2626'), readCssVar('--cyan', '#06b6d4'), readCssVar('--pink', '#ec4899'), readCssVar('--chart-8', '#14b8a6'), readCssVar('--warning', '#f59e0b'), readCssVar('--status-neutral', '#64748b')];
     const style = getComputedStyle(document.documentElement);
@@ -7657,33 +7640,33 @@ async function(ctx) {
       const container = document.getElementById(containerId);
       if (!container) return;
       if (!rows || rows.length === 0) {
-        setHTML(container, `<p style="text-align:center;color:var(--muted-foreground);padding:20px;">${emptyText}</p>`);
+        setHTML(container, `<p style="text-align:center;padding:20px;">${emptyText}</p>`);
         return;
       }
       const totalRequests = rows.reduce((sum, row) => sum + Number(row.requests || 0), 0);
       const totalCost = rows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
-      setHTML(container, `<div style="overflow-x:auto;"><table><thead><tr><th>${labelKey === 'user_name' ? t('成员') : labelKey === 'team_name' ? 'Team' : t('用户组')}</th><th>请求数</th><th>占比</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => {
+      setHTML(container, `<div class="blora-table-wrap"><table class="blora-table"><thead><tr><th>${labelKey === 'user_name' ? t('成员') : labelKey === 'team_name' ? 'Team' : t('模型')}</th><th>请求数</th><th>占比</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => {
         const requests = Number(row.requests || 0);
         const cost = Number(row.cost || 0);
         return `<tr><td>${escapeHtml(row[labelKey] || t('未分配'))}</td><td>${requests.toLocaleString()}</td><td>${totalRequests ? (requests / totalRequests * 100).toFixed(1) : '0.0'}%</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${cost.toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`;
-      }).join('')}</tbody><tfoot><tr style="font-weight:600;background:var(--background);"><td>' + t('合计') + '</td><td>${totalRequests.toLocaleString()}</td><td>100%</td><td title="${rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0).toLocaleString()}">${this._formatBigNumber(rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0))}</td><td>${totalCost.toFixed(4)}</td><td>-</td></tr></tfoot></table></div>`);
+      }).join('')}</tbody><tfoot><tr ><td>' + t('合计') + '</td><td>${totalRequests.toLocaleString()}</td><td>100%</td><td title="${rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0).toLocaleString()}">${this._formatBigNumber(rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0))}</td><td>${totalCost.toFixed(4)}</td><td>-</td></tr></tfoot></table></div>`);
     };
     const summaryRows = [
       [t('成员'), this.stats.byUser || [], 'user_name'],
       ['Team', this.stats.byTeam || [], 'team_name'],
-      [t('用户组'), this.stats.byGroup || [], 'group_name']
+
     ];
     const summary = summaryRows.map(([label, rows]) => {
       const requests = rows.reduce((sum, row) => sum + Number(row.requests || 0), 0);
       const tokens = rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0);
       const cost = rows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
-      return `<div class="stats-overview-card" style="background:linear-gradient(135deg,var(--status-neutral),var(--text-muted-soft));"><div class="stats-overview-content"><span class="stats-overview-label">${label}${t('数量')}</span><span class="stats-overview-value">${rows.length}</span><span class="stats-overview-sub">${requests.toLocaleString()}${t('次 ·')}${this._formatBigNumber(tokens)} Token · ${cost.toFixed(2)}${t('积分')}</span></div></div>`;
+      return `<div class="cr-admin-overview-card blora-card"  data-size="sm"><div class="blora-stat"><span class="blora-stat__label">${label}${t('数量')}</span><span class="blora-stat__value">${rows.length}</span><span class="blora-text-muted">${requests.toLocaleString()}${t('次 ·')}${this._formatBigNumber(tokens)} Token · ${cost.toFixed(2)}${t('积分')}</span></div></div>`;
     }).join('');
     const summaryEl = document.getElementById('memberStatsSummary');
     if (summaryEl) setHTML(summaryEl, summary);
     render('memberStatsTable', this.stats.byUser, 'user_name', t('暂无成员用量数据'));
     render('teamStatsTable', this.stats.byTeam, 'team_name', t('暂无 Team 用量数据'));
-    render('groupStatsTable', this.stats.byGroup, 'group_name', t('暂无用户组用量数据'));
+
   }
 
   renderSourceStatsTable() {
@@ -9203,9 +9186,9 @@ async function(ctx) {
   showBatchEditDescModal() {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-    
+
     document.getElementById('batchEditDescCount').textContent = ids.length;
-    
+
     // 显示选中的模型列表
     const listEl = document.getElementById('batchEditDescModelsList');
     const selectedModels = this.modelsData.filter(m => ids.includes(m.id));
@@ -9215,19 +9198,19 @@ async function(ctx) {
         <span style="color:var(--muted-foreground);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.description || '-')}</span>
       </div>
     `).join(''));
-    
+
     document.getElementById('batchDescMode').value = 'replace';
     document.getElementById('batchDescValue').value = '';
     document.getElementById('batchEditDescStatus').style.display = 'none';
     document.getElementById('batchDescValue').placeholder = t('输入新的模型说明...');
-    
+
     this.showModal('batchEditDescModal');
   }
 
   toggleBatchDescMode() {
     const mode = document.getElementById('batchDescMode').value;
     const textarea = document.getElementById('batchDescValue');
-    
+
     switch (mode) {
       case 'replace':
         textarea.placeholder = t('输入新的模型说明...');
@@ -9244,11 +9227,11 @@ async function(ctx) {
   async executeBatchEditDesc() {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-    
+
     const mode = document.getElementById('batchDescMode').value;
     const value = document.getElementById('batchDescValue').value.trim();
     const statusEl = document.getElementById('batchEditDescStatus');
-    
+
     if (!value) {
       statusEl.style.display = 'block';
       statusEl.style.background = 'rgba(239,68,68,0.1)';
@@ -9256,7 +9239,7 @@ async function(ctx) {
       statusEl.textContent = t('请输入说明内容');
       return;
     }
-    
+
     // 根据模式构建更新数据
     const updates = {};
     if (mode === 'replace') {
@@ -9266,7 +9249,7 @@ async function(ctx) {
       updates.description = value;
       updates._mode = mode;
     }
-    
+
     try {
       const response = await fetch('/api/admin/models/batch-update-description', {
         method: 'POST',
@@ -9277,7 +9260,7 @@ async function(ctx) {
           mode
         })
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         statusEl.style.display = 'block';
@@ -9307,9 +9290,9 @@ async function(ctx) {
   showBatchSetSeriesModal() {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-    
+
     document.getElementById('batchSetSeriesCount').textContent = ids.length;
-    
+
     const listEl = document.getElementById('batchSetSeriesModelsList');
     const selectedModels = this.modelsData.filter(m => ids.includes(m.id));
     setHTML(listEl, selectedModels.map(m => `
@@ -9318,27 +9301,27 @@ async function(ctx) {
         <span style="color:var(--muted-foreground);">当前系列: ${escapeHtml(m.series || t('无'))}</span>
       </div>
     `).join(''));
-    
+
     document.getElementById('batchSeriesValue').value = '';
     document.getElementById('batchSetSeriesStatus').style.display = 'none';
-    
+
     this.showModal('batchSetSeriesModal');
   }
 
   async executeBatchSetSeries() {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-    
+
     const series = document.getElementById('batchSeriesValue').value.trim();
     const statusEl = document.getElementById('batchSetSeriesStatus');
-    
+
     try {
       const response = await fetch('/api/admin/models/batch-update-series', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids, series })
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         statusEl.style.display = 'block';
@@ -9575,301 +9558,23 @@ async function(ctx) {
 
   // ==================== 用户组管理 ====================
 
-  userGroupPageGo(page) {
-    this.userGroupPage = page;
-    this.renderUserGroupsList(this._userGroupsData || []);
-  }
 
-  async loadUserGroups() {
-    console.log(t('[用户组] 开始加载用户组列表'));
-    const listEl = document.getElementById('userGroupsList') || document.getElementById('adminUserGroupsList');
-    if (listEl) setHTML(listEl, pageLoadingHtml(t('加载用户组...')));
-    try {
-      const response = await fetch('/api/admin/user-groups');
-      console.log(t('[用户组] API 响应状态:'), response.status);
-      if (!response.ok) throw new Error(t('加载失败'));
-      const groups = await response.json();
-      console.log(t('[用户组] 获取到用户组数据:'), groups);
-      this.renderUserGroupsList(groups);
-    } catch (error) {
-      console.error(t('[用户组] 加载用户组列表失败:'), error);
-    }
-  }
 
-  filterUserGroups() {
-    this._debounceSearch('_userGroupFilterTimer', () => {
-      this.userGroupPage = 0;
-      this.renderUserGroupsList(this._userGroupsData || []);
-    });
-  }
 
-  renderUserGroupsList(groups) {
-    console.log(t('[用户组] 渲染用户组列表, 数量:'), groups.length);
-    this._userGroupsData = groups || [];
-    const all = this._userGroupsData;
-    const q = this._searchQ('userGroupSearchInput');
-    const filtered = q
-      ? all.filter(g => this._matchSearch(q, g.name, g.description))
-      : all;
 
-    // 统计卡片基于全量
-    const defaultCount = all.filter(g => g.is_default).length;
-    const totalRules = all.reduce((s, g) => s + (parseInt(g.rule_count) || 0), 0);
-    const totalMembers = all.reduce((s, g) => s + (parseInt(g.member_count) || 0), 0);
 
-    const statsContainer = document.getElementById('userGroupStatsCards');
-    if (statsContainer) {
-      setHTML(statsContainer, `
-        <div class="admin-stat-card">
-          <div class="admin-stat-card-icon blue">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          </div>
-          <div class="admin-stat-card-info">
-            <span class="admin-stat-card-value">${all.length}</span>
-            <span class="admin-stat-card-label">用户组数</span>
-          </div>
-        </div>
-        <div class="admin-stat-card">
-          <div class="admin-stat-card-icon green">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          </div>
-          <div class="admin-stat-card-info">
-            <span class="admin-stat-card-value">${defaultCount}</span>
-            <span class="admin-stat-card-label">默认组</span>
-          </div>
-        </div>
-        <div class="admin-stat-card">
-          <div class="admin-stat-card-icon amber">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          </div>
-          <div class="admin-stat-card-info">
-            <span class="admin-stat-card-value">${totalRules}</span>
-            <span class="admin-stat-card-label">速率规则</span>
-          </div>
-        </div>
-        <div class="admin-stat-card">
-          <div class="admin-stat-card-icon purple">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-          </div>
-          <div class="admin-stat-card-info">
-            <span class="admin-stat-card-value">${totalMembers}</span>
-            <span class="admin-stat-card-label">总成员数</span>
-          </div>
-        </div>
-      `);
-    }
 
-    const container = document.getElementById('userGroupsList');
-    if (!container) {
-      console.error(t('[用户组] 找不到 userGroupsList 容器'));
-      return;
-    }
 
-    const countEl = document.getElementById('userGroupCount');
-    if (countEl) {
-      countEl.textContent = filtered.length === all.length
-        ? `${t('共')}${all.length}${t('个')}`
-        : `${t('显示')}${filtered.length} / ${all.length}`;
-    }
 
-    if (!all.length) {
-      setHTML(container, '<div class="empty-state">' + t('暂无用户组，点击右上角创建') + '</div>');
-    } else if (!filtered.length) {
-      setHTML(container, '<div class="empty-state">' + t('未找到匹配的用户组') + '</div>');
-    } else {
-      const pg = this._paginate(filtered, this.userGroupPage, this.userGroupPageSize);
-      this.userGroupPage = pg.page;
-      setHTML(container, `<table class="data-table"><thead><tr>
-        <th>名称</th><th>描述</th><th>成员数</th><th>规则数</th><th>默认</th><th>创建时间</th><th>操作</th>
-      </tr></thead><tbody>${pg.items.map(g => `<tr>
-        <td>${escapeHtml(g.name)}</td>
-        <td>${escapeHtml(g.description || '-')}</td>
-        <td>${g.member_count}</td>
-        <td>${g.rule_count}</td>
-        <td>${g.is_default ? '<span class="blora-badge" data-variant="success">' + t('默认') + '</span>' : '-'}</td>
-        <td>${new Date(g.created_at).toLocaleDateString()}</td>
-        <td style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${g.is_default
-            ? '<button class="blora-button" disabled style="opacity:0.5;" data-variant="secondary" data-size="sm">' + t('✓ 默认') + '</button>'
-            : `<button class="blora-button" onclick="adminApp.setDefaultGroup(${g.id})" data-variant="secondary" data-size="sm"><span>${t('设为默认')}</span></button>`}
-          <button class="blora-button" onclick="adminApp.showUserGroupDetail(${g.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-        </td>
-      </tr>`).join('')}</tbody></table>
-      ${pg.totalPages > 1 ? this._renderPagination('userGroup', pg.page, pg.totalPages, pg.total) : ''}`);
-    }
 
-    // 绑定创建按钮事件
-    const createBtn = document.getElementById('createUserGroupBtn');
-    console.log(t('[用户组] 创建按钮元素:'), createBtn);
-    if (createBtn) {
-      createBtn.onclick = () => {
-        console.log(t('[用户组] 创建按钮被点击'));
-        this.showCreateUserGroupModal();
-      };
-      console.log(t('[用户组] 创建按钮事件已绑定'));
-    } else {
-      console.error(t('[用户组] 找不到 createUserGroupBtn 按钮'));
-    }
-  }
 
-  async setDefaultGroup(groupId) {
-    try {
-      const res = await fetch(`/api/admin/user-groups/${groupId}/set-default`, { method: 'PUT' });
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || t('设置失败'));
-        return;
-      }
-      this.loadUserGroups();
-    } catch (e) {
-      alert(t('设置失败: ') + e.message);
-    }
-  }
 
-  showCreateUserGroupModal() {
-    console.log(t('[用户组] 打开创建用户组弹窗'));
 
-    const content = `
-      <div style="display:grid;gap:12px;">
-        <div class="form-group">
-          <label>用户组名称</label>
-          <input type="text" id="userGroupNameInput" class="form-input" placeholder="${t('例如：VIP用户')}">
-        </div>
-        <div class="form-group">
-          <label>描述</label>
-          <textarea id="userGroupDescInput" class="form-input" rows="3" placeholder="${t('可选描述')}"></textarea>
-        </div>
-      </div>
-    `;
 
-    const modal = Dialog.showModal({
-      title: t('创建用户组'),
-      content: content,
-      footer: `<button class="blora-button" id="confirmCreateUserGroup" data-variant="primary">${t('创建')}</button>`
-    });
-    console.log(t('[用户组] 弹窗已显示:'), modal);
 
-    const confirmBtn = document.getElementById('confirmCreateUserGroup');
-    console.log(t('[用户组] 确认按钮:'), confirmBtn);
 
-    if (confirmBtn) {
-      confirmBtn.onclick = async () => {
-        console.log(t('[用户组] 确认创建按钮被点击'));
-        const name = document.getElementById('userGroupNameInput').value.trim();
-        const description = document.getElementById('userGroupDescInput').value.trim();
-        console.log(t('[用户组] 输入数据:'), { name, description });
-        if (!name) { alert(t('名称不能为空')); return; }
-        try {
-          console.log(t('[用户组] 发送创建请求...'));
-          const res = await fetch('/api/admin/user-groups', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, description })
-          });
-          console.log(t('[用户组] 创建响应状态:'), res.status);
-          if (!res.ok) {
-            const err = await res.json();
-            console.error(t('[用户组] 创建失败:'), err);
-            alert(err.error || t('创建失败'));
-            return;
-          }
-          console.log(t('[用户组] 创建成功'));
-          modal.close();
-          this.loadUserGroups();
-        } catch (e) {
-          console.error(t('[用户组] 创建请求异常:'), e);
-          alert(t('创建失败'));
-        }
-      };
-    }
-  }
 
-  async showUserGroupDetail(groupId) {
-    this.currentGroupId = groupId;
-    document.getElementById('userGroupDetailPanel').style.display = 'block';
 
-    // 加载用户组规则
-    this.loadUserGroupRules(groupId);
-    // 加载用户组成员
-    this.loadUserGroupMembers(groupId);
-
-    // 绑定按钮事件
-    document.getElementById('editUserGroupBtn').onclick = () => this.showEditUserGroupModal(groupId);
-    document.getElementById('deleteUserGroupBtn').onclick = () => this.deleteUserGroup(groupId);
-    document.getElementById('addUserGroupMemberBtn').onclick = () => this.showAddUserGroupMemberModal(groupId);
-  }
-
-  async loadUserGroupRules(groupId) {
-    try {
-      const response = await fetch(`/api/admin/user-groups/${groupId}/rules`);
-      if (!response.ok) throw new Error(t('加载失败'));
-      const rules = await response.json();
-      this.renderUserGroupRules(groupId, rules);
-    } catch (error) {
-      console.error(t('加载用户组规则失败:'), error);
-    }
-  }
-
-  renderUserGroupRules(groupId, rules) {
-    const container = document.getElementById('userGroupRulesList');
-
-    const durationPresets = [
-      { hours: 1, label: t('1 小时') },
-      { hours: 5, label: t('5 小时') },
-      { hours: 24, label: t('1 天') },
-      { hours: 168, label: t('1 周') },
-    ];
-
-    // 渲染已有规则列表
-    let html = '';
-    if (rules.length > 0) {
-      html += '<div class="rules-list">';
-      rules.forEach(r => {
-        const unit = r.rule_type === 'requests' ? t('次请求') : 'tokens';
-        const durationLabel = this.formatDuration(r.duration_hours);
-        html += `
-          <div class="rule-row" data-rule-id="${r.id}">
-            <div class="rule-row-main">
-              <span class="rule-row-type">${r.rule_type === 'requests' ? t('请求次数') : t('Token 用量')}</span>
-              <span class="rule-row-value">每 ${durationLabel} 最多 <strong>${Number(r.rule_value).toLocaleString()}</strong> ${unit}</span>
-            </div>
-            <button class="blora-button" onclick="adminApp.deleteUserGroupRule(${groupId}, ${r.id})" data-variant="danger" data-size="sm">删除</button>
-          </div>`;
-      });
-      html += '</div>';
-    }
-
-    // 添加新规则表单
-    html += `
-      <div class="rule-add-form" id="ruleAddForm">
-        <div class="rule-add-row">
-          <blora-select id="ruleNewType" class="form-input" style="width:auto;">
-            <blora-option value="requests">请求次数</blora-option>
-            <blora-option value="tokens">Token 用量</blora-option>
-          </blora-select>
-          <span class="rule-add-label">每</span>
-          <input type="number" id="ruleNewDuration" class="form-input" style="width:100px;" min="1" placeholder="${t('小时数')}">
-          <span class="rule-add-label">小时</span>
-          <span class="rule-add-label">最多</span>
-          <input type="number" id="ruleNewValue" class="form-input" style="width:120px;" min="1" placeholder="${t('限额')}">
-          <span class="rule-add-label" id="ruleNewUnit">次请求</span>
-          <button class="blora-button" onclick="adminApp.addGroupRule(${groupId})" data-variant="primary" data-size="sm">添加</button>
-        </div>
-        <div class="rule-presets">
-          快捷设置：
-          ${durationPresets.map(p => `<button class="blora-button" onclick="document.getElementById('ruleNewDuration').value=${p.hours}" data-variant="ghost" data-size="sm">${p.label}</button>`).join('')}
-        </div>
-      </div>`;
-
-    setHTML(container, html);
-
-    // 切换单位显示
-    const typeSelect = document.getElementById('ruleNewType');
-    const unitLabel = document.getElementById('ruleNewUnit');
-    typeSelect.addEventListener('change', () => {
-      unitLabel.textContent = typeSelect.value === 'requests' ? t('次请求') : 'tokens';
-    });
-  }
 
   formatDuration(hours) {
     if (!hours) return t('永久');
@@ -9884,224 +9589,25 @@ async function(ctx) {
     return `${hours}${t('小时')}`;
   }
 
-  async deleteUserGroupRule(groupId, ruleId) {
-    if (!await confirm(t('确定删除此规则？'))) return;
-    try {
-      await fetch(`/api/admin/user-group-rules/${ruleId}`, { method: 'DELETE' });
-      this.loadUserGroupRules(groupId);
-    } catch (e) { alert(t('删除失败')); }
-  }
 
-  async addGroupRule(groupId) {
-    const rule_type = document.getElementById('ruleNewType').value;
-    const rule_value = parseInt(document.getElementById('ruleNewValue').value);
-    const duration_hours = parseInt(document.getElementById('ruleNewDuration').value);
 
-    if (!duration_hours || duration_hours <= 0) {
-      alert(t('请输入有效的小时数'));
-      document.getElementById('ruleNewDuration').focus();
-      return;
-    }
-    if (!rule_value || rule_value <= 0) {
-      alert(t('请输入有效的限额'));
-      document.getElementById('ruleNewValue').focus();
-      return;
-    }
 
-    try {
-      await fetch(`/api/admin/user-groups/${groupId}/rules`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rule_type, rule_value, duration_hours })
-      });
-      this.loadUserGroupRules(groupId);
-    } catch (e) {
-      alert(t('添加失败'));
-    }
-  }
 
-  async loadUserGroupMembers(groupId) {
-    try {
-      const [membersRes, usersRes] = await Promise.all([
-        fetch('/api/admin/users'),
-        fetch('/api/admin/users')
-      ]);
-      const users = await usersRes.json();
-      const members = users.filter(u => u.group_id === groupId);
-      this.renderUserGroupMembers(groupId, members, users);
-    } catch (error) {
-      console.error(t('加载用户组成员失败:'), error);
-    }
-  }
 
-  filterUserGroupMembers() {
-    this._debounceSearch('_userGroupMemberFilterTimer', () => {
-      this.userGroupMemberPage = 0;
-      const c = this._userGroupMembersCache;
-      if (c) this.renderUserGroupMembers(c.groupId, c.members, c.allUsers);
-    });
-  }
 
-  renderUserGroupMembers(groupId, members, allUsers) {
-    const container = document.getElementById('userGroupMembersList');
-    this._userGroupMembersCache = { groupId, members, allUsers };
-    if (!members.length) {
-      setHTML(container, '<div class="empty-state">' + t('暂无成员') + '</div>');
-      return;
-    }
-    const q = this._searchQ('userGroupMemberSearchInput');
-    const filtered = q
-      ? members.filter(m => this._matchSearch(q, m.username, m.email))
-      : members;
-    if (!filtered.length) {
-      setHTML(container, '<div class="empty-state">' + t('未找到匹配的成员') + '</div>');
-      return;
-    }
-    const pg = this._paginate(filtered, this.userGroupMemberPage, this.memberPageSize);
-    this.userGroupMemberPage = pg.page;
-    setHTML(container, `<table class="data-table"><thead><tr>
-      <th>用户名</th><th>邮箱</th><th>积分</th><th>操作</th>
-    </tr></thead><tbody>${pg.items.map(m => `<tr>
-      <td>${escapeHtml(m.username)}</td>
-      <td>${escapeHtml(m.email || '-')}</td>
-      <td>${parseFloat(m.balance || 0).toFixed(0)}</td>
-      <td><button class="blora-button" onclick="adminApp.removeUserGroupMember(${groupId}, ${m.id})" data-variant="danger" data-size="sm">移除</button></td>
-    </tr>`).join('')}</tbody></table>
-    ${pg.totalPages > 1 ? this._renderPagination('userGroupMember', pg.page, pg.totalPages, pg.total) : ''}`);
-  }
 
-  userGroupMemberPageGo(page) {
-    this.userGroupMemberPage = page;
-    const c = this._userGroupMembersCache;
-    if (c) this.renderUserGroupMembers(c.groupId, c.members, c.allUsers);
-  }
 
-  async removeUserGroupMember(groupId, userId) {
-    if (!await confirm(t('确定移除此成员？'))) return;
-    try {
-      await fetch(`/api/admin/users/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ group_id: null })
-      });
-      this.loadUserGroupMembers(groupId);
-      this.loadUserGroups();
-    } catch (e) { alert(t('移除失败')); }
-  }
 
-  async showAddUserGroupMemberModal(groupId) {
-    try {
-      const usersRes = await fetch('/api/admin/users');
-      const users = await usersRes.json();
-      const available = users.filter(u => u.group_id !== groupId);
 
-      const content = available.length
-        ? `<div style="display:grid;gap:10px;">
-            <input type="text" id="addGroupMemberSearch" class="form-input" placeholder="${t('搜索用户名或邮箱...')}" style="width:100%;box-sizing:border-box;">
-            <div id="addGroupMemberList" style="max-height:360px;overflow-y:auto;"></div>
-          </div>`
-        : '<div class="empty-state">' + t('所有用户都已在此用户组中') + '</div>';
 
-      const modal = Dialog.showModal({
-        title: t('添加成员'),
-        content: content,
-        footer: `<button class="blora-button" id="confirmAddGroupMembers" data-variant="primary">${t('添加')}</button>`
-      });
 
-      if (available.length) {
-        const listEl = document.getElementById('addGroupMemberList');
-        const selected = new Set();
-        const render = (q = '') => {
-          const kw = (q || '').trim().toLowerCase();
-          const rows = kw
-            ? available.filter(u => this._matchSearch(kw, u.username, u.email))
-            : available;
-          setHTML(listEl, rows.map(u => `
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
-              <input type="checkbox" value="${u.id}" class="group-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
-              <span>${escapeHtml(u.username)}</span>
-              <span class="text-muted">${escapeHtml(u.email || '')}</span>
-            </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
-          listEl.querySelectorAll('.group-member-checkbox').forEach(cb => {
-            cb.onchange = () => {
-              if (cb.checked) selected.add(parseInt(cb.value));
-              else selected.delete(parseInt(cb.value));
-            };
-          });
-        };
-        render();
-        document.getElementById('addGroupMemberSearch').oninput = (e) => render(e.target.value);
 
-        document.getElementById('confirmAddGroupMembers').onclick = async () => {
-          const checked = Array.from(selected);
-          if (!checked.length) { alert(t('请选择用户')); return; }
-          try {
-            for (const userId of checked) {
-              await fetch(`/api/admin/users/${userId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ group_id: groupId })
-              });
-            }
-            modal.close();
-            this.loadUserGroupMembers(groupId);
-            this.loadUserGroups();
-          } catch (e) { alert(t('添加失败')); }
-        };
-      }
-    } catch (e) { alert(t('加载用户列表失败')); }
-  }
 
-  async showEditUserGroupModal(groupId) {
-    try {
-      const res = await fetch('/api/admin/user-groups');
-      const groups = await res.json();
-      const group = groups.find(g => g.id === groupId);
-      if (!group) { alert(t('用户组不存在')); return; }
 
-      const content = `
-        <div style="display:grid;gap:12px;">
-          <div class="form-group">
-            <label>用户组名称</label>
-            <input type="text" id="editGroupNameInput" class="form-input" value="${escapeHtml(group.name)}">
-          </div>
-          <div class="form-group">
-            <label>描述</label>
-            <textarea id="editGroupDescInput" class="form-input" rows="3">${escapeHtml(group.description || '')}</textarea>
-          </div>
-        </div>
-      `;
-      const modal = Dialog.showModal({
-        title: t('编辑用户组'),
-        content: content,
-        footer: `<button class="blora-button" id="confirmEditGroup" data-variant="primary">${t('保存')}</button>`
-      });
-      document.getElementById('confirmEditGroup').onclick = async () => {
-        const name = document.getElementById('editGroupNameInput').value.trim();
-        const description = document.getElementById('editGroupDescInput').value.trim();
-        if (!name) { alert(t('名称不能为空')); return; }
-        try {
-          await fetch(`/api/admin/user-groups/${groupId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, description })
-          });
-          modal.close();
-          this.loadUserGroups();
-          this.showUserGroupDetail(groupId);
-        } catch (e) { alert(t('保存失败')); }
-      };
-    } catch (e) { alert(t('加载用户组信息失败')); }
-  }
 
-  async deleteUserGroup(groupId) {
-    if (!await confirm(t('确定删除此用户组？成员将被移除但不会被删除。'))) return;
-    try {
-      await fetch(`/api/admin/user-groups/${groupId}`, { method: 'DELETE' });
-      document.getElementById('userGroupDetailPanel').style.display = 'none';
-      this.loadUserGroups();
-    } catch (e) { alert(t('删除失败')); }
-  }
+
+
+
 
   // ==================== CrewRouter Team 管理 ====================
 
