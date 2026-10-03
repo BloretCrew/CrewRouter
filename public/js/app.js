@@ -4314,7 +4314,7 @@ class ConsoleApp {
     const total = results.length;
     const passed = results.filter(r => r.ok).length;
     const failed = total - passed;
-    const passPct = total > 0 ? Math.round(passed / total * 100) : 0;
+    const completionPct = totalCount > 0 ? Math.min(100, total / totalCount * 100) : 0;
 
     const summaryHtml = `
       <div class="model-test-summary">
@@ -4332,9 +4332,7 @@ class ConsoleApp {
           <div class="model-test-summary-label">/ ${totalCount}</div>
         </div>
       </div>
-      <div class="model-test-summary-bar">
-        <div class="model-test-summary-bar-fill" style="width:${passPct}%;${failed > 0 ? 'background:linear-gradient(90deg,var(--success),' + (passPct > 50 ? 'var(--status-warn)' : 'var(--destructive)') + ')' : ''}"></div>
-      </div>
+      <blora-progress value="${completionPct}" label="${t('已完成')} ${total} / ${totalCount}"></blora-progress>
     `;
 
     const rowsHtml = results.map(r => {

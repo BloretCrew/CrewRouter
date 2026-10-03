@@ -10597,7 +10597,7 @@ async function(ctx) {
       for (const r of results) {
         if (r.modelId) this._updateModelTestResult(r.modelId, r);
       }
-      this._showTestResult(results);
+      this._showTestResult(results, modelIds.length);
     } catch (e) {
       setHTML(body, `${'<div class="empty-state"><p style="color:var(--destructive);">' + t('测试失败:')}${escapeHtml(e.message)}</p></div>`);
     }
@@ -10615,13 +10615,14 @@ async function(ctx) {
     row.classList.toggle('is-error-expanded', !expanded);
   }
 
-  _showTestResult(results) {
+  _showTestResult(results, totalCount = results.length) {
     const body = document.getElementById('adminTestResultBody');
     if (!body) return;
 
     const total = results.length;
     const passed = results.filter(r => r.ok).length;
     const failed = total - passed;
+    const completionPct = totalCount > 0 ? Math.min(100, total / totalCount * 100) : 0;
 
     const summaryHtml = `
       <div class="model-test-summary">
@@ -10639,6 +10640,7 @@ async function(ctx) {
           <div class="model-test-summary-label">总计</div>
         </div>
       </div>
+      <blora-progress value="${completionPct}" label="${t('已完成')} ${total} / ${totalCount}"></blora-progress>
     `;
 
     const rowsHtml = results.map(r => {
