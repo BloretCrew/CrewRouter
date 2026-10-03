@@ -202,6 +202,9 @@
 }
 
 @media (max-width: 640px) {
+  /* Mobile drawer must override the tablet's compact 70px rail. */
+  .blora-admin-page .sidebar,
+  .blora-admin-page .sidebar.open { width: 260px; }
   .blora-admin-page .main-content { margin-left: 0; padding: calc(4.25rem + var(--blora-space-3)) var(--blora-space-3) var(--blora-space-5); }
   .blora-admin-page .content-header { align-items: flex-start; margin-bottom: var(--blora-space-4); }
   .blora-admin-page .content-header h1 { font-size: var(--blora-text-xl); }
