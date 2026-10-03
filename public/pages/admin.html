@@ -24,6 +24,7 @@
   <script src="/js/blora-dialog.js?v=5"></script>
   <link rel="stylesheet" href="/css/themes.css?v=correction-2">
   <link rel="stylesheet" href="/css/main.css?v=correction-2">
+  <link rel="stylesheet" href="/css/provider-model-picker.css?v=1">
   <link rel="stylesheet" href="/css/settings.css?v=1">
   <link rel="stylesheet" href="/css/edition-badge.css?v=2">
   <link rel="stylesheet" href="/css/admin-stats-blora.css?v=correction-2">
@@ -2032,48 +2033,6 @@
   </blora-dialog>
 
   <!-- 选择模型对话框 -->
-  <blora-dialog id="fetchModelsModal" role="dialog" aria-modal="true">
-    <div class="modal-content model-picker-modal">
-      <div class="modal-header">
-        <h3 id="fetchModelsTitle" class="blora-h4"><span data-i18n="获取模型列表">获取模型列表</span></h3>
-        <button type="button" class="blora-button modal-close" data-icon="x" data-size="icon" data-variant="ghost"></button>
-      </div>
-      <div class="modal-body">
-        <div id="fetchModelsLoading" style="text-align:center;padding:20px;">
-          <div class="page-loading"><span class="blora-spinner" role="status" aria-label="加载中"></span><div class="page-loading-text"><span data-i18n="正在获取模型列表...">正在获取模型列表...</span></div></div>
-        </div>
-        <div id="fetchModelsError" style="display:none;text-align:center;padding:20px;"></div>
-        <div id="fetchModelsContent" class="model-picker" style="display:none;">
-          <div class="model-picker-toolbar">
-            <div style="display:flex;gap:8px;margin-bottom:10px;">
-              <blora-field label="搜索模型名称..." data-field-label="搜索模型名称..."><input type="text" id="fetchedModelsSearch" class="blora-input" placeholder="搜索模型名称..." data-i18n-placeholder="搜索模型名称..." style="flex:1;"></blora-field>
-            </div>
-            <div id="fetchedModelsTabs" style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;">
-              <button type="button" class="blora-button" data-filter="all" onclick="adminApp.setFetchedModelsFilter('all')" data-variant="primary" data-size="sm"><span data-i18n="全部">全部</span></button>
-              <button type="button" class="blora-button" data-filter="enabled" onclick="adminApp.setFetchedModelsFilter('enabled')" data-variant="outline" data-size="sm"><span data-i18n="已启用">已启用</span></button>
-              <button type="button" class="blora-button" data-filter="disabled" onclick="adminApp.setFetchedModelsFilter('disabled')" data-variant="outline" data-size="sm"><span data-i18n="未启用">未启用</span></button>
-              <button type="button" class="blora-button" data-filter="stale" onclick="adminApp.setFetchedModelsFilter('stale')" data-variant="outline" data-size="sm"><span data-i18n="已失效">已失效</span></button>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                <blora-checkbox id="selectAllFetchedModels" class="checkbox" ></blora-checkbox>
-                <span ><span data-i18n="全选">全选</span></span>
-              </div>
-              <span id="fetchedModelsCount" class="model-picker-count" style="padding:0;"></span>
-            </div>
-          </div>
-          <div id="fetchedModelsList" class="model-picker-scroll model-picker-flat"></div>
-        </div>
-      </div>
-      <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <button type="button" id="cleanupStaleModelsBtn" class="blora-button" style="display:none;" onclick="adminApp.cleanupStaleModelsInFetchModal()" title="删除上游已不存在的本地模型记录" data-i18n-title="删除上游已不存在的本地模型记录" data-variant="outline"><span data-i18n="清理已下架模型">清理已下架模型</span></button>
-        <div style="display:flex;gap:8px;margin-left:auto;">
-          <button type="button" id="saveFetchedModelsBtn" class="blora-button" style="display:none;" onclick="adminApp.saveFetchedModels()" data-variant="primary"><span data-i18n="保存">保存</span></button>
-        </div>
-      </div>
-    </div>
-  </blora-dialog>
-
   <!-- 批量设置固定价格模态框 -->
   <blora-dialog id="batchSetPricesModal" role="dialog" aria-modal="true">
     <div class="modal-content">
@@ -2469,7 +2428,8 @@
   <script src="/js/dom.js?v=3"></script>
   <script src="/js/edition-badge.js?v=1"></script>
   <script src="/js/multi-dimension-chart.js?v=3"></script>
-  <script src="/js/admin.js?v=correction-2"></script>
+  <script src="/js/provider-model-picker.js?v=1"></script>
+  <script src="/js/admin.js?v=provider-picker-1"></script>
   <script src="/js/plugin-runtime.js?v=1"></script>
   <script>
     // 移动端侧边栏切换

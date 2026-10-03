@@ -1,0 +1,80 @@
+/* The same flat model picker is used by both system-provider entry points. */
+.provider-model-picker-dialog::part(panel) {
+  display: flex;
+  flex-direction: column;
+  max-height: min(90dvh, 900px);
+  overflow: hidden;
+}
+.provider-model-picker-dialog::part(body) {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.provider-model-picker {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: calc(90dvh - 190px);
+}
+.provider-model-picker .model-picker-toolbar {
+  display: grid;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.provider-model-picker-tabs,
+.provider-model-picker-summary,
+.provider-model-picker-footer,
+.provider-model-picker-footer > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.provider-model-picker-summary {
+  justify-content: space-between;
+}
+.provider-model-picker .model-picker-count {
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+.provider-model-picker [data-model-status] {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  flex-shrink: 0;
+}
+.provider-model-picker [data-model-status]:empty {
+  display: none;
+}
+.provider-model-picker [data-model-list] {
+  overflow-y: auto;
+  min-height: 0;
+}
+.provider-model-picker .model-check-item[hidden],
+.provider-model-picker-footer [hidden] {
+  display: none;
+}
+.provider-model-picker .model-check-item > blora-checkbox {
+  flex-shrink: 0;
+}
+.provider-model-picker .model-check-item > label {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+.provider-model-picker .model-name,
+.provider-model-picker .model-id {
+  min-width: 0;
+  max-width: 100%;
+}
+.provider-model-picker-footer {
+  width: 100%;
+  justify-content: space-between;
+}
+.provider-model-picker-footer > div {
+  margin-left: auto;
+}
+@media (max-width: 560px) {
+  .provider-model-picker { max-height: calc(90dvh - 220px); }
+  .provider-model-picker-summary { align-items: flex-start; }
+  .provider-model-picker .model-check-item { padding-inline: 0; }
+}

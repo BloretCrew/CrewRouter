@@ -114,7 +114,6 @@ class AdminApp {
     this.modelStatsPage = 0;
     this.providerStatsPage = 0;
     this.statsTablePageSize = 50;
-    this._pendingFetchedModelsRaf = null;
     this._updateInfo = null;
     this._updatePollTimer = null;
     this._adminModelsStickyObserver = null;
@@ -5678,195 +5677,16 @@ async function(ctx) {
   // 获取供应商模型列表
   async fetchProviderModels(providerId) {
     this.currentFetchProviderId = providerId;
-    this.fetchedModels = [];
-    this.fetchedExistingModels = [];
-    this.fetchedExistingById = {};
-    this.fetchedExistingIds = new Set();
-
-    // 显示对话框
-    document.getElementById('fetchModelsTitle').textContent = t('获取模型列表');
-    document.getElementById('fetchModelsLoading').style.display = 'block';
-    document.getElementById('fetchModelsError').style.display = 'none';
-    document.getElementById('fetchModelsContent').style.display = 'none';
-    document.getElementById('saveFetchedModelsBtn').style.display = 'none';
-    const cleanupBtn = document.getElementById('cleanupStaleModelsBtn');
-    if (cleanupBtn) cleanupBtn.style.display = 'none';
-    document.getElementById('selectAllFetchedModels').checked = false;
-
-    this.showModal('fetchModelsModal');
-
-    try {
-      const url = `/api/admin/providers/${providerId}/fetch-models`;
-      console.log(`${t('[获取模型] 请求: GET')}${url}`);
-      const response = await fetch(url);
-      const data = await response.json();
-      console.log(`${t('[获取模型] 响应: status=')}${response.status}`, data);
-
-      // 输出详细的调试信息到控制台
-      if (data.debug?.attempts) {
-        console.group(t('[获取模型] 请求尝试详情'));
-        data.debug.attempts.forEach((a, i) => {
-          console.log(`${t('尝试')}${i + 1}: ${a.url}`);
-          console.log(`${t('状态:')}${a.status || 'N/A'}`);
-          console.log(`  Content-Type: ${a.contentType || 'N/A'}`);
-          if (a.error) console.log(`${t('错误:')}${a.error}`);
-          if (a.bodyPreview) console.log(`${t('响应预览:')}${a.bodyPreview}`);
-          if (a.success) console.log(`${t('成功! 模型数:')}${a.modelCount}`);
-        });
-        if (data.debug.succeededUrl) console.log(`${t('成功路径:')}${data.debug.succeededUrl}`);
-        console.groupEnd();
+    return ProviderModelPicker.open({
+      providerId,
+      showToast: (message, type) => this.showToast(message, type),
+      onChanged: async () => {
+        this._invalidateAdminProviderModelsCache();
+        this._notifyModelsCatalogChanged();
+        await this.loadModels();
+        if (this.currentPage === 'adminProviders') await this.loadProviders({ resetPage: false });
       }
-
-      if (!response.ok) {
-        document.getElementById('fetchModelsLoading').style.display = 'none';
-        document.getElementById('fetchModelsError').style.display = 'block';
-        let errorMsg = data.error || t('获取失败');
-        if (data.debug?.attempts) {
-          errorMsg += '\n\n' + t('尝试过的路径:') + '\n';
-          data.debug.attempts.forEach(a => {
-            errorMsg += `  ${a.url}: ${a.error || `HTTP ${a.status}`}\n`;
-          });
-        }
-        document.getElementById('fetchModelsError').textContent = errorMsg;
-        document.getElementById('fetchModelsError').style.whiteSpace = 'pre-wrap';
-        console.error(`${t('[获取模型] 失败:')}`, data);
-        return;
-      }
-
-      const models = Array.isArray(data.models) ? data.models : [];
-      const existingModels = Array.isArray(data.existingModels) ? data.existingModels : [];
-      // 上游为空但本地仍有模型时，仍展示列表（便于清理已下架）
-      if (models.length === 0 && existingModels.length === 0) {
-        document.getElementById('fetchModelsLoading').style.display = 'none';
-        document.getElementById('fetchModelsError').style.display = 'block';
-        document.getElementById('fetchModelsError').style.color = 'var(--muted-foreground)';
-        document.getElementById('fetchModelsError').textContent = data.message || t('未获取到模型');
-        return;
-      }
-
-      this.fetchedModels = models;
-      this.fetchedExistingIds = new Set(data.existingIds || []);
-      this.fetchedExistingModels = existingModels;
-      this.fetchedExistingById = data.existingById || {};
-      this.fetchedModelsFilter = 'all';
-      this.renderFetchedModels(data.provider_name, models);
-    } catch (error) {
-      console.error(t('获取供应商模型失败:'), error);
-      document.getElementById('fetchModelsLoading').style.display = 'none';
-      document.getElementById('fetchModelsError').style.display = 'block';
-      document.getElementById('fetchModelsError').textContent = t('网络错误: ') + error.message;
-    }
-  }
-
-  renderFetchedModels(providerName, models) {
-    document.getElementById('fetchModelsLoading').style.display = 'none';
-    const contentEl = document.getElementById('fetchModelsContent');
-    if (contentEl) contentEl.style.display = 'flex';
-    document.getElementById('saveFetchedModelsBtn').style.display = 'inline-flex';
-    document.getElementById('fetchedModelsSearch').value = '';
-
-    this._renderFetchedModelsList(models);
-    this._updateFetchedModelsFilterTabs();
-    this._updateCleanupStaleModelsBtn();
-  }
-
-  /** 同步弹窗：根据当前已下架数量显示/隐藏清理按钮 */
-  _updateCleanupStaleModelsBtn() {
-    const btn = document.getElementById('cleanupStaleModelsBtn');
-    if (!btn) return;
-    const models = this.fetchedModels || [];
-    const existingModels = this.fetchedExistingModels || [];
-    const upstreamIds = new Set(models.map(m => m.id));
-    const staleCount = existingModels.filter(m => !upstreamIds.has(m.id)).length;
-    btn.style.display = staleCount > 0 ? 'inline-flex' : 'none';
-    btn.textContent = staleCount > 0 ? `${t('清理已下架模型 (')}${staleCount})` : t('清理已下架模型');
-    btn.disabled = false;
-  }
-
-  /**
-   * 同步弹窗：清理当前供应商已下架模型记录
-   */
-  async cleanupStaleModelsInFetchModal() {
-    const providerId = this.currentFetchProviderId;
-    if (!providerId) return;
-
-    const models = this.fetchedModels || [];
-    const existingModels = this.fetchedExistingModels || [];
-    const upstreamIds = new Set(models.map(m => m.id));
-    const staleModels = existingModels.filter(m => !upstreamIds.has(m.id));
-    if (staleModels.length === 0) {
-      this.showToast(t('没有可清理的已下架模型'), 'info');
-      this._updateCleanupStaleModelsBtn();
-      return;
-    }
-
-    const preview = staleModels.slice(0, 8).map(m => escapeHtml(m.name || m.id)).join('、');
-    const more = staleModels.length > 8 ? `${t('等')}${staleModels.length}${t('个')}` : '';
-    const ok = await Dialog.confirm(
-      t('清理已下架模型'),
-      `${t('将')}<strong >${t('永久删除')}</strong>${t('本供应商下')} <strong>${staleModels.length}${'</strong>' + t('个上游已不存在的本地模型记录（含 Team / API Key 绑定等关联数据）。此操作不可撤销。')}<br><br>` +
-        `${'<span >' + t('预览：')}${preview}${more}</span>`,
-      { confirmText: t('确认清理'), danger: true }
-    );
-    if (!ok) return;
-
-    const btn = document.getElementById('cleanupStaleModelsBtn');
-    if (btn) {
-      btn.disabled = true;
-      setButtonLoading(btn, t('清理中...'));
-    }
-
-    try {
-      const response = await fetch(
-        `/api/admin/providers/${encodeURIComponent(providerId)}/cleanup-stale-models`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ modelIds: staleModels.map(m => m.systemId).filter(Boolean) })
-        }
-      );
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        this.showToast(result.error || t('清理失败'), 'error');
-        return;
-      }
-
-      const deleted = result.deleted || 0;
-      this.showToast(
-        deleted > 0 ? `${t('已清理')}${deleted}${t('个已下架模型')}` : (result.message || t('没有可清理的已下架模型')),
-        deleted > 0 ? 'success' : 'info'
-      );
-
-      // 从本地缓存移除已删除项并刷新列表
-      const deletedSet = new Set(result.deletedIds || staleModels.map(m => m.systemId));
-      this.fetchedExistingModels = (this.fetchedExistingModels || []).filter(
-        m => !deletedSet.has(m.systemId)
-      );
-      this.fetchedExistingIds = new Set((this.fetchedExistingModels || []).map(m => m.id));
-      const byId = { ...(this.fetchedExistingById || {}) };
-      for (const m of staleModels) {
-        if (deletedSet.has(m.systemId)) delete byId[m.id];
-      }
-      this.fetchedExistingById = byId;
-
-      this._renderFetchedModelsList(this.fetchedModels || []);
-      this._updateFetchedModelsFilterTabs();
-      this._updateCleanupStaleModelsBtn();
-      this._invalidateAdminProviderModelsCache?.();
-      this._notifyModelsCatalogChanged();
-      if (typeof this.loadModels === 'function') {
-        this.loadModels({ resetPage: false }).catch(() => {});
-      }
-    } catch (error) {
-      console.error(t('清理已下架模型失败:'), error);
-      this.showToast(t('清理失败: ') + error.message, 'error');
-    } finally {
-      if (btn) {
-        clearButtonLoading(btn, btn.textContent || t('清理已下架模型'));
-        btn.disabled = false;
-        this._updateCleanupStaleModelsBtn();
-      }
-    }
+    });
   }
 
   /**
@@ -5916,9 +5736,7 @@ async function(ctx) {
       this.showToast(parts.join(' · '), deleted > 0 || skipped === 0 ? 'success' : 'info');
 
       // 若同步弹窗打开且属于某一供应商，刷新该列表
-      if (this.currentFetchProviderId && document.getElementById('fetchModelsModal')?.hasAttribute('open')) {
-        this.fetchProviderModels(this.currentFetchProviderId).catch(() => {});
-      }
+      ProviderModelPicker.reload(this.currentFetchProviderId)?.catch(() => {});
       this._invalidateAdminProviderModelsCache?.();
       this._notifyModelsCatalogChanged();
       if (typeof this.loadModels === 'function') {
@@ -5935,218 +5753,6 @@ async function(ctx) {
       if (toolbarBtn) {
         clearButtonLoading(toolbarBtn, t('清理所有已下架模型'));
         toolbarBtn.disabled = false;
-      }
-    }
-  }
-
-  _renderFetchedModelsList(models) {
-    const existingById = this.fetchedExistingById || {};
-    const existingModels = this.fetchedExistingModels || [];
-    const fetchedModelIds = new Set(models.map(m => m.id));
-    // 已不在上游列表中的已添加模型
-    const staleModels = existingModels.filter(m => !fetchedModelIds.has(m.id));
-    document.getElementById('selectAllFetchedModels').checked = false;
-
-    const container = document.getElementById('fetchedModelsList');
-
-    // 取消之前的渐进渲染任务
-    if (this._pendingFetchedModelsRaf) {
-      cancelAnimationFrame(this._pendingFetchedModelsRaf);
-      this._pendingFetchedModelsRaf = null;
-    }
-
-    const _buildItemHtml = (model, index, extraAttrs) => {
-      const existing = existingById[model.id];
-      const isInSystem = !!existing;
-      const isEnabled = existing?.enabled === true;
-      const isStale = extraAttrs?.stale;
-      const statusClass = isStale ? 'stale' : (isEnabled ? 'enabled' : 'disabled');
-
-      return `
-        <div class="model-check-item" data-model-id="${model.id}" data-model-name="${model.name || ''}" data-status="${statusClass}"${extraAttrs?.attrs || ''}>
-          <blora-checkbox class="checkbox" id="fetchedModel_${index}" value="${model.id}" ${isEnabled ? 'checked' : ''} data-control-action="admin-dynamic-5"></blora-checkbox>
-          <label for="fetchedModel_${index}">
-            <span class="model-name">${model.name || model.id}</span>
-            ${model.name && model.name !== model.id ? `<span class="model-id">${model.id}</span>` : ''}
-            ${isStale ? '<span class="blora-badge" data-variant="warning">' + t('已失效') + '</span>' : (isInSystem ? (isEnabled ? '<span class="blora-badge" data-variant="success">' + t('已启用') + '</span>' : '<span class="blora-badge" data-variant="neutral">' + t('已禁用') + '</span>') : '<span class="blora-badge" data-variant="info">' + t('新模型') + '</span>')}
-          </label>
-        </div>
-      `;
-    };
-
-    const INITIAL_BATCH = 50;
-    const CHUNK_SIZE = 100;
-
-    // 先渲染第一批（快速显示）
-    const initialModels = models.slice(0, INITIAL_BATCH);
-    let html = initialModels.map((model, i) => _buildItemHtml(model, i)).join('');
-
-    // 已下架的模型（之前添加过但已不在上游列表）
-    const staleHtml = staleModels.map((model, i) => _buildItemHtml(model, i + models.length, {
-      stale: true,
-      attrs: ' data-system-id="' + model.systemId + '" '
-    })).join('');
-
-    setHTML(container, html + staleHtml);
-    this._applyFetchedModelsFilter();
-
-    // 如果模型数量不多，直接返回
-    if (models.length <= INITIAL_BATCH) return;
-
-    // 渐进渲染剩余模型
-    let currentIndex = INITIAL_BATCH;
-    const remainingModels = models.slice(INITIAL_BATCH);
-
-    const renderChunk = () => {
-      const end = Math.min(currentIndex + CHUNK_SIZE, models.length);
-      const chunk = models.slice(currentIndex, end);
-      const chunkHtml = chunk.map((model, i) =>
-        _buildItemHtml(model, currentIndex + i)
-      ).join('');
-
-      const temp = document.createElement('div');
-      setHTML(temp, chunkHtml);
-      while (temp.firstChild) {
-        container.appendChild(temp.firstChild);
-      }
-
-      currentIndex = end;
-      this._applyFetchedModelsFilter();
-
-      if (currentIndex < models.length) {
-        this._pendingFetchedModelsRaf = requestAnimationFrame(renderChunk);
-      } else {
-        this._pendingFetchedModelsRaf = null;
-      }
-    };
-
-    this._pendingFetchedModelsRaf = requestAnimationFrame(renderChunk);
-  }
-
-  setFetchedModelsFilter(filter) {
-    this.fetchedModelsFilter = filter;
-    this._updateFetchedModelsFilterTabs();
-    this._applyFetchedModelsFilter();
-  }
-
-  _updateFetchedModelsFilterTabs() {
-    const tabs = document.querySelectorAll('#fetchedModelsTabs button');
-    tabs.forEach(tab => {
-      const isActive = tab.dataset.filter === (this.fetchedModelsFilter || 'all');
-      tab.className = isActive ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
-    });
-  }
-
-  _applyFetchedModelsFilter() {
-    const keyword = (document.getElementById('fetchedModelsSearch').value || '').trim().toLowerCase();
-    const filter = this.fetchedModelsFilter || 'all';
-    const items = document.querySelectorAll('#fetchedModelsList .model-check-item');
-    let visibleCount = 0;
-    items.forEach(item => {
-      const id = (item.dataset.modelId || '').toLowerCase();
-      const name = (item.dataset.modelName || '').toLowerCase();
-      const status = item.dataset.status;
-      const matchSearch = !keyword || id.includes(keyword) || name.includes(keyword);
-      let matchFilter = true;
-      if (filter === 'enabled') matchFilter = status === 'enabled';
-      else if (filter === 'disabled') matchFilter = status === 'disabled';
-      else if (filter === 'stale') matchFilter = status === 'stale';
-      const visible = matchSearch && matchFilter;
-      item.style.display = visible ? '' : 'none';
-      if (visible) visibleCount++;
-    });
-    const enabledCount = document.querySelectorAll('#fetchedModelsList .model-check-item[data-status="enabled"]').length;
-    const disabledCount = document.querySelectorAll('#fetchedModelsList .model-check-item[data-status="disabled"]').length;
-    const staleCount = document.querySelectorAll('#fetchedModelsList .model-check-item[data-status="stale"]').length;
-    const newCount = document.querySelectorAll('#fetchedModelsList .model-check-item[data-status="new"]').length;
-    let label = '';
-    if (filter === 'enabled') label = `${t('已启用')}${enabledCount}${t('个')}`;
-    else if (filter === 'disabled') label = `${t('未启用')}${disabledCount}${t('个')}`;
-    else if (filter === 'stale') label = `${t('已失效')}${staleCount}${t('个')}`;
-    else label = `${t('共')}${enabledCount + disabledCount + staleCount + newCount}${t('个（已启用')}${enabledCount}${t('，未启用')}${disabledCount}${t('，新模型')}${newCount}${staleCount > 0 ? `${t('，已失效')} ${staleCount}` : ''}）`;
-    if (keyword) label += `${t('，匹配')}${visibleCount}${t('个')}`;
-    document.getElementById('fetchedModelsCount').textContent = label;
-  }
-
-  filterFetchedModels() {
-    this._applyFetchedModelsFilter();
-  }
-
-  toggleSelectAllFetchedModels(checked) {
-    const filter = this.fetchedModelsFilter || 'all';
-    const items = document.querySelectorAll('#fetchedModelsList .model-check-item');
-    items.forEach(item => {
-      if (item.style.display !== 'none') {
-        const cb = item.querySelector('blora-checkbox');
-        if (cb) cb.checked = checked;
-      }
-    });
-    this.updateFetchedModelsCount();
-  }
-
-  updateFetchedModelsCount() {
-    const checked = document.querySelectorAll('#fetchedModelsList blora-checkbox[checked]').length;
-    const total = document.querySelectorAll('#fetchedModelsList blora-checkbox').length;
-    document.getElementById('selectAllFetchedModels').checked = checked > 0 && checked === total;
-  }
-
-  async saveFetchedModels() {
-    const providerId = this.currentFetchProviderId;
-    const checkboxes = document.querySelectorAll('#fetchedModelsList blora-checkbox');
-    const enabledModelIds = [];
-    checkboxes.forEach(cb => {
-      if (cb.checked) {
-        enabledModelIds.push(cb.value);
-      }
-    });
-
-    if (enabledModelIds.length === 0) {
-      const ok = await Dialog.confirm(
-        t('禁用全部模型？'),
-         t('当前') + '<strong>' + t('没有任何模型被勾选') + '</strong>' + t('。保存后将') + '<strong >' + t('禁用该供应商下所有已有模型') + '</strong>' + t('。确定继续吗？') + ',',
-        { confirmText: t('确认禁用全部'), danger: true }
-      );
-      if (!ok) return;
-    }
-
-    // 禁用按钮防止重复提交
-    const saveBtn = document.getElementById('saveFetchedModelsBtn');
-    if (saveBtn) {
-      setButtonLoading(saveBtn, t('保存中...'));
-    }
-
-    try {
-      const response = await fetch(`/api/admin/providers/${providerId}/sync-models`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabledModelIds })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        const parts = [];
-        if (result.added > 0) parts.push(`${t('新增')}${result.added}${t('个')}`);
-        if (result.enabled > 0) parts.push(`${t('启用')}${result.enabled}${t('个')}`);
-        if (result.disabled > 0) parts.push(`${t('禁用')}${result.disabled}${t('个')}`);
-        this.showToast(t('保存成功：') + (parts.join('，') || t('无变化')), 'success');
-        this.closeModals();
-        // 模型目录变更：使 Team 模型权限等跨页缓存失效并尽量即时刷新
-        this._invalidateAdminProviderModelsCache();
-        this._notifyModelsCatalogChanged();
-        this.loadModels();
-        if (typeof this.loadProviders === 'function' && this.currentPage === 'adminProviders') {
-          this.loadProviders({ resetPage: false }).catch(() => {});
-        }
-      } else {
-        const err = await response.json().catch(() => ({}));
-        this.showToast(err.error || t('保存失败'), 'error');
-      }
-    } catch (error) {
-      console.error(t('保存模型失败:'), error);
-      this.showToast(t('保存失败: ') + error.message, 'error');
-    } finally {
-      if (saveBtn) {
-        clearButtonLoading(saveBtn, t('保存'));
       }
     }
   }
@@ -12336,7 +11942,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (control.matches("[data-event-bind=\"admin-event-5\"]")) { adminApp.toggleProviderProxyMode(); }
     if (control.matches("[data-event-bind=\"admin-event-6\"]")) { adminApp.toggleProviderProxyMode(); }
     if (control.matches("#providerProxyUseSystem")) { adminApp.toggleProviderProxyUseSystem(); }
-    if (control.matches("#selectAllFetchedModels")) { adminApp.toggleSelectAllFetchedModels(control.checked); }
     if (control.matches("#batchDescMode")) { adminApp.toggleBatchDescMode(); }
   });
   document.addEventListener('keydown', (event) => {
@@ -12363,7 +11968,6 @@ document.addEventListener('DOMContentLoaded', () => {
       case "admin-dynamic-2": { adminApp.toggleProviderQuota(control.dataset.controlArg0, control.checked); break; }
       case "admin-dynamic-3": { adminApp.toggleProviderSelection(control.dataset.controlArg0, control.checked); break; }
       case "admin-dynamic-4": { adminApp.toggleProviderSelection(control.dataset.controlArg0, control.checked); break; }
-      case "admin-dynamic-5": { adminApp.updateFetchedModelsCount(); break; }
     }
   });
 })();
