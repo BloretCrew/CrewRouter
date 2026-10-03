@@ -453,6 +453,7 @@
   .blora-model-library #modelLibraryStickyBar .model-library-sticky-inner {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
     gap: var(--blora-space-2);
   }
 
@@ -469,11 +470,32 @@
     width: 100%;
     max-width: none;
     min-width: 0;
+    padding: 0;
+    margin: 0;
+    display: flex;
+  }
+
+  /* 旧 select 的外层 padding 会再次缩进 Shadow DOM 中的 trigger。 */
+  .blora-model-library #modelLibraryStickyBar .model-library-sticky-select::part(trigger) {
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 2.5rem;
+    margin: 0;
+  }
+
+  .blora-model-library #modelLibraryStickyBar .model-library-sticky-search .blora-search,
+  .blora-model-library #modelLibraryStickyBar .model-library-sticky-search input {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    box-sizing: border-box;
   }
 
   .blora-model-library #modelLibraryStickyBar .model-library-sticky-more-btn {
     grid-column: 2;
     grid-row: 2;
+    min-height: 2.5rem;
+    margin: 0;
   }
 
   .blora-model-library #modelLibraryStickyBar .model-library-sticky-key-wrap {

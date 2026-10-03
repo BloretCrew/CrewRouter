@@ -109,6 +109,44 @@
 }
 
 @media (max-width: 640px) {
+  .blora-admin-teams-page #teamModelsList .model-library-provider-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--blora-space-2);
+    padding: var(--blora-space-3);
+  }
+
+  .blora-admin-teams-page #teamModelsList .model-library-provider-title {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .blora-admin-teams-page #teamModelsList .model-library-provider-title .collapse-icon {
+    flex: none;
+  }
+
+  .blora-admin-teams-page #teamModelsList .model-library-provider-title .model-provider-name {
+    min-width: 0;
+    max-width: calc(100% - 22px);
+    overflow-wrap: anywhere;
+  }
+
+  .blora-admin-teams-page #teamModelsList .model-library-provider-actions {
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: var(--blora-space-2);
+  }
+
+  .blora-admin-teams-page #teamModelsList .model-library-provider-actions .blora-button {
+    flex: none;
+  }
+
+  .blora-admin-teams-page #teamModelsList .provider-model-count {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
   .blora-admin-teams-page .content-section {
     padding: var(--blora-space-4);
   }
