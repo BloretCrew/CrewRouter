@@ -10603,6 +10603,18 @@ async function(ctx) {
     }
   }
 
+  toggleModelTestError(buttonEl) {
+    const row = buttonEl?.closest?.('.model-test-row');
+    const fullError = row?.querySelector?.('.model-test-row-error-full');
+    if (!row || !fullError) return;
+
+    const expanded = buttonEl.getAttribute('aria-expanded') === 'true';
+    buttonEl.setAttribute('aria-expanded', String(!expanded));
+    buttonEl.textContent = expanded ? t('展开') : t('收起');
+    fullError.hidden = expanded;
+    row.classList.toggle('is-error-expanded', !expanded);
+  }
+
   _showTestResult(results) {
     const body = document.getElementById('adminTestResultBody');
     if (!body) return;
@@ -10666,7 +10678,11 @@ async function(ctx) {
           <div class="model-test-row">
             <div class="model-test-row-icon model-test-result-fail">&#10007;</div>
             <div class="model-test-row-model">${escapeHtml(modelLabel)}${providerLabel}</div>
-            <div class="model-test-row-error" title="${escapeHtml(r.error || '')}">${escapeHtml(r.error || t('失败'))}</div>
+            <div class="model-test-row-error-wrap">
+              <div class="model-test-row-error" title="${escapeHtml(r.error || t('失败'))}">${escapeHtml(r.error || t('失败'))}</div>
+              <button type="button" class="blora-button model-test-row-error-toggle" data-variant="ghost" data-size="sm" aria-expanded="false" onclick="adminApp.toggleModelTestError(this)">${t('展开')}</button>
+              <div class="model-test-row-error-full" hidden>${escapeHtml(r.error || t('失败'))}</div>
+            </div>
           </div>
         `;
       }

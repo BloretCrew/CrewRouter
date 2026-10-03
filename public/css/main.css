@@ -4487,6 +4487,9 @@
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .model-test-row.is-error-expanded {
   align-items: flex-start;
@@ -4500,8 +4503,52 @@
 }
 
 @media (max-width: 640px) {
+  .model-test-row {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    align-items: start;
+    gap: 8px 10px;
+  }
+  .model-test-row-model {
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+  .model-test-row-model .model-provider-name,
+  .model-test-provider-url {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .model-test-row-stats {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+  }
+  .model-test-stat {
+    min-width: 0;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
   .model-test-row-error-wrap {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
     max-width: 100%;
+    width: 100%;
+  }
+  .model-test-row-error {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+  .model-test-row-error-full {
+    width: 100%;
   }
 }
 
