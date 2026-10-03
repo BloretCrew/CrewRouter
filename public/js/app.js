@@ -12881,8 +12881,14 @@ ${extractorBody}
     const list = document.getElementById('quickAddedModelsList');
     const retry = document.getElementById('quickAddedModelsRetry');
     const save = document.getElementById('quickAddedModelsSave');
+    let busy = false;
+    // 保留首次成功获取的基线，保存响应丢失或部分写入后重试仍能恢复本次新增模型。
+    let initialExistingIds = null;
+    modal.element.addEventListener('blora-before-close', event => { if (busy) event.preventDefault(); });
     nameEl.textContent = providerName || '';
     const load = async () => {
+      if (busy) return;
+      busy = true;
       retry.disabled = true;
       save.disabled = true;
       list.replaceChildren();
@@ -12892,6 +12898,7 @@ ${extractorBody}
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || t('获取模型列表失败'));
         const models = Array.isArray(data.models) ? data.models : [];
+        if (initialExistingIds === null) initialExistingIds = new Set((data.existingModels || []).map(model => String(model.id)));
         const enabledIds = new Set((data.existingModels || []).filter(model => model.enabled).map(model => String(model.id)));
         if (!models.length) {
           status.textContent = t('未获取到模型，可检查供应商配置后重试');
@@ -12921,10 +12928,15 @@ ${extractorBody}
         status.textContent = error.message || t('获取模型列表失败');
       } finally {
         retry.disabled = false;
+        busy = false;
       }
     };
     retry.addEventListener('click', load);
     save.addEventListener('click', async () => {
+      if (busy || save.disabled) return;
+      busy = true;
+      retry.disabled = true;
+      list.querySelectorAll('input').forEach(el => { el.disabled = true; });
       setButtonLoading(save, t('保存中...'));
       try {
         const enabledModelIds = Array.from(list.querySelectorAll('input:checked'), el => el.value);
@@ -12932,20 +12944,108 @@ ${extractorBody}
           method: 'POST',
           credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabledModelIds })
+          body: JSON.stringify({ enabledModelIds, addOnly: true })
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || t('保存失败'));
+        if (data.success !== true || !Array.isArray(data.selectedModels)) throw new Error(t('保存响应缺少新增模型信息，请刷新模型列表后确认'));
+        const selected = new Set(enabledModelIds);
+        const addedModels = data.selectedModels.filter(model => model.id && selected.has(model.upstream_model_id) && !initialExistingIds.has(model.upstream_model_id));
+        busy = false;
         modal.close();
+        this.showQuickAddedModelsTeams(addedModels);
         this.showToast(t('模型列表已保存'), 'success');
-        await this.loadModelLibrary();
+        try { await this.loadModelLibrary(); } catch (error) { this.showToast(t('模型列表刷新失败'), 'error'); }
       } catch (error) {
         status.textContent = error.message || t('保存失败');
       } finally {
         clearButtonLoading(save);
+        retry.disabled = false;
+        list.querySelectorAll('input').forEach(el => { el.disabled = false; });
+        busy = false;
       }
     });
     load();
+  }
+
+  async showQuickAddedModelsTeams(addedModels) {
+    if (!this.user?.isAdmin || this.instance?.edition !== 'team' || this.instance?.capabilities?.teamAdmin === false) return;
+    const modelIds = [...new Set(addedModels.map(model => String(model.id)))];
+    const modal = Dialog.showModal({
+      title: t('添加到 Team'),
+      content: `<p style="font-size:13px;overflow-wrap:anywhere;">${escapeHtml(t('选择本次新增模型要添加到的 Team，已有授权将保留。'))}</p>
+        <p id="quickAddedTeamsModels" style="font-size:13px;overflow-wrap:anywhere;"></p>
+        <div id="quickAddedTeamsStatus" role="status" style="font-size:13px;"></div>
+        <div id="quickAddedTeamsList" style="max-height:45vh;overflow:auto;"></div>`,
+      footer: `<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;">
+        <button type="button" class="blora-button" data-variant="outline" id="quickAddedTeamsSkip">${escapeHtml(t('跳过'))}</button>
+        <button type="button" class="blora-button" data-variant="outline" id="quickAddedTeamsRetry" style="display:none;">${escapeHtml(t('重新获取'))}</button>
+        <button type="button" class="blora-button" data-variant="primary" id="quickAddedTeamsSave" disabled>${escapeHtml(t('添加到所选 Team'))}</button></div>`,
+      width: 600
+    });
+    const root = modal.element;
+    const find = id => root.querySelector(`#${id}`);
+    const list = find('quickAddedTeamsList'), status = find('quickAddedTeamsStatus');
+    const save = find('quickAddedTeamsSave'), retry = find('quickAddedTeamsRetry'), skip = find('quickAddedTeamsSkip');
+    find('quickAddedTeamsModels').textContent = `${t('本次新增')}: ${addedModels.map(model => model.upstream_model_id).join('、') || t('无')}`;
+    let busy = false;
+    const succeeded = new Set();
+    root.addEventListener('blora-before-close', event => { if (busy) event.preventDefault(); });
+    const update = () => { save.disabled = busy || !modelIds.length || !list.querySelector('input:checked:not(:disabled)'); };
+    skip.addEventListener('click', () => { if (!busy) modal.close(); });
+    list.addEventListener('change', update);
+    const load = async () => {
+      if (busy) return;
+      busy = true; retry.style.display = 'none'; save.disabled = true;
+      status.textContent = t('正在获取 Team 列表...'); list.replaceChildren();
+      try {
+        const res = await fetch('/api/admin/teams', { credentials: 'same-origin' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || t('获取 Team 列表失败'));
+        if (!Array.isArray(data)) throw new Error(t('获取 Team 列表失败'));
+        if (!root.isConnected) return;
+        const teams = data.filter(team => !team.is_personal);
+        status.textContent = teams.length ? '' : t('暂无可管理的 Team，可跳过此步骤');
+        for (const team of teams) {
+          const row = document.createElement('label');
+          row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 0;overflow-wrap:anywhere;';
+          const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = String(team.id);
+          const name = document.createElement('span'); name.textContent = team.name; name.style.cssText = 'min-width:0;flex:1;';
+          const result = document.createElement('span'); result.dataset.teamResult = ''; result.setAttribute('role', 'status'); result.style.cssText = 'font-size:12px;min-width:0;width:100%;padding-left:24px;box-sizing:border-box;';
+          row.append(checkbox, name, result); list.append(row);
+        }
+      } catch (error) { status.textContent = error.message; retry.style.display = ''; }
+      finally { busy = false; update(); }
+    };
+    retry.addEventListener('click', load);
+    save.addEventListener('click', async () => {
+      if (busy || save.disabled) return;
+      const targets = [...list.querySelectorAll('input:checked')].filter(el => !succeeded.has(el.value));
+      busy = true; skip.disabled = true; setButtonLoading(save, t('添加中...'));
+      list.querySelectorAll('input').forEach(el => { el.disabled = true; });
+      let failed = 0;
+      for (const checkbox of targets) {
+        const result = checkbox.parentElement.querySelector('[data-team-result]'); result.textContent = t('添加中...');
+        try {
+          const res = await fetch(`/api/admin/teams/${encodeURIComponent(checkbox.value)}/models/batch`, {
+            method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: true, modelIds })
+          });
+          const data = await res.json();
+          if (!res.ok || data.success !== true) throw new Error(data.error || t('添加失败'));
+          if (!Array.isArray(data.modelIds) || modelIds.some(id => !data.modelIds.includes(id))) throw new Error(t('部分模型未获授权，请重试'));
+          succeeded.add(checkbox.value); result.textContent = t('已添加');
+        } catch (error) { failed++; result.textContent = `${t('添加失败')}: ${error.message}`; }
+      }
+      busy = false; skip.disabled = false;
+      list.querySelectorAll('input').forEach(el => { el.disabled = succeeded.has(el.value); });
+      clearButtonLoading(save, failed ? t('重试失败的 Team') : t('添加到所选 Team'));
+      skip.textContent = failed ? t('跳过其余 Team') : t('完成');
+      status.textContent = failed ? t('部分 Team 添加失败，可重试失败项或跳过') : t('所选 Team 已添加成功');
+      update();
+    });
+    if (modelIds.length) await load();
+    else status.textContent = t('本次没有新增模型，可跳过此步骤');
   }
 
   // 供应商管理 - 向导式添加

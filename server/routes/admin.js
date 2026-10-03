@@ -2821,7 +2821,10 @@ router.post('/providers/:id/sync-models', requireAuth, requireAdmin, auditMiddle
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `同步供应商 #${req.params.id} 模型`,
 }), async (req, res) => {
-  const { enabledModelIds } = req.body;
+  const { enabledModelIds, addOnly = false } = req.body;
+  if (typeof addOnly !== 'boolean') {
+    return res.status(400).json({ error: '参数错误：addOnly 必须是布尔值' });
+  }
   if (!Array.isArray(enabledModelIds)) {
     return res.status(400).json({ error: '参数错误：enabledModelIds 必须是数组' });
   }
@@ -2843,6 +2846,7 @@ router.post('/providers/:id/sync-models', requireAuth, requireAdmin, auditMiddle
       existingByUpstream.set(key, { systemId: r.id, enabled: r.enabled });
     });
 
+    const addedModels = [];
     let added = 0;
     let enabled = 0;
     let disabled = 0;
@@ -2866,6 +2870,8 @@ router.post('/providers/:id/sync-models', requireAuth, requireAdmin, auditMiddle
            VALUES ($1, $2, $3, TRUE, $4)`,
           [uuid, modelId, providerId, modelId]
         );
+        existingByUpstream.set(modelId, { systemId: uuid, enabled: true });
+        addedModels.push({ id: uuid, upstream_model_id: modelId });
         frontierCandidateIds.push(uuid);
         added++;
       }
@@ -2873,7 +2879,7 @@ router.post('/providers/:id/sync-models', requireAuth, requireAdmin, auditMiddle
 
     // 已存在但不在启用列表中的 → 彻底清理关联并禁用
     for (const [upstreamId, existing] of existingByUpstream) {
-      if (!enabledModelIds.includes(upstreamId) && existing.enabled) {
+      if (!addOnly && !enabledModelIds.includes(upstreamId) && existing.enabled) {
         const modelUuid = existing.systemId;
         // 1) 删除 Team 关联（team_models 有 ON DELETE CASCADE 但显式删更安全）
         await pool.query('DELETE FROM team_models WHERE model_id = $1', [modelUuid]);
@@ -2909,7 +2915,10 @@ router.post('/providers/:id/sync-models', requireAuth, requireAdmin, auditMiddle
     }
 
     Logger.info(`[同步模型] 供应商 ${providerId}: 新增 ${added}, 启用 ${enabled}, 禁用 ${disabled}`);
-    res.json({ success: true, added, enabled, disabled });
+    const selectedModels = [...new Set(enabledModelIds)].map(upstreamId => ({
+      id: existingByUpstream.get(upstreamId).systemId, upstream_model_id: upstreamId
+    }));
+    res.json({ success: true, added, enabled, disabled, addedModels, selectedModels });
   } catch (error) {
     Logger.error('[同步模型] 错误:', error);
     res.status(500).json({ error: '同步失败: ' + error.message });
