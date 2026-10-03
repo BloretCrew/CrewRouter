@@ -1,0 +1,177 @@
+/* =========================================================================
+   Blora Design 2.0 - Steps component
+   Visual baseline: legacy/v1/blora.css lines 1747-1760, 4152-4167
+   ========================================================================= */
+
+blora-steps {
+  display: block;
+  container-type: inline-size;
+}
+
+/* The host is the query container so the @container block below can also
+   restyle the inner .blora-steps row (a container never matches itself). */
+.blora-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+}
+
+/* Component CSS must not depend on the opt-in reset: flex math needs border-box. */
+.blora-steps,
+.blora-steps *,
+.blora-steps *::before,
+.blora-steps *::after {
+  box-sizing: border-box;
+}
+
+.blora-step {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-3);
+  position: relative;
+
+  /* Margin instead of padding: Chromium adds padding outside the flex
+     distribution, which would shrink the last column and skew the row. */
+  margin-inline-end: var(--blora-space-5);
+}
+
+.blora-step:last-child {
+  margin-inline-end: 0;
+}
+
+.blora-step__head {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+}
+
+.blora-step__icon {
+  width: 2em;
+  height: 2em;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--blora-color-surface-sunken);
+  color: var(--blora-color-text-subtle);
+  font-family: var(--blora-font-heading);
+  font-weight: 600;
+  font-size: var(--blora-text-sm);
+  border: 1px solid var(--blora-color-border-subtle);
+  z-index: var(--blora-z-base);
+  transition:
+    color var(--blora-duration-base) var(--blora-easing-standard),
+    background var(--blora-duration-base) var(--blora-easing-standard),
+    border-color var(--blora-duration-base) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-step__line {
+  position: absolute;
+  top: 1em;
+  inset-inline: 2em 0;
+  height: 1px;
+  background: var(--blora-color-border-subtle);
+  transition: background var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-step:last-child .blora-step__line {
+  display: none;
+}
+
+/* States */
+.blora-step[data-state="active"] .blora-step__icon {
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+  border-color: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-shadow-primary);
+}
+
+.blora-step[data-state="done"] .blora-step__icon {
+  background: var(--blora-color-status-success);
+  color: var(--blora-color-text-on-accent);
+  border-color: var(--blora-color-status-success);
+}
+
+.blora-step[data-state="done"] .blora-step__line {
+  background: var(--blora-color-status-success);
+}
+
+.blora-step[data-state="active"] .blora-step__line {
+  background: linear-gradient(
+    90deg,
+    var(--blora-color-status-success) 0%,
+    var(--blora-color-border-subtle) 60%
+  );
+}
+
+.blora-step__title {
+  font-size: var(--blora-text-sm);
+  font-weight: 500;
+  color: var(--blora-color-text-emphasis);
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-step__desc {
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+  overflow-wrap: anywhere;
+}
+
+.blora-step[data-state="active"] .blora-step__title {
+  color: var(--blora-color-action-primary-default);
+}
+
+/* Vertical layout on narrow containers */
+@container (max-width: 32rem) {
+  .blora-steps {
+    flex-direction: column;
+    gap: var(--blora-space-4);
+  }
+
+  .blora-step,
+  .blora-step:last-child {
+    width: 100%;
+    flex: none;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    margin-inline-end: 0;
+  }
+
+  .blora-step__head {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    display: block;
+  }
+
+  .blora-step__title {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .blora-step__desc {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .blora-step__line {
+    top: 2em;
+    bottom: calc(-1 * var(--blora-space-4));
+    inset-inline: 1em auto;
+    width: 1px;
+    height: auto;
+  }
+
+  .blora-step[data-state="active"] .blora-step__line {
+    background: linear-gradient(
+      180deg,
+      var(--blora-color-status-success) 0%,
+      var(--blora-color-border-subtle) 60%
+    );
+  }
+}

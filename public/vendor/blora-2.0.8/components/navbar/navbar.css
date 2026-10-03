@@ -1,0 +1,227 @@
+/* Blora Design 2.0 - Navbar */
+
+blora-navbar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--blora-z-sticky);
+  display: block;
+}
+
+blora-navbar[variant="floating"] {
+  inset-block-start: var(--blora-space-4);
+}
+
+.blora-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blora-space-5);
+  padding: var(--blora-space-3) var(--blora-space-6);
+  background: transparent;
+  border: var(--blora-border-subtle);
+  border-radius: 0;
+  box-shadow: var(--blora-shadow-2);
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--blora-z-sticky);
+  flex-wrap: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+blora-navbar > .blora-navbar {
+  position: relative;
+  inset-block-start: auto;
+}
+
+.blora-navbar::before {
+  position: absolute;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--blora-color-surface-default) 72%, transparent);
+  backdrop-filter: blur(20px) saturate(1.25);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+}
+
+/* A modal/tour backdrop must own the final blur composition. Keeping the
+   navbar's own backdrop-filter active creates an isolated backdrop root;
+   a giant overlay shadow then seams through it as a vertical divider. */
+:root[data-blora-modal-open] .blora-navbar::before,
+:root[data-blora-tour-open] .blora-navbar::before {
+  backdrop-filter: none;
+}
+
+:root[data-blora-modal-open] blora-navbar,
+:root[data-blora-tour-open] blora-navbar {
+  z-index: var(--blora-z-base);
+}
+
+.blora-navbar > * {
+  position: relative;
+  z-index: var(--blora-z-base);
+}
+
+/* Floating variant */
+.blora-navbar[data-variant="floating"] {
+  width: min(90rem, calc(100% - var(--blora-space-4) * 2));
+  margin-block-start: 0;
+  margin-inline: auto;
+  inset-block-start: auto;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-full);
+  box-shadow: var(--blora-shadow-2);
+  padding: var(--blora-space-3);
+}
+
+@media (max-width: 560px) {
+  blora-navbar[variant="floating"] {
+    inset-block-start: var(--blora-space-2);
+  }
+
+  .blora-navbar[data-variant="floating"] {
+    width: calc(100% - var(--blora-space-2) * 2);
+    padding-inline: var(--blora-space-3);
+    gap: var(--blora-space-2);
+  }
+}
+
+/* Full-width variant */
+.blora-navbar[data-variant="full"] {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  inset-block-start: 0;
+  border-radius: 0;
+  padding: var(--blora-space-3) var(--blora-space-6);
+}
+
+.blora-navbar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-lg);
+  font-weight: 600;
+  color: var(--blora-color-text-primary);
+  flex: none;
+  min-width: 0;
+  border-radius: var(--blora-radius-md);
+  text-decoration: none;
+}
+
+/* The brand is one focusable unit (circular mark + title). The foundation's
+   inset fallback (-4px) clips the round mark, so give it an external rounded
+   ring that frames the whole composite without adding layout height. */
+.blora-navbar__brand:focus-visible {
+  outline-offset: var(--blora-focus-ring-offset);
+}
+
+.blora-navbar__title {
+  white-space: nowrap;
+}
+
+/* Brand mark - circular logo background */
+.blora-brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.8em;
+  height: 1.8em;
+  flex: none;
+  overflow: hidden;
+  color: var(--blora-color-brand-glyph);
+  background: var(--blora-color-action-primary-default);
+  border-radius: 50%;
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-navbar__menu {
+  display: flex;
+  gap: var(--blora-space-2);
+  min-width: 0;
+}
+
+.blora-navbar__link {
+  padding: 0.4em 0.9em;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  border-radius: var(--blora-radius-md);
+  text-decoration: none;
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background-color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-navbar__link:hover {
+  color: var(--blora-color-text-primary);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-navbar__link[aria-current="page"] {
+  color: var(--blora-color-action-primary-default);
+  font-weight: 500;
+}
+
+.blora-navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.blora-navbar__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  flex: 0 1 auto;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.blora-navbar__cta {
+  flex: none;
+  position: relative;
+  z-index: var(--blora-z-sticky);
+}
+
+/* Navbar controls share the frozen v1 compact geometry. Keeping small
+   actions at one tokenized height prevents an icon-only tool from stretching
+   the concentric floating shell. */
+.blora-navbar .blora-button[data-size="sm"] {
+  height: var(--blora-space-6);
+  padding-block: 0;
+  align-self: center;
+}
+
+@media (max-width: 720px) {
+  .blora-navbar {
+    gap: var(--blora-space-2);
+    padding-inline: var(--blora-space-3);
+  }
+
+  .blora-navbar__title {
+    display: none;
+  }
+
+  .blora-navbar__menu {
+    display: none;
+  }
+
+  /* Icon-only brand: match the circular logo mark so the focus ring is round
+     rather than the md-radius squircle used to frame the mark + title. */
+  .blora-navbar__brand {
+    border-radius: 50%;
+  }
+}
+
+@media (max-width: 560px) {
+  .blora-navbar__secondary {
+    display: none;
+  }
+}

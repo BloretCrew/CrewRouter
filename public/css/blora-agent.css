@@ -1,14 +1,13 @@
-.cr-agent-page.page.active {
+.blora-agent-page.page.active {
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 152px);
-  gap: 0 !important;
+  height: calc(100vh - 128px);
   min-height: 0;
   min-width: 0;
   overflow: hidden;
 }
 
-.cr-agent-page [hidden] {
+.blora-agent-page [hidden] {
   display: none !important;
 }
 
@@ -34,6 +33,8 @@
 
 .ba-balance {
   margin-left: auto;
+  color: var(--blora-color-text-muted, var(--muted-foreground));
+  font-size: 13px;
 }
 
 .ba-body {
@@ -48,11 +49,15 @@
 .ba-history,
 .ba-main {
   min-height: 0;
+  border: 1px solid var(--blora-color-border, var(--border));
+  border-radius: 12px;
+  background: var(--blora-color-surface, var(--card));
 }
 
 .ba-history {
   display: flex;
   flex-direction: column;
+  padding: 12px;
 }
 
 .ba-history__bar {
@@ -67,10 +72,24 @@
   gap: 6px;
 }
 
-.ba-history__item { display: flex; flex-direction: column; align-items: flex-start; width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.ba-history__item {
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  padding: 8px;
+  cursor: pointer;
+}
 
-.ba-history__meta {
+.ba-history__item.is-active,
+.ba-history__item:hover {
+  background: color-mix(in srgb, var(--blora-color-primary, var(--primary)) 12%, transparent);
+}
+
+.ba-history__item small {
   display: block;
+  color: var(--blora-color-text-muted, var(--muted-foreground));
 }
 
 .ba-main {
@@ -92,39 +111,48 @@
 }
 
 .ba-bubble {
-  width: min(760px, 100%);
   max-width: min(760px, 100%);
+  padding: 10px 12px;
+  border-radius: 12px;
+  line-height: 1.5;
 }
 
 .ba-bubble--user {
   align-self: flex-end;
+  background: color-mix(in srgb, var(--blora-color-primary, var(--primary)) 16%, transparent);
 }
 
 .ba-bubble--assistant,
 .ba-card {
   align-self: flex-start;
+  background: color-mix(in srgb, var(--blora-color-text-muted, var(--muted-foreground)) 10%, transparent);
 }
 
-.ba-code {
+.ba-bubble pre {
   overflow: auto;
+  padding: 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--blora-color-text, #000) 8%, transparent);
 }
 
 .ba-card {
   width: min(640px, 100%);
+  padding: 10px 12px;
+  border-radius: 12px;
 }
 
-.ba-card__header {
+.ba-card header {
   display: flex;
   justify-content: space-between;
   gap: 8px;
+  font-weight: 600;
   margin-bottom: 6px;
 }
 
-.ba-card__body {
+.ba-card pre {
   margin: 0;
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  max-width: 100%;
+  font-size: 12px;
 }
 
 .ba-card__actions {
@@ -139,6 +167,7 @@
   height: auto;
   max-width: min(720px, 100%);
   max-height: 60vh;
+  border-radius: 12px;
 }
 
 .ba-options,
@@ -149,10 +178,15 @@
   flex-wrap: wrap;
 }
 
+.ba-options {
+  border-top: 1px solid var(--blora-color-border, var(--border));
+}
+
 .ba-option {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  font-size: 13px;
   min-width: 0;
 }
 
@@ -161,81 +195,52 @@
   align-items: center;
 }
 
-.ba-composer :is(blora-textarea, textarea[id]) {
+.ba-composer textarea {
   flex: 1;
   min-width: 180px;
   resize: vertical;
 }
 
 .ba-thinking {
+  font-size: 13px;
+  color: var(--blora-color-text-muted, var(--muted-foreground));
   margin-bottom: 6px;
 }
 
 .ba-overlay { display: none; }
 
-.ba-top { margin-bottom: 20px; }
-.ba-body { gap: 24px; }
-.ba-history__bar { flex-wrap: wrap; gap: 12px; padding-bottom: 12px; }
-.ba-history__meta { margin-top: 5px; }
-.ba-main { padding: 0 24px; }
-.ba-thread { width: 100%; max-width: 800px; margin: 0 auto; padding: 24px 0; gap: 24px; }
-.ba-welcome {  padding: 24px 12px; }
-.ba-welcome__title { margin: 18px 0 12px; }
-.ba-welcome__description { margin: 0; }
-.cr-agent-page.is-empty .ba-thread { flex: 0 0 auto; overflow: auto; }
-.cr-agent-page.is-empty .ba-main { justify-content: center; overflow-y: auto; }
-.ba-settings { width: 100%; max-width: 760px; margin: 0 auto 10px; flex-shrink: 0; }
-.ba-settings summary { padding: 8px 4px; width: fit-content; }
-.ba-settings[open] summary { margin-left: 12px; }
-.ba-options { gap: 16px; max-height: 220px; overflow: auto; }
-.ba-option:first-child { flex: 1 0 100%; }
-.ba-option :is(blora-textarea, textarea[id]) { width: 100%; resize: vertical; }
-.ba-option :is(blora-number-input, input[type="number"]) { width: 100px; }
-.ba-composer { display: flex; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 12px; width: 100%; max-width: 760px; margin: 0 auto; }
-.ba-composer #baInput { width: 100%; min-width: 0; min-height: 72px; max-height: 180px; resize: vertical; }
-.ba-composer__tools { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
-.ba-composer__tools #baModel { flex: 1; min-width: 0; max-width: 320px; }
-.ba-composer__tools #baImageSize { min-width: 120px; }
-.ba-composer__tools #baSend, .ba-composer__tools #baStop { margin-left: auto; flex-shrink: 0; }
-.ba-input-hint {  margin: 10px 0 0; flex-shrink: 0; }
-.ba-bubble { overflow-wrap: anywhere; }
-
 @media (max-width: 800px) {
-  .ba-main { padding: 0; }
-  .ba-top { gap: 8px; margin-bottom: 12px; }
-  .ba-welcome { padding: 20px 8px; }
-
-  .ba-input-hint { display: none; }
-
-}
-
-@media (max-width: 800px) {
-  .cr-agent-page.page.active {
-    height: calc(100dvh - 152px);
+  .blora-agent-page.page.active {
+    height: calc(100dvh - 148px);
     min-height: 0;
     overflow: hidden;
   }
   .ba-body { grid-template-columns: 1fr; overflow: hidden; }
   .ba-options { max-height: 34vh; overflow: auto; }
-  .ba-history { width: 100%; height: 100%; min-height: 0; }
-  .ba-overlay { display: none; }
+  .ba-history {
+    position: fixed;
+    z-index: 30;
+    top: 0;
+    left: 0;
+    width: min(280px, 86vw);
+    height: 100vh;
+    transform: translateX(-105%);
+    transition: transform 160ms ease;
+  }
+  .ba-history.is-open { transform: none; }
+  .ba-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 29;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .ba-overlay.is-open { opacity: 1; pointer-events: auto; }
   .ba-history-toggle { display: inline-flex; }
 }
 
 @media (min-width: 801px) {
   .ba-history-toggle { display: none; }
-}
-
-/* The composer stays inside the viewport; only the thread scrolls. */
-.ba-top { flex-shrink: 0; }
-.ba-welcome__title { font-size: var(--blora-text-xl); line-height: 1.4; }
-@media (max-width: 640px) {
-  .cr-agent-page.page.active { height: calc(100dvh - 132px); }
-  .ba-body { gap: var(--blora-space-3); }
-  .ba-thread { padding-block: var(--blora-space-3); }
-  .ba-welcome { padding: var(--blora-space-4) var(--blora-space-2); }
-  .ba-welcome__title { margin-block: var(--blora-space-3); }
-  .ba-composer { padding: var(--blora-space-3); }
-  .ba-composer #baInput { min-height: 64px; max-height: 120px; }
-  .ba-balance { font-size: var(--blora-text-sm); }
 }

@@ -1,0 +1,190 @@
+/* =========================================================================
+   Blora Design 2.0 - Select component
+   Spec §17.2: Form-associated combobox with keyboard navigation
+   ========================================================================= */
+
+:host {
+  display: inline-block;
+  position: relative;
+}
+
+:host([disabled]) {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.blora-select__trigger {
+  width: 100%;
+
+  /* Height never collapses when value+placeholder are both empty */
+  min-height: calc(0.6em * 2 + var(--blora-text-sm, 0.875rem) * 1.4);
+  padding: 0.6em 2.4em 0.6em 0.85em;
+  font-size: var(--blora-text-sm);
+  line-height: 1.4;
+  color: var(--blora-color-text-secondary);
+  background: var(--blora-color-surface-default);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-fast) var(--blora-easing-standard),
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+@supports (corner-shape: superellipse(1.2)) {
+  .blora-select__trigger {
+    corner-shape: superellipse(1.2);
+  }
+}
+
+.blora-select__value {
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:host([multiple]) .blora-select__trigger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  height: auto;
+  overflow: visible;
+  white-space: normal;
+  text-overflow: unset;
+  padding-block: 0.35em;
+}
+
+.blora-select__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--blora-space-2);
+  max-width: calc(100% - 1.5em);
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+}
+
+.blora-select__tags .blora-tag {
+  max-width: 100%;
+}
+
+.blora-select__trigger:hover {
+  border-color: var(--blora-color-text-subtle);
+}
+
+.blora-select__trigger[aria-expanded="true"] {
+  border-color: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-focus-ring-default);
+}
+
+.blora-select__trigger::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: 0.85em;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-inline-start: 4px solid transparent;
+  border-inline-end: 4px solid transparent;
+  border-block-start: 5px solid var(--blora-color-text-subtle);
+  transform: translateY(-50%);
+  transition: transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-select__trigger[aria-expanded="true"]::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.blora-select__trigger[data-placeholder] {
+  color: var(--blora-color-text-disabled);
+}
+
+.blora-select__popup {
+  position: absolute;
+  inset-block-start: calc(100% + 4px);
+  inset-inline: 0;
+  max-height: var(--blora-select-popup-max-height, 240px);
+  overflow-y: auto;
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  box-shadow: var(--blora-shadow-3);
+  padding: var(--blora-space-1);
+  z-index: var(--blora-z-dropdown);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition:
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-fast) var(--blora-easing-standard),
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-select__popup[data-open] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.blora-select__listbox {
+  max-height: min(14rem, 40vh);
+  overflow-y: auto;
+}
+
+.blora-select__option {
+  padding: 0.5em 0.8em;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+  border-radius: var(--blora-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-fast) var(--blora-easing-standard),
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    opacity var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-select__option:hover,
+.blora-select__option[data-active] {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+}
+
+.blora-select__option[data-selected] {
+  background: var(--blora-color-action-primary-tint);
+  color: var(--blora-color-action-primary-default);
+  font-weight: 500;
+}
+
+.blora-select__option[data-disabled] {
+  color: var(--blora-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.blora-select__option[data-disabled]:hover {
+  background: none;
+}
+
+.blora-select__empty {
+  padding: 0.65em 0.8em;
+  font-size: var(--blora-text-xs);
+  color: var(--blora-color-text-subtle);
+}

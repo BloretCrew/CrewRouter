@@ -1,0 +1,94 @@
+/* Blora Design 2.0 - carousel component (beta, migrated from v1) */
+
+blora-carousel {
+  display: block;
+}
+
+.blora-carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--blora-radius-lg);
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+}
+
+.blora-carousel:active {
+  cursor: grabbing;
+}
+
+.blora-carousel__track {
+  display: flex;
+  will-change: transform;
+  transition: transform var(--blora-duration-slow) var(--blora-easing-standard);
+}
+
+.blora-carousel__track[data-dragging] {
+  transition: none;
+}
+
+.blora-carousel__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+}
+
+.blora-carousel__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.6em;
+  height: 2.6em;
+  border-radius: 50%;
+  background: var(--blora-color-overlay-media);
+  color: var(--blora-color-text-on-media);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard);
+  backdrop-filter: blur(4px);
+}
+
+.blora-carousel__arrow svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.blora-carousel__arrow:hover {
+  background: var(--blora-color-overlay-media-strong);
+}
+
+.blora-carousel__arrow--prev {
+  left: var(--blora-space-3);
+}
+
+.blora-carousel__arrow--next {
+  right: var(--blora-space-3);
+}
+
+.blora-carousel__dots {
+  position: absolute;
+  bottom: var(--blora-space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--blora-space-2);
+}
+
+.blora-carousel__dot {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: var(--blora-color-overlay-media-indicator);
+  cursor: pointer;
+  transition:
+    background-color var(--blora-duration-fast) var(--blora-easing-standard),
+    width var(--blora-duration-fast) var(--blora-easing-standard),
+    border-radius var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-carousel__dot[data-active] {
+  background: var(--blora-color-text-on-accent);
+  width: 1.6em;
+  border-radius: var(--blora-radius-full);
+}

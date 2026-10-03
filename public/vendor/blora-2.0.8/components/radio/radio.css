@@ -1,0 +1,79 @@
+/* =========================================================================
+   Blora Design 2.0 - Radio component
+   Spec §11.1: Native input + visual dot, no JS required
+   ========================================================================= */
+
+blora-radio {
+  display: inline-block;
+}
+
+.blora-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-radio > input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.blora-radio__dot {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border: 1.5px solid var(--blora-color-text-subtle);
+  border-radius: 50%;
+  background: var(--blora-color-surface-default);
+  display: grid;
+  place-items: center;
+  position: relative;
+  transition:
+    background var(--blora-duration-fast) var(--blora-easing-standard),
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+/*
+ * Inner disc: 50% + translate(-50%, -50%) stays on the geometric center
+ * at fractional DPR / 125% zoom. inset+margin:auto + scale() snaps 1px
+ * off on those devices. Grid place-items is the fallback if transform
+ * is later removed. transform-origin is the disc center so scale stays put.
+ */
+.blora-radio__dot::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.375em;
+  height: 0.375em;
+  margin: 0;
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+  transform: translate(-50%, -50%) scale(0);
+  transform-origin: center center;
+  transition: transform var(--blora-duration-fast) var(--blora-easing-overshoot);
+}
+
+.blora-radio > input:checked + .blora-radio__dot {
+  border-color: var(--blora-color-action-primary-default);
+}
+
+.blora-radio > input:checked + .blora-radio__dot::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.blora-radio > input:focus-visible + .blora-radio__dot {
+  box-shadow: var(--blora-focus-ring-strong);
+}
+
+.blora-radio > input:disabled + .blora-radio__dot {
+  opacity: 0.4;
+}

@@ -1,0 +1,486 @@
+/* =========================================================================
+   Blora Design 2.0 - Button component
+   Spec §17.1: Native <button> with stable class, data-variant, data-size
+   ========================================================================= */
+
+.blora-button {
+  --blora-button-bg: var(--blora-color-surface-default);
+  --blora-button-fg: var(--blora-color-text-secondary);
+  --blora-button-bd: var(--blora-color-border-subtle);
+
+  /* Vertical size lives entirely in padding; line-height stays 1 so flex
+     centers the glyph box (not a tall line-box with ink stuck near the top —
+     the usual mobile CJK “text too high” failure mode).
+     pad-y = 0.75em keeps total height ≈ old 0.55em + line-height 1.4. */
+  --blora-button-pad-y: 0.75em;
+  --blora-button-pad-x: 1.1em;
+  --blora-button-height: calc(1em + 2 * var(--blora-button-pad-y) + 2px);
+
+  /* `auto` honors SVG width/height attributes (createBloraIcon). Components
+     override this token for circular / chrome controls. Do not default to 1em
+     — that crushed navbar, speed-dial, and other intended rem/px icons. */
+  --blora-button-icon-size: auto;
+  --blora-button-radius: var(--blora-radius-lg);
+  --blora-button-corner: superellipse(1.2);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blora-space-2);
+  box-sizing: border-box;
+
+  /* Never stretch to fill a grid/flex track — that produced "exploded" tall
+     pills (e.g. sidebar toggle in a min-height layout). Grow only when the
+     consumer sets width/flex explicitly (dialog footer full-width).
+     Floor the inline size at the content-box height so an icon-only control
+     can collapse to a square, never a vertical rectangle.
+     Height is a closed box: pad-y + 1em type + 1px border × 2. Children
+     (icons, images, custom nodes) cannot raise it — max-height locks the
+     used size, min-height: 0 defeats flex-item min-height: auto. */
+  width: max-content;
+  min-inline-size: var(--blora-button-height);
+  max-width: 100%;
+  height: var(--blora-button-height);
+  min-height: 0;
+  max-height: var(--blora-button-height);
+  align-self: flex-start;
+  flex: 0 0 auto;
+  padding: var(--blora-button-pad-y) var(--blora-button-pad-x);
+  font-family: var(--blora-font-sans);
+  font-size: var(--blora-text-sm);
+  font-weight: 500;
+  line-height: 1;
+
+  /*
+   * Standard CSS (not UA-sniff): trim half-leading so flex centers ink metrics,
+   * not the full em-box. Fixes real-device system fonts (PingFang / Noto / SF)
+   * sitting high while desktop emulation (often different fonts) looks fine.
+   * Chrome 133+, Safari 18.2+, Edge 133+ — ignored elsewhere, flex+lh1 remains.
+   */
+  text-box: trim-both cap alphabetic;
+  text-box-trim: trim-both;
+  text-box-edge: cap alphabetic;
+  writing-mode: horizontal-tb;
+  color: var(--blora-button-fg);
+  background: var(--blora-button-bg);
+  border: 1px solid var(--blora-button-bd);
+  border-radius: var(--blora-button-radius);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--blora-duration-base) var(--blora-easing-standard),
+    border-color var(--blora-duration-base) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-fast) var(--blora-easing-standard);
+  position: relative;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Buttons keep the v1 external focus treatment. They are not clipped
+   navigation items and must not inherit the foundation's inset fallback. */
+.blora-button:focus-visible {
+  outline: var(--blora-focus-ring-width) solid var(--blora-color-action-primary-default);
+  outline-offset: var(--blora-focus-ring-offset);
+}
+
+/* Opt-in block / full-row button */
+.blora-button[data-block],
+.blora-button[data-full-width] {
+  width: 100%;
+  align-self: stretch;
+}
+
+.blora-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-button:active {
+  transform: translateY(0);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-button:disabled,
+.blora-button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* -- Primary variant -- */
+.blora-button[data-variant="primary"] {
+  --blora-button-bg: var(--blora-color-action-primary-default);
+  --blora-button-fg: var(--blora-color-text-on-accent);
+  --blora-button-bd: var(--blora-color-action-primary-default);
+
+  font-weight: 600;
+  box-shadow: var(--blora-shadow-primary);
+}
+
+.blora-button[data-variant="primary"]:hover {
+  --blora-button-bg: var(--blora-color-action-primary-hover);
+  --blora-button-bd: var(--blora-color-action-primary-hover);
+}
+
+/* -- Secondary variant (default) -- */
+.blora-button[data-variant="secondary"] {
+  --blora-button-bg: var(--blora-color-text-secondary);
+  --blora-button-fg: var(--blora-color-text-on-accent);
+  --blora-button-bd: var(--blora-color-text-secondary);
+
+  font-weight: 600;
+}
+
+.blora-button[data-variant="secondary"]:hover {
+  --blora-button-bg: var(--blora-color-text-primary);
+  --blora-button-bd: var(--blora-color-text-primary);
+}
+
+/* -- Danger variant -- */
+.blora-button[data-variant="danger"] {
+  --blora-button-bg: var(--blora-color-status-danger);
+  --blora-button-fg: var(--blora-color-text-on-accent);
+  --blora-button-bd: var(--blora-color-status-danger);
+
+  font-weight: 600;
+}
+
+.blora-button[data-variant="danger"]:hover {
+  --blora-button-bg: color-mix(
+    in srgb,
+    var(--blora-color-status-danger) 85%,
+    var(--blora-color-text-primary)
+  );
+  --blora-button-bd: color-mix(
+    in srgb,
+    var(--blora-color-status-danger) 85%,
+    var(--blora-color-text-primary)
+  );
+}
+
+/* -- Ghost variant -- */
+.blora-button[data-variant="ghost"] {
+  --blora-button-bg: transparent;
+  --blora-button-bd: transparent;
+}
+
+.blora-button[data-variant="ghost"]:hover {
+  --blora-button-bg: var(--blora-color-surface-raised);
+
+  box-shadow: none;
+  transform: none;
+}
+
+/* -- Outline variant -- */
+.blora-button[data-variant="outline"] {
+  --blora-button-bg: transparent;
+  --blora-button-bd: var(--blora-color-text-subtle);
+}
+
+.blora-button[data-variant="outline"]:hover {
+  --blora-button-bd: var(--blora-color-text-emphasis);
+  --blora-button-bg: var(--blora-color-surface-raised);
+}
+
+/* -- Text variant -- */
+.blora-button[data-variant="text"] {
+  --blora-button-bg: transparent;
+  --blora-button-bd: transparent;
+  --blora-button-pad-x: 0.4em;
+
+  color: var(--blora-color-action-primary-default);
+  padding: var(--blora-button-pad-y) var(--blora-button-pad-x);
+}
+
+.blora-button[data-variant="text"]:hover {
+  color: var(--blora-color-action-primary-hover);
+  background: none;
+  box-shadow: none;
+  transform: none;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* -- Sizes (pad-y compensated for line-height: 1 vs legacy 1.4) -- */
+.blora-button[data-size="xs"] {
+  --blora-button-pad-y: 0.5em;
+  --blora-button-pad-x: 0.7em;
+
+  font-size: var(--blora-text-xs);
+  padding: var(--blora-button-pad-y) var(--blora-button-pad-x);
+}
+
+.blora-button[data-size="sm"] {
+  --blora-button-pad-y: 0.6em;
+  --blora-button-pad-x: 0.9em;
+
+  font-size: var(--blora-text-sm);
+  padding: var(--blora-button-pad-y) var(--blora-button-pad-x);
+}
+
+.blora-button[data-size="md"] {
+  --blora-button-pad-y: 0.75em;
+  --blora-button-pad-x: 1.1em;
+
+  font-size: var(--blora-text-sm);
+  padding: var(--blora-button-pad-y) var(--blora-button-pad-x);
+}
+
+.blora-button[data-size="lg"] {
+  --blora-button-pad-y: 0.9em;
+  --blora-button-pad-x: 1.4em;
+
+  font-size: var(--blora-text-lg);
+  padding: var(--blora-button-pad-y) var(--blora-button-pad-x);
+}
+
+.blora-button[data-size="xl"] {
+  --blora-button-pad-y: 1em;
+  --blora-button-pad-x: 1.6em;
+
+  font-size: var(--blora-text-xl);
+  padding: var(--blora-button-pad-y) var(--blora-button-pad-x);
+  font-family: var(--blora-font-heading);
+}
+
+/* -- Icon-only button -- */
+.blora-button[data-size="icon"] {
+  --blora-button-pad-y: 0.75em;
+  --blora-button-pad-x: 0.75em;
+  --blora-button-radius: 50%;
+  --blora-button-corner: round;
+  --blora-button-icon-size: 1.125rem;
+
+  padding: var(--blora-button-pad-y);
+  aspect-ratio: 1;
+  flex: none;
+}
+
+.blora-button[data-size="icon"][data-shape="square"] {
+  --blora-button-radius: var(--blora-radius-lg);
+  --blora-button-corner: superellipse(1.2);
+}
+
+.blora-button[data-size="icon"][data-shape="circle"] {
+  --blora-button-radius: 50%;
+  --blora-button-corner: round;
+}
+
+/* Height is already a closed box — children cannot raise it. Do not also
+   clamp descendants to 1em: that is smaller than Lucide's 16–18px defaults
+   and smaller than circular chrome (navbar, speed-dial, dock). */
+.blora-button > * {
+  flex: none;
+}
+
+.blora-button :is(svg, img, canvas, video, object, embed) {
+  display: block;
+  flex: none;
+  inline-size: var(--blora-button-icon-size);
+  block-size: var(--blora-button-icon-size);
+  object-fit: contain;
+}
+
+/* -- Button group -- */
+.blora-button-group {
+  display: inline-flex;
+  max-width: 100%;
+  padding: calc(var(--blora-focus-ring-width) + var(--blora-focus-ring-offset));
+  margin: calc(-1 * (var(--blora-focus-ring-width) + var(--blora-focus-ring-offset)));
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+/* Shared with .blora-join: weld adjacent controls, lift on focus */
+.blora-button-group > .blora-button,
+.blora-join > .blora-button {
+  border-radius: 0;
+  margin-inline-start: -1px;
+  align-self: stretch;
+  height: auto;
+  min-height: var(--blora-join-height, var(--blora-button-height));
+  max-height: none;
+}
+
+.blora-button-group > .blora-button:first-child,
+.blora-join > .blora-button:first-child {
+  margin-inline-start: 0;
+  border-start-start-radius: var(--blora-button-radius);
+  border-end-start-radius: var(--blora-button-radius);
+}
+
+.blora-button-group > .blora-button:last-child,
+.blora-join > .blora-button:last-child {
+  border-start-end-radius: var(--blora-button-radius);
+  border-end-end-radius: var(--blora-button-radius);
+}
+
+.blora-button-group > .blora-button:only-child,
+.blora-join > .blora-button:only-child {
+  border-radius: var(--blora-button-radius);
+}
+
+.blora-join[data-orientation="vertical"] > .blora-button {
+  margin-inline-start: 0;
+  margin-block-start: -1px;
+}
+
+.blora-join[data-orientation="vertical"] > .blora-button:first-child {
+  margin-block-start: 0;
+  border-radius: var(--blora-button-radius) var(--blora-button-radius) 0 0;
+}
+
+.blora-join[data-orientation="vertical"] > .blora-button:last-child {
+  border-radius: 0 0 var(--blora-button-radius) var(--blora-button-radius);
+}
+
+.blora-join[data-orientation="vertical"] > .blora-button:only-child {
+  border-radius: var(--blora-button-radius);
+}
+
+@supports (corner-shape: superellipse(1.2)) {
+  .blora-button {
+    corner-shape: var(--blora-button-corner);
+  }
+
+  .blora-button-group > .blora-button,
+  .blora-join > .blora-button {
+    corner-shape: square;
+  }
+
+  .blora-button-group > .blora-button:first-child,
+  .blora-join > .blora-button:first-child {
+    corner-shape: var(--blora-button-corner) square square var(--blora-button-corner);
+  }
+
+  .blora-button-group > .blora-button:last-child,
+  .blora-join > .blora-button:last-child {
+    corner-shape: square var(--blora-button-corner) var(--blora-button-corner) square;
+  }
+
+  .blora-button-group > .blora-button:only-child,
+  .blora-join > .blora-button:only-child {
+    corner-shape: var(--blora-button-corner);
+  }
+
+  .blora-join[data-orientation="vertical"] > .blora-button:first-child {
+    corner-shape: var(--blora-button-corner) var(--blora-button-corner) square square;
+  }
+
+  .blora-join[data-orientation="vertical"] > .blora-button:last-child {
+    corner-shape: square square var(--blora-button-corner) var(--blora-button-corner);
+  }
+}
+
+.blora-button-group > .blora-button:hover,
+.blora-button-group > .blora-button:active,
+.blora-join > .blora-button:hover,
+.blora-join > .blora-button:active {
+  transform: none;
+  box-shadow: none;
+}
+
+.blora-button-group > .blora-button:focus-visible,
+.blora-join > .blora-button:focus-visible {
+  z-index: var(--blora-z-sticky);
+}
+
+/* -- Loading state (§17.1: aria-busy + data-loading) -- */
+.blora-button[data-loading] {
+  pointer-events: none;
+}
+
+.blora-button[data-loading]::before {
+  content: "";
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border: 2px solid currentcolor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: blora-button-spin 0.7s linear infinite;
+}
+
+.blora-button[data-loading][data-size="icon"] > svg {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+@keyframes blora-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* -- Loading in reduced motion -- */
+@media (prefers-reduced-motion: reduce) {
+  .blora-button[data-loading]::before {
+    animation-duration: 1.5s;
+  }
+}
+
+/* -- FAB (Floating Action Button) -- */
+.blora-fab {
+  position: fixed;
+  inset-inline-end: max(var(--blora-space-5), env(safe-area-inset-inline-end, 0px));
+  bottom: max(var(--blora-space-5), env(safe-area-inset-bottom, 0px));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+  display: grid;
+  place-items: center;
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--blora-shadow-4), var(--blora-shadow-primary);
+  z-index: var(--blora-z-sticky);
+  transition:
+    transform var(--blora-duration-base) var(--blora-easing-overshoot),
+    opacity var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-fab:hover {
+  transform: scale(1.12);
+}
+
+.blora-fab[data-variant="surface"] {
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-primary);
+  border: 1px solid var(--blora-color-border-subtle);
+  box-shadow: var(--blora-shadow-3);
+}
+
+.blora-fab[data-hidden] {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.86);
+}
+
+/* Static FAB for docs/preview */
+.blora-fab--static {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  flex: none;
+}
+
+.blora-fab--static[data-hidden] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+@media (max-width: 560px) {
+  .blora-fab:not(.blora-fab--static) {
+    inset-inline-end: max(var(--blora-space-4), env(safe-area-inset-inline-end, 0px));
+    bottom: max(var(--blora-space-4), env(safe-area-inset-bottom, 0px));
+    width: 3rem;
+    height: 3rem;
+  }
+}

@@ -1,0 +1,1328 @@
+{
+  "schemaVersion": "1.0",
+  "tokens": [
+    {
+      "name": "--blora-color-coral-background",
+      "path": "color.coral.background",
+      "type": "color",
+      "value": "#FAF7F8"
+    },
+    {
+      "name": "--blora-color-coral-surface-1",
+      "path": "color.coral.surface1",
+      "type": "color",
+      "value": "#FFFCFD"
+    },
+    {
+      "name": "--blora-color-coral-surface-2",
+      "path": "color.coral.surface2",
+      "type": "color",
+      "value": "#F4ECEE"
+    },
+    {
+      "name": "--blora-color-coral-surface-3",
+      "path": "color.coral.surface3",
+      "type": "color",
+      "value": "#E9DEE1"
+    },
+    {
+      "name": "--blora-color-coral-text-strong",
+      "path": "color.coral.textStrong",
+      "type": "color",
+      "value": "#303143"
+    },
+    {
+      "name": "--blora-color-coral-foreground",
+      "path": "color.coral.foreground",
+      "type": "color",
+      "value": "#3D3E50"
+    },
+    {
+      "name": "--blora-color-coral-text-emphasis",
+      "path": "color.coral.textEmphasis",
+      "type": "color",
+      "value": "#555565"
+    },
+    {
+      "name": "--blora-color-coral-text-muted",
+      "path": "color.coral.textMuted",
+      "type": "color",
+      "value": "#74717C"
+    },
+    {
+      "name": "--blora-color-coral-text-subtle",
+      "path": "color.coral.textSubtle",
+      "type": "color",
+      "value": "#9B959D"
+    },
+    {
+      "name": "--blora-color-coral-text-disabled",
+      "path": "color.coral.textDisabled",
+      "type": "color",
+      "value": "#B9B2B8"
+    },
+    {
+      "name": "--blora-color-coral-border-subtle",
+      "path": "color.coral.borderSubtle",
+      "type": "color",
+      "value": "#D9D2D6"
+    },
+    {
+      "name": "--blora-color-coral-primary",
+      "path": "color.coral.primary",
+      "type": "color",
+      "value": "#9F5964"
+    },
+    {
+      "name": "--blora-color-coral-primary-hover",
+      "path": "color.coral.primaryHover",
+      "type": "color",
+      "value": "#80464F"
+    },
+    {
+      "name": "--blora-color-coral-primary-soft",
+      "path": "color.coral.primarySoft",
+      "type": "color",
+      "value": "#C07E86"
+    },
+    {
+      "name": "--blora-color-coral-danger",
+      "path": "color.coral.danger",
+      "type": "color",
+      "value": "#9E5559"
+    },
+    {
+      "name": "--blora-color-coral-accent-neutral",
+      "path": "color.coral.accentNeutral",
+      "type": "color",
+      "value": "#6E6975"
+    },
+    {
+      "name": "--blora-color-coral-accent-neutral-soft",
+      "path": "color.coral.accentNeutralSoft",
+      "type": "color",
+      "value": "#9A95A0"
+    },
+    {
+      "name": "--blora-color-coral-info",
+      "path": "color.coral.info",
+      "type": "color",
+      "value": "#5D6680"
+    },
+    {
+      "name": "--blora-color-coral-info-soft",
+      "path": "color.coral.infoSoft",
+      "type": "color",
+      "value": "#888FA5"
+    },
+    {
+      "name": "--blora-color-coral-success",
+      "path": "color.coral.success",
+      "type": "color",
+      "value": "#5B756B"
+    },
+    {
+      "name": "--blora-color-coral-success-soft",
+      "path": "color.coral.successSoft",
+      "type": "color",
+      "value": "#879C94"
+    },
+    {
+      "name": "--blora-color-coral-support",
+      "path": "color.coral.support",
+      "type": "color",
+      "value": "#687C7B"
+    },
+    {
+      "name": "--blora-color-coral-warning",
+      "path": "color.coral.warning",
+      "type": "color",
+      "value": "#806C4F"
+    },
+    {
+      "name": "--blora-color-coral-accent-secondary",
+      "path": "color.coral.accentSecondary",
+      "type": "color",
+      "value": "#8B6571"
+    },
+    {
+      "name": "--blora-color-coral-on-accent",
+      "path": "color.coral.onAccent",
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "--blora-color-coral-on-media",
+      "path": "color.coral.onMedia",
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "--blora-color-coral-media-overlay",
+      "path": "color.coral.mediaOverlay",
+      "type": "color",
+      "value": "rgba(0,0,0,0.4)"
+    },
+    {
+      "name": "--blora-color-coral-media-overlay-strong",
+      "path": "color.coral.mediaOverlayStrong",
+      "type": "color",
+      "value": "rgba(0,0,0,0.7)"
+    },
+    {
+      "name": "--blora-color-coral-media-indicator",
+      "path": "color.coral.mediaIndicator",
+      "type": "color",
+      "value": "rgba(255,255,255,0.6)"
+    },
+    {
+      "name": "--blora-color-coral-overlay-modal",
+      "path": "color.coral.overlayModal",
+      "type": "color",
+      "value": "rgba(48,49,67,0.52)"
+    },
+    {
+      "name": "--blora-color-coral-overlay-drawer",
+      "path": "color.coral.overlayDrawer",
+      "type": "color",
+      "value": "rgba(48,49,67,0.46)"
+    },
+    {
+      "name": "--blora-color-coral-shadow-base",
+      "path": "color.coral.shadowBase",
+      "type": "color",
+      "value": "rgba(29,27,32,0.05)"
+    },
+    {
+      "name": "--blora-color-coral-shadow-base-2",
+      "path": "color.coral.shadowBase2",
+      "type": "color",
+      "value": "rgba(29,27,32,0.07)"
+    },
+    {
+      "name": "--blora-color-coral-shadow-base-3",
+      "path": "color.coral.shadowBase3",
+      "type": "color",
+      "value": "rgba(29,27,32,0.1)"
+    },
+    {
+      "name": "--blora-color-coral-shadow-base-4",
+      "path": "color.coral.shadowBase4",
+      "type": "color",
+      "value": "rgba(29,27,32,0.14)"
+    },
+    {
+      "name": "--blora-color-coral-shadow-inset-top",
+      "path": "color.coral.shadowInsetTop",
+      "type": "color",
+      "value": "rgba(255,255,255,0.5)"
+    },
+    {
+      "name": "--blora-color-coral-shadow-inset-bottom",
+      "path": "color.coral.shadowInsetBottom",
+      "type": "color",
+      "value": "rgba(28,26,23,0.04)"
+    },
+    {
+      "name": "--blora-color-surface-canvas",
+      "path": "color.surface.canvas",
+      "type": "color",
+      "value": "{color.coral.background}",
+      "description": "页面最底层背景"
+    },
+    {
+      "name": "--blora-color-surface-default",
+      "path": "color.surface.default",
+      "type": "color",
+      "value": "{color.coral.surface1}",
+      "description": "卡片、菜单和控件的默认表面"
+    },
+    {
+      "name": "--blora-color-surface-raised",
+      "path": "color.surface.raised",
+      "type": "color",
+      "value": "{color.coral.surface2}",
+      "description": "次要层级表面"
+    },
+    {
+      "name": "--blora-color-surface-sunken",
+      "path": "color.surface.sunken",
+      "type": "color",
+      "value": "{color.coral.surface3}",
+      "description": "凹陷区域"
+    },
+    {
+      "name": "--blora-color-text-primary",
+      "path": "color.text.primary",
+      "type": "color",
+      "value": "{color.coral.textStrong}",
+      "description": "最强文本色"
+    },
+    {
+      "name": "--blora-color-text-secondary",
+      "path": "color.text.secondary",
+      "type": "color",
+      "value": "{color.coral.foreground}",
+      "description": "正文文本色"
+    },
+    {
+      "name": "--blora-color-text-emphasis",
+      "path": "color.text.emphasis",
+      "type": "color",
+      "value": "{color.coral.textEmphasis}",
+      "description": "强调文本"
+    },
+    {
+      "name": "--blora-color-text-muted",
+      "path": "color.text.muted",
+      "type": "color",
+      "value": "{color.coral.textMuted}",
+      "description": "弱化文本"
+    },
+    {
+      "name": "--blora-color-text-subtle",
+      "path": "color.text.subtle",
+      "type": "color",
+      "value": "{color.coral.textSubtle}",
+      "description": "次要弱化文本"
+    },
+    {
+      "name": "--blora-color-text-disabled",
+      "path": "color.text.disabled",
+      "type": "color",
+      "value": "{color.coral.textDisabled}",
+      "description": "禁用文本"
+    },
+    {
+      "name": "--blora-color-text-on-accent",
+      "path": "color.text.onAccent",
+      "type": "color",
+      "value": "{color.coral.onAccent}",
+      "description": "强调色上的前景色"
+    },
+    {
+      "name": "--blora-color-text-on-media",
+      "path": "color.text.onMedia",
+      "type": "color",
+      "value": "{color.coral.onMedia}",
+      "description": "媒体遮罩上的前景色"
+    },
+    {
+      "name": "--blora-color-border-subtle",
+      "path": "color.border.subtle",
+      "type": "color",
+      "value": "{color.coral.borderSubtle}",
+      "description": "细微边框"
+    },
+    {
+      "name": "--blora-color-action-primary-default",
+      "path": "color.action.primary.default",
+      "type": "color",
+      "value": "{color.coral.primary}",
+      "description": "主操作色"
+    },
+    {
+      "name": "--blora-color-action-primary-hover",
+      "path": "color.action.primary.hover",
+      "type": "color",
+      "value": "{color.coral.primaryHover}",
+      "description": "主操作悬停"
+    },
+    {
+      "name": "--blora-color-action-primary-soft",
+      "path": "color.action.primary.soft",
+      "type": "color",
+      "value": "{color.coral.primarySoft}",
+      "description": "主操作弱化"
+    },
+    {
+      "name": "--blora-color-action-primary-tint",
+      "path": "color.action.primary.tint",
+      "type": "color",
+      "value": "color-mix(in srgb, {color.action.primary.default} 8%, transparent)",
+      "description": "选中/激活底色"
+    },
+    {
+      "name": "--blora-color-action-selection-bg",
+      "path": "color.action.selectionBg",
+      "type": "color",
+      "value": "color-mix(in srgb, {color.action.primary.default} 27%, {color.surface.canvas})",
+      "description": "文本选区背景：不透明淡色（主色混画布），字符重叠时不会因透明叠加而加深"
+    },
+    {
+      "name": "--blora-color-status-danger",
+      "path": "color.status.danger",
+      "type": "color",
+      "value": "{color.coral.danger}"
+    },
+    {
+      "name": "--blora-color-status-neutral",
+      "path": "color.status.neutral",
+      "type": "color",
+      "value": "{color.coral.accentNeutral}"
+    },
+    {
+      "name": "--blora-color-status-neutral-soft",
+      "path": "color.status.neutralSoft",
+      "type": "color",
+      "value": "{color.coral.accentNeutralSoft}"
+    },
+    {
+      "name": "--blora-color-status-info",
+      "path": "color.status.info",
+      "type": "color",
+      "value": "{color.coral.info}"
+    },
+    {
+      "name": "--blora-color-status-info-soft",
+      "path": "color.status.infoSoft",
+      "type": "color",
+      "value": "{color.coral.infoSoft}"
+    },
+    {
+      "name": "--blora-color-status-success",
+      "path": "color.status.success",
+      "type": "color",
+      "value": "{color.coral.success}"
+    },
+    {
+      "name": "--blora-color-status-success-soft",
+      "path": "color.status.successSoft",
+      "type": "color",
+      "value": "{color.coral.successSoft}"
+    },
+    {
+      "name": "--blora-color-status-support",
+      "path": "color.status.support",
+      "type": "color",
+      "value": "{color.coral.support}"
+    },
+    {
+      "name": "--blora-color-status-warning",
+      "path": "color.status.warning",
+      "type": "color",
+      "value": "{color.coral.warning}"
+    },
+    {
+      "name": "--blora-color-status-secondary",
+      "path": "color.status.secondary",
+      "type": "color",
+      "value": "{color.coral.accentSecondary}"
+    },
+    {
+      "name": "--blora-color-overlay-media",
+      "path": "color.overlay.media",
+      "type": "color",
+      "value": "{color.coral.mediaOverlay}"
+    },
+    {
+      "name": "--blora-color-overlay-media-strong",
+      "path": "color.overlay.mediaStrong",
+      "type": "color",
+      "value": "{color.coral.mediaOverlayStrong}"
+    },
+    {
+      "name": "--blora-color-overlay-media-indicator",
+      "path": "color.overlay.mediaIndicator",
+      "type": "color",
+      "value": "{color.coral.mediaIndicator}"
+    },
+    {
+      "name": "--blora-color-overlay-modal",
+      "path": "color.overlay.modal",
+      "type": "color",
+      "value": "{color.coral.overlayModal}"
+    },
+    {
+      "name": "--blora-color-overlay-drawer",
+      "path": "color.overlay.drawer",
+      "type": "color",
+      "value": "{color.coral.overlayDrawer}"
+    },
+    {
+      "name": "--blora-color-code-background",
+      "path": "color.code.background",
+      "type": "color",
+      "value": "color-mix(in srgb, {color.text.primary} 92%, {color.surface.canvas})"
+    },
+    {
+      "name": "--blora-color-code-foreground",
+      "path": "color.code.foreground",
+      "type": "color",
+      "value": "{color.coral.onAccent}"
+    },
+    {
+      "name": "--blora-color-banner-background",
+      "path": "color.banner.background",
+      "type": "color",
+      "value": "{color.coral.foreground}"
+    },
+    {
+      "name": "--blora-color-banner-foreground",
+      "path": "color.banner.foreground",
+      "type": "color",
+      "value": "{color.coral.onMedia}"
+    },
+    {
+      "name": "--blora-color-tooltip-background",
+      "path": "color.tooltip.background",
+      "type": "color",
+      "value": "{color.coral.textStrong}"
+    },
+    {
+      "name": "--blora-color-tooltip-foreground",
+      "path": "color.tooltip.foreground",
+      "type": "color",
+      "value": "{color.coral.onAccent}",
+      "description": "Tooltip bubble text on dark tooltip background"
+    },
+    {
+      "name": "--blora-color-brand-glyph",
+      "path": "color.brand.glyph",
+      "type": "color",
+      "value": "color-mix(in srgb, {color.text.onAccent} 88%, {color.action.primary.default})"
+    },
+    {
+      "name": "--blora-space-0",
+      "path": "space.0",
+      "type": "dimension",
+      "value": "0"
+    },
+    {
+      "name": "--blora-space-1",
+      "path": "space.1",
+      "type": "dimension",
+      "value": "0.25rem"
+    },
+    {
+      "name": "--blora-space-2",
+      "path": "space.2",
+      "type": "dimension",
+      "value": "0.5rem"
+    },
+    {
+      "name": "--blora-space-3",
+      "path": "space.3",
+      "type": "dimension",
+      "value": "0.75rem"
+    },
+    {
+      "name": "--blora-space-4",
+      "path": "space.4",
+      "type": "dimension",
+      "value": "1rem"
+    },
+    {
+      "name": "--blora-space-5",
+      "path": "space.5",
+      "type": "dimension",
+      "value": "1.5rem"
+    },
+    {
+      "name": "--blora-space-6",
+      "path": "space.6",
+      "type": "dimension",
+      "value": "2rem"
+    },
+    {
+      "name": "--blora-space-7",
+      "path": "space.7",
+      "type": "dimension",
+      "value": "2.5rem"
+    },
+    {
+      "name": "--blora-space-8",
+      "path": "space.8",
+      "type": "dimension",
+      "value": "3rem"
+    },
+    {
+      "name": "--blora-space-9",
+      "path": "space.9",
+      "type": "dimension",
+      "value": "4rem"
+    },
+    {
+      "name": "--blora-space-10",
+      "path": "space.10",
+      "type": "dimension",
+      "value": "5rem"
+    },
+    {
+      "name": "--blora-space-11",
+      "path": "space.11",
+      "type": "dimension",
+      "value": "6rem"
+    },
+    {
+      "name": "--blora-space-12",
+      "path": "space.12",
+      "type": "dimension",
+      "value": "8rem"
+    },
+    {
+      "name": "--blora-radius-xs",
+      "path": "radius.xs",
+      "type": "dimension",
+      "value": "6px"
+    },
+    {
+      "name": "--blora-radius-sm",
+      "path": "radius.sm",
+      "type": "dimension",
+      "value": "10px"
+    },
+    {
+      "name": "--blora-radius-md",
+      "path": "radius.md",
+      "type": "dimension",
+      "value": "14px"
+    },
+    {
+      "name": "--blora-radius-lg",
+      "path": "radius.lg",
+      "type": "dimension",
+      "value": "18px"
+    },
+    {
+      "name": "--blora-radius-xl",
+      "path": "radius.xl",
+      "type": "dimension",
+      "value": "26px"
+    },
+    {
+      "name": "--blora-radius-2xl",
+      "path": "radius.2xl",
+      "type": "dimension",
+      "value": "36px"
+    },
+    {
+      "name": "--blora-radius-full",
+      "path": "radius.full",
+      "type": "dimension",
+      "value": "9999px"
+    },
+    {
+      "name": "--blora-primitive-control-height",
+      "path": "primitive.control.height",
+      "type": "dimension",
+      "value": "2.75em"
+    },
+    {
+      "name": "--blora-primitive-control-pad-x",
+      "path": "primitive.control.padX",
+      "type": "dimension",
+      "value": "1em"
+    },
+    {
+      "name": "--blora-primitive-control-radius",
+      "path": "primitive.control.radius",
+      "type": "dimension",
+      "value": "{radius.full}"
+    },
+    {
+      "name": "--blora-primitive-range-track-size",
+      "path": "primitive.range.trackSize",
+      "type": "dimension",
+      "value": "4px"
+    },
+    {
+      "name": "--blora-primitive-range-thumb-size",
+      "path": "primitive.range.thumbSize",
+      "type": "dimension",
+      "value": "18px"
+    },
+    {
+      "name": "--blora-primitive-duration-fast",
+      "path": "primitive.duration.fast",
+      "type": "duration",
+      "value": "160ms"
+    },
+    {
+      "name": "--blora-primitive-duration-base",
+      "path": "primitive.duration.base",
+      "type": "duration",
+      "value": "260ms"
+    },
+    {
+      "name": "--blora-primitive-duration-slow",
+      "path": "primitive.duration.slow",
+      "type": "duration",
+      "value": "420ms"
+    },
+    {
+      "name": "--blora-primitive-duration-emphasis",
+      "path": "primitive.duration.emphasis",
+      "type": "duration",
+      "value": "700ms"
+    },
+    {
+      "name": "--blora-primitive-duration-tabs-fade",
+      "path": "primitive.duration.tabsFade",
+      "type": "duration",
+      "value": "240ms"
+    },
+    {
+      "name": "--blora-primitive-font-heading",
+      "path": "primitive.font.heading",
+      "type": "fontFamily",
+      "value": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Noto Sans SC\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif"
+    },
+    {
+      "name": "--blora-primitive-font-sans",
+      "path": "primitive.font.sans",
+      "type": "fontFamily",
+      "value": "system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Noto Sans SC\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif"
+    },
+    {
+      "name": "--blora-primitive-font-mono",
+      "path": "primitive.font.mono",
+      "type": "fontFamily",
+      "value": "\"JetBrains Mono\", \"Fira Code\", \"SF Mono\", Consolas, monospace"
+    },
+    {
+      "name": "--blora-shadow-1",
+      "path": "shadow.1",
+      "type": "shadow",
+      "value": "0 1px 3px rgba(29,27,32,0.05)"
+    },
+    {
+      "name": "--blora-shadow-2",
+      "path": "shadow.2",
+      "type": "shadow",
+      "value": "0 4px 12px rgba(29,27,32,0.07)"
+    },
+    {
+      "name": "--blora-shadow-3",
+      "path": "shadow.3",
+      "type": "shadow",
+      "value": "0 12px 30px rgba(29,27,32,0.1)"
+    },
+    {
+      "name": "--blora-shadow-4",
+      "path": "shadow.4",
+      "type": "shadow",
+      "value": "0 24px 56px rgba(29,27,32,0.14)"
+    },
+    {
+      "name": "--blora-shadow-inset",
+      "path": "shadow.inset",
+      "type": "shadow",
+      "value": "inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(28,26,23,0.04)"
+    },
+    {
+      "name": "--blora-shadow-primary",
+      "path": "shadow.primary",
+      "type": "shadow",
+      "value": "0 0 0 1px color-mix(in srgb, {color.action.primary.default} 18%, transparent), 0 2px 6px color-mix(in srgb, {color.action.primary.default} 15%, transparent)"
+    },
+    {
+      "name": "--blora-text-xs",
+      "path": "text.xs",
+      "type": "dimension",
+      "value": "0.75rem"
+    },
+    {
+      "name": "--blora-text-sm",
+      "path": "text.sm",
+      "type": "dimension",
+      "value": "0.875rem"
+    },
+    {
+      "name": "--blora-text-base",
+      "path": "text.base",
+      "type": "dimension",
+      "value": "1rem"
+    },
+    {
+      "name": "--blora-text-lg",
+      "path": "text.lg",
+      "type": "dimension",
+      "value": "1.125rem"
+    },
+    {
+      "name": "--blora-text-xl",
+      "path": "text.xl",
+      "type": "dimension",
+      "value": "1.375rem"
+    },
+    {
+      "name": "--blora-text-2xl",
+      "path": "text.2xl",
+      "type": "dimension",
+      "value": "1.75rem"
+    },
+    {
+      "name": "--blora-text-3xl",
+      "path": "text.3xl",
+      "type": "dimension",
+      "value": "2.25rem"
+    },
+    {
+      "name": "--blora-text-4xl",
+      "path": "text.4xl",
+      "type": "dimension",
+      "value": "3rem"
+    },
+    {
+      "name": "--blora-text-5xl",
+      "path": "text.5xl",
+      "type": "dimension",
+      "value": "4rem"
+    },
+    {
+      "name": "--blora-leading-tight",
+      "path": "leading.tight",
+      "type": "number",
+      "value": 1.25
+    },
+    {
+      "name": "--blora-leading-normal",
+      "path": "leading.normal",
+      "type": "number",
+      "value": 1.6
+    },
+    {
+      "name": "--blora-leading-loose",
+      "path": "leading.loose",
+      "type": "number",
+      "value": 1.85
+    },
+    {
+      "name": "--blora-tracking-tight",
+      "path": "tracking.tight",
+      "type": "dimension",
+      "value": "0"
+    },
+    {
+      "name": "--blora-tracking-normal",
+      "path": "tracking.normal",
+      "type": "dimension",
+      "value": "0"
+    },
+    {
+      "name": "--blora-tracking-wide",
+      "path": "tracking.wide",
+      "type": "dimension",
+      "value": "0.04em"
+    },
+    {
+      "name": "--blora-tracking-caps",
+      "path": "tracking.caps",
+      "type": "dimension",
+      "value": "0.18em"
+    },
+    {
+      "name": "--blora-focus-ring-width",
+      "path": "focusRing.width",
+      "type": "dimension",
+      "value": "2px"
+    },
+    {
+      "name": "--blora-focus-ring-width-strong",
+      "path": "focusRing.widthStrong",
+      "type": "dimension",
+      "value": "3px"
+    },
+    {
+      "name": "--blora-focus-ring-offset",
+      "path": "focusRing.offset",
+      "type": "dimension",
+      "value": "2px"
+    },
+    {
+      "name": "--blora-focus-ring-default",
+      "path": "focusRing.default",
+      "type": "shadow",
+      "value": "0 0 0 3px color-mix(in srgb, {color.action.primary.default} 12%, transparent)"
+    },
+    {
+      "name": "--blora-focus-ring-strong",
+      "path": "focusRing.strong",
+      "type": "shadow",
+      "value": "0 0 0 3px color-mix(in srgb, {color.action.primary.default} 18%, transparent)"
+    },
+    {
+      "name": "--blora-z-base",
+      "path": "z.base",
+      "type": "number",
+      "value": 1
+    },
+    {
+      "name": "--blora-z-sticky",
+      "path": "z.sticky",
+      "type": "number",
+      "value": 100
+    },
+    {
+      "name": "--blora-z-dropdown",
+      "path": "z.dropdown",
+      "type": "number",
+      "value": 1000
+    },
+    {
+      "name": "--blora-z-drawer",
+      "path": "z.drawer",
+      "type": "number",
+      "value": 1100
+    },
+    {
+      "name": "--blora-z-modal",
+      "path": "z.modal",
+      "type": "number",
+      "value": 1200
+    },
+    {
+      "name": "--blora-z-top",
+      "path": "z.top",
+      "type": "number",
+      "value": 1300
+    },
+    {
+      "name": "--blora-border-subtle",
+      "path": "border.subtle",
+      "type": "border",
+      "value": "1px solid var(--blora-color-border-subtle)"
+    },
+    {
+      "name": "--blora-border-strong",
+      "path": "border.strong",
+      "type": "border",
+      "value": "1px solid var(--blora-color-text-subtle)"
+    },
+    {
+      "name": "--blora-border-primary",
+      "path": "border.primary",
+      "type": "border",
+      "value": "1px solid var(--blora-color-action-primary-default)"
+    },
+    {
+      "name": "--blora-control-height",
+      "path": "control.height",
+      "type": "dimension",
+      "value": "{primitive.control.height}"
+    },
+    {
+      "name": "--blora-control-pad-x",
+      "path": "control.padX",
+      "type": "dimension",
+      "value": "{primitive.control.padX}"
+    },
+    {
+      "name": "--blora-control-radius",
+      "path": "control.radius",
+      "type": "dimension",
+      "value": "{primitive.control.radius}"
+    },
+    {
+      "name": "--blora-button-pad-y",
+      "path": "button.padY",
+      "type": "dimension",
+      "value": "0.75em"
+    },
+    {
+      "name": "--blora-button-pad-x",
+      "path": "button.padX",
+      "type": "dimension",
+      "value": "1.1em"
+    },
+    {
+      "name": "--blora-tabs-indicator-size",
+      "path": "tabs.indicatorSize",
+      "type": "dimension",
+      "value": "3px"
+    },
+    {
+      "name": "--blora-tabs-focus-inset",
+      "path": "tabs.focusInset",
+      "type": "dimension",
+      "value": "6px"
+    },
+    {
+      "name": "--blora-range-track-size",
+      "path": "range.trackSize",
+      "type": "dimension",
+      "value": "{primitive.range.trackSize}"
+    },
+    {
+      "name": "--blora-range-thumb-size",
+      "path": "range.thumbSize",
+      "type": "dimension",
+      "value": "{primitive.range.thumbSize}"
+    },
+    {
+      "name": "--blora-texture-background",
+      "path": "texture.background",
+      "type": "other",
+      "value": "none"
+    },
+    {
+      "name": "--blora-texture-overlay",
+      "path": "texture.overlay",
+      "type": "other",
+      "value": "none"
+    },
+    {
+      "name": "--blora-easing-standard",
+      "path": "easing.standard",
+      "type": "easing",
+      "value": "cubic-bezier(0.25, 0.8, 0.25, 1)"
+    },
+    {
+      "name": "--blora-easing-soft",
+      "path": "easing.soft",
+      "type": "easing",
+      "value": "cubic-bezier(0.4, 0, 0.2, 1)"
+    },
+    {
+      "name": "--blora-easing-overshoot",
+      "path": "easing.overshoot",
+      "type": "easing",
+      "value": "cubic-bezier(0.34, 1.56, 0.64, 1)"
+    },
+    {
+      "name": "--blora-duration-fast",
+      "path": "duration.fast",
+      "type": "duration",
+      "value": "{primitive.duration.fast}"
+    },
+    {
+      "name": "--blora-duration-base",
+      "path": "duration.base",
+      "type": "duration",
+      "value": "{primitive.duration.base}"
+    },
+    {
+      "name": "--blora-duration-slow",
+      "path": "duration.slow",
+      "type": "duration",
+      "value": "{primitive.duration.slow}"
+    },
+    {
+      "name": "--blora-duration-emphasis",
+      "path": "duration.emphasis",
+      "type": "duration",
+      "value": "{primitive.duration.emphasis}"
+    },
+    {
+      "name": "--blora-duration-tabs-fade",
+      "path": "duration.tabsFade",
+      "type": "duration",
+      "value": "{primitive.duration.tabsFade}"
+    },
+    {
+      "name": "--blora-ease",
+      "path": "ease",
+      "type": "easing",
+      "value": "{easing.standard}"
+    },
+    {
+      "name": "--blora-ease-soft",
+      "path": "easeSoft",
+      "type": "easing",
+      "value": "{easing.soft}"
+    },
+    {
+      "name": "--blora-ease-overshoot",
+      "path": "easeOvershoot",
+      "type": "easing",
+      "value": "{easing.overshoot}"
+    },
+    {
+      "name": "--blora-dur-fast",
+      "path": "dur.fast",
+      "type": "duration",
+      "value": "{duration.fast}"
+    },
+    {
+      "name": "--blora-dur-base",
+      "path": "dur.base",
+      "type": "duration",
+      "value": "{duration.base}"
+    },
+    {
+      "name": "--blora-dur-slow",
+      "path": "dur.slow",
+      "type": "duration",
+      "value": "{duration.slow}"
+    },
+    {
+      "name": "--blora-dur-emphasis",
+      "path": "dur.emphasis",
+      "type": "duration",
+      "value": "{duration.emphasis}"
+    },
+    {
+      "name": "--blora-font-heading",
+      "path": "font.heading",
+      "type": "fontFamily",
+      "value": "{primitive.font.heading}"
+    },
+    {
+      "name": "--blora-font-sans",
+      "path": "font.sans",
+      "type": "fontFamily",
+      "value": "{primitive.font.sans}"
+    },
+    {
+      "name": "--blora-font-mono",
+      "path": "font.mono",
+      "type": "fontFamily",
+      "value": "{primitive.font.mono}"
+    }
+  ],
+  "darkOverrides": [
+    {
+      "name": "--blora-color-surface-canvas",
+      "path": "color.surface.canvas",
+      "type": "color",
+      "value": "#17161C"
+    },
+    {
+      "name": "--blora-color-surface-default",
+      "path": "color.surface.default",
+      "type": "color",
+      "value": "#222128"
+    },
+    {
+      "name": "--blora-color-surface-raised",
+      "path": "color.surface.raised",
+      "type": "color",
+      "value": "#2C2931"
+    },
+    {
+      "name": "--blora-color-surface-sunken",
+      "path": "color.surface.sunken",
+      "type": "color",
+      "value": "#3A363F"
+    },
+    {
+      "name": "--blora-color-text-primary",
+      "path": "color.text.primary",
+      "type": "color",
+      "value": "#F8F2F4"
+    },
+    {
+      "name": "--blora-color-text-secondary",
+      "path": "color.text.secondary",
+      "type": "color",
+      "value": "#ECE5E8"
+    },
+    {
+      "name": "--blora-color-text-emphasis",
+      "path": "color.text.emphasis",
+      "type": "color",
+      "value": "#CDC3C8"
+    },
+    {
+      "name": "--blora-color-text-muted",
+      "path": "color.text.muted",
+      "type": "color",
+      "value": "#A1979D"
+    },
+    {
+      "name": "--blora-color-text-subtle",
+      "path": "color.text.subtle",
+      "type": "color",
+      "value": "#786F75"
+    },
+    {
+      "name": "--blora-color-text-disabled",
+      "path": "color.text.disabled",
+      "type": "color",
+      "value": "#5A5358"
+    },
+    {
+      "name": "--blora-color-text-on-accent",
+      "path": "color.text.onAccent",
+      "type": "color",
+      "value": "#25181C"
+    },
+    {
+      "name": "--blora-color-text-on-media",
+      "path": "color.text.onMedia",
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "--blora-color-border-subtle",
+      "path": "color.border.subtle",
+      "type": "color",
+      "value": "#413C41"
+    },
+    {
+      "name": "--blora-color-action-primary-default",
+      "path": "color.action.primary.default",
+      "type": "color",
+      "value": "#D18A94"
+    },
+    {
+      "name": "--blora-color-action-primary-hover",
+      "path": "color.action.primary.hover",
+      "type": "color",
+      "value": "#E0A3AB"
+    },
+    {
+      "name": "--blora-color-action-primary-soft",
+      "path": "color.action.primary.soft",
+      "type": "color",
+      "value": "#B36F79"
+    },
+    {
+      "name": "--blora-color-action-selection-bg",
+      "path": "color.action.selectionBg",
+      "type": "color",
+      "value": "color-mix(in srgb, {color.action.primary.default} 27%, {color.surface.canvas})"
+    },
+    {
+      "name": "--blora-color-status-danger",
+      "path": "color.status.danger",
+      "type": "color",
+      "value": "#D27779"
+    },
+    {
+      "name": "--blora-color-status-neutral",
+      "path": "color.status.neutral",
+      "type": "color",
+      "value": "#99939E"
+    },
+    {
+      "name": "--blora-color-status-neutral-soft",
+      "path": "color.status.neutralSoft",
+      "type": "color",
+      "value": "#B5B0B9"
+    },
+    {
+      "name": "--blora-color-status-info",
+      "path": "color.status.info",
+      "type": "color",
+      "value": "#919AB4"
+    },
+    {
+      "name": "--blora-color-status-info-soft",
+      "path": "color.status.infoSoft",
+      "type": "color",
+      "value": "#ADB3C7"
+    },
+    {
+      "name": "--blora-color-status-success",
+      "path": "color.status.success",
+      "type": "color",
+      "value": "#86A399"
+    },
+    {
+      "name": "--blora-color-status-success-soft",
+      "path": "color.status.successSoft",
+      "type": "color",
+      "value": "#A3B8B0"
+    },
+    {
+      "name": "--blora-color-status-support",
+      "path": "color.status.support",
+      "type": "color",
+      "value": "#91A3A0"
+    },
+    {
+      "name": "--blora-color-status-warning",
+      "path": "color.status.warning",
+      "type": "color",
+      "value": "#BBA27B"
+    },
+    {
+      "name": "--blora-color-status-secondary",
+      "path": "color.status.secondary",
+      "type": "color",
+      "value": "#B08A9A"
+    },
+    {
+      "name": "--blora-color-overlay-modal",
+      "path": "color.overlay.modal",
+      "type": "color",
+      "value": "rgba(7,6,10,0.72)"
+    },
+    {
+      "name": "--blora-color-overlay-drawer",
+      "path": "color.overlay.drawer",
+      "type": "color",
+      "value": "rgba(7,6,10,0.66)"
+    },
+    {
+      "name": "--blora-color-code-background",
+      "path": "color.code.background",
+      "type": "color",
+      "value": "#0E0D12"
+    },
+    {
+      "name": "--blora-color-code-foreground",
+      "path": "color.code.foreground",
+      "type": "color",
+      "value": "#F8F2F4"
+    },
+    {
+      "name": "--blora-color-banner-background",
+      "path": "color.banner.background",
+      "type": "color",
+      "value": "#1D191E"
+    },
+    {
+      "name": "--blora-color-banner-foreground",
+      "path": "color.banner.foreground",
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "--blora-color-tooltip-background",
+      "path": "color.tooltip.background",
+      "type": "color",
+      "value": "#2C2931"
+    },
+    {
+      "name": "--blora-color-tooltip-foreground",
+      "path": "color.tooltip.foreground",
+      "type": "color",
+      "value": "#F8F2F4"
+    },
+    {
+      "name": "--blora-shadow-1",
+      "path": "shadow.1",
+      "type": "shadow",
+      "value": "0 1px 3px rgba(0,0,0,0.3)"
+    },
+    {
+      "name": "--blora-shadow-2",
+      "path": "shadow.2",
+      "type": "shadow",
+      "value": "0 4px 12px rgba(0,0,0,0.36)"
+    },
+    {
+      "name": "--blora-shadow-3",
+      "path": "shadow.3",
+      "type": "shadow",
+      "value": "0 12px 30px rgba(0,0,0,0.44)"
+    },
+    {
+      "name": "--blora-shadow-4",
+      "path": "shadow.4",
+      "type": "shadow",
+      "value": "0 24px 56px rgba(0,0,0,0.54)"
+    },
+    {
+      "name": "--blora-shadow-inset",
+      "path": "shadow.inset",
+      "type": "shadow",
+      "value": "inset 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.3)"
+    },
+    {
+      "name": "--blora-texture-background",
+      "path": "texture.background",
+      "type": "other",
+      "value": "radial-gradient(ellipse at 20% 30%, rgba(255,255,255,0.012) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(255,255,255,0.008) 0%, transparent 55%)"
+    },
+    {
+      "name": "--blora-texture-overlay",
+      "path": "texture.overlay",
+      "type": "other",
+      "value": "none"
+    }
+  ]
+}

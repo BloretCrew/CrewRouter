@@ -3,46 +3,6 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function requestBloraValue(label, value = '') {
-  const field = document.createElement('blora-field');
-  field.setAttribute('label', label);
-  const input = document.createElement('input');
-  input.className = 'blora-input';
-  input.value = String(value);
-  field.appendChild(input);
-  const modal = Dialog.showModal({
-    title: escapeHtml(label),
-    content: '',
-    footer: `<button type="button" class="blora-button" data-variant="outline" data-value-cancel>${t('取消')}</button><button type="button" class="blora-button" data-variant="primary" data-value-save>${t('确认')}</button>`,
-    width: 420,
-  });
-  modal.element.appendChild(field);
-  modal.element.addEventListener('click', (event) => {
-    if (event.target.closest('[data-value-cancel]')) modal.close(null);
-    if (event.target.closest('[data-value-save]')) modal.close(input.value);
-  });
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') { event.preventDefault(); modal.close(input.value); }
-  });
-  customElements.whenDefined('blora-field').then(() => input.focus());
-  return modal.promise.then((result) => result === false ? null : result);
-}
-
-(function installFieldTranslations() {
-  if (!window.I18N || I18N.applyDom.crewrouterFields) return;
-  const applyDom = I18N.applyDom;
-  const translate = function (root = document) {
-    applyDom.call(this, root);
-    root.querySelectorAll('blora-field[data-field-label]').forEach((field) => {
-      field.setAttribute('label', this.t(field.dataset.fieldLabel));
-    });
-  };
-  translate.crewrouterFields = true;
-  I18N.applyDom = translate;
-  I18N.applyDom();
-})();
-
-
 function formatDisplayName(format) {
   switch (format) {
     case 'openai': return 'Chat Completions';
@@ -103,7 +63,11 @@ class AdminApp {
     this.teamPage = 0;
     this.teamPageSize = 50;
     this._teamsData = [];
+    this.userGroupPage = 0;
+    this.userGroupPageSize = 50;
+    this._userGroupsData = [];
     this.teamMemberPage = 0;
+    this.userGroupMemberPage = 0;
     this.memberPageSize = 50;
     this.teamModelPage = 0;
     this.teamModelPageSize = 50;
@@ -114,6 +78,7 @@ class AdminApp {
     this.modelStatsPage = 0;
     this.providerStatsPage = 0;
     this.statsTablePageSize = 50;
+    this._pendingFetchedModelsRaf = null;
     this._updateInfo = null;
     this._updatePollTimer = null;
     this._adminModelsStickyObserver = null;
@@ -200,9 +165,8 @@ class AdminApp {
     // 从 URL hash 恢复页面（刷新后保持原位置）
     const restored = this._parseAdminHash(location.hash);
     const teamPages = new Set(['adminTeams', 'adminUserGroups', 'adminAuditLogs']);
-    const normalizedRestoredPage = restored.page === 'adminUserGroups' ? 'adminTeams' : restored.page;
-    const safePage = teamPages.has(restored.page) && this._instance?.capabilities?.teamMembers === false
-      ? 'adminStats' : normalizedRestoredPage;
+    const safePage = teamPages.has(restored.page) && this._instance?.capabilities?.teamAdmin === false
+      ? 'adminStats' : restored.page;
     if (safePage !== restored.page) this._writeAdminHash(safePage, { replaceHash: true });
     const startPage = safePage || 'adminStats';
     await this.navigateTo(startPage, {
@@ -233,7 +197,12 @@ class AdminApp {
 
   /** 支持的管理后台页面 id */
   _adminPageIds() {
-    return new Set(Array.from(document.querySelectorAll('.page[id$="Page"]'), (page) => page.id.slice(0, -4)));
+    return new Set([
+      'adminStats', 'adminUsers', 'adminModels', 'adminProviders',
+      'adminSettings', 'adminTeams', 'adminUserGroups',
+      'adminErrorLogs',
+      'adminAuditLogs'
+    ]);
   }
 
   /**
@@ -247,7 +216,7 @@ class AdminApp {
     let page = pagePart || null;
     if (page === 'adminDashboard') page = 'adminStats';
     if (page && !this._adminPageIds().has(page)) page = null;
-    const teamId = ((page === 'adminTeams' || page === 'adminUserGroups') && extra && /^\d+$/.test(extra))
+    const teamId = (page === 'adminTeams' && extra && /^\d+$/.test(extra))
       ? parseInt(extra, 10)
       : null;
     return { page, teamId };
@@ -307,7 +276,7 @@ class AdminApp {
   updateUserInfo() {
     const usernameEl = document.getElementById('username');
     const avatarEl = document.getElementById('userAvatar');
-
+    
     if (usernameEl) usernameEl.textContent = this.user.username;
     if (avatarEl) {
       avatarEl.src = this.user.avatar || '';
@@ -460,12 +429,12 @@ class AdminApp {
         const val = modelListInput.value.trim();
         if (!val) return;
         if (val === 'fusion') {
-          Dialog.alert(t('fusion 是固定模型，无需添加'));
+          alert(t('fusion 是固定模型，无需添加'));
           return;
         }
         if (!this._modelList) this._modelList = [];
         if (this._modelList.includes(val)) {
-          Dialog.alert(t('该模型 ID 已存在'));
+          alert(t('该模型 ID 已存在'));
           return;
         }
         this._modelList.push(val);
@@ -492,7 +461,7 @@ class AdminApp {
     }
 
     // 计费模式切换：显示/隐藏每次请求价格
-    document.querySelectorAll('blora-radio[name="billingMode"]').forEach(radio => {
+    document.querySelectorAll('input[name="billingMode"]').forEach(radio => {
       radio.addEventListener('change', () => {
         document.getElementById('ratePriceGroup').style.display = radio.value === 'rate' && radio.checked ? '' : 'none';
       });
@@ -578,6 +547,7 @@ class AdminApp {
       'adminErrorLogs': t('调用错误'),
       'adminSettings': t('系统设置'),
       'adminTeams': t('Team 管理'),
+      'adminUserGroups': t('用户组管理'),
       'adminAuditLogs': t('操作日志'),
       'adminPrompts': t('提示词'),
       'adminPlugins': t('插件管理')
@@ -716,8 +686,7 @@ class AdminApp {
         }
         break;
       case 'adminUserGroups':
-        this._writeAdminHash('adminTeams', { replaceHash: true });
-        await this.navigateTo('adminTeams', { skipHash: true });
+        await this.loadUserGroups();
         break;
       case 'adminErrorLogs':
         await this.loadErrorLogs(1);
@@ -761,40 +730,40 @@ class AdminApp {
       const statsContainer = document.getElementById('userStatsCards');
       if (statsContainer) {
         setHTML(statsContainer, `
-          <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-            <div class="cr-admin-stat-icon">
-              <span class="app-icon" style="width:20px;height:20px;" data-icon="users" aria-hidden="true"></span>
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-icon blue">
+              <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="person.2">
             </div>
-            <div class="blora-stat">
-              <span class="blora-stat__value">${totalUsers}</span>
-              <span class="blora-stat__label">总用户数</span>
-            </div>
-          </div>
-          <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-            <div class="cr-admin-stat-icon">
-              <span class="app-icon" style="width:20px;height:20px;" data-icon="shield" aria-hidden="true"></span>
-            </div>
-            <div class="blora-stat">
-              <span class="blora-stat__value">${adminCount}</span>
-              <span class="blora-stat__label">管理员</span>
+            <div class="admin-stat-card-info">
+              <span class="admin-stat-card-value">${totalUsers}</span>
+              <span class="admin-stat-card-label">总用户数</span>
             </div>
           </div>
-          <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-            <div class="cr-admin-stat-icon">
-              <span class="app-icon" style="width:20px;height:20px;" data-icon="badge-check" aria-hidden="true"></span>
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-icon purple">
+              <img src="https://img.bloret.net/SF/shield?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="shield">
             </div>
-            <div class="blora-stat">
-              <span class="blora-stat__value">${verifiedCount}</span>
-              <span class="blora-stat__label">已验证</span>
+            <div class="admin-stat-card-info">
+              <span class="admin-stat-card-value">${adminCount}</span>
+              <span class="admin-stat-card-label">管理员</span>
             </div>
           </div>
-          <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-            <div class="cr-admin-stat-icon">
-              <span class="app-icon" style="width:20px;height:20px;" data-icon="circle-plus" aria-hidden="true"></span>
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-icon green">
+              <img src="https://img.bloret.net/SF/checkmark.seal?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="checkmark.seal">
             </div>
-            <div class="blora-stat">
-              <span class="blora-stat__value">${Number(totalBalance).toFixed(0)}</span>
-              <span class="blora-stat__label">总积分</span>
+            <div class="admin-stat-card-info">
+              <span class="admin-stat-card-value">${verifiedCount}</span>
+              <span class="admin-stat-card-label">已验证</span>
+            </div>
+          </div>
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-icon amber">
+              <img src="https://img.bloret.net/SF/plus.circle?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="plus.circle">
+            </div>
+            <div class="admin-stat-card-info">
+              <span class="admin-stat-card-value">${Number(totalBalance).toFixed(0)}</span>
+              <span class="admin-stat-card-label">总积分</span>
             </div>
           </div>
         `);
@@ -803,7 +772,7 @@ class AdminApp {
       this._renderUsersTable();
     } catch (error) {
       console.error(t('加载用户列表失败:'), error);
-      setHTML(document.getElementById('usersList'), `<p style="text-align:center;padding:20px;">${escapeHtml(error.message || t('加载用户列表失败'))}</p>`);
+      setHTML(document.getElementById('usersList'), `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载用户列表失败'))}</p>`);
     }
   }
 
@@ -824,7 +793,7 @@ class AdminApp {
       const rows = await this._inviteRequest('/api/auth-invites');
       this._renderInviteList(Array.isArray(rows) ? rows : []);
     } catch (error) {
-      list.innerHTML = `<p >${escapeHtml(error.message || t('加载邀请链接失败'))}</p>`;
+      list.innerHTML = `<p style="color:var(--destructive);">${escapeHtml(error.message || t('加载邀请链接失败'))}</p>`;
     }
   }
 
@@ -832,16 +801,16 @@ class AdminApp {
     const list = document.getElementById('inviteList');
     if (!list) return;
     if (!rows.length) {
-      list.innerHTML = `<blora-empty title="暂无邀请链接"></blora-empty>`;
+      list.innerHTML = `<p style="color:var(--muted-foreground);padding:24px;text-align:center;">暂无邀请链接</p>`;
       return;
     }
     const statusLabel = { active: '有效', used: '已用完', expired: '已过期' };
     const fmt = (value) => value ? new Date(value).toLocaleString() : '-';
-    list.innerHTML = `<table class="blora-table"><thead><tr><th>ID</th><th>状态</th><th>使用人数</th><th>有效期</th><th>Team</th><th>创建人</th><th>创建时间</th><th>最近使用</th><th>操作</th></tr></thead><tbody>${rows.map((row) => {
+    list.innerHTML = `<table><thead><tr><th>ID</th><th>状态</th><th>使用人数</th><th>有效期</th><th>Team</th><th>用户组</th><th>创建人</th><th>创建时间</th><th>最近使用</th><th>操作</th></tr></thead><tbody>${rows.map((row) => {
       const status = statusLabel[row.status] || row.status;
       const actions = [
-        this._inviteUrlMap?.[row.id] ? `<button class="blora-button" type="button" onclick="adminApp.copyInviteUrl(${row.id})" data-variant="outline" data-size="sm">复制链接</button>` : '',
-        row.status === 'active' ? `<button class="blora-button" type="button" onclick="adminApp.revokeInvite(${row.id})" data-variant="outline" data-size="sm">撤销</button>` : '',
+        this._inviteUrlMap?.[row.id] ? `<button class="blora-button" type="button" onclick="adminApp.copyInviteUrl(${row.id})" data-variant="secondary" data-size="sm">复制链接</button>` : '',
+        row.status === 'active' ? `<button class="blora-button" type="button" onclick="adminApp.revokeInvite(${row.id})" data-variant="secondary" data-size="sm">撤销</button>` : '',
       ].filter(Boolean).join(' ');
       return `<tr>
         <td>#${row.id}</td>
@@ -849,6 +818,7 @@ class AdminApp {
         <td>${Number(row.used_count || 0)} / ${Number(row.max_uses || 1)}</td>
         <td>${fmt(row.expires_at)}</td>
         <td>${escapeHtml(row.team_name || '未指定')}</td>
+        <td>${escapeHtml(row.group_name || '未指定')}</td>
         <td>${escapeHtml(row.created_by_name || '-')}</td>
         <td>${fmt(row.created_at)}</td>
         <td>${fmt(row.used_at)}</td>
@@ -859,14 +829,19 @@ class AdminApp {
 
   async openInviteDialog() {
     const instance = this._instance || await window.CrewRouterEditionBadge?.load?.();
-    if (instance?.capabilities?.teamMembers === false) return;
-    const teams = await fetch('/api/admin/teams').then((r) => r.ok ? r.json() : []).catch(() => []);
+    if (instance?.capabilities?.teamAdmin === false) return;
+    const [teams, groups] = await Promise.all([
+      fetch('/api/admin/teams').then((r) => r.ok ? r.json() : []).catch(() => []),
+      fetch('/api/admin/user-groups').then((r) => r.ok ? r.json() : []).catch(() => []),
+    ]);
     const teamOptions = (Array.isArray(teams) ? teams : []).map((t) => `<blora-option value="${t.id}">${escapeHtml(t.name)}</blora-option>`).join('');
+    const groupOptions = (Array.isArray(groups) ? groups : []).map((g) => `<blora-option value="${g.id}">${escapeHtml(g.name)}</blora-option>`).join('');
     const content = `
       <div class="setup-form" style="display:grid;gap:12px;">
-        <blora-field class="cr-admin-field" label="使用人数" data-field-label="使用人数" required><input id="inviteMaxUses" class="blora-input" type="number" min="1" max="10000" value="1" required></blora-field>
-        <blora-field class="cr-admin-field" label="有效天数" data-field-label="有效天数" required><input id="inviteDays" class="blora-input" type="number" min="1" max="365" value="7" required></blora-field>
-        <div class="blora-stack blora-stack--sm"><span class="blora-text-muted">加入 Team</span><blora-select id="inviteTeamId" aria-label="加入 Team"><blora-option value="">不指定</blora-option>${teamOptions}</blora-select></div>
+        <div class="form-group"><label>使用人数 *</label><input id="inviteMaxUses" class="input" type="number" min="1" max="10000" value="1" required></div>
+        <div class="form-group"><label>有效天数 *</label><input id="inviteDays" class="input" type="number" min="1" max="365" value="7" required></div>
+        <div class="form-group"><label>加入 Team</label><blora-select id="inviteTeamId" class="input"><blora-option value="">不指定</blora-option>${teamOptions}</blora-select></div>
+        <div class="form-group"><label>加入用户组</label><blora-select id="inviteGroupId" class="input"><blora-option value="">不指定</blora-option>${groupOptions}</blora-select></div>
       </div>`;
     const footer = `<button type="button" class="blora-button" data-variant="primary" id="inviteGenerateBtn">生成</button>`;
     const modal = Dialog.showModal({ title: '生成邀请链接', content, footer, width: 480 });
@@ -880,6 +855,7 @@ class AdminApp {
           maxUses,
           days,
           teamId: document.getElementById('inviteTeamId')?.value || '',
+          groupId: document.getElementById('inviteGroupId')?.value || '',
         };
         const data = await this._inviteRequest('/api/auth-invites', {
           method: 'POST',
@@ -890,12 +866,12 @@ class AdminApp {
         if (data.id && data.url) this._inviteUrlMap[data.id] = data.url;
         if (navigator.clipboard?.writeText && data.url) await navigator.clipboard.writeText(data.url);
         const result = document.getElementById('inviteResult');
-        if (result) result.innerHTML = `<div><strong>最新邀请链接</strong></div><div>${escapeHtml(data.url || '')}</div><div style="margin-top:6px;">人数 ${data.max_uses} · ${days} 天 · 有效期至 ${new Date(data.expires_at).toLocaleString()}</div>`;
+        if (result) result.innerHTML = `<div><strong>最新邀请链接</strong></div><div>${escapeHtml(data.url || '')}</div><div style="margin-top:6px;color:var(--muted-foreground);font-size:12px;">人数 ${data.max_uses} · ${days} 天 · 有效期至 ${new Date(data.expires_at).toLocaleString()}</div>`;
         modal?.close?.();
-        Dialog.alert(`邀请链接已生成并复制：\n\n${data.url}\n使用人数：${data.max_uses}\n有效天数：${days}\n有效期至：${new Date(data.expires_at).toLocaleString()}`);
+        alert(`邀请链接已生成并复制：\n\n${data.url}\n使用人数：${data.max_uses}\n有效天数：${days}\n有效期至：${new Date(data.expires_at).toLocaleString()}`);
         await this.loadInvites();
       } catch (err) {
-        Dialog.alert(err.message || '生成邀请链接失败');
+        alert(err.message || '生成邀请链接失败');
       }
     });
   }
@@ -903,11 +879,11 @@ class AdminApp {
   copyInviteUrl(id) {
     const url = this._inviteUrlMap?.[id];
     if (!url) {
-      Dialog.alert('完整链接仅在本次生成后可复制，请重新生成。');
+      alert('完整链接仅在本次生成后可复制，请重新生成。');
       return;
     }
     if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).catch(() => {});
-    Dialog.alert(url);
+    alert(url);
   }
 
   async revokeInvite(id) {
@@ -915,7 +891,7 @@ class AdminApp {
       await this._inviteRequest(`/api/auth-invites/${id}/revoke`, { method: 'POST' });
       await this.loadInvites();
     } catch (error) {
-      Dialog.alert(error.message || '撤销邀请失败');
+      alert(error.message || '撤销邀请失败');
     }
   }
 
@@ -927,11 +903,11 @@ class AdminApp {
     if (this.userPage >= totalPages) this.userPage = Math.max(0, totalPages - 1);
 
     if (users.length === 0) {
-      setHTML(container, '<blora-empty title="' + t('未找到匹配的用户') + '"></blora-empty>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('未找到匹配的用户') + '</p>');
       return;
     }
     setHTML(container, `
-      <table class="blora-table">
+      <table>
         <thead>
           <tr>
             <th>用户名</th>
@@ -948,15 +924,15 @@ class AdminApp {
           ${users.map(user => `
             <tr>
               <td><strong>${escapeHtml(user.username)}</strong></td>
-              <td >${escapeHtml(user.email) || '-'}</td>
-              <td>${user.email_verified ? '<span >' + t('已验证') + '</span>' : '<span >' + t('未验证') + '</span>'}</td>
-              <td >${parseFloat(user.balance || 0).toFixed(0)}</td>
-              <td>${user.is_admin ? '<span class="blora-badge" data-variant="info">' + t('管理员') + '</span>' : '<span >' + t('普通用户') + '</span>'}</td>
-              <td >${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
-              <td >${new Date(user.created_at).toLocaleDateString('zh-CN')}</td>
+              <td style="color:var(--muted-foreground);font-size:12px;">${escapeHtml(user.email) || '-'}</td>
+              <td>${user.email_verified ? '<span style="color:var(--status-success);font-size:12px;">' + t('✓ 已验证') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('✗ 未验证') + '</span>'}</td>
+              <td style="font-variant-numeric:tabular-nums;">${parseFloat(user.balance || 0).toFixed(0)}</td>
+              <td>${user.is_admin ? '<span class="blora-badge" data-variant="info">' + t('管理员') + '</span>' : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('普通用户') + '</span>'}</td>
+              <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
+              <td style="color:var(--muted-foreground);font-size:12px;">${new Date(user.created_at).toLocaleDateString('zh-CN')}</td>
               <td>
-                <button type="button" class="blora-button" title="${t('编辑')}" aria-label="${t('编辑')}" onclick="adminApp.editUserById(${user.id})" data-variant="outline" data-size="icon">
-                  <span class="app-icon" style="width:16px;height:16px;" data-icon="pencil" aria-hidden="true"></span>
+                <button class="blora-button" title="${t('编辑')}" aria-label="${t('编辑')}" onclick="adminApp.editUserById(${user.id})" data-variant="secondary" data-size="icon">
+                  <img src="https://img.bloret.net/SF/pencil?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="pencil">
                 </button>
               </td>
             </tr>
@@ -994,7 +970,7 @@ class AdminApp {
 
   editUserById(userId) {
     const user = (this._usersData || []).find(u => u.id === userId);
-    if (!user) { Dialog.alert(t('用户不存在，请刷新后重试')); return; }
+    if (!user) { alert(t('用户不存在，请刷新后重试')); return; }
     this.editUser(user);
   }
 
@@ -1008,20 +984,22 @@ class AdminApp {
     document.getElementById('editUserRateLimitRpm').value = user.rate_limit_rpm || 0;
     document.getElementById('editUserRateLimitTpm').value = user.rate_limit_tpm || 0;
 
-    this.loadTeamsForUserSelect(user.team_id);
+    // 加载用户组列表
+    this.loadUserGroupsForSelect(user.group_id);
+
     this.showModal('editUserModal');
   }
 
-  async loadTeamsForUserSelect(selectedTeamId) {
+  async loadUserGroupsForSelect(selectedGroupId) {
     try {
-      const response = await fetch('/api/admin/teams');
+      const response = await fetch('/api/admin/user-groups');
       if (!response.ok) return;
-      const teams = await response.json();
-      const select = document.getElementById('editUserTeam');
-      setHTML(select, '<blora-option value="">' + t('无 Team') + '</blora-option>' +
-        teams.map(team => `<blora-option value="${team.id}" ${team.id === selectedTeamId ? 'selected' : ''}>${escapeHtml(team.name)}</blora-option>`).join(''));
+      const groups = await response.json();
+      const select = document.getElementById('editUserGroup');
+      setHTML(select, '<blora-option value="">' + t('无用户组') + '</blora-option>' +
+        groups.map(g => `<blora-option value="${g.id}" ${g.id === selectedGroupId ? 'selected' : ''}>${escapeHtml(g.name)}</blora-option>`).join(''));
     } catch (error) {
-      console.error(t('加载 Team 列表失败:'), error);
+      console.error(t('加载用户组列表失败:'), error);
     }
   }
 
@@ -1031,60 +1009,60 @@ class AdminApp {
       const response = await fetch(`/api/admin/users/${userId}/code-balances`);
       if (!response.ok) throw new Error(t('加载失败'));
       const balances = await response.json();
-
+      
       if (balances.length === 0) {
-        setHTML(container, '<span >' + t('无可退款余额') + '</span>');
+        setHTML(container, '<span style="color:var(--muted-foreground)">' + t('无可退款余额') + '</span>');
         return;
       }
-
+      
       setHTML(container, balances.map(b => {
         const feePercent = (parseFloat(b.fee_rate) * 100).toFixed(0);
         const feeLabel = parseFloat(b.fee_rate) > 0 ? `${t('(费率')}${feePercent}%)` : '';
         const netAmount = parseFloat(b.net_amount || 0).toFixed(2);
-        return `<div style="display:flex;justify-content:space-between;padding:4px 0;">
-          <span><code >${b.code}</code>${feeLabel}</span>
-          <span >¥${netAmount}</span>
+        return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
+          <span><code style="font-size:11px;">${b.code}</code>${feeLabel}</span>
+          <span style="font-weight:600;">¥${netAmount}</span>
         </div>`;
       }).join(''));
     } catch (error) {
-      setHTML(container, '<blora-alert variant="danger" title="' + t('加载失败') + '"></blora-alert>');
+      setHTML(container, '<span style="color:var(--destructive)">' + t('加载失败') + '</span>');
     }
   }
 
   async refundUser() {
     const userId = document.getElementById('editUserId').value;
     const refundAmount = parseFloat(document.getElementById('editUserRefundAmount').value);
-
+    
     if (isNaN(refundAmount) || refundAmount <= 0) {
-      Dialog.alert(t('请输入有效的退款金额'));
+      alert(t('请输入有效的退款金额'));
       return;
     }
-
-    if (!await Dialog.confirm(t('确认'), `${t('确认为该用户退款 ¥')}${refundAmount.toFixed(2)}${t('？系统将按手续费从高到低扣除。')}`)) {
+    
+    if (!await confirm(`${t('确认为该用户退款 ¥')}${refundAmount.toFixed(2)}${t('？系统将按手续费从高到低扣除。')}`)) {
       return;
     }
-
+    
     try {
       const response = await fetch(`/api/admin/users/${userId}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refundAmount })
       });
-
+      
       const result = await response.json();
-
+      
       if (response.ok && result.success) {
-        Dialog.alert(`${t('退款成功！实际扣除 ¥')}${result.deductions.reduce((s, d) => s + d.deducted, 0).toFixed(2)}${t('，新可退款余额 ¥')}${result.newRefundBalance.toFixed(2)}`);
+        alert(`${t('退款成功！实际扣除 ¥')}${result.deductions.reduce((s, d) => s + d.deducted, 0).toFixed(2)}${t('，新可退款余额 ¥')}${result.newRefundBalance.toFixed(2)}`);
         document.getElementById('editUserRefundAmount').value = '';
         document.getElementById('refundPreview').textContent = '';
         this.loadUserCodeBalances(userId);
         this.loadUsers();
       } else {
-        Dialog.alert(result.error || t('退款失败'));
+        alert(result.error || t('退款失败'));
       }
     } catch (error) {
       console.error(t('退款失败:'), error);
-      Dialog.alert(t('退款失败'));
+      alert(t('退款失败'));
     }
   }
 
@@ -1094,7 +1072,7 @@ class AdminApp {
     const email_verified = document.getElementById('editUserEmailVerified').value === 'true';
     const isAdmin = document.getElementById('editUserAdmin').value === 'true';
     const balance = parseFloat(document.getElementById('editUserBalance').value);
-    const team_id = document.getElementById('editUserTeam').value || null;
+    const group_id = document.getElementById('editUserGroup').value || null;
     const tagsStr = document.getElementById('editUserTags').value;
     const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()) : [];
     const rate_limit_rpm = parseInt(document.getElementById('editUserRateLimitRpm').value) || 0;
@@ -1104,7 +1082,7 @@ class AdminApp {
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, email_verified, isAdmin, balance, team_id, tags, rate_limit_rpm, rate_limit_tpm })
+        body: JSON.stringify({ email, email_verified, isAdmin, balance, group_id, tags, rate_limit_rpm, rate_limit_tpm })
       });
 
       if (response.ok) {
@@ -1112,11 +1090,11 @@ class AdminApp {
         this.loadUsers();
       } else {
         const result = await response.json().catch(() => ({}));
-        Dialog.alert(result.error || t('保存失败'));
+        alert(result.error || t('保存失败'));
       }
     } catch (error) {
       console.error(t('保存用户失败:'), error);
-      Dialog.alert(t('保存失败'));
+      alert(t('保存失败'));
     }
   }
 
@@ -1372,40 +1350,40 @@ class AdminApp {
       const statsContainer = document.getElementById('modelStatsCards');
       if (statsContainer) {
         setHTML(statsContainer, `
-          <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-            <div class="cr-admin-stat-icon">
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-icon blue">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M15 2v2M9 2v2M15 20v2M9 20v2M2 15h2M2 9h2M20 15h2M20 9h2"/></svg>
             </div>
-            <div class="blora-stat">
-              <span class="blora-stat__value">${this.modelsTotal}</span>
-              <span class="blora-stat__label">总模型数</span>
+            <div class="admin-stat-card-info">
+              <span class="admin-stat-card-value">${this.modelsTotal}</span>
+              <span class="admin-stat-card-label">总模型数</span>
             </div>
           </div>
-          <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-            <div class="cr-admin-stat-icon">
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-icon green">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             </div>
-            <div class="blora-stat">
-              <span class="blora-stat__value">${enabledCount}</span>
-              <span class="blora-stat__label">已启用</span>
+            <div class="admin-stat-card-info">
+              <span class="admin-stat-card-value">${enabledCount}</span>
+              <span class="admin-stat-card-label">已启用</span>
             </div>
           </div>
-          <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-            <div class="cr-admin-stat-icon">
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-icon purple">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/></svg>
             </div>
-            <div class="blora-stat">
-              <span class="blora-stat__value">${providerCount}</span>
-              <span class="blora-stat__label">供应商数</span>
+            <div class="admin-stat-card-info">
+              <span class="admin-stat-card-value">${providerCount}</span>
+              <span class="admin-stat-card-label">供应商数</span>
             </div>
           </div>
-          <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-            <div class="cr-admin-stat-icon">
+          <div class="admin-stat-card">
+            <div class="admin-stat-card-icon amber">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
-            <div class="blora-stat">
-              <span class="blora-stat__value">¥${Number(avgInputPrice).toFixed(4)}</span>
-              <span class="blora-stat__label">平均输入价</span>
+            <div class="admin-stat-card-info">
+              <span class="admin-stat-card-value">¥${Number(avgInputPrice).toFixed(4)}</span>
+              <span class="admin-stat-card-label">平均输入价</span>
             </div>
           </div>
         `);
@@ -1436,7 +1414,7 @@ class AdminApp {
       }
     } catch (error) {
       console.error(t('加载模型列表失败:'), error);
-      setHTML(document.getElementById('adminModelsList'), `<p style="text-align:center;padding:20px;">${escapeHtml(error.message || t('加载模型列表失败'))}</p>`);
+      setHTML(document.getElementById('adminModelsList'), `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载模型列表失败'))}</p>`);
     }
   }
 
@@ -1666,7 +1644,7 @@ class AdminApp {
     return `
       <div class="model-library-item admin-models-library-item ${selected ? 'selected' : ''} ${isDisabled ? 'is-disabled' : ''}"
            data-model-id="${idAttr}"
-           style="cursor:pointer;${isDisabled ? 'opacity:0.72;' : ''};">
+           style="cursor:pointer;${isDisabled ? 'opacity:0.72;' : ''}">
         <div class="model-library-item-info">
           <div class="model-library-item-name">
             <span class="admin-add-model-check ${selected ? 'checked' : ''}" aria-hidden="true">
@@ -1679,7 +1657,7 @@ class AdminApp {
             ${testBadgeHtml}
             <div class="model-item-badges">
               ${renderProviderNameTag(model.provider_name || model.provider)}
-              ${model.series ? `<span class="blora-tag model-item-badge series" data-variant="neutral">${escapeHtml(model.series)}</span>` : ''}
+              ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
               ${isDisabled
                 ? '<span class="blora-badge model-item-badge" data-variant="danger">' + t('已禁用') + '</span>'
                 : '<span class="blora-badge model-item-badge" data-variant="success">' + t('启用') + '</span>'}
@@ -1711,11 +1689,11 @@ class AdminApp {
         </div>
         <div class="model-library-item-actions" style="margin-left:0;margin-top:10px;justify-content:flex-end;">
           <button type="button" class="blora-button model-test-btn" title="${t('测试')}"
-            data-admin-model-action="test" data-model-id="${idAttr}" data-variant="outline" data-size="sm">测试</button>
+            data-admin-model-action="test" data-model-id="${idAttr}" data-variant="secondary" data-size="sm">测试</button>
           <button type="button" class="blora-button"
-            data-admin-model-action="edit" data-model-id="${idAttr}" data-variant="outline" data-size="sm">编辑</button>
-          <button type="button" class="blora-button"
-            data-admin-model-action="delete" data-model-id="${idAttr}" data-variant="outline" data-size="sm">删除</button>
+            data-admin-model-action="edit" data-model-id="${idAttr}" data-variant="secondary" data-size="sm">编辑</button>
+          <button type="button" class="blora-button" style="color:var(--destructive);"
+            data-admin-model-action="delete" data-model-id="${idAttr}" data-variant="secondary" data-size="sm">删除</button>
         </div>
       </div>
     `;
@@ -1869,7 +1847,7 @@ class AdminApp {
       this._applyUptimeCacheToDom([modelId]);
       setHTML(body, this._renderModelUptimeDetailHtml(data, modelName || modelId));
     } catch (e) {
-      setHTML(body, `<blora-alert variant="danger" title="${t('加载失败')}" description="${escapeHtml(e.message || e)}"></blora-alert>`);
+      setHTML(body, `${'<div class="empty-state"><p style="color:var(--destructive);">' + t('加载失败：')}${escapeHtml(e.message || e)}</p></div>`);
     }
   }
 
@@ -1937,7 +1915,15 @@ class AdminApp {
 
     if (!shell.length) {
       setHTML(container, `
-        <blora-empty title="暂无匹配的模型" description="可调整筛选条件，或点击「添加模型」"></blora-empty>`);
+        <div class="empty-state model-library-empty" style="padding:48px 20px;text-align:center;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+          <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无匹配的模型</p>
+          <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">可调整筛选条件，或点击「添加模型」</p>
+        </div>`);
       return;
     }
 
@@ -1985,9 +1971,9 @@ class AdminApp {
                   </div>
                   <div class="model-library-provider-actions">
                     <blora-checkbox class="admin-models-provider-select-all" label="全选本页" data-provider-key="${keyAttr}" ${allSelected ? 'checked' : ''}></blora-checkbox>
-                    <button type="button" class="blora-button model-test-btn" style="padding:4px 8px;"
+                    <button type="button" class="blora-button model-test-btn" style="padding:4px 8px;font-size:11px;"
                       title="${t('测试此供应商下当前筛选模型')}"
-                      data-admin-model-action="test-provider" data-provider-key="${keyAttr}" data-variant="outline" data-size="sm">测试</button>
+                      data-admin-model-action="test-provider" data-provider-key="${keyAttr}" data-variant="secondary" data-size="sm">测试</button>
                     <span class="provider-model-count">${totalCount} 个模型${enabledCount != null && enabledCount !== totalCount ? ` · ${enabledCount}${t('启用')}` : ''}</span>
                   </div>
                 </div>
@@ -2118,7 +2104,7 @@ class AdminApp {
     } catch (e) {
       console.error(t('[模型管理] 加载供应商模型失败:'), key, e);
       if (listEl) {
-        setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" >加载失败，<a href="#" data-admin-model-action="retry-provider" data-provider-key="${escapeHtml(key)}" data-page="${pageNum}">${t('重试')}</a></span></div>`);
+        setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">加载失败，<a href="#" data-admin-model-action="retry-provider" data-provider-key="${escapeHtml(key)}" data-page="${pageNum}">${t('重试')}</a></span></div>`);
       }
     } finally {
       this._adminProviderLoading.delete(key);
@@ -2211,7 +2197,7 @@ class AdminApp {
       if (badges) {
         const existing = badges.querySelector('.model-item-badge.owner');
         if (selected && !existing) {
-          badges.insertAdjacentHTML('beforeend', '<span class="blora-badge model-item-badge owner" data-variant="info">' + t('已选') + '</span>');
+          badges.insertAdjacentHTML('beforeend', '<span class="model-item-badge owner">' + t('已选') + '</span>');
         } else if (!selected && existing) {
           existing.remove();
         }
@@ -2248,8 +2234,8 @@ class AdminApp {
     const key = String(providerKey);
     // 拉取该供应商在当前筛选下的全部模型 ID（分页遍历）
     const ids = await this._fetchAllAdminProviderModelIds(key);
-    if (!ids.length) { Dialog.alert(t('该供应商下暂无模型')); return; }
-    if (ids.length > 100 && !await Dialog.confirm(t('确认'), `${t('将测试')}${ids.length}${t('个模型，可能较久，是否继续？')}`)) return;
+    if (!ids.length) { alert(t('该供应商下暂无模型')); return; }
+    if (ids.length > 100 && !await confirm(`${t('将测试')}${ids.length}${t('个模型，可能较久，是否继续？')}`)) return;
     await this._runBatchTest(ids, `${t('正在测试')}${ids.length}${t('个模型...')}`);
   }
 
@@ -2286,23 +2272,23 @@ class AdminApp {
     if (endPage - startPage < maxVisible - 1) startPage = Math.max(0, endPage - maxVisible + 1);
 
     if (startPage > 0) {
-      pages.push(`<button type="button" style="${btnStyle};" onclick="adminApp.${prefix}PageGo(0)">1</button>`);
-      if (startPage > 1) pages.push(`<span >…</span>`);
+      pages.push(`<button style="${btnStyle}" onclick="adminApp.${prefix}PageGo(0)">1</button>`);
+      if (startPage > 1) pages.push(`<span style="color:var(--muted-foreground);font-size:12px;">…</span>`);
     }
     for (let i = startPage; i <= endPage; i++) {
-      pages.push(`<button type="button" style="${i === currentPage ? activeStyle : btnStyle};" onclick="adminApp.${prefix}PageGo(${i})">${i + 1}</button>`);
+      pages.push(`<button style="${i === currentPage ? activeStyle : btnStyle}" onclick="adminApp.${prefix}PageGo(${i})">${i + 1}</button>`);
     }
     if (endPage < totalPages - 1) {
-      if (endPage < totalPages - 2) pages.push(`<span >…</span>`);
-      pages.push(`<button type="button" style="${btnStyle};" onclick="adminApp.${prefix}PageGo(${totalPages - 1})">${totalPages}</button>`);
+      if (endPage < totalPages - 2) pages.push(`<span style="color:var(--muted-foreground);font-size:12px;">…</span>`);
+      pages.push(`<button style="${btnStyle}" onclick="adminApp.${prefix}PageGo(${totalPages - 1})">${totalPages}</button>`);
     }
 
     return `
       <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:16px;padding:12px 0;">
-        <button type="button" style="${currentPage === 0 ? disabledStyle : btnStyle};" onclick="adminApp.${prefix}PageGo(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}>上一页</button>
+        <button style="${currentPage === 0 ? disabledStyle : btnStyle}" onclick="adminApp.${prefix}PageGo(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}>上一页</button>
         ${pages.join('')}
-        <button type="button" style="${currentPage >= totalPages - 1 ? disabledStyle : btnStyle};" onclick="adminApp.${prefix}PageGo(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>下一页</button>
-        <span style="margin-left:12px;">共 ${totalItems} 项，${totalPages} 页</span>
+        <button style="${currentPage >= totalPages - 1 ? disabledStyle : btnStyle}" onclick="adminApp.${prefix}PageGo(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>下一页</button>
+        <span style="margin-left:12px;color:var(--muted-foreground);font-size:12px;">共 ${totalItems} 项，${totalPages} 页</span>
       </div>
     `;
   }
@@ -2314,7 +2300,7 @@ class AdminApp {
 
   editModelById(modelId) {
     const model = this._findAdminModelById(modelId);
-    if (!model) { Dialog.alert(t('模型不存在，请先展开所属供应商后再试')); return; }
+    if (!model) { alert(t('模型不存在，请先展开所属供应商后再试')); return; }
     this.editModel(model);
   }
 
@@ -2327,7 +2313,7 @@ class AdminApp {
     }
 
     if (list.length === 0) {
-      setHTML(container, '<blora-empty title="' + t('暂无匹配的模型') + '"></blora-empty>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无匹配的模型') + '</p>');
       return;
     }
 
@@ -2345,8 +2331,8 @@ class AdminApp {
       const nonThinkingName = model.non_thinking_model_id ? (modelNameMap[model.non_thinking_model_id] || t('(未知)')) : null;
 
       return `
-        <div class="cr-admin-resource-card blora-card" data-size="sm">
-          <div class="cr-admin-resource-header blora-row blora-row--between">
+        <div class="admin-card">
+          <div class="admin-card-header">
             <div style="flex:1;min-width:0;">
               <div class="admin-card-title" title="${escapeHtml(model.upstream_model_id || model.name || '')}">${escapeHtml(model.upstream_model_id || model.name || model.id)}</div>
               ${model.name && model.name !== model.upstream_model_id ? `<div class="admin-card-subtitle">${escapeHtml(model.name)}</div>` : ''}
@@ -2360,44 +2346,44 @@ class AdminApp {
             </div>
             ${model.alias ? `${'<div class="admin-card-row"><span class="admin-card-row-label">' + t('别名')}</span><span class="admin-card-row-value">${escapeHtml(model.alias)}</span></div>` : ''}
             ${model.series ? `${'<div class="admin-card-row"><span class="admin-card-row-label">' + t('系列')}</span><span class="admin-card-row-value"><span class="series-badge">${escapeHtml(model.series)}</span></span></div>` : ''}
-            ${model.description ? `<div style="margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${escapeHtml(model.description)}">${escapeHtml(model.description)}</div>` : ''}
+            ${model.description ? `<div style="font-size:12px;color:var(--muted-foreground);margin-top:6px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${escapeHtml(model.description)}">${escapeHtml(model.description)}</div>` : ''}
             <div style="margin-top:8px;display:flex;gap:12px;">
               <div>
-                <div >输入价</div>
-                <div >¥${inputPrice.toFixed(6)}</div>
+                <div style="font-size:11px;color:var(--muted-foreground);">输入价</div>
+                <div style="font-size:13px;font-weight:500;color:var(--brand-blue);">¥${inputPrice.toFixed(6)}</div>
               </div>
               <div>
-                <div >输出价</div>
-                <div >¥${outputPrice.toFixed(6)}</div>
+                <div style="font-size:11px;color:var(--muted-foreground);">输出价</div>
+                <div style="font-size:13px;font-weight:500;color:var(--brand-blue);">¥${outputPrice.toFixed(6)}</div>
               </div>
               <div>
-                <div >倍率</div>
-                <div >${multiplier.toFixed(2)}×</div>
+                <div style="font-size:11px;color:var(--muted-foreground);">倍率</div>
+                <div style="font-size:13px;font-weight:500;">${multiplier.toFixed(2)}×</div>
               </div>
             </div>
             ${(thinkingName || nonThinkingName) ? `
-              <div style="margin-top:6px;">
+              <div style="margin-top:6px;font-size:12px;color:var(--muted-foreground);">
                 ${thinkingName ? `<span title="${model.thinking_model_id}">${t('思考:')}${escapeHtml(thinkingName)}</span>` : ''}
                 ${thinkingName && nonThinkingName ? ' / ' : ''}
                 ${nonThinkingName ? `<span title="${model.non_thinking_model_id}">${t('非思考:')}${escapeHtml(nonThinkingName)}</span>` : ''}
               </div>
             ` : ''}
             ${(rpm > 0 || tpm > 0) ? `
-              <div style="margin-top:4px;">
+              <div style="margin-top:4px;font-size:12px;color:var(--muted-foreground);">
                 速率: ${rpm > 0 ? rpm + ' RPM' : ''}${rpm > 0 && tpm > 0 ? ' / ' : ''}${tpm > 0 ? tpm.toLocaleString() + ' TPM' : ''}
               </div>
             ` : ''}
             ${model.test_ok === true ? `
-              <div style="margin-top:4px;">
+              <div style="margin-top:4px;font-size:12px;">
                 <span class="model-test-indicator pass" title="${escapeHtml(this._formatTestTooltip(model.test_tested_at))}">${model.test_latency_ms}ms${model.test_tokens_per_second ? ' · ' + model.test_tokens_per_second + ' t/s' : ''}</span>
               </div>
             ` : model.test_ok === false ? `
-              <div style="margin-top:4px;">
+              <div style="margin-top:4px;font-size:12px;">
                 <span class="model-test-indicator fail" title="${escapeHtml((model.test_error || t('失败')) + ' · ' + this._formatTestTooltip(model.test_tested_at))}">失败</span>
               </div>
             ` : ''}
           </div>
-          <div class="cr-admin-resource-footer blora-actions">
+          <div class="admin-card-footer">
             <button type="button" class="blora-button admin-model-action" data-variant="outline" data-size="sm" data-admin-model-action="test" data-model-id="${escapeHtml(model.id)}">测试</button>
             <button type="button" class="blora-button admin-model-action" data-variant="outline" data-size="sm" data-admin-model-action="edit" data-model-id="${escapeHtml(model.id)}">编辑</button>
             <button type="button" class="blora-button admin-model-action" data-variant="danger" data-size="sm" data-admin-model-action="delete" data-model-id="${escapeHtml(model.id)}">删除</button>
@@ -2412,7 +2398,7 @@ class AdminApp {
   formatRateLimit(rpm, tpm) {
     rpm = parseInt(rpm) || 0;
     tpm = parseInt(tpm) || 0;
-    if (rpm === 0 && tpm === 0) return '<span >' + t('不限制') + '</span>';
+    if (rpm === 0 && tpm === 0) return '<span style="color:var(--muted-foreground)">' + t('不限制') + '</span>';
     const parts = [];
     if (rpm > 0) parts.push(`${rpm} RPM`);
     if (tpm > 0) parts.push(`${tpm.toLocaleString()} TPM`);
@@ -2429,7 +2415,7 @@ class AdminApp {
       });
       this.renderModels();
     } else {
-      document.querySelectorAll('#adminModelsList tbody blora-checkbox').forEach(cb => {
+      document.querySelectorAll('#adminModelsList tbody input[type="checkbox"]').forEach(cb => {
         cb.checked = checked;
         if (checked) this.selectedModels.add(cb.value);
         else this.selectedModels.delete(cb.value);
@@ -2462,7 +2448,7 @@ class AdminApp {
   async batchDeleteModels() {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-    if (!await Dialog.confirm(t('确认'), `${t('确定要删除选中的')}${ids.length}${t('个模型吗？此操作不可撤销。')}`)) return;
+    if (!await confirm(`${t('确定要删除选中的')}${ids.length}${t('个模型吗？此操作不可撤销。')}`)) return;
 
     try {
       const response = await fetch('/api/admin/models/batch-delete', {
@@ -2478,11 +2464,11 @@ class AdminApp {
         this.showToast?.(t('已删除选中模型'), 'success');
       } else {
         const err = await response.json().catch(() => ({}));
-        Dialog.alert(err.error || t('批量删除失败'));
+        alert(err.error || t('批量删除失败'));
       }
     } catch (error) {
       console.error(t('批量删除模型失败:'), error);
-      Dialog.alert(t('批量删除失败'));
+      alert(t('批量删除失败'));
     }
   }
 
@@ -2490,7 +2476,7 @@ class AdminApp {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
     const action = enabled ? t('启用') : t('禁用');
-    if (!await Dialog.confirm(t('确认'), `${t('确定要')}${action}${t('选中的')}${ids.length}${t('个模型吗？')}`)) return;
+    if (!await confirm(`${t('确定要')}${action}${t('选中的')}${ids.length}${t('个模型吗？')}`)) return;
 
     try {
       const response = await fetch('/api/admin/models/batch-update', {
@@ -2505,11 +2491,11 @@ class AdminApp {
         this.showToast?.(`${t('已')}${action}${t('选中模型')}`, 'success');
       } else {
         const err = await response.json().catch(() => ({}));
-        Dialog.alert(err.error || `${t('批量')}${action}${t('失败')}`);
+        alert(err.error || `${t('批量')}${action}${t('失败')}`);
       }
     } catch (error) {
       console.error(`${t('批量')}${action}${t('模型失败:')}`, error);
-      Dialog.alert(`${t('批量')}${action}${t('失败')}`);
+      alert(`${t('批量')}${action}${t('失败')}`);
     }
   }
 
@@ -2527,7 +2513,7 @@ class AdminApp {
     if (freEl) freEl.value = 'false';
     const testUaEl = document.getElementById('modelTestUserAgent');
     if (testUaEl) testUaEl.value = '';
-
+    
     this.loadProviderOptions().then(() => {
       document.getElementById('modelProvider').value = '';
       this.onModelProviderChange();
@@ -2550,7 +2536,7 @@ class AdminApp {
     if (freEl) freEl.value = (model.forward_reasoning_effort === true).toString();
     const testUaEl = document.getElementById('modelTestUserAgent');
     if (testUaEl) testUaEl.value = model.provider_test_user_agent || '';
-
+    
     this.loadProviderOptions().then(() => {
       document.getElementById('modelProvider').value = model.provider;
       const cachedUa = this._getProviderTestUserAgent(model.provider);
@@ -2632,7 +2618,7 @@ class AdminApp {
     const test_user_agent = document.getElementById('modelTestUserAgent')?.value || '';
 
     if (!upstream_model_id || !provider) {
-      Dialog.alert(t('请填写上游模型ID和提供商'));
+      alert(t('请填写上游模型ID和提供商'));
       return;
     }
 
@@ -2651,16 +2637,16 @@ class AdminApp {
         this._notifyModelsCatalogChanged();
         this.loadModels();
       } else {
-        Dialog.alert(t('保存失败'));
+        alert(t('保存失败'));
       }
     } catch (error) {
       console.error(t('保存模型失败:'), error);
-      Dialog.alert(t('保存失败'));
+      alert(t('保存失败'));
     }
   }
 
   async deleteModel(id) {
-    if (!await Dialog.confirm(t('确认'), t('确定要删除此模型吗？'))) return;
+    if (!await confirm(t('确定要删除此模型吗？'))) return;
 
     try {
       const response = await fetch(`/api/admin/models/${encodeURIComponent(id)}`, {
@@ -2675,24 +2661,25 @@ class AdminApp {
         this.showToast?.(t('模型已删除'), 'success');
       } else {
         const err = await response.json().catch(() => ({}));
-        Dialog.alert(err.error || t('删除失败'));
+        alert(err.error || t('删除失败'));
       }
     } catch (error) {
       console.error(t('删除模型失败:'), error);
-      Dialog.alert(t('删除失败'));
+      alert(t('删除失败'));
     }
   }
 
   // 供应商管理
-  async showToast(text, type = 'info') {
-    if (!window.bloraMessage) {
-      window.crewrouterMessageReady ||= import('/blora/index.js?v=2.1.0').then(({ message }) => {
-        window.bloraMessage = message;
-      });
-      await window.crewrouterMessageReady;
-    }
-    const variant = type === 'error' ? 'danger' : type;
-    return window.bloraMessage[variant]?.(String(text)) || window.bloraMessage.info(String(text));
+  showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'admin-toast admin-toast-' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => { toast.classList.add('admin-toast-show'); });
+    setTimeout(() => {
+      toast.classList.remove('admin-toast-show');
+      setTimeout(() => toast.remove(), 300);
+    }, 2800);
   }
 
   toggleProviderMoreMenu(e) {
@@ -2806,9 +2793,9 @@ class AdminApp {
     } catch (error) {
       console.error(t('加载供应商列表失败:'), error);
       setHTML(document.getElementById('adminProvidersList'), `
-        <div class="blora-stack">
-          <blora-alert variant="danger" title="${t('加载供应商列表失败')}" description="${escapeHtml(error.message || t('加载供应商列表失败'))}"></blora-alert>
-          <button type="button" class="blora-button" style="margin-top:12px;" onclick="adminApp.loadProviders()" data-variant="outline" data-size="sm">重试</button>
+        <div class="admin-empty-state">
+          <p style="color:var(--destructive);">${escapeHtml(error.message || t('加载供应商列表失败'))}</p>
+          <button class="blora-button" style="margin-top:12px;" onclick="adminApp.loadProviders()" data-variant="secondary" data-size="sm">重试</button>
         </div>`);
     }
   }
@@ -2976,25 +2963,29 @@ class AdminApp {
 
   _providerEmptyStateHtml() {
     return `
-      <div class="blora-stack">
-        <blora-empty title="还没有供应商" description="连接上游 API，导入模型后即可在模型管理中启用。"></blora-empty>
+      <div class="admin-empty-state provider-empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+        </svg>
+        <p class="provider-empty-title">还没有供应商</p>
+        <p class="provider-empty-desc">连接上游 API，导入模型后即可在模型管理中启用。</p>
         <ol class="provider-empty-steps">
           <li>选择或自定义供应商</li>
           <li>填写 API Key</li>
           <li>同步模型列表</li>
         </ol>
         <div class="provider-empty-actions">
-          <button type="button" class="blora-button" onclick="adminApp.showAddProviderWizard()" data-variant="primary">添加供应商</button>
-          <button type="button" class="blora-button" onclick="document.getElementById('importOpenCodeBtn')?.click()" data-variant="outline">导入配置</button>
+          <button class="blora-button" onclick="adminApp.showAddProviderWizard()" data-variant="primary">添加供应商</button>
+          <button class="blora-button" onclick="document.getElementById('importOpenCodeBtn')?.click()" data-variant="secondary">导入配置</button>
         </div>
       </div>`;
   }
 
   _providerNoMatchHtml() {
     return `
-      <div class="blora-stack">
-        <blora-empty title="未找到匹配的供应商"></blora-empty>
-        <button type="button" class="blora-button" style="margin-top:12px;" onclick="adminApp.clearProviderFilters()" data-variant="outline" data-size="sm">清除筛选</button>
+      <div class="admin-empty-state">
+        <p>未找到匹配的供应商</p>
+        <button class="blora-button" style="margin-top:12px;" onclick="adminApp.clearProviderFilters()" data-variant="secondary" data-size="sm">清除筛选</button>
       </div>`;
   }
 
@@ -3035,40 +3026,40 @@ class AdminApp {
     const statsContainer = document.getElementById('providerStatsCards');
     if (statsContainer) {
       setHTML(statsContainer, `
-        <div role="button" tabindex="0" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" class="cr-admin-stat-card admin-stat-card-clickable blora-card" aria-pressed="${scopeVal === 'global'}" onclick="adminApp.applyProviderStatFilter('global')" title="${t('筛选全局供应商')}" data-size="sm">
-          <div class="cr-admin-stat-icon">
+        <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'global' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('global')" title="${t('筛选全局供应商')}">
+          <div class="admin-stat-card-icon blue">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </div>
-          <div class="blora-stat">
-            <span class="blora-stat__value">${globalCount}</span>
-            <span class="blora-stat__label">全局供应商</span>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${globalCount}</span>
+            <span class="admin-stat-card-label">全局供应商</span>
           </div>
         </div>
-        <div role="button" tabindex="0" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" class="cr-admin-stat-card admin-stat-card-clickable blora-card" aria-pressed="${scopeVal === 'user'}" onclick="adminApp.applyProviderStatFilter('user')" title="${t('筛选用户供应商')}" data-size="sm">
-          <div class="cr-admin-stat-icon">
+        <div class="admin-stat-card admin-stat-card-clickable ${scopeVal === 'user' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('user')" title="${t('筛选用户供应商')}">
+          <div class="admin-stat-card-icon purple">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
-          <div class="blora-stat">
-            <span class="blora-stat__value">${userCount}</span>
-            <span class="blora-stat__label">用户供应商</span>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${userCount}</span>
+            <span class="admin-stat-card-label">用户供应商</span>
           </div>
         </div>
-        <div role="button" tabindex="0" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" class="cr-admin-stat-card admin-stat-card-clickable blora-card" aria-pressed="${statusVal === 'enabled'}" onclick="adminApp.applyProviderStatFilter('enabled')" title="${t('筛选已启用')}" data-size="sm">
-          <div class="cr-admin-stat-icon">
+        <div class="admin-stat-card admin-stat-card-clickable ${statusVal === 'enabled' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('enabled')" title="${t('筛选已启用')}">
+          <div class="admin-stat-card-icon green">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
-          <div class="blora-stat">
-            <span class="blora-stat__value">${enabledCount}</span>
-            <span class="blora-stat__label">已启用</span>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${enabledCount}</span>
+            <span class="admin-stat-card-label">已启用</span>
           </div>
         </div>
-        <div role="button" tabindex="0" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" class="cr-admin-stat-card admin-stat-card-clickable blora-card" aria-pressed="${keyModeVal === 'script'}" onclick="adminApp.applyProviderStatFilter('script')" title="${t('筛选脚本模式')}" data-size="sm">
-          <div class="cr-admin-stat-icon">
+        <div class="admin-stat-card admin-stat-card-clickable ${keyModeVal === 'script' ? 'active' : ''}" onclick="adminApp.applyProviderStatFilter('script')" title="${t('筛选脚本模式')}">
+          <div class="admin-stat-card-icon amber">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
           </div>
-          <div class="blora-stat">
-            <span class="blora-stat__value">${scriptCount}</span>
-            <span class="blora-stat__label">脚本模式</span>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${scriptCount}</span>
+            <span class="admin-stat-card-label">脚本模式</span>
           </div>
         </div>
       `);
@@ -3114,13 +3105,13 @@ class AdminApp {
     const pageIds = providers.map(p => p.id);
     const allPageSelected = pageIds.length > 0 && pageIds.every(id => this.selectedProviders.has(id));
     const selectAllBar = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-        <div style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;">
-          <blora-checkbox class="checkbox" id="providerSelectAllPage" ${allPageSelected ? 'checked' : ''}
-            data-control-action="admin-dynamic-0"></blora-checkbox>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:13px;">
+        <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;">
+          <input type="checkbox" class="checkbox" id="providerSelectAllPage" ${allPageSelected ? 'checked' : ''}
+            onchange="adminApp.toggleSelectAllProvidersOnPage(this.checked)">
           <span>全选本页</span>
-        </div>
-        <span >勾选后可批量同步模型</span>
+        </label>
+        <span style="color:var(--muted-foreground);">勾选后可批量同步模型</span>
       </div>`;
 
     if (this.providerViewMode === 'card') {
@@ -3130,13 +3121,13 @@ class AdminApp {
         ${selectAllBar}
         ${globalProviders.length > 0 ? `
           <div style="margin-bottom:24px;">
-            <h3 style="margin-bottom:12px;">${t('全局供应商')} <span >(本页 ${globalProviders.length})</span></h3>
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${t('全局供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${globalProviders.length})</span></h3>
             ${this._renderProviderTable(globalProviders)}
           </div>
         ` : ''}
         ${userProviders.length > 0 ? `
           <div>
-            <h3 style="margin-bottom:12px;">${t('用户供应商')} <span >(本页 ${userProviders.length})</span></h3>
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${t('用户供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${userProviders.length})</span></h3>
             ${this._renderProviderTable(userProviders, true)}
           </div>
         ` : ''}
@@ -3166,25 +3157,25 @@ class AdminApp {
     const pingBtnId = isCard ? `ping-btn-card-${pid}` : `ping-btn-${pid}`;
     return `
       <div class="provider-row-actions">
-        <div class="control-toggle-row" title="${provider.enabled ? t('禁用供应商') : t('启用供应商')}" style="transform:scale(0.8);">
-          <blora-checkbox ${provider.enabled ? 'checked' : ''} data-control-action="admin-dynamic-1" data-control-arg0="${escapeHtml(String(pid))}"></blora-checkbox>
-
-        </div>
-        <button type="button" class="blora-button" title="${t('同步模型')}" onclick="adminApp.fetchProviderModels('${pid}')" data-variant="outline" data-size="sm">同步模型</button>
-        <button type="button" class="blora-button" title="${t('编辑')}" onclick="adminApp.editProviderById('${pid}')" data-variant="outline" data-size="sm">编辑</button>
+        <label class="toggle-switch" title="${provider.enabled ? t('禁用供应商') : t('启用供应商')}" style="transform:scale(0.8);">
+          <input type="checkbox" ${provider.enabled ? 'checked' : ''} onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+        <button class="blora-button" title="${t('同步模型')}" onclick="adminApp.fetchProviderModels('${pid}')" data-variant="secondary" data-size="sm">同步模型</button>
+        <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editProviderById('${pid}')" data-variant="secondary" data-size="sm">编辑</button>
         <div class="provider-row-more-wrap">
-          <button type="button" class="blora-button" data-row-menu-btn="${pid}" title="${t('更多操作')}" onclick="adminApp.toggleProviderRowMenu('${pid}', event)" data-variant="outline" data-size="sm">更多 ▾</button>
+          <button type="button" class="blora-button" data-row-menu-btn="${pid}" title="${t('更多操作')}" onclick="adminApp.toggleProviderRowMenu('${pid}', event)" data-variant="secondary" data-size="sm">更多 ▾</button>
           <div class="provider-row-dropdown" id="provider-row-menu-${pid}" style="display:none;" role="menu">
             <button type="button" class="provider-more-item" id="${pingBtnId}" onclick="adminApp.pingProvider('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" role="menuitem">检测连通性</button>
-            ${isScriptKey ? `<button type="button" class="provider-more-item"  onclick="adminApp.refreshProviderKey('${pid}');adminApp.toggleProviderRowMenu('${pid}\', event);" role="menuitem">${t('刷新密钥')}</button>` : ''}
+            ${isScriptKey ? `<button type="button" class="provider-more-item" style="color:var(--warning);" onclick="adminApp.refreshProviderKey('${pid}');adminApp.toggleProviderRowMenu('${pid}\', event);" role="menuitem">${t('刷新密钥')}</button>` : ''}
             <div class="provider-more-item provider-more-item-toggle" role="menuitem">
               <span>额度查询</span>
-              <div class="control-toggle-row" style="transform:scale(0.75);" onclick="event.stopPropagation()">
-                <blora-checkbox ${quotaEnabled ? 'checked' : ''} data-control-action="admin-dynamic-2" data-control-arg0="${escapeHtml(String(pid))}"></blora-checkbox>
-
-              </div>
+              <label class="toggle-switch" style="transform:scale(0.75);" onclick="event.stopPropagation()">
+                <input type="checkbox" ${quotaEnabled ? 'checked' : ''} onchange="adminApp.toggleProviderQuota('${pid}', this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
             </div>
-            <button type="button" class="provider-more-item" id="quota-btn-${pid}" onclick="adminApp.checkProviderQuota('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" ${!quotaEnabled ? 'disabled ' : ''} role="menuitem">查询额度</button>
+            <button type="button" class="provider-more-item" id="quota-btn-${pid}" onclick="adminApp.checkProviderQuota('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" ${!quotaEnabled ? 'disabled style="opacity:0.45;"' : ''} role="menuitem">查询额度</button>
             <button type="button" class="provider-more-item provider-more-item-danger" onclick="adminApp.deleteProvider('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" role="menuitem">删除</button>
           </div>
         </div>
@@ -3192,10 +3183,10 @@ class AdminApp {
   }
 
   _renderProviderTable(providerList, showOwner = false) {
-    if (providerList.length === 0) return '<blora-empty title="' + t('暂无') + '"></blora-empty>';
+    if (providerList.length === 0) return '<p style="text-align:center;color:var(--muted-foreground);padding:12px;font-size:13px;">' + t('暂无') + '</p>';
 
     return `
-      <table class="blora-table">
+      <table>
         <thead>
           <tr>
             <th class="provider-select-cell"></th>
@@ -3220,18 +3211,18 @@ class AdminApp {
             const lastError = provider.key_last_error;
             const hasError = isScriptKey && lastError && lastError.trim();
             const errorIcon = hasError
-              ? ` <span style="cursor:pointer;" title="${escapeHtml(lastError).replace(/"/g, '&quot;')}"><span data-icon="triangle-alert" aria-hidden="true"></span></span>`
+              ? ` <span style="color:var(--destructive);cursor:pointer;font-size:11px;" title="${escapeHtml(lastError).replace(/"/g, '&quot;')}">⚠️</span>`
               : '';
             const keyCount = provider.api_key_count || 0;
             const keyModeDisplay = isScriptKey
-              ? `<span  title="${t('脚本刷新模式')}${hasError ? '\n上次错误: ' + escapeHtml(lastError) : ''}"><span data-icon="zap" aria-hidden="true"></span> ${t('脚本')}${errorIcon}</span>`
+              ? `<span style="color:var(--warning);font-size:12px;" title="${t('脚本刷新模式')}${hasError ? '\n上次错误: ' + escapeHtml(lastError) : ''}">⚡ ${t('脚本')}${errorIcon}</span>`
               : (keyCount > 1
-                ? `<span  title="${provider.api_key_select_mode === 'weight' ? t('权重模式') : t('顺序模式')}">${t('固定 ·')}${keyCount} Key${provider.api_key_select_mode === 'weight' ? t(' · 权重') : ''}</span>`
-                : '<span >' + t('固定') + '</span>');
+                ? `<span style="font-size:12px;" title="${provider.api_key_select_mode === 'weight' ? t('权重模式') : t('顺序模式')}">${t('固定 ·')}${keyCount} Key${provider.api_key_select_mode === 'weight' ? t(' · 权重') : ''}</span>`
+                : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('固定') + '</span>');
             let proxyDisplay = this._formatProviderProxyDisplay(provider);
             const statusPill = provider.enabled
-              ? '<span class="blora-badge status-pill" data-variant="success">' + t('启用') + '</span>'
-              : '<span class="blora-badge status-pill" data-variant="neutral">' + t('禁用') + '</span>';
+              ? '<span class="status-pill status-pill-on">' + t('启用') + '</span>'
+              : '<span class="status-pill status-pill-off">' + t('禁用') + '</span>';
             const safePid = String(pid).replace(/'/g, "\\'");
             return `
             <tr class="provider-drop-target"
@@ -3240,27 +3231,27 @@ class AdminApp {
                 ondragleave="adminApp.handleProviderDragLeave(event)"
                 ondrop="adminApp.handleProviderDrop(event, '${safePid}')">
               <td class="provider-select-cell">
-                <blora-checkbox class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
+                <input type="checkbox" class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
                   ${selected ? 'checked' : ''}
-                  data-control-action="admin-dynamic-3" data-control-arg0="${escapeHtml(String(safePid))}"></blora-checkbox>
+                  onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)">
               </td>
               <td>
                 <div class="provider-row-name">${escapeHtml(provider.name)}</div>
                 <div class="provider-row-url" title="${escapeHtml(provider.base_url || '')}">${escapeHtml(provider.base_url || '')}</div>
               </td>
-              ${showOwner ? `<td >${escapeHtml(provider.username || t('未知'))}</td>` : ''}
+              ${showOwner ? `<td style="font-size:12px;color:var(--muted-foreground);">${escapeHtml(provider.username || t('未知'))}</td>` : ''}
               <td class="provider-tags-cell">${this._renderProviderTagChips(provider.tags, pid)}</td>
               <td>${keyModeDisplay}</td>
               <td>${proxyDisplay}</td>
               <td>
                 <div id="quota-display-${provider.id}" style="min-width:100px;">
                   ${quotaEnabled
-                    ? '<span  title="' + t('在「更多」中查询或使用顶部「刷新本页额度」') + '">' + t('已启用') + '</span>'
-                    : '<span >' + t('未启用') + '</span>'}
+                    ? '<span style="color:var(--muted-foreground);font-size:12px;" title="' + t('在「更多」中查询或使用顶部「刷新本页额度」') + '">' + t('已启用') + '</span>'
+                    : '<span style="color:var(--muted-foreground);font-size:12px;">' + t('未启用') + '</span>'}
                 </div>
               </td>
               <td>
-                <div id="ping-display-${provider.id}" style="min-width:80px;">-</div>
+                <div id="ping-display-${provider.id}" style="min-width:80px;font-size:12px;color:var(--muted-foreground);">-</div>
               </td>
               <td>${escapeHtml(formatDisplayName(provider.format))}</td>
               <td>${statusPill}</td>
@@ -3304,13 +3295,13 @@ class AdminApp {
 
   // ========== 供应商多 API Key 编辑 ==========
   _getProviderKeySelectMode() {
-    const checked = document.querySelector('blora-radio[name="providerKeySelectMode"][checked]');
+    const checked = document.querySelector('input[name="providerKeySelectMode"]:checked');
     return checked?.value === 'weight' ? 'weight' : 'order';
   }
 
   _setProviderKeySelectMode(mode) {
     const m = mode === 'weight' ? 'weight' : 'order';
-    document.querySelectorAll('blora-radio[name="providerKeySelectMode"]').forEach(el => {
+    document.querySelectorAll('input[name="providerKeySelectMode"]').forEach(el => {
       el.checked = el.value === m;
     });
     this.onProviderKeySelectModeChange();
@@ -3367,7 +3358,7 @@ class AdminApp {
       const enabled = item.enabled !== false;
       const isPrimary = hasEnabled && index === primaryIdx;
       const mainBadge = isPrimary
-        ? `<span class="blora-badge" data-variant="info" title="${t('主 Key：获取模型列表 / 连通性 / 额度')}">${t('主 Key')}</span>`
+        ? `<span class="provider-api-key-main-badge" title="${t('主 Key：获取模型列表 / 连通性 / 额度')}">${t('主 Key')}</span>`
         : `<button type="button" class="provider-api-key-make-primary" data-key-index="${index}"
              onclick="adminApp.setProviderPrimaryKey(${index})" title="${t('设为主 Key')}">设为主</button>`;
       const disableBtn = `<button type="button" class="provider-api-key-disable ${enabled ? '' : 'is-on'}" data-key-index="${index}"
@@ -3376,13 +3367,16 @@ class AdminApp {
       return `
         <div class="provider-api-key-row${enabled ? '' : ' is-disabled'}" data-key-index="${index}" draggable="${multi && enabled ? 'true' : 'false'}">
           <span class="provider-api-key-drag" title="${multi ? t('拖动排序') : t('仅 1 个 Key 时无需排序')}" aria-hidden="true">⋮⋮</span>
-          <blora-field class="provider-api-key-label-wrap" label="名称" data-field-label="名称"><input type="text" class="blora-input provider-api-key-label" data-key-index="${index}"
+          <div class="provider-api-key-label-wrap">
+            <label>名称</label>
+            <input type="text" class="input provider-api-key-label" data-key-index="${index}"
               value="${escapeHtml(item.label || this._defaultKeyLabel(index))}"
               placeholder="${escapeHtml(this._defaultKeyLabel(index))}"
               maxlength="50" autocomplete="off" spellcheck="false"
-              oninput="adminApp.onProviderApiKeyLabelInput(${index}, this.value)"></blora-field>
+              oninput="adminApp.onProviderApiKeyLabelInput(${index}, this.value)">
+          </div>
           <div class="provider-api-key-input-wrap">
-            <input type="password" class="blora-input provider-api-key-input" data-key-index="${index}"
+            <input type="password" class="input provider-api-key-input" data-key-index="${index}"
               value="${escapeHtml(item.key || '')}"
               placeholder="${item.key ? (enabled ? t('已配置，可修改') : t('已禁用')) : 'API Key'}"
               autocomplete="off" spellcheck="false"
@@ -3395,14 +3389,15 @@ class AdminApp {
             </button>
           </div>
           <div class="provider-api-key-main-badge-wrap">${mainBadge}</div>
-          <blora-field class="provider-api-key-weight-wrap" label="${t('权重')}">
-            <input type="number" class="blora-input" min="1" step="1" value="${Number(item.weight) > 0 ? Number(item.weight) : 1}"
+          <div class="provider-api-key-weight-wrap">
+            <label>权重</label>
+            <input type="number" class="input" min="1" step="1" value="${Number(item.weight) > 0 ? Number(item.weight) : 1}"
               oninput="adminApp.onProviderApiKeyWeightInput(${index}, this.value)">
-          </blora-field>
+          </div>
           ${disableBtn}
           <button type="button" class="blora-button provider-api-key-remove"
-            style="${multi ? '' : 'visibility:hidden;'};"
-            onclick="adminApp.removeProviderApiKeyRow(${index})" title="${t('删除')}" data-variant="outline" data-size="sm">删除</button>
+            style="${multi ? '' : 'visibility:hidden;'}"
+            onclick="adminApp.removeProviderApiKeyRow(${index})" title="${t('删除')}" data-variant="secondary" data-size="sm">删除</button>
         </div>`;
     }).join(''));
 
@@ -3574,7 +3569,7 @@ class AdminApp {
 
   _renderProviderCards(container, globalPage, userPage, paginationHtml = '', selectAllBar = '') {
     const renderCardList = (providers) => {
-      if (providers.length === 0) return '<blora-empty title="' + t('暂无') + '"></blora-empty>';
+      if (providers.length === 0) return '<p style="text-align:center;color:var(--muted-foreground);padding:12px;font-size:13px;">' + t('暂无') + '</p>';
       return `<div class="admin-card-grid">${providers.map(provider => {
         const pid = provider.id;
         const selected = this.selectedProviders.has(pid);
@@ -3585,17 +3580,17 @@ class AdminApp {
 
         const hasTags = Array.isArray(provider.tags) && provider.tags.length > 0;
         return `
-          <div class="cr-admin-resource-card has-provider-select provider-drop-target blora-card"
+          <div class="admin-card has-provider-select provider-drop-target"
                data-provider-id="${escapeHtml(pid)}"
                ondragover="adminApp.handleProviderDragOver(event)"
                ondragleave="adminApp.handleProviderDragLeave(event)"
-               ondrop="adminApp.handleProviderDrop(event, '${safePid}')" data-size="sm">
-            <div class="provider-card-select" title="${t('选择')}" onclick="event.stopPropagation()">
-              <blora-checkbox class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
+               ondrop="adminApp.handleProviderDrop(event, '${safePid}')">
+            <label class="provider-card-select" title="${t('选择')}" onclick="event.stopPropagation()">
+              <input type="checkbox" class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
                 ${selected ? 'checked' : ''}
-                data-control-action="admin-dynamic-4" data-control-arg0="${escapeHtml(String(safePid))}"></blora-checkbox>
-            </div>
-            <div class="cr-admin-resource-header blora-row blora-row--between">
+                onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)">
+            </label>
+            <div class="admin-card-header">
               <div style="flex:1;min-width:0;">
                 <div class="admin-card-title-row">
                   <div class="admin-card-title">${escapeHtml(provider.name)}</div>
@@ -3612,10 +3607,10 @@ class AdminApp {
                 <span class="admin-card-row-label">密钥模式</span>
                 <span class="admin-card-row-value">
                   ${isScriptKey
-                    ? `${'<span >' + t('脚本')}${hasError ? ` <span style="cursor:pointer;" title="${escapeHtml(lastError).replace(/"/g, '&quot;')}"><span data-icon="triangle-alert" aria-hidden="true"></span></span>` : ''}</span>`
+                    ? `${'<span style="color:var(--warning);">' + t('⚡ 脚本')}${hasError ? ` <span style="color:var(--destructive);cursor:pointer;font-size:11px;" title="${escapeHtml(lastError).replace(/"/g, '&quot;')}">⚠️</span>` : ''}</span>`
                     : ((provider.api_key_count || 0) > 1
                       ? `${'<span>' + t('固定 ·')}${provider.api_key_count} Key${provider.api_key_select_mode === 'weight' ? t(' · 权重') : ''}</span>`
-                      : '<span >' + t('固定') + '</span>')}
+                      : '<span style="color:var(--muted-foreground);">' + t('固定') + '</span>')}
                 </span>
               </div>
               <div class="admin-card-row">
@@ -3624,15 +3619,15 @@ class AdminApp {
               </div>
               <div class="admin-card-row">
                 <span class="admin-card-row-label">额度查询</span>
-                <span class="admin-card-row-value" id="quota-display-card-${provider.id}">${provider.quota_enabled ? '<span >' + t('已启用') + '</span>' : '<span >' + t('未启用') + '</span>'}</span>
+                <span class="admin-card-row-value" id="quota-display-card-${provider.id}">${provider.quota_enabled ? '<span style="color:var(--success);">' + t('已启用') + '</span>' : '<span style="color:var(--muted-foreground);">' + t('未启用') + '</span>'}</span>
               </div>
               <div class="admin-card-row">
                 <span class="admin-card-row-label">格式</span>
                 <span class="admin-card-row-value">${escapeHtml(formatDisplayName(provider.format))}</span>
               </div>
-              <div id="ping-display-card-${provider.id}" class="admin-card-ping" style="margin-top:6px;">延迟: -</div>
+              <div id="ping-display-card-${provider.id}" class="admin-card-ping" style="margin-top:6px;font-size:12px;color:var(--muted-foreground);">延迟: -</div>
             </div>
-            <div class="cr-admin-resource-footer blora-actions">
+            <div class="admin-card-footer">
               ${this._renderProviderRowActions(provider, { isCard: true })}
             </div>
           </div>
@@ -3644,13 +3639,13 @@ class AdminApp {
       ${selectAllBar || ''}
       ${globalPage.total > 0 ? `
         <div style="margin-bottom:24px;">
-          <h3 style="margin-bottom:12px;">${t('全局供应商')} <span >(本页 ${globalPage.total})</span></h3>
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${t('全局供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${globalPage.total})</span></h3>
           ${renderCardList(globalPage.items)}
         </div>
       ` : ''}
       ${userPage.total > 0 ? `
         <div>
-          <h3 style="margin-bottom:12px;">${t('用户供应商')} <span >(本页 ${userPage.total})</span></h3>
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${t('用户供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${userPage.total})</span></h3>
           ${renderCardList(userPage.items)}
         </div>
       ` : ''}
@@ -3787,27 +3782,27 @@ class AdminApp {
     }));
 
     const content = `
-      <p style="margin:0 0 8px;">
+      <p style="margin:0 0 8px;font-size:13px;color:var(--muted-foreground);">
         将依次从上游拉取模型列表并同步到本地，共 <strong>${items.length}</strong> 个${scopeLabel}供应商。
       </p>
       <div class="batch-sync-options">
-        <div>
-          <blora-checkbox id="batchSyncEnableNew" class="checkbox" checked></blora-checkbox>
+        <label>
+          <input type="checkbox" id="batchSyncEnableNew" class="checkbox" checked>
           <span>新增上游模型默认<strong>启用</strong></span>
-        </div>
-        <div>
-          <blora-checkbox id="batchSyncDisableStale" class="checkbox"></blora-checkbox>
+        </label>
+        <label>
+          <input type="checkbox" id="batchSyncDisableStale" class="checkbox">
           <span>上游已下架的模型自动<strong>禁用</strong>（默认保留）</span>
-        </div>
+        </label>
       </div>
-      <div id="batchSyncProgressMeta" style="margin-top:4px;">准备就绪，点击开始</div>
-      <div style="margin-top:8px;height:6px;overflow:hidden;">
-        <div id="batchSyncProgressBar" style="height:100%;width:0%;transition:width .25s;"></div>
+      <div id="batchSyncProgressMeta" style="font-size:13px;color:var(--muted-foreground);margin-top:4px;">准备就绪，点击开始</div>
+      <div style="margin-top:8px;height:6px;background:var(--muted);border-radius:3px;overflow:hidden;">
+        <div id="batchSyncProgressBar" style="height:100%;width:0%;background:var(--brand-blue);transition:width .25s;"></div>
       </div>
       <div class="batch-sync-progress-list" id="batchSyncProgressList">
         ${items.map((it, i) => `
           <div class="batch-sync-row" data-batch-sync-id="${escapeHtml(it.id)}">
-            <span style="width:28px;">${i + 1}.</span>
+            <span style="color:var(--muted-foreground);width:28px;">${i + 1}.</span>
             <span class="batch-sync-name" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}</span>
             <span class="batch-sync-status" data-status>等待</span>
           </div>
@@ -3976,12 +3971,12 @@ class AdminApp {
       const resp = await fetch(`/api/admin/providers/${providerId}/ping`);
       const data = await resp.json();
       const resultHtml = data.ok
-        ? `<span >${data.latency_ms}ms</span>`
-        : `<span  title="${escapeHtml(data.error || '')}">${t('失败')}</span>`;
+        ? `<span style="color:${data.latency_ms <= 300 ? 'var(--success)' : data.latency_ms <= 1000 ? 'var(--warning)' : 'var(--destructive)'};font-weight:500;">${data.latency_ms}ms</span>`
+        : `<span style="color:var(--destructive);" title="${escapeHtml(data.error || '')}">${t('失败')}</span>`;
       if (display) setHTML(display, resultHtml);
       if (cardDisplay) setHTML(cardDisplay, resultHtml);
     } catch (e) {
-      const errHtml = '<span >' + t('错误') + '</span>';
+      const errHtml = '<span style="color:var(--destructive);">' + t('错误') + '</span>';
       if (display) setHTML(display, errHtml);
       if (cardDisplay) setHTML(cardDisplay, errHtml);
     } finally {
@@ -4019,7 +4014,7 @@ class AdminApp {
     const modal = Dialog.showModal({
       title: t('添加供应商'),
       content: `
-        <p style="margin:0 0 8px;">从常用列表选择，或自定义添加。完成后可立即同步模型。</p>
+        <p style="color:var(--muted-foreground);font-size:13px;margin:0 0 8px;">从常用列表选择，或自定义添加。完成后可立即同步模型。</p>
         <input type="text" class="wizard-search" id="wizardSearch" placeholder="${t('搜索供应商名称或 Base URL...')}">
         <div class="wizard-provider-list" id="wizardProviderList">
           <div class="wizard-empty"><div class="page-loading page-loading-compact" style="min-height:100px;padding:20px 12px;"><div class="loading-spinner md" role="status" aria-label="${t('加载中')}"></div><div class="page-loading-text">正在加载供应商列表...</div></div></div>
@@ -4065,8 +4060,8 @@ class AdminApp {
       if (loadError) {
         setHTML(listContainer, `
           <div class="wizard-empty">
-            <p style="margin-bottom:8px;">${escapeHtml(loadError)}</p>
-            <button type="button" class="blora-button" id="wizardRetryBtn" data-variant="outline" data-size="sm">重试</button>
+            <p style="color:var(--destructive);margin-bottom:8px;">${escapeHtml(loadError)}</p>
+            <button type="button" class="blora-button" id="wizardRetryBtn" data-variant="secondary" data-size="sm">重试</button>
           </div>`);
         document.getElementById('wizardRetryBtn')?.addEventListener('click', () => loadIndex());
         return;
@@ -4143,17 +4138,17 @@ class AdminApp {
     const modal = Dialog.showModal({
       title: `${t('配置')}${provider.name}`,
       content: `
-        <p style="margin-bottom:12px;">
+        <p style="color:var(--muted-foreground);font-size:13px;margin-bottom:12px;">
           供应商: <strong>${escapeHtml(provider.name)}</strong><br>
           API 地址: ${escapeHtml(provider.base_url || '')}
         </p>
-        <span class="blora-text-muted">API Key（可稍后填写）</span>
+        <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">API Key <span style="font-weight:400;color:var(--muted-foreground);">（可稍后填写）</span></label>
         <input type="password" class="wizard-apikey-input" id="wizardApiKey" placeholder="${t('输入 API Key，可留空稍后编辑补全')}">
       `,
       footer: `
-        <button type="button" class="wizard-back-btn" id="wizardBackBtn">← 返回</button>
-        <div style="flex:1;"></div>
-        <button type="button" class="dialog-btn dialog-btn-primary" id="wizardSaveBtn">添加</button>
+        <button class="wizard-back-btn" id="wizardBackBtn">← 返回</button>
+        <div style="flex:1"></div>
+        <button class="dialog-btn dialog-btn-primary" id="wizardSaveBtn">添加</button>
       `,
       width: 420
     });
@@ -4219,13 +4214,13 @@ class AdminApp {
     const modal = Dialog.showModal({
       title: t('供应商已添加'),
       content: `
-        <p style="margin:0 0 8px;"><strong>${escapeHtml(name)}</strong> 已创建成功。</p>
-        <p style="margin:0;">建议下一步同步模型列表，导入后即可在模型管理中启用。</p>
+        <p style="font-size:14px;margin:0 0 8px;"><strong>${escapeHtml(name)}</strong> 已创建成功。</p>
+        <p style="color:var(--muted-foreground);font-size:13px;margin:0;">建议下一步同步模型列表，导入后即可在模型管理中启用。</p>
       `,
       footer: `
-        <button type="button" class="dialog-btn dialog-btn-cancel" id="providerSuccessLater">稍后再说</button>
-        <button type="button" class="dialog-btn dialog-btn-cancel" id="providerSuccessPing" ${providerId ? '' : 'disabled'}>检测连通性</button>
-        <button type="button" class="dialog-btn dialog-btn-primary" id="providerSuccessSync" ${providerId ? '' : 'disabled'}>同步模型</button>
+        <button class="dialog-btn dialog-btn-cancel" id="providerSuccessLater">稍后再说</button>
+        <button class="dialog-btn dialog-btn-cancel" id="providerSuccessPing" ${providerId ? '' : 'disabled'}>检测连通性</button>
+        <button class="dialog-btn dialog-btn-primary" id="providerSuccessSync" ${providerId ? '' : 'disabled'}>同步模型</button>
       `,
       width: 440
     });
@@ -4546,7 +4541,7 @@ class AdminApp {
     const proxyEnabledEl = document.getElementById('providerProxyEnabled');
     if (proxyEnabledEl) proxyEnabledEl.checked = enabled;
 
-    document.querySelectorAll('blora-radio[name="providerProxyMode"]').forEach(r => {
+    document.querySelectorAll('input[name="providerProxyMode"]').forEach(r => {
       r.checked = r.value === mode;
     });
 
@@ -4562,7 +4557,7 @@ class AdminApp {
   // 供应商代理表单：收集
   _collectProviderProxyFromForm() {
     const proxy_enabled = document.getElementById('providerProxyEnabled')?.checked || false;
-    const modeRadio = document.querySelector('blora-radio[name="providerProxyMode"][checked]');
+    const modeRadio = document.querySelector('input[name="providerProxyMode"]:checked');
     const proxy_mode = modeRadio?.value === 'pool' ? 'pool' : 'single';
     const proxy_use_system = document.getElementById('providerProxyUseSystem')?.checked || false;
     const proxy_url = document.getElementById('providerProxyUrl')?.value?.trim() || '';
@@ -4577,7 +4572,7 @@ class AdminApp {
   }
 
   toggleProviderProxyMode() {
-    const modeRadio = document.querySelector('blora-radio[name="providerProxyMode"][checked]');
+    const modeRadio = document.querySelector('input[name="providerProxyMode"]:checked');
     const mode = modeRadio?.value === 'pool' ? 'pool' : 'single';
     const single = document.getElementById('providerProxySingleOptions');
     const poolHint = document.getElementById('providerProxyPoolHint');
@@ -4595,25 +4590,25 @@ class AdminApp {
   // 列表/卡片：代理状态展示
   _formatProviderProxyDisplay(provider) {
     if (!provider.proxy_enabled) {
-      return '<span >' + t('关闭') + '</span>';
+      return '<span style="color:var(--muted-foreground);font-size:12px;">' + t('关闭') + '</span>';
     }
     const mode = (provider.proxy_mode || 'pool').toLowerCase();
     if (mode === 'single') {
       if (provider.proxy_use_system) {
-        return '<span  title="' + t('使用系统设置中的代理') + '">' + t('🌐 系统代理') + '</span>';
+        return '<span style="font-size:12px;color:var(--purple);" title="' + t('使用系统设置中的代理') + '">' + t('🌐 系统代理') + '</span>';
       }
       const url = (provider.proxy_url || '').trim();
       if (!url) {
-        return '<span >' + t('未配置') + '</span>';
+        return '<span style="color:var(--muted-foreground);font-size:12px;">' + t('未配置') + '</span>';
       }
       const short = url.length > 28 ? url.slice(0, 25) + '…' : url;
-      return `<span  title="${escapeHtml(url)}">🔗 ${escapeHtml(short)}</span>`;
+      return `<span style="font-size:12px;" title="${escapeHtml(url)}">🔗 ${escapeHtml(short)}</span>`;
     }
     // 代理池
     const proxyPool = this.parseProxyPool(provider.proxy_pool);
     const hasSubscription = !!(provider.proxy_subscription_url || '').trim();
     if (proxyPool.length === 0 && !hasSubscription) {
-      return '<span  title="' + t('使用系统全局代理池') + '">' + t('🔄 全局池') + '</span>';
+      return '<span style="font-size:12px;color:var(--info);" title="' + t('使用系统全局代理池') + '">' + t('🔄 全局池') + '</span>';
     }
     const tags = [];
     if (proxyPool.length > 0) {
@@ -4621,9 +4616,9 @@ class AdminApp {
       tags.push(`${'<span title="' + t('手动添加的代理') + '">' + t('🔄')}${healthyCount}/${proxyPool.length}</span>`);
     }
     if (hasSubscription) {
-      tags.push(`<span  title="${escapeHtml(provider.proxy_subscription_url)}">${t('📡 订阅')}</span>`);
+      tags.push(`<span style="color:var(--info);" title="${escapeHtml(provider.proxy_subscription_url)}">${t('📡 订阅')}</span>`);
     }
-    return `<span >${tags.join(' ')}</span>`;
+    return `<span style="font-size:12px;">${tags.join(' ')}</span>`;
   }
 
   // 解析代理池 JSON
@@ -4644,11 +4639,11 @@ class AdminApp {
     const applyAll = document.getElementById('systemProxyEnabled')?.checked || false;
     const url = document.getElementById('systemProxyUrl')?.value?.trim() || '';
     if (applyAll && !url) {
-      Dialog.alert(t('开启「为所有连接使用代理」时请填写代理地址'));
+      alert(t('开启「为所有连接使用代理」时请填写代理地址'));
       return;
     }
     if (url && !/^(https?|socks4|socks5h?):\/\//i.test(url)) {
-      Dialog.alert(t('代理地址需以 http://、https://、socks4://、socks5:// 或 socks5h:// 开头'));
+      alert(t('代理地址需以 http://、https://、socks4://、socks5:// 或 socks5h:// 开头'));
       return;
     }
     try {
@@ -4662,13 +4657,13 @@ class AdminApp {
         })
       });
       if (res.ok) {
-        Dialog.alert(t('代理设置已保存'));
+        alert(t('代理设置已保存'));
       } else {
-        Dialog.alert(t('保存失败'));
+        alert(t('保存失败'));
       }
     } catch (err) {
       console.error(t('保存系统代理失败:'), err);
-      Dialog.alert(t('保存失败'));
+      alert(t('保存失败'));
     }
   }
 
@@ -4713,14 +4708,14 @@ class AdminApp {
         })
       });
       if (res.ok) {
-        Dialog.alert(t('代理池设置已保存'));
+        alert(t('代理池设置已保存'));
         this.checkGlobalProxyPoolStatus();
       } else {
-        Dialog.alert(t('保存失败'));
+        alert(t('保存失败'));
       }
     } catch (e) {
       console.error(t('保存全局代理池设置失败:'), e);
-      Dialog.alert(t('保存失败'));
+      alert(t('保存失败'));
     }
   }
 
@@ -4731,7 +4726,7 @@ class AdminApp {
 
     const proxies = this._globalProxyPool || [];
     if (proxies.length === 0) {
-      setHTML(container, '<div style="padding:8px 0;">' + t('暂无手动代理') + '</div>');
+      setHTML(container, '<div style="color:var(--muted-foreground);font-size:13px;padding:8px 0;">' + t('暂无手动代理') + '</div>');
       return;
     }
 
@@ -4745,7 +4740,7 @@ class AdminApp {
       div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;font-size:13px;';
       setHTML(div, `
         <code style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.url.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code>
-        <button type="button" class="blora-button" title="${t('删除')}"  data-variant="outline" data-size="icon">🗑️</button>`);
+        <button type="button" class="blora-button" title="${t('删除')}" style="font-size:14px;color:var(--destructive);" data-variant="secondary" data-size="icon">🗑️</button>`);
       div.querySelector('button').onclick = () => this.removeGlobalProxy(p.id);
       fragment.appendChild(div);
     }
@@ -4765,14 +4760,14 @@ class AdminApp {
   addGlobalProxy() {
     const input = document.getElementById('globalNewProxyUrl');
     const url = input?.value?.trim();
-    if (!url) { Dialog.alert(t('请输入代理 URL')); return; }
+    if (!url) { alert(t('请输入代理 URL')); return; }
     if (!url.match(/^(https?|socks[45]?h?):\/\//i)) {
-      Dialog.alert(t('代理 URL 格式不正确，支持 http://, https://, socks4://, socks5://'));
+      alert(t('代理 URL 格式不正确，支持 http://, https://, socks4://, socks5://'));
       return;
     }
     if (!this._globalProxyPool) this._globalProxyPool = [];
     if (this._globalProxyPool.some(p => p.url === url)) {
-      Dialog.alert(t('该代理已存在'));
+      alert(t('该代理已存在'));
       return;
     }
     this._globalProxyPool.push({ id: crypto.randomUUID(), url, enabled: true });
@@ -4784,7 +4779,7 @@ class AdminApp {
   async importGlobalProxies() {
     const urlInput = document.getElementById('globalImportProxyUrl');
     const url = urlInput?.value?.trim();
-    if (!url) { Dialog.alert(t('请输入代理列表 URL')); return; }
+    if (!url) { alert(t('请输入代理列表 URL')); return; }
 
     try {
       const res = await fetch('/api/admin/fetch-proxies-url', {
@@ -4793,8 +4788,8 @@ class AdminApp {
         body: JSON.stringify({ url })
       });
       const data = await res.json();
-      if (!res.ok) { Dialog.alert(t('获取失败: ') + (data.error || t('未知错误'))); return; }
-      if (data.count === 0) { Dialog.alert(t('代理列表为空')); return; }
+      if (!res.ok) { alert(t('获取失败: ') + (data.error || t('未知错误'))); return; }
+      if (data.count === 0) { alert(t('代理列表为空')); return; }
 
       if (!this._globalProxyPool) this._globalProxyPool = [];
       const existingUrls = new Set(this._globalProxyPool.map(p => p.url));
@@ -4808,9 +4803,9 @@ class AdminApp {
       }
       urlInput.value = '';
       this.renderGlobalProxyPoolList();
-      Dialog.alert(`${t('成功导入')}${added}${t('个代理')}`);
+      alert(`${t('✅ 成功导入')}${added}${t('个代理')}`);
     } catch (err) {
-      Dialog.alert(t('导入失败: ') + err.message);
+      alert(t('导入失败: ') + err.message);
     }
   }
 
@@ -4818,7 +4813,7 @@ class AdminApp {
   batchAddGlobalProxies() {
     const input = document.getElementById('globalBatchProxyInput');
     const text = input?.value?.trim();
-    if (!text) { Dialog.alert(t('请输入代理地址')); return; }
+    if (!text) { alert(t('请输入代理地址')); return; }
 
     const lines = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
     if (!this._globalProxyPool) this._globalProxyPool = [];
@@ -4833,7 +4828,7 @@ class AdminApp {
     }
     input.value = '';
     this.renderGlobalProxyPoolList();
-    Dialog.alert(`${t('成功添加')}${added}${t('个代理')}`);
+    alert(`${t('✅ 成功添加')}${added}${t('个代理')}`);
   }
 
   // 删除全局代理
@@ -4856,9 +4851,9 @@ class AdminApp {
     const lines = [];
 
     if (manualCount > 0) {
-      lines.push(`<span ><span data-icon="check" aria-hidden="true"></span></span> ${t('手动代理:')} <b>${manualCount}${'</b>' + t('个')}`);
+      lines.push(`<span style="color:var(--success);">✓</span> ${t('手动代理:')} <b>${manualCount}${'</b>' + t('个')}`);
     } else {
-      lines.push(`${'<span >' + '-' + '</span>' + t('手动代理: 0 个')}`);
+      lines.push(`${'<span style="color:var(--muted-foreground);">' + '-' + '</span>' + t('手动代理: 0 个')}`);
     }
 
     if (subUrl) {
@@ -4874,18 +4869,18 @@ class AdminApp {
         const data = await res.json();
         lines.pop();
         if (res.ok && data.count > 0) {
-          lines.push(`<span ><span data-icon="check" aria-hidden="true"></span></span> ${t('订阅地址:')} <b>${data.count}${'</b>' + t('个代理可用')}`);
+          lines.push(`<span style="color:var(--success);">✓</span> ${t('订阅地址:')} <b>${data.count}${'</b>' + t('个代理可用')}`);
         } else if (res.ok && data.count === 0) {
-          lines.push(`${'<span >' + '<span data-icon="triangle-alert" aria-hidden="true"></span>' + '</span>' + t('订阅地址: 返回内容中未找到有效代理')}`);
+          lines.push(`${'<span style="color:var(--warning);">' + '⚠' + '</span>' + t('订阅地址: 返回内容中未找到有效代理')}`);
         } else {
-          lines.push(`${'<span >' + '<span data-icon="x" aria-hidden="true"></span>' + '</span>' + t('订阅地址:')}${data.error || t('请求失败')}`);
+          lines.push(`${'<span style="color:var(--destructive);">' + '✗' + '</span>' + t('订阅地址:')}${data.error || t('请求失败')}`);
         }
       } catch (e) {
         lines.pop();
-        lines.push(`${'<span >' + '<span data-icon="x" aria-hidden="true"></span>' + '</span>' + t('订阅地址:')}${e.message}`);
+        lines.push(`${'<span style="color:var(--destructive);">' + '✗' + '</span>' + t('订阅地址:')}${e.message}`);
       }
     } else {
-      lines.push(`${'<span >' + '-' + '</span>' + t('订阅地址: 未配置')}`);
+      lines.push(`${'<span style="color:var(--muted-foreground);">' + '-' + '</span>' + t('订阅地址: 未配置')}`);
     }
 
     setHTML(statusContent, lines.join('<br>'));
@@ -4897,7 +4892,7 @@ class AdminApp {
       const res = await fetch(`/api/admin/providers/${providerId}/refresh-key`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        Dialog.alert(t('密钥刷新成功') + (data.expiresAt ? '\n' + t('过期时间: ') + new Date(data.expiresAt).toLocaleString('zh-CN') : ''));
+        alert(t('✅ 密钥刷新成功') + (data.expiresAt ? '\n' + t('过期时间: ') + new Date(data.expiresAt).toLocaleString('zh-CN') : ''));
         this.loadProviders();
       } else {
         const errMsg = data.error || t('未知错误');
@@ -4905,7 +4900,7 @@ class AdminApp {
         this._showScriptErrorDialog(providerId, errMsg);
       }
     } catch (error) {
-      Dialog.alert(t('请求失败: ') + error.message);
+      alert(t('❌ 请求失败: ') + error.message);
       console.error(t('[密钥刷新请求失败]'), providerId, error);
     }
   }
@@ -4942,7 +4937,7 @@ class AdminApp {
     if (!model || !model.id) return t('自动选择（按系统可用模型）');
     const name = escapeHtml(model.name || model.id);
     return model.provider_name
-      ? `${renderProviderNameTag(model.provider_name)}<span class="script-ai-model-label-arrow"><span data-icon="arrow-right" aria-hidden="true"></span></span>${name}`
+      ? `${renderProviderNameTag(model.provider_name)}<span class="script-ai-model-label-arrow">→</span>${name}`
       : name;
   }
 
@@ -4967,23 +4962,23 @@ class AdminApp {
     overlay.id = 'scriptAiModelPickerOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;padding:16px;';
     overlay.innerHTML = `
-      <div role="dialog" aria-label="${t('选择 AI 辅助模型')}" style="width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;">
-        <div style="padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div role="dialog" aria-label="${t('选择 AI 辅助模型')}" style="background:var(--card,#fff);color:var(--foreground);border:1px solid var(--border);border-radius:14px;width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.25);">
+        <div style="padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);">
           <div>
-            <div >选择 AI 辅助模型</div>
-            <div style="margin-top:2px;">仅用于密钥脚本的分析/修复</div>
+            <div style="font-weight:600;font-size:15px;">选择 AI 辅助模型</div>
+            <div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">仅用于密钥脚本的分析/修复</div>
           </div>
-          <button type="button" id="scriptAiModelPickerClose" class="blora-button" style="min-width:auto;" data-variant="outline" data-size="sm">关闭</button>
+          <button type="button" id="scriptAiModelPickerClose" class="blora-button" style="min-width:auto;" data-variant="secondary" data-size="sm">关闭</button>
         </div>
         <div style="padding:12px 18px;">
-          <input type="search" id="scriptAiModelSearch" class="blora-input" placeholder="${t('搜索模型名称 / ID / 供应商...')}" style="width:100%;">
+          <input type="search" id="scriptAiModelSearch" class="input" placeholder="${t('搜索模型名称 / ID / 供应商...')}" style="width:100%;">
         </div>
         <div id="scriptAiModelList" style="padding:0 10px 12px;overflow-y:auto;flex:1;min-height:200px;max-height:50vh;">
           ${pageLoadingHtml(t('加载中...'), { size: 'md', compact: true })}
         </div>
-        <div style="padding:12px 18px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="blora-button" id="scriptAiModelClear" data-variant="outline" data-size="sm">使用自动选择</button>
-          <span style="align-self:center;">当前：${this._formatScriptAiModelLabel(selected)}</span>
+        <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="blora-button" id="scriptAiModelClear" data-variant="secondary" data-size="sm">使用自动选择</button>
+          <span style="font-size:12px;color:var(--muted-foreground);align-self:center;">当前：${this._formatScriptAiModelLabel(selected)}</span>
         </div>
       </div>
     `;
@@ -5009,7 +5004,7 @@ class AdminApp {
         return hay.includes(q);
       });
       if (!filtered.length) {
-        listEl.innerHTML = `<div style="padding:24px;text-align:center;">${models.length ? t('无匹配模型') : t('暂无可用模型（需启用且供应商已配置 API Key）')}</div>`;
+        listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted-foreground);font-size:13px;">${models.length ? t('无匹配模型') : t('暂无可用模型（需启用且供应商已配置 API Key）')}</div>`;
         return;
       }
       const selectedId = selected?.id ? String(selected.id) : '';
@@ -5019,9 +5014,9 @@ class AdminApp {
         const sub = `${renderProviderNameTag(m.provider_name)}${m.upstream_model_id || m.id ? `<span class="script-ai-model-id">${escHtml(m.upstream_model_id || m.id)}</span>` : ''}`;
         return `
           <button type="button" class="script-ai-model-item" data-model-id="${escHtml(m.id)}"
-            style="display:block;width:100%;text-align:left;padding:10px 12px;margin:4px 0;cursor:pointer;">
-            <div >${title}${isActive ? ' <span >' + t('当前') + '</span>' : ''}</div>
-            <div style="margin-top:2px;">${sub}</div>
+            style="display:block;width:100%;text-align:left;padding:10px 12px;margin:4px 0;border-radius:10px;border:1px solid ${isActive ? 'var(--primary,var(--info))' : 'var(--border)'};background:${isActive ? 'rgba(59,130,246,0.08)' : 'transparent'};cursor:pointer;color:inherit;">
+            <div style="font-weight:600;font-size:13px;">${title}${isActive ? ' <span style="color:var(--primary,var(--info));font-size:11px;">' + t('当前') + '</span>' : ''}</div>
+            <div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">${sub}</div>
           </button>
         `;
       }).join('');
@@ -5062,7 +5057,7 @@ class AdminApp {
       render();
       searchEl.focus();
     } catch (e) {
-      listEl.innerHTML = `<div style="padding:24px;text-align:center;">${escHtml(e.message || t('加载失败'))}</div>`;
+      listEl.innerHTML = `<div style="padding:24px;text-align:center;color:var(--destructive);font-size:13px;">${escHtml(e.message || t('加载失败'))}</div>`;
     }
   }
 
@@ -5082,28 +5077,28 @@ class AdminApp {
 
     const content = `
       <div style="max-height:60vh;overflow-y:auto;">
-        <div style="padding:12px;margin-bottom:12px;">
-          <div style="margin-bottom:8px;"><span data-icon="circle-x" aria-hidden="true"></span> 密钥刷新失败</div>
-          <pre style="white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;">${escHtml(errMsg)}</pre>
+        <div style="background:var(--destructive-bg,rgba(239,68,68,0.08));border:1px solid var(--destructive,var(--danger));border-radius:8px;padding:12px;margin-bottom:12px;">
+          <div style="font-weight:600;color:var(--destructive,var(--danger));margin-bottom:8px;">❌ 密钥刷新失败</div>
+          <pre style="white-space:pre-wrap;word-break:break-all;font-size:13px;margin:0;max-height:200px;overflow-y:auto;color:var(--foreground);">${escHtml(errMsg)}</pre>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;margin-bottom:12px;border:1px solid var(--border);border-radius:8px;background:var(--card);">
           <div style="min-width:0;flex:1;">
-            <div style="margin-bottom:2px;">AI 辅助模型</div>
-            <div id="scriptAiModelLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._formatScriptAiModelLabel(this._scriptAiModel)}</div>
+            <div style="font-size:12px;color:var(--muted-foreground);margin-bottom:2px;">AI 辅助模型</div>
+            <div id="scriptAiModelLabel" style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this._formatScriptAiModelLabel(this._scriptAiModel)}</div>
           </div>
-          <button type="button" class="blora-button" id="scriptAiSelectModelBtn" data-variant="outline" data-size="sm">选择模型</button>
+          <button type="button" class="blora-button" id="scriptAiSelectModelBtn" data-variant="secondary" data-size="sm">选择模型</button>
         </div>
         <div id="aiAnalysisSection" style="display:none;">
-          <div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-            <span><span data-icon="bot" aria-hidden="true"></span></span> AI 分析结果
+          <div style="font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+            <span>🤖</span> AI 分析结果
           </div>
-          <div id="aiAnalysisContent" style="padding:12px;white-space:pre-wrap;max-height:300px;overflow-y:auto;"></div>
+          <div id="aiAnalysisContent" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto;"></div>
         </div>
         <div id="aiFixSection" style="display:none;margin-top:12px;">
-          <div style="margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-            <span><span data-icon="wrench" aria-hidden="true"></span></span> AI 修复代码
+          <div style="font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+            <span>🔧</span> AI 修复代码
           </div>
-          <div id="aiFixContent" style="padding:12px;white-space:pre-wrap;max-height:300px;overflow-y:auto;"></div>
+          <div id="aiFixContent" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto;font-family:monospace;"></div>
         </div>
       </div>
     `;
@@ -5113,9 +5108,9 @@ class AdminApp {
       content: content,
       width: 600,
       footer: `
-        <button type="button" class="blora-button" id="aiAnalyzeBtn" data-variant="primary"><span data-icon="bot" aria-hidden="true"></span> 让 AI 分析错误并给出修改建议</button>
-        <button type="button" class="blora-button" id="aiFixBtn" style="display:none;" data-variant="outline"><span data-icon="wrench" aria-hidden="true"></span> 让 AI 修复错误</button>
-        <button type="button" class="blora-button" id="aiApplyBtn" style="display:none;" data-variant="primary"><span data-icon="circle-check" aria-hidden="true"></span> 应用修复代码</button>
+        <button class="blora-button" id="aiAnalyzeBtn" data-variant="primary">🤖 让 AI 分析错误并给出修改建议</button>
+        <button class="blora-button" id="aiFixBtn" style="display:none;" data-variant="secondary">🔧 让 AI 修复错误</button>
+        <button class="blora-button" id="aiApplyBtn" style="display:none;" data-variant="primary">✅ 应用修复代码</button>
       `
     });
 
@@ -5140,7 +5135,7 @@ class AdminApp {
       const section = document.getElementById('aiAnalysisSection');
       const contentEl = document.getElementById('aiAnalysisContent');
       section.style.display = 'block';
-      setHTML(contentEl, '<span >' + t('正在分析，请稍候...') + '</span>');
+      setHTML(contentEl, '<span style="color:var(--muted-foreground);">' + t('正在分析，请稍候...') + '</span>');
 
       let fullText = '';
 
@@ -5157,8 +5152,8 @@ class AdminApp {
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: t('请求失败') }));
-          setHTML(contentEl, `<span >${escHtml(err.error || t('AI 分析失败'))}</span>`);
-          clearButtonLoading(btn, t('让 AI 分析错误并给出修改建议'));
+          setHTML(contentEl, `<span style="color:var(--destructive);">${escHtml(err.error || t('AI 分析失败'))}</span>`);
+          clearButtonLoading(btn, t('🤖 让 AI 分析错误并给出修改建议'));
           btn.disabled = false;
           return;
         }
@@ -5188,13 +5183,13 @@ class AdminApp {
           }
         }
 
-        clearButtonLoading(btn, t('分析完成'));
+        clearButtonLoading(btn, t('✅ 分析完成'));
         // 显示修复按钮
         const fixBtn = document.getElementById('aiFixBtn');
         if (fixBtn) fixBtn.style.display = '';
       } catch (e) {
-        setHTML(contentEl, `${'<span >' + t('请求失败:')}${escHtml(e.message)}</span>`);
-        clearButtonLoading(btn, t('让 AI 分析错误并给出修改建议'));
+        setHTML(contentEl, `${'<span style="color:var(--destructive);">' + t('请求失败:')}${escHtml(e.message)}</span>`);
+        clearButtonLoading(btn, t('🤖 让 AI 分析错误并给出修改建议'));
         btn.disabled = false;
       }
 
@@ -5213,7 +5208,7 @@ class AdminApp {
       const fixContent = document.getElementById('aiFixContent');
       if (fixSection) fixSection.style.display = 'block';
       if (fixContent) {
-        setHTML(fixContent, '<span >' + t('正在生成修复代码，请稍候...') + '</span>');
+        setHTML(fixContent, '<span style="color:var(--muted-foreground);">' + t('正在生成修复代码，请稍候...') + '</span>');
       }
 
       let fullText = '';
@@ -5232,8 +5227,8 @@ class AdminApp {
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: t('请求失败') }));
-          if (fixContent) setHTML(fixContent, `<span >${escHtml(err.error || t('AI 修复失败'))}</span>`);
-          clearButtonLoading(fixBtn, t('让 AI 修复错误'));
+          if (fixContent) setHTML(fixContent, `<span style="color:var(--destructive);">${escHtml(err.error || t('AI 修复失败'))}</span>`);
+          clearButtonLoading(fixBtn, t('🔧 让 AI 修复错误'));
           fixBtn.disabled = false;
           return;
         }
@@ -5275,7 +5270,7 @@ class AdminApp {
           fixedScript = fullText.replace(/^```(?:javascript|js)?\s*\n/i, '').replace(/\n```\s*$/, '').trim();
         }
 
-        clearButtonLoading(fixBtn, t('修复完成'));
+        clearButtonLoading(fixBtn, t('✅ 修复完成'));
 
         if (fixedScript) {
           // 显示应用按钮
@@ -5289,17 +5284,17 @@ class AdminApp {
                 scriptTextarea.value = fixedScript;
                 scriptTextarea.dispatchEvent(new Event('input', { bubbles: true }));
               }
-              Dialog.alert(t('AI 已修复脚本，请检查后保存'));
+              alert(t('✅ AI 已修复脚本，请检查后保存'));
             };
           }
         } else {
-          if (fixContent) appendHTML(fixContent, '<br><span >' + t('AI 未能生成修复代码') + '</span>');
-          clearButtonLoading(fixBtn, t('让 AI 修复错误'));
+          if (fixContent) appendHTML(fixContent, '<br><span style="color:var(--destructive);">' + t('⚠️ AI 未能生成修复代码') + '</span>');
+          clearButtonLoading(fixBtn, t('🔧 让 AI 修复错误'));
           fixBtn.disabled = false;
         }
       } catch (e) {
-        if (fixContent) setHTML(fixContent, `${'<span >' + t('请求失败:')}${escHtml(e.message)}</span>`);
-        clearButtonLoading(fixBtn, t('让 AI 修复错误'));
+        if (fixContent) setHTML(fixContent, `${'<span style="color:var(--destructive);">' + t('请求失败:')}${escHtml(e.message)}</span>`);
+        clearButtonLoading(fixBtn, t('🔧 让 AI 修复错误'));
         fixBtn.disabled = false;
       }
     };
@@ -5526,8 +5521,8 @@ async function(ctx) {
     };
 
     doCopy().then(ok => {
-      if (ok) Dialog.alert(t('文档已复制到剪贴板'));
-    }).catch(() => Dialog.alert(t('复制失败')));
+      if (ok) alert(t('文档已复制到剪贴板'));
+    }).catch(() => alert(t('复制失败')));
   }
 
   // 切换供应商额度查询开关
@@ -5550,7 +5545,7 @@ async function(ctx) {
       if (enabled) {
         this.loadProviderQuotaInline(providerId);
       } else {
-        const empty = '<span >' + t('未启用') + '</span>';
+        const empty = '<span style="color:var(--muted-foreground);font-size:12px;">' + t('未启用') + '</span>';
         const el = document.getElementById(`quota-display-${providerId}`);
         const cardEl = document.getElementById(`quota-display-card-${providerId}`);
         if (el) setHTML(el, empty);
@@ -5606,7 +5601,7 @@ async function(ctx) {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        const errHtml = `<span  title="${escapeHtml(data.error || '查询失败')}">${t('查询失败')}</span>`;
+        const errHtml = `<span style="color:var(--destructive);font-size:12px;" title="${escapeHtml(data.error || '查询失败')}">${t('查询失败')}</span>`;
         els.forEach(el => setHTML(el, errHtml));
         return;
       }
@@ -5622,19 +5617,19 @@ async function(ctx) {
       if (pct >= 90) barColor = 'var(--destructive)';
       else if (pct >= 70) barColor = 'var(--warning)';
 
-      const keysInline = keys.length > 1 ? `<div style="margin-top:2px;" title="${escapeHtml(keys.map(k => `${k.masked_key || ('#' + (k.index + 1))}: ${k.ok ? t('成功') : (k.error || t('失败'))}`).join('\n'))}">${keys.filter(k => k.ok).length}/${keys.length} ${t('个 Key 可用')}</div>` : '';
+      const keysInline = keys.length > 1 ? `<div style="font-size:10px;color:var(--muted-foreground);margin-top:2px;" title="${escapeHtml(keys.map(k => `${k.masked_key || ('#' + (k.index + 1))}: ${k.ok ? t('成功') : (k.error || t('失败'))}`).join('\n'))}">${keys.filter(k => k.ok).length}/${keys.length} ${t('个 Key 可用')}</div>` : '';
 
       const html = `
-        <div >${escapeHtml(String(shown.remaining ?? ''))}</div>
-        <div style="height:3px;margin:3px 0;width:80px;">
-          <div style="height:100%;width:${Math.min(pct, 100)}%;"></div>
+        <div style="font-size:13px;font-weight:600;">${escapeHtml(String(shown.remaining ?? ''))}</div>
+        <div style="height:3px;background:var(--border);border-radius:2px;margin:3px 0;width:80px;">
+          <div style="height:100%;width:${Math.min(pct, 100)}%;background:${barColor};border-radius:2px;"></div>
         </div>
-        <div >${escapeHtml(shown.extra || shown.planName || '')}</div>
+        <div style="font-size:10px;color:var(--muted-foreground);">${escapeHtml(shown.extra || shown.planName || '')}</div>
         ${keysInline}
       `;
       els.forEach(el => setHTML(el, html));
     } catch (e) {
-      els.forEach(el => setHTML(el, `<span >${t('网络错误')}</span>`));
+      els.forEach(el => setHTML(el, `<span style="color:var(--destructive);font-size:12px;">${t('网络错误')}</span>`));
     } finally {
       if (quotaButton) {
         quotaButton.disabled = false;
@@ -5646,7 +5641,7 @@ async function(ctx) {
   async deleteProvider(id) {
     const ok = await Dialog.confirm(
       t('删除供应商'),
-       t('确定要删除此供应商吗？') + '<br><br><strong >' + t('将同时删除该供应商下的全部模型') + '</strong>' + t('，并清理 Team 绑定、API Key 模型绑定等关联数据。此操作不可撤销。'),
+       t('确定要删除此供应商吗？') + '<br><br><strong style="color:var(--destructive);">' + t('将同时删除该供应商下的全部模型') + '</strong>' + t('，并清理 Team 绑定、API Key 模型绑定等关联数据。此操作不可撤销。'),
       { confirmText: t('确认删除'), danger: true }
     );
     if (!ok) return;
@@ -5677,16 +5672,195 @@ async function(ctx) {
   // 获取供应商模型列表
   async fetchProviderModels(providerId) {
     this.currentFetchProviderId = providerId;
-    return ProviderModelPicker.open({
-      providerId,
-      showToast: (message, type) => this.showToast(message, type),
-      onChanged: async () => {
-        this._invalidateAdminProviderModelsCache();
-        this._notifyModelsCatalogChanged();
-        await this.loadModels();
-        if (this.currentPage === 'adminProviders') await this.loadProviders({ resetPage: false });
+    this.fetchedModels = [];
+    this.fetchedExistingModels = [];
+    this.fetchedExistingById = {};
+    this.fetchedExistingIds = new Set();
+
+    // 显示对话框
+    document.getElementById('fetchModelsTitle').textContent = t('获取模型列表');
+    document.getElementById('fetchModelsLoading').style.display = 'block';
+    document.getElementById('fetchModelsError').style.display = 'none';
+    document.getElementById('fetchModelsContent').style.display = 'none';
+    document.getElementById('saveFetchedModelsBtn').style.display = 'none';
+    const cleanupBtn = document.getElementById('cleanupStaleModelsBtn');
+    if (cleanupBtn) cleanupBtn.style.display = 'none';
+    document.getElementById('selectAllFetchedModels').checked = false;
+
+    this.showModal('fetchModelsModal');
+
+    try {
+      const url = `/api/admin/providers/${providerId}/fetch-models`;
+      console.log(`${t('[获取模型] 请求: GET')}${url}`);
+      const response = await fetch(url);
+      const data = await response.json();
+      console.log(`${t('[获取模型] 响应: status=')}${response.status}`, data);
+
+      // 输出详细的调试信息到控制台
+      if (data.debug?.attempts) {
+        console.group(t('[获取模型] 请求尝试详情'));
+        data.debug.attempts.forEach((a, i) => {
+          console.log(`${t('尝试')}${i + 1}: ${a.url}`);
+          console.log(`${t('状态:')}${a.status || 'N/A'}`);
+          console.log(`  Content-Type: ${a.contentType || 'N/A'}`);
+          if (a.error) console.log(`${t('错误:')}${a.error}`);
+          if (a.bodyPreview) console.log(`${t('响应预览:')}${a.bodyPreview}`);
+          if (a.success) console.log(`${t('成功! 模型数:')}${a.modelCount}`);
+        });
+        if (data.debug.succeededUrl) console.log(`${t('成功路径:')}${data.debug.succeededUrl}`);
+        console.groupEnd();
       }
-    });
+
+      if (!response.ok) {
+        document.getElementById('fetchModelsLoading').style.display = 'none';
+        document.getElementById('fetchModelsError').style.display = 'block';
+        let errorMsg = data.error || t('获取失败');
+        if (data.debug?.attempts) {
+          errorMsg += '\n\n' + t('尝试过的路径:') + '\n';
+          data.debug.attempts.forEach(a => {
+            errorMsg += `  ${a.url}: ${a.error || `HTTP ${a.status}`}\n`;
+          });
+        }
+        document.getElementById('fetchModelsError').textContent = errorMsg;
+        document.getElementById('fetchModelsError').style.whiteSpace = 'pre-wrap';
+        console.error(`${t('[获取模型] 失败:')}`, data);
+        return;
+      }
+
+      const models = Array.isArray(data.models) ? data.models : [];
+      const existingModels = Array.isArray(data.existingModels) ? data.existingModels : [];
+      // 上游为空但本地仍有模型时，仍展示列表（便于清理已下架）
+      if (models.length === 0 && existingModels.length === 0) {
+        document.getElementById('fetchModelsLoading').style.display = 'none';
+        document.getElementById('fetchModelsError').style.display = 'block';
+        document.getElementById('fetchModelsError').style.color = 'var(--muted-foreground)';
+        document.getElementById('fetchModelsError').textContent = data.message || t('未获取到模型');
+        return;
+      }
+
+      this.fetchedModels = models;
+      this.fetchedExistingIds = new Set(data.existingIds || []);
+      this.fetchedExistingModels = existingModels;
+      this.fetchedExistingById = data.existingById || {};
+      this.fetchedModelsFilter = 'all';
+      this.renderFetchedModels(data.provider_name, models);
+    } catch (error) {
+      console.error(t('获取供应商模型失败:'), error);
+      document.getElementById('fetchModelsLoading').style.display = 'none';
+      document.getElementById('fetchModelsError').style.display = 'block';
+      document.getElementById('fetchModelsError').textContent = t('网络错误: ') + error.message;
+    }
+  }
+
+  renderFetchedModels(providerName, models) {
+    document.getElementById('fetchModelsLoading').style.display = 'none';
+    const contentEl = document.getElementById('fetchModelsContent');
+    if (contentEl) contentEl.style.display = 'flex';
+    document.getElementById('saveFetchedModelsBtn').style.display = 'inline-flex';
+    document.getElementById('fetchedModelsSearch').value = '';
+
+    this._renderFetchedModelsList(models);
+    this._updateFetchedModelsFilterTabs();
+    this._updateCleanupStaleModelsBtn();
+  }
+
+  /** 同步弹窗：根据当前已下架数量显示/隐藏清理按钮 */
+  _updateCleanupStaleModelsBtn() {
+    const btn = document.getElementById('cleanupStaleModelsBtn');
+    if (!btn) return;
+    const models = this.fetchedModels || [];
+    const existingModels = this.fetchedExistingModels || [];
+    const upstreamIds = new Set(models.map(m => m.id));
+    const staleCount = existingModels.filter(m => !upstreamIds.has(m.id)).length;
+    btn.style.display = staleCount > 0 ? 'inline-flex' : 'none';
+    btn.textContent = staleCount > 0 ? `${t('清理已下架模型 (')}${staleCount})` : t('清理已下架模型');
+    btn.disabled = false;
+  }
+
+  /**
+   * 同步弹窗：清理当前供应商已下架模型记录
+   */
+  async cleanupStaleModelsInFetchModal() {
+    const providerId = this.currentFetchProviderId;
+    if (!providerId) return;
+
+    const models = this.fetchedModels || [];
+    const existingModels = this.fetchedExistingModels || [];
+    const upstreamIds = new Set(models.map(m => m.id));
+    const staleModels = existingModels.filter(m => !upstreamIds.has(m.id));
+    if (staleModels.length === 0) {
+      this.showToast(t('没有可清理的已下架模型'), 'info');
+      this._updateCleanupStaleModelsBtn();
+      return;
+    }
+
+    const preview = staleModels.slice(0, 8).map(m => escapeHtml(m.name || m.id)).join('、');
+    const more = staleModels.length > 8 ? `${t('等')}${staleModels.length}${t('个')}` : '';
+    const ok = await Dialog.confirm(
+      t('清理已下架模型'),
+      `${t('将')}<strong style="color:var(--destructive);">${t('永久删除')}</strong>${t('本供应商下')} <strong>${staleModels.length}${'</strong>' + t('个上游已不存在的本地模型记录（含 Team / API Key 绑定等关联数据）。此操作不可撤销。')}<br><br>` +
+        `${'<span style="font-size:13px;color:var(--muted-foreground);">' + t('预览：')}${preview}${more}</span>`,
+      { confirmText: t('确认清理'), danger: true }
+    );
+    if (!ok) return;
+
+    const btn = document.getElementById('cleanupStaleModelsBtn');
+    if (btn) {
+      btn.disabled = true;
+      setButtonLoading(btn, t('清理中...'));
+    }
+
+    try {
+      const response = await fetch(
+        `/api/admin/providers/${encodeURIComponent(providerId)}/cleanup-stale-models`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ modelIds: staleModels.map(m => m.systemId).filter(Boolean) })
+        }
+      );
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        this.showToast(result.error || t('清理失败'), 'error');
+        return;
+      }
+
+      const deleted = result.deleted || 0;
+      this.showToast(
+        deleted > 0 ? `${t('已清理')}${deleted}${t('个已下架模型')}` : (result.message || t('没有可清理的已下架模型')),
+        deleted > 0 ? 'success' : 'info'
+      );
+
+      // 从本地缓存移除已删除项并刷新列表
+      const deletedSet = new Set(result.deletedIds || staleModels.map(m => m.systemId));
+      this.fetchedExistingModels = (this.fetchedExistingModels || []).filter(
+        m => !deletedSet.has(m.systemId)
+      );
+      this.fetchedExistingIds = new Set((this.fetchedExistingModels || []).map(m => m.id));
+      const byId = { ...(this.fetchedExistingById || {}) };
+      for (const m of staleModels) {
+        if (deletedSet.has(m.systemId)) delete byId[m.id];
+      }
+      this.fetchedExistingById = byId;
+
+      this._renderFetchedModelsList(this.fetchedModels || []);
+      this._updateFetchedModelsFilterTabs();
+      this._updateCleanupStaleModelsBtn();
+      this._invalidateAdminProviderModelsCache?.();
+      this._notifyModelsCatalogChanged();
+      if (typeof this.loadModels === 'function') {
+        this.loadModels({ resetPage: false }).catch(() => {});
+      }
+    } catch (error) {
+      console.error(t('清理已下架模型失败:'), error);
+      this.showToast(t('清理失败: ') + error.message, 'error');
+    } finally {
+      if (btn) {
+        clearButtonLoading(btn, btn.textContent || t('清理已下架模型'));
+        btn.disabled = false;
+        this._updateCleanupStaleModelsBtn();
+      }
+    }
   }
 
   /**
@@ -5700,7 +5874,7 @@ async function(ctx) {
 
     const ok = await Dialog.confirm(
       t('清理所有已下架模型'),
-       t('将依次从') + '<strong>' + t('每个供应商') + '</strong>' + t('拉取上游模型列表，对比后') + '<strong >' + t('永久删除') + '</strong>' + t('本地已下架的模型记录（含 Team / API Key 绑定等关联数据）。') +
+       t('将依次从') + '<strong>' + t('每个供应商') + '</strong>' + t('拉取上游模型列表，对比后') + '<strong style="color:var(--destructive);">' + t('永久删除') + '</strong>' + t('本地已下架的模型记录（含 Team / API Key 绑定等关联数据）。') +
         '<br><br>' + t('拉取失败的供应商会') + '<strong>' + t('跳过') + '</strong>' + t('（不会误删）。此操作可能耗时较长，且不可撤销。') + ',',
       { confirmText: t('开始清理'), danger: true }
     );
@@ -5736,7 +5910,9 @@ async function(ctx) {
       this.showToast(parts.join(' · '), deleted > 0 || skipped === 0 ? 'success' : 'info');
 
       // 若同步弹窗打开且属于某一供应商，刷新该列表
-      ProviderModelPicker.reload(this.currentFetchProviderId)?.catch(() => {});
+      if (this.currentFetchProviderId && document.getElementById('fetchModelsModal')?.hasAttribute('open')) {
+        this.fetchProviderModels(this.currentFetchProviderId).catch(() => {});
+      }
       this._invalidateAdminProviderModelsCache?.();
       this._notifyModelsCatalogChanged();
       if (typeof this.loadModels === 'function') {
@@ -5753,6 +5929,218 @@ async function(ctx) {
       if (toolbarBtn) {
         clearButtonLoading(toolbarBtn, t('清理所有已下架模型'));
         toolbarBtn.disabled = false;
+      }
+    }
+  }
+
+  _renderFetchedModelsList(models) {
+    const existingById = this.fetchedExistingById || {};
+    const existingModels = this.fetchedExistingModels || [];
+    const fetchedModelIds = new Set(models.map(m => m.id));
+    // 已不在上游列表中的已添加模型
+    const staleModels = existingModels.filter(m => !fetchedModelIds.has(m.id));
+    document.getElementById('selectAllFetchedModels').checked = false;
+
+    const container = document.getElementById('fetchedModelsList');
+
+    // 取消之前的渐进渲染任务
+    if (this._pendingFetchedModelsRaf) {
+      cancelAnimationFrame(this._pendingFetchedModelsRaf);
+      this._pendingFetchedModelsRaf = null;
+    }
+
+    const _buildItemHtml = (model, index, extraAttrs) => {
+      const existing = existingById[model.id];
+      const isInSystem = !!existing;
+      const isEnabled = existing?.enabled === true;
+      const isStale = extraAttrs?.stale;
+      const statusClass = isStale ? 'stale' : (isEnabled ? 'enabled' : 'disabled');
+
+      return `
+        <div class="model-check-item" data-model-id="${model.id}" data-model-name="${model.name || ''}" data-status="${statusClass}"${extraAttrs?.attrs || ''}>
+          <input type="checkbox" class="checkbox" id="fetchedModel_${index}" value="${model.id}" ${isEnabled ? 'checked' : ''} onchange="adminApp.updateFetchedModelsCount()">
+          <label for="fetchedModel_${index}">
+            <span class="model-name">${model.name || model.id}</span>
+            ${model.name && model.name !== model.id ? `<span class="model-id">${model.id}</span>` : ''}
+            ${isStale ? '<span class="status-badge stale-badge">' + t('已失效') + '</span>' : (isInSystem ? (isEnabled ? '<span class="status-badge enabled-badge">' + t('已启用') + '</span>' : '<span class="status-badge disabled-badge">' + t('已禁用') + '</span>') : '<span class="status-badge new-badge">' + t('新模型') + '</span>')}
+          </label>
+        </div>
+      `;
+    };
+
+    const INITIAL_BATCH = 50;
+    const CHUNK_SIZE = 100;
+
+    // 先渲染第一批（快速显示）
+    const initialModels = models.slice(0, INITIAL_BATCH);
+    let html = initialModels.map((model, i) => _buildItemHtml(model, i)).join('');
+
+    // 已下架的模型（之前添加过但已不在上游列表）
+    const staleHtml = staleModels.map((model, i) => _buildItemHtml(model, i + models.length, {
+      stale: true,
+      attrs: ' data-system-id="' + model.systemId + '" style="border-left:3px solid var(--destructive);opacity:0.6;"'
+    })).join('');
+
+    setHTML(container, html + staleHtml);
+    this._applyFetchedModelsFilter();
+
+    // 如果模型数量不多，直接返回
+    if (models.length <= INITIAL_BATCH) return;
+
+    // 渐进渲染剩余模型
+    let currentIndex = INITIAL_BATCH;
+    const remainingModels = models.slice(INITIAL_BATCH);
+
+    const renderChunk = () => {
+      const end = Math.min(currentIndex + CHUNK_SIZE, models.length);
+      const chunk = models.slice(currentIndex, end);
+      const chunkHtml = chunk.map((model, i) =>
+        _buildItemHtml(model, currentIndex + i)
+      ).join('');
+
+      const temp = document.createElement('div');
+      setHTML(temp, chunkHtml);
+      while (temp.firstChild) {
+        container.appendChild(temp.firstChild);
+      }
+
+      currentIndex = end;
+      this._applyFetchedModelsFilter();
+
+      if (currentIndex < models.length) {
+        this._pendingFetchedModelsRaf = requestAnimationFrame(renderChunk);
+      } else {
+        this._pendingFetchedModelsRaf = null;
+      }
+    };
+
+    this._pendingFetchedModelsRaf = requestAnimationFrame(renderChunk);
+  }
+
+  setFetchedModelsFilter(filter) {
+    this.fetchedModelsFilter = filter;
+    this._updateFetchedModelsFilterTabs();
+    this._applyFetchedModelsFilter();
+  }
+
+  _updateFetchedModelsFilterTabs() {
+    const tabs = document.querySelectorAll('#fetchedModelsTabs button');
+    tabs.forEach(tab => {
+      const isActive = tab.dataset.filter === (this.fetchedModelsFilter || 'all');
+      tab.className = isActive ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+    });
+  }
+
+  _applyFetchedModelsFilter() {
+    const keyword = (document.getElementById('fetchedModelsSearch').value || '').trim().toLowerCase();
+    const filter = this.fetchedModelsFilter || 'all';
+    const items = document.querySelectorAll('#fetchedModelsList .model-check-item');
+    let visibleCount = 0;
+    items.forEach(item => {
+      const id = (item.dataset.modelId || '').toLowerCase();
+      const name = (item.dataset.modelName || '').toLowerCase();
+      const status = item.dataset.status;
+      const matchSearch = !keyword || id.includes(keyword) || name.includes(keyword);
+      let matchFilter = true;
+      if (filter === 'enabled') matchFilter = status === 'enabled';
+      else if (filter === 'disabled') matchFilter = status === 'disabled';
+      else if (filter === 'stale') matchFilter = status === 'stale';
+      const visible = matchSearch && matchFilter;
+      item.style.display = visible ? '' : 'none';
+      if (visible) visibleCount++;
+    });
+    const enabledCount = document.querySelectorAll('#fetchedModelsList .model-check-item[data-status="enabled"]').length;
+    const disabledCount = document.querySelectorAll('#fetchedModelsList .model-check-item[data-status="disabled"]').length;
+    const staleCount = document.querySelectorAll('#fetchedModelsList .model-check-item[data-status="stale"]').length;
+    const newCount = document.querySelectorAll('#fetchedModelsList .model-check-item[data-status="new"]').length;
+    let label = '';
+    if (filter === 'enabled') label = `${t('已启用')}${enabledCount}${t('个')}`;
+    else if (filter === 'disabled') label = `${t('未启用')}${disabledCount}${t('个')}`;
+    else if (filter === 'stale') label = `${t('已失效')}${staleCount}${t('个')}`;
+    else label = `${t('共')}${enabledCount + disabledCount + staleCount + newCount}${t('个（已启用')}${enabledCount}${t('，未启用')}${disabledCount}${t('，新模型')}${newCount}${staleCount > 0 ? `${t('，已失效')} ${staleCount}` : ''}）`;
+    if (keyword) label += `${t('，匹配')}${visibleCount}${t('个')}`;
+    document.getElementById('fetchedModelsCount').textContent = label;
+  }
+
+  filterFetchedModels() {
+    this._applyFetchedModelsFilter();
+  }
+
+  toggleSelectAllFetchedModels(checked) {
+    const filter = this.fetchedModelsFilter || 'all';
+    const items = document.querySelectorAll('#fetchedModelsList .model-check-item');
+    items.forEach(item => {
+      if (item.style.display !== 'none') {
+        const cb = item.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = checked;
+      }
+    });
+    this.updateFetchedModelsCount();
+  }
+
+  updateFetchedModelsCount() {
+    const checked = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]:checked').length;
+    const total = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]').length;
+    document.getElementById('selectAllFetchedModels').checked = checked > 0 && checked === total;
+  }
+
+  async saveFetchedModels() {
+    const providerId = this.currentFetchProviderId;
+    const checkboxes = document.querySelectorAll('#fetchedModelsList input[type="checkbox"]');
+    const enabledModelIds = [];
+    checkboxes.forEach(cb => {
+      if (cb.checked) {
+        enabledModelIds.push(cb.value);
+      }
+    });
+
+    if (enabledModelIds.length === 0) {
+      const ok = await Dialog.confirm(
+        t('禁用全部模型？'),
+         t('当前') + '<strong>' + t('没有任何模型被勾选') + '</strong>' + t('。保存后将') + '<strong style="color:var(--destructive);">' + t('禁用该供应商下所有已有模型') + '</strong>' + t('。确定继续吗？') + ',',
+        { confirmText: t('确认禁用全部'), danger: true }
+      );
+      if (!ok) return;
+    }
+
+    // 禁用按钮防止重复提交
+    const saveBtn = document.getElementById('saveFetchedModelsBtn');
+    if (saveBtn) {
+      setButtonLoading(saveBtn, t('保存中...'));
+    }
+
+    try {
+      const response = await fetch(`/api/admin/providers/${providerId}/sync-models`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabledModelIds })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const parts = [];
+        if (result.added > 0) parts.push(`${t('新增')}${result.added}${t('个')}`);
+        if (result.enabled > 0) parts.push(`${t('启用')}${result.enabled}${t('个')}`);
+        if (result.disabled > 0) parts.push(`${t('禁用')}${result.disabled}${t('个')}`);
+        this.showToast(t('保存成功：') + (parts.join('，') || t('无变化')), 'success');
+        this.closeModals();
+        // 模型目录变更：使 Team 模型权限等跨页缓存失效并尽量即时刷新
+        this._invalidateAdminProviderModelsCache();
+        this._notifyModelsCatalogChanged();
+        this.loadModels();
+        if (typeof this.loadProviders === 'function' && this.currentPage === 'adminProviders') {
+          this.loadProviders({ resetPage: false }).catch(() => {});
+        }
+      } else {
+        const err = await response.json().catch(() => ({}));
+        this.showToast(err.error || t('保存失败'), 'error');
+      }
+    } catch (error) {
+      console.error(t('保存模型失败:'), error);
+      this.showToast(t('保存失败: ') + error.message, 'error');
+    } finally {
+      if (saveBtn) {
+        clearButtonLoading(saveBtn, t('保存'));
       }
     }
   }
@@ -5847,12 +6235,12 @@ async function(ctx) {
       const periodDetails = document.getElementById('quotaPeriodDetails');
       if (periodDetails) {
         setHTML(periodDetails, periods.map(period => `
-          <div style="padding:10px 12px;">
-            <div style="display:flex;justify-content:space-between;gap:8px;">
+          <div style="padding:10px 12px;background:var(--muted);border-radius:8px;">
+            <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;">
               <span>${escapeHtml(period.label || period.key)}</span><span>${escapeHtml(String(period.percent))}%</span>
             </div>
-            ${period.startsAt ? `${'<div style="margin-top:4px;">' + t('周期：')}${escapeHtml(period.startsAt)}${t('至')}${escapeHtml(period.resetsAt || t('未知'))}</div>` : (period.resetsAt ? `${'<div style="margin-top:4px;">' + t('重置于')}${escapeHtml(period.resetsAt)}</div>` : '')}
-            ${period.resetAfterSeconds > 0 ? `${'<div style="margin-top:2px;">' + t('约')}${escapeHtml(String(Math.ceil(period.resetAfterSeconds / 3600)))}${t('小时后重置')}</div>` : ''}
+            ${period.startsAt ? `${'<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">' + t('周期：')}${escapeHtml(period.startsAt)}${t('至')}${escapeHtml(period.resetsAt || t('未知'))}</div>` : (period.resetsAt ? `${'<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">' + t('重置于')}${escapeHtml(period.resetsAt)}</div>` : '')}
+            ${period.resetAfterSeconds > 0 ? `${'<div style="margin-top:2px;font-size:11px;color:var(--muted-foreground);">' + t('约')}${escapeHtml(String(Math.ceil(period.resetAfterSeconds / 3600)))}${t('小时后重置')}</div>` : ''}
           </div>`).join(''));
       }
       const creditsDetails = document.getElementById('quotaCreditsDetails');
@@ -5886,12 +6274,12 @@ async function(ctx) {
       const keyLabel = key.label || key.masked_key || `#${key.index + 1}`;
       if (!key.ok) {
         return `
-          <div style="padding:10px 12px;">
-            <div style="display:flex;justify-content:space-between;gap:8px;">
-              <code >${escapeHtml(keyLabel)}</code>
-              <span  title="${escapeHtml(key.error || '')}">${t('查询失败')}</span>
+          <div style="padding:10px 12px;background:var(--muted);border-radius:8px;">
+            <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;">
+              <code style="font-size:12px;">${escapeHtml(keyLabel)}</code>
+              <span style="color:var(--destructive);font-size:12px;" title="${escapeHtml(key.error || '')}">${t('查询失败')}</span>
             </div>
-            ${key.error ? `<div style="margin-top:4px;word-break:break-all;">${escapeHtml(key.error)}</div>` : ''}
+            ${key.error ? `<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);word-break:break-all;">${escapeHtml(key.error)}</div>` : ''}
           </div>`;
       }
       const kq = key.quota || {};
@@ -5902,19 +6290,19 @@ async function(ctx) {
       const shownPct = Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct));
       const barColor = shownPct >= 90 ? 'var(--destructive)' : shownPct >= 70 ? 'var(--warning)' : 'var(--brand-blue)';
       return `
-        <div style="padding:10px 12px;">
-          <div style="display:flex;justify-content:space-between;gap:8px;">
-            <code >${escapeHtml(keyLabel)}</code>
+        <div style="padding:10px 12px;background:var(--muted);border-radius:8px;">
+          <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;">
+            <code style="font-size:12px;">${escapeHtml(keyLabel)}</code>
             <span>${shownPct}%</span>
           </div>
-          <div style="height:5px;overflow:hidden;margin-top:8px;">
-            <div style="height:100%;width:${shownPct}%;"></div>
+          <div style="height:5px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:8px;">
+            <div style="height:100%;width:${shownPct}%;background:${barColor};border-radius:4px;"></div>
           </div>
-          ${kTotal > 0 ? `<div style="margin-top:4px;">${t('剩余')} ${escapeHtml(String(kq.remaining ?? 0))} / ${escapeHtml(String(kTotal))}${kq.extra ? ` · ${escapeHtml(kq.extra)}` : ''}</div>` : (kq.extra ? `<div style="margin-top:4px;">${escapeHtml(kq.extra)}</div>` : '')}
+          ${kTotal > 0 ? `<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">${t('剩余')} ${escapeHtml(String(kq.remaining ?? 0))} / ${escapeHtml(String(kTotal))}${kq.extra ? ` · ${escapeHtml(kq.extra)}` : ''}</div>` : (kq.extra ? `<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">${escapeHtml(kq.extra)}</div>` : '')}
         </div>`;
     }).join('');
     container.style.display = 'block';
-    setHTML(container, `<div style="margin-bottom:8px;">${t('逐 Key 额度')}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;">${rows}</div>`);
+    setHTML(container, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('逐 Key 额度')}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;">${rows}</div>`);
   }
 
   renderGrokQuotaDetails(q, isGrok) {
@@ -5924,25 +6312,25 @@ async function(ctx) {
     [billing, products, history].forEach(el => { if (el) { el.style.display = 'none'; setHTML(el, ''); } });
     if (!isGrok) return;
 
-    const card = (label, value, hint = '') => `<div style="padding:12px;min-width:140px;flex:1;"><div style="margin-bottom:5px;">${escapeHtml(label)}</div><div >${escapeHtml(String(value))}</div>${hint ? `<div style="margin-top:4px;">${escapeHtml(hint)}</div>` : ''}</div>`;
+    const card = (label, value, hint = '') => `<div style="padding:12px;background:var(--muted);border-radius:10px;min-width:140px;flex:1;"><div style="font-size:11px;color:var(--muted-foreground);margin-bottom:5px;">${escapeHtml(label)}</div><div style="font-size:16px;font-weight:600;">${escapeHtml(String(value))}</div>${hint ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:4px;">${escapeHtml(hint)}</div>` : ''}</div>`;
     const formatNumber = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) : '-';
     const current = q.currentPeriod || {};
     if (billing) {
       billing.style.display = 'block';
-      setHTML(billing, `<div style="margin-bottom:8px;">${t('SuperGrok 计费信息')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;">${card(t('当前周期'), current.label || current.type || t('当前周期'), current.startsAt && current.resetsAt ? `${current.startsAt} ${t('至')} ${current.resetsAt}` : '')}${card(t('按需额度上限'), formatNumber(q.onDemandCap), 'onDemandCap')}${card(t('按需已使用'), formatNumber(q.onDemandUsed), `剩余 ${formatNumber(q.onDemandRemaining)}`)}${card('Prepaid Credits', formatNumber(q.prepaidBalance), q.isUnifiedBillingUser ? t('统一周池计费') : t('额外购买余额'))}${q.monthlyLimit ? card(t('旧版月额度'), formatNumber(q.monthlyLimit), `已使用 ${formatNumber(q.monthlyUsed)} 美分`) : ''}</div>`);
+      setHTML(billing, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('SuperGrok 计费信息')}</div><div style="display:flex;gap:8px;flex-wrap:wrap;">${card(t('当前周期'), current.label || current.type || t('当前周期'), current.startsAt && current.resetsAt ? `${current.startsAt} ${t('至')} ${current.resetsAt}` : '')}${card(t('按需额度上限'), formatNumber(q.onDemandCap), 'onDemandCap')}${card(t('按需已使用'), formatNumber(q.onDemandUsed), `剩余 ${formatNumber(q.onDemandRemaining)}`)}${card('Prepaid Credits', formatNumber(q.prepaidBalance), q.isUnifiedBillingUser ? t('统一周池计费') : t('额外购买余额'))}${q.monthlyLimit ? card(t('旧版月额度'), formatNumber(q.monthlyLimit), `已使用 ${formatNumber(q.monthlyUsed)} 美分`) : ''}</div>`);
     }
 
     const productPeriods = (q.periods || []).filter(period => !period.historical && period.key !== 'current_period');
     if (products && productPeriods.length) {
       products.style.display = 'block';
-      setHTML(products, `<div style="margin-bottom:8px;">${t('按产品用量')}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">${productPeriods.map(period => `<div style="padding:10px 12px;"><div style="display:flex;justify-content:space-between;gap:8px;"><span>${escapeHtml(period.label || period.key)}</span><span>${escapeHtml(String(period.percent))}%</span></div><div style="height:5px;overflow:hidden;margin-top:8px;"><div style="height:100%;width:${Math.min(100, Math.max(0, Number(period.percent) || 0))}%;"></div></div></div>`).join('')}</div>`);
+      setHTML(products, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('按产品用量')}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">${productPeriods.map(period => `<div style="padding:10px 12px;background:var(--muted);border-radius:8px;"><div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;"><span>${escapeHtml(period.label || period.key)}</span><span>${escapeHtml(String(period.percent))}%</span></div><div style="height:5px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:8px;"><div style="height:100%;width:${Math.min(100, Math.max(0, Number(period.percent) || 0))}%;background:var(--brand-blue);border-radius:4px;"></div></div></div>`).join('')}</div>`);
     }
 
     const historyPeriods = (q.periods || []).filter(period => period.historical);
     if (history && historyPeriods.length) {
       const formatCents = cents => Number.isFinite(Number(cents)) ? `$${(Number(cents) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
       history.style.display = 'block';
-      setHTML(history, `<div style="margin-bottom:8px;">${t('历史周期')}</div><div class="blora-table-wrap"><table class="blora-table" style="width:100%;"><thead><tr><th style="text-align:left;padding:6px 8px;">周期</th><th style="text-align:right;padding:6px 8px;">使用率</th><th style="text-align:right;padding:6px 8px;">用量</th><th style="text-align:right;padding:6px 8px;">时间</th></tr></thead><tbody>${historyPeriods.map(period => { const percent = Number.isFinite(Number(period.percent)) ? `${Number(period.percent)}%` : '-'; const amount = period.amountCents ? formatCents(period.amountCents.total) : '-'; return `<tr><td style="padding:6px 8px;">${escapeHtml(period.label || period.key)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml(percent)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml(amount)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml([period.startsAt, period.resetsAt].filter(Boolean).join(t(' 至 ')) || '-')}</td></tr>`; }).join('')}</tbody></table></div>`);
+      setHTML(history, `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">${t('历史周期')}</div><div style="overflow:auto;"><table style="width:100%;font-size:12px;"><thead><tr><th style="text-align:left;padding:6px 8px;">周期</th><th style="text-align:right;padding:6px 8px;">使用率</th><th style="text-align:right;padding:6px 8px;">用量</th><th style="text-align:right;padding:6px 8px;">时间</th></tr></thead><tbody>${historyPeriods.map(period => { const percent = Number.isFinite(Number(period.percent)) ? `${Number(period.percent)}%` : '-'; const amount = period.amountCents ? formatCents(period.amountCents.total) : '-'; return `<tr><td style="padding:6px 8px;">${escapeHtml(period.label || period.key)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml(percent)}</td><td style="padding:6px 8px;text-align:right;">${escapeHtml(amount)}</td><td style="padding:6px 8px;text-align:right;color:var(--muted-foreground);">${escapeHtml([period.startsAt, period.resetsAt].filter(Boolean).join(t(' 至 ')) || '-')}</td></tr>`; }).join('')}</tbody></table></div>`);
     }
   }
 
@@ -5990,14 +6378,14 @@ async function(ctx) {
       const data = await res.json();
 
       if (!res.ok) {
-        Dialog.alert(data.error || t('保存失败'));
+        alert(data.error || t('保存失败'));
         return;
       }
 
       // 保存成功，重新查询
       this.checkProviderQuota(providerId);
     } catch (e) {
-      Dialog.alert(t('保存失败: ') + e.message);
+      alert(t('保存失败: ') + e.message);
     }
   }
 
@@ -6015,7 +6403,7 @@ async function(ctx) {
       // 重新加载默认脚本
       this.editQuotaScript();
     } catch (e) {
-      Dialog.alert(t('重置失败: ') + e.message);
+      alert(t('重置失败: ') + e.message);
     }
   }
 
@@ -6102,21 +6490,21 @@ async function(ctx) {
     const text = document.getElementById('providerCodexConfigText')?.value.trim();
     const mode = document.getElementById('providerQuotaMode')?.value;
     const isGrok = mode === 'grok_billing';
-    if (!providerId) { Dialog.alert(`${t('请先保存供应商，再绑定')}${isGrok ? 'SuperGrok' : 'Codex'} OAuth`); return; }
-    if (!text) { Dialog.alert(t('请输入或上传 auth.json')); return; }
+    if (!providerId) { alert(`${t('请先保存供应商，再绑定')}${isGrok ? 'SuperGrok' : 'Codex'} OAuth`); return; }
+    if (!text) { alert(t('请输入或上传 auth.json')); return; }
     let config;
-    try { config = JSON.parse(text); } catch (error) { Dialog.alert(t('JSON 格式错误: ') + error.message); return; }
+    try { config = JSON.parse(text); } catch (error) { alert(t('JSON 格式错误: ') + error.message); return; }
     try {
       const response = await fetch(isGrok ? '/api/admin/import-grok' : '/api/admin/import-codex', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ providerId, config })
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) { Dialog.alert(result.error || t('绑定失败')); return; }
-      Dialog.alert(`${isGrok ? 'SuperGrok' : 'Codex'}${t('OAuth 已绑定到当前供应商')}`);
+      if (!response.ok) { alert(result.error || t('绑定失败')); return; }
+      alert(`${isGrok ? 'SuperGrok' : 'Codex'}${t('OAuth 已绑定到当前供应商')}`);
       document.getElementById('providerCodexConfigText').value = '';
       document.getElementById('providerCodexConfigFile').value = '';
-    } catch (error) { Dialog.alert(t('绑定失败: ') + error.message); }
+    } catch (error) { alert(t('绑定失败: ') + error.message); }
   }
 
   // OpenCode 配置导入
@@ -6125,7 +6513,7 @@ async function(ctx) {
     document.getElementById('openCodeConfigFile').value = '';
     document.getElementById('importPreview').style.display = 'none';
     clearChildren(document.getElementById('importPreviewContent'));
-
+    
     this.showModal('importOpenCodeModal');
   }
 
@@ -6147,50 +6535,50 @@ async function(ctx) {
       const config = JSON.parse(content);
       const preview = document.getElementById('importPreview');
       const previewContent = document.getElementById('importPreviewContent');
-
+      
       let html = '';
-
+      
       // Claude Code 格式（有 env 字段）
       if (config.env && typeof config.env === 'object') {
         const env = config.env;
         const key = env.ANTHROPIC_AUTH_TOKEN;
         const baseUrl = env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com';
-
-        html += `<p style="margin-bottom: 8px;"><strong>${t('Claude Code 配置')}</strong></p>`;
-        html += `<div style="margin-left: 12px;margin-bottom: 4px;">
-          <span >anthropic</span>
-          <span > — ${baseUrl}</span>
-          ${key ? `<span > (${key.substring(0, 8)}****)</span>` : '<span >' + t('(无 Key)') + '</span>'}
+        
+        html += `<p style="color: var(--foreground); margin-bottom: 8px;"><strong>${t('Claude Code 配置')}</strong></p>`;
+        html += `<div style="margin-left: 12px; margin-bottom: 4px;">
+          <span style="color: var(--success);">anthropic</span>
+          <span style="color: var(--muted-foreground);"> — ${baseUrl}</span>
+          ${key ? `<span style="color: var(--success);"> (${key.substring(0, 8)}****)</span>` : '<span style="color: var(--destructive);">' + t('(无 Key)') + '</span>'}
         </div>`;
-
+        
         // 显示模型
         const modelKeys = ['ANTHROPIC_MODEL', 'ANTHROPIC_DEFAULT_HAIKU_MODEL', 'ANTHROPIC_DEFAULT_SONNET_MODEL', 'ANTHROPIC_DEFAULT_OPUS_MODEL'];
         const modelNames = [t('默认'), 'Haiku', 'Sonnet', 'Opus'];
         for (let i = 0; i < modelKeys.length; i++) {
           const modelId = env[modelKeys[i]];
           if (modelId) {
-            html += `<div style="margin-left: 24px;"><span data-icon="arrow-right" aria-hidden="true"></span> ${modelId} (${modelNames[i]})</div>`;
+            html += `<div style="margin-left: 24px; color: var(--muted-foreground); font-size: 12px;">→ ${modelId} (${modelNames[i]})</div>`;
           }
         }
       } else {
         // OpenCode auth.json 格式
-        html += '<p style="margin-bottom: 8px;"><strong>OpenCode auth.json</strong></p>';
+        html += '<p style="color: var(--foreground); margin-bottom: 8px;"><strong>OpenCode auth.json</strong></p>';
         let count = 0;
         for (const [id, entry] of Object.entries(config)) {
           if (entry && entry.key) {
             const masked = entry.key.substring(0, 8) + '****';
-            html += `<div style="margin-left: 12px;margin-bottom: 4px;">
-              <span >${id}</span>
-              <span > — ${masked}</span>
+            html += `<div style="margin-left: 12px; margin-bottom: 4px;">
+              <span style="color: var(--success);">${id}</span>
+              <span style="color: var(--muted-foreground);"> — ${masked}</span>
             </div>`;
             count++;
           }
         }
         if (count === 0) {
-          html += '<blora-empty title="' + t('未找到有效的 API Key') + '"></blora-empty>';
+          html += '<p style="color: var(--muted-foreground); margin-left: 12px;">' + t('未找到有效的 API Key') + '</p>';
         }
       }
-
+      
       setHTML(previewContent, html);
       preview.style.display = 'block';
     } catch (error) {
@@ -6202,14 +6590,14 @@ async function(ctx) {
     const providerName = document.getElementById('importProviderName').value.trim();
     const text = document.getElementById('openCodeConfigText').value.trim();
 
-    if (!providerName) { Dialog.alert(t('请输入供应商名称')); return; }
-    if (!text) { Dialog.alert(t('请输入或上传配置内容')); return; }
+    if (!providerName) { alert(t('请输入供应商名称')); return; }
+    if (!text) { alert(t('请输入或上传配置内容')); return; }
 
     let config;
     try {
       config = JSON.parse(text);
     } catch (error) {
-      Dialog.alert(t('JSON 格式错误: ') + error.message);
+      alert(t('JSON 格式错误: ') + error.message);
       return;
     }
 
@@ -6218,7 +6606,7 @@ async function(ctx) {
     const isOpenCode = Object.values(config).some(e => e && e.key);
 
     if (!isClaudeCode && !isOpenCode) {
-      Dialog.alert(t('未识别的配置格式'));
+      alert(t('未识别的配置格式'));
       return;
     }
 
@@ -6236,16 +6624,16 @@ async function(ctx) {
         if (created > 0) msg += `${t('\\n新增:')}${created}${t('个供应商')}`;
         if (updated > 0) msg += `${t('\\n更新:')}${updated}${t('个供应商')}`;
         if (models > 0) msg += `${t('\\n模型:')}${models}${t('个')}`;
-        Dialog.alert(msg);
+        alert(msg);
         this.closeModals();
         this.loadProviders();
       } else {
         const err = await response.json().catch(() => ({}));
-        Dialog.alert(err.error || t('导入失败'));
+        alert(err.error || t('导入失败'));
       }
     } catch (error) {
       console.error(t('导入 OpenCode 配置失败:'), error);
-      Dialog.alert(t('导入失败'));
+      alert(t('导入失败'));
     }
   }
 
@@ -6259,7 +6647,7 @@ async function(ctx) {
     const data = await res.json();
     const configs = [
       ['multiStatsUser', data.users, t('全部成员')], ['multiStatsTeam', data.teams, t('全部 Team')],
-      ['multiStatsModel', data.models, t('全部模型')],
+      ['multiStatsGroup', data.groups, t('全部用户组')], ['multiStatsModel', data.models, t('全部模型')],
       ['multiStatsProvider', data.providers, t('全部供应商')], ['multiStatsSource', data.sources, t('全部客户端')],
       ['multiStatsProject', data.projects, t('全部项目')]
     ];
@@ -6273,7 +6661,7 @@ async function(ctx) {
 
   _multiStatsParams() {
     const params = new URLSearchParams({ days: document.getElementById('adminStatsDays')?.value || '30' });
-    [['user_id', 'multiStatsUser'], ['team_id', 'multiStatsTeam'], ['model_id', 'multiStatsModel'], ['provider_id', 'multiStatsProvider'], ['request_source', 'multiStatsSource'], ['workspace_path', 'multiStatsProject']].forEach(([key, id]) => {
+    [['user_id', 'multiStatsUser'], ['team_id', 'multiStatsTeam'], ['group_id', 'multiStatsGroup'], ['model_id', 'multiStatsModel'], ['provider_id', 'multiStatsProvider'], ['request_source', 'multiStatsSource'], ['workspace_path', 'multiStatsProject']].forEach(([key, id]) => {
       const value = document.getElementById(id)?.value || '';
       if (value) params.set(key, value);
     });
@@ -6293,17 +6681,17 @@ async function(ctx) {
     } catch (error) {
       if (seq !== this._multiStatsLoadSeq) return;
       const el = document.getElementById('adminStatsMultiSummary');
-      if (el) setHTML(el, `<p >${escapeHtml(error.message)}</p>`);
+      if (el) setHTML(el, `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
     }
   }
 
   resetMultiStatsFilters() {
-    ['multiStatsUser', 'multiStatsTeam', 'multiStatsModel', 'multiStatsProvider', 'multiStatsSource', 'multiStatsProject'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    ['multiStatsUser', 'multiStatsTeam', 'multiStatsGroup', 'multiStatsModel', 'multiStatsProvider', 'multiStatsSource', 'multiStatsProject'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     this.loadMultiStats();
   }
 
   _multiStatsDrill(key, value) {
-    const map = { user_id: 'multiStatsUser', team_id: 'multiStatsTeam', model_id: 'multiStatsModel', provider_id: 'multiStatsProvider', request_source: 'multiStatsSource', workspace_path: 'multiStatsProject' };
+    const map = { user_id: 'multiStatsUser', team_id: 'multiStatsTeam', group_id: 'multiStatsGroup', model_id: 'multiStatsModel', provider_id: 'multiStatsProvider', request_source: 'multiStatsSource', workspace_path: 'multiStatsProject' };
     const el = document.getElementById(map[key]);
     if (el) { el.value = String(value); this.loadMultiStats(); }
   }
@@ -6319,7 +6707,7 @@ async function(ctx) {
       [t('客户端'), s.active_sources || 0], [t('平均延迟'), s.avg_latency == null ? '-' : `${Math.round(Number(s.avg_latency))}ms`]
     ];
     const summaryEl = document.getElementById('adminStatsMultiSummary');
-    if (summaryEl) setHTML(summaryEl, cards.map(([label, value]) => `<div class="cr-admin-overview-card blora-card"  data-size="sm"><div class="blora-stat"><span class="blora-stat__label">${label}</span><span class="blora-stat__value">${value}</span></div></div>`).join(''));
+    if (summaryEl) setHTML(summaryEl, cards.map(([label, value]) => `<div class="stats-overview-card" style="background:linear-gradient(135deg,var(--chart-6),var(--chart-6));"><div class="stats-overview-content"><span class="stats-overview-label">${label}</span><span class="stats-overview-value">${value}</span></div></div>`).join(''));
     this.renderMultiStatsChart(data.dimensions || {});
     const relation = data.relationships || {};
     const relationLabel = (item) => `${escapeHtml(item.left || t('未知'))} → ${escapeHtml(item.right || t('未知'))} <strong>${Number(item.requests || 0).toLocaleString()}</strong>`;
@@ -6359,9 +6747,9 @@ async function(ctx) {
   renderMultiStatsTable(rows) {
     const el = document.getElementById('adminStatsCombinationTable');
     if (!el) return;
-    if (!rows.length) { setHTML(el, '<blora-empty title="' + t('当前筛选条件下暂无组合数据') + '"></blora-empty>'); return; }
+    if (!rows.length) { setHTML(el, '<p class="stats-insight-empty">' + t('当前筛选条件下暂无组合数据') + '</p>'); return; }
     const sourceLabel = (source) => this._usageRequestSourceMeta(source).label;
-    setHTML(el, `<div class="blora-table-wrap"><table class="blora-table"><thead><tr><th>${t('成员')}</th><th>Team</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${renderProviderNameTag(row.provider_name) || '<span class="model-provider-missing">' + t('未知供应商') + '</span>'}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
+    setHTML(el, `<div style="overflow:auto;"><table><thead><tr><th>${t('成员')}</th><th>Team</th><th>用户组</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.group_name || t('未分配用户组'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${renderProviderNameTag(row.provider_name) || '<span class="model-provider-missing">' + t('未知供应商') + '</span>'}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
   }
 
   async loadStats() {
@@ -6379,7 +6767,7 @@ async function(ctx) {
       }
       if (seq !== this._statsLoadSeq) return; // 过期响应丢弃
       this.stats = await response.json();
-
+      
       this.renderStatsOverview();
       this.renderCharts();
       this.renderDailyBarCharts();
@@ -6388,11 +6776,11 @@ async function(ctx) {
       this.renderSourceCharts();
       this.renderMemberStatsCharts();
       this.renderMemberStatsTables();
-
+      
       const container = document.getElementById('detailedStats');
       if (!container) return;
       if (!this.stats.daily || this.stats.daily.length === 0) {
-        setHTML(container, '<blora-empty title="' + t('暂无使用数据') + '"></blora-empty>');
+        setHTML(container, '<p style="text-align: center; color: var(--muted-foreground); padding: 20px;">' + t('暂无使用数据') + '</p>');
         this._statsDailyTableSig = '';
         this.renderModelStatsTable();
         this.renderProviderStatsTable();
@@ -6410,10 +6798,10 @@ async function(ctx) {
       if (tableSig !== this._statsDailyTableSig) {
         this._statsDailyTableSig = tableSig;
         setHTML(container, `
-          <div style="padding:20px;">
-            <h3 style="margin:0 0 16px 0;">每日详细统计</h3>
+          <div style="background:var(--muted);border-radius:12px;padding:20px;">
+            <h3 style="margin:0 0 16px 0;font-size:14px;">每日详细统计</h3>
             <div style="overflow-x:auto;">
-              <table class="blora-table">
+              <table>
                 <thead>
                   <tr>
                     <th>日期</th>
@@ -6431,8 +6819,8 @@ async function(ctx) {
                     const totalTokens = parseInt(usage.tokens || 0);
                     const cacheRate = totalTokens > 0 ? (cachedTokens / totalTokens * 100).toFixed(1) : '0.0';
                     const cacheDisplay = cachedTokens > 0
-                      ? `<span  title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span >(${cacheRate}%)</span>`
-                      : '<span >-</span>';
+                      ? `<span style="color:var(--success);" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
+                      : '<span style="color:var(--muted-foreground);">-</span>';
                     return `
                     <tr>
                       <td>${new Date(usage.date).toLocaleDateString('zh-CN')}</td>
@@ -6458,7 +6846,7 @@ async function(ctx) {
       if (seq !== this._statsLoadSeq) return;
       console.error(t('加载统计数据失败:'), error);
       const el = document.getElementById('detailedStats');
-      if (el) setHTML(el, `<p style="text-align:center;padding:20px;">${escapeHtml(error.message || t('加载统计数据失败'))}</p>`);
+      if (el) setHTML(el, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载统计数据失败'))}</p>`);
     }
   }
 
@@ -6492,25 +6880,25 @@ async function(ctx) {
     const sumCards = document.getElementById('adminSourceSummaryCards');
     if (sumCards) {
       setHTML(sumCards, `
-        <div class="cr-admin-overview-card blora-card"  data-size="sm">
-          <div class="blora-stat">
-            <span class="blora-stat__label">识别率</span>
-            <span class="blora-stat__value">${((ss.identified_rate || 0) * 100).toFixed(1)}%</span>
-            <span class="blora-text-muted">已知 ${(ss.known_requests || 0).toLocaleString()} / 共 ${(ss.total_requests || 0).toLocaleString()}</span>
+        <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--chart-1),var(--chart-1));">
+          <div class="stats-overview-content">
+            <span class="stats-overview-label">识别率</span>
+            <span class="stats-overview-value">${((ss.identified_rate || 0) * 100).toFixed(1)}%</span>
+            <span class="stats-overview-sub">已知 ${(ss.known_requests || 0).toLocaleString()} / 共 ${(ss.total_requests || 0).toLocaleString()}</span>
           </div>
         </div>
-        <div class="cr-admin-overview-card blora-card"  data-size="sm">
-          <div class="blora-stat">
-            <span class="blora-stat__label">活跃客户端</span>
-            <span class="blora-stat__value">${ss.active_sources || 0}</span>
-            <span class="blora-text-muted">不含未知/其他</span>
+        <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--chart-2),var(--chart-2));">
+          <div class="stats-overview-content">
+            <span class="stats-overview-label">活跃客户端</span>
+            <span class="stats-overview-value">${ss.active_sources || 0}</span>
+            <span class="stats-overview-sub">不含未知/其他</span>
           </div>
         </div>
-        <div class="cr-admin-overview-card blora-card"  data-size="sm">
-          <div class="blora-stat">
-            <span class="blora-stat__label">未知请求</span>
-            <span class="blora-stat__value">${(ss.unknown_requests || 0).toLocaleString()}</span>
-            <span class="blora-text-muted">历史或未识别</span>
+        <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--status-neutral),var(--text-muted-soft));">
+          <div class="stats-overview-content">
+            <span class="stats-overview-label">未知请求</span>
+            <span class="stats-overview-value">${(ss.unknown_requests || 0).toLocaleString()}</span>
+            <span class="stats-overview-sub">历史或未识别</span>
           </div>
         </div>
       `);
@@ -6569,10 +6957,17 @@ async function(ctx) {
   }
 
   switchStatsTab(tab) {
-    document.getElementById('adminStatsTabs')?.setAttribute('value', tab);
+    document.querySelectorAll('.stats-tab-bar button, .stats-tab').forEach(btn => {
+      btn.classList.remove('active');
+    });
     document.querySelectorAll('.stats-tab-content').forEach(content => {
       content.style.display = 'none';
     });
+
+    const activeBtn = document.querySelector(`.stats-tab-bar button[onclick*="${tab}"], .stats-tab[onclick*="${tab}"]`);
+    if (activeBtn) {
+      activeBtn.classList.add('active');
+    }
 
     const tabContent = document.getElementById('statsTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
     if (tabContent) {
@@ -6631,15 +7026,15 @@ async function(ctx) {
       const s = data.summary || {};
       if (!data || data.error) throw new Error(data.error || t('消息统计返回数据为空'));
       if (!(data.by_workspace || []).length && !(data.daily || []).length) {
-        const empty = '<blora-empty title="' + t('所选时间范围内暂无可分析的项目消息记录') + '"></blora-empty>';
+        const empty = '<div class="empty-state" style="padding:28px;text-align:center;color:var(--muted-foreground);">' + t('所选时间范围内暂无可分析的项目消息记录') + '</div>';
         [summaryEl, sourceEl, blockEl, workspaceEl].forEach((el) => { if (el) setHTML(el, empty); });
         return;
       }
-      const card = (label, value) => `<div class="cr-admin-overview-card blora-card"  data-size="sm"><div class="blora-stat"><span class="blora-stat__label">${label}</span><span class="blora-stat__value">${value}</span></div></div>`;
+      const card = (label, value) => `<div class="stats-overview-card" style="background:var(--muted);color:var(--foreground);"><div class="stats-overview-content"><span class="stats-overview-label">${label}</span><span class="stats-overview-value">${value}</span></div></div>`;
       const analysisStatus = s.analysis_status || {};
       const pendingLabel = analysisStatus.pending_requests ? card(t('后台待分析'), analysisStatus.pending_requests.toLocaleString()) : '';
       setHTML(document.getElementById('messageStatsSummary'), [card(t('活跃请求'), s.analyzed_requests || 0), card(t('活跃项目'), (data.by_workspace || []).length), card(t('活跃天数'), s.active_days || 0), card(t('日均请求'), Number(s.avg_daily_requests || 0).toFixed(1)), card(t('总 Token'), this._formatBigNumber(Number(s.total_tokens || 0))), card(t('Git 状态率'), `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
-      const table = (headers, rows) => `<div class="blora-table-wrap"><table class="blora-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:18px;">' + t('暂无数据') + '</td></tr>'}</tbody></table></div>`;
+      const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:18px;color:var(--muted-foreground);">' + t('暂无数据') + '</td></tr>'}</tbody></table></div>`;
       setHTML(document.getElementById('messageStatsSourceTable'), table(['Harness', t('请求数'), t('平均消息'), t('平均字符'), 'Token', t('Git率')], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${(r.git_requests / Math.max(r.requests, 1) * 100).toFixed(1)}%</td></tr>`; }).join('')));
       setHTML(document.getElementById('messageStatsBlockTable'), table([t('区块'), t('请求数'), t('出现次数')], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
       setHTML(document.getElementById('messageStatsWorkspaceTable'), table([t('项目/工作区'), t('请求数'), 'Token', t('积分'), t('来源')], (data.by_workspace || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td><code>${escapeHtml(r.workspace_path)}</code></td><td>${r.requests}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td><td>${Number(r.cost || 0).toFixed(4)}</td><td>${escapeHtml(Object.entries(r.sources || {}).map(([k, v]) => `${k}: ${v}`).join(', '))}</td></tr>`; }).join('')));
@@ -6648,7 +7043,7 @@ async function(ctx) {
       }
     } catch (error) {
       console.error(error);
-      setHTML(document.getElementById('messageStatsSummary'), `<p >${escapeHtml(error.message)}</p>`);
+      setHTML(document.getElementById('messageStatsSummary'), `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
     }
   }
 
@@ -6985,7 +7380,7 @@ async function(ctx) {
     if (!container || !this.stats || !this.stats.byModel) return;
 
     if (this.stats.byModel.length === 0) {
-      setHTML(container, '<blora-empty title="' + t('暂无模型使用数据') + '"></blora-empty>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('暂无模型使用数据') + '</p>');
       return;
     }
 
@@ -6994,7 +7389,7 @@ async function(ctx) {
       ? this.stats.byModel.filter(m => this._matchSearch(q, m.model_name, m.model_id))
       : this.stats.byModel;
     if (!rows.length) {
-      setHTML(container, '<blora-empty title="' + t('未找到匹配的模型') + '"></blora-empty>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('未找到匹配的模型') + '</p>');
       return;
     }
 
@@ -7007,7 +7402,7 @@ async function(ctx) {
 
     setHTML(container, `
       <div style="overflow-x:auto;">
-        <table class="blora-table">
+        <table>
           <thead>
             <tr>
               <th>模型</th>
@@ -7028,7 +7423,7 @@ async function(ctx) {
               const cachedTokens = parseInt(m.cached_tokens || 0);
               const cacheRate = m.tokens > 0 ? (cachedTokens / m.tokens * 100).toFixed(1) : '0.0';
               const cacheDisplay = cachedTokens > 0
-                ? `<span  title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span >(${cacheRate}%)</span>`
+                ? `<span style="color:var(--success);" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
                 : '-';
               return `
                 <tr>
@@ -7044,12 +7439,12 @@ async function(ctx) {
             }).join('')}
           </tbody>
           <tfoot>
-            <tr >
+            <tr style="font-weight:600;background:var(--background);">
               <td>' + t('合计') + '</td>
               <td>${totalRequests.toLocaleString()}</td>
               <td>100%</td>
               <td title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</td>
-              <td>${totalCached > 0 ? '<span  title="' + totalCached.toLocaleString() + '">' + this._formatBigNumber(totalCached) + '</span>' : '-'}</td>
+              <td>${totalCached > 0 ? '<span style="color:var(--success);" title="' + totalCached.toLocaleString() + '">' + this._formatBigNumber(totalCached) + '</span>' : '-'}</td>
               <td>¥${totalCost.toFixed(4)}</td>
               <td>100%</td>
               <td>${totalRequests > 0 ? this._formatBigNumber(Math.round(totalTokens / totalRequests)) : '-'}</td>
@@ -7078,7 +7473,7 @@ async function(ctx) {
     if (!container || !this.stats || !this.stats.byProvider) return;
 
     if (this.stats.byProvider.length === 0) {
-      setHTML(container, '<blora-empty title="' + t('暂无供应商使用数据') + '"></blora-empty>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('暂无供应商使用数据') + '</p>');
       return;
     }
 
@@ -7087,7 +7482,7 @@ async function(ctx) {
       ? this.stats.byProvider.filter(p => this._matchSearch(q, p.provider, p.provider_name, p.provider_id))
       : this.stats.byProvider;
     if (!rows.length) {
-      setHTML(container, '<blora-empty title="' + t('未找到匹配的供应商') + '"></blora-empty>');
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('未找到匹配的供应商') + '</p>');
       return;
     }
 
@@ -7100,7 +7495,7 @@ async function(ctx) {
 
     setHTML(container, `
       <div style="overflow-x:auto;">
-        <table class="blora-table">
+        <table>
           <thead>
             <tr>
               <th>供应商</th>
@@ -7121,11 +7516,11 @@ async function(ctx) {
               const cachedTokens = parseInt(p.cached_tokens || 0);
               const cacheRate = p.tokens > 0 ? (cachedTokens / p.tokens * 100).toFixed(1) : '0.0';
               const cacheDisplay = cachedTokens > 0
-                ? `<span  title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span >(${cacheRate}%)</span>`
+                ? `<span style="color:var(--success);" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
                 : '-';
               return `
                 <tr>
-                  <td >${renderProviderNameTag(p.provider) || '<span class="model-provider-missing">' + t('未知') + '</span>'}</td>
+                  <td style="font-size:13px;">${renderProviderNameTag(p.provider) || '<span class="model-provider-missing">' + t('未知') + '</span>'}</td>
                   <td>${(p.requests || 0).toLocaleString()}</td>
                   <td>${reqPercent}%</td>
                   <td title="${(p.tokens || 0).toLocaleString()}">${this._formatBigNumber(p.tokens || 0)}</td>
@@ -7137,12 +7532,12 @@ async function(ctx) {
             }).join('')}
           </tbody>
           <tfoot>
-            <tr >
+            <tr style="font-weight:600;background:var(--background);">
               <td>' + t('合计') + '</td>
               <td>${totalRequests.toLocaleString()}</td>
               <td>100%</td>
               <td title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</td>
-              <td>${totalCached > 0 ? '<span  title="' + totalCached.toLocaleString() + '">' + this._formatBigNumber(totalCached) + '</span>' : '-'}</td>
+              <td>${totalCached > 0 ? '<span style="color:var(--success);" title="' + totalCached.toLocaleString() + '">' + this._formatBigNumber(totalCached) + '</span>' : '-'}</td>
               <td>¥${totalCost.toFixed(4)}</td>
               <td>100%</td>
               <td>${totalRequests > 0 ? this._formatBigNumber(Math.round(totalTokens / totalRequests)) : '-'}</td>
@@ -7223,6 +7618,7 @@ async function(ctx) {
     const groups = [
       { key: 'byUser', label: t('成员'), requests: 'memberRequestsChart', cost: 'memberCostChart', reqStore: '_memberReqChart', costStore: '_memberCostChart', name: 'user_name' },
       { key: 'byTeam', label: 'Team', requests: 'teamRequestsChart', reqStore: '_teamReqChart', name: 'team_name' },
+      { key: 'byGroup', label: t('用户组'), requests: 'groupRequestsChart', reqStore: '_groupReqChart', name: 'group_name' }
     ];
     const colors = [readCssVar('--status-info', '#2563eb'), readCssVar('--chart-2', '#a855f7'), readCssVar('--status-success', '#16a34a'), readCssVar('--status-warn', '#d97706'), readCssVar('--status-danger', '#dc2626'), readCssVar('--cyan', '#06b6d4'), readCssVar('--pink', '#ec4899'), readCssVar('--chart-8', '#14b8a6'), readCssVar('--warning', '#f59e0b'), readCssVar('--status-neutral', '#64748b')];
     const style = getComputedStyle(document.documentElement);
@@ -7261,33 +7657,33 @@ async function(ctx) {
       const container = document.getElementById(containerId);
       if (!container) return;
       if (!rows || rows.length === 0) {
-        setHTML(container, `<p style="text-align:center;padding:20px;">${emptyText}</p>`);
+        setHTML(container, `<p style="text-align:center;color:var(--muted-foreground);padding:20px;">${emptyText}</p>`);
         return;
       }
       const totalRequests = rows.reduce((sum, row) => sum + Number(row.requests || 0), 0);
       const totalCost = rows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
-      setHTML(container, `<div class="blora-table-wrap"><table class="blora-table"><thead><tr><th>${labelKey === 'user_name' ? t('成员') : labelKey === 'team_name' ? 'Team' : t('模型')}</th><th>请求数</th><th>占比</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => {
+      setHTML(container, `<div style="overflow-x:auto;"><table><thead><tr><th>${labelKey === 'user_name' ? t('成员') : labelKey === 'team_name' ? 'Team' : t('用户组')}</th><th>请求数</th><th>占比</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => {
         const requests = Number(row.requests || 0);
         const cost = Number(row.cost || 0);
         return `<tr><td>${escapeHtml(row[labelKey] || t('未分配'))}</td><td>${requests.toLocaleString()}</td><td>${totalRequests ? (requests / totalRequests * 100).toFixed(1) : '0.0'}%</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${cost.toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`;
-      }).join('')}</tbody><tfoot><tr ><td>' + t('合计') + '</td><td>${totalRequests.toLocaleString()}</td><td>100%</td><td title="${rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0).toLocaleString()}">${this._formatBigNumber(rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0))}</td><td>${totalCost.toFixed(4)}</td><td>-</td></tr></tfoot></table></div>`);
+      }).join('')}</tbody><tfoot><tr style="font-weight:600;background:var(--background);"><td>' + t('合计') + '</td><td>${totalRequests.toLocaleString()}</td><td>100%</td><td title="${rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0).toLocaleString()}">${this._formatBigNumber(rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0))}</td><td>${totalCost.toFixed(4)}</td><td>-</td></tr></tfoot></table></div>`);
     };
     const summaryRows = [
       [t('成员'), this.stats.byUser || [], 'user_name'],
       ['Team', this.stats.byTeam || [], 'team_name'],
-
+      [t('用户组'), this.stats.byGroup || [], 'group_name']
     ];
     const summary = summaryRows.map(([label, rows]) => {
       const requests = rows.reduce((sum, row) => sum + Number(row.requests || 0), 0);
       const tokens = rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0);
       const cost = rows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
-      return `<div class="cr-admin-overview-card blora-card"  data-size="sm"><div class="blora-stat"><span class="blora-stat__label">${label}${t('数量')}</span><span class="blora-stat__value">${rows.length}</span><span class="blora-text-muted">${requests.toLocaleString()}${t('次 ·')}${this._formatBigNumber(tokens)} Token · ${cost.toFixed(2)}${t('积分')}</span></div></div>`;
+      return `<div class="stats-overview-card" style="background:linear-gradient(135deg,var(--status-neutral),var(--text-muted-soft));"><div class="stats-overview-content"><span class="stats-overview-label">${label}${t('数量')}</span><span class="stats-overview-value">${rows.length}</span><span class="stats-overview-sub">${requests.toLocaleString()}${t('次 ·')}${this._formatBigNumber(tokens)} Token · ${cost.toFixed(2)}${t('积分')}</span></div></div>`;
     }).join('');
     const summaryEl = document.getElementById('memberStatsSummary');
     if (summaryEl) setHTML(summaryEl, summary);
     render('memberStatsTable', this.stats.byUser, 'user_name', t('暂无成员用量数据'));
     render('teamStatsTable', this.stats.byTeam, 'team_name', t('暂无 Team 用量数据'));
-
+    render('groupStatsTable', this.stats.byGroup, 'group_name', t('暂无用户组用量数据'));
   }
 
   renderSourceStatsTable() {
@@ -7295,12 +7691,12 @@ async function(ctx) {
     if (!container || !this.stats) return;
     const rows = this.stats.bySource || [];
     if (rows.length === 0) {
-      setHTML(container, '<blora-empty title="' + t('暂无来源数据（历史记录在功能上线前均为「未知/其他」）') + '"></blora-empty>');
+      setHTML(container, '<p style="color:var(--muted-foreground);font-size:13px;">' + t('暂无来源数据（历史记录在功能上线前均为「未知/其他」）') + '</p>');
       return;
     }
     setHTML(container, `
       <div style="overflow-x:auto;">
-        <table class="blora-table">
+        <table>
           <thead>
             <tr>
               <th>客户端</th>
@@ -7324,13 +7720,13 @@ async function(ctx) {
               const latency = r.avg_latency != null ? `${Math.round(parseFloat(r.avg_latency))}ms` : '-';
               return `<tr>
                 <td>${this._usageRequestSourceBadge(r.request_source)}</td>
-                <td style="text-align:right;">${reqs.toLocaleString()}</td>
-                <td style="text-align:right;">${share}%</td>
-                <td style="text-align:right;" title="${tokens.toLocaleString()}">${this._formatBigNumber(tokens)}</td>
-                <td style="text-align:right;" title="${parseInt(r.prompt_tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.prompt_tokens || 0, 10))}</td>
-                <td style="text-align:right;" title="${parseInt(r.completion_tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.completion_tokens || 0, 10))}</td>
-                <td style="text-align:right;">${cached > 0 ? `<span title="${cached.toLocaleString()}">${this._formatBigNumber(cached)}</span>` : '-'}</td>
-                <td style="text-align:right;">${cost.toFixed(4)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;">${reqs.toLocaleString()}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;">${share}%</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;" title="${tokens.toLocaleString()}">${this._formatBigNumber(tokens)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;" title="${parseInt(r.prompt_tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.prompt_tokens || 0, 10))}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;" title="${parseInt(r.completion_tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.completion_tokens || 0, 10))}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;">${cached > 0 ? `<span title="${cached.toLocaleString()}">${this._formatBigNumber(cached)}</span>` : '-'}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;">${cost.toFixed(4)}</td>
                 <td style="text-align:right;">${latency}</td>
               </tr>`;
             }).join('')}
@@ -7345,12 +7741,12 @@ async function(ctx) {
     if (!container || !this.stats) return;
     const rows = this.stats.bySourceModel || [];
     if (rows.length === 0) {
-      setHTML(container, '<blora-empty title="' + t('暂无交叉数据') + '"></blora-empty>');
+      setHTML(container, '<p style="color:var(--muted-foreground);font-size:13px;">' + t('暂无交叉数据') + '</p>');
       return;
     }
     setHTML(container, `
       <div style="overflow-x:auto;">
-        <table class="blora-table">
+        <table>
           <thead>
             <tr>
               <th>客户端</th>
@@ -7366,9 +7762,9 @@ async function(ctx) {
               return `<tr>
                 <td>${this._usageRequestSourceBadge(r.request_source)}</td>
                 <td>${escapeHtml(String(modelLabel))}</td>
-                <td style="text-align:right;">${parseInt(r.requests || 0, 10).toLocaleString()}</td>
-                <td style="text-align:right;" title="${parseInt(r.tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.tokens || 0, 10))}</td>
-                <td style="text-align:right;">${parseFloat(r.cost || 0).toFixed(4)}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;">${parseInt(r.requests || 0, 10).toLocaleString()}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;" title="${parseInt(r.tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.tokens || 0, 10))}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums;">${parseFloat(r.cost || 0).toFixed(4)}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -7446,21 +7842,21 @@ async function(ctx) {
       }
 
       if (!data.logs || data.logs.length === 0) {
-        setHTML(container, '<blora-empty title="' + t('暂无错误记录') + '"></blora-empty>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无错误记录') + '</p>');
         return;
       }
 
       const statusBadge = (code) => {
-        if (code == null) return '<span >-</span>';
+        if (code == null) return '<span style="color:var(--muted-foreground);">-</span>';
         const c = parseInt(code, 10);
         let color = 'var(--muted-foreground)';
         if (c >= 500) color = 'var(--destructive)';
         else if (c >= 400) color = 'var(--warning)';
-        return `<span style="display:inline-block;padding:2px 8px;">${c}</span>`;
+        return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600;background:color-mix(in srgb, ${color} 15%, transparent);color:${color};">${c}</span>`;
       };
 
       setHTML(container, `
-        <table class="blora-table">
+        <table>
           <thead>
             <tr>
               <th>时间</th>
@@ -7480,7 +7876,7 @@ async function(ctx) {
               const shortMsg = msg.length > 80 ? msg.slice(0, 80) + '…' : msg;
               const finalTag = log.is_final
                 ? ''
-                : '<span style="margin-left:4px;padding:1px 5px;">' + t('重试') + '</span>';
+                : '<span style="margin-left:4px;font-size:10px;padding:1px 5px;border-radius:4px;background:var(--muted);color:var(--muted-foreground);">' + t('重试') + '</span>';
               return `
               <tr style="cursor:pointer;" onclick="adminApp.showErrorDetail(${idx})">
                 <td style="white-space:nowrap;">${new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</td>
@@ -7488,10 +7884,10 @@ async function(ctx) {
                 <td>${escapeHtml(log.model_name || log.model_id || '-')}${finalTag}</td>
                 <td>${renderProviderNameTag(log.provider_name || log.provider_id) || '<span class="model-provider-missing">-</span>'}</td>
                 <td>${statusBadge(log.status_code)}</td>
-                <td >${escapeHtml(log.error_type || '-')}</td>
+                <td style="font-size:12px;">${escapeHtml(log.error_type || '-')}</td>
                 <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(msg)}">${escapeHtml(shortMsg || '-')}</td>
                 <td style="white-space:nowrap;">${log.latency_ms != null ? log.latency_ms + 'ms' : '-'}</td>
-                <td><button type="button" class="blora-button" onclick="event.stopPropagation();adminApp.showErrorDetail(${idx})" data-variant="outline" data-size="sm">详情</button></td>
+                <td><button class="blora-button" onclick="event.stopPropagation();adminApp.showErrorDetail(${idx})" data-variant="secondary" data-size="sm">详情</button></td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -7499,7 +7895,7 @@ async function(ctx) {
       `);
     } catch (error) {
       console.error(t('加载错误记录失败:'), error);
-      setHTML(document.getElementById('errorLogsList'), `<blora-alert variant="danger" title="${t('加载失败')}" description="${escapeHtml(error.message || t('加载失败'))}"></blora-alert>`);
+      setHTML(document.getElementById('errorLogsList'), `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -7535,27 +7931,27 @@ async function(ctx) {
       [t('延迟'), log.latency_ms != null ? `${log.latency_ms}ms` : '-'],
       [t('IP 地址'), escapeHtml(log.ip_address || '-')],
       ['API Key', log.key_prefix
-        ? `<code >${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` <span >(${escapeHtml(log.key_name)})</span>` : ''}`
+        ? `<code style="font-size:12px;">${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` <span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}`
         : '-'],
     ];
 
     let bodyHtml = '';
     if (log.error_message) {
-      bodyHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('错误信息')}</span><pre style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;">${escapeHtml(log.error_message)}</pre></div>`;
+      bodyHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('错误信息')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;color:var(--destructive);">${escapeHtml(log.error_message)}</pre></div>`;
     }
     if (log.error_body) {
       let pretty = log.error_body;
       try {
         pretty = JSON.stringify(JSON.parse(log.error_body), null, 2);
       } catch { /* keep raw */ }
-      bodyHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('原始响应')}</span><pre style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(pretty)}</pre></div>`;
+      bodyHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('原始响应')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(pretty)}</pre></div>`;
     }
 
     const content = document.getElementById('errorDetailContent');
     setHTML(content, rows.map(([label, value]) => `
-      <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;">
-        <span >${label}</span>
-        <span >${value}</span>
+      <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
+        <span style="font-size:14px;">${value}</span>
       </div>
     `).join('') + bodyHtml);
 
@@ -7593,8 +7989,8 @@ async function(ctx) {
 
   _usageRequestTypeBadge(type) {
     const meta = this._usageRequestTypeMeta(type);
-    if (meta.label === '-') return '<span >-</span>';
-    return `<span style="display:inline-block;padding:2px 8px;white-space:nowrap;">${escapeHtml(meta.label)}</span>`;
+    if (meta.label === '-') return '<span style="color:var(--muted-foreground);">-</span>';
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:color-mix(in srgb, ${meta.color} 15%, transparent);color:${meta.color};">${escapeHtml(meta.label)}</span>`;
   }
 
   _usageRequestSourceMeta(source) {
@@ -7615,14 +8011,14 @@ async function(ctx) {
 
   _usageRequestSourceBadge(source) {
     const meta = this._usageRequestSourceMeta(source);
-    return `<span style="display:inline-block;padding:2px 8px;white-space:nowrap;">${escapeHtml(meta.label)}</span>`;
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:color-mix(in srgb, ${meta.color} 15%, transparent);color:${meta.color};">${escapeHtml(meta.label)}</span>`;
   }
 
   /** 列表「命中自定义提示词文件」徽标：📄 N（N 为文件数） */
   _customInstructionsBadge(count) {
     const n = parseInt(count || 0, 10);
     if (!(n > 0)) return '';
-    return `<span style="display:inline-block;padding:2px 8px;white-space:nowrap;margin-left:6px;" title="${n} ${t('个自定义提示词文件')}">📄 ${n}</span>`;
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;margin-left:6px;background:color-mix(in srgb, var(--success) 15%, transparent);color:var(--status-success);" title="${n} ${t('个自定义提示词文件')}">📄 ${n}</span>`;
   }
 
   /** 详情「自定义提示词」区块 HTML（从 log.plugin_meta.customInstructions 渲染） */
@@ -7632,7 +8028,7 @@ async function(ctx) {
     // 超大输入被跳过提取的情形
     if (!Array.isArray(ci)) {
       if (ci && ci.skipped === 'size') {
-        return `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('自定义提示词')}</span><span >${t('请求过大，已跳过提取')}</span></div>`;
+        return `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('自定义提示词')}</span><span style="font-size:13px;color:var(--muted-foreground);">${t('请求过大，已跳过提取')}</span></div>`;
       }
       return '';
     }
@@ -7642,17 +8038,17 @@ async function(ctx) {
       const sourceLabel = this._customInstructionSourceLabel(item && item.source);
       const chars = parseInt(item && item.chars || 0, 10);
       const truncated = !!(item && item.truncated);
-      const truncNote = truncated ? ` <span >(${t('已截断')})</span>` : '';
-      const detail = `<span >${sourceLabel}</span> <span >${chars.toLocaleString()} ${t('字符')}</span>${truncNote}`;
-      const contentPre = `<pre style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:8px 0 0;max-height:220px;overflow-y:auto;${truncated ? 'display:none;' : ''};" data-custom-inst-content="${idx}">${escapeHtml(String(item && item.content || ''))}</pre>`;
-      const toggleBtn = truncated ? `<button type="button" class="blora-button" data-custom-inst-toggle="${idx}" style="margin-top:8px;" data-variant="outline" data-size="sm">${t('查看全部')}</button>` : '';
-      return `<div style="margin:10px 0;padding:10px;">
-        <div style="word-break:break-all;">📄 ${file}</div>
+      const truncNote = truncated ? ` <span style="color:var(--warning);font-size:12px;">(${t('已截断')})</span>` : '';
+      const detail = `<span style="font-size:12px;color:var(--muted-foreground);">${sourceLabel}</span> <span style="font-size:12px;color:var(--muted-foreground);">${chars.toLocaleString()} ${t('字符')}</span>${truncNote}`;
+      const contentPre = `<pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:8px 0 0;max-height:220px;overflow-y:auto;${truncated ? 'display:none;' : ''}" data-custom-inst-content="${idx}">${escapeHtml(String(item && item.content || ''))}</pre>`;
+      const toggleBtn = truncated ? `<button type="button" class="blora-button" data-custom-inst-toggle="${idx}" style="margin-top:8px;" data-variant="secondary" data-size="sm">${t('查看全部')}</button>` : '';
+      return `<div style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;word-break:break-all;">📄 ${file}</div>
         <div style="margin-top:2px;">${detail}</div>
         ${contentPre}${toggleBtn}
       </div>`;
     }).join('');
-    return `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('自定义提示词')}</span><div>${blocks || t('无')}</div></div>`;
+    return `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('自定义提示词')}</span><div>${blocks || t('无')}</div></div>`;
   }
 
   _customInstructionSourceLabel(source) {
@@ -7706,12 +8102,12 @@ async function(ctx) {
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
 
       if (!data.logs || data.logs.length === 0) {
-        setHTML(container, '<blora-empty title="' + t('暂无调用记录') + '"></blora-empty>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无调用记录') + '</p>');
         return;
       }
 
       setHTML(container, `
-        <table class="blora-table">
+        <table>
           <thead>
             <tr>
               <th>时间</th>
@@ -7737,13 +8133,13 @@ async function(ctx) {
               const providerLabel = this._formatUsageProviderLabel(log);
               const costVal = parseFloat(log.cost || 0);
               const costDisplay = (costVal === 0 && totalTokens > 0)
-                ? '<span title="' + t('配额内免费') + '">0</span><span style="margin-left:2px;">' + t('配额内') + '</span>'
+                ? '<span title="' + t('配额内免费') + '">0</span><span style="font-size:11px;color:var(--muted-foreground);margin-left:2px;">' + t('配额内') + '</span>'
                 : costVal.toFixed(6);
               const seriesLine = log.series
-                ? `<div style="margin-top:2px;">${escapeHtml(log.series)}</div>`
+                ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;">${escapeHtml(log.series)}</div>`
                 : '';
               const keyHint = log.key_prefix
-                ? `<div style="margin-top:2px;"><code >${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` ${escapeHtml(log.key_name)}` : ''}</div>`
+                ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;"><code style="font-size:11px;">${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` ${escapeHtml(log.key_name)}` : ''}</div>`
                 : '';
               const tokenSub = [
                 `${t('入')}${this._formatBigNumber(promptTokens)}`,
@@ -7755,7 +8151,7 @@ async function(ctx) {
                 <td style="white-space:nowrap;">${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
                 <td class="cell-clip-sm" title="${escapeHtml(log.username || String(log.user_id || ''))}">${escapeHtml(log.username || String(log.user_id || '-'))}</td>
                 <td class="cell-clip" title="${escapeHtml(modelLabel)}">
-                  <div >${escapeHtml(modelLabel)}</div>
+                  <div style="font-weight:500;">${escapeHtml(modelLabel)}</div>
                   ${seriesLine}
                   ${keyHint}
                 </td>
@@ -7765,12 +8161,12 @@ async function(ctx) {
                 <td>${this._usageRequestTypeBadge(log.request_type)}</td>
                 <td>${this._usageRequestSourceBadge(log.request_source)}${this._customInstructionsBadge(log.custom_instruction_count)}</td>
                 <td style="white-space:nowrap;">
-                  <div  title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</div>
-                  <div style="margin-top:2px;">${tokenSub}</div>
+                  <div style="font-variant-numeric:tabular-nums;" title="${totalTokens.toLocaleString()}">${this._formatBigNumber(totalTokens)}</div>
+                  <div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;">${tokenSub}</div>
                 </td>
-                <td style="white-space:nowrap;">${costDisplay}</td>
-                <td style="white-space:nowrap;">${log.latency_ms != null ? `${log.latency_ms}ms` : '<span >-</span>'}</td>
-                <td class="cell-actions"><button type="button" class="blora-button" data-usage-detail-idx="${idx}" data-variant="outline" data-size="sm">详情</button></td>
+                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${costDisplay}</td>
+                <td style="white-space:nowrap;">${log.latency_ms != null ? `${log.latency_ms}ms` : '<span style="color:var(--muted-foreground);">-</span>'}</td>
+                <td class="cell-actions"><button type="button" class="blora-button" data-usage-detail-idx="${idx}" data-variant="secondary" data-size="sm">详情</button></td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -7795,7 +8191,7 @@ async function(ctx) {
       });
     } catch (error) {
       console.error(t('加载调用记录失败:'), error);
-      setHTML(document.getElementById('usageLogsList'), `<blora-alert variant="danger" title="${t('加载失败')}" description="${escapeHtml(error.message || t('加载失败'))}"></blora-alert>`);
+      setHTML(document.getElementById('usageLogsList'), `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -7859,7 +8255,7 @@ async function(ctx) {
       this.showToast?.(t('导出成功'), 'success');
     } catch (error) {
       console.error(t('导出调用记录失败:'), error);
-      Dialog.alert(error.message || t('导出失败'));
+      alert(error.message || t('导出失败'));
     } finally {
       if (btn) clearButtonLoading(btn, t('导出 CSV'));
     }
@@ -7869,7 +8265,7 @@ async function(ctx) {
   async exportUsageAggregate() {
     const btn = document.getElementById('usageAggregateExportBtn');
     try {
-      const input = await requestBloraValue(t('导出最近几天的用量聚合？（1-90 天）'), '7');
+      const input = prompt(t('导出最近几天的用量聚合？（1-90 天）'), '7');
       if (input === null) return;
       const days = Math.min(Math.max(parseInt(input, 10) || 7, 1), 90);
       if (btn) setButtonLoading(btn, t('导出中...'));
@@ -7893,7 +8289,7 @@ async function(ctx) {
       this.showToast?.(t('导出成功'), 'success');
     } catch (error) {
       console.error(t('导出用量聚合失败:'), error);
-      Dialog.alert(error.message || t('导出失败'));
+      alert(error.message || t('导出失败'));
     } finally {
       if (btn) clearButtonLoading(btn, t('导出用量聚合'));
     }
@@ -7917,7 +8313,7 @@ async function(ctx) {
       } catch (error) {
         console.error(t('加载用量详情失败:'), error);
         const content = document.getElementById('usageDetailContent');
-        if (content) setHTML(content, `<blora-alert variant="danger" title="${t('加载失败')}" description="${escapeHtml(error.message || t('加载失败'))}"></blora-alert>`);
+        if (content) setHTML(content, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
         return;
       }
     }
@@ -7926,7 +8322,7 @@ async function(ctx) {
     const cachedTokens = parseInt(log.cached_tokens || 0, 10);
     const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
     const cacheDisplay = cachedTokens > 0
-      ? `<span title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span >(${cacheRate}${t('% 命中)')}</span>`
+      ? `<span title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="color:var(--success);font-size:12px;">(${cacheRate}${t('% 命中)')}</span>`
       : '0';
 
     const modelLabel = this._formatUsageModelLabel(log);
@@ -7944,10 +8340,10 @@ async function(ctx) {
       [t('系列'), escapeHtml(log.series || '-')],
       [t('上游模型 ID'), escapeHtml(log.upstream_model_id || log.model_id || '-')],
       [t('供应商'), renderProviderNameTag(providerLabel) || '<span class="model-provider-missing">-</span>'],
-      [t('请求类型'), this._usageRequestTypeBadge(log.request_type) + (typeMeta.label !== '-' && log.request_type ? ` <span >(${escapeHtml(String(log.request_type))})</span>` : '')],
-      [t('客户端'), this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
+      [t('请求类型'), this._usageRequestTypeBadge(log.request_type) + (typeMeta.label !== '-' && log.request_type ? ` <span style="color:var(--muted-foreground);font-size:12px;">(${escapeHtml(String(log.request_type))})</span>` : '')],
+      [t('客户端'), this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
       ['API Key', log.key_prefix
-        ? `<code >${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` <span >(${escapeHtml(log.key_name)})</span>` : ''}`
+        ? `<code style="font-size:12px;">${escapeHtml(log.key_prefix)}****</code>${log.key_name ? ` <span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}`
         : '-'],
       [t('总 Token'), this._formatBigNumber(tokensVal)],
       [t('输入 Token'), this._formatBigNumber(promptTokens)],
@@ -7974,32 +8370,32 @@ async function(ctx) {
         [t('项目布局'), observed.project_layout ? t('已读取') : t('未出现')],
       ];
       const blockRows = Object.entries(analysis.block_counts || {}).map(([name, count]) => `${escapeHtml(name)} × ${count}`).join('、') || '-';
-      messagesHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('消息读取统计')}${'</span><div><div style="margin-bottom:6px;">' + t('区块：')}${blockRows}</div>${fieldRows.map(([label, value]) => `<div style="display:flex;gap:8px;margin:3px 0;"><span style="width:90px;">${escapeHtml(label)}</span><code style="white-space:pre-wrap;word-break:break-all;">${escapeHtml(value == null ? '-' : String(value))}</code></div>`).join('')}</div></div>`;
+      messagesHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('消息读取统计')}${'</span><div><div style="font-size:12px;margin-bottom:6px;">' + t('区块：')}${blockRows}</div>${fieldRows.map(([label, value]) => `<div style="display:flex;gap:8px;margin:3px 0;font-size:12px;"><span style="width:90px;color:var(--muted-foreground);">${escapeHtml(label)}</span><code style="white-space:pre-wrap;word-break:break-all;">${escapeHtml(value == null ? '-' : String(value))}</code></div>`).join('')}</div></div>`;
     }
     if (log.messages) {
       try {
         const msgs = typeof log.messages === 'string' ? JSON.parse(log.messages) : log.messages;
         const formatted = msgs.map(m => {
-          const role = m.role === 'system' ? 'System' : m.role === 'user' ? 'User' : 'Assistant';
+          const role = m.role === 'system' ? '🔧 System' : m.role === 'user' ? '👤 User' : '🤖 Assistant';
           const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content, null, 2);
-          return `<div style="margin-bottom:8px;"><div style="margin-bottom:2px;">${role}</div><pre style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;">${escapeHtml(content)}</pre></div>`;
+          return `<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--muted-foreground);margin-bottom:2px;">${role}</div><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;">${escapeHtml(content)}</pre></div>`;
         }).join('');
-        messagesHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('请求消息')}</span><div style="max-height:400px;overflow-y:auto;">${formatted}</div></div>`;
+        messagesHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('请求消息')}</span><div style="max-height:400px;overflow-y:auto;">${formatted}</div></div>`;
       } catch {
-        messagesHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('请求消息')}</span><pre style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(String(log.messages))}</pre></div>`;
+        messagesHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('请求消息')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(String(log.messages))}</pre></div>`;
       }
     }
 
     let responseHtml = '';
     if (log.response) {
-      responseHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('AI 回复')}</span><pre style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(log.response)}</pre></div>`;
+      responseHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('AI 回复')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(log.response)}</pre></div>`;
     }
 
     const content = document.getElementById('usageDetailContent');
     setHTML(content, rows.map(([label, value]) => `
-      <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;">
-        <span >${label}</span>
-        <span >${value}</span>
+      <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
+        <span style="font-size:14px;">${value}</span>
       </div>
     `).join('') + this._customInstructionsSectionHtml(log) + messagesHtml + responseHtml);
 
@@ -8025,7 +8421,7 @@ async function(ctx) {
   async saveAdminSettings(e) {
     e.preventDefault();
 
-    const billingMode = document.querySelector('blora-radio[name="billingMode"][checked]')?.value || 'token';
+    const billingMode = document.querySelector('input[name="billingMode"]:checked')?.value || 'token';
     let refreshSec = parseInt(document.getElementById('statsRefreshInterval')?.value, 10);
     if (!Number.isFinite(refreshSec)) refreshSec = 10;
     refreshSec = Math.min(300, Math.max(3, refreshSec));
@@ -8068,13 +8464,13 @@ async function(ctx) {
         this._startStatsRefreshTimer();
         const input = document.getElementById('statsRefreshInterval');
         if (input) input.value = String(refreshSec);
-        Dialog.alert(t('设置已保存'));
+        alert(t('设置已保存'));
       } else {
-        Dialog.alert(t('保存失败'));
+        alert(t('保存失败'));
       }
     } catch (error) {
       console.error(t('保存设置失败:'), error);
-      Dialog.alert(t('保存失败'));
+      alert(t('保存失败'));
     }
   }
 
@@ -8085,17 +8481,17 @@ async function(ctx) {
     for (const field of fields) {
       const value = Number(document.getElementById(`retention${field}`)?.value);
       if (!Number.isInteger(value) || value < 0) {
-        Dialog.alert(t('数据保留配置必须是非负整数'));
+        alert(t('数据保留配置必须是非负整数'));
         return;
       }
       values[field] = value;
     }
     if (values.CompressDays && values.PurgeDays && values.CompressDays >= values.PurgeDays) {
-      Dialog.alert(t('压缩天数必须小于删除天数'));
+      alert(t('压缩天数必须小于删除天数'));
       return;
     }
     if (values.CompressSizeGb && values.PurgeSizeGb && values.CompressSizeGb >= values.PurgeSizeGb) {
-      Dialog.alert(t('压缩大小必须小于删除大小'));
+      alert(t('压缩大小必须小于删除大小'));
       return;
     }
     const btn = document.getElementById('retentionSaveBtn');
@@ -8122,7 +8518,7 @@ async function(ctx) {
   async runRetentionTask(kind, dryRun = false) {
     const suffix = kind === 'compress' ? 'Compress' : 'Purge';
     const button = document.getElementById(`retentionRun${dryRun ? suffix + 'Preview' : suffix}Btn`);
-    if (!dryRun && !Dialog.confirm(t('确认'), t('确认立即执行数据保留任务？'))) return;
+    if (!dryRun && !confirm(t('确认立即执行数据保留任务？'))) return;
     if (button) button.disabled = true;
     try {
       const response = await fetch(`/api/admin/retention/run-${kind}`, {
@@ -8131,7 +8527,7 @@ async function(ctx) {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(t(data.code || '') || data.error || t('执行失败'));
       if (data.taskId) await this.pollRetentionTask(data.taskId);
-    } catch (error) { Dialog.alert(error.message); }
+    } catch (error) { alert(error.message); }
     finally { if (button) button.disabled = false; }
   }
 
@@ -8141,7 +8537,7 @@ async function(ctx) {
       const response = await fetch(`/api/admin/retention/tasks/${encodeURIComponent(taskId)}`);
       const task = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(task.error || t('任务状态获取失败'));
-      if (task.status === 'completed') { Dialog.alert(`${t('任务完成')}\n${JSON.stringify(task.result || {}, null, 2)}`); return; }
+      if (task.status === 'completed') { alert(`${t('任务完成')}\n${JSON.stringify(task.result || {}, null, 2)}`); return; }
       if (task.status === 'failed') throw new Error(t(task.error?.code || '') || task.error?.message || t('执行失败'));
     }
     throw new Error(t('任务执行超时'));
@@ -8190,7 +8586,7 @@ async function(ctx) {
       }
       // 计费模式
       const billingMode = settings['billing_mode'] || 'token';
-      const radio = document.querySelector(`blora-radio[name="billingMode"][value="${billingMode}"]`);
+      const radio = document.querySelector(`input[name="billingMode"][value="${billingMode}"]`);
       if (radio) radio.checked = true;
       document.getElementById('ratePricePerRequest').value = settings['rate_price_per_request'] || 0.01;
       document.getElementById('ratePriceGroup').style.display = billingMode === 'rate' ? '' : 'none';
@@ -8296,9 +8692,9 @@ async function(ctx) {
     if (!container) return;
     const modelList = this._modelList || [];
     container.innerHTML = modelList.map(m => `
-      <span class="model-tag" data-model="${escapeHtml(m)}" style="display:inline-flex;align-items:center;gap:4px;padding:2px 10px;">
+      <span class="model-tag" data-model="${escapeHtml(m)}" style="display:inline-flex;align-items:center;gap:4px;background:var(--primary);color:#fff;padding:2px 10px;border-radius:12px;font-size:12px;">
         ${escapeHtml(m)}
-        ${m !== 'fusion' ? '<span class="model-tag-remove" style="cursor:pointer;margin-left:2px;" title="删除">&times;</span>' : ''}
+        ${m !== 'fusion' ? '<span class="model-tag-remove" style="cursor:pointer;margin-left:2px;opacity:0.7;" title="删除">&times;</span>' : ''}
       </span>
     `).join('');
 
@@ -8321,11 +8717,11 @@ async function(ctx) {
     const btn = document.getElementById('feishuSaveBtn');
 
     if (enabled && !appId) {
-      Dialog.alert(t('启用飞书登录时必须填写 App ID'));
+      alert(t('启用飞书登录时必须填写 App ID'));
       return;
     }
     if (enabled && !appSecret && !this._feishuHasSecret) {
-      Dialog.alert(t('启用飞书登录时必须填写 App Secret'));
+      alert(t('启用飞书登录时必须填写 App Secret'));
       return;
     }
 
@@ -8356,15 +8752,15 @@ async function(ctx) {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         console.error(t('[飞书配置] 保存失败:'), data);
-        Dialog.alert(data.error || t('保存失败'));
+        alert(data.error || t('保存失败'));
         return;
       }
       console.log(t('[飞书配置] 保存成功:'), data);
-      Dialog.alert(t('飞书登录配置已保存'));
+      alert(t('飞书登录配置已保存'));
       await this.loadFeishuLoginSettings();
     } catch (error) {
       console.error(t('[飞书配置] 保存异常:'), error);
-      Dialog.alert(t('保存失败'));
+      alert(t('保存失败'));
     } finally {
       if (btn) {
         btn.disabled = false;
@@ -8377,18 +8773,18 @@ async function(ctx) {
     const el = document.getElementById('feishuRedirectUri');
     const value = el?.value || '';
     if (!value) {
-      Dialog.alert(t('回调地址为空'));
+      alert(t('回调地址为空'));
       return;
     }
     try {
       await navigator.clipboard.writeText(value);
       console.log(t('[飞书配置] 已复制回调地址:'), value);
-      Dialog.alert(t('回调地址已复制'));
+      alert(t('回调地址已复制'));
     } catch (err) {
       console.warn(t('[飞书配置] 剪贴板复制失败，尝试选中输入框'), err);
       el.select();
       document.execCommand('copy');
-      Dialog.alert(t('回调地址已复制'));
+      alert(t('回调地址已复制'));
     }
   }
 
@@ -8411,7 +8807,7 @@ async function(ctx) {
     const output_price = parseFloat(document.getElementById('batchSetOutputPrice').value);
 
     if (isNaN(input_price) || isNaN(output_price)) {
-      Dialog.alert(t('请输入有效的价格'));
+      alert(t('请输入有效的价格'));
       return;
     }
 
@@ -8430,14 +8826,14 @@ async function(ctx) {
       if (response.ok) {
         this.closeModals();
         this.loadModels();
-        Dialog.alert(t('价格设置成功'));
+        alert(t('价格设置成功'));
       } else {
         const err = await response.json().catch(() => ({}));
-        Dialog.alert(err.error || t('设置失败'));
+        alert(err.error || t('设置失败'));
       }
     } catch (error) {
       console.error(t('批量设置价格失败:'), error);
-      Dialog.alert(t('设置失败'));
+      alert(t('设置失败'));
     }
   }
 
@@ -8466,12 +8862,12 @@ async function(ctx) {
         data = await this._fetchAllFilteredModels();
       }
     } catch (e) {
-      Dialog.alert(e.message || t('导出失败'));
+      alert(e.message || t('导出失败'));
       return;
     }
 
     if (!data || data.length === 0) {
-      Dialog.alert(t('暂无模型数据'));
+      alert(t('暂无模型数据'));
       return;
     }
 
@@ -8727,11 +9123,11 @@ async function(ctx) {
 
     const percentage = parseFloat(document.getElementById('batchAdjustPercentage').value);
     if (isNaN(percentage)) {
-      Dialog.alert(t('请输入有效的百分比'));
+      alert(t('请输入有效的百分比'));
       return;
     }
 
-    if (!await Dialog.confirm(t('确认'), `${t('确定要将选中')}${ids.length}${t('个模型的价格')}${percentage >= 0 ? t('上涨') : t('下降')} ${Math.abs(percentage)}${t('% 吗？')}`)) {
+    if (!await confirm(`${t('确定要将选中')}${ids.length}${t('个模型的价格')}${percentage >= 0 ? t('上涨') : t('下降')} ${Math.abs(percentage)}${t('% 吗？')}`)) {
       return;
     }
 
@@ -8749,14 +9145,14 @@ async function(ctx) {
       if (response.ok) {
         this.closeModals();
         this.loadModels();
-        Dialog.alert(t('价格调整成功'));
+        alert(t('价格调整成功'));
       } else {
         const err = await response.json().catch(() => ({}));
-        Dialog.alert(err.error || t('调整失败'));
+        alert(err.error || t('调整失败'));
       }
     } catch (error) {
       console.error(t('批量调整价格失败:'), error);
-      Dialog.alert(t('调整失败'));
+      alert(t('调整失败'));
     }
   }
 
@@ -8791,14 +9187,14 @@ async function(ctx) {
       if (response.ok) {
         this.closeModals();
         this.loadModels();
-        Dialog.alert(t('速率限制设置成功'));
+        alert(t('速率限制设置成功'));
       } else {
         const err = await response.json().catch(() => ({}));
-        Dialog.alert(err.error || t('设置失败'));
+        alert(err.error || t('设置失败'));
       }
     } catch (error) {
       console.error(t('批量设置速率限制失败:'), error);
-      Dialog.alert(t('设置失败'));
+      alert(t('设置失败'));
     }
   }
 
@@ -8807,31 +9203,31 @@ async function(ctx) {
   showBatchEditDescModal() {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-
+    
     document.getElementById('batchEditDescCount').textContent = ids.length;
-
+    
     // 显示选中的模型列表
     const listEl = document.getElementById('batchEditDescModelsList');
     const selectedModels = this.modelsData.filter(m => ids.includes(m.id));
     setHTML(listEl, selectedModels.map(m => `
-      <div style="display:flex;justify-content:space-between;padding:4px 0;">
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
         <span>${escapeHtml(m.upstream_model_id || m.name || m.id)}</span>
-        <span style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.description || '-')}</span>
+        <span style="color:var(--muted-foreground);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.description || '-')}</span>
       </div>
     `).join(''));
-
+    
     document.getElementById('batchDescMode').value = 'replace';
     document.getElementById('batchDescValue').value = '';
     document.getElementById('batchEditDescStatus').style.display = 'none';
     document.getElementById('batchDescValue').placeholder = t('输入新的模型说明...');
-
+    
     this.showModal('batchEditDescModal');
   }
 
   toggleBatchDescMode() {
     const mode = document.getElementById('batchDescMode').value;
     const textarea = document.getElementById('batchDescValue');
-
+    
     switch (mode) {
       case 'replace':
         textarea.placeholder = t('输入新的模型说明...');
@@ -8848,11 +9244,11 @@ async function(ctx) {
   async executeBatchEditDesc() {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-
+    
     const mode = document.getElementById('batchDescMode').value;
     const value = document.getElementById('batchDescValue').value.trim();
     const statusEl = document.getElementById('batchEditDescStatus');
-
+    
     if (!value) {
       statusEl.style.display = 'block';
       statusEl.style.background = 'rgba(239,68,68,0.1)';
@@ -8860,7 +9256,7 @@ async function(ctx) {
       statusEl.textContent = t('请输入说明内容');
       return;
     }
-
+    
     // 根据模式构建更新数据
     const updates = {};
     if (mode === 'replace') {
@@ -8870,7 +9266,7 @@ async function(ctx) {
       updates.description = value;
       updates._mode = mode;
     }
-
+    
     try {
       const response = await fetch('/api/admin/models/batch-update-description', {
         method: 'POST',
@@ -8881,7 +9277,7 @@ async function(ctx) {
           mode
         })
       });
-
+      
       if (response.ok) {
         const result = await response.json();
         statusEl.style.display = 'block';
@@ -8911,38 +9307,38 @@ async function(ctx) {
   showBatchSetSeriesModal() {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-
+    
     document.getElementById('batchSetSeriesCount').textContent = ids.length;
-
+    
     const listEl = document.getElementById('batchSetSeriesModelsList');
     const selectedModels = this.modelsData.filter(m => ids.includes(m.id));
     setHTML(listEl, selectedModels.map(m => `
-      <div style="display:flex;justify-content:space-between;padding:4px 0;">
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
         <span>${escapeHtml(m.upstream_model_id || m.name || m.id)}</span>
-        <span >当前系列: ${escapeHtml(m.series || t('无'))}</span>
+        <span style="color:var(--muted-foreground);">当前系列: ${escapeHtml(m.series || t('无'))}</span>
       </div>
     `).join(''));
-
+    
     document.getElementById('batchSeriesValue').value = '';
     document.getElementById('batchSetSeriesStatus').style.display = 'none';
-
+    
     this.showModal('batchSetSeriesModal');
   }
 
   async executeBatchSetSeries() {
     const ids = [...this.selectedModels];
     if (ids.length === 0) return;
-
+    
     const series = document.getElementById('batchSeriesValue').value.trim();
     const statusEl = document.getElementById('batchSetSeriesStatus');
-
+    
     try {
       const response = await fetch('/api/admin/models/batch-update-series', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids, series })
       });
-
+      
       if (response.ok) {
         const result = await response.json();
         statusEl.style.display = 'block';
@@ -8999,23 +9395,23 @@ async function(ctx) {
       const icons = await response.json();
       const listEl = document.getElementById('seriesIconsList');
       if (icons.length === 0) {
-        setHTML(listEl, '<div style="text-align:center;padding:20px;">' + t('暂无系列图标') + '</div>');
+        setHTML(listEl, '<div style="text-align:center;color:var(--muted-foreground);padding:20px;">' + t('暂无系列图标') + '</div>');
         return;
       }
       setHTML(listEl, icons.map(icon => `
-        <div style="display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:8px;">
-          ${icon.icon_url ? `<img src="${icon.icon_url}" style="width:32px;height:32px;object-fit:contain;" onerror="this.style.display='none'">` : '<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;">' + t('无') + '</div>'}
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+          ${icon.icon_url ? `<img src="${icon.icon_url}" style="width:32px;height:32px;object-fit:contain;border-radius:4px;" onerror="this.style.display='none'">` : '<div style="width:32px;height:32px;background:var(--muted);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted-foreground);">' + t('无') + '</div>'}
           <div style="flex:1;">
-            <div >${icon.name}</div>
-            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon.icon_url || t('未设置图标')}</div>
+            <div style="font-weight:500;">${icon.name}</div>
+            <div style="font-size:12px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${icon.icon_url || t('未设置图标')}</div>
           </div>
-          <button type="button" class="blora-button" title="${t('编辑')}" onclick="adminApp.editSeriesIcon('${icon.name}', '${icon.icon_url || ''}')" data-variant="outline" data-size="icon">
+          <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editSeriesIcon('${icon.name}', '${icon.icon_url || ''}')" data-variant="secondary" data-size="icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
           </button>
-          <button type="button" class="blora-button" title="${t('删除')}" onclick="adminApp.deleteSeriesIcon('${icon.name}')" data-variant="outline" data-size="icon">
+          <button class="blora-button" title="${t('删除')}" onclick="adminApp.deleteSeriesIcon('${icon.name}')" data-variant="secondary" data-size="icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -9032,7 +9428,7 @@ async function(ctx) {
     const name = document.getElementById('newSeriesName').value.trim();
     const icon_url = document.getElementById('newSeriesIconUrl').value.trim();
     if (!name) {
-      Dialog.alert(t('请输入系列名称'));
+      alert(t('请输入系列名称'));
       return;
     }
     try {
@@ -9046,15 +9442,15 @@ async function(ctx) {
         document.getElementById('newSeriesIconUrl').value = '';
         await this.loadSeriesIcons();
       } else {
-        Dialog.alert(t('添加失败'));
+        alert(t('添加失败'));
       }
     } catch (error) {
-      Dialog.alert(t('网络错误: ') + error.message);
+      alert(t('网络错误: ') + error.message);
     }
   }
 
-  async editSeriesIcon(name, currentUrl) {
-    const newUrl = await requestBloraValue(`${t('设置 "')}${name}${t('" 的图标 URL:')}`, currentUrl);
+  editSeriesIcon(name, currentUrl) {
+    const newUrl = prompt(`${t('设置 "')}${name}${t('" 的图标 URL:')}`, currentUrl);
     if (newUrl === null) return;
     fetch('/api/admin/series-icons', {
       method: 'POST',
@@ -9064,12 +9460,12 @@ async function(ctx) {
   }
 
   async deleteSeriesIcon(name) {
-    if (!await Dialog.confirm(t('确认'), `${t('确定要删除系列 "')}${name}${t('" 的图标配置吗？')}`)) return;
+    if (!await confirm(`${t('确定要删除系列 "')}${name}${t('" 的图标配置吗？')}`)) return;
     try {
       await fetch(`/api/admin/series-icons/${encodeURIComponent(name)}`, { method: 'DELETE' });
       await this.loadSeriesIcons();
     } catch (error) {
-      Dialog.alert(t('删除失败: ') + error.message);
+      alert(t('删除失败: ') + error.message);
     }
   }
 
@@ -9095,7 +9491,7 @@ async function(ctx) {
     const outputPct = parseFloat(document.getElementById('batchRefOutputPct').value);
 
     if (isNaN(inputPct) || isNaN(outputPct)) {
-      Dialog.alert(t('请输入有效的百分比'));
+      alert(t('请输入有效的百分比'));
       return;
     }
 
@@ -9111,24 +9507,24 @@ async function(ctx) {
         const tbody = document.getElementById('batchAdjustByRefPreviewBody');
         setHTML(tbody, data.preview.map(m => `
           <tr>
-            <td style="padding:6px 8px;">${m.name || m.id}</td>
-            <td style="padding:6px 8px;text-align:right;">¥${m.current_input.toFixed(4)}</td>
-            <td style="padding:6px 8px;text-align:right;">${m.ref_input > 0 ? '¥' + m.ref_input.toFixed(4) : '-'}</td>
-            <td style="padding:6px 8px;text-align:right;">${m.new_input != null ? '¥' + m.new_input.toFixed(4) : '-'}</td>
-            <td style="padding:6px 8px;text-align:right;">¥${m.current_output.toFixed(4)}</td>
-            <td style="padding:6px 8px;text-align:right;">${m.ref_output > 0 ? '¥' + m.ref_output.toFixed(4) : '-'}</td>
-            <td style="padding:6px 8px;text-align:right;">${m.new_output != null ? '¥' + m.new_output.toFixed(4) : '-'}</td>
+            <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${m.name || m.id}</td>
+            <td style="padding:6px 8px;text-align:right;border-bottom:1px solid var(--border);">¥${m.current_input.toFixed(4)}</td>
+            <td style="padding:6px 8px;text-align:right;border-bottom:1px solid var(--border);color:var(--muted-foreground);">${m.ref_input > 0 ? '¥' + m.ref_input.toFixed(4) : '-'}</td>
+            <td style="padding:6px 8px;text-align:right;border-bottom:1px solid var(--border);font-weight:600;color:var(--brand-blue);">${m.new_input != null ? '¥' + m.new_input.toFixed(4) : '-'}</td>
+            <td style="padding:6px 8px;text-align:right;border-bottom:1px solid var(--border);">¥${m.current_output.toFixed(4)}</td>
+            <td style="padding:6px 8px;text-align:right;border-bottom:1px solid var(--border);color:var(--muted-foreground);">${m.ref_output > 0 ? '¥' + m.ref_output.toFixed(4) : '-'}</td>
+            <td style="padding:6px 8px;text-align:right;border-bottom:1px solid var(--border);font-weight:600;color:var(--brand-blue);">${m.new_output != null ? '¥' + m.new_output.toFixed(4) : '-'}</td>
           </tr>
         `).join(''));
         document.getElementById('batchAdjustByRefPreview').style.display = 'block';
         document.getElementById('batchAdjustByRefConfirmBtn').style.display = 'inline-flex';
       } else {
         const err = await response.json().catch(() => ({}));
-        Dialog.alert(err.error || t('预览失败'));
+        alert(err.error || t('预览失败'));
       }
     } catch (error) {
       console.error(t('预览失败:'), error);
-      Dialog.alert(t('预览失败: ') + error.message);
+      alert(t('预览失败: ') + error.message);
     }
   }
 
@@ -9140,11 +9536,11 @@ async function(ctx) {
     const outputPct = parseFloat(document.getElementById('batchRefOutputPct').value);
 
     if (isNaN(inputPct) || isNaN(outputPct)) {
-      Dialog.alert(t('请输入有效的百分比'));
+      alert(t('请输入有效的百分比'));
       return;
     }
 
-    if (!await Dialog.confirm(t('确认'), `${t('确定要将选中的')}${ids.length}${t('个模型的价格设置为参考价的')}${inputPct}%/${outputPct}${t('% 吗？')}`)) {
+    if (!await confirm(`${t('确定要将选中的')}${ids.length}${t('个模型的价格设置为参考价的')}${inputPct}%/${outputPct}${t('% 吗？')}`)) {
       return;
     }
 
@@ -9177,37 +9573,301 @@ async function(ctx) {
     }
   }
 
-  // 旧用户组 hash 的兼容方法
-  async loadUserGroups() { return this.loadTeams(); }
-  filterUserGroups() { return this.filterTeams(); }
-  renderUserGroupsList() { return this.renderTeamsList(this._teamsData || []); }
+  // ==================== 用户组管理 ====================
 
-  async setDefaultGroup(groupId) {
+  userGroupPageGo(page) {
+    this.userGroupPage = page;
+    this.renderUserGroupsList(this._userGroupsData || []);
+  }
+
+  async loadUserGroups() {
+    console.log(t('[用户组] 开始加载用户组列表'));
+    const listEl = document.getElementById('userGroupsList') || document.getElementById('adminUserGroupsList');
+    if (listEl) setHTML(listEl, pageLoadingHtml(t('加载用户组...')));
     try {
-      const res = await fetch(`/api/admin/teams/${groupId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_default: true }) });
-      if (!res.ok) {
-        const err = await res.json();
-        Dialog.alert(err.error || t('设置失败'));
-        return;
-      }
-      this.loadTeams();
-    } catch (e) {
-      Dialog.alert(t('设置失败: ') + e.message);
+      const response = await fetch('/api/admin/user-groups');
+      console.log(t('[用户组] API 响应状态:'), response.status);
+      if (!response.ok) throw new Error(t('加载失败'));
+      const groups = await response.json();
+      console.log(t('[用户组] 获取到用户组数据:'), groups);
+      this.renderUserGroupsList(groups);
+    } catch (error) {
+      console.error(t('[用户组] 加载用户组列表失败:'), error);
     }
   }
 
-  showCreateUserGroupModal() { return this.showCreateTeamModal(); }
-  async showUserGroupDetail(teamId) { return this.showTeamDetail(teamId); }
-  async loadUserGroupRules(teamId) { return this.loadTeamQuotaRules(teamId); }
-  renderUserGroupRules(teamId, rules) {
-    const container = document.getElementById('teamQuotaRulesList');
-    if (!container) return;
-    const presets = [{ hours: 1, label: t('1 小时') }, { hours: 5, label: t('5 小时') }, { hours: 24, label: t('1 天') }, { hours: 168, label: t('1 周') }];
-    const rows = (rules || []).map(rule => `<div class="rule-row"><div class="rule-row-main"><span class="rule-row-type">${rule.rule_type === 'requests' ? t('请求次数') : t('Token 用量')}</span><span class="rule-row-value">每 ${this.formatDuration(rule.duration_hours)} 最多 <strong>${Number(rule.rule_value).toLocaleString()}</strong> ${rule.rule_type === 'requests' ? t('次请求') : 'tokens'}</span></div><button type="button" class="blora-button" onclick="adminApp.deleteTeamQuotaRule(${teamId}, '${escapeHtml(rule.id)}')" data-variant="danger" data-size="sm">${t('删除')}</button></div>`).join('');
-    setHTML(container, `<div class="rules-list">${rows || `<blora-empty title="${t('暂无规则')}"></blora-empty>`}</div><div class="rule-add-form"><div class="rule-add-row"><blora-select id="ruleNewType" class="" style="width:auto;"><blora-option value="requests">${t('请求次数')}</blora-option><blora-option value="tokens">${t('Token 用量')}</blora-option></blora-select><span>${t('每')}</span><blora-field label="${t('小时数')}"><input type="number" id="ruleNewDuration" class="blora-input" style="width:100px;" min="1" placeholder="${t('小时数')}"></blora-field><span>${t('小时')}</span><span>${t('最多')}</span><blora-field label="${t('限额')}"><input type="number" id="ruleNewValue" class="blora-input" style="width:120px;" min="1" placeholder="${t('限额')}"></blora-field><button type="button" class="blora-button" onclick="adminApp.addTeamQuotaRule(${teamId})" data-variant="primary" data-size="sm">${t('添加')}</button></div><div class="rule-presets">${t('快捷设置：')} ${presets.map(p => `<button type="button" class="blora-button" onclick="document.getElementById('ruleNewDuration').value=${p.hours}" data-variant="ghost" data-size="sm">${p.label}</button>`).join('')}</div></div>`);
-    document.getElementById('ruleNewType')?.addEventListener('change', event => {
-      const unit = document.getElementById('ruleNewUnit');
-      if (unit) unit.textContent = event.target.value === 'requests' ? t('次请求') : 'tokens';
+  filterUserGroups() {
+    this._debounceSearch('_userGroupFilterTimer', () => {
+      this.userGroupPage = 0;
+      this.renderUserGroupsList(this._userGroupsData || []);
+    });
+  }
+
+  renderUserGroupsList(groups) {
+    console.log(t('[用户组] 渲染用户组列表, 数量:'), groups.length);
+    this._userGroupsData = groups || [];
+    const all = this._userGroupsData;
+    const q = this._searchQ('userGroupSearchInput');
+    const filtered = q
+      ? all.filter(g => this._matchSearch(q, g.name, g.description))
+      : all;
+
+    // 统计卡片基于全量
+    const defaultCount = all.filter(g => g.is_default).length;
+    const totalRules = all.reduce((s, g) => s + (parseInt(g.rule_count) || 0), 0);
+    const totalMembers = all.reduce((s, g) => s + (parseInt(g.member_count) || 0), 0);
+
+    const statsContainer = document.getElementById('userGroupStatsCards');
+    if (statsContainer) {
+      setHTML(statsContainer, `
+        <div class="admin-stat-card">
+          <div class="admin-stat-card-icon blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${all.length}</span>
+            <span class="admin-stat-card-label">用户组数</span>
+          </div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-card-icon green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${defaultCount}</span>
+            <span class="admin-stat-card-label">默认组</span>
+          </div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-card-icon amber">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${totalRules}</span>
+            <span class="admin-stat-card-label">速率规则</span>
+          </div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-card-icon purple">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${totalMembers}</span>
+            <span class="admin-stat-card-label">总成员数</span>
+          </div>
+        </div>
+      `);
+    }
+
+    const container = document.getElementById('userGroupsList');
+    if (!container) {
+      console.error(t('[用户组] 找不到 userGroupsList 容器'));
+      return;
+    }
+
+    const countEl = document.getElementById('userGroupCount');
+    if (countEl) {
+      countEl.textContent = filtered.length === all.length
+        ? `${t('共')}${all.length}${t('个')}`
+        : `${t('显示')}${filtered.length} / ${all.length}`;
+    }
+
+    if (!all.length) {
+      setHTML(container, '<div class="empty-state">' + t('暂无用户组，点击右上角创建') + '</div>');
+    } else if (!filtered.length) {
+      setHTML(container, '<div class="empty-state">' + t('未找到匹配的用户组') + '</div>');
+    } else {
+      const pg = this._paginate(filtered, this.userGroupPage, this.userGroupPageSize);
+      this.userGroupPage = pg.page;
+      setHTML(container, `<table class="data-table"><thead><tr>
+        <th>名称</th><th>描述</th><th>成员数</th><th>规则数</th><th>默认</th><th>创建时间</th><th>操作</th>
+      </tr></thead><tbody>${pg.items.map(g => `<tr>
+        <td>${escapeHtml(g.name)}</td>
+        <td>${escapeHtml(g.description || '-')}</td>
+        <td>${g.member_count}</td>
+        <td>${g.rule_count}</td>
+        <td>${g.is_default ? '<span class="blora-badge" data-variant="success">' + t('默认') + '</span>' : '-'}</td>
+        <td>${new Date(g.created_at).toLocaleDateString()}</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${g.is_default
+            ? '<button class="blora-button" disabled style="opacity:0.5;" data-variant="secondary" data-size="sm">' + t('✓ 默认') + '</button>'
+            : `<button class="blora-button" onclick="adminApp.setDefaultGroup(${g.id})" data-variant="secondary" data-size="sm"><span>${t('设为默认')}</span></button>`}
+          <button class="blora-button" onclick="adminApp.showUserGroupDetail(${g.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </td>
+      </tr>`).join('')}</tbody></table>
+      ${pg.totalPages > 1 ? this._renderPagination('userGroup', pg.page, pg.totalPages, pg.total) : ''}`);
+    }
+
+    // 绑定创建按钮事件
+    const createBtn = document.getElementById('createUserGroupBtn');
+    console.log(t('[用户组] 创建按钮元素:'), createBtn);
+    if (createBtn) {
+      createBtn.onclick = () => {
+        console.log(t('[用户组] 创建按钮被点击'));
+        this.showCreateUserGroupModal();
+      };
+      console.log(t('[用户组] 创建按钮事件已绑定'));
+    } else {
+      console.error(t('[用户组] 找不到 createUserGroupBtn 按钮'));
+    }
+  }
+
+  async setDefaultGroup(groupId) {
+    try {
+      const res = await fetch(`/api/admin/user-groups/${groupId}/set-default`, { method: 'PUT' });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || t('设置失败'));
+        return;
+      }
+      this.loadUserGroups();
+    } catch (e) {
+      alert(t('设置失败: ') + e.message);
+    }
+  }
+
+  showCreateUserGroupModal() {
+    console.log(t('[用户组] 打开创建用户组弹窗'));
+
+    const content = `
+      <div style="display:grid;gap:12px;">
+        <div class="form-group">
+          <label>用户组名称</label>
+          <input type="text" id="userGroupNameInput" class="form-input" placeholder="${t('例如：VIP用户')}">
+        </div>
+        <div class="form-group">
+          <label>描述</label>
+          <textarea id="userGroupDescInput" class="form-input" rows="3" placeholder="${t('可选描述')}"></textarea>
+        </div>
+      </div>
+    `;
+
+    const modal = Dialog.showModal({
+      title: t('创建用户组'),
+      content: content,
+      footer: `<button class="blora-button" id="confirmCreateUserGroup" data-variant="primary">${t('创建')}</button>`
+    });
+    console.log(t('[用户组] 弹窗已显示:'), modal);
+
+    const confirmBtn = document.getElementById('confirmCreateUserGroup');
+    console.log(t('[用户组] 确认按钮:'), confirmBtn);
+
+    if (confirmBtn) {
+      confirmBtn.onclick = async () => {
+        console.log(t('[用户组] 确认创建按钮被点击'));
+        const name = document.getElementById('userGroupNameInput').value.trim();
+        const description = document.getElementById('userGroupDescInput').value.trim();
+        console.log(t('[用户组] 输入数据:'), { name, description });
+        if (!name) { alert(t('名称不能为空')); return; }
+        try {
+          console.log(t('[用户组] 发送创建请求...'));
+          const res = await fetch('/api/admin/user-groups', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, description })
+          });
+          console.log(t('[用户组] 创建响应状态:'), res.status);
+          if (!res.ok) {
+            const err = await res.json();
+            console.error(t('[用户组] 创建失败:'), err);
+            alert(err.error || t('创建失败'));
+            return;
+          }
+          console.log(t('[用户组] 创建成功'));
+          modal.close();
+          this.loadUserGroups();
+        } catch (e) {
+          console.error(t('[用户组] 创建请求异常:'), e);
+          alert(t('创建失败'));
+        }
+      };
+    }
+  }
+
+  async showUserGroupDetail(groupId) {
+    this.currentGroupId = groupId;
+    document.getElementById('userGroupDetailPanel').style.display = 'block';
+
+    // 加载用户组规则
+    this.loadUserGroupRules(groupId);
+    // 加载用户组成员
+    this.loadUserGroupMembers(groupId);
+
+    // 绑定按钮事件
+    document.getElementById('editUserGroupBtn').onclick = () => this.showEditUserGroupModal(groupId);
+    document.getElementById('deleteUserGroupBtn').onclick = () => this.deleteUserGroup(groupId);
+    document.getElementById('addUserGroupMemberBtn').onclick = () => this.showAddUserGroupMemberModal(groupId);
+  }
+
+  async loadUserGroupRules(groupId) {
+    try {
+      const response = await fetch(`/api/admin/user-groups/${groupId}/rules`);
+      if (!response.ok) throw new Error(t('加载失败'));
+      const rules = await response.json();
+      this.renderUserGroupRules(groupId, rules);
+    } catch (error) {
+      console.error(t('加载用户组规则失败:'), error);
+    }
+  }
+
+  renderUserGroupRules(groupId, rules) {
+    const container = document.getElementById('userGroupRulesList');
+
+    const durationPresets = [
+      { hours: 1, label: t('1 小时') },
+      { hours: 5, label: t('5 小时') },
+      { hours: 24, label: t('1 天') },
+      { hours: 168, label: t('1 周') },
+    ];
+
+    // 渲染已有规则列表
+    let html = '';
+    if (rules.length > 0) {
+      html += '<div class="rules-list">';
+      rules.forEach(r => {
+        const unit = r.rule_type === 'requests' ? t('次请求') : 'tokens';
+        const durationLabel = this.formatDuration(r.duration_hours);
+        html += `
+          <div class="rule-row" data-rule-id="${r.id}">
+            <div class="rule-row-main">
+              <span class="rule-row-type">${r.rule_type === 'requests' ? t('请求次数') : t('Token 用量')}</span>
+              <span class="rule-row-value">每 ${durationLabel} 最多 <strong>${Number(r.rule_value).toLocaleString()}</strong> ${unit}</span>
+            </div>
+            <button class="blora-button" onclick="adminApp.deleteUserGroupRule(${groupId}, ${r.id})" data-variant="danger" data-size="sm">删除</button>
+          </div>`;
+      });
+      html += '</div>';
+    }
+
+    // 添加新规则表单
+    html += `
+      <div class="rule-add-form" id="ruleAddForm">
+        <div class="rule-add-row">
+          <blora-select id="ruleNewType" class="form-input" style="width:auto;">
+            <blora-option value="requests">请求次数</blora-option>
+            <blora-option value="tokens">Token 用量</blora-option>
+          </blora-select>
+          <span class="rule-add-label">每</span>
+          <input type="number" id="ruleNewDuration" class="form-input" style="width:100px;" min="1" placeholder="${t('小时数')}">
+          <span class="rule-add-label">小时</span>
+          <span class="rule-add-label">最多</span>
+          <input type="number" id="ruleNewValue" class="form-input" style="width:120px;" min="1" placeholder="${t('限额')}">
+          <span class="rule-add-label" id="ruleNewUnit">次请求</span>
+          <button class="blora-button" onclick="adminApp.addGroupRule(${groupId})" data-variant="primary" data-size="sm">添加</button>
+        </div>
+        <div class="rule-presets">
+          快捷设置：
+          ${durationPresets.map(p => `<button class="blora-button" onclick="document.getElementById('ruleNewDuration').value=${p.hours}" data-variant="ghost" data-size="sm">${p.label}</button>`).join('')}
+        </div>
+      </div>`;
+
+    setHTML(container, html);
+
+    // 切换单位显示
+    const typeSelect = document.getElementById('ruleNewType');
+    const unitLabel = document.getElementById('ruleNewUnit');
+    typeSelect.addEventListener('change', () => {
+      unitLabel.textContent = typeSelect.value === 'requests' ? t('次请求') : 'tokens';
     });
   }
 
@@ -9224,39 +9884,128 @@ async function(ctx) {
     return `${hours}${t('小时')}`;
   }
 
-  async deleteUserGroupRule(teamId, ruleId) { return this.deleteTeamQuotaRule(teamId, ruleId); }
+  async deleteUserGroupRule(groupId, ruleId) {
+    if (!await confirm(t('确定删除此规则？'))) return;
+    try {
+      await fetch(`/api/admin/user-group-rules/${ruleId}`, { method: 'DELETE' });
+      this.loadUserGroupRules(groupId);
+    } catch (e) { alert(t('删除失败')); }
+  }
 
-  async addGroupRule(teamId) { return this.addTeamQuotaRule(teamId); }
+  async addGroupRule(groupId) {
+    const rule_type = document.getElementById('ruleNewType').value;
+    const rule_value = parseInt(document.getElementById('ruleNewValue').value);
+    const duration_hours = parseInt(document.getElementById('ruleNewDuration').value);
 
-  async loadUserGroupMembers(teamId) { return this.loadTeamMembers(teamId); }
+    if (!duration_hours || duration_hours <= 0) {
+      alert(t('请输入有效的小时数'));
+      document.getElementById('ruleNewDuration').focus();
+      return;
+    }
+    if (!rule_value || rule_value <= 0) {
+      alert(t('请输入有效的限额'));
+      document.getElementById('ruleNewValue').focus();
+      return;
+    }
 
-  filterUserGroupMembers() { return this.filterTeamMembers(); }
+    try {
+      await fetch(`/api/admin/user-groups/${groupId}/rules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rule_type, rule_value, duration_hours })
+      });
+      this.loadUserGroupRules(groupId);
+    } catch (e) {
+      alert(t('添加失败'));
+    }
+  }
 
-  renderUserGroupMembers(teamId) { return this.loadTeamMembers(teamId); }
+  async loadUserGroupMembers(groupId) {
+    try {
+      const [membersRes, usersRes] = await Promise.all([
+        fetch('/api/admin/users'),
+        fetch('/api/admin/users')
+      ]);
+      const users = await usersRes.json();
+      const members = users.filter(u => u.group_id === groupId);
+      this.renderUserGroupMembers(groupId, members, users);
+    } catch (error) {
+      console.error(t('加载用户组成员失败:'), error);
+    }
+  }
 
-  userGroupMemberPageGo(page) { this.teamMemberPageGo(page); }
+  filterUserGroupMembers() {
+    this._debounceSearch('_userGroupMemberFilterTimer', () => {
+      this.userGroupMemberPage = 0;
+      const c = this._userGroupMembersCache;
+      if (c) this.renderUserGroupMembers(c.groupId, c.members, c.allUsers);
+    });
+  }
 
-  async removeUserGroupMember(teamId, userId) { return this.removeTeamMember(teamId, userId); }
+  renderUserGroupMembers(groupId, members, allUsers) {
+    const container = document.getElementById('userGroupMembersList');
+    this._userGroupMembersCache = { groupId, members, allUsers };
+    if (!members.length) {
+      setHTML(container, '<div class="empty-state">' + t('暂无成员') + '</div>');
+      return;
+    }
+    const q = this._searchQ('userGroupMemberSearchInput');
+    const filtered = q
+      ? members.filter(m => this._matchSearch(q, m.username, m.email))
+      : members;
+    if (!filtered.length) {
+      setHTML(container, '<div class="empty-state">' + t('未找到匹配的成员') + '</div>');
+      return;
+    }
+    const pg = this._paginate(filtered, this.userGroupMemberPage, this.memberPageSize);
+    this.userGroupMemberPage = pg.page;
+    setHTML(container, `<table class="data-table"><thead><tr>
+      <th>用户名</th><th>邮箱</th><th>积分</th><th>操作</th>
+    </tr></thead><tbody>${pg.items.map(m => `<tr>
+      <td>${escapeHtml(m.username)}</td>
+      <td>${escapeHtml(m.email || '-')}</td>
+      <td>${parseFloat(m.balance || 0).toFixed(0)}</td>
+      <td><button class="blora-button" onclick="adminApp.removeUserGroupMember(${groupId}, ${m.id})" data-variant="danger" data-size="sm">移除</button></td>
+    </tr>`).join('')}</tbody></table>
+    ${pg.totalPages > 1 ? this._renderPagination('userGroupMember', pg.page, pg.totalPages, pg.total) : ''}`);
+  }
 
-  async showAddUserGroupMemberModal(groupId) { return this.showAddTeamMemberModal(groupId); }
+  userGroupMemberPageGo(page) {
+    this.userGroupMemberPage = page;
+    const c = this._userGroupMembersCache;
+    if (c) this.renderUserGroupMembers(c.groupId, c.members, c.allUsers);
+  }
 
-  async _legacyShowAddUserGroupMemberModal(groupId) {
+  async removeUserGroupMember(groupId, userId) {
+    if (!await confirm(t('确定移除此成员？'))) return;
+    try {
+      await fetch(`/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ group_id: null })
+      });
+      this.loadUserGroupMembers(groupId);
+      this.loadUserGroups();
+    } catch (e) { alert(t('移除失败')); }
+  }
+
+  async showAddUserGroupMemberModal(groupId) {
     try {
       const usersRes = await fetch('/api/admin/users');
       const users = await usersRes.json();
-      const available = users.filter(u => Number(u.team_id) !== Number(groupId));
+      const available = users.filter(u => u.group_id !== groupId);
 
       const content = available.length
         ? `<div style="display:grid;gap:10px;">
-            <input type="text" id="addGroupMemberSearch" class="blora-input" placeholder="${t('搜索用户名或邮箱...')}" style="width:100%;box-sizing:border-box;">
+            <input type="text" id="addGroupMemberSearch" class="form-input" placeholder="${t('搜索用户名或邮箱...')}" style="width:100%;box-sizing:border-box;">
             <div id="addGroupMemberList" style="max-height:360px;overflow-y:auto;"></div>
           </div>`
-        : '<blora-empty title="' + t('所有用户都已在此用户组中') + '"></blora-empty>';
+        : '<div class="empty-state">' + t('所有用户都已在此用户组中') + '</div>';
 
       const modal = Dialog.showModal({
         title: t('添加成员'),
         content: content,
-        footer: `<button type="button" class="blora-button" id="confirmAddGroupMembers" data-variant="primary">${t('添加')}</button>`
+        footer: `<button class="blora-button" id="confirmAddGroupMembers" data-variant="primary">${t('添加')}</button>`
       });
 
       if (available.length) {
@@ -9268,11 +10017,11 @@ async function(ctx) {
             ? available.filter(u => this._matchSearch(kw, u.username, u.email))
             : available;
           setHTML(listEl, rows.map(u => `
-            <div style="display:flex;align-items:center;gap:8px;padding:8px;">
-              <blora-checkbox value="${u.id}" class="group-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}></blora-checkbox>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
+              <input type="checkbox" value="${u.id}" class="group-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
               <span>${escapeHtml(u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
-            </div>`).join('') || '<blora-empty title="' + t('无匹配用户') + '"></blora-empty>');
+            </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.group-member-checkbox').forEach(cb => {
             cb.onchange = () => {
               if (cb.checked) selected.add(parseInt(cb.value));
@@ -9285,63 +10034,74 @@ async function(ctx) {
 
         document.getElementById('confirmAddGroupMembers').onclick = async () => {
           const checked = Array.from(selected);
-          if (!checked.length) { Dialog.alert(t('请选择用户')); return; }
+          if (!checked.length) { alert(t('请选择用户')); return; }
           try {
             for (const userId of checked) {
               await fetch(`/api/admin/users/${userId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ team_id: groupId })
+                body: JSON.stringify({ group_id: groupId })
               });
             }
             modal.close();
             this.loadUserGroupMembers(groupId);
-            this.loadTeams();
-          } catch (e) { Dialog.alert(t('添加失败')); }
+            this.loadUserGroups();
+          } catch (e) { alert(t('添加失败')); }
         };
       }
-    } catch (e) { Dialog.alert(t('加载用户列表失败')); }
+    } catch (e) { alert(t('加载用户列表失败')); }
   }
 
-  async showEditUserGroupModal(groupId) { return this.showEditTeamModal(groupId); }
-
-  async _legacyShowEditUserGroupModal(groupId) {
+  async showEditUserGroupModal(groupId) {
     try {
-      const res = await fetch('/api/admin/teams');
+      const res = await fetch('/api/admin/user-groups');
       const groups = await res.json();
-      const group = groups.find(g => Number(g.id) === Number(groupId));
-      if (!group) { Dialog.alert(t('用户组不存在')); return; }
+      const group = groups.find(g => g.id === groupId);
+      if (!group) { alert(t('用户组不存在')); return; }
 
       const content = `
         <div style="display:grid;gap:12px;">
-          <blora-field class="cr-admin-field" label="用户组名称" data-field-label="用户组名称"><input type="text" id="editGroupNameInput" class="blora-input" value="${escapeHtml(group.name)}"></blora-field>
-          <blora-field class="cr-admin-field" label="描述" data-field-label="描述"><textarea id="editGroupDescInput" class="blora-textarea" rows="3">${escapeHtml(group.description || '')}</textarea></blora-field>
+          <div class="form-group">
+            <label>用户组名称</label>
+            <input type="text" id="editGroupNameInput" class="form-input" value="${escapeHtml(group.name)}">
+          </div>
+          <div class="form-group">
+            <label>描述</label>
+            <textarea id="editGroupDescInput" class="form-input" rows="3">${escapeHtml(group.description || '')}</textarea>
+          </div>
         </div>
       `;
       const modal = Dialog.showModal({
         title: t('编辑用户组'),
         content: content,
-        footer: `<button type="button" class="blora-button" id="confirmEditGroup" data-variant="primary">${t('保存')}</button>`
+        footer: `<button class="blora-button" id="confirmEditGroup" data-variant="primary">${t('保存')}</button>`
       });
       document.getElementById('confirmEditGroup').onclick = async () => {
         const name = document.getElementById('editGroupNameInput').value.trim();
         const description = document.getElementById('editGroupDescInput').value.trim();
-        if (!name) { Dialog.alert(t('名称不能为空')); return; }
+        if (!name) { alert(t('名称不能为空')); return; }
         try {
-          await fetch(`/api/admin/teams/${groupId}`, {
+          await fetch(`/api/admin/user-groups/${groupId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, description })
           });
           modal.close();
-          this.loadTeams();
+          this.loadUserGroups();
           this.showUserGroupDetail(groupId);
-        } catch (e) { Dialog.alert(t('保存失败')); }
+        } catch (e) { alert(t('保存失败')); }
       };
-    } catch (e) { Dialog.alert(t('加载用户组信息失败')); }
+    } catch (e) { alert(t('加载用户组信息失败')); }
   }
 
-  async deleteUserGroup(teamId) { return this.deleteTeam(teamId); }
+  async deleteUserGroup(groupId) {
+    if (!await confirm(t('确定删除此用户组？成员将被移除但不会被删除。'))) return;
+    try {
+      await fetch(`/api/admin/user-groups/${groupId}`, { method: 'DELETE' });
+      document.getElementById('userGroupDetailPanel').style.display = 'none';
+      this.loadUserGroups();
+    } catch (e) { alert(t('删除失败')); }
+  }
 
   // ==================== CrewRouter Team 管理 ====================
 
@@ -9355,7 +10115,7 @@ async function(ctx) {
       this.renderTeamsList(teams);
     } catch (error) {
       console.error(t('加载 Team 列表失败:'), error);
-      if (listEl) setHTML(listEl, `<blora-alert variant="danger" title="${t('加载失败')}" description="${escapeHtml(error.message || t('加载失败'))}"></blora-alert>`);
+      if (listEl) setHTML(listEl, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -9512,40 +10272,40 @@ async function(ctx) {
     const statsContainer = document.getElementById('teamStatsCards');
     if (statsContainer) {
       setHTML(statsContainer, `
-        <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-          <div class="cr-admin-stat-icon">
-            <span class="app-icon" style="width:20px;height:20px;" data-icon="users" aria-hidden="true"></span>
+        <div class="admin-stat-card">
+          <div class="admin-stat-card-icon blue">
+            <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="person.2">
           </div>
-          <div class="blora-stat">
-            <span class="blora-stat__value">${all.length}</span>
-            <span class="blora-stat__label">团队总数</span>
-          </div>
-        </div>
-        <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-          <div class="cr-admin-stat-icon">
-            <span class="app-icon" style="width:20px;height:20px;" data-icon="star" aria-hidden="true"></span>
-          </div>
-          <div class="blora-stat">
-            <span class="blora-stat__value">${defaultCount}</span>
-            <span class="blora-stat__label">默认团队</span>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${all.length}</span>
+            <span class="admin-stat-card-label">团队总数</span>
           </div>
         </div>
-        <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-          <div class="cr-admin-stat-icon">
-            <span class="app-icon" style="width:20px;height:20px;" data-icon="zap" aria-hidden="true"></span>
+        <div class="admin-stat-card">
+          <div class="admin-stat-card-icon amber">
+            <img src="https://img.bloret.net/SF/star.fill?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="star.fill">
           </div>
-          <div class="blora-stat">
-            <span class="blora-stat__value">${frontierCount}</span>
-            <span class="blora-stat__label">前沿团队</span>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${defaultCount}</span>
+            <span class="admin-stat-card-label">默认团队</span>
           </div>
         </div>
-        <div class="cr-admin-stat-card blora-card blora-row" data-size="sm">
-          <div class="cr-admin-stat-icon">
-            <span class="app-icon" style="width:20px;height:20px;" data-icon="user-plus" aria-hidden="true"></span>
+        <div class="admin-stat-card">
+          <div class="admin-stat-card-icon purple">
+            <img src="https://img.bloret.net/SF/bolt.fill?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="bolt.fill">
           </div>
-          <div class="blora-stat">
-            <span class="blora-stat__value">${totalMembers}</span>
-            <span class="blora-stat__label">总成员数</span>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${frontierCount}</span>
+            <span class="admin-stat-card-label">前沿团队</span>
+          </div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-card-icon green">
+            <img src="https://img.bloret.net/SF/person.2.badge.plus?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="person.2.badge.plus">
+          </div>
+          <div class="admin-stat-card-info">
+            <span class="admin-stat-card-value">${totalMembers}</span>
+            <span class="admin-stat-card-label">总成员数</span>
           </div>
         </div>
       `);
@@ -9562,25 +10322,25 @@ async function(ctx) {
     this._syncAdminTeamsStickyControlsFromMain();
 
     if (!all.length) {
-      setHTML(container, '<blora-empty title="' + t('暂无 Team，点击右上角创建') + '"></blora-empty>');
+      setHTML(container, '<div class="empty-state">' + t('暂无 Team，点击右上角创建') + '</div>');
       return;
     }
     if (!filtered.length) {
-      setHTML(container, '<blora-empty title="' + t('未找到匹配的 Team') + '"></blora-empty>');
+      setHTML(container, '<div class="empty-state">' + t('未找到匹配的 Team') + '</div>');
       return;
     }
     const pg = this._paginate(filtered, this.teamPage, this.teamPageSize);
     this.teamPage = pg.page;
     const renderTeamCard = (team) => `
-      <div class="cr-admin-team-card blora-card" data-team-id="${team.id}" data-size="sm">
-        <div class="cr-admin-team-header blora-row blora-row--between">
+      <div class="team-card" data-team-id="${team.id}">
+        <div class="team-card-header">
           <h3>${escapeHtml(team.name)}${team.is_default ? ' <span class="blora-badge" data-variant="warning">' + t('默认') + '</span>' : ''}${team.is_frontier ? ' <span class="blora-badge" data-variant="info">' + t('前沿') + '</span>' : ''}${team.is_personal ? ' <span class="blora-badge" data-variant="primary">' + t('个人') + '</span>' : ''}</h3>
-          <span class="blora-badge" data-variant="neutral">${team.member_count} ${t('成员')}</span><span class="blora-badge" data-variant="info">${team.rule_count || 0} ${t('条规则')}</span>
+          <span class="blora-badge" data-variant="neutral">${team.member_count} ${t('成员')}</span>
         </div>
         <p class="team-description">${escapeHtml(team.description || t('暂无描述'))}</p>
-        <div class="cr-admin-team-footer blora-actions">
+        <div class="team-card-footer">
           <span class="text-muted">${new Date(team.created_at).toLocaleDateString()}</span>
-          <button type="button" class="blora-button" onclick="adminApp.showTeamDetail(${team.id})" data-variant="outline" data-size="sm"><span>${t('管理')}</span><span class="app-icon" style="width:14px;height:14px;" data-icon="chevron-right" aria-hidden="true"></span></button>
+          <button class="blora-button" onclick="adminApp.showTeamDetail(${team.id})" data-variant="secondary" data-size="sm"><span>${t('管理')}</span><img src="https://img.bloret.net/SF/chevron.right?color=white" alt="" width="14" height="14" class="sf-icon" data-sf-name="chevron.right"></button>
         </div>
       </div>
     `;
@@ -9590,15 +10350,15 @@ async function(ctx) {
     const personalTeams = pg.items.filter(team => team.is_personal);
     const personalCollapsed = !q && !this._personalTeamsExpanded;
     const personalSection = personalTeams.length ? `
-      <div class="cr-admin-section blora-stack" style="grid-column:1 / -1;">
-        <button type="button" class="blora-button cr-admin-personal-heading" data-variant="ghost" style="width:100%;"
+      <div class="content-section" style="grid-column:1 / -1;margin-top:8px;padding:0;overflow:hidden;">
+        <button type="button" class="section-header" style="width:100%;border:0;background:transparent;padding:16px;cursor:pointer;text-align:left;"
           onclick="adminApp.togglePersonalTeams()" aria-expanded="${(!personalCollapsed).toString()}">
           <h3 style="margin:0;display:flex;align-items:center;gap:8px;">
-            <span class="collapse-icon app-icon" style="transition:transform .2s;transform:rotate(${personalCollapsed ? '-90deg' : '0deg'});" data-icon="chevron-down" aria-hidden="true"></span>
+            <img class="collapse-icon sf-icon" style="transition:transform .2s;transform:rotate(${personalCollapsed ? '-90deg' : '0deg'});" src="https://img.bloret.net/SF/chevron.down?color=white" alt="" width="16" height="16" data-sf-name="chevron.down">
             个人 Team
             <span class="blora-badge" data-variant="neutral">${personalTeams.length}</span>
           </h3>
-          <span class="text-muted" >${personalCollapsed ? t('点击展开') : t('点击折叠')}</span>
+          <span class="text-muted" style="font-size:12px;">${personalCollapsed ? t('点击展开') : t('点击折叠')}</span>
         </button>
         <div class="teams-grid" style="display:${personalCollapsed ? 'none' : 'grid'};padding:0 16px 16px;">
           ${personalTeams.map(renderTeamCard).join('')}
@@ -9625,19 +10385,25 @@ async function(ctx) {
   showCreateTeamModal() {
     const content = `
       <div style="display:grid;gap:12px;">
-        <blora-field class="cr-admin-field" label="Team 名称" data-field-label="Team 名称"><input type="text" id="teamNameInput" class="blora-input" placeholder="${t('例如：研发组')}"></blora-field>
-        <blora-field class="cr-admin-field" label="描述" data-field-label="描述"><textarea id="teamDescInput" class="blora-textarea" rows="3" placeholder="${t('可选描述')}"></textarea></blora-field>
+        <div class="form-group">
+          <label>Team 名称</label>
+          <input type="text" id="teamNameInput" class="form-input" placeholder="${t('例如：研发组')}">
+        </div>
+        <div class="form-group">
+          <label>描述</label>
+          <textarea id="teamDescInput" class="form-input" rows="3" placeholder="${t('可选描述')}"></textarea>
+        </div>
       </div>
     `;
     const modal = Dialog.showModal({
       title: t('创建 Team'),
       content: content,
-      footer: `<button type="button" class="blora-button" id="confirmCreateTeam" data-variant="primary">${t('创建')}</button>`
+      footer: `<button class="blora-button" id="confirmCreateTeam" data-variant="primary">${t('创建')}</button>`
     });
     document.getElementById('confirmCreateTeam').onclick = async () => {
       const name = document.getElementById('teamNameInput').value.trim();
       const description = document.getElementById('teamDescInput').value.trim();
-      if (!name) { Dialog.alert(t('名称不能为空')); return; }
+      if (!name) { alert(t('名称不能为空')); return; }
       try {
         const res = await fetch('/api/admin/teams', {
           method: 'POST',
@@ -9646,12 +10412,12 @@ async function(ctx) {
         });
         if (!res.ok) {
           const err = await res.json();
-          Dialog.alert(err.error || t('创建失败'));
+          alert(err.error || t('创建失败'));
           return;
         }
         modal.close();
         this.loadTeams();
-      } catch (e) { Dialog.alert(t('创建失败')); }
+      } catch (e) { alert(t('创建失败')); }
     };
   }
 
@@ -9660,7 +10426,7 @@ async function(ctx) {
    * @param {'members'|'models'} section
    */
   toggleTeamDetailSection(section) {
-    const id = section === 'models' ? 'teamModelsSection' : (section === 'rules' ? 'teamQuotaRulesSection' : 'teamMembersSection');
+    const id = section === 'models' ? 'teamModelsSection' : 'teamMembersSection';
     const el = document.getElementById(id);
     if (!el) return;
     const collapsed = el.classList.toggle('collapsed');
@@ -9677,18 +10443,13 @@ async function(ctx) {
     }
   }
 
-  /** 打开 Team 详情时应用默认折叠状态：成员折叠、规则与模型权限展开 */
+  /** 打开 Team 详情时应用默认折叠状态：成员折叠、模型权限展开 */
   _resetTeamDetailSectionCollapse() {
     const members = document.getElementById('teamMembersSection');
-    const rules = document.getElementById('teamQuotaRulesSection');
     const models = document.getElementById('teamModelsSection');
     if (members) {
       members.classList.add('collapsed');
       members.querySelector('.team-detail-section-header')?.setAttribute('aria-expanded', 'false');
-    }
-    if (rules) {
-      rules.classList.remove('collapsed');
-      rules.querySelector('.team-detail-section-header')?.setAttribute('aria-expanded', 'true');
     }
     if (models) {
       models.classList.remove('collapsed');
@@ -9724,9 +10485,6 @@ async function(ctx) {
 
     // 加载 Team 成员
     this.loadTeamMembers(teamId);
-    this.loadTeamQuotaRules(teamId);
-    const quotaRulesSection = document.getElementById('teamQuotaRulesSection');
-    if (quotaRulesSection) quotaRulesSection.classList.remove('collapsed');
     // 切换 Team 时重置模型筛选，避免沿用上一 Team 条件
     const teamModelIds = [
       'teamModelListSearchInput', 'adminTeamModelsStickySearch',
@@ -9794,7 +10552,7 @@ async function(ctx) {
       });
       this.loadTeams();
       this.updateDefaultTeamBtn(teamId);
-    } catch (e) { Dialog.alert(t('操作失败')); }
+    } catch (e) { alert(t('操作失败')); }
   }
 
   async updateFrontierTeamBtn(teamId) {
@@ -9837,41 +10595,7 @@ async function(ctx) {
       }
       this.loadTeams();
       this.updateFrontierTeamBtn(teamId);
-    } catch (e) { Dialog.alert(t('操作失败')); }
-  }
-
-  async loadTeamQuotaRules(teamId) {
-    try {
-      const response = await fetch(`/api/admin/teams/${teamId}/rules`);
-      if (!response.ok) throw new Error(t('加载失败'));
-      const rules = await response.json();
-      this.renderUserGroupRules(teamId, rules);
-    } catch (error) {
-      console.error(t('加载 Team 限额规则失败:'), error);
-    }
-  }
-
-  async addTeamQuotaRule(teamId) {
-    const rule_type = document.getElementById('ruleNewType')?.value;
-    const rule_value = Number(document.getElementById('ruleNewValue')?.value);
-    const duration_hours = Number(document.getElementById('ruleNewDuration')?.value);
-    if (!rule_value || rule_value <= 0 || !duration_hours || duration_hours <= 0) return Dialog.alert(t('请输入有效的限额和小时数'));
-    try {
-      const response = await fetch(`/api/admin/teams/${teamId}/rules`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rule_type, rule_value, duration_hours }) });
-      if (!response.ok) throw new Error((await response.json()).error || t('添加失败'));
-      this.loadTeamQuotaRules(teamId);
-      this.loadTeams();
-    } catch (error) { Dialog.alert(error.message || t('添加失败')); }
-  }
-
-  async deleteTeamQuotaRule(teamId, ruleId) {
-    if (!await Dialog.confirm(t('确认'), t('确定删除此规则？'))) return;
-    try {
-      const response = await fetch(`/api/admin/teams/${teamId}/rules/${encodeURIComponent(ruleId)}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error(t('删除失败'));
-      this.loadTeamQuotaRules(teamId);
-      this.loadTeams();
-    } catch (error) { Dialog.alert(error.message || t('删除失败')); }
+    } catch (e) { alert(t('操作失败')); }
   }
 
   async loadTeamMembers(teamId) {
@@ -9900,7 +10624,7 @@ async function(ctx) {
     const container = document.getElementById('teamMembersList');
     this._teamMembersCache = { teamId, members, allUsers };
     if (!members.length) {
-      setHTML(container, '<blora-empty title="' + t('暂无成员') + '"></blora-empty>');
+      setHTML(container, '<div class="empty-state">' + t('暂无成员') + '</div>');
       return;
     }
     const q = this._searchQ('teamMemberSearchInput');
@@ -9908,19 +10632,19 @@ async function(ctx) {
       ? members.filter(m => this._matchSearch(q, m.username, m.email))
       : members;
     if (!filtered.length) {
-      setHTML(container, '<blora-empty title="' + t('未找到匹配的成员') + '"></blora-empty>');
+      setHTML(container, '<div class="empty-state">' + t('未找到匹配的成员') + '</div>');
       return;
     }
     const isPersonal = this.currentTeamIsPersonal;
     const pg = this._paginate(filtered, this.teamMemberPage, this.memberPageSize);
     this.teamMemberPage = pg.page;
-    setHTML(container, `<table class="data-table blora-table"><thead><tr>
+    setHTML(container, `<table class="data-table"><thead><tr>
       <th>用户名</th><th>邮箱</th><th>加入时间</th>${isPersonal ? '' : '<th>' + t('操作') + '</th>'}
     </tr></thead><tbody>${pg.items.map(m => `<tr>
       <td>${escapeHtml(m.username)}</td>
       <td>${escapeHtml(m.email || '-')}</td>
       <td>${new Date(m.created_at).toLocaleDateString()}</td>
-      ${isPersonal ? '' : `<td><button type="button" class="blora-button" onclick="adminApp.removeTeamMember(${teamId}, ${m.id})" data-variant="danger" data-size="sm">${t('移除')}</button></td>`}
+      ${isPersonal ? '' : `<td><button class="blora-button" onclick="adminApp.removeTeamMember(${teamId}, ${m.id})" data-variant="danger" data-size="sm">${t('移除')}</button></td>`}
     </tr>`).join('')}</tbody></table>
     ${pg.totalPages > 1 ? this._renderPagination('teamMember', pg.page, pg.totalPages, pg.total) : ''}`);
   }
@@ -9932,12 +10656,12 @@ async function(ctx) {
   }
 
   async removeTeamMember(teamId, userId) {
-    if (!await Dialog.confirm(t('确认'), t('确定移除此成员？'))) return;
+    if (!await confirm(t('确定移除此成员？'))) return;
     try {
       await fetch(`/api/admin/teams/${teamId}/members/${userId}`, { method: 'DELETE' });
       this.loadTeamMembers(teamId);
       this.loadTeams(); // 刷新成员数
-    } catch (e) { Dialog.alert(t('移除失败')); }
+    } catch (e) { alert(t('移除失败')); }
   }
 
   async showAddTeamMemberModal(teamId) {
@@ -9956,19 +10680,20 @@ async function(ctx) {
       }
       const members = await membersRes.json();
       const users = await usersRes.json();
-      const available = users.filter(u => Number(u.team_id) !== Number(teamId));
+      const memberIds = new Set(members.map(m => m.id));
+      const available = users.filter(u => !memberIds.has(u.id));
 
       const content = available.length
         ? `<div style="display:grid;gap:10px;">
-            <input type="text" id="addTeamMemberSearch" class="blora-input" placeholder="${t('搜索用户名或邮箱...')}" style="width:100%;box-sizing:border-box;">
+            <input type="text" id="addTeamMemberSearch" class="form-input" placeholder="${t('搜索用户名或邮箱...')}" style="width:100%;box-sizing:border-box;">
             <div id="addTeamMemberList" style="max-height:360px;overflow-y:auto;"></div>
           </div>`
-        : '<blora-empty title="' + t('所有用户都已在此 Team 中') + '"></blora-empty>';
+        : '<div class="empty-state">' + t('所有用户都已在此 Team 中') + '</div>';
 
       const modal = Dialog.showModal({
         title: t('添加成员'),
         content: content,
-        footer: `<button type="button" class="blora-button" id="confirmAddMembers" data-variant="primary">${t('添加')}</button>`
+        footer: `<button class="blora-button" id="confirmAddMembers" data-variant="primary">${t('添加')}</button>`
       });
 
       if (available.length) {
@@ -9980,12 +10705,12 @@ async function(ctx) {
             ? available.filter(u => this._matchSearch(kw, u.username, u.email, u.team_name))
             : available;
           setHTML(listEl, rows.map(u => `
-            <div style="display:flex;align-items:center;gap:8px;padding:8px;">
-              <blora-checkbox value="${u.id}" class="team-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}></blora-checkbox>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);">
+              <input type="checkbox" value="${u.id}" class="team-member-checkbox" ${selected.has(u.id) ? 'checked' : ''}>
               <span>${escapeHtml(u.username)}</span>
               <span class="text-muted">${escapeHtml(u.email || '')}</span>
               ${u.team_name ? `<span class="badge">${escapeHtml(u.team_name)}</span>` : ''}
-            </div>`).join('') || '<blora-empty title="' + t('无匹配用户') + '"></blora-empty>');
+            </label>`).join('') || '<div class="empty-state" style="padding:20px;">' + t('无匹配用户') + '</div>');
           listEl.querySelectorAll('.team-member-checkbox').forEach(cb => {
             cb.onchange = () => {
               if (cb.checked) selected.add(parseInt(cb.value));
@@ -9998,7 +10723,7 @@ async function(ctx) {
 
         document.getElementById('confirmAddMembers').onclick = async () => {
           const checked = Array.from(selected);
-          if (!checked.length) { Dialog.alert(t('请选择用户')); return; }
+          if (!checked.length) { alert(t('请选择用户')); return; }
           try {
             await fetch(`/api/admin/teams/${teamId}/members`, {
               method: 'POST',
@@ -10008,12 +10733,12 @@ async function(ctx) {
             modal.close();
             this.loadTeamMembers(teamId);
             this.loadTeams();
-          } catch (e) { Dialog.alert(t('添加失败')); }
+          } catch (e) { alert(t('添加失败')); }
         };
       }
     } catch (e) {
       console.error(t('加载用户列表失败:'), e);
-      Dialog.alert(t('加载用户列表失败: ') + e.message);
+      alert(t('加载用户列表失败: ') + e.message);
     }
   }
 
@@ -10032,7 +10757,7 @@ async function(ctx) {
       console.error(t('加载 Team 模型失败:'), error);
       const container = document.getElementById('teamModelsList');
       if (container) {
-        setHTML(container, `<blora-alert variant="danger" title="${t('加载失败')}" description="${escapeHtml(error.message || t('未知错误'))}"></blora-alert>`);
+        setHTML(container, `${'<div class="empty-state"><p style="color:var(--destructive);">' + t('加载失败：')}${escapeHtml(error.message || t('未知错误'))}</p></div>`);
       }
     }
   }
@@ -10128,14 +10853,14 @@ async function(ctx) {
     const safeModelId = String(modelId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     return `
-      <div class="model-library-item admin-team-model-item ${isDisabled ? 'is-disabled' : ''}" data-model-id="${escapeHtml(modelId)}" style="cursor:default;${isDisabled ? 'opacity:0.72;' : ''};">
+      <div class="model-library-item admin-team-model-item ${isDisabled ? 'is-disabled' : ''}" data-model-id="${escapeHtml(modelId)}" style="cursor:default;${isDisabled ? 'opacity:0.72;' : ''}">
         <div class="model-library-item-info">
           <div class="model-library-item-name">
             ${m.icon_url ? `<img src="${escapeHtml(m.icon_url)}" onerror="this.style.display='none'" alt="">` : ''}
             <span title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
                         <div class="model-item-badges">
               ${renderProviderNameTag(m.provider_name || m.provider)}
-              ${m.series ? `<span class="blora-tag model-item-badge series" data-variant="neutral">${escapeHtml(m.series)}</span>` : ''}
+              ${m.series ? `<span class="model-item-badge series">${escapeHtml(m.series)}</span>` : ''}
               ${isDisabled ? '<span class="blora-badge model-item-badge" data-variant="neutral">' + t('未启用') + '</span>' : '<span class="blora-badge model-item-badge" data-variant="success">' + t('已启用') + '</span>'}
               ${isProviderDisabled ? '<span class="blora-badge model-item-badge" data-variant="danger">' + t('供应商禁用') + '</span>' : ''}
             </div>
@@ -10160,8 +10885,8 @@ async function(ctx) {
           </div>
         </div>
         <div class="model-library-item-actions" style="margin-left:0;margin-top:10px;justify-content:flex-end;">
-          <button type="button" class="blora-button ${m.enabled ? 'btn-secondary' : 'btn-primary'}"
-            onclick="adminApp.toggleTeamModel(${teamId}, '${safeModelId}', ${!m.enabled})" data-variant="outline" data-size="sm">
+          <button class="blora-button ${m.enabled ? 'btn-secondary' : 'btn-primary'}"
+            onclick="adminApp.toggleTeamModel(${teamId}, '${safeModelId}', ${!m.enabled})" data-variant="secondary" data-size="sm">
             ${m.enabled ? t('禁用') : t('启用')}
           </button>
         </div>
@@ -10182,7 +10907,15 @@ async function(ctx) {
 
     if (!all.length) {
       setHTML(container, `
-        <blora-empty title="暂无已启用模型" description="请先在「模型管理」中启用模型"></blora-empty>`);
+        <div class="empty-state model-library-empty" style="padding:48px 20px;text-align:center;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+          <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无已启用模型</p>
+          <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">请先在「模型管理」中启用模型</p>
+        </div>`);
       const countEl = document.getElementById('teamModelListCount');
       if (countEl) countEl.textContent = '';
       const stickyCount = document.getElementById('adminTeamModelsStickyCount');
@@ -10228,7 +10961,7 @@ async function(ctx) {
     this._syncAdminTeamModelsStickyControlsFromMain();
 
     if (!filtered.length) {
-      setHTML(container, '<div class="empty-state" style="padding:40px;text-align:center;"><p style="margin:0;">' + t('未找到匹配的模型') + '</p></div>');
+      setHTML(container, '<div class="empty-state" style="padding:40px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('未找到匹配的模型') + '</p></div>');
       return;
     }
 
@@ -10269,17 +11002,17 @@ async function(ctx) {
                   <div class="model-library-provider-title">
                     <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                     ${renderProviderNameTag(group.label)}
-                    ${!group.providerEnabled ? '<span >' + t('供应商已禁用') + '</span>' : ''}
+                    ${!group.providerEnabled ? '<span style="color:var(--destructive);font-size:11px;font-weight:500;">' + t('供应商已禁用') + '</span>' : ''}
                   </div>
                   <div class="model-library-provider-actions" onclick="event.stopPropagation()">
-                    <button type="button" class="blora-button" style="padding:3px 8px;"
+                    <button type="button" class="blora-button" style="padding:3px 8px;font-size:11px;"
                       title="${t('一键启用该供应商下全部模型')}"
                       onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', true)" data-variant="primary" data-size="sm">全部启用</button>
-                    <button type="button" class="blora-button" style="padding:3px 8px;"
+                    <button type="button" class="blora-button" style="padding:3px 8px;font-size:11px;"
                       title="${t('一键禁用该供应商下全部模型')}"
-                      onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', false)" data-variant="outline" data-size="sm">全部禁用</button>
+                      onclick="adminApp.batchToggleTeamModelsByProvider('${safeProviderKey}', false)" data-variant="secondary" data-size="sm">全部禁用</button>
                     <span class="provider-model-count" title="${countTitle}"
-                      >${totalCount} 个模型 · ${enabledCount} 启用</span>
+                      style="color:${countColor};font-weight:600;">${totalCount} 个模型 · ${enabledCount} 启用</span>
                   </div>
                 </div>
                 <div class="model-library-list">
@@ -10338,7 +11071,7 @@ async function(ctx) {
       const row = (this._teamModelsFlat || []).find(m => String(m.model_id) === String(modelId));
       if (row) row.enabled = enabled;
       this.renderTeamModels(teamId, this._teamModelsFlat);
-    } catch (e) { Dialog.alert(e.message || t('操作失败')); }
+    } catch (e) { alert(e.message || t('操作失败')); }
   }
 
   /** 当前筛选条件下的 Team 模型列表（与 render 逻辑一致） */
@@ -10371,8 +11104,8 @@ async function(ctx) {
    */
   async _batchToggleTeamModels(body, confirmMsg) {
     const teamId = this._teamModelsTeamId;
-    if (!teamId) { Dialog.alert(t('请先选择 Team')); return; }
-    if (confirmMsg && !await Dialog.confirm(t('确认'), confirmMsg)) return;
+    if (!teamId) { alert(t('请先选择 Team')); return; }
+    if (confirmMsg && !await confirm(confirmMsg)) return;
 
     try {
       const res = await fetch(`/api/admin/teams/${teamId}/models/batch`, {
@@ -10392,10 +11125,10 @@ async function(ctx) {
 
       const action = nextEnabled ? t('启用') : t('禁用');
       const cleared = data.cleared_keys ? `${t('，清理')}${data.cleared_keys}${t('个 Key 绑定')}` : '';
-      Dialog.alert(`${t('已')}${action} ${data.updated || 0}${t('个模型')}${cleared}`);
+      alert(`${t('已')}${action} ${data.updated || 0}${t('个模型')}${cleared}`);
       return data;
     } catch (e) {
-      Dialog.alert(e.message || t('批量操作失败'));
+      alert(e.message || t('批量操作失败'));
     }
   }
 
@@ -10403,7 +11136,7 @@ async function(ctx) {
   async batchToggleTeamModelsByProvider(providerKey, enabled) {
     if (!providerKey) return;
     const models = (this._teamModelsFlat || []).filter(m => this._teamModelProviderKey(m) === providerKey);
-    if (!models.length) { Dialog.alert(t('该供应商下没有可操作的模型')); return; }
+    if (!models.length) { alert(t('该供应商下没有可操作的模型')); return; }
     const label = this._teamModelProviderLabel(models[0]) || providerKey;
     const action = enabled ? t('启用') : t('禁用');
     // 优先用 provider 字段（服务端按 provider id / 名称匹配）
@@ -10417,7 +11150,7 @@ async function(ctx) {
   /** 启用/禁用当前筛选结果 */
   async batchToggleFilteredTeamModels(enabled) {
     const filtered = this._getFilteredTeamModels();
-    if (!filtered.length) { Dialog.alert(t('当前筛选结果为空')); return; }
+    if (!filtered.length) { alert(t('当前筛选结果为空')); return; }
     const action = enabled ? t('启用') : t('禁用');
     const modelIds = filtered.map(m => m.model_id);
     await this._batchToggleTeamModels(
@@ -10429,26 +11162,29 @@ async function(ctx) {
   /** 按名称关键字批量启用（弹窗输入） */
   async batchEnableTeamModelsByName() {
     const teamId = this._teamModelsTeamId;
-    if (!teamId) { Dialog.alert(t('请先选择 Team')); return; }
+    if (!teamId) { alert(t('请先选择 Team')); return; }
 
     const content = `
       <div style="display:grid;gap:12px;">
-        <p style="margin:0;">
+        <p style="margin:0;font-size:13px;color:var(--muted-foreground);line-height:1.5;">
           按关键字匹配模型的上游 ID、名称、别名或系列（不区分大小写），对本 Team 批量启用。
         </p>
-        <blora-field class="cr-admin-field" style="margin:0;" label="名称关键字" data-field-label="名称关键字"><input type="text" id="teamModelBatchNameInput" class="blora-input" placeholder="${t('例如：claude、gpt-4、gemini')}" autofocus></blora-field>
-        <div class="cr-admin-field-group blora-stack blora-stack--sm" style="margin:0;">
-          <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <blora-checkbox id="teamModelBatchNameDisable" ></blora-checkbox>
+        <div class="form-group" style="margin:0;">
+          <label>名称关键字</label>
+          <input type="text" id="teamModelBatchNameInput" class="form-input" placeholder="${t('例如：claude、gpt-4、gemini')}" autofocus>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="teamModelBatchNameDisable" >
             <span>改为批量禁用（取消勾选则为启用）</span>
-          </div>
+          </label>
         </div>
       </div>
     `;
     const modal = Dialog.showModal({
       title: t('按名称批量启用/禁用'),
       content,
-      footer: `<button type="button" class="blora-button" id="confirmTeamModelBatchName" data-variant="primary">${t('执行')}</button>`
+      footer: `<button class="blora-button" id="confirmTeamModelBatchName" data-variant="primary">${t('执行')}</button>`
     });
 
     const input = document.getElementById('teamModelBatchNameInput');
@@ -10461,7 +11197,7 @@ async function(ctx) {
 
     document.getElementById('confirmTeamModelBatchName').onclick = async () => {
       const namePattern = (document.getElementById('teamModelBatchNameInput')?.value || '').trim();
-      if (!namePattern) { Dialog.alert(t('请输入名称关键字')); return; }
+      if (!namePattern) { alert(t('请输入名称关键字')); return; }
       const enabled = !document.getElementById('teamModelBatchNameDisable')?.checked;
       const action = enabled ? t('启用') : t('禁用');
       // 预估匹配数（本地）
@@ -10469,8 +11205,8 @@ async function(ctx) {
       const preview = (this._teamModelsFlat || []).filter(m =>
         [m.upstream_model_id, m.name, m.alias, m.series].some(v => v && String(v).toLowerCase().includes(q))
       );
-      if (!preview.length) { Dialog.alert(t('没有匹配的模型')); return; }
-      if (!await Dialog.confirm(t('确认'), `${t('将对本 Team')}${action}${t('约')}${preview.length}${t('个匹配「')}${namePattern}${t('」的模型，是否继续？')}`)) return;
+      if (!preview.length) { alert(t('没有匹配的模型')); return; }
+      if (!await confirm(`${t('将对本 Team')}${action}${t('约')}${preview.length}${t('个匹配「')}${namePattern}${t('」的模型，是否继续？')}`)) return;
       modal.close();
       await this._batchToggleTeamModels({ enabled, namePattern });
     };
@@ -10483,37 +11219,43 @@ async function(ctx) {
       const teams = await res.json();
       if (!res.ok) throw new Error(t('加载 Team 信息失败'));
       const team = teams.find(t => Number(t.id) === Number(teamId));
-      if (!team) { Dialog.alert(t('Team 不存在')); return; }
+      if (!team) { alert(t('Team 不存在')); return; }
 
       const content = `
         <div style="display:grid;gap:12px;">
-          <blora-field class="cr-admin-field" label="Team 名称" data-field-label="Team 名称" required><input type="text" id="editTeamNameInput" class="blora-input" value="${escapeHtml(team.name)}" maxlength="100" required></blora-field>
-          <blora-field class="cr-admin-field" label="描述" data-field-label="描述"><textarea id="editTeamDescInput" class="blora-textarea" rows="3">${escapeHtml(team.description || '')}</textarea></blora-field>
-          <div class="cr-admin-field-group blora-stack blora-stack--sm">
-            <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-              <blora-checkbox id="editTeamDefaultInput" ${team.is_default ? 'checked' : ''}></blora-checkbox>
-              <span>设为默认 Team（新用户自动加入）</span>
-            </div>
+          <div class="form-group">
+            <label for="editTeamNameInput">Team 名称</label>
+            <input type="text" id="editTeamNameInput" class="form-input" value="${escapeHtml(team.name)}" maxlength="100" required>
           </div>
-          <div class="cr-admin-field-group blora-stack blora-stack--sm">
-            <div style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-              <blora-checkbox id="editTeamHideQuotaInput" ${team.hide_provider_quota ? 'checked' : ''}></blora-checkbox>
+          <div class="form-group">
+            <label>描述</label>
+            <textarea id="editTeamDescInput" class="form-input" rows="3">${escapeHtml(team.description || '')}</textarea>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="editTeamDefaultInput" ${team.is_default ? 'checked' : ''}>
+              <span>设为默认 Team（新用户自动加入）</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="editTeamHideQuotaInput" ${team.hide_provider_quota ? 'checked' : ''}>
               <span>${t('隐藏供应商额度（本 Team 成员在模型库不显示供应商额度区块）')}</span>
-            </div>
+            </label>
           </div>
         </div>
       `;
       const modal = Dialog.showModal({
         title: t('编辑 Team'),
         content: content,
-        footer: `<button type="button" class="blora-button" id="confirmEditTeam" data-variant="primary">${t('保存')}</button>`
+        footer: `<button class="blora-button" id="confirmEditTeam" data-variant="primary">${t('保存')}</button>`
       });
       document.getElementById('confirmEditTeam').onclick = async () => {
         const name = document.getElementById('editTeamNameInput').value.trim();
         const description = document.getElementById('editTeamDescInput').value.trim();
         const is_default = document.getElementById('editTeamDefaultInput').checked;
         const hide_provider_quota = document.getElementById('editTeamHideQuotaInput').checked;
-        if (!name) { Dialog.alert(t('名称不能为空')); return; }
+        if (!name) { alert(t('名称不能为空')); return; }
         const saveBtn = document.getElementById('confirmEditTeam');
         saveBtn.disabled = true;
         try {
@@ -10524,20 +11266,20 @@ async function(ctx) {
           });
           if (!response.ok) {
             const error = await response.json().catch(() => ({}));
-            Dialog.alert(error.error || t('保存失败'));
+            alert(error.error || t('保存失败'));
             return;
           }
           modal.close();
           await this.loadTeams();
           await this.showTeamDetail(teamId);
-        } catch (e) { Dialog.alert(t('保存失败')); }
+        } catch (e) { alert(t('保存失败')); }
         finally { if (saveBtn.isConnected) saveBtn.disabled = false; }
       };
-    } catch (e) { Dialog.alert(t('加载 Team 信息失败')); }
+    } catch (e) { alert(t('加载 Team 信息失败')); }
   }
 
   async deleteTeam(teamId) {
-    if (!await Dialog.confirm(t('确认'), t('确定删除此 Team？成员将被移除但不会被删除。'))) return;
+    if (!await confirm(t('确定删除此 Team？成员将被移除但不会被删除。'))) return;
     try {
       await fetch(`/api/admin/teams/${teamId}`, { method: 'DELETE' });
       document.getElementById('teamDetailPanel').style.display = 'none';
@@ -10545,7 +11287,7 @@ async function(ctx) {
       this._syncAdminTeamModelsStickyVisibility(false);
       await this.loadTeams();
       this._initAdminTeamsStickyBar();
-    } catch (e) { Dialog.alert(t('删除失败')); }
+    } catch (e) { alert(t('删除失败')); }
   }
 
   // ==================== 模型测试 ====================
@@ -10575,7 +11317,7 @@ async function(ctx) {
   }
 
   async testModel(modelId, buttonEl) {
-    if (!modelId) { console.error(t('[模型测试] modelId 为空')); Dialog.alert(t('模型 ID 为空')); return; }
+    if (!modelId) { console.error(t('[模型测试] modelId 为空')); alert(t('模型 ID 为空')); return; }
     if (!this._confirmTest()) return;
 
     // 查找本地数据验证
@@ -10615,7 +11357,7 @@ async function(ctx) {
   }
 
   _confirmTest() {
-    return Dialog.confirm(t('确认'), t('模型测试将发送一条真实请求（"Hi"，max_tokens=16）到该模型，\n并按照正常用量扣除积分。是否继续？'));
+    return confirm(t('模型测试将发送一条真实请求（"Hi"，max_tokens=16）到该模型，\n并按照正常用量扣除积分。是否继续？'));
   }
 
   _formatTestTooltip(testedAt) {
@@ -10705,18 +11447,18 @@ async function(ctx) {
     this._closeTestDropdown();
     try {
       const modelIds = await this._fetchAllFilteredModelIds();
-      if (modelIds.length === 0) { Dialog.alert(t('当前筛选结果为空')); return; }
-      if (modelIds.length > 200 && !await Dialog.confirm(t('确认'), `${t('将测试')}${modelIds.length}${t('个模型，可能较久，是否继续？')}`)) return;
+      if (modelIds.length === 0) { alert(t('当前筛选结果为空')); return; }
+      if (modelIds.length > 200 && !await confirm(`${t('将测试')}${modelIds.length}${t('个模型，可能较久，是否继续？')}`)) return;
       await this._runBatchTest(modelIds, `${t('正在测试')}${modelIds.length}${t('个模型...')}`);
     } catch (e) {
-      Dialog.alert(e.message || t('获取模型列表失败'));
+      alert(e.message || t('获取模型列表失败'));
     }
   }
 
   async testSelectedModels() {
     this._closeTestDropdown();
     const modelIds = [...this.selectedModels];
-    if (modelIds.length === 0) { Dialog.alert(t('请先选择要测试的模型')); return; }
+    if (modelIds.length === 0) { alert(t('请先选择要测试的模型')); return; }
     await this._runBatchTest(modelIds, `${t('正在测试')}${modelIds.length}${t('个模型...')}`);
   }
 
@@ -10745,7 +11487,7 @@ async function(ctx) {
       }
       this._showTestResult(results);
     } catch (e) {
-      setHTML(body, `<blora-alert variant="danger" title="${t('测试失败')}" description="${escapeHtml(e.message)}"></blora-alert>`);
+      setHTML(body, `${'<div class="empty-state"><p style="color:var(--destructive);">' + t('测试失败:')}${escapeHtml(e.message)}</p></div>`);
     }
   }
 
@@ -10760,12 +11502,12 @@ async function(ctx) {
     const summaryHtml = `
       <div class="model-test-summary">
         <div class="model-test-summary-item">
-          <div class="model-test-summary-value" >${passed}</div>
+          <div class="model-test-summary-value" style="color:var(--success);">${passed}</div>
           <div class="model-test-summary-label">通过</div>
         </div>
         ${failed > 0 ? `
         <div class="model-test-summary-item">
-          <div class="model-test-summary-value" >${failed}</div>
+          <div class="model-test-summary-value" style="color:var(--destructive);">${failed}</div>
           <div class="model-test-summary-label">失败</div>
         </div>` : ''}
         <div class="model-test-summary-item">
@@ -10785,7 +11527,7 @@ async function(ctx) {
             <div class="model-test-row-icon model-test-result-pass">&#10003;</div>
             <div class="model-test-row-model">
               ${escapeHtml(r.model)}
-              <div style="margin-top:1px;">${providerLabel}</div>
+              <div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${providerLabel}</div>
             </div>
             <div class="model-test-row-stats">
               <div class="model-test-stat">
@@ -10806,7 +11548,7 @@ async function(ctx) {
       } else {
         const modelLabel = r.model || r.modelId || t('未知模型');
         const providerLabel = r.provider
-          ? `<div style="margin-top:1px;">${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
+          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${renderProviderNameTag(r.provider)}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
           : '';
         return `
           <div class="model-test-row">
@@ -10851,14 +11593,14 @@ async function(ctx) {
       const selected = Number(activeId) === Number(tag.id);
       const color = tag.color || 'var(--info)';
       return `<div class="key-tag-chip provider-tag-chip ${selected ? 'active' : ''}"
-           style="${selected ? `background:${color};` : ''};"
+           style="border-color:${color};${selected ? `background:${color};color:#fff;` : ''}"
            draggable="true"
            data-tag-id="${tag.id}"
            ondragstart="adminApp.handleProviderTagDragStart(event, ${tag.id})"
            ondragend="adminApp.handleProviderTagDragEnd(event)"
            onclick="adminApp.filterProvidersByTag(${tag.id})"
            title="${t('点击筛选 · 拖拽到供应商分配 · 铅笔编辑')}">
-        <span >●</span>
+        <span style="color:${selected ? '#fff' : color};">●</span>
         ${escapeHtml(tag.name)}
         <span class="edit-tag-def" onclick="event.stopPropagation();adminApp.showEditProviderTagPopover(${tag.id}, this)" title="${t('编辑标签')}">✎</span>
         <span class="remove-tag-def" onclick="event.stopPropagation();adminApp.deleteProviderTag(${tag.id})" title="${t('删除标签')}">&times;</span>
@@ -10876,7 +11618,7 @@ async function(ctx) {
     const chips = list.map(tag => {
       const color = tag.color || 'var(--info)';
       return `<span class="key-tag-chip-sm" data-tag-id="${tag.id}"
-        >
+        style="border-color:${color};color:${color};background:${color}18;">
         ${escapeHtml(tag.name)}
         <span class="remove-tag" title="${t('移除')}"
           onclick="event.stopPropagation();adminApp.removeTagFromProvider('${safePid}',${tag.id})">&times;</span>
@@ -11044,7 +11786,7 @@ async function(ctx) {
         const color = tag.color || 'var(--info)';
         return `<div class="provider-tag-assign-item ${has ? 'is-on' : ''}"
                      onclick="adminApp.toggleProviderTagFromDropdown('${safePid}',${tag.id})">
-          <span >${has ? '✓' : '○'}</span>
+          <span style="color:${color};">${has ? '✓' : '○'}</span>
           <span>${escapeHtml(tag.name)}</span>
         </div>`;
       }).join(''));
@@ -11211,7 +11953,7 @@ async function(ctx) {
         style="--tag-color:${color};"
         onclick="this.dataset.selected=this.dataset.selected==='1'?'0':'1';this.classList.toggle('is-on',this.dataset.selected==='1')"
         data-selected="${selected ? '1' : '0'}">${escapeHtml(t.name)}</span>`;
-    }).join('') || '<span >' + t('暂无标签，请先在列表上方创建') + '</span>');
+    }).join('') || '<span style="font-size:12px;color:var(--muted-foreground);">' + t('暂无标签，请先在列表上方创建') + '</span>');
   }
 
   _getSelectedProviderTagIds() {
@@ -11258,41 +12000,41 @@ async function(ctx) {
       if (!res.ok) throw new Error(data.error || t('加载失败'));
       const { items, total, limit } = data;
       if (!items.length) {
-        setHTML(listEl, '<blora-empty title="' + t('暂无操作日志') + '"></blora-empty>');
+        setHTML(listEl, '<p class="api-key-sub-muted" style="text-align:center;padding:24px;">' + t('暂无操作日志') + '</p>');
         setHTML(paginationEl, '');
         return;
       }
       setHTML(listEl, items.map(log => `
-        <div class="cr-admin-audit-row blora-card" data-size="sm" style="display:flex;align-items:flex-start;gap:12px;padding:12px;">
+        <div class="audit-log-row" style="display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
               <span class="blora-badge" data-variant="info">${escapeHtml(log.action)}</span>
               ${log.is_admin ? '<span class="blora-badge" data-variant="danger">' + t('管理员') + '</span>' : ''}
-              <strong >${escapeHtml(log.username || '-')}</strong>
-              <span >${escapeHtml(log.description || '')}</span>
+              <strong style="font-size:13px;">${escapeHtml(log.username || '-')}</strong>
+              <span style="font-size:13px;color:var(--foreground);">${escapeHtml(log.description || '')}</span>
             </div>
-            <div class="api-key-sub-muted" >
+            <div class="api-key-sub-muted" style="font-size:12px;">
               ${escapeHtml(log.resource_type || '-')}${log.resource_id ? ` #${escapeHtml(String(log.resource_id))}` : ''}
               ${log.ip_address ? ` · IP ${escapeHtml(log.ip_address)}` : ''}
               ${log.status ? ` · HTTP ${log.status}` : ''}
               ${log.duration_ms != null ? ` · ${log.duration_ms}ms` : ''}
             </div>
-            ${log.details ? `<details style="margin-top:4px;"><summary style="cursor:pointer;">详情</summary><pre style="margin:4px 0 0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2))}</pre></details>` : ''}
+            ${log.details ? `<details style="margin-top:4px;"><summary style="font-size:12px;color:var(--muted-foreground);cursor:pointer;">详情</summary><pre style="font-size:12px;margin:4px 0 0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2))}</pre></details>` : ''}
           </div>
-          <div style="white-space:nowrap;" title="${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN'))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
+          <div style="font-size:12px;color:var(--muted-foreground);white-space:nowrap;" title="${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN'))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
         </div>`).join(''));
 
       const totalPages = Math.ceil(total / limit);
       if (totalPages > 1) {
         setHTML(paginationEl, `
           <button type="button" class="blora-button" data-variant="outline" data-size="sm" ${page <= 1 ? 'disabled' : ''} onclick="adminApp.loadAdminAuditLogs(${page - 1})">上一页</button>
-          <span style="padding:0 8px;">${page} / ${totalPages}</span>
+          <span style="padding:0 8px;font-size:13px;">${page} / ${totalPages}</span>
           <button type="button" class="blora-button" data-variant="outline" data-size="sm" ${page >= totalPages ? 'disabled' : ''} onclick="adminApp.loadAdminAuditLogs(${page + 1})">下一页</button>`);
       } else {
         setHTML(paginationEl, '');
       }
     } catch (error) {
-      setHTML(listEl, `<p >${escapeHtml(error.message)}</p>`);
+      setHTML(listEl, `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
       setHTML(paginationEl, '');
     }
   }
@@ -11331,13 +12073,13 @@ async function(ctx) {
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
 
       if (!data.items || data.items.length === 0) {
-        setHTML(container, '<blora-empty title="' + t('暂无提示词记录') + '"></blora-empty>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无提示词记录') + '</p>');
         return;
       }
       this._promptsCache = data.items;
 
       setHTML(container, `
-        <table class="blora-table">
+        <table>
           <thead>
             <tr>
               <th>${t('文件名')}</th>
@@ -11354,16 +12096,16 @@ async function(ctx) {
             ${data.items.map((item, idx) => `
               <tr style="cursor:pointer;" data-admin-prompt-idx="${idx}" title="${t('点击查看详情')}">
                 <td class="cell-clip" style="max-width:280px;">
-                  <div style="display:flex;align-items:center;gap:6px;">📄 ${escapeHtml(item.file || t('(未知文件)'))}${item.truncated ? `<span >(${t('截断存储')})</span>` : ''}</div>
-                  <div style="margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.preview || '')}</div>
+                  <div style="font-weight:500;display:flex;align-items:center;gap:6px;">📄 ${escapeHtml(item.file || t('(未知文件)'))}${item.truncated ? `<span style="font-size:11px;color:var(--muted-foreground);">(${t('截断存储')})</span>` : ''}</div>
+                  <div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.preview || '')}</div>
                 </td>
                 <td>${this._usageRequestSourceBadge(item.source)}</td>
-                <td style="white-space:nowrap;">${(parseInt(item.chars, 10) || 0).toLocaleString()}</td>
-                <td style="white-space:nowrap;">${(parseInt(item.occurrence_count, 10) || 0).toLocaleString()}</td>
-                <td style="white-space:nowrap;">${(parseInt(item.user_count, 10) || 0).toLocaleString()}</td>
-                <td style="white-space:nowrap;">${escapeHtml(new Date(item.first_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
-                <td style="white-space:nowrap;">${escapeHtml(new Date(item.last_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
-                <td class="cell-actions"><button type="button" class="blora-button" data-admin-prompt-view-idx="${idx}" data-variant="outline" data-size="sm">${t('查看内容')}</button></td>
+                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.chars, 10) || 0).toLocaleString()}</td>
+                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.occurrence_count, 10) || 0).toLocaleString()}</td>
+                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.user_count, 10) || 0).toLocaleString()}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.first_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.last_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
+                <td class="cell-actions"><button type="button" class="blora-button" data-admin-prompt-view-idx="${idx}" data-variant="secondary" data-size="sm">${t('查看内容')}</button></td>
               </tr>
             `).join('')}
           </tbody>
@@ -11386,7 +12128,7 @@ async function(ctx) {
       });
     } catch (error) {
       console.error(t('加载提示词失败:'), error);
-      setHTML(container, `<blora-alert variant="danger" title="${t('加载失败')}" description="${escapeHtml(error.message || t('加载失败'))}"></blora-alert>`);
+      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -11422,7 +12164,7 @@ async function(ctx) {
         [t('文件名'), escapeHtml(data.file || t('(未知文件)'))],
         [t('客户端'), this._usageRequestSourceBadge(data.source)],
         [t('字符数'), (parseInt(data.chars, 10) || 0).toLocaleString()],
-        [t('出现次数'), `${(parseInt(data.occurrence_count, 10) || 0).toLocaleString()}${data.truncated ? ` <span >(${t('截断存储')})</span>` : ''}`],
+        [t('出现次数'), `${(parseInt(data.occurrence_count, 10) || 0).toLocaleString()}${data.truncated ? ` <span style="font-size:11px;color:var(--muted-foreground);">(${t('截断存储')})</span>` : ''}`],
         [t('关联用户'), (parseInt(data.user_count, 10) || 0).toLocaleString()],
         [t('注入位置'), (data.positions || []).length ? escapeHtml(data.positions.join(', ')) : '-'],
         [t('首次出现'), escapeHtml(fmtTime(data.first_seen))],
@@ -11432,15 +12174,15 @@ async function(ctx) {
       let refsHtml = '';
       if (Array.isArray(data.recent_refs) && data.recent_refs.length) {
         refsHtml = `
-          <h4 style="margin:16px 0 8px;">${t('最近引用记录')}（${t('最近')} ${data.recent_refs.length} ${t('条')}）</h4>
+          <h4 style="margin:16px 0 8px;font-size:14px;">${t('最近引用记录')}（${t('最近')} ${data.recent_refs.length} ${t('条')}）</h4>
           <div style="overflow-x:auto;">
-            <table class="blora-table">
+            <table>
               <thead><tr><th>${t('记录 ID')}</th><th>${t('时间')}</th><th>${t('用户')}</th><th>${t('模型')}</th><th>${t('客户端')}</th></tr></thead>
               <tbody>
                 ${data.recent_refs.map(r => `
                   <tr>
-                    <td><code >${escapeHtml(String(r.record_id))}</code></td>
-                    <td style="white-space:nowrap;">${escapeHtml(fmtTime(r.created_at))}</td>
+                    <td><code style="font-size:12px;">${escapeHtml(String(r.record_id))}</code></td>
+                    <td style="white-space:nowrap;font-size:12px;">${escapeHtml(fmtTime(r.created_at))}</td>
                     <td>${escapeHtml(r.username || String(r.user_id ?? '-'))}</td>
                     <td class="cell-clip" style="max-width:220px;">${escapeHtml(r.model_id || '-')}</td>
                     <td>${this._usageRequestSourceBadge(r.request_source)}</td>
@@ -11453,21 +12195,21 @@ async function(ctx) {
 
       setHTML(body, `
         ${rows.map(([label, value]) => `
-          <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;">
-            <span >${label}</span>
-            <span >${value}</span>
+          <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
+            <span style="font-size:14px;">${value}</span>
           </div>
         `).join('')}
-        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:12px 0 0;">
-          <span >${t('完整内容')}</span>
-          <pre id="adminPromptFullContent" style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(data.content || '')}</pre>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:12px 0 0;border-bottom:1px solid var(--border);">
+          <span style="color:var(--muted-foreground);font-size:13px;">${t('完整内容')}</span>
+          <pre id="adminPromptFullContent" style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(data.content || '')}</pre>
         </div>
         <div style="padding:8px 0;"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.copyAdminPromptContent(this)">⧉ ${t('复制内容')}</button></div>
         ${refsHtml}
       `);
     } catch (error) {
       console.error(t('加载提示词详情失败:'), error);
-      setHTML(body, `<blora-alert variant="danger" title="${t('加载失败')}" description="${escapeHtml(error.message || t('加载失败'))}"></blora-alert>`);
+      setHTML(body, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -11540,7 +12282,7 @@ async function(ctx) {
     setHTML(banner, `
       <span>发现新版本 <strong>v${lat}</strong>（当前 v${cur}）。建议在系统设置中一键更新。</span>
       <span style="display:flex;gap:8px;">
-        <button type="button" class="blora-button" onclick="adminApp.navigateTo('adminSettings')" data-variant="outline" data-size="sm">查看详情</button>
+        <button type="button" class="blora-button" onclick="adminApp.navigateTo('adminSettings')" data-variant="secondary" data-size="sm">查看详情</button>
         <button type="button" class="blora-button" id="bannerUpdateApplyBtn" onclick="adminApp.applyUpdate()" data-variant="primary" data-size="sm">一键更新</button>
       </span>
     `);
@@ -11618,13 +12360,13 @@ async function(ctx) {
               `${t('最新版本 ')}<strong>v${escapeHtml(data.latestVersion)}${'</strong>' + t('，当前 v')}${escapeHtml(data.currentVersion)}${t('。可点击「一键更新」安装。')}`
             );
           } else {
-            Dialog.alert(`${t('发现新版本 v')}${data.latestVersion}${t('（当前 v')}${data.currentVersion}）`);
+            alert(`${t('发现新版本 v')}${data.latestVersion}${t('（当前 v')}${data.currentVersion}）`);
           }
         } else {
           if (typeof Dialog !== 'undefined') {
             await Dialog.alert(t('已是最新'), `${t('当前版本 v')}${escapeHtml(data.currentVersion)}${t('已是最新。')}`);
           } else {
-            Dialog.alert(`${t('已是最新版本 v')}${data.currentVersion}`);
+            alert(`${t('已是最新版本 v')}${data.currentVersion}`);
           }
         }
       }
@@ -11636,7 +12378,7 @@ async function(ctx) {
         if (typeof Dialog !== 'undefined') {
           await Dialog.alert(t('检查失败'), escapeHtml(err.message || t('网络错误')));
         } else {
-          Dialog.alert(err.message || t('检查更新失败'));
+          alert(err.message || t('检查更新失败'));
         }
       }
       return null;
@@ -11726,7 +12468,7 @@ async function(ctx) {
         if (typeof Dialog !== 'undefined') {
           await Dialog.alert(t('无需更新'), t('当前已是最新版本。'));
         } else {
-          Dialog.alert(t('当前已是最新版本'));
+          alert(t('当前已是最新版本'));
         }
         return;
       }
@@ -11737,7 +12479,7 @@ async function(ctx) {
       if (typeof Dialog !== 'undefined') {
         await Dialog.alert(t('无法更新'), escapeHtml(msg));
       } else {
-        Dialog.alert(msg);
+        alert(msg);
       }
       return;
     }
@@ -11751,7 +12493,7 @@ async function(ctx) {
         { confirmText: t('开始更新'), cancelText: t('取消') }
       );
     } else {
-      confirmed = Dialog.confirm(t('确认'), `${t('确认更新到 v')}${toVer}${t('？服务将短暂中断并自动重启。')}`);
+      confirmed = confirm(`${t('确认更新到 v')}${toVer}${t('？服务将短暂中断并自动重启。')}`);
     }
     if (!confirmed) {
       console.log(t('[Update] 用户取消更新'));
@@ -11800,7 +12542,7 @@ async function(ctx) {
         if (typeof Dialog !== 'undefined') {
           await Dialog.alert(t('更新失败'), escapeHtml(msg));
         } else {
-          Dialog.alert(msg);
+          alert(msg);
         }
         if (applyBtn) {
           applyBtn.disabled = false;
@@ -11864,7 +12606,7 @@ async function(ctx) {
               `${t('服务已重启。当前版本：')}<strong>v${escapeHtml(data.version)}</strong>`
             );
           } else {
-            Dialog.alert(`${t('更新完成，当前版本 v')}${data.version}`);
+            alert(`${t('更新完成，当前版本 v')}${data.version}`);
           }
           window.location.reload();
           return;
@@ -11886,7 +12628,7 @@ async function(ctx) {
         t('服务可能已更新并重启，但页面未能自动连上。请刷新页面或检查进程状态。')
       );
     } else {
-      Dialog.alert(t('请手动刷新页面确认更新结果'));
+      alert(t('请手动刷新页面确认更新结果'));
     }
     const applyBtn = document.getElementById('updateApplyBtn');
     const checkBtn = document.getElementById('updateCheckBtn');
@@ -11903,71 +12645,3 @@ let adminApp;
 document.addEventListener('DOMContentLoaded', () => {
   adminApp = new AdminApp();
 });
-
-(function bindBusinessControlEvents() {
-  document.addEventListener('blora-change', event => {
-    if (event.target.id === 'adminStatsTabs' && event.detail?.value) adminApp.switchStatsTab(event.detail.value);
-  });
-  document.addEventListener('change', (event) => {
-    const control = event.target.closest?.('blora-switch, blora-checkbox, blora-radio, blora-slider, blora-datepicker, blora-timepicker, blora-upload, blora-select, blora-search') || event.target;
-    if (!(control instanceof Element)) return;
-    if (control.matches("#adminTeamModelsStickyProvider")) { adminApp.onAdminTeamModelFilterInput('provider', control.value, 'sticky'); }
-    if (control.matches("#adminTeamModelsStickyStatus")) { adminApp.onAdminTeamModelFilterInput('status', control.value, 'sticky'); }
-    if (control.matches("#teamModelProviderFilter")) { adminApp.onAdminTeamModelFilterInput('provider', control.value, 'main'); }
-    if (control.matches("#teamModelStatusFilter")) { adminApp.onAdminTeamModelFilterInput('status', control.value, 'main'); }
-    if (control.matches("#adminModelsStickyProvider")) { adminApp.onAdminModelFilterInput('provider', control.value, 'sticky'); }
-    if (control.matches("#adminModelsStickyStatus")) { adminApp.onAdminModelFilterInput('status', control.value, 'sticky'); }
-    if (control.matches("#adminModelsStickySeries")) { adminApp.onAdminModelFilterInput('series', control.value, 'sticky'); }
-    if (control.matches("#adminModelsStickyTest")) { adminApp.onAdminModelFilterInput('test', control.value, 'sticky'); }
-    if (control.matches("#modelProviderFilter")) { adminApp.onAdminModelFilterInput('provider', control.value, 'main'); }
-    if (control.matches("#modelStatusFilter")) { adminApp.onAdminModelFilterInput('status', control.value, 'main'); }
-    if (control.matches("#modelSeriesFilter")) { adminApp.onAdminModelFilterInput('series', control.value, 'main'); }
-    if (control.matches("#modelTestFilter")) { adminApp.onAdminModelFilterInput('test', control.value, 'main'); }
-    if (control.matches("#adminProvidersStickyStatus")) { adminApp.onAdminProviderFilterInput('status', control.value, 'sticky'); }
-    if (control.matches("#adminProvidersStickyScope")) { adminApp.onAdminProviderFilterInput('scope', control.value, 'sticky'); }
-    if (control.matches("#adminProvidersStickyKeyMode")) { adminApp.onAdminProviderFilterInput('keyMode', control.value, 'sticky'); }
-    if (control.matches("#providerStatusFilter")) { adminApp.onAdminProviderFilterInput('status', control.value, 'main'); }
-    if (control.matches("#providerScopeFilter")) { adminApp.onAdminProviderFilterInput('scope', control.value, 'main'); }
-    if (control.matches("#providerKeyModeFilter")) { adminApp.onAdminProviderFilterInput('keyMode', control.value, 'main'); }
-    if (control.matches("#adminStatsDays")) { adminApp.loadStats(); }
-    if (control.matches("#adminAuditLogResourceFilter")) { adminApp.loadAdminAuditLogs(1); }
-    if (control.matches("#modelProvider")) { adminApp.onModelProviderChange(); }
-    if (control.matches("[data-event-bind=\"admin-event-3\"]")) { adminApp.onProviderKeySelectModeChange(); }
-    if (control.matches("[data-event-bind=\"admin-event-4\"]")) { adminApp.onProviderKeySelectModeChange(); }
-    if (control.matches("#providerKeyMode")) { adminApp.toggleKeyMode(); }
-    if (control.matches("#providerQuotaEnabled")) { adminApp.toggleQuotaScheduleFields(); }
-    if (control.matches("#providerQuotaScheduleEnabled")) { adminApp.toggleQuotaScheduleFields(); }
-    if (control.matches("#providerQuotaMode")) { adminApp.toggleCodexQuotaImport();adminApp.toggleArkQuotaConfig(); }
-    if (control.matches("#providerProxyEnabled")) { adminApp.toggleProviderProxyOptions(); }
-    if (control.matches("[data-event-bind=\"admin-event-5\"]")) { adminApp.toggleProviderProxyMode(); }
-    if (control.matches("[data-event-bind=\"admin-event-6\"]")) { adminApp.toggleProviderProxyMode(); }
-    if (control.matches("#providerProxyUseSystem")) { adminApp.toggleProviderProxyUseSystem(); }
-    if (control.matches("#batchDescMode")) { adminApp.toggleBatchDescMode(); }
-  });
-  document.addEventListener('keydown', (event) => {
-    const control = event.target.closest?.('blora-switch, blora-checkbox, blora-radio, blora-slider, blora-datepicker, blora-timepicker, blora-upload, blora-select, blora-search') || event.target;
-    if (!(control instanceof Element)) return;
-    if (control.matches("[data-event-bind=\"admin-event-0\"]")) { if(event.key==='Enter'||event.key===' '){event.preventDefault();adminApp.toggleTeamDetailSection('rules');}; }
-    if (control.matches("[data-event-bind=\"admin-event-1\"]")) { if(event.key==='Enter'||event.key===' '){event.preventDefault();adminApp.toggleTeamDetailSection('members');}; }
-    if (control.matches("[data-event-bind=\"admin-event-2\"]")) { if(event.key==='Enter'||event.key===' '){event.preventDefault();adminApp.toggleTeamDetailSection('models');}; }
-    if (control.matches("#usageLogUserFilter")) { if(event.key==='Enter')adminApp.loadUsageLogs(1); }
-    if (control.matches("#usageLogModelFilter")) { if(event.key==='Enter')adminApp.loadUsageLogs(1); }
-    if (control.matches("#usageLogProviderFilter")) { if(event.key==='Enter')adminApp.loadUsageLogs(1); }
-    if (control.matches("#adminAuditLogSearch")) { if(event.key==='Enter')adminApp.loadAdminAuditLogs(1); }
-    if (control.matches("#adminPromptSearchInput")) { if(event.key==='Enter')adminApp.loadAdminCustomPrompts(1); }
-  });
-})();
-
-(function delegateBusinessControlEvents() {
-  document.addEventListener('change', (event) => {
-    const control = event.target.closest?.('[data-control-action]');
-    if (!control) return;
-    switch (control.dataset.controlAction) {
-      case "admin-dynamic-0": { adminApp.toggleSelectAllProvidersOnPage(control.checked); break; }
-      case "admin-dynamic-1": { adminApp.toggleProviderEnabled(control.dataset.controlArg0, control.checked); break; }
-      case "admin-dynamic-2": { adminApp.toggleProviderQuota(control.dataset.controlArg0, control.checked); break; }
-      case "admin-dynamic-3": { adminApp.toggleProviderSelection(control.dataset.controlArg0, control.checked); break; }
-      case "admin-dynamic-4": { adminApp.toggleProviderSelection(control.dataset.controlArg0, control.checked); break; }
-    }
-  });
-})();

@@ -39,7 +39,7 @@
 
   function renderUsage(usage) {
     if (!Array.isArray(usage) || usage.length === 0) {
-      setState('empty', `<blora-empty title="${escapeHtml(translate('暂无使用记录'))}"></blora-empty>`);
+      setState('empty', `<p>${escapeHtml(translate('暂无使用记录'))}</p>`);
       return;
     }
 
@@ -61,16 +61,16 @@
         <td>${data.requests.toLocaleString()}</td>
         <td title="${data.tokens.toLocaleString()}">${formatBigNumber(data.tokens)}</td>
         <td>${data.cost.toFixed(4)}</td>
-        <td><div class="usage-model-list">${Object.entries(data.models).map(([model, count]) => `<span class="usage-model-tag blora-tag">${escapeHtml(model)} (${count})</span>`).join('')}</div></td>
+        <td><div class="usage-model-list">${Object.entries(data.models).map(([model, count]) => `<span class="usage-model-tag">${escapeHtml(model)} (${count})</span>`).join('')}</div></td>
       </tr>
     `).join('');
 
     setState('success', '');
     if (content) {
       content.innerHTML = `
-        <div class="usage-table-wrap blora-table-wrap">
-          <table class="usage-detail-table blora-table"><caption class="blora-text-muted">${escapeHtml(translate('密钥用量详情'))}</caption>
-            <thead><tr><th scope="col">${escapeHtml(translate('日期'))}</th><th scope="col">${escapeHtml(translate('请求数'))}</th><th scope="col">${escapeHtml(translate('Token'))}</th><th scope="col">${escapeHtml(translate('费用'))}</th><th scope="col">${escapeHtml(translate('模型分布'))}</th></tr></thead>
+        <div class="usage-table-wrap">
+          <table class="usage-detail-table">
+            <thead><tr><th>${escapeHtml(translate('日期'))}</th><th>${escapeHtml(translate('请求数'))}</th><th>${escapeHtml(translate('Token'))}</th><th>${escapeHtml(translate('费用'))}</th><th>${escapeHtml(translate('模型分布'))}</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
@@ -81,11 +81,11 @@
   async function load() {
     const keyId = new URLSearchParams(window.location.search).get('keyId');
     if (!/^\d+$/.test(String(keyId || ''))) {
-      setState('error', `<blora-alert variant="danger" title="${escapeHtml(translate('无效的 API Key'))}"></blora-alert>`);
+      setState('error', `<p class="usage-error">${escapeHtml(translate('无效的 API Key'))}</p>`);
       return;
     }
 
-    setState('loading', `<div class="blora-skeleton" data-variant="text" aria-label="${escapeHtml(translate('加载中...'))}"></div>`);
+    setState('loading', `<div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status" aria-label="加载中"></div><div class="page-loading-text">${escapeHtml(translate('加载中...'))}</div></div>`);
     try {
       const response = await fetch(`/api/user/api-keys/${encodeURIComponent(keyId)}/usage`, { credentials: 'same-origin' });
       if (response.status === 401 || response.status === 403) {
@@ -96,8 +96,7 @@
       const usage = await response.json();
       renderUsage(usage);
     } catch (error) {
-      setState('error', `<blora-alert variant="danger" title="${escapeHtml(error.message || translate('加载失败'))}"></blora-alert><button type="button" class="blora-button" data-variant="outline" id="usageRetry">${escapeHtml(translate('重试'))}</button>`);
-      document.getElementById('usageRetry').addEventListener('click', load);
+      setState('error', `<p class="usage-error">${escapeHtml(error.message || translate('加载失败'))}</p>`);
     }
   }
 

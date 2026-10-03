@@ -1,0 +1,61 @@
+/* Visual baseline: legacy/v1/blora.css footer (lines 2873–2881). */
+
+.blora-footer {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--blora-space-8) var(--blora-space-6);
+  color: var(--blora-color-text-muted);
+  background: var(--blora-color-surface-default);
+  border-block-start: 1px solid var(--blora-color-border-subtle);
+}
+
+.blora-footer__inner {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, 1fr);
+  gap: var(--blora-space-7);
+  width: min(100%, 75rem);
+  margin-inline: auto;
+}
+
+.blora-footer__title {
+  margin-block-end: var(--blora-space-3);
+  color: var(--blora-color-text-primary);
+  font-weight: 600;
+}
+
+.blora-footer__link {
+  display: block;
+  padding-block: 0.25rem;
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-sm);
+  text-decoration: none;
+}
+
+.blora-footer__link:hover,
+.blora-footer__link:focus-visible {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-footer__bottom {
+  width: min(100%, 75rem);
+  margin: var(--blora-space-7) auto 0;
+  padding-block-start: var(--blora-space-4);
+  border-block-start: 1px solid var(--blora-color-border-subtle);
+  font-size: var(--blora-text-xs);
+}
+
+@media (max-width: 720px) {
+  .blora-footer__inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .blora-footer {
+    padding-inline: var(--blora-space-4);
+  }
+
+  .blora-footer__inner {
+    grid-template-columns: 1fr;
+  }
+}

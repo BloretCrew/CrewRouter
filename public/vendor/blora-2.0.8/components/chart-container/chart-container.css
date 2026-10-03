@@ -1,0 +1,47 @@
+/* Blora Design 2.0 - chart-container component (beta, migrated from v1) */
+
+.blora-chart {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-chart {
+  min-height: var(--blora-chart-min-h, 16rem);
+  padding: var(--blora-space-4);
+}
+
+.blora-chart__placeholder {
+  display: grid;
+  place-items: center;
+  min-height: inherit;
+  height: 100%;
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-sm);
+  text-align: center;
+}
+
+blora-chart-container {
+  display: block;
+}
+
+.blora-chart__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--blora-space-3) var(--blora-space-4);
+  border-bottom: 1px solid var(--blora-color-border-subtle);
+}
+
+.blora-chart__title {
+  font-size: var(--blora-text-sm);
+  font-weight: 600;
+}
+
+.blora-chart__body {
+  min-height: var(--blora-chart-min-h, 10rem);
+  padding: var(--blora-space-4);
+}

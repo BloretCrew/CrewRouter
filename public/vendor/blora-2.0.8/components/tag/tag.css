@@ -1,0 +1,88 @@
+/* =========================================================================
+   Blora Design 2.0 - Tag component
+   ========================================================================= */
+
+.blora-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.2em 0.7em;
+  font-size: var(--blora-text-xs);
+  font-weight: 500;
+  background: var(--blora-color-surface-sunken);
+  color: var(--blora-color-text-emphasis);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-full);
+
+  /* Pin leading — inherited 1.6 + CJK fonts drift vertical metrics cross-device */
+  line-height: 1.25;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.blora-tag[data-variant="primary"] {
+  background: var(--blora-color-action-primary-tint);
+  color: var(--blora-color-text-emphasis);
+  border-color: color-mix(in srgb, var(--blora-color-action-primary-default) 25%, transparent);
+}
+
+.blora-tag[data-variant="neutral"] {
+  background: color-mix(in srgb, var(--blora-color-status-neutral) 8%, transparent);
+  color: var(--blora-color-text-emphasis);
+  border-color: color-mix(in srgb, var(--blora-color-status-neutral) 25%, transparent);
+}
+
+.blora-tag[data-variant="info"] {
+  background: color-mix(in srgb, var(--blora-color-status-info) 8%, transparent);
+  color: var(--blora-color-text-emphasis);
+  border-color: color-mix(in srgb, var(--blora-color-status-info) 25%, transparent);
+}
+
+.blora-tag[data-variant="success"] {
+  background: color-mix(in srgb, var(--blora-color-status-success) 8%, transparent);
+  color: var(--blora-color-text-emphasis);
+  border-color: color-mix(in srgb, var(--blora-color-status-success) 25%, transparent);
+}
+
+.blora-tag[data-variant="warning"] {
+  background: color-mix(in srgb, var(--blora-color-status-warning) 10%, transparent);
+  color: var(--blora-color-text-emphasis);
+  border-color: color-mix(in srgb, var(--blora-color-status-warning) 30%, transparent);
+}
+
+.blora-tag--removable {
+  padding-inline-end: 0.35em;
+}
+
+.blora-tag__close {
+  position: relative;
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-tag__close::before,
+.blora-tag__close::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 50%;
+  width: 0.65em;
+  height: 1.5px;
+  background: currentcolor;
+  border-radius: 1px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.blora-tag__close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.blora-tag__close:hover {
+  background: color-mix(in srgb, var(--blora-color-text-primary) 15%, transparent);
+}

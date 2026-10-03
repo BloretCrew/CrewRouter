@@ -1,0 +1,103 @@
+/* =========================================================================
+   Blora Design 2.0 - Message component
+   - Static: inline pill (.blora-message in page flow)
+   - Service: top-center floating stack (.blora-message-container)
+   Ant-style counterpart to Notification (corner cards).
+   Visual baseline: legacy/v1/blora.css lines 2194-2199
+   ========================================================================= */
+
+.blora-message {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  padding: 0.7em 1.2em;
+  background: var(--blora-color-surface-default);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-full);
+  box-shadow: var(--blora-shadow-3);
+  font-size: var(--blora-text-sm);
+  line-height: var(--blora-leading-normal);
+  color: var(--blora-color-text-emphasis);
+  max-width: min(24rem, calc(100vw - 2 * var(--blora-space-5)));
+}
+
+.blora-message__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 1.1em;
+}
+
+.blora-message__icon svg {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+.blora-message__content {
+  min-width: 0;
+}
+
+.blora-message[data-variant="success"] .blora-message__icon {
+  color: var(--blora-color-status-success);
+}
+
+.blora-message[data-variant="warning"] .blora-message__icon {
+  color: var(--blora-color-status-warning);
+}
+
+.blora-message[data-variant="danger"] .blora-message__icon {
+  color: var(--blora-color-status-danger);
+}
+
+.blora-message[data-variant="info"] .blora-message__icon {
+  color: var(--blora-color-status-info);
+}
+
+/* -- Floating stack (message() service) — Ant: top center -- */
+
+.blora-message-container {
+  position: fixed;
+  inset-block-start: max(var(--blora-space-5), env(safe-area-inset-top, 0px));
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  z-index: var(--blora-z-top);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--blora-space-2);
+  pointer-events: none;
+  width: max-content;
+  max-width: min(24rem, calc(100vw - 2 * var(--blora-space-5)));
+}
+
+.blora-message-container > .blora-message {
+  pointer-events: auto;
+  animation: blora-message-in var(--blora-duration-base) var(--blora-easing-overshoot);
+}
+
+.blora-message-container > .blora-message.is-leaving {
+  opacity: 0;
+  transition: opacity var(--blora-duration-fast) var(--blora-easing-standard);
+  animation: none;
+}
+
+@keyframes blora-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blora-message-container > .blora-message {
+    animation: none;
+  }
+}

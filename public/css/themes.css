@@ -1,4 +1,3 @@
-@layer legacy {
 /* Crant AI Studio - Design System
  * Based on ui-design-spec.md - Linear/Raycast inspired design
  * Dark-first, glass morphism, multi-layer shadows, large border radii
@@ -8,75 +7,177 @@
    Light Mode
    ============================================ */
 :root {
-  --background: var(--blora-color-surface-canvas);
-  --foreground: var(--blora-color-text-primary);
-  --card: var(--blora-color-surface-default);
-  --card-foreground: var(--blora-color-text-primary);
-  --popover: var(--blora-color-surface-raised);
-  --popover-foreground: var(--blora-color-text-primary);
-  --primary: var(--blora-color-action-primary-default);
-  --primary-foreground: var(--blora-color-text-on-accent);
-  --secondary: var(--blora-color-surface-raised);
-  --secondary-foreground: var(--blora-color-text-secondary);
-  --muted: var(--blora-color-surface-sunken);
-  --muted-foreground: var(--blora-color-text-muted);
-  --accent: var(--blora-color-surface-raised);
-  --accent-foreground: var(--blora-color-text-emphasis);
-  --destructive: var(--blora-color-status-danger);
-  --border: var(--blora-color-border-subtle);
-  --input: var(--blora-color-border-subtle);
-  --ring: var(--blora-color-action-primary-default);
-  --brand-blue: var(--blora-color-action-primary-default);
-  --brand-blue-bg: var(--blora-color-action-primary-soft);
-  --bg-base: var(--blora-color-surface-canvas);
-  --bg-gradient-start: var(--blora-color-surface-canvas);
-  --bg-gradient-end: var(--blora-color-surface-sunken);
-  --dot-color: var(--blora-color-border-subtle);
-  --success: var(--blora-color-status-success);
-  --warning: var(--blora-color-status-warning);
-  --info: var(--blora-color-status-info);
-  --danger: var(--blora-color-status-danger);
-  --purple: var(--blora-color-status-support);
-  --pink: var(--blora-color-status-secondary);
-  --cyan: var(--blora-color-status-info);
-  --status-success: var(--blora-color-status-success);
-  --status-success-soft: var(--blora-color-status-success-soft);
-  --status-warn: var(--blora-color-status-warning);
-  --status-warn-soft: var(--blora-color-status-neutral-soft);
-  --status-warn-strong: var(--blora-color-status-warning);
-  --status-info: var(--blora-color-status-info);
-  --status-danger: var(--blora-color-status-danger);
-  --status-danger-soft: var(--blora-color-status-neutral-soft);
-  --status-neutral: var(--blora-color-status-neutral);
-  --text-muted-soft: var(--blora-color-text-subtle);
-  --on-accent: var(--blora-color-text-on-accent);
-  --uptime-ok: var(--blora-color-status-success);
-  --uptime-degraded: var(--blora-color-status-warning);
-  --uptime-outage: var(--blora-color-status-danger);
-  --alert-info-bg: var(--blora-color-status-info-soft);
-  --alert-info-fg: var(--blora-color-status-info);
-  --alert-info-border: var(--blora-color-status-info);
-  --alert-info-border-strong: var(--blora-color-status-info);
-  --alert-error-bg: var(--blora-color-status-neutral-soft);
-  --alert-error-fg: var(--blora-color-status-danger);
-  --alert-error-border: var(--blora-color-status-danger);
-  --chart-1: var(--blora-color-status-info);
-  --chart-2: var(--blora-color-status-support);
-  --chart-3: var(--blora-color-status-success);
-  --chart-4: var(--blora-color-status-warning);
-  --chart-5: var(--blora-color-status-danger);
-  --chart-6: var(--blora-color-status-secondary);
-  --chart-7: var(--blora-color-status-neutral);
-  --chart-8: var(--blora-color-status-info);
-  --radius: var(--blora-radius-lg);
-  --shadow-card: var(--blora-shadow-1);
-  --shadow-button: var(--blora-shadow-1);
-  --shadow-button-outline: var(--blora-shadow-1);
-  --shadow-input: var(--blora-shadow-inset);
-  --shadow-dialog: var(--blora-shadow-4);
-  --shadow-nav: var(--blora-shadow-1);
-  --shadow-dropdown: var(--blora-shadow-3);
-  --shadow-login: var(--blora-shadow-2);
+  --background: #ffffff;
+  --foreground: #222222;
+  --card: #ffffff;
+  --card-foreground: #222222;
+  --popover: #ffffff;
+  --popover-foreground: #222222;
+  --primary: #181e25;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #333333;
+  --muted: #f5f5f5;
+  --muted-foreground: #45515e;
+  --accent: #f5f5f5;
+  --accent-foreground: #18181b;
+  --destructive: #ef4444;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #3b82f6;
+  --radius: 0.8125rem;
+
+  /* Brand colors */
+  --brand-blue: #1456f0;
+  --brand-blue-bg: #edf4ff;
+
+  /* Shadows */
+  --shadow-card: 0 8px 24px rgba(24,40,72,0.07);
+  --shadow-button: 0 4px 10px rgba(24,30,37,0.12);
+  --shadow-button-outline: 0 4px 6px rgba(0,0,0,0.04);
+  --shadow-input: 0 2px 4px rgba(0,0,0,0.03);
+  --shadow-dialog: 0 32px 110px -38px rgba(15,23,42,0.45);
+  --shadow-nav: 0 0 22.576px rgba(44,74,116,0.09);
+  --shadow-dropdown: 0 20px 60px -30px rgba(15,23,42,0.35);
+  --shadow-login: 0 28px 80px rgba(15,23,42,0.12), 0 10px 28px rgba(44,30,116,0.08);
+
+  /* Background patterns */
+  --bg-base: #fff9fb;
+  --bg-gradient-start: #fff8fa;
+  --bg-gradient-end: #f4f8ff;
+  --dot-color: rgba(20,86,240,0.12);
+
+  /* Semantic status colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --danger: #ef4444;
+  --purple: #8b5cf6;
+  --pink: #ec4899;
+  --cyan: #06b6d4;
+
+  /* 高频语义色（JS 动态 UI / badge / 状态点可引用，主题可覆盖） */
+  --status-success: #16a34a;
+  --status-success-soft: #ecfdf5;
+  --status-warn: #d97706;
+  --status-warn-soft: #fffbeb;
+  --status-warn-strong: #a16207;
+  --status-info: #2563eb;
+  --status-danger: #dc2626;
+  --status-danger-soft: #fef2f2;
+  --status-neutral: #64748b;
+  --text-muted-soft: #94a3b8;
+  --on-accent: #ffffff;
+
+  /* 图表调色板（canvas 场景经 readCssVar() 读取） */
+  --chart-1: #0ea5e9;
+  --chart-2: #a855f7;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --chart-6: #06b6d4;
+  --chart-7: #ec4899;
+  --chart-8: #14b8a6;
+
+  /* 可用性监控状态色 */
+  --uptime-ok: #86efac;
+  --uptime-degraded: #facc15;
+  --uptime-outage: #f87171;
+
+  /* 提示条（alert banner） */
+  --alert-info-bg: #eff6ff;
+  --alert-info-fg: #1e40af;
+  --alert-info-border: #bfdbfe;
+  --alert-info-border-strong: #93c5fd;
+  --alert-error-bg: #fef2f2;
+  --alert-error-fg: #991b1b;
+  --alert-error-border: #fecaca;
+}
+
+/* ============================================
+   Dark Mode
+   ============================================ */
+.dark {
+  --background: #111111;
+  --foreground: #e5e5e5;
+  --card: #1a1a1a;
+  --card-foreground: #e5e5e5;
+  --popover: #1a1a1a;
+  --popover-foreground: #e5e5e5;
+  --primary: #e5e5e5;
+  --primary-foreground: #111111;
+  --secondary: #262626;
+  --secondary-foreground: #e5e5e5;
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+  --accent: #262626;
+  --accent-foreground: #e5e5e5;
+  --destructive: #ef4444;
+  --border: rgba(255,255,255,0.08);
+  --input: rgba(255,255,255,0.1);
+  --ring: #6b7280;
+
+  /* Shadows - reduced in dark mode */
+  --shadow-card: 0 8px 24px rgba(0,0,0,0.3);
+  --shadow-button: 0 4px 10px rgba(0,0,0,0.4);
+  --shadow-button-outline: 0 4px 6px rgba(0,0,0,0.2);
+  --shadow-input: 0 2px 4px rgba(0,0,0,0.2);
+  --shadow-dialog: 0 32px 110px -38px rgba(0,0,0,0.6);
+  --shadow-nav: 0 0 22.576px rgba(0,0,0,0.3);
+  --shadow-dropdown: 0 20px 60px -30px rgba(0,0,0,0.5);
+  --shadow-login: 0 30px 90px rgba(2,6,23,0.58), 0 12px 32px rgba(2,6,23,0.32);
+
+  /* Background patterns - dark */
+  --bg-base: #111111;
+  --bg-gradient-start: #0f0f0f;
+  --bg-gradient-end: #141414;
+  --dot-color: rgba(255,255,255,0.05);
+
+  /* Semantic status colors */
+  --success: #34d399;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+  --danger: #f87171;
+  --purple: #a78bfa;
+  --pink: #f472b6;
+  --cyan: #22d3ee;
+
+  /* 高频语义色（深色变体） */
+  --status-success: #4ade80;
+  --status-success-soft: rgba(74, 222, 128, 0.15);
+  --status-warn: #fbbf24;
+  --status-warn-soft: rgba(251, 191, 36, 0.15);
+  --status-warn-strong: #fde68a;
+  --status-info: #60a5fa;
+  --status-danger: #f87171;
+  --status-danger-soft: rgba(248, 113, 113, 0.15);
+  --status-neutral: #94a3b8;
+  --text-muted-soft: #94a3b8;
+  --on-accent: #ffffff;
+
+  /* 图表调色板（深色变体） */
+  --chart-1: #38bdf8;
+  --chart-2: #c084fc;
+  --chart-3: #34d399;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+  --chart-6: #22d3ee;
+  --chart-7: #f472b6;
+  --chart-8: #2dd4bf;
+
+  /* 可用性监控状态色（深色变体） */
+  --uptime-ok: #166534;
+  --uptime-degraded: #854d0e;
+  --uptime-outage: #991b1b;
+
+  /* 提示条（alert banner，深色变体） */
+  --alert-info-bg: rgba(59, 130, 246, 0.12);
+  --alert-info-fg: #93c5fd;
+  --alert-info-border: rgba(59, 130, 246, 0.3);
+  --alert-info-border-strong: rgba(59, 130, 246, 0.5);
+  --alert-error-bg: rgba(239, 68, 68, 0.12);
+  --alert-error-fg: #fca5a5;
+  --alert-error-border: rgba(239, 68, 68, 0.3);
 }
 
 /* ============================================
@@ -84,7 +185,7 @@
    ============================================ */
 /* 通用 reset 放进最低优先级的 cascade layer：Blora 组件样式位于 @layer blora.*，
    未分层的 * { margin:0; padding:0 } 会压过它们，导致 Blora 控件失去内边距。 */
-@layer legacy {
+@layer legacy-reset {
   *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
@@ -97,11 +198,18 @@ html {
 }
 
 body {
-  font-family: var(--blora-font-sans);
-  font-size: var(--blora-text-sm);
-  line-height: var(--blora-leading-normal);
-  color: var(--blora-color-text-secondary);
-  background: var(--blora-color-surface-canvas);
+  font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--foreground);
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(var(--dot-color) 1px, transparent 1px),
+    linear-gradient(145deg, var(--bg-gradient-start) 0%, var(--background) 48%, var(--bg-gradient-end) 100%);
+  background-position: 0 0, center;
+  background-size: 12px 12px, cover;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ============================================
@@ -218,7 +326,11 @@ pre {
 }
 
 .btn-primary:hover {
-  background: var(--blora-color-surface-raised);
+  background: #2a323d;
+}
+
+.dark .btn-primary:hover {
+  background: #2a2a2a;
 }
 
 .btn-secondary {
@@ -230,7 +342,11 @@ pre {
 }
 
 .btn-secondary:hover {
-  background: var(--blora-color-surface-raised);
+  background: #e8e8e8;
+}
+
+.dark .btn-secondary:hover {
+  background: #333333;
 }
 
 .btn-outline {
@@ -340,7 +456,7 @@ pre {
 
 .input:focus {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--blora-color-overlay-modal);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
 }
 
 .input:disabled {
@@ -374,7 +490,7 @@ pre {
 
 .textarea:focus {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--blora-color-overlay-modal);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
 }
 
 /* ============================================
@@ -405,7 +521,7 @@ pre {
 
 .select:focus {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--blora-color-overlay-modal);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
 }
 
 /* ============================================
@@ -423,7 +539,7 @@ pre {
 }
 
 .checkbox:focus {
-  box-shadow: 0 0 0 3px var(--blora-color-overlay-modal);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
 }
 
 .checkbox:checked {
@@ -456,7 +572,7 @@ pre {
   background: var(--primary);
   cursor: pointer;
   border: 2px solid var(--background);
-  box-shadow: 0 1px 3px var(--blora-color-overlay-modal);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
 .range-input::-moz-range-thumb {
@@ -466,7 +582,7 @@ pre {
   background: var(--primary);
   cursor: pointer;
   border: 2px solid var(--background);
-  box-shadow: 0 1px 3px var(--blora-color-overlay-modal);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
 /* ============================================
@@ -539,6 +655,11 @@ pre {
   color: var(--brand-blue);
 }
 
+.dark .badge-default {
+  background: color-mix(in srgb, var(--brand-blue) 20%, transparent);
+  color: var(--status-info);
+}
+
 .badge-secondary {
   background: var(--secondary);
   color: var(--secondary-foreground);
@@ -556,10 +677,22 @@ pre {
   border: 1px solid color-mix(in srgb, var(--status-success) 30%, transparent);
 }
 
+.dark .badge-success {
+  background: color-mix(in srgb, var(--status-success-soft) 15%, transparent);
+  color: var(--status-success);
+  border-color: color-mix(in srgb, var(--status-success) 30%, transparent);
+}
+
 .badge-warning {
   background: var(--status-warn-soft);
   color: var(--status-warn-strong);
   border: 1px solid color-mix(in srgb, var(--status-warn) 30%, transparent);
+}
+
+.dark .badge-warning {
+  background: color-mix(in srgb, var(--status-warn-soft) 15%, transparent);
+  color: var(--status-warn-strong);
+  border-color: color-mix(in srgb, var(--status-warn) 30%, transparent);
 }
 
 .badge-danger {
@@ -568,16 +701,34 @@ pre {
   border: 1px solid color-mix(in srgb, var(--status-danger) 30%, transparent);
 }
 
+.dark .badge-danger {
+  background: color-mix(in srgb, var(--status-danger-soft) 100%, transparent);
+  color: var(--status-danger);
+  border-color: color-mix(in srgb, var(--status-danger) 30%, transparent);
+}
+
 .badge-info {
   background: color-mix(in srgb, var(--status-info) 10%, transparent);
   color: var(--status-info);
   border: 1px solid color-mix(in srgb, var(--status-info) 30%, transparent);
 }
 
+.dark .badge-info {
+  background: color-mix(in srgb, var(--status-info) 15%, transparent);
+  color: var(--status-info);
+  border-color: color-mix(in srgb, var(--status-info) 30%, transparent);
+}
+
 .badge-violet {
   background: color-mix(in srgb, var(--purple) 10%, transparent);
   color: var(--purple);
   border: 1px solid color-mix(in srgb, var(--purple) 30%, transparent);
+}
+
+.dark .badge-violet {
+  background: color-mix(in srgb, var(--purple) 15%, transparent);
+  color: var(--purple);
+  border-color: color-mix(in srgb, var(--purple) 30%, transparent);
 }
 
 /* ============================================
@@ -590,7 +741,7 @@ pre {
   display: none;
   align-items: center;
   justify-content: center;
-  background: var(--blora-color-surface-raised);
+  background: rgba(0,0,0,0.3);
   backdrop-filter: blur(2px);
 }
 
@@ -600,13 +751,64 @@ pre {
 
 .modal-content {
   position: relative;
+  width: min(92vw, 560px);
+  max-height: 90vh;
+  overflow: hidden; /* 头/脚固定，仅 body 滚动 */
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  padding: 0;
+  box-shadow: var(--shadow-dialog);
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  gap: var(--blora-space-4);
+  gap: 0;
 }
-.modal-header { display: flex; align-items: center; gap: var(--blora-space-3); }
-.modal-header .modal-close { display: none; }
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  margin-bottom: 0;
+  padding: 20px 24px 12px;
+  position: relative;
+}
+
+.modal-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  padding-right: 48px; /* 避免标题与右上角叉号重叠 */
+}
+
+/* 仅标题栏内的叉号固定在右上角；footer 勿再使用 modal-close 承载文字取消 */
+.modal-close {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: transparent;
+  border: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  opacity: 0.7;
+  font-size: 27px;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.modal-header .modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.modal-close:hover {
+  opacity: 1;
+  background: var(--accent);
+}
 
 /* ============================================
    Field System
@@ -634,12 +836,30 @@ pre {
   color: var(--muted-foreground);
 }
 
-.modal-body { min-width: 0; }
+.modal-body {
+  margin-bottom: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 24px 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
 .modal-footer {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--blora-space-2);
+  flex-direction: column-reverse;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 12px 24px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--background);
+}
+
+@media (min-width: 640px) {
+  .modal-footer {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
 }
 
 /* Wide modal */
@@ -672,8 +892,12 @@ pre {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted-foreground);
-  background: var(--blora-color-surface-raised);
+  background: rgba(245,245,245,0.55);
   border-bottom: 1px solid var(--border);
+}
+
+.dark .table th {
+  background: rgba(38,38,38,0.55);
 }
 
 .table td {
@@ -686,7 +910,11 @@ pre {
 }
 
 .table tr:hover td {
-  background: var(--blora-color-surface-raised);
+  background: rgba(245,245,245,0.5);
+}
+
+.dark .table tr:hover td {
+  background: rgba(38,38,38,0.5);
 }
 
 /* ============================================
@@ -698,9 +926,13 @@ pre {
   z-index: 40;
   border-radius: 24px;
   border: 1px solid var(--border);
-  background: var(--blora-color-surface-raised);
+  background: rgba(255,255,255,0.9);
   box-shadow: var(--shadow-nav);
   backdrop-filter: blur(12px);
+}
+
+.dark .topnav {
+  background: rgba(26,26,26,0.9);
 }
 
 .topnav-inner {
@@ -772,7 +1004,7 @@ pre {
 .topnav-link.active {
   background: var(--primary);
   color: var(--primary-foreground);
-  box-shadow: 0 1px 3px var(--blora-color-overlay-modal);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .topnav-tag {
@@ -833,6 +1065,37 @@ pre {
   color: var(--muted-foreground);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 20px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+
+.nav-item:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.nav-item.active {
+  background: rgba(20,86,240,0.1);
+  color: var(--brand-blue);
+}
+
+.nav-item svg,
+.nav-item .sf-icon {
+  margin-right: 10px;
+  opacity: 0.7;
+}
+
+.nav-item.active svg,
+.nav-item.active .sf-icon {
+  opacity: 1;
 }
 
 .sidebar-footer {
@@ -897,7 +1160,7 @@ pre {
 
 .form-input:focus {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--blora-color-overlay-modal);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
 }
 
 .toggle-form {
@@ -1011,9 +1274,20 @@ pre {
    Content Sections
    ============================================ */
 .content-section {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 16px;
   max-width: 100%;
   min-width: 0;
+  overflow-x: hidden;
   box-sizing: border-box;
+}
+
+.content-section h2 {
+  margin-bottom: 16px;
 }
 
 .section-header {
@@ -1147,7 +1421,7 @@ pre {
 .search-input:focus {
   outline: none;
   border-color: var(--brand-blue);
-  box-shadow: 0 0 0 3px var(--blora-color-overlay-modal);
+  box-shadow: 0 0 0 3px rgba(20, 86, 240, 0.1);
 }
 
 .search-input::placeholder {
@@ -1273,15 +1547,64 @@ pre {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 999px;
+  color: var(--brand-blue);
+  background: color-mix(in srgb, var(--brand-blue) 12%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.api-key-group-cokey .api-key-group-count {
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.12);
 }
 
 .api-key-card {
   position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
   padding: 14px 16px;
   margin-bottom: 0;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s, box-shadow 0.15s;
   min-width: 0;
   display: flex;
   flex-direction: column;
+}
+
+.api-key-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  background: var(--brand-blue);
+  border-radius: 3px;
+}
+
+.api-key-card:hover {
+  border-color: color-mix(in srgb, var(--brand-blue) 45%, var(--border));
+}
+
+.api-key-card.api-key-drag-over {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.api-key-card.key-disabled {
+  opacity: 0.62;
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.api-key-card.key-disabled:hover {
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.api-key-card.key-disabled::before {
+  background: var(--status-danger);
 }
 
 /* API Key 拖拽排序 */
@@ -1299,11 +1622,23 @@ pre {
 
 .api-key-drag-handle:hover {
   color: var(--brand-blue);
-  background: var(--blora-color-surface-raised);
+  background: rgba(59, 130, 246, 0.08);
 }
 
 .api-key-drag-handle:active {
   cursor: grabbing;
+}
+
+.api-key-card.api-key-sort-dragging {
+  opacity: 0.45;
+}
+
+.api-key-card.api-key-sort-over-top {
+  box-shadow: 0 -2px 0 0 var(--brand-blue);
+}
+
+.api-key-card.api-key-sort-over-bottom {
+  box-shadow: 0 2px 0 0 var(--brand-blue);
 }
 
 /* 拖拽标签时卡片收成单行（仍保持两列网格） */
@@ -1314,7 +1649,9 @@ pre {
 
 .api-keys-compact-drag .api-key-card {
   padding: 10px 14px;
+  border-radius: 10px;
   margin-bottom: 0;
+  transition: all 0.2s ease;
 }
 
 .api-keys-compact-drag .api-key-card .api-key-prefix,
@@ -1334,10 +1671,13 @@ pre {
 }
 
 .api-keys-compact-drag .api-key-card::after {
+  content: '拖放标签到此处';
   position: absolute;
   right: 16px;
   top: 50%;
   transform: translateY(-50%);
+  font-size: 12px;
+  color: var(--muted-foreground);
   pointer-events: none;
 }
 
@@ -1509,7 +1849,7 @@ pre {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 10px 28px var(--blora-color-overlay-modal);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
 }
 
 .api-key-tags-overflow-title {
@@ -1567,7 +1907,7 @@ pre {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 8px 24px var(--blora-color-overlay-modal);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   padding: 6px;
   min-width: 160px;
   max-height: 240px;
@@ -1665,10 +2005,17 @@ pre {
   gap: 8px;
   margin-bottom: 10px;
   padding: 8px 12px;
+  background: var(--muted);
+  border-radius: 10px;
+  border: 1px solid var(--border);
 }
 
 .api-key-prefix code,
 .api-key-value {
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--brand-blue);
+  letter-spacing: 0.2px;
   flex: 1;
   min-width: 0;
   word-break: break-all;
@@ -1802,7 +2149,7 @@ pre {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 10px 28px var(--blora-color-overlay-modal);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
 }
 
 .api-key-route-queue-tip-title {
@@ -1849,7 +2196,7 @@ pre {
 }
 
 .api-key-route-queue-tip-item.is-primary .api-key-route-queue-tip-order {
-  color: var(--blora-color-text-on-accent);
+  color: #fff;
   background: var(--brand-blue);
 }
 
@@ -1934,7 +2281,7 @@ pre {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 10px 28px var(--blora-color-overlay-modal);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
   z-index: 40;
 }
 
@@ -2069,11 +2416,11 @@ pre {
 
 .key-tag-chip:hover {
   opacity: 0.85;
-  box-shadow: 0 0 0 2px var(--blora-color-overlay-modal);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 .key-tag-chip.active {
-  box-shadow: 0 0 0 2px var(--blora-color-overlay-modal);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
   font-weight: 500;
 }
 
@@ -2100,12 +2447,12 @@ pre {
 
 .key-tag-chip .remove-tag-def:hover {
   opacity: 1;
-  background: var(--blora-color-status-danger);
+  background: rgba(239, 68, 68, 0.2);
 }
 
 .key-tag-chip .edit-tag-def:hover {
   opacity: 1;
-  background: var(--blora-color-surface-raised);
+  background: rgba(59, 130, 246, 0.18);
 }
 
 .key-tag-chip.key-tag-add-btn {
@@ -2119,7 +2466,7 @@ pre {
 
 .key-tag-chip.key-tag-add-btn:hover {
   opacity: 1;
-  background: var(--blora-color-surface-raised);
+  background: rgba(59, 130, 246, 0.05);
 }
 
 .key-tag-add-tag-btn {
@@ -2164,7 +2511,7 @@ pre {
 
 .key-tag-chip-sm .remove-tag:hover {
   opacity: 1;
-  background: var(--blora-color-status-danger);
+  background: rgba(239, 68, 68, 0.25);
 }
 
 .api-key-tags {
@@ -2181,7 +2528,7 @@ pre {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 8px 24px var(--blora-color-overlay-modal);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
   padding: 14px;
   min-width: 240px;
 }
@@ -2254,14 +2601,14 @@ pre {
 }
 
 .provider-drop-target.provider-drag-over {
-  outline: 2px solid var(--brand-blue, var(--blora-color-border-subtle));
+  outline: 2px solid var(--brand-blue, #3b82f6);
   outline-offset: -2px;
-  background: var(--blora-color-surface-raised) !important;
+  background: rgba(59, 130, 246, 0.06) !important;
 }
 
 .admin-card.provider-drop-target.provider-drag-over {
-  border-color: var(--brand-blue, var(--blora-color-border-subtle));
-  box-shadow: 0 0 0 2px var(--blora-color-overlay-modal);
+  border-color: var(--brand-blue, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 /* 拖拽标签时压缩列表，便于投放；标签保留在卡片头，折叠态也可见 */
@@ -2328,7 +2675,7 @@ pre {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 8px 24px var(--blora-color-overlay-modal);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   padding: 6px;
   min-width: 160px;
   max-height: 240px;
@@ -2371,10 +2718,10 @@ pre {
 }
 
 .provider-modal-tag.is-on {
-  background: color-mix(in srgb, var(--tag-color, var(--blora-color-surface-raised)) 16%, transparent);
-  color: var(--tag-color, var(--blora-color-text-secondary));
-  border-color: var(--tag-color, var(--blora-color-border-subtle));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tag-color, var(--blora-color-overlay-modal)) 33%, transparent);
+  background: color-mix(in srgb, var(--tag-color, #3b82f6) 16%, transparent);
+  color: var(--tag-color, #3b82f6);
+  border-color: var(--tag-color, #3b82f6);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tag-color, #3b82f6) 33%, transparent);
 }
 
 .color-dot.selected {
@@ -2467,13 +2814,61 @@ pre {
 /* ============================================
    Theme Toggle
    ============================================ */
-.theme-toggle { display: flex; align-items: center; gap: var(--blora-space-2); }
+.theme-toggle {
+  position: relative;
+}
+
+.theme-toggle .btn-icon,
+#themeToggle,
+#themeToggleMobile {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+}
 
 /* 图标互斥：默认隐藏，由 theme.js 按 light/dark/system 单独显示 */
+.theme-toggle .btn-icon svg,
+#themeToggle svg,
+#themeToggleMobile svg {
+  display: none;
+  flex-shrink: 0;
+}
 
 /* ============================================
    Usage Overview
    ============================================ */
+.usage-overview {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--muted);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.usage-overview-item {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  text-align: center;
+}
+
+.usage-overview-label {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-bottom: 4px;
+}
+
+.usage-overview-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+
 /* ============================================
    Dropdown
    ============================================ */
@@ -2595,7 +2990,7 @@ pre {
   display: none;
   position: fixed;
   inset: 0;
-  background: var(--blora-color-surface-raised);
+  background: rgba(0,0,0,0.4);
   z-index: 99;
 }
 
@@ -2708,7 +3103,7 @@ pre {
 .multi-stats-filters select { width: 100%; }
 .multi-stats-filter-actions { display: flex; gap: 8px; align-items: end; height: 36px; }
 .multi-stats-summary { margin-bottom: 18px; }
-.multi-stats-summary .stats-overview-card { background: linear-gradient(135deg, var(--blora-color-surface-raised), var(--blora-color-surface-raised)) !important; }
+.multi-stats-summary .stats-overview-card { background: linear-gradient(135deg, #0f766e, #115e59) !important; }
 .multi-stats-chart-row, .multi-stats-relation-grid { margin-bottom: 18px; }
 .multi-stats-relation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .multi-stats-main-chart { min-height: 365px; }
@@ -2843,7 +3238,7 @@ pre {
 .stats-overview-icon {
   width: 48px;
   height: 48px;
-  background: var(--blora-color-surface-raised);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -3206,24 +3601,48 @@ pre {
     bottom: 0;
     width: 260px;
     z-index: 100;
-    display: none;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
     box-shadow: none;
   }
 
-
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.2);
+  }
 
   /* Restore sidebar text when drawer is open */
+  .sidebar.open .sidebar-header h2,
+  .sidebar.open .sidebar-header .badge,
+  .sidebar.open .nav-item span,
+  .sidebar.open .nav-section-title,
+  .sidebar.open .sidebar-footer .user-info span {
+    display: block;
+  }
 
+  .sidebar.open .sidebar-header {
+    padding: 20px;
+    justify-content: flex-start;
+  }
 
+  .sidebar.open .nav-item {
+    justify-content: flex-start;
+    padding: 8px 20px;
+  }
 
+  .sidebar.open .nav-item svg,
+  .sidebar.open .nav-item .sf-icon {
+    margin-right: 10px;
+  }
 
+  .sidebar.open .sidebar-footer {
+    justify-content: space-between;
+    padding: 12px 20px;
+  }
 
-
-
-
-
-
-
+  .sidebar.open .sidebar-footer .user-info {
+    gap: 10px;
+  }
 
   .sidebar-overlay.active {
     display: block;
@@ -3676,12 +4095,12 @@ pre {
   border-radius: 50%;
   background: var(--primary);
   cursor: pointer;
-  box-shadow: 0 2px 6px var(--blora-color-overlay-modal);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .ccs-slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
-  box-shadow: 0 2px 8px var(--blora-color-overlay-modal);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }
 .ccs-slider::-moz-range-thumb {
   width: 18px;
@@ -3690,7 +4109,7 @@ pre {
   background: var(--primary);
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 6px var(--blora-color-overlay-modal);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 .ccs-slider-value {
   min-width: 28px;
@@ -3748,7 +4167,7 @@ pre {
 
 .admin-card:hover {
   border-color: var(--brand-blue);
-  box-shadow: 0 2px 8px var(--blora-color-overlay-modal);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
 .admin-card-header {
@@ -3888,7 +4307,7 @@ pre {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--blora-color-surface-raised);
+  background: rgba(128, 128, 128, 0.15);
   border-radius: 14px;
   z-index: 1;
   pointer-events: none;
@@ -3902,6 +4321,4 @@ pre {
   opacity: 0.5;
   pointer-events: none;
   cursor: not-allowed;
-}
-
 }

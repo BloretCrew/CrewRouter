@@ -1,0 +1,104 @@
+/* =========================================================================
+   Blora Design 2.0 - Card and Panel components
+   Visual baseline: legacy/v1/blora.css lines 426-462
+   ========================================================================= */
+
+.blora-card {
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  padding: var(--blora-space-6);
+  box-shadow: var(--blora-shadow-1);
+  min-width: 0;
+  max-width: 100%;
+  container-type: inline-size;
+  transition:
+    box-shadow var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-card[data-variant="hover"]:hover {
+  box-shadow: var(--blora-shadow-3);
+  transform: translateY(-2px);
+}
+
+.blora-card[data-variant="flat"] {
+  box-shadow: none;
+}
+
+/* Deck / media surfaces: chrome stays on the card, content fills it. */
+.blora-card[data-variant="content"] {
+  display: grid;
+  padding: 0;
+  overflow: hidden;
+}
+
+.blora-card[data-variant="content"] > * {
+  min-width: 0;
+}
+
+.blora-card[data-variant="inset"] {
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-inset);
+}
+
+.blora-card__title {
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-lg);
+  color: var(--blora-color-text-primary);
+  margin-bottom: var(--blora-space-2);
+}
+
+.blora-card__body {
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-card__foot {
+  margin-top: var(--blora-space-5);
+  padding-top: var(--blora-space-4);
+  border-top: var(--blora-border-subtle);
+}
+
+.blora-card__badge {
+  position: absolute;
+  top: var(--blora-space-4);
+  inset-inline-end: var(--blora-space-4);
+}
+
+.blora-card[data-positioned] {
+  position: relative;
+}
+
+.blora-card[data-with-badge] {
+  padding-inline-end: 6rem;
+}
+
+/* -- Panel -- a looser container than card */
+
+.blora-panel {
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-xl);
+  padding: var(--blora-space-7);
+  box-shadow: var(--blora-shadow-2);
+  min-width: 0;
+  max-width: 100%;
+  container-type: inline-size;
+}
+
+@media (max-width: 560px) {
+  .blora-panel {
+    padding: var(--blora-space-5);
+  }
+}
+
+.blora-panel__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--blora-space-3);
+  min-width: 0;
+  margin-bottom: var(--blora-space-5);
+  padding-bottom: var(--blora-space-4);
+  border-bottom: var(--blora-border-subtle);
+}

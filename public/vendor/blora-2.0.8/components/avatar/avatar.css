@@ -1,0 +1,161 @@
+/* =========================================================================
+   Blora Design 2.0 - Avatar component
+   Visual baseline: legacy/v1/blora.css lines 1438-1473
+   ========================================================================= */
+
+/* -- Avatar wrapper (for badge positioning) -- */
+
+.blora-avatar-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.blora-avatar-wrap .blora-badge {
+  position: absolute;
+  top: -0.2em;
+  inset-inline-end: -0.2em;
+
+  /* Ring via box-shadow so a 2px canvas halo cannot squash the
+     border-box height into an oval (that shifted the digit). */
+  border: 0;
+  box-shadow:
+    0 0 0 2px var(--blora-color-surface-canvas),
+    var(--blora-shadow-primary);
+}
+
+/* -- Status dot -- */
+
+.blora-dot {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: var(--blora-color-text-subtle);
+}
+
+.blora-dot[data-variant="primary"] {
+  background: var(--blora-color-action-primary-default);
+}
+
+.blora-dot[data-variant="success"] {
+  background: var(--blora-color-status-success);
+}
+
+.blora-dot[data-variant="warning"] {
+  background: var(--blora-color-status-warning);
+}
+
+.blora-dot[data-pulse] {
+  animation: blora-pulse 2s ease-in-out infinite;
+}
+
+/* -- Avatar -- */
+
+.blora-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5em;
+  height: 2.5em;
+  border-radius: 50%;
+  background: var(--blora-color-surface-sunken);
+  color: var(--blora-color-text-muted);
+  font-family: var(--blora-font-heading);
+  font-weight: 600;
+  font-size: 1em;
+  line-height: 1;
+  overflow: hidden;
+  flex: none;
+  user-select: none;
+  box-shadow: var(--blora-shadow-1);
+  box-sizing: border-box;
+}
+
+.blora-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.blora-avatar[data-size="xs"] {
+  width: 1.5em;
+  height: 1.5em;
+  font-size: 0.7em;
+}
+
+.blora-avatar[data-size="sm"] {
+  width: 2em;
+  height: 2em;
+  font-size: 0.85em;
+}
+
+.blora-avatar[data-size="lg"] {
+  width: 3.5em;
+  height: 3.5em;
+  font-size: 1.2em;
+}
+
+.blora-avatar[data-size="xl"] {
+  width: 5em;
+  height: 5em;
+  font-size: 1.6em;
+}
+
+.blora-avatar[data-variant="primary"] {
+  background: var(--blora-color-action-primary-default);
+  color: var(--blora-color-text-on-accent);
+}
+
+.blora-avatar[data-variant="neutral"] {
+  background: var(--blora-color-status-neutral);
+  color: var(--blora-color-text-on-accent);
+}
+
+.blora-avatar[data-variant="info"] {
+  background: var(--blora-color-status-info);
+  color: var(--blora-color-text-on-accent);
+}
+
+.blora-avatar[data-variant="success"] {
+  background: var(--blora-color-status-success);
+  color: var(--blora-color-text-on-accent);
+}
+
+.blora-avatar[data-variant="contrast"] {
+  background: var(--blora-color-text-secondary);
+  color: var(--blora-color-text-on-accent);
+}
+
+.blora-avatar[data-shape="square"] {
+  border-radius: var(--blora-radius-md);
+}
+
+/* -- Avatar group (overlapping) -- */
+
+.blora-avatar-group {
+  display: inline-flex;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-inline: 0.6em;
+}
+
+.blora-avatar-group .blora-avatar {
+  margin-inline-start: -0.6em;
+  border: 2px solid var(--blora-color-surface-canvas);
+}
+
+.blora-avatar-group .blora-avatar:first-child {
+  margin-inline-start: 0;
+}
+
+@keyframes blora-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.25);
+  }
+}

@@ -1,0 +1,51 @@
+/* =========================================================================
+   Blora Design 2.0 - Statistic component
+   Visual baseline: legacy/v1/blora.css lines 2001-2007
+   ========================================================================= */
+
+blora-statistic {
+  display: block;
+}
+
+.blora-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--blora-space-1);
+}
+
+.blora-stat__label {
+  font-size: var(--blora-text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--blora-tracking-caps);
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-stat__value {
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-3xl);
+  font-weight: 600;
+  color: var(--blora-color-text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.blora-stat__suffix {
+  font-size: var(--blora-text-base);
+  color: var(--blora-color-text-muted);
+  margin-inline-start: 0.2em;
+}
+
+.blora-stat__trend {
+  font-size: var(--blora-text-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.blora-stat__trend[data-direction="up"] {
+  color: var(--blora-color-status-success);
+}
+
+.blora-stat__trend[data-direction="down"] {
+  color: var(--blora-color-status-danger);
+}

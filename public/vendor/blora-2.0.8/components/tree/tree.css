@@ -1,0 +1,84 @@
+/* =========================================================================
+   Blora Design 2.0 - Tree / TreeSelect
+   Children expand with measured --blora-tree-h (no hard-coded 500px).
+   ========================================================================= */
+
+blora-tree {
+  display: block;
+}
+
+.blora-tree {
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-secondary);
+}
+
+.blora-tree__node {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-2);
+  padding: 0.35em 0.5em;
+  border-radius: var(--blora-radius-sm);
+  cursor: pointer;
+  user-select: none;
+}
+
+.blora-tree__node:hover {
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-tree__node[data-selected] {
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 12%, transparent);
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-tree__toggle {
+  display: inline-flex;
+  flex: none;
+  transition: transform var(--blora-duration-base) var(--blora-easing-standard);
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-tree__node[data-open] > .blora-tree__toggle {
+  transform: rotate(90deg);
+}
+
+/*
+ * Height is driven by controller inline maxHeight (0 → content px → none).
+ * CSS only sets closed default + opacity/transform; no hard-coded px caps.
+ * Symmetric expand/collapse: both animate the real content height.
+ */
+.blora-tree__children {
+  padding-inline-start: var(--blora-space-5);
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition:
+    max-height var(--blora-duration-base) var(--blora-easing-standard),
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-tree__node[data-open] + .blora-tree__children {
+  opacity: 1;
+  transform: translateY(0);
+
+  /* max-height set inline by controller to measured content height */
+}
+
+.blora-treeselect,
+.blora-autocomplete,
+.blora-mentions {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  width: 100%;
+  height: fit-content;
+  min-width: 0;
+}
+
+.blora-treeselect,
+.blora-autocomplete {
+  max-width: 22rem;
+}

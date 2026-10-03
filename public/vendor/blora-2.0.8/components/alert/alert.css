@@ -1,0 +1,119 @@
+/* =========================================================================
+   Blora Design 2.0 - Alert component
+   ========================================================================= */
+
+.blora-alert {
+  display: flex;
+
+  /* Center icon/close against the full body (title + desc), not the top edge */
+  align-items: center;
+  gap: var(--blora-space-3);
+  padding: var(--blora-space-4) var(--blora-space-5);
+  color: var(--blora-color-text-secondary);
+  border-radius: var(--blora-radius-lg);
+  border: 1px solid;
+  font-size: var(--blora-text-sm);
+  line-height: var(--blora-leading-normal);
+}
+
+.blora-alert__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.blora-alert__icon svg {
+  display: block;
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+}
+
+.blora-alert__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.blora-alert__title {
+  font-weight: 600;
+  margin-bottom: 0.2em;
+  line-height: inherit;
+}
+
+.blora-alert__desc {
+  color: inherit;
+  opacity: 0.85;
+  font-size: var(--blora-text-xs);
+  line-height: var(--blora-leading-normal);
+}
+
+.blora-alert__close {
+  color: currentcolor;
+  opacity: 0.5;
+  cursor: pointer;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border: none;
+  background: none;
+  padding: 0;
+  transition: opacity var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-alert__close:hover {
+  opacity: 1;
+}
+
+.blora-alert__close svg {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+.blora-alert[data-variant="info"] {
+  background: color-mix(in srgb, var(--blora-color-status-info) 6%, transparent);
+  border-color: color-mix(in srgb, var(--blora-color-status-info) 20%, transparent);
+}
+
+.blora-alert[data-variant="success"] {
+  background: color-mix(in srgb, var(--blora-color-status-success) 6%, transparent);
+  border-color: color-mix(in srgb, var(--blora-color-status-success) 20%, transparent);
+}
+
+.blora-alert[data-variant="warning"] {
+  background: color-mix(in srgb, var(--blora-color-status-warning) 8%, transparent);
+  border-color: color-mix(in srgb, var(--blora-color-status-warning) 30%, transparent);
+}
+
+.blora-alert[data-variant="danger"] {
+  background: color-mix(in srgb, var(--blora-color-status-danger) 6%, transparent);
+  border-color: color-mix(in srgb, var(--blora-color-status-danger) 20%, transparent);
+}
+
+.blora-alert[data-variant="info"] .blora-alert__icon {
+  color: var(--blora-color-status-info);
+}
+
+.blora-alert[data-variant="success"] .blora-alert__icon {
+  color: var(--blora-color-status-success);
+}
+
+.blora-alert[data-variant="warning"] .blora-alert__icon {
+  color: var(--blora-color-status-warning);
+}
+
+.blora-alert[data-variant="danger"] .blora-alert__icon {
+  color: var(--blora-color-status-danger);
+}
+
+.blora-alert[data-variant="ghost"] {
+  background: transparent;
+}
+
+blora-alert {
+  display: block;
+}

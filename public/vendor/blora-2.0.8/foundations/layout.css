@@ -1,0 +1,204 @@
+/* =========================================================================
+   Blora Design 2.0 - Layout primitives
+   Spec §8.5: Container Queries, §8.4: 逻辑属性与 RTL
+   ========================================================================= */
+
+/* -- Container -- */
+.blora-container {
+  width: 100%;
+  max-width: 1200px;
+  min-width: 0;
+  margin-inline: auto;
+  padding-inline: var(--blora-space-6);
+}
+
+.blora-container--prose {
+  max-width: 760px;
+}
+
+.blora-container--wide {
+  max-width: 1440px;
+}
+
+/* -- Stack (vertical flow) -- */
+.blora-stack > * + * {
+  margin-top: var(--blora-space-4);
+}
+
+.blora-stack--sm > * + * {
+  margin-top: var(--blora-space-2);
+}
+
+.blora-stack--lg > * + * {
+  margin-top: var(--blora-space-6);
+}
+
+.blora-stack--xl > * + * {
+  margin-top: var(--blora-space-8);
+}
+
+/* -- Row (horizontal flex) -- */
+.blora-row {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.blora-row > * {
+  min-width: 0;
+}
+
+.blora-row--tight {
+  gap: var(--blora-space-2);
+}
+
+.blora-row--between {
+  justify-content: space-between;
+}
+
+.blora-row--center {
+  justify-content: center;
+}
+
+/* -- Actions (wrapping command row) -- */
+.blora-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--blora-space-3);
+  min-width: 0;
+}
+
+.blora-actions--tight {
+  gap: var(--blora-space-2);
+}
+
+.blora-actions--end {
+  justify-content: flex-end;
+}
+
+.blora-actions > * {
+  flex: none;
+  min-width: 0;
+}
+
+/* -- Grid -- */
+.blora-grid {
+  display: grid;
+  gap: var(--blora-space-5);
+  min-width: 0;
+}
+
+.blora-grid > * {
+  min-width: 0;
+}
+
+.blora-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.blora-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.blora-grid--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* §8.5: Container query for responsive grid */
+@container (width < 36rem) {
+  .blora-grid--2,
+  .blora-grid--3,
+  .blora-grid--4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Fallback viewport query for grids without container context */
+@media (max-width: 880px) {
+  .blora-grid--2,
+  .blora-grid--3,
+  .blora-grid--4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* -- Card -- */
+.blora-card {
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  padding: var(--blora-space-6);
+  box-shadow: var(--blora-shadow-1);
+  min-width: 0;
+  max-width: 100%;
+  container-type: inline-size;
+  transition:
+    box-shadow var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+.blora-card__title {
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-lg);
+  color: var(--blora-color-text-primary);
+  margin-bottom: var(--blora-space-2);
+}
+
+.blora-card__body {
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-card__foot {
+  margin-top: var(--blora-space-5);
+  padding-top: var(--blora-space-4);
+  border-top: var(--blora-border-subtle);
+}
+
+.blora-card__badge {
+  position: absolute;
+  top: var(--blora-space-4);
+  inset-inline-end: var(--blora-space-4);
+}
+
+/* -- Panel -- */
+.blora-panel {
+  background: var(--blora-color-surface-default);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-xl);
+  padding: var(--blora-space-7);
+  box-shadow: var(--blora-shadow-2);
+  min-width: 0;
+}
+
+@container (width < 36rem) {
+  .blora-panel {
+    padding: var(--blora-space-5);
+  }
+}
+
+@media (max-width: 880px) {
+  .blora-panel {
+    padding: var(--blora-space-5);
+  }
+}
+
+.blora-panel__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--blora-space-3);
+  min-width: 0;
+  margin-bottom: var(--blora-space-5);
+  padding-bottom: var(--blora-space-4);
+  border-bottom: var(--blora-border-subtle);
+}
+
+/* -- Spacer -- */
+.blora-spacer {
+  flex: 1;
+}
+
+/* Divider lives in components/divider/divider.css */

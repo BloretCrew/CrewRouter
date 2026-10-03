@@ -1,0 +1,93 @@
+/* =========================================================================
+   Blora Design 2.0 - Collapse component (independent toggle, multiple open)
+   Visual baseline: legacy/v1/blora.css lines 1965-1975
+
+   Height: closed = 0 (tight stack). Open = measured --blora-collapse-h from
+   controller (real content px). No hard-coded 400px / 80rem caps.
+   ========================================================================= */
+
+blora-collapse {
+  display: block;
+}
+
+.blora-collapse {
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-default);
+  overflow: hidden;
+}
+
+.blora-collapse__item {
+  border-bottom: 1px solid var(--blora-color-border-subtle);
+}
+
+.blora-collapse__item:last-child {
+  border-bottom: none;
+}
+
+.blora-collapse__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--blora-space-3);
+  padding: 0.85em 1.1em;
+  cursor: pointer;
+  font-size: var(--blora-text-sm);
+  font-weight: 500;
+  color: var(--blora-color-text-emphasis);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: start;
+  transition: color var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-collapse__head:not(:disabled):hover {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-collapse__icon {
+  flex: none;
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+  color: var(--blora-color-text-subtle);
+  display: inline-flex;
+}
+
+.blora-collapse__head:not(:disabled):hover .blora-collapse__icon {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-collapse__item[data-open] .blora-collapse__icon {
+  transform: rotate(90deg);
+}
+
+/* Collapsed: hard zero height — headers stack like v1 */
+.blora-collapse__body {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    max-height var(--blora-duration-base) var(--blora-easing-standard),
+    opacity var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+/*
+ * Open: only the measured height token (set by controller to content px).
+ * If the var is unset (no JS), declaration is invalid → max-height falls to
+ * initial `none` so content still shows fully without a fake cap.
+ */
+.blora-collapse__item[data-open] .blora-collapse__body {
+  max-height: var(--blora-collapse-h);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.blora-collapse__content {
+  padding: 0 var(--blora-space-6) var(--blora-space-5);
+  color: var(--blora-color-text-emphasis);
+  font-size: var(--blora-text-sm);
+}

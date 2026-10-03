@@ -34,61 +34,6 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function formatQuotaNumber(value) {
-  const number = Number(value);
-  if (value === null || value === undefined || value === '' || !Number.isFinite(number)) return '—';
-  const magnitude = Math.abs(number);
-  const options = magnitude > 0 && magnitude < 1
-    ? { maximumSignificantDigits: 3 }
-    : { maximumFractionDigits: 2 };
-  return number.toLocaleString('zh-CN', options);
-}
-
-function formatQuotaPercent(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? Math.max(0, Math.min(100, number)).toLocaleString('zh-CN', { maximumFractionDigits: 1 }) : '—';
-}
-
-function requestBloraValue(label, value = '') {
-  const field = document.createElement('blora-field');
-  field.setAttribute('label', label);
-  const input = document.createElement('input');
-  input.className = 'blora-input';
-  input.value = String(value);
-  field.appendChild(input);
-  const modal = Dialog.showModal({
-    title: escapeHtml(label),
-    content: '',
-    footer: `<button type="button" class="blora-button" data-variant="outline" data-value-cancel>${t('取消')}</button><button type="button" class="blora-button" data-variant="primary" data-value-save>${t('确认')}</button>`,
-    width: 420,
-  });
-  modal.element.appendChild(field);
-  modal.element.addEventListener('click', (event) => {
-    if (event.target.closest('[data-value-cancel]')) modal.close(null);
-    if (event.target.closest('[data-value-save]')) modal.close(input.value);
-  });
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') { event.preventDefault(); modal.close(input.value); }
-  });
-  customElements.whenDefined('blora-field').then(() => input.focus());
-  return modal.promise.then((result) => result === false ? null : result);
-}
-
-(function installFieldTranslations() {
-  if (!window.I18N || I18N.applyDom.crewrouterFields) return;
-  const applyDom = I18N.applyDom;
-  const translate = function (root = document) {
-    applyDom.call(this, root);
-    root.querySelectorAll('blora-field[data-field-label]').forEach((field) => {
-      field.setAttribute('label', this.t(field.dataset.fieldLabel));
-    });
-  };
-  translate.crewrouterFields = true;
-  I18N.applyDom = translate;
-  I18N.applyDom();
-})();
-
-
 function safeColor(value, fallback = 'var(--muted-foreground)') {
   const raw = String(value ?? '').trim();
   if (/^var\(--[a-z0-9-]+\)$/.test(raw) || /^#[0-9a-f]{3,8}$/i.test(raw) || /^(?:rgb|hsl)a?\([0-9.,%\s-]+\)$/.test(raw)) return raw;
@@ -656,13 +601,16 @@ class ConsoleApp {
   }
 
   getSFIcon(name, size) {
-    return this._libIcon(name, size);
+    const color = (window.themeManager?.resolvedTheme || 'dark') === 'dark' ? 'white' : 'black';
+    return `<img src="https://img.bloret.net/SF/${name}?color=${color}" alt="" width="${size || 18}" height="${size || 18}" class="sf-icon" data-sf-name="${name}" style="display:inline-block;vertical-align:middle;">`;
   }
 
-  _libIcon(name, size, className = '') {
-    const icon = window.crewrouterIcons.name(name);
-    const pixels = Number(size) || 18;
-    return `<span class="app-icon ${escapeHtml(className)}" data-icon="${escapeHtml(icon)}" aria-hidden="true" style="width:${pixels}px;height:${pixels}px;"></span>`;
+  // 模型库用 SF 图标（随主题换色，可附加 class，例如 collapse-icon）
+  _libIcon(name, size, className) {
+    const color = (window.themeManager?.resolvedTheme || 'dark') === 'dark' ? 'white' : 'black';
+    const s = Number(size) || 14;
+    const cls = className ? `sf-icon ${className}` : 'sf-icon';
+    return `<img src="https://img.bloret.net/SF/${encodeURIComponent(name)}?color=${color}" alt="" width="${s}" height="${s}" class="${cls}" data-sf-name="${escapeHtml(name)}" aria-hidden="true">`;
   }
 
   async loadPersonalHome() {
@@ -699,7 +647,7 @@ class ConsoleApp {
         <button type="button" class="personal-checklist-item ${step.done ? 'is-done' : ''}" onclick="${step.action}">
           <span class="personal-checklist-number">${step.done ? '✓' : index + 1}</span>
           <span>${escapeHtml(step.label)}</span>
-          <span class="personal-checklist-arrow">${step.done ? t('已完成') : this._libIcon('arrow.right', 14)}</span>
+          <span class="personal-checklist-arrow">${step.done ? t('已完成') : '→'}</span>
         </button>
       `).join(''));
     } catch (error) {
@@ -731,17 +679,17 @@ class ConsoleApp {
 
       const overview = document.getElementById('usageOverview');
       if (apiKeys.length > 0) {
-        overview.style.display = 'grid';
+        overview.style.display = 'flex';
         document.getElementById('totalRequests').textContent = totalReqs.toLocaleString();
         document.getElementById('totalTokens').textContent = this._formatBigNumber(totalTokens);
-        document.getElementById('totalCost').textContent = `${formatQuotaNumber(totalCost)} ${t('积分')}`;
+        document.getElementById('totalCost').textContent = `${totalCost.toFixed(4)}${t('积分')}`;
       } else {
         overview.style.display = 'none';
       }
 
       if (apiKeys.length === 0) {
         setBloraState('apiKeysList', 'empty');
-        setHTML(container, '<p style="text-align:center;padding:40px;">' + t('暂无 API 密钥，点击上方按钮一键创建') + '</p>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无 API 密钥，点击上方按钮一键创建') + '</p>');
         return;
       }
 
@@ -749,12 +697,12 @@ class ConsoleApp {
       const coKeys = apiKeys.filter(key => key.key_type === 'co_key');
       const renderGroup = (title, hint, keys, groupClass) => !keys.length ? '' : `
         <section class="api-key-group ${groupClass}">
-          <div class="blora-row blora-row--between api-key-group-header">
+          <div class="api-key-group-header">
             <div>
               <h3 class="api-key-group-title">${title}</h3>
               <p class="api-key-group-hint">${hint}</p>
             </div>
-            <span class="blora-badge api-key-group-count" data-variant="neutral">${keys.length}</span>
+            <span class="api-key-group-count">${keys.length}</span>
           </div>
           <div class="api-keys-list">${keys.map(key => this._renderApiKeyCard(key)).join('')}</div>
         </section>`;
@@ -769,7 +717,7 @@ class ConsoleApp {
     } catch (error) {
       console.error(t('加载API密钥失败:'), error);
       setBloraState('apiKeysList', 'error');
-      if (container) setHTML(container, '<p style="text-align:center;padding:40px;">' + t('加载失败，请刷新重试') + '</p>');
+      if (container) setHTML(container, '<p style="text-align:center;color:var(--destructive);padding:40px;">' + t('加载失败，请刷新重试') + '</p>');
     }
   }
 
@@ -786,7 +734,7 @@ class ConsoleApp {
       const list = Array.isArray(data?.authorizations) ? data.authorizations : [];
       this._lastAuthorizations = list;
       if (list.length === 0) {
-        setHTML(container, '<p style="text-align:center;padding:24px;">' + t('暂无活跃授权') + '</p>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:24px;">' + t('暂无活跃授权') + '</p>');
         return;
       }
       setHTML(container, `<div class="api-key-groups">${list.map(a => this._renderAuthorizationCard(a)).join('')}</div>`);
@@ -796,7 +744,7 @@ class ConsoleApp {
   }
 
   async revokeAuthorization(id) {
-    if (!await Dialog.confirm(t('确认'), t('确定吊销该客户端的全部授权？其所有令牌将立即失效。'))) return;
+    if (!await confirm(t('确定吊销该客户端的全部授权？其所有令牌将立即失效。'))) return;
     try {
       const res = await fetch('/oauth/authorizations/revoke', {
         method: 'POST',
@@ -830,7 +778,7 @@ class ConsoleApp {
       .map(s => this._renderApiKeyChip(s, 'info')).join('');
     return `
       <section class="api-key-group api-key-group-normal">
-        <div class="blora-row blora-row--between api-key-group-header">
+        <div class="api-key-group-header">
           <div>
             <h3 class="api-key-group-title">${escapeHtml(a.client_name || a.client_id)}</h3>
             <p class="api-key-group-hint"><code>${escapeHtml(a.client_id)}</code></p>
@@ -839,7 +787,7 @@ class ConsoleApp {
         </div>
         <div style="padding:12px 16px;">
           ${statusChip} ${scopeChips}
-          <div style="margin-top:10px;">
+          <div style="margin-top:10px;font-size:12px;color:var(--muted-foreground);line-height:1.9;">
             <div>${t('绑定密钥')}：${escapeHtml(a.api_key_name || (a.api_key_id ? '#' + a.api_key_id : t('未知')))}</div>
             <div>${t('最后使用')}：${escapeHtml(this._formatOAuthTime(a.last_used_at, t('从未使用')))}</div>
             <div>${t('过期时间')}：${escapeHtml(this._formatOAuthTime(a.expires_at))}</div>
@@ -879,6 +827,9 @@ class ConsoleApp {
       ? (tokens / 1000000).toFixed(1) + 'M'
       : tokens >= 1000 ? (tokens / 1000).toFixed(1) + 'K' : String(tokens);
     const fullKey = key.key_value || '';
+    const maskedKey = fullKey
+      ? (fullKey.length > 16 ? fullKey.slice(0, 10) + ' ··· ' + fullKey.slice(-4) : fullKey.slice(0, 12) + '····')
+      : '—';
     const modelDisplay = key.current_model_name || '';
     const queue = Array.isArray(key.model_queue) ? key.model_queue : [];
     const queueLen = queue.length;
@@ -935,25 +886,25 @@ class ConsoleApp {
 
     return `
       <div class="blora-card api-key-card ${isEnabled ? '' : 'key-disabled'}" data-key-id="${key.id}"
-           ondragover="app.handleApiKeyDragOver(event);app.handleApiKeySortOver(event)" ondragleave="app.handleApiKeyDragLeave(event);app.handleApiKeySortLeave(event)" ondrop="app.handleApiKeyDrop(event, ${key.id});app.handleApiKeySortDrop(event, ${key.id})" data-size="sm">
-        <div class="blora-card__header api-key-header">
+           ondragover="app.handleApiKeyDragOver(event);app.handleApiKeySortOver(event)" ondragleave="app.handleApiKeyDragLeave(event);app.handleApiKeySortLeave(event)" ondrop="app.handleApiKeyDrop(event, ${key.id});app.handleApiKeySortDrop(event, ${key.id})">
+        <div class="api-key-header">
           <div class="api-key-title">
             <span class="api-key-drag-handle" draggable="true" title="${t('拖拽调整顺序')}" aria-hidden="true"
-              ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)"><span data-icon="grip" aria-hidden="true"></span></span>
+              ondragstart="app.handleApiKeySortStart(event, this)" ondragend="app.handleApiKeySortEnd(event)">⠿</span>
             ${/^crewrouter$/i.test(String(key.name || '')) ? '' : `
-            <div class="control-toggle-row api-key-enable-toggle" title="${isEnabled ? t('点击禁用') : t('点击启用')}">
-              <blora-checkbox ${isEnabled ? 'checked' : ''} data-control-action="app-dynamic-0" data-control-arg0="${escapeHtml(String(key.id))}"></blora-checkbox>
-
-            </div>`}
+            <label class="pg-toggle api-key-enable-toggle" title="${isEnabled ? t('点击禁用') : t('点击启用')}">
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="event.stopPropagation(); app.toggleKeyEnabled(${key.id}, this.checked)">
+              <span class="pg-toggle-slider"></span>
+            </label>`}
             <div class="api-key-title-text">
               <div class="api-key-name-row">
-                <span class="blora-card__title api-key-name" data-key-id="${key.id}">${escapeHtml(displayName)}</span>
+                <span class="api-key-name" data-key-id="${key.id}">${escapeHtml(displayName)}</span>
                 ${/^crewrouter$/i.test(String(key.name || '')) ? '<span class="key-system-badge" title="' + t('系统依赖密钥，不可删除/改名/启停') + '">' + t('系统') + '</span>' : ''}
                 <div class="api-key-chips">${chips}</div>
                 <span class="api-key-meta-divider" aria-hidden="true"></span>
                 ${this.renderApiKeyTags(key)}
               </div>
-              <div class="blora-card__desc api-key-subline">
+              <div class="api-key-subline">
                 ${key.last_used_at
                   ? `${'<span>' + t('最近')}${escapeHtml(this.formatRelativeTime(key.last_used_at))}</span>`
                   : '<span class="api-key-sub-muted">' + t('尚未使用') + '</span>'}
@@ -965,7 +916,7 @@ class ConsoleApp {
                 <span class="api-key-metrics">
                   <span class="api-key-metric"><b>${reqs.toLocaleString()}</b> 次</span>
                   <span class="api-key-metric"><b>${escapeHtml(tokenDisplay)}</b> Token</span>
-                  <span class="api-key-metric"><b>${formatQuotaNumber(cost)}</b> 积分</span>
+                  <span class="api-key-metric"><b>${cost.toFixed(4)}</b> 积分</span>
                 </span>
               </div>
             </div>
@@ -973,10 +924,20 @@ class ConsoleApp {
         </div>
 
         <div class="api-key-prefix">
-          ${fullKey ? `<blora-copy text="${escapeHtml(fullKey)}" masked label="${escapeHtml(t('复制密钥'))}"></blora-copy>` : '<span class="blora-text-muted">—</span>'}
+          <code class="api-key-value" data-visible="false" data-fullkey="${escapeHtml(fullKey)}"
+                onclick="app.toggleKeyVisibility(this)" title="${t('点击显示/隐藏完整密钥')}">${escapeHtml(maskedKey)}</code>
+          ${fullKey ? `<div class="api-key-secret-actions">
+            <button type="button" class="copy-btn" onclick="app.toggleKeyVisibility(this.closest('.api-key-prefix').querySelector('.api-key-value'))" title="${t('显示/隐藏')}">
+              ${this.getSFIcon('eye', 14)}
+            </button>
+            <button type="button" class="copy-btn" onclick="app.copyFullKey(this.closest('.api-key-prefix').querySelector('.api-key-value').dataset.fullkey, this)" title="${t('复制密钥')}">
+              ${this.getSFIcon('document.on.document', 14)}
+              <span>复制</span>
+            </button>
+          </div>` : ''}
         </div>
 
-        <div class="blora-card__foot api-key-footer">
+        <div class="api-key-footer">
           ${this._renderApiKeyRoutePill(key, modelDisplay, queueLen)}
           <div class="api-key-actions">
             <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="app.showKeyModels(${key.id})">模型队列</button>
@@ -1148,18 +1109,18 @@ class ConsoleApp {
   _renderKeyTagChipsHtml() {
     return (this._keyTags || []).map(tag => `
       <div class="key-tag-chip"
-
+           style="border-color:${safeColor(tag.color)};"
            draggable="true"
            data-tag-id="${tag.id}"
            ondragstart="app.handleKeyTagDragStart(event, ${tag.id})"
            ondragend="app.handleKeyTagDragEnd(event)"
            title="${t('拖拽到 Key 卡片来分配 · 点击铅笔编辑')}">
-        <span >●</span>
+        <span style="color:${safeColor(tag.color)};">●</span>
         ${escapeHtml(tag.name)}
         <span class="edit-tag-def" onclick="event.stopPropagation();app.showEditKeyTagPopover(${tag.id}, this)" title="${t('编辑标签')}">✎</span>
         <span class="remove-tag-def" onclick="event.stopPropagation();app.deleteKeyTag(${tag.id})" title="${t('删除此标签')}">&times;</span>
       </div>`
-    ).join('') + `<button type="button" class="blora-button key-tag-add-btn" data-variant="outline" data-size="icon" data-icon="plus" onclick="app.showCreateKeyTagPopover(this)" title="${t('创建标签')}" aria-label="${t('创建标签')}"></button>`;
+    ).join('') + `<div class="key-tag-chip key-tag-add-btn" onclick="app.showCreateKeyTagPopover(this)" title="${t('创建标签')}">+</div>`;
   }
 
   renderKeyTagBar() {
@@ -1249,17 +1210,17 @@ class ConsoleApp {
       submitBtn.onclick = onSubmit;
     }
     document.getElementById('createKeyTagName').value = name || '';
-    const colors = document.getElementById('createKeyTagColors');
-    const selectedColor = color || 'var(--info)';
-    const options = Array.from(colors.querySelectorAll('blora-option'));
-    if (!options.some(option => option.getAttribute('value') === selectedColor)) {
-      const option = document.createElement('blora-option');
-      option.setAttribute('value', selectedColor);
-      option.textContent = t('当前颜色');
-      colors.appendChild(option);
+    document.querySelectorAll('#createKeyTagColors .color-dot').forEach(d => {
+      d.classList.toggle('selected', d.dataset.color === (color || 'var(--info)'));
+    });
+    if (!document.querySelector('#createKeyTagColors .color-dot.selected')) {
+      document.querySelector('#createKeyTagColors .color-dot')?.classList.add('selected');
     }
-    colors.value = selectedColor;
-    pop.show();
+    const rect = btnEl.getBoundingClientRect();
+    pop.style.top = (rect.bottom + 8) + 'px';
+    pop.style.left = Math.max(8, rect.left - 80) + 'px';
+    pop.style.display = 'block';
+    setTimeout(() => document.getElementById('createKeyTagName').focus(), 100);
   }
 
   showCreateKeyTagPopover(btnEl) {
@@ -1289,7 +1250,7 @@ class ConsoleApp {
   hideCreateKeyTagPopover() {
     this._editingKeyTagId = null;
     const pop = document.getElementById('createKeyTagPopover');
-    if (pop) pop.close();
+    if (pop) pop.style.display = 'none';
   }
 
   selectTagColor(el) {
@@ -1300,7 +1261,8 @@ class ConsoleApp {
   async saveKeyTag() {
     const name = document.getElementById('createKeyTagName').value.trim();
     if (!name) { this.showToast(t('请输入标签名称'), 'error'); return; }
-    const color = document.getElementById('createKeyTagColors').value || 'var(--info)';
+    const colorEl = document.querySelector('#createKeyTagColors .color-dot.selected');
+    const color = colorEl ? colorEl.dataset.color : 'var(--info)';
     const editingId = this._editingKeyTagId;
     try {
       const res = editingId
@@ -1341,7 +1303,7 @@ class ConsoleApp {
   }
 
   async deleteKeyTag(tagId) {
-    if (!await Dialog.confirm(t('确认'), t('确定删除此标签？将从所有 API Key 上移除。'))) return;
+    if (!await confirm(t('确定删除此标签？将从所有 API Key 上移除。'))) return;
     try {
       const res = await fetch('/api/user/key-tags/' + tagId, { method: 'DELETE' });
       if (!res.ok) { this.showToast(t('删除失败'), 'error'); return; }
@@ -1360,7 +1322,7 @@ class ConsoleApp {
     return `<div class="api-key-inline-tags" data-key-id="${key.id}">
       <div class="api-key-inline-tags-track">
         ${tags.map(tag => `
-          <span class="key-tag-chip-sm" data-tag-id="${tag.id}" >
+          <span class="key-tag-chip-sm" data-tag-id="${tag.id}" style="border-color:${safeColor(tag.color)};color:${safeColor(tag.color)};background:${safeColor(tag.color)}10;">
             ${escapeHtml(tag.name)}
             ${isOwner ? `<span class="remove-tag" onclick="event.stopPropagation();app.removeTagFromKey(${key.id},${tag.id})" title="${t('移除')}">&times;</span>` : ''}
           </span>`).join('')}
@@ -1561,7 +1523,7 @@ class ConsoleApp {
     const listHtml = tags.length
       ? tags.map(tag => `
           <div class="api-key-tags-overflow-item" data-tag-id="${tag.id}">
-            <span class="key-tag-chip-sm" >
+            <span class="key-tag-chip-sm" style="border-color:${escapeHtml(tag.color)};color:${escapeHtml(tag.color)};background:${escapeHtml(tag.color)}10;">
               ${escapeHtml(tag.name)}
             </span>
             ${isOwner ? `<button type="button" class="api-key-tags-overflow-remove" title="${t('移除标签')}"
@@ -1636,7 +1598,7 @@ class ConsoleApp {
         const has = currentTagIds.has(Number(tag.id));
         return `<div class="api-key-tag-assign-item${has ? ' is-on' : ''}"
                      onclick="app.toggleTagInDropdown(${keyId},${tag.id})">
-          <span >${has ? '✓' : '○'}</span>
+          <span style="color:${escapeHtml(tag.color)};">${has ? '✓' : '○'}</span>
           <span>${escapeHtml(tag.name)}</span>
         </div>`;
       }).join(''));
@@ -1789,7 +1751,7 @@ class ConsoleApp {
   }
 
   async removeTagFromKey(keyId, tagId) {
-    if (!await Dialog.confirm(t('确认'), t('确定移除此标签？'))) return;
+    if (!await confirm(t('确定移除此标签？'))) return;
     try {
       const tid = Number(tagId);
       const newTagIds = this._getKeyTagIds(keyId).filter(id => id !== tid);
@@ -1861,7 +1823,7 @@ class ConsoleApp {
     if (prefix) {
       const eyeBtn = prefix.querySelector('.copy-btn[title="显示/隐藏"], .copy-btn[data-i18n-title="显示/隐藏"]');
       if (eyeBtn) {
-        const iconName = el.dataset.visible === 'true' ? 'eye-off' : 'eye';
+        const iconName = el.dataset.visible === 'true' ? 'eye.slash' : 'eye';
         setHTML(eyeBtn, this.getSFIcon(iconName, 14));
       }
     }
@@ -1924,7 +1886,7 @@ class ConsoleApp {
       ]);
       if (!libraryRes.ok || !assignedRes.ok) {
         setBloraState('keyModelsContent', 'error');
-        setHTML(container, '<p style="text-align:center;padding:32px;">' + t('加载失败') + '</p>');
+        setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:32px;">' + t('加载失败') + '</p>');
         return;
       }
 
@@ -1965,7 +1927,7 @@ class ConsoleApp {
     } catch (error) {
       console.error(t('加载密钥模型列表失败:'), error);
       setBloraState('keyModelsContent', 'error');
-      setHTML(container, '<p style="text-align:center;padding:32px;">' + t('加载失败') + '</p>');
+      setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:32px;">' + t('加载失败') + '</p>');
     }
   }
 
@@ -2003,7 +1965,7 @@ class ConsoleApp {
       return;
     }
 
-    const selected = document.querySelector('blora-radio[name="keyModelRadio"][checked]');
+    const selected = document.querySelector('input[name="keyModelRadio"]:checked');
     const modelId = selected ? selected.value : null;
 
     try {
@@ -2016,11 +1978,11 @@ class ConsoleApp {
         this.closeModals();
         this.loadApiKeys();
       } else {
-        Dialog.alert(t('保存失败'));
+        alert(t('保存失败'));
       }
     } catch (error) {
       console.error(t('保存密钥模型失败:'), error);
-      Dialog.alert(t('保存失败'));
+      alert(t('保存失败'));
     }
   }
 
@@ -2113,16 +2075,16 @@ class ConsoleApp {
             <input type="text" id="keyModelPickerSearch" placeholder="${escapeHtml(t('搜索模型、供应商、Team...'))}" class="blora-input model-search-input">
           </div>
           <div class="model-filter-selects">
-            <blora-select id="keyModelPickerProvider" class="select"><blora-option value="all">全部供应商</blora-option></blora-select>
-            <blora-select id="keyModelPickerSeries" class="select"><blora-option value="all">全部系列</blora-option></blora-select>
-            <blora-select id="keyModelPickerProviderTag" class="select"><blora-option value="all">全部标签</blora-option></blora-select>
-            <blora-select id="keyModelPickerTest" class="select">
+            <blora-select id="keyModelPickerProvider" class="blora-select select"><blora-option value="all">全部供应商</blora-option></blora-select>
+            <blora-select id="keyModelPickerSeries" class="blora-select select"><blora-option value="all">全部系列</blora-option></blora-select>
+            <blora-select id="keyModelPickerProviderTag" class="blora-select select"><blora-option value="all">全部标签</blora-option></blora-select>
+            <blora-select id="keyModelPickerTest" class="blora-select select">
               <blora-option value="all">全部状态</blora-option>
               <blora-option value="pass">测试通过</blora-option>
               <blora-option value="fail">测试失败</blora-option>
               <blora-option value="untested">未测试</blora-option>
             </blora-select>
-            <blora-select id="keyModelPickerSort" class="select">
+            <blora-select id="keyModelPickerSort" class="blora-select select">
               <blora-option value="default">默认排序</blora-option>
               <blora-option value="price_asc">价格低→高</blora-option>
               <blora-option value="price_desc">价格高→低</blora-option>
@@ -2299,7 +2261,7 @@ class ConsoleApp {
     const container = document.getElementById('keyModelPickerContent');
     const countEl = document.getElementById('keyModelPickerCount');
     if (container) {
-      setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="margin:0;">' + t('搜索中...') + '</p></div>');
+      setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('搜索中...') + '</p></div>');
     }
     try {
       const params = new URLSearchParams();
@@ -2330,7 +2292,7 @@ class ConsoleApp {
       if (!models.length) {
         setBloraState('keyModelsContent', 'empty');
         if (container) {
-          setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="margin:0;">' + t('没有符合条件的模型') + '</p></div>');
+          setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('没有符合条件的模型') + '</p></div>');
         }
         return;
       }
@@ -2354,9 +2316,9 @@ class ConsoleApp {
       if (!container) return;
       setBloraState('keyModelsContent', 'success');
       setHTML(container, [...teamMap.values()].map(team => `
-        <div class="blora-stack model-library-team model-search-team">
-          <div class="blora-row model-library-team-header" style="cursor:default;">
-            <h3 class="blora-h4">${escapeHtml(team.team_name)}</h3>
+        <div class="model-library-team model-search-team">
+          <div class="model-library-team-header" style="cursor:default;">
+            <h3>${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="team-badge">' + t('个人') + '</span>' : ''}
           </div>
           <div class="model-library-list model-search-list">
@@ -2373,7 +2335,7 @@ class ConsoleApp {
       setBloraState('keyModelsContent', 'error');
       console.warn(t('[API Key 模型选择] 全局搜索失败:'), e);
       if (container) {
-        setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="margin:0;">' + t('搜索失败，请重试') + '</p></div>');
+        setHTML(container, '<div class="empty-state" style="padding:32px 16px;text-align:center;"><p style="color:var(--destructive);margin:0;">' + t('搜索失败，请重试') + '</p></div>');
       }
     }
   }
@@ -2415,28 +2377,28 @@ class ConsoleApp {
     if (!container) return;
     if (!libraryData.teams || libraryData.teams.length === 0) {
       setBloraState('keyModelsContent', 'empty');
-      setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="margin:0;">' + t('暂无可用模型') + '</p></div>');
+      setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="font-size:15px;color:var(--muted-foreground);margin:0;">' + t('暂无可用模型') + '</p></div>');
       return;
     }
 
     const hasProviders = libraryData.teams.some(team => team.providers && team.providers.length > 0);
     if (!hasProviders) {
       setBloraState('keyModelsContent', 'empty');
-      setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="margin:0;">' + t('请尝试调整筛选条件') + '</p></div>');
+      setHTML(container, '<div class="empty-state" style="padding:48px 20px;text-align:center;"><p style="font-size:15px;color:var(--muted-foreground);margin:0;">' + t('请尝试调整筛选条件') + '</p></div>');
       return;
     }
 
     setHTML(container, libraryData.teams.map((team, teamIndex) => {
       if (!team.providers || team.providers.length === 0) return '';
       return `
-        <div class="blora-stack model-library-team" data-picker-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
-          <div class="blora-row model-library-team-header" onclick="app.toggleKeyModelPickerTeam(${teamIndex})">
-            ${this._libIcon('chevron-down', 16, 'collapse-icon')}
-            <h3 class="blora-h4">${escapeHtml(team.team_name)}</h3>
+        <div class="model-library-team" data-picker-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
+          <div class="model-library-team-header" onclick="app.toggleKeyModelPickerTeam(${teamIndex})">
+            <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            <h3>${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
           </div>
-          <div class="blora-list model-library-team-content" role="list">
+          <div class="model-library-team-content">
             ${team.providers.map((provider, providerIndex) => this._renderKeyPickerProvider(team, provider, teamIndex, providerIndex)).join('')}
           </div>
         </div>
@@ -2450,14 +2412,14 @@ class ConsoleApp {
     const hasModels = provider.models_loaded && provider.models && provider.models.length > 0;
     const totalCount = provider.model_count != null ? provider.model_count : (provider.pagination?.total ?? (provider.models ? provider.models.length : 0));
     return `
-      <div class="model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}" role="listitem"
+      <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}" data-variant="hover"
            data-picker-provider-index="${teamIndex}-${providerIndex}"
            data-team-id="${escapeHtml(String(team.team_id))}"
            data-provider-id="${escapeHtml(String(provider.provider_id))}"
-           style="${isProviderDisabled ? 'position:relative;' : ''};" data-size="sm">
+           style="${isProviderDisabled ? 'position:relative;' : ''}">
         ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
-        <div class="blora-list__item model-library-provider-header" onclick="app.toggleKeyModelPickerProvider(${teamIndex}, ${providerIndex})">
-          <div class="blora-list__meta model-library-provider-title">
+        <div class="model-library-provider-header" onclick="app.toggleKeyModelPickerProvider(${teamIndex}, ${providerIndex})">
+          <div class="model-library-provider-title">
             <svg class="collapse-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             ${renderProviderNameTag(provider.provider_name)}
             ${this._renderProviderTestSummary(provider)}
@@ -2466,7 +2428,7 @@ class ConsoleApp {
             ).join('')}
             ${isProviderDisabled ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>' : ''}
           </div>
-          <div class="blora-actions model-library-provider-actions">
+          <div class="model-library-provider-actions">
             <span class="provider-model-count">${totalCount} 个模型</span>
           </div>
         </div>
@@ -2634,7 +2596,7 @@ class ConsoleApp {
         || (providerEl && providerEl.isConnected ? providerEl : null);
       if (failEl) {
         const listEl = failEl.querySelector('.model-library-list');
-        if (listEl) setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" >${t('加载失败，')}<a href="#" onclick="event.preventDefault();app.retryKeyModelPickerProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\')">${t('重试')}</a></span></div>`);
+        if (listEl) setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">${t('加载失败，')}<a href="#" onclick="event.preventDefault();app.retryKeyModelPickerProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\')">${t('重试')}</a></span></div>`);
       }
     } finally {
       ctx.loadingProviders.delete(providerKey);
@@ -2704,13 +2666,13 @@ class ConsoleApp {
     const pageButtons = pages.map(p => {
       const gap = p - lastPage > 1 ? '<span class="model-library-page-ellipsis">...</span>' : '';
       lastPage = p;
-      return `${gap}<button type="button" class="blora-button model-library-page-btn ${p === current ? 'active' : ''}" ${p === current ? 'disabled' : ''} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${p})">${p}</button>`;
+      return `${gap}<button class="blora-button model-library-page-btn ${p === current ? 'active' : ''}" ${p === current ? 'disabled' : ''} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${p})">${p}</button>`;
     }).join('');
     return `
       <div class="model-library-pagination">
-        <button type="button" class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current - 1})">上一页</button>
+        <button class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current - 1})">上一页</button>
         ${pageButtons}
-        <button type="button" class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current + 1})">下一页</button>
+        <button class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadKeyModelPickerProviderPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current + 1})">下一页</button>
         <span class="model-library-page-summary">共 ${pagination.total} 个</span>
       </div>
     `;
@@ -2800,11 +2762,11 @@ class ConsoleApp {
       const displayName = item.name || item.id;
       return `
       <div class="key-model-queue-item" draggable="true" data-model-id="${escapeHtml(item.id)}">
-        <span class="key-model-queue-handle" title="${t('拖拽排序')}" aria-hidden="true"><span data-icon="grip" aria-hidden="true"></span></span>
+        <span class="key-model-queue-handle" title="${t('拖拽排序')}" aria-hidden="true">⠿</span>
         <span class="key-model-queue-order">${index + 1}</span>
         <span class="key-model-queue-name" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}${index === 0 ? ' <em class="key-model-queue-primary">' + t('首选') + '</em>' : ''}</span>
         <div class="key-model-queue-actions">
-          <button type="button" class="blora-button" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title="${t('移除')}" data-variant="ghost" data-size="sm" data-icon="x" data-size="icon"></button>
+          <button type="button" class="blora-button" onclick="event.stopPropagation();app.removeKeyModelFromQueue('${this._jsString(item.id)}')" title="${t('移除')}" data-variant="ghost" data-size="sm">×</button>
         </div>
       </div>`;
     }).join(''));
@@ -3039,7 +3001,7 @@ class ConsoleApp {
         fetch(`/api/user/api-keys/${keyId}/fusion-config`),
         fetch('/api/user/api-keys/' + keyId + '/models')
       ]);
-      if (!configRes.ok) { setHTML(container, '<p style="text-align:center;padding:20px;">' + t('加载失败') + '</p>'); return; }
+      if (!configRes.ok) { setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:20px;">' + t('加载失败') + '</p>'); return; }
       const config = await configRes.json();
       const modelsPayload = modelsRes.ok ? await modelsRes.json() : [];
       const models = this._normalizeKeyModelsPayload(modelsPayload);
@@ -3060,73 +3022,73 @@ class ConsoleApp {
       const providerEntries = Object.entries(byProvider);
 
       setHTML(container, `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 12px;background:var(--secondary);border-radius:8px;">
           <div>
-            <div >启用 Fusion</div>
-            <div >禁用后，请求 fusion 模型将回退到当前绑定模型</div>
+            <div style="font-size:14px;font-weight:500;">启用 Fusion</div>
+            <div style="font-size:12px;color:var(--muted-foreground);">禁用后，请求 fusion 模型将回退到当前绑定模型</div>
           </div>
-          <div style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
-            <blora-switch id="fusionEnabledToggle" ${fusionEnabled ? 'checked' : ''} style="width:0;height:0;"></blora-switch>
-            <span style="position:absolute;inset:0;transition:background 0.2s;"></span>
-            <span style="position:absolute;top:2px;${fusionEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;transition:left 0.2s,right 0.2s;"></span>
-          </div>
+          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
+            <input type="checkbox" id="fusionEnabledToggle" ${fusionEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+            <span style="position:absolute;inset:0;background:${fusionEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
+            <span style="position:absolute;top:2px;${fusionEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+          </label>
         </div>
 
-        <div id="fusionConfigBody" style="${fusionEnabled ? '' : 'opacity:0.4;pointer-events:none;'};">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 12px;">
+        <div id="fusionConfigBody" style="${fusionEnabled ? '' : 'opacity:0.4;pointer-events:none;'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;">
           <div style="padding-right:16px;">
-            <div >${t('启用 Fusion 综合提示')}</div>
-            <div id="fusionSynthesisPromptRisk" >${synthesisPromptEnabled ? t('开启时，Panel 仅作为不可信结构化参考，不会拼入 system prompt。') : t('关闭后会保留原始 Panel 内容，但内容未经净化，存在提示注入风险。')}</div>
+            <div style="font-size:14px;font-weight:500;">${t('启用 Fusion 综合提示')}</div>
+            <div id="fusionSynthesisPromptRisk" style="font-size:12px;color:${synthesisPromptEnabled ? 'var(--muted-foreground)' : 'var(--destructive)'};">${synthesisPromptEnabled ? t('开启时，Panel 仅作为不可信结构化参考，不会拼入 system prompt。') : t('关闭后会保留原始 Panel 内容，但内容未经净化，存在提示注入风险。')}</div>
           </div>
-          <div style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex:none;">
-            <blora-checkbox id="fusionSynthesisPromptToggle" ${synthesisPromptEnabled ? 'checked' : ''} style="width:0;height:0;"></blora-checkbox>
-            <span style="position:absolute;inset:0;transition:background 0.2s;"></span>
-            <span style="position:absolute;top:2px;${synthesisPromptEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;transition:left 0.2s,right 0.2s;"></span>
-          </div>
+          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;flex:none;">
+            <input type="checkbox" id="fusionSynthesisPromptToggle" ${synthesisPromptEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;">
+            <span style="position:absolute;inset:0;background:${synthesisPromptEnabled ? 'var(--primary)' : 'var(--border)'};border-radius:12px;transition:background 0.2s;"></span>
+            <span style="position:absolute;top:2px;${synthesisPromptEnabled ? 'right:2px' : 'left:2px'};width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s,right 0.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+          </label>
         </div>
         <div style="margin-bottom:16px;">
-          <div style="margin-bottom:8px;">Panel 模型（多选，并行调用）</div>
+          <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:8px;">Panel 模型（多选，并行调用）</div>
           <div style="display:flex;gap:8px;margin-bottom:8px;">
-            <input type="text" id="fusionPanelSearch" class="blora-input input" placeholder="${escapeHtml(t('搜索模型...'))}" style="flex:1;" oninput="app._filterFusionPanelModels()">
+            <input type="text" id="fusionPanelSearch" class="blora-input input" placeholder="${escapeHtml(t('搜索模型...'))}" style="flex:1;font-size:13px;" oninput="app._filterFusionPanelModels()">
             <button type="button" class="blora-button" onclick="app._toggleAllFusionPanels()" data-variant="secondary" data-size="sm">全选/取消</button>
           </div>
-          <div id="fusionPanelList" style="max-height:200px;overflow-y:auto;padding:8px;">
+          <div id="fusionPanelList" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;">
             ${providerEntries.map(([provider, pModels]) => `
               <div class="fusion-provider-group" style="margin-bottom:8px;">
-                <div style="text-transform:uppercase;margin-bottom:4px;">${escapeHtml(provider)}</div>
+                <div style="font-size:11px;font-weight:600;color:var(--muted-foreground);text-transform:uppercase;margin-bottom:4px;">${escapeHtml(provider)}</div>
                 ${pModels.map(m => {
                   const label = m.name || m.upstream_model_id || m.id;
                   const checked = selectedPanels.has(m.id) ? 'checked' : '';
                   return `
-                    <div class="blora-card fusion-panel-item" data-search="${escapeHtml((label + ' ' + m.id).toLowerCase())}" style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;">
-                      <blora-checkbox class=" fusion-panel-cb" value="${escapeHtml(String(m.id))}" ${checked}></blora-checkbox>
+                    <label class="blora-card fusion-panel-item" data-search="${escapeHtml((label + ' ' + m.id).toLowerCase())}" style="display:flex;align-items:center;gap:6px;padding:4px 6px;cursor:pointer;border-radius:4px;font-size:13px;">
+                      <input type="checkbox" class="blora-input fusion-panel-cb" value="${escapeHtml(String(m.id))}" ${checked}>
                       <span>${escapeHtml(label)}</span>
-                    </div>
+                    </label>
                   `;
                 }).join('')}
               </div>
             `).join('')}
           </div>
-          <div id="fusionPanelCount" style="margin-top:4px;">${selectedPanels.size} 个模型已选</div>
+          <div id="fusionPanelCount" style="font-size:12px;color:var(--muted-foreground);margin-top:4px;">${selectedPanels.size} 个模型已选</div>
         </div>
 
         <div style="display:flex;gap:12px;margin-bottom:16px;">
           <div style="flex:1;">
-            <div style="margin-bottom:6px;">Judge 模型</div>
-            <blora-select id="fusionJudgeSelect" name="judge_model_id" class="select" >
+            <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:6px;">Judge 模型</div>
+            <blora-select id="fusionJudgeSelect" name="judge_model_id" class="blora-select select" style="font-size:13px;">
               ${models.map(m => `<blora-option value="${escapeHtml(String(m.id))}">${escapeHtml(m.name || m.id)}</blora-option>`).join('')}
             </blora-select>
           </div>
           <div style="flex:1;">
-            <div style="margin-bottom:6px;">合成模型</div>
-            <blora-select id="fusionOuterSelect" name="outer_model_id" class="select" >
+            <div style="font-size:13px;color:var(--muted-foreground);margin-bottom:6px;">合成模型</div>
+            <blora-select id="fusionOuterSelect" name="outer_model_id" class="blora-select select" style="font-size:13px;">
               ${models.map(m => `<blora-option value="${escapeHtml(String(m.id))}">${escapeHtml(m.name || m.id)}</blora-option>`).join('')}
             </blora-select>
           </div>
         </div>
 
-        <div style="padding:10px;">
-          <span data-icon="lightbulb" aria-hidden="true"></span> <strong>Fusion</strong> 会将请求同时发送给多个 Panel 模型，由 Judge 模型分析差异后，由合成模型生成最终回答。留空则使用系统默认配置。
+        <div style="font-size:12px;color:var(--muted-foreground);background:var(--secondary);padding:10px;border-radius:8px;">
+          💡 <strong>Fusion</strong> 会将请求同时发送给多个 Panel 模型，由 Judge 模型分析差异后，由合成模型生成最终回答。留空则使用系统默认配置。
         </div>
         </div>
       `);
@@ -3171,7 +3133,7 @@ class ConsoleApp {
       // 绑定 panel checkbox 变化事件
       container.querySelectorAll('.fusion-panel-cb').forEach(cb => {
         cb.addEventListener('change', () => {
-          const count = container.querySelectorAll('.fusion-panel-cb[checked]').length;
+          const count = container.querySelectorAll('.fusion-panel-cb:checked').length;
           document.getElementById('fusionPanelCount').textContent = `${count}${t('个模型已选')}`;
         });
       });
@@ -3179,7 +3141,7 @@ class ConsoleApp {
       // 存储 keyId 并重写保存逻辑
       this._editingKeyModelsId = keyId;
       this._saveKeyModelsOverride = async () => {
-        const panelModels = Array.from(container.querySelectorAll('.fusion-panel-cb[checked]')).map(cb => cb.value);
+        const panelModels = Array.from(container.querySelectorAll('.fusion-panel-cb:checked')).map(cb => cb.value);
         const judgeModelId = document.getElementById('fusionJudgeSelect').value;
         const outerModelId = document.getElementById('fusionOuterSelect').value;
 
@@ -3200,16 +3162,16 @@ class ConsoleApp {
             this._saveKeyModelsOverride = null;
             this.loadApiKeys();
           } else {
-            Dialog.alert(t('保存失败'));
+            alert(t('保存失败'));
           }
         } catch (e) {
           console.error(t('保存 Fusion 配置失败:'), e);
-          Dialog.alert(t('保存失败'));
+          alert(t('保存失败'));
         }
       };
     } catch (error) {
       console.error(t('加载 Fusion 配置失败:'), error);
-      setHTML(container, '<p style="text-align:center;padding:20px;">' + t('加载失败') + '</p>');
+      setHTML(container, '<p style="color:var(--destructive);text-align:center;padding:20px;">' + t('加载失败') + '</p>');
     }
   }
 
@@ -3224,7 +3186,7 @@ class ConsoleApp {
     const visible = document.querySelectorAll('#fusionPanelList .fusion-panel-item:not([style*="display: none"]) .fusion-panel-cb');
     const allChecked = Array.from(visible).every(cb => cb.checked);
     visible.forEach(cb => cb.checked = !allChecked);
-    const count = document.querySelectorAll('#fusionPanelList .fusion-panel-cb[checked]').length;
+    const count = document.querySelectorAll('#fusionPanelList .fusion-panel-cb:checked').length;
     document.getElementById('fusionPanelCount').textContent = `${count}${t('个模型已选')}`;
   }
 
@@ -3236,7 +3198,7 @@ class ConsoleApp {
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/signature`);
       if (!res.ok) {
-        Dialog.alert(t('加载签名配置失败'));
+        alert(t('加载签名配置失败'));
         return;
       }
       const data = await res.json();
@@ -3267,7 +3229,7 @@ class ConsoleApp {
       this.showModal('keySignatureModal');
     } catch (error) {
       console.error(t('加载签名配置失败:'), error);
-      Dialog.alert(t('加载签名配置失败'));
+      alert(t('加载签名配置失败'));
     }
   }
 
@@ -3334,11 +3296,11 @@ class ConsoleApp {
         this.closeModals();
         this.loadApiKeys();  // 刷新列表显示新的签名状态
       } else {
-        Dialog.alert(t('保存失败'));
+        alert(t('保存失败'));
       }
     } catch (error) {
       console.error(t('保存签名配置失败:'), error);
-      Dialog.alert(t('保存失败'));
+      alert(t('保存失败'));
     }
   }
 
@@ -3461,7 +3423,7 @@ class ConsoleApp {
       }
       await this.loadApiKeys();
     } catch (err) {
-      Dialog.alert(t('更新失败: ') + err.message);
+      alert(t('更新失败: ') + err.message);
       await this.loadApiKeys();
     }
   }
@@ -3471,7 +3433,7 @@ class ConsoleApp {
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/schedule`);
       if (!res.ok) {
-        Dialog.alert(t('加载定时配置失败'));
+        alert(t('加载定时配置失败'));
         return;
       }
       const data = await res.json();
@@ -3491,7 +3453,7 @@ class ConsoleApp {
       this.showModal('keyScheduleModal');
     } catch (error) {
       console.error(t('加载定时配置失败:'), error);
-      Dialog.alert(t('加载定时配置失败'));
+      alert(t('加载定时配置失败'));
     }
   }
 
@@ -3505,14 +3467,14 @@ class ConsoleApp {
     const schedule_on_time = document.getElementById('scheduleOnTime').value;
     const schedule_off_time = document.getElementById('scheduleOffTime').value;
     const schedule_timezone = document.getElementById('scheduleTimezone').value;
-    const schedule_days = Array.from(document.querySelectorAll('.schedule-day[checked]')).map(cb => parseInt(cb.value));
+    const schedule_days = Array.from(document.querySelectorAll('.schedule-day:checked')).map(cb => parseInt(cb.value));
 
     if (schedule_enabled && (!schedule_on_time || !schedule_off_time)) {
-      Dialog.alert(t('请设置开启和关闭时间'));
+      alert(t('请设置开启和关闭时间'));
       return;
     }
     if (schedule_enabled && schedule_days.length === 0) {
-      Dialog.alert(t('请至少选择一天'));
+      alert(t('请至少选择一天'));
       return;
     }
 
@@ -3534,11 +3496,11 @@ class ConsoleApp {
         this.loadApiKeys();
       } else {
         const data = await res.json();
-        Dialog.alert(t('保存失败: ') + (data.error || t('未知错误')));
+        alert(t('保存失败: ') + (data.error || t('未知错误')));
       }
     } catch (error) {
       console.error(t('保存定时配置失败:'), error);
-      Dialog.alert(t('保存失败'));
+      alert(t('保存失败'));
     }
   }
 
@@ -3619,8 +3581,8 @@ class ConsoleApp {
         ['Token', fmtTok(summary.tokens), t('总投入')],
         [t('最近活动'), date(summary.last_activity), t('最后一次工作')],
       ];
-      setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="cr-console-project-stat blora-stat"><span class="blora-stat__label">${escapeHtml(label)}</span><strong class="blora-stat__value">${value}</strong><small class="blora-text-muted">${sub}</small></div>`).join(''));
-      setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)}${t('次 ·')}${fmtTok(p.tokens)}${t('Token · 最近')}${date(p.last_activity)}</small></span><span class="project-work-arrow"><span data-icon="arrow-right" aria-hidden="true"></span></span></button>`).join(''));
+      setHTML(summaryEl, cards.map(([label, value, sub]) => `<div class="project-work-stat"><span>${escapeHtml(label)}</span><strong>${value}</strong><small>${sub}</small></div>`).join(''));
+      setHTML(recentEl, projects.slice(0, 4).map((p, i) => `<button class="project-work-recent-item" type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)})"><span class="project-work-rank">0${i + 1}</span><span class="project-work-recent-main"><strong>${escapeHtml(this.projectDisplayName(p.workspace_path))}</strong><small>${fmt(p.requests)}${t('次 ·')}${fmtTok(p.tokens)}${t('Token · 最近')}${date(p.last_activity)}</small></span><span class="project-work-arrow">→</span></button>`).join(''));
       setHTML(projectsEl, projects.map((p) => `<article class="project-work-project-card"><div class="project-work-project-top"><div class="project-work-project-icon">${escapeHtml(this.projectProjectMark(p.workspace_path))}</div><div class="project-work-project-title"><h4>${escapeHtml(this.projectDisplayName(p.workspace_path))}</h4><button type="button" onclick="app.copyProjectPath(${JSON.stringify(p.workspace_path)}${t(')" title="' + t('复制工作区路径') + '">')}${escapeHtml(p.workspace_path)}${'</button></div></div><div class="project-work-project-metrics"><div><span>' + t('请求')}</span><strong>${fmt(p.requests)}</strong></div><div><span>Token</span><strong>${fmtTok(p.tokens)}${'</strong></div><div><span>' + t('活跃')}</span><strong>${fmt(p.active_days)}${t('天')}</strong></div><div><span>最近</span><strong>${date(p.last_activity)}</strong></div></div><div class="project-work-project-footer"><span>${Object.keys(p.sources || {}).map(escapeHtml).join(' · ') || t('未标记客户端')}</span><span>${money(p.cost)}${t('积分')}</span></div></article>`).join(''));
       if (typeof Chart !== 'undefined') this._upsertChart('_userProjectDailyChart', document.getElementById('userProjectDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('AI 请求'), data: (data.daily || []).map(r => r.requests), borderColor: readCssVar('--chart-6', '#0f766e'), backgroundColor: 'rgba(15,118,110,.14)', fill: true, tension: .3 }, { label: t('活跃项目'), data: (data.daily || []).map(r => r.projects), borderColor: 'var(--warning)', backgroundColor: 'transparent', fill: false, tension: .3, yAxisID: 'projects' }] }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, projects: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } });
     } catch (error) {
@@ -3666,22 +3628,22 @@ class ConsoleApp {
       const s = data.summary || {};
       if (!data || data.error) throw new Error(data.error || t('消息统计返回数据为空'));
       if (!(data.by_workspace || []).length && !(data.daily || []).length) {
-        const empty = '<div class="empty-state" style="padding:28px;text-align:center;">' + t('所选时间范围内暂无可分析的项目消息记录') + '</div>';
+        const empty = '<div class="empty-state" style="padding:28px;text-align:center;color:var(--muted-foreground);">' + t('所选时间范围内暂无可分析的项目消息记录') + '</div>';
         [summaryEl, blockEl, sourceEl].forEach((el) => { if (el) setHTML(el, empty); });
         return;
       }
-      const row = (label, value) => `<div style="display:flex;justify-content:space-between;padding:8px 0;"><span >${label}</span><strong>${value}</strong></div>`;
+      const row = (label, value) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);">${label}</span><strong>${value}</strong></div>`;
       const analysisStatus = s.analysis_status || {};
       const pendingLabel = analysisStatus.pending_requests ? row(t('后台待分析'), analysisStatus.pending_requests.toLocaleString()) : '';
       const fmtTok = (v) => { const n = Number(v || 0); return `<span title="${n.toLocaleString()}">${this._formatBigNumber(n)}</span>`; };
       setHTML(document.getElementById('userMessageStatsSummary'), [row(t('活跃请求'), s.analyzed_requests || 0), row(t('项目数'), (data.by_workspace || []).length), row(t('活跃天数'), s.active_days || 0), row(t('日均请求'), Number(s.avg_daily_requests || 0).toFixed(1)), row(t('总 Token'), fmtTok(s.total_tokens)), row(t('Git 状态率'), `${((s.git_rate || 0) * 100).toFixed(1)}%`), pendingLabel].join(''));
-      const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || ('<tr><td colspan="4" style="text-align:center;padding:18px;">' + t('暂无数据') + '</td></tr>')}</tbody></table></div>`;
+      const table = (headers, rows) => `<div style="overflow:auto;"><table class="stats-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows || ('<tr><td colspan="4" style="text-align:center;padding:18px;color:var(--muted-foreground);">' + t('暂无数据') + '</td></tr>')}</tbody></table></div>`;
       setHTML(document.getElementById('userMessageStatsBlockTable'), table([t('区块'), t('请求数'), t('出现次数')], (data.by_block || []).map(r => `<tr><td><code>${escapeHtml(r.block)}</code></td><td>${r.requests}</td><td>${r.occurrences}</td></tr>`).join('')));
       setHTML(document.getElementById('userMessageStatsSourceTable'), table(['Harness', t('请求数'), t('平均消息'), t('平均字符'), 'Token'], (data.by_source || []).map(r => { const n = Number(r.tokens || 0); return `<tr><td>${escapeHtml(r.request_source)}</td><td>${r.requests}</td><td>${(r.messages / Math.max(r.requests, 1)).toFixed(1)}</td><td>${Math.round(r.characters / Math.max(r.requests, 1)).toLocaleString()}</td><td title="${n.toLocaleString()}">${this._formatBigNumber(n)}</td></tr>`; }).join('')));
       if (typeof Chart !== 'undefined') this._upsertChart('_userMessageStatsDailyChart', document.getElementById('userMessageStatsDailyChart'), 'line', { labels: (data.daily || []).map(r => r.date), datasets: [{ label: t('请求数'), data: (data.daily || []).map(r => r.requests), borderColor: 'var(--info)', backgroundColor: 'rgba(59,130,246,.15)', fill: true, tension: .25 }, { label: 'Token', data: (data.daily || []).map(r => r.tokens), borderColor: 'var(--purple)', fill: false, tension: .25 }] }, { responsive: true, maintainAspectRatio: false });
     } catch (error) {
       console.error(error);
-      setHTML(document.getElementById('userMessageStatsSummary'), `<p >${escapeHtml(error.message)}</p>`);
+      setHTML(document.getElementById('userMessageStatsSummary'), `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
     }
   }
 
@@ -3845,7 +3807,7 @@ class ConsoleApp {
       console.error(t('加载排行榜失败:'), error);
       const container = document.getElementById('leaderboardContent');
       if (container) {
-        setHTML(container, '<div class="empty-state"><p >' + t('加载失败，请稍后重试') + '</p></div>');
+        setHTML(container, '<div class="empty-state"><p style="color:var(--destructive);">' + t('加载失败，请稍后重试') + '</p></div>');
       }
     }
   }
@@ -3888,7 +3850,7 @@ class ConsoleApp {
           <div class="leaderboard-user-cell">
             ${avatarHtml}
             <span class="leaderboard-username">${escapeHtml(u.username)}</span>
-            ${isCurrent ? '<span class="badge badge-info" style="margin-left:6px;">' + t('我') + '</span>' : ''}
+            ${isCurrent ? '<span class="badge badge-info" style="margin-left:6px;font-size:11px;">' + t('我') + '</span>' : ''}
           </div>
         </td>
         <td class="leaderboard-stat-cell">${u.totalRequests.toLocaleString()}</td>
@@ -3961,7 +3923,7 @@ class ConsoleApp {
   }
 
   async testModel(modelId, buttonEl) {
-    if (!modelId) { Dialog.alert(t('模型 ID 为空，请刷新重试')); return; }
+    if (!modelId) { alert(t('模型 ID 为空，请刷新重试')); return; }
 
     if (!await this._confirmTest()) return;
 
@@ -3986,7 +3948,7 @@ class ConsoleApp {
   }
 
   _confirmTest() {
-    return Dialog.confirm(t('确认'), t('模型测试将发送一条真实请求（"Hi"，max_tokens=16）到该模型，\n并按照正常用量扣除积分。是否继续？'));
+    return confirm(t('模型测试将发送一条真实请求（"Hi"，max_tokens=16）到该模型，\n并按照正常用量扣除积分。是否继续？'));
   }
 
   _formatTestTooltip(testedAt) {
@@ -4129,7 +4091,7 @@ class ConsoleApp {
   _renderProviderTestSummary(provider) {
     const summary = this._computeProviderTestSummary(provider);
     const formatted = this._formatProviderTestSummary(summary);
-    return `<span class="provider-test-summary ${formatted.className}" data-variant="${formatted.className === 'pass' ? 'success' : formatted.className === 'fail' ? 'danger' : formatted.className === 'mixed' ? 'warning' : 'neutral'}" title="${escapeHtml(formatted.title)}">${escapeHtml(formatted.text)}</span>`;
+    return `<span class="blora-badge provider-test-summary ${formatted.className}" data-variant="${formatted.className === 'pass' ? 'success' : formatted.className === 'fail' ? 'danger' : formatted.className === 'mixed' ? 'warning' : 'neutral'}" title="${escapeHtml(formatted.title)}">${escapeHtml(formatted.text)}</span>`;
   }
 
   _refreshProviderTestSummary(team, provider) {
@@ -4188,7 +4150,7 @@ class ConsoleApp {
         }
       }
     }
-    if (modelIds.length === 0) { Dialog.alert(t('暂无可测试的模型')); return; }
+    if (modelIds.length === 0) { alert(t('暂无可测试的模型')); return; }
     await this._runBatchTest(modelIds, `${t('正在测试全部')}${modelIds.length}${t('个模型...')}`);
   }
 
@@ -4204,7 +4166,7 @@ class ConsoleApp {
         if (model.model_id) modelIds.push(model.model_id);
       }
     }
-    if (modelIds.length === 0) { Dialog.alert(t('当前 Team 无可测试的模型')); return; }
+    if (modelIds.length === 0) { alert(t('当前 Team 无可测试的模型')); return; }
     await this._runBatchTest(modelIds, `${t('正在测试当前 Team')}${modelIds.length}${t('个模型...')}`);
   }
 
@@ -4227,7 +4189,7 @@ class ConsoleApp {
         }
       }
     }
-    if (modelIds.length === 0) { Dialog.alert(t('当前供应商无可测试的模型')); return; }
+    if (modelIds.length === 0) { alert(t('当前供应商无可测试的模型')); return; }
     await this._runBatchTest(modelIds, `${t('正在测试')}${modelIds.length}${t('个模型...')}`);
   }
 
@@ -4258,7 +4220,7 @@ class ConsoleApp {
         if (model.model_id) modelIds.push(model.model_id);
       }
     }
-    if (modelIds.length === 0) { Dialog.alert(t('此 Team 下没有可测试的模型')); return; }
+    if (modelIds.length === 0) { alert(t('此 Team 下没有可测试的模型')); return; }
     await this._runBatchTest(modelIds, `${t('正在测试 Team「')}${escapeHtml(team.team_name)}」${modelIds.length}${t('个模型...')}`);
   }
 
@@ -4278,7 +4240,7 @@ class ConsoleApp {
     for (const model of provider.models || []) {
       if (model.model_id) modelIds.push(model.model_id);
     }
-    if (modelIds.length === 0) { Dialog.alert(t('此供应商下没有可测试的模型')); return; }
+    if (modelIds.length === 0) { alert(t('此供应商下没有可测试的模型')); return; }
     await this._runBatchTest(modelIds, `${t('正在测试供应商「')}${escapeHtml(provider.provider_name)}」${modelIds.length}${t('个模型...')}`);
   }
 
@@ -4293,9 +4255,9 @@ class ConsoleApp {
     this.showModal('modelTestModal');
     setHTML(body, `
       <div style="text-align:center;padding:40px 20px;">
-        <div style="display:inline-block;width:36px;height:36px;animation:spin 0.8s linear infinite;margin-bottom:20px;"></div>
-        <p style="margin:0 0 8px;">${loadingMsg}</p>
-        <p style="margin:0;" id="modelTestProgressCount">正在测试中...</p>
+        <div style="display:inline-block;width:36px;height:36px;border:3px solid #222;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:20px;"></div>
+        <p style="font-size:15px;color:var(--foreground);margin:0 0 8px;font-weight:500;">${loadingMsg}</p>
+        <p style="font-size:13px;color:var(--muted-foreground);margin:0;" id="modelTestProgressCount">正在测试中...</p>
       </div>
       <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
     `);
@@ -4318,7 +4280,7 @@ class ConsoleApp {
       this._renderTestResults(results, modelIds.length);
     } catch (e) {
       cancelAnimationFrame(animId);
-      setHTML(body, `${'<div class="empty-state"><p >' + t('测试失败:')}${escapeHtml(e.message)}</p></div>`);
+      setHTML(body, `${'<div class="empty-state"><p style="color:var(--destructive);">' + t('测试失败:')}${escapeHtml(e.message)}</p></div>`);
     }
   }
 
@@ -4357,12 +4319,12 @@ class ConsoleApp {
     const summaryHtml = `
       <div class="model-test-summary">
         <div class="model-test-summary-item">
-          <div class="model-test-summary-value" >${passed}</div>
+          <div class="model-test-summary-value" style="color:var(--success);">${passed}</div>
           <div class="model-test-summary-label">通过</div>
         </div>
         ${failed > 0 ? `
         <div class="model-test-summary-item">
-          <div class="model-test-summary-value" >${failed}</div>
+          <div class="model-test-summary-value" style="color:var(--destructive);">${failed}</div>
           <div class="model-test-summary-label">失败</div>
         </div>` : ''}
         <div class="model-test-summary-item">
@@ -4371,7 +4333,7 @@ class ConsoleApp {
         </div>
       </div>
       <div class="model-test-summary-bar">
-        <div class="model-test-summary-bar-fill" style="width:${passPct}%;${failed > 0 ? 'background:linear-gradient(90deg,var(--success),' + (passPct > 50 ? 'var(--status-warn)' : 'var(--destructive)') + ')' : ''};"></div>
+        <div class="model-test-summary-bar-fill" style="width:${passPct}%;${failed > 0 ? 'background:linear-gradient(90deg,var(--success),' + (passPct > 50 ? 'var(--status-warn)' : 'var(--destructive)') + ')' : ''}"></div>
       </div>
     `;
 
@@ -4385,7 +4347,7 @@ class ConsoleApp {
             <div class="model-test-row-icon model-test-result-pass">&#10003;</div>
             <div class="model-test-row-model">
               ${escapeHtml(r.model)}
-              <div style="margin-top:1px;">${providerLabel}</div>
+              <div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${providerLabel}</div>
             </div>
             <div class="model-test-row-stats">
               <div class="model-test-stat">
@@ -4406,7 +4368,7 @@ class ConsoleApp {
       } else {
         const modelLabel = r.model || r.modelId || t('未知模型');
         const providerLabel = r.provider
-          ? `<div style="margin-top:1px;">${renderProviderNameTag(r.provider, { tag: false })}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
+          ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:1px;">${renderProviderNameTag(r.provider, { tag: false })}${r.provider_url ? ` <span class="model-test-provider-url">(${escapeHtml(r.provider_url)})</span>` : ''}</div>`
           : '';
         const errorText = r.error || t('失败');
         return `
@@ -4491,7 +4453,7 @@ class ConsoleApp {
       const cacheHitRate = totalPrompt > 0 ? (totalCached / totalPrompt * 100) : 0;
       const savedTokens = totalCached; // 缓存命中的 token 本应按原价计费，命中后节省了 90%
       document.getElementById('cacheHitPercent').textContent = cacheHitRate.toFixed(1) + '%';
-      document.getElementById('cacheHitBar').setAttribute('value', String(Math.max(0, Math.min(cacheHitRate, 100))));
+      document.getElementById('cacheHitBar').style.width = Math.min(cacheHitRate, 100) + '%';
       document.getElementById('cacheHitTokens').textContent = this._formatBigNumber(totalCached);
       document.getElementById('cacheTotalPrompt').textContent = this._formatBigNumber(totalPrompt);
       document.getElementById('cacheSavedTokens').textContent = this._formatBigNumber(savedTokens);
@@ -4604,8 +4566,8 @@ class ConsoleApp {
               <span class="stats-insight-name">${this._usageRequestSourceBadge(s.request_source)}</span>
               <span class="stats-insight-value">${requests.toLocaleString()} · ${pct}%</span>
             </div>
-            <div style="height:4px;overflow:hidden;">
-              <div style="height:100%;width:${barW}%;"></div>
+            <div style="height:4px;background:var(--muted);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:${barW}%;background:${meta.color};border-radius:2px;"></div>
             </div>
           </div>`;
         }).join(''));
@@ -4629,8 +4591,8 @@ class ConsoleApp {
               <span class="stats-insight-name">🧩 ${dim}</span>
               <span class="stats-insight-value">${requests.toLocaleString()}</span>
             </div>
-            <div style="height:4px;overflow:hidden;">
-              <div style="height:100%;width:${barW}%;"></div>
+            <div style="height:4px;background:var(--muted);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:${barW}%;background:var(--cyan);border-radius:2px;"></div>
             </div>
           </div>`;
         }).join(''));
@@ -4872,13 +4834,13 @@ class ConsoleApp {
       const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
       const cacheColor = cachedTokens > 0 ? 'var(--success)' : 'var(--muted-foreground)';
       return `<tr>
-        <td style="padding:8px;">${new Date(r.date).toLocaleDateString('zh-CN')}</td>
-        <td style="text-align:right;padding:8px;">${parseInt(r.requests).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;" title="${promptTokens.toLocaleString()}">${this._formatBigNumber(promptTokens)}</td>
-        <td style="text-align:right;padding:8px;" title="${parseInt(r.completion_tokens || 0).toLocaleString()}">${this._formatBigNumber(parseInt(r.completion_tokens || 0))}</td>
-        <td style="text-align:right;padding:8px;"><span  title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span >(${cacheRate}%)</span></td>
-        <td style="text-align:right;padding:8px;">${parseFloat(r.cost).toFixed(4)}</td>
-        <td style="text-align:right;padding:8px;">${Math.round(parseFloat(r.avg_latency || 0))}ms</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);">${new Date(r.date).toLocaleDateString('zh-CN')}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(r.requests).toLocaleString()}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${promptTokens.toLocaleString()}">${this._formatBigNumber(promptTokens)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${parseInt(r.completion_tokens || 0).toLocaleString()}">${this._formatBigNumber(parseInt(r.completion_tokens || 0))}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);"><span style="color:${cacheColor};" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span></td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseFloat(r.cost).toFixed(4)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${Math.round(parseFloat(r.avg_latency || 0))}ms</td>
       </tr>`;
     }).join(''));
   }
@@ -4893,13 +4855,13 @@ class ConsoleApp {
       const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
       const cacheColor = cachedTokens > 0 ? 'var(--success)' : 'var(--muted-foreground)';
       return `<tr>
-        <td style="padding:8px;">${m.model_name || t('(已删除)')}</td>
-        <td style="text-align:right;padding:8px;">${parseInt(m.requests).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;" title="${promptTokens.toLocaleString()}">${this._formatBigNumber(promptTokens)}</td>
-        <td style="text-align:right;padding:8px;" title="${parseInt(m.completion_tokens || 0).toLocaleString()}">${this._formatBigNumber(parseInt(m.completion_tokens || 0))}</td>
-        <td style="text-align:right;padding:8px;"><span  title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span >(${cacheRate}%)</span></td>
-        <td style="text-align:right;padding:8px;">¥${parseFloat(m.cost).toFixed(4)}</td>
-        <td style="text-align:right;padding:8px;">${Math.round(parseFloat(m.avg_latency || 0))}ms</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);font-size:12px;">${m.model_name || t('(已删除)')}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(m.requests).toLocaleString()}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${promptTokens.toLocaleString()}">${this._formatBigNumber(promptTokens)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${parseInt(m.completion_tokens || 0).toLocaleString()}">${this._formatBigNumber(parseInt(m.completion_tokens || 0))}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);"><span style="color:${cacheColor};" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span></td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">¥${parseFloat(m.cost).toFixed(4)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${Math.round(parseFloat(m.avg_latency || 0))}ms</td>
       </tr>`;
     }).join(''));
   }
@@ -4912,12 +4874,12 @@ class ConsoleApp {
       const cachedTokens = parseInt(k.cached_tokens || 0);
       const kTokens = parseInt(k.tokens || 0);
       return `<tr>
-      <td style="padding:8px;">${k.key_name || 'API Key'}</td>
-      <td style="padding:8px;">${k.key_prefix || ''}****</td>
-      <td style="text-align:right;padding:8px;">${parseInt(k.requests).toLocaleString()}</td>
-      <td style="text-align:right;padding:8px;" title="${kTokens.toLocaleString()}">${this._formatBigNumber(kTokens)}</td>
-      <td style="text-align:right;padding:8px;">${cachedTokens > 0 ? '<span  title="' + cachedTokens.toLocaleString() + '">' + this._formatBigNumber(cachedTokens) + '</span>' : '-'}</td>
-      <td style="text-align:right;padding:8px;">¥${parseFloat(k.cost).toFixed(4)}</td>
+      <td style="padding:8px;border-bottom:1px solid var(--border);">${k.key_name || 'API Key'}</td>
+      <td style="padding:8px;border-bottom:1px solid var(--border);font-family:monospace;">${k.key_prefix || ''}****</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${parseInt(k.requests).toLocaleString()}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);" title="${kTokens.toLocaleString()}">${this._formatBigNumber(kTokens)}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${cachedTokens > 0 ? '<span style="color:var(--success);" title="' + cachedTokens.toLocaleString() + '">' + this._formatBigNumber(cachedTokens) + '</span>' : '-'}</td>
+      <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">¥${parseFloat(k.cost).toFixed(4)}</td>
     </tr>`;
     }).join(''));
 
@@ -5022,7 +4984,7 @@ class ConsoleApp {
     const tbody = document.getElementById('statsSourceTableBody');
     if (!tbody) return;
     if (!d || !d.bySource || d.bySource.length === 0) {
-      setHTML(tbody, '<tr><td colspan="10" style="text-align:center;padding:24px;">' + t('暂无客户端数据') + '</td></tr>');
+      setHTML(tbody, '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--muted-foreground);">' + t('暂无客户端数据') + '</td></tr>');
       return;
     }
     setHTML(tbody, d.bySource.map((s) => {
@@ -5031,26 +4993,26 @@ class ConsoleApp {
       const sid = String(s.request_source || 'unknown');
       const latency = s.avg_latency != null ? `${Math.round(parseFloat(s.avg_latency))}ms` : '-';
       return `<tr>
-        <td style="padding:8px;">${this._usageRequestSourceBadge(sid)}</td>
-        <td style="text-align:right;padding:8px;">${reqs.toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;">
+        <td style="padding:8px;border-bottom:1px solid var(--border);">${this._usageRequestSourceBadge(sid)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${reqs.toLocaleString()}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">
           <div style="display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;">
-            <span >${share}%</span>
-            <span style="display:inline-block;width:48px;height:4px;overflow:hidden;vertical-align:middle;">
-              <span style="display:block;height:100%;width:${Math.min(100, share)}%;"></span>
+            <span style="font-variant-numeric:tabular-nums;">${share}%</span>
+            <span style="display:inline-block;width:48px;height:4px;background:var(--muted);border-radius:2px;overflow:hidden;vertical-align:middle;">
+              <span style="display:block;height:100%;width:${Math.min(100, share)}%;background:${this._usageRequestSourceMeta(sid).color};"></span>
             </span>
           </div>
         </td>
         ${(() => { const t = parseInt(s.tokens || 0, 10), p = parseInt(s.prompt_tokens || 0, 10), c = parseInt(s.completion_tokens || 0, 10), cc = parseInt(s.cached_tokens || 0, 10); return `
-        <td style="text-align:right;padding:8px;" title="${t.toLocaleString()}">${this._formatBigNumber(t)}</td>
-        <td style="text-align:right;padding:8px;" title="${p.toLocaleString()}">${this._formatBigNumber(p)}</td>
-        <td style="text-align:right;padding:8px;" title="${c.toLocaleString()}">${this._formatBigNumber(c)}</td>
-        <td style="text-align:right;padding:8px;" title="${cc.toLocaleString()}">${this._formatBigNumber(cc)}</td>`; })()}
-        <td style="text-align:right;padding:8px;">${parseFloat(s.cost || 0).toFixed(4)}</td>
-        <td style="text-align:right;padding:8px;">${latency}</td>
-        <td style="padding:8px;white-space:nowrap;">
-          <button type="button" class="blora-button" style="padding:2px 8px;" onclick="app.filterStatsBySource('${escapeHtml(sid)}')" data-variant="secondary" data-size="sm">筛选</button>
-          <button type="button" class="blora-button" style="padding:2px 8px;margin-left:4px;" onclick="app.jumpToUsageLogsBySource('${escapeHtml(sid)}')" data-variant="secondary" data-size="sm">记录</button>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;" title="${t.toLocaleString()}">${this._formatBigNumber(t)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;" title="${p.toLocaleString()}">${this._formatBigNumber(p)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;" title="${c.toLocaleString()}">${this._formatBigNumber(c)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;" title="${cc.toLocaleString()}">${this._formatBigNumber(cc)}</td>`; })()}
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseFloat(s.cost || 0).toFixed(4)}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);">${latency}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);white-space:nowrap;">
+          <button type="button" class="blora-button" style="font-size:11px;padding:2px 8px;" onclick="app.filterStatsBySource('${escapeHtml(sid)}')" data-variant="secondary" data-size="sm">筛选</button>
+          <button type="button" class="blora-button" style="font-size:11px;padding:2px 8px;margin-left:4px;" onclick="app.jumpToUsageLogsBySource('${escapeHtml(sid)}')" data-variant="secondary" data-size="sm">记录</button>
         </td>
       </tr>`;
     }).join(''));
@@ -5062,17 +5024,17 @@ class ConsoleApp {
     if (!tbody) return;
     const rows = d?.bySourceModel || [];
     if (rows.length === 0) {
-      setHTML(tbody, '<tr><td colspan="5" style="text-align:center;padding:24px;">' + t('暂无交叉数据') + '</td></tr>');
+      setHTML(tbody, '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted-foreground);">' + t('暂无交叉数据') + '</td></tr>');
       return;
     }
     setHTML(tbody, rows.map((r) => {
       const modelLabel = r.model_name || r.model_id || t('(未知)');
       return `<tr>
-        <td style="padding:8px;">${this._usageRequestSourceBadge(r.request_source)}</td>
-        <td style="padding:8px;">${escapeHtml(String(modelLabel))}</td>
-        <td style="text-align:right;padding:8px;">${parseInt(r.requests || 0, 10).toLocaleString()}</td>
-        <td style="text-align:right;padding:8px;" title="${parseInt(r.tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.tokens || 0, 10))}</td>
-        <td style="text-align:right;padding:8px;">${parseFloat(r.cost || 0).toFixed(4)}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);">${this._usageRequestSourceBadge(r.request_source)}</td>
+        <td style="padding:8px;border-bottom:1px solid var(--border);">${escapeHtml(String(modelLabel))}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseInt(r.requests || 0, 10).toLocaleString()}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;" title="${parseInt(r.tokens || 0, 10).toLocaleString()}">${this._formatBigNumber(parseInt(r.tokens || 0, 10))}</td>
+        <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;">${parseFloat(r.cost || 0).toFixed(4)}</td>
       </tr>`;
     }).join(''));
   }
@@ -5119,9 +5081,15 @@ class ConsoleApp {
   }
 
   switchStatsTab(tab) {
-    document.getElementById('consoleStatsTabs')?.setAttribute('value', tab);
+    document.querySelectorAll('.stats-tab-bar button, .stats-tab').forEach(btn => {
+      btn.classList.remove('active');
+    });
     document.querySelectorAll('.stats-tab-content').forEach(c => { c.style.display = 'none'; });
 
+    const activeBtn = document.querySelector(`.stats-tab-bar button[onclick*="${tab}"], .stats-tab[onclick*="${tab}"]`);
+    if (activeBtn) {
+      activeBtn.classList.add('active');
+    }
     const tabContent = document.getElementById('statsTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
     if (tabContent) tabContent.style.display = 'block';
 
@@ -5214,7 +5182,7 @@ class ConsoleApp {
   _harnessIconHtml(source, size = 14) {
     const meta = this._usageRequestSourceMeta(source);
     if (!meta.icon) {
-      return `<span class="library-key-bubble-dot" style="width:${Math.max(6, size / 2)}px;height:${Math.max(6, size / 2)}px;"></span>`;
+      return `<span class="library-key-bubble-dot" style="background:${meta.color};width:${Math.max(6, size / 2)}px;height:${Math.max(6, size / 2)}px;"></span>`;
     }
     const s = Number(size) || 14;
     return `<img class="harness-tool-icon" src="${meta.icon}" alt="" width="${s}" height="${s}" loading="lazy" decoding="async">`;
@@ -5228,7 +5196,7 @@ class ConsoleApp {
 
   _usageRequestSourceBadge(source) {
     const meta = this._usageRequestSourceMeta(source);
-    return `<span style="display:inline-block;padding:2px 8px;white-space:nowrap;">${escapeHtml(meta.label)}</span>`;
+    return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:color-mix(in srgb, ${meta.color} 15%, transparent);color:${meta.color};">${escapeHtml(meta.label)}</span>`;
   }
 
   // ==================== 会话 Tab（经网关的客户端会话聚合，只读） ====================
@@ -5309,7 +5277,7 @@ class ConsoleApp {
       : '';
     const previewSource = item.summary || item.lastMessagePreview || '';
     const previewText = String(previewSource).split(/[。.!！？?\n]/)[0].slice(0, 60);
-    const preview = previewText ? `<div class="session-card__preview blora-card__desc" title="${escapeHtml(previewSource)}">${escapeHtml(previewText)}</div>` : '';
+    const preview = previewText ? `<div class="session-card__preview" title="${escapeHtml(previewSource)}">${escapeHtml(previewText)}</div>` : '';
     const pressureBadge = item.pressureLevel === 'critical'
       ? `<span class="blora-badge" data-variant="danger" title="${t('上下文压力')}">${t('高压')}</span>`
       : item.pressureLevel === 'warning'
@@ -5321,7 +5289,7 @@ class ConsoleApp {
     return `
       <button type="button" class="blora-card session-card" data-variant="hover" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
         <div class="session-card__body">
-          <div class="session-card__title blora-card__title">
+          <div class="session-card__title">
             ${this._harnessIconHtml(item.harness, 16)}
             <span class="session-card__harness">${escapeHtml(harnessMeta.label)}</span>
             <span class="session-card__key" title="${escapeHtml(key)}">${escapeHtml(key.slice(0, 18))}…</span>
@@ -5398,7 +5366,7 @@ class ConsoleApp {
     return `
       <button type="button" class="blora-card session-card" data-variant="hover" data-session-key="${escapeHtml(key)}" onclick="app.showSessionDetail('${keyAttr}')">
         <div class="session-card__body">
-          <div class="session-card__title blora-card__title">
+          <div class="session-card__title">
             ${this._harnessIconHtml(item.harness, 16)}
             <span class="session-card__harness">${escapeHtml(harnessMeta.label)}</span>
             <span class="session-card__key" title="${escapeHtml(key)}">${escapeHtml(key.slice(0, 18))}…</span>
@@ -5483,7 +5451,7 @@ class ConsoleApp {
     const previousScrollY = page > 1 ? window.scrollY : 0;
     let requestSucceeded = false;
     if (page === 1) {
-      setHTML(timeline, `<li class="session-detail-skeleton" aria-busy="true"><div class="blora-skeleton" data-variant="text" style="width:65%;"></div><div class="blora-skeleton" data-variant="text" style="width:90%;"></div><div class="blora-skeleton" data-variant="text" style="width:78%;"></div></li>`);
+      setHTML(timeline, `<li class="session-detail-skeleton" aria-busy="true"><div class="blora-skeleton" data-variant="text" style="width:65%"></div><div class="blora-skeleton" data-variant="text" style="width:90%"></div><div class="blora-skeleton" data-variant="text" style="width:78%"></div></li>`);
     } else if (moreBtn) {
       this._updateSessionMoreButton(moreBtn, 'loading');
     }
@@ -5799,7 +5767,7 @@ class ConsoleApp {
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
 
       if (!data.items || data.items.length === 0) {
-        setHTML(container, '<p style="text-align:center;padding:40px;">' + t('暂无提示词记录') + '</p>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无提示词记录') + '</p>');
         return;
       }
       this._promptsCache = data.items;
@@ -5821,14 +5789,14 @@ class ConsoleApp {
             ${data.items.map((item, idx) => `
               <tr style="cursor:pointer;" data-prompt-idx="${idx}" title="${t('点击查看详情')}">
                 <td class="cell-clip" style="max-width:280px;">
-                  <div style="display:flex;align-items:center;gap:6px;">📄 ${escapeHtml(item.file || t('(未知文件)'))}${item.truncated ? `<span >(${t('截断存储')})</span>` : ''}</div>
-                  <div style="margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.preview || '')}</div>
+                  <div style="font-weight:500;display:flex;align-items:center;gap:6px;">📄 ${escapeHtml(item.file || t('(未知文件)'))}${item.truncated ? `<span style="font-size:11px;color:var(--muted-foreground);">(${t('截断存储')})</span>` : ''}</div>
+                  <div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.preview || '')}</div>
                 </td>
                 <td>${this._usageRequestSourceBadge(item.source)}</td>
-                <td style="white-space:nowrap;">${(parseInt(item.chars, 10) || 0).toLocaleString()}</td>
-                <td style="white-space:nowrap;">${(parseInt(item.occurrence_count, 10) || 0).toLocaleString()}</td>
-                <td style="white-space:nowrap;">${escapeHtml(new Date(item.first_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
-                <td style="white-space:nowrap;">${escapeHtml(new Date(item.last_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
+                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.chars, 10) || 0).toLocaleString()}</td>
+                <td style="white-space:nowrap;font-variant-numeric:tabular-nums;">${(parseInt(item.occurrence_count, 10) || 0).toLocaleString()}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.first_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
+                <td style="white-space:nowrap;font-size:12px;">${escapeHtml(new Date(item.last_seen).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
                 <td class="cell-actions"><button type="button" class="blora-button" data-prompt-view-idx="${idx}" data-variant="secondary" data-size="sm">${t('查看内容')}</button></td>
               </tr>
             `).join('')}
@@ -5852,7 +5820,7 @@ class ConsoleApp {
       });
     } catch (error) {
       console.error(t('加载提示词失败:'), error);
-      setHTML(container, `<p style="text-align:center;padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -5889,7 +5857,7 @@ class ConsoleApp {
         [t('文件名'), escapeHtml(data.file || t('(未知文件)'))],
         [t('客户端'), this._usageRequestSourceBadge(data.source)],
         [t('字符数'), (parseInt(data.chars, 10) || 0).toLocaleString()],
-        [t('出现次数'), `${(parseInt(data.occurrence_count, 10) || 0).toLocaleString()}${data.truncated ? ` <span >(${t('截断存储')})</span>` : ''}`],
+        [t('出现次数'), `${(parseInt(data.occurrence_count, 10) || 0).toLocaleString()}${data.truncated ? ` <span style="font-size:11px;color:var(--muted-foreground);">(${t('截断存储')})</span>` : ''}`],
         [t('注入位置'), (data.positions || []).length ? escapeHtml(data.positions.join(', ')) : '-'],
         [t('首次出现'), escapeHtml(fmtTime(data.first_seen))],
         [t('最近出现'), escapeHtml(fmtTime(data.last_seen))],
@@ -5898,15 +5866,15 @@ class ConsoleApp {
       let refsHtml = '';
       if (Array.isArray(data.recent_refs) && data.recent_refs.length) {
         refsHtml = `
-          <h4 style="margin:16px 0 8px;">${t('最近引用记录')}（${t('最近')} ${data.recent_refs.length} ${t('条')}）</h4>
+          <h4 style="margin:16px 0 8px;font-size:14px;">${t('最近引用记录')}（${t('最近')} ${data.recent_refs.length} ${t('条')}）</h4>
           <div style="overflow-x:auto;">
             <table>
               <thead><tr><th>${t('记录 ID')}</th><th>${t('时间')}</th><th>${t('用户')}</th><th>${t('模型')}</th><th>${t('客户端')}</th></tr></thead>
               <tbody>
                 ${data.recent_refs.map(r => `
                   <tr>
-                    <td><code >${escapeHtml(String(r.record_id))}</code></td>
-                    <td style="white-space:nowrap;">${escapeHtml(fmtTime(r.created_at))}</td>
+                    <td><code style="font-size:12px;">${escapeHtml(String(r.record_id))}</code></td>
+                    <td style="white-space:nowrap;font-size:12px;">${escapeHtml(fmtTime(r.created_at))}</td>
                     <td class="cell-clip" style="max-width:220px;">${escapeHtml(r.model_id || '-')}</td>
                     <td>${this._usageRequestSourceBadge(r.request_source)}</td>
                   </tr>
@@ -5918,21 +5886,21 @@ class ConsoleApp {
 
       setHTML(content, `
         ${rows.map(([label, value]) => `
-          <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;">
-            <span >${label}</span>
-            <span >${value}</span>
+          <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
+            <span style="font-size:14px;">${value}</span>
           </div>
         `).join('')}
-        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:12px 0 0;">
-          <span >${t('完整内容')}</span>
-          <pre id="promptFullContent" style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(data.content || '')}</pre>
+        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:12px 0 0;border-bottom:1px solid var(--border);">
+          <span style="color:var(--muted-foreground);font-size:13px;">${t('完整内容')}</span>
+          <pre id="promptFullContent" style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(data.content || '')}</pre>
         </div>
         <div style="padding:8px 0;"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.copyPromptContent(this)">⧉ ${t('复制内容')}</button></div>
         ${refsHtml}
       `);
     } catch (error) {
       console.error(t('加载提示词详情失败:'), error);
-      setHTML(content, `<p style="text-align:center;padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+      setHTML(content, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -5948,9 +5916,9 @@ class ConsoleApp {
       this._injectPrompts = data.items || [];
       setHTML(container, this._injectPrompts.length
         ? this._injectPrompts.map(item => this.renderInjectPromptCard(item)).join('')
-        : `<blora-empty title="${escapeHtml(t('暂无注入条目，点击右上角「新建条目」创建'))}"></blora-empty>`);
+        : `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc" style="text-align:center;">${t('暂无注入条目，点击右上角「新建条目」创建')}</div></div></div>`);
     } catch (error) {
-      setHTML(container, `<div class="blora-stack"><blora-alert variant="danger" title="${escapeHtml(error.message || t('加载失败'))}"></blora-alert><button type="button" class="blora-button" data-variant="outline" onclick="app.loadInjectPrompts()">${t('重试')}</button></div>`);
+      setHTML(container, `<div class="model-library-item" style="grid-column:1/-1;cursor:default;"><div class="model-library-item-info"><div class="model-library-item-desc">${escapeHtml(error.message || t('加载失败'))}</div></div></div>`);
     }
   }
 
@@ -5961,25 +5929,25 @@ class ConsoleApp {
     const scopeBadge = !item.enabled
       ? ''
       : (boundCount > 0
-        ? `<span class="blora-badge model-item-badge" data-variant="info">${t('{n} 个 Key', { n: boundCount })}</span>`
-        : `<span class="blora-badge model-item-badge" data-variant="info">${t('全局生效')}</span>`);
-    const disabledBadge = item.enabled ? '' : `<span class="blora-badge model-item-badge" data-variant="neutral">${t('已停用')}</span>`;
+        ? `<span class="model-item-badge" style="background:rgba(59,130,246,.12);color:var(--primary);">${t('{n} 个 Key', { n: boundCount })}</span>`
+        : `<span class="model-item-badge" style="background:rgba(34,197,94,.12);color:var(--status-success);">${t('全局生效')}</span>`);
+    const disabledBadge = item.enabled ? '' : `<span class="model-item-badge series">${t('已停用')}</span>`;
     return `
-    <div class="blora-card model-library-item ${item.enabled ? '' : 'model-hidden'}" data-size="sm" data-inject-id="${escapeHtml(item.id)}" style="cursor:default;">
+    <div class="model-library-item ${item.enabled ? '' : 'model-hidden'}" data-inject-id="${escapeHtml(item.id)}" style="cursor:default;">
       <div class="model-library-item-info">
         <div class="model-library-item-name">
           <span>${escapeHtml(item.name)}</span>
           <div class="model-item-badges">${scopeBadge}${disabledBadge}</div>
         </div>
-        <div class="blora-card__desc model-library-item-desc" style="-webkit-line-clamp:1;">${escapeHtml(preview)}</div>
+        <div class="model-library-item-desc" style="-webkit-line-clamp:1;">${escapeHtml(preview)}</div>
       </div>
-      <div class="blora-card__foot blora-actions model-library-item-actions">
-        <div class="control-toggle-row" onclick="event.stopPropagation()" title="${item.enabled ? t('点击停用') : t('点击启用')}">
-          <blora-checkbox ${item.enabled ? 'checked' : ''} data-control-action="app-dynamic-1" data-control-arg0="${escapeHtml(String(parseInt(item.id, 10)))}"></blora-checkbox>
-
-        </div>
+      <div class="model-library-item-actions">
+        <label class="toggle-switch" onclick="event.stopPropagation()" title="${item.enabled ? t('点击停用') : t('点击启用')}">
+          <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
         <button type="button" class="blora-button" onclick="app.showInjectPromptModal(${parseInt(item.id, 10)})" data-variant="secondary" data-size="sm">${t('编辑')}</button>
-        <button type="button" class="blora-button" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})" data-variant="danger" data-size="sm">${t('删除')}</button>
+        <button type="button" class="blora-button" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})" data-variant="secondary" data-size="sm">${t('删除')}</button>
       </div>
     </div>`;
   }
@@ -6005,7 +5973,7 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('加载失败'));
       keys = data.items || [];
     } catch (error) {
-      setHTML(keyListEl, `<p style="margin:0;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+      setHTML(keyListEl, `<p style="font-size:13px;color:var(--destructive);margin:0;">${escapeHtml(error.message || t('加载失败'))}</p>`);
       if (modal.show) modal.show();
       else modal.setAttribute('open', '');
       return;
@@ -6013,15 +5981,15 @@ class ConsoleApp {
 
     const bound = new Set((item?.bound_key_ids || []).map(v => String(v)));
     if (!keys.length) {
-      setHTML(keyListEl, `<p style="margin:0;">${t('暂无可用 Key，保存后将对所有 Key 全局生效')}</p>`);
+      setHTML(keyListEl, `<p style="font-size:13px;color:var(--muted-foreground);margin:0;">${t('暂无可用 Key，保存后将对所有 Key 全局生效')}</p>`);
     } else {
       setHTML(keyListEl, `
-        <p style="margin:0 0 4px;">${t('不勾选任何 Key 时对所有 Key 全局生效；勾选后仅对所选 Key 生效')}</p>
+        <p style="font-size:12px;color:var(--muted-foreground);margin:0 0 4px;">${t('不勾选任何 Key 时对所有 Key 全局生效；勾选后仅对所选 Key 生效')}</p>
         ${keys.map(k => `
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
-            <blora-checkbox class="inject-key-check" value="${escapeHtml(k.id)}" ${bound.has(String(k.id)) ? 'checked' : ''}></blora-checkbox>
-            <span>${escapeHtml(k.name)}${k.key_prefix ? `&nbsp;<code >${escapeHtml(k.key_prefix)}…</code>` : ''}</span>
-          </div>`).join('')}
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);">
+            <input type="checkbox" class="inject-key-check" value="${escapeHtml(k.id)}" ${bound.has(String(k.id)) ? 'checked' : ''}>
+            <span>${escapeHtml(k.name)}${k.key_prefix ? `&nbsp;<code style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(k.key_prefix)}…</code>` : ''}</span>
+          </label>`).join('')}
       `);
     }
 
@@ -6034,9 +6002,9 @@ class ConsoleApp {
     const id = this._editingInjectId;
     const name = (document.getElementById('injectPromptName')?.value || '').trim();
     const content = document.getElementById('injectPromptContent')?.value || '';
-    if (!name) { Dialog.alert(t('名称不能为空')); return; }
-    if (!content.trim()) { Dialog.alert(t('内容不能为空')); return; }
-    if (new TextEncoder().encode(content).length > 32 * 1024) { Dialog.alert(t('内容超过 32KB 上限')); return; }
+    if (!name) { alert(t('名称不能为空')); return; }
+    if (!content.trim()) { alert(t('内容不能为空')); return; }
+    if (new TextEncoder().encode(content).length > 32 * 1024) { alert(t('内容超过 32KB 上限')); return; }
 
     try {
       const res = await fetch(id ? `/api/user/inject-prompts/${id}` : '/api/user/inject-prompts', {
@@ -6048,14 +6016,14 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('保存失败'));
 
       // 绑定选择随条目一起保存
-      const keyIds = [...document.querySelectorAll('#injectPromptKeyList .inject-key-check[checked]')].map(cb => parseInt(cb.value, 10));
+      const keyIds = [...document.querySelectorAll('#injectPromptKeyList .inject-key-check:checked')].map(cb => parseInt(cb.value, 10));
       await this.saveInjectPromptKeys(data.item?.id || id, keyIds);
 
       this.closeModals();
       this.showToast(t('已保存'), 'success');
       await this.loadInjectPrompts();
     } catch (error) {
-      Dialog.alert(error.message || t('保存失败'));
+      alert(error.message || t('保存失败'));
     }
   }
 
@@ -6072,7 +6040,7 @@ class ConsoleApp {
   }
 
   async deleteInjectPrompt(id) {
-    if (!Dialog.confirm(t('确认'), t('确认删除此注入条目？删除后转发的请求不再包含该条内容'))) return;
+    if (!confirm(t('确认删除此注入条目？删除后转发的请求不再包含该条内容'))) return;
     try {
       const res = await fetch(`/api/user/inject-prompts/${id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
@@ -6080,7 +6048,7 @@ class ConsoleApp {
       this.showToast(t('已删除'), 'success');
       await this.loadInjectPrompts();
     } catch (error) {
-      Dialog.alert(error.message || t('删除失败'));
+      alert(error.message || t('删除失败'));
     }
   }
 
@@ -6095,7 +6063,7 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('操作失败'));
       await this.loadInjectPrompts();
     } catch (error) {
-      Dialog.alert(error.message || t('操作失败'));
+      alert(error.message || t('操作失败'));
       await this.loadInjectPrompts();
     }
   }
@@ -6163,7 +6131,7 @@ class ConsoleApp {
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
 
       if (!data.logs || data.logs.length === 0) {
-        setHTML(container, '<p style="text-align:center;padding:40px;">' + t('暂无调用记录') + '</p>');
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无调用记录') + '</p>');
         return;
       }
 
@@ -6187,8 +6155,8 @@ class ConsoleApp {
               const cachedTokens = parseInt(log.cached_tokens || 0, 10);
               const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
               const cacheDisplay = cachedTokens > 0
-                ? `<span  title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span >(${cacheRate}%)</span>`
-                : '<span >-</span>';
+                ? `<span style="color:var(--success);" title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="font-size:11px;color:var(--muted-foreground);">(${cacheRate}%)</span>`
+                : '<span style="color:var(--muted-foreground);">-</span>';
               const modelLabel = log.model_name
                 || (log.request_type === 'fusion' ? 'Fusion' : null)
                 || (log.model_id ? String(log.model_id) : null)
@@ -6204,7 +6172,7 @@ class ConsoleApp {
                 <td>${escapeHtml(modelLabel)}</td>
                 <td>${escapeHtml(log.series || '-')}</td>
                 <td>${this._usageRequestSourceBadge(log.request_source)}</td>
-                <td><code >${escapeHtml(log.key_prefix || '-')}****</code> ${log.key_name ? `<span >(${escapeHtml(log.key_name)})</span>` : ''}</td>
+                <td><code style="font-size:12px;">${escapeHtml(log.key_prefix || '-')}****</code> ${log.key_name ? `<span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}</td>
                 <td title="${(log.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(parseInt(log.tokens_used || 0, 10))}</td>
                 <td>${cacheDisplay}</td>
                 <td>${costDisplay}</td>
@@ -6215,7 +6183,7 @@ class ConsoleApp {
       `);
     } catch (error) {
       console.error(t('加载调用记录失败:'), error);
-      setHTML(container, `<p style="text-align:center;padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -6285,7 +6253,7 @@ class ConsoleApp {
       } catch (error) {
         console.error(t('加载用量详情失败:'), error);
         const content = document.getElementById('usageDetailContent');
-        if (content) setHTML(content, `<p style="text-align:center;padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+        if (content) setHTML(content, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
         return;
       }
     }
@@ -6294,7 +6262,7 @@ class ConsoleApp {
     const cachedTokens = parseInt(log.cached_tokens || 0, 10);
     const cacheRate = promptTokens > 0 ? (cachedTokens / promptTokens * 100).toFixed(1) : '0.0';
     const cacheDisplay = cachedTokens > 0
-      ? `<span title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span >(${cacheRate}${t('% 命中)')}</span>`
+      ? `<span title="${cachedTokens.toLocaleString()}">${this._formatBigNumber(cachedTokens)}</span> <span style="color:var(--success);font-size:12px;">(${cacheRate}${t('% 命中)')}</span>`
       : '0';
 
     const modelLabel = log.model_name
@@ -6312,8 +6280,8 @@ class ConsoleApp {
       [t('系列'), escapeHtml(log.series || '-')],
       [t('供应商'), renderProviderNameTag(log.provider_name) || '<span class="model-provider-missing">-</span>'],
       [t('请求类型'), escapeHtml(log.request_type || '-')],
-      [t('客户端'), this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
-      ['API Key', `<code >${escapeHtml(log.key_prefix || '-')}****</code>${log.key_name ? ` <span >(${escapeHtml(log.key_name)})</span>` : ''}`],
+      [t('客户端'), this._usageRequestSourceBadge(log.request_source) + (log.user_agent ? ` <span style="color:var(--muted-foreground);font-size:11px;word-break:break-all;">${escapeHtml(String(log.user_agent).slice(0, 120))}</span>` : '')],
+      ['API Key', `<code style="font-size:12px;">${escapeHtml(log.key_prefix || '-')}****</code>${log.key_name ? ` <span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}`],
       [t('总 Token'), this._formatBigNumber(parseInt(log.tokens_used || 0, 10))],
       [t('输入 Token'), this._formatBigNumber(promptTokens)],
       [t('输出 Token'), this._formatBigNumber(parseInt(log.completion_tokens || 0, 10))],
@@ -6328,27 +6296,27 @@ class ConsoleApp {
       try {
         const msgs = typeof log.messages === 'string' ? JSON.parse(log.messages) : log.messages;
         const formatted = (Array.isArray(msgs) ? msgs : [msgs]).map(m => {
-          const role = m.role === 'system' ? 'System' : m.role === 'user' ? 'User' : 'Assistant';
+          const role = m.role === 'system' ? '🔧 System' : m.role === 'user' ? '👤 User' : '🤖 Assistant';
           const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content, null, 2);
-          return `<div style="margin-bottom:8px;"><div style="margin-bottom:2px;">${role}</div><pre style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;">${escapeHtml(content)}</pre></div>`;
+          return `<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--muted-foreground);margin-bottom:2px;">${role}</div><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;">${escapeHtml(content)}</pre></div>`;
         }).join('');
-        messagesHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('请求消息')}</span><div style="max-height:400px;overflow-y:auto;">${formatted}</div></div>`;
+        messagesHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('请求消息')}</span><div style="max-height:400px;overflow-y:auto;">${formatted}</div></div>`;
       } catch {
-        messagesHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('请求消息')}</span><pre style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(String(log.messages))}</pre></div>`;
+        messagesHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('请求消息')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(String(log.messages))}</pre></div>`;
       }
     }
 
     let responseHtml = '';
     if (log.response) {
-      responseHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;"><span >${t('AI 回复')}</span><pre style="padding:8px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(log.response)}</pre></div>`;
+      responseHtml = `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('AI 回复')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:400px;overflow-y:auto;">${escapeHtml(log.response)}</pre></div>`;
     }
 
     const content = document.getElementById('usageDetailContent');
     if (!content) return;
     setHTML(content, rows.map(([label, value]) => `
-      <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;">
-        <span >${label}</span>
-        <span >${value}</span>
+      <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
+        <span style="font-size:14px;">${value}</span>
       </div>
     `).join('') + messagesHtml + responseHtml);
 
@@ -6404,12 +6372,12 @@ class ConsoleApp {
                   <span class="rule-value">${isRequests ? `${current.toLocaleString()} / ${limit.toLocaleString()}` : `${this._formatBigNumber(current)} / ${this._formatBigNumber(limit)}`} ${unit}</span>
                 </div>
                 <div class="rule-bar-bg">
-                  <div class="rule-bar-fill" style="width:${pct}%;"></div>
+                  <div class="rule-bar-fill" style="width:${pct}%;background:${barColor}"></div>
                 </div>
               </div>`;
           }).join(''));
         } else {
-          setHTML(rulesContainer, '<div class="rule-item"><span class="rule-label" >' + t('暂无限额规则') + '</span></div>');
+          setHTML(rulesContainer, '<div class="rule-item"><span class="rule-label" style="color:var(--muted-foreground)">' + t('暂无限额规则') + '</span></div>');
         }
         groupSection.style.display = 'block';
       } else {
@@ -6440,7 +6408,7 @@ class ConsoleApp {
     const detail = document.getElementById('settingsDetail');
     if (overview) overview.hidden = false;
     if (detail) detail.hidden = true;
-    document.querySelectorAll('.cr-console-settings-section').forEach(section => { section.hidden = true; });
+    document.querySelectorAll('.settings-section').forEach(section => { section.hidden = true; });
   }
 
   showSettingsCategory(category) {
@@ -6452,7 +6420,7 @@ class ConsoleApp {
     if (overview) overview.hidden = true;
     if (detail) detail.hidden = false;
     if (title) title.textContent = document.querySelector(`[data-settings-category="${category}"] strong`)?.textContent || '';
-    document.querySelectorAll('.cr-console-settings-section').forEach(item => { item.hidden = !sections.includes(item); });
+    document.querySelectorAll('.settings-section').forEach(item => { item.hidden = !sections.includes(item); });
     sections[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
     if (category === 'desktop') this.loadDesktopSettingsEmbed();
   }
@@ -6465,7 +6433,7 @@ class ConsoleApp {
       const data = await bridge.getDesktopSettings();
       const settings = data.settings || {};
       const status = data.status || {};
-      target.innerHTML = `<div class="settings-desktop-stack"><section class="settings-desktop-block"><h3>当前连接</h3><dl class="settings-details"><dt>模式</dt><dd>${escapeHtml(status.mode || '-')}</dd><dt>目标地址</dt><dd>${escapeHtml(status.target || '-')}</dd><dt>运行时</dt><dd>${escapeHtml(status.runtime || '-')}</dd><dt>版本</dt><dd>${escapeHtml(status.edition || '-')}</dd></dl></section><section class="settings-desktop-block"><div class="settings-desktop-block-header"><h3>已保存的 CrewRouter</h3><button type="button" class="blora-button" data-variant="primary" id="desktopAddConnection">添加连接</button></div><div id="desktopProfilesList"></div></section><section class="settings-desktop-block"><h3>Desktop 偏好</h3><div class="settings-desktop-preferences"><div><blora-checkbox id="desktopAutoConnect" ${settings.autoConnect !== false ? 'checked' : ''}></blora-checkbox> 启动时自动连接上次实例</div><div><blora-checkbox id="desktopNotifications" ${settings.notifications !== false ? 'checked' : ''}></blora-checkbox> 启用桌面通知</div><div><blora-checkbox id="desktopUpdateChecks" ${settings.updateChecks !== false ? 'checked' : ''}></blora-checkbox> 检查更新</div><label>主题 <blora-select id="desktopTheme" class="blora-input"><blora-option value="system" ${settings.theme === 'system' ? 'selected' : ''}>跟随系统</blora-option><blora-option value="light" ${settings.theme === 'light' ? 'selected' : ''}>浅色</blora-option><blora-option value="dark" ${settings.theme === 'dark' ? 'selected' : ''}>深色</blora-option></blora-select></label></div></section><section class="settings-desktop-block"><h3>本地 Server</h3><div id="desktopLocalStatus"></div></section><section class="settings-desktop-block"><h3>诊断</h3><p class="settings-muted">诊断信息不包含 Token、Cookie 或 API Key。</p><button type="button" class="blora-button" data-variant="outline" id="desktopCopyDiagnostics">复制诊断信息</button><output id="desktopSettingsMessage" class="settings-output" role="status"></output></section><section class="settings-desktop-block"><h3>应用程序</h3><p class="settings-muted">重启会重新加载 Desktop；关闭会停止桌面应用及其管理的本地服务。</p><div class="settings-actions"><button type="button" class="blora-button" data-variant="secondary" id="desktopRestartApp">重启 Desktop</button><button type="button" class="blora-button" data-variant="danger" id="desktopQuitApp">关闭 Desktop</button></div></section></div>`;
+      target.innerHTML = `<div class="settings-desktop-stack"><section class="settings-desktop-block"><h3>当前连接</h3><dl class="settings-details"><dt>模式</dt><dd>${escapeHtml(status.mode || '-')}</dd><dt>目标地址</dt><dd>${escapeHtml(status.target || '-')}</dd><dt>运行时</dt><dd>${escapeHtml(status.runtime || '-')}</dd><dt>版本</dt><dd>${escapeHtml(status.edition || '-')}</dd></dl></section><section class="settings-desktop-block"><div class="settings-desktop-block-header"><h3>已保存的 CrewRouter</h3><button type="button" class="blora-button" data-variant="primary" id="desktopAddConnection">添加连接</button></div><div id="desktopProfilesList"></div></section><section class="settings-desktop-block"><h3>Desktop 偏好</h3><div class="settings-desktop-preferences"><label><input type="checkbox" id="desktopAutoConnect" ${settings.autoConnect !== false ? 'checked' : ''}> 启动时自动连接上次实例</label><label><input type="checkbox" id="desktopNotifications" ${settings.notifications !== false ? 'checked' : ''}> 启用桌面通知</label><label><input type="checkbox" id="desktopUpdateChecks" ${settings.updateChecks !== false ? 'checked' : ''}> 检查更新</label><label>主题 <blora-select id="desktopTheme" class="blora-input"><blora-option value="system" ${settings.theme === 'system' ? 'selected' : ''}>跟随系统</blora-option><blora-option value="light" ${settings.theme === 'light' ? 'selected' : ''}>浅色</blora-option><blora-option value="dark" ${settings.theme === 'dark' ? 'selected' : ''}>深色</blora-option></blora-select></label></div></section><section class="settings-desktop-block"><h3>本地 Server</h3><div id="desktopLocalStatus"></div></section><section class="settings-desktop-block"><h3>诊断</h3><p class="settings-muted">诊断信息不包含 Token、Cookie 或 API Key。</p><button type="button" class="blora-button" data-variant="outline" id="desktopCopyDiagnostics">复制诊断信息</button><output id="desktopSettingsMessage" class="settings-output" role="status"></output></section><section class="settings-desktop-block"><h3>应用程序</h3><p class="settings-muted">重启会重新加载 Desktop；关闭会停止桌面应用及其管理的本地服务。</p><div class="settings-actions"><button type="button" class="blora-button" data-variant="secondary" id="desktopRestartApp">重启 Desktop</button><button type="button" class="blora-button" data-variant="danger" id="desktopQuitApp">关闭 Desktop</button></div></section></div>`;
       const profiles = data.profiles || [];
       const profileList = target.querySelector('#desktopProfilesList');
       if (status.mode === 'connect') { target.textContent = '正在连接本地 CrewRouter…'; return; }
@@ -6475,7 +6443,7 @@ class ConsoleApp {
       const reloadDesktop = () => this.loadDesktopSettingsEmbed();
       target.querySelector('#desktopAddConnection')?.addEventListener('click', () => bridge.openOobe?.());
       const confirmAction = async (message, action) => {
-        if (!await Dialog.confirm(t('确认'), message)) return;
+        if (!await window.confirm(message)) return;
         const output = target.querySelector('#desktopSettingsMessage');
         if (output) output.innerHTML = '<span class="desktop-settings-spinner" aria-hidden="true"></span><span>正在执行…</span>';
         target.classList.add('desktop-settings-is-loading');
@@ -6483,7 +6451,7 @@ class ConsoleApp {
         try { await action(); } catch (error) { if (output) output.textContent = error.message; } finally { target.classList.remove('desktop-settings-is-loading'); }
       };
       target.querySelectorAll('[data-profile-switch]').forEach((button) => button.addEventListener('click', async () => { const profile = profiles.find((item) => item.id === button.dataset.profileSwitch); confirmAction(`确定切换到“${profile?.name || '这个 CrewRouter'}”吗？`, async () => { await bridge.switchProfile(button.dataset.profileSwitch); }); }));
-      target.querySelectorAll('[data-profile-rename]').forEach((button) => button.addEventListener('click', async () => { const current = profiles.find((item) => item.id === button.dataset.profileRename)?.name || ''; const name = await requestBloraValue(t('重命名'), current); if (!name || name.trim() === current.trim()) return; if (!await Dialog.confirm(t('确认'), `确定将实例重命名为“${name.trim()}”吗？`)) return; try { await bridge.renameProfile(button.dataset.profileRename, name); reloadDesktop(); } catch (error) { target.querySelector('#desktopSettingsMessage').textContent = error.message; } }));
+      target.querySelectorAll('[data-profile-rename]').forEach((button) => button.addEventListener('click', async () => { const current = profiles.find((item) => item.id === button.dataset.profileRename)?.name || ''; const name = window.prompt('重命名', current); if (!name || name.trim() === current.trim()) return; if (!window.confirm(`确定将实例重命名为“${name.trim()}”吗？`)) return; try { await bridge.renameProfile(button.dataset.profileRename, name); reloadDesktop(); } catch (error) { target.querySelector('#desktopSettingsMessage').textContent = error.message; } }));
       target.querySelectorAll('[data-profile-delete]').forEach((button) => button.addEventListener('click', async () => { confirmAction('确定删除这个实例吗？删除后将从 Desktop 的已保存实例中移除。', async () => { await bridge.deleteProfile(button.dataset.profileDelete); reloadDesktop(); }); }));
       const savePreferences = () => bridge.saveDesktopSettings({ autoConnect: target.querySelector('#desktopAutoConnect').checked, notifications: target.querySelector('#desktopNotifications').checked, updateChecks: target.querySelector('#desktopUpdateChecks').checked, theme: target.querySelector('#desktopTheme').value }).then(reloadDesktop);
       const preferenceChanged = (message, control) => { const next = control.checked; control.checked = !next; confirmAction(message, async () => { control.checked = next; await savePreferences(); }); };
@@ -6621,12 +6589,12 @@ class ConsoleApp {
     if (!list) return;
     try {
       const res = await fetch('/api/user/notifications?limit=50');
-      if (res.status === 403) { list.innerHTML = '<div style="padding:12px 0;">' + t('Personal 版暂不提供通知功能') + '</div>'; return; }
+      if (res.status === 403) { list.innerHTML = '<div style="color:var(--muted-foreground);font-size:13px;padding:12px 0;">' + t('Personal 版暂不提供通知功能') + '</div>'; return; }
       if (!res.ok) throw new Error(t('加载失败'));
       const items = await res.json();
-      if (!items.length) { list.innerHTML = '<div style="padding:12px 0;">' + t('暂无通知') + '</div>'; return; }
-      list.innerHTML = items.map(item => `<div style="padding:14px 0;${item.read_at ? '' : 'background:color-mix(in srgb, var(--primary) 5%, transparent);'};"><div style="display:flex;gap:8px;align-items:center;"><strong>${escapeHtml(item.title)}</strong><span >${this.formatRelativeTime(item.created_at)}</span><button type="button" class="blora-button" style="margin-left:auto;padding:4px 8px;" onclick="app.deleteNotification(${item.id})" data-variant="secondary">${t('删除')}</button></div><div style="margin-top:6px;white-space:pre-wrap;">${escapeHtml(item.body)}</div>${item.read_at ? '' : `<button type="button" class="blora-button" style="margin-top:8px;padding:4px 8px;" onclick="app.markNotificationRead(${item.id})" data-variant="secondary">标记已读</button>`}</div>`).join('');
-    } catch (error) { list.innerHTML = '<div >' + t('通知加载失败') + '</div>'; }
+      if (!items.length) { list.innerHTML = '<div style="color:var(--muted-foreground);font-size:13px;padding:12px 0;">' + t('暂无通知') + '</div>'; return; }
+      list.innerHTML = items.map(item => `<div style="padding:14px 0;border-bottom:1px solid var(--border);${item.read_at ? '' : 'background:color-mix(in srgb, var(--primary) 5%, transparent);'}"><div style="display:flex;gap:8px;align-items:center;"><strong>${escapeHtml(item.title)}</strong><span style="font-size:12px;color:var(--muted-foreground);">${this.formatRelativeTime(item.created_at)}</span><button class="blora-button" style="margin-left:auto;padding:4px 8px;font-size:12px;" onclick="app.deleteNotification(${item.id})" data-variant="secondary">${t('删除')}</button></div><div style="margin-top:6px;font-size:13px;color:var(--muted-foreground);white-space:pre-wrap;">${escapeHtml(item.body)}</div>${item.read_at ? '' : `<button class="blora-button" style="margin-top:8px;padding:4px 8px;font-size:12px;" onclick="app.markNotificationRead(${item.id})" data-variant="secondary">标记已读</button>`}</div>`).join('');
+    } catch (error) { list.innerHTML = '<div style="color:var(--destructive);font-size:13px;">' + t('通知加载失败') + '</div>'; }
   }
 
   async markNotificationRead(id) { await fetch(`/api/user/notifications/${id}/read`, { method: 'PUT' }); await this.loadNotifications(); }
@@ -6657,19 +6625,19 @@ class ConsoleApp {
     if (!hWrap || !eWrap) return;
     hWrap.innerHTML = harnesses.map(h => {
       const on = sel.harnesses.includes(h) ? ' checked' : '';
-      return `<div style="display:flex;align-items:center;gap:6px;"><blora-checkbox class="hn-harness" value="${h}"${on}></blora-checkbox> ${h}</div>`;
+      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-harness" value="${h}"${on}> ${h}</label>`;
     }).join('');
     eWrap.innerHTML = events.map(([v, label]) => {
       const on = sel.eventTypes.includes(v) ? ' checked' : '';
-      return `<div style="display:flex;align-items:center;gap:6px;"><blora-checkbox class="hn-event" value="${v}"${on}></blora-checkbox> ${t(label)}</div>`;
+      return `<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;"><input type="checkbox" class="hn-event" value="${v}"${on}> ${t(label)}</label>`;
     }).join('');
     this.showModal('hookNotifySelectModal');
   }
 
   async saveHookNotifySelection() {
     try {
-      const harnesses = [...document.querySelectorAll('#hookNotifyHarnessChecks .hn-harness[checked]')].map(c => c.value);
-      const eventTypes = [...document.querySelectorAll('#hookNotifyEventChecks .hn-event[checked]')].map(c => c.value);
+      const harnesses = [...document.querySelectorAll('#hookNotifyHarnessChecks .hn-harness:checked')].map(c => c.value);
+      const eventTypes = [...document.querySelectorAll('#hookNotifyEventChecks .hn-event:checked')].map(c => c.value);
       const res = await fetch('/api/user/hook-notify-rules/selection', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -6841,7 +6809,7 @@ class ConsoleApp {
 
         const live = document.getElementById('sessionSummaryBody');
         if (this._summaryModalSessionKey === reqKey && live && document.getElementById('sessionSummaryModal')?.style.display !== 'none') {
-          setHTML(live, `<span >${escapeHtml(summaryError)}</span>`);
+          setHTML(live, `<span style="color:var(--danger);">${escapeHtml(summaryError)}</span>`);
         }
       }
       // 生成失败时收起加载条，避免留下无限旋转的进行中提示
@@ -6867,7 +6835,7 @@ class ConsoleApp {
       const sessionKey = String(payload.sessionKey || this._summaryTaskSessionKey || '');
       if (sessionKey) this._summaryTaskSessionKey = sessionKey;
       setHTML(bar, `
-        <div class="blora-row session-task-bar" data-variant="flat" data-size="sm">
+        <div class="blora-card session-task-bar" data-variant="flat">
           <span class="blora-spinner" data-size="sm" aria-hidden="true"></span>
           <span class="session-task-bar__text">${t('正在生成会话总结...')}<small>${t('可离开此页，完成后在此查看')}</small></span>
           ${sessionKey ? `<button type="button" class="blora-button" onclick="app.openSessionSummaryModal('${this._jsString(sessionKey)}')" data-variant="secondary" data-size="sm">${t('查看总结')}</button>` : ''}
@@ -6882,7 +6850,7 @@ class ConsoleApp {
       bar.dataset.sessionKey = sessionKey;
       bar.style.display = '';
       setHTML(bar, `
-        <div class="blora-row session-task-bar session-task-bar--done" data-variant="flat" data-size="sm">
+        <div class="blora-card session-task-bar session-task-bar--done" data-variant="flat">
           <div class="session-task-bar__head">
             <strong>${t('会话总结已生成')}</strong>
             <button type="button" class="blora-button" onclick="app.dismissModelLibraryTaskBar()" title="${t('关闭')}" aria-label="${t('关闭')}" data-variant="ghost" data-size="icon">${this._libIcon('xmark', 12)}</button>
@@ -7024,7 +6992,7 @@ class ConsoleApp {
       el.dataset.built = '1';
       // 总结卡片：默认常驻展开（流式生成中实时更新），不再手写折叠交互
       const card = document.createElement('section');
-      card.className = 'blora-stack session-summary-inline';
+      card.className = 'blora-card session-summary-inline';
       card.dataset.variant = 'inset';
       card.setAttribute('aria-live', 'polite');
       const head = document.createElement('div');
@@ -7271,10 +7239,10 @@ class ConsoleApp {
         this.closeModals();
         this.loadApiKeys();
       } else {
-        Dialog.alert(t('创建失败: ') + (data.error || t('未知错误')));
+        alert(t('创建失败: ') + (data.error || t('未知错误')));
       }
     } catch (error) {
-      Dialog.alert(t('创建失败'));
+      alert(t('创建失败'));
     }
   }
 
@@ -7294,12 +7262,12 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('加载失败'));
       const members = Array.isArray(data.members) ? data.members : [];
       setHTML(list, members.length ? members.map(member => `
-        <div class="co-key-member-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;">
+        <div class="co-key-member-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;">
           <div><strong>${escapeHtml(member.username || '')}</strong><div class="api-key-sub-muted">${escapeHtml(member.email || '')}</div></div>
           <button type="button" class="blora-button" onclick="app.removeKeyMember(${member.id})" data-variant="secondary" data-size="sm">移除</button>
         </div>`).join('') : '<p class="api-key-sub-muted" style="text-align:center;padding:18px;">' + t('暂无共同成员') + '</p>');
     } catch (error) {
-      setHTML(list, `<p >${escapeHtml(error.message)}</p>`);
+      setHTML(list, `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
     }
   }
 
@@ -7320,7 +7288,7 @@ class ConsoleApp {
   }
 
   async removeKeyMember(userId) {
-    if (!await Dialog.confirm(t('确认'), t('确定移除此共同成员？'))) return;
+    if (!await confirm(t('确定移除此共同成员？'))) return;
     try {
       const res = await fetch(`/api/user/api-keys/${this._currentMembersKeyId}/members/${userId}`, { method: 'DELETE' });
       const data = await res.json();
@@ -7352,40 +7320,40 @@ class ConsoleApp {
         return;
       }
       setHTML(listEl, items.map(log => `
-        <div class="audit-log-row" style="display:flex;align-items:flex-start;gap:12px;padding:12px;">
+        <div class="audit-log-row" style="display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-              <span class="audit-log-action" style="padding:2px 8px;">${escapeHtml(log.action)}</span>
-              <span >${escapeHtml(log.description || '')}</span>
+              <span class="audit-log-action" style="font-size:12px;padding:2px 8px;border-radius:4px;background:var(--brand-blue);color:#fff;font-weight:500;">${escapeHtml(log.action)}</span>
+              <span style="font-size:13px;color:var(--foreground);">${escapeHtml(log.description || '')}</span>
             </div>
-            <div class="api-key-sub-muted" >
+            <div class="api-key-sub-muted" style="font-size:12px;">
               ${escapeHtml(log.resource_type || '-')}${log.resource_id ? ` #${escapeHtml(String(log.resource_id))}` : ''}
               ${log.ip_address ? ` · IP ${escapeHtml(log.ip_address)}` : ''}
               ${log.status ? ` · HTTP ${log.status}` : ''}
               ${log.duration_ms != null ? ` · ${log.duration_ms}ms` : ''}
             </div>
-            ${log.details ? `<details style="margin-top:4px;"><summary style="cursor:pointer;">${t('详情')}</summary><pre style="margin:4px 0 0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2))}</pre></details>` : ''}
+            ${log.details ? `<details style="margin-top:4px;"><summary style="font-size:12px;color:var(--muted-foreground);cursor:pointer;">${t('详情')}</summary><pre style="font-size:12px;margin:4px 0 0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2))}</pre></details>` : ''}
           </div>
-          <div style="white-space:nowrap;" title="${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN'))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
+          <div style="font-size:12px;color:var(--muted-foreground);white-space:nowrap;" title="${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN'))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
         </div>`).join(''));
 
       const totalPages = Math.ceil(total / limit);
       if (totalPages > 1) {
         setHTML(paginationEl, `
           <button type="button" class="blora-button" data-variant="outline" data-size="sm" ${page <= 1 ? 'disabled' : ''} onclick="app.loadAuditLogs(${page - 1})">上一页</button>
-          <span style="padding:0 8px;">${page} / ${totalPages}</span>
+          <span style="padding:0 8px;font-size:13px;">${page} / ${totalPages}</span>
           <button type="button" class="blora-button" data-variant="outline" data-size="sm" ${page >= totalPages ? 'disabled' : ''} onclick="app.loadAuditLogs(${page + 1})">下一页</button>`);
       } else {
         setHTML(paginationEl, '');
       }
     } catch (error) {
-      setHTML(listEl, `<p >${escapeHtml(error.message)}</p>`);
+      setHTML(listEl, `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
       setHTML(paginationEl, '');
     }
   }
 
   async leaveCoKey(keyId) {
-    const confirmed = await Dialog.confirm(t('确认'), t('退出后将立即失去此 Co-Key 的查看、复制和配置权限。若要重新加入，必须由发起者再次邀请。确定退出吗？'));
+    const confirmed = await confirm(t('退出后将立即失去此 Co-Key 的查看、复制和配置权限。若要重新加入，必须由发起者再次邀请。确定退出吗？'));
     if (!confirmed) return;
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/members/me`, { method: 'DELETE' });
@@ -7408,7 +7376,7 @@ class ConsoleApp {
   }
 
   async deleteApiKey(id) {
-    if (!await Dialog.confirm(t('确认'), t('确定要删除此 API 密钥吗？此操作不可撤销。'))) return;
+    if (!await confirm(t('确定要删除此 API 密钥吗？此操作不可撤销。'))) return;
     try {
       const res = await fetch(`/api/user/api-keys/${id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
@@ -7559,7 +7527,7 @@ class ConsoleApp {
       const res = await fetch(`/api/user/api-keys/${keyId}/config`);
       if (!res.ok) {
         const err = await res.json();
-        Dialog.alert(err.error || t('生成配置失败'));
+        alert(err.error || t('生成配置失败'));
         return;
       }
       const data = await res.json();
@@ -7665,14 +7633,14 @@ llm-deepseek:
 
       document.getElementById('configOutputTitle').textContent = title;
       if (!title || !content) {
-        Dialog.alert(t('未知工具类型: ') + tool);
+        alert(t('未知工具类型: ') + tool);
         return;
       }
       setHTML(document.getElementById('configOutputDesc'), desc);
       document.getElementById('configOutputContent').value = content;
       this.showModal('configOutputModal');
     } catch (e) {
-      Dialog.alert(t('生成配置失败: ') + e.message);
+      alert(t('生成配置失败: ') + e.message);
     }
   }
 
@@ -7688,7 +7656,7 @@ llm-deepseek:
 
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/config`);
-      if (!res.ok) { Dialog.alert(t('获取配置失败')); return; }
+      if (!res.ok) { alert(t('获取配置失败')); return; }
       const data = await res.json();
       const baseUrl = data.env.ANTHROPIC_BASE_URL;
       const apiKey = data.env.ANTHROPIC_AUTH_TOKEN;
@@ -7714,7 +7682,7 @@ llm-deepseek:
       window.location.href = deepLink;
       this.showToast(t('正在调起 CC Switch...'), 'info');
     } catch (e) {
-      Dialog.alert(t('生成链接失败: ') + e.message);
+      alert(t('生成链接失败: ') + e.message);
     }
   }
 
@@ -7764,7 +7732,7 @@ llm-deepseek:
       const res = await fetch(`/api/user/api-keys/${keyId}/config`);
       if (!res.ok) {
         const err = await res.json();
-        Dialog.alert(err.error || t('生成脚本失败'));
+        alert(err.error || t('生成脚本失败'));
         return;
       }
       const config = await res.json();
@@ -7781,7 +7749,7 @@ llm-deepseek:
       this.rebuildUsageScript();
       this.showModal('usageScriptModal');
     } catch (e) {
-      Dialog.alert(t('生成脚本失败: ') + e.message);
+      alert(t('生成脚本失败: ') + e.message);
     }
   }
 
@@ -8005,15 +7973,17 @@ ${extractorBody}
     this._summaryModalSessionKey = null;
   }
 
-  async showToast(text, type = 'info') {
-    if (!window.bloraMessage) {
-      window.crewrouterMessageReady ||= import('/blora/index.js?v=2.1.0').then(({ message }) => {
-        window.bloraMessage = message;
-      });
-      await window.crewrouterMessageReady;
-    }
-    const variant = type === 'error' ? 'danger' : type;
-    return window.bloraMessage[variant]?.(String(text)) || window.bloraMessage.info(String(text));
+  showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:10000;padding:12px 20px;border-radius:8px;font-size:14px;color:white;box-shadow:0 4px 12px rgba(0,0,0,0.15);transition:opacity 0.3s;opacity:0;`;
+    toast.style.background = type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--info)';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.opacity = '1'; });
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
   }
 
   async logout() {
@@ -8039,15 +8009,15 @@ ${extractorBody}
 
       if (data.enabled) {
         statusBadge.textContent = t('已启用');
-        statusBadge.classList.add('blora-badge');
-        statusBadge.dataset.variant = 'success';
+        statusBadge.style.background = 'rgba(34,197,94,0.1)';
+        statusBadge.style.color = 'var(--success)';
         if (setupDiv) setupDiv.style.display = 'none';
         if (disableDiv) disableDiv.style.display = 'block';
         if (startBtn) startBtn.style.display = 'none';
       } else {
         statusBadge.textContent = t('未启用');
-        statusBadge.classList.add('blora-badge');
-        statusBadge.dataset.variant = 'neutral';
+        statusBadge.style.background = 'rgba(239,68,68,0.1)';
+        statusBadge.style.color = 'var(--destructive)';
         // 未在引导流程中时隐藏 setup；保留用户已打开的 setup 区域
         if (setupDiv && setupDiv.dataset.active !== '1') {
           setupDiv.style.display = 'none';
@@ -8104,7 +8074,7 @@ ${extractorBody}
         statusEl.textContent = error.message || t('生成 2FA 失败');
         statusEl.style.color = 'var(--destructive)';
       } else {
-        Dialog.alert(t('生成 2FA 失败: ') + (error.message || t('未知错误')));
+        alert(t('生成 2FA 失败: ') + (error.message || t('未知错误')));
       }
       // 确保 setup 区域可见以显示错误
       if (setupDiv) {
@@ -8193,7 +8163,7 @@ ${extractorBody}
       return;
     }
 
-    if (!await Dialog.confirm(t('确认'), t('确定要关闭双重认证吗？'))) return;
+    if (!await confirm(t('确定要关闭双重认证吗？'))) return;
 
     try {
       const res = await fetch('/api/2fa/disable', {
@@ -8353,7 +8323,7 @@ ${extractorBody}
       if (!container) return;
 
       if (passkeys.length === 0) {
-        setHTML(container, '<li style="text-align:center;padding:20px;">' + t('暂无绑定的通行密钥') + '</li>');
+        setHTML(container, '<li style="color:var(--muted-foreground);text-align:center;padding:20px;font-size:14px;">' + t('暂无绑定的通行密钥') + '</li>');
         return;
       }
 
@@ -8361,17 +8331,17 @@ ${extractorBody}
         const safeId = (pk.credentialID || '').replace(/'/g, "\\'");
         const deviceLabel = pk.deviceType === 'multiDevice' ? t('同步通行密钥') : t('本机通行密钥');
         return `
-        <li style="display:flex;justify-content:space-between;align-items:center;padding:12px;">
+        <li style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--border);">
           <div>
-            <div >${deviceLabel}</div>
-            <div >
+            <div style="font-weight:500;">${deviceLabel}</div>
+            <div style="font-size:12px;color:var(--muted-foreground);font-family:monospace;">
               ID: ${pk.credentialID ? pk.credentialID.substring(0, 12) + '...' : 'Unknown'}
             </div>
-            <div >
+            <div style="font-size:12px;color:var(--muted-foreground);">
               创建于: ${pk.createdAt ? new Date(pk.createdAt).toLocaleDateString('zh-CN') : t('未知')}
             </div>
           </div>
-          <button type="button" class="blora-button" onclick="app.deletePasskey('${safeId}')" data-variant="danger" data-size="sm">删除</button>
+          <button class="blora-button" onclick="app.deletePasskey('${safeId}')" data-variant="danger" data-size="sm">删除</button>
         </li>`;
       }).join(''));
     } catch (error) {
@@ -8389,7 +8359,7 @@ ${extractorBody}
 
     if (!window.PublicKeyCredential) {
       setStatus(t('当前浏览器不支持通行密钥'), false);
-      Dialog.alert(t('当前浏览器不支持通行密钥（WebAuthn）'));
+      alert(t('当前浏览器不支持通行密钥（WebAuthn）'));
       return;
     }
 
@@ -8424,7 +8394,7 @@ ${extractorBody}
       const verifyData = await verifyRes.json();
       if (verifyData.success) {
         setStatus(t('通行密钥注册成功'), true);
-        Dialog.alert(t('PassKey 注册成功'));
+        alert(t('PassKey 注册成功'));
         this.loadPasskeys();
       } else {
         throw new Error(verifyData.error || t('未知错误'));
@@ -8435,12 +8405,12 @@ ${extractorBody}
         ? t('操作已取消或超时')
         : (error.message || t('注册失败'));
       setStatus(msg, false);
-      Dialog.alert(t('PassKey 注册失败: ') + msg);
+      alert(t('PassKey 注册失败: ') + msg);
     }
   }
 
   async deletePasskey(credentialID) {
-    if (!await Dialog.confirm(t('确认'), t('确定要删除此通行密钥吗？'))) return;
+    if (!await confirm(t('确定要删除此通行密钥吗？'))) return;
 
     try {
       const res = await fetch(`/api/passkey/${encodeURIComponent(credentialID)}`, {
@@ -8449,14 +8419,14 @@ ${extractorBody}
       });
 
       if (res.ok) {
-        Dialog.alert(t('PassKey 已删除'));
+        alert(t('PassKey 已删除'));
         this.loadPasskeys();
       } else {
         const data = await res.json().catch(() => ({}));
-        Dialog.alert(t('删除失败: ') + (data.error || t('未知错误')));
+        alert(t('删除失败: ') + (data.error || t('未知错误')));
       }
     } catch (error) {
-      Dialog.alert(t('删除失败'));
+      alert(t('删除失败'));
     }
   }
 
@@ -8531,7 +8501,7 @@ ${extractorBody}
     const reports = await res.json();
     if (!reports.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
     box.style.display = 'block';
-    box.innerHTML = `<div class="trace-reports-title">${t('未查看的跟踪报告')}</div><div class="trace-reports-list">${reports.map(r => `<button type="button" class="trace-report-chip" onclick="app.openTraceReport('${escapeHtml(r.public_id)}')"><strong>${escapeHtml(r.public_id)}</strong><span>${escapeHtml(r.api_key_name || t('已删除 Key'))}</span><span>${Number(r.summary?.requests || 0)} 项请求</span></button>`).join('')}</div>`;
+    box.innerHTML = `<div class="trace-reports-title">${t('未查看的跟踪报告')}</div><div class="trace-reports-list">${reports.map(r => `<button class="trace-report-chip" onclick="app.openTraceReport('${escapeHtml(r.public_id)}')"><strong>${escapeHtml(r.public_id)}</strong><span>${escapeHtml(r.api_key_name || t('已删除 Key'))}</span><span>${Number(r.summary?.requests || 0)} 项请求</span></button>`).join('')}</div>`;
   }
 
   async openTraceReport(publicId) {
@@ -8557,14 +8527,14 @@ ${extractorBody}
       const meta = semanticsMeta[type] || semanticsMeta.unknown;
       const reasonCodes = Array.isArray(semantics?.reason_codes) ? semantics.reason_codes : [];
       const title = reasonCodes.length ? ` title="${escapeHtml(reasonCodes.join(', '))}"` : '';
-      return `<span class="badge"${title} >${escapeHtml(meta.label)}</span>`;
+      return `<span class="badge"${title} style="color:${meta.color};border:1px solid ${meta.color};">${escapeHtml(meta.label)}</span>`;
     };
     const rows = events.map(e => `<tr><td>${escapeHtml(new Date(e.created_at).toLocaleString('zh-CN', { hour12: false }))}</td><td>${escapeHtml(e.request_type || '-')}</td><td>${renderSemantics(e.semantics)}</td><td>${escapeHtml(e.model_id || '-')}</td><td>${e.ok ? t('成功') : t('失败')}</td><td title="${Number(e.tokens_used || 0).toLocaleString()}">${this._formatBigNumber(Number(e.tokens_used || 0))}</td><td>${e.latency_ms == null ? '-' : `${e.latency_ms} ms`}</td></tr>`).join('');
-    Dialog.showModal({
-      title: `${t('跟踪报告')} ${escapeHtml(session.public_id)}`,
-      width: 1000,
-      content: `<div class="blora-stack"><p>请求 ${Number(session.summary?.requests || events.length)} ${t('项 · 成功')} ${Number(session.summary?.succeeded || 0)} ${t('· 失败')} ${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="blora-actions"><a class="blora-button" data-variant="outline" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="blora-button" data-variant="outline" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="blora-table-wrap" data-blora-table><table class="blora-table"><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div></div>`,
-    });
+    const detail = document.createElement('div');
+    detail.className = 'trace-report-modal';
+    detail.innerHTML = `${'<div class="trace-report-dialog"><div class="trace-report-dialog-head"><h3>' + t('跟踪报告')}${escapeHtml(session.public_id)}${'</h3><button class="blora-button" onclick="this.closest(\'.trace-report-modal\').remove()" data-variant="secondary" data-size="sm">' + t('关闭')}</button></div><p>请求${Number(session.summary?.requests || events.length)}${t('项 · 成功')}${Number(session.summary?.succeeded || 0)}${t('· 失败')}${Number(session.summary?.failed || 0)} · ${this._formatBigNumber(Number(session.summary?.tokens || 0))} tokens</p><div class="trace-report-actions"><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=json">${t('下载 JSON')}</a><a class="btn btn-secondary btn-sm" href="/api/user/trace-sessions/${encodeURIComponent(publicId)}/export?format=csv">下载 CSV</a></div><div class="trace-report-table-wrap"><table><thead><tr><th>时间</th><th>类型</th><th>${t('语义')}</th><th>模型</th><th>状态</th><th>Tokens</th><th>延迟</th></tr></thead><tbody>${rows || '<tr><td colspan="7">暂无事件</td></tr>'}</tbody></table></div></div>`;
+    document.body.appendChild(detail);
+    detail.addEventListener('click', e => { if (e.target === detail) detail.remove(); });
     this.loadTraceReports().catch(() => {});
   }
 
@@ -8582,16 +8552,25 @@ ${extractorBody}
       }
       if (!providers.length) {
         setBloraState('myProvidersTable', 'empty');
-        setHTML(container, `<blora-empty title="${escapeHtml(t('暂无供应商'))}" description="${escapeHtml(t('点击上方添加供应商按钮开始'))}"></blora-empty>`);
+        setHTML(container, `
+          <div class="empty-state" style="padding:60px 20px;text-align:center;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+            </svg>
+            <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无供应商</p>
+            <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">点击上方${t('添加供应商')}按钮开始</p>
+          </div>
+        `);
         return;
       }
 
       setBloraState('myProvidersTable', 'success');
       setHTML(container, `
-        <table class="blora-table">
+        <table>
           <thead>
             <tr>
-              <th style="width:40px;"><blora-checkbox class="" data-control-action="app-dynamic-2"></blora-checkbox></th>
+              <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllProviders(this.checked)"></th>
               <th>名称</th>
               <th>Base URL</th>
               <th>格式</th>
@@ -8603,28 +8582,28 @@ ${extractorBody}
           <tbody>
             ${providers.map(p => `
               <tr data-provider-id="${escapeHtml(p.id)}">
-                <td><blora-checkbox class=" provider-checkbox" value="${escapeHtml(p.id)}" data-control-action="app-dynamic-3"></blora-checkbox></td>
+                <td><input type="checkbox" class="blora-input provider-checkbox" value="${escapeHtml(p.id)}" onchange="app.updateBatchButtons()"></td>
                 <td>
-                  <div class="blora-list__title">${escapeHtml(p.name)}</div>
-                  <div class="blora-text-muted blora-text-mono">${escapeHtml(p.id)}</div>
+                  <div style="font-weight:500;">${escapeHtml(p.name)}</div>
+                  <div style="font-size:11px;color:var(--muted-foreground);font-family:monospace;">${escapeHtml(p.id)}</div>
                 </td>
                 <td>
                   <div style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(p.base_url)}">${escapeHtml(p.base_url)}</div>
                 </td>
-                <td><span class="blora-tag" data-variant="neutral">${escapeHtml(formatDisplayName(p.format))}</span></td>
+                <td><span style="font-size:12px;">${escapeHtml(formatDisplayName(p.format))}</span></td>
                 <td>
-                  <div id="user-ping-page-${escapeHtml(String(p.id))}" style="min-width:60px;">-</div>
+                  <div id="user-ping-page-${escapeHtml(String(p.id))}" style="min-width:60px;font-size:12px;color:var(--muted-foreground);">-</div>
                 </td>
                 <td>
                   <button type="button" class="blora-button upstream-action" data-variant="outline" data-size="sm" onclick="app.showManageModelsModal('${this._jsString(p.id)}')" title="${t('管理模型')}">
-                    ${this._libIcon('list', 14)}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                     模型
                   </button>
                 </td>
                 <td>
                   <div style="display:flex;gap:6px;">
                     <button type="button" class="blora-button upstream-icon-action" data-variant="ghost" data-size="icon" onclick="app.pingUserProvider('${this._jsString(p.id)}')" title="${t('检测连通性')}" aria-label="${t('检测连通性')}">
-                      ${this._libIcon('radio', 14)}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     </button>
                     <button type="button" class="blora-button upstream-action" data-variant="outline" data-size="sm" onclick="app.editMyProvider('${this._jsString(p.id)}')">编辑</button>
                     <button type="button" class="blora-button upstream-action" data-variant="danger" data-size="sm" onclick="app.deleteMyProvider('${this._jsString(p.id)}')">删除</button>
@@ -8649,7 +8628,7 @@ ${extractorBody}
   }
 
   updateBatchButtons() {
-    const checked = document.querySelectorAll('.provider-checkbox[checked]');
+    const checked = document.querySelectorAll('.provider-checkbox:checked');
     const batchBtn = document.getElementById('batchDeleteBtn');
     if (batchBtn) {
       batchBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
@@ -8657,11 +8636,11 @@ ${extractorBody}
   }
 
   async batchDeleteProviders() {
-    const checked = document.querySelectorAll('.provider-checkbox[checked]');
+    const checked = document.querySelectorAll('.provider-checkbox:checked');
     const ids = Array.from(checked).map(cb => cb.value);
 
     if (!ids.length) return;
-    if (!await Dialog.confirm(t('确认'), `${t('确定要删除选中的')}${ids.length}${t('个供应商吗？关联的模型也会被删除。')}`)) return;
+    if (!await confirm(`${t('确定要删除选中的')}${ids.length}${t('个供应商吗？关联的模型也会被删除。')}`)) return;
 
     let successCount = 0;
     for (const id of ids) {
@@ -8738,7 +8717,7 @@ ${extractorBody}
       const providers = await res.json();
       const provider = providers.find(p => p.id === providerId);
       if (!provider) {
-        Dialog.alert(t('未找到供应商信息'));
+        alert(t('未找到供应商信息'));
         return;
       }
 
@@ -8753,7 +8732,7 @@ ${extractorBody}
       this.showModal('editProviderModal');
     } catch (error) {
       console.error(t('获取供应商信息失败:'), error);
-      Dialog.alert(t('获取供应商信息失败'));
+      alert(t('获取供应商信息失败'));
     }
   }
 
@@ -8811,13 +8790,13 @@ ${extractorBody}
       const resp = await fetch(`/api/user/providers/${providerId}/ping`);
       const data = await resp.json();
       const resultHtml = data.ok
-        ? `<span >${data.latency_ms}ms</span>`
-        : `<span  title="${escapeHtml(data.error || '')}">${t('失败')}</span>`;
+        ? `<span style="color:${data.latency_ms <= 300 ? 'var(--success)' : data.latency_ms <= 1000 ? 'var(--warning)' : 'var(--destructive)'};font-weight:500;">${data.latency_ms}ms</span>`
+        : `<span style="color:var(--destructive);" title="${escapeHtml(data.error || '')}">${t('失败')}</span>`;
       if (display) setHTML(display, resultHtml);
       if (pageDisplay) setHTML(pageDisplay, resultHtml);
       libDisplays.forEach(el => setHTML(el, resultHtml));
     } catch (e) {
-      const errHtml = '<span >' + t('错误') + '</span>';
+      const errHtml = '<span style="color:var(--destructive);">' + t('错误') + '</span>';
       if (display) setHTML(display, errHtml);
       if (pageDisplay) setHTML(pageDisplay, errHtml);
       libDisplays.forEach(el => setHTML(el, errHtml));
@@ -8850,19 +8829,19 @@ ${extractorBody}
   }
 
   async deleteMyProvider(providerId) {
-    if (!await Dialog.confirm(t('确认'), t('确定要删除此供应商吗？关联的模型也会被删除。'))) return;
+    if (!await confirm(t('确定要删除此供应商吗？关联的模型也会被删除。'))) return;
 
     try {
       const res = await fetch(`/api/user/providers/${providerId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('删除失败'));
+        alert(data.error || t('删除失败'));
         return;
       }
       this.showToast(t('供应商已删除'), 'success');
       await this.loadModelLibrary();
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -8872,13 +8851,13 @@ ${extractorBody}
       const res = await fetch(`/api/user/providers/${providerId}/refresh-models`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('刷新失败'));
+        alert(data.error || t('刷新失败'));
         return;
       }
       this.showToast(`${t('已添加')}${data.added}${t('个新模型（共')}${data.total}${t('个）')}`, 'success');
       await this.loadModelLibrary();
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -8937,22 +8916,22 @@ ${extractorBody}
 
     if (models.length === 0) {
       setHTML(container, `
-        <div style="text-align:center;padding:40px;">
+        <div style="text-align:center;padding:40px;color:var(--muted-foreground);">
           <p>暂无模型</p>
-          <p >点击${t('刷新列表')}从供应商获取模型</p>
+          <p style="font-size:13px;">点击${t('刷新列表')}从供应商获取模型</p>
         </div>
       `);
       return;
     }
 
     setHTML(container, models.map((model, index) => `
-      <div class="blora-card model-check-item" data-model-id="${escapeHtml(String(model.id))}" data-model-name="${escapeHtml(model.name || '')}" data-size="sm">
-        <blora-checkbox class=" manage-model-checkbox" id="manageModel_${index}" value="${escapeHtml(String(model.id))}" data-control-action="app-dynamic-4"></blora-checkbox>
+      <div class="blora-card model-check-item" data-model-id="${escapeHtml(String(model.id))}" data-model-name="${escapeHtml(model.name || '')}">
+        <input type="checkbox" class="blora-input manage-model-checkbox" id="manageModel_${index}" value="${escapeHtml(String(model.id))}" onchange="app._updateManageModelsBatchBar()">
         <label for="manageModel_${index}" style="flex:1;cursor:pointer;">
-          <span >${escapeHtml(model.name || model.id)}</span>
-          ${model.name && model.name !== model.id ? `<span style="margin-left:8px;">${escapeHtml(model.id)}</span>` : ''}
-          ${model.series ? `<span style="padding:2px 6px;margin-left:8px;">${escapeHtml(model.series)}</span>` : ''}
-          ${model.enabled === false ? '<span style="margin-left:8px;">' + t('已禁用') + '</span>' : ''}
+          <span style="font-weight:500;">${escapeHtml(model.name || model.id)}</span>
+          ${model.name && model.name !== model.id ? `<span style="font-size:12px;color:var(--muted-foreground);margin-left:8px;">${escapeHtml(model.id)}</span>` : ''}
+          ${model.series ? `<span style="font-size:11px;background:var(--muted);padding:2px 6px;border-radius:4px;margin-left:8px;">${escapeHtml(model.series)}</span>` : ''}
+          ${model.enabled === false ? '<span style="font-size:11px;color:var(--destructive);margin-left:8px;">' + t('已禁用') + '</span>' : ''}
         </label>
       </div>
     `).join(''));
@@ -8986,19 +8965,19 @@ ${extractorBody}
       const res = await fetch(`/api/user/providers/${providerId}/refresh-models`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('刷新失败'));
+        alert(data.error || t('刷新失败'));
         return;
       }
       this.showToast(`${t('已添加')}${data.added}${t('个新模型')}`, 'success');
       // 重新加载模型列表
       await this.showManageModelsModal(providerId);
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
   async saveManagedModels() {
-    const checked = document.querySelectorAll('.manage-model-checkbox[checked]');
+    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
     const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) {
@@ -9006,7 +8985,7 @@ ${extractorBody}
       return;
     }
 
-    if (!await Dialog.confirm(t('确认'), `${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
+    if (!await confirm(`${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
 
     const providerId = this._currentManageProviderId;
     try {
@@ -9018,7 +8997,7 @@ ${extractorBody}
 
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('删除失败'));
+        alert(data.error || t('删除失败'));
         return;
       }
 
@@ -9026,13 +9005,13 @@ ${extractorBody}
       this.closeModals();
       await this.loadMyProvidersPage();
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
   // 批量操作函数
   _updateManageModelsBatchBar() {
-    const checked = document.querySelectorAll('.manage-model-checkbox[checked]');
+    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
     const count = checked.length;
     const batchBar = document.getElementById('manageModelsBatchBar');
     const countEl = document.getElementById('manageModelsSelectedCount');
@@ -9046,13 +9025,13 @@ ${extractorBody}
   }
 
   async batchEnableModels(enabled) {
-    const checked = document.querySelectorAll('.manage-model-checkbox[checked]');
+    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
     const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) return;
 
     const action = enabled ? t('启用') : t('禁用');
-    if (!await Dialog.confirm(t('确认'), `${t('确定要')}${action}${t('选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
+    if (!await confirm(`${t('确定要')}${action}${t('选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
 
     const providerId = this._currentManageProviderId;
     try {
@@ -9064,23 +9043,23 @@ ${extractorBody}
 
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || `${action}${t('失败')}`);
+        alert(data.error || `${action}${t('失败')}`);
         return;
       }
 
       this.showToast(`${t('已')}${action} ${data.updated}${t('个模型')}`, 'success');
       await this.showManageModelsModal(providerId);
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
   async batchDeleteManagedModels() {
-    const checked = document.querySelectorAll('.manage-model-checkbox[checked]');
+    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
     const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) return;
-    if (!await Dialog.confirm(t('确认'), `${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
+    if (!await confirm(`${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
 
     const providerId = this._currentManageProviderId;
     try {
@@ -9092,14 +9071,14 @@ ${extractorBody}
 
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('删除失败'));
+        alert(data.error || t('删除失败'));
         return;
       }
 
       this.showToast(`${t('已删除')}${data.deleted}${t('个模型')}`, 'success');
       await this.showManageModelsModal(providerId);
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -9111,7 +9090,7 @@ ${extractorBody}
   }
 
   async executeBatchSetPrices() {
-    const checked = document.querySelectorAll('.manage-model-checkbox[checked]');
+    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
     const modelIds = Array.from(checked).map(cb => cb.value);
 
     if (!modelIds.length) return;
@@ -9126,7 +9105,7 @@ ${extractorBody}
     if (cachedPrice !== '') updates.cached_output_price_per_1k_tokens = parseFloat(cachedPrice);
 
     if (Object.keys(updates).length === 0) {
-      Dialog.alert(t('请至少填写一项价格'));
+      alert(t('请至少填写一项价格'));
       return;
     }
 
@@ -9140,7 +9119,7 @@ ${extractorBody}
 
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('设置失败'));
+        alert(data.error || t('设置失败'));
         return;
       }
 
@@ -9148,7 +9127,7 @@ ${extractorBody}
       this.closeModals();
       await this.showManageModelsModal(providerId);
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -9184,12 +9163,12 @@ ${extractorBody}
     if (models.length === 0) {
       setHTML(container, `
         <div class="empty-state" style="padding:60px 20px;text-align:center;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
             <rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>
             <path d="M7 7h10M7 12h10M7 17h6"/>
           </svg>
-          <p style="margin:0;">暂无模型</p>
-          <p style="margin:8px 0 0;">通过供应商刷新导入模型后会自动出现在这里</p>
+          <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无模型</p>
+          <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">通过供应商刷新导入模型后会自动出现在这里</p>
         </div>
       `);
       return;
@@ -9199,7 +9178,7 @@ ${extractorBody}
       <table>
         <thead>
           <tr>
-            <th style="width:40px;"><blora-checkbox class="" data-control-action="app-dynamic-5"></blora-checkbox></th>
+            <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></th>
             <th>模型名称</th>
             <th>上游模型ID</th>
             <th>供应商</th>
@@ -9212,23 +9191,23 @@ ${extractorBody}
         <tbody>
           ${models.map(m => `
             <tr data-model-id="${escapeHtml(m.id)}">
-              <td><blora-checkbox class=" my-team-model-checkbox" value="${escapeHtml(m.id)}" data-control-action="app-dynamic-6"></blora-checkbox></td>
+              <td><input type="checkbox" class="blora-input my-team-model-checkbox" value="${escapeHtml(m.id)}" onchange="app.updateMyModelsBatchButtons()"></td>
               <td>
-                <div >${escapeHtml(m.alias || m.name || m.id)}</div>
-                ${m.description ? `<div style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
+                <div style="font-weight:500;">${escapeHtml(m.alias || m.name || m.id)}</div>
+                ${m.description ? `<div style="font-size:11px;color:var(--muted-foreground);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
               </td>
-              <td><code >${escapeHtml(m.upstream_model_id || m.name || m.id)}</code></td>
+              <td><code style="font-size:12px;color:var(--muted-foreground);">${escapeHtml(m.upstream_model_id || m.name || m.id)}</code></td>
               <td>${renderProviderNameTag(m.provider_name || m.provider) || '<span class="model-provider-missing">-</span>'}</td>
-              <td>${m.series ? `<span style="padding:2px 6px;">${escapeHtml(m.series)}</span>` : '<span >-</span>'}</td>
-              <td >×${parseFloat(m.model_multiplier || 1.0).toFixed(2)}</td>
+              <td>${m.series ? `<span style="font-size:11px;background:var(--muted);padding:2px 6px;border-radius:4px;">${escapeHtml(m.series)}</span>` : '<span style="color:var(--muted-foreground);font-size:12px;">-</span>'}</td>
+              <td style="font-size:13px;">×${parseFloat(m.model_multiplier || 1.0).toFixed(2)}</td>
               <td>${m.enabled !== false
-                ? '<span >' + t('● 启用') + '</span>'
-                : '<span >' + t('● 禁用') + '</span>'
+                ? '<span style="font-size:11px;color:var(--success,var(--brand-green,var(--success)));">' + t('● 启用') + '</span>'
+                : '<span style="font-size:11px;color:var(--destructive);">' + t('● 禁用') + '</span>'
               }</td>
               <td>
                 <div style="display:flex;gap:4px;">
-                  <button type="button" class="blora-button" onclick="app.editMyTeamModel('${this._jsString(m.id)}')" data-variant="secondary" data-size="sm">编辑</button>
-                  <button type="button" class="blora-button"  onclick="app.deleteMyTeamModel('${this._jsString(m.id)}')" data-variant="danger" data-size="sm">删除</button>
+                  <button class="blora-button" onclick="app.editMyTeamModel('${this._jsString(m.id)}')" data-variant="secondary" data-size="sm">编辑</button>
+                  <button class="blora-button" style="color:var(--destructive);background:transparent;border:1px solid var(--border);" onclick="app.deleteMyTeamModel('${this._jsString(m.id)}')" data-variant="secondary" data-size="sm">删除</button>
                 </div>
               </td>
             </tr>
@@ -9259,7 +9238,7 @@ ${extractorBody}
   }
 
   updateMyModelsBatchButtons() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox[checked]');
+    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
     const count = checked.length;
     const ids = ['batchEnableMyModelsBtn', 'batchDisableMyModelsBtn', 'batchEditMyModelsBtn', 'batchDeleteMyModelsBtn'];
     ids.forEach(id => {
@@ -9269,10 +9248,10 @@ ${extractorBody}
   }
 
   async batchDeleteMyTeamModels() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox[checked]');
+    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
     const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
-    if (!await Dialog.confirm(t('确认'), `${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？此操作不可撤销。')}`)) return;
+    if (!await confirm(`${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？此操作不可撤销。')}`)) return;
 
     try {
       const res = await fetch('/api/user/my-team-models/batch-delete', {
@@ -9282,13 +9261,13 @@ ${extractorBody}
       });
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('删除失败'));
+        alert(data.error || t('删除失败'));
         return;
       }
       this.showToast(`${t('已删除')}${data.deleted}${t('个模型')}`, 'success');
       await this.loadMyTeamModels();
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -9301,10 +9280,10 @@ ${extractorBody}
   }
 
   async _batchUpdateMyTeamModels(updates, action) {
-    const checked = document.querySelectorAll('.my-team-model-checkbox[checked]');
+    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
     const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
-    if (!await Dialog.confirm(t('确认'), `${t('确定要')}${action}${t('选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
+    if (!await confirm(`${t('确定要')}${action}${t('选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
 
     try {
       const res = await fetch('/api/user/my-team-models/batch-update', {
@@ -9314,18 +9293,18 @@ ${extractorBody}
       });
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || `${action}${t('失败')}`);
+        alert(data.error || `${action}${t('失败')}`);
         return;
       }
       this.showToast(`${t('已')}${action} ${data.updated}${t('个模型')}`, 'success');
       await this.loadMyTeamModels();
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
   showBatchEditMyModelsModal() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox[checked]');
+    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
     const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
 
@@ -9352,7 +9331,7 @@ ${extractorBody}
   }
 
   async saveBatchEditMyModels() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox[checked]');
+    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
     const modelIds = Array.from(checked).map(cb => cb.value);
     if (!modelIds.length) return;
 
@@ -9386,7 +9365,7 @@ ${extractorBody}
     }
 
     if (Object.keys(updates).length === 0) {
-      Dialog.alert(t('请至少勾选一项进行编辑'));
+      alert(t('请至少勾选一项进行编辑'));
       return;
     }
 
@@ -9398,20 +9377,20 @@ ${extractorBody}
       });
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('更新失败'));
+        alert(data.error || t('更新失败'));
         return;
       }
       this.showToast(`${t('已更新')}${data.updated}${t('个模型')}`, 'success');
       this.closeModals();
       await this.loadMyTeamModels();
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
   async editMyTeamModel(modelId) {
     const model = this._myTeamModels.find(m => m.id === modelId);
-    if (!model) { Dialog.alert(t('模型不存在')); return; }
+    if (!model) { alert(t('模型不存在')); return; }
 
     // 复用已有的编辑模态框
     this._editingModelId = modelId;
@@ -9448,19 +9427,19 @@ ${extractorBody}
   }
 
   async deleteMyTeamModel(modelId) {
-    if (!await Dialog.confirm(t('确认'), t('确定要删除此模型吗？此操作不可撤销。'))) return;
+    if (!await confirm(t('确定要删除此模型吗？此操作不可撤销。'))) return;
 
     try {
       const res = await fetch(`/api/user/models/${modelId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('删除失败'));
+        alert(data.error || t('删除失败'));
         return;
       }
       this.showToast(t('模型已删除'), 'success');
       await this.loadMyTeamModels();
     } catch (error) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
@@ -9587,7 +9566,7 @@ ${extractorBody}
     const container = document.getElementById('modelLibraryContent');
     const countEl = document.getElementById('modelLibraryCount');
     if (container && page === 1) {
-      setHTML(container, '<div class="empty-state" style="padding:40px 20px;text-align:center;"><p style="margin:0;">' + t('搜索中...') + '</p></div>');
+      setHTML(container, '<div class="empty-state" style="padding:40px 20px;text-align:center;"><p style="color:var(--muted-foreground);margin:0;">' + t('搜索中...') + '</p></div>');
     }
     try {
       const res = await fetch(`/api/user/model-library/search?${this._buildLibraryGlobalSearchParams(page).toString()}`);
@@ -9607,7 +9586,7 @@ ${extractorBody}
       if (seq !== this._libraryGlobalSearchSeq) return;
       console.warn(t('[模型库] 全局搜索失败:'), e);
       if (container) {
-        setHTML(container, '<div class="empty-state" style="padding:40px 20px;text-align:center;"><p style="margin:0;">' + t('搜索失败，请重试') + '</p></div>');
+        setHTML(container, '<div class="empty-state" style="padding:40px 20px;text-align:center;"><p style="color:var(--destructive);margin:0;">' + t('搜索失败，请重试') + '</p></div>');
       }
     }
   }
@@ -9622,8 +9601,8 @@ ${extractorBody}
     if (!models.length) {
       setHTML(container, `
         <div class="empty-state model-library-empty" style="padding:48px 20px;text-align:center;">
-          <p style="margin:0;">没有符合条件的模型</p>
-          <p style="margin:8px 0 0;">试试缩短关键词，或清空系列/测试筛选</p>
+          <p style="font-size:15px;color:var(--muted-foreground);margin:0;">没有符合条件的模型</p>
+          <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">试试缩短关键词，或清空系列/测试筛选</p>
         </div>`);
       return;
     }
@@ -9652,9 +9631,9 @@ ${extractorBody}
         });
       }).join('');
       return `
-        <div class="blora-stack model-library-team model-search-team">
-          <div class="blora-row model-library-team-header" style="cursor:default;">
-            <h3 class="blora-h4">${escapeHtml(team.team_name)}</h3>
+        <div class="model-library-team model-search-team">
+          <div class="model-library-team-header" style="cursor:default;">
+            <h3>${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
             <div style="flex:1;"></div>
@@ -9669,10 +9648,10 @@ ${extractorBody}
       const page = pagination.page || 1;
       paginationHtml = `
         <div class="model-library-pagination" style="margin-top:12px;">
-          <button type="button" class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'}
+          <button class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'}
             onclick="app.loadLibraryGlobalSearchPage(${page - 1})">上一页</button>
           <span class="model-library-page-summary">第 ${page} / ${pagination.total_pages} 页 · 共 ${pagination.total} 个</span>
-          <button type="button" class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'}
+          <button class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'}
             onclick="app.loadLibraryGlobalSearchPage(${page + 1})">下一页</button>
         </div>`;
     }
@@ -9996,7 +9975,7 @@ ${extractorBody}
   }
 
   async clearLibraryHidden() {
-    if (!await Dialog.confirm(t('确认'), t('确定清除全部隐藏偏好吗？已隐藏的供应商和模型将全部恢复显示。'))) return;
+    if (!await confirm(t('确定清除全部隐藏偏好吗？已隐藏的供应商和模型将全部恢复显示。'))) return;
     try {
       const res = await fetch('/api/user/model-library/hidden?scope=all', { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
@@ -10216,8 +10195,8 @@ ${extractorBody}
     }).join('');
 
     return `
-      <div class="blora-stack model-library-team model-library-starred" data-starred-section="1">
-        <div class="blora-row model-library-team-header" style="cursor:default;">
+      <div class="model-library-team model-library-starred" data-starred-section="1">
+        <div class="model-library-team-header" style="cursor:default;">
           ${this._libIcon('star.fill', 16, 'model-star-heading-icon')}
           <h3>星标</h3>
           <div style="flex:1;"></div>
@@ -10277,7 +10256,7 @@ ${extractorBody}
       return;
     }
 
-    const confirmed = await Dialog.confirm(t('确认'),
+    const confirmed = await confirm(
       `${t('将按「')}${sortLabels[sort]}${t('」重写当前账号的模型库自定义排序：\\n')}` +
       `${t('• 各 Team 内供应商顺序\\n')}` +
       `${t('• 各供应商内模型顺序\\n\\n')}` +
@@ -10582,7 +10561,7 @@ ${extractorBody}
   }
 
   async resetLibraryOrder() {
-    if (!await Dialog.confirm(t('确认'), t('确定恢复模型库默认排序吗？这会清除当前账号的 Team、供应商和模型自定义排序。'))) return;
+    if (!await confirm(t('确定恢复模型库默认排序吗？这会清除当前账号的 Team、供应商和模型自定义排序。'))) return;
     try {
       const res = await fetch('/api/user/model-library/order?scope=all', { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
@@ -10694,7 +10673,7 @@ ${extractorBody}
 
     const usageBadge = (pct) => {
       const variant = pct >= 90 ? 'danger' : pct >= 70 ? 'warning' : 'success';
-      return `<span class="blora-badge" data-variant="${variant}">${t('已用')} ${formatQuotaPercent(pct)}%</span>`;
+      return `<span class="blora-badge" data-variant="${variant}">${t('已用')} ${pct}%</span>`;
     };
     const progressBar = (pct, label) => `<blora-progress class="model-quota-progress" value="${Math.max(0, Math.min(100, Number(pct) || 0))}" label="${escapeHtml(label)}"></blora-progress>`;
 
@@ -10702,9 +10681,9 @@ ${extractorBody}
     setHTML(grid, providers.map(p => {
       if (p.error) {
         return `
-          <article class="blora-card model-quota-card error" data-variant="flat" data-size="sm">
-            <div class="blora-card__header model-quota-header">
-              <h4 class="model-quota-name blora-card__title">${escapeHtml(p.name)}</h4>
+          <article class="blora-card model-quota-card error" data-variant="flat">
+            <div class="model-quota-header">
+              <span class="model-quota-name">${escapeHtml(p.name)}</span>
               <span class="blora-badge" data-variant="danger">${t('查询失败')}</span>
             </div>
           </article>`;
@@ -10718,14 +10697,14 @@ ${extractorBody}
       const periods = Array.isArray(q.periods) ? q.periods : [];
       const currentPercent = Number(q.currentPercent ?? periods.find(period => period.key === 'current_period')?.percent);
       const pct = Number.isFinite(currentPercent)
-        ? currentPercent
-        : (total > 0 ? used / total * 100 : 0);
+        ? Math.round(currentPercent)
+        : (total > 0 ? Math.round(used / total * 100) : 0);
 
       const credits = q.credits || {};
       const resetCredits = q.rateLimitResetCredits?.available_count;
       const creditsHtml = (credits.hasCredits || credits.unlimited || credits.balance !== undefined || resetCredits !== undefined) ? `
         <div class="model-quota-credits">
-          <span>Credits：${escapeHtml(credits.unlimited ? t('无限') : formatQuotaNumber(credits.balance ?? 0))}</span>
+          <span>Credits：${escapeHtml(credits.unlimited ? t('无限') : String(credits.balance ?? '0'))}</span>
           ${resetCredits !== undefined ? `${'<span>' + t('可手动重置：')}${escapeHtml(String(resetCredits))}${t('次')}</span>` : ''}
         </div>` : '';
 
@@ -10745,7 +10724,7 @@ ${extractorBody}
                   ${usageBadge(periodPct)}
                 </div>
                 ${progressBar(periodPct, periodLabel)}
-                ${periodRange ? `<div class="blora-text-muted model-quota-period-reset" title="${escapeHtml(resetTitle)}">${t('周期：')}${escapeHtml(periodRange)}</div>` : ''}
+                ${periodRange ? `<div class="model-quota-period-reset" title="${escapeHtml(resetTitle)}">${t('周期：')}${escapeHtml(periodRange)}</div>` : ''}
               </div>`;
           }).join('')}
         </div>` : `
@@ -10764,47 +10743,47 @@ ${extractorBody}
             const kq = key.quota || {};
             const kTotal = parseFloat(kq.total) || 0;
             const kUsed = parseFloat(kq.used) || 0;
-            const kPct = kTotal > 0 ? Math.min(100, kUsed / kTotal * 100) : 0;
+            const kPct = kTotal > 0 ? Math.min(100, Math.round(kUsed / kTotal * 100)) : 0;
             const keyLabel = key.label || key.masked_key || `${t('Key')} ${key.index + 1}`;
             if (!key.ok) {
               return `
-                <div class="model-quota-key" >
+                <div class="model-quota-key" style="opacity:0.75;">
                   <div class="model-quota-period-header">
-                    <span><code >${escapeHtml(keyLabel)}</code></span>
+                    <span><code style="font-size:11px;">${escapeHtml(keyLabel)}</code></span>
                     <span class="blora-badge" data-variant="danger">${t('查询失败')}</span>
                   </div>
-                  ${key.error ? `<div style="margin-top:2px;" title="${escapeHtml(key.error)}">${escapeHtml(key.error.length > 60 ? key.error.slice(0, 60) + '…' : key.error)}</div>` : ''}
+                  ${key.error ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;" title="${escapeHtml(key.error)}">${escapeHtml(key.error.length > 60 ? key.error.slice(0, 60) + '…' : key.error)}</div>` : ''}
                 </div>`;
             }
             const kCurrent = Number(kq.currentPercent ?? kPct);
             return `
               <div class="model-quota-key">
                 <div class="model-quota-period-header">
-                  <span><code >${escapeHtml(keyLabel)}</code></span>
-                  ${usageBadge(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? kCurrent : kPct)))}
+                  <span><code style="font-size:11px;">${escapeHtml(keyLabel)}</code></span>
+                  ${usageBadge(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct)))}
                 </div>
-                ${progressBar(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? kCurrent : kPct)), keyLabel)}
-                ${kTotal > 0 ? `<div class="model-quota-numbers" title="${escapeHtml(String(kq.remaining ?? 0))} / ${escapeHtml(String(kq.total))}">${escapeHtml(formatQuotaNumber(kq.remaining ?? 0))} / ${escapeHtml(formatQuotaNumber(kTotal))}</div>` : ''}
+                ${progressBar(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct)), keyLabel)}
+                ${kTotal > 0 ? `<div style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(String(kq.remaining ?? 0))} / ${escapeHtml(String(kTotal))}</div>` : ''}
               </div>`;
           }).join('')}
         </div>` : '';
 
       return `
-        <article class="blora-card model-quota-card" data-variant="flat" data-size="sm">
-          <div class="blora-card__header model-quota-header">
-            <h4 class="model-quota-name blora-card__title">${escapeHtml(p.name)}</h4>
+        <article class="blora-card model-quota-card" data-variant="flat">
+          <div class="model-quota-header">
+            <span class="model-quota-name">${escapeHtml(p.name)}</span>
             ${q.planName ? `<span class="blora-tag model-quota-plan" data-variant="neutral">${escapeHtml(q.planName)}</span>` : ''}
             ${keyEntries.length > 1 ? `<span class="blora-tag model-quota-plan" data-variant="neutral">${t('共')} ${keyEntries.length} ${t('个 Key')}</span>` : ''}
           </div>
           ${periods.length ? periodHtml : `
-          <div class="model-quota-numbers" title="${escapeHtml(String((agg || q).remaining ?? 0))} / ${escapeHtml(String((agg || q).total ?? 0))}">
-            <span class="model-quota-remaining">${escapeHtml(formatQuotaNumber((agg || q).remaining ?? 0))}</span>
-            <span class="model-quota-total">/ ${escapeHtml(formatQuotaNumber((agg || q).total ?? 0))}</span>
+          <div class="model-quota-numbers">
+            <span class="model-quota-remaining">${escapeHtml(String((agg || q).remaining ?? 0))}</span>
+            <span class="model-quota-total">/ ${escapeHtml(String((agg || q).total ?? 0))}</span>
           </div>
           ${periodHtml}`}
           ${keysHtml}
           ${creditsHtml}
-          ${p.checked_at ? `${'<div class="blora-text-muted model-quota-updated">' + t('更新于')}${escapeHtml(this._formatQuotaCheckedAt(p.checked_at))}</div>` : ''}
+          ${p.checked_at ? `${'<div class="model-quota-updated">' + t('更新于')}${escapeHtml(this._formatQuotaCheckedAt(p.checked_at))}</div>` : ''}
         </article>`;
     }).join(''));
   }
@@ -10863,10 +10842,10 @@ ${extractorBody}
       }
 
       return `
-        <div class="blora-stack model-library-team" data-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
-          <div class="blora-row model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
+        <div class="model-library-team" data-team-index="${teamIndex}" data-team-id="${escapeHtml(String(team.team_id))}">
+          <div class="model-library-team-header" onclick="app.toggleTeam(${teamIndex})">
             ${this._libIcon('chevron.down', 16, 'collapse-icon')}
-            <h3 class="blora-h4">${escapeHtml(team.team_name)}</h3>
+            <h3>${escapeHtml(team.team_name)}</h3>
             ${team.is_personal ? '<span class="blora-badge team-badge" data-variant="info">' + t('个人') + '</span>' : ''}
             ${team.is_default ? '<span class="blora-badge team-badge" data-variant="neutral">' + t('默认') + '</span>' : ''}
             ${this._renderLibraryMoveControls('team', team.team_id)}
@@ -10880,7 +10859,7 @@ ${extractorBody}
             ])}
           </div>
 
-          <div class="blora-list model-library-team-content" role="list">
+          <div class="model-library-team-content">
           ${team.providers.map((provider, providerIndex) => {
             const isProviderDisabled = provider.provider_enabled === false;
             const isProviderHidden = !!provider.is_hidden;
@@ -10905,17 +10884,13 @@ ${extractorBody}
               }
             ];
             return `
-            <div class="model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" role="listitem" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''};" data-size="sm">
+            <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-variant="hover" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''}">
               ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
-              <div class="blora-list__item model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
-                <div class="blora-list__meta model-library-provider-title">
+              <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
+                <div class="model-library-provider-title">
                   ${this._libIcon('chevron.down', 14, 'collapse-icon')}
-                  <span class="blora-list__title">${renderProviderNameTag(provider.provider_name, { tag: false })}</span>
-                </div>
-                <div class="model-library-provider-summary">
+                  ${renderProviderNameTag(provider.provider_name, { tag: false })}
                   ${this._renderProviderTestSummary(provider)}
-                </div>
-                <div class="model-library-provider-tags">
                   ${(provider.tags || []).map(t =>
                     `<span class="blora-tag model-provider-tag-chip" data-variant="neutral" style="--badge-accent:${safeColor(t.color)};">${escapeHtml(t.name)}</span>`
                   ).join('')}
@@ -10923,14 +10898,22 @@ ${extractorBody}
                   ${isProviderDisabled ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>' : ''}
                   ${isProviderHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
                 </div>
-                <div class="blora-actions model-library-provider-actions">
+                <div class="model-library-provider-actions">
                   <span class="lib-ping" data-provider-id="${escapeHtml(String(provider.provider_id))}"></span>
                   <button type="button" class="blora-button model-action-icon" data-variant="ghost" data-size="icon" title="${t('检测连通性')}" aria-label="${t('检测连通性')}" onclick="event.stopPropagation();app.pingLibraryProvider('${this._jsString(provider.provider_id)}')">${this._libIcon('dot.radiowaves.left.and.right', 14)}</button>
                   ${this._renderLibraryMoreMenu(providerMoreItems)}
                   <span class="provider-model-count">${displayCount} 个模型</span>
                 </div>
               </div>
-              <div class="model-library-list"></div>
+              <div class="model-library-list">
+                  ${hasModels
+                    ? `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}">
+                        <span class="placeholder-text">${provider.models.length} 个模型</span>
+                      </div>`
+                    : `<div class="model-library-placeholder" data-placeholder="${escapeHtml(providerKey)}">
+                        <span class="placeholder-text">${provider.models_loaded ? t('该供应商下暂无模型') : t('点击展开以加载模型')}</span>
+                      </div>`}
+              </div>
             </div>
           `;}).join('')}
           </div>
@@ -11020,15 +11003,14 @@ ${extractorBody}
     ];
 
     return `
-    <div class="blora-card model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-variant="hover" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}"  data-size="sm">
+    <div class="blora-card model-library-item ${isCurrent ? 'selected' : ''} ${isProviderDisabled ? 'model-disabled' : ''} ${isModelHidden ? 'model-hidden' : ''} ${isStarred ? 'model-starred' : ''}" data-variant="hover" data-model-id="${escapeHtml(modelId)}" data-team-id="${escapeHtml(teamId)}" data-provider-id="${escapeHtml(providerId)}" ${isProviderDisabled ? '' : `onclick="${onClick}"`}>
       <div class="model-library-item-info">
         <div class="model-library-item-name">
           ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" data-variant="ghost" data-size="icon" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-label="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">${this._libIcon(isStarred ? 'star.fill' : 'star', 14)}</button>`}
           ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
-          <button type="button" class="blora-button blora-card__title model-library-select" data-variant="text" ${isProviderDisabled ? 'disabled' : `onclick="${onClick}"`}>${escapeHtml(model.name)}</button>
+          <span>${escapeHtml(model.name)}</span>
           ${testBadgeHtml}
           <div class="model-item-badges">
-            ${isCurrent ? `<span class="blora-badge" data-variant="primary">${isKeyPicker ? (queueIndex >= 0 ? `${t('队列 #')}${queueIndex + 1}` : t('已加入队列')) : t('已绑定')}</span>` : ''}
             ${providerTagHtml}
             ${subtitleHtml}
             ${model.series ? `<span class="blora-tag" data-variant="neutral">${escapeHtml(model.series)}</span>` : ''}
@@ -11036,7 +11018,7 @@ ${extractorBody}
             ${isModelHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
           </div>
         </div>
-        ${model.description ? `<div class="blora-card__desc model-library-item-desc">${escapeHtml(model.description)}</div>` : ''}
+        ${model.description ? `<div class="model-library-item-desc">${escapeHtml(model.description)}</div>` : ''}
         <div class="model-library-item-price">
           <span class="model-price-item">
             <span class="model-price-label">倍率</span>
@@ -11045,20 +11027,20 @@ ${extractorBody}
         </div>
         ${this._renderModelUptimeSlot(modelId, model.name)}
       </div>
-      <div class="blora-card__foot blora-actions model-library-item-actions">
+      <div class="model-library-item-actions">
         ${isKeyPicker ? '' : this._renderLibraryMoveControls('model', team.team_id, providerId)}
         ${isProviderDisabled
           ? '<button type="button" class="blora-button model-action-disabled" data-variant="secondary" data-size="sm" disabled>' + t('供应商已禁用') + '</button>'
           : isKeyPicker
             ? (queueIndex >= 0
-              ? `<button type="button" class="blora-button model-action-bound" data-variant="secondary" data-size="sm" onclick="${onClick}" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
-              : `<button type="button" class="blora-button model-action-primary" data-variant="primary" data-size="sm" onclick="${onClick}">${t('加入队列')}</button>`)
+              ? `<button type="button" class="blora-button model-action-bound" data-variant="secondary" data-size="sm" title="${t('再次点击可移出队列')}">${t('队列 #')}${queueIndex + 1}</button>`
+              : '<button type="button" class="blora-button model-action-primary" data-variant="primary" data-size="sm">' + t('加入队列') + '</button>')
           : `
             ${isOwner
               ? ''
               : isCurrent
                 ? '<button type="button" class="blora-button model-action-bound" data-variant="secondary" data-size="sm" disabled>' + t('已绑定') + '</button>'
-                : `<button type="button" class="blora-button model-action-primary" data-variant="primary" data-size="sm" onclick="${onClick}">${t('绑定')}</button>`}
+                : '<button type="button" class="blora-button model-action-primary" data-variant="primary" data-size="sm">' + t('绑定') + '</button>'}
           `}
         ${isKeyPicker ? '' : this._renderLibraryMoreMenu(modelMoreItems)}
       </div>
@@ -11212,7 +11194,7 @@ ${extractorBody}
       this._applyUptimeCacheToDom([modelId]);
       setHTML(body, this._renderModelUptimeDetailHtml(data, modelName || modelId));
     } catch (e) {
-      setHTML(body, `${'<div class="empty-state"><p >' + t('加载失败：')}${escapeHtml(e.message || e)}</p></div>`);
+      setHTML(body, `${'<div class="empty-state"><p style="color:var(--destructive);">' + t('加载失败：')}${escapeHtml(e.message || e)}</p></div>`);
     }
   }
 
@@ -11282,7 +11264,7 @@ ${extractorBody}
     const variant = options.variant || 'outline';
     const extraClass = options.className ? ` ${options.className}` : '';
     return `
-      <blora-dropdown class="library-more-menu${extraClass}" align="end">
+      <blora-dropdown class="library-more-menu${extraClass}" align="end" onclick="event.stopPropagation()">
         <button slot="trigger" type="button" class="blora-button library-more-trigger" data-variant="${variant}" data-size="sm" aria-label="${escapeHtml(triggerLabel)}">
           <span>${escapeHtml(triggerLabel)}</span>
           ${this._libIcon('chevron.down', 12)}
@@ -11527,7 +11509,7 @@ ${extractorBody}
           });
           const listEl = freshEl.querySelector('.model-library-list');
           if (listEl) {
-            setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" >渲染失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\')">${t('重试')}</a></span></div>`);
+            setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">渲染失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\')">${t('重试')}</a></span></div>`);
           }
         }
       }
@@ -11546,7 +11528,7 @@ ${extractorBody}
       const failEl = this._findProviderEl(team.team_id, provider.provider_id, providerEl);
       if (failEl && !aborted) {
         const listEl = failEl.querySelector('.model-library-list');
-        if (listEl) setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" >加载失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\')">${t('重试')}</a></span></div>`);
+        if (listEl) setHTML(listEl, `<div class="model-library-placeholder"><span class="placeholder-text" style="color:var(--destructive);">加载失败，<a href="#" onclick="event.preventDefault();app._retryLoadProviderModels('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}\')">${t('重试')}</a></span></div>`);
       }
     } finally {
       this._libraryLoadingProviders.delete(providerKey);
@@ -11638,14 +11620,14 @@ ${extractorBody}
     const pageButtons = pages.map(p => {
       const gap = p - lastPage > 1 ? '<span class="model-library-page-ellipsis">...</span>' : '';
       lastPage = p;
-      return `${gap}<button type="button" class="blora-button model-library-page-btn ${p === current ? 'active' : ''}" ${p === current ? 'disabled' : ''} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${p})">${p}</button>`;
+      return `${gap}<button class="blora-button model-library-page-btn ${p === current ? 'active' : ''}" ${p === current ? 'disabled' : ''} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${p})">${p}</button>`;
     }).join('');
 
     return `
       <div class="model-library-pagination">
-        <button type="button" class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current - 1})">上一页</button>
+        <button class="blora-button model-library-page-btn" ${pagination.has_prev ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current - 1})">上一页</button>
         ${pageButtons}
-        <button type="button" class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current + 1})">下一页</button>
+        <button class="blora-button model-library-page-btn" ${pagination.has_next ? '' : 'disabled'} onclick="event.stopPropagation();app.loadProviderModelsPage('${this._jsString(team.team_id)}','${this._jsString(provider.provider_id)}',${current + 1})">下一页</button>
         <span class="model-library-page-summary">共 ${pagination.total} 个</span>
       </div>
     `;
@@ -11870,7 +11852,7 @@ ${extractorBody}
           <div class="binding-key-row">
             <span class="binding-key-name">${keyName}</span>
             <span class="binding-arrow" aria-hidden="true">${this._libIcon('arrow.right', 12)}</span>
-            <span class="binding-harness-tag" >
+            <span class="binding-harness-tag" style="color:${harnessMeta.color};border-color:${harnessMeta.color};">
               ${this._harnessIconHtml(bindTarget, 12)}
               ${escapeHtml(harnessMeta.label)}
             </span>
@@ -11987,15 +11969,14 @@ ${extractorBody}
         : `${name}${modelName ? ' → ' + modelName : ''}`;
       // 官方 Filter 模式（radio 芯片）；label 的 click 先交给业务处理，再次点击同一 Key 打开工具气泡
       return `
-        <label class="blora-filter__item model-library-key-item"
+        <label class="blora-filter__item model-library-key-item ${isActive ? 'active' : ''}"
              data-key-id="${key.id}"
-             title="${escapeHtml(tip)}"
-             onclick="if(event.target.tagName !== 'INPUT'){event.preventDefault();app.selectLibraryKey(${key.id}, event)}">
-          <input type="radio" name="libraryKeyChip" value="${key.id}"${isActive ? ' checked' : ''}
-            onclick="app.selectLibraryKey(${key.id}, event)" />
+             onclick="event.preventDefault();app.selectLibraryKey(${key.id}, event)"
+             title="${escapeHtml(tip)}">
+          <input type="radio" name="libraryKeyChip" value="${key.id}"${isActive ? ' checked' : ''}>
           <span class="blora-filter__label">
             <span class="key-name">${escapeHtml(name)}</span>
-            ${tags.map(t => `<span class="key-tag-dot"  title="${escapeHtml(t.name)}"></span>`).join('')}
+            ${tags.map(t => `<span class="key-tag-dot" style="background:${safeColor(t.color)};" title="${escapeHtml(t.name)}"></span>`).join('')}
             ${modelName ? `<span class="blora-badge key-model-badge" data-variant="neutral">${escapeHtml(modelName)}</span>` : ''}
             ${harnessCount ? `<span class="blora-badge" data-variant="info" title="${harnessCount}${escapeHtml(t('个工具单独绑定'))}">${harnessCount}</span>` : ''}
           </span>
@@ -12049,7 +12030,11 @@ ${extractorBody}
 
     // 再次点击同一 Key：切换气泡菜单（除非强制仅选中）
     if (isReselect && !forceSelect) {
-      this._openLibraryKeyBubble(id, event?.currentTarget || event?.target);
+      if (this._isLibraryKeyBubbleOpen()) {
+        this.closeLibraryKeyBubble();
+      } else {
+        this._openLibraryKeyBubble(id, event?.currentTarget || event?.target);
+      }
       return;
     }
 
@@ -12076,9 +12061,24 @@ ${extractorBody}
     }
   }
 
+  _ensureLibraryKeyBubbleEl() {
+    let menu = document.getElementById('libraryKeyBubbleMenu');
+    if (menu) return menu;
+    menu = document.createElement('div');
+    menu.id = 'libraryKeyBubbleMenu';
+    menu.className = 'library-key-bubble-menu';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-hidden', 'true');
+    menu.hidden = true;
+    menu.style.position = 'fixed';
+    menu.style.zIndex = '1200';
+    document.body.appendChild(menu);
+    return menu;
+  }
+
   _isLibraryKeyBubbleOpen() {
     const menu = document.getElementById('libraryKeyBubbleMenu');
-    return !!menu?.hasAttribute('open');
+    return !!(menu && menu.classList.contains('is-open') && !menu.classList.contains('is-closing'));
   }
 
   _openLibraryKeyBubble(keyId, anchorEl) {
@@ -12091,30 +12091,94 @@ ${extractorBody}
       this._libraryKeyBubbleCloseTimer = null;
     }
 
-    document.getElementById('libraryKeyBubbleMenu')?.remove();
-    const menu = document.createElement('blora-dropdown');
-    menu.id = 'libraryKeyBubbleMenu';
-    menu.setAttribute('align', 'start');
+    const menu = this._ensureLibraryKeyBubbleEl();
     const defaultModel = key.current_model_name || t('未绑定');
-    const item = (label, action) => `<blora-dropdown-item value="library-action:${encodeURIComponent(action)}">${escapeHtml(label)}</blora-dropdown-item>`;
     const harnessItems = this._libraryHarnessList().map(h => {
       const bound = this._getKeyHarnessBinding(key, h.id);
       const modelText = bound?.name || t('跟随默认');
-      return item(`${h.label} · ${modelText}`, `app.onLibraryKeyBubbleHarness('${h.id}')`);
+      const hasOverride = !!bound;
+      return `
+        <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
+                onclick="app.onLibraryKeyBubbleHarness('${h.id}')">
+          <span class="library-key-bubble-item-main">
+            ${this._harnessIconHtml(h.id, 14)}
+            <span>${escapeHtml(h.label)}</span>
+          </span>
+          <span class="library-key-bubble-item-meta ${hasOverride ? 'is-override' : ''}">${escapeHtml(modelText)}</span>
+        </button>`;
     }).join('');
 
     setHTML(menu, `
-      <button slot="trigger" type="button" class="blora-button" data-variant="outline" data-size="sm">${escapeHtml(t('按工具绑定'))}</button>
-      ${item(`${t('跳转到绑定模型')} · ${defaultModel}`, 'app.onLibraryKeyBubbleLocate()')}
-      ${item(`${t('默认绑定')} · ${defaultModel}`, 'app.onLibraryKeyBubbleDefault()')}
+      <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
+              onclick="app.onLibraryKeyBubbleLocate()">
+        <span class="library-key-bubble-item-main">跳转到绑定模型</span>
+        <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
+      </button>
+      <div class="expand-dropdown-divider"></div>
+      <button type="button" class="blora-button library-key-bubble-item ${this._libraryBindTarget === 'default' ? 'active' : ''}" role="menuitem"
+              onclick="app.onLibraryKeyBubbleDefault()">
+        <span class="library-key-bubble-item-main">默认绑定</span>
+        <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
+      </button>
+      <div class="library-key-bubble-section-label">按工具绑定</div>
       ${harnessItems}
-      ${item(t('导出客户端配置'), 'app.onLibraryKeyBubbleExportConfig()')}
+      <div class="expand-dropdown-divider"></div>
+      <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
+              onclick="app.onLibraryKeyBubbleExportConfig()">
+        <span class="library-key-bubble-item-main">导出客户端配置</span>
+      </button>
     `);
-    // Connect only after the complete official definitions are available.
-    document.getElementById('modelLibraryKeySelector').appendChild(menu);
-    customElements.whenDefined('blora-dropdown').then(() => {
-      if (menu.isConnected) menu.open();
-    });
+
+    const anchor = anchorEl?.closest?.('.model-library-key-item, .binding-key-button, .model-library-sticky-key')
+      || anchorEl
+      || document.querySelector(`.model-library-key-item[data-key-id="${keyId}"]`)
+      || document.querySelector('.binding-key-button');
+
+    // 先以收起态显示，测量尺寸后再定位并播放打开动画
+    menu.hidden = false;
+    menu.classList.remove('is-open', 'is-closing', 'origin-top-right');
+    menu.style.visibility = 'hidden';
+    menu.style.left = '0px';
+    menu.style.top = '0px';
+
+    const rect = anchor?.getBoundingClientRect?.();
+    const menuW = Math.max(menu.offsetWidth || 200, 200);
+    const menuH = Math.max(menu.offsetHeight || 200, 120);
+    let left = 16;
+    let top = 80;
+    let originRight = false;
+    if (rect) {
+      left = rect.left;
+      top = rect.bottom + 4;
+      if (left + menuW > window.innerWidth - 8) {
+        left = Math.max(8, rect.right - menuW);
+        originRight = true;
+      }
+      if (top + menuH > window.innerHeight - 8) {
+        top = Math.max(8, rect.top - 4 - menuH);
+      }
+    }
+    menu.style.left = `${Math.round(left)}px`;
+    menu.style.top = `${Math.round(top)}px`;
+    menu.classList.toggle('origin-top-right', originRight);
+    menu.style.visibility = '';
+    menu.setAttribute('aria-hidden', 'false');
+
+    // 强制 reflow，确保从收起态过渡到打开态
+    void menu.offsetWidth;
+    menu.classList.add('is-open');
+
+    if (this._libraryKeyBubbleCloser) {
+      document.removeEventListener('click', this._libraryKeyBubbleCloser);
+      this._libraryKeyBubbleCloser = null;
+    }
+    const closer = (e) => {
+      if (menu.contains(e.target)) return;
+      if (anchor && anchor.contains?.(e.target)) return;
+      this.closeLibraryKeyBubble();
+    };
+    this._libraryKeyBubbleCloser = closer;
+    setTimeout(() => document.addEventListener('click', closer), 0);
   }
 
   closeLibraryKeyBubble() {
@@ -12123,7 +12187,23 @@ ${extractorBody}
       document.removeEventListener('click', this._libraryKeyBubbleCloser);
       this._libraryKeyBubbleCloser = null;
     }
-    menu?.close();
+    if (!menu || menu.hidden) return;
+
+    // 已在关闭中则不重复
+    if (menu.classList.contains('is-closing')) return;
+
+    menu.classList.remove('is-open');
+    menu.classList.add('is-closing');
+    menu.setAttribute('aria-hidden', 'true');
+
+    if (this._libraryKeyBubbleCloseTimer) {
+      clearTimeout(this._libraryKeyBubbleCloseTimer);
+    }
+    this._libraryKeyBubbleCloseTimer = setTimeout(() => {
+      this._libraryKeyBubbleCloseTimer = null;
+      menu.classList.remove('is-closing', 'is-open', 'origin-top-right');
+      menu.hidden = true;
+    }, 160);
   }
 
   onLibraryKeyBubbleLocate() {
@@ -12702,9 +12782,9 @@ ${extractorBody}
 
   async confirmSelectKey() {
     console.log(t('[模型库] 确认选择 Key'));
-    const selected = document.querySelector('blora-radio[name="selectKeyRadio"][checked]');
+    const selected = document.querySelector('input[name="selectKeyRadio"]:checked');
     console.log(t('[模型库] 选中的 Key:'), selected);
-    if (!selected) { Dialog.alert(t('请选择一个 API Key')); return; }
+    if (!selected) { alert(t('请选择一个 API Key')); return; }
 
     const keyId = parseInt(selected.value);
     const modelId = this._selectingModelId;
@@ -12752,9 +12832,9 @@ ${extractorBody}
     const modal = Dialog.showModal({
       title: t('快速添加供应商到系统'),
       content: `
-        <p >${escapeHtml(t('粘贴供应商接入信息。继续后会用你的 CrewRouter Key 当前模型解析，并添加为系统供应商。'))}</p>
-        <textarea id="quickAddProviderText" class="blora-input" rows="8" placeholder="${escapeHtml(t('例如名称、Base URL、API Key，或一段配置、curl、环境变量'))}" style="width:100%;box-sizing:border-box;resize:vertical;min-height:160px;"></textarea>
-        <p id="quickAddProviderError" role="alert" style="display:none;"></p>
+        <p style="color:var(--muted-foreground);font-size:13px;line-height:1.5;">${escapeHtml(t('粘贴供应商接入信息。继续后会用你的 CrewRouter Key 当前模型解析，并添加为系统供应商。'))}</p>
+        <textarea id="quickAddProviderText" class="blora-input" rows="8" placeholder="${escapeHtml(t('例如名称、Base URL、API Key，或一段配置、curl、环境变量'))}" style="width:100%;box-sizing:border-box;resize:vertical;min-height:160px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:13px;line-height:1.5;"></textarea>
+        <p id="quickAddProviderError" role="alert" style="display:none;color:var(--destructive);font-size:13px;"></p>
       `,
       footer: `
         <button type="button" class="blora-button" data-variant="outline" id="quickAddProviderCancel">${escapeHtml(t('取消'))}</button>
@@ -12821,12 +12901,89 @@ ${extractorBody}
 
   showQuickAddedProviderModels(providerId, providerName) {
     if (!this.user?.isAdmin) return;
-    return ProviderModelPicker.open({
-      providerId,
-      providerName,
-      showToast: (message, type) => this.showToast(message, type),
-      onChanged: () => this.loadModelLibrary()
+    const modal = Dialog.showModal({
+      title: t('获取模型列表'),
+      content: `
+        <p id="quickAddedProviderName" style="color:var(--muted-foreground);font-size:13px;"></p>
+        <div id="quickAddedModelsStatus" role="status" style="font-size:13px;"></div>
+        <div id="quickAddedModelsList" style="max-height:50vh;overflow:auto;"></div>
+      `,
+      footer: `
+        <button type="button" class="blora-button" data-variant="outline" id="quickAddedModelsRetry">${escapeHtml(t('重新获取'))}</button>
+        <button type="button" class="blora-button" data-variant="primary" id="quickAddedModelsSave" disabled>${escapeHtml(t('保存所选模型'))}</button>
+      `,
+      width: 600
     });
+    const nameEl = document.getElementById('quickAddedProviderName');
+    const status = document.getElementById('quickAddedModelsStatus');
+    const list = document.getElementById('quickAddedModelsList');
+    const retry = document.getElementById('quickAddedModelsRetry');
+    const save = document.getElementById('quickAddedModelsSave');
+    nameEl.textContent = providerName || '';
+    const load = async () => {
+      retry.disabled = true;
+      save.disabled = true;
+      list.replaceChildren();
+      status.textContent = t('正在获取模型列表...');
+      try {
+        const res = await fetch(`/api/admin/providers/${encodeURIComponent(providerId)}/fetch-models`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || t('获取模型列表失败'));
+        const models = Array.isArray(data.models) ? data.models : [];
+        const enabledIds = new Set((data.existingModels || []).filter(model => model.enabled).map(model => String(model.id)));
+        if (!models.length) {
+          status.textContent = t('未获取到模型，可检查供应商配置后重试');
+          return;
+        }
+        status.textContent = `${t('共')}${models.length}${t('个模型')}`;
+        for (const model of models) {
+          const id = String(model.id || '');
+          if (!id) continue;
+          const label = document.createElement('label');
+          label.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--border);cursor:pointer;';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = id;
+          checkbox.checked = enabledIds.has(id);
+          label.append(checkbox, document.createTextNode(String(model.name || id)));
+          if (model.name && model.name !== id) {
+            const detail = document.createElement('small');
+            detail.textContent = id;
+            detail.style.color = 'var(--muted-foreground)';
+            label.append(detail);
+          }
+          list.append(label);
+        }
+        save.disabled = !list.querySelector('input');
+      } catch (error) {
+        status.textContent = error.message || t('获取模型列表失败');
+      } finally {
+        retry.disabled = false;
+      }
+    };
+    retry.addEventListener('click', load);
+    save.addEventListener('click', async () => {
+      setButtonLoading(save, t('保存中...'));
+      try {
+        const enabledModelIds = Array.from(list.querySelectorAll('input:checked'), el => el.value);
+        const res = await fetch(`/api/admin/providers/${encodeURIComponent(providerId)}/sync-models`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabledModelIds })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || t('保存失败'));
+        modal.close();
+        this.showToast(t('模型列表已保存'), 'success');
+        await this.loadModelLibrary();
+      } catch (error) {
+        status.textContent = error.message || t('保存失败');
+      } finally {
+        clearButtonLoading(save);
+      }
+    });
+    load();
   }
 
   // 供应商管理 - 向导式添加
@@ -12856,7 +13013,7 @@ ${extractorBody}
       this._providersIndex = await res.json();
       this.renderProviderList(this._providersIndex);
     } catch (error) {
-      setHTML(container, '<div style="text-align:center;padding:20px;">' + t('加载失败，请重试') + '</div>');
+      setHTML(container, '<div style="text-align:center;padding:20px;color:var(--destructive);">' + t('加载失败，请重试') + '</div>');
     }
   }
 
@@ -13169,122 +13326,39 @@ ${extractorBody}
   }
 
   async deleteUserModel(modelId) {
-    if (!await Dialog.confirm(t('确认'), t('确定要删除此模型吗？此操作不可撤销。'))) return;
+    if (!await confirm(t('确定要删除此模型吗？此操作不可撤销。'))) return;
 
     try {
       const res = await fetch(`/api/user/models/${modelId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('删除失败'));
+        alert(data.error || t('删除失败'));
         return;
       }
       this.showToast(t('模型已删除'), 'success');
       await this.loadModelLibrary();
     } catch (e) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 
   async publishModel(modelId) {
-    if (!await Dialog.confirm(t('确认'), t('发布模型到默认 Team 后，您将失去对此模型的管理权限。确定要发布吗？'))) return;
+    if (!await confirm(t('发布模型到默认 Team 后，您将失去对此模型的管理权限。确定要发布吗？'))) return;
 
     try {
       const res = await fetch(`/api/user/models/${modelId}/publish`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
-        Dialog.alert(data.error || t('发布失败'));
+        alert(data.error || t('发布失败'));
         return;
       }
       this.showToast(t('模型已发布到默认 Team'), 'success');
       await this.loadModelLibrary();
     } catch (e) {
-      Dialog.alert(t('网络错误，请重试'));
+      alert(t('网络错误，请重试'));
     }
   }
 }
 
 const app = new ConsoleApp();
 window.app = app;
-
-(function bindBusinessControlEvents() {
-  document.addEventListener('blora-change', event => {
-    if (event.target.id === 'consoleStatsTabs' && event.detail?.value) app.switchStatsTab(event.detail.value);
-  });
-  document.addEventListener('change', (event) => {
-    const control = event.target.closest?.('blora-switch, blora-checkbox, blora-radio, blora-slider, blora-datepicker, blora-timepicker, blora-upload, blora-select, blora-search') || event.target;
-    if (!(control instanceof Element)) return;
-    if (control.matches("#statsTimeRange")) { app.loadStats(); }
-    if (control.matches("#statsModelFilter")) { app.loadStats(); }
-    if (control.matches("#statsProviderFilter")) { app.loadStats(); }
-    if (control.matches("#statsTeamFilter")) { app.loadStats(); }
-    if (control.matches("#statsSourceFilter")) { app.loadStats(); }
-    if (control.matches("#projectWorkTimeRange")) { app.loadProjectWorkStats(); }
-    if (control.matches("#projectWorkSourceFilter")) { app.loadProjectWorkStats(); }
-    if (control.matches("#leaderboardTimeRange")) { app.loadLeaderboard(); }
-    if (control.matches("#leaderboardSort")) { app.loadLeaderboard(); }
-    if (control.matches("#auditLogActionFilter")) { app.loadAuditLogs(1); }
-    if (control.matches("#keySignatureMode")) { app.toggleKeySignatureMode(); }
-    if (control.matches("#selectAllManageModels")) { app.toggleSelectAllManageModels(control.checked); }
-    if (control.matches("#ccsShowBalance")) { app.rebuildUsageScript(); }
-    if (control.matches("#ccsShowGroupRules")) { app.rebuildUsageScript(); }
-    if (control.matches("#ccsShowTotalUsage")) { app.rebuildUsageScript(); }
-    if (control.matches("#ccsShowUsername")) { app.rebuildUsageScript(); }
-  });
-  document.addEventListener('keydown', (event) => {
-    const control = event.target.closest?.('blora-switch, blora-checkbox, blora-radio, blora-slider, blora-datepicker, blora-timepicker, blora-upload, blora-select, blora-search') || event.target;
-    if (!(control instanceof Element)) return;
-    if (control.matches("#promptSearchInput")) { if(event.key==='Enter')app.loadCustomPrompts(1); }
-    if (control.matches("#sessionsSearchInput")) { if(event.key==='Enter')app.runSessionsSearch(); }
-  });
-})();
-
-(function delegateBusinessControlEvents() {
-  document.addEventListener('change', (event) => {
-    const control = event.target.closest?.('[data-control-action]');
-    if (!control) return;
-    switch (control.dataset.controlAction) {
-      case "app-dynamic-0": { event.stopPropagation(); app.toggleKeyEnabled(Number(control.dataset.controlArg0), control.checked); break; }
-      case "app-dynamic-1": { app.toggleInjectPrompt(Number(control.dataset.controlArg0), control.checked); break; }
-      case "app-dynamic-2": { app.toggleSelectAllProviders(control.checked); break; }
-      case "app-dynamic-3": { app.updateBatchButtons(); break; }
-      case "app-dynamic-4": { app._updateManageModelsBatchBar(); break; }
-      case "app-dynamic-5": { app.toggleSelectAllMyTeamModels(control.checked); break; }
-      case "app-dynamic-6": { app.updateMyModelsBatchButtons(); break; }
-    }
-  });
-})();
-
-document.getElementById('ccsBarLength')?.addEventListener('input', (event) => {
-  const control = event.currentTarget;
-  document.getElementById('ccsBarLenVal').textContent = control.value;
-  app.rebuildUsageScript();
-});
-
-document.addEventListener('click', (event) => {
-  if (event.target.closest('blora-dropdown.library-more-menu')) event.stopPropagation();
-});
-
-(function enhanceResourceLists() {
-  const headers = '.model-library-team-header[onclick], .model-library-provider-header[onclick]';
-  const roots = '.cr-model-library, .cr-api-keys-page, .cr-upstream-page, .key-model-picker';
-  const sync = () => {
-    document.querySelectorAll(headers).forEach((header) => {
-      const group = header.closest('.model-library-provider, .model-library-team');
-      header.setAttribute('role', 'button');
-      header.setAttribute('tabindex', '0');
-      header.setAttribute('aria-expanded', String(!group.classList.contains('collapsed')));
-    });
-  };
-  document.addEventListener('keydown', (event) => {
-    if (!event.target.matches?.(headers) || !['Enter', ' '].includes(event.key)) return;
-    event.preventDefault();
-    event.target.click();
-  });
-  sync();
-  new MutationObserver(sync).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-  Promise.all([import('/blora/icons-full.js?v=2.1.0'), import('/blora/index.js?v=2.1.0')]).then(([, { hydrateIcons, observeIcons }]) => {
-    const hydrate = () => document.querySelectorAll(roots).forEach((root) => hydrateIcons(root));
-    hydrate();
-    observeIcons(document);
-  }).catch((error) => console.error('Blora resource icons unavailable', error));
-})();

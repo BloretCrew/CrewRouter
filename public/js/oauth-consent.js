@@ -35,13 +35,7 @@
   function showError(msgKey) {
     loadingEl.hidden = true;
     formEl.hidden = true;
-    errorEl.innerHTML = '<blora-alert variant="danger" title="' + esc(t(msgKey)) + '"></blora-alert>';
-    if (msgKey === '加载失败') {
-      var retry = document.createElement('button');
-      retry.type = 'button'; retry.className = 'blora-button'; retry.dataset.variant = 'outline'; retry.textContent = t('重试');
-      retry.addEventListener('click', function () { errorEl.classList.remove('show'); loadingEl.hidden = false; init(); });
-      errorEl.appendChild(retry);
-    }
+    errorEl.textContent = t(msgKey);
     errorEl.classList.add('show');
   }
 
@@ -55,7 +49,8 @@
   }
 
   function scopeCheckIcon() {
-    return '<span data-icon="check" aria-hidden="true"></span>';
+    var color = (window.themeManager && window.themeManager.resolvedTheme) === 'light' ? 'black' : 'white';
+    return '<img src="https://img.bloret.net/SF/checkmark?color=' + color + '" alt="" width="14" height="14" class="sf-icon" data-sf-name="checkmark">';
   }
 
   function renderScopes(scopes) {
@@ -64,10 +59,10 @@
       var descKey = SCOPE_I18N_KEYS[s];
       html += '<li class="blora-list__item">'
         + '<span class="oc-scope-check" aria-hidden="true">' + scopeCheckIcon() + '</span>'
-        + '<span class="blora-list__meta">' + esc(t(descKey || s)) + ' <code class="blora-code">' + esc(s) + '</code></span>'
+        + '<span class="blora-list__meta">' + esc(t(descKey || s)) + ' <code>' + esc(s) + '</code></span>'
         + '</li>';
     });
-    scopeListEl.innerHTML = html || '<li class="blora-list__item">' + esc(t('没有申请额外权限')) + '</li>';
+    scopeListEl.innerHTML = html || '<li class="blora-list__item">-</li>';
   }
 
   function renderKeys(apiKeys, defaultId) {
@@ -81,11 +76,8 @@
       html += '<blora-option value="' + esc(k.id) + '"' + selected + '>' + esc(k.name || ('API Key #' + k.id)) + '</blora-option>';
     });
     keySelectEl.innerHTML = html;
-    var first = apiKeys.some(function (key) { return String(key.id) === String(defaultId); }) ? defaultId : apiKeys[0].id;
+    var first = defaultId != null ? defaultId : apiKeys[0].id;
     keySelectEl.setAttribute('value', String(first));
-    customElements.whenDefined('blora-select').then(function () {
-      requestAnimationFrame(function () { keySelectEl.value = String(first); });
-    });
   }
 
   function init() {

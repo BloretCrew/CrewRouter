@@ -1,0 +1,4 @@
+/* Blora Design 2.0 - Foundations (reset + base + layout) */
+@import "./foundations/reset.css";
+@import "./foundations/base.css";
+@import "./foundations/layout.css";

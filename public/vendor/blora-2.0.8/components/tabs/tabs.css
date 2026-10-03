@@ -1,0 +1,215 @@
+/* Blora Design 2.0 - Tabs */
+
+/* Before render(), light-DOM <blora-tab> children would all paint. */
+blora-tabs > blora-tab:not([selected]) {
+  display: none;
+}
+
+blora-tabs {
+  display: block;
+}
+
+.blora-tabs {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.blora-tabs__nav {
+  display: flex;
+  gap: var(--blora-space-1);
+  min-width: 0;
+  max-width: 100%;
+  border-bottom: 1px solid var(--blora-color-border-subtle);
+  position: relative;
+  overflow: auto hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+
+.blora-tabs__nav::-webkit-scrollbar {
+  display: none;
+}
+
+.blora-tabs__indicator {
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: -1px;
+  width: var(--blora-tab-w, 0);
+  height: var(--blora-tabs-indicator-size);
+  transform: translateX(var(--blora-tab-x, 0));
+  background: var(--blora-color-action-primary-default);
+  border-radius: var(--blora-radius-full);
+  pointer-events: none;
+  transition:
+    width var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+  z-index: var(--blora-z-base);
+}
+
+.blora-tabs__tab {
+  flex: none;
+  padding: 0.7em 1.1em;
+  font-size: var(--blora-text-sm);
+  font-weight: 500;
+  color: var(--blora-color-text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  white-space: nowrap;
+  scroll-snap-align: start;
+  transition:
+    color var(--blora-duration-fast) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard);
+  position: relative;
+
+  /* Above the sliding indicator (same tier, later in DOM) but below page
+     chrome like the sticky navbar, which must keep covering content. */
+  z-index: var(--blora-z-base);
+  background: none;
+  border-inline-start: none;
+  border-inline-end: none;
+  border-block-start: none;
+  border-radius: var(--blora-radius-sm);
+}
+
+.blora-tabs__tab:focus-visible {
+  /* Tabs often sit flush against a clipped card edge. A component-owned
+     radius keeps the inset focus indicator complete at every corner. */
+  border-radius: var(--blora-radius-sm);
+  outline-offset: calc(-1 * var(--blora-tabs-focus-inset));
+}
+
+/* A flush tab strip is designed to meet its containing surface edge. Reuse
+   the standard surface curvature so the inset focus path remains concentric
+   with an lg-radius card instead of introducing a second, tighter curve. */
+.blora-tabs[data-flush] > .blora-tabs__nav > .blora-tabs__tab {
+  border-radius: var(--blora-radius-lg);
+}
+
+.blora-tabs__tab:hover {
+  color: var(--blora-color-text-primary);
+}
+
+.blora-tabs__tab[aria-selected="true"] {
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-tabs__tab[disabled] {
+  color: var(--blora-color-text-disabled);
+  cursor: not-allowed;
+}
+
+/* Indicator instant mode (no transition for initial positioning) */
+.blora-tabs__indicator[data-instant] {
+  transition: none;
+}
+
+.blora-tabs__panel {
+  padding-top: var(--blora-space-5);
+}
+
+/* Panel fade-in animation (Spec §17.3, ported from v1) */
+.blora-tabs__panel[data-entering] {
+  animation: blora-tab-panel-in var(--blora-duration-tabs-fade) var(--blora-easing-standard) both;
+}
+
+@keyframes blora-tab-panel-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Pills variant */
+.blora-tabs[data-variant="pills"] .blora-tabs__nav {
+  border-bottom: none;
+  gap: var(--blora-space-2);
+}
+
+.blora-tabs[data-variant="pills"] .blora-tabs__tab {
+  border-bottom: none;
+  border-radius: var(--blora-radius-full);
+  padding: 0.4em 1em;
+  margin-bottom: 0;
+}
+
+/* CSS-only fallback: selected pill gets a static background.
+   When the controller is active (data-tabs-enhanced), the sliding
+   indicator provides the background instead. */
+.blora-tabs[data-variant="pills"] .blora-tabs__tab[aria-selected="true"] {
+  color: var(--blora-color-text-on-accent);
+  background: var(--blora-color-action-primary-default);
+}
+
+.blora-tabs[data-variant="pills"][data-tabs-enhanced] .blora-tabs__tab[aria-selected="true"] {
+  background: none;
+}
+
+/* Pills indicator: full-height background pill that slides between tabs */
+.blora-tabs[data-variant="pills"] .blora-tabs__indicator {
+  top: 0;
+  bottom: 0;
+  height: var(--blora-tab-h, 100%);
+  transform: translateX(var(--blora-tab-x, 0));
+  border-radius: var(--blora-radius-full);
+}
+
+/* Vertical variant */
+.blora-tabs[data-orientation="vertical"] {
+  flex-direction: row;
+}
+
+.blora-tabs[data-orientation="vertical"] .blora-tabs__nav {
+  flex-direction: column;
+  border-bottom: none;
+  border-inline-end: 1px solid var(--blora-color-border-subtle);
+  padding-inline-end: var(--blora-space-1);
+}
+
+.blora-tabs[data-orientation="vertical"] .blora-tabs__tab {
+  border-bottom: none;
+  border-inline-end: 2px solid transparent;
+  margin-bottom: 0;
+  margin-inline-end: -1px;
+}
+
+.blora-tabs[data-orientation="vertical"] .blora-tabs__panel {
+  padding-top: 0;
+  padding-inline-start: var(--blora-space-6);
+  flex: 1;
+}
+
+/* Full-bleed panels own their complete surface and spacing. */
+.blora-tabs[data-flush] > .blora-tabs__panel {
+  padding-block-start: 0;
+  padding-inline-start: 0;
+}
+
+/* Vertical indicator: right-edge bar that slides between tabs */
+.blora-tabs[data-orientation="vertical"] .blora-tabs__indicator {
+  top: 0;
+  inset-inline: auto -1px;
+  bottom: auto;
+  width: var(--blora-tabs-indicator-size);
+  height: var(--blora-tab-h, 0);
+  transform: translateY(var(--blora-tab-y, 0));
+  transition:
+    height var(--blora-duration-base) var(--blora-easing-standard),
+    transform var(--blora-duration-base) var(--blora-easing-standard);
+}
+
+/* Reduced motion: disable indicator transitions and panel animation */
+@media (prefers-reduced-motion: reduce) {
+  .blora-tabs__indicator {
+    transition: none;
+  }
+
+  .blora-tabs__panel[data-entering] {
+    animation: none;
+  }
+}

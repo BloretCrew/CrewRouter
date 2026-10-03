@@ -1,69 +1,109 @@
+/* Blora surface migration for user settings. */
+.blora-settings-page {
+  --settings-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  --settings-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);
+}
 
-
-.cr-settings-page .cr-console-settings-overview {
+.blora-settings-page .settings-overview {
   max-width: none;
   padding: var(--blora-space-6);
-
+  border: var(--settings-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
 }
 
-.cr-settings-page .cr-console-settings-category {
-  width: 100%;
-  justify-content: flex-start;
-  min-width: 0;
+.blora-settings-page .settings-version-card {
+  padding: var(--blora-space-5);
+  border: var(--settings-border-soft);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-raised);
 }
-.cr-settings-page .cr-console-settings-category > span:nth-child(2) {
-  min-width: 0;
-  flex: 1;
-  text-align: start;
-}
-.cr-settings-page .cr-console-settings-category strong { display: block; }
-.cr-settings-page .cr-console-settings-category small { display: none; }
-.cr-settings-page .cr-console-settings-category .settings-category-arrow { margin-inline-start: auto; }
-.cr-settings-page .cr-console-settings-version { display: flex; gap: var(--blora-space-4); align-items: flex-start; }
-.cr-settings-page .settings-link-list { display: flex; gap: var(--blora-space-2); flex-wrap: wrap; }
 
-.cr-settings-page .settings-detail {
+.blora-settings-page .settings-version-info > strong,
+.blora-settings-page .settings-detail-title,
+.blora-settings-page .settings-section h2,
+.blora-settings-page .settings-section h3 {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-settings-page .settings-link-button {
+  border: var(--settings-border-soft);
+  border-radius: var(--blora-radius-md);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-emphasis);
+}
+
+.blora-settings-page .settings-link-button:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-settings-page .settings-category-card {
+  min-height: 5.5rem;
+  border: var(--settings-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  color: var(--blora-color-text-primary);
+  box-shadow: var(--blora-shadow-1);
+}
+
+.blora-settings-page .settings-category-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: var(--blora-color-surface-raised);
+  box-shadow: var(--blora-shadow-2);
+}
+
+.blora-settings-page .settings-category-card small,
+.blora-settings-page .settings-overview-hint,
+.blora-settings-page .settings-version-info > span {
+  color: var(--blora-color-text-subtle);
+}
+
+.blora-settings-page .settings-detail {
   max-width: none;
   margin: var(--blora-space-5) 0;
 }
 
-@media (max-width: 640px) {
+.blora-settings-page .settings-back-button {
+  color: var(--blora-color-text-subtle);
+}
 
-  .cr-settings-page .settings-category-grid {
+.blora-settings-page .settings-back-button:hover {
+  color: var(--blora-color-text-primary);
+}
+
+.blora-settings-page .settings-section {
+  border: var(--settings-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  padding: var(--blora-space-6);
+}
+
+.blora-settings-page .settings-section > div[style*="border"] {
+  border: var(--settings-border-soft) !important;
+  border-radius: var(--blora-radius-lg) !important;
+  background: var(--blora-color-surface-raised);
+}
+
+.blora-settings-page .settings-section .blora-button {
+  font-family: var(--blora-font-body);
+}
+
+.blora-settings-page .settings-section .form-group label,
+.blora-settings-page .settings-section small {
+  color: var(--blora-color-text-subtle);
+}
+
+@media (max-width: 640px) {
+  .blora-settings-page .settings-overview,
+  .blora-settings-page .settings-section {
+    padding: var(--blora-space-4);
+  }
+
+  .blora-settings-page .settings-category-grid {
     grid-template-columns: 1fr;
   }
-}
-
-/* CrewRouter Desktop 内嵌设置：Blora 开关 / 选择器 / 对话框 */
-.settings-desktop-preferences blora-switch {
-  display: block;
-}
-
-.settings-desktop-pref-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--blora-space-4);
-  padding-top: var(--blora-space-3);
-
-}
-
-.settings-desktop-pref-row blora-select {
-  width: min(100%, 12rem);
-}
-
-#desktopConfirmDialog .desktop-dialog-body p {
-  margin: 0;
-
-}
-
-#desktopConfirmDialog .desktop-dialog-body blora-field {
-  display: block;
-  margin-top: var(--blora-space-3);
-}
-
-.desktop-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--blora-space-3);
 }

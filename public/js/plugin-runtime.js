@@ -51,11 +51,18 @@
     return null;
   }
 
+  function withRestoreVersion(src) {
+    const url = new URL(src, window.location.href);
+    if (url.origin !== window.location.origin || !/\.(css|js)$/.test(url.pathname)) return src;
+    url.searchParams.set('v', 'restore-0930-20261003');
+    return url.href;
+  }
+
   function loadScript(src) {
     if (state.failedScripts.has(src)) return Promise.resolve(false);
     return new Promise((resolve) => {
       const el = document.createElement('script');
-      el.src = src;
+      el.src = withRestoreVersion(src);
       el.onload = () => resolve(true);
       el.onerror = () => { state.failedScripts.add(src); resolve(false); };
       document.head.appendChild(el);
@@ -83,7 +90,7 @@
       const item = document.createElement('div');
       item.className = 'nav-item';
       item.setAttribute('data-page', p.pageId);
-      item.innerHTML = `<span data-icon="puzzle" aria-hidden="true"></span>
+      item.innerHTML = `<img src="https://img.bloret.net/SF/puzzlepiece?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="puzzlepiece">
         <span><span>${esc(p.title)}</span></span>`;
       item.addEventListener('click', () => {
         if (area === 'admin' && window.adminApp) adminApp.navigateTo(p.pageId);
@@ -171,22 +178,21 @@
     appObj.navigateTo = async function (page, options) {
       await origNavigate(page, options);
       try {
-        const activePage = currentPage() || page;
-        const pluginPage = state.pages.find(x => x.pageId === activePage);
+        const pluginPage = state.pages.find(x => x.pageId === page);
         if (pluginPage) {
           setPageTitle(pluginPage.title);
-          await renderPluginPageIfAny(activePage);
+          await renderPluginPageIfAny(page);
           return;
         }
-        if (activePage === 'adminPlugins') {
+        if (page === 'adminPlugins') {
           renderPluginsAdmin(document.getElementById('adminPluginsContent'));
           return;
         }
         // 设置页渲染主题选择器
-        if (activePage === 'settings') await renderUserThemePicker(document.getElementById('pluginThemePicker'));
-        if (activePage === 'adminSettings') await renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
+        if (page === 'settings') renderUserThemePicker(document.getElementById('pluginThemePicker'));
+        if (page === 'adminSettings') renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
         // 常规页面激活后填充插槽
-        await renderSlotsFor(activePage);
+        await renderSlotsFor(page);
       } catch (e) { console.warn('[plugins] 导航后处理失败', e); }
     };
     appObj.__pluginPatched = true;
@@ -198,67 +204,19 @@
     return state.themes.find(t => t.id === id) || null;
   }
 
-  const palettes = {
-    'all-capabilities/all-capabilities-theme': 'dusk',
-    'crewrouter-classic/classic': 'graphite',
-    'example-theme/ocean': 'circuit',
-    'theme-linear/linear': 'indigo',
-    'theme-paper/paper': 'coral',
-    'theme-raycast/raycast': 'dusk',
-    'theme-terminal/terminal': 'mono',
-  };
+  // 当前挂在 <html> 上的主题 class（切换/取消时移除）
   let activeThemeClass = '';
-  let originalPalette;
-  let themeLoadSequence = 0;
-  let themePaletteStyles;
-
-  async function notifyTheme(variant, text) {
-    if (!window.bloraMessage) {
-      const { message } = await import('/blora/index.js?v=2.1.0');
-      window.bloraMessage = message;
-    }
-    window.bloraMessage[variant](String(text));
-  }
 
   function applyThemeClass(themeId) {
-    const root = document.documentElement;
-    if (activeThemeClass) root.classList.remove(activeThemeClass);
-    activeThemeClass = '';
+    if (activeThemeClass) {
+      document.documentElement.classList.remove(activeThemeClass);
+      activeThemeClass = '';
+    }
     if (themeId) {
-      activeThemeClass = `theme-${String(themeId).replace(/\//g, '__').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
-      root.classList.add(activeThemeClass);
+      const cls = `theme-${String(themeId).replace(/[^a-zA-Z0-9_-]/g, '-').replace(/\//g, '__')}`;
+      document.documentElement.classList.add(cls);
+      activeThemeClass = cls;
     }
-  }
-
-  function applyThemePalette(themeId) {
-    const root = document.documentElement;
-    if (originalPalette === undefined) originalPalette = root.getAttribute('data-blora-theme');
-    const palette = palettes[themeId];
-    if (palette) root.setAttribute('data-blora-theme', palette);
-    else if (originalPalette) root.setAttribute('data-blora-theme', originalPalette);
-    else root.removeAttribute('data-blora-theme');
-  }
-
-  function loadThemeStyles(link) {
-    return new Promise((resolve, reject) => {
-      link.onload = () => resolve(link);
-      link.onerror = () => { link.remove(); reject(new Error(t('主题加载失败'))); };
-      document.head.appendChild(link);
-    });
-  }
-
-  function ensureThemePaletteStyles() {
-    if (!themePaletteStyles) {
-      const link = document.createElement('link');
-      link.id = 'crPluginThemePalettes';
-      link.rel = 'stylesheet';
-      link.href = '/blora/tokens.themes.css?v=2.1.0';
-      themePaletteStyles = loadThemeStyles(link).catch((error) => {
-        themePaletteStyles = null;
-        throw error;
-      });
-    }
-    return themePaletteStyles;
   }
 
   function applyThemeScript(theme) {
@@ -267,40 +225,33 @@
     if (!theme || !theme.jsUrl) return;
     const script = document.createElement('script');
     script.id = 'crPluginThemeScript';
-    script.src = theme.jsUrl;
+    script.src = withRestoreVersion(theme.jsUrl);
     document.head.appendChild(script);
   }
 
-  async function applyThemeStyle(themeId) {
-    const sequence = ++themeLoadSequence;
+  function applyThemeStyle(themeId) {
+    const el = document.getElementById('crPluginThemeStyle');
     const theme = themeId ? findTheme(themeId) : null;
     if (!theme) {
-      document.getElementById('crPluginThemeStyle')?.remove();
+      if (el) el.remove();
       applyThemeScript(null);
       applyThemeClass('');
-      applyThemePalette('');
       return;
     }
-    await ensureThemePaletteStyles();
-    if (sequence !== themeLoadSequence) return;
-    const previous = document.getElementById('crPluginThemeStyle');
-    if (previous?.href === new URL(theme.url, location.href).href) {
-      applyThemePalette(theme.id);
-      applyThemeClass(theme.id);
-      return;
-    }
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.media = 'print';
-    link.href = theme.url;
-    await loadThemeStyles(link);
-    if (sequence !== themeLoadSequence) { link.remove(); return; }
-    previous?.remove();
-    link.id = 'crPluginThemeStyle';
-    applyThemePalette(theme.id);
     applyThemeClass(theme.id);
-    link.media = 'all';
     applyThemeScript(theme);
+    // 仅注入样式表，不改任何行为；重复应用先移除旧节点
+    if (el && el.href === withRestoreVersion(theme.url)) return;
+    if (el) el.remove();
+    const link = document.createElement('link');
+    link.id = 'crPluginThemeStyle';
+    link.rel = 'stylesheet';
+    // 防闪烁：先用 print 媒体加载（不渲染、不阻塞），加载完成后再切换为 all，
+    // 避免样式表未就绪时短暂闪回默认主题
+    link.media = 'print';
+    link.onload = () => { link.media = 'all'; };
+    link.href = withRestoreVersion(theme.url);
+    document.head.appendChild(link);
   }
 
   async function initThemes() {
@@ -308,85 +259,100 @@
       const data = await helpers.fetchJSON('/api/plugins/user-theme');
       state.userThemeId = data.themeId || '';
       state.defaultThemeId = data.defaultThemeId || '';
-      await applyThemeStyle(data.effective || '');
-      await renderThemePickers();
+      applyThemeStyle(data.effective || '');
+      renderThemePickers();
     } catch { /* 未登录或后端未就绪时静默 */ }
   }
 
-  function themeOptionsHtml(selectedId, followLabel) {
-    const opts = [`<blora-option value="" ${!selectedId ? 'selected' : ''}>${esc(t(followLabel))}</blora-option>`];
-    if (selectedId && !findTheme(selectedId)) {
-      opts.push(`<blora-option value="${esc(selectedId)}" selected disabled>${esc(t('该主题的插件已停用，当前显示为默认样式'))}</blora-option>`);
+  function themeOptionsHtml(selectedId, includeFollowOption, followLabel) {
+    const opts = [];
+    if (includeFollowOption) {
+      opts.push(`<option value="" ${!selectedId ? 'selected' : ''}>${esc(t('内置默认主题'))}</option>`);
     }
-    for (const theme of state.themes) {
-      opts.push(`<blora-option value="${esc(theme.id)}" ${selectedId === theme.id ? 'selected' : ''}>${esc(t(theme.name))}</blora-option>`);
+    for (const th of state.themes) {
+      opts.push(`<option value="${esc(th.id)}" ${selectedId === th.id ? 'selected' : ''}>${esc(t(th.name))}</option>`);
     }
     return opts.join('');
   }
 
-  async function renderThemePicker(container, isDefault) {
-    if (!container) return;
-    const selectedId = isDefault ? state.defaultThemeId : state.userThemeId;
-    const id = isDefault ? 'pluginDefaultThemeSelect' : 'pluginThemeSelect';
-    container.innerHTML = `<blora-select id="${id}" aria-label="${esc(t('界面主题'))}" style="min-width:220px;">${themeOptionsHtml(selectedId, isDefault ? '内置默认主题' : '跟随默认主题')}</blora-select>`;
-    const select = container.querySelector(`#${id}`);
-    await customElements.whenDefined('blora-select');
-    if (!select.isConnected) return;
-    customElements.upgrade(select);
-    select.setAttribute('value', selectedId);
-    select.addEventListener('change', async () => {
-      const value = select.value;
-      select.setAttribute('disabled', '');
-      try {
-        await helpers.fetchJSON(isDefault ? '/api/admin/settings' : '/api/plugins/user-theme', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(isDefault ? { default_theme: value } : { themeId: value }),
-        });
-        if (isDefault) state.defaultThemeId = value;
-        else state.userThemeId = value;
-        await applyThemeStyle(state.userThemeId || state.defaultThemeId || '');
-        await notifyTheme('success', t(isDefault ? '已保存，刷新后对所有用户生效' : '已保存并生效'));
-      } catch (error) {
-        select.setAttribute('value', isDefault ? state.defaultThemeId : state.userThemeId);
-        await notifyTheme('error', error.message);
-      } finally {
-        select.removeAttribute('disabled');
-      }
-    });
-    if (!isDefault && selectedId && !findTheme(selectedId)) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'blora-button';
-      button.setAttribute('data-variant', 'outline');
-      button.textContent = t('重置');
-      button.addEventListener('click', () => window.CrewThemes.resetStale());
-      container.appendChild(button);
-    }
+  function unavailableBadge(selectedId) {
+    if (!selectedId || findTheme(selectedId)) return '';
+    return `<span style="font-size:12px;color:var(--destructive);margin-left:8px;">${esc(t('该主题的插件已停用，当前显示为默认样式'))}
+      <button class="btn btn-ghost btn-sm" style="padding:2px 8px;" onclick="window.CrewThemes.resetStale()">${esc(t('重置'))}</button></span>`;
   }
 
-  function renderUserThemePicker(container) { return renderThemePicker(container, false); }
-  function renderDefaultThemePicker(container) { return renderThemePicker(container, true); }
+  function renderUserThemePicker(container) {
+    if (!container) return;
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <select id="pluginThemeSelect" class="select" style="min-width:220px;">${themeOptionsHtml(state.userThemeId, true)}</select>
+        <span id="pluginThemeStatus" style="font-size:13px;color:var(--muted-foreground);"></span>
+      </div>
+      <div style="margin-top:6px;">${unavailableBadge(state.userThemeId)}</div>
+    `;
+    const sel = container.querySelector('#pluginThemeSelect');
+    sel.addEventListener('change', async () => {
+      const v = sel.value;
+      try {
+        await helpers.fetchJSON('/api/plugins/user-theme', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ themeId: v }),
+        });
+        state.userThemeId = v;
+        applyThemeStyle(v || state.defaultThemeId || '');
+        const st = container.querySelector('#pluginThemeStatus');
+        if (st) st.textContent = t('已保存并生效');
+      } catch (e) {
+        const st = container.querySelector('#pluginThemeStatus');
+        if (st) st.textContent = e.message;
+      }
+    });
+  }
+
+  function renderDefaultThemePicker(container) {
+    if (!container) return;
+    container.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <select id="pluginDefaultThemeSelect" class="select" style="min-width:220px;">${themeOptionsHtml(state.defaultThemeId, true)}</select>
+        <span id="pluginDefaultThemeStatus" style="font-size:13px;color:var(--muted-foreground);"></span>
+      </div>
+      <p style="margin:6px 0 0;font-size:12px;color:var(--muted-foreground);">${esc(t('对未自行选择主题的用户生效；用户可在控制台「用户设置 → 界面主题」中覆盖。'))}</p>
+    `;
+    const sel = container.querySelector('#pluginDefaultThemeSelect');
+    sel.addEventListener('change', async () => {
+      const v = sel.value;
+      try {
+        await helpers.fetchJSON('/api/admin/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ default_theme: v }),
+        });
+        state.defaultThemeId = v;
+        const st = container.querySelector('#pluginDefaultThemeStatus');
+        if (st) st.textContent = t('已保存，刷新后对所有用户生效');
+      } catch (e) {
+        const st = container.querySelector('#pluginDefaultThemeStatus');
+        if (st) st.textContent = e.message;
+      }
+    });
+  }
 
   function renderThemePickers() {
-    return Promise.all([
-      renderUserThemePicker(document.getElementById('pluginThemePicker')),
-      renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker')),
-    ]);
+    renderUserThemePicker(document.getElementById('pluginThemePicker'));
+    renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
   }
 
   window.CrewThemes = {
     list: () => [...state.themes],
     effective: () => state.userThemeId || state.defaultThemeId || '',
-    apply: async (id) => { state.userThemeId = id; await applyThemeStyle(id || state.defaultThemeId || ''); },
+    apply: (id) => { state.userThemeId = id; applyThemeStyle(id || state.defaultThemeId || ''); },
     refreshPickers: renderThemePickers,
-    async resetStale() {
-      try {
-        await helpers.fetchJSON('/api/plugins/user-theme', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ themeId: '' }) });
-        await this.apply('');
-        await renderThemePickers();
-        await notifyTheme('success', t('已保存并生效'));
-      } catch (error) { await notifyTheme('error', error.message); }
+    resetStale(area, themeId) {
+      // 清掉指向已停用插件的无效选择
+      this.apply('');
+      fetch('/api/plugins/user-theme', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ themeId: '' }) })
+        .then(() => renderThemePickers()).catch(() => {});
     },
   };
 
@@ -420,11 +386,7 @@
       // 但原生的「插件管理」静态页需要给出明确提示
       if (area === 'admin') {
         const box = document.getElementById('adminPluginsContent');
-        if (box) {
-          box.dataset.bloraState = 'error';
-          box.innerHTML = `<blora-alert variant="warning" title="${esc(t('插件服务未就绪：请重启 CrewRouter 使插件系统生效。'))}"></blora-alert><button type="button" class="blora-button" data-variant="outline" data-plugin-runtime-retry>${esc(t('重试'))}</button>`;
-          box.querySelector('[data-plugin-runtime-retry]')?.addEventListener('click', init);
-        }
+        if (box) box.innerHTML = `<p style="color:var(--muted-foreground);font-size:13px;">${esc(t('插件服务未就绪：请重启 CrewRouter 使插件系统生效。'))}</p>`;
       }
       return;
     }
@@ -455,23 +417,14 @@
     injectPageContainers(area);
 
     const appObj = area === 'console'
-      ? await waitForApp(() => window.app || (typeof app !== 'undefined' ? app : null))
-      : await waitForApp(() => window.adminApp || (typeof adminApp !== 'undefined' ? adminApp : null));
+      ? await waitForApp(() => window.app)
+      : await waitForApp(() => window.adminApp);
     if (appObj) patchApp(appObj, area);
 
     state.ready = true;
-    let lastPage;
-    const pageObserver = new MutationObserver(() => {
-      const page = currentPage();
-      if (page === lastPage) return;
-      lastPage = page;
-      if (page === 'adminPlugins') renderPluginsAdmin(document.getElementById('adminPluginsContent'));
-    });
-    document.querySelectorAll('.page').forEach(page => pageObserver.observe(page, { attributes: true, attributeFilter: ['class'] }));
-    window.addEventListener('pagehide', () => pageObserver.disconnect(), { once: true });
 
     // 主题：拉取用户/默认选择并应用（含设置页选择器首渲）
-    await initThemes();
+    initThemes();
 
     // 初始页面若是插件页/常规页，恢复一次渲染（hash 直达场景）
     const cur = currentPage();
@@ -479,8 +432,8 @@
       if (cur.startsWith('plugin_')) await renderPluginPageIfAny(cur);
       else if (cur === 'adminPlugins') renderPluginsAdmin(document.getElementById('adminPluginsContent'));
       else {
-        if (cur === 'settings') await renderUserThemePicker(document.getElementById('pluginThemePicker'));
-        if (cur === 'adminSettings') await renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
+        if (cur === 'settings') renderUserThemePicker(document.getElementById('pluginThemePicker'));
+        if (cur === 'adminSettings') renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
         await renderSlotsFor(cur);
       }
     }
@@ -506,61 +459,80 @@
   let manageState = { plugins: [], expanded: {}, search: '', sort: 'id' };
 
   const mstyle = `
-    .mstat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(10rem,1fr));gap:var(--blora-space-4);}
-    .mhead{display:flex;align-items:flex-start;gap:var(--blora-space-3);flex-wrap:wrap;}
-    .msearch,.mmut{display:flex;gap:var(--blora-space-2);align-items:center;flex-wrap:wrap;}
-    .mcard{min-width:0;}
+    .mstat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:14px 0;}
+    .mstat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+    .mstat .v{font-size:22px;font-weight:700;line-height:1.1;}
+    .mstat .l{font-size:12px;color:var(--muted-foreground);margin-top:2px;}
+    .mstat.err .v{color:var(--destructive);}
+    .mstat.warn .v{color:var(--status-warn);}
+    .mcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
+    .mhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .mtitle{font-size:15px;font-weight:600;}
+    .mtag{font-size:11px;color:var(--muted-foreground);font-family:monospace;background:var(--muted);padding:1px 7px;border-radius:6px;}
+    .mdesc{font-size:13px;color:var(--muted-foreground);margin:6px 0 0;}
+    .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--muted);color:var(--muted-foreground);margin-right:6px;border:1px solid transparent;}
+    .chip.on{background:color-mix(in srgb,var(--status-success) 12%,transparent);color:var(--status-success);}
+    .chip.off{color:var(--muted-foreground);}
+    .chip.warn{background:color-mix(in srgb,var(--status-warn) 12%,transparent);color:var(--status-warn);}
+    .chip.perm{font-family:monospace;background:var(--muted);cursor:help;}
+    .chip.cap{background:var(--brand-blue-bg);color:var(--brand-blue);}
+    .msec{font-size:12px;color:var(--muted-foreground);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.04em;}
+    .mtable{width:100%;font-size:12px;border-collapse:collapse;}
+    .mtable th{text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--muted-foreground);font-weight:500;}
+    .mtable td{padding:4px 8px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-all;}
+    .msearch{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 14px;}
+    .mmut{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;}
   `;
 
   function statCard(v, label, cls) {
-    return `<div class="blora-card blora-stat mstat ${cls || ''}" data-size="sm"><div class="blora-stat__value">${esc(String(v))}</div><div class="blora-stat__label">${esc(label)}</div></div>`;
+    return `<div class="mstat ${cls || ''}"><div class="v">${esc(String(v))}</div><div class="l">${esc(label)}</div></div>`;
   }
 
   function permChip(p) {
     const label = PERM_GLOSSARY[p] || p;
-    return `<span class="blora-tag" data-variant="neutral" title="${esc(label)}">${esc(p)}</span>`;
+    return `<span class="chip perm" title="${esc(label)}">${esc(p)}</span>`;
   }
 
   function pluginRow(pl) {
     const open = !!manageState.expanded[pl.id];
-    const perms = (pl.permissions || []).map(permChip).join('') || '<span class="blora-badge" data-variant="neutral">-</span>';
+    const perms = (pl.permissions || []).map(permChip).join('') || '<span class="chip off">-</span>';
 
     const statusChips = [
-      pl.enabled ? '<span class="blora-badge" data-variant="success">已启用</span>' : '<span class="blora-badge" data-variant="neutral">已禁用</span>',
-      pl.onDisk ? '' : '<span class="blora-badge" data-variant="warning">磁盘缺失</span>',
-      pl.loaded ? '<span class="blora-badge" data-variant="success">运行中</span>' : '',
-      pl.errorCount > 0 || pl.lastError ? `<span class="blora-badge" data-variant="warning">错误 ${esc(String(pl.errorCount))}</span>` : '',
-      pl.storeUpdateAvailable ? `<span class="blora-badge" data-variant="warning">有更新 v${esc(String(pl.storeLatestVersion || ''))}</span>` : '',
+      pl.enabled ? '<span class="chip on">● 已启用</span>' : '<span class="chip off">○ 已禁用</span>',
+      pl.onDisk ? '' : '<span class="chip warn">磁盘缺失</span>',
+      pl.loaded ? '<span class="chip on">运行中</span>' : '',
+      pl.errorCount > 0 || pl.lastError ? `<span class="chip warn">错误 ${esc(String(pl.errorCount))}</span>` : '',
+      pl.storeUpdateAvailable ? `<span class="chip warn">有更新 v${esc(String(pl.storeLatestVersion || ''))}</span>` : '',
     ].join('');
 
     const caps = [];
-    if (pl.pages?.length) caps.push(`<span class="blora-tag" data-variant="primary">${esc(String(pl.pages.length))} 页面</span>`);
-    if (pl.slots?.length) caps.push(`<span class="blora-tag" data-variant="primary">${esc(String(pl.slots.length))} 插槽</span>`);
-    if (pl.routes?.length) caps.push(`<span class="blora-tag" data-variant="primary">${esc(String(pl.routes.length))} API</span>`);
-    if (pl.cron?.length) caps.push(`<span class="blora-tag" data-variant="primary">${esc(String(pl.cron.length))} 定时任务</span>`);
-    if (pl.themes?.length) caps.push(`<span class="blora-tag" data-variant="primary">${esc(String(pl.themes.length))} 主题</span>`);
-    const capsHtml = caps.join('') || '<span class="blora-badge" data-variant="neutral">无能力注册</span>';
+    if (pl.pages?.length) caps.push(`<span class="chip cap">${esc(String(pl.pages.length))} 页面</span>`);
+    if (pl.slots?.length) caps.push(`<span class="chip cap">${esc(String(pl.slots.length))} 插槽</span>`);
+    if (pl.routes?.length) caps.push(`<span class="chip cap">${esc(String(pl.routes.length))} API</span>`);
+    if (pl.cron?.length) caps.push(`<span class="chip cap">${esc(String(pl.cron.length))} 定时任务</span>`);
+    if (pl.themes?.length) caps.push(`<span class="chip cap">${esc(String(pl.themes.length))} 主题</span>`);
+    const capsHtml = caps.join('') || '<span class="chip off">无能力注册</span>';
 
     const detail = open ? pluginDetail(pl, perms) : '';
     return `
-      <div class="blora-card blora-stack mcard" data-size="sm">
+      <div class="mcard">
         <div class="mhead">
           <div style="flex:1;min-width:260px;">
-            <div class="blora-card__title"><span data-icon="puzzle" aria-hidden="true"></span> ${esc(pl.name)} <span class="blora-tag" data-variant="neutral">v${esc(pl.version || '-')} · ${esc(pl.id)}</span></div>
-            ${pl.author ? `<div>作者：${esc(pl.author)}</div>` : ''}
-            ${pl.description ? `<div class="blora-card__desc">${esc(pl.description)}</div>` : ''}
+            <div class="mtitle">🧩 ${esc(pl.name)} <span class="mtag">v${esc(pl.version || '-')} · ${esc(pl.id)}</span></div>
+            ${pl.author ? `<div style="font-size:12px;color:var(--muted-foreground);margin-top:2px;">作者：${esc(pl.author)}</div>` : ''}
+            ${pl.description ? `<div class="mdesc">${esc(pl.description)}</div>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
             <div>${statusChips}</div>
-            <label><blora-switch ${pl.enabled ? 'checked' : ''} data-plugin-toggle="${esc(pl.id)}" label="${esc(t('启用'))}"></blora-switch> ${esc(t('启用'))}</label>
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" ${pl.enabled ? 'checked' : ''} onchange="window.__pluginRT.toggle('${esc(pl.id)}', this.checked)"> ${esc(t('启用'))}</label>
           </div>
         </div>
         <div style="margin-top:10px;">${capsHtml}</div>
         <div class="mmut">
-          ${pl.storeUpdateAvailable && pl.storeSource ? `<button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')">${esc(t('更新'))}</button>` : ''}
-          <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
-          <button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
-          <button type="button" class="blora-button" data-variant="danger" data-size="sm" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
+          ${pl.storeUpdateAvailable && pl.storeSource ? `<button class="btn btn-ghost btn-sm" style="color:var(--primary);" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')">${esc(t('更新'))}</button>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--destructive);" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
         </div>
         ${detail}
       </div>`;
@@ -568,48 +540,45 @@
 
   function pluginDetail(pl, perms) {
     const routesHtml = (pl.routes || []).map(r =>
-      `${esc((r.method || 'GET').toUpperCase())} <code style="font-family:monospace;">/api/plugins/${esc(pl.id)}${esc(r.path)}</code> <span>(${esc(r.auth || 'user')})</span>`
+      `${esc((r.method || 'GET').toUpperCase())} <code style="font-family:monospace;">/api/plugins/${esc(pl.id)}${esc(r.path)}</code> <span style="color:var(--muted-foreground);font-size:11px;">(${esc(r.auth || 'user')})</span>`
     ).join('<br>');
     const cronHtml = (pl.cron || []).map(c =>
-      `<code style="font-family:monospace;">${esc(c.expr || '-')}</code> <span>→ ${esc(c.handler || '-')}</span>`
+      `<code style="font-family:monospace;">${esc(c.expr || '-')}</code> <span style="color:var(--muted-foreground);font-size:11px;">→ ${esc(c.handler || '-')}</span>`
     ).join('<br>');
     const themesHtml = (pl.themes || []).map(th => esc(th.name || th.id)).join('、');
     const cfgText = esc(JSON.stringify(pl.config || {}, null, 2));
 
     return `
-      <div>
-        <div class="blora-text-muted">${esc(t('权限声明'))}</div>
+      <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:4px;">
+        <div class="msec">${esc(t('权限声明'))}</div>
         <div>${perms}</div>
-        ${pl.routes?.length ? `<div class="blora-text-muted">${esc(t('自有 API'))}</div><div>${routesHtml}</div>` : ''}
-        ${pl.cron?.length ? `<div class="blora-text-muted">${esc(t('定时任务'))}</div><div>${cronHtml}</div>` : ''}
-        ${pl.themes?.length ? `<div class="blora-text-muted">${esc(t('主题'))}</div><div>${themesHtml}</div>` : ''}
-        <div class="blora-text-muted">${esc(t('插件配置'))}(config)</div>
-        <blora-field label="${esc(t('插件配置'))}"><textarea class="blora-textarea" data-plugin-cfg="${esc(pl.id)}" rows="5">${cfgText}</textarea></blora-field>
+        ${pl.routes?.length ? `<div class="msec">${esc(t('自有 API'))}</div><div style="font-size:12px;">${routesHtml}</div>` : ''}
+        ${pl.cron?.length ? `<div class="msec">${esc(t('定时任务'))}</div><div style="font-size:12px;">${cronHtml}</div>` : ''}
+        ${pl.themes?.length ? `<div class="msec">${esc(t('主题'))}</div><div style="font-size:12px;">${themesHtml}</div>` : ''}
+        <div class="msec">${esc(t('插件配置'))}(config)</div>
+        <textarea data-plugin-cfg="${esc(pl.id)}" rows="5" style="width:100%;font-family:monospace;font-size:12px;background:var(--background);color:var(--foreground);border:1px solid var(--border);border-radius:8px;padding:8px;">${cfgText}</textarea>
         <div style="margin-top:6px;display:flex;gap:8px;">
-          <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
-          <div data-plugin-cfg-msg="${esc(pl.id)}"></div>
+          <button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.saveConfig('${esc(pl.id)}')">${esc(t('保存配置'))}</button>
+          <div data-plugin-cfg-msg="${esc(pl.id)}" style="font-size:12px;align-self:center;"></div>
         </div>
-        <div class="blora-text-muted">${esc(t('插件数据'))}(plugin_data)</div>
-        <div data-plugin-data="${esc(pl.id)}"><p>${esc(t('加载中...'))}</p></div>
-        ${pl.lastError ? `<div class="blora-text-muted">${esc(t('最近错误'))}</div><div><span data-icon="triangle-alert" aria-hidden="true"></span> ${esc(pl.lastError)}</div>
-          <div style="margin-top:4px;"><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')">${esc(t('清除错误并重载'))}</button></div>` : ''}
+        <div class="msec">${esc(t('插件数据'))}(plugin_data)</div>
+        <div data-plugin-data="${esc(pl.id)}"><p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p></div>
+        ${pl.lastError ? `<div class="msec">${esc(t('最近错误'))}</div><div style="font-size:12px;color:var(--destructive);">⚠ ${esc(pl.lastError)}</div>
+          <div style="margin-top:4px;"><button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.resetErrors('${esc(pl.id)}')">${esc(t('清除错误并重载'))}</button></div>` : ''}
       </div>`;
   }
 
   async function renderPluginsAdmin(container, keepExpand) {
     if (!container) return;
-    container.dataset.bloraState = 'loading';
-    if (!keepExpand) container.innerHTML = `<div class="page-loading page-loading-compact"><div class="blora-spinner" role="status"></div><div class="page-loading-text">${esc(t('加载中...'))}</div></div>`;
+    if (!keepExpand) container.innerHTML = `<div class="page-loading page-loading-compact"><div class="loading-spinner md" role="status"></div><div class="page-loading-text">${esc(t('加载中...'))}</div></div>`;
     let data;
     try {
       data = await helpers.fetchJSON('/api/admin/plugins');
     } catch (e) {
-      container.dataset.bloraState = 'error';
-      container.innerHTML = `<div class="blora-stack"><blora-alert variant="danger" title="${esc(t('加载失败'))}" description="${esc(e.message)}"></blora-alert><button type="button" class="blora-button" data-variant="outline" onclick="window.__pluginRT.refresh()">${esc(t('重试'))}</button></div>`;
+      container.innerHTML = `<p style="color:var(--destructive)">${esc(t('加载失败'))}: ${esc(e.message)}</p>`;
       return;
     }
-    manageState.plugins = Array.isArray(data) ? data : (data.plugins || []);
-    container.dataset.bloraState = 'success';
+    manageState.plugins = data.plugins || [];
 
     const q = manageState.search.trim().toLowerCase();
     const filtered = manageState.plugins.filter(pl =>
@@ -635,24 +604,21 @@
       <div class="section-header">
         <div>
           <h2>${esc(t('插件管理'))}</h2>
-          <p>${esc(t('安装方法：将插件目录放入服务器 plugins/ 目录，重启服务后在此启用。'))}</p>
+          <p style="font-size:13px;color:var(--muted-foreground);margin:0;">${esc(t('安装方法：将插件目录放入服务器 plugins/ 目录，重启服务后在此启用。'))}</p>
         </div>
-        <div class="mmut" style="margin-top:0;"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
+        <div class="mmut" style="margin-top:0;"><button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
       </div>
       <div class="mstat-grid">${stats}</div>
       <div class="msearch">
-        <blora-search id="pluginSearchInput" label="${esc(t('搜索插件名称、ID、作者或描述'))}" placeholder="${esc(t('搜索插件名称、ID、作者或描述'))}" value="${esc(manageState.search)}"></blora-search>
-        <blora-select id="pluginSortSelect" aria-label="排序">
-          <blora-option value="id" ${manageState.sort === 'id' ? 'selected' : ''}>${esc(t('按名称排序'))}</blora-option>
-          <blora-option value="name" ${manageState.sort === 'name' ? 'selected' : ''}>${esc(t('按显示名排序'))}</blora-option>
-          <blora-option value="enabled" ${manageState.sort === 'enabled' ? 'selected' : ''}>${esc(t('按状态排序'))}</blora-option>
-        </blora-select>
+        <input type="search" id="pluginSearchInput" class="input" style="flex:1;min-width:200px;" placeholder="${esc(t('搜索插件名称、ID、作者或描述'))}" value="${esc(manageState.search)}" oninput="window.__pluginRT.search(this.value)">
+        <select id="pluginSortSelect" class="select" onchange="window.__pluginRT.sort(this.value)">
+          <option value="id" ${manageState.sort === 'id' ? 'selected' : ''}>${esc(t('按名称排序'))}</option>
+          <option value="name" ${manageState.sort === 'name' ? 'selected' : ''}>${esc(t('按显示名排序'))}</option>
+          <option value="enabled" ${manageState.sort === 'enabled' ? 'selected' : ''}>${esc(t('按状态排序'))}</option>
+        </select>
       </div>
-      ${rows ? rows : `<blora-empty title="${q ? esc(t('未找到匹配插件')) : esc(t('暂无插件。将插件目录放入 plugins/ 后重启服务即可在此看到。'))}"></blora-empty>`}
+      ${rows ? rows : `<p style="color:var(--muted-foreground);font-size:14px;">${q ? esc(t('未找到匹配插件')) : esc(t('暂无插件。将插件目录放入 plugins/ 后重启服务即可在此看到。'))}</p>`}
     `;
-    container.querySelectorAll('[data-plugin-toggle]').forEach(control => control.addEventListener('change', () => window.__pluginRT.toggle(control.dataset.pluginToggle, control.checked)));
-    container.querySelector('#pluginSearchInput')?.addEventListener('input', event => window.__pluginRT.search(event.target.value));
-    container.querySelector('#pluginSortSelect')?.addEventListener('change', event => window.__pluginRT.sort(event.target.value));
   }
 
   function msg(id, text, ok) {
@@ -671,7 +637,7 @@
       const pl = manageState.plugins.find(p => p.id === id);
       if (!pl || !pl.storeId || !pl.storeSource) return;
       const next = pl.storeLatestVersion || '最新';
-      if (!await Dialog.confirm(esc(t('确定要将插件') + '「' + pl.name + '」' + t('更新到') + ' v' + next + t('吗？')))) return;
+      if (!window.confirm(t('确定要将插件') + '「' + pl.name + '」' + t('更新到') + ' v' + next + t('吗？'))) return;
       try {
         await helpers.fetchJSON('/api/admin/plugins/install-from-store', {
           method: 'POST',
@@ -680,46 +646,46 @@
         });
         this.refresh();
       } catch (e) {
-        await Dialog.alert(esc(t('更新失败') + '：' + e.message));
+        window.alert(t('更新失败') + '：' + e.message);
       }
     },
     expand(id) { manageState.expanded[id] = !manageState.expanded[id]; this.refresh(); if (manageState.expanded[id]) this.loadData(id); },
     async loadData(id) {
       const box = document.querySelector(`[data-plugin-data="${id}"]`);
       if (!box) return;
-      box.innerHTML = `<p>${esc(t('加载中...'))}</p>`;
+      box.innerHTML = `<p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('加载中...'))}</p>`;
       try {
         const data = await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/data`);
         const rows = data.keys || [];
         if (!rows.length) {
-          box.innerHTML = `<p>${esc(t('暂无数据'))}</p>`;
+          box.innerHTML = `<p style="font-size:12px;color:var(--muted-foreground);margin:0;">${esc(t('暂无数据'))}</p>`;
           return;
         }
-        box.innerHTML = `<table class="blora-table">
+        box.innerHTML = `<table class="mtable">
           <tr><th>${esc(t('键'))}</th><th>${esc(t('值'))}</th><th>${esc(t('更新时间'))}</th><th></th></tr>
           ${rows.map(r => `<tr>
             <td style="font-family:monospace;">${esc(r.key)}</td>
             <td style="font-family:monospace;max-width:320px;">${esc(JSON.stringify(r.value))}</td>
             <td style="white-space:nowrap;">${esc(String(r.updatedAt || '').slice(0, 19).replace('T', ' '))}</td>
-            <td><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')">${esc(t('删除'))}</button></td>
+            <td><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:1px 8px;" onclick="window.__pluginRT.deleteData('${esc(id)}', '${esc(r.key)}')">${esc(t('删除'))}</button></td>
           </tr>`).join('')}
         </table>`;
       } catch (e) {
-        box.innerHTML = `<p>${esc(e.message)}</p>`;
+        box.innerHTML = `<p style="font-size:12px;color:var(--destructive);margin:0;">${esc(e.message)}</p>`;
       }
     },
     async deleteData(id, key) {
-      if (!await Dialog.confirm(t('确定删除该插件数据键？'))) return;
+      if (!confirm(t('确定删除该插件数据键？'))) return;
       try {
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/data/${encodeURIComponent(key)}`, { method: 'DELETE' });
         this.loadData(id);
-      } catch (e) { await Dialog.alert(esc(e.message)); }
+      } catch (e) { alert(e.message); }
     },
     async toggle(id, enabled) {
       try {
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/toggle`, { method: 'POST' });
         this.refresh();
-      } catch (e) { await Dialog.alert(esc(e.message)); this.refresh(); }
+      } catch (e) { alert(e.message); this.refresh(); }
     },
     async reload(id) {
       try {
@@ -728,11 +694,11 @@
       } catch (e) { msg(id, e.message, false); }
     },
     async uninstall(id) {
-      if (!await Dialog.confirm(t('确定卸载该插件的记录？（需先禁用；插件目录不会被删除）'))) return;
+      if (!confirm(t('确定卸载该插件的记录？（需先禁用；插件目录不会被删除）'))) return;
       try {
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}`, { method: 'DELETE' });
         this.refresh();
-      } catch (e) { await Dialog.alert(esc(e.message)); }
+      } catch (e) { alert(e.message); }
     },
     async saveConfig(id) {
       const el = document.querySelector(`[data-plugin-cfg="${id}"]`);
@@ -753,7 +719,7 @@
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/reset-errors`, { method: 'POST' });
         await helpers.fetchJSON(`/api/admin/plugins/${encodeURIComponent(id)}/reload`, { method: 'POST' });
         this.refresh();
-      } catch (e) { await Dialog.alert(esc(e.message)); }
+      } catch (e) { alert(e.message); }
     },
   };
 

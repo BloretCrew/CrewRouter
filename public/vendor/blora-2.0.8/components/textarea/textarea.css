@@ -1,0 +1,59 @@
+/* =========================================================================
+   Blora Design 2.0 - Textarea component
+   Spec §11.1: Native element with stable class, no JS required
+   ========================================================================= */
+
+.blora-textarea {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  padding: 0.6em 0.85em;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-secondary);
+  background: var(--blora-color-surface-default);
+  border: 1px solid var(--blora-color-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  font-family: var(--blora-font-sans);
+  min-height: 6em;
+  resize: vertical;
+  line-height: var(--blora-leading-normal);
+  transition:
+    border-color var(--blora-duration-fast) var(--blora-easing-standard),
+    box-shadow var(--blora-duration-fast) var(--blora-easing-standard),
+    background var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
+.blora-textarea::placeholder {
+  color: var(--blora-color-text-disabled);
+}
+
+.blora-textarea:hover {
+  border-color: var(--blora-color-text-subtle);
+}
+
+.blora-textarea:focus {
+  outline: none;
+  border-color: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-focus-ring-default);
+  background: var(--blora-color-surface-default);
+}
+
+.blora-textarea:disabled {
+  background: var(--blora-color-surface-sunken);
+  color: var(--blora-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.blora-textarea[aria-invalid="true"] {
+  border-color: var(--blora-color-status-danger);
+}
+
+.blora-textarea[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blora-color-status-danger) 18%, transparent);
+}
+
+@supports (corner-shape: superellipse(1.2)) {
+  .blora-textarea {
+    corner-shape: superellipse(1.2);
+  }
+}

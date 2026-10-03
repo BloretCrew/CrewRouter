@@ -1,0 +1,76 @@
+/* =========================================================================
+   Blora Design 2.0 - Segmented control component
+   Visual baseline: legacy/v1/blora.css lines 1139-1144
+   ========================================================================= */
+
+blora-segmented {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.blora-segmented {
+  --blora-segmented-padding: 3px;
+
+  display: inline-flex;
+  max-width: 100%;
+  padding: var(--blora-segmented-padding);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  background: var(--blora-color-surface-sunken);
+  border-radius: var(--blora-radius-full);
+  gap: 0;
+  position: relative;
+  scrollbar-width: none;
+}
+
+.blora-segmented::-webkit-scrollbar {
+  display: none;
+}
+
+.blora-segmented__indicator {
+  position: absolute;
+  top: var(--blora-segmented-padding);
+  bottom: var(--blora-segmented-padding);
+  background: var(--blora-color-surface-default);
+  border-radius: calc(var(--blora-radius-full) - var(--blora-segmented-padding));
+  box-shadow: var(--blora-shadow-1);
+  transition:
+    left var(--blora-duration-base) var(--blora-easing-standard),
+    width var(--blora-duration-base) var(--blora-easing-standard);
+  pointer-events: none;
+  z-index: var(--blora-z-base);
+}
+
+.blora-segmented__item {
+  padding: 0.4em 0.9em;
+  font-size: var(--blora-text-sm);
+  color: var(--blora-color-text-secondary);
+  border-radius: calc(var(--blora-radius-full) - var(--blora-segmented-padding));
+  cursor: pointer;
+  transition: color var(--blora-duration-base) var(--blora-easing-standard);
+  position: relative;
+  z-index: var(--blora-z-sticky);
+  background: none;
+  border: none;
+  white-space: nowrap;
+}
+
+.blora-segmented__item:hover {
+  color: var(--blora-color-text-primary);
+}
+
+.blora-segmented__item[data-active] {
+  color: var(--blora-color-text-emphasis);
+}
+
+/* The control is an overflow-clipping pill, so an outward focus ring would be
+   cut off at the clipped edges. Draw it inset like Tabs / Sidebar Nav. */
+.blora-segmented__item:focus-visible {
+  outline-offset: calc(-1 * var(--blora-focus-ring-width));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blora-segmented__indicator {
+    transition: none;
+  }
+}
