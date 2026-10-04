@@ -87,6 +87,8 @@ class ConsoleApp {
     this._librarySavingStar = false;
     this._librarySelectedKeyId = null;
     this._libraryKeys = [];
+    /** 用户的 Key 全部被关闭（禁用）时为 true，用于顶部空态文案 */
+    this._libraryAllKeysClosed = false;
     /** 模型库绑定目标：'default' | harness id（如 claude_code） */
     this._libraryBindTarget = 'default';
     this._libraryKeyBubbleCloser = null;
@@ -10761,6 +10763,10 @@ ${extractorBody}
 
     // 无 API Key 时优先引导创建（仍展示模型列表时在绑定栏提示）
     const noKeys = !this._libraryKeys || this._libraryKeys.length === 0;
+    // Key 全部被关闭时，引导动作是去启用而不是去创建
+    const keyCtaHtml = noKeys
+      ? `<button type="button" class="blora-button" onclick="app.navigateTo('apiKeys')" data-variant="primary" data-size="sm">${this._libraryAllKeysClosed ? t('去启用 API Key') : t('创建 API Key')}</button>`
+      : '';
 
     const starredModels = libraryData.starred_models || [];
     const starredHtml = this._renderStarredModelsSection(starredModels, currentModel);
@@ -10771,7 +10777,7 @@ ${extractorBody}
         <div class="model-library-empty">
           <blora-empty title="${escapeHtml(t('暂无可用模型'))}" description="${escapeHtml(t('请联系管理员添加模型或加入 Team，也可添加自己的供应商'))}"></blora-empty>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button type="button" class="blora-button" onclick="app.navigateTo(\'apiKeys\')" data-variant="primary" data-size="sm">' + t('创建 API Key') + '</button>' : ''}
+            ${keyCtaHtml}
             <button type="button" class="blora-button" onclick="app.showAddProviderModal()" data-variant="secondary" data-size="sm">${t('添加供应商')}</button>
             <button type="button" class="blora-button" onclick="app.navigateTo('myUpstream')" data-variant="secondary" data-size="sm">${t('管理我的上游')}</button>
           </div>
@@ -10787,7 +10793,7 @@ ${extractorBody}
         <div class="model-library-empty">
           <blora-empty title="${escapeHtml(t('暂无可用模型'))}" description="${escapeHtml(t('可调整筛选，或添加自己的上游供应商导入模型'))}"></blora-empty>
           <div class="model-library-empty-actions">
-            ${noKeys ? '<button type="button" class="blora-button" onclick="app.navigateTo(\'apiKeys\')" data-variant="primary" data-size="sm">' + t('创建 API Key') + '</button>' : ''}
+            ${keyCtaHtml}
             <button type="button" class="blora-button" onclick="app.showAddProviderModal()" data-variant="secondary" data-size="sm">${t('添加供应商')}</button>
           </div>
         </div>
@@ -11736,6 +11742,7 @@ ${extractorBody}
   async _loadLibraryKeys() {
     const prevSelected = this._librarySelectedKeyId;
     this._libraryKeys = [];
+    this._libraryAllKeysClosed = false;
     try {
       const res = await fetch('/api/user/api-keys');
       if (!res.ok) {
@@ -11744,24 +11751,35 @@ ${extractorBody}
         this._updateLibraryBindingBar();
         return;
       }
-      const keys = await res.json();
-      if (!Array.isArray(keys) || keys.length === 0) {
+      const allKeys = await res.json();
+      if (!Array.isArray(allKeys) || allKeys.length === 0) {
         this._librarySelectedKeyId = null;
         this._renderLibraryKeySelector();
         this._updateLibraryBindingBar();
         return;
       }
+      // 已关闭（已禁用）的 Key 不进入模型库顶部的切换与绑定区域
+      const keys = allKeys.filter(k => k.enabled !== false);
+      this._libraryAllKeysClosed = keys.length === 0;
       this._libraryKeys = keys;
 
       // 优先保留用户已选 Key；否则选绑定了当前模型的 Key；否则选第一个
       const prevStillValid = prevSelected && keys.some(k => k.id === prevSelected);
+      let selectedId;
       if (prevStillValid) {
-        this._librarySelectedKeyId = prevSelected;
+        selectedId = prevSelected;
       } else if (this._libraryCurrentModel) {
         const activeKey = keys.find(k => String(k.current_model_id) === String(this._libraryCurrentModel.id));
-        this._librarySelectedKeyId = activeKey ? activeKey.id : keys[0].id;
+        selectedId = activeKey ? activeKey.id : keys[0]?.id;
       } else {
-        this._librarySelectedKeyId = keys[0].id;
+        selectedId = keys[0]?.id;
+      }
+      this._librarySelectedKeyId = selectedId || null;
+
+      // 选中的 Key 被关闭等原因导致切换时，以新选中 Key 的绑定为准，避免顶部信息与列表高亮不一致
+      if (prevSelected && selectedId !== prevSelected) {
+        const selectedKey = keys.find(k => k.id === selectedId);
+        if (selectedKey) this._applyLibraryKeyCurrentModel(selectedKey);
       }
 
       this._renderLibraryKeySelector();
@@ -11769,6 +11787,19 @@ ${extractorBody}
     } catch (e) {
       console.warn(t('[模型库] 加载 API Keys 失败:'), e);
       this._updateLibraryBindingBar();
+    }
+  }
+
+  /** 用某个 Key 的默认绑定覆盖模型库的「当前模型」展示 */
+  _applyLibraryKeyCurrentModel(key) {
+    if (key?.current_model_id) {
+      this._libraryCurrentModel = {
+        id: key.current_model_id,
+        name: key.current_model_name || key.current_model_id,
+        provider_name: key.current_model_provider_name || ''
+      };
+    } else {
+      this._libraryCurrentModel = null;
     }
   }
 
@@ -11783,10 +11814,12 @@ ${extractorBody}
 
     const keys = this._libraryKeys || [];
     if (!keys.length) {
+      // 区分为「一个 Key 都没有」与「Key 都被关闭」两种空态，引导动作才准确
+      const allClosed = !!this._libraryAllKeysClosed;
       setHTML(summary, `
         <div class="binding-empty">
-          <span>还没有 API Key，创建后才能绑定模型</span>
-          <button type="button" class="blora-button" onclick="app.navigateTo('apiKeys')" data-variant="primary" data-size="sm">去创建 API Key</button>
+          <span>${allClosed ? t('API Key 已全部关闭，启用后才能绑定模型') : t('还没有 API Key，创建后才能绑定模型')}</span>
+          <button type="button" class="blora-button" onclick="app.navigateTo('apiKeys')" data-variant="primary" data-size="sm">${allClosed ? t('去启用 API Key') : t('去创建 API Key')}</button>
         </div>`);
       this._renderLibraryStickyKeyBtn();
       return;
@@ -11906,6 +11939,8 @@ ${extractorBody}
 
     if (this._libraryKeys.length === 0) {
       container.style.display = 'none';
+      // Key 被全部关闭等场景下要清掉旧芯片，避免残留已不可用的 Key
+      setHTML(chipsContainer, '');
       this._renderLibraryStickyKeyBtn();
       return;
     }
@@ -12587,7 +12622,8 @@ ${extractorBody}
     }
 
     if (!this._libraryKeys?.length) {
-      this.showToast(t('请先创建 API Key'), 'error');
+      // Key 被全部关闭与从未创建 Key 的引导文案不同
+      this.showToast(this._libraryAllKeysClosed ? t('API Key 已全部关闭，请先启用') : t('请先创建 API Key'), 'error');
       this.navigateTo('apiKeys');
       return;
     }

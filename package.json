@@ -42,6 +42,8 @@
     "test:blora-navbar-runtime": "node scripts/verify-blora-navbar-runtime.js",
     "test:blora-runtime": "cd CrewRouter-Desktop && xvfb-run -a node_modules/.bin/electron --disable-gpu --no-sandbox ../scripts/verify-blora-runtime.js",
     "test:no-legacy-dialog": "node scripts/test-no-legacy-dialog.js",
+    "test:library-closed-keys": "node scripts/test-library-closed-keys.js",
+    "test:library-closed-keys:browser": "node scripts/test-library-closed-keys-browser.js",
     "money-precision:migrate": "node scripts/migrate-money-precision.js"
   },
   "dependencies": {
