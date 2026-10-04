@@ -26,7 +26,9 @@ if (isDemo) {
     user: config.database.user,
     password: config.database.password,
     // 每个后端连接默认时区（比 SET 更早生效）
-    options: `-c timezone=${APP_TIMEZONE}`
+    // idle_in_transaction_session_timeout：防止未提交事务长期占锁，堵住启动期 DDL
+    // lock_timeout：避免启动迁移/业务查询在锁上无限等待（导致 HTTP 端口迟迟不监听）
+    options: `-c timezone=${APP_TIMEZONE} -c idle_in_transaction_session_timeout=30000 -c lock_timeout=30000`
   });
 
   pool.on('error', (err) => {

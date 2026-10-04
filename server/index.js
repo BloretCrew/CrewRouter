@@ -3009,30 +3009,55 @@ async function runPendingMigrations() {
   Logger.info('[启动] 数据库迁移完成');
 }
 
+function isRetryableStartupDbError(err) {
+  const msg = String(err && err.message || err || '');
+  const code = err && err.code;
+  return code === '55P03' // lock_not_available
+    || /lock timeout|could not obtain lock|canceling statement due to lock timeout/i.test(msg);
+}
+
 async function startServer() {
   if (!isDemo) {
     // 首次运行必须先完成建表 + 迁移，再对外提供服务（含 OOBE）
-    try {
-      Logger.info('[启动] 首次/启动时数据库初始化…');
-      const { initDatabase } = require('./scripts/init-db');
-      await initDatabase();
-      await runPendingMigrations();
-      await ensureInstanceEdition();
-      // 插件系统：表结构就绪后扫描并加载已启用插件
+    const maxAttempts = 4;
+    let lastErr;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        await require('./plugins/registry').init();
+        Logger.info(`[启动] 首次/启动时数据库初始化…${attempt > 1 ? `（重试 ${attempt}/${maxAttempts}）` : ''}`);
+        const { initDatabase } = require('./scripts/init-db');
+        await initDatabase();
+        await runPendingMigrations();
+        await ensureInstanceEdition();
+        // 插件系统：表结构就绪后扫描并加载已启用插件
+        try {
+          await require('./plugins/registry').init();
+        } catch (err) {
+          Logger.error(`[plugins] 初始化失败: ${err.message}`);
+        }
+        // 插件商店（第三期）：初始化 plugin_store_* 表 + 演示数据（不影响系统表）
+        try {
+          await require('./store/store').init({ seedDemo: config.store && config.store.seedDemo !== false });
+        } catch (err) {
+          Logger.error(`[store] 插件商店初始化失败: ${err.message}`);
+        }
+        Logger.success('[启动] 数据库已就绪，可以接受请求');
+        lastErr = null;
+        break;
       } catch (err) {
-        Logger.error(`[plugins] 初始化失败: ${err.message}`);
+        lastErr = err;
+        if (attempt < maxAttempts && isRetryableStartupDbError(err)) {
+          const waitMs = attempt * 2000;
+          Logger.warn(`[启动] 数据库初始化遇到锁等待（${err.message}），${waitMs}ms 后重试…`);
+          await new Promise((r) => setTimeout(r, waitMs));
+          continue;
+        }
+        Logger.error(`[启动] 数据库初始化/迁移失败: ${err.message}`);
+        Logger.error('[启动] 拒绝启动 HTTP 服务，请检查数据库配置后重试');
+        process.exit(1);
       }
-      // 插件商店（第三期）：初始化 plugin_store_* 表 + 演示数据（不影响系统表）
-      try {
-        await require('./store/store').init({ seedDemo: config.store && config.store.seedDemo !== false });
-      } catch (err) {
-        Logger.error(`[store] 插件商店初始化失败: ${err.message}`);
-      }
-      Logger.success('[启动] 数据库已就绪，可以接受请求');
-    } catch (err) {
-      Logger.error(`[启动] 数据库初始化/迁移失败: ${err.message}`);
+    }
+    if (lastErr) {
+      Logger.error(`[启动] 数据库初始化/迁移失败: ${lastErr.message}`);
       Logger.error('[启动] 拒绝启动 HTTP 服务，请检查数据库配置后重试');
       process.exit(1);
     }

@@ -54,26 +54,26 @@ async function scanPendingMessageAnalysis(options = {}) {
   if (scanRunning) return { scanned: 0, skipped: true };
   scanRunning = true;
   const batchSize = Math.min(Math.max(Number(options.batchSize) || 50, 1), 500);
-  let client;
   try {
     await ensureMessageAnalysisTable();
-    client = await pool.connect();
-    await client.query('BEGIN');
-    const pending = await client.query(
+    // 不在长事务里持有 usage_records 行锁：analyzeMessages 可能很慢，
+    // 旧实现 BEGIN + FOR UPDATE 跨分析会导致 idle in transaction，堵住启动期 ALTER TABLE。
+    // 并发重复分析由 ON CONFLICT (usage_id) DO NOTHING 消化。
+    const pending = await pool.query(
       `SELECT ur.id, ur.user_id, ur.created_at, ur.request_source, ur.messages,
               ur.tokens_used, ur.cost
        FROM usage_records ur
        LEFT JOIN usage_message_analysis uma ON uma.usage_id = ur.id
        WHERE ur.messages IS NOT NULL AND uma.usage_id IS NULL
        ORDER BY ur.id ASC
-       LIMIT $1
-       FOR UPDATE OF ur SKIP LOCKED`,
+       LIMIT $1`,
       [batchSize]
     );
 
+    let persisted = 0;
     for (const row of pending.rows) {
       const analysis = analyzeMessages(row.messages);
-      await client.query(
+      const inserted = await pool.query(
         `INSERT INTO usage_message_analysis (
            usage_id, user_id, created_at, request_source, workspace_path,
            message_count, total_characters, total_lines, metadata_message_count,
@@ -92,16 +92,14 @@ async function scanPendingMessageAnalysis(options = {}) {
           JSON.stringify(analysis.values), Number(row.tokens_used) || 0, Number(row.cost) || 0
         ]
       );
+      if (inserted.rowCount) persisted += 1;
     }
-    await client.query('COMMIT');
-    if (pending.rows.length) Logger.info(`[消息分析] 已持久化 ${pending.rows.length} 条请求的结构化标记`);
-    return { scanned: pending.rows.length, skipped: false };
+    if (persisted) Logger.info(`[消息分析] 已持久化 ${persisted} 条请求的结构化标记`);
+    return { scanned: persisted, skipped: false };
   } catch (error) {
-    if (client) await client.query('ROLLBACK').catch(() => {});
     Logger.warn(`[消息分析] 后台扫描失败: ${error.message}`);
     return { scanned: 0, error: error.message };
   } finally {
-    client?.release();
     scanRunning = false;
   }
 }

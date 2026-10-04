@@ -57,6 +57,8 @@ async function initDatabase() {
   Logger.info('[数据库初始化] 已连接到目标数据库，开始创建表...');
 
   try {
+    // 避免被其它会话的行锁/事务无限堵住（此前消息分析 idle in transaction 可卡死启动）
+    await client.query("SET lock_timeout = '15s'");
     await client.query('BEGIN');
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -862,7 +864,7 @@ async function initDatabase() {
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     Logger.error('[数据库初始化] 错误:', error.message);
-    process.exit(1);
+    throw error;
   } finally {
     client.release();
     await pool.end();
@@ -870,7 +872,7 @@ async function initDatabase() {
 }
 
 if (require.main === module) {
-  initDatabase();
+  initDatabase().catch(() => process.exit(1));
 }
 
 module.exports = { initDatabase };
