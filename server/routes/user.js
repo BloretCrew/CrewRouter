@@ -58,10 +58,12 @@ router.get('/trace-sessions/:publicId', requireAuth, async (req, res) => {
   try {
     const r = await pool.query(`UPDATE trace_sessions SET viewed_at = COALESCE(viewed_at, CURRENT_TIMESTAMP) WHERE public_id = $1 AND user_id = $2 RETURNING *`, [req.params.publicId, req.session.user.id]);
     if (!r.rows.length) return res.status(404).json({ error: '报告不存在' });
-    const events = await pool.query(`SELECT te.*, ur.plugin_meta->'request_semantics' AS semantics
+    const events = await pool.query(`SELECT te.*, COALESCE(ur.requested_model, te.request_params->'model_identity'->>'requested_model') AS requested_model,
+      COALESCE(ur.resolved_model, te.request_params->'model_identity'->>'resolved_model') AS resolved_model,
+      COALESCE(ur.response_model, te.request_params->'model_identity'->>'response_model') AS response_model, ur.plugin_meta->'request_semantics' AS semantics
       FROM trace_events te
-      LEFT JOIN usage_records ur ON ur.id = te.usage_record_id
-      WHERE te.session_id = $1 ORDER BY te.created_at, te.id`, [r.rows[0].id]);
+      LEFT JOIN usage_records ur ON ur.id = te.usage_record_id AND ur.user_id = $2
+      WHERE te.session_id = $1 ORDER BY te.created_at, te.id`, [r.rows[0].id, req.session.user.id]);
     res.json({ session: r.rows[0], events: events.rows });
   } catch (e) { Logger.error('[跟踪报告详情] 错误:', e); res.status(500).json({ error: '服务器错误' }); }
 });
@@ -70,11 +72,16 @@ router.get('/trace-sessions/:publicId/export', requireAuth, async (req, res) => 
   try {
     const r = await pool.query('SELECT * FROM trace_sessions WHERE public_id = $1 AND user_id = $2', [req.params.publicId, req.session.user.id]);
     if (!r.rows.length) return res.status(404).json({ error: '报告不存在' });
-    const events = await pool.query('SELECT * FROM trace_events WHERE session_id = $1 ORDER BY created_at, id', [r.rows[0].id]);
+    const events = await pool.query(`SELECT te.*, COALESCE(ur.requested_model, te.request_params->'model_identity'->>'requested_model') AS requested_model,
+      COALESCE(ur.resolved_model, te.request_params->'model_identity'->>'resolved_model') AS resolved_model,
+      COALESCE(ur.response_model, te.request_params->'model_identity'->>'response_model') AS response_model
+      FROM trace_events te
+      LEFT JOIN usage_records ur ON ur.id = te.usage_record_id AND ur.user_id = $2
+      WHERE te.session_id = $1 ORDER BY te.created_at, te.id`, [r.rows[0].id, req.session.user.id]);
     const format = String(req.query.format || 'json').toLowerCase();
     if (format !== 'csv') return res.json({ session: r.rows[0], events: events.rows });
-    const columns = ['id','created_at','ok','http_status','error','request_type','request_source','model_id','provider_id','tokens_used','prompt_tokens','completion_tokens','cached_tokens','weighted_tokens','cost','latency_ms','messages','response','reasoning_content','request_params','finish_reason'];
-    const quote = value => `"${String(value == null ? '' : (typeof value === 'object' ? JSON.stringify(value) : value)).replace(/"/g, '""')}"`;
+    const columns = ['id','created_at','ok','http_status','error','request_type','request_source','model_id','provider_id','tokens_used','prompt_tokens','completion_tokens','cached_tokens','weighted_tokens','cost','latency_ms','messages','response','reasoning_content','request_params','finish_reason','requested_model','resolved_model','response_model'];
+    const quote = value => csvEscapeUser(typeof value === 'object' && value !== null ? JSON.stringify(value) : value);
     const csv = [columns.join(','), ...events.rows.map(row => columns.map(c => quote(row[c])).join(','))].join('\n');
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="trace-${req.params.publicId}.csv"`);
@@ -4657,7 +4664,8 @@ router.post('/my-team-models/batch-update', requireAuth, async (req, res) => {
 
 function csvEscapeUser(value) {
   if (value == null) return '';
-  const s = String(value);
+  let s = String(value);
+  if (typeof value === 'string' && /^[\s]*[=+@-]/.test(s)) s = `'${s}`;
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
@@ -4704,6 +4712,9 @@ router.get('/usage-logs', requireAuth, async (req, res) => {
           u.model_id
         ) as model_name,
         m.upstream_model_id,
+        u.requested_model,
+        u.resolved_model,
+        u.response_model,
         p.name as provider_name
       ${fromSql}
       ${where}
@@ -4735,6 +4746,9 @@ router.get('/usage-logs/export', requireAuth, async (req, res) => {
           u.model_id
         ) as model_name,
         m.upstream_model_id,
+        u.requested_model,
+        u.resolved_model,
+        u.response_model,
         m.series,
         p.name as provider_name,
         ak.key_prefix,
@@ -4758,7 +4772,7 @@ router.get('/usage-logs/export', requireAuth, async (req, res) => {
     const header = [
       '时间', '模型', '上游模型ID', '系列', '供应商',
       'Key前缀', 'Key名称', '请求类型', '客户端', '总Token', '输入Token', '输出Token',
-      '缓存Token', '积分', '延迟ms', 'IP'
+      '缓存Token', '积分', '延迟ms', 'IP', '客户端请求模型', '路由模型', '上游响应模型'
     ];
 
     const lines = [header.map(csvEscapeUser).join(',')];
@@ -4780,7 +4794,10 @@ router.get('/usage-logs/export', requireAuth, async (req, res) => {
         row.cached_tokens || 0,
         row.cost != null ? row.cost : '',
         row.latency_ms != null ? row.latency_ms : '',
-        row.ip_address || ''
+        row.ip_address || '',
+        row.requested_model || '',
+        row.resolved_model || '',
+        row.response_model || ''
       ].map(csvEscapeUser).join(','));
     }
 
@@ -4833,10 +4850,13 @@ router.get('/usage-logs/:id', requireAuth, async (req, res) => {
           u.model_id
         ) as model_name,
         m.upstream_model_id,
+        u.requested_model,
+        u.resolved_model,
+        u.response_model,
         p.name as provider_name
       ${fromSql}
-      WHERE u.id = $1
-    `, [id]);
+      WHERE u.id = $1 AND u.user_id = $2
+    `, [id, userId]);
 
     if (!result.rows.length) return res.status(404).json({ error: '记录不存在' });
     res.json({ log: result.rows[0] });

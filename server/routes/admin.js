@@ -1437,7 +1437,8 @@ router.get('/message-stats', requireAuth, requireAdmin, async (req, res) => {
 
 function csvEscape(value) {
   if (value == null) return '';
-  const s = String(value);
+  let s = String(value);
+  if (typeof value === 'string' && /^[\s]*[=+@-]/.test(s)) s = `'${s}`;
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
@@ -1496,6 +1497,9 @@ router.get('/usage-logs', requireAuth, requireAdmin, async (req, res) => {
           u.model_id
         ) as model_name,
         m.upstream_model_id,
+        u.requested_model,
+        u.resolved_model,
+        u.response_model,
         p.name as provider_name
       ${fromSql}
       ${where}
@@ -1639,6 +1643,9 @@ router.get('/usage-logs/export', requireAuth, requireAdmin, async (req, res) => 
           u.model_id
         ) as model_name,
         m.upstream_model_id,
+        u.requested_model,
+        u.resolved_model,
+        u.response_model,
         m.series,
         p.name as provider_name,
         ak.key_prefix,
@@ -1663,7 +1670,7 @@ router.get('/usage-logs/export', requireAuth, requireAdmin, async (req, res) => 
     const header = [
       '时间', '用户名', '用户ID', '模型', '上游模型ID', '系列', '供应商',
       'Key前缀', 'Key名称', '请求类型', '客户端', '总Token', '输入Token', '输出Token',
-      '缓存Token', '积分', '延迟ms', 'IP', '自定义提示词文件'
+      '缓存Token', '积分', '延迟ms', 'IP', '自定义提示词文件', '客户端请求模型', '路由模型', '上游响应模型'
     ];
 
     const lines = [header.map(csvEscape).join(',')];
@@ -1688,7 +1695,10 @@ router.get('/usage-logs/export', requireAuth, requireAdmin, async (req, res) => 
         row.cost != null ? row.cost : '',
         row.latency_ms != null ? row.latency_ms : '',
         row.ip_address || '',
-        customInstructionsFiles(row.plugin_meta)
+        customInstructionsFiles(row.plugin_meta),
+        row.requested_model || '',
+        row.resolved_model || '',
+        row.response_model || ''
       ].map(csvEscape).join(','));
     }
 
@@ -1743,6 +1753,9 @@ router.get('/usage-logs/:id', requireAuth, requireAdmin, async (req, res) => {
           u.model_id
         ) as model_name,
         m.upstream_model_id,
+        u.requested_model,
+        u.resolved_model,
+        u.response_model,
         p.name as provider_name
       ${fromSql}
       ${where} AND u.id = $${detailIdParam}

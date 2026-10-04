@@ -11,6 +11,8 @@
     "test:session-identity": "node server/scripts/test-session-identity.js",
     "test:session-classification": "node server/scripts/test-session-classification-static.js",
     "test:usage-accuracy": "node server/scripts/test-usage-accuracy.js",
+    "test:model-identity": "node --test server/scripts/test-model-identity.js && node server/scripts/test-model-identity-data.js && node scripts/test-model-identity-ui.js",
+    "test:model-identity:browser": "node scripts/test-model-identity-browser.js",
     "test:session-summary-model-selection": "node server/scripts/test-session-summary-model-selection.js",
     "test:before-upstream-policy": "node server/scripts/test-before-upstream-policy.js",
     "test:quota-usage": "node server/scripts/test-quota-usage.js",

@@ -12,7 +12,8 @@ async function recordAgentUsage({
   requestType,
   promptTokens = 0,
   completionTokens = 0,
-  req
+  req,
+  identity = {}
 }) {
   const billing = calculateCost(modelConfig || {}, {
     promptTokens,
@@ -32,8 +33,8 @@ async function recordAgentUsage({
   });
   const clientMeta = clientMetaFromReq(req || {});
   await pool.query(
-    `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens, cost, request_type, provider_id, request_source, user_agent)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens, cost, request_type, provider_id, request_source, user_agent, requested_model, resolved_model, response_model)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
     [
       userId,
       modelConfig.id,
@@ -45,7 +46,10 @@ async function recordAgentUsage({
       requestType,
       modelConfig.provider || null,
       clientMeta.requestSource,
-      clientMeta.userAgent
+      clientMeta.userAgent,
+      identity.requested_model ?? null,
+      identity.resolved_model ?? null,
+      identity.response_model ?? null
     ]
   );
   if (pointsToDeduct > 0) {

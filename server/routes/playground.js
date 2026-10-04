@@ -1,4 +1,5 @@
 const express = require('express');
+const { createModelIdentity, createModelIdentityStream } = require('../utils/model-identity');
 const router = express.Router();
 const { pool } = require('../models/database');
 const { requireAuth } = require('../middleware/auth');
@@ -60,6 +61,8 @@ router.post('/chat', requireAuth, async (req, res) => {
     return res.status(400).json({ error: '缺少必要参数' });
   }
 
+  const requestedModel = model;
+  let modelIdentity = null;
   let streamAbortController = null;
   let streamTimeout = null;
   let timeoutAborted = false;
@@ -221,6 +224,8 @@ router.post('/chat', requireAuth, async (req, res) => {
       return res.status(400).json({ error: `供应商 URL 校验失败: ${urlCheck.error}` });
     }
 
+    modelIdentity = createModelIdentity(requestedModel, upstreamBody.model);
+
     // 多 Key：顺序 / 权重尝试，失败后 fallback
     streamAbortController = isStream ? new AbortController() : null;
     streamTimeout = isStream ? setTimeout(() => { timeoutAborted = true; streamAbortController.abort(); }, UPSTREAM_STREAM_TIMEOUT) : null;
@@ -316,6 +321,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       let clientDisconnected = false;
       let streamCompleted = false;
       let streamFailed = false;
+      const identityStream = createModelIdentityStream(modelIdentity);
       const streamState = { clientDisconnected, timeoutAborted, streamCompleted, streamFailed, pendingEvent: '' };
       let backpressureCount = 0;
 
@@ -355,6 +361,7 @@ router.post('/chat', requireAuth, async (req, res) => {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+          identityStream.push(value);
           if (clientDisconnected) {
             Logger.stream(`[Playground] 客户端已断开, 停止读取上游: provider=${provider.id}, model=${model}`);
             break;
@@ -463,6 +470,7 @@ router.post('/chat', requireAuth, async (req, res) => {
         }
       }
 
+      identityStream.finish();
       const streamTerminal = finalizePlaygroundStream({ clientDisconnected, timeoutAborted, streamCompleted, streamFailed });
       if (streamTerminal === 'failed') streamFailed = true;
       if (streamTimeout) { clearTimeout(streamTimeout); streamTimeout = null; }
@@ -508,7 +516,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       Logger.info(`[Playground] 流式完成: model=${model}, promptTokens=${normalized.promptTokens}, completionTokens=${normalized.completionTokens}, totalTokens=${totalTokens}, points=${pointsCost}`);
       const requestParams = { temperature, max_tokens, top_p, thinking: effectiveThinking, thinking_budget, reasoning_effort };
       try {
-        await recordPlaygroundUsageIfCompleted({ streamCompleted: streamTerminal === 'completed', clientDisconnected, timeoutAborted, streamFailed }, recordUsage, [userId, modelConfig.id, totalTokens, weightedTokens, pointsCost, messages, totalContent, normalized, totalReasoning, requestParams, finishReason, req]);
+        await recordPlaygroundUsageIfCompleted({ streamCompleted: streamTerminal === 'completed', clientDisconnected, timeoutAborted, streamFailed }, recordUsage, [userId, modelConfig.id, totalTokens, weightedTokens, pointsCost, messages, totalContent, normalized, totalReasoning, requestParams, finishReason, req, modelIdentity.snapshot()]);
       } catch (e) {
         Logger.error(`[Playground] 记录使用量异常: ${e.message}`);
       }
@@ -521,6 +529,8 @@ router.post('/chat', requireAuth, async (req, res) => {
       });
     } else {
       const data = await response.json();
+      modelIdentity.observe(data);
+      modelIdentity.finish();
 
       let normalized;
       if (provider.format === 'anthropic') {
@@ -555,7 +565,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       Logger.info(`[Playground] 非流式完成: model=${model}, promptTokens=${normalized.promptTokens}, completionTokens=${normalized.completionTokens}, totalTokens=${totalTokens}, points=${pointsCost}`);
       const requestParams = { temperature, max_tokens, top_p, thinking: effectiveThinking, thinking_budget, reasoning_effort };
       try {
-        await recordUsage(userId, modelConfig.id, totalTokens, weightedTokens, pointsCost, messages, responseContent, normalized, reasoningContent, requestParams, finishReason, req);
+        await recordUsage(userId, modelConfig.id, totalTokens, weightedTokens, pointsCost, messages, responseContent, normalized, reasoningContent, requestParams, finishReason, req, modelIdentity.snapshot());
       } catch (e) {
         Logger.error(`[Playground] 记录使用量异常: ${e.message}`);
       }
@@ -580,7 +590,7 @@ router.post('/chat', requireAuth, async (req, res) => {
   }
 });
 
-async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsCost, messages, response, normalized, reasoningContent, requestParams, finishReason, req) {
+async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsCost, messages, response, normalized, reasoningContent, requestParams, finishReason, req, identity = {}) {
   try {
     // 与 API 一致：组配额未耗尽时实扣可为 0
     let teamId = null;
@@ -639,11 +649,11 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
 
     await pool.query(
       `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens,
-       provider_id, request_type, messages, response, cost, reasoning_content, request_params, finish_reason, request_source, user_agent, plugin_meta)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+       provider_id, request_type, messages, response, cost, reasoning_content, request_params, finish_reason, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
       [userId, modelId, totalTokens, weightedTokens, promptTokens, completionTokens,
        providerId, 'playground', messagesJson, responseText, pointsToDeduct, reasoningText, paramsJson, finish,
-       clientMeta.requestSource, clientMeta.userAgent, pluginMeta]
+       clientMeta.requestSource, clientMeta.userAgent, pluginMeta, identity.requested_model ?? null, identity.resolved_model ?? null, identity.response_model ?? null]
     );
     Logger.info(`[Playground计费] 记录成功`);
     if (pointsToDeduct > 0) {
@@ -667,11 +677,11 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
       });
       const clientMeta = clientMetaFromReq(req || {});
       await pool.query(
-        `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens, cost, request_type, provider_id, request_source, user_agent)
+        `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens, cost, request_type, provider_id, request_source, user_agent, requested_model, resolved_model, response_model)
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'playground',
-           (SELECT provider FROM models WHERE id = $2 LIMIT 1), $8, $9)`,
+           (SELECT provider FROM models WHERE id = $2 LIMIT 1), $8, $9, $10, $11, $12)`,
         [userId, modelId, totalTokens, weightedTokens, promptTokens, completionTokens, pointsToDeduct,
-         clientMeta.requestSource, clientMeta.userAgent]
+         clientMeta.requestSource, clientMeta.userAgent, identity.requested_model ?? null, identity.resolved_model ?? null, identity.response_model ?? null]
       );
       Logger.info(`[Playground计费] 简化INSERT成功`);
       if (pointsToDeduct > 0) {
@@ -738,7 +748,7 @@ router.get('/history', requireAuth, async (req, res) => {
     const total = parseInt(countResult.rows[0].total);
 
     const result = await pool.query(`
-      SELECT id, model_id, prompt_tokens, completion_tokens, tokens_used, cost,
+      SELECT id, model_id, requested_model, resolved_model, response_model, prompt_tokens, completion_tokens, tokens_used, cost,
              reasoning_content, request_params, finish_reason, response, messages,
              created_at
       FROM usage_records
@@ -754,6 +764,9 @@ router.get('/history', requireAuth, async (req, res) => {
       records: result.rows.map(r => ({
         id: r.id,
         model: r.model_id,
+        requested_model: r.requested_model ?? null,
+        resolved_model: r.resolved_model ?? null,
+        response_model: r.response_model ?? null,
         promptTokens: r.prompt_tokens,
         completionTokens: r.completion_tokens,
         totalTokens: r.tokens_used,
@@ -777,7 +790,7 @@ router.get('/history/:id', requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
     const result = await pool.query(
-      `SELECT id, model_id, prompt_tokens, completion_tokens, tokens_used, cost,
+      `SELECT id, model_id, requested_model, resolved_model, response_model, prompt_tokens, completion_tokens, tokens_used, cost,
               reasoning_content, request_params, finish_reason, response, messages,
               created_at
        FROM usage_records
@@ -794,6 +807,9 @@ router.get('/history/:id', requireAuth, async (req, res) => {
     res.json({
       id: r.id,
       model: r.model_id,
+      requested_model: r.requested_model ?? null,
+      resolved_model: r.resolved_model ?? null,
+      response_model: r.response_model ?? null,
       promptTokens: r.prompt_tokens,
       completionTokens: r.completion_tokens,
       totalTokens: r.tokens_used,

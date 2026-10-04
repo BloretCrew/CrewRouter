@@ -2929,6 +2929,19 @@ async function runPendingMigrations() {
     ensureAuthEnhancements,
     ensureEmailVerification,
     ensureUsageRecordsFields,
+    async function ensureUsageModelIdentity() {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await require('./utils/usage-model-migration').ensureUsageModelIdentityColumns(client);
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw err;
+      } finally {
+        client.release();
+      }
+    },
     ensureUsageCompressColumns,
     ensureTraceSessionTables,
     ensureUsageMessageAnalysisTable,

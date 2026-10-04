@@ -619,7 +619,7 @@ router.get('/sessions/:sessionKey/messages', requireAuth, async (req, res) => {
     const hasDelta = deltaCheck.rows[0] && deltaCheck.rows[0].has_delta === true;
 
     const DETAIL_COLUMNS = `
-      SELECT id, created_at, model_id, tokens_used, cached_tokens, latency_ms,
+      SELECT id, created_at, model_id, requested_model, resolved_model, response_model, tokens_used, cached_tokens, latency_ms,
              COALESCE(request_source, 'unknown') AS request_source,
              messages, response, reasoning_content,
              storage_mode, delta_seq, orig_ctx_msgs, orig_ctx_bytes
@@ -763,6 +763,10 @@ function buildDetailRecords(rawRows) {
       id: row.id,
       ts: row.created_at,
       model: row.model_id || null,
+      requested_model: row.requested_model ?? null,
+      resolved_model: row.resolved_model ?? null,
+      response_model: row.response_model ?? null,
+      modelIdentities: [{ id: row.id, requested_model: row.requested_model ?? null, resolved_model: row.resolved_model ?? null, response_model: row.response_model ?? null }],
       tokens: Number(row.tokens_used || 0),
       cachedTokens: Number(row.cached_tokens || 0),
       latencyMs: row.latency_ms == null ? null : Number(row.latency_ms),
@@ -787,6 +791,7 @@ function buildDetailRecords(rawRows) {
     const last = merged[merged.length - 1];
     // 完全相同的请求（原始事件流 hash 一致）：并入前一条，tokens 累加
     if (last && rec.userFingerprint && rec.userFingerprint === last.userFingerprint) {
+      last.modelIdentities.push(...rec.modelIdentities);
       last.tokens += rec.tokens;
       last.cachedTokens += rec.cachedTokens;
       last.repeatCount = (last.repeatCount || 1) + 1;

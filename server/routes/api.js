@@ -11,6 +11,7 @@ router.use((req, res, next) => {
       httpStatus: res.statusCode,
       requestType: req.path.includes('responses') ? 'responses' : (req.path.includes('messages') ? 'anthropic' : 'chat'),
       usageRecordId: req._usageRecordId || null,
+      requestParams: { model_identity: req._upstreamAttemptContext?.modelIdentity?.snapshot() || { requested_model: require('../utils/model-identity').normalizeModel(req._requestedModel), resolved_model: null, response_model: null } },
       requestSource: req._clientMetaSnapshot?.requestSource,
       userAgent: req._clientMetaSnapshot?.userAgent,
       messages: req.body?.messages || req.body?.input || req.body,
@@ -22,7 +23,8 @@ router.use((req, res, next) => {
   req._traceStartedAt = Date.now();
   req._clientMetaSnapshot = clientMetaFromReq(req);
   req._requestLifecycle = createRequestLifecycle(req, res);
-  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle.signal };
+  req._requestedModel = req.body?.model;
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle.signal, requestedModel: req._requestedModel };
   res.once('finish', () => req._requestLifecycle.dispose());
   next();
 });
@@ -35,7 +37,7 @@ const { calculateCost } = require('../utils/billing');
 const { recordQuotaData } = require('../utils/quota-data');
 const { recordModelCall } = require('../utils/model-uptime');
 const { recordLiveCallTest } = require('../utils/model-test');
-const { captureCallError, clientIp } = require('../utils/error-records');
+const { captureCallError: captureRawCallError, clientIp } = require('../utils/error-records');
 const { notifyUser, NOTIFICATION_TYPES } = require('../utils/notifications');
 const {
   clientMetaFromReq,
@@ -93,6 +95,33 @@ const { validateBeforeUpstreamRewrite } = require('../utils/before-upstream-poli
 const { selectHealthyWeighted } = require('../utils/provider-selector');
 const { createRequestLifecycle, combineAbortSignals } = require('../utils/request-lifecycle');
 const protocolBridge = require('../protocol/bridge');
+const { createModelIdentity, observeModelResponse } = require('../utils/model-identity');
+
+function modelIdentityValues(req, fusion = false) {
+  const identity = fusion
+    ? createModelIdentity(req._requestedModel, null).snapshot()
+    : (req._upstreamAttemptContext?.modelIdentity || createModelIdentity(req._requestedModel, null)).snapshot();
+  return [identity.requested_model, identity.resolved_model, identity.response_model];
+}
+
+function captureCallError(req, context = {}) {
+  const [requested_model, resolved_model, response_model] = modelIdentityValues(req);
+  const original = context.error || context.body;
+  const body = original instanceof Error
+    ? { error: { message: original.message, type: 'exception' }, stack: original.stack }
+    : (original && typeof original === 'object' ? { ...original } : { message: original });
+  captureRawCallError(req, { ...context, error: null, body: { ...body, model_identity: { requested_model, resolved_model, response_model } } });
+}
+
+async function fetchWithModelIdentity(url, options) {
+  const context = options.requestContext;
+  let sentBody = null;
+  try { sentBody = JSON.parse(options.body); } catch { /* ignore non-JSON requests */ }
+  const identity = createModelIdentity(context?.requestedModel, sentBody?.model);
+  if (context) context.modelIdentity = identity;
+  const response = await proxyPool.proxyFetch(url, options);
+  return observeModelResponse(response, identity);
+}
 
 function bridgeRequest(dialect, body, options = {}) {
   const ir = protocolBridge.decodeRequest(dialect, body || {});
@@ -186,15 +215,6 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
   let lastError = null;
   const attempts = Math.min(MAX_UPSTREAM_ATTEMPTS, Math.max(1, parseInt(maxRetries, 10) || 1));
   const requestContext = hookCtx?.requestContext || provider?._requestContext;
-  const consumeAttempt = () => {
-    if (!requestContext) return;
-    requestContext.upstreamAttempts = (requestContext.upstreamAttempts || 0) + 1;
-    if (requestContext.upstreamAttempts > MAX_UPSTREAM_ATTEMPTS) {
-      const err = new Error(`Upstream request attempt limit exceeded (${MAX_UPSTREAM_ATTEMPTS})`);
-      err.code = 'upstream_attempt_limit';
-      throw err;
-    }
-  };
 
   // 插件 gateway:beforeUpstream 钩子：首次构造请求选项时执行一次，
   // 得到的覆盖值（url / headers / bodyText）在后续代理重试中持续生效
@@ -242,12 +262,11 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
 
   for (let retry = 0; retry < attempts; retry++) {
     throwIfAborted();
-    consumeAttempt();
     const fetchOpts = applyUpstreamOverride(makeFetchOpts(proxyInfo));
     if (signal) fetchOpts.signal = combineAbortSignals(fetchOpts.signal, signal);
 
     try {
-      response = await proxyPool.proxyFetch(fetchOpts.url, { ...fetchOpts, requestContext });
+      response = await fetchWithModelIdentity(fetchOpts.url, { ...fetchOpts, requestContext });
       lastError = null;
     } catch (err) {
       lastError = err;
@@ -521,6 +540,7 @@ async function runWithProviderKeyFallback(provider, res, outerSuppress, runOnce)
   let lastResult = null;
   let lastError = null;
   for (let i = 0; i < keys.length; i++) {
+    if (res.req?._upstreamAttemptContext) res.req._upstreamAttemptContext.modelIdentity = null;
     const hasMoreKeys = i < keys.length - 1;
     const suppressErrorResponse = !!outerSuppress || hasMoreKeys;
     const apiKey = keys[i];
@@ -1488,7 +1508,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       currentProxyInfo,
       maxRetries,
       'proxyOpenAI',
-      { model, requestType: 'proxyOpenAI', affinityKey: affinityKeyForRequest(req, req.body) }
+      { requestContext: req._upstreamAttemptContext, model, requestType: 'proxyOpenAI', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -1732,7 +1752,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       currentProxyInfo,
       maxRetries,
       'proxyOpenAI',
-      { model, requestType: 'proxyOpenAI', affinityKey: affinityKeyForRequest(req, req.body) }
+      { requestContext: req._upstreamAttemptContext, model, requestType: 'proxyOpenAI', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -1853,7 +1873,7 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
     currentProxyInfo,
     maxRetries,
     'proxyChatToResponses',
-    { model, requestType: 'proxyChatToResponses', affinityKey: affinityKeyForRequest(req, req.body) }
+    { requestContext: req._upstreamAttemptContext, model, requestType: 'proxyChatToResponses', affinityKey: affinityKeyForRequest(req, req.body) }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -2079,7 +2099,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       currentProxyInfo,
       maxRetries,
       'proxyAnthropic',
-      { model, requestType: 'proxyAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
+      { requestContext: req._upstreamAttemptContext, model, requestType: 'proxyAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -2420,7 +2440,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       currentProxyInfo,
       maxRetries,
       'proxyAnthropic',
-      { model, requestType: 'proxyAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
+      { requestContext: req._upstreamAttemptContext, model, requestType: 'proxyAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -2544,7 +2564,8 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
 router.post('/chat/completions', oauthBearer, handleChatCompletion);
 
 async function handleChatCompletion(req, res) {
-  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal };
+  if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -2603,6 +2624,7 @@ async function handleChatCompletion(req, res) {
   let lastError = null;
 
   for (let i = 0; i < modelQueue.length; i++) {
+    req._upstreamAttemptContext.modelIdentity = null;
     const queueModelId = modelQueue[i];
     const hasMore = i < modelQueue.length - 1;
     const suppressErrorResponse = hasMore;
@@ -2888,13 +2910,13 @@ async function handleChatCompletion(req, res) {
         const localModelId = modelConfig.id || userRequestedModel;
         const latencyMs = Date.now() - liveCallStart;
         const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+           pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
@@ -3080,13 +3102,13 @@ async function handleFusionRequest(req, res, format = 'openai') {
         }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
 
         const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id`, usageValues: [req.apiUser.userId, req.apiUser.keyId, totalTokens,
+           weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id`, usageValues: [req.apiUser.userId, req.apiUser.keyId, totalTokens,
            fusionPromptTokens, fusionCompletionTokens,
            totalWeightedTokens, null, 'fusion',
            JSON.stringify(messages), result.content || null, realDeduct,
            Date.now() - startTime, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: totalWeightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+           pluginMeta, ...modelIdentityValues(req, true)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: totalWeightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
 
@@ -3196,7 +3218,8 @@ router.get('/models', oauthBearer, async (req, res) => {
 router.post('/messages', oauthBearer, handleAnthropicMessage);
 
 async function handleAnthropicMessage(req, res) {
-  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal };
+  if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -3280,6 +3303,7 @@ async function handleAnthropicMessage(req, res) {
   const anthropicBody = { messages, system, max_tokens, temperature, top_p, top_k, stop_sequences, tools, tool_choice, thinking, metadata, output_config, service_tier, cache_control, container, inference_geo };
 
   for (let i = 0; i < modelQueue.length; i++) {
+    req._upstreamAttemptContext.modelIdentity = null;
     const queueModelId = modelQueue[i];
     const hasMore = i < modelQueue.length - 1;
     const suppressErrorResponse = hasMore;
@@ -3523,13 +3547,13 @@ async function handleAnthropicMessage(req, res) {
         const localModelId = modelConfig.id || queueModelId;
         const latencyMs = Date.now() - liveCallStart;
         const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'chat', JSON.stringify(messages), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+           pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
@@ -3667,7 +3691,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       currentProxyInfo,
       maxRetries,
       'proxyAnthropicToAnthropic',
-      { model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
+      { requestContext: req._upstreamAttemptContext, model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -3940,7 +3964,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       currentProxyInfo,
       maxRetries,
       'proxyAnthropicToAnthropic',
-      { model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
+      { requestContext: req._upstreamAttemptContext, model, requestType: 'proxyAnthropicToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
     );
     currentProxyInfo = finalProxyInfo;
 
@@ -4051,7 +4075,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     currentProxyInfo,
     maxRetries,
     'proxyOpenAIToAnthropic',
-    { model, requestType: 'proxyOpenAIToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
+    { requestContext: req._upstreamAttemptContext, model, requestType: 'proxyOpenAIToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -4433,7 +4457,7 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
     currentProxyInfo,
     maxRetries,
     'proxyOpenAIToAnthropic',
-    { model, requestType: 'proxyOpenAIToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
+    { requestContext: req._upstreamAttemptContext, model, requestType: 'proxyOpenAIToAnthropic', affinityKey: affinityKeyForRequest(req, req.body) }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -5093,7 +5117,7 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
     currentProxyInfo,
     maxRetries,
     'Responses/OpenAI',
-    { model, requestType: 'Responses/OpenAI', affinityKey: affinityKeyForRequest(req, req.body) }
+    { requestContext: req._upstreamAttemptContext, model, requestType: 'Responses/OpenAI', affinityKey: affinityKeyForRequest(req, req.body) }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -5222,7 +5246,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
     currentProxyInfo,
     maxRetries,
     'Responses/Anthropic',
-    { model, requestType: 'Responses/Anthropic', affinityKey: affinityKeyForRequest(req, req.body) }
+    { requestContext: req._upstreamAttemptContext, model, requestType: 'Responses/Anthropic', affinityKey: affinityKeyForRequest(req, req.body) }
   );
   currentProxyInfo = finalProxyInfo;
 
@@ -5298,7 +5322,8 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
 router.post('/responses', oauthBearer, handleResponses);
 
 async function handleResponses(req, res) {
-  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal };
+  if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -5375,6 +5400,7 @@ async function handleResponses(req, res) {
   let selectedQueueIndex = -1;
 
   for (let i = 0; i < modelQueue.length; i++) {
+    req._upstreamAttemptContext.modelIdentity = null;
     const queueModelId = modelQueue[i];
     const hasMore = i < modelQueue.length - 1;
     const cfg = await getModelConfig(queueModelId);
@@ -5465,7 +5491,7 @@ async function handleResponses(req, res) {
           return res.status(400).json({ error: { message: 'input is required', type: 'invalid_request_error' } });
         }
         try {
-          const upstreamResp = await proxyPool.proxyFetch(url, {
+          const upstreamResp = await fetchWithModelIdentity(url, {
             method: 'POST', headers, body: JSON.stringify(upstreamBody),
             signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
             agent: currentProxyInfo?.agent,
@@ -5521,13 +5547,13 @@ async function handleResponses(req, res) {
               }, req.body.messages ?? req.body.input, req.body.system ?? req.body.instructions, req);
               const localModelId = modelConfig.id || model;
               const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-                 cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+                 cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                  promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
                  provider?.id || null, 'responses',
                  typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
                  null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-                 pluginMeta], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+                 pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
               recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
@@ -5636,14 +5662,14 @@ async function handleResponses(req, res) {
             const localModelId = modelConfig.id || model;
             const latencyMs = Date.now() - liveCallStart;
             const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-               cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+               cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
                result.promptTokens || 0, result.completionTokens || 0,
                result.cachedTokens || 0, weightedTokens,
                provider?.id || null, 'responses',
                typeof input === 'string' ? input : JSON.stringify(input), result.content || null, realDeduct,
                latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-               pluginMeta], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+               pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
             recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
@@ -5722,7 +5748,7 @@ async function handleResponses(req, res) {
       res.setHeader('X-Accel-Buffering', 'no');
       res.flushHeaders();
 
-      const upstreamResp = await proxyPool.proxyFetch(url, {
+      const upstreamResp = await fetchWithModelIdentity(url, {
         method: 'POST', headers, body: JSON.stringify(upstreamBody),
         signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
         agent: currentProxyInfo?.agent,
@@ -5837,14 +5863,14 @@ async function handleResponses(req, res) {
             ? { estimated: true, estimate_method: 'output_chars/4', prompt_tokens_policy: 'zero_when_unknown' }
             : { estimated: false };
           const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-             cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_params, request_source, user_agent, plugin_meta)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+             cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_params, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
              promptTokens, completionTokens, cachedTokens, calculated.weightedTokens,
              provider?.id || null, 'responses',
              typeof input === 'string' ? input : JSON.stringify(input), totalContent || null, realDeduct,
              Date.now() - liveCallStart, clientIp(req), JSON.stringify(requestParams),
              clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-             pluginMeta], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+             pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens: calculated.weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
           recordQuotaData(req.apiUser.userId, localModelId, totalTokens, calculated.weightedTokens, realDeduct);
@@ -5861,7 +5887,7 @@ async function handleResponses(req, res) {
     }
 
     // 非流式直接透传
-    const upstreamResp = await proxyPool.proxyFetch(url, {
+    const upstreamResp = await fetchWithModelIdentity(url, {
       method: 'POST', headers, body: JSON.stringify(upstreamBody),
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
       agent: currentProxyInfo?.agent,
@@ -5913,13 +5939,13 @@ async function handleResponses(req, res) {
 
         const localModelId = modelConfig.id || model;
         const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            promptTokens, completionTokens, cachedTokens, weightedTokens,
            provider?.id || null, 'responses',
            typeof input === 'string' ? input : JSON.stringify(input), responseData.output_text || null, realDeduct,
            null, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+           pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);
@@ -5971,7 +5997,7 @@ async function handleResponses(req, res) {
         const systemMessage = messages.find(m => m.role === 'system');
         const nonSystemMessages = messages.filter(m => m.role !== 'system');
         const upstreamBody = protocolBridge.encodeRequest('anthropic', protocolBridge.decodeRequest('openai', chatBody), { quirks: protocolBridge.getDialectCapability('anthropic').quirks });
-        const response = await proxyPool.proxyFetch(url, {
+        const response = await fetchWithModelIdentity(url, {
           method: 'POST', headers, body: JSON.stringify(upstreamBody),
           signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
           agent: currentProxyInfo?.agent,
@@ -6001,7 +6027,7 @@ async function handleResponses(req, res) {
         });
         if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
 
-        const response = await proxyPool.proxyFetch(url, {
+        const response = await fetchWithModelIdentity(url, {
           method: 'POST', headers, body: JSON.stringify(chatBody),
           signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
           agent: currentProxyInfo?.agent,
@@ -6084,14 +6110,14 @@ async function handleResponses(req, res) {
         const localModelId = modelConfig.id || model;
         const latencyMs = typeof liveCallStart === 'number' ? Date.now() - liveCallStart : null;
         const usageResult = await recordUsageAndDeduct({ pool, usageQuery: `INSERT INTO usage_records (user_id, model_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
+           cached_tokens, weighted_tokens, provider_id, request_type, messages, response, cost, latency_ms, ip_address, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) RETURNING id`, usageValues: [req.apiUser.userId, localModelId, req.apiUser.keyId, totalTokens,
            result.promptTokens || 0, result.completionTokens || 0,
            result.cachedTokens || 0, weightedTokens,
            provider?.id || null, 'responses',
            typeof input === 'string' ? input : JSON.stringify(input), result.content || null, realDeduct,
            latencyMs, clientIp(req), clientMetaFromReq(req).requestSource, clientMetaFromReq(req).userAgent,
-           pluginMeta], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
+           pluginMeta, ...modelIdentityValues(req)], userId: req.apiUser.userId, teamId: req.apiUser.teamId, weightedTokens, pointsCost: pointsToDeduct, pointsToDeduct: realDeduct });
         if (!usageResult.ok) throw new Error(usageResult.error || '用量记录与扣款失败');
         req._usageRecordId = usageResult.id || null;
         recordQuotaData(req.apiUser.userId, localModelId, totalTokens, weightedTokens, realDeduct);

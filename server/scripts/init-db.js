@@ -2,6 +2,7 @@ const { Pool } = require('pg');
 const config = require('../config-loader');
 const Logger = require('../logger');
 const { encryptSecret } = require('../utils/secret-crypto');
+const { ensureUsageModelIdentityColumns } = require('../utils/usage-model-migration');
 
 async function ensureDatabase() {
   const adminPool = new Pool({
@@ -618,6 +619,9 @@ async function initDatabase() {
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         model_id VARCHAR(100) REFERENCES models(id),
+        requested_model TEXT,
+        resolved_model TEXT,
+        response_model TEXT,
         api_key_id INTEGER REFERENCES api_keys(id) ON DELETE SET NULL,
         tokens_used INTEGER DEFAULT 0,
         prompt_tokens INTEGER DEFAULT 0,
@@ -654,6 +658,7 @@ async function initDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_usage_records_created ON usage_records (created_at DESC)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_usage_records_request_type_created ON usage_records (request_type, created_at DESC)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_usage_records_request_source_created ON usage_records (request_source, created_at DESC)`);
+    await ensureUsageModelIdentityColumns(client);
     Logger.info('[数据库初始化] 表 usage_records 已就绪');
 
     await client.query(`

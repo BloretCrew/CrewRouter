@@ -5526,6 +5526,7 @@ class ConsoleApp {
               ${record.latencyMs != null ? `<span>${(record.latencyMs / 1000).toFixed(1)}s</span>` : ''}
               ${record.eventsTruncated ? `<span class="merged-tag">${t('已折叠 {count} 个旧事件', { count: suppressed })}</span>` : suppressed > 0 ? `<span class="merged-tag">${t('上下文重放')} +${suppressed}</span>` : `${evts.length} ${t('个事件')}`}${Number(record.repeatCount || 0) > 1 ? ` · <span class="merged-tag">${t('重复')} ×${record.repeatCount}</span>` : ''}
             </div>
+            ${ModelIdentity.session(record)}
             ${eventsHtml}
           </li>`;
       }).join('');
@@ -6167,7 +6168,7 @@ class ConsoleApp {
               return `
               <tr style="cursor:pointer;" onclick="app.showUsageDetail(${idx})">
                 <td style="white-space:nowrap;">${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
-                <td>${escapeHtml(modelLabel)}</td>
+                <td style="white-space:normal;overflow-wrap:anywhere;">${escapeHtml(modelLabel)}${ModelIdentity.summary(log)}</td>
                 <td>${escapeHtml(log.series || '-')}</td>
                 <td>${this._usageRequestSourceBadge(log.request_source)}</td>
                 <td><code style="font-size:12px;">${escapeHtml(log.key_prefix || '-')}****</code> ${log.key_name ? `<span style="color:var(--muted-foreground);font-size:11px;">(${escapeHtml(log.key_name)})</span>` : ''}</td>
@@ -6316,7 +6317,7 @@ class ConsoleApp {
         <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
         <span style="font-size:14px;">${value}</span>
       </div>
-    `).join('') + messagesHtml + responseHtml);
+    `).join('') + ModelIdentity.detail(log) + messagesHtml + responseHtml);
 
     const modal = document.getElementById('usageDetailModal');
     if (modal) {

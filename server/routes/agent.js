@@ -36,6 +36,7 @@ const {
   toOpenAiMessages,
   toAnthropicMessages
 } = require('../utils/agent-loop');
+const { createModelIdentity, normalizeModel } = require('../utils/model-identity');
 const { recordAgentUsage, assertHasBalance, logAgentError } = require('../utils/agent-billing');
 
 const router = express.Router();
@@ -176,7 +177,10 @@ async function callManageModel(model, messages) {
     });
     if (response.ok) {
       const json = await response.json();
-      return { ...parseModelResponse(format, json), usage: extractUsage(json) };
+      const identity = createModelIdentity(null, body.model);
+      identity.observe(json);
+      identity.finish();
+      return { ...parseModelResponse(format, json), usage: extractUsage(json), identity: identity.snapshot() };
     }
     lastStatus = response.status;
     lastText = await response.text().catch(() => '');
@@ -190,6 +194,7 @@ async function continueManage(req, res, { thread, messages, model }) {
   const send = beginSse(res);
   send({ type: 'run.started', payload: { thread_id: thread.id } });
   const usages = [];
+  const identities = [];
   try {
     const edition = await loadPersistedEdition(pool);
     const result = await runManageLoop({
@@ -197,6 +202,7 @@ async function continueManage(req, res, { thread, messages, model }) {
       modelCaller: async (current) => {
         const reply = await callManageModel(model, current);
         usages.push(reply.usage || {});
+        identities.push(reply.identity || null);
         return reply;
       },
       onEvent: async (event) => { send(event); },
@@ -234,7 +240,12 @@ async function continueManage(req, res, { thread, messages, model }) {
           requestType: 'agent_manage',
           promptTokens,
           completionTokens,
-          req
+          req,
+          identity: {
+            requested_model: normalizeModel(req.body?.model),
+            resolved_model: identities.every(item => item?.resolved_model === identities[0]?.resolved_model) ? identities[0]?.resolved_model : null,
+            response_model: identities.every(item => item?.response_model && item.response_model === identities[0]?.response_model) ? identities[0]?.response_model : null
+          }
         });
       } catch (billingErr) {
         logAgentError('billing', billingErr);
@@ -263,6 +274,7 @@ router.post('/images', requireAuth, async (req, res) => {
     let bytes = TEST_IMAGE_PNG;
     let mime = 'image/png';
     let usage = null;
+    const identity = createModelIdentity(req.body?.model, isTestImageModel(model) ? null : model.upstream_model_id);
     if (!isTestImageModel(model)) {
       const provider = await loadProvider(model);
       if (!provider) return res.status(500).json({ error: '供应商未配置' });
@@ -290,6 +302,8 @@ router.post('/images', requireAuth, async (req, res) => {
         });
         if (response.ok) {
           payload = await response.json();
+          identity.observe(payload);
+          identity.finish();
           break;
         }
         lastStatus = response.status;
@@ -319,6 +333,7 @@ router.post('/images', requireAuth, async (req, res) => {
       requestType: 'imagine',
       promptTokens: tokens.promptTokens,
       completionTokens: tokens.completionTokens,
+      identity: identity.snapshot(),
       req
     });
     res.json({

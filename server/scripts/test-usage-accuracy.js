@@ -69,16 +69,16 @@ async function main() {
 
   console.log('== points-deduct ==');
 
-  // 无 groupId：直接返回理论积分（不查库）
+  // 无 teamId：直接返回理论积分（不查库）
   const full = await calculatePointsToDeduct({
-    userId: 1, groupId: null, weightedTokens: 5000000, pointsCost: 5
+    userId: 1, teamId: null, weightedTokens: 5000000, pointsCost: 5
   });
   assert.strictEqual(full, 5);
-  ok('no groupId → full pointsCost');
+  ok('no teamId → full pointsCost');
 
   // 配额未耗尽 → 实扣 0
   const free = await calculatePointsToDeduct(
-    { userId: 1, groupId: 9, weightedTokens: 1000000, pointsCost: 1 },
+    { userId: 1, teamId: 9, weightedTokens: 1000000, pointsCost: 1 },
     {
       checkQuotaRules: async () => [
         { rule_type: 'tokens', exceeded: false, used: 0, limit: 100, remaining: 100 }
@@ -90,7 +90,7 @@ async function main() {
 
   // 配额全耗尽 → 按加权 token / 1e6
   const paid = await calculatePointsToDeduct(
-    { userId: 1, groupId: 9, weightedTokens: 2500000, pointsCost: 99 },
+    { userId: 1, teamId: 9, weightedTokens: 2500000, pointsCost: 99 },
     {
       checkQuotaRules: async () => [
         { rule_type: 'tokens', exceeded: true, used: 100, limit: 100, remaining: 0 }
@@ -102,7 +102,7 @@ async function main() {
 
   // 无规则 → 理论积分
   const noRules = await calculatePointsToDeduct(
-    { userId: 1, groupId: 9, weightedTokens: 1000, pointsCost: 0.5 },
+    { userId: 1, teamId: 9, weightedTokens: 1000, pointsCost: 0.5 },
     { checkQuotaRules: async () => null }
   );
   assert.strictEqual(noRules, 0.5);

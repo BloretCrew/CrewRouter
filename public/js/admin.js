@@ -7739,8 +7739,9 @@ async function(ctx) {
               <tr style="cursor:pointer;" data-usage-log-idx="${idx}" title="${t('点击查看详情')}">
                 <td style="white-space:nowrap;">${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</td>
                 <td class="cell-clip-sm" title="${escapeHtml(log.username || String(log.user_id || ''))}">${escapeHtml(log.username || String(log.user_id || '-'))}</td>
-                <td class="cell-clip" title="${escapeHtml(modelLabel)}">
+                <td style="white-space:normal;overflow-wrap:anywhere;" title="${escapeHtml(modelLabel)}">
                   <div style="font-weight:500;">${escapeHtml(modelLabel)}</div>
+                  ${ModelIdentity.summary(log)}
                   ${seriesLine}
                   ${keyHint}
                 </td>
@@ -7986,7 +7987,7 @@ async function(ctx) {
         <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
         <span style="font-size:14px;">${value}</span>
       </div>
-    `).join('') + this._customInstructionsSectionHtml(log) + messagesHtml + responseHtml);
+    `).join('') + ModelIdentity.detail(log) + this._customInstructionsSectionHtml(log) + messagesHtml + responseHtml);
 
     // 截断文件「查看全部」展开/收起
     const customRoot = document.getElementById('usageDetailContent');

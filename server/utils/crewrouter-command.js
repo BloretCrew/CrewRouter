@@ -768,14 +768,15 @@ async function recordCommandUsage(req, text) {
     const last = extractLastInputText(req.body || {});
     await pool.query(
       `INSERT INTO usage_records (user_id, api_key_id, tokens_used, prompt_tokens, completion_tokens,
-         request_type, messages, response, cost, request_source, user_agent)
-       VALUES ($1, $2, 0, 0, 0, 'crewrouter_command', $3, $4, 0, $5, $6)`,
+         request_type, messages, response, cost, request_source, user_agent, requested_model)
+       VALUES ($1, $2, 0, 0, 0, 'crewrouter_command', $3, $4, 0, $5, $6, $7)`,
       [
         req.apiUser.userId, req.apiUser.keyId,
         JSON.stringify([{ role: 'user', content: last.slice(0, 2000) }]),
         String(text).slice(0, 4000),
         require('./request-source').clientMetaFromReq(req).requestSource,
         require('./request-source').clientMetaFromReq(req).userAgent,
+        require('./model-identity').normalizeModel(req.body?.model),
       ]
     );
   } catch (err) {
