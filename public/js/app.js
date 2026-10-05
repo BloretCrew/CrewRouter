@@ -5985,7 +5985,7 @@ class ConsoleApp {
         <p style="font-size:12px;color:var(--muted-foreground);margin:0 0 4px;">${t('不勾选任何 Key 时对所有 Key 全局生效；勾选后仅对所选 Key 生效')}</p>
         ${keys.map(k => `
           <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);">
-            <input type="checkbox" class="inject-key-check" value="${escapeHtml(k.id)}" ${bound.has(String(k.id)) ? 'checked' : ''}>
+            <blora-checkbox class="inject-key-check" aria-label="${escapeHtml(k.name)}" value="${escapeHtml(k.id)}" ${bound.has(String(k.id)) ? 'checked' : ''}></blora-checkbox>
             <span>${escapeHtml(k.name)}${k.key_prefix ? `&nbsp;<code style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(k.key_prefix)}…</code>` : ''}</span>
           </label>`).join('')}
       `);
@@ -6014,7 +6014,7 @@ class ConsoleApp {
       if (!res.ok) throw new Error(data.error || t('保存失败'));
 
       // 绑定选择随条目一起保存
-      const keyIds = [...document.querySelectorAll('#injectPromptKeyList .inject-key-check:checked')].map(cb => parseInt(cb.value, 10));
+      const keyIds = [...document.querySelectorAll('#injectPromptKeyList .inject-key-check')].filter(cb => cb.checked).map(cb => parseInt(cb.getAttribute('value'), 10));
       await this.saveInjectPromptKeys(data.item?.id || id, keyIds);
 
       this.closeModals();
@@ -12087,7 +12087,7 @@ ${extractorBody}
       const modelText = bound?.name || t('跟随默认');
       const hasOverride = !!bound;
       return `
-        <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
+        <button type="button" data-variant="ghost" class="blora-button library-key-bubble-item" role="menuitem"
                 onclick="app.onLibraryKeyBubbleHarness('${h.id}')">
           <span class="library-key-bubble-item-main">
             ${this._harnessIconHtml(h.id, 14)}
@@ -12098,13 +12098,13 @@ ${extractorBody}
     }).join('');
 
     setHTML(menu, `
-      <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
+      <button type="button" data-variant="ghost" class="blora-button library-key-bubble-item" role="menuitem"
               onclick="app.onLibraryKeyBubbleLocate()">
         <span class="library-key-bubble-item-main">跳转到绑定模型</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
       </button>
       <div class="expand-dropdown-divider"></div>
-      <button type="button" class="blora-button library-key-bubble-item ${this._libraryBindTarget === 'default' ? 'active' : ''}" role="menuitem"
+      <button type="button" data-variant="ghost" class="blora-button library-key-bubble-item ${this._libraryBindTarget === 'default' ? 'active' : ''}" role="menuitem"
               onclick="app.onLibraryKeyBubbleDefault()">
         <span class="library-key-bubble-item-main">默认绑定</span>
         <span class="library-key-bubble-item-meta">${escapeHtml(defaultModel)}</span>
@@ -12112,7 +12112,7 @@ ${extractorBody}
       <div class="library-key-bubble-section-label">按工具绑定</div>
       ${harnessItems}
       <div class="expand-dropdown-divider"></div>
-      <button type="button" class="blora-button library-key-bubble-item" role="menuitem"
+      <button type="button" data-variant="ghost" class="blora-button library-key-bubble-item" role="menuitem"
               onclick="app.onLibraryKeyBubbleExportConfig()">
         <span class="library-key-bubble-item-main">导出客户端配置</span>
       </button>

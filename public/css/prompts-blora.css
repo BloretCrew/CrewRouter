@@ -117,3 +117,8 @@
   #promptDetailContent > div[style*="display:grid"] { grid-template-columns: minmax(0, 1fr) !important; }
 }
 #promptDetailModal::part(panel) { max-width: min(60rem, calc(100vw - 2 * var(--blora-space-4))) !important; }
+
+#injectPromptModal::part(panel) { max-width: min(40rem, calc(100vw - 2 * var(--blora-space-4))) !important; }
+#injectPromptKeyList label > span { min-width: 0; overflow-wrap: anywhere; }
+#injectPromptKeyList blora-checkbox { flex-shrink: 0; }
+#injectPromptContent { box-sizing: border-box; }
