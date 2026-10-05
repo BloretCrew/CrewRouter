@@ -42,9 +42,13 @@
   font-weight: 600;
 }
 
-.blora-stats-page .stats-filters .blora-select,
-.blora-stats-page .stats-filters .select {
+.blora-stats-page .stats-filters blora-select {
   width: 100%;
+  display: block;
+}
+
+.blora-stats-page .stats-filters blora-select::part(trigger) {
+  box-sizing: border-box;
   min-height: 2.5rem;
 }
 

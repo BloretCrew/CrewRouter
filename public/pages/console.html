@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/css/upstream-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/stats-blora.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/stats-blora.css?v=filter-select-20261005">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/project-work.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/project-work-blora.css?v=restore-0930-20261003">
@@ -639,7 +639,7 @@
           <div class="stats-filters">
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label>
-              <blora-select id="statsTimeRange" class="blora-select select" onchange="app.loadStats()">
+              <blora-select id="statsTimeRange" value="30" onchange="app.loadStats()">
                 <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
                 <blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option>
                 <blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option>
@@ -650,25 +650,25 @@
             </div>
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="模型">模型</span></label>
-              <blora-select id="statsModelFilter" class="blora-select select" onchange="app.loadStats()">
+              <blora-select id="statsModelFilter" placeholder="全部模型" data-i18n-placeholder="全部模型" onchange="app.loadStats()">
                 <blora-option value=""><span data-i18n="全部模型">全部模型</span></blora-option>
               </blora-select>
             </div>
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="供应商">供应商</span></label>
-              <blora-select id="statsProviderFilter" class="blora-select select" onchange="app.loadStats()">
+              <blora-select id="statsProviderFilter" placeholder="全部供应商" data-i18n-placeholder="全部供应商" onchange="app.loadStats()">
                 <blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
               </blora-select>
             </div>
             <div class="stats-filter-group">
               <label class="stats-filter-label">Team</label>
-              <blora-select id="statsTeamFilter" class="blora-select select" onchange="app.loadStats()">
+              <blora-select id="statsTeamFilter" placeholder="全部 Team" data-i18n-placeholder="全部 Team" onchange="app.loadStats()">
                 <blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option>
               </blora-select>
             </div>
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="客户端">客户端</span></label>
-              <blora-select id="statsSourceFilter" class="blora-select select" onchange="app.loadStats()" title="按 harness / 客户端筛选" data-i18n-title="按 harness / 客户端筛选">
+              <blora-select id="statsSourceFilter" placeholder="全部客户端" data-i18n-placeholder="全部客户端" onchange="app.loadStats()" title="按 harness / 客户端筛选" data-i18n-title="按 harness / 客户端筛选">
                 <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
                 <blora-option value="grok">Grok</blora-option>
                 <blora-option value="codex">Codex</blora-option>
