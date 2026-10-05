@@ -561,3 +561,7 @@
 #modelTestModal .model-test-row-model { overflow-wrap: anywhere; }
 #modelTestModal .model-test-row.is-error-expanded { flex-wrap: wrap; }
 #modelTestModal .model-test-row.is-error-expanded .model-test-row-error-wrap { flex: 1 1 100%; max-width: 100%; }
+
+.blora-model-library .model-library-item-name > .model-item-badges { flex-basis: 100%; }
+.blora-model-library .model-item-badges .blora-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.blora-model-library .model-item-badges .model-test-badge { margin-left: 0; border-radius: var(--blora-radius-full, 999px); }

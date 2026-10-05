@@ -10969,12 +10969,12 @@ ${extractorBody}
           ${isKeyPicker ? '' : `<button type="button" class="blora-button model-star-btn ${isStarred ? 'starred' : ''}" data-variant="ghost" data-size="icon" title="${isStarred ? t('取消星标') : t('星标此模型')}" aria-label="${isStarred ? t('取消星标') : t('星标此模型')}" aria-pressed="${isStarred ? 'true' : 'false'}" onclick="event.stopPropagation();app.toggleLibraryStar('${this._jsString(teamId)}', '${this._jsString(providerId)}', '${this._jsString(modelId)}', ${isStarred ? 'false' : 'true'})">${this._libIcon(isStarred ? 'star.fill' : 'star', 14)}</button>`}
           ${safeHttpUrl(model.series_icon_url) ? `<img src="${escapeHtml(safeHttpUrl(model.series_icon_url))}" alt="" onerror="this.style.display='none'">` : ''}
           <span>${escapeHtml(model.name)}</span>
-          ${testBadgeHtml}
           <div class="model-item-badges">
+            ${testBadgeHtml}
             ${providerTagHtml}
             ${subtitleHtml}
-            ${model.series ? `<span class="blora-tag" data-variant="neutral">${escapeHtml(model.series)}</span>` : ''}
-            ${isOwner ? '<span class="blora-tag" data-variant="info">' + t('我的') + '</span>' : ''}
+            ${model.series ? `<span class="blora-badge" data-variant="neutral">${escapeHtml(model.series)}</span>` : ''}
+            ${isOwner ? '<span class="blora-badge" data-variant="info">' + t('我的') + '</span>' : ''}
             ${isModelHidden ? '<span class="blora-badge" data-variant="neutral">' + t('已隐藏') + '</span>' : ''}
           </div>
         </div>
