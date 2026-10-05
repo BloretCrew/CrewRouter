@@ -139,3 +139,23 @@
     max-height: 48dvh;
   }
 }
+
+#configToolSelectModal::part(panel),
+#ccSwitchSubmenuModal::part(panel),
+#ccSwitchResultModal::part(panel),
+#configOutputModal::part(panel) {
+  max-width: min(44rem, calc(100vw - 2 * var(--blora-space-4))) !important;
+}
+
+#configToolSelectModal .config-tool-list > .blora-button {
+  width: 100%;
+  min-height: 3.5rem;
+}
+
+#configToolSelectModal .config-tool-list > .blora-button > img {
+  width: 2rem;
+  height: 2rem;
+  max-width: 2rem;
+  flex: 0 0 2rem;
+  object-fit: contain;
+}
