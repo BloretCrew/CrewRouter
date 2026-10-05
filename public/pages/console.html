@@ -38,7 +38,7 @@
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/project-work.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/project-work-blora.css?v=filter-select-20261005">
-  <link rel="stylesheet" href="/css/leaderboard-blora.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/leaderboard-blora.css?v=filter-badge-20261005">
   <link rel="stylesheet" href="/css/docs-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/balance-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/audit-logs-blora.css?v=restore-0930-20261003">
@@ -1384,7 +1384,7 @@
           <div class="stats-filters">
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="时间范围">时间范围</span></label>
-              <blora-select id="leaderboardTimeRange" class="blora-select select" onchange="app.loadLeaderboard()">
+              <blora-select id="leaderboardTimeRange" value="30" onchange="app.loadLeaderboard()">
                 <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
                 <blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option>
                 <blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option>
@@ -1393,7 +1393,7 @@
             </div>
             <div class="stats-filter-group">
               <label class="stats-filter-label"><span data-i18n="排序方式">排序方式</span></label>
-              <blora-select id="leaderboardSort" class="blora-select select" onchange="app.loadLeaderboard()">
+              <blora-select id="leaderboardSort" value="tokens" onchange="app.loadLeaderboard()">
                 <blora-option value="tokens"><span data-i18n="Token 数">Token 数</span></blora-option>
                 <blora-option value="requests"><span data-i18n="请求数">请求数</span></blora-option>
                 <blora-option value="points"><span data-i18n="消耗积分">消耗积分</span></blora-option>
@@ -2720,7 +2720,7 @@ data: [DONE]</code></pre>
   <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/app.js?v=library-closed-keys-20261004"></script>
+  <script src="/js/app.js?v=personal-limits-leaderboard-20261005"></script>
   <script src="/js/blora-agent.js?v=restore-0930-20261003"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

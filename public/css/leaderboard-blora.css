@@ -25,6 +25,17 @@
   background: var(--blora-color-surface-raised);
 }
 
+.blora-leaderboard-page .stats-filters blora-select {
+  display: block;
+  width: 100%;
+  min-width: 9rem;
+}
+
+.blora-leaderboard-page .stats-filters blora-select::part(trigger) {
+  box-sizing: border-box;
+  min-height: 2.5rem;
+}
+
 .blora-leaderboard-page .stats-filter-label {
   color: var(--blora-color-text-subtle);
 }

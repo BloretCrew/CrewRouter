@@ -3852,7 +3852,7 @@ class ConsoleApp {
           <div class="leaderboard-user-cell">
             ${avatarHtml}
             <span class="leaderboard-username">${escapeHtml(u.username)}</span>
-            ${isCurrent ? '<span class="badge badge-info" style="margin-left:6px;font-size:11px;">' + t('我') + '</span>' : ''}
+            ${isCurrent ? '<span class="blora-badge" data-variant="info">' + t('我') + '</span>' : ''}
           </div>
         </td>
         <td class="leaderboard-stat-cell">${u.totalRequests.toLocaleString()}</td>
@@ -6352,15 +6352,11 @@ class ConsoleApp {
       const personalContainer = document.getElementById('personalLimits');
       const rpm = data.rate_limit_rpm || 0;
       const tpm = data.rate_limit_tpm || 0;
-      if (rpm > 0 || tpm > 0) {
-        setHTML(personalContainer, `
-          ${rpm > 0 ? `${'<div class="limit-card"><span class="limit-label">' + t('每分钟请求数 (RPM)')}</span><span class="limit-value">${rpm.toLocaleString()}</span></div>` : ''}
-          ${tpm > 0 ? `${'<div class="limit-card"><span class="limit-label">' + t('每分钟 Token 数 (TPM)')}</span><span class="limit-value">${this._formatBigNumber(tpm)}</span></div>` : ''}
-        `);
-        personalSection.style.display = 'block';
-      } else {
-        personalSection.style.display = 'none';
-      }
+      setHTML(personalContainer, `
+        <div class="limit-card"><span class="limit-label">${t('每分钟请求数 (RPM)')}</span><span class="limit-value">${rpm > 0 ? rpm.toLocaleString() : t('不限制')}</span></div>
+        <div class="limit-card"><span class="limit-label">${t('每分钟 Token 数 (TPM)')}</span><span class="limit-value">${tpm > 0 ? this._formatBigNumber(tpm) : t('不限制')}</span></div>
+      `);
+      personalSection.style.display = 'block';
     } catch (error) {
       console.error(t('加载积分信息失败:'), error);
     }
