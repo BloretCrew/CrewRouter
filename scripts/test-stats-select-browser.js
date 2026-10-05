@@ -69,6 +69,8 @@ async function main() {
         await sleep(100);
       }
       await check(`app._statsFiltersLoaded`, '统计筛选加载');
+      // 重新导航会保留当前标签；恢复概览以验证该区块。
+      await cdp.evaluate(`app.switchStatsTab('overview')`);
       await check(`document.getElementById('statsTimeRange').value === '30'`, '默认最近30天');
       for (const id of ids) {
         await check(`(() => {
@@ -98,15 +100,41 @@ async function main() {
       await sleep(500);
       await check(`document.getElementById('statsTimeRange').value === '30' && ${JSON.stringify(ids.slice(1))}.every(id => document.getElementById(id).value === '')`, '恢复默认筛选');
       await check(`document.getElementById('statsModelFilter').shadowRoot.querySelector('[part="trigger"]').textContent.includes(t('全部模型'))`, '重置后全部模型标签');
+      await check(`(() => {
+        const cards = [...document.querySelectorAll('#statsTabOverview .stats-insight-card')];
+        return cards.every(card => {
+          const list = card.querySelector('.stats-insight-list');
+          const style = getComputedStyle(card);
+          return card.getBoundingClientRect().bottom - list.getBoundingClientRect().bottom
+            <= parseFloat(style.paddingBottom) + 2;
+        });
+      })()`, '概览卡片高度随内容收缩');
+      await check(`(() => {
+        const overview = document.getElementById('statsTabOverview').getBoundingClientRect();
+        const daily = document.getElementById('statsTabDaily').getBoundingClientRect();
+        return parseFloat(getComputedStyle(document.getElementById('statsTabOverview')).marginBottom) >= 16
+          && (getComputedStyle(document.getElementById('statsTabDaily')).display === 'none' || daily.top - overview.bottom >= 16);
+      })()`, '概览与图表至少间隔16像素');
       if (process.env.STATS_SCREENSHOT_DIR) {
-        await cdp.evaluate('window.scrollTo(0, 0)');
+        await cdp.evaluate(`document.getElementById('statsTabOverview').scrollIntoView({ block: 'start', behavior: 'instant' })`);
         await sleep(350);
         const shot = await cdp.send('Page.captureScreenshot');
         require('node:fs').writeFileSync(`${process.env.STATS_SCREENSHOT_DIR}/stats-${width}.png`, Buffer.from(shot.data, 'base64'));
       }
       assert.ok(await cdp.click('#statsPage button[onclick="app.switchStatsTab(\'multi\')"]'), '打开多维分析');
       await check(`document.getElementById('statsTabMulti').style.display === 'block'`, '多维分析仍可用');
-      console.log(`PASS stats selects ${width}px`);
+      assert.ok(await cdp.click('#statsPage button[onclick="app.switchStatsTab(\'daily\')"]'), '切换每日趋势');
+      await check(`document.getElementById('statsTabOverview').style.display === 'none' && document.getElementById('statsTabDaily').style.display === 'block'`, '每日趋势独立展示');
+      assert.ok(await cdp.click('#statsPage button[onclick="app.switchStatsTab(\'overview\')"]'), '切回概览');
+      await check(`document.getElementById('statsTabOverview').style.display === 'block'`, '概览恢复');
+      await cdp.evaluate(`document.getElementById('topModelsList').innerHTML = '<div class="stats-insight-empty">' + t('暂无数据') + '</div>'`);
+      await check(`(() => {
+        const card = document.querySelector('#statsTabOverview .stats-insight-card');
+        const list = card.querySelector('.stats-insight-list');
+        return card.getBoundingClientRect().bottom - list.getBoundingClientRect().bottom <= parseFloat(getComputedStyle(card).paddingBottom) + 2;
+      })()`, '空数据卡片保持紧凑');
+      console.log(`PASS stats selects and overview layout ${width}px`);
+
     }
   } finally {
     cdp.ws.close();

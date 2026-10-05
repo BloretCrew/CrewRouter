@@ -167,6 +167,14 @@
   border-bottom: 0;
 }
 
+.blora-stats-page .stats-overview-insights {
+  align-items: start;
+}
+
+.blora-stats-page #statsTabOverview {
+  margin-bottom: var(--blora-space-4);
+}
+
 .blora-stats-page .stats-table,
 .blora-stats-page .stats-table-card {
   border: var(--stats-border-soft);
