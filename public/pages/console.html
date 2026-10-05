@@ -45,7 +45,7 @@
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/settings-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sessions-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/blora-agent.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/blora-agent.css?v=model-library-picker-20261005">
   <link rel="stylesheet" href="/css/prompts-blora.css?v=inject-editor-20261005">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
   <script>
@@ -1297,7 +1297,7 @@
       <div id="bloraAgentPage" class="page blora-agent-page">
         <div class="ba-top">
           <div id="baModeSwitch"></div>
-          <blora-select id="baModel" name="model" aria-label="模型"></blora-select>
+          <input type="hidden" id="baModel" name="model"><button type="button" id="baModelPicker" class="blora-button" data-variant="secondary" aria-haspopup="dialog">模型库</button>
           <span id="baBalance" class="ba-balance">0 积分</span>
           <button type="button" id="baHistoryToggle" class="blora-button ba-history-toggle" data-variant="outline" data-size="sm"><span data-i18n="历史">历史</span></button>
         </div>
@@ -2721,7 +2721,7 @@ data: [DONE]</code></pre>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/app.js?v=card-badges-20261005"></script>
-  <script src="/js/blora-agent.js?v=restore-0930-20261003"></script>
+  <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
     // 文档分页导航

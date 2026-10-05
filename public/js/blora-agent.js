@@ -54,7 +54,7 @@
         const label = document.getElementById('baTempVal');
         if (label) label.textContent = Number(event.target.value).toFixed(1);
       });
-      document.getElementById('baModel')?.addEventListener('change', () => this.applyThinkingControls());
+      document.getElementById('baModelPicker')?.addEventListener('click', () => this.openModelLibrary());
       document.getElementById('baThread')?.addEventListener('click', (event) => {
         const button = event.target.closest('[data-decision]');
         if (!button || !this.pendingApproval) return;
@@ -122,20 +122,49 @@
     },
 
     renderModelSelect() {
-      const select = document.getElementById('baModel');
-      if (!select) return;
       const models = this.modelsForMode();
-      if (!models.length) {
-        setHTML(select, `<blora-option value="" disabled selected>${Dom.escapeHtml(this.mode === 'imagine' ? '还没有图像模型' : '暂无可用模型')}</blora-option>`);
-        return;
+      const previous = this.selectedModel();
+      this.setModel(models.some(model => String(model.id) === previous) ? previous : models[0]?.id || '');
+    },
+
+    setModel(id) {
+      const input = document.getElementById('baModel');
+      const button = document.getElementById('baModelPicker');
+      if (input) input.value = id || '';
+      const model = this.models.find(item => String(item.id) === String(id));
+      if (button) {
+        button.textContent = model?.name || id || t(this.mode === 'imagine' ? '还没有图像模型' : '暂无可用模型');
+        button.disabled = !this.modelsForMode().length;
       }
-      setHTML(select, models.map(model => {
-        const id = Dom.escapeHtml(model.id);
-        const name = Dom.escapeHtml(model.name || model.id);
-        return `<blora-option value="${id}">${name}</blora-option>`;
-      }).join(''));
-      select.value = models[0].id;
       this.applyThinkingControls();
+    },
+
+    async openModelLibrary() {
+      if (this.modelLibraryDialog) return;
+      await customElements.whenDefined('blora-dialog');
+      const escape = Dom.escapeHtml;
+      const modal = Dialog.showModal({
+        title: t('模型库'),
+        content: `<div class="ba-model-library"><input type="search" class="blora-input" data-model-search placeholder="${escape(t('搜索模型、供应商、Team...'))}" aria-label="${escape(t('搜索模型、供应商、Team...'))}"><div class="ba-model-library-list" data-model-list></div></div>`,
+        width: 960
+      });
+      this.modelLibraryDialog = modal.element;
+      modal.element.classList.add('ba-model-library-dialog');
+      modal.promise.finally(() => { this.modelLibraryDialog = null; document.getElementById('baModelPicker')?.focus(); });
+      const search = modal.element.querySelector('[data-model-search]');
+      const list = modal.element.querySelector('[data-model-list]');
+      const render = () => {
+        const keyword = search.value.trim().toLowerCase();
+        const models = this.modelsForMode().filter(model => `${model.name || ''} ${model.id} ${model.provider_name || ''} ${model.team_name || ''}`.toLowerCase().includes(keyword));
+        setHTML(list, models.length ? models.map(model => `<button type="button" class="blora-card ba-model-card" data-model-id="${escape(String(model.id))}" aria-pressed="${String(model.id) === this.selectedModel()}"><strong>${escape(model.name || String(model.id))}</strong><span>${escape(model.provider_name || model.provider || '')}</span>${model.team_name ? `<span>${escape(model.team_name)}</span>` : ''}</button>`).join('') : `<p role="status">${t('暂无可用模型')}</p>`);
+        list.querySelectorAll('[data-model-id]').forEach(button => button.addEventListener('click', () => {
+          this.setModel(button.dataset.modelId);
+          modal.element.close('api');
+        }));
+      };
+      search.addEventListener('input', render);
+      render();
+      search.focus();
     },
 
     async loadThinking() {
@@ -224,8 +253,7 @@
       this.activeId = data.id;
       this.messages = Array.isArray(data.messages) ? data.messages : [];
       if (data.model) {
-        const select = document.getElementById('baModel');
-        if (select) select.value = data.model;
+        this.setModel(data.model);
       }
       const system = document.getElementById('baSystem');
       if (system && data.system_prompt) system.value = data.system_prompt;
@@ -259,8 +287,7 @@
         arguments: data.approval.arguments || {}
       } : null;
       if (data.model_id) {
-        const select = document.getElementById('baModel');
-        if (select) select.value = data.model_id;
+        this.setModel(data.model_id);
       }
       this.renderThread();
       this.loadHistory();
