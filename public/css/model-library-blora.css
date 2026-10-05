@@ -121,8 +121,9 @@
   min-width: 10rem;
 }
 
-.blora-model-library .model-library-sticky-key-wrap { position: static; }
-.blora-model-library .model-library-sticky-key { max-width: 22rem; gap: var(--blora-space-2); }
+.blora-model-library .model-library-sticky-more-btn { align-self: center; }
+.blora-model-library .model-library-sticky-key-wrap { position: static; display: flex; align-items: center; }
+.blora-model-library .model-library-sticky-key { align-self: center; min-height: 2.25rem; max-width: 22rem; gap: var(--blora-space-2); }
 .blora-model-library .model-library-sticky-key .sticky-key-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .blora-model-library .model-library-sticky-key .blora-badge { flex: none; max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -506,6 +507,7 @@
   }
 
   .blora-model-library #modelLibraryStickyBar .model-library-sticky-key {
+    min-height: 2.5rem;
     max-width: 100%;
   }
 
