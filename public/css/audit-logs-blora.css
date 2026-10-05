@@ -26,12 +26,8 @@
   gap: var(--blora-space-2) !important;
 }
 
-.blora-audit-page #auditLogActionFilter {
-  min-height: 2.25rem;
-  border: var(--audit-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
-}
+.blora-audit-page #auditLogActionFilter { display: block; min-width: 9rem; }
+.blora-audit-page #auditLogActionFilter::part(trigger) { box-sizing: border-box; min-height: 2.25rem; }
 
 .blora-audit-page .audit-log-row {
   gap: var(--blora-space-4) !important;
@@ -47,11 +43,6 @@
   background: var(--blora-color-surface-raised);
 }
 
-.blora-audit-page .audit-log-action {
-  border-radius: var(--blora-radius-pill) !important;
-  background: var(--blora-color-action-primary-default) !important;
-  font-size: var(--blora-text-xs) !important;
-}
 
 .blora-audit-page .audit-log-row details {
   margin-top: var(--blora-space-2) !important;

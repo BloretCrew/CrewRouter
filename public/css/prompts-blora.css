@@ -103,3 +103,17 @@
     grid-template-columns: 1fr;
   }
 }
+
+.blora-prompts-page .admin-filter-bar blora-select { display: block; flex: 1 1 10rem; min-width: 0; }
+.blora-prompts-page .admin-filter-bar blora-select::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
+.blora-prompts-page #injectPromptsList .model-library-item-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-2); }
+#promptDetailTitle { overflow-wrap: anywhere; }
+#promptDetailContent > div > span, #promptDetailContent pre { min-width: 0; overflow-wrap: anywhere; }
+#promptDetailContent .prompt-refs-table { width: 100%; min-width: 36rem; border-collapse: collapse; }
+#promptDetailContent .prompt-refs-table th, #promptDetailContent .prompt-refs-table td { padding: var(--blora-space-3); text-align: start; border-bottom: var(--blora-border-subtle); }
+#promptDetailContent .prompt-refs-table th { background: var(--blora-color-surface-raised); }
+@media (max-width: 720px) {
+  .blora-prompts-page .admin-filter-bar blora-select { flex-basis: 100%; }
+  #promptDetailContent > div[style*="display:grid"] { grid-template-columns: minmax(0, 1fr) !important; }
+}
+#promptDetailModal::part(panel) { max-width: min(60rem, calc(100vw - 2 * var(--blora-space-4))) !important; }

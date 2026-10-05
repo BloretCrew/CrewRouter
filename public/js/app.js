@@ -5869,8 +5869,8 @@ class ConsoleApp {
         refsHtml = `
           <h4 style="margin:16px 0 8px;font-size:14px;">${t('最近引用记录')}（${t('最近')} ${data.recent_refs.length} ${t('条')}）</h4>
           <div style="overflow-x:auto;">
-            <table>
-              <thead><tr><th>${t('记录 ID')}</th><th>${t('时间')}</th><th>${t('用户')}</th><th>${t('模型')}</th><th>${t('客户端')}</th></tr></thead>
+            <table class="table prompt-refs-table">
+              <thead><tr><th>${t('记录 ID')}</th><th>${t('时间')}</th><th>${t('模型')}</th><th>${t('客户端')}</th></tr></thead>
               <tbody>
                 ${data.recent_refs.map(r => `
                   <tr>
@@ -5896,7 +5896,7 @@ class ConsoleApp {
           <span style="color:var(--muted-foreground);font-size:13px;">${t('完整内容')}</span>
           <pre id="promptFullContent" style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(data.content || '')}</pre>
         </div>
-        <div style="padding:8px 0;"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.copyPromptContent(this)">⧉ ${t('复制内容')}</button></div>
+        <div style="padding:8px 0;"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="app.copyPromptContent(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>${t('复制内容')}</span></button></div>
         ${refsHtml}
       `);
     } catch (error) {
@@ -5930,9 +5930,9 @@ class ConsoleApp {
     const scopeBadge = !item.enabled
       ? ''
       : (boundCount > 0
-        ? `<span class="model-item-badge" style="background:rgba(59,130,246,.12);color:var(--primary);">${t('{n} 个 Key', { n: boundCount })}</span>`
-        : `<span class="model-item-badge" style="background:rgba(34,197,94,.12);color:var(--status-success);">${t('全局生效')}</span>`);
-    const disabledBadge = item.enabled ? '' : `<span class="model-item-badge series">${t('已停用')}</span>`;
+        ? `<span class="blora-badge" data-variant="info">${t('{n} 个 Key', { n: boundCount })}</span>`
+        : `<span class="blora-badge" data-variant="success">${t('全局生效')}</span>`);
+    const disabledBadge = item.enabled ? '' : `<span class="blora-badge" data-variant="neutral">${t('已停用')}</span>`;
     return `
     <div class="model-library-item ${item.enabled ? '' : 'model-hidden'}" data-inject-id="${escapeHtml(item.id)}" style="cursor:default;">
       <div class="model-library-item-info">
@@ -5943,10 +5943,7 @@ class ConsoleApp {
         <div class="model-library-item-desc" style="-webkit-line-clamp:1;">${escapeHtml(preview)}</div>
       </div>
       <div class="model-library-item-actions">
-        <label class="toggle-switch" onclick="event.stopPropagation()" title="${item.enabled ? t('点击停用') : t('点击启用')}">
-          <input type="checkbox" ${item.enabled ? 'checked' : ''} onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)">
-          <span class="toggle-slider"></span>
-        </label>
+        <blora-switch ${item.enabled ? 'checked' : ''} aria-label="${escapeHtml(item.enabled ? t('点击停用') : t('点击启用'))}" onclick="event.stopPropagation()" onchange="app.toggleInjectPrompt(${parseInt(item.id, 10)}, this.checked)"></blora-switch>
         <button type="button" class="blora-button" onclick="app.showInjectPromptModal(${parseInt(item.id, 10)})" data-variant="secondary" data-size="sm">${t('编辑')}</button>
         <button type="button" class="blora-button" onclick="app.deleteInjectPrompt(${parseInt(item.id, 10)})" data-variant="secondary" data-size="sm">${t('删除')}</button>
       </div>
@@ -7282,7 +7279,7 @@ class ConsoleApp {
         <div class="audit-log-row" style="display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
-              <span class="audit-log-action" style="font-size:12px;padding:2px 8px;border-radius:4px;background:var(--brand-blue);color:#fff;font-weight:500;">${escapeHtml(log.action)}</span>
+              <span class="blora-badge audit-log-action" data-variant="primary">${escapeHtml(log.action)}</span>
               <span style="font-size:13px;color:var(--foreground);">${escapeHtml(log.description || '')}</span>
             </div>
             <div class="api-key-sub-muted" style="font-size:12px;">

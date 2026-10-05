@@ -41,12 +41,12 @@
   <link rel="stylesheet" href="/css/leaderboard-blora.css?v=filter-badge-20261005">
   <link rel="stylesheet" href="/css/docs-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/balance-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/audit-logs-blora.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/audit-logs-blora.css?v=controls-detail-20261005">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/settings-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sessions-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/blora-agent.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/prompts-blora.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/prompts-blora.css?v=controls-detail-20261005">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
   <script>
     (function() {
@@ -1196,7 +1196,7 @@
           </div>
           <div class="admin-filter-bar" style="margin-bottom:16px;">
             <input type="text" id="promptSearchInput" class="blora-input input" placeholder="搜索文件名或内容..." data-i18n-placeholder="搜索文件名或内容..." style="min-width:200px;" onkeydown="if(event.key==='Enter')app.loadCustomPrompts(1)">
-            <blora-select id="promptSourceFilter" class="blora-input input" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
+            <blora-select id="promptSourceFilter" placeholder="全部客户端" data-i18n-placeholder="全部客户端" style="min-width:140px;" title="客户端来源" data-i18n-title="客户端来源">
               <blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option>
               <blora-option value="grok">Grok</blora-option>
               <blora-option value="codex">Codex</blora-option>
@@ -1208,7 +1208,7 @@
               <blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
               <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
             </blora-select>
-            <blora-select id="promptSortSelect" class="blora-input input" style="min-width:130px;">
+            <blora-select id="promptSortSelect" value="count" style="min-width:130px;">
               <blora-option value="count"><span data-i18n="按出现次数排序">按出现次数排序</span></blora-option>
               <blora-option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></blora-option>
               <blora-option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></blora-option>
@@ -1680,7 +1680,7 @@ data: [DONE]</code></pre>
           <div class="section-header">
             <h2><span data-i18n="操作日志">操作日志</span></h2>
             <div style="display:flex;gap:8px;align-items:center;">
-              <blora-select id="auditLogActionFilter" class="blora-input input" style="width:auto;" onchange="app.loadAuditLogs(1)">
+              <blora-select id="auditLogActionFilter" placeholder="全部操作" data-i18n-placeholder="全部操作" style="width:auto;" onchange="app.loadAuditLogs(1)">
                 <blora-option value=""><span data-i18n="全部操作">全部操作</span></blora-option>
                 <blora-option value="api_key">API Key</blora-option>
                 <blora-option value="cokey">Co-Key</blora-option>
@@ -2720,7 +2720,7 @@ data: [DONE]</code></pre>
   <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/app.js?v=personal-limits-leaderboard-20261005"></script>
+  <script src="/js/app.js?v=prompts-audit-20261005"></script>
   <script src="/js/blora-agent.js?v=restore-0930-20261003"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
@@ -2991,7 +2991,7 @@ data: [DONE]</code></pre>
     </div>
   </blora-dialog>
 
-  <blora-dialog id="promptDetailModal" role="dialog" aria-modal="true">
+  <blora-dialog id="promptDetailModal" style="--blora-dialog-max-width:960px;" role="dialog" aria-modal="true">
     <div class="modal-content modal-wide">
       <div class="modal-header">
         <h3 id="promptDetailTitle"><span data-i18n="提示词详情">提示词详情</span></h3>
