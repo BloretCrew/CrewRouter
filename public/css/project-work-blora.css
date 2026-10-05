@@ -43,6 +43,17 @@
   background: var(--blora-color-surface-raised);
 }
 
+.blora-project-work-page .project-work-filters blora-select {
+  display: block;
+  width: 100%;
+  min-width: 9rem;
+}
+
+.blora-project-work-page .project-work-filters blora-select::part(trigger) {
+  box-sizing: border-box;
+  min-height: 2.5rem;
+}
+
 .blora-project-work-page .project-work-summary {
   gap: var(--blora-space-3);
 }
