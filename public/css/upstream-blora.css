@@ -159,3 +159,13 @@
     flex: 1 1 auto;
   }
 }
+
+#addProviderModal::part(panel) {
+  max-width: min(36rem, calc(100vw - 2 * var(--blora-space-4))) !important;
+}
+#addProviderModal .provider-list-item { gap: var(--blora-space-3); }
+#addProviderModal .provider-list-name { min-width: 0; overflow-wrap: anywhere; }
+#addProviderModal .provider-list-url { max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#selectedProviderDisplay { overflow-wrap: anywhere; }
+#providerFormat { display: block; width: 100%; }
+#providerFormat::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
