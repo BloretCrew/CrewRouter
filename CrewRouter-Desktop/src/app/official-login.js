@@ -61,12 +61,12 @@ function createOfficialLogin({ electron, demoUrl, fetchImpl, state, connect, val
       // 无效回调不终止流程，避免本机其他进程通过伪造回调打断登录。
       logger.warn('[official-login] rejected callback with invalid state');
       response.writeHead(400, { 'content-type': 'text/html; charset=utf-8' });
-      response.end(PAGE('CrewRouter Desktop', '登录回调无效，请关闭此页面并在 Desktop 中重试。'));
+      response.end(PAGE('CrewRouter Local', '登录回调无效，请关闭此页面并在 Desktop 中重试。'));
       return;
     }
     const { verifier } = current;
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    response.end(PAGE('CrewRouter Desktop', '登录已完成，请回到 CrewRouter Desktop。'));
+    response.end(PAGE('CrewRouter Local', '登录已完成，请回到 CrewRouter Local。'));
     closeCurrent();
     state.set({ mode: 'connecting', pending: { kind: 'official-login', startedAt: Date.now(), retry: { action: 'official-login' } }, progress: { step: 1, total: 3, label: '已收到授权，正在建立登录会话' } });
     finish({ routerUrl: payload.router_url, code, verifier }).catch((error) => {

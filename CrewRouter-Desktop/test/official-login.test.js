@@ -74,7 +74,7 @@ test('valid callback exchanges the code, installs the session cookie and connect
   const redirectUri = opened.searchParams.get('redirect_uri');
   const response = await get(`${redirectUri}?code=code-1&state=${b64({ nonce, router_url: 'https://router.example' })}`);
   assert.equal(response.status, 200);
-  assert.match(response.body, /CrewRouter Desktop/);
+  assert.match(response.body, /CrewRouter Local/);
   await sleep(50);
   assert.equal(login.isPending(), false);
   const exchange = connects.find((item) => item.url);

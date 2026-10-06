@@ -37,7 +37,7 @@ async function createRuntimeConfig(userData, overrides = {}) {
   const databaseKey = crypto.createHash('sha256').update(path.resolve(userData)).digest('hex').slice(0, 16);
   const databaseName = `crewrouter_desktop_${databaseKey}`;
   const config = {
-    app: { name: 'CrewRouter Desktop', host: '127.0.0.1', port: 0, sessionSecret: crypto.randomBytes(32).toString('hex') },
+    app: { name: 'CrewRouter Local', host: '127.0.0.1', port: 0, sessionSecret: crypto.randomBytes(32).toString('hex') },
     database: { host: '127.0.0.1', port: 5432, name: databaseName, user: 'postgres', password: '' },
     runtime: 'desktop-local',
     edition: 'personal',

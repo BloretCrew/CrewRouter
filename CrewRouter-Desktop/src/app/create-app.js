@@ -310,7 +310,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   }
 
   function diagnostics(audience = 'launcher') {
-    const base = { app: 'CrewRouter Desktop', version: electron.app.getVersion(), platform: process.platform, arch: process.arch, mode: state.mode, target: state.target, runtime: state.instance?.runtime || null, edition: state.instance?.edition || null };
+    const base = { app: 'CrewRouter Local', version: electron.app.getVersion(), platform: process.platform, arch: process.arch, mode: state.mode, target: state.target, runtime: state.instance?.runtime || null, edition: state.instance?.edition || null };
     if (audience === 'remoteConsole') return base;
     const local = ctx.local?.getStatus() || null;
     return { ...base, profileId: state.profile?.id || null, localServer: local ? { ready: local.ready, port: local.port, version: local.version, database: local.database } : null, electron: process.versions.electron || null, node: process.versions.node };

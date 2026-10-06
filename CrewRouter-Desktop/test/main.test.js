@@ -186,7 +186,7 @@ test('preferences drive native theme, language, menu and are persisted', async (
   assert.ok(electron.Menu.template.some((item) => item.label === 'File'));
   assert.equal(app.ctx.connection.store.getSettings().autoConnect, false);
   const diagnostics = await electron.ipcMain.invoke('desktop:get-diagnostics', launcher());
-  assert.equal(diagnostics.app, 'CrewRouter Desktop');
+  assert.equal(diagnostics.app, 'CrewRouter Local');
   assert.doesNotMatch(JSON.stringify(diagnostics), /token|cookie|password/i);
 });
 
