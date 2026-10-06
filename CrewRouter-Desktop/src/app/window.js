@@ -1,7 +1,10 @@
 'use strict';
 
+const path = require('node:path');
 const { fileURLToPath } = require('node:url');
 const { sameFile } = require('./ipc');
+
+const windowIcon = path.join(__dirname, '..', 'renderer', 'ico.png');
 
 const ABORTED = (error) => error?.code === 'ERR_ABORTED' || error?.errno === -3;
 
@@ -29,6 +32,7 @@ function createMainWindow({ electron, state, rendererEntry, preloadPath, env = p
     minHeight: 560,
     show: false,
     autoHideMenuBar: true,
+    icon: windowIcon,
     backgroundColor: backgroundColorFor(state.theme, electron.nativeTheme),
     title: 'CrewRouter Desktop',
     webPreferences: { preload: preloadPath, contextIsolation: true, nodeIntegration: false, sandbox: true },

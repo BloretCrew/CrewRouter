@@ -37,7 +37,7 @@
     "directories": {
       "output": "dist"
     },
-    "icon": "build/icons/crewrouter.png",
+    "icon": "build/icons/ico.png",
     "files": [
       "src/**/*",
       "scripts/**/*",
@@ -61,7 +61,7 @@
       }
     ],
     "linux": {
-      "icon": "build/icons/crewrouter.png",
+      "icon": "build/icons/ico.png",
       "target": [
         "AppImage"
       ],
@@ -82,7 +82,7 @@
       ]
     },
     "mac": {
-      "icon": "build/icons/crewrouter.png",
+      "icon": "build/icons/ico.png",
       "target": [
         "dmg"
       ],
