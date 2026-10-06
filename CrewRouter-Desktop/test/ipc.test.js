@@ -42,15 +42,12 @@ test('connected consoles are classified by origin and runtime', () => {
   assert.equal(classifySender(frame(webContents, 'http://127.0.0.1:4322/console'), ctx), null);
 });
 
-test('allow matrix keeps profiles and settings away from remote consoles', () => {
+test('allow matrix exposes Desktop settings to every Desktop-opened console', () => {
   for (const [channel, audiences] of Object.entries(ALLOW)) {
     assert.ok(audiences.includes('launcher'), `${channel} 必须允许启动页`);
   }
   const remoteOnly = Object.entries(ALLOW).filter(([, audiences]) => audiences.includes('remoteConsole')).map(([channel]) => channel).sort();
-  assert.deepEqual(remoteOnly, ['desktop:get-diagnostics', 'desktop:get-status', 'desktop:open-launcher', 'desktop:quit', 'desktop:restart-app']);
-  for (const channel of ['desktop:list-profiles', 'desktop:rename-profile', 'desktop:delete-profile', 'desktop:get-settings', 'desktop:save-settings', 'desktop:stop-local', 'desktop:restart-local', 'desktop:open-external']) {
-    assert.ok(!ALLOW[channel].includes('remoteConsole'), `${channel} 不得暴露给远程页面`);
-  }
+  assert.deepEqual(remoteOnly, ['desktop:delete-profile', 'desktop:get-diagnostics', 'desktop:get-settings', 'desktop:get-status', 'desktop:list-profiles', 'desktop:open-external', 'desktop:open-launcher', 'desktop:open-logs', 'desktop:quit', 'desktop:rename-profile', 'desktop:restart-app', 'desktop:restart-local', 'desktop:save-settings', 'desktop:stop-local', 'desktop:switch-profile']);
 });
 
 test('registered handlers reject untrusted senders before touching actions', async () => {
@@ -67,8 +64,8 @@ test('registered handlers reject untrusted senders before touching actions', asy
   assert.equal((await handlers.get('desktop:get-status')(frame(webContents, launcherUrl))).mode, 'idle');
   state.set({ target: 'https://team.example', instance: { runtime: 'server', edition: 'team' } });
   const remote = frame(webContents, 'https://team.example/console');
-  await assert.rejects(handlers.get('desktop:list-profiles')(remote), /不可信/);
-  await assert.rejects(handlers.get('desktop:get-settings')(remote), /不可信/);
+  assert.deepEqual(await handlers.get('desktop:list-profiles')(remote), [{ id: 'a', name: 'A', url: 'https://a.example' }]);
+  assert.deepEqual((await handlers.get('desktop:get-settings')(remote)).settings, {});
   assert.deepEqual(await handlers.get('desktop:get-diagnostics')(remote), { audience: 'remoteConsole' });
   const status = await handlers.get('desktop:get-status')(remote);
   assert.equal('localServer' in status, false);

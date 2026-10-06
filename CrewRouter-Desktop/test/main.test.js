@@ -66,7 +66,8 @@ test('custom remote connection saves a profile, loads the target and trims the r
   assert.equal(result.mode, 'connected');
   assert.equal(result.target, REMOTE_URL);
   assert.equal(win.loads.at(-1).url, REMOTE_URL);
-  assert.deepEqual(win.webContents.scripts, [], '远程控制台不得注入本地设置入口');
+  assert.equal(win.webContents.scripts.length, 1, 'Desktop 连接需要注入设置入口');
+  assert.match(win.webContents.scripts[0], /desktopSettingsCard.*hidden = false/);
   const profiles = app.ctx.connection.listProfiles();
   assert.equal(profiles.length, 1);
   assert.equal(profiles[0].name, '203.0.113.10');
@@ -75,7 +76,8 @@ test('custom remote connection saves a profile, loads the target and trims the r
   const status = await electron.ipcMain.invoke('desktop:get-status', remote);
   assert.equal(status.edition, 'team');
   assert.equal('localServer' in status, false);
-  await assert.rejects(electron.ipcMain.invoke('desktop:rename-profile', remote, profiles[0].id, 'x'), /不可信/);
+  const renamed = await electron.ipcMain.invoke('desktop:rename-profile', remote, profiles[0].id, 'x');
+  assert.equal(renamed[0].name, 'x');
   const pushed = win.webContents.sent.filter((item) => item.channel === 'desktop:status');
   assert.ok(pushed.length > 0);
   assert.equal('localServer' in pushed.at(-1).payload, false, '推送给远程页面的状态必须裁剪');
