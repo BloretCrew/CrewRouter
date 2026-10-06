@@ -48,3 +48,19 @@
 .settings-desktop-preferences select { min-width: 140px; }
 .settings-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 @media (max-width:640px) { .settings-category-grid { grid-template-columns:1fr; } .settings-version-card { padding:16px; } .settings-link-list { gap:6px; } .settings-link-button { font-size:11px; padding:5px 7px; } .settings-detail-title { font-size:21px; } .desktop-profile-row { align-items: flex-start; flex-direction: column; } .desktop-profile-actions { justify-content: flex-start; } .settings-desktop-preferences label:last-child { align-items: flex-start; flex-direction: column; } .settings-desktop-preferences select { width: 100%; } }
+.settings-desktop-stack { gap: 20px; }
+.settings-desktop-block { padding: 24px; border-radius: 16px; box-shadow: none; }
+.settings-desktop-block-header { align-items: flex-start; margin-bottom: 20px; }
+.settings-desktop-block-header h3 { font-size: 17px; }
+.settings-desktop-block-hint { margin: 5px 0 0; color: var(--muted-foreground); font-size: 13px; }
+.settings-desktop-status-badge { flex: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted-foreground); font-size: 12px; }
+.settings-desktop-details { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px 16px; margin: 0; }
+.settings-desktop-details dt { color: var(--muted-foreground); }
+.settings-desktop-details dd { margin: 0; overflow-wrap: anywhere; }
+.settings-desktop-url { color: var(--muted-foreground); }
+.settings-desktop-preferences { gap: 0; }
+.settings-desktop-preferences > blora-switch { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.settings-desktop-preferences > blora-switch:first-child { padding-top: 0; }
+.settings-desktop-theme { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; }
+.settings-desktop-theme blora-select { min-width: 150px; }
+@media (max-width: 640px) { .settings-desktop-block { padding: 18px; } .settings-desktop-block-header { flex-direction: column; } .settings-desktop-theme { align-items: flex-start; flex-direction: column; } .settings-desktop-theme blora-select { width: 100%; } }
