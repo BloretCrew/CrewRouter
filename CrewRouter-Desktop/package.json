@@ -13,6 +13,7 @@
     "syntax": "node scripts/check-syntax.js",
     "test:local-server": "node scripts/test-local-server.js",
     "test:packaged-server": "node scripts/test-local-server.js --packaged",
+    "test:electron:launcher": "electron scripts/test-launcher-interactions.js",
     "test:electron:local-username": "node scripts/run-electron-acceptance.js",
     "test:electron:real-pages": "node scripts/run-real-page-acceptance.js",
     "validate:server-bundle": "node scripts/validate-server-bundle.js",

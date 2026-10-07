@@ -24,7 +24,9 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 .launcher__lead { max-width: 44rem; margin: var(--blora-space-3) 0 0; }
 .launcher__block { display: grid; gap: var(--blora-space-3); }
 .launcher__block-head h2, .launcher__panel-head h2 { margin: 0; }
-.launcher__profiles { overflow: hidden; }
+.launcher__profiles { overflow: visible; }
+.launcher__profile .blora-list__meta { min-width: 0; flex: 1; }
+.launcher__profile .blora-list__title { overflow-wrap: anywhere; }
 .launcher__profile { gap: var(--blora-space-4); }
 .launcher__profile-icon { display: inline-flex; flex: none; }
 .launcher__profile .blora-list__title { display: flex; align-items: center; gap: var(--blora-space-2); flex-wrap: wrap; }
@@ -72,6 +74,9 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
   .launcher__choices { grid-template-columns: 1fr; }
   .launcher__choice { min-height: 92px; }
   .launcher__profile { flex-wrap: wrap; }
+  .launcher__header { flex-wrap: wrap; }
+  .launcher__header-tools { flex-wrap: wrap; }
+  .launcher__pref-row { flex-wrap: wrap; }
   .launcher__profile-actions { width: 100%; justify-content: flex-end; }
   .launcher__actions { justify-content: stretch; }
   .launcher__form .launcher__actions .blora-button { width: 100%; min-width: 0; }

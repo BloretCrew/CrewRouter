@@ -14,7 +14,7 @@ function mountIcons(root = document) {
   window.Blora.hydrateIcons(root);
 }
 
-const state = { status: null, view: 'welcome', profiles: [], settings: null, prefillApplied: false, busy: false };
+const state = { status: null, view: 'welcome', profiles: [], settings: null, prefillApplied: false, busy: false, pendingConnection: false };
 const views = [...document.querySelectorAll('.launcher__view')];
 
 function showFatal(message) {
@@ -182,6 +182,16 @@ function renderSettings(status) {
   $('local-restart').textContent = local.ready ? t('settings.restartLocal') : t('local.submit');
 }
 
+function updateControls() {
+  const busy = state.pendingConnection || ['starting-local', 'connecting', 'awaiting-official-login', 'connected'].includes(state.status?.mode);
+  state.busy = busy;
+  $('launcher').setAttribute('aria-busy', String(busy));
+  $('open-settings').disabled = busy;
+  document.querySelectorAll('.launcher__view:not([data-view="progress"]) button').forEach((button) => { button.disabled = busy; });
+  ['local-username-field', 'custom-url-field'].forEach((id) => $(id).toggleAttribute('disabled', busy));
+  if (!busy && state.view === 'settings') renderSettings(state.status || {});
+}
+
 function render(status) {
   if (!status) return;
   state.status = status;
@@ -189,9 +199,7 @@ function render(status) {
   if (status.theme) applyTheme(status.theme);
   $('local-chip').hidden = !status.localServer?.ready;
   const busy = ['starting-local', 'connecting', 'awaiting-official-login', 'connected'].includes(status.mode);
-  state.busy = busy;
-  document.querySelectorAll('.launcher__view:not([data-view="progress"]) button').forEach((button) => { button.disabled = busy; });
-  ['local-username-field', 'custom-url-field'].forEach((id) => $(id).toggleAttribute('disabled', busy));
+  updateControls();
   if (busy) { renderProgress(status); setView('progress', { focus: false }); if (document.activeElement?.closest('[hidden]')) $('cancel-pending').focus(); return; }
   if (status.mode === 'error') { renderError(status); setView('error'); return; }
   if (state.view === 'settings') renderSettings(status);
@@ -235,7 +243,9 @@ $('rename-ok').addEventListener('click', () => { const value = fieldValue($('ren
 $('rename-cancel').addEventListener('click', () => { const resolve = renameResolver; renameResolver = null; $('rename-dialog').close(); resolve?.(null); });
 $('rename-dialog').addEventListener('blora-close', () => { const resolve = renameResolver; renameResolver = null; resolve?.(null); });
 
-async function run(action, { field } = {}) {
+async function run(action, { field, connection = false } = {}) {
+  if (connection && state.busy) return null;
+  if (connection) { state.pendingConnection = true; updateControls(); }
   hideInlineAlert();
   try { return await action(); }
   catch (error) {
@@ -246,6 +256,8 @@ async function run(action, { field } = {}) {
       showInlineAlert(message);
     }
     return null;
+  } finally {
+    if (connection) { state.pendingConnection = false; updateControls(); }
   }
 }
 
@@ -258,14 +270,14 @@ $('open-settings').addEventListener('click', async () => {
 $('settings-back').addEventListener('click', () => { refreshProfiles(); setView('welcome'); });
 $('choose-local').addEventListener('click', () => {
   if (state.busy) return;
-  if (state.status?.localProfile?.displayName) { run(() => api.startLocal()); return; }
+  if (state.status?.localProfile?.displayName) { run(() => api.startLocal(), { connection: true }); return; }
   setView('local-name');
 });
 $('choose-remote').addEventListener('click', () => { if (!state.busy) setView('remote-method'); });
 $('local-back').addEventListener('click', () => setView('welcome'));
 $('remote-back').addEventListener('click', () => setView('welcome'));
 $('custom-back').addEventListener('click', () => setView('remote-method'));
-$('official-remote').addEventListener('click', () => { if (!state.busy) run(() => api.openOfficialLogin()); });
+$('official-remote').addEventListener('click', () => { if (!state.busy) run(() => api.openOfficialLogin(), { connection: true }); });
 $('custom-remote').addEventListener('click', () => { if (!state.busy) setView('custom-url'); });
 $('local-profile-form').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -275,7 +287,7 @@ $('local-profile-form').addEventListener('submit', (event) => {
   setFieldError(field);
   if (!value) { setFieldError(field, t('local.required')); fieldControl(field)?.focus(); return; }
   if (value.length > 64 || hasUnsafeNameCharacter(value)) { setFieldError(field, t('local.invalid')); fieldControl(field)?.focus(); return; }
-  run(() => api.startLocal(value), { field });
+  run(() => api.startLocal(value), { field, connection: true });
 });
 $('connection-form').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -287,11 +299,11 @@ $('connection-form').addEventListener('submit', (event) => {
   let parsed;
   try { parsed = new URL(value); } catch { setFieldError(field, t('custom.invalid')); fieldControl(field)?.focus(); return; }
   if (!['http:', 'https:'].includes(parsed.protocol)) { setFieldError(field, t('custom.protocol')); fieldControl(field)?.focus(); return; }
-  run(() => api.connectCustomRemote(value), { field });
+  run(() => api.connectCustomRemote(value), { field, connection: true });
 });
 $('cancel-pending').addEventListener('click', () => run(() => api.cancelPending()));
 $('reopen-login').addEventListener('click', () => run(() => api.reopenOfficialLogin()));
-$('retry').addEventListener('click', () => run(() => api.retry()));
+$('retry').addEventListener('click', () => run(() => api.retry(), { connection: true }));
 $('error-open-logs').addEventListener('click', () => run(() => api.openLogs()));
 $('dismiss-error').addEventListener('click', async () => { await run(() => api.clearError()); await refreshProfiles(); setView('welcome'); });
 $('profile-list').addEventListener('click', async (event) => {
@@ -299,7 +311,7 @@ $('profile-list').addEventListener('click', async (event) => {
   if (!row || state.busy) return;
   const profile = state.profiles.find((item) => item.id === row.dataset.id);
   if (!profile) return;
-  if (event.target.closest('[data-action="connect"]')) { run(() => api.switchProfile(profile.id)); return; }
+  if (event.target.closest('[data-action="connect"]')) { run(() => api.switchProfile(profile.id), { connection: true }); return; }
 });
 $('profile-list').addEventListener('blora-select', async (event) => {
   const row = event.target.closest('.launcher__profile');
@@ -322,14 +334,19 @@ function selectValue(select, fallback) {
 function savePreferences() {
   const language = selectValue($('pref-language'), i18n.language);
   return run(async () => {
+    $('preferences-message').textContent = '';
     state.settings = await api.saveDesktopSettings({ autoConnect: $('pref-autoConnect').checked, notifications: $('pref-notifications').checked, updateChecks: $('pref-updateChecks').checked, theme: selectValue($('pref-theme'), 'system'), language });
+    i18n.setLanguage(state.settings.language || language);
+    applyTheme(state.settings.theme || 'system');
+    renderProfiles();
+    $('preferences-message').textContent = t('settings.saved');
     renderSettings(state.status || {});
   });
 }
 ['pref-autoConnect', 'pref-notifications', 'pref-updateChecks'].forEach((id) => $(id).addEventListener('change', savePreferences));
 ['pref-theme', 'pref-language'].forEach((id) => { $(id).addEventListener('change', savePreferences); });
 $('local-restart').addEventListener('click', async () => {
-  if (!state.status?.localServer?.ready) { run(() => api.startLocal()); return; }
+  if (!state.status?.localServer?.ready) { run(() => api.startLocal(), { connection: true }); return; }
   if (await confirmDialog({ message: t('confirm.restartLocal'), okLabel: t('settings.restartLocal'), danger: false })) run(() => api.restartLocal());
 });
 $('local-stop').addEventListener('click', async () => { if (await confirmDialog({ message: t('confirm.stopLocal'), okLabel: t('settings.stopLocal') })) run(() => api.stopLocal()); });
@@ -338,6 +355,19 @@ $('copy-diagnostics').addEventListener('click', () => run(async () => { await na
 $('restart-app').addEventListener('click', async () => { if (await confirmDialog({ message: t('confirm.restartApp'), okLabel: t('settings.restartApp'), danger: false })) run(() => api.restartApp()); });
 $('quit-app').addEventListener('click', async () => { if (await confirmDialog({ message: t('confirm.quit'), okLabel: t('settings.quit') })) run(() => api.quit()); });
 window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (state.status?.theme === 'system') applyTheme('system'); });
+
+['local-username-field', 'custom-url-field', 'rename-field'].forEach((id) => {
+  $(id).addEventListener('input', () => { setFieldError($(id)); hideInlineAlert(); });
+});
+$('rename-field').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); $('rename-ok').click(); }
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || event.defaultPrevented || state.busy) return;
+  if (document.querySelector('blora-dialog[open], .blora-dropdown[data-open], .blora-select [aria-expanded="true"]')) return;
+  const back = { 'local-name': 'local-back', 'remote-method': 'remote-back', 'custom-url': 'custom-back', settings: 'settings-back' }[state.view];
+  if (back) { event.preventDefault(); $(back).click(); }
+});
 
 mountIcons();
 i18n.apply();
