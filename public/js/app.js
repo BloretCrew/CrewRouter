@@ -244,11 +244,12 @@ class ConsoleApp {
     // 从 URL hash 恢复页面（刷新后保持原位置）
     const restored = this._parseConsoleHash(location.hash);
     const teamHashPages = new Set(['myUpstream']);
-    const safePage = teamHashPages.has(restored.page) && this.instance?.capabilities?.teamProjects === false
-      ? 'modelLibrary' : restored.page;
+    const safePage = restored.page === 'home'
+      ? 'modelLibrary'
+      : (teamHashPages.has(restored.page) && this.instance?.capabilities?.teamProjects === false ? 'modelLibrary' : restored.page);
     if (safePage !== restored.page) this._writeConsoleHash(safePage);
-    const requestedStartPage = safePage || (this.instance?.edition === 'personal' ? 'home' : 'modelLibrary');
-    const startPage = requestedStartPage === 'home' && this.instance?.edition !== 'personal' ? 'modelLibrary' : requestedStartPage;
+    const requestedStartPage = safePage || 'modelLibrary';
+    const startPage = requestedStartPage === 'home' ? 'modelLibrary' : requestedStartPage;
     await this.navigateTo(startPage, {
       skipHash: true,
       upstreamTab: restored.upstreamTab,
@@ -443,7 +444,7 @@ class ConsoleApp {
 
   async navigateTo(page, options = {}) {
     // 旧入口重定向到合并页
-    let targetPage = page;
+    let targetPage = page === 'home' ? 'modelLibrary' : page;
     const capability = targetPage === 'projectWork' ? 'projects' : (targetPage === 'auditLogs' ? 'auditLogs' : null);
     const capabilityEnabled = capability ? this.instance?.capabilities?.[capability] !== false : true;
     if (capability && !capabilityEnabled) {
@@ -533,7 +534,7 @@ class ConsoleApp {
     }
 
     switch (page) {
-      case 'home': await this.loadPersonalHome(); break;
+      case 'home':
       case 'dashboard':
       case 'modelLibrary': await this.loadModelLibrary(); break;
       case 'myUpstream':
