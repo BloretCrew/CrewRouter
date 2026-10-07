@@ -34,7 +34,7 @@ function createMainWindow({ electron, state, rendererEntry, preloadPath, env = p
     autoHideMenuBar: true,
     icon: windowIcon,
     backgroundColor: backgroundColorFor(state.theme, electron.nativeTheme),
-    title: 'CrewRouter Local',
+    title: 'CrewRouter Desktop',
     webPreferences: { preload: preloadPath, contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   const contents = win.webContents;

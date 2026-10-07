@@ -1,8 +1,8 @@
 {
-  "name": "crewrouter-local",
+  "name": "crewrouter-desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "CrewRouter Local application",
+  "description": "CrewRouter Desktop application",
   "type": "commonjs",
   "main": "src/main.js",
   "scripts": {
@@ -32,7 +32,7 @@
   },
   "build": {
     "appId": "com.crewrouter.desktop",
-    "productName": "CrewRouter Local",
+    "productName": "CrewRouter Desktop",
     "asar": true,
     "directories": {
       "output": "dist"

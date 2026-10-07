@@ -1,8 +1,8 @@
 'use strict';
 
 const LABELS = {
-  zh: { file: '文件', launcher: '返回启动页', logs: '打开日志目录', quit: '退出', view: '视图', reload: '重新加载', zoomIn: '放大', zoomOut: '缩小', resetZoom: '实际大小', fullscreen: '全屏', devtools: '开发者工具', window: '窗口', minimize: '最小化', close: '关闭窗口', about: '关于 CrewRouter Local' },
-  en: { file: 'File', launcher: 'Back to launcher', logs: 'Open log folder', quit: 'Quit', view: 'View', reload: 'Reload', zoomIn: 'Zoom In', zoomOut: 'Zoom Out', resetZoom: 'Actual Size', fullscreen: 'Toggle Full Screen', devtools: 'Developer Tools', window: 'Window', minimize: 'Minimize', close: 'Close Window', about: 'About CrewRouter Local' },
+  zh: { file: '文件', launcher: '返回启动页', logs: '打开日志目录', quit: '退出', view: '视图', reload: '重新加载', zoomIn: '放大', zoomOut: '缩小', resetZoom: '实际大小', fullscreen: '全屏', devtools: '开发者工具', window: '窗口', minimize: '最小化', close: '关闭窗口', about: '关于 CrewRouter Desktop' },
+  en: { file: 'File', launcher: 'Back to launcher', logs: 'Open log folder', quit: 'Quit', view: 'View', reload: 'Reload', zoomIn: 'Zoom In', zoomOut: 'Zoom Out', resetZoom: 'Actual Size', fullscreen: 'Toggle Full Screen', devtools: 'Developer Tools', window: 'Window', minimize: 'Minimize', close: 'Close Window', about: 'About CrewRouter Desktop' },
 };
 
 function buildMenuTemplate({ language = 'zh', isMac = process.platform === 'darwin', isDev = false, actions }) {
