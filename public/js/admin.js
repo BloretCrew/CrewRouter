@@ -5738,6 +5738,7 @@ async function(ctx) {
   // 查询供应商额度
   async checkProviderQuota(providerId) {
     this._quotaProviderId = providerId;
+    this._quotaScriptMode = null;
     const quotaButton = document.getElementById(`quota-btn-${providerId}`);
     const previousQuotaButtonHtml = quotaButton?.innerHTML;
     if (quotaButton) {
@@ -5759,8 +5760,11 @@ async function(ctx) {
     else modal.setAttribute('open', '');
 
     // 切换按钮：显示结果模式
-    document.getElementById('quotaEditBtn').style.display = '';
-        document.getElementById('quotaSaveBtn').style.display = 'none';
+    const quotaEditBtn = document.getElementById('quotaEditBtn');
+    const provider = (this.providersData || []).find(p => String(p.id) === String(providerId));
+    quotaEditBtn.textContent = provider?.quota_mode === 'cpa' ? t('编辑配置') : t('编辑脚本');
+    quotaEditBtn.style.display = '';
+    document.getElementById('quotaSaveBtn').style.display = 'none';
     document.getElementById('quotaCancelEditBtn').style.display = 'none';
 
     try {
@@ -5924,6 +5928,10 @@ async function(ctx) {
     }
   }
 
+  _cpaQuotaConfigHint() {
+    return t('CPA 配置为 JSON：plugin_id 是已加载的额度插件 ID，auth_index 是目标凭据的索引（均为字符串）。管理地址和管理密钥仅在服务器环境 CPA_MANAGEMENT_URL、CPA_MANAGEMENT_KEY 中配置，请勿写入浏览器配置。先保存供应商的 CPA 模式，再通过“查询额度 → 编辑配置”保存 JSON。');
+  }
+
   // 打开脚本编辑器
   async editQuotaScript() {
     const providerId = this._quotaProviderId;
@@ -5932,32 +5940,75 @@ async function(ctx) {
     const content = document.getElementById('quotaContent');
     const editor = document.getElementById('quotaScriptEditor');
     const textarea = document.getElementById('quotaScriptText');
+    const saveBtn = document.getElementById('quotaSaveBtn');
 
     content.style.display = 'none';
     editor.style.display = 'block';
     textarea.value = t('加载中...');
+    textarea.disabled = true;
+    this._quotaScriptMode = null;
 
     // 切换按钮：显示编辑模式
     document.getElementById('quotaEditBtn').style.display = 'none';
-        document.getElementById('quotaSaveBtn').style.display = '';
+    saveBtn.style.display = '';
+    saveBtn.disabled = true;
     document.getElementById('quotaCancelEditBtn').style.display = '';
 
     try {
-      const res = await fetch(`/api/admin/providers/${providerId}/default-quota-script`);
-      const data = await res.json();
-      textarea.value = data.script || '';
+      const providerRes = await fetch(`/api/admin/providers/${providerId}`);
+      const provider = await providerRes.json();
+      if (!providerRes.ok) throw new Error(provider.error || t('加载供应商详情失败，回退列表数据'));
+      const mode = provider.quota_mode || 'script';
+      let script = provider.quota_script;
+      if (!script || !script.trim()) {
+        if (mode === 'cpa') {
+          script = '{"plugin_id":"","auth_index":""}';
+        } else {
+          const res = await fetch(`/api/admin/providers/${providerId}/default-quota-script`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || t('查询失败'));
+          script = data.script || '';
+        }
+      }
+      if (this._quotaProviderId !== providerId || editor.style.display === 'none') return;
+      this._quotaScriptMode = mode;
+      const isCpa = mode === 'cpa';
+      document.getElementById('quotaScriptLabel').textContent = isCpa ? t('CPA 额度配置（JSON）') : t('查询脚本');
+      document.getElementById('quotaScriptHint').style.display = isCpa ? 'none' : '';
+      const cpaHint = document.getElementById('quotaCpaHint');
+      cpaHint.style.display = isCpa ? 'block' : 'none';
+      cpaHint.textContent = this._cpaQuotaConfigHint();
+      document.getElementById('quotaEditBtn').textContent = isCpa ? t('编辑配置') : t('编辑脚本');
+      textarea.value = script;
+      textarea.disabled = false;
+      saveBtn.disabled = false;
     } catch (e) {
-      textarea.value = '// 获取默认脚本失败: ' + e.message;
+      if (this._quotaProviderId !== providerId || editor.style.display === 'none') return;
+      textarea.value = '';
+      this.showToast(t('加载额度配置失败: ') + e.message, 'error');
     }
   }
 
   // 保存自定义脚本
   async saveQuotaScript() {
     const providerId = this._quotaProviderId;
-    if (!providerId) return;
+    if (!providerId || !this._quotaScriptMode) return;
 
     const textarea = document.getElementById('quotaScriptText');
     const script = textarea.value.trim();
+    if (this._quotaScriptMode === 'cpa') {
+      try {
+        const config = JSON.parse(script);
+        if (!config || Array.isArray(config) || typeof config !== 'object'
+          || typeof config.plugin_id !== 'string' || !config.plugin_id.trim()
+          || typeof config.auth_index !== 'string' || !config.auth_index.trim()) {
+          throw new Error(t('plugin_id 和 auth_index 必须为非空字符串'));
+        }
+      } catch (e) {
+        alert(t('CPA 配置无效: ') + e.message);
+        return;
+      }
+    }
 
     try {
       const res = await fetch(`/api/admin/providers/${providerId}/quota-script`, {
@@ -5982,14 +6033,20 @@ async function(ctx) {
   // 重置为默认脚本
   async resetQuotaScript() {
     const providerId = this._quotaProviderId;
-    if (!providerId) return;
+    if (!providerId || !this._quotaScriptMode) return;
+    if (this._quotaScriptMode === 'cpa') {
+      document.getElementById('quotaScriptText').value = '{"plugin_id":"","auth_index":""}';
+      return;
+    }
 
     try {
-      await fetch(`/api/admin/providers/${providerId}/quota-script`, {
+      const res = await fetch(`/api/admin/providers/${providerId}/quota-script`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ script: '' })
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t('重置失败: '));
       // 重新加载默认脚本
       this.editQuotaScript();
     } catch (e) {
@@ -6016,7 +6073,9 @@ async function(ctx) {
     const isNewApi = mode === 'newapi';
     const isCursor = mode === 'cursor';
     if (section) section.style.display = isCodex || isGrok ? 'block' : 'none';
-    if (hint) hint.textContent = isGrok
+    if (hint) hint.textContent = mode === 'cpa'
+      ? this._cpaQuotaConfigHint()
+      : isGrok
       ? t('SuperGrok 使用 ~/.grok/auth.json 查询订阅周池、按需额度和 prepaid credits，接口为非公开接口，字段可能变化')
       : isCommandCode
         ? t('Command Code 使用供应商 API Key 调用 /alpha/* 接口查询 5 小时、每周与月度额度，Base URL 只取域名（官方为 https://api.commandcode.ai）；Go 套餐不含 API 权限，四个端点全部 404')

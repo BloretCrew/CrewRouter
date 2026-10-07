@@ -1830,6 +1830,7 @@
               <label for="providerQuotaMode"><span data-i18n="额度查询方式">额度查询方式</span></label>
               <blora-select id="providerQuotaMode" class="select" onchange="adminApp.toggleCodexQuotaImport();adminApp.toggleArkQuotaConfig()">
                 <blora-option value="script"><span data-i18n="通用脚本（按 Base URL 查询）">通用脚本（按 Base URL 查询）</span></blora-option>
+                <blora-option value="cpa"><span data-i18n="CPA 额度插件（服务器管理接口）">CPA 额度插件（服务器管理接口）</span></blora-option>
                 <blora-option value="opencode_go">OpenCode Go（/zen/go/v1/usage）</blora-option>
                 <blora-option value="codex_wham">Codex WHAM（ChatGPT OAuth）</blora-option>
                 <blora-option value="grok_billing">SuperGrok（Grok CLI OAuth）</blora-option>
@@ -2341,14 +2342,15 @@
         <div id="quotaScriptEditor" style="display:none;">
           <div style="margin-bottom:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-              <span style="font-size:14px;font-weight:600;"><span data-i18n="查询脚本">查询脚本</span></span>
+              <span id="quotaScriptLabel" style="font-size:14px;font-weight:600;">查询脚本</span>
               <div style="display:flex;gap:6px;">
                 <button class="blora-button" onclick="adminApp.resetQuotaScript()" data-variant="secondary" data-size="sm"><span data-i18n="恢复默认">恢复默认</span></button>
               </div>
             </div>
-            <p style="font-size:12px;color:var(--muted-foreground);margin-bottom:12px;"><span data-i18n="脚本格式与 cc-switch 一致，包含">
+            <p id="quotaScriptHint" style="font-size:12px;color:var(--muted-foreground);margin-bottom:12px;"><span data-i18n="脚本格式与 cc-switch 一致，包含">
               脚本格式与 cc-switch 一致，包含 </span><code>request</code><span data-i18n="（请求配置）和">（请求配置）和 </span><code>extractor</code><span data-i18n="（响应解析函数）。支持变量：">（响应解析函数）。支持变量：</span><code>{baseUrl}</code> <code>{apiRoot}</code> <code>{apiKey}</code> <code>{providerId}</code> <code>{providerName}</code>
             </p>
+            <p id="quotaCpaHint" style="display:none;font-size:12px;color:var(--muted-foreground);margin-bottom:12px;"></p>
             <textarea id="quotaScriptText" class="textarea textarea-mono" style="min-height:280px;font-size:12px;line-height:1.5;"></textarea>
           </div>
         </div>

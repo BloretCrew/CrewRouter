@@ -2084,7 +2084,7 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
     const finalProxyUrl = typeof proxy_url === 'string' ? proxy_url.trim() : '';
     const finalProxyUseSystem = proxy_use_system === true || proxy_use_system === 'true';
     const normalizedQuotaMode = String(quota_mode || 'script').toLowerCase();
-    const finalQuotaMode = ['opencode_go', 'codex_wham', 'grok_billing', 'ark_inference', 'ark_afp', 'commandcode', 'newapi', 'cursor'].includes(normalizedQuotaMode) ? normalizedQuotaMode : 'script';
+    const finalQuotaMode = ['opencode_go', 'codex_wham', 'grok_billing', 'ark_inference', 'ark_afp', 'commandcode', 'newapi', 'cursor', 'cpa'].includes(normalizedQuotaMode) ? normalizedQuotaMode : 'script';
     const testUaProvided = Object.prototype.hasOwnProperty.call(req.body, 'test_user_agent');
     const finalTestUserAgent = normalizeTestUserAgent(test_user_agent);
     const scheduleProvided = Object.prototype.hasOwnProperty.call(req.body, 'quota_schedule_enabled')
@@ -2958,11 +2958,23 @@ router.get('/providers/:id/default-quota-script', requireAuth, requireAdmin, asy
 router.post('/providers/:id/quota-script', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { script } = req.body;
+    if (script !== undefined && typeof script !== 'string') {
+      return res.status(400).json({ error: '额度配置必须是字符串' });
+    }
+    const providerResult = await pool.query('SELECT quota_mode FROM providers WHERE id = $1', [req.params.id]);
+    if (!providerResult.rows.length) return res.status(404).json({ error: '供应商不存在' });
+    const isCpa = providerResult.rows[0].quota_mode === 'cpa';
     // 验证脚本格式
-    if (script && script.trim()) {
+    if (isCpa) {
+      try {
+        require('../utils/cpa-usage').parseCpaQuotaConfig(script);
+      } catch (error) {
+        return res.status(400).json({ error: error.message });
+      }
+    } else if (script && script.trim()) {
       try {
         const parsed = JSON.parse(script);
-        if (!parsed.request || !parsed.extractor) {
+        if (!parsed || !parsed.request || !parsed.extractor) {
           return res.status(400).json({ error: '脚本必须包含 request 和 extractor 字段' });
         }
       } catch (e) {

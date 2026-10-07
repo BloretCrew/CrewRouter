@@ -10,6 +10,7 @@ const { fetchArkUsage } = require('./volcengine-ark-usage');
 const { fetchCommandCodeUsage } = require('./commandcode-usage');
 const { fetchNewApiUsage } = require('./newapi-usage');
 const { fetchCursorUsage } = require('./cursor-usage');
+const { fetchCpaUsage } = require('./cpa-usage');
 
 const QUOTA_SCHEDULE_INTERVALS = Object.freeze([
   { value: 600, label: '每 10 分钟' },
@@ -42,6 +43,10 @@ function generateDefaultQuotaScript(provider) {
     .replace(/\/+$/, '');
   const apiRoot = /\/v1\/?$/.test(cleaned) ? cleaned : `${cleaned}/v1`;
   const format = provider.format || 'openai';
+
+  if (provider.quota_mode === 'cpa') {
+    return JSON.stringify({ plugin_id: '', auth_index: '' }, null, 2);
+  }
 
   if (provider.quota_mode === 'opencode_go') {
     return JSON.stringify({
@@ -217,6 +222,16 @@ async function queryProviderQuotaInternal(provider) {
     }
   }
 
+  if (provider.quota_mode === 'cpa') {
+    try {
+      const quota = await fetchCpaUsage(provider);
+      return { ok: true, status: 200, provider: { ...meta, type: 'cpa' }, quota };
+    } catch (error) {
+      Logger.warn(`[查询 CPA 额度] ${provider.id} 失败`);
+      return { ok: false, status: 502, error: error.message, provider: meta };
+    }
+  }
+
   if (provider.quota_mode === 'cursor') {
     try {
       const quota = await fetchCursorUsage(provider);
@@ -387,6 +402,8 @@ async function queryProviderQuotaPerKey(provider) {
 }
 
 async function queryProviderQuotaPerKeyInternal(provider) {
+  // CPA 配置关联一个订阅账号，供应商的代理 Key 共用该账号额度。
+  if (provider.quota_mode === 'cpa') return queryProviderQuota(provider);
   const meta = { id: provider.id, name: provider.name };
   const entries = normalizeProviderKeyEntries(provider).filter((e) => e.enabled !== false);
   if (entries.length <= 1) {

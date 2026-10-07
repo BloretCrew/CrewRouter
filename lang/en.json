@@ -2742,5 +2742,12 @@
   "还没有图像模型。管理员可以在 Manage 里把模型标成图像。": "No image models yet. An admin can mark a model as an image model in Manage.",
   "请先选择模型": "Choose a model first",
   "当前模式不可用": "This mode is unavailable",
-  "这个实例没有开放对应接口。": "This instance does not expose that API."
+  "这个实例没有开放对应接口。": "This instance does not expose that API.",
+  "CPA 额度插件（服务器管理接口）": "CPA quota plugin (server management API)",
+  "CPA 额度配置（JSON）": "CPA quota configuration (JSON)",
+  "编辑配置": "Edit configuration",
+  "CPA 配置为 JSON：plugin_id 是已加载的额度插件 ID，auth_index 是目标凭据的索引（均为字符串）。管理地址和管理密钥仅在服务器环境 CPA_MANAGEMENT_URL、CPA_MANAGEMENT_KEY 中配置，请勿写入浏览器配置。先保存供应商的 CPA 模式，再通过“查询额度 → 编辑配置”保存 JSON。": "CPA configuration is JSON: plugin_id identifies a loaded quota plugin, and auth_index is the target credential index (both are strings). Configure the management URL and key only through the server environment variables CPA_MANAGEMENT_URL and CPA_MANAGEMENT_KEY; do not put them in browser configuration. Save the provider in CPA mode first, then save the JSON through “Check quota → Edit configuration”.",
+  "加载额度配置失败: ": "Failed to load quota configuration: ",
+  "plugin_id 和 auth_index 必须为非空字符串": "plugin_id and auth_index must be non-empty strings",
+  "CPA 配置无效: ": "Invalid CPA configuration: "
 }
