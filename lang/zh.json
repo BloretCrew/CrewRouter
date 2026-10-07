@@ -2706,8 +2706,11 @@
   "CPA 额度插件（服务器管理接口）": "CPA 额度插件（服务器管理接口）",
   "CPA 额度配置（JSON）": "CPA 额度配置（JSON）",
   "编辑配置": "编辑配置",
-  "CPA 配置为 JSON：plugin_id 是已加载的额度插件 ID，auth_index 是目标凭据的索引（均为字符串）。管理地址和管理密钥仅在服务器环境 CPA_MANAGEMENT_URL、CPA_MANAGEMENT_KEY 中配置，请勿写入浏览器配置。先保存供应商的 CPA 模式，再通过“查询额度 → 编辑配置”保存 JSON。": "CPA 配置为 JSON：plugin_id 是已加载的额度插件 ID，auth_index 是目标凭据的索引（均为字符串）。管理地址和管理密钥仅在服务器环境 CPA_MANAGEMENT_URL、CPA_MANAGEMENT_KEY 中配置，请勿写入浏览器配置。先保存供应商的 CPA 模式，再通过“查询额度 → 编辑配置”保存 JSON。",
+  "plugin_id 是已加载的 CPA 额度插件 ID，auth_index 是目标账号凭据的索引。管理地址和管理密钥仅在服务器环境 CPA_MANAGEMENT_URL、CPA_MANAGEMENT_KEY 中配置，请勿写入浏览器配置。在供应商编辑窗口填写插件 ID 和账号凭据索引，随供应商设置一起保存。": "plugin_id 是已加载的 CPA 额度插件 ID，auth_index 是目标账号凭据的索引。管理地址和管理密钥仅在服务器环境 CPA_MANAGEMENT_URL、CPA_MANAGEMENT_KEY 中配置，请勿写入浏览器配置。在供应商编辑窗口填写插件 ID 和账号凭据索引，随供应商设置一起保存。",
   "加载额度配置失败: ": "加载额度配置失败: ",
   "plugin_id 和 auth_index 必须为非空字符串": "plugin_id 和 auth_index 必须为非空字符串",
-  "CPA 配置无效: ": "CPA 配置无效: "
+  "CPA 配置无效: ": "CPA 配置无效: ",
+  "CPA 额度插件 ID": "CPA 额度插件 ID",
+  "CPA 账号凭据索引": "CPA 账号凭据索引",
+  "请填写有效的 CPA 插件 ID 和账号凭据索引": "请填写有效的 CPA 插件 ID 和账号凭据索引"
 }

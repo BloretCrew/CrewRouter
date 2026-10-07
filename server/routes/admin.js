@@ -2085,6 +2085,15 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
     const finalProxyUseSystem = proxy_use_system === true || proxy_use_system === 'true';
     const normalizedQuotaMode = String(quota_mode || 'script').toLowerCase();
     const finalQuotaMode = ['opencode_go', 'codex_wham', 'grok_billing', 'ark_inference', 'ark_afp', 'commandcode', 'newapi', 'cursor', 'cpa'].includes(normalizedQuotaMode) ? normalizedQuotaMode : 'script';
+    let cpaQuotaScript = null;
+    if (finalQuotaMode === 'cpa') {
+      try {
+        const config = require('../utils/cpa-usage').parseCpaQuotaConfig(req.body.quota_script);
+        cpaQuotaScript = JSON.stringify({ plugin_id: config.pluginId, auth_index: config.authIndex });
+      } catch (error) {
+        return res.status(400).json({ error: error.message });
+      }
+    }
     const testUaProvided = Object.prototype.hasOwnProperty.call(req.body, 'test_user_agent');
     const finalTestUserAgent = normalizeTestUserAgent(test_user_agent);
     const scheduleProvided = Object.prototype.hasOwnProperty.call(req.body, 'quota_schedule_enabled')
@@ -2117,8 +2126,8 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
       INSERT INTO providers (id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
                              key_mode, key_script, key_refresh_interval, proxy_enabled, proxy_mode, proxy_url, proxy_use_system,
                              content_type_mode, forward_headers, test_user_agent, ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params,
-                             quota_schedule_enabled, quota_schedule_interval)
-      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $31, $32)
+                             quota_schedule_enabled, quota_schedule_interval, quota_script)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $31, $32, $34)
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         base_url = EXCLUDED.base_url,
@@ -2137,6 +2146,7 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
         models_url = COALESCE(NULLIF(EXCLUDED.models_url, ''), providers.models_url),
         quota_enabled = EXCLUDED.quota_enabled,
         quota_mode = EXCLUDED.quota_mode,
+        quota_script = CASE WHEN EXCLUDED.quota_mode = 'cpa' THEN EXCLUDED.quota_script ELSE providers.quota_script END,
         notes = EXCLUDED.notes,
         key_mode = EXCLUDED.key_mode,
         key_script = EXCLUDED.key_script,
@@ -2162,7 +2172,7 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
         content_type_mode || 'hardcoded', forward_headers !== false, finalTestUserAgent,
         ark_access_key || '', ark_secret_key || '', ark_region || 'cn-north-1', ark_service || 'ark',
         ark_usage_action || (finalQuotaMode === 'ark_afp' ? 'GetAFPUsage' : 'GetInferenceUsage'), ark_usage_params || '{}',
-        testUaProvided, finalScheduleEnabled, finalScheduleInterval, scheduleProvided]);
+        testUaProvided, finalScheduleEnabled, finalScheduleInterval, scheduleProvided, cpaQuotaScript]);
 
     // 注册/更新密钥刷新计划
     keyRefresher.registerProvider({ id: providerId, key_mode: keyMode, key_refresh_interval: keyRefreshInterval });
