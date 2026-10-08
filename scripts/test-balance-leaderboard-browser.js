@@ -94,16 +94,21 @@ async function main() {
           return new Response(JSON.stringify({ ...data, ...window.__limits }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         };
       })()`);
-      for (const [rpm, tpm] of [[0, 0], [60, 0], [0, 120000], [60, 120000]]) {
-        await cdp.evaluate(`window.__limits = { rate_limit_rpm: ${rpm}, rate_limit_tpm: ${tpm} }; app.loadBalance()`);
-        await check(`(() => {
-          const values = [...document.querySelectorAll('#personalLimits .limit-value')].map(e => e.textContent);
-          return values.length === 2 && values[0] === (${rpm} > 0 ? (${rpm}).toLocaleString() : t('不限制'))
-            && values[1] === (${tpm} > 0 ? app._formatBigNumber(${tpm}) : t('不限制'))
-            && getComputedStyle(document.getElementById('personalLimitsSection')).display !== 'none';
-        })()`, '有限/无限及混合限额');
+      for (const group of [null, { name: 'Test Team', rules: [] }, { name: 'Test Team', rules: [
+        { rule_type: 'requests', rule_value: 100, duration_hours: 24, current: 25 },
+        { rule_type: 'tokens', rule_value: 100000, duration_hours: 168, current: 120000 }
+      ] }]) {
+        await cdp.evaluate(`window.__limits = { group: ${JSON.stringify(group)} }; app.loadBalance()`);
+        await check(`document.getElementById('personalLimitsSection').textContent.includes(t('Team 与限额'))`, 'Team限额标题');
+        if (group?.rules.length) {
+          await check(`document.getElementById('balanceTeamName').textContent === 'Test Team'
+            && document.querySelectorAll('#personalLimits .limit-card').length === 2
+            && document.getElementById('personalLimits').textContent.includes('25 / 100')
+            && [...document.querySelectorAll('#personalLimits blora-progress')].every(e => Number(e.getAttribute('value')) <= 100)`, 'Team名称、窗口规则与超额用量');
+        } else {
+          await check(`document.getElementById('personalLimits').textContent.includes(t('暂无限额规则'))`, '无Team或无限额状态');
+        }
       }
-      await cdp.evaluate(`window.__limits = { rate_limit_rpm: 0, rate_limit_tpm: 0 }; app.loadBalance()`);
       if (process.env.LIMITS_SCREENSHOT_DIR) {
         const shot = await cdp.send('Page.captureScreenshot');
         require('node:fs').writeFileSync(`${process.env.LIMITS_SCREENSHOT_DIR}/balance-${width}.png`, Buffer.from(shot.data, 'base64'));

@@ -6345,16 +6345,20 @@ class ConsoleApp {
 
       document.getElementById('balanceDisplay').textContent = Number(data.balance || 0).toFixed(0);
 
-      // 个人限额
-      const personalSection = document.getElementById('personalLimitsSection');
-      const personalContainer = document.getElementById('personalLimits');
-      const rpm = data.rate_limit_rpm || 0;
-      const tpm = data.rate_limit_tpm || 0;
-      setHTML(personalContainer, `
-        <div class="limit-card"><span class="limit-label">${t('每分钟请求数 (RPM)')}</span><span class="limit-value">${rpm > 0 ? rpm.toLocaleString() : t('不限制')}</span></div>
-        <div class="limit-card"><span class="limit-label">${t('每分钟 Token 数 (TPM)')}</span><span class="limit-value">${tpm > 0 ? this._formatBigNumber(tpm) : t('不限制')}</span></div>
-      `);
-      personalSection.style.display = 'block';
+      const section = document.getElementById('personalLimitsSection');
+      const container = document.getElementById('personalLimits');
+      const group = data.group;
+      const rules = Array.isArray(group?.rules) ? group.rules : [];
+      const name = document.getElementById('balanceTeamName');
+      if (name) name.textContent = group?.name || '';
+      setHTML(container, rules.length ? rules.map(rule => {
+        const limit = Number(rule.rule_value) || 0;
+        const current = Number(rule.current) || 0;
+        const format = value => rule.rule_type === 'tokens' ? this._formatBigNumber(value) : value.toLocaleString();
+        const label = rule.rule_type === 'tokens' ? t('Token 数') : t('请求数');
+        return `<div class="limit-card"><span class="limit-label">${escapeHtml(this.formatRuleDuration(Number(rule.duration_hours)))} · ${label}</span><span class="limit-value">${format(current)} / ${format(limit)}</span><blora-progress value="${limit > 0 ? Math.min(100, current / limit * 100) : 0}"></blora-progress>${rule.description ? `<span class="limit-label">${escapeHtml(rule.description)}</span>` : ''}</div>`;
+      }).join('') : `<div class="limit-card"><span class="limit-value">${t('不限制')}</span><span class="limit-label">${t('暂无限额规则')}</span></div>`);
+      section.style.display = 'block';
     } catch (error) {
       console.error(t('加载积分信息失败:'), error);
     }
