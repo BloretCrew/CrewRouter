@@ -5791,6 +5791,12 @@ async function(ctx) {
   }
 
   // 查询供应商额度
+  _formatQuotaDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
   async checkProviderQuota(providerId) {
     this._quotaProviderId = providerId;
     this._quotaScriptMode = null;
@@ -5854,12 +5860,7 @@ async function(ctx) {
       const periods = Array.isArray((agg || q).periods) ? (agg || q).periods : [];
       const credits = q.credits || {};
       const resetCredits = q.rateLimitResetCredits?.available_count;
-      const detailParts = periods.map(period => `${period.label || period.key}: ${period.percent}%${period.resetsAt ? `${t('，重置于')} ${period.resetsAt}` : ''}${period.resetAfterSeconds > 0 ? `${t('（约')} ${Math.ceil(period.resetAfterSeconds / 3600)} ${t('小时后）')}` : ''}`);
-      if (credits.hasCredits || credits.unlimited || credits.balance !== undefined) {
-        detailParts.push(`Credits: ${credits.unlimited ? t('无限') : credits.balance ?? '0'}`);
-      }
-      if (resetCredits !== undefined) detailParts.push(`${t('可手动重置:')}${resetCredits}${t('次')}`);
-      document.getElementById('quotaExtra').textContent = detailParts.length ? detailParts.join(' | ') : ((agg || q).extra || '');
+      document.getElementById('quotaExtra').textContent = periods.length ? '' : ((agg || q).extra || '');
 
       this.renderGrokQuotaDetails(q, isGrok);
       this.renderPerKeyQuotaDetails(keys);
@@ -5888,13 +5889,14 @@ async function(ctx) {
             <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;">
               <span>${escapeHtml(period.label || period.key)}</span><span>${escapeHtml(String(period.percent))}%</span>
             </div>
-            ${period.startsAt ? `${'<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">' + t('周期：')}${escapeHtml(period.startsAt)}${t('至')}${escapeHtml(period.resetsAt || t('未知'))}</div>` : (period.resetsAt ? `${'<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">' + t('重置于')}${escapeHtml(period.resetsAt)}</div>` : '')}
+            ${period.startsAt ? `${'<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">' + t('周期：')}${escapeHtml(this._formatQuotaDate(period.startsAt))}${t('至')}${escapeHtml(this._formatQuotaDate(period.resetsAt) || t('未知'))}</div>` : (period.resetsAt ? `${'<div style="margin-top:4px;font-size:11px;color:var(--muted-foreground);">' + t('重置于')}${escapeHtml(this._formatQuotaDate(period.resetsAt))}</div>` : '')}
             ${period.resetAfterSeconds > 0 ? `${'<div style="margin-top:2px;font-size:11px;color:var(--muted-foreground);">' + t('约')}${escapeHtml(String(Math.ceil(period.resetAfterSeconds / 3600)))}${t('小时后重置')}</div>` : ''}
           </div>`).join(''));
       }
       const creditsDetails = document.getElementById('quotaCreditsDetails');
       if (creditsDetails) {
         const resetCount = q.rateLimitResetCredits?.available_count;
+        creditsDetails.style.display = credits.hasCredits || credits.unlimited || credits.balance !== undefined || resetCount !== undefined ? '' : 'none';
         setHTML(creditsDetails, `<div>Credits：${escapeHtml(credits.unlimited ? t('无限') : String(credits.balance ?? '0'))}</div>${resetCount !== undefined ? `<div>${t('可手动重置：')}${escapeHtml(String(resetCount))} ${t('次')}</div>` : ''}`);
       }
       content.style.display = 'block';

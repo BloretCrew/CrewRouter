@@ -120,3 +120,7 @@
   #addProviderModal .modal-footer > .blora-button { flex: 0 0 auto; width: auto; }
   #addProviderModal .provider-api-key-row { flex-wrap: wrap; }
 }
+
+#providerQuotaModal::part(panel) { max-width: min(45rem, calc(100vw - 2rem)) !important; }
+#providerQuotaModal #quotaPeriodDetails > div { overflow-wrap: anywhere; border: var(--blora-border-subtle); border-radius: var(--blora-radius-lg) !important; }
+#providerQuotaModal .modal-footer:not(:has(> button:not([style*="display: none"]):not([style*="display:none"]))) { display: none; }
