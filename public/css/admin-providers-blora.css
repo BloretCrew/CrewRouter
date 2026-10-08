@@ -98,3 +98,6 @@
   #adminProvidersFilters #providerSearchInput { flex-basis: 100%; width: 100%; }
   #adminProvidersFilters blora-select { flex: 1 1 100%; width: 100%; }
 }
+
+.provider-select-all-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-3); padding: var(--blora-space-2) var(--blora-space-3); margin-bottom: var(--blora-space-3); font-size: var(--blora-text-sm); }
+.provider-select-all-hint { color: var(--blora-color-text-subtle); }

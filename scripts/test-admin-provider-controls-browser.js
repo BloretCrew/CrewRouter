@@ -76,6 +76,7 @@ async function main(){
  await cdp.evaluate(`adminApp.setProviderView('card')`);await sleep(300);
  await cdp.evaluate(`document.querySelector('.provider-select-cb').scrollIntoView({block:'center',behavior:'instant'})`);await sleep(350);
  assert.ok(await cdp.click('.provider-select-cb'),'单选供应商');await check(`adminApp.selectedProviders.size===1`,'选择状态');
+ await check(`(()=>{const bar=document.querySelector('.provider-select-all-bar'),cb=document.getElementById('providerSelectAllPage');return cb.getBoundingClientRect().left-bar.getBoundingClientRect().left>=12&&!cb.parentElement.closest('label');})()`,'全选安全间距与独立标签');
  assert.ok(await cdp.click('#providerSelectAllPage'),'全选');await check(`[...document.querySelectorAll('.provider-select-cb')].every(e=>e.checked)`,'全选同步');
  assert.ok(await cdp.click('#providerSelectAllPage'),'取消全选');await check(`adminApp.selectedProviders.size===0`,'取消全选同步');
  const switchSelector='.provider-row-actions > blora-switch';

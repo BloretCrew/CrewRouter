@@ -3089,13 +3089,10 @@ class AdminApp {
     const pageIds = providers.map(p => p.id);
     const allPageSelected = pageIds.length > 0 && pageIds.every(id => this.selectedProviders.has(id));
     const selectAllBar = `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:13px;">
-        <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;">
-          <blora-checkbox id="providerSelectAllPage" aria-label="全选本页" ${allPageSelected ? 'checked' : ''}
+      <div class="provider-select-all-bar">
+          <blora-checkbox id="providerSelectAllPage" label="全选本页" ${allPageSelected ? 'checked' : ''}
             onchange="adminApp.toggleSelectAllProvidersOnPage(this.checked)"></blora-checkbox>
-          <span>全选本页</span>
-        </label>
-        <span style="color:var(--muted-foreground);">勾选后可批量同步模型</span>
+        <span class="provider-select-all-hint">勾选后可批量同步模型</span>
       </div>`;
 
     if (this.providerViewMode === 'card') {
