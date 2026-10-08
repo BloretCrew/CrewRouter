@@ -7689,22 +7689,19 @@ async function(ctx) {
 
     let bodyHtml = '';
     if (log.error_message) {
-      bodyHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('错误信息')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:200px;overflow-y:auto;color:var(--destructive);">${escapeHtml(log.error_message)}</pre></div>`;
+      bodyHtml += `<div class="error-detail-block"><span class="error-detail-label">${t('错误信息')}</span><pre class="error-detail-pre error-detail-pre--message">${escapeHtml(log.error_message)}</pre></div>`;
     }
     if (log.error_body) {
       let pretty = log.error_body;
       try {
         pretty = JSON.stringify(JSON.parse(log.error_body), null, 2);
       } catch { /* keep raw */ }
-      bodyHtml += `<div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);"><span style="color:var(--muted-foreground);font-size:13px;">${t('原始响应')}</span><pre style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(pretty)}</pre></div>`;
+      bodyHtml += `<div class="error-detail-block"><span class="error-detail-label">${t('原始响应')}</span><pre class="error-detail-pre error-detail-pre--body">${escapeHtml(pretty)}</pre></div>`;
     }
 
     const content = document.getElementById('errorDetailContent');
     setHTML(content, rows.map(([label, value]) => `
-      <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
-        <span style="font-size:14px;">${value}</span>
-      </div>
+      <div class="error-detail-row"><span class="error-detail-label">${label}</span><span class="error-detail-value">${value}</span></div>
     `).join('') + bodyHtml);
 
     const modal = document.getElementById('errorDetailModal');
@@ -8146,10 +8143,7 @@ async function(ctx) {
 
     const content = document.getElementById('usageDetailContent');
     setHTML(content, rows.map(([label, value]) => `
-      <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-        <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
-        <span style="font-size:14px;">${value}</span>
-      </div>
+      <div class="error-detail-row"><span class="error-detail-label">${label}</span><span class="error-detail-value">${value}</span></div>
     `).join('') + ModelIdentity.detail(log) + this._customInstructionsSectionHtml(log) + messagesHtml + responseHtml);
 
     // 截断文件「查看全部」展开/收起
@@ -11496,7 +11490,7 @@ async function(ctx) {
         `).join('')}
         <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:12px 0 0;border-bottom:1px solid var(--border);">
           <span style="color:var(--muted-foreground);font-size:13px;">${t('完整内容')}</span>
-          <pre id="adminPromptFullContent" style="background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;white-space:pre-wrap;word-break:break-all;margin:0;max-height:360px;overflow-y:auto;">${escapeHtml(data.content || '')}</pre>
+          <pre id="adminPromptFullContent" class="error-detail-pre error-detail-pre--body">${escapeHtml(data.content || '')}</pre>
         </div>
         <div style="padding:8px 0;"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.copyAdminPromptContent(this)">⧉ ${t('复制内容')}</button></div>
         ${refsHtml}

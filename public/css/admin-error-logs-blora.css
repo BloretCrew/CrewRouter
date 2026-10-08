@@ -78,3 +78,15 @@
     flex: 1 1 100%;
   }
 }
+
+#errorDetailModal::part(panel) { width: min(64rem, calc(100vw - 2rem)); max-width: 64rem; max-height: calc(100dvh - 2rem); }
+#errorDetailModal .modal-content { width: 100%; max-width: none; max-height: calc(100dvh - 2rem); }
+#errorDetailModal .modal-body { min-width: 0; overflow: auto; }
+#errorDetailContent { min-width: 0; }
+.error-detail-row, .error-detail-block { display: grid; grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr); gap: .75rem; align-items: start; padding: .625rem 0; border-bottom: var(--blora-border-subtle); min-width: 0; }
+.error-detail-label { color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); }
+.error-detail-value { min-width: 0; overflow-wrap: anywhere; }
+.error-detail-pre { min-width: 0; max-width: 100%; box-sizing: border-box; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: .75rem; border: var(--blora-border-subtle); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-raised); font: var(--blora-text-xs)/1.55 var(--blora-font-mono); }
+.error-detail-pre--message { max-height: 12rem; color: var(--blora-color-status-danger); }
+.error-detail-pre--body { max-height: 24rem; }
+@media (max-width: 640px) { #errorDetailModal::part(panel) { width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); } .error-detail-row, .error-detail-block { grid-template-columns: 1fr; gap: .25rem; } }
