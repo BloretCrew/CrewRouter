@@ -828,7 +828,7 @@ class AdminApp {
       <div class="setup-form" style="display:grid;gap:12px;">
         <div class="form-group"><label>使用人数 *</label><input id="inviteMaxUses" class="input" type="number" min="1" max="10000" value="1" required></div>
         <div class="form-group"><label>有效天数 *</label><input id="inviteDays" class="input" type="number" min="1" max="365" value="7" required></div>
-        <div class="form-group"><label>加入 Team</label><blora-select id="inviteTeamId" class="input"><blora-option value="">不指定</blora-option>${teamOptions}</blora-select></div>
+        <div class="form-group"><label for="inviteTeamId">加入 Team</label><blora-select id="inviteTeamId" placeholder="不指定 Team" data-i18n-placeholder="不指定 Team"><blora-option value="">不指定 Team</blora-option>${teamOptions}</blora-select></div>
       </div>`;
     const footer = `<button type="button" class="blora-button" data-variant="primary" id="inviteGenerateBtn">生成</button>`;
     const modal = Dialog.showModal({ title: '生成邀请链接', content, footer, width: 480 });
