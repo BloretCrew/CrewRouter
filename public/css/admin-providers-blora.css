@@ -124,3 +124,8 @@
 #providerQuotaModal::part(panel) { max-width: min(45rem, calc(100vw - 2rem)) !important; }
 #providerQuotaModal #quotaPeriodDetails > div { overflow-wrap: anywhere; border: var(--blora-border-subtle); border-radius: var(--blora-radius-lg) !important; }
 #providerQuotaModal .modal-footer:not(:has(> button:not([style*="display: none"]):not([style*="display:none"]))) { display: none; }
+
+.blora-admin-providers-page .admin-card { position: relative; }
+.blora-admin-providers-page .admin-card.has-open-provider-menu { z-index: 30; }
+.blora-admin-providers-page .provider-row-more-wrap { position: relative; z-index: 31; }
+.blora-admin-providers-page .provider-row-dropdown { z-index: 32; min-width: 12rem; }

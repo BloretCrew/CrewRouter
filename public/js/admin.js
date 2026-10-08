@@ -2704,15 +2704,20 @@ class AdminApp {
     const menu = document.getElementById(menuId);
     if (!menu) return;
     const wasOpen = menu.style.display === 'block';
-    document.querySelectorAll('.provider-row-dropdown').forEach(el => { el.style.display = 'none'; });
+    document.querySelectorAll('.provider-row-dropdown').forEach(el => {
+      el.style.display = 'none';
+      el.closest('.admin-card')?.classList.remove('has-open-provider-menu');
+    });
     this._openProviderRowMenuId = null;
     if (!wasOpen) {
       menu.style.display = 'block';
+      menu.closest('.admin-card')?.classList.add('has-open-provider-menu');
       this._openProviderRowMenuId = providerId;
       setTimeout(() => {
         const handler = (ev) => {
           if (!menu.contains(ev.target) && !ev.target.closest(`[data-row-menu-btn="${providerId}"]`)) {
             menu.style.display = 'none';
+            menu.closest('.admin-card')?.classList.remove('has-open-provider-menu');
             this._openProviderRowMenuId = null;
             document.removeEventListener('click', handler);
           }
