@@ -73,10 +73,37 @@ async function main() {
   let status = 200;
   let body = JSON.stringify({ groups: [{ buckets: [{ remainingFraction: 0.5 }] }] });
   let requests = 0;
+  let noPlugin = false;
+  let credentialType = 'codex';
+  let upstreamStatus = 200;
+  let passive = {};
+  let activeBody = { rate_limit: { primary_window: { used_percent: 30 } }, plan_type: 'Pro' };
+  let disabled = false;
   const server = http.createServer((req, res) => {
     requests++;
-    assert.equal(req.url, '/v8/management/plugins/plugin%2Fname/quota?auth_index=account+index');
+    if (!noPlugin) assert.equal(req.url, '/v8/management/plugins/plugin%2Fname/quota?auth_index=account%20index');
     assert.equal(req.headers.authorization, 'Bearer isolated-test-key');
+    if (noPlugin) {
+      if (req.url === '/v8/management/credentials') return res.end(JSON.stringify({ files: [{ auth_index: 'account index', provider: credentialType, disabled, quota: passive, id_token: { chatgpt_account_id: 'acct' } }] }));
+      assert.equal(req.url, '/v8/management/requests/api-call');
+      let text = '';
+      req.on('data', chunk => { text += chunk; });
+      req.on('end', () => {
+        const request = JSON.parse(text);
+        assert.equal(request.auth_index, 'account index');
+        assert.equal(request.header.Authorization, 'Bearer $TOKEN$');
+        assert.equal(request.method, 'GET');
+        if (credentialType === 'codex') {
+          assert.equal(request.url, 'https://chatgpt.com/backend-api/wham/usage');
+          assert.equal(request.header['ChatGPT-Account-Id'], 'acct');
+        } else {
+          assert.equal(request.url, 'https://api.anthropic.com/api/oauth/usage');
+          assert.equal(request.header['anthropic-beta'], 'oauth-2025-04-20');
+        }
+        res.end(JSON.stringify({ status_code: upstreamStatus, body: JSON.stringify(activeBody) }));
+      });
+      return;
+    }
     res.writeHead(status, status === 302 ? { Location: '/secret-target' } : { 'Content-Type': 'application/json' });
     res.end(body);
   });
@@ -105,6 +132,33 @@ async function main() {
     const before = requests;
     await assert.rejects(fetchCpaUsage(provider));
     assert.equal(requests, before + 1);
+    noPlugin = true;
+    provider.quota_script = '{"auth_index":"account index"}';
+    assert.equal((await fetchCpaUsage(provider)).remaining, 70);
+    assert.equal((await fetchCpaUsage(provider)).source, 'active');
+    credentialType = 'claude';
+    activeBody = { five_hour: { utilization: 20, resets_at: '2026-10-08T00:00:00Z' }, seven_day: { utilization: 65 } };
+    assert.equal((await fetchCpaUsage(provider)).remaining, 35);
+    activeBody = {};
+    await assert.rejects(fetchCpaUsage(provider), /没有可用/);
+    upstreamStatus = 401;
+    passive = { observed_at: '2026-10-07T00:00:00Z', signals: { 'Anthropic-Ratelimit-Unified-5h-Utilization': '0.4' } };
+    const fallback = await fetchCpaUsage(provider);
+    assert.equal(fallback.remaining, 60);
+    assert.equal(fallback.source, 'passive');
+    assert.equal(fallback.observedAt, passive.observed_at);
+    credentialType = 'devin'; passive = {};
+    await assert.rejects(fetchCpaUsage(provider), /暂无可用/);
+    credentialType = 'codex';
+    passive = { signals: { 'X-Codex-Primary-Used-Percent': '100' } };
+    assert.equal((await fetchCpaUsage(provider)).remaining, 0);
+    passive = { signals: { 'X-Codex-Primary-Used-Percent': '' } };
+    await assert.rejects(fetchCpaUsage(provider), /HTTP 401/);
+    disabled = true;
+    await assert.rejects(fetchCpaUsage(provider), /已禁用/);
+    disabled = false;
+    provider.quota_script = '{"auth_index":"missing"}';
+    await assert.rejects(fetchCpaUsage(provider), /找不到/);
     provider.cpa_management_url = 'file:///tmp/cpa';
     await assert.rejects(fetchCpaUsage(provider), /HTTP/);
   } finally {

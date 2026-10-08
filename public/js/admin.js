@@ -4445,8 +4445,8 @@ class AdminApp {
       plugin_id: document.getElementById('providerCpaPluginId').value.trim(),
       auth_index: document.getElementById('providerCpaAuthIndex').value.trim()
     } : null;
-    if (cpaConfig && (!cpaConfig.plugin_id || !cpaConfig.auth_index || ['.', '..'].includes(cpaConfig.plugin_id))) {
-      this.showToast(t('请填写有效的 CPA 插件 ID 和账号凭据索引'), 'error');
+    if (cpaConfig && (!cpaConfig.auth_index || ['.', '..'].includes(cpaConfig.plugin_id))) {
+      this.showToast(t('请填写 CPA 账号凭据索引；插件 ID 可留空，填写时必须有效'), 'error');
       this._setProviderFormSectionsOpen({ modelsQuota: true });
       return;
     }
@@ -5968,7 +5968,7 @@ async function(ctx) {
   }
 
   _cpaQuotaConfigHint() {
-    return t('plugin_id 是已加载的 CPA 额度插件 ID，auth_index 是目标账号凭据的索引。在供应商编辑窗口填写管理地址、管理密钥、插件 ID 和账号凭据索引，随供应商设置一起保存。管理密钥加密存储，编辑时留空保留原值。');
+    return t('plugin_id 可选：填写已加载的额度插件 ID 时使用插件模式；留空时自动读取账号类型，Codex/Claude 支持主动查询，其他账号仅读取被动额度，有数据才展示。auth_index 必填，为目标账号凭据索引。在供应商编辑窗口填写管理地址、管理密钥和账号凭据索引，随供应商设置一起保存。管理密钥加密存储，编辑时留空保留原值。');
   }
 
   // 打开脚本编辑器
@@ -6039,9 +6039,10 @@ async function(ctx) {
       try {
         const config = JSON.parse(script);
         if (!config || Array.isArray(config) || typeof config !== 'object'
-          || typeof config.plugin_id !== 'string' || !config.plugin_id.trim()
+          || (config.plugin_id !== undefined && (typeof config.plugin_id !== 'string'
+            || ['.', '..'].includes(config.plugin_id.trim())))
           || typeof config.auth_index !== 'string' || !config.auth_index.trim()) {
-          throw new Error(t('plugin_id 和 auth_index 必须为非空字符串'));
+          throw new Error(t('auth_index 必须为非空字符串；plugin_id 可省略或为空字符串，填写时必须为有效的插件 ID'));
         }
       } catch (e) {
         alert(t('CPA 配置无效: ') + e.message);

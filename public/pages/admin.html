@@ -1830,7 +1830,7 @@
               <label for="providerQuotaMode"><span data-i18n="额度查询方式">额度查询方式</span></label>
               <blora-select id="providerQuotaMode" class="select" onchange="adminApp.toggleCodexQuotaImport();adminApp.toggleArkQuotaConfig()">
                 <blora-option value="script"><span data-i18n="通用脚本（按 Base URL 查询）">通用脚本（按 Base URL 查询）</span></blora-option>
-                <blora-option value="cpa"><span data-i18n="CPA 额度插件（服务器管理接口）">CPA 额度插件（服务器管理接口）</span></blora-option>
+                <blora-option value="cpa"><span data-i18n="CPA 额度查询（服务器管理接口）">CPA 额度查询（服务器管理接口）</span></blora-option>
                 <blora-option value="opencode_go">OpenCode Go（/zen/go/v1/usage）</blora-option>
                 <blora-option value="codex_wham">Codex WHAM（ChatGPT OAuth）</blora-option>
                 <blora-option value="grok_billing">SuperGrok（Grok CLI OAuth）</blora-option>
@@ -1853,8 +1853,8 @@
                 <small id="providerCpaKeyStatus" style="color:var(--muted-foreground);"></small>
               </div>
               <div class="form-group">
-                <label for="providerCpaPluginId"><span data-i18n="CPA 额度插件 ID">CPA 额度插件 ID</span></label>
-                <input type="text" id="providerCpaPluginId" class="input" placeholder="plugin_id">
+                <label for="providerCpaPluginId"><span data-i18n="CPA 额度插件 ID（可选）">CPA 额度插件 ID（可选）</span></label>
+                <input type="text" id="providerCpaPluginId" class="input" placeholder="留空自动读取账号类型" data-i18n-placeholder="留空自动读取账号类型">
               </div>
               <div class="form-group">
                 <label for="providerCpaAuthIndex"><span data-i18n="CPA 账号凭据索引">CPA 账号凭据索引</span></label>

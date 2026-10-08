@@ -66,13 +66,13 @@ assert.ok(await c.evaluate("document.getElementById('cpaQuotaConfigSection').sty
 await c.evaluate("document.getElementById('providerCpaAuthIndex').value=''");await click('#saveProviderBtn');assert.equal(await c.evaluate('writes.length'),0);
 async function type(selector,text){await click(selector);await c.evaluate(`document.querySelector(${JSON.stringify(selector)}).value=''`);await c.send('Input.insertText',{text});}
 await type('#providerCpaManagementUrl','http://127.0.0.1:8318');await type('#providerCpaManagementKey','isolated-new-key');
-await type('#providerCpaPluginId','new-plugin');await type('#providerCpaAuthIndex','new-account');
+await type('#providerCpaPluginId','');await type('#providerCpaAuthIndex','new-account');
 await c.evaluate('window.saveFail=true');await click('#saveProviderBtn');assert.ok(await c.evaluate("document.getElementById('addProviderModal').hasAttribute('open')"));
 assert.equal(await c.evaluate('JSON.parse(savedProvider.quota_script).plugin_id'),'old-plugin');
 await c.evaluate('window.saveFail=false');await click('#saveProviderBtn');await wait("!document.getElementById('addProviderModal').hasAttribute('open')");
 assert.equal(await c.evaluate('writes.at(-1).cpa_management_key'),'isolated-new-key');
 assert.equal(await c.evaluate('writes.at(-1).cpa_management_url'),'http://127.0.0.1:8318');
-assert.deepEqual(JSON.parse(await c.evaluate('savedProvider.quota_script')),{plugin_id:'new-plugin',auth_index:'new-account'});
+assert.deepEqual(JSON.parse(await c.evaluate('savedProvider.quota_script')),{plugin_id:'',auth_index:'new-account'});
 await c.evaluate('adminApp.editProvider(savedProvider);adminApp._setProviderFormSectionsOpen({modelsQuota:true})');
 assert.equal(await c.evaluate("document.getElementById('providerCpaManagementKey').value"),'');
 assert.equal(await c.evaluate("document.getElementById('providerCpaAuthIndex').value"),'new-account');
@@ -82,7 +82,7 @@ await c.evaluate("document.getElementById('providerQuotaMode').value='script';do
 assert.ok(await c.evaluate("document.getElementById('cpaQuotaConfigSection').style.display==='none'"));
 await click('#saveProviderBtn');await wait("!document.getElementById('addProviderModal').hasAttribute('open')");assert.ok(await c.evaluate("!Object.hasOwn(writes.at(-1),'quota_script')"));
 await c.evaluate("savedProvider.quota_mode='cpa';adminApp.editProvider(savedProvider);adminApp._setProviderFormSectionsOpen({modelsQuota:true})");
-assert.equal(await c.evaluate("document.getElementById('providerCpaPluginId').value"),'new-plugin');
+assert.equal(await c.evaluate("document.getElementById('providerCpaPluginId').value"),'');
 assert.ok(await c.evaluate("document.getElementById('providerCpaAuthIndex').getBoundingClientRect().right<=innerWidth"));
 await c.evaluate("document.getElementById('addProviderModal').close();adminApp.providersData.push(savedProvider);adminApp.checkProviderQuota('cpa-test')");await wait("document.getElementById('quotaContent').style.display==='block'");assert.equal(await c.evaluate("document.getElementById('quotaRemaining').textContent"),'50');assert.equal(await c.evaluate("document.getElementById('quotaEditBtn').style.display"),'none');
 await c.evaluate("window.fail=true;adminApp.checkProviderQuota('cpa-test')");await wait("document.getElementById('quotaError').style.display==='block'");assert.ok(await c.evaluate("document.getElementById('quotaError').textContent.includes('502')"));
