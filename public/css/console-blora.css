@@ -359,6 +359,20 @@
 }
 
 .blora-page .content-header h1,
+.blora-page .usage-logs-table { width: 100%; min-width: 82rem; table-layout: fixed; }
+.blora-page .usage-logs-table .usage-col-time { width: 12rem; }
+.blora-page .usage-logs-table .usage-col-model { width: 20rem; }
+.blora-page .usage-logs-table .usage-col-series { width: 10rem; }
+.blora-page .usage-logs-table .usage-col-source { width: 13rem; }
+.blora-page .usage-logs-table .usage-col-key { width: 18rem; }
+.blora-page .usage-logs-table .usage-col-tokens { width: 10rem; }
+.blora-page .usage-logs-table .usage-col-cache { width: 10rem; }
+.blora-page .usage-logs-table .usage-col-cost { width: 10rem; }
+.blora-page .usage-logs-table th, .blora-page .usage-logs-table td { box-sizing: border-box; }
+.blora-page .usage-logs-table td:nth-child(2), .blora-page .usage-logs-table td:nth-child(4), .blora-page .usage-logs-table td:nth-child(5) { overflow-wrap: anywhere; }
+.blora-page .usage-logs-table .model-identity-summary { width: 100%; max-width: 100%; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .blora-page #usageLogsList { overflow-x: auto; } .blora-page .usage-logs-table { min-width: 82rem; } }
+
 .blora-page .content-section h2,
 .blora-page .model-library-page h2 {
   color: var(--blora-color-text-primary);

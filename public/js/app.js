@@ -6136,7 +6136,8 @@ class ConsoleApp {
       }
 
       setHTML(container, `
-        <table>
+        <table class="usage-logs-table">
+          <colgroup><col class="usage-col-time"><col class="usage-col-model"><col class="usage-col-series"><col class="usage-col-source"><col class="usage-col-key"><col class="usage-col-tokens"><col class="usage-col-cache"><col class="usage-col-cost"></colgroup>
           <thead>
             <tr>
               <th>时间</th>
