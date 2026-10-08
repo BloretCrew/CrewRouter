@@ -104,8 +104,8 @@
   }
 }
 
-.blora-prompts-page .admin-filter-bar blora-select { display: block; flex: 1 1 10rem; min-width: 0; }
-.blora-prompts-page .admin-filter-bar blora-select::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
+.blora-prompts-page .admin-filter-bar > blora-select { display: block; flex: 1 1 10rem; width: 100%; min-width: 0; border: 0; background: transparent; box-shadow: none; }
+.blora-prompts-page .admin-filter-bar > blora-select::part(trigger) { box-sizing: border-box; width: 100%; min-height: 2.5rem; }
 .blora-prompts-page #injectPromptsList .model-library-item-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-2); }
 #promptDetailTitle { overflow-wrap: anywhere; }
 #promptDetailContent > div > span, #promptDetailContent pre { min-width: 0; overflow-wrap: anywhere; }

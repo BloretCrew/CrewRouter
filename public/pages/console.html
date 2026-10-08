@@ -46,7 +46,7 @@
   <link rel="stylesheet" href="/css/settings-blora.css?v=notifications-20261005">
   <link rel="stylesheet" href="/css/sessions-blora.css?v=attachments-20261005">
   <link rel="stylesheet" href="/css/blora-agent.css?v=options-layout-20261005">
-  <link rel="stylesheet" href="/css/prompts-blora.css?v=inject-editor-20261005">
+  <link rel="stylesheet" href="/css/prompts-blora.css?v=filter-labels-20261008">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
   <script>
     (function() {
@@ -1161,7 +1161,7 @@
               <blora-option value="deepseek_harness">DeepSeek Harness</blora-option>
               <blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
             </blora-select>
-            <blora-select id="promptSortSelect" value="count" style="min-width:130px;">
+            <blora-select id="promptSortSelect" value="count" placeholder="按出现次数排序" data-i18n-placeholder="按出现次数排序" style="min-width:130px;">
               <blora-option value="count"><span data-i18n="按出现次数排序">按出现次数排序</span></blora-option>
               <blora-option value="last_seen"><span data-i18n="按最近出现排序">按最近出现排序</span></blora-option>
               <blora-option value="first_seen"><span data-i18n="按首次出现排序">按首次出现排序</span></blora-option>
