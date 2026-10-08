@@ -1,5 +1,7 @@
 'use strict';
 
+const { decryptSecret } = require('./secret-crypto');
+
 function parseCpaQuotaConfig(text) {
   let config;
   try { config = JSON.parse(text || '{}'); } catch { throw new Error('CPA 额度配置必须是 JSON'); }
@@ -46,15 +48,15 @@ function normalizeCpaQuota(data) {
 
 async function fetchCpaUsage(provider) {
   const { pluginId, authIndex } = parseCpaQuotaConfig(provider.quota_script);
-  const key = process.env.CPA_MANAGEMENT_KEY;
-  if (!key) throw new Error('服务器未配置 CPA_MANAGEMENT_KEY');
+  const key = decryptSecret(provider.cpa_management_key || '');
+  if (!key) throw new Error('供应商未配置 CPA 管理密钥');
   let base;
-  try { base = new URL(process.env.CPA_MANAGEMENT_URL || 'http://127.0.0.1:8317'); } catch { throw new Error('CPA_MANAGEMENT_URL 无效'); }
-  if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.search || base.hash) throw new Error('CPA_MANAGEMENT_URL 必须为 HTTP(S) 管理地址');
+  try { base = new URL(provider.cpa_management_url || ''); } catch { throw new Error('CPA 管理地址无效'); }
+  if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.search || base.hash) throw new Error('CPA 管理地址必须为 HTTP(S) 地址');
   const root = base.pathname.replace(/\/+$/, '').replace(/\/v[08]\/management$/, '');
   base.pathname = `${root}/v8/management/plugins/${encodeURIComponent(pluginId)}/quota`;
   base.searchParams.set('auth_index', authIndex);
-  // 地址只来自服务器配置，允许本地 CPA；禁止重定向泄露管理密钥。
+  // 地址由管理员配置，允许本地 CPA；禁止重定向泄露管理密钥。
   const response = await fetch(base, { headers: { Authorization: `Bearer ${key}` }, redirect: 'error', signal: AbortSignal.timeout(15000) });
   if (!response.ok) {
     const hints = { 401: '管理密钥无效', 403: '管理接口访问被拒绝', 404: '账号、插件或 v8 额度接口不存在', 502: '插件查询上游失败' };

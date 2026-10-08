@@ -4250,6 +4250,10 @@ class AdminApp {
     if (quotaEl) quotaEl.value = 'false';
     const quotaModeEl = document.getElementById('providerQuotaMode');
     if (quotaModeEl) quotaModeEl.value = 'script';
+    document.getElementById('providerCpaManagementUrl').value = '';
+    document.getElementById('providerCpaManagementKey').value = '';
+    document.getElementById('providerCpaKeyStatus').textContent = '';
+    this._hasCpaManagementKey = false;
     document.getElementById('providerCpaPluginId').value = '';
     document.getElementById('providerCpaAuthIndex').value = '';
     const scheduleEl = document.getElementById('providerQuotaScheduleEnabled');
@@ -4349,6 +4353,10 @@ class AdminApp {
     if (quotaEl) quotaEl.value = (provider.quota_enabled || false).toString();
     const quotaModeEl = document.getElementById('providerQuotaMode');
     if (quotaModeEl) quotaModeEl.value = provider.quota_mode || 'script';
+    document.getElementById('providerCpaManagementUrl').value = provider.cpa_management_url || '';
+    document.getElementById('providerCpaManagementKey').value = '';
+    this._hasCpaManagementKey = !!provider.has_cpa_management_key;
+    document.getElementById('providerCpaKeyStatus').textContent = this._hasCpaManagementKey ? t('已配置，留空保留原值') : t('尚未配置');
     let cpaConfig = {};
     if (provider.quota_mode === 'cpa') {
       try { cpaConfig = JSON.parse(provider.quota_script || '{}') || {}; } catch (_) { /* 保存时校验配置。 */ }
@@ -4426,6 +4434,13 @@ class AdminApp {
     const enabled = document.getElementById('providerEnabled').value === 'true';
     const quota_enabled = document.getElementById('providerQuotaEnabled')?.value === 'true';
     const quota_mode = document.getElementById('providerQuotaMode')?.value || 'script';
+    const cpaManagementUrl = document.getElementById('providerCpaManagementUrl').value.trim();
+    const cpaManagementKey = document.getElementById('providerCpaManagementKey').value.trim();
+    if (quota_mode === 'cpa' && (!cpaManagementUrl || (!cpaManagementKey && !this._hasCpaManagementKey))) {
+      this.showToast(t('请填写 CPA 管理地址和管理密钥'), 'error');
+      this._setProviderFormSectionsOpen({ modelsQuota: true });
+      return;
+    }
     const cpaConfig = quota_mode === 'cpa' ? {
       plugin_id: document.getElementById('providerCpaPluginId').value.trim(),
       auth_index: document.getElementById('providerCpaAuthIndex').value.trim()
@@ -4481,7 +4496,11 @@ class AdminApp {
         ark_usage_params: document.getElementById('providerArkParams')?.value.trim() || '{}',
         ...proxyFields
       };
-      if (cpaConfig) body.quota_script = JSON.stringify(cpaConfig);
+      if (cpaConfig) {
+        body.quota_script = JSON.stringify(cpaConfig);
+        body.cpa_management_url = cpaManagementUrl;
+        if (cpaManagementKey) body.cpa_management_key = cpaManagementKey;
+      }
       if (id) body.id = id;
       body.models_url = models_url || '';
 
@@ -5949,7 +5968,7 @@ async function(ctx) {
   }
 
   _cpaQuotaConfigHint() {
-    return t('plugin_id 是已加载的 CPA 额度插件 ID，auth_index 是目标账号凭据的索引。管理地址和管理密钥仅在服务器环境 CPA_MANAGEMENT_URL、CPA_MANAGEMENT_KEY 中配置，请勿写入浏览器配置。在供应商编辑窗口填写插件 ID 和账号凭据索引，随供应商设置一起保存。');
+    return t('plugin_id 是已加载的 CPA 额度插件 ID，auth_index 是目标账号凭据的索引。在供应商编辑窗口填写管理地址、管理密钥、插件 ID 和账号凭据索引，随供应商设置一起保存。管理密钥加密存储，编辑时留空保留原值。');
   }
 
   // 打开脚本编辑器

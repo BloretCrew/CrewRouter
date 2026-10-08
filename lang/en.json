@@ -2746,11 +2746,16 @@
   "CPA 额度插件（服务器管理接口）": "CPA quota plugin (server management API)",
   "CPA 额度配置（JSON）": "CPA quota configuration (JSON)",
   "编辑配置": "Edit configuration",
-  "plugin_id 是已加载的 CPA 额度插件 ID，auth_index 是目标账号凭据的索引。管理地址和管理密钥仅在服务器环境 CPA_MANAGEMENT_URL、CPA_MANAGEMENT_KEY 中配置，请勿写入浏览器配置。在供应商编辑窗口填写插件 ID 和账号凭据索引，随供应商设置一起保存。": "plugin_id identifies a loaded CPA quota plugin, and auth_index is the target account credential index. Configure the management URL and key only through the server environment variables CPA_MANAGEMENT_URL and CPA_MANAGEMENT_KEY; do not put them in browser configuration. Enter the plugin ID and credential index in the provider editor and save them with the provider settings.",
+  "plugin_id 是已加载的 CPA 额度插件 ID，auth_index 是目标账号凭据的索引。在供应商编辑窗口填写管理地址、管理密钥、插件 ID 和账号凭据索引，随供应商设置一起保存。管理密钥加密存储，编辑时留空保留原值。": "plugin_id identifies a loaded CPA quota plugin, and auth_index is the target account credential index. Enter the management URL, management key, plugin ID and credential index in the provider editor. The key is encrypted; leave it blank when editing to keep the saved key.",
   "加载额度配置失败: ": "Failed to load quota configuration: ",
   "plugin_id 和 auth_index 必须为非空字符串": "plugin_id and auth_index must be non-empty strings",
   "CPA 配置无效: ": "Invalid CPA configuration: ",
   "CPA 额度插件 ID": "CPA quota plugin ID",
   "CPA 账号凭据索引": "CPA credential index",
-  "请填写有效的 CPA 插件 ID 和账号凭据索引": "Enter a valid CPA plugin ID and credential index"
+  "请填写有效的 CPA 插件 ID 和账号凭据索引": "Enter a valid CPA plugin ID and credential index",
+  "CPA 管理地址": "CPA management URL",
+  "CPA 管理密钥": "CPA management key",
+  "首次填写，编辑时留空保留原值": "Required initially; leave blank when editing to keep the saved key",
+  "请填写 CPA 管理地址和管理密钥": "Enter the CPA management URL and key",
+  "已配置，留空保留原值": "Configured; leave blank to keep the saved key"
 }

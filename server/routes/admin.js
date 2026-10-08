@@ -1866,13 +1866,14 @@ router.get('/providers', requireAuth, requireAdmin, async (req, res) => {
 
     // 列表脱敏：不返回完整 api_key / api_keys，仅标记是否已配置与数量
     const maskProvider = (r, tagMap) => {
-      const { api_key, api_keys, ark_secret_key, ...rest } = r;
+      const { api_key, api_keys, ark_secret_key, cpa_management_key, ...rest } = r;
       const keyCount = countProviderApiKeys(r);
       return {
         ...rest,
         has_api_key: keyCount > 0,
         api_key_count: keyCount,
         has_ark_secret_key: !!ark_secret_key,
+        has_cpa_management_key: !!cpa_management_key,
         api_key_select_mode: getApiKeySelectMode(r),
         tags: tagMap[r.id] || []
       };
@@ -2059,6 +2060,8 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS proxy_url TEXT DEFAULT ''`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS proxy_use_system BOOLEAN DEFAULT FALSE`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS quota_mode VARCHAR(32) DEFAULT 'script'`);
+      await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS cpa_management_url TEXT DEFAULT ''`);
+      await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS cpa_management_key TEXT DEFAULT ''`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_access_key TEXT DEFAULT ''`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_secret_key TEXT DEFAULT ''`);
       await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_region VARCHAR(64) DEFAULT 'cn-north-1'`);
@@ -2094,6 +2097,18 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
         return res.status(400).json({ error: error.message });
       }
     }
+    const cpaUrlProvided = Object.hasOwn(req.body, 'cpa_management_url');
+    const cpaManagementUrl = typeof req.body.cpa_management_url === 'string' ? req.body.cpa_management_url.trim() : '';
+    const cpaManagementKey = typeof req.body.cpa_management_key === 'string' ? req.body.cpa_management_key.trim() : '';
+    if (finalQuotaMode === 'cpa') {
+      try {
+        const url = new URL(cpaManagementUrl);
+        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error();
+      } catch (_) { return res.status(400).json({ error: '请填写有效的 CPA HTTP(S) 管理地址' }); }
+      const current = id ? await pool.query('SELECT cpa_management_key FROM providers WHERE id = $1', [id]) : { rows: [] };
+      if (!cpaManagementKey && !current.rows[0]?.cpa_management_key) return res.status(400).json({ error: '请填写 CPA 管理密钥' });
+    }
+    const encryptedCpaKey = cpaManagementKey ? encryptSecret(cpaManagementKey) : '';
     const testUaProvided = Object.prototype.hasOwnProperty.call(req.body, 'test_user_agent');
     const finalTestUserAgent = normalizeTestUserAgent(test_user_agent);
     const scheduleProvided = Object.prototype.hasOwnProperty.call(req.body, 'quota_schedule_enabled')
@@ -2126,8 +2141,8 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
       INSERT INTO providers (id, name, base_url, api_key, api_keys, api_key_select_mode, format, enabled, grp, models_url, quota_enabled, quota_mode, notes,
                              key_mode, key_script, key_refresh_interval, proxy_enabled, proxy_mode, proxy_url, proxy_use_system,
                              content_type_mode, forward_headers, test_user_agent, ark_access_key, ark_secret_key, ark_region, ark_service, ark_usage_action, ark_usage_params,
-                             quota_schedule_enabled, quota_schedule_interval, quota_script)
-      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $31, $32, $34)
+                             quota_schedule_enabled, quota_schedule_interval, quota_script, cpa_management_url, cpa_management_key)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $31, $32, $34, $35, $36)
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         base_url = EXCLUDED.base_url,
@@ -2146,6 +2161,8 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
         models_url = COALESCE(NULLIF(EXCLUDED.models_url, ''), providers.models_url),
         quota_enabled = EXCLUDED.quota_enabled,
         quota_mode = EXCLUDED.quota_mode,
+        cpa_management_url = CASE WHEN $37 THEN EXCLUDED.cpa_management_url ELSE providers.cpa_management_url END,
+        cpa_management_key = CASE WHEN EXCLUDED.cpa_management_key <> '' THEN EXCLUDED.cpa_management_key ELSE providers.cpa_management_key END,
         quota_script = CASE WHEN EXCLUDED.quota_mode = 'cpa' THEN EXCLUDED.quota_script ELSE providers.quota_script END,
         notes = EXCLUDED.notes,
         key_mode = EXCLUDED.key_mode,
@@ -2172,7 +2189,7 @@ router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADM
         content_type_mode || 'hardcoded', forward_headers !== false, finalTestUserAgent,
         ark_access_key || '', ark_secret_key || '', ark_region || 'cn-north-1', ark_service || 'ark',
         ark_usage_action || (finalQuotaMode === 'ark_afp' ? 'GetAFPUsage' : 'GetInferenceUsage'), ark_usage_params || '{}',
-        testUaProvided, finalScheduleEnabled, finalScheduleInterval, scheduleProvided, cpaQuotaScript]);
+        testUaProvided, finalScheduleEnabled, finalScheduleInterval, scheduleProvided, cpaQuotaScript, cpaManagementUrl, encryptedCpaKey, cpaUrlProvided]);
 
     // 注册/更新密钥刷新计划
     keyRefresher.registerProvider({ id: providerId, key_mode: keyMode, key_refresh_interval: keyRefreshInterval });
@@ -2424,8 +2441,10 @@ router.get('/providers/:id', requireAuth, requireAdmin, async (req, res) => {
       tags = tr.rows;
     } catch (_) { /* 标签表可能未创建 */ }
 
+    const { cpa_management_key, ...publicProvider } = p;
     res.json({
-      ...p,
+      ...publicProvider,
+      has_cpa_management_key: !!cpa_management_key,
       api_keys: entries,
       api_key: entries[0]?.key || p.api_key || '',
       api_key_select_mode: getApiKeySelectMode(p),

@@ -1554,6 +1554,8 @@ async function ensureProviderQuotaEnabled() {
 // 为 providers 添加火山方舟查询凭据与参数字段
 async function ensureProviderArkUsageColumns() {
   try {
+    await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS cpa_management_url TEXT DEFAULT ''`);
+    await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS cpa_management_key TEXT DEFAULT ''`);
     await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_access_key TEXT DEFAULT ''`);
     await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_secret_key TEXT DEFAULT ''`);
     await pool.query(`ALTER TABLE providers ADD COLUMN IF NOT EXISTS ark_region VARCHAR(64) DEFAULT 'cn-north-1'`);
