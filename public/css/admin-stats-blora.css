@@ -331,3 +331,6 @@
 .admin-stats-range label { flex-shrink: 0; white-space: nowrap; color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); }
 #adminStatsDays { display: block; width: 10rem; min-width: 0; }
 #adminStatsDays::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
+
+#adminStatsMultiFilters blora-select { display: block; width: 100%; min-width: 0; }
+#adminStatsMultiFilters blora-select::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }

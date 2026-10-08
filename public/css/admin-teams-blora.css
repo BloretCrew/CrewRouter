@@ -157,3 +157,11 @@
     flex: 1 1 100%;
   }
 }
+
+.blora-admin-teams-page .admin-stat-card-icon img { filter: brightness(0) saturate(100%); opacity: .7; }
+
+.blora-admin-teams-page .team-card { display: flex; flex-direction: column; min-width: 0; }
+.blora-admin-teams-page .team-card-header { align-items: flex-start; gap: var(--blora-space-2); }
+.blora-admin-teams-page .team-card-header h3 { min-width: 0; overflow-wrap: anywhere; }
+.blora-admin-teams-page .team-description { overflow-wrap: anywhere; }
+.blora-admin-teams-page .team-card-footer { margin-top: auto; padding-top: var(--blora-space-3); gap: var(--blora-space-2); flex-wrap: wrap; }

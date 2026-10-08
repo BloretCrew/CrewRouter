@@ -917,8 +917,8 @@ class AdminApp {
               <td style="font-size:12px;">${this.formatRateLimit(user.rate_limit_rpm, user.rate_limit_tpm)}</td>
               <td style="color:var(--muted-foreground);font-size:12px;">${new Date(user.created_at).toLocaleDateString('zh-CN')}</td>
               <td>
-                <button class="blora-button" title="${t('编辑')}" aria-label="${t('编辑')}" onclick="adminApp.editUserById(${user.id})" data-variant="secondary" data-size="icon">
-                  <img src="https://img.bloret.net/SF/pencil?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="pencil">
+                <button class="blora-button" title="${t('编辑')}" aria-label="${t('编辑')}" onclick="adminApp.editUserById(${user.id})" data-variant="outline" data-size="sm">
+                  <span>${t('编辑')}</span>
                 </button>
               </td>
             </tr>

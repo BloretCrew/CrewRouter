@@ -104,3 +104,5 @@
     flex: 1 1 100%;
   }
 }
+
+.blora-admin-users-page .admin-stat-card-icon img { filter: brightness(0) saturate(100%); opacity: .7; }

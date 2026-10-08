@@ -27,14 +27,14 @@
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/admin-stats-blora.css?v=time-range-20261005">
+  <link rel="stylesheet" href="/css/admin-stats-blora.css?v=multi-filters-20261005">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/badges-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/admin-users-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/admin-teams-blora.css?v=restore-0930-mobile-20261003">
+  <link rel="stylesheet" href="/css/admin-users-blora.css?v=cards-20261005">
+  <link rel="stylesheet" href="/css/admin-teams-blora.css?v=cards-20261005">
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=header-actions-20261005">
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=select-all-20261005">
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=restore-0930-20261003">
@@ -820,13 +820,13 @@
               <div class="multi-stats-legend"><span class="multi-stats-dot"></span><span data-i18n="当前统计周期">当前统计周期</span></div>
             </div>
             <div class="admin-filter-bar multi-stats-filters" id="adminStatsMultiFilters">
-              <label><span data-i18n="成员">成员</span><blora-select id="multiStatsUser" class="input"><blora-option value=""><span data-i18n="全部成员">全部成员</span></blora-option></blora-select></label>
-              <label>Team<blora-select id="multiStatsTeam" class="input"><blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option></blora-select></label>
+              <label><span data-i18n="成员">成员</span><blora-select id="multiStatsUser" placeholder="全部成员" data-i18n-placeholder="全部成员"><blora-option value=""><span data-i18n="全部成员">全部成员</span></blora-option></blora-select></label>
+              <label>Team<blora-select id="multiStatsTeam" placeholder="全部 Team" data-i18n-placeholder="全部 Team"><blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option></blora-select></label>
 
-              <label><span data-i18n="模型">模型</span><blora-select id="multiStatsModel" class="input"><blora-option value=""><span data-i18n="全部模型">全部模型</span></blora-option></blora-select></label>
-              <label><span data-i18n="供应商">供应商</span><blora-select id="multiStatsProvider" class="input"><blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option></blora-select></label>
-              <label><span data-i18n="客户端">客户端</span><blora-select id="multiStatsSource" class="input"><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option></blora-select></label>
-              <label><span data-i18n="项目">项目</span><blora-select id="multiStatsProject" class="input"><blora-option value=""><span data-i18n="全部项目">全部项目</span></blora-option></blora-select></label>
+              <label><span data-i18n="模型">模型</span><blora-select id="multiStatsModel" placeholder="全部模型" data-i18n-placeholder="全部模型"><blora-option value=""><span data-i18n="全部模型">全部模型</span></blora-option></blora-select></label>
+              <label><span data-i18n="供应商">供应商</span><blora-select id="multiStatsProvider" placeholder="全部供应商" data-i18n-placeholder="全部供应商"><blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option></blora-select></label>
+              <label><span data-i18n="客户端">客户端</span><blora-select id="multiStatsSource" placeholder="全部客户端" data-i18n-placeholder="全部客户端"><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option></blora-select></label>
+              <label><span data-i18n="项目">项目</span><blora-select id="multiStatsProject" placeholder="全部项目" data-i18n-placeholder="全部项目"><blora-option value=""><span data-i18n="全部项目">全部项目</span></blora-option></blora-select></label>
               <div class="multi-stats-filter-actions"><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.loadMultiStats()"><span data-i18n="查询">查询</span></button><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="adminApp.resetMultiStatsFilters()"><span data-i18n="重置">重置</span></button></div>
             </div>
             <section id="adminMultiDimension" class="multi-dimension-panel" aria-label="自选多维分析">
@@ -2447,7 +2447,7 @@
   <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/admin.js?v=provider-select-all-20261005"></script>
+  <script src="/js/admin.js?v=user-team-controls-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
     // 移动端侧边栏切换
