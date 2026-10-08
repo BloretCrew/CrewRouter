@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-users-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=restore-0930-mobile-20261003">
-  <link rel="stylesheet" href="/css/admin-models-blora.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/admin-models-blora.css?v=filter-labels-20261005">
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=select-all-20261005">
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=restore-0930-20261003">
@@ -350,10 +350,10 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               <input type="text" id="adminModelsStickySearch" class="model-search-input" placeholder="搜索模型名称、上游 ID、系列..." data-i18n-placeholder="搜索模型名称、上游 ID、系列..." autocomplete="off" oninput="adminApp.onAdminModelFilterInput('search', this.value, 'sticky')">
             </div>
-            <blora-select id="adminModelsStickyProvider" class="select model-library-sticky-select" aria-label="供应商筛选" data-i18n-title="供应商筛选" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'sticky')">
+            <blora-select id="adminModelsStickyProvider" placeholder="全部供应商" data-i18n-placeholder="全部供应商" class="model-library-sticky-select" aria-label="供应商筛选" data-i18n-title="供应商筛选" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'sticky')">
               <blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
             </blora-select>
-            <blora-select id="adminModelsStickyStatus" class="select model-library-sticky-select" aria-label="状态筛选" data-i18n-title="状态筛选" onchange="adminApp.onAdminModelFilterInput('status', this.value, 'sticky')">
+            <blora-select id="adminModelsStickyStatus" placeholder="全部状态" data-i18n-placeholder="全部状态" class="model-library-sticky-select" aria-label="状态筛选" data-i18n-title="状态筛选" onchange="adminApp.onAdminModelFilterInput('status', this.value, 'sticky')">
               <blora-option value=""><span data-i18n="全部状态">全部状态</span></blora-option>
               <blora-option value="enabled"><span data-i18n="已启用">已启用</span></blora-option>
               <blora-option value="disabled"><span data-i18n="已禁用">已禁用</span></blora-option>
@@ -364,10 +364,10 @@
             <button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.showAddModelModal()" title="添加模型" data-i18n-title="添加模型"><span data-i18n="添加模型">添加模型</span></button>
           </div>
           <div id="adminModelsStickyAdvanced" class="model-library-sticky-advanced" style="display:none;" aria-hidden="true">
-            <blora-select id="adminModelsStickySeries" class="select model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'sticky')">
+            <blora-select id="adminModelsStickySeries" placeholder="全部系列" data-i18n-placeholder="全部系列" class="model-library-sticky-select" aria-label="系列筛选" data-i18n-title="系列筛选" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'sticky')">
               <blora-option value=""><span data-i18n="全部系列">全部系列</span></blora-option>
             </blora-select>
-            <blora-select id="adminModelsStickyTest" class="select model-library-sticky-select" aria-label="测试状态" data-i18n-title="测试状态" onchange="adminApp.onAdminModelFilterInput('test', this.value, 'sticky')">
+            <blora-select id="adminModelsStickyTest" placeholder="全部测试状态" data-i18n-placeholder="全部测试状态" class="model-library-sticky-select" aria-label="测试状态" data-i18n-title="测试状态" onchange="adminApp.onAdminModelFilterInput('test', this.value, 'sticky')">
               <blora-option value=""><span data-i18n="全部测试状态">全部测试状态</span></blora-option>
               <blora-option value="pass"><span data-i18n="测试通过">测试通过</span></blora-option>
               <blora-option value="fail"><span data-i18n="测试失败">测试失败</span></blora-option>
@@ -431,27 +431,27 @@
               <input type="search" id="modelSearchInput" class="blora-input model-search-input" placeholder="搜索模型名称、上游 ID、系列..." data-i18n-placeholder="搜索模型名称、上游 ID、系列..." oninput="adminApp.onAdminModelFilterInput('search', this.value, 'main')">
             </div>
             <div class="model-filter-selects admin-models-filter-selects">
-              <blora-select id="modelProviderFilter" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'main')">
+              <blora-select id="modelProviderFilter" placeholder="全部供应商" data-i18n-placeholder="全部供应商" onchange="adminApp.onAdminModelFilterInput('provider', this.value, 'main')">
                 <blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
               </blora-select>
-              <blora-select id="modelStatusFilter" onchange="adminApp.onAdminModelFilterInput('status', this.value, 'main')">
+              <blora-select id="modelStatusFilter" placeholder="全部状态" data-i18n-placeholder="全部状态" onchange="adminApp.onAdminModelFilterInput('status', this.value, 'main')">
                 <blora-option value=""><span data-i18n="全部状态">全部状态</span></blora-option>
                 <blora-option value="enabled"><span data-i18n="已启用">已启用</span></blora-option>
                 <blora-option value="disabled"><span data-i18n="已禁用">已禁用</span></blora-option>
               </blora-select>
-              <blora-select id="modelSeriesFilter" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'main')">
+              <blora-select id="modelSeriesFilter" placeholder="全部系列" data-i18n-placeholder="全部系列" onchange="adminApp.onAdminModelFilterInput('series', this.value, 'main')">
                 <blora-option value=""><span data-i18n="全部系列">全部系列</span></blora-option>
               </blora-select>
-              <blora-select id="modelTestFilter" onchange="adminApp.onAdminModelFilterInput('test', this.value, 'main')">
+              <blora-select id="modelTestFilter" placeholder="全部测试状态" data-i18n-placeholder="全部测试状态" onchange="adminApp.onAdminModelFilterInput('test', this.value, 'main')">
                 <blora-option value=""><span data-i18n="全部测试状态">全部测试状态</span></blora-option>
                 <blora-option value="pass"><span data-i18n="测试通过">测试通过</span></blora-option>
                 <blora-option value="fail"><span data-i18n="测试失败">测试失败</span></blora-option>
                 <blora-option value="untested"><span data-i18n="未测试">未测试</span></blora-option>
               </blora-select>
-              <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.clearModelFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
+              <div class="admin-model-filter-actions"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.clearModelFilters()"><span data-i18n="清除筛选">清除筛选</span></button>
               <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.expandAllAdminModelProviders()" title="展开全部供应商" data-i18n-title="展开全部供应商"><span data-i18n="展开">展开</span></button>
               <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.collapseAllAdminModelProviders()" title="折叠全部供应商" data-i18n-title="折叠全部供应商"><span data-i18n="折叠">折叠</span></button>
-              <span id="modelCount" class="filter-info"></span>
+              <span id="modelCount" class="filter-info"></span></div>
             </div>
           </div>
           <!-- 悬浮顶栏显隐哨兵：滚出视口后显示 sticky bar -->

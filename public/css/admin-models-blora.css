@@ -213,3 +213,9 @@
     flex: 1 1 auto;
   }
 }
+
+#adminModelsFilters { align-items: flex-start; }
+#adminModelsFilters .model-search-box { flex-basis: 100%; width: 100%; }
+.admin-model-filter-actions { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-2); }
+.admin-model-filter-actions .filter-info { margin-inline-start: auto; }
+#adminModelsFilters blora-select::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
