@@ -27,6 +27,19 @@
   border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-raised);
 }
+.blora-admin-audit-page .section-header blora-select {
+  display: block;
+  width: 10rem;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.blora-admin-audit-page .section-header blora-select::part(trigger) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.5rem;
+}
 
 .blora-admin-audit-page .audit-log-row {
   gap: var(--blora-space-4) !important;

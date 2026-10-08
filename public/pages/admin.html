@@ -38,7 +38,7 @@
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=model-cards-20261005">
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=provider-menu-stack-20261005">
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=paged-error-detail-20261008">
-  <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=resource-filter-20261008">
   <link rel="stylesheet" href="/css/admin-prompts-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-settings-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-plugins-blora.css?v=restore-0930-20261003">
@@ -1109,7 +1109,7 @@
             <h2><span data-i18n="操作日志">操作日志</span></h2>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <input id="adminAuditLogSearch" class="blora-input input" type="text" placeholder="搜索用户名/描述" data-i18n-placeholder="搜索用户名/描述" style="width:200px;" onkeydown="if(event.key==='Enter')adminApp.loadAdminAuditLogs(1)">
-              <blora-select id="adminAuditLogResourceFilter" class="input" style="width:auto;" onchange="adminApp.loadAdminAuditLogs(1)">
+              <blora-select id="adminAuditLogResourceFilter" placeholder="全部资源" data-i18n-placeholder="全部资源" onchange="adminApp.loadAdminAuditLogs(1)">
                 <blora-option value=""><span data-i18n="全部资源">全部资源</span></blora-option>
                 <blora-option value="api_key">API Key</blora-option>
                 <blora-option value="user"><span data-i18n="用户">用户</span></blora-option>
