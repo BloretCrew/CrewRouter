@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/admin-stats-blora.css?v=restore-0930-sidebar-20261003">
+  <link rel="stylesheet" href="/css/admin-stats-blora.css?v=time-range-20261005">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/badges-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
@@ -628,9 +628,9 @@
               <h2><span data-i18n="统计信息">统计信息</span></h2>
                <p style="font-size:13px;color:var(--muted-foreground);margin:0;"><span data-i18n="系统全局使用情况、积分消耗和性能监控">系统全局使用情况、积分消耗和性能监控</span></p>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <label style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="时间范围">时间范围</span></label>
-              <blora-select id="adminStatsDays" class="select" style="min-width:120px;" onchange="adminApp.loadStats()">
+            <div class="admin-stats-range">
+              <label for="adminStatsDays"><span data-i18n="时间范围">时间范围</span></label>
+              <blora-select id="adminStatsDays" value="30" onchange="adminApp.loadStats()">
                 <blora-option value="7"><span data-i18n="最近 7 天">最近 7 天</span></blora-option>
                 <blora-option value="30" selected><span data-i18n="最近 30 天">最近 30 天</span></blora-option>
                 <blora-option value="90"><span data-i18n="最近 90 天">最近 90 天</span></blora-option>
