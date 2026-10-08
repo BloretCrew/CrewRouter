@@ -1638,13 +1638,13 @@ class AdminApp {
             </span>
             ${model.icon_url ? `<img src="${escapeHtml(model.icon_url)}" onerror="this.style.display='none'" alt="">` : ''}
             <span title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
-            ${testBadgeHtml}
             <div class="model-item-badges">
+              ${testBadgeHtml}
               ${renderProviderNameTag(model.provider_name || model.provider)}
-              ${model.series ? `<span class="model-item-badge series">${escapeHtml(model.series)}</span>` : ''}
+              ${model.series ? `<span class="blora-badge" data-variant="neutral">${escapeHtml(model.series)}</span>` : ''}
               ${isDisabled
-                ? '<span class="blora-badge model-item-badge" data-variant="danger">' + t('已禁用') + '</span>'
-                : '<span class="blora-badge model-item-badge" data-variant="success">' + t('启用') + '</span>'}
+                ? '<span class="blora-badge" data-variant="danger">' + t('已禁用') + '</span>'
+                : '<span class="blora-badge" data-variant="success">' + t('启用') + '</span>'}
               ${selected ? '<span class="blora-badge model-item-badge owner" data-variant="info">' + t('已选') + '</span>' : ''}
             </div>
           </div>
@@ -1673,11 +1673,11 @@ class AdminApp {
         </div>
         <div class="model-library-item-actions" style="margin-left:0;margin-top:10px;justify-content:flex-end;">
           <button type="button" class="blora-button model-test-btn" title="${t('测试')}"
-            data-admin-model-action="test" data-model-id="${idAttr}" data-variant="secondary" data-size="sm">测试</button>
+            data-admin-model-action="test" data-model-id="${idAttr}" data-variant="outline" data-size="sm">测试</button>
           <button type="button" class="blora-button"
-            data-admin-model-action="edit" data-model-id="${idAttr}" data-variant="secondary" data-size="sm">编辑</button>
+            data-admin-model-action="edit" data-model-id="${idAttr}" data-variant="outline" data-size="sm">编辑</button>
           <button type="button" class="blora-button" style="color:var(--destructive);"
-            data-admin-model-action="delete" data-model-id="${idAttr}" data-variant="secondary" data-size="sm">删除</button>
+            data-admin-model-action="delete" data-model-id="${idAttr}" data-variant="outline" data-size="sm">删除</button>
         </div>
       </div>
     `;
@@ -2181,7 +2181,7 @@ class AdminApp {
       if (badges) {
         const existing = badges.querySelector('.model-item-badge.owner');
         if (selected && !existing) {
-          badges.insertAdjacentHTML('beforeend', '<span class="model-item-badge owner">' + t('已选') + '</span>');
+          badges.insertAdjacentHTML('beforeend', '<span class="blora-badge model-item-badge owner" data-variant="info">' + t('已选') + '</span>');
         } else if (!selected && existing) {
           existing.remove();
         }

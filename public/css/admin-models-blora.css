@@ -235,3 +235,15 @@
 @media (max-width: 900px) {
   .blora-admin-models-page .model-library-header-actions { width: 100%; }
 }
+
+.blora-admin-models-page .model-library-header-actions { width: min(100%, 32rem); }
+.blora-admin-models-page .model-library-item-name > .model-item-badges { flex-basis: 100%; }
+.blora-admin-models-page .model-item-badges { display: flex; flex-wrap: wrap; gap: .375rem; align-items: center; }
+.blora-admin-models-page .model-item-badges .blora-badge { border-radius: var(--blora-radius-full); max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.blora-admin-models-page .model-test-badge { margin-left: 0; padding: .125rem .5rem; }
+.blora-admin-models-page .model-library-item-price { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+.blora-admin-models-page .model-price-item { display: flex; align-items: baseline; gap: .25rem; white-space: nowrap; }
+.blora-admin-models-page .model-price-label { flex-shrink: 0; white-space: nowrap; }
+.blora-admin-models-page .model-library-item-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.blora-admin-models-page .model-library-item-actions .blora-button { flex: 1 1 3rem; min-width: 0; }
+@media (max-width: 900px) { .blora-admin-models-page .model-library-header-actions { width: 100%; } }
