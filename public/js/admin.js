@@ -981,7 +981,8 @@ class AdminApp {
       const teams = await response.json();
       const select = document.getElementById('editUserTeam');
       setHTML(select, '<blora-option value="">' + t('无 Team') + '</blora-option>' +
-        teams.map(team => `<blora-option value="${team.id}" ${team.id === selectedTeamId ? 'selected' : ''}>${escapeHtml(team.name)}</blora-option>`).join(''));
+        teams.map(team => `<blora-option value="${team.id}" ${String(team.id) === String(selectedTeamId) ? 'selected' : ''}>${escapeHtml(team.name)}</blora-option>`).join(''));
+      select.value = selectedTeamId == null ? '' : String(selectedTeamId);
     } catch (error) {
       console.error(t('加载 Team 列表失败:'), error);
     }

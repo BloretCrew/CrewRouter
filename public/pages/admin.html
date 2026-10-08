@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/admin-users-blora.css?v=cards-20261005">
+  <link rel="stylesheet" href="/css/admin-users-blora.css?v=edit-selects-20261008b">
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=cards-20261005">
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=model-cards-20261005">
   <link rel="stylesheet" href="/css/admin-providers-blora.css?v=provider-menu-stack-20261005">
@@ -1494,14 +1494,14 @@
         </div>
         <div class="form-group">
           <label for="editUserEmailVerified"><span data-i18n="邮箱验证状态">邮箱验证状态</span></label>
-          <blora-select id="editUserEmailVerified" class="select">
+          <blora-select id="editUserEmailVerified" placeholder="选择验证状态" data-i18n-placeholder="选择验证状态">
             <blora-option value="true"><span data-i18n="已验证">已验证</span></blora-option>
             <blora-option value="false"><span data-i18n="未验证">未验证</span></blora-option>
           </blora-select>
         </div>
         <div class="form-group">
           <label for="editUserAdmin"><span data-i18n="管理员权限">管理员权限</span></label>
-          <blora-select id="editUserAdmin" class="select">
+          <blora-select id="editUserAdmin" placeholder="选择用户角色" data-i18n-placeholder="选择用户角色">
             <blora-option value="false"><span data-i18n="普通用户">普通用户</span></blora-option>
             <blora-option value="true"><span data-i18n="管理员">管理员</span></blora-option>
           </blora-select>
@@ -1512,7 +1512,7 @@
         </div>
         <div class="form-group">
           <label for="editUserTeam"><span data-i18n="Team">Team</span></label>
-          <blora-select id="editUserTeam" class="select">
+          <blora-select id="editUserTeam" placeholder="全部 Team" data-i18n-placeholder="全部 Team">
             <blora-option value=""><span data-i18n="未指定 Team">未指定 Team</span></blora-option>
           </blora-select>
         </div>
