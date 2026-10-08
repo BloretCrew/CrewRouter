@@ -47,17 +47,19 @@ class CDP {
 }
 // Run with the isolated demo and Chrome from verify-blora-correction-browser.js.
 // Provider writes are intercepted and retained only in browser memory.
-const { normalizeCpaQuota } = require('../server/utils/cpa-usage');
+const base = process.env.BLORA_TEST_URL || 'http://127.0.0.1:18571';
+const debugging = process.env.BLORA_CDP_URL || 'http://127.0.0.1:18572';
+const { normalizeCpaQuota, normalizePassiveQuota } = require('../server/utils/cpa-usage');
 const q=normalizeCpaQuota({subscription:{plan:'CPA Test'},groups:[{displayName:'Codex',buckets:[{window:'5h',remainingFraction:0.75},{window:'weekly',remainingFraction:0.5}]}]});
 (async()=>{
-const target=await fetch('http://127.0.0.1:18572/json/new?about:blank',{method:'PUT'}).then(r=>r.json()); const c=new CDP(target.webSocketDebuggerUrl);
+const target=await fetch(`${debugging}/json/new?about:blank`,{method:'PUT'}).then(r=>r.json()); const c=new CDP(target.webSocketDebuggerUrl);
 async function wait(expr){for(let i=0;i<100;i++){if(await c.evaluate(expr))return;await sleep(100);}throw Error(expr);}
 async function click(s){await sleep(400);assert.ok(await c.click(s),s);}
 try{
 await c.send('Page.enable');
 for(const width of [1440,390]){
 await c.send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width===390});
-await c.send('Page.navigate',{url:'http://127.0.0.1:18571/admin#adminProviders'});await wait("typeof adminApp!=='undefined' && !!customElements.get('blora-select')");await sleep(1100);
+await c.send('Page.navigate',{url:`${base}/admin#adminProviders`});await wait("typeof adminApp!=='undefined' && !!customElements.get('blora-select')");await sleep(1100);
 await c.evaluate(`(()=>{const orig=fetch;window.testQuota=${JSON.stringify(q)};window.savedProvider={id:'cpa-test',name:'CPA',base_url:'https://example.com/v1',format:'openai',enabled:true,quota_mode:'cpa',cpa_management_url:'http://127.0.0.1:8317',has_cpa_management_key:true,quota_script:'{"plugin_id":"old-plugin","auth_index":"old-account"}'};window.writes=[];window.accountsFail=false;window.accountsEmpty=false;window.accountCalls=[];window.fail=false;window.saveFail=false;window.fetch=async(u,o={})=>{if(String(u)==='/api/admin/providers/cpa/accounts'){accountCalls.push(JSON.parse(o.body));return accountsFail?Response.json({error:'Fixture accounts failed'},{status:502}):Response.json({accounts:accountsEmpty?[]:[{auth_index:'new-account',provider:'codex',label:'test@example.com',disabled:false},{auth_index:'disabled-account',provider:'claude',label:'Disabled',disabled:true}]});}if(String(u)==='/api/admin/providers'&&o.method==='POST'){const body=JSON.parse(o.body);writes.push(body);if(saveFail)return Response.json({error:'Save failed'},{status:500});Object.assign(savedProvider,body);return Response.json({success:true,id:'cpa-test'});}if(String(u)==='/api/admin/providers/cpa-test')return Response.json(savedProvider);if(String(u).endsWith('/cpa-test/check-quota'))return fail?Response.json({error:'CPA HTTP 502'},{status:502}):Response.json({provider:{name:'CPA'},quota:testQuota});return orig(u,o);};adminApp.editProvider(savedProvider);adminApp._setProviderFormSectionsOpen({modelsQuota:true});})()`);
 assert.equal(await c.evaluate("document.getElementById('providerCpaPluginId').value"),'old-plugin');
 assert.equal(await c.evaluate("document.getElementById('providerCpaManagementUrl').value"),'http://127.0.0.1:8317');
@@ -96,12 +98,20 @@ assert.ok(await c.evaluate("document.getElementById('providerCpaAuthIndex').getB
 await c.evaluate("document.getElementById('addProviderModal').close();adminApp.providersData.push(savedProvider);adminApp.checkProviderQuota('cpa-test')");await wait("document.getElementById('quotaContent').style.display==='block'");assert.equal(await c.evaluate("document.getElementById('quotaRemaining').textContent"),'50');assert.equal(await c.evaluate("document.getElementById('quotaEditBtn').style.display"),'none');
 await c.evaluate("window.fail=true;adminApp.checkProviderQuota('cpa-test')");await wait("document.getElementById('quotaError').style.display==='block'");assert.ok(await c.evaluate("document.getElementById('quotaError').textContent.includes('502')"));
 await c.evaluate("document.getElementById('providerQuotaModal').close();adminApp.showAddProviderModal();");assert.equal(await c.evaluate("document.getElementById('providerCpaPluginId').value"),'');assert.equal(await c.evaluate("document.getElementById('providerCpaAuthIndex').value"),'');assert.equal(await c.evaluate("document.getElementById('cpaQuotaConfigSection').style.display"),'none');
-await c.send('Page.navigate',{url:'http://127.0.0.1:18571/console#modelLibrary'});await wait("typeof app!=='undefined'");await sleep(1500);
+await c.send('Page.navigate',{url:`${base}/console#modelLibrary`});await wait("typeof app!=='undefined'");await sleep(1500);
 await c.evaluate(`(()=>{const orig=fetch;window.testQuota=${JSON.stringify(q)};window.quotaFail=false;window.fetch=async(u,o)=>String(u).includes('/api/user/providers/quota')?Response.json({providers:[{id:'cpa-test',name:'CPA Test',ok:!quotaFail,error:quotaFail?'CPA HTTP 502':undefined,quota:testQuota}]}):orig(u,o);app.loadProviderQuota();})()`);await wait("document.getElementById('providerQuotaGrid').textContent.includes('CPA Test')");
 await click('#providerQuotaRefreshBtn');assert.ok(await c.evaluate("document.getElementById('providerQuotaGrid').textContent.includes('weekly')"));
 await c.evaluate("window.quotaFail=true");await click('#providerQuotaRefreshBtn');assert.ok(await c.evaluate("document.getElementById('providerQuotaGrid').textContent.includes('查询失败')"));
 await c.evaluate("window.quotaFail=false");await click('#providerQuotaRefreshBtn');assert.ok(await c.evaluate("document.getElementById('providerQuotaGrid').textContent.includes('5h')"));
+const passive=normalizePassiveQuota({provider:'codex',quota:{observed_at:'2026-10-08T10:00:00Z',signals:{'x-codex-primary-used-percent':'60','x-codex-primary-window-minutes':'10080','x-codex-secondary-used-percent':'0','x-codex-secondary-window-minutes':'300'}},model_quotas:{old:{observed_at:'2026-10-08T09:00:00Z',signals:{'x-codex-primary-used-percent':'26'}}}});
+await c.evaluate(`window.testQuota=${JSON.stringify(passive)}`);await click('#providerQuotaRefreshBtn');
+assert.equal(await c.evaluate("document.querySelectorAll('#providerQuotaGrid .model-quota-period').length"),2);
+assert.ok(await c.evaluate("document.getElementById('providerQuotaGrid').textContent.includes('7 天窗口（缓存）')"));
+assert.ok(await c.evaluate("!document.getElementById('providerQuotaGrid').textContent.includes('x-codex')"));
+await c.evaluate(`window.testQuota=${JSON.stringify(q)}`);await click('#providerQuotaRefreshBtn');
+assert.ok(await c.evaluate("!document.getElementById('providerQuotaGrid').textContent.includes('（缓存）')"));
+
 console.log('CPA desktop/mobile admin config, save/reopen, error and console refresh passed: '+width);
 }
-}finally{c.ws.close();await fetch('http://127.0.0.1:18572/json/close/'+target.id);}
+}finally{c.ws.close();await fetch(`${debugging}/json/close/${target.id}`);}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -2,12 +2,30 @@
 
 const assert = require('node:assert/strict');
 const http = require('node:http');
-const { parseCpaQuotaConfig, normalizeCpaQuota, fetchCpaUsage, listCpaAccounts } = require('../utils/cpa-usage');
+const { parseCpaQuotaConfig, normalizeCpaQuota, fetchCpaUsage, listCpaAccounts, normalizePassiveQuota, normalizeCodexUsage } = require('../utils/cpa-usage');
 
 async function main() {
   assert.throws(() => parseCpaQuotaConfig('bad'), /JSON/);
   for (const value of ['null', '[]', '{}', '{"plugin_id":"p"}']) assert.throws(() => parseCpaQuotaConfig(value));
   assert.deepEqual(parseCpaQuotaConfig('{"plugin_id":" p ","auth_index":" a "}'), { pluginId: 'p', authIndex: 'a' });
+  const snapshot = (percent, time) => ({ observed_at: time, signals: {
+    'x-codex-primary-used-percent': String(percent), 'x-codex-primary-window-minutes': '10080',
+    'x-codex-secondary-used-percent': '0', 'x-codex-secondary-window-minutes': '300', 'x-codex-plan-type': 'Pro'
+  } });
+  const cached = normalizePassiveQuota({ provider: 'codex', quota: snapshot(60, '2026-10-08T10:00:00Z'),
+    model_quotas: { old: snapshot(26, '2026-10-08T09:00:00Z'), newer: snapshot(40, '2026-10-08T11:00:00Z') } });
+  assert.equal(cached.periods.length, 2);
+  assert.equal(cached.used, 40);
+  assert.equal(cached.planName, 'Pro');
+  assert.equal(cached.periods[0].label, '7 天窗口（缓存）');
+  assert.equal(cached.periods[1].label, '5 小时窗口（缓存）');
+  assert.ok(!cached.periods.some(period => period.label.includes('2026') || period.label.includes('x-codex')));
+  assert.equal(normalizePassiveQuota({ quota: { observed_at: '2026-10-08T12:00:00Z', signals: {} }, model_quotas: { valid: snapshot(10, '2026-10-08T11:00:00Z') } }).used, 10);
+  const active = normalizeCodexUsage({ plan_type: 'Pro', rate_limit: { primary_window: { used_percent: 60, limit_window_seconds: 604800 }, secondary_window: { used_percent: 0, limit_window_seconds: 18000 } }, additional_rate_limits: [{ limit_name: 'Spark', rate_limit: { primary_window: { used_percent: 20, limit_window_seconds: 18000 } } }] });
+  assert.equal(active.periods.length, 3);
+  assert.equal(active.periods[0].label, '7 天窗口');
+  assert.equal(active.periods[1].label, '5 小时窗口');
+  assert.equal(active.periods[2].label, 'Spark · 5 小时窗口');
   const fs = require('node:fs');
   const vm = require('node:vm');
   const { decryptSecret } = require('../utils/secret-crypto');

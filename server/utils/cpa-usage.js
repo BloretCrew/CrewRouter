@@ -62,30 +62,67 @@ function normalizeClaudeUsage(data) {
   return quotaFromPeriods(periods, 'Claude');
 }
 
-function normalizePassiveQuota(credential) {
+function codexWindowLabel(window, minutes) {
+  const duration = Number(minutes);
+  if (duration === 300) return '5 小时窗口';
+  if (duration === 10080) return '7 天窗口';
+  if (duration > 0) return `${duration / 60} 小时窗口`;
+  return window === 'primary' ? '主额度窗口' : '次额度窗口';
+}
+
+function normalizeCodexUsage(data) {
   const periods = [];
-  const observations = [['账号', credential.quota], ...Object.entries(credential.model_quotas || {})];
-  let observedAt = '';
-  for (const [label, observation] of observations) {
-    const signals = Object.fromEntries(Object.entries(observation?.signals || {}).map(([key, value]) => [key.toLowerCase(), value]));
+  const limits = data?.rate_limit || data?.rate_limits;
+  const append = (limit, name = '') => {
+    for (const window of ['primary', 'secondary']) {
+      const value = limit?.[`${window}_window`] || limit?.[window];
+      if (!value || typeof value.used_percent !== 'number' || !Number.isFinite(value.used_percent) || value.used_percent < 0) continue;
+      const minutes = value.limit_window_seconds ? value.limit_window_seconds / 60 : value.window_minutes;
+      const date = typeof value.reset_at === 'number' ? new Date(value.reset_at * 1000) : null;
+      periods.push({ key: `${name || 'account'}-${window}`, label: [name, codexWindowLabel(window, minutes)].filter(Boolean).join(' · '),
+        percent: value.used_percent, resetsAt: date && Number.isFinite(date.getTime()) ? date.toISOString() : '' });
+    }
+  };
+  append(limits);
+  const additional = data?.additional_rate_limits || limits?.additional_rate_limits;
+  if (Array.isArray(additional)) additional.forEach(item => append(item.rate_limit || item, item.limit_name || item.name || '额外额度'));
+  else if (additional && typeof additional === 'object') Object.entries(additional).forEach(([name, item]) => append(item.rate_limit || item, name));
+  const legacy = require('./codex-usage').normalizeWhamUsage(data);
+  return { ...legacy, ...quotaFromPeriods(periods, data?.plan_type || 'ChatGPT', legacy.extra) };
+}
+
+function normalizePassiveQuota(credential) {
+  const snapshots = [credential.quota, ...Object.values(credential.model_quotas || {})].filter(snapshot => snapshot && snapshot.signals);
+  // 模型记录是同一账号在不同请求时的快照；选择最新有效快照，避免累计旧窗口。
+  snapshots.sort((a, b) => (Date.parse(b.observed_at) || 0) - (Date.parse(a.observed_at) || 0));
+  for (const observation of snapshots) {
+    const periods = [];
+    const signals = Object.fromEntries(Object.entries(observation.signals).map(([key, value]) => [key.toLowerCase(), value]));
     for (const [key, raw] of Object.entries(signals)) {
       const codex = key.startsWith('x-codex-') && key.endsWith('-used-percent');
       const claude = key.startsWith('anthropic-ratelimit-unified-') && key.endsWith('-utilization');
-      if (!codex && !claude) continue;
-      if (typeof raw !== 'string' || !raw.trim()) continue;
+      if ((!codex && !claude) || typeof raw !== 'string' || !raw.trim()) continue;
       const value = Number(raw);
       if (!Number.isFinite(value) || value < 0) continue;
       const prefix = key.slice(0, -(codex ? 'used-percent'.length : 'utilization'.length));
       const reset = signals[`${prefix}${codex ? 'reset-at' : 'reset'}`];
       const date = reset && Number.isFinite(Number(reset)) ? new Date(Number(reset) * 1000) : null;
-      periods.push({ key: `${label}-${key}`, label: `${label} · ${prefix.replace(/-$/, '')}`, percent: claude ? value * 100 : value,
+      let label;
+      if (codex) {
+        const match = prefix.match(/^x-codex-(?:(.*)-)?(primary|secondary)-$/);
+        if (!match) continue;
+        const name = signals[`${prefix.replace(/(primary|secondary)-$/, '')}limit-name`] || match[1];
+        label = [name, codexWindowLabel(match[2], signals[`${prefix}window-minutes`])].filter(Boolean).join(' · ');
+      } else label = prefix.includes('-5h-') ? '5 小时窗口' : prefix.includes('-7d-') ? '7 天窗口' : prefix.replace('anthropic-ratelimit-unified-', '').replace(/-$/, '');
+      periods.push({ key: prefix, label, percent: claude ? value * 100 : value,
         resetsAt: date && Number.isFinite(date.getTime()) ? date.toISOString() : '' });
     }
-    if (observation?.observed_at && (!observedAt || observation.observed_at > observedAt)) observedAt = observation.observed_at;
+    if (!periods.length) continue;
+    const observedAt = typeof observation.observed_at === 'string' ? observation.observed_at : '';
+    const plan = signals['x-codex-plan-type'] || credential.provider || credential.type || 'CPA';
+    return { ...quotaFromPeriods(periods.map(period => ({ ...period, label: `${period.label}（缓存）` })), plan, observedAt ? `最近请求采集：${observedAt}` : '最近请求采集的额度信息'), source: 'passive', observedAt };
   }
-  const observedLabel = observedAt ? `最近请求观察（${observedAt}）` : '最近请求观察';
-  const labeledPeriods = periods.map(period => ({ ...period, label: `${observedLabel} · ${period.label}` }));
-  return { ...quotaFromPeriods(labeledPeriods, credential.provider || credential.type || 'CPA', observedLabel), source: 'passive', observedAt };
+  throw new Error('CPA 响应中没有可用额度数据');
 }
 
 function managementBase(provider) {
@@ -138,6 +175,10 @@ async function fetchCpaUsage(provider) {
   if (type === 'codex' || type === 'claude') {
     try {
       const headers = { Authorization: 'Bearer $TOKEN$', Accept: 'application/json' };
+      if (type === 'codex') {
+        headers['User-Agent'] = 'codex_cli_rs/0.101.0';
+        headers.originator = 'codex_cli_rs';
+      }
       if (type === 'claude') headers['anthropic-beta'] = 'oauth-2025-04-20';
       const accountId = credential.id_token?.chatgpt_account_id;
       if (type === 'codex' && typeof accountId === 'string' && accountId) headers['ChatGPT-Account-Id'] = accountId;
@@ -146,12 +187,7 @@ async function fetchCpaUsage(provider) {
       if (result.status_code !== 200) throw new Error(`CPA 上游额度接口失败（HTTP ${result.status_code}）`);
       const data = JSON.parse(result.body);
       if (type === 'claude') return { ...normalizeClaudeUsage(data), source: 'active' };
-      const quota = require('./codex-usage').normalizeWhamUsage(data);
-      const periods = quota.periods.filter(period => {
-        const window = data.rate_limit?.[period.key];
-        return window && typeof window.used_percent === 'number' && Number.isFinite(window.used_percent) && window.used_percent >= 0;
-      });
-      return { ...quota, ...quotaFromPeriods(periods, quota.planName, quota.extra), source: 'active' };
+      return { ...normalizeCodexUsage(data), source: 'active' };
     } catch (error) { activeError = error; }
   }
   try { return normalizePassiveQuota(credential); } catch {
@@ -159,4 +195,4 @@ async function fetchCpaUsage(provider) {
   }
 }
 
-module.exports = { parseCpaQuotaConfig, normalizeCpaQuota, normalizeClaudeUsage, normalizePassiveQuota, fetchCpaUsage, listCpaAccounts };
+module.exports = { parseCpaQuotaConfig, normalizeCpaQuota, normalizeClaudeUsage, normalizeCodexUsage, normalizePassiveQuota, fetchCpaUsage, listCpaAccounts };
