@@ -3091,8 +3091,8 @@ class AdminApp {
     const selectAllBar = `
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:13px;">
         <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;">
-          <input type="checkbox" class="checkbox" id="providerSelectAllPage" ${allPageSelected ? 'checked' : ''}
-            onchange="adminApp.toggleSelectAllProvidersOnPage(this.checked)">
+          <blora-checkbox id="providerSelectAllPage" aria-label="全选本页" ${allPageSelected ? 'checked' : ''}
+            onchange="adminApp.toggleSelectAllProvidersOnPage(this.checked)"></blora-checkbox>
           <span>全选本页</span>
         </label>
         <span style="color:var(--muted-foreground);">勾选后可批量同步模型</span>
@@ -3141,10 +3141,7 @@ class AdminApp {
     const pingBtnId = isCard ? `ping-btn-card-${pid}` : `ping-btn-${pid}`;
     return `
       <div class="provider-row-actions">
-        <label class="toggle-switch" title="${provider.enabled ? t('禁用供应商') : t('启用供应商')}" style="transform:scale(0.8);">
-          <input type="checkbox" ${provider.enabled ? 'checked' : ''} onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)">
-          <span class="toggle-slider"></span>
-        </label>
+        <blora-switch aria-label="${provider.enabled ? t('禁用供应商') : t('启用供应商')}" ${provider.enabled ? 'checked' : ''} onchange="adminApp.toggleProviderEnabled('${pid}', this.checked)"></blora-switch>
         <button class="blora-button" title="${t('同步模型')}" onclick="adminApp.fetchProviderModels('${pid}')" data-variant="secondary" data-size="sm">同步模型</button>
         <button class="blora-button" title="${t('编辑')}" onclick="adminApp.editProviderById('${pid}')" data-variant="secondary" data-size="sm">编辑</button>
         <div class="provider-row-more-wrap">
@@ -3154,10 +3151,7 @@ class AdminApp {
             ${isScriptKey ? `<button type="button" class="provider-more-item" style="color:var(--warning);" onclick="adminApp.refreshProviderKey('${pid}');adminApp.toggleProviderRowMenu('${pid}\', event);" role="menuitem">${t('刷新密钥')}</button>` : ''}
             <div class="provider-more-item provider-more-item-toggle" role="menuitem">
               <span>额度查询</span>
-              <label class="toggle-switch" style="transform:scale(0.75);" onclick="event.stopPropagation()">
-                <input type="checkbox" ${quotaEnabled ? 'checked' : ''} onchange="adminApp.toggleProviderQuota('${pid}', this.checked)">
-                <span class="toggle-slider"></span>
-              </label>
+              <blora-switch aria-label="额度查询" ${quotaEnabled ? 'checked' : ''} onclick="event.stopPropagation()" onchange="adminApp.toggleProviderQuota('${pid}', this.checked)"></blora-switch>
             </div>
             <button type="button" class="provider-more-item" id="quota-btn-${pid}" onclick="adminApp.checkProviderQuota('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" ${!quotaEnabled ? 'disabled style="opacity:0.45;"' : ''} role="menuitem">查询额度</button>
             <button type="button" class="provider-more-item provider-more-item-danger" onclick="adminApp.deleteProvider('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" role="menuitem">删除</button>
@@ -3215,9 +3209,9 @@ class AdminApp {
                 ondragleave="adminApp.handleProviderDragLeave(event)"
                 ondrop="adminApp.handleProviderDrop(event, '${safePid}')">
               <td class="provider-select-cell">
-                <input type="checkbox" class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
+                <blora-checkbox class="provider-select-cb" aria-label="选择供应商" data-provider-id="${escapeHtml(pid)}"
                   ${selected ? 'checked' : ''}
-                  onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)">
+                  onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)"></blora-checkbox>
               </td>
               <td>
                 <div class="provider-row-name">${escapeHtml(provider.name)}</div>
@@ -3570,9 +3564,9 @@ class AdminApp {
                ondragleave="adminApp.handleProviderDragLeave(event)"
                ondrop="adminApp.handleProviderDrop(event, '${safePid}')">
             <label class="provider-card-select" title="${t('选择')}" onclick="event.stopPropagation()">
-              <input type="checkbox" class="checkbox provider-select-cb" data-provider-id="${escapeHtml(pid)}"
+              <blora-checkbox class="provider-select-cb" aria-label="选择供应商" data-provider-id="${escapeHtml(pid)}"
                 ${selected ? 'checked' : ''}
-                onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)">
+                onchange="adminApp.toggleProviderSelection('${safePid}', this.checked)"></blora-checkbox>
             </label>
             <div class="admin-card-header">
               <div style="flex:1;min-width:0;">

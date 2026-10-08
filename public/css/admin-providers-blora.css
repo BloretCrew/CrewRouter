@@ -86,3 +86,15 @@
     flex: 1 1 100%;
   }
 }
+
+#adminProvidersFilters { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; }
+#adminProvidersFilters #providerSearchInput { flex: 1 1 18rem; min-width: 0; width: auto; }
+#adminProvidersFilters blora-select { display: block; flex: 0 1 10rem; min-width: 0; }
+#adminProvidersFilters blora-select::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
+.blora-admin-providers-page .provider-row-actions { display: flex; align-items: center; flex-wrap: wrap; }
+.blora-admin-providers-page .provider-row-actions > .blora-button,
+.blora-admin-providers-page .provider-row-more-wrap > .blora-button { background: var(--blora-color-surface-default); color: var(--blora-color-text-primary); border: var(--providers-border); }
+@media (max-width: 640px) {
+  #adminProvidersFilters #providerSearchInput { flex-basis: 100%; width: 100%; }
+  #adminProvidersFilters blora-select { flex: 1 1 100%; width: 100%; }
+}

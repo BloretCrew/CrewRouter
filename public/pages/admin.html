@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="/css/admin-users-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=restore-0930-mobile-20261003">
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/admin-providers-blora.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/admin-providers-blora.css?v=controls-20261005">
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-prompts-blora.css?v=restore-0930-20261003">
@@ -471,12 +471,12 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               <input type="text" id="adminProvidersStickySearch" class="model-search-input" placeholder="搜索供应商名称、Base URL 或备注..." data-i18n-placeholder="搜索供应商名称、Base URL 或备注..." autocomplete="off" oninput="adminApp.onAdminProviderFilterInput('search', this.value, 'sticky')">
             </div>
-            <blora-select id="adminProvidersStickyStatus" class="select model-library-sticky-select" aria-label="状态筛选" data-i18n-title="状态筛选" onchange="adminApp.onAdminProviderFilterInput('status', this.value, 'sticky')">
+            <blora-select id="adminProvidersStickyStatus" class="model-library-sticky-select" placeholder="所有状态" data-i18n-placeholder="所有状态" aria-label="状态筛选" data-i18n-title="状态筛选" onchange="adminApp.onAdminProviderFilterInput('status', this.value, 'sticky')">
               <blora-option value=""><span data-i18n="所有状态">所有状态</span></blora-option>
               <blora-option value="enabled"><span data-i18n="已启用">已启用</span></blora-option>
               <blora-option value="disabled"><span data-i18n="已禁用">已禁用</span></blora-option>
             </blora-select>
-            <blora-select id="adminProvidersStickyScope" class="select model-library-sticky-select" aria-label="范围筛选" data-i18n-title="范围筛选" onchange="adminApp.onAdminProviderFilterInput('scope', this.value, 'sticky')">
+            <blora-select id="adminProvidersStickyScope" class="model-library-sticky-select" placeholder="全部范围" data-i18n-placeholder="全部范围" aria-label="范围筛选" data-i18n-title="范围筛选" onchange="adminApp.onAdminProviderFilterInput('scope', this.value, 'sticky')">
               <blora-option value=""><span data-i18n="全部范围">全部范围</span></blora-option>
               <blora-option value="global"><span data-i18n="全局供应商">全局供应商</span></blora-option>
               <blora-option value="user"><span data-i18n="用户供应商">用户供应商</span></blora-option>
@@ -492,7 +492,7 @@
             <div id="adminProvidersStickyTags" class="key-tag-chips page-sticky-tag-chips"></div>
           </div>
           <div id="adminProvidersStickyAdvanced" class="model-library-sticky-advanced" style="display:none;" aria-hidden="true">
-            <blora-select id="adminProvidersStickyKeyMode" class="select model-library-sticky-select" aria-label="密钥模式" data-i18n-title="密钥模式" onchange="adminApp.onAdminProviderFilterInput('keyMode', this.value, 'sticky')">
+            <blora-select id="adminProvidersStickyKeyMode" class="model-library-sticky-select" placeholder="全部密钥" data-i18n-placeholder="全部密钥" aria-label="密钥模式" data-i18n-title="密钥模式" onchange="adminApp.onAdminProviderFilterInput('keyMode', this.value, 'sticky')">
               <blora-option value=""><span data-i18n="全部密钥">全部密钥</span></blora-option>
               <blora-option value="fixed"><span data-i18n="固定密钥">固定密钥</span></blora-option>
               <blora-option value="script"><span data-i18n="脚本模式">脚本模式</span></blora-option>
@@ -564,17 +564,17 @@
           </div>
           <div class="admin-filter-bar" id="adminProvidersFilters">
             <input type="search" id="providerSearchInput" class="blora-input input" placeholder="搜索供应商名称、Base URL 或备注..." data-i18n-placeholder="搜索供应商名称、Base URL 或备注..." oninput="adminApp.onAdminProviderFilterInput('search', this.value, 'main')">
-            <blora-select id="providerStatusFilter" class="select" onchange="adminApp.onAdminProviderFilterInput('status', this.value, 'main')">
+            <blora-select id="providerStatusFilter" placeholder="所有状态" data-i18n-placeholder="所有状态" onchange="adminApp.onAdminProviderFilterInput('status', this.value, 'main')">
               <blora-option value=""><span data-i18n="所有状态">所有状态</span></blora-option>
               <blora-option value="enabled"><span data-i18n="已启用">已启用</span></blora-option>
               <blora-option value="disabled"><span data-i18n="已禁用">已禁用</span></blora-option>
             </blora-select>
-            <blora-select id="providerScopeFilter" class="select" onchange="adminApp.onAdminProviderFilterInput('scope', this.value, 'main')" title="范围" data-i18n-title="范围">
+            <blora-select id="providerScopeFilter" placeholder="全部范围" data-i18n-placeholder="全部范围" onchange="adminApp.onAdminProviderFilterInput('scope', this.value, 'main')" title="范围" data-i18n-title="范围">
               <blora-option value=""><span data-i18n="全部范围">全部范围</span></blora-option>
               <blora-option value="global"><span data-i18n="全局供应商">全局供应商</span></blora-option>
               <blora-option value="user"><span data-i18n="用户供应商">用户供应商</span></blora-option>
             </blora-select>
-            <blora-select id="providerKeyModeFilter" class="select" onchange="adminApp.onAdminProviderFilterInput('keyMode', this.value, 'main')" title="密钥模式" data-i18n-title="密钥模式">
+            <blora-select id="providerKeyModeFilter" placeholder="全部密钥" data-i18n-placeholder="全部密钥" onchange="adminApp.onAdminProviderFilterInput('keyMode', this.value, 'main')" title="密钥模式" data-i18n-title="密钥模式">
               <blora-option value=""><span data-i18n="全部密钥">全部密钥</span></blora-option>
               <blora-option value="fixed"><span data-i18n="固定密钥">固定密钥</span></blora-option>
               <blora-option value="script"><span data-i18n="脚本模式">脚本模式</span></blora-option>
@@ -2447,7 +2447,7 @@
   <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/admin.js?v=model-identity-20261004"></script>
+  <script src="/js/admin.js?v=provider-controls-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
     // 移动端侧边栏切换
