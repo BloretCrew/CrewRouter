@@ -12952,7 +12952,7 @@ ${extractorBody}
     let busy = false;
     const succeeded = new Set();
     root.addEventListener('blora-before-close', event => { if (busy) event.preventDefault(); });
-    const update = () => { save.disabled = busy || !modelIds.length || !list.querySelector('input:checked:not(:disabled)'); };
+    const update = () => { save.disabled = busy || !modelIds.length || ![...list.querySelectorAll('blora-checkbox')].some(el => el.checked && !el.disabled); };
     skip.addEventListener('click', () => { if (!busy) modal.close(); });
     list.addEventListener('change', update);
     const load = async () => {
@@ -12968,12 +12968,11 @@ ${extractorBody}
         const teams = data.filter(team => !team.is_personal);
         status.textContent = teams.length ? '' : t('暂无可管理的 Team，可跳过此步骤');
         for (const team of teams) {
-          const row = document.createElement('label');
+          const row = document.createElement('div');
           row.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 0;overflow-wrap:anywhere;';
-          const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = String(team.id);
-          const name = document.createElement('span'); name.textContent = team.name; name.style.cssText = 'min-width:0;flex:1;';
+          const checkbox = document.createElement('blora-checkbox'); checkbox.setAttribute('value', String(team.id)); checkbox.setAttribute('label', team.name);
           const result = document.createElement('span'); result.dataset.teamResult = ''; result.setAttribute('role', 'status'); result.style.cssText = 'font-size:12px;min-width:0;width:100%;padding-left:24px;box-sizing:border-box;';
-          row.append(checkbox, name, result); list.append(row);
+          row.append(checkbox, result); list.append(row);
         }
       } catch (error) { status.textContent = error.message; retry.style.display = ''; }
       finally { busy = false; update(); }
@@ -12981,25 +12980,25 @@ ${extractorBody}
     retry.addEventListener('click', load);
     save.addEventListener('click', async () => {
       if (busy || save.disabled) return;
-      const targets = [...list.querySelectorAll('input:checked')].filter(el => !succeeded.has(el.value));
+      const targets = [...list.querySelectorAll('blora-checkbox')].filter(el => el.checked && !succeeded.has(el.getAttribute('value')));
       busy = true; skip.disabled = true; setButtonLoading(save, t('添加中...'));
-      list.querySelectorAll('input').forEach(el => { el.disabled = true; });
+      list.querySelectorAll('blora-checkbox').forEach(el => { el.disabled = true; });
       let failed = 0;
       for (const checkbox of targets) {
         const result = checkbox.parentElement.querySelector('[data-team-result]'); result.textContent = t('添加中...');
         try {
-          const res = await fetch(`/api/admin/teams/${encodeURIComponent(checkbox.value)}/models/batch`, {
+          const res = await fetch(`/api/admin/teams/${encodeURIComponent(checkbox.getAttribute('value'))}/models/batch`, {
             method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ enabled: true, modelIds })
           });
           const data = await res.json();
           if (!res.ok || data.success !== true) throw new Error(data.error || t('添加失败'));
           if (!Array.isArray(data.modelIds) || modelIds.some(id => !data.modelIds.includes(id))) throw new Error(t('部分模型未获授权，请重试'));
-          succeeded.add(checkbox.value); result.textContent = t('已添加');
+          succeeded.add(checkbox.getAttribute('value')); result.textContent = t('已添加');
         } catch (error) { failed++; result.textContent = `${t('添加失败')}: ${error.message}`; }
       }
       busy = false; skip.disabled = false;
-      list.querySelectorAll('input').forEach(el => { el.disabled = succeeded.has(el.value); });
+      list.querySelectorAll('blora-checkbox').forEach(el => { el.disabled = succeeded.has(el.getAttribute('value')); });
       clearButtonLoading(save, failed ? t('重试失败的 Team') : t('添加到所选 Team'));
       skip.textContent = failed ? t('跳过其余 Team') : t('完成');
       status.textContent = failed ? t('部分 Team 添加失败，可重试失败项或跳过') : t('所选 Team 已添加成功');

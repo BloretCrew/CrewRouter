@@ -565,3 +565,8 @@
 .blora-model-library .model-library-item-name > .model-item-badges { flex-basis: 100%; }
 .blora-model-library .model-item-badges .blora-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .blora-model-library .model-item-badges .model-test-badge { margin-left: 0; border-radius: var(--blora-radius-full, 999px); }
+
+#quickAddedTeamsList { display: grid; gap: var(--blora-space-2); padding: var(--blora-space-2); }
+#quickAddedTeamsList > div { padding: var(--blora-space-3) !important; border: var(--blora-border-subtle); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-raised); }
+#quickAddedTeamsList blora-checkbox { min-width: 0; max-width: 100%; }
+#quickAddedTeamsList [data-team-result]:empty { display: none; }
