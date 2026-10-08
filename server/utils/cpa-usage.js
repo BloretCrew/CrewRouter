@@ -96,21 +96,37 @@ function managementBase(provider) {
   return base;
 }
 
-async function fetchCpaUsage(provider) {
-  const { pluginId, authIndex } = parseCpaQuotaConfig(provider.quota_script);
+function cpaRequest(provider) {
   const key = decryptSecret(provider.cpa_management_key || '');
   if (!key) throw new Error('供应商未配置 CPA 管理密钥');
   const base = managementBase(provider);
-  async function request(path, body) {
+  return async function request(path, body) {
     const url = new URL(base);
     url.pathname += path.split('?')[0];
     url.search = path.includes('?') ? path.slice(path.indexOf('?')) : '';
     // 管理员指定可信地址；禁止重定向泄露管理密钥。
     const response = await fetch(url, { method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${key}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}), redirect: 'error', signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw new Error(`CPA 额度查询失败（HTTP ${response.status}）`);
+    if (!response.ok) throw new Error(`CPA 管理接口请求失败（HTTP ${response.status}）`);
     try { return await response.json(); } catch { throw new Error('CPA 额度响应不是有效 JSON'); }
-  }
+  };
+}
+
+async function listCpaAccounts(provider) {
+  const data = await cpaRequest(provider)('/credentials');
+  const files = Array.isArray(data?.files) ? data.files : Array.isArray(data) ? data : null;
+  if (!files) throw new Error('CPA 账号列表响应无效');
+  return files.filter(file => file && typeof file.auth_index === 'string' && file.auth_index.trim()).map(file => ({
+    auth_index: file.auth_index,
+    provider: typeof (file.provider || file.type) === 'string' ? (file.provider || file.type) : '',
+    label: typeof file.email === 'string' && file.email ? file.email : typeof file.label === 'string' && file.label ? file.label : typeof file.name === 'string' ? file.name : file.auth_index,
+    disabled: file.disabled === true
+  }));
+}
+
+async function fetchCpaUsage(provider) {
+  const { pluginId, authIndex } = parseCpaQuotaConfig(provider.quota_script);
+  const request = cpaRequest(provider);
   if (pluginId) return normalizeCpaQuota(await request(`/plugins/${encodeURIComponent(pluginId)}/quota?auth_index=${encodeURIComponent(authIndex)}`));
   const credentials = await request('/credentials');
   const files = Array.isArray(credentials.files) ? credentials.files : Array.isArray(credentials) ? credentials : [];
@@ -143,4 +159,4 @@ async function fetchCpaUsage(provider) {
   }
 }
 
-module.exports = { parseCpaQuotaConfig, normalizeCpaQuota, normalizeClaudeUsage, normalizePassiveQuota, fetchCpaUsage };
+module.exports = { parseCpaQuotaConfig, normalizeCpaQuota, normalizeClaudeUsage, normalizePassiveQuota, fetchCpaUsage, listCpaAccounts };

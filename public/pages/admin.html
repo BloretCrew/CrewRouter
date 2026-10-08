@@ -1845,7 +1845,7 @@
             <div id="cpaQuotaConfigSection" style="display:none;">
               <div class="form-group">
                 <label for="providerCpaManagementUrl"><span data-i18n="CPA 管理地址">CPA 管理地址</span></label>
-                <input type="url" id="providerCpaManagementUrl" class="input" placeholder="http://127.0.0.1:8317">
+                <input type="url" id="providerCpaManagementUrl" class="input" placeholder="http://127.0.0.1:8317" oninput="adminApp._resetCpaAccounts('')">
               </div>
               <div class="form-group">
                 <label for="providerCpaManagementKey"><span data-i18n="CPA 管理密钥">CPA 管理密钥</span></label>
@@ -1857,8 +1857,12 @@
                 <input type="text" id="providerCpaPluginId" class="input" placeholder="留空自动读取账号类型" data-i18n-placeholder="留空自动读取账号类型">
               </div>
               <div class="form-group">
-                <label for="providerCpaAuthIndex"><span data-i18n="CPA 账号凭据索引">CPA 账号凭据索引</span></label>
-                <input type="text" id="providerCpaAuthIndex" class="input" placeholder="auth_index">
+                <label for="providerCpaAuthIndex"><span data-i18n="CPA 账号">CPA 账号</span></label>
+                <blora-select id="providerCpaAuthIndex" class="select">
+                  <blora-option value=""><span data-i18n="请先加载 CPA 账号">请先加载 CPA 账号</span></blora-option>
+                </blora-select>
+                <button type="button" id="providerCpaLoadAccounts" class="blora-button" data-variant="secondary" data-size="sm" style="margin-top:8px;" onclick="adminApp.loadCpaAccounts()"><span data-i18n="加载 CPA 账号">加载 CPA 账号</span></button>
+                <small id="providerCpaAccountsStatus" role="status" style="display:block;margin-top:4px;color:var(--muted-foreground);"></small>
               </div>
             </div>
             <div class="form-group" id="arkQuotaConfigSection" style="display:none;">

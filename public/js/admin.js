@@ -4255,7 +4255,7 @@ class AdminApp {
     document.getElementById('providerCpaKeyStatus').textContent = '';
     this._hasCpaManagementKey = false;
     document.getElementById('providerCpaPluginId').value = '';
-    document.getElementById('providerCpaAuthIndex').value = '';
+    this._resetCpaAccounts('');
     const scheduleEl = document.getElementById('providerQuotaScheduleEnabled');
     if (scheduleEl) scheduleEl.value = 'false';
     const scheduleIntervalEl = document.getElementById('providerQuotaScheduleInterval');
@@ -4362,7 +4362,7 @@ class AdminApp {
       try { cpaConfig = JSON.parse(provider.quota_script || '{}') || {}; } catch (_) { /* 保存时校验配置。 */ }
     }
     document.getElementById('providerCpaPluginId').value = typeof cpaConfig.plugin_id === 'string' ? cpaConfig.plugin_id : '';
-    document.getElementById('providerCpaAuthIndex').value = typeof cpaConfig.auth_index === 'string' ? cpaConfig.auth_index : '';
+    this._resetCpaAccounts(typeof cpaConfig.auth_index === 'string' ? cpaConfig.auth_index : '');
     const scheduleEl = document.getElementById('providerQuotaScheduleEnabled');
     if (scheduleEl) scheduleEl.value = (provider.quota_schedule_enabled || false).toString();
     const scheduleIntervalEl = document.getElementById('providerQuotaScheduleInterval');
@@ -5967,8 +5967,52 @@ async function(ctx) {
     }
   }
 
+  _resetCpaAccounts(selected) {
+    this._cpaAccountsRequest = (this._cpaAccountsRequest || 0) + 1;
+    const select = document.getElementById('providerCpaAuthIndex');
+    setHTML(select, `<blora-option value="">${escapeHtml(t('请先加载 CPA 账号'))}</blora-option>${selected ? `<blora-option value="${escapeHtml(selected)}">${escapeHtml(t('已保存账号'))} · ${escapeHtml(selected)}</blora-option>` : ''}`);
+    select.value = selected;
+    document.getElementById('providerCpaAccountsStatus').textContent = '';
+    document.getElementById('providerCpaLoadAccounts').disabled = false;
+  }
+
+  async loadCpaAccounts() {
+    const button = document.getElementById('providerCpaLoadAccounts');
+    if (button.disabled) return;
+    const url = document.getElementById('providerCpaManagementUrl').value.trim();
+    const key = document.getElementById('providerCpaManagementKey').value.trim();
+    const id = document.getElementById('providerId').value;
+    const status = document.getElementById('providerCpaAccountsStatus');
+    if (!url || (!key && !this._hasCpaManagementKey)) {
+      status.textContent = t('请填写 CPA 管理地址和管理密钥');
+      return;
+    }
+    const requestId = ++this._cpaAccountsRequest;
+    button.disabled = true;
+    status.textContent = t('正在加载 CPA 账号...');
+    try {
+      const response = await fetch('/api/admin/providers/cpa/accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, cpa_management_url: url, ...(key ? { cpa_management_key: key } : {}) }) });
+      const data = await response.json();
+      if (requestId !== this._cpaAccountsRequest || url !== document.getElementById('providerCpaManagementUrl').value.trim()
+          || key !== document.getElementById('providerCpaManagementKey').value.trim()) return;
+      if (!response.ok) throw new Error(data.error || t('加载 CPA 账号失败'));
+      const accounts = Array.isArray(data.accounts) ? data.accounts : [];
+      const select = document.getElementById('providerCpaAuthIndex');
+      const selected = select.value;
+      setHTML(select, `<blora-option value="">${escapeHtml(t('请选择 CPA 账号'))}</blora-option>` + accounts.map(account =>
+        `<blora-option value="${escapeHtml(account.auth_index)}" ${account.disabled ? 'disabled' : ''}>${escapeHtml([account.provider, account.label, account.auth_index, account.disabled ? t('已禁用') : ''].filter(Boolean).join(' · '))}</blora-option>`).join(''));
+      select.value = accounts.some(account => account.auth_index === selected && !account.disabled) ? selected : '';
+      status.textContent = accounts.length ? t('请选择要查询额度的 CPA 账号') : t('CPA 中暂无已登录账号');
+    } catch (error) {
+      if (requestId === this._cpaAccountsRequest) status.textContent = error.message;
+    } finally {
+      if (requestId === this._cpaAccountsRequest) button.disabled = false;
+    }
+  }
+
   _cpaQuotaConfigHint() {
-    return t('plugin_id 可选：填写已加载的额度插件 ID 时使用插件模式；留空时自动读取账号类型，Codex/Claude 支持主动查询，其他账号仅读取被动额度，有数据才展示。auth_index 必填，为目标账号凭据索引。在供应商编辑窗口填写管理地址、管理密钥和账号凭据索引，随供应商设置一起保存。管理密钥加密存储，编辑时留空保留原值。');
+    return t('plugin_id 可选：填写已加载的额度插件 ID 时使用插件模式；留空时自动读取账号类型，Codex/Claude 支持主动查询，其他账号仅读取被动额度，有数据才展示。auth_index 必填，为目标账号凭据索引。在供应商编辑窗口填写管理地址和密钥，点击加载 CPA 账号并选择目标账号，然后保存。管理密钥加密存储，编辑时留空保留原值。');
   }
 
   // 打开脚本编辑器

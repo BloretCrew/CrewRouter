@@ -2037,6 +2037,28 @@ router.post('/providers/quick-add', requireAuth, requireAdmin, auditMiddleware(A
   }
 });
 
+// 未保存的 CPA 连接也可加载账号；凭据只在服务端使用。
+router.post('/providers/cpa/accounts', requireAuth, requireAdmin, async (req, res) => {
+  const { id, cpa_management_url, cpa_management_key } = req.body;
+  if (typeof cpa_management_url !== 'string' || !cpa_management_url.trim()
+      || (cpa_management_key !== undefined && typeof cpa_management_key !== 'string')) {
+    return res.status(400).json({ error: '请填写有效的 CPA 管理地址和密钥' });
+  }
+  try {
+    let key = cpa_management_key?.trim() || '';
+    if (!key && id) {
+      const result = await pool.query('SELECT cpa_management_key FROM providers WHERE id = $1', [id]);
+      if (!result.rows.length) return res.status(404).json({ error: '供应商不存在' });
+      key = result.rows[0].cpa_management_key || '';
+    }
+    if (!key) return res.status(400).json({ error: '请填写 CPA 管理密钥' });
+    const accounts = await require('../utils/cpa-usage').listCpaAccounts({ cpa_management_url: cpa_management_url.trim(), cpa_management_key: key });
+    res.json({ accounts });
+  } catch (_) {
+    res.status(502).json({ error: '加载 CPA 账号失败，请检查管理地址、密钥和 CPA 服务状态' });
+  }
+});
+
 // 创建/更新供应商
 router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_PROVIDER_CREATE, {
   resourceType: 'provider',

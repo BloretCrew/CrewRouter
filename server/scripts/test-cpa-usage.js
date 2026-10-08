@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict');
 const http = require('node:http');
-const { parseCpaQuotaConfig, normalizeCpaQuota, fetchCpaUsage } = require('../utils/cpa-usage');
+const { parseCpaQuotaConfig, normalizeCpaQuota, fetchCpaUsage, listCpaAccounts } = require('../utils/cpa-usage');
 
 async function main() {
   assert.throws(() => parseCpaQuotaConfig('bad'), /JSON/);
@@ -56,6 +56,21 @@ async function main() {
   const details = source.slice(source.indexOf("router.get('/providers/:id',"), source.indexOf('// 切换供应商额度查询开关'));
   assert.ok(details.includes('const { cpa_management_key, ...publicProvider } = p'));
   assert.ok(source.includes('ark_secret_key, cpa_management_key, ...rest'));
+  const accountsStart = source.indexOf('async (req, res) => {', source.indexOf("router.post('/providers/cpa/accounts'"));
+  const accountsEnd = source.indexOf('\n});', accountsStart);
+  let listInput;
+  const accountsHandler = vm.runInNewContext('(' + source.slice(accountsStart, accountsEnd) + '\n})', {
+    pool, require: () => ({ listCpaAccounts: async input => { listInput = input; return []; } })
+  });
+  const accountsRes = { code: 200, status(code) { this.code = code; return this; }, json(data) { this.data = data; } };
+  await accountsHandler({ body: { id: 'test', cpa_management_url: 'http://127.0.0.1:8317' } }, accountsRes);
+  assert.equal(accountsRes.code, 200);
+  assert.equal(listInput.cpa_management_key, oldKey);
+  assert.deepEqual(Array.from(accountsRes.data.accounts), []);
+  await accountsHandler({ body: { cpa_management_url: 'http://127.0.0.1:8317', cpa_management_key: 'new-key' } }, accountsRes);
+  assert.equal(listInput.cpa_management_key, 'new-key');
+  await accountsHandler({ body: { cpa_management_url: 'http://127.0.0.1:8317' } }, accountsRes);
+  assert.equal(accountsRes.code, 400);
   const quota = normalizeCpaQuota({ subscription: { plan: 'Pro' }, groups: [
     { displayName: 'Codex', buckets: [{ window: '5h', remainingFraction: 0.75 }, { window: 'weekly', remaining_fraction: 0, reset_time: '2026-10-08T00:00:00Z' }] }
   ] });
@@ -84,7 +99,7 @@ async function main() {
     if (!noPlugin) assert.equal(req.url, '/v8/management/plugins/plugin%2Fname/quota?auth_index=account%20index');
     assert.equal(req.headers.authorization, 'Bearer isolated-test-key');
     if (noPlugin) {
-      if (req.url === '/v8/management/credentials') return res.end(JSON.stringify({ files: [{ auth_index: 'account index', provider: credentialType, disabled, quota: passive, id_token: { chatgpt_account_id: 'acct' } }] }));
+      if (req.url === '/v8/management/credentials') return res.end(JSON.stringify({ files: [{ auth_index: 'account index', provider: credentialType, email: 'test@example.com', access_token: 'MUST-NOT-EXPOSE', disabled, quota: passive, id_token: { chatgpt_account_id: 'acct' } }] }));
       assert.equal(req.url, '/v8/management/requests/api-call');
       let text = '';
       req.on('data', chunk => { text += chunk; });
@@ -134,6 +149,9 @@ async function main() {
     assert.equal(requests, before + 1);
     noPlugin = true;
     provider.quota_script = '{"auth_index":"account index"}';
+    const accounts = await listCpaAccounts(provider);
+    assert.deepEqual(accounts, [{ auth_index: 'account index', provider: 'codex', label: 'test@example.com', disabled: false }]);
+    assert.ok(!JSON.stringify(accounts).includes('MUST-NOT-EXPOSE'));
     assert.equal((await fetchCpaUsage(provider)).remaining, 70);
     assert.equal((await fetchCpaUsage(provider)).source, 'active');
     credentialType = 'claude';

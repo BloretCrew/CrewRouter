@@ -2746,7 +2746,7 @@
   "CPA 额度查询（服务器管理接口）": "CPA quota query (server management API)",
   "CPA 额度配置（JSON）": "CPA quota configuration (JSON)",
   "编辑配置": "Edit configuration",
-  "plugin_id 可选：填写已加载的额度插件 ID 时使用插件模式；留空时自动读取账号类型，Codex/Claude 支持主动查询，其他账号仅读取被动额度，有数据才展示。auth_index 必填，为目标账号凭据索引。在供应商编辑窗口填写管理地址、管理密钥和账号凭据索引，随供应商设置一起保存。管理密钥加密存储，编辑时留空保留原值。": "plugin_id is optional: enter a loaded quota plugin ID to use plugin mode, or leave it blank to detect the account type automatically. Codex/Claude support active queries; other accounts only read passive quota data, displayed only when available. auth_index is required and identifies the target account credential. Enter the management URL, management key and credential index in the provider editor; they are saved with the provider settings. The key is encrypted; leave it blank when editing to keep the saved key.",
+  "plugin_id 可选：填写已加载的额度插件 ID 时使用插件模式；留空时自动读取账号类型，Codex/Claude 支持主动查询，其他账号仅读取被动额度，有数据才展示。auth_index 必填，为目标账号凭据索引。在供应商编辑窗口填写管理地址和密钥，点击加载 CPA 账号并选择目标账号，然后保存。管理密钥加密存储，编辑时留空保留原值。": "plugin_id is optional: enter a loaded quota plugin ID to use plugin mode, or leave it blank to detect the account type automatically. Codex/Claude support active queries; other accounts only read passive quota data, displayed only when available. auth_index is required and identifies the target account credential. Enter the management URL, management key and credential index in the provider editor; they are saved with the provider settings. The key is encrypted; leave it blank when editing to keep the saved key.",
   "加载额度配置失败: ": "Failed to load quota configuration: ",
   "auth_index 必须为非空字符串；plugin_id 可省略或为空字符串，填写时必须为有效的插件 ID": "auth_index must be a non-empty string; plugin_id may be omitted or an empty string, but must be a valid plugin ID when provided",
   "CPA 配置无效: ": "Invalid CPA configuration: ",
@@ -2758,5 +2758,14 @@
   "CPA 管理密钥": "CPA management key",
   "首次填写，编辑时留空保留原值": "Required initially; leave blank when editing to keep the saved key",
   "请填写 CPA 管理地址和管理密钥": "Enter the CPA management URL and key",
-  "已配置，留空保留原值": "Configured; leave blank to keep the saved key"
+  "已配置，留空保留原值": "Configured; leave blank to keep the saved key",
+  "CPA 账号": "CPA account",
+  "请先加载 CPA 账号": "Load CPA accounts first",
+  "加载 CPA 账号": "Load CPA accounts",
+  "已保存账号": "Saved account",
+  "正在加载 CPA 账号...": "Loading CPA accounts...",
+  "加载 CPA 账号失败": "Failed to load CPA accounts",
+  "请选择 CPA 账号": "Select a CPA account",
+  "请选择要查询额度的 CPA 账号": "Select the CPA account to query",
+  "CPA 中暂无已登录账号": "No signed-in CPA accounts"
 }
