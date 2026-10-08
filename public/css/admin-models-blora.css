@@ -219,3 +219,19 @@
 .admin-model-filter-actions { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-2); }
 .admin-model-filter-actions .filter-info { margin-inline-start: auto; }
 #adminModelsFilters blora-select::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
+
+.blora-admin-models-page .model-library-header-actions {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: min(100%, 40rem);
+}
+.blora-admin-models-page .model-library-header-actions > .blora-button,
+.blora-admin-models-page .model-library-header-actions > .expand-dropdown,
+.blora-admin-models-page .model-library-header-actions > .admin-action-dropdown {
+  flex: 1 1 8rem;
+  width: auto;
+}
+@media (max-width: 900px) {
+  .blora-admin-models-page .model-library-header-actions { width: 100%; }
+}
