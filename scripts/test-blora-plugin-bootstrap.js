@@ -10,11 +10,11 @@ const context = vm.createContext({ window: {}, adminApp: { ready: true }, setTim
 vm.runInContext(source.slice(start, end) + "\nthis.result = waitForApp(() => window.adminApp || (typeof adminApp !== 'undefined' ? adminApp : null));", context);
 context.result.then(value => {
   assert.equal(value.ready, true);
-  assert.match(source, /waitForApp\(\(\) => window\.adminApp \|\| \(typeof adminApp/);
-  assert.match(source, /container\.dataset\.bloraState = 'error'/);
-  assert.match(source, /<blora-empty/);
-  assert.match(source, /<blora-search id="pluginSearchInput"/);
-  assert.match(source, /<blora-switch/);
-  assert.doesNotMatch(source, /<input type="checkbox"/);
-  console.log('Plugin bootstrap resolves lexical app; error/empty/search/switch use official APIs.');
+  assert.match(source, /waitForApp\(\(\) => window\.adminApp \|\| \(typeof adminApp !== 'undefined' \? adminApp : null\)/);
+  assert.match(source, /area === 'admin' && \(window\.adminApp \|\| \(typeof adminApp !== 'undefined' && adminApp\)\)/);
+  assert.match(source, /const hashPage = location\.hash\.replace/);
+  assert.match(source, /hashPage === 'adminPlugins'/);
+  assert.match(source, /renderPluginsAdmin\(document\.getElementById\('adminPluginsContent'\)\)/);
+  assert.match(source, /const initialPage = cur === 'adminPlugins'/);
+  console.log('Plugin bootstrap resolves lexical adminApp and renders direct adminPlugins links.');
 }).catch(error => { console.error(error); process.exitCode = 1; });

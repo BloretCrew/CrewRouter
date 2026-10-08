@@ -93,7 +93,7 @@
       item.innerHTML = `<img src="https://img.bloret.net/SF/puzzlepiece?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="puzzlepiece">
         <span><span>${esc(p.title)}</span></span>`;
       item.addEventListener('click', () => {
-        if (area === 'admin' && window.adminApp) adminApp.navigateTo(p.pageId);
+        if (area === 'admin' && (window.adminApp || (typeof adminApp !== 'undefined' && adminApp))) adminApp.navigateTo(p.pageId);
         else if (area === 'console' && window.app) app.navigateTo(p.pageId);
       });
       // 追加到第一个分区内置项之后
@@ -418,7 +418,7 @@
 
     const appObj = area === 'console'
       ? await waitForApp(() => window.app)
-      : await waitForApp(() => window.adminApp);
+      : await waitForApp(() => window.adminApp || (typeof adminApp !== 'undefined' ? adminApp : null));
     if (appObj) patchApp(appObj, area);
 
     state.ready = true;
@@ -428,9 +428,12 @@
 
     // 初始页面若是插件页/常规页，恢复一次渲染（hash 直达场景）
     const cur = currentPage();
-    if (cur) {
-      if (cur.startsWith('plugin_')) await renderPluginPageIfAny(cur);
-      else if (cur === 'adminPlugins') renderPluginsAdmin(document.getElementById('adminPluginsContent'));
+    const hashPage = location.hash.replace(/^#/, '').split('/')[0];
+    const initialPage = cur === 'adminPlugins' || (area === 'admin' && hashPage === 'adminPlugins')
+      ? 'adminPlugins' : cur;
+    if (initialPage) {
+      if (initialPage.startsWith('plugin_')) await renderPluginPageIfAny(initialPage);
+      else if (initialPage === 'adminPlugins') renderPluginsAdmin(document.getElementById('adminPluginsContent'));
       else {
         if (cur === 'settings') renderUserThemePicker(document.getElementById('pluginThemePicker'));
         if (cur === 'adminSettings') renderDefaultThemePicker(document.getElementById('pluginDefaultThemePicker'));
