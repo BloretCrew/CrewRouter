@@ -7692,27 +7692,65 @@ async function(ctx) {
         : '-'],
     ];
 
-    let bodyHtml = '';
-    if (log.error_message) {
-      bodyHtml += `<div class="error-detail-block"><span class="error-detail-label">${t('错误信息')}</span><pre class="error-detail-pre error-detail-pre--message">${escapeHtml(log.error_message)}</pre></div>`;
-    }
+    let prettyResponse = '';
     if (log.error_body) {
-      let pretty = log.error_body;
+      prettyResponse = log.error_body;
       try {
-        pretty = JSON.stringify(JSON.parse(log.error_body), null, 2);
+        prettyResponse = JSON.stringify(JSON.parse(log.error_body), null, 2);
       } catch { /* keep raw */ }
-      bodyHtml += `<div class="error-detail-block"><span class="error-detail-label">${t('原始响应')}</span><pre class="error-detail-pre error-detail-pre--body">${escapeHtml(pretty)}</pre></div>`;
     }
 
     const content = document.getElementById('errorDetailContent');
-    setHTML(content, rows.map(([label, value]) => `
-      <div class="error-detail-row"><span class="error-detail-label">${label}</span><span class="error-detail-value">${value}</span></div>
-    `).join('') + bodyHtml);
+    const pageRows = [
+      { id: 'overview', title: t('基本信息'), content: rows.map(([label, value]) => `
+        <div class="error-detail-row"><span class="error-detail-label">${label}</span><span class="error-detail-value">${value}</span></div>`).join('') },
+      { id: 'error', title: t('错误信息'), content: log.error_message ? `<pre class="error-detail-pre error-detail-pre--message">${escapeHtml(log.error_message)}</pre>` : `<p class="error-detail-empty">${t('没有错误信息')}</p>` },
+      { id: 'response', title: t('原始响应'), content: prettyResponse ? `<pre class="error-detail-pre error-detail-pre--body">${escapeHtml(prettyResponse)}</pre>` : `<p class="error-detail-empty">${t('没有原始响应')}</p>` }
+    ];
+    this._errorDetailPage = 0;
+    setHTML(content, `
+      <nav class="error-detail-tabs" role="tablist" aria-label="${t('错误详情分页')}">
+        ${pageRows.map((page, index) => `<button type="button" class="blora-button" data-variant="${index === 0 ? 'primary' : 'ghost'}" role="tab" aria-selected="${index === 0}" aria-controls="errorDetailPage-${page.id}" onclick="adminApp.setErrorDetailPage(${index})">${escapeHtml(page.title)}</button>`).join('')}
+      </nav>
+      <div class="error-detail-page-status" id="errorDetailPageStatus" aria-live="polite">1 / ${pageRows.length}</div>
+      ${pageRows.map((page, index) => `<section id="errorDetailPage-${page.id}" class="error-detail-page" role="tabpanel" ${index === 0 ? '' : 'hidden'}>${page.content}</section>`).join('')}
+      <nav class="error-detail-pagination" aria-label="${t('错误详情分页操作')}">
+        <button type="button" class="blora-button" data-variant="outline" id="errorDetailPrevious" onclick="adminApp.setErrorDetailPage(adminApp._errorDetailPage - 1)" disabled>${t('上一页')}</button>
+        <span id="errorDetailPageCounter">1 / ${pageRows.length}</span>
+        <button type="button" class="blora-button" data-variant="outline" id="errorDetailNext" onclick="adminApp.setErrorDetailPage(adminApp._errorDetailPage + 1)">${t('下一页')}</button>
+      </nav>`);
+    this._errorDetailPages = pageRows.map(page => page.id);
 
     const modal = document.getElementById('errorDetailModal');
     if (modal) {
       this.showModal('errorDetailModal');
     }
+  }
+
+  setErrorDetailPage(page) {
+    const pages = this._errorDetailPages || [];
+    if (!pages.length) return;
+    this._errorDetailPage = Math.max(0, Math.min(pages.length - 1, Number(page) || 0));
+    pages.forEach((id, index) => {
+      const panel = document.getElementById(`errorDetailPage-${id}`);
+      if (panel) panel.hidden = index !== this._errorDetailPage;
+      const tab = document.querySelector(`#errorDetailContent [aria-controls="errorDetailPage-${id}"]`);
+      if (tab) {
+        tab.setAttribute('aria-selected', String(index === this._errorDetailPage));
+        tab.dataset.variant = index === this._errorDetailPage ? 'primary' : 'ghost';
+      }
+    });
+    const counter = document.getElementById('errorDetailPageCounter');
+    const status = document.getElementById('errorDetailPageStatus');
+    const label = `${this._errorDetailPage + 1} / ${pages.length}`;
+    if (counter) counter.textContent = label;
+    if (status) status.textContent = label;
+    const previous = document.getElementById('errorDetailPrevious');
+    const next = document.getElementById('errorDetailNext');
+    if (previous) previous.disabled = this._errorDetailPage === 0;
+    if (next) next.disabled = this._errorDetailPage === pages.length - 1;
+    const body = document.querySelector('#errorDetailModal .modal-body');
+    if (body) body.scrollTop = 0;
   }
 
   closeErrorDetailModal() {
