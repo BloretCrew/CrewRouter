@@ -63,6 +63,11 @@ async function main(){
  for(let i=0;i<100;i++){if(await cdp.evaluate(`typeof app !== 'undefined'&&!!app.user&&!!window.BloraAgentPage`))break;await sleep(100);}
  await cdp.evaluate(`app.navigateTo('bloraAgent',{agentMode:'chat'})`);await sleep(1500);
  await cdp.evaluate(`BloraAgentPage.models=[{id:'chat-a',name:'Chat Alpha',provider_name:'Provider A'},{id:'chat-b',name:'Chat Beta',provider_name:'Provider B'},{id:'image-a',name:'Image Alpha',output_kind:'image'}];BloraAgentPage.mode='chat';BloraAgentPage.renderModelSelect()`);
+ await cdp.evaluate(`document.getElementById('baSystem').focus();document.getElementById('baSystem').select()`);await cdp.send('Input.insertText',{text:'Browser system prompt'});
+ await cdp.evaluate(`document.getElementById('baMaxTokens').focus();document.getElementById('baMaxTokens').select()`);await cdp.send('Input.insertText',{text:'8192'});
+ await cdp.evaluate(`document.getElementById('baTemperature').focus()`);await cdp.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+ await check(`document.getElementById('baSystem').value==='Browser system prompt'&&document.getElementById('baMaxTokens').value==='8192'&&document.getElementById('baTempVal').textContent===Number(document.getElementById('baTemperature').value).toFixed(1)`,'参数输入与温度显示');
+ await check(`(()=>{const a=document.querySelector('.ba-option--temperature > span').getBoundingClientRect(),b=document.querySelector('.ba-option--tokens > span').getBoundingClientRect();return Math.abs(a.top-b.top)<1&&document.getElementById('baChatOptions').scrollWidth<=document.getElementById('baChatOptions').clientWidth;})()`,'参数标签对齐无溢出');
  assert.ok(await cdp.click('#baModelPicker'),'打开模型库');await sleep(350);
  await check(`document.querySelectorAll('.ba-model-card').length===2`,'聊天只显示对话模型');
  await cdp.evaluate(`document.querySelector('[data-model-search]').focus()`);await cdp.send('Input.insertText',{text:'Beta'});

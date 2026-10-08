@@ -45,7 +45,7 @@
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/settings-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sessions-blora.css?v=attachments-20261005">
-  <link rel="stylesheet" href="/css/blora-agent.css?v=model-library-picker-20261005">
+  <link rel="stylesheet" href="/css/blora-agent.css?v=options-layout-20261005">
   <link rel="stylesheet" href="/css/prompts-blora.css?v=inject-editor-20261005">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
   <script>
@@ -1266,13 +1266,13 @@
           <section class="ba-main">
             <div id="baThread" class="ba-thread" aria-live="polite"></div>
             <div id="baChatOptions" class="ba-options">
-              <label class="ba-option"><span data-i18n="系统提示词">系统提示词</span>
+              <label class="ba-option ba-option--system"><span data-i18n="系统提示词">系统提示词</span>
                 <textarea id="baSystem" class="blora-textarea" rows="2" data-i18n-placeholder="你是一个有用的助手" placeholder="你是一个有用的助手"></textarea>
               </label>
-              <label class="ba-option ba-option--inline">Temperature <span id="baTempVal">1.0</span>
+              <label class="ba-option ba-option--temperature"><span>Temperature <span id="baTempVal">1.0</span></span>
                 <input id="baTemperature" type="range" min="0" max="2" step="0.1" value="1">
               </label>
-              <label class="ba-option ba-option--inline">Max Tokens
+              <label class="ba-option ba-option--tokens"><span>Max Tokens</span>
                 <input id="baMaxTokens" class="blora-input" type="number" min="1" max="128000" value="4096">
               </label>
               <label class="ba-option ba-option--inline" id="baThinkingWrap"><input id="baThinking" type="checkbox" checked> <span data-i18n="思考">思考</span></label>
