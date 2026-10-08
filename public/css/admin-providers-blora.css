@@ -101,3 +101,22 @@
 
 .provider-select-all-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-3); padding: var(--blora-space-2) var(--blora-space-3); margin-bottom: var(--blora-space-3); font-size: var(--blora-text-sm); }
 .provider-select-all-hint { color: var(--blora-color-text-subtle); }
+
+#addProviderModal::part(panel) { width: 100vw !important; max-width: 100vw !important; height: 100dvh !important; max-height: 100dvh !important; margin: 0 !important; border-radius: 0 !important; }
+#addProviderModal .modal-content { width: 100%; height: 100%; max-width: none; max-height: none; border-radius: 0; }
+#addProviderModal .modal-body { flex: 1; min-height: 0; overflow-y: auto; }
+#addProviderModal .provider-editor-pages { display: flex; flex-wrap: wrap; gap: .5rem; padding: .75rem 1.5rem; border-bottom: var(--blora-border-subtle); }
+#addProviderModal .provider-form-section[hidden], #addProviderModal .provider-form-basics[hidden] { display: none !important; }
+#addProviderModal .provider-form-section > summary { display: none; }
+#addProviderModal blora-select { display: block; width: 100%; min-width: 0; }
+#addProviderModal .modal-footer { flex-wrap: wrap; gap: .5rem; }
+#providerEditorPageStatus { margin-inline-end: auto; }
+@media (max-width: 640px) { #addProviderModal .provider-editor-pages { flex-wrap: nowrap; overflow-x: auto; padding: .75rem; } #addProviderModal .provider-editor-pages button { flex-shrink: 0; } }
+#addProviderModal::part(overlay) { padding: 0 !important; }
+#addProviderModal::part(panel) { flex-shrink: 0; position: fixed; inset: 0; }
+#addProviderModal .modal-footer { display: flex; flex-direction: row !important; align-items: center; }
+#addProviderModal .provider-editor-pages { flex-shrink: 0; }
+@media (max-width: 640px) {
+  #addProviderModal .modal-footer > .blora-button { flex: 0 0 auto; width: auto; }
+  #addProviderModal .provider-api-key-row { flex-wrap: wrap; }
+}

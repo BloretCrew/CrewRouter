@@ -4211,6 +4211,26 @@ class AdminApp {
     });
   }
 
+  setProviderEditorPage(page = 0) {
+    const root = document.getElementById('addProviderModal');
+    const sections = [root.querySelector('.provider-form-basics'), ...['KeyMode', 'ModelsQuota', 'Proxy', 'Test', 'Headers', 'Tags'].map(name => document.getElementById('providerSection' + name))];
+    this._providerEditorPage = Math.max(0, Math.min(sections.length - 1, page));
+    sections.forEach((section, index) => {
+      if (!section) return;
+      section.hidden = index !== this._providerEditorPage;
+      if (section.tagName === 'DETAILS') section.open = true;
+    });
+    root.querySelectorAll('[data-provider-page]').forEach(button => {
+      const active = Number(button.dataset.providerPage) === this._providerEditorPage;
+      button.setAttribute('aria-current', active ? 'page' : 'false');
+      button.dataset.variant = active ? 'primary' : 'ghost';
+    });
+    document.getElementById('providerEditorPrevious').disabled = this._providerEditorPage === 0;
+    document.getElementById('providerEditorNext').disabled = this._providerEditorPage === sections.length - 1;
+    document.getElementById('providerEditorPageStatus').textContent = `${this._providerEditorPage + 1} / ${sections.length}`;
+    root.querySelector('.modal-body').scrollTop = 0;
+  }
+
   _setProviderFormSectionsOpen({ keyMode = false, modelsQuota = false, proxy = false, headers = false, tags = false, test = false } = {}) {
     const map = {
       providerSectionKeyMode: keyMode,
@@ -4224,6 +4244,9 @@ class AdminApp {
       const el = document.getElementById(id);
       if (el) el.open = !!open;
     });
+    const pageIds = ['providerSectionKeyMode', 'providerSectionModelsQuota', 'providerSectionProxy', 'providerSectionTest', 'providerSectionHeaders', 'providerSectionTags'];
+    const selected = pageIds.findIndex(id => map[id]);
+    if (selected >= 0 && document.getElementById('addProviderModal')?.hasAttribute('open')) this.setProviderEditorPage(selected + 1);
     const doc = document.getElementById('keyScriptDocDetails');
     if (doc) doc.open = false;
   }
@@ -4304,6 +4327,7 @@ class AdminApp {
     this.renderProviderTagAssignment([]);
     this._setProviderFormSectionsOpen({});
 
+    this.setProviderEditorPage(0);
     this.showModal('addProviderModal');
   }
 
@@ -4412,6 +4436,7 @@ class AdminApp {
     this.renderProviderTagAssignment(provider.tags || []);
     this._setProviderFormSectionsOpen({});
 
+    this.setProviderEditorPage(0);
     this.showModal('addProviderModal');
   }
 

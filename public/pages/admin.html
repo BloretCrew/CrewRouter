@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="/css/admin-users-blora.css?v=cards-20261005">
   <link rel="stylesheet" href="/css/admin-teams-blora.css?v=cards-20261005">
   <link rel="stylesheet" href="/css/admin-models-blora.css?v=model-cards-20261005">
-  <link rel="stylesheet" href="/css/admin-providers-blora.css?v=select-all-20261005">
+  <link rel="stylesheet" href="/css/admin-providers-blora.css?v=fullscreen-editor-20261005">
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-prompts-blora.css?v=restore-0930-20261003">
@@ -1657,7 +1657,7 @@
         <h3 id="providerModalTitle"><span data-i18n="添加供应商">添加供应商</span></h3>
         <button class="modal-close">&times;</button>
       </div>
-      <div class="modal-body">
+      <nav class="provider-editor-pages" aria-label="供应商配置分页"><button type="button" class="blora-button" data-variant="ghost" data-provider-page="0" onclick="adminApp.setProviderEditorPage(0)">基本信息</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="1" onclick="adminApp.setProviderEditorPage(1)">密钥模式</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="2" onclick="adminApp.setProviderEditorPage(2)">模型与额度</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="3" onclick="adminApp.setProviderEditorPage(3)">代理</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="4" onclick="adminApp.setProviderEditorPage(4)">测试配置</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="5" onclick="adminApp.setProviderEditorPage(5)">请求头转发</button><button type="button" class="blora-button" data-variant="ghost" data-provider-page="6" onclick="adminApp.setProviderEditorPage(6)">标签</button></nav><div class="modal-body">
         <input type="hidden" id="providerId">
 
         <!-- 基础字段（始终可见） -->
@@ -1704,7 +1704,7 @@
           <div class="form-row-2">
             <div class="form-group">
               <label for="providerFormat"><span data-i18n="API 格式">API 格式</span></label>
-              <blora-select id="providerFormat" class="select">
+              <blora-select id="providerFormat">
                 <blora-option value="openai">Chat Completions</blora-option>
                 <blora-option value="responses">Responses</blora-option>
                 <blora-option value="anthropic">Anthropic Messages</blora-option>
@@ -1712,7 +1712,7 @@
             </div>
             <div class="form-group">
               <label for="providerEnabled"><span data-i18n="启用状态">启用状态</span></label>
-              <blora-select id="providerEnabled" class="select">
+              <blora-select id="providerEnabled">
                 <blora-option value="true"><span data-i18n="启用">启用</span></blora-option>
                 <blora-option value="false"><span data-i18n="禁用">禁用</span></blora-option>
               </blora-select>
@@ -1726,7 +1726,7 @@
           <div class="provider-form-section-body">
             <div class="form-group">
               <label for="providerKeyMode"><span data-i18n="密钥模式">密钥模式</span></label>
-              <blora-select id="providerKeyMode" class="select" onchange="adminApp.toggleKeyMode()">
+              <blora-select id="providerKeyMode" onchange="adminApp.toggleKeyMode()">
                 <blora-option value="fixed"><span data-i18n="固定密钥（传统模式）">固定密钥（传统模式）</span></blora-option>
                 <blora-option value="script"><span data-i18n="脚本刷新（动态密钥）">脚本刷新（动态密钥）</span></blora-option>
               </blora-select>
@@ -1799,7 +1799,7 @@
             </div>
             <div class="form-group">
               <label for="providerQuotaEnabled"><span data-i18n="额度查询">额度查询</span></label>
-              <blora-select id="providerQuotaEnabled" class="select" onchange="adminApp.toggleQuotaScheduleFields()">
+              <blora-select id="providerQuotaEnabled" onchange="adminApp.toggleQuotaScheduleFields()">
                 <blora-option value="true"><span data-i18n="启用（用户可查看此供应商额度）">启用（用户可查看此供应商额度）</span></blora-option>
                 <blora-option value="false"><span data-i18n="关闭">关闭</span></blora-option>
               </blora-select>
@@ -1807,7 +1807,7 @@
             </div>
             <div class="form-group" id="providerQuotaScheduleGroup">
               <label for="providerQuotaScheduleEnabled"><span data-i18n="定时查询">定时查询</span></label>
-              <blora-select id="providerQuotaScheduleEnabled" class="select" onchange="adminApp.toggleQuotaScheduleFields()">
+              <blora-select id="providerQuotaScheduleEnabled" onchange="adminApp.toggleQuotaScheduleFields()">
                 <blora-option value="false"><span data-i18n="关闭">关闭</span></blora-option>
                 <blora-option value="true"><span data-i18n="开启">开启</span></blora-option>
               </blora-select>
@@ -1815,7 +1815,7 @@
             </div>
             <div class="form-group" id="providerQuotaScheduleIntervalGroup">
               <label for="providerQuotaScheduleInterval"><span data-i18n="查询间隔">查询间隔</span></label>
-              <blora-select id="providerQuotaScheduleInterval" class="select">
+              <blora-select id="providerQuotaScheduleInterval">
                 <blora-option value="600"><span data-i18n="每 10 分钟">每 10 分钟</span></blora-option>
                 <blora-option value="1800"><span data-i18n="每 30 分钟">每 30 分钟</span></blora-option>
                 <blora-option value="3600"><span data-i18n="每 1 小时">每 1 小时</span></blora-option>
@@ -1828,7 +1828,7 @@
             <div id="providerQuotaScheduleMeta" style="display:none;font-size:12px;color:var(--muted-foreground);margin:-4px 0 12px;"></div>
             <div class="form-group">
               <label for="providerQuotaMode"><span data-i18n="额度查询方式">额度查询方式</span></label>
-              <blora-select id="providerQuotaMode" class="select" onchange="adminApp.toggleCodexQuotaImport();adminApp.toggleArkQuotaConfig()">
+              <blora-select id="providerQuotaMode" onchange="adminApp.toggleCodexQuotaImport();adminApp.toggleArkQuotaConfig()">
                 <blora-option value="script"><span data-i18n="通用脚本（按 Base URL 查询）">通用脚本（按 Base URL 查询）</span></blora-option>
                 <blora-option value="cpa"><span data-i18n="CPA 额度查询（服务器管理接口）">CPA 额度查询（服务器管理接口）</span></blora-option>
                 <blora-option value="opencode_go">OpenCode Go（/zen/go/v1/usage）</blora-option>
@@ -1858,7 +1858,7 @@
               </div>
               <div class="form-group">
                 <label for="providerCpaAuthIndex"><span data-i18n="CPA 账号">CPA 账号</span></label>
-                <blora-select id="providerCpaAuthIndex" class="select">
+                <blora-select id="providerCpaAuthIndex">
                   <blora-option value=""><span data-i18n="请先加载 CPA 账号">请先加载 CPA 账号</span></blora-option>
                 </blora-select>
                 <button type="button" id="providerCpaLoadAccounts" class="blora-button" data-variant="secondary" data-size="sm" style="margin-top:8px;" onclick="adminApp.loadCpaAccounts()"><span data-i18n="加载 CPA 账号">加载 CPA 账号</span></button>
@@ -1972,14 +1972,14 @@
               <div style="display:flex;flex-direction:column;gap:12px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                   <label for="providerContentTypeMode" style="font-size:13px;min-width:100px;">Content-Type</label>
-                  <blora-select id="providerContentTypeMode" class="select" style="flex:1;">
+                  <blora-select id="providerContentTypeMode" style="flex:1;">
                     <blora-option value="hardcoded">application/json</blora-option>
                     <blora-option value="passthrough"><span data-i18n="透传客户端请求头">透传客户端请求头</span></blora-option>
                   </blora-select>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
                   <label for="providerForwardHeaders" style="font-size:13px;min-width:100px;"><span data-i18n="UA / Accept / 其他">UA / Accept / 其他</span></label>
-                  <blora-select id="providerForwardHeaders" class="select" style="flex:1;">
+                  <blora-select id="providerForwardHeaders" style="flex:1;">
                     <blora-option value="true"><span data-i18n="透传">透传</span></blora-option>
                     <blora-option value="false"><span data-i18n="不转发">不转发</span></blora-option>
                   </blora-select>
@@ -2005,7 +2005,7 @@
           </div>
         </details>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer"><span id="providerEditorPageStatus" role="status"></span><button type="button" id="providerEditorPrevious" class="blora-button" data-variant="outline" onclick="adminApp.setProviderEditorPage(adminApp._providerEditorPage - 1)">上一页</button><button type="button" id="providerEditorNext" class="blora-button" data-variant="outline" onclick="adminApp.setProviderEditorPage(adminApp._providerEditorPage + 1)">下一页</button>
         <button type="button" id="saveProviderBtn" class="blora-button" data-variant="primary" data-size="sm"><span data-i18n="保存">保存</span></button>
       </div>
     </div>
@@ -2447,7 +2447,7 @@
   <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/admin.js?v=model-cards-20261005"></script>
+  <script src="/js/admin.js?v=fullscreen-provider-editor-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
     // 移动端侧边栏切换
