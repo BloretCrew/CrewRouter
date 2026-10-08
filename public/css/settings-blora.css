@@ -107,3 +107,11 @@
     grid-template-columns: 1fr;
   }
 }
+
+#notificationsList { display: grid; gap: var(--blora-space-3); }
+.notification-card { padding: var(--blora-space-4); border: var(--blora-border-subtle); border-radius: var(--blora-radius-lg); background: var(--blora-color-surface-default); min-width: 0; }
+.notification-card.is-unread { border-inline-start: 3px solid var(--blora-color-action-primary-default); background: var(--blora-color-surface-raised); }
+.notification-header { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--blora-space-2); }
+.notification-header time { color: var(--blora-color-text-subtle); font-size: var(--blora-text-xs); }
+.notification-body { margin-top: var(--blora-space-2); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); }
+.notification-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--blora-space-2); margin-top: var(--blora-space-3); }
