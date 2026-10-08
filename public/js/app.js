@@ -5666,10 +5666,14 @@ class ConsoleApp {
     } else {
       bodyHtml = escapeHtml(evt.text || '') + (evt.truncated ? '\n…' : '');
     }
+    const attachmentsHtml = (Array.isArray(evt.attachments) ? evt.attachments : []).filter(item => item?.type === 'image').map(item => {
+      const url = typeof item.url === 'string' && item.url.length <= 2 * 1024 * 1024 && /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=\r\n]+$/.test(item.url) ? item.url : '';
+      return url ? `<details class="session-image-attachment"><summary>${t('图片')}</summary><img src="${escapeHtml(url)}" alt="${t('图片')}" loading="lazy"></details>` : `<span class="blora-badge" data-variant="neutral">${t('图片')}</span>`;
+    }).join('');
     return `
       <li class="timeline-event role-${escapeHtml(evt.role || 'system')}">
         <span class="timeline-event-tag">${meta.label}</span>
-        <div class="timeline-event-text timeline-md-body role-${escapeHtml(evt.role || 'system')}-text">${bodyHtml}</div>
+        <div class="timeline-event-text timeline-md-body role-${escapeHtml(evt.role || 'system')}-text">${bodyHtml}${attachmentsHtml}</div>
       </li>`;
   }
 

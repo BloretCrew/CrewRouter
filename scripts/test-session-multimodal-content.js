@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const s=fs.readFileSync('server/routes/sessions-view.js','utf8');
+const start=s.indexOf('function contentToText'),end=s.indexOf('\nfunction ',s.indexOf('function parseMessagesToEvents')+10);
+const context={LIMIT_TEXT:50000,LIMIT_TOOL_RESULT:800,cleanDisplayText:x=>x.trim(),truncStr:(x,n)=>x.slice(0,n)};
+vm.createContext(context);vm.runInContext(s.slice(start,end),context);
+const image='data:image/png;base64,aGVsbG8=';
+const events=context.parseMessagesToEvents([{role:'user',content:[{type:'text',text:'hello'},{type:'image_url',image_url:{url:image}}]}]);
+assert.equal(events[0].text,'hello');assert.equal(events[0].attachments[0].url,image);
+assert.equal(context.parseMessagesToEvents([{role:'user',content:[{type:'image_url',image_url:{url:'https://example.test/a.png'}}]}])[0].attachments[0].url,null);
+assert.equal(context.contentToText({type:'text',text:'plain'}),'plain');
+console.log('PASS multimodal text, image-only, safe attachment parsing');

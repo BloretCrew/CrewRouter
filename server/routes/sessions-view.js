@@ -181,6 +181,12 @@ function contentToText(content) {
     }
     return out;
   }
+  if (typeof content === 'object') {
+    if (['image_url', 'image', 'input_image'].includes(content.type)) return '';
+    for (const key of ['text', 'content', 'input_text']) {
+      if (typeof content[key] === 'string') return content[key];
+    }
+  }
   try { return JSON.stringify(content); } catch { return ''; }
 }
 
@@ -219,12 +225,17 @@ function parseMessagesToEvents(messages) {
             });
           }
         }
-        const text = m.content
-          .filter(b => b && b.type !== 'tool_result')
-          .map(b => contentToText(b))
-          .join('\n');
-        const cleaned = cleanDisplayText(text);
-        if (cleaned) events.push({ type: 'text', role: 'user', text: truncStr(cleaned, LIMIT_TEXT), truncated: cleaned.length > LIMIT_TEXT });
+        const blocks = m.content.filter(b => b && b.type !== 'tool_result');
+        const cleaned = cleanDisplayText(contentToText(blocks));
+        const attachments = blocks.filter(b => ['image_url', 'image', 'input_image'].includes(b?.type)).map(b => {
+          const url = b.image_url?.url || (typeof b.image_url === 'string' ? b.image_url : '') || b.url;
+          const source = b.source;
+          // 只返回可安全内联的光栅图片；远程图片保留占位，避免自动请求第三方。
+          const inline = source?.type === 'base64' ? `data:${source.media_type};base64,${source.data}` : url;
+          const safe = typeof inline === 'string' && inline.length <= 2 * 1024 * 1024 && /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=\r\n]+$/.test(inline);
+          return { type: 'image', url: safe ? inline : null };
+        });
+        if (cleaned || attachments.length) events.push({ type: 'text', role: 'user', text: truncStr(cleaned, LIMIT_TEXT), truncated: cleaned.length > LIMIT_TEXT, attachments });
       } else {
         const cleaned = cleanDisplayText(contentToText(m.content));
         if (cleaned) events.push({ type: 'text', role: 'user', text: truncStr(cleaned, LIMIT_TEXT), truncated: cleaned.length > LIMIT_TEXT });
@@ -1104,3 +1115,5 @@ module.exports = router;
 module.exports.hasMoreCursorPage = hasMoreCursorPage;
 module.exports.hasMoreCompressedSlice = hasMoreCompressedSlice;
 module.exports.buildDetailNextCursor = buildDetailNextCursor;
+
+module.exports.parseMessagesToEvents = parseMessagesToEvents;
