@@ -69,6 +69,19 @@
   border-color: color-mix(in srgb, var(--border) 55%, transparent);
   background: var(--blora-color-surface-default);
 }
+.blora-admin-settings-page .settings-section blora-select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.blora-admin-settings-page .settings-section blora-select::part(trigger) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.5rem;
+}
 
 @media (max-width: 640px) {
   .blora-admin-settings-page .settings-overview,

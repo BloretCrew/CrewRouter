@@ -40,7 +40,7 @@
   <link rel="stylesheet" href="/css/admin-error-logs-blora.css?v=paged-error-detail-20261008">
   <link rel="stylesheet" href="/css/admin-audit-logs-blora.css?v=rounded-audit-badges-20261008">
   <link rel="stylesheet" href="/css/admin-prompts-blora.css?v=paged-prompt-detail-20261008">
-  <link rel="stylesheet" href="/css/admin-settings-blora.css?v=default-theme-select-20261008">
+  <link rel="stylesheet" href="/css/admin-settings-blora.css?v=report-granularity-select-20261008">
   <link rel="stylesheet" href="/css/admin-plugins-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/admin-dialogs-blora.css?v=restore-0930-20261003">
   <script src="/js/i18n.js?v=restore-0930-20261003"></script>
@@ -1340,7 +1340,7 @@
             </div>
             <div class="form-group">
               <label for="statsReportGranularity"><span data-i18n="上报粒度">上报粒度</span></label>
-              <blora-select id="statsReportGranularity" class="input">
+              <blora-select id="statsReportGranularity" placeholder="含模型与供应商明细（默认）" data-i18n-placeholder="含模型与供应商明细（默认）">
                 <blora-option value="detailed" data-i18n="含模型与供应商明细（默认）">含模型与供应商明细（默认）</blora-option>
                 <blora-option value="counts" data-i18n="仅聚合计数（不含模型/供应商明细）">仅聚合计数（不含模型/供应商明细）</blora-option>
               </blora-select>
