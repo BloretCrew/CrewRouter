@@ -145,12 +145,37 @@
   letter-spacing: -0.025em;
 }
 
+.blora-admin-page .theme-toggle {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--blora-space-3);
+  min-width: max-content;
+}
 .blora-admin-page .theme-toggle .blora-language-select {
+  display: block;
+  flex: 0 0 4.5rem;
   width: 4.5rem;
   min-width: 4.5rem;
   max-width: 4.5rem;
   height: 2.25rem;
-  border-radius: var(--blora-radius-sm);
+  border-radius: var(--blora-radius-full);
+  border: 1px solid var(--blora-color-border-subtle);
+  background: var(--blora-color-surface-default);
+  box-shadow: none;
+}
+.blora-admin-page .theme-toggle .blora-language-select::part(trigger) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.25rem;
+  border-radius: inherit;
+}
+.blora-admin-page #themeToggle { flex: 0 0 2.25rem; width: 2.25rem; height: 2.25rem; }
+@media (max-width: 640px) {
+  .blora-admin-page .content-header { display: flex; flex-wrap: nowrap; justify-content: space-between; gap: var(--blora-space-3); }
+  .blora-admin-page .content-header h1 { min-width: 0; }
+  .blora-admin-page .theme-toggle { gap: var(--blora-space-2); }
 }
 
 .blora-admin-page .content-section {
