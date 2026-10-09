@@ -35,14 +35,15 @@
     .pi-warn { margin-top: var(--blora-space-4); }
     .pi-actions { display: flex; gap: var(--blora-space-2); margin-top: var(--blora-space-5); flex-wrap: wrap; }
     .pi-link { color: var(--blora-color-action-primary); }
-    .pi-loading, .pi-err { text-align: center; padding: var(--blora-space-10) 0; color: var(--blora-color-text-subtle); }
-    .pi-err strong { display: block; margin-bottom: var(--blora-space-2); color: var(--blora-color-status-danger); }
+    .pi-loading, .pi-err { display:flex; justify-content:center; text-align:center; padding: var(--blora-space-10) 0; color: var(--blora-color-text-subtle); }
+    .pi-success { display:block; margin-block:var(--blora-space-5); }
   </style>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
   <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
+  <link rel="stylesheet" href="/css/plugin-install-blora.css?v=plugin-install-states-20261010">
 </head>
-<body class="blora-page blora-scope">
+<body class="blora-page blora-scope plugin-install-page">
   <div class="pi-wrap">
     <div class="pi-brand">CrewRouter <span class="brand-edition-badge" data-edition-badge hidden></span></div>
     <div id="pi-root" class="blora-card pi-card">
@@ -133,8 +134,7 @@
       }
 
       function renderError(title, msg, href) {
-        root.innerHTML = '<div class="pi-err"><strong>' + esc(title) + '</strong>' + esc(msg) +
-          (href ? '<div style="margin-top:10px;"><a class="pi-link" href="' + esc(href) + '">去登录</a></div>' : '') + '</div>';
+        root.innerHTML = '<blora-empty title="' + esc(title) + '" description="' + esc(msg) + '"' + (href ? ' action-label="去登录"' : '') + '></blora-empty>';
       }
 
       function confirmInstall() {
@@ -148,9 +148,7 @@
           return r.json().then(function (d) { return { ok: r.ok, data: d }; });
         }).then(function (res) {
           if (res.ok) {
-            root.innerHTML = '<div class="pi-err"><strong style="color:var(--primary,#2563eb);">安装成功</strong>' +
-              esc(res.data.name || pluginId) + ' v' + esc(res.data.version || '') + ' 已启用。</div>' +
-              '<div class="pi-actions"><a class="blora-button" data-variant="primary" href="/admin">前往插件管理</a></div>';
+            root.innerHTML = '<blora-alert class="pi-success" variant="success" title="安装成功" description="' + esc(res.data.name || pluginId) + ' v' + esc(res.data.version || '') + ' 已启用。"></blora-alert>' + '<div class="pi-actions"><a class="blora-button" data-variant="primary" href="/admin">前往插件管理</a></div>';
           } else {
             throw new Error((res.data && res.data.error) || ('HTTP ' + res.status));
           }

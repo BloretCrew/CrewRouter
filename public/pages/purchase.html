@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="/css/themes.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/main.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/purchase-blora.css?v=purchase-blora-surfaces-20261010">
   <script>
     (function() {
       var theme = localStorage.getItem('theme') || 'system';
@@ -40,12 +41,7 @@
       margin: 60px auto;
       padding: 0 20px;
     }
-    .purchase-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-    }
+    .purchase-card { overflow:hidden; min-width:0; }
     .purchase-image {
       width: 100%;
       height: 240px;
@@ -62,35 +58,14 @@
       color: var(--muted-foreground);
       font-size: 48px;
     }
-    .purchase-info {
-      padding: 24px;
-    }
-    .purchase-name {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .purchase-desc {
-      font-size: 14px;
-      color: var(--muted-foreground);
-      margin-bottom: 20px;
-      line-height: 1.6;
-    }
-    .purchase-btn {
-      width: 100%;
-      padding: 14px;
-      font-size: 16px;
-      font-weight: 600;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      background: var(--brand-blue);
-      color: white;
-      transition: opacity 0.2s;
-    }
-    .purchase-btn:hover {
-      opacity: 0.9;
-    }
+    .purchase-info { padding: var(--blora-space-5); }
+    .purchase-name { color:var(--blora-color-text-primary); font:700 var(--blora-text-xl) var(--blora-font-heading); margin-bottom: var(--blora-space-2); overflow-wrap:anywhere; }
+    .purchase-desc { color:var(--blora-color-text-muted); margin-bottom:var(--blora-space-5); line-height:1.6; overflow-wrap:anywhere; }
+    .purchase-error { display:flex; min-height:9rem; align-items:center; justify-content:center; padding:var(--blora-space-5); text-align:center; }
+    .purchase-status[data-variant="info"] { border:var(--blora-border-subtle); background:var(--blora-color-surface-raised); color:var(--blora-color-text-secondary); }
+    .purchase-status[data-variant="danger"] { border:1px solid color-mix(in srgb,var(--blora-color-status-danger) 30%,var(--blora-color-border-subtle)); background:color-mix(in srgb,var(--blora-color-status-danger) 10%,var(--blora-color-surface-default)); color:var(--blora-color-status-danger); }
+    .purchase-btn { width:100%; min-height:2.75rem; }
+    .purchase-btn:hover { opacity:.92; }
     .purchase-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -109,10 +84,11 @@
       color: var(--foreground);
     }
     .purchase-status {
-      margin-top: 16px;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 13px;
+      margin-top: var(--blora-space-4);
+      padding: var(--blora-space-3);
+      border: var(--blora-border-subtle);
+      border-radius: var(--blora-radius-md);
+      font-size: var(--blora-text-sm);
       text-align: center;
     }
     .loading-text {
@@ -129,7 +105,7 @@
   <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
 </head>
-<body class="blora-page blora-scope">
+<body class="blora-page blora-scope purchase-page">
 <div style="position:absolute;top:10px;right:12px;z-index:99;"><blora-select id="langToggle" title="Language" aria-label="Language">
       <blora-option value="zh">中文</blora-option>
       <blora-option value="en">EN</blora-option>
@@ -174,7 +150,7 @@
       const container = document.getElementById('purchaseContent');
 
       if (!productId) {
-        container.innerHTML = '<div class="error-text">商品ID不存在</div>';
+        container.innerHTML = '<div class="purchase-error"><blora-empty title="商品ID不存在"></blora-empty></div>';
         return;
       }
 
@@ -185,7 +161,7 @@
         const product = products.find(p => p.id === parseInt(productId));
 
         if (!product) {
-          container.innerHTML = '<div class="error-text">商品不存在或已下架</div>';
+          container.innerHTML = '<div class="purchase-error"><blora-empty title="商品不存在或已下架"></blora-empty></div>';
           return;
         }
 
@@ -194,7 +170,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             返回余额
           </a>
-          <div class="purchase-card">
+          <div class="blora-card purchase-card" data-variant="content">
             ${product.image_url
               ? `<img class="purchase-image" src="${product.image_url}" alt="${product.name}">`
               : `<div class="purchase-image-placeholder">📦</div>`
@@ -202,21 +178,20 @@
             <div class="purchase-info">
               <div class="purchase-name">${product.name}</div>
               ${product.description ? `<div class="purchase-desc">${product.description}</div>` : ''}
-              <button class="purchase-btn blora-button" onclick="handlePurchase()">立即购买</button>
+              <button type="button" class="purchase-btn blora-button" data-variant="primary" onclick="handlePurchase()">立即购买</button>
               <div id="purchaseStatus" class="purchase-status" style="display:none;"></div>
             </div>
           </div>
         `;
       } catch (error) {
-        container.innerHTML = '<div class="error-text">加载商品信息失败</div>';
+        container.innerHTML = '<div class="purchase-error"><blora-empty title="加载商品信息失败"></blora-empty></div>';
       }
     }
 
     function handlePurchase() {
       const statusEl = document.getElementById('purchaseStatus');
       statusEl.style.display = 'block';
-      statusEl.style.background = 'rgba(59,130,246,0.1)';
-      statusEl.style.color = 'var(--brand-blue)';
+      statusEl.dataset.variant = 'info';
       statusEl.textContent = '购买功能暂未开放，敬请期待';
     }
 

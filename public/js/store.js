@@ -181,7 +181,7 @@
   function cardHtml(p) {
     var rating = p.ratingCount ? ((p.ratingAvg || 0).toFixed(1) + ' (' + p.ratingCount + ')') : t('暂无评分');
     return (
-      '<article class="store-card">' +
+      '<article class="store-card blora-card" data-variant="content">' +
         '<div class="store-card__cover">' + (p.icon ? '<img src="' + esc(p.icon) + '" alt="" style="width:64px;height:64px;border-radius:12px;object-fit:cover;">' : '🧩') + '</div>' +
         '<div class="store-card__body">' +
           '<div class="store-card__name">' + esc(p.name) + '</div>' +
@@ -655,14 +655,17 @@
   }
 
   function removeModal() {
-    var mask = document.getElementById('storeInstallMask');
-    if (mask) mask.remove();
+    var dialog = document.getElementById('storeInstallDialog');
+    if (!dialog) return;
+    if (typeof dialog.close === 'function') dialog.close();
+    else dialog.removeAttribute('open');
+    window.setTimeout(function () { if (dialog.isConnected && !dialog.hasAttribute('open')) dialog.remove(); }, 250);
   }
 
   function openInstallTargetsModal(pluginId) {
     api('/install-targets').then(function (data) {
       var targets = data.targets || [];
-      var html = '<div class="store-modal-mask" id="storeInstallMask"><div class="store-modal">';
+      var html = '<blora-dialog id="storeInstallDialog" class="store-install-dialog" title="' + esc(t('安装到 CrewRouter')) + '" open><div class="store-modal-mask" id="storeInstallMask"><div class="store-modal blora-card" data-variant="content">';
       html += '<div class="store-modal__head"><h3>' + esc(t('安装到 CrewRouter')) + '</h3><button class="btn btn-sm btn-secondary" id="storeModalClose">' + esc(t('关闭')) + '</button></div>';
       if (!targets.length) {
         html += '<div class="store-empty">' + esc(t('未检测到你登录过的 CrewRouter')) + '</div>';
@@ -686,12 +689,15 @@
 
       var wrap = document.createElement('div');
       wrap.innerHTML = html;
-      var mask = wrap.firstChild;
-      document.body.appendChild(mask);
+      var dialog = wrap.firstChild;
+      var mask = dialog.querySelector('#storeInstallMask');
+      document.body.appendChild(dialog);
 
       var close = document.getElementById('storeModalClose');
       if (close) close.addEventListener('click', removeModal);
-      mask.addEventListener('click', function (e) { if (e.target === mask) removeModal(); });
+      dialog.addEventListener('click', function (e) { if (e.target === mask) removeModal(); });
+      dialog.addEventListener('keydown', function (e) { if (e.key === 'Escape') removeModal(); });
+      dialog.addEventListener('blora-close', removeModal, { once: true });
       // 非管理员实例不可点：拦截默认跳转
       mask.querySelectorAll('a.store-target--disabled').forEach(function (a) {
         a.addEventListener('click', function (e) { e.preventDefault(); });
