@@ -8527,24 +8527,18 @@ ${extractorBody}
     setBloraState('myProvidersTable', 'loading');
     try {
       const res = await fetch('/api/user/my-providers');
-      if (!res.ok) { setBloraState('myProvidersTable', 'error'); return; }
+      if (!res.ok) throw new Error(t('加载供应商页面失败:') + ` HTTP ${res.status}`);
       const providers = await res.json();
 
       const container = document.getElementById('myProvidersTable');
-      if (!Array.isArray(providers)) {
-        setBloraState('myProvidersTable', 'error');
-        return;
-      }
+      if (!Array.isArray(providers)) throw new Error(t('供应商响应格式异常'));
       if (!providers.length) {
         setBloraState('myProvidersTable', 'empty');
         setHTML(container, `
-          <div class="empty-state" style="padding:60px 20px;text-align:center;">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" style="margin-bottom:16px;opacity:0.5;">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-            </svg>
-            <p style="font-size:15px;color:var(--muted-foreground);margin:0;">暂无供应商</p>
-            <p style="font-size:13px;color:var(--muted-foreground);margin:8px 0 0;opacity:0.7;">点击上方${t('添加供应商')}按钮开始</p>
+          <div class="upstream-empty-state">
+            <span class="upstream-empty-icon" aria-hidden="true">${this._libIcon('building.2', 28)}</span>
+            <p>暂无供应商</p>
+            <p class="upstream-empty-hint">点击上方${t('添加供应商')}按钮开始</p>
           </div>
         `);
         return;
@@ -8552,10 +8546,11 @@ ${extractorBody}
 
       setBloraState('myProvidersTable', 'success');
       setHTML(container, `
-        <table>
+        <table class="blora-table">
+          <caption class="blora-table__caption">${t('我的上游')}</caption>
           <thead>
             <tr>
-              <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllProviders(this.checked)"></th>
+              <th style="width:40px;"><blora-checkbox class="blora-table-col--fixed-left" label="全选供应商" data-blora-checkall onchange="app.toggleSelectAllProviders(this.checked)"></blora-checkbox></th>
               <th>名称</th>
               <th>Base URL</th>
               <th>格式</th>
@@ -8567,7 +8562,7 @@ ${extractorBody}
           <tbody>
             ${providers.map(p => `
               <tr data-provider-id="${escapeHtml(p.id)}">
-                <td><input type="checkbox" class="blora-input provider-checkbox" value="${escapeHtml(p.id)}" onchange="app.updateBatchButtons()"></td>
+                <td><blora-checkbox class="provider-checkbox" value="${escapeHtml(p.id)}" label="${escapeHtml(t('选择供应商'))}" onchange="app.updateBatchButtons()"></blora-checkbox></td>
                 <td>
                   <div style="font-weight:500;">${escapeHtml(p.name)}</div>
                   <div style="font-size:11px;color:var(--muted-foreground);font-family:monospace;">${escapeHtml(p.id)}</div>
@@ -8601,6 +8596,8 @@ ${extractorBody}
       `);
     } catch (error) {
       setBloraState('myProvidersTable', 'error');
+      const container = document.getElementById('myProvidersTable');
+      if (container) setHTML(container, `<div class="upstream-table-error" role="alert"><blora-empty title="${escapeHtml(t('加载失败，请刷新重试'))}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.loadMyProvidersPage()">${t('重试')}</button></div>`);
       console.error(t('加载供应商页面失败:'), error);
     }
   }
@@ -8613,7 +8610,7 @@ ${extractorBody}
   }
 
   updateBatchButtons() {
-    const checked = document.querySelectorAll('.provider-checkbox:checked');
+    const checked = [...document.querySelectorAll('.provider-checkbox')].filter(cb => cb.checked);
     const batchBtn = document.getElementById('batchDeleteBtn');
     if (batchBtn) {
       batchBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
@@ -8621,8 +8618,8 @@ ${extractorBody}
   }
 
   async batchDeleteProviders() {
-    const checked = document.querySelectorAll('.provider-checkbox:checked');
-    const ids = Array.from(checked).map(cb => cb.value);
+    const checked = [...document.querySelectorAll('.provider-checkbox')].filter(cb => cb.checked);
+    const ids = checked.map(cb => cb.getAttribute('value') || cb.value);
 
     if (!ids.length) return;
     if (!await confirm(`${t('确定要删除选中的')}${ids.length}${t('个供应商吗？关联的模型也会被删除。')}`)) return;
@@ -8895,29 +8892,25 @@ ${extractorBody}
     const container = document.getElementById('manageModelsList');
     setBloraState('manageModelsContent', models.length ? 'success' : 'empty');
     const countEl = document.getElementById('manageModelsCount');
-    document.getElementById('selectAllManageModels').checked = false;
+    const selectAll = document.getElementById('selectAllManageModels');
+    if (selectAll) selectAll.checked = false;
 
     countEl.textContent = `${t('共')}${models.length}${t('个模型')}`;
 
     if (models.length === 0) {
-      setHTML(container, `
-        <div style="text-align:center;padding:40px;color:var(--muted-foreground);">
-          <p>暂无模型</p>
-          <p style="font-size:13px;">点击${t('刷新列表')}从供应商获取模型</p>
-        </div>
-      `);
+      setHTML(container, `<blora-empty title="暂无模型" description="${escapeHtml(t('点击刷新列表从供应商获取模型'))}"></blora-empty>`);
       return;
     }
 
     setHTML(container, models.map((model, index) => `
-      <div class="blora-card model-check-item" data-model-id="${escapeHtml(String(model.id))}" data-model-name="${escapeHtml(model.name || '')}">
-        <input type="checkbox" class="blora-input manage-model-checkbox" id="manageModel_${index}" value="${escapeHtml(String(model.id))}" onchange="app._updateManageModelsBatchBar()">
-        <label for="manageModel_${index}" style="flex:1;cursor:pointer;">
-          <span style="font-weight:500;">${escapeHtml(model.name || model.id)}</span>
-          ${model.name && model.name !== model.id ? `<span style="font-size:12px;color:var(--muted-foreground);margin-left:8px;">${escapeHtml(model.id)}</span>` : ''}
-          ${model.series ? `<span style="font-size:11px;background:var(--muted);padding:2px 6px;border-radius:4px;margin-left:8px;">${escapeHtml(model.series)}</span>` : ''}
-          ${model.enabled === false ? '<span style="font-size:11px;color:var(--destructive);margin-left:8px;">' + t('已禁用') + '</span>' : ''}
-        </label>
+      <div class="blora-list__item model-check-item" data-model-id="${escapeHtml(String(model.id))}" data-model-name="${escapeHtml(model.name || '')}">
+        <blora-checkbox class="manage-model-checkbox" label="${escapeHtml(model.name || model.id)}" value="${escapeHtml(String(model.id))}" onchange="app._updateManageModelsBatchBar()"></blora-checkbox>
+        <div class="manage-model-meta">
+          <span class="manage-model-name">${escapeHtml(model.name || model.id)}</span>
+          ${model.name && model.name !== model.id ? `<span class="manage-model-id">${escapeHtml(model.id)}</span>` : ''}
+          ${model.series ? `<span class="manage-model-series">${escapeHtml(model.series)}</span>` : ''}
+          ${model.enabled === false ? '<span class="manage-model-disabled-badge">' + t('已禁用') + '</span>' : ''}
+        </div>
       </div>
     `).join(''));
 
@@ -8962,8 +8955,8 @@ ${extractorBody}
   }
 
   async saveManagedModels() {
-    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const checked = [...document.querySelectorAll('.manage-model-checkbox')].filter(checkbox => checkbox.checked);
+    const modelIds = checked.map(checkbox => checkbox.getAttribute('value') || checkbox.value);
 
     if (!modelIds.length) {
       this.closeModals();
@@ -8996,7 +8989,7 @@ ${extractorBody}
 
   // 批量操作函数
   _updateManageModelsBatchBar() {
-    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
+    const checked = [...document.querySelectorAll('.manage-model-checkbox')].filter(checkbox => checkbox.checked);
     const count = checked.length;
     const batchBar = document.getElementById('manageModelsBatchBar');
     const countEl = document.getElementById('manageModelsSelectedCount');
@@ -9010,8 +9003,8 @@ ${extractorBody}
   }
 
   async batchEnableModels(enabled) {
-    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const checked = [...document.querySelectorAll('.manage-model-checkbox')].filter(checkbox => checkbox.checked);
+    const modelIds = checked.map(checkbox => checkbox.getAttribute('value') || checkbox.value);
 
     if (!modelIds.length) return;
 
@@ -9040,8 +9033,8 @@ ${extractorBody}
   }
 
   async batchDeleteManagedModels() {
-    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const checked = [...document.querySelectorAll('.manage-model-checkbox')].filter(checkbox => checkbox.checked);
+    const modelIds = checked.map(checkbox => checkbox.getAttribute('value') || checkbox.value);
 
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
@@ -9075,8 +9068,8 @@ ${extractorBody}
   }
 
   async executeBatchSetPrices() {
-    const checked = document.querySelectorAll('.manage-model-checkbox:checked');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const checked = [...document.querySelectorAll('.manage-model-checkbox')].filter(checkbox => checkbox.checked);
+    const modelIds = checked.map(checkbox => checkbox.getAttribute('value') || checkbox.value);
 
     if (!modelIds.length) return;
 
@@ -9160,10 +9153,10 @@ ${extractorBody}
     }
 
     setHTML(container, `
-      <table>
+      <table class="blora-table">
         <thead>
           <tr>
-            <th style="width:40px;"><input type="checkbox" class="blora-input" onchange="app.toggleSelectAllMyTeamModels(this.checked)"></th>
+            <th style="width:40px;"><blora-checkbox class="blora-table-col--fixed-left" label="全选模型" data-blora-checkall onchange="app.toggleSelectAllMyTeamModels(this.checked)"></blora-checkbox></th>
             <th>模型名称</th>
             <th>上游模型ID</th>
             <th>供应商</th>
@@ -9176,7 +9169,7 @@ ${extractorBody}
         <tbody>
           ${models.map(m => `
             <tr data-model-id="${escapeHtml(m.id)}">
-              <td><input type="checkbox" class="blora-input my-team-model-checkbox" value="${escapeHtml(m.id)}" onchange="app.updateMyModelsBatchButtons()"></td>
+              <td><blora-checkbox class="my-team-model-checkbox" value="${escapeHtml(m.id)}" label="${escapeHtml(t('选择模型'))}" onchange="app.updateMyModelsBatchButtons()"></blora-checkbox></td>
               <td>
                 <div style="font-weight:500;">${escapeHtml(m.alias || m.name || m.id)}</div>
                 ${m.description ? `<div style="font-size:11px;color:var(--muted-foreground);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(m.description)}">${escapeHtml(m.description)}</div>` : ''}
@@ -9186,8 +9179,8 @@ ${extractorBody}
               <td>${m.series ? `<span style="font-size:11px;background:var(--muted);padding:2px 6px;border-radius:4px;">${escapeHtml(m.series)}</span>` : '<span style="color:var(--muted-foreground);font-size:12px;">-</span>'}</td>
               <td style="font-size:13px;">×${parseFloat(m.model_multiplier || 1.0).toFixed(2)}</td>
               <td>${m.enabled !== false
-                ? '<span style="font-size:11px;color:var(--success,var(--brand-green,var(--success)));">' + t('● 启用') + '</span>'
-                : '<span style="font-size:11px;color:var(--destructive);">' + t('● 禁用') + '</span>'
+                ? '<span class="my-upstream-status is-enabled"><span class="my-upstream-status-dot" aria-hidden="true"></span>' + t('启用') + '</span>'
+                : '<span class="my-upstream-status is-disabled"><span class="my-upstream-status-dot" aria-hidden="true"></span>' + t('禁用') + '</span>'
               }</td>
               <td>
                 <div style="display:flex;gap:4px;">
@@ -9223,7 +9216,7 @@ ${extractorBody}
   }
 
   updateMyModelsBatchButtons() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
+    const checked = [...document.querySelectorAll('.my-team-model-checkbox')].filter(cb => cb.checked);
     const count = checked.length;
     const ids = ['batchEnableMyModelsBtn', 'batchDisableMyModelsBtn', 'batchEditMyModelsBtn', 'batchDeleteMyModelsBtn'];
     ids.forEach(id => {
@@ -9233,8 +9226,8 @@ ${extractorBody}
   }
 
   async batchDeleteMyTeamModels() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const checked = [...document.querySelectorAll('.my-team-model-checkbox')].filter(cb => cb.checked);
+    const modelIds = checked.map(cb => cb.getAttribute('value') || cb.value);
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要删除选中的')}${modelIds.length}${t('个模型吗？此操作不可撤销。')}`)) return;
 
@@ -9265,8 +9258,8 @@ ${extractorBody}
   }
 
   async _batchUpdateMyTeamModels(updates, action) {
-    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const checked = [...document.querySelectorAll('.my-team-model-checkbox')].filter(cb => cb.checked);
+    const modelIds = checked.map(cb => cb.getAttribute('value') || cb.value);
     if (!modelIds.length) return;
     if (!await confirm(`${t('确定要')}${action}${t('选中的')}${modelIds.length}${t('个模型吗？')}`)) return;
 
@@ -9289,8 +9282,8 @@ ${extractorBody}
   }
 
   showBatchEditMyModelsModal() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const checked = [...document.querySelectorAll('.my-team-model-checkbox')].filter(cb => cb.checked);
+    const modelIds = checked.map(cb => cb.getAttribute('value') || cb.value);
     if (!modelIds.length) return;
 
     document.getElementById('batchEditMyModelsInfo').textContent = `${t('已选择')}${modelIds.length}${t('个模型')}`;
@@ -9316,8 +9309,8 @@ ${extractorBody}
   }
 
   async saveBatchEditMyModels() {
-    const checked = document.querySelectorAll('.my-team-model-checkbox:checked');
-    const modelIds = Array.from(checked).map(cb => cb.value);
+    const checked = [...document.querySelectorAll('.my-team-model-checkbox')].filter(cb => cb.checked);
+    const modelIds = checked.map(cb => cb.getAttribute('value') || cb.value);
     if (!modelIds.length) return;
 
     const updates = {};

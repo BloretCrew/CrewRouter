@@ -62,7 +62,7 @@ const ProviderModelPicker = (() => {
         item.dataset.status = row.status;
         const labels = { enabled: ['enabled-badge', '已启用'], disabled: ['disabled-badge', '已禁用'], new: ['new-badge', '新模型'], stale: ['stale-badge', '已失效'] };
         const [variant, label] = labels[row.status];
-        item.innerHTML = `<input type="checkbox" class="checkbox" value="${escape(row.id)}" id="${root.id}-model-${index}" ${selected.has(row.id) ? 'checked' : ''} ${busy || savedWithoutIds ? 'disabled' : ''}><label for="${root.id}-model-${index}"><span class="model-name">${escape(row.name || row.id)}</span>${row.name && row.name !== row.id ? `<span class="model-id">${escape(row.id)}</span>` : ''}<span class="status-badge ${variant}">${escape(t(label))}</span></label>`;
+        item.innerHTML = `<blora-checkbox class="checkbox" value="${escape(row.id)}" label="${escape(row.name || row.id)}" ${selected.has(row.id) ? 'checked' : ''} ${busy || savedWithoutIds ? 'disabled' : ''}></blora-checkbox><span class="provider-picker-model-meta">${row.name && row.name !== row.id ? `<span class="model-id">${escape(row.id)}</span>` : ''}<span class="status-badge ${variant}">${escape(t(label))}</span></span>`;
         list.append(item);
       });
       root.querySelectorAll('[data-filter]').forEach(button => {
@@ -170,7 +170,15 @@ const ProviderModelPicker = (() => {
     });
     root.addEventListener('click', event => {
       const tab = event.target.closest('[data-filter]');
-      if (tab && !busy) { filter = tab.dataset.filter; render(); }
+      if (tab && !busy) { filter = tab.dataset.filter; render(); return; }
+      const meta = event.target.closest('.provider-picker-model-meta');
+      if (meta && !busy) {
+        const checkbox = meta.closest('.model-check-item')?.querySelector('blora-checkbox');
+        if (checkbox && !checkbox.disabled) {
+          checkbox.checked = !checkbox.checked;
+          checkbox.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+        }
+      }
     });
     root.addEventListener('blora-before-close', event => { if (busy) event.preventDefault(); });
     search.addEventListener('input', render);

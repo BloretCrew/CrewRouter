@@ -54,12 +54,20 @@
 .provider-model-picker-footer [hidden] {
   display: none;
 }
-.provider-model-picker .model-check-item > input[type="checkbox"] {
-  flex-shrink: 0;
+.provider-model-picker .model-check-item > blora-checkbox {
+  flex: 0 0 auto;
 }
 .provider-model-picker .model-check-item > label {
   flex-wrap: wrap;
   overflow-wrap: anywhere;
+}
+.provider-model-picker .model-check-item .provider-picker-model-meta {
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: var(--blora-space-2);
 }
 .provider-model-picker .model-name,
 .provider-model-picker .model-id {

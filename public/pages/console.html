@@ -32,7 +32,7 @@
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/upstream-blora.css?v=provider-wizard-20261005">
+  <link rel="stylesheet" href="/css/upstream-blora.css?v=provider-blora-table-states-20261009">
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=phase4-key-layout-20261009">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=panel-icons-20261005">
   <link rel="stylesheet" href="/css/stats-blora.css?v=overview-spacing-20261005">
@@ -2282,12 +2282,12 @@ data: [DONE]</code></pre>
         <div id="manageModelsError" data-blora-state="error" style="display:none;color:var(--destructive);padding:16px;text-align:center;"></div>
         <div id="manageModelsContent" style="display:none;">
           <!-- 搜索和刷新 -->
-          <div style="display:flex;gap:12px;margin-bottom:12px;">
+          <div class="manage-models-search-row">
             <input type="text" id="manageModelsSearch" class="blora-input input" placeholder="搜索模型..." data-i18n-placeholder="搜索模型..." style="flex:1;" oninput="app.filterManageModels(this.value)">
             <button type="button" class="blora-button" onclick="app.refreshProviderModelsForManage()" data-variant="secondary"><span data-i18n="刷新列表">刷新列表</span></button>
           </div>
           <!-- 批量操作栏 -->
-          <div id="manageModelsBatchBar" style="display:none;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--muted);border-radius:8px;flex-wrap:wrap;align-items:center;">
+          <div id="manageModelsBatchBar" class="manage-models-batch-bar" style="display:none;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--muted);border-radius:8px;flex-wrap:wrap;align-items:center;">
             <span style="font-size:13px;color:var(--muted-foreground);"><span data-i18n="已选">已选 </span><strong id="manageModelsSelectedCount">0</strong><span data-i18n="个模型"> 个模型</span></span>
             <div style="margin-left:auto;display:flex;gap:6px;">
               <button type="button" class="blora-button" onclick="app.batchEnableModels(true)" data-variant="secondary" data-size="sm"><span data-i18n="启用">启用</span></button>
@@ -2297,15 +2297,12 @@ data: [DONE]</code></pre>
             </div>
           </div>
           <!-- 全选 -->
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-              <input type="checkbox" id="selectAllManageModels" onchange="app.toggleSelectAllManageModels(this.checked)">
-              <span style="font-size:13px;"><span data-i18n="全选">全选</span></span>
-            </label>
-            <span id="manageModelsCount" style="font-size:13px;color:var(--muted-foreground);margin-left:auto;"></span>
+          <div class="manage-model-select-all-row">
+            <blora-checkbox id="selectAllManageModels" label="全选" data-blora-checkall onchange="app.toggleSelectAllManageModels(this.checked)"></blora-checkbox>
+            <span id="manageModelsCount" class="manage-model-count"></span>
           </div>
           <!-- 模型列表 -->
-          <div id="manageModelsList" style="max-height:400px;overflow-y:auto;"></div>
+          <div id="manageModelsList" class="manage-model-list"></div>
         </div>
       </div>
     </div>
