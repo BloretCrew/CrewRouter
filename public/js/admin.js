@@ -7616,7 +7616,7 @@ async function(ctx) {
       }
 
       if (!data.logs || data.logs.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无错误记录') + '</p>');
+        setHTML(container, `<blora-empty title="${escapeHtml(t('暂无错误记录'))}"></blora-empty>`);
         return;
       }
 
@@ -7630,7 +7630,7 @@ async function(ctx) {
       };
 
       setHTML(container, `
-        <table>
+        <table class="blora-table">
           <thead>
             <tr>
               <th>时间</th>
@@ -7650,7 +7650,7 @@ async function(ctx) {
               const shortMsg = msg.length > 80 ? msg.slice(0, 80) + '…' : msg;
               const finalTag = log.is_final
                 ? ''
-                : '<span style="margin-left:4px;font-size:10px;padding:1px 5px;border-radius:4px;background:var(--muted);color:var(--muted-foreground);">' + t('重试') + '</span>';
+                : '<span class="blora-badge error-retry-badge" data-variant="neutral">' + t('重试') + '</span>';
               return `
               <tr style="cursor:pointer;" onclick="adminApp.showErrorDetail(${idx})">
                 <td style="white-space:nowrap;">${new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</td>
@@ -7669,7 +7669,7 @@ async function(ctx) {
       `);
     } catch (error) {
       console.error(t('加载错误记录失败:'), error);
-      setHTML(document.getElementById('errorLogsList'), `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+      setHTML(document.getElementById('errorLogsList'), `<div class="error-log-list-notice" role="alert"><blora-empty title="${escapeHtml(error.message || t('加载失败'))}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage)">${t('重试')}</button></div>`);
     }
   }
 
@@ -11362,12 +11362,12 @@ async function(ctx) {
       if (!res.ok) throw new Error(data.error || t('加载失败'));
       const { items, total, limit } = data;
       if (!items.length) {
-        setHTML(listEl, '<p class="api-key-sub-muted" style="text-align:center;padding:24px;">' + t('暂无操作日志') + '</p>');
+        setHTML(listEl, `<blora-empty title="${escapeHtml(t('暂无操作日志'))}"></blora-empty>`);
         setHTML(paginationEl, '');
         return;
       }
       setHTML(listEl, items.map(log => `
-        <div class="audit-log-row" style="display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;">
+        <article class="blora-card audit-log-row" data-variant="flat">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
               <span class="blora-badge" data-variant="info">${escapeHtml(log.action)}</span>
@@ -11383,8 +11383,8 @@ async function(ctx) {
             </div>
             ${log.details ? `<details style="margin-top:4px;"><summary style="font-size:12px;color:var(--muted-foreground);cursor:pointer;">详情</summary><pre style="font-size:12px;margin:4px 0 0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2))}</pre></details>` : ''}
           </div>
-          <div style="font-size:12px;color:var(--muted-foreground);white-space:nowrap;" title="${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN'))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
-        </div>`).join(''));
+          <div class="audit-log-row-time" title="${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN'))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
+        </article>`).join(''));
 
       const totalPages = Math.ceil(total / limit);
       if (totalPages > 1) {
@@ -11435,13 +11435,13 @@ async function(ctx) {
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
 
       if (!data.items || data.items.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无提示词记录') + '</p>');
+        setHTML(container, `<blora-empty title="${escapeHtml(t('暂无提示词记录'))}"></blora-empty>`);
         return;
       }
       this._promptsCache = data.items;
 
       setHTML(container, `
-        <table>
+        <table class="blora-table">
           <thead>
             <tr>
               <th>${t('文件名')}</th>
@@ -11490,7 +11490,7 @@ async function(ctx) {
       });
     } catch (error) {
       console.error(t('加载提示词失败:'), error);
-      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+      setHTML(container, `<div class="admin-content-list-error" role="alert"><blora-empty title="${escapeHtml(error.message || t('加载失败'))}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage)">${t('重试')}</button></div>`);
     }
   }
 
