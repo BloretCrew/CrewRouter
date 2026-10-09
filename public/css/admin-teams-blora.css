@@ -33,21 +33,51 @@
   padding: var(--blora-space-6);
 }
 
+.blora-admin-teams-page .content-section[style*="margin-top"][style*="padding:0"] {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.blora-admin-teams-page .content-section[style*="margin-top"] .teams-grid[style*="padding"] {
+  padding: 0 var(--blora-space-4) var(--blora-space-4) !important;
+}
+
+.blora-admin-teams-page .content-section[style*="margin-top"] .section-header {
+  padding: var(--blora-space-4) !important;
+}
+
+.blora-admin-teams-page .team-detail-section .section-header > button { flex: 0 0 auto; }
+
 .blora-admin-teams-page .admin-stat-cards {
   gap: var(--blora-space-3);
 }
 
-.blora-admin-teams-page .admin-stat-card,
-.blora-admin-teams-page .team-card {
+.blora-admin-teams-page .admin-stat-card {
   border: var(--teams-border-soft);
   border-radius: var(--blora-radius-xl);
   background: var(--blora-color-surface-raised);
   box-shadow: var(--blora-shadow-1);
 }
 
+.blora-admin-teams-page .team-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.blora-admin-teams-page .team-card {
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+  transition: border-color var(--blora-duration-fast) var(--blora-easing-standard), box-shadow var(--blora-duration-base) var(--blora-easing-standard), transform var(--blora-duration-fast) var(--blora-easing-standard);
+}
+
 .blora-admin-teams-page .team-card:hover {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  border-color: color-mix(in srgb, var(--blora-color-action-primary-default) 40%, var(--blora-color-border-subtle));
+  background: var(--blora-color-surface-raised);
   box-shadow: var(--blora-shadow-2);
+  transform: translateY(-1px);
 }
 
 .blora-admin-teams-page .section-actions .blora-button,
@@ -161,7 +191,56 @@
 .blora-admin-teams-page .admin-stat-card-icon img { filter: brightness(0) saturate(100%); opacity: .7; }
 
 .blora-admin-teams-page .team-card { display: flex; flex-direction: column; min-width: 0; }
-.blora-admin-teams-page .team-card-header { align-items: flex-start; gap: var(--blora-space-2); }
-.blora-admin-teams-page .team-card-header h3 { min-width: 0; overflow-wrap: anywhere; }
-.blora-admin-teams-page .team-description { overflow-wrap: anywhere; }
-.blora-admin-teams-page .team-card-footer { margin-top: auto; padding-top: var(--blora-space-3); gap: var(--blora-space-2); flex-wrap: wrap; }
+.blora-admin-teams-page .team-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--blora-space-2);
+  padding: var(--blora-space-4);
+}
+.blora-admin-teams-page .team-card-header h3 { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--blora-color-text-primary); font-family: var(--blora-font-heading); }
+.blora-admin-teams-page .team-description { flex: 1 1 auto; margin: 0; padding-inline: var(--blora-space-4); overflow-wrap: anywhere; color: var(--blora-color-text-muted); }
+.blora-admin-teams-page .team-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding: var(--blora-space-4); gap: var(--blora-space-2); flex-wrap: wrap; }
+.blora-admin-teams-page .team-card-footer .text-muted { color: var(--blora-color-text-subtle); font-size: var(--blora-text-xs); }
+
+.blora-admin-teams-page .teams-grid .admin-teams-empty,
+.blora-admin-teams-page .teams-grid .admin-teams-list-error {
+  grid-column: 1 / -1;
+  display: flex;
+  min-height: 10rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blora-space-3);
+  padding: var(--blora-space-5);
+  text-align: center;
+}
+
+.blora-admin-teams-page .team-card .team-description { color: var(--blora-color-text-muted); }
+
+.blora-admin-teams-page .admin-teams-empty,
+.blora-admin-teams-page .admin-teams-list-error {
+  display: flex;
+  min-height: 10rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--blora-space-3);
+  padding: var(--blora-space-5);
+  color: var(--blora-color-text-muted);
+  text-align: center;
+}
+
+.blora-admin-teams-page .admin-teams-list-error {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .blora-admin-teams-page .team-card-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: var(--blora-space-3);
+  }
+  .blora-admin-teams-page .team-description,
+  .blora-admin-teams-page .team-card-footer { padding-inline: var(--blora-space-3); }
+}
