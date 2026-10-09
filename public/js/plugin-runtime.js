@@ -284,9 +284,12 @@
   function renderUserThemePicker(container) {
     if (!container) return;
     container.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <select id="pluginThemeSelect" class="select" style="min-width:220px;">${themeOptionsHtml(state.userThemeId, true)}</select>
-        <span id="pluginThemeStatus" style="font-size:13px;color:var(--muted-foreground);"></span>
+      <div class="user-theme-control">
+        <blora-select id="pluginThemeSelect" aria-label="界面主题" data-i18n-aria-label="界面主题" placeholder="跟随默认主题" data-i18n-placeholder="跟随默认主题">
+          <blora-option value="">跟随默认主题</blora-option>
+          ${state.themes.map(theme => `<blora-option value="${esc(theme.id)}" ${theme.id === state.userThemeId ? 'selected' : ''}>${esc(t(theme.name))}</blora-option>`).join('')}
+        </blora-select>
+        <span id="pluginThemeStatus" role="status" aria-live="polite"></span>
       </div>
       <div style="margin-top:6px;">${unavailableBadge(state.userThemeId)}</div>
     `;

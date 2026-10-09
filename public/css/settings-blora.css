@@ -115,3 +115,26 @@
 .notification-header time { color: var(--blora-color-text-subtle); font-size: var(--blora-text-xs); }
 .notification-body { margin-top: var(--blora-space-2); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); }
 .notification-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--blora-space-2); margin-top: var(--blora-space-3); }
+
+.blora-settings-page .user-theme-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--blora-space-3);
+}
+
+.blora-settings-page .user-theme-control blora-select {
+  display: block;
+  min-width: min(18rem, 100%);
+}
+
+.blora-settings-page .user-theme-control blora-select::part(trigger) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.5rem;
+}
+
+.blora-settings-page #pluginThemeStatus {
+  color: var(--blora-color-text-subtle);
+  font-size: var(--blora-text-sm);
+}
