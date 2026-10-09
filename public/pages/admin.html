@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/admin-stats-blora.css?v=multidimension-tables-20261008b">
+  <link rel="stylesheet" href="/css/admin-stats-blora.css?v=stats-message-fixes-20261008">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=checkbox-layout-20261008">
   <link rel="stylesheet" href="/css/badges-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
@@ -973,12 +973,12 @@
           <!-- Tab: 消息分析 -->
           <div id="statsTabMessages" class="stats-tab-content" style="display:none;">
             <p style="font-size:13px;color:var(--muted-foreground);margin:0 0 12px;"><span data-i18n="直接读取已保存 messages 中的实际区块和字段，不用识别标签代替原始数据。">直接读取已保存 messages 中的实际区块和字段，不用识别标签代替原始数据。</span></p>
-            <div class="admin-filter-bar" style="margin-bottom:16px;">
-              <blora-select id="messageStatsSourceFilter" class="input" style="min-width:140px;">
+            <div id="messageStatsFilters" class="admin-filter-bar" style="margin-bottom:16px;">
+              <blora-select id="messageStatsSourceFilter" placeholder="全部客户端" data-i18n-placeholder="全部客户端" style="min-width:140px;">
                 <blora-option value=""><span data-i18n="全部 harness">全部 harness</span></blora-option><blora-option value="grok">Grok</blora-option><blora-option value="codex">Codex</blora-option><blora-option value="claude_code">Claude Code</blora-option><blora-option value="opencode">OpenCode</blora-option><blora-option value="qwen_code">Qwen Code</blora-option><blora-option value="hermes">Hermes</blora-option><blora-option value="openclaw">OpenClaw</blora-option><blora-option value="deepseek_harness">DeepSeek Harness</blora-option><blora-option value="unknown"><span data-i18n="未知/其他">未知/其他</span></blora-option>
               </blora-select>
               <input id="messageStatsWorkspaceFilter" class="input" placeholder="工作区路径（可选）" data-i18n-placeholder="工作区路径（可选）" style="min-width:220px;">
-              <blora-select id="messageStatsBlockFilter" class="input" style="min-width:150px;"><blora-option value=""><span data-i18n="全部区块">全部区块</span></blora-option><blora-option value="user_info">user_info</blora-option><blora-option value="git_status">git_status</blora-option><blora-option value="jj_status">jj_status</blora-option><blora-option value="project_layout">project_layout</blora-option><blora-option value="environment_context">environment_context</blora-option><blora-option value="system-reminder">system-reminder</blora-option></blora-select>
+              <blora-select id="messageStatsBlockFilter" placeholder="全部区块" data-i18n-placeholder="全部区块" style="min-width:150px;"><blora-option value=""><span data-i18n="全部区块">全部区块</span></blora-option><blora-option value="user_info">user_info</blora-option><blora-option value="git_status">git_status</blora-option><blora-option value="jj_status">jj_status</blora-option><blora-option value="project_layout">project_layout</blora-option><blora-option value="environment_context">environment_context</blora-option><blora-option value="system-reminder">system-reminder</blora-option></blora-select>
               <button class="blora-button" onclick="adminApp.loadMessageStats()" data-variant="primary"><span data-i18n="查询">查询</span></button>
             </div>
             <div id="messageStatsSummary" class="stats-overview-grid" style="margin-bottom:20px;"></div>

@@ -7380,6 +7380,7 @@ async function(ctx) {
     const groups = [
       { key: 'byUser', label: t('成员'), requests: 'memberRequestsChart', cost: 'memberCostChart', reqStore: '_memberReqChart', costStore: '_memberCostChart', name: 'user_name' },
       { key: 'byTeam', label: 'Team', requests: 'teamRequestsChart', reqStore: '_teamReqChart', name: 'team_name' },
+      { key: 'byUser', label: t('成员积分消耗排行'), cost: 'memberCostChart', costStore: '_memberCostChart', name: 'user_name' },
     ];
     const colors = [readCssVar('--status-info', '#2563eb'), readCssVar('--chart-2', '#a855f7'), readCssVar('--status-success', '#16a34a'), readCssVar('--status-warn', '#d97706'), readCssVar('--status-danger', '#dc2626'), readCssVar('--cyan', '#06b6d4'), readCssVar('--pink', '#ec4899'), readCssVar('--chart-8', '#14b8a6'), readCssVar('--warning', '#f59e0b'), readCssVar('--status-neutral', '#64748b')];
     const style = getComputedStyle(document.documentElement);
@@ -7406,7 +7407,7 @@ async function(ctx) {
         const costs = rows.map(row => Number(row.cost || 0));
         const costCanvas = document.getElementById(group.cost);
         if (costCanvas) {
-          this._upsertChart(group.costStore, costCanvas, 'bar', { labels, datasets: [{ label: t('积分'), data: costs, backgroundColor: 'var(--success)', borderRadius: 5, borderWidth: 0 }] }, options);
+          this._upsertChart(group.costStore, costCanvas, 'bar', { labels, datasets: [{ label: t('积分'), data: costs, backgroundColor: colors, borderRadius: 5, borderWidth: 0 }] }, options);
         }
       }
     });
@@ -7427,7 +7428,7 @@ async function(ctx) {
         const requests = Number(row.requests || 0);
         const cost = Number(row.cost || 0);
         return `<tr><td>${escapeHtml(row[labelKey] || t('未分配'))}</td><td>${requests.toLocaleString()}</td><td>${totalRequests ? (requests / totalRequests * 100).toFixed(1) : '0.0'}%</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${cost.toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`;
-      }).join('')}</tbody><tfoot><tr ><td>' + t('合计') + '</td><td>${totalRequests.toLocaleString()}</td><td>100%</td><td title="${rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0).toLocaleString()}">${this._formatBigNumber(rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0))}</td><td>${totalCost.toFixed(4)}</td><td>-</td></tr></tfoot></table></div>`);
+      }).join('')}</tbody><tfoot><tr><td>${t('合计')}</td><td>${totalRequests.toLocaleString()}</td><td>100%</td><td title="${rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0).toLocaleString()}">${this._formatBigNumber(rows.reduce((sum, row) => sum + Number(row.tokens || 0), 0))}</td><td>${totalCost.toFixed(4)}</td><td>-</td></tr></tfoot></table></div>`);
     };
     const summaryRows = [
       [t('成员'), this.stats.byUser || [], 'user_name'],

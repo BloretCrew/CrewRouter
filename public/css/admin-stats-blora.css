@@ -389,5 +389,7 @@
 #adminStatsDays { display: block; width: 10rem; min-width: 0; }
 #adminStatsDays::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
 
+#messageStatsFilters blora-select { display: block; flex: 0 1 11rem; width: 100%; min-width: 0; border: 0; background: transparent; box-shadow: none; }
+#messageStatsFilters blora-select::part(trigger) { box-sizing: border-box; width: 100%; min-height: 2.5rem; }
 #adminStatsMultiFilters blora-select { display: block; width: 100%; min-width: 0; }
 #adminStatsMultiFilters blora-select::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
