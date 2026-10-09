@@ -18,9 +18,10 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <script type="module" src="/vendor/blora-2.0.8/auto.js?v=restore-0930-20261003"></script>
+  <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js?v=restore-0930-20261003"></script>
   <script src="/js/blora-dialog.js?v=restore-0930-20261003"></script>
+  <link rel="stylesheet" href="/css/layers.css?v=2.1.0">
   <link rel="stylesheet" href="/css/themes.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
@@ -58,13 +59,13 @@
       document.documentElement.classList.add(resolved);
     })();
   </script>
-  <link rel="stylesheet" href="/vendor/blora-2.0.8/blora.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
+  <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
 </head>
-<body class="blora-page">
+<body class="blora-page blora-scope">
   <!-- 移动端顶部导航栏 -->
   <div class="mobile-topbar">
-    <button class="mobile-hamburger" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单">
+    <button class="mobile-hamburger blora-button" data-variant="ghost" data-size="icon" type="button" id="sidebarToggle" aria-label="打开菜单" data-i18n-title="打开菜单">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
       </svg>
@@ -73,7 +74,7 @@
       <img src="https://img.bloret.net/img/1778334791692/7cf47c179900187457dc3abba0eaf918" alt="Logo">
     </div>
     <div class="mobile-topbar-title" id="mobilePageTitle"><span data-i18n="控制台">控制台</span></div>
-    <button id="themeToggleMobile" class="blora-button" title="切换主题" data-i18n-title="切换主题" style="width:32px;height:32px;" data-variant="secondary" data-size="icon">
+    <button id="themeToggleMobile" type="button" aria-label="切换主题" class="blora-button" title="切换主题" data-i18n-title="切换主题" style="width:32px;height:32px;" data-variant="secondary" data-size="icon">
       <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
       </svg>
@@ -85,8 +86,9 @@
       </svg>
     </button>
   </div>
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
+  <blora-drawer id="mobileSidebarDrawer" class="mobile-sidebar-drawer" position="left" title="主导航">
+    <div class="mobile-sidebar-drawer-content"></div>
+  </blora-drawer>
   <div class="app-container">
     <!-- 侧边栏 -->
     <aside class="sidebar">
@@ -97,7 +99,7 @@
         </div>
       </div>
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" hidden>
         <div class="nav-section">
           <div class="nav-item" data-page="modelLibrary">
             <img src="https://img.bloret.net/SF/books.vertical?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="books.vertical">
@@ -2664,7 +2666,7 @@ data: [DONE]</code></pre>
   </blora-dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="/js/theme.js?v=restore-0930-20261003"></script>
+  <script src="/js/theme.js?v=blora-color-scheme-20261009"></script>
   <script src="/js/i18n.js?v=restore-0930-20261003"></script>
   <script src="/js/dom.js?v=restore-0930-20261003"></script>
   <script src="/js/session-tool-groups.js?v=restore-0930-20261003"></script>
@@ -2766,33 +2768,82 @@ data: [DONE]</code></pre>
       checkDocsAdmin();
     });
 
-    // 移动端侧边栏切换
-    document.addEventListener('DOMContentLoaded', () => {
-      const sidebar = document.querySelector('.sidebar');
-      const overlay = document.getElementById('sidebarOverlay');
+    const initializeSidebarNavigation = () => {
+      const drawer = document.getElementById('mobileSidebarDrawer');
+      const drawerContent = drawer?.querySelector('.mobile-sidebar-drawer-content');
+      const sourceSidebar = document.querySelector('.sidebar');
+      const sourceNavigation = sourceSidebar?.querySelector('.sidebar-nav');
+      const sourceFooter = sourceSidebar?.querySelector('.sidebar-footer');
       const toggle = document.getElementById('sidebarToggle');
-
-      if (toggle && sidebar) {
-        toggle.addEventListener('click', () => {
-          sidebar.classList.toggle('open');
-          overlay?.classList.toggle('active');
+      const updateNavigation = (navigationRoot, selectedPage) => {
+        if (navigationRoot) navigationRoot.value = selectedPage || '';
+      };
+      const buildNavigation = (source, host, label) => {
+        if (!source || !host) return null;
+        const nav = document.createElement('blora-sidebar-nav');
+        nav.className = 'business-sidebar-navigation';
+        nav.setAttribute('label', label);
+        const sourceItems = [...source.querySelectorAll('.nav-item')];
+        for (const section of source.querySelectorAll('.nav-section')) {
+          const group = document.createElement('blora-sidebar-nav-group');
+          const heading = section.querySelector('.nav-section-title')?.textContent.trim();
+          if (heading) group.setAttribute('label', heading);
+          for (const item of sourceItems.filter(item => section.contains(item))) {
+            const link = document.createElement('blora-sidebar-nav-link');
+            const value = item.dataset.page || item.id || `external-${sourceItems.indexOf(item)}`;
+            link.setAttribute('label', item.textContent.trim());
+            link.setAttribute('value', value);
+            link.setAttribute('href', item.dataset.page ? `#${item.dataset.page}` : '#');
+            group.append(link);
+          }
+          if (group.children.length) nav.append(group);
+        }
+        nav.addEventListener('click', event => {
+          if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
         });
-      }
-      if (overlay) {
-        overlay.addEventListener('click', () => {
-          sidebar?.classList.remove('open');
-          overlay.classList.remove('active');
+        nav.addEventListener('blora-change', event => {
+          const item = sourceItems.find(candidate =>
+            (candidate.dataset.page || candidate.id || `external-${sourceItems.indexOf(candidate)}`) === event.detail.value
+          );
+          item?.click();
+          drawer?.close();
         });
-      }
-
-      // 移动端主题切换按钮同步
-      const themeToggleMobile = document.getElementById('themeToggleMobile');
-      if (themeToggleMobile) {
-        themeToggleMobile.addEventListener('click', () => {
-          document.getElementById('themeToggle')?.click();
-        });
-      }
-    });
+        host.replaceChildren(nav);
+        return nav;
+      };
+      const desktopHost = document.createElement('div');
+      desktopHost.className = 'business-sidebar-host';
+      sourceNavigation?.before(desktopHost);
+      const desktopNavigation = buildNavigation(sourceNavigation, desktopHost, '主导航');
+      desktopHost?.after(sourceFooter);
+      const mobileNavigation = buildNavigation(sourceNavigation, drawerContent, '主导航');
+      const mobileHeader = sourceSidebar?.querySelector('.sidebar-header')?.cloneNode(true);
+      if (mobileHeader) drawerContent?.prepend(mobileHeader);
+      if (sourceFooter && drawerContent) drawerContent.append(sourceFooter.cloneNode(true));
+      if (sourceNavigation) sourceNavigation.hidden = true;
+      const getSelectedPage = () => sourceNavigation?.querySelector('.nav-item.active')?.dataset.page || '';
+      const syncNavigation = () => {
+        const selected = getSelectedPage();
+        for (const root of [desktopNavigation, mobileNavigation]) {
+          if (!root) continue;
+          updateNavigation(root, selected);
+          root.querySelectorAll('blora-sidebar-nav-link').forEach(link => {
+            const item = sourceNavigation.querySelector(`.nav-item[data-page="${CSS.escape(link.value)}"]`) ||
+              sourceItems.find(candidate => (candidate.dataset.page || candidate.id || `external-${sourceItems.indexOf(candidate)}`) === link.value);
+            link.hidden = !item || item.hidden || item.style.display === 'none';
+          });
+        }
+      };
+      syncNavigation();
+      new MutationObserver(syncNavigation).observe(document.querySelector('.sidebar'), { subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+      toggle?.addEventListener('click', () => drawer?.open());
+      document.getElementById('themeToggleMobile')?.addEventListener('click', () => {
+        document.getElementById('themeToggle')?.click();
+      });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeSidebarNavigation, { once: true });
+    else initializeSidebarNavigation();
   </script>
   <style>
     .docs-nav-item {

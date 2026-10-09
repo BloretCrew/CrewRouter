@@ -393,3 +393,46 @@
 #messageStatsFilters blora-select::part(trigger) { box-sizing: border-box; width: 100%; min-height: 2.5rem; }
 #adminStatsMultiFilters blora-select { display: block; width: 100%; min-width: 0; }
 #adminStatsMultiFilters blora-select::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
+
+@media (max-width: 640px) {
+  .blora-admin-page .app-container > .sidebar {
+    display: none;
+  }
+}
+
+.blora-admin-page .business-sidebar-navigation,
+.mobile-sidebar-drawer-content .business-sidebar-navigation {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: var(--blora-space-3) var(--blora-space-2);
+}
+
+.blora-admin-page .business-sidebar-navigation blora-sidebar-nav-link::part(link),
+.mobile-sidebar-drawer-content .business-sidebar-navigation blora-sidebar-nav-link::part(link) {
+  justify-content: flex-start;
+  min-height: 2.5rem;
+  color: var(--blora-color-text-muted);
+}
+
+.blora-admin-page .business-sidebar-navigation blora-sidebar-nav-link[aria-current="page"]::part(link),
+.mobile-sidebar-drawer-content .business-sidebar-navigation blora-sidebar-nav-link[aria-current="page"]::part(link) {
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 14%, var(--blora-color-surface-default));
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-admin-page .business-sidebar-host,
+.mobile-sidebar-drawer-content .business-sidebar-host {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.blora-drawer__content:has(> .mobile-sidebar-drawer-content) {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
