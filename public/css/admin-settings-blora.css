@@ -1,4 +1,9 @@
 /* Blora surface migration for admin system settings. */
+.admin-default-theme-control { display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-3); }
+.admin-default-theme-control blora-select { display: block; flex: 1 1 16rem; min-width: 0; border: 0; background: transparent; box-shadow: none; }
+.admin-default-theme-control blora-select::part(trigger) { box-sizing: border-box; width: 100%; min-height: 2.5rem; }
+.admin-default-theme-control [role="status"] { flex: 1 1 100%; color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); }
+.admin-default-theme-help { margin: .75rem 0 0; color: var(--blora-color-text-subtle); font-size: var(--blora-text-xs); line-height: 1.6; }
 .blora-admin-settings-page {
   --admin-settings-border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
   --admin-settings-border-soft: 1px solid color-mix(in srgb, var(--border) 36%, transparent);

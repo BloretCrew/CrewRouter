@@ -313,11 +313,14 @@
   function renderDefaultThemePicker(container) {
     if (!container) return;
     container.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <select id="pluginDefaultThemeSelect" class="select" style="min-width:220px;">${themeOptionsHtml(state.defaultThemeId, true)}</select>
-        <span id="pluginDefaultThemeStatus" style="font-size:13px;color:var(--muted-foreground);"></span>
+      <div class="admin-default-theme-control">
+        <blora-select id="pluginDefaultThemeSelect" placeholder="${esc(t('内置默认主题'))}" data-i18n-placeholder="内置默认主题">
+          <blora-option value="" ${!state.defaultThemeId ? 'selected' : ''}>${esc(t('内置默认主题'))}</blora-option>
+          ${state.themes.map(theme => `<blora-option value="${esc(theme.id)}" ${theme.id === state.defaultThemeId ? 'selected' : ''}>${esc(t(theme.name))}</blora-option>`).join('')}
+        </blora-select>
+        <span id="pluginDefaultThemeStatus" role="status"></span>
       </div>
-      <p style="margin:6px 0 0;font-size:12px;color:var(--muted-foreground);">${esc(t('对未自行选择主题的用户生效；用户可在控制台「用户设置 → 界面主题」中覆盖。'))}</p>
+      <p class="admin-default-theme-help">${esc(t('对未自行选择主题的用户生效；用户可在控制台「用户设置 → 界面主题」中覆盖。'))}</p>
     `;
     const sel = container.querySelector('#pluginDefaultThemeSelect');
     sel.addEventListener('change', async () => {
