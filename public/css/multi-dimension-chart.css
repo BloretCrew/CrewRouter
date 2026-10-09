@@ -16,3 +16,9 @@
 .multi-dimension-table-wrap table { width: 100%; border-collapse: collapse; }
 .multi-dimension-table-wrap th, .multi-dimension-table-wrap td { padding: 9px; border-bottom: 1px solid var(--border); text-align: left; }
 @media (max-width: 640px) { .multi-dimension-panel { padding: 14px; } .multi-dimension-actions > * { max-width: 100%; } }
+.multi-dimension-choices blora-checkbox { flex: 0 0 auto; }
+.multi-dimension-choices blora-checkbox::part(control) { border-radius: var(--blora-radius-sm); }
+@media (max-width: 640px) {
+  .multi-dimension-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--blora-space-3); }
+  .multi-dimension-choices blora-checkbox { min-width: 0; }
+}
