@@ -277,8 +277,8 @@
 
   function unavailableBadge(selectedId) {
     if (!selectedId || findTheme(selectedId)) return '';
-    return `<span style="font-size:12px;color:var(--destructive);margin-left:8px;">${esc(t('该主题的插件已停用，当前显示为默认样式'))}
-      <button class="btn btn-ghost btn-sm" style="padding:2px 8px;" onclick="window.CrewThemes.resetStale()">${esc(t('重置'))}</button></span>`;
+    return `<span class="user-theme-stale-notice">${esc(t('该主题的插件已停用，当前显示为默认样式'))}
+      <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="window.CrewThemes.resetStale()">${esc(t('重置'))}</button></span>`;
   }
 
   function renderUserThemePicker(container) {
@@ -468,33 +468,37 @@
   let manageState = { plugins: [], expanded: {}, search: '', sort: 'id' };
 
   const mstyle = `
-    .mstat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:14px 0;}
-    .mstat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
-    .mstat .v{font-size:22px;font-weight:700;line-height:1.1;}
-    .mstat .l{font-size:12px;color:var(--muted-foreground);margin-top:2px;}
-    .mstat.err .v{color:var(--destructive);}
-    .mstat.warn .v{color:var(--status-warn);}
-    .mcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
-    .mhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-    .mtitle{font-size:15px;font-weight:600;}
-    .mtag{font-size:11px;color:var(--muted-foreground);font-family:monospace;background:var(--muted);padding:1px 7px;border-radius:6px;}
-    .mdesc{font-size:13px;color:var(--muted-foreground);margin:6px 0 0;}
-    .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--muted);color:var(--muted-foreground);margin-right:6px;border:1px solid transparent;}
-    .chip.on{background:color-mix(in srgb,var(--status-success) 12%,transparent);color:var(--status-success);}
-    .chip.off{color:var(--muted-foreground);}
-    .chip.warn{background:color-mix(in srgb,var(--status-warn) 12%,transparent);color:var(--status-warn);}
-    .chip.perm{font-family:monospace;background:var(--muted);cursor:help;}
-    .chip.cap{background:var(--brand-blue-bg);color:var(--brand-blue);}
-    .msec{font-size:12px;color:var(--muted-foreground);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.04em;}
-    .mtable{width:100%;font-size:12px;border-collapse:collapse;}
-    .mtable th{text-align:left;padding:4px 8px;border-bottom:1px solid var(--border);color:var(--muted-foreground);font-weight:500;}
-    .mtable td{padding:4px 8px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-all;}
-    .msearch{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 14px;}
-    .mmut{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;}
+    .mstat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8rem),1fr));gap:var(--blora-space-3);margin:var(--blora-space-4) 0;}
+    .mstat{display:block;min-width:0;padding:var(--blora-space-4);border:var(--blora-border-subtle);border-radius:var(--blora-radius-lg);background:var(--blora-color-surface-raised);}
+    .mstat .v{color:var(--blora-color-text-primary);font-family:var(--blora-font-heading);font-size:var(--blora-text-xl);font-weight:700;line-height:1.1;overflow-wrap:anywhere;}
+    .mstat .l{color:var(--blora-color-text-muted);font-size:var(--blora-text-xs);margin-top:var(--blora-space-1);}
+    .mstat.err .v{color:var(--blora-color-status-danger);}
+    .mstat.warn .v{color:var(--blora-color-status-warning);}
+    .mcard.blora-card{display:block;min-width:0;padding:var(--blora-space-4);margin-bottom:var(--blora-space-3);border:var(--blora-border-subtle);border-radius:var(--blora-radius-lg);background:var(--blora-color-surface-default);box-shadow:var(--blora-shadow-1);}
+    .mhead{display:flex;align-items:flex-start;gap:var(--blora-space-3);flex-wrap:wrap;}
+    .mtitle{color:var(--blora-color-text-primary);font-size:var(--blora-text-base);font-weight:600;overflow-wrap:anywhere;}
+    .mtag{color:var(--blora-color-text-muted);font-family:var(--blora-font-mono);font-size:var(--blora-text-xs);overflow-wrap:anywhere;}
+    .mdesc{color:var(--blora-color-text-muted);font-size:var(--blora-text-sm);margin-top:var(--blora-space-1);overflow-wrap:anywhere;}
+    .chip{display:inline-flex;align-items:center;gap:var(--blora-space-1);padding:.125rem .5rem;border:var(--blora-border-subtle);border-radius:var(--blora-radius-full);background:var(--blora-color-surface-raised);color:var(--blora-color-text-muted);font-size:var(--blora-text-xs);overflow-wrap:anywhere;}
+    .chip.on{border-color:color-mix(in srgb,var(--blora-color-status-success) 30%,transparent);background:color-mix(in srgb,var(--blora-color-status-success) 12%,var(--blora-color-surface-default));color:var(--blora-color-status-success);}
+    .chip.off{color:var(--blora-color-text-muted);}
+    .chip.warn{border-color:color-mix(in srgb,var(--blora-color-status-warning) 30%,transparent);background:color-mix(in srgb,var(--blora-color-status-warning) 12%,var(--blora-color-surface-default));color:var(--blora-color-status-warning);}
+    .chip.perm{font-family:var(--blora-font-mono);cursor:help;}
+    .chip.cap{border-color:color-mix(in srgb,var(--blora-color-info) 30%,transparent);background:color-mix(in srgb,var(--blora-color-info) 12%,var(--blora-color-surface-default));color:var(--blora-color-info);}
+    .msec{margin:var(--blora-space-4) 0 var(--blora-space-1);color:var(--blora-color-text-subtle);font-size:var(--blora-text-xs);font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
+    .mtable{width:100%;font-size:var(--blora-text-xs);border-collapse:collapse;}
+    .mtable th{text-align:left;padding:var(--blora-space-2);border-bottom:var(--blora-border-subtle);background:var(--blora-color-surface-raised);color:var(--blora-color-text-subtle);font-weight:600;}
+    .mtable td{padding:var(--blora-space-2);border-bottom:var(--blora-border-subtle);vertical-align:top;overflow-wrap:anywhere;color:var(--blora-color-text-secondary);}
+    .msearch{display:flex;gap:var(--blora-space-2);align-items:center;flex-wrap:wrap;margin:var(--blora-space-3) 0 var(--blora-space-4);}
+    .mmut{display:flex;gap:var(--blora-space-2);flex-wrap:wrap;margin-top:var(--blora-space-3);}
+    .blora-admin-plugins-page .plugin-admin-empty,.blora-admin-plugins-page .plugin-admin-error{display:grid;justify-items:center;gap:var(--blora-space-3);padding:var(--blora-space-6);border:var(--blora-border-subtle);border-radius:var(--blora-radius-lg);background:var(--blora-color-surface-raised);color:var(--blora-color-text-muted);text-align:center;}
+    .blora-admin-plugins-page .plugin-admin-search blora-select{display:block;min-width:10rem;}
+    .blora-admin-plugins-page .plugin-admin-search blora-select::part(trigger){box-sizing:border-box;min-height:2.5rem;width:100%;}
   `;
 
   function statCard(v, label, cls) {
-    return `<div class="mstat ${cls || ''}"><div class="v">${esc(String(v))}</div><div class="l">${esc(label)}</div></div>`;
+    const valueClass = cls === 'err' ? 'status-danger' : cls === 'warn' ? 'status-warning' : '';
+    return `<div class="mstat"><blora-statistic class="${valueClass}" label="${esc(label)}" value="${esc(String(v))}"></blora-statistic></div>`;
   }
 
   function permChip(p) {
@@ -524,7 +528,7 @@
 
     const detail = open ? pluginDetail(pl, perms) : '';
     return `
-      <div class="mcard">
+      <div class="mcard blora-card" data-variant="content">
         <div class="mhead">
           <div style="flex:1;min-width:260px;">
             <div class="mtitle">🧩 ${esc(pl.name)} <span class="mtag">v${esc(pl.version || '-')} · ${esc(pl.id)}</span></div>
@@ -532,16 +536,16 @@
             ${pl.description ? `<div class="mdesc">${esc(pl.description)}</div>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div>${statusChips}</div>
-            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" ${pl.enabled ? 'checked' : ''} onchange="window.__pluginRT.toggle('${esc(pl.id)}', this.checked)"> ${esc(t('启用'))}</label>
+            <div class="plugin-status-chips">${statusChips}</div>
+            <label class="plugin-enabled-toggle"><blora-switch class="plugin-enabled-switch" aria-label="${esc(pl.name)} · ${esc(t('启用'))}" ${pl.enabled ? 'checked' : ''} onchange="window.__pluginRT.toggle('${esc(pl.id)}', this.checked)"></blora-switch><span>${esc(t('启用'))}</span></label>
           </div>
         </div>
         <div style="margin-top:10px;">${capsHtml}</div>
         <div class="mmut">
-          ${pl.storeUpdateAvailable && pl.storeSource ? `<button class="btn btn-ghost btn-sm" style="color:var(--primary);" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')">${esc(t('更新'))}</button>` : ''}
-          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
-          <button class="btn btn-ghost btn-sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--destructive);" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
+          ${pl.storeUpdateAvailable && pl.storeSource ? `<button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="window.__pluginRT.updateFromStore('${esc(pl.id)}')">${esc(t('更新'))}</button>` : ''}
+          <button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="window.__pluginRT.expand('${esc(pl.id)}')">${open ? esc(t('收起')) : esc(t('配置'))}</button>
+          <button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="window.__pluginRT.reload('${esc(pl.id)}')">${esc(t('重载'))}</button>
+          <button type="button" class="blora-button" data-variant="danger" data-size="sm" onclick="window.__pluginRT.uninstall('${esc(pl.id)}')">${esc(t('卸载'))}</button>
         </div>
         ${detail}
       </div>`;
@@ -558,7 +562,7 @@
     const cfgText = esc(JSON.stringify(pl.config || {}, null, 2));
 
     return `
-      <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:4px;">
+      <div class="plugin-config-detail">
         <div class="msec">${esc(t('权限声明'))}</div>
         <div>${perms}</div>
         ${pl.routes?.length ? `<div class="msec">${esc(t('自有 API'))}</div><div style="font-size:12px;">${routesHtml}</div>` : ''}
@@ -584,7 +588,7 @@
     try {
       data = await helpers.fetchJSON('/api/admin/plugins');
     } catch (e) {
-      container.innerHTML = `<p style="color:var(--destructive)">${esc(t('加载失败'))}: ${esc(e.message)}</p>`;
+      container.innerHTML = `<div class="plugin-admin-error" role="alert"><blora-empty title="${esc(t('加载失败'))}" description="${esc(e.message)}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="window.__pluginRT.refresh()">${esc(t('重试'))}</button></div>`;
       return;
     }
     manageState.plugins = data.plugins || [];
@@ -615,18 +619,18 @@
           <h2>${esc(t('插件管理'))}</h2>
           <p style="font-size:13px;color:var(--muted-foreground);margin:0;">${esc(t('安装方法：将插件目录放入服务器 plugins/ 目录，重启服务后在此启用。'))}</p>
         </div>
-        <div class="mmut" style="margin-top:0;"><button class="btn btn-secondary btn-sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
+        <div class="plugin-admin-header-actions"><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="window.__pluginRT.refresh()">${esc(t('刷新'))}</button></div>
       </div>
       <div class="mstat-grid">${stats}</div>
-      <div class="msearch">
-        <input type="search" id="pluginSearchInput" class="input" style="flex:1;min-width:200px;" placeholder="${esc(t('搜索插件名称、ID、作者或描述'))}" value="${esc(manageState.search)}" oninput="window.__pluginRT.search(this.value)">
-        <select id="pluginSortSelect" class="select" onchange="window.__pluginRT.sort(this.value)">
-          <option value="id" ${manageState.sort === 'id' ? 'selected' : ''}>${esc(t('按名称排序'))}</option>
-          <option value="name" ${manageState.sort === 'name' ? 'selected' : ''}>${esc(t('按显示名排序'))}</option>
-          <option value="enabled" ${manageState.sort === 'enabled' ? 'selected' : ''}>${esc(t('按状态排序'))}</option>
-        </select>
+      <div class="msearch plugin-admin-search">
+        <blora-search id="pluginSearchInput" aria-label="${esc(t('搜索插件名称、ID、作者或描述'))}" placeholder="${esc(t('搜索插件名称、ID、作者或描述'))}" value="${esc(manageState.search)}" oninput="window.__pluginRT.search(this.value)"></blora-search>
+        <blora-select id="pluginSortSelect" aria-label="${esc(t('插件排序'))}" value="${esc(manageState.sort)}" onchange="window.__pluginRT.sort(this.value)">
+          <blora-option value="id">${esc(t('按名称排序'))}</blora-option>
+          <blora-option value="name">${esc(t('按显示名排序'))}</blora-option>
+          <blora-option value="enabled">${esc(t('按状态排序'))}</blora-option>
+        </blora-select>
       </div>
-      ${rows ? rows : `<p style="color:var(--muted-foreground);font-size:14px;">${q ? esc(t('未找到匹配插件')) : esc(t('暂无插件。将插件目录放入 plugins/ 后重启服务即可在此看到。'))}</p>`}
+      ${rows ? rows : `<div class="plugin-admin-empty"><blora-empty title="${esc(q ? t('未找到匹配插件') : t('暂无插件。将插件目录放入 plugins/ 后重启服务即可在此看到。'))}"></blora-empty></div>`}
     `;
   }
 

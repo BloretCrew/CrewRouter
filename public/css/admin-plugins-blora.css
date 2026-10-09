@@ -17,3 +17,68 @@
     padding: var(--blora-space-4);
   }
 }
+
+.blora-admin-plugins-page .section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--blora-space-4);
+  margin-bottom: var(--blora-space-4);
+}
+
+.blora-admin-plugins-page .section-header h2 {
+  margin: 0;
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+}
+
+.blora-admin-plugins-page .mstat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: var(--blora-space-3);
+  margin-block: var(--blora-space-4);
+}
+
+.blora-admin-plugins-page .mstat {
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-raised);
+  box-shadow: none;
+  padding: var(--blora-space-4);
+}
+
+.blora-admin-plugins-page .mstat .v {
+  color: var(--blora-color-text-primary);
+  font-family: var(--blora-font-heading);
+  font-size: var(--blora-text-xl);
+}
+
+.blora-admin-plugins-page .mstat .l { color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
+.blora-admin-plugins-page .msearch { display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-2); }
+.blora-admin-plugins-page .msearch blora-search { display: block; flex: 1 1 16rem; min-width: min(100%, 16rem); }
+.blora-admin-plugins-page .msearch blora-select { display: block; flex: 0 1 15rem; min-width: min(100%, 12rem); }
+.blora-admin-plugins-page .msearch blora-select::part(trigger) { box-sizing: border-box; width: 100%; min-height: 2.5rem; }
+.blora-admin-plugins-page .mcard.blora-card { margin-bottom: var(--blora-space-3); padding: var(--blora-space-4); }
+.blora-admin-plugins-page .mhead > div:first-child { min-width: min(100%, 16rem) !important; }
+.blora-admin-plugins-page .plugin-status-chips { display: flex; align-items: center; flex-wrap: wrap; gap: var(--blora-space-1); }
+.blora-admin-plugins-page .plugin-enabled-toggle { display: inline-flex; align-items: center; gap: var(--blora-space-2); color: var(--blora-color-text-secondary); font-size: var(--blora-text-sm); }
+.blora-admin-plugins-page .plugin-enabled-switch { flex: 0 0 auto; }
+.blora-admin-plugins-page .chip { margin: 0; border-color: var(--blora-color-border-subtle); background: var(--blora-color-surface-raised); color: var(--blora-color-text-muted); }
+.blora-admin-plugins-page .chip.on { border-color: color-mix(in srgb, var(--blora-color-status-success) 30%, var(--blora-color-border-subtle)); background: color-mix(in srgb, var(--blora-color-status-success) 12%, var(--blora-color-surface-default)); color: var(--blora-color-status-success); }
+.blora-admin-plugins-page .chip.warn { border-color: color-mix(in srgb, var(--blora-color-status-warning) 30%, var(--blora-color-border-subtle)); background: color-mix(in srgb, var(--blora-color-status-warning) 12%, var(--blora-color-surface-default)); color: var(--blora-color-status-warning); }
+.blora-admin-plugins-page .plugin-config-detail { margin-top: var(--blora-space-3); padding-top: var(--blora-space-3); border-top: var(--blora-border-subtle); }
+.blora-admin-plugins-page .msearch input,
+.blora-admin-plugins-page .plugin-config-detail textarea { border-color: var(--blora-color-border-subtle); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-default); color: var(--blora-color-text-primary); }
+.blora-admin-plugins-page .plugin-admin-header-actions { display:flex; align-items:center; gap:var(--blora-space-2); }
+.blora-admin-plugins-page #adminPluginsContent blora-empty { display:block; padding:var(--blora-space-6); }
+
+@media (max-width: 640px) {
+  .blora-admin-plugins-page .section-header { align-items: stretch; flex-direction: column; }
+  .blora-admin-plugins-page .plugin-admin-header-actions,
+  .blora-admin-plugins-page .msearch blora-search,
+  .blora-admin-plugins-page .msearch blora-select { width:100%; min-width:0; max-width:none; }
+  .blora-admin-plugins-page .mhead { align-items: flex-start; }
+  .blora-admin-plugins-page .mhead > div:last-child { align-items:flex-start !important; flex-direction:row !important; justify-content:space-between; width:100%; }
+  .blora-admin-plugins-page .plugin-status-chips { justify-content:flex-start; }
+}
