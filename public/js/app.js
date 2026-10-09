@@ -2412,7 +2412,7 @@ class ConsoleApp {
     const hasModels = provider.models_loaded && provider.models && provider.models.length > 0;
     const totalCount = provider.model_count != null ? provider.model_count : (provider.pagination?.total ?? (provider.models ? provider.models.length : 0));
     return `
-      <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}" data-variant="hover"
+      <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''}" data-variant="inset"
            data-picker-provider-index="${teamIndex}-${providerIndex}"
            data-team-id="${escapeHtml(String(team.team_id))}"
            data-provider-id="${escapeHtml(String(provider.provider_id))}"
@@ -10873,7 +10873,7 @@ ${extractorBody}
               }
             ];
             return `
-            <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-variant="hover" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''}">
+            <div class="blora-card model-library-provider collapsed ${isProviderDisabled ? 'provider-disabled' : ''} ${isProviderHidden ? 'provider-hidden' : ''}" data-variant="inset" data-provider-index="${teamIndex}-${providerIndex}" data-team-id="${escapeHtml(String(team.team_id))}" data-provider-id="${escapeHtml(String(provider.provider_id))}" style="${isProviderDisabled ? 'position:relative;' : ''}">
               ${isProviderDisabled ? '<div class="provider-disabled-overlay"></div>' : ''}
               <div class="model-library-provider-header" onclick="app.toggleProvider(${teamIndex}, ${providerIndex})">
                 <div class="model-library-provider-title">
