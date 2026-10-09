@@ -62,6 +62,42 @@
   background: var(--blora-color-surface-raised);
 }
 
+#adminPromptDetailModal::part(panel) { width: min(64rem, calc(100vw - 2rem)); max-width: 64rem; max-height: calc(100dvh - 2rem); }
+#adminPromptDetailModal .modal-content { width: 100%; max-width: none; max-height: calc(100dvh - 2rem); }
+#adminPromptDetailModal .modal-body { min-width: 0; overflow: auto; }
+#adminPromptDetailBody { min-width: 0; display: flex; flex-direction: column; min-height: min(34rem, calc(100dvh - 12rem)); }
+.prompt-detail-tabs { display: flex; flex-wrap: wrap; gap: .5rem; padding-bottom: .75rem; border-bottom: var(--prompts-border-soft); }
+.prompt-detail-tabs .blora-button { min-height: 2.5rem; }
+.prompt-detail-page-status { color: var(--blora-color-text-subtle); font-size: var(--blora-text-xs); text-align: end; padding: .5rem 0; }
+.prompt-detail-page { min-width: 0; flex: 1; }
+.prompt-detail-page[hidden] { display: none !important; }
+.prompt-detail-row { display: grid; grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr); gap: .75rem; align-items: start; padding: .625rem 0; border-bottom: var(--prompts-border-soft); }
+.prompt-detail-label { color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); }
+.prompt-detail-value { min-width: 0; overflow-wrap: anywhere; }
+.prompt-detail-full-content { max-height: min(55dvh, 38rem); overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: 1rem; border: var(--prompts-border-soft); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-raised); font: var(--blora-text-sm)/1.6 var(--blora-font-mono); }
+.prompt-detail-copy { padding-top: .75rem; }
+.prompt-detail-pagination { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; padding-top: .75rem; border-top: var(--prompts-border-soft); }
+.prompt-detail-pagination > span { color: var(--blora-color-text-subtle); font-size: var(--blora-text-xs); }
+.prompt-detail-empty { color: var(--blora-color-text-subtle); padding: 1rem 0; }
+.prompt-refs-heading { margin: 0 0 .75rem; font-size: var(--blora-text-sm); }
+.prompt-refs-scroll { width: 100%; overflow-x: auto; overscroll-behavior-x: contain; border: var(--prompts-border-soft); border-radius: var(--blora-radius-md); }
+#adminPromptDetailBody .prompt-refs-table { width: 100%; min-width: 56rem; table-layout: fixed; border-collapse: collapse; }
+.prompt-refs-table .prompt-ref-id { width: 6rem; }
+.prompt-refs-table .prompt-ref-time { width: 13rem; }
+.prompt-refs-table .prompt-ref-user { width: 15rem; }
+.prompt-refs-table .prompt-ref-model { width: 15rem; }
+.prompt-refs-table .prompt-ref-source { width: 10rem; }
+.prompt-refs-table th, .prompt-refs-table td { padding: .625rem .75rem; border-bottom: var(--prompts-border-soft); text-align: start; vertical-align: top; overflow-wrap: anywhere; }
+.prompt-refs-table th { color: var(--blora-color-text-subtle); background: var(--blora-color-surface-raised); white-space: nowrap; }
+.prompt-refs-table td:nth-child(2) { white-space: nowrap; }
+@media (max-width: 640px) {
+  #adminPromptDetailModal::part(panel) { width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); }
+  #adminPromptDetailBody { min-height: calc(100dvh - 11rem); }
+  .prompt-detail-row { grid-template-columns: 1fr; gap: .25rem; }
+  .prompt-detail-pagination { justify-content: space-between; }
+  .prompt-refs-scroll { max-width: calc(100vw - 4rem); }
+}
+
 .blora-admin-prompts-page #adminPromptsList code,
 .blora-admin-prompts-page #adminPromptDetailBody pre {
   border: var(--prompts-border-soft);

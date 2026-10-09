@@ -11503,46 +11503,74 @@ async function(ctx) {
         [t('最近出现'), escapeHtml(fmtTime(data.last_seen))],
       ];
 
-      let refsHtml = '';
-      if (Array.isArray(data.recent_refs) && data.recent_refs.length) {
-        refsHtml = `
-          <h4 style="margin:16px 0 8px;font-size:14px;">${t('最近引用记录')}（${t('最近')} ${data.recent_refs.length} ${t('条')}）</h4>
-          <div style="overflow-x:auto;">
-            <table>
-              <thead><tr><th>${t('记录 ID')}</th><th>${t('时间')}</th><th>${t('用户')}</th><th>${t('模型')}</th><th>${t('客户端')}</th></tr></thead>
-              <tbody>
-                ${data.recent_refs.map(r => `
-                  <tr>
-                    <td><code style="font-size:12px;">${escapeHtml(String(r.record_id))}</code></td>
-                    <td style="white-space:nowrap;font-size:12px;">${escapeHtml(fmtTime(r.created_at))}</td>
-                    <td>${escapeHtml(r.username || String(r.user_id ?? '-'))}</td>
-                    <td class="cell-clip" style="max-width:220px;">${escapeHtml(r.model_id || '-')}</td>
-                    <td>${this._usageRequestSourceBadge(r.request_source)}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>`;
-      }
-
+      const refs = Array.isArray(data.recent_refs) ? data.recent_refs : [];
+      const overviewHtml = rows.map(([label, value]) => `
+        <div class="prompt-detail-row"><span class="prompt-detail-label">${label}</span><span class="prompt-detail-value">${value}</span></div>
+      `).join('');
+      const refsHtml = refs.length ? `
+        <h4 class="prompt-refs-heading">${t('最近引用记录')}（${t('最近')} ${refs.length} ${t('条')}）</h4>
+        <div class="prompt-refs-scroll"><table class="prompt-refs-table">
+          <colgroup><col class="prompt-ref-id"><col class="prompt-ref-time"><col class="prompt-ref-user"><col class="prompt-ref-model"><col class="prompt-ref-source"></colgroup>
+          <thead><tr><th>${t('记录 ID')}</th><th>${t('时间')}</th><th>${t('用户')}</th><th>${t('模型')}</th><th>${t('客户端')}</th></tr></thead>
+          <tbody>${refs.map(r => `
+            <tr>
+              <td><code>${escapeHtml(String(r.record_id))}</code></td>
+              <td>${escapeHtml(fmtTime(r.created_at))}</td>
+              <td>${escapeHtml(r.username || String(r.user_id ?? '-'))}</td>
+              <td>${escapeHtml(r.model_id || '-')}</td>
+              <td>${this._usageRequestSourceBadge(r.request_source)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table></div>` : `<p class="prompt-detail-empty">${t('暂无引用记录')}</p>`;
+      this._adminPromptDetailPage = 0;
       setHTML(body, `
-        ${rows.map(([label, value]) => `
-          <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-            <span style="color:var(--muted-foreground);font-size:13px;">${label}</span>
-            <span style="font-size:14px;">${value}</span>
-          </div>
-        `).join('')}
-        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:start;padding:12px 0 0;border-bottom:1px solid var(--border);">
-          <span style="color:var(--muted-foreground);font-size:13px;">${t('完整内容')}</span>
-          <pre id="adminPromptFullContent" class="error-detail-pre error-detail-pre--body">${escapeHtml(data.content || '')}</pre>
-        </div>
-        <div style="padding:8px 0;"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.copyAdminPromptContent(this)">⧉ ${t('复制内容')}</button></div>
-        ${refsHtml}
+        <nav class="prompt-detail-tabs" role="tablist" aria-label="${t('提示词详情分页')}">
+          <button type="button" class="blora-button" data-variant="primary" role="tab" aria-selected="true" aria-controls="adminPromptPage-overview" onclick="adminApp.setAdminPromptDetailPage(0)">${t('概要')}</button>
+          <button type="button" class="blora-button" data-variant="ghost" role="tab" aria-selected="false" aria-controls="adminPromptPage-content" onclick="adminApp.setAdminPromptDetailPage(1)">${t('完整内容')}</button>
+          <button type="button" class="blora-button" data-variant="ghost" role="tab" aria-selected="false" aria-controls="adminPromptPage-refs" onclick="adminApp.setAdminPromptDetailPage(2)">${t('最近引用')}</button>
+        </nav>
+        <div class="prompt-detail-page-status" aria-live="polite"><span id="adminPromptDetailPageCounter">1 / 3</span></div>
+        <section class="prompt-detail-page" id="adminPromptPage-overview" role="tabpanel">${overviewHtml}</section>
+        <section class="prompt-detail-page" id="adminPromptPage-content" role="tabpanel" hidden>
+          <pre id="adminPromptFullContent" class="prompt-detail-full-content">${escapeHtml(data.content || '')}</pre>
+          <div class="prompt-detail-copy"><button type="button" class="blora-button" data-variant="outline" data-size="sm" onclick="adminApp.copyAdminPromptContent(this)">⧉ ${t('复制内容')}</button></div>
+        </section>
+        <section class="prompt-detail-page" id="adminPromptPage-refs" role="tabpanel" hidden>${refsHtml}</section>
+        <nav class="prompt-detail-pagination" aria-label="${t('提示词详情分页操作')}" data-page="1">
+          <button type="button" class="blora-button" data-variant="outline" id="adminPromptDetailPrev" onclick="adminApp.setAdminPromptDetailPage(adminApp._adminPromptDetailPage - 1)" disabled>${t('上一页')}</button>
+          <span id="adminPromptDetailPageIndex">1 / 3</span>
+          <button type="button" class="blora-button" data-variant="outline" id="adminPromptDetailNext" onclick="adminApp.setAdminPromptDetailPage(adminApp._adminPromptDetailPage + 1)">${t('下一页')}</button>
+        </nav>
       `);
     } catch (error) {
       console.error(t('加载提示词详情失败:'), error);
       setHTML(body, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
+  }
+
+  setAdminPromptDetailPage(page) {
+    this._adminPromptDetailPage = Math.max(0, Math.min(2, Number(page) || 0));
+    const ids = ['overview', 'content', 'refs'];
+    ids.forEach((id, index) => {
+      const panel = document.getElementById(`adminPromptPage-${id}`);
+      if (panel) panel.hidden = index !== this._adminPromptDetailPage;
+      const tab = document.querySelector(`#adminPromptDetailBody [aria-controls="adminPromptPage-${id}"]`);
+      if (tab) {
+        tab.setAttribute('aria-selected', String(index === this._adminPromptDetailPage));
+        tab.dataset.variant = index === this._adminPromptDetailPage ? 'primary' : 'ghost';
+      }
+    });
+    const label = `${this._adminPromptDetailPage + 1} / ${ids.length}`;
+    ['adminPromptDetailPageCounter', 'adminPromptDetailPageIndex'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = label;
+    });
+    const prev = document.getElementById('adminPromptDetailPrev');
+    const next = document.getElementById('adminPromptDetailNext');
+    if (prev) prev.disabled = this._adminPromptDetailPage === 0;
+    if (next) next.disabled = this._adminPromptDetailPage === ids.length - 1;
+    const body = document.querySelector('#adminPromptDetailModal .modal-body');
+    if (body) body.scrollTop = 0;
   }
 
   copyAdminPromptContent(btn) {
