@@ -55,8 +55,11 @@
   background: var(--blora-color-surface-raised);
 }
 
-.blora-admin-audit-page .audit-log-row > div:first-child > div:first-child span {
-  border-radius: var(--blora-radius-pill) !important;
+.blora-admin-audit-page .audit-log-row > div:first-child > div:first-child .blora-badge {
+  border-radius: var(--blora-radius-full) !important;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .blora-admin-audit-page .audit-log-row details summary {
