@@ -160,14 +160,6 @@
       document.addEventListener('DOMContentLoaded', apply);
     } else { apply(); }
     document.addEventListener('i18n:ready', apply);
-    var el = document.getElementById('langToggle');
-    if (el && window.I18N) {
-      el.value = I18N.current();
-      el.addEventListener('blora-change', function (event) {
-        var value = event.detail && event.detail.value;
-        if (value) I18N.load(value);
-      });
-    }
   })();
 </script>
 </body>

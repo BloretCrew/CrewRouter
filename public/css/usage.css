@@ -32,13 +32,9 @@
 .usage-back-link:hover { color: var(--foreground); }
 .usage-back-link > span:first-child { font-size: 24px; line-height: 1; }
 
-.usage-language-select {
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
-  color: var(--foreground);
+.usage-language-wrap blora-select {
+  display: block;
+  min-width: 6rem;
 }
 
 .usage-card {

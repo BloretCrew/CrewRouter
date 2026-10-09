@@ -5,7 +5,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const root = path.resolve(__dirname, '..');
-const pages = ['index.html', 'setup.html', 'feishu-bind.html', 'set-password.html'];
+const pages = ['index.html', 'setup.html', 'feishu-bind.html', 'set-password.html', 'usage.html', 'store.html', 'showcase.html', 'purchase.html', 'playground.html', 'data.html'];
 const out = fs.mkdtempSync(path.join(os.tmpdir(), 'crewrouter-blora-navbar-'));
 try {
   for (const name of pages) {
@@ -14,11 +14,17 @@ try {
     assert.ok(language, `${name}: real language control exists`);
     const theme = html.match(/<button\b[^>]*id="themeToggle"[\s\S]*?<\/button>/i)?.[0] || '';
     const nav = html.match(/<blora-navbar\b[\s\S]*?<\/blora-navbar>/i)?.[0];
+    const selectControls = [...html.matchAll(/<blora-select\b[^>]*id="langToggle"[^>]*>[\s\S]*?<\/blora-select>/gi)];
+    const dropdownControls = [...html.matchAll(/<blora-dropdown\b[^>]*id="langToggle"[^>]*>[\s\S]*?<\/blora-dropdown>/gi)];
+    const nativeLanguageSelect = [...html.matchAll(/<select\b[^>]*id="langToggle"/gi)];
+    assert.strictEqual(nativeLanguageSelect.length, 0, `${name}: language control uses Blora Select or Dropdown`);
+    assert.strictEqual(selectControls.length + dropdownControls.length, 1, `${name}: exactly one official Blora language control`);
+    assert.match(html, /<body\b[^>]*class="[^"]*\bblora-scope\b/);
     if (['setup.html', 'feishu-bind.html'].includes(name)) {
       assert.ok(nav?.includes('<blora-navbar-tool>'), `${name}: official tool slot exists`);
       assert.ok(!/(?:^|>)\s*(?:<a|<div|<select|<button)\b/i.test(nav.replace(/<blora-navbar-tool>[\s\S]*?<\/blora-navbar-tool>/gi, '')), `${name}: no unsupported direct child`);
-    } else assert.ok(theme, `${name}: real theme button exists`);
-    const controlMarkup = nav || `${language}${theme}`;
+    } else if (['index.html', 'set-password.html', 'oauth-consent.html', 'showcase.html', 'data.html'].includes(name)) assert.ok(theme, `${name}: real theme button exists`);
+    const controlMarkup = nav || `${selectControls[0]?.[0] || dropdownControls[0]?.[0]}${theme}`;
     const probe = `<!doctype html><meta charset="utf-8"><script>window.t=v=>v;</script><link rel="stylesheet" href="file://${root}/node_modules/@bloret-crew/blora-design/dist/blora.css">${controlMarkup}<script src="file://${root}/node_modules/@bloret-crew/blora-design/dist/blora.global.js"></script><script src="file://${root}/public/js/theme.js"></script><script>window.addEventListener('load',()=>{setTimeout(()=>{try {
       const lang=document.querySelector('#langToggle');
       if (!customElements.get(lang.localName)||!lang.getAttribute('aria-label')) throw Error('official language control or accessible name lost');
@@ -39,6 +45,7 @@ try {
         if(!option) throw Error('language option lost');
         option.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true,composed:true}));
         if (lang.value!=='en') throw Error('language selection failed');
+        lang.dispatchEvent(new Event('change', {bubbles:true,composed:true}));
       }
       const button=document.querySelector('#themeToggle');
       if(button){ localStorage.setItem('theme','light'); window.themeManager.theme='light'; window.themeManager.applyTheme(); button.click(); if(localStorage.getItem('theme')!=='dark'||document.documentElement.getAttribute('data-blora-color-scheme')!=='dark') throw Error('real theme action failed'); }

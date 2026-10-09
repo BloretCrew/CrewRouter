@@ -19,8 +19,8 @@
   <link rel="stylesheet" href="/css/themes.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/main.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/usage.css?v=restore-0930-20261003">
-  <script src="/js/i18n.js?v=restore-0930-20261003"></script>
+  <link rel="stylesheet" href="/css/usage.css?v=blora-language-select-20261009">
+  <script src="/js/i18n.js?v=blora-select-change-20261009"></script>
   <script type="module" src="/blora/auto.js?v=2.1.0"></script>
   <script src="/js/blora-foundation.js?v=restore-0930-20261003"></script>
   <link rel="stylesheet" href="/blora/blora.css?v=2.1.0">
@@ -35,10 +35,10 @@
       </a>
       <div class="usage-language-wrap">
         <label for="langToggle" class="sr-only" data-i18n="语言">语言</label>
-        <select id="langToggle" class="usage-language-select" title="Language">
-          <option value="zh">中文</option>
-          <option value="en">EN</option>
-        </select>
+        <blora-select id="langToggle" title="Language" aria-label="Language">
+          <blora-option value="zh">中文</blora-option>
+          <blora-option value="en">EN</blora-option>
+        </blora-select>
       </div>
     </header>
 
@@ -60,6 +60,6 @@
     </section>
   </main>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
-  <script src="/js/usage.js?v=restore-0930-20261003"></script>
+  <script src="/js/usage.js?v=blora-select-language-20261009"></script>
 </body>
 </html>

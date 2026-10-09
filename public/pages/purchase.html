@@ -130,10 +130,10 @@
   <link rel="stylesheet" href="/blora/tokens.dark.css?v=2.1.0">
 </head>
 <body class="blora-page blora-scope">
-<div style="position:absolute;top:10px;right:12px;z-index:99;"><select id="langToggle" class="btn btn-icon blora-input" title="Language" style="width:auto;height:28px;padding:0 6px;font-size:12px;cursor:pointer;">
-      <option value="zh">中文</option>
-      <option value="en">EN</option>
-    </select></div>
+<div style="position:absolute;top:10px;right:12px;z-index:99;"><blora-select id="langToggle" title="Language" aria-label="Language">
+      <blora-option value="zh">中文</blora-option>
+      <blora-option value="en">EN</blora-option>
+    </blora-select></div>
   <div class="app-container">
     <aside class="sidebar">
       <div class="sidebar-header">
@@ -163,7 +163,7 @@
     </main>
   </div>
 
-  <script src="/js/i18n.js?v=restore-0930-20261003"></script>
+  <script src="/js/i18n.js?v=blora-select-change-20261009"></script>
   <script src="/js/theme.js?v=blora-color-scheme-20261009"></script>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
   <script>
@@ -230,11 +230,6 @@
       document.addEventListener('DOMContentLoaded', apply);
     } else { apply(); }
     document.addEventListener('i18n:ready', apply);
-    var el = document.getElementById('langToggle');
-    if (el && window.I18N) {
-      el.value = I18N.current();
-      el.addEventListener('change', function () { I18N.load(el.value); });
-    }
   })();
 </script>
 </body>
