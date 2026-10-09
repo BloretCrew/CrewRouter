@@ -5770,13 +5770,13 @@ class ConsoleApp {
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
 
       if (!data.items || data.items.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无提示词记录') + '</p>');
+        setHTML(container, `<blora-empty title="${escapeHtml(t('暂无提示词记录'))}"></blora-empty>`);
         return;
       }
       this._promptsCache = data.items;
 
       setHTML(container, `
-        <table>
+        <table class="blora-table">
           <thead>
             <tr>
               <th>${t('文件名')}</th>
@@ -5823,7 +5823,7 @@ class ConsoleApp {
       });
     } catch (error) {
       console.error(t('加载提示词失败:'), error);
-      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+      setHTML(container, `<div class="content-list__notice" role="alert"><blora-empty title="${escapeHtml(error.message || t('加载失败'))}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.loadCustomPrompts(app.promptPage)">${t('重试')}</button></div>`);
     }
   }
 
@@ -6131,12 +6131,12 @@ class ConsoleApp {
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
 
       if (!data.logs || data.logs.length === 0) {
-        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无调用记录') + '</p>');
+        setHTML(container, `<blora-empty title="${escapeHtml(t('暂无调用记录'))}"></blora-empty>`);
         return;
       }
 
       setHTML(container, `
-        <table class="usage-logs-table">
+        <table class="blora-table usage-logs-table">
           <colgroup><col class="usage-col-time"><col class="usage-col-model"><col class="usage-col-series"><col class="usage-col-source"><col class="usage-col-key"><col class="usage-col-tokens"><col class="usage-col-cache"><col class="usage-col-cost"></colgroup>
           <thead>
             <tr>
@@ -6184,7 +6184,7 @@ class ConsoleApp {
       `);
     } catch (error) {
       console.error(t('加载调用记录失败:'), error);
-      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
+      setHTML(container, `<div class="content-list__notice" role="alert"><blora-empty title="${escapeHtml(error.message || t('加载失败'))}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="app.loadUsageLogs(app.usageLogPage)">${t('重试')}</button></div>`);
     }
   }
 
