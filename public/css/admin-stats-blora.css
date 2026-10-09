@@ -186,9 +186,16 @@
 }
 
 .blora-admin-page .stats-overview-grid {
+  width: 100%;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--blora-space-3);
+  gap: 1rem;
 }
+.blora-admin-page #statsTabOverview > .responsive-grid-2 {
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.blora-admin-page #statsTabOverview > .responsive-grid-2 > .chart-card { min-width: 0; }
 
 .blora-admin-page .stats-overview-card {
   min-height: 8.5rem;
