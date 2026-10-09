@@ -603,3 +603,8 @@
 #quickAddedTeamsList > div { padding: var(--blora-space-3) !important; border: var(--blora-border-subtle); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-raised); }
 #quickAddedTeamsList blora-checkbox { min-width: 0; max-width: 100%; }
 #quickAddedTeamsList [data-team-result]:empty { display: none; }
+
+/* Period headers already show label and percentage; retain the accessible progress name. */
+.blora-model-library .model-quota-progress .blora-progress__label { display: none; }
+.blora-model-library .model-quota-numbers { flex-wrap: wrap; min-width: 0; }
+.blora-model-library .model-quota-remaining { overflow-wrap: anywhere; }

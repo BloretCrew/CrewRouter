@@ -10649,9 +10649,13 @@ ${extractorBody}
       return;
     }
 
+    const formatQuotaNumber = value => {
+      const number = Number(value);
+      return Number.isFinite(number) ? number.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) : '0';
+    };
     const usageBadge = (pct) => {
       const variant = pct >= 90 ? 'danger' : pct >= 70 ? 'warning' : 'success';
-      return `<span class="blora-badge" data-variant="${variant}">${t('已用')} ${pct}%</span>`;
+      return `<span class="blora-badge" data-variant="${variant}">${t('已用')} ${Math.round(Number(pct) || 0)}%</span>`;
     };
     const progressBar = (pct, label) => `<blora-progress class="model-quota-progress" value="${Math.max(0, Math.min(100, Number(pct) || 0))}" label="${escapeHtml(label)}"></blora-progress>`;
 
@@ -10741,7 +10745,7 @@ ${extractorBody}
                   ${usageBadge(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct)))}
                 </div>
                 ${progressBar(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct)), keyLabel)}
-                ${kTotal > 0 ? `<div style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(String(kq.remaining ?? 0))} / ${escapeHtml(String(kTotal))}</div>` : ''}
+                ${kTotal > 0 ? `<div style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(formatQuotaNumber(kq.remaining ?? 0))} / ${escapeHtml(formatQuotaNumber(kTotal))}</div>` : ''}
               </div>`;
           }).join('')}
         </div>` : '';
@@ -10755,8 +10759,8 @@ ${extractorBody}
           </div>
           ${periods.length ? periodHtml : `
           <div class="model-quota-numbers">
-            <span class="model-quota-remaining">${escapeHtml(String((agg || q).remaining ?? 0))}</span>
-            <span class="model-quota-total">/ ${escapeHtml(String((agg || q).total ?? 0))}</span>
+            <span class="model-quota-remaining">${escapeHtml(formatQuotaNumber((agg || q).remaining ?? 0))}</span>
+            <span class="model-quota-total">/ ${escapeHtml(formatQuotaNumber((agg || q).total ?? 0))}</span>
           </div>
           ${periodHtml}`}
           ${keysHtml}

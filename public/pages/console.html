@@ -26,8 +26,8 @@
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
-  <link rel="stylesheet" href="/css/model-library-blora.css?v=nested-provider-inset-20261009">
-  <link rel="stylesheet" href="/css/console-blora.css?v=record-list-blora-20261009">
+  <link rel="stylesheet" href="/css/model-library-blora.css?v=navigation-quota-fix-20261010">
+  <link rel="stylesheet" href="/css/console-blora.css?v=navigation-quota-fix-20261010">
   <link rel="stylesheet" href="/css/badges-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
@@ -2672,7 +2672,7 @@ data: [DONE]</code></pre>
   <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/app.js?v=usage-table-widths-20261008"></script>
+  <script src="/js/app.js?v=navigation-quota-fix-20261010"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
@@ -2771,6 +2771,7 @@ data: [DONE]</code></pre>
       const sourceSidebar = document.querySelector('.sidebar');
       const sourceNavigation = sourceSidebar?.querySelector('.sidebar-nav');
       const sourceFooter = sourceSidebar?.querySelector('.sidebar-footer');
+      const sourceItems = [...(sourceNavigation?.querySelectorAll('.nav-item') || [])];
       const toggle = document.getElementById('sidebarToggle');
       const pageTitle = document.getElementById('pageTitle');
       const mobileTitle = document.getElementById('mobilePageTitle');
@@ -2782,7 +2783,7 @@ data: [DONE]</code></pre>
         const nav = document.createElement('blora-sidebar-nav');
         nav.className = 'business-sidebar-navigation';
         nav.setAttribute('label', label);
-        const sourceItems = [...source.querySelectorAll('.nav-item')];
+
         for (const section of source.querySelectorAll('.nav-section')) {
           const group = document.createElement('blora-sidebar-nav-group');
           const heading = section.querySelector('.nav-section-title')?.textContent.trim();
@@ -2819,7 +2820,15 @@ data: [DONE]</code></pre>
       const mobileNavigation = buildNavigation(sourceNavigation, drawerContent, '主导航');
       const mobileHeader = sourceSidebar?.querySelector('.sidebar-header')?.cloneNode(true);
       if (mobileHeader) drawerContent?.prepend(mobileHeader);
-      if (sourceFooter && drawerContent) drawerContent.append(sourceFooter.cloneNode(true));
+      if (sourceFooter && drawerContent) {
+        const footer = sourceFooter.cloneNode(true);
+        footer.querySelectorAll('[id]').forEach(element => {
+          const source = sourceFooter.querySelector(`[id="${element.id}"]`);
+          element.removeAttribute('id');
+          if (source?.matches('button')) element.addEventListener('click', () => source.click());
+        });
+        drawerContent.append(footer);
+      }
       if (sourceNavigation) sourceNavigation.hidden = true;
       const getSelectedPage = () => sourceNavigation?.querySelector('.nav-item.active')?.dataset.page || '';
       const syncNavigation = () => {
@@ -2827,15 +2836,27 @@ data: [DONE]</code></pre>
         for (const root of [desktopNavigation, mobileNavigation]) {
           if (!root) continue;
           updateNavigation(root, selected);
-          root.querySelectorAll('blora-sidebar-nav-link').forEach(link => {
-            const item = sourceNavigation.querySelector(`.nav-item[data-page="${CSS.escape(link.value)}"]`) ||
-              sourceItems.find(candidate => (candidate.dataset.page || candidate.id || `external-${sourceItems.indexOf(candidate)}`) === link.value);
-            link.hidden = !item || item.hidden || item.style.display === 'none';
+          root.querySelectorAll('.blora-sidebar-nav__link').forEach(link => {
+            const item = sourceItems.find((candidate, index) =>
+              (candidate.dataset.page || candidate.id || `external-${index}`) === link.dataset.value
+            );
+            const hidden = !item || item.hidden || item.style.display === 'none';
+            if (link.hidden !== hidden) link.hidden = hidden;
+            if (item && !link.querySelector('.business-nav-label')) {
+              const label = document.createElement('span');
+              label.className = 'business-nav-label';
+              label.textContent = item.textContent.trim();
+              const icon = item.querySelector('.sf-icon, svg');
+              link.replaceChildren();
+              if (icon) link.append(icon.cloneNode(true));
+              link.append(label);
+            }
           });
         }
       };
       syncNavigation();
-      new MutationObserver(syncNavigation).observe(document.querySelector('.sidebar'), { subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+      new MutationObserver(syncNavigation).observe(sourceNavigation, { subtree: true, attributes: true, childList: true, characterData: true, attributeFilter: ['class', 'style', 'hidden'] });
+      customElements.whenDefined('blora-sidebar-nav').then(() => requestAnimationFrame(syncNavigation));
       if (pageTitle && mobileTitle) {
         new MutationObserver(() => {
           const title = pageTitle.textContent.trim();
