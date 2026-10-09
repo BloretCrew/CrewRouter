@@ -2775,6 +2775,8 @@ data: [DONE]</code></pre>
       const sourceNavigation = sourceSidebar?.querySelector('.sidebar-nav');
       const sourceFooter = sourceSidebar?.querySelector('.sidebar-footer');
       const toggle = document.getElementById('sidebarToggle');
+      const pageTitle = document.getElementById('pageTitle');
+      const mobileTitle = document.getElementById('mobilePageTitle');
       const updateNavigation = (navigationRoot, selectedPage) => {
         if (navigationRoot) navigationRoot.value = selectedPage || '';
       };
@@ -2837,6 +2839,12 @@ data: [DONE]</code></pre>
       };
       syncNavigation();
       new MutationObserver(syncNavigation).observe(document.querySelector('.sidebar'), { subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+      if (pageTitle && mobileTitle) {
+        new MutationObserver(() => {
+          const title = pageTitle.textContent.trim();
+          if (title && mobileTitle.textContent.trim() !== title) mobileTitle.textContent = title;
+        }).observe(pageTitle, { subtree: true, childList: true, characterData: true });
+      }
       toggle?.addEventListener('click', () => drawer?.open());
       document.getElementById('themeToggleMobile')?.addEventListener('click', () => {
         document.getElementById('themeToggle')?.click();
