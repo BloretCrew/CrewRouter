@@ -1,3 +1,5 @@
+.purchase-page .purchase-language-wrap { position:absolute; top:var(--blora-space-2); right:var(--blora-space-3); z-index:99; }
+.purchase-page .purchase-language-wrap blora-select { display:block; min-width:5rem; }
 .purchase-page .app-container { min-width:0; }
 .purchase-page .main-content { min-width:0; }
 .purchase-page .purchase-container { width:min(100%,32rem); max-width:32rem; margin:var(--blora-space-6) auto; }
