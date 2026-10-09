@@ -6488,16 +6488,19 @@ async function(ctx) {
     const values = rows.map(row => Number(row.requests || 0));
     const style = getComputedStyle(document.documentElement);
     const textSecondary = style.getPropertyValue('--muted-foreground').trim() || readCssVar('--text-muted-soft', '#94a3b8');
+    const chartColor = readCssVar('--chart-8', '').trim();
+    const backgroundColor = chartColor && chartColor !== 'currentColor' ? chartColor : '#14b8a6';
+    const gridColor = style.getPropertyValue('--border').trim() || 'rgba(148, 163, 184, .18)';
     this._upsertChart('_multiDimensionChart', document.getElementById('multiDimensionChart'), 'bar', {
       labels,
-      datasets: [{ label: t('请求数'), data: values, backgroundColor: readCssVar('--chart-8', '#14b8a6'), borderRadius: 6, barThickness: 16 }]
+      datasets: [{ label: t('请求数'), data: values, backgroundColor, borderRadius: 6, barThickness: 16 }]
     }, {
       responsive: true,
       maintainAspectRatio: false,
       indexAxis: 'y',
       plugins: { legend: { display: false } },
       scales: {
-        x: { beginAtZero: true, ticks: { color: textSecondary } },
+        x: { beginAtZero: true, ticks: { color: textSecondary }, grid: { color: gridColor } },
         y: { ticks: { color: textSecondary, autoSkip: false, font: { size: 11 } }, grid: { display: false } }
       }
     });
@@ -6508,7 +6511,7 @@ async function(ctx) {
     if (!el) return;
     if (!rows.length) { setHTML(el, '<blora-empty title="' + t('当前筛选条件下暂无组合数据') + '"></blora-empty>'); return; }
     const sourceLabel = (source) => this._usageRequestSourceMeta(source).label;
-    setHTML(el, `<div class="blora-table-wrap"><table class="blora-table"><thead><tr><th>${t('成员')}</th><th>Team</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${renderProviderNameTag(row.provider_name) || '<span class="model-provider-missing">' + t('未知供应商') + '</span>'}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
+    setHTML(el, `<div class="blora-table-wrap multi-stats-combination-table-wrap"><table class="blora-table multi-stats-combination-table"><colgroup><col class="multi-stats-col-member"><col class="multi-stats-col-team"><col class="multi-stats-col-project"><col class="multi-stats-col-source"><col class="multi-stats-col-model"><col class="multi-stats-col-provider"><col class="multi-stats-col-requests"><col class="multi-stats-col-tokens"><col class="multi-stats-col-cost"><col class="multi-stats-col-latency"></colgroup><thead><tr><th>${t('成员')}</th><th>Team</th><th>项目</th><th>客户端</th><th>模型</th><th>供应商</th><th>请求</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => `<tr><td>${escapeHtml(row.user_name || t('未知成员'))}</td><td>${escapeHtml(row.team_name || t('未分配 Team'))}</td><td>${escapeHtml(row.workspace_path === '__unknown__' ? t('未识别项目') : (row.workspace_path || t('未识别项目')))}</td><td>${escapeHtml(sourceLabel(row.request_source))}</td><td>${escapeHtml(row.model_name || t('未知模型'))}</td><td>${renderProviderNameTag(row.provider_name) || '<span class="model-provider-missing">' + t('未知供应商') + '</span>'}</td><td>${Number(row.requests || 0).toLocaleString()}</td><td title="${Number(row.tokens || 0).toLocaleString()}">${this._formatBigNumber(Number(row.tokens || 0))}</td><td>${Number(row.cost || 0).toFixed(4)}</td><td>${row.avg_latency == null ? '-' : `${Math.round(Number(row.avg_latency))}ms`}</td></tr>`).join('')}</tbody></table></div>`);
   }
 
   async loadStats() {
@@ -7312,7 +7315,7 @@ async function(ctx) {
     if (!this.stats || typeof Chart === 'undefined') return;
     const rows = (this.stats.bySource || []).filter((s) => parseInt(s.requests || 0, 10) > 0);
     const labels = rows.map((s) => this._usageRequestSourceMeta(s.request_source).label);
-    const colors = rows.map((s) => this._usageRequestSourceMeta(s.request_source).color);
+    const colors = rows.map((s) => this._usageRequestSourceMeta(s.request_source, true).color);
     const reqs = rows.map((s) => parseInt(s.requests || 0, 10));
     const costs = rows.map((s) => parseFloat(s.cost || 0));
     const pieOpts = {
@@ -7343,7 +7346,7 @@ async function(ctx) {
         this._destroyChart?.('_adminSourceDailyChart');
       } else {
         const datasets = sourceIds.map((sid) => {
-          const meta = this._usageRequestSourceMeta(sid);
+          const meta = this._usageRequestSourceMeta(sid, true);
           const byDate = {};
           series.filter((r) => (r.request_source || 'unknown') === sid).forEach((r) => {
             byDate[r.date] = parseInt(r.requests || 0, 10);
@@ -7786,7 +7789,7 @@ async function(ctx) {
     return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;white-space:nowrap;background:color-mix(in srgb, ${meta.color} 15%, transparent);color:${meta.color};">${escapeHtml(meta.label)}</span>`;
   }
 
-  _usageRequestSourceMeta(source) {
+  _usageRequestSourceMeta(source, forCanvas = false) {
     const s = String(source || 'unknown').toLowerCase();
     const map = {
       grok: { label: 'Grok', color: 'var(--chart-2)' },
@@ -7799,7 +7802,11 @@ async function(ctx) {
       deepseek_harness: { label: 'DeepSeek Harness', color: 'var(--brand-blue)' },
       unknown: { label: t('未知/其他'), color: 'var(--muted-foreground)' }
     };
-    return map[s] || map.unknown;
+    const meta = map[s] || map.unknown;
+    if (!forCanvas) return meta;
+    const fallback = { '--chart-1': '#0ea5e9', '--chart-2': '#a855f7', '--success': '#16a34a', '--warning': '#d97706', '--info': '#2563eb', '--pink': '#ec4899', '--brand-blue': '#2563eb', '--muted-foreground': '#64748b' };
+    const color = meta.color.match(/^var\((--[\w-]+)\)$/);
+    return { ...meta, color: color ? readCssVar(color[1], fallback[color[1]] || '#64748b') : meta.color };
   }
 
   _usageRequestSourceBadge(source) {

@@ -190,12 +190,37 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
+.blora-admin-page .stats-overview-grid.multi-stats-summary {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 1rem;
+}
+.blora-admin-page .stats-overview-grid.multi-stats-summary > .stats-overview-card {
+  min-width: 0;
+  width: 100%;
+}
 .blora-admin-page #statsTabOverview > .responsive-grid-2 {
   width: 100%;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 .blora-admin-page #statsTabOverview > .responsive-grid-2 > .chart-card { min-width: 0; }
+.blora-admin-page .multi-stats-table-card { min-width: 0; overflow: hidden; }
+.blora-admin-page .multi-stats-combination-table-wrap { width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+.blora-admin-page .multi-stats-combination-table { width: 100%; min-width: 76rem; table-layout: fixed; }
+.blora-admin-page .multi-stats-combination-table .multi-stats-col-member { width: 11rem; }
+.blora-admin-page .multi-stats-combination-table .multi-stats-col-team { width: 11rem; }
+.blora-admin-page .multi-stats-combination-table .multi-stats-col-project { width: 15rem; }
+.blora-admin-page .multi-stats-combination-table .multi-stats-col-source { width: 11rem; }
+.blora-admin-page .multi-stats-combination-table .multi-stats-col-model { width: 14rem; }
+.blora-admin-page .multi-stats-combination-table .multi-stats-col-provider { width: 13rem; }
+.blora-admin-page .multi-stats-combination-table .multi-stats-col-requests,
+.blora-admin-page .multi-stats-combination-table .multi-stats-col-tokens,
+.blora-admin-page .multi-stats-combination-table .multi-stats-col-cost,
+.blora-admin-page .multi-stats-combination-table .multi-stats-col-latency { width: 9rem; }
+.blora-admin-page .multi-stats-combination-table th,
+.blora-admin-page .multi-stats-combination-table td { box-sizing: border-box; vertical-align: top; }
+.blora-admin-page .multi-stats-combination-table td { overflow-wrap: anywhere; }
+.blora-admin-page .multi-stats-combination-table td:nth-child(n+7) { white-space: nowrap; }
 
 .blora-admin-page .stats-overview-card {
   min-height: 8.5rem;
