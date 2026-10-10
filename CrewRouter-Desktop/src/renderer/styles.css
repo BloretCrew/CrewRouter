@@ -14,8 +14,8 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 .desktop-brand__icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .desktop-brand strong { display: block; }
 .desktop-brand small { display: block; margin-top: 2px; }
-.launcher [data-icon] { display: inline-flex; flex: none; }
-.launcher [data-icon] svg { width: 1em; height: 1em; }
+.launcher [data-icon] { display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.launcher [data-icon] svg { display: block; width: 1em; height: 1em; }
 .button-icon { display: inline-flex; align-items: center; }
 .desktop-eyebrow { margin: 0 0 var(--blora-space-2); }
 .launcher__inline-alert { display: block; margin-top: var(--blora-space-4); }
@@ -28,7 +28,8 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 .launcher__profile .blora-list__meta { min-width: 0; flex: 1; }
 .launcher__profile .blora-list__title { overflow-wrap: anywhere; }
 .launcher__profile { gap: var(--blora-space-4); }
-.launcher__profile-icon { display: inline-flex; flex: none; }
+.launcher__profile-icon { display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.launcher__profile-icon svg { display: block; flex: none; }
 .launcher__profile .blora-list__title { display: flex; align-items: center; gap: var(--blora-space-2); flex-wrap: wrap; }
 .launcher__profile .blora-list__desc { overflow-wrap: anywhere; }
 .launcher__profile-actions { display: inline-flex; align-items: center; gap: var(--blora-space-2); flex: none; }
@@ -36,7 +37,7 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 .launcher__choice-list { display: grid; gap: var(--blora-space-3); }
 .launcher__choice { display: flex; align-items: center; width: 100%; min-height: 104px; height: auto; max-height: none; text-align: left; white-space: normal; }
 .launcher__choice-icon { display: inline-flex; flex: none; margin-right: var(--blora-space-4); }
-.launcher__choice-icon svg { width: 20px; height: 20px; }
+.launcher .launcher__choice-icon svg { width: 20px; height: 20px; }
 .launcher__choice-copy { display: grid; gap: var(--blora-space-1); min-width: 0; }
 .launcher__choice-arrow { margin-left: auto; padding-left: var(--blora-space-3); }
 .launcher__panel { width: 100%; }

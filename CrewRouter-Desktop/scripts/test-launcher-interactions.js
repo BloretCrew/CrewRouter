@@ -35,6 +35,20 @@ if (process.type === 'renderer') {
     const pause = () => new Promise((resolve) => setTimeout(resolve, 250));
     const click = async (id) => { await execute(`document.getElementById('${id}').click(); void 0`); await pause(); };
     const view = () => execute("document.getElementById('launcher').dataset.view");
+    const checkIcons = async () => {
+      const issues = await execute(`Array.from(document.querySelectorAll('.launcher__profile-icon, .launcher__choice-icon, .button-icon, .launcher__choice-arrow')).flatMap((host) => {
+        const svg = host.querySelector('svg');
+        if (!svg || !host.getBoundingClientRect().width) return [];
+        const box = host.getBoundingClientRect(), icon = svg.getBoundingClientRect();
+        const style = getComputedStyle(host);
+        const centerX = box.left + (box.width + parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)) / 2;
+        const centerY = box.top + (box.height + parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)) / 2;
+        const centered = Math.abs(icon.left + icon.width / 2 - centerX) < 1 && Math.abs(icon.top + icon.height / 2 - centerY) < 1;
+        const sized = !host.classList.contains('launcher__choice-icon') || (icon.width === 20 && icon.height === 20);
+        return centered && sized ? [] : [host.className];
+      })`);
+      assert.deepEqual(issues, [], '图标应在容器内居中，连接选项图标应为 20px');
+    };
     const escape = async () => { win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' }); await pause(); };
     try {
       await win.loadFile(path.join(__dirname, '..', 'src', 'renderer', 'index.html'));
@@ -43,6 +57,11 @@ if (process.type === 'renderer') {
       for (const width of [960, 375]) {
         win.setSize(width, 700); await pause();
         assert.equal(await execute('document.documentElement.scrollWidth <= document.documentElement.clientWidth'), true, `连接列表溢出：${width}`);
+        await checkIcons();
+        await click('choose-remote');
+        await checkIcons();
+        await escape();
+        assert.equal(await view(), 'welcome');
       }
       await execute("document.querySelector('#profile-list blora-dropdown button').click(); void 0"); await pause();
       assert.equal(await execute("document.querySelector('#profile-list .blora-dropdown').hasAttribute('data-open')"), true);
