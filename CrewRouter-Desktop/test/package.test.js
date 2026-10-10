@@ -24,3 +24,10 @@ test('desktop ships embedded PostgreSQL with optional platform binaries', () => 
   assert.ok(manifest.build.asarUnpack.includes('node_modules/@embedded-postgres/**/*'));
   assert.ok(manifest.build.asarUnpack.includes('node_modules/embedded-postgres/**/*'));
 });
+
+test('each desktop platform references an existing packaging icon', () => {
+  for (const platform of ['linux', 'win', 'mac']) {
+    const icon = manifest.build[platform].icon;
+    assert.equal(fs.existsSync(path.join(root, icon)), true, `${platform} icon is missing: ${icon}`);
+  }
+});

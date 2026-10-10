@@ -77,7 +77,7 @@
       }
     ],
     "win": {
-      "icon": "build/icons/crewrouter.ico",
+      "icon": "build/icons/ico.png",
       "target": [
         "nsis"
       ]
