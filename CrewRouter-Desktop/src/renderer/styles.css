@@ -67,6 +67,21 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 .launcher__descriptions td { overflow-wrap: anywhere; }
 .launcher__output { display: block; min-height: 1.4rem; }
 .launcher__dialog-actions { display: flex; justify-content: flex-end; gap: var(--blora-space-3); }
+/* 关闭期间组件仍驻留顶层，按 open 属性淡出并等待过渡完成。 */
+:is(#confirm-dialog, #rename-dialog) {
+  opacity: 0;
+  transition: opacity 200ms ease, display 200ms allow-discrete, overlay 200ms allow-discrete;
+}
+:is(#confirm-dialog, #rename-dialog)[open],
+:is(#confirm-dialog, #rename-dialog):popover-open { display: block; }
+:is(#confirm-dialog, #rename-dialog)[open] { opacity: 1; }
+:is(#confirm-dialog, #rename-dialog):not([open]) { opacity: 0; }
+@starting-style {
+  :is(#confirm-dialog, #rename-dialog)[open] { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(#confirm-dialog, #rename-dialog) { transition-duration: .01ms; }
+}
 #confirm-dialog #confirm-text { margin: 0; }
 #rename-dialog blora-field { display: block; }
 .desktop-fallback-message { margin: var(--blora-space-6) auto; width: min(680px, calc(100% - (2 * var(--blora-space-6)))); padding: var(--blora-space-5); }

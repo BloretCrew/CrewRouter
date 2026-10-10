@@ -28,11 +28,21 @@ if (process.type === 'renderer') {
   const path = require('node:path');
   const { app, BrowserWindow } = require('electron');
   app.whenReady().then(async () => {
-    const win = new BrowserWindow({ width: 960, height: 700, show: false, webPreferences: { preload: __filename, contextIsolation: false, nodeIntegration: false } });
+    const win = new BrowserWindow({ width: 960, height: 700, show: true, webPreferences: { preload: __filename, contextIsolation: false, nodeIntegration: false, backgroundThrottling: false } });
     const errors = [];
     win.webContents.on('console-message', (_, level, message) => { if (level === 3) errors.push(message); });
     const execute = (source) => win.webContents.executeJavaScript(source, true);
     const pause = () => new Promise((resolve) => setTimeout(resolve, 250));
+    const midFade = (id) => execute(`new Promise((resolve) => {
+      const start = performance.now();
+      const sample = () => {
+        const dialog = document.getElementById('${id}');
+        const opacity = Number(getComputedStyle(dialog).opacity);
+        if ((opacity > 0 && opacity < 1) || performance.now() - start > 1500) resolve({opacity, visible: dialog.matches(':popover-open'), open: dialog.hasAttribute('open')});
+        else requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    })`);
     const click = async (id) => { await execute(`document.getElementById('${id}').click(); void 0`); await pause(); };
     const view = () => execute("document.getElementById('launcher').dataset.view");
     const checkIcons = async () => {
@@ -73,6 +83,25 @@ if (process.type === 'renderer') {
         await checkIcons();
         await escape();
         assert.equal(await view(), 'welcome');
+      }
+      for (const width of [960, 375]) {
+        win.setSize(width, 700); await pause();
+        for (const id of ['confirm-dialog', 'rename-dialog']) {
+          for (const closeBy of ['button', 'escape']) {
+            await execute(`document.getElementById('${id}').show(); void 0`);
+            const {opacity: opening} = await midFade(id);
+            assert.ok(opening > 0 && opening < 1, `淡入：${id}/${width}，opacity=${opening}`);
+            await pause();
+            assert.equal(await execute(`Number(getComputedStyle(document.getElementById('${id}')).opacity)`), 1);
+            if (closeBy === 'escape') win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+            else await execute(`document.getElementById('${id}').shadowRoot.querySelector('button').click(); void 0`);
+            const closing = await midFade(id);
+            assert.ok(closing.opacity > 0 && closing.opacity < 1 && closing.visible, `淡出：${id}/${width}/${closeBy} ${JSON.stringify(closing)}`);
+            await pause();
+            await pause();
+            assert.equal(await execute(`getComputedStyle(document.getElementById('${id}')).display`), 'none');
+          }
+        }
       }
       await execute("document.querySelector('#profile-list blora-dropdown button').click(); void 0"); await pause();
       assert.equal(await execute("document.querySelector('#profile-list .blora-dropdown').hasAttribute('data-open')"), true);
