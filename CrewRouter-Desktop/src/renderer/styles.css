@@ -7,7 +7,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 }
 .launcher { display: flex; flex-direction: column; width: min(calc(100% - (2 * var(--blora-space-6))), 860px); min-height: 100vh; margin: 0 auto; padding: var(--blora-space-5) 0 var(--blora-space-4); }
-.launcher__header, .launcher__footer, .launcher__panel-head, .launcher__block-head { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-4); }
+.launcher__header, .launcher__panel-head, .launcher__block-head { display: flex; align-items: center; justify-content: space-between; gap: var(--blora-space-4); }
 .launcher__header { min-height: 2.75rem; }
 .launcher__header-tools { display: inline-flex; align-items: center; gap: var(--blora-space-3); }
 .desktop-brand { display: inline-flex; align-items: center; gap: var(--blora-space-3); text-decoration: none; }
@@ -67,7 +67,6 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 .launcher__dialog-actions { display: flex; justify-content: flex-end; gap: var(--blora-space-3); }
 #confirm-dialog #confirm-text { margin: 0; }
 #rename-dialog blora-field { display: block; }
-.launcher__footer { margin-top: auto; padding-top: var(--blora-space-6); }
 .desktop-fallback-message { margin: var(--blora-space-6) auto; width: min(680px, calc(100% - (2 * var(--blora-space-6)))); padding: var(--blora-space-5); }
 @media (max-width: 700px) {
   .launcher { width: min(calc(100% - (2 * var(--blora-space-4))), 560px); padding-top: var(--blora-space-3); }
@@ -81,7 +80,6 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
   .launcher__profile-actions { width: 100%; justify-content: flex-end; }
   .launcher__actions { justify-content: stretch; }
   .launcher__form .launcher__actions .blora-button { width: 100%; min-width: 0; }
-  .launcher__footer { align-items: flex-start; flex-direction: column; gap: var(--blora-space-2); }
 }
 @media (min-width: 701px) and (max-height: 720px) {
   .launcher { padding-top: var(--blora-space-4); }

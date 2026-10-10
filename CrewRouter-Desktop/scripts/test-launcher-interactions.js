@@ -54,6 +54,7 @@ if (process.type === 'renderer') {
       await win.loadFile(path.join(__dirname, '..', 'src', 'renderer', 'index.html'));
       await pause();
       assert.equal(await view(), 'welcome');
+      assert.equal(await execute("document.querySelector('.launcher__footer, #app-version, [data-i18n=\"footer.note\"]') === null"), true);
       for (const width of [960, 375]) {
         win.setSize(width, 700); await pause();
         assert.equal(await execute('document.documentElement.scrollWidth <= document.documentElement.clientWidth'), true, `连接列表溢出：${width}`);

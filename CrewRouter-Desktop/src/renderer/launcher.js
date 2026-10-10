@@ -379,6 +379,5 @@ api.onStatus(render);
     await refreshProfiles();
     try { const data = await api.getDesktopSettings(); state.settings = data.settings; } catch {}
     render(status);
-    try { const diagnostics = await api.getDiagnostics(); if (diagnostics?.version) $('app-version').textContent = `v${diagnostics.version}`; } catch {}
   } catch (error) { showFatal(ipcErrorMessage(error) || t('bridge.missing')); }
 })();

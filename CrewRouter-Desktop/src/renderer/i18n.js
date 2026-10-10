@@ -34,7 +34,6 @@
     'confirm.restartApp': '确定重启 CrewRouter Desktop 吗？', 'confirm.quit': '确定退出 CrewRouter Desktop 吗？这会停止本地服务。',
     'confirm.deleteProfile': '确定删除“{name}”吗？只会从 Desktop 的已保存连接中移除。',
     'profile.renameTitle': '重命名连接', 'profile.nameField': '名称', 'profile.rename': '重命名', 'profile.delete': '删除',
-    'footer.note': '登录由目标服务器负责；Desktop 不接管凭据。',
     'bridge.missing': '桌面桥接加载失败，请重启应用后重试。', 'busy': '已有操作正在进行，请稍候。',
   };
   const en = {
@@ -69,7 +68,6 @@
     'confirm.restartApp': 'Restart CrewRouter Desktop?', 'confirm.quit': 'Quit CrewRouter Desktop? This stops the local server.',
     'confirm.deleteProfile': 'Delete “{name}”? It is only removed from Desktop\'s saved connections.',
     'profile.renameTitle': 'Rename connection', 'profile.nameField': 'Name', 'profile.rename': 'Rename', 'profile.delete': 'Delete',
-    'footer.note': 'The target server handles sign-in; Desktop never takes over credentials.',
     'bridge.missing': 'The desktop bridge failed to load. Please restart the app.', 'busy': 'Another action is in progress, please wait.',
   };
   const dict = { zh, en };
