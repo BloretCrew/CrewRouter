@@ -190,12 +190,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
-
-@media (max-width: 640px) {
-  .blora-admin-page .stats-overview-grid:not(.multi-stats-summary) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .blora-admin-page #statsTabOverview > .responsive-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
 .blora-admin-page .stats-overview-grid.multi-stats-summary {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: 1rem;
@@ -229,15 +223,13 @@
 .blora-admin-page .multi-stats-combination-table td:nth-child(n+7) { white-space: nowrap; }
 
 .blora-admin-page .stats-overview-card {
-  min-width: 0;
   min-height: 8.5rem;
   padding: var(--blora-space-5);
-  border: var(--blora-border-subtle);
+  border: var(--admin-stats-border-soft);
   border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-default) !important;
+  background: var(--blora-color-surface-raised) !important;
   color: var(--blora-color-text-primary);
   box-shadow: var(--blora-shadow-1);
-  overflow-wrap: anywhere;
 }
 
 .blora-admin-page .stats-overview-card:nth-child(1) { --stats-card-accent: var(--blora-color-info); }
@@ -401,77 +393,3 @@
 #messageStatsFilters blora-select::part(trigger) { box-sizing: border-box; width: 100%; min-height: 2.5rem; }
 #adminStatsMultiFilters blora-select { display: block; width: 100%; min-width: 0; }
 #adminStatsMultiFilters blora-select::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
-
-@media (max-width: 640px) {
-  .blora-admin-page .app-container > .sidebar {
-    display: none;
-  }
-}
-
-.blora-admin-page .business-sidebar-navigation,
-.mobile-sidebar-drawer-content .business-sidebar-navigation {
-  display: flex;
-  min-height: 0;
-  flex: 1 1 auto;
-  flex-direction: column;
-  overflow-y: auto;
-  padding: var(--blora-space-3) var(--blora-space-2);
-}
-
-.blora-admin-page .business-sidebar-navigation .blora-sidebar-nav__link,
-.mobile-sidebar-drawer-content .business-sidebar-navigation .blora-sidebar-nav__link {
-  justify-content: flex-start;
-  min-height: 2.5rem;
-  color: var(--blora-color-text-muted);
-}
-
-.blora-admin-page .business-sidebar-navigation .blora-sidebar-nav__link[aria-current="page"],
-.mobile-sidebar-drawer-content .business-sidebar-navigation .blora-sidebar-nav__link[aria-current="page"] {
-  background: color-mix(in srgb, var(--blora-color-action-primary-default) 14%, var(--blora-color-surface-default));
-  color: var(--blora-color-action-primary-default);
-}
-
-.blora-admin-page .business-sidebar-host,
-.mobile-sidebar-drawer-content .business-sidebar-host {
-  display: flex;
-  min-height: 0;
-  flex: 1 1 auto;
-  flex-direction: column;
-}
-
-.blora-drawer__content:has(> .mobile-sidebar-drawer-content) {
-  display: flex;
-  height: 100%;
-  min-height: 0;
-}
-
-.business-sidebar-navigation .blora-sidebar-nav__link {
-  display: flex;
-  align-items: center;
-  gap: var(--blora-space-3);
-  width: 100%;
-  min-height: 2.5rem;
-  padding: var(--blora-space-2) var(--blora-space-3);
-  border-radius: var(--blora-radius-md);
-  color: var(--blora-color-text-emphasis);
-  font-size: var(--blora-text-sm);
-  text-decoration: none;
-}
-.business-sidebar-navigation .blora-sidebar-nav__link[hidden] { display: none; }
-.business-sidebar-navigation .blora-sidebar-nav__link:hover {
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-primary);
-  text-decoration: none;
-}
-.business-sidebar-navigation .blora-sidebar-nav__link > .sf-icon,
-.business-sidebar-navigation .blora-sidebar-nav__link > svg { width: 1.125rem; height: 1.125rem; flex: none; }
-.business-sidebar-navigation .blora-sidebar-nav__group-label {
-  padding: var(--blora-space-4) var(--blora-space-3) var(--blora-space-1);
-  color: var(--blora-color-text-muted);
-  font-size: var(--blora-text-xs);
-}
-.business-sidebar-navigation .blora-sidebar-nav__link[aria-current="page"] {
-  background: var(--blora-color-action-primary-soft);
-  color: var(--blora-color-text-primary);
-  font-weight: 600;
-}

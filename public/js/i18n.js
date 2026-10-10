@@ -109,12 +109,12 @@
         el.addEventListener('change', function () {
           I18N.load(el.value);
           var other = document.getElementById(id === 'langToggle' ? 'langToggleMobile' : 'langToggle');
-          if (other && (other.tagName === 'SELECT' || other.localName === 'blora-select')) other.value = el.value;
+          if (other && other.tagName === 'SELECT') other.value = el.value;
         });
       } else {
-        el.value = I18N.current();
-        el.addEventListener('change', function () {
-          if (el.value) I18N.load(el.value);
+        el.addEventListener('blora-select', function (event) {
+          var value = event.detail && event.detail.value;
+          if (value) I18N.load(value);
         });
       }
     });

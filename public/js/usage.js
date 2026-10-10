@@ -33,14 +33,13 @@
       state.dataset.bloraState = kind;
       state.hidden = kind === 'success';
       state.innerHTML = html;
-      if (kind === 'error') state.querySelector('[data-usage-retry]')?.addEventListener('click', load);
     }
     if (content) content.hidden = kind !== 'success';
   }
 
   function renderUsage(usage) {
     if (!Array.isArray(usage) || usage.length === 0) {
-      setState('empty', `<blora-empty title="${escapeHtml(translate('暂无使用记录'))}"></blora-empty>`);
+      setState('empty', `<p>${escapeHtml(translate('暂无使用记录'))}</p>`);
       return;
     }
 
@@ -70,7 +69,7 @@
     if (content) {
       content.innerHTML = `
         <div class="usage-table-wrap">
-          <table class="blora-table usage-detail-table">
+          <table class="usage-detail-table">
             <thead><tr><th>${escapeHtml(translate('日期'))}</th><th>${escapeHtml(translate('请求数'))}</th><th>${escapeHtml(translate('Token'))}</th><th>${escapeHtml(translate('费用'))}</th><th>${escapeHtml(translate('模型分布'))}</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
@@ -82,7 +81,7 @@
   async function load() {
     const keyId = new URLSearchParams(window.location.search).get('keyId');
     if (!/^\d+$/.test(String(keyId || ''))) {
-      setState('error', `<blora-empty title="${escapeHtml(translate('无效的 API Key'))}"></blora-empty>`);
+      setState('error', `<p class="usage-error">${escapeHtml(translate('无效的 API Key'))}</p>`);
       return;
     }
 
@@ -97,7 +96,7 @@
       const usage = await response.json();
       renderUsage(usage);
     } catch (error) {
-      setState('error', `<div class="usage-error-state"><blora-empty title="${escapeHtml(error.message || translate('加载失败'))}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-usage-retry>${escapeHtml(translate('重试'))}</button></div>`);
+      setState('error', `<p class="usage-error">${escapeHtml(error.message || translate('加载失败'))}</p>`);
     }
   }
 

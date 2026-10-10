@@ -73,7 +73,6 @@ async function main() {
       }
       if(String(url).endsWith('sync-models')&&test.saveFail)return new Response(JSON.stringify({error:'Fixture save failed'}),{status:500});
       if(String(url).endsWith('cleanup-stale-models'))test.cleaned=true;
-      if(String(url).endsWith('sync-models')&&options.body){const body=JSON.parse(options.body);if(body.addOnly)return new Response(JSON.stringify({success:true,selectedModels:body.enabledModelIds.map((id,index)=>({id:'fixture-system-'+index,upstream_model_id:id,name:id}))}),{status:200});}
       return new Response(JSON.stringify({added:1,deleted:1}),{status:200});
     };
   })()`;
@@ -97,40 +96,35 @@ async function main() {
         await click('[onclick*="fetchProviderModels"]');
       }
       await wait("document.querySelectorAll('.provider-model-picker [data-model-list] > div').length===129");
-      await check("!!document.querySelector('[data-model-id=enabled] blora-checkbox')?.checked && !!document.querySelector('[data-model-id=stale] blora-checkbox')?.checked",'enabled and stale preselection');
+      await check("!!document.querySelector('[data-model-id=enabled] blora-checkbox').checked && !!document.querySelector('[data-model-id=stale] blora-checkbox').checked",'enabled and stale preselection');
       await check("document.querySelectorAll('[data-model-list] blora-checkbox').length===129",'all models available before saving');
       await click('[data-filter=disabled]');
       await click('[data-model-search]'); await cdp.send('Input.insertText',{text:'New Model'});
       await check("[...document.querySelectorAll('[data-model-list] > div')].filter(el=>!el.hidden).length===1",'search and status intersection');
       await click('[data-select-all]');
-      await check("document.querySelector('[data-model-id=new] blora-checkbox')?.checked && document.querySelector('[data-model-id=enabled] blora-checkbox')?.checked",'filtered select-all preserves hidden selection');
+      await check("document.querySelector('[data-model-id=new] blora-checkbox').checked && document.querySelector('[data-model-id=enabled] blora-checkbox').checked",'filtered select-all preserves hidden selection');
+      await click('[data-model-id=new] > label');
+      await check("!document.querySelector('[data-model-id=new] blora-checkbox').checked",'row label toggles once');
       await click('[data-model-id=new] blora-checkbox');
-      await check("!document.querySelector('[data-model-id=new] blora-checkbox')?.checked",'Blora Checkbox public state toggles once');
-      await click('[data-model-id=new] blora-checkbox');
-      await check("document.querySelector('[data-model-id=new] blora-checkbox')?.checked",'Blora checkbox click restores selection');
+      await check("document.querySelector('[data-model-id=new] blora-checkbox').checked",'native Blora checkbox click');
       await cdp.evaluate("pickerTest.saveFail=true"); await click('[data-save]');
       await wait("document.querySelector('[data-model-status]').textContent.includes('Fixture save failed')");
       await check("!document.querySelector('[data-save]').disabled",'save failure can retry');
       await cdp.evaluate("pickerTest.saveFail=false"); await click('[data-save]');
       await wait("!document.querySelector('.provider-model-picker-dialog')");
       await check("pickerTest.requests.filter(r=>r.url.endsWith('sync-models')).at(-1).body.enabledModelIds.sort().join(',')==='enabled,new,stale'",'save includes hidden selected models');
-      const addOnly = page === 'console';
       const reopen=page==='admin'?"adminApp.fetchProviderModels('picker-fixture')":"app.showQuickAddedProviderModels('picker-fixture','Fixture Provider')";
       await cdp.evaluate(`void ${reopen}`); await wait("document.querySelectorAll('[data-model-list] > div').length===129");
       await check(`(() => {const d=document.querySelector('.provider-model-picker-dialog');const p=d.shadowRoot.querySelector('[part=panel]').getBoundingClientRect();return p.x>=0&&p.right<=innerWidth+1&&p.bottom<=innerHeight+1&&d.querySelector('[data-model-list]').clientHeight<d.querySelector('[data-model-list]').scrollHeight;})()`,'responsive panel and inner list scroll');
-      if (!addOnly) await wait("document.querySelector('[data-cleanup]') && !document.querySelector('[data-cleanup]').hidden");
-      else await check("document.querySelector('[data-cleanup]').hidden",'add-only picker hides destructive stale cleanup');
       if (process.env.PICKER_SCREENSHOT_DIR) {
         const shot=await cdp.send('Page.captureScreenshot',{format:'png'});
         require('node:fs').writeFileSync(require('node:path').join(process.env.PICKER_SCREENSHOT_DIR,`${page}-${width}.png`),Buffer.from(shot.data,'base64'));
       }
-      if (!addOnly) {
-        await click('[data-cleanup]'); await click('[data-dialog-cancel]');
-        await check("!pickerTest.requests.some(r=>r.url.endsWith('cleanup-stale-models'))",'cleanup cancellation');
-        await click('[data-cleanup]'); await click('[data-dialog-confirm]');
-        await wait("document.querySelectorAll('[data-model-list] > div').length===128");
-        await check("pickerTest.requests.find(r=>r.url.endsWith('cleanup-stale-models')).body.modelIds[0]==='system-stale'",'cleanup uses system IDs');
-      }
+      await click('[data-cleanup]'); await click('[data-dialog-cancel]');
+      await check("!pickerTest.requests.some(r=>r.url.endsWith('cleanup-stale-models'))",'cleanup cancellation');
+      await click('[data-cleanup]'); await click('[data-dialog-confirm]');
+      await wait("document.querySelectorAll('[data-model-list] > div').length===128");
+      await check("pickerTest.requests.find(r=>r.url.endsWith('cleanup-stale-models')).body.modelIds[0]==='system-stale'",'cleanup uses system IDs');
       await cdp.evaluate("pickerTest.fail=true"); await click('[data-retry]');
       await wait("document.querySelector('[data-model-status]').textContent.includes('Fixture fetch failed')");
       await check("document.querySelector('[data-save]').disabled",'failed fetch disables save');
@@ -138,19 +132,13 @@ async function main() {
       await wait("document.querySelector('[data-model-status]').textContent.includes('未获取到模型')");
       await check("document.querySelector('[data-save]').disabled && document.querySelectorAll('[data-model-list] > div').length===0",'empty response');
       await cdp.evaluate("pickerTest.empty=false"); await click('[data-retry]');
-      await wait(`document.querySelectorAll('[data-model-list] > div').length===${addOnly?129:128}`);
-      if (page === 'admin') {
-        await click('[data-select-all]'); await click('[data-select-all]');
-        await click('[data-save]'); await click('[data-dialog-cancel]');
-        await check("!!document.querySelector('.provider-model-picker-dialog')",'disable all cancellation keeps picker');
-        await click('[data-save]'); await click('[data-dialog-confirm]');
-        await wait("!document.querySelector('.provider-model-picker-dialog')");
-        await check("pickerTest.requests.filter(r=>r.url.endsWith('sync-models')).at(-1).body.enabledModelIds.length===0",'confirmed disable all');
-      } else {
-        await click('[data-select-all]'); await click('[data-save]');
-        await wait("!document.querySelector('.provider-model-picker-dialog')");
-        await check("pickerTest.requests.filter(r=>r.url.endsWith('sync-models')).at(-1).body.enabledModelIds.length===129",'add-only saves selected models without disable-all confirmation');
-      }
+      await wait("document.querySelectorAll('[data-model-list] > div').length===128");
+      await click('[data-select-all]'); await click('[data-select-all]');
+      await click('[data-save]'); await click('[data-dialog-cancel]');
+      await check("!!document.querySelector('.provider-model-picker-dialog')",'disable all cancellation keeps picker');
+      await click('[data-save]'); await click('[data-dialog-confirm]');
+      await wait("!document.querySelector('.provider-model-picker-dialog')");
+      await check("pickerTest.requests.filter(r=>r.url.endsWith('sync-models')).at(-1).body.enabledModelIds.length===0",'confirmed disable all');
       const routes=page==='admin'?['adminModels','adminTeams','adminProviders']:['apiKeys','modelLibrary'];
       for(const route of routes){await cdp.evaluate(`location.hash=${JSON.stringify(route)}`);await sleep(350);await check(`location.hash===${JSON.stringify('#'+route)} && !document.querySelector('.provider-model-picker-dialog')`,'surrounding route '+route);}
       console.log(`PASS ${page} ${width}px`);

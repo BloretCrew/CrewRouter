@@ -76,16 +76,8 @@ async function main() {
       assert.ok(await cdp.evaluate(`document.getElementById('${value}Page').classList.contains('active')`),'路由切换');
       assert.ok(await cdp.evaluate(`document.querySelector('.sidebar .blora-sidebar-nav__link[data-value="${value}"]').getAttribute('aria-current')==='page'`),'当前项同步');
       if(width===390) assert.ok(await cdp.evaluate(`!document.getElementById('mobileSidebarDrawer').hasAttribute('open')`),'选择后关闭抽屉');
-      if(page==='console') {
-        await cdp.evaluate(`app.navigateTo('modelLibrary')`); await sleep(400);
-        await cdp.evaluate(`app.renderProviderQuota([{name:'AnyRouter',quota:{total:200000000,remaining:199997225.940844,used:2774.059156},keys:[{ok:true,index:0,label:'Key 1',quota:{total:100000000,remaining:99999724.725314,used:275.274686}},{ok:true,index:1,label:'Key 2',quota:{total:100000000,remaining:99997501.21553,used:2498.78447}}]},{name:'GOAT',quota:{periods:[{label:'每周窗口',percent:5.630078206857143},{label:'月度额度',percent:87.3529158909714}]}}])`);
-        await sleep(300);
-        assert.ok(await cdp.evaluate(`(()=>{const t=document.getElementById('providerQuotaGrid').innerText;return t.includes('199,997,225.94')&&t.includes('已用 6%')&&!t.includes('5.630078')&&!t.includes('87.352915')&&[...document.querySelectorAll('.model-quota-progress .blora-progress__label')].every(e=>getComputedStyle(e).display==='none')})()`),'额度保留数值且最多两位小数、百分比取整、无重复标签');
-        assert.ok(await cdp.evaluate(`document.documentElement.scrollWidth<=innerWidth`),'页面无横向溢出');
-        const screenshot=await cdp.send('Page.captureScreenshot');require('fs').writeFileSync(`/tmp/navigation-quota-${width}.png`,Buffer.from(screenshot.data,'base64'));
-      }
       const errors=cdp.events.filter(e=>e.method==='Runtime.exceptionThrown');assert.equal(errors.length,0,'无未捕获运行时异常');cdp.events=[];
-      console.log(`PASS ${page} navigation/quota ${width}px`);
+      console.log(`PASS ${page} sidebar ${width}px`);
     }
   } finally {cdp.ws.close();await fetch(`${debug}/json/close/${target.id}`);}
 }

@@ -85,14 +85,7 @@
   overflow: auto;
 }
 
-.blora-upstream-page .models-table:has(.blora-table) {
-  padding: 0;
-}
-
-
-.blora-upstream-page .models-table table,
-.blora-upstream-page .models-table .blora-table {
-  width: 100%;
+.blora-upstream-page .models-table table {
   min-width: 760px;
   border-collapse: separate;
   border-spacing: 0;
@@ -118,22 +111,6 @@
 }
 
 .blora-upstream-page .models-table tbody tr:hover {
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-upstream-page .models-table .blora-table {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--blora-color-text-emphasis);
-  table-layout: auto;
-}
-
-.blora-upstream-page .models-table .blora-table thead {
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-upstream-page .models-table .blora-table tbody tr:hover {
   background: var(--blora-color-surface-raised);
 }
 
@@ -192,143 +169,3 @@
 #selectedProviderDisplay { overflow-wrap: anywhere; }
 #providerFormat { display: block; width: 100%; }
 #providerFormat::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
-
-/* Dynamic provider and Team-model tables use the official Blora table class. */
-.blora-upstream-page .models-table:has(.upstream-empty-state),
-.blora-upstream-page .models-table:has(.upstream-table-error) {
-  display: grid;
-  place-items: center;
-  min-height: 13rem;
-  padding: var(--blora-space-5);
-  overflow: visible;
-}
-
-.blora-upstream-page .upstream-empty-state,
-.blora-upstream-page .upstream-table-error {
-  display: grid;
-  justify-items: center;
-  gap: var(--blora-space-2);
-  max-width: 34rem;
-  color: var(--blora-color-text-muted);
-  text-align: center;
-}
-
-.blora-upstream-page .upstream-empty-state p:first-of-type {
-  margin: var(--blora-space-2) 0 0;
-  color: var(--blora-color-text-emphasis);
-  font-size: var(--blora-text-base);
-  font-weight: 600;
-}
-
-.blora-upstream-page .upstream-empty-hint {
-  margin: 0;
-  font-size: var(--blora-text-sm);
-}
-
-.blora-upstream-page .upstream-table-error blora-empty {
-  padding: 0;
-}
-
-.blora-upstream-page .blora-table th {
-  white-space: nowrap;
-}
-
-.blora-upstream-page .blora-table td code {
-  overflow-wrap: anywhere;
-}
-
-.blora-upstream-page .blora-table .upstream-action {
-  white-space: nowrap;
-}
-
-.blora-upstream-page .my-upstream-status {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--blora-space-1);
-  color: var(--blora-color-text-emphasis);
-  white-space: nowrap;
-}
-
-.blora-upstream-page .my-upstream-status-dot {
-  width: .5rem;
-  height: .5rem;
-  flex: none;
-  border-radius: var(--blora-radius-full);
-  background: var(--blora-color-status-success);
-}
-
-.blora-upstream-page .my-upstream-status.is-disabled .my-upstream-status-dot {
-  background: var(--blora-color-status-danger);
-}
-
-#editProviderModal::part(panel),
-#manageModelsModal::part(panel) {
-  max-width: min(44rem, calc(100vw - 2 * var(--blora-space-5))) !important;
-}
-
-#batchPriceModal::part(panel) {
-  max-width: min(34rem, calc(100vw - 2 * var(--blora-space-5))) !important;
-}
-
-.blora-upstream-page .upstream-empty-icon { color: var(--blora-color-text-subtle); }
-.blora-upstream-page .upstream-empty-icon svg { width: 1.75rem; height: 1.75rem; }
-
-.blora-upstream-page .manage-models-search-row,
-.blora-upstream-page .manage-model-select-all-row {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: var(--blora-space-3);
-}
-
-.blora-upstream-page .manage-model-select-all-row {
-  margin-block: var(--blora-space-3);
-  padding-block: var(--blora-space-3);
-  border-bottom: var(--upstream-border-soft);
-}
-
-.blora-upstream-page .manage-model-count {
-  margin-inline-start: auto;
-  color: var(--blora-color-text-subtle);
-  font-size: var(--blora-text-sm);
-}
-
-.blora-upstream-page .manage-model-list {
-  display: grid;
-  gap: var(--blora-space-2);
-  max-height: min(24rem, 50dvh);
-  overflow-y: auto;
-  padding: var(--blora-space-1);
-}
-
-.blora-upstream-page .manage-model-item {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: var(--blora-space-3);
-  padding: var(--blora-space-3) var(--blora-space-4);
-  border: var(--upstream-border-soft);
-  border-radius: var(--blora-radius-md);
-  background: var(--blora-color-surface-default);
-}
-
-.blora-upstream-page .manage-model-meta {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  gap: var(--blora-space-2);
-}
-
-.blora-upstream-page .manage-model-name { font-weight: 600; color: var(--blora-color-text-primary); }
-.blora-upstream-page .manage-model-id { color: var(--blora-color-text-subtle); font-size: var(--blora-text-xs); overflow-wrap: anywhere; }
-.blora-upstream-page .manage-model-series { padding: .15em .6em; border-radius: var(--blora-radius-full); background: var(--blora-color-surface-raised); color: var(--blora-color-text-muted); font-size: var(--blora-text-xs); }
-.blora-upstream-page .manage-model-disabled-badge { color: var(--blora-color-status-danger); font-size: var(--blora-text-xs); }
-
-@media (max-width: 640px) {
-  .blora-upstream-page .section-actions { flex-wrap: wrap; }
-  .blora-upstream-page .manage-models-search-row { align-items: stretch; flex-direction: column; }
-  .blora-upstream-page .manage-models-search-row .blora-button { min-height: 2.5rem; }
-  .blora-upstream-page .manage-model-item { align-items: flex-start; padding: var(--blora-space-3); }
-}

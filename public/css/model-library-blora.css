@@ -1,4 +1,4 @@
-/* 模型库：控件使用 Blora 2.1.0 组件；页面布局保留业务层级，不增加重复表面。 */
+/* 模型库区块：只保留布局；控件视觉全部来自 Blora 2.0.8（按钮 / 搜索 / 下拉 / 徽章 / 标签 / 进度 / 空态 / 加载）。 */
 .blora-model-library {
   --library-gap: var(--blora-space-4);
 }
@@ -9,15 +9,12 @@
 .blora-model-library .model-quota-section,
 .blora-model-library .library-reorder-toolbar,
 .blora-model-library .model-filter-bar,
+.blora-model-library .model-library-team,
 .blora-model-library .model-library-empty {
   border: var(--blora-border-subtle);
   border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-default);
   box-shadow: var(--blora-shadow-1);
-}
-
-.blora-model-library .model-library-team {
-  overflow: hidden;
 }
 
 .blora-model-library .model-library-header {
@@ -274,13 +271,8 @@
 
 /* ---------- Team / 供应商 / 模型卡片 ---------- */
 .blora-model-library .model-library-team {
-  display: block;
   margin-bottom: var(--library-gap);
   padding: 0;
-  border: var(--blora-border-subtle);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-default);
-  box-shadow: var(--blora-shadow-1);
   overflow: hidden;
 }
 
@@ -303,21 +295,10 @@
 
 .blora-model-library .model-library-provider {
   padding: 0;
-  border-radius: var(--blora-radius-md);
-  box-shadow: none;
-}
-
-.blora-model-library .model-library-provider[data-variant="inset"] {
-  padding: 0;
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-model-library .model-library-provider.provider-disabled {
   border: var(--blora-border-subtle);
-}
-
-.blora-model-library .model-library-provider[data-variant="inset"].provider-disabled {
+  border-radius: var(--blora-radius-lg);
   background: var(--blora-color-surface-default);
+  box-shadow: none;
 }
 
 .blora-model-library .model-library-provider > .model-library-provider-header,
@@ -362,25 +343,10 @@
 .blora-model-library .model-library-item {
   min-height: 12rem;
   padding: var(--blora-space-4);
-}
-
-.blora-model-library .model-item-badges {
-  display: flex;
-  min-width: 0;
-  flex-basis: 100%;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--blora-space-1);
-}
-
-.blora-model-library .model-library-item-name > span:not(.model-item-badges) {
-  min-width: 0;
-  flex: 1 1 12rem;
-  overflow-wrap: anywhere;
-}
-
-.blora-model-library .model-library-item-desc {
-  overflow-wrap: anywhere;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: none;
 }
 
 .blora-model-library .model-library-item.selected {
@@ -596,6 +562,7 @@
 #modelTestModal .model-test-row.is-error-expanded { flex-wrap: wrap; }
 #modelTestModal .model-test-row.is-error-expanded .model-test-row-error-wrap { flex: 1 1 100%; max-width: 100%; }
 
+.blora-model-library .model-library-item-name > .model-item-badges { flex-basis: 100%; }
 .blora-model-library .model-item-badges .blora-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .blora-model-library .model-item-badges .model-test-badge { margin-left: 0; border-radius: var(--blora-radius-full, 999px); }
 
@@ -603,8 +570,3 @@
 #quickAddedTeamsList > div { padding: var(--blora-space-3) !important; border: var(--blora-border-subtle); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-raised); }
 #quickAddedTeamsList blora-checkbox { min-width: 0; max-width: 100%; }
 #quickAddedTeamsList [data-team-result]:empty { display: none; }
-
-/* Period headers already show label and percentage; retain the accessible progress name. */
-.blora-model-library .model-quota-progress .blora-progress__label { display: none; }
-.blora-model-library .model-quota-numbers { flex-wrap: wrap; min-width: 0; }
-.blora-model-library .model-quota-remaining { overflow-wrap: anywhere; }

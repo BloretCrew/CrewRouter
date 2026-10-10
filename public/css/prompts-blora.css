@@ -38,19 +38,10 @@
   background: var(--blora-color-surface-default);
 }
 
-.blora-prompts-page .models-table table,
-.blora-prompts-page .models-table .blora-table {
-  width: 100%;
+.blora-prompts-page .models-table table {
   min-width: 48rem;
   border-collapse: separate;
   border-spacing: 0;
-}
-
-.blora-prompts-page .models-table .blora-table {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  table-layout: auto;
 }
 
 .blora-prompts-page .models-table th {
@@ -127,40 +118,7 @@
 }
 #promptDetailModal::part(panel) { max-width: min(60rem, calc(100vw - 2 * var(--blora-space-4))) !important; }
 
-.blora-prompts-page #promptsList .blora-table {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
 #injectPromptModal::part(panel) { max-width: min(40rem, calc(100vw - 2 * var(--blora-space-4))) !important; }
 #injectPromptKeyList label > span { min-width: 0; overflow-wrap: anywhere; }
 #injectPromptKeyList blora-checkbox { flex-shrink: 0; }
 #injectPromptContent { box-sizing: border-box; }
-
-.blora-prompts-page .models-table .blora-table tbody td {
-  white-space: normal;
-}
-
-.blora-prompts-page #promptsList[data-blora-state="loading"]:empty {
-  min-height: 8rem;
-}
-
-.blora-prompts-page #promptsList > blora-empty {
-  display: block;
-  padding-block: var(--blora-space-5);
-  border: var(--prompt-border-soft);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-raised);
-}
-
-.blora-prompts-page #promptDetailContent .prompt-refs-table {
-  border: 0;
-  border-radius: 0;
-  background: var(--blora-color-surface-default);
-}
-
-.blora-prompts-page #promptDetailContent .prompt-refs-table th {
-  color: var(--blora-color-text-subtle);
-  font-family: var(--blora-font-body);
-}

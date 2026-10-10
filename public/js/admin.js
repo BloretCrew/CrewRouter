@@ -12,12 +12,6 @@ function formatDisplayName(format) {
   }
 }
 
-function setBloraState(id, state) {
-  const element = document.getElementById(id);
-  if (element) element.setAttribute('data-blora-state', state);
-  return element;
-}
-
 // 管理员控制台应用
 class AdminApp {
   constructor() {
@@ -701,10 +695,7 @@ class AdminApp {
 
   async loadUsers() {
     const listEl = document.getElementById('usersList');
-    if (listEl && !(this._usersData || []).length) {
-      setBloraState('usersList', 'loading');
-      setHTML(listEl, pageLoadingHtml(t('加载用户...')));
-    }
+    if (listEl && !(this._usersData || []).length) setHTML(listEl, pageLoadingHtml(t('加载用户...')));
     try {
       const q = (document.getElementById('userSearchInput')?.value || '').trim();
       const params = new URLSearchParams({
@@ -734,7 +725,7 @@ class AdminApp {
         setHTML(statsContainer, `
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon blue">
-              <span class="sf-icon" data-sf-name="person.2" aria-hidden="true"></span>
+              <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="person.2">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${totalUsers}</span>
@@ -743,7 +734,7 @@ class AdminApp {
           </div>
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon purple">
-              <span class="sf-icon" data-sf-name="shield" aria-hidden="true"></span>
+              <img src="https://img.bloret.net/SF/shield?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="shield">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${adminCount}</span>
@@ -752,7 +743,7 @@ class AdminApp {
           </div>
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon green">
-              <span class="sf-icon" data-sf-name="checkmark.seal" aria-hidden="true"></span>
+              <img src="https://img.bloret.net/SF/checkmark.seal?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="checkmark.seal">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${verifiedCount}</span>
@@ -761,7 +752,7 @@ class AdminApp {
           </div>
           <div class="admin-stat-card">
             <div class="admin-stat-card-icon amber">
-              <span class="sf-icon" data-sf-name="plus.circle" aria-hidden="true"></span>
+              <img src="https://img.bloret.net/SF/plus.circle?color=white" alt="" width="20" height="20" class="sf-icon" data-sf-name="plus.circle">
             </div>
             <div class="admin-stat-card-info">
               <span class="admin-stat-card-value">${Number(totalBalance).toFixed(0)}</span>
@@ -774,8 +765,7 @@ class AdminApp {
       this._renderUsersTable();
     } catch (error) {
       console.error(t('加载用户列表失败:'), error);
-      setBloraState('usersList', 'error');
-      setHTML(document.getElementById('usersList'), `<div class="admin-users-list-notice" role="alert"><blora-empty title="${escapeHtml(error.message || t('加载用户列表失败'))}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="adminApp.loadUsers()">${t('重试')}</button></div>`);
+      setHTML(document.getElementById('usersList'), `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载用户列表失败'))}</p>`);
     }
   }
 
@@ -899,13 +889,11 @@ class AdminApp {
     if (this.userPage >= totalPages) this.userPage = Math.max(0, totalPages - 1);
 
     if (users.length === 0) {
-      setBloraState('usersList', 'empty');
-      setHTML(container, `<blora-empty title="${escapeHtml(t('未找到匹配的用户'))}"></blora-empty>`);
+      setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('未找到匹配的用户') + '</p>');
       return;
     }
-    setBloraState('usersList', 'success');
     setHTML(container, `
-      <table class="blora-table">
+      <table>
         <thead>
           <tr>
             <th>用户名</th>
@@ -7616,7 +7604,7 @@ async function(ctx) {
       }
 
       if (!data.logs || data.logs.length === 0) {
-        setHTML(container, `<blora-empty title="${escapeHtml(t('暂无错误记录'))}"></blora-empty>`);
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无错误记录') + '</p>');
         return;
       }
 
@@ -7630,7 +7618,7 @@ async function(ctx) {
       };
 
       setHTML(container, `
-        <table class="blora-table">
+        <table>
           <thead>
             <tr>
               <th>时间</th>
@@ -7650,7 +7638,7 @@ async function(ctx) {
               const shortMsg = msg.length > 80 ? msg.slice(0, 80) + '…' : msg;
               const finalTag = log.is_final
                 ? ''
-                : '<span class="blora-badge error-retry-badge" data-variant="neutral">' + t('重试') + '</span>';
+                : '<span style="margin-left:4px;font-size:10px;padding:1px 5px;border-radius:4px;background:var(--muted);color:var(--muted-foreground);">' + t('重试') + '</span>';
               return `
               <tr style="cursor:pointer;" onclick="adminApp.showErrorDetail(${idx})">
                 <td style="white-space:nowrap;">${new Date(log.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</td>
@@ -7669,7 +7657,7 @@ async function(ctx) {
       `);
     } catch (error) {
       console.error(t('加载错误记录失败:'), error);
-      setHTML(document.getElementById('errorLogsList'), `<div class="error-log-list-notice" role="alert"><blora-empty title="${escapeHtml(error.message || t('加载失败'))}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="adminApp.loadErrorLogs(adminApp.errorLogPage)">${t('重试')}</button></div>`);
+      setHTML(document.getElementById('errorLogsList'), `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -9441,10 +9429,7 @@ async function(ctx) {
 
   async loadTeams() {
     const listEl = document.getElementById('teamsList') || document.getElementById('adminTeamsList');
-    if (listEl) {
-      setBloraState('teamsList', 'loading');
-      setHTML(listEl, pageLoadingHtml(t('加载 Team...')));
-    }
+    if (listEl) setHTML(listEl, pageLoadingHtml(t('加载 Team...')));
     try {
       const response = await fetch('/api/admin/teams');
       if (!response.ok) throw new Error(t('加载失败'));
@@ -9452,10 +9437,7 @@ async function(ctx) {
       this.renderTeamsList(teams);
     } catch (error) {
       console.error(t('加载 Team 列表失败:'), error);
-      if (listEl) {
-        setBloraState('teamsList', 'error');
-        setHTML(listEl, `<div class="admin-teams-list-error" role="alert"><blora-empty title="${escapeHtml(error.message || t('加载失败'))}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="adminApp.loadTeams()">${t('重试')}</button></div>`);
-      }
+      if (listEl) setHTML(listEl, `<p style="text-align:center;color:var(--destructive);padding:20px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 
@@ -9652,7 +9634,6 @@ async function(ctx) {
     }
 
     const container = document.getElementById('teamsList');
-    if (!container) return;
     const countText = filtered.length === all.length
       ? `${t('共')}${all.length}${t('个')}`
       : `${t('显示')}${filtered.length} / ${all.length}`;
@@ -9663,16 +9644,13 @@ async function(ctx) {
     this._syncAdminTeamsStickyControlsFromMain();
 
     if (!all.length) {
-      setBloraState('teamsList', 'empty');
-      setHTML(container, `<div class="admin-teams-empty"><blora-empty title="${escapeHtml(t('暂无 Team，点击右上角创建'))}"></blora-empty></div>`);
+      setHTML(container, '<div class="empty-state">' + t('暂无 Team，点击右上角创建') + '</div>');
       return;
     }
     if (!filtered.length) {
-      setBloraState('teamsList', 'empty');
-      setHTML(container, `<div class="admin-teams-empty"><blora-empty title="${escapeHtml(t('未找到匹配的 Team'))}"></blora-empty></div>`);
+      setHTML(container, '<div class="empty-state">' + t('未找到匹配的 Team') + '</div>');
       return;
     }
-    setBloraState('teamsList', 'success');
     const pg = this._paginate(filtered, this.teamPage, this.teamPageSize);
     this.teamPage = pg.page;
     const renderTeamCard = (team) => `
@@ -11362,12 +11340,12 @@ async function(ctx) {
       if (!res.ok) throw new Error(data.error || t('加载失败'));
       const { items, total, limit } = data;
       if (!items.length) {
-        setHTML(listEl, `<blora-empty title="${escapeHtml(t('暂无操作日志'))}"></blora-empty>`);
+        setHTML(listEl, '<p class="api-key-sub-muted" style="text-align:center;padding:24px;">' + t('暂无操作日志') + '</p>');
         setHTML(paginationEl, '');
         return;
       }
       setHTML(listEl, items.map(log => `
-        <article class="blora-card audit-log-row" data-variant="flat">
+        <div class="audit-log-row" style="display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px;">
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
               <span class="blora-badge" data-variant="info">${escapeHtml(log.action)}</span>
@@ -11383,8 +11361,8 @@ async function(ctx) {
             </div>
             ${log.details ? `<details style="margin-top:4px;"><summary style="font-size:12px;color:var(--muted-foreground);cursor:pointer;">详情</summary><pre style="font-size:12px;margin:4px 0 0;white-space:pre-wrap;word-break:break-all;">${escapeHtml(typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2))}</pre></details>` : ''}
           </div>
-          <div class="audit-log-row-time" title="${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN'))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
-        </article>`).join(''));
+          <div style="font-size:12px;color:var(--muted-foreground);white-space:nowrap;" title="${escapeHtml(new Date(log.created_at).toLocaleString('zh-CN'))}">${escapeHtml(this.formatRelativeTime(log.created_at))}</div>
+        </div>`).join(''));
 
       const totalPages = Math.ceil(total / limit);
       if (totalPages > 1) {
@@ -11435,13 +11413,13 @@ async function(ctx) {
       if (nextBtn) nextBtn.disabled = data.page >= totalPages;
 
       if (!data.items || data.items.length === 0) {
-        setHTML(container, `<blora-empty title="${escapeHtml(t('暂无提示词记录'))}"></blora-empty>`);
+        setHTML(container, '<p style="text-align:center;color:var(--muted-foreground);padding:40px;">' + t('暂无提示词记录') + '</p>');
         return;
       }
       this._promptsCache = data.items;
 
       setHTML(container, `
-        <table class="blora-table">
+        <table>
           <thead>
             <tr>
               <th>${t('文件名')}</th>
@@ -11490,7 +11468,7 @@ async function(ctx) {
       });
     } catch (error) {
       console.error(t('加载提示词失败:'), error);
-      setHTML(container, `<div class="admin-content-list-error" role="alert"><blora-empty title="${escapeHtml(error.message || t('加载失败'))}"></blora-empty><button type="button" class="blora-button" data-variant="secondary" data-size="sm" onclick="adminApp.loadAdminCustomPrompts(adminApp.promptPage)">${t('重试')}</button></div>`);
+      setHTML(container, `<p style="text-align:center;color:var(--destructive);padding:40px;">${escapeHtml(error.message || t('加载失败'))}</p>`);
     }
   }
 

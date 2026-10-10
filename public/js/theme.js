@@ -32,7 +32,6 @@ class ThemeManager {
     const resolved = this.resolvedTheme;
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(resolved);
-    document.documentElement.setAttribute('data-blora-color-scheme', resolved);
     document.documentElement.style.colorScheme = resolved;
     this.updateIcons();
     this.updateSFIcons();

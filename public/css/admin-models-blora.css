@@ -5,15 +5,12 @@
 }
 
 .blora-admin-models-page > .content-section {
-  margin-bottom: 0;
+  border: var(--models-border);
+  border-radius: var(--blora-radius-xl);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
   padding: var(--blora-space-6);
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  overflow: visible;
 }
-
 
 .blora-admin-models-page .model-library-header h2 {
   color: var(--blora-color-text-primary);

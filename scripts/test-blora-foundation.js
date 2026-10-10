@@ -26,31 +26,28 @@ assert.strictEqual(pageNames.length, 14);
 assert.ok(pageNames.includes('usage.html'));
 for (const name of pageNames) {
   const html = fs.readFileSync(path.join(root, 'public/pages', name), 'utf8');
-  for (const marker of ['/blora/blora.css?v=2.1.0', '/blora/tokens.dark.css?v=2.1.0', '/blora/auto.js?v=2.1.0', '/js/blora-foundation.js']) assert.ok(html.includes(marker), `${name} missing ${marker}`);
+  for (const marker of ['/blora/blora.css?v=2.1.0', '/blora/tokens.dark.css?v=2.1.0', '/blora/auto.js?v=2.1.0', '/js/blora-foundation.js', '/js/blora-services.js?v=2.1.0']) assert.ok(html.includes(marker), `${name} missing ${marker}`);
   assert.match(html, /<link rel="stylesheet" href="\/css\/layers\.css\?v=2\.1\.0">/);
   const firstStylesheet = html.match(/<link\b[^>]*rel="stylesheet"[^>]*>/)?.[0];
   assert.ok(firstStylesheet?.includes('/css/layers.css?v=2.1.0'), `${name} layers must be the first stylesheet`);
+  assert.match(html, /<script type="module" src="\/js\/blora-services\.js\?v=2\.1\.0"><\/script>/);
   assert.ok(/<body\b[^>]*class=["'][^"']*\bblora-page\b/.test(html), `${name} missing blora-page scope`);
-  assert.ok(/<body\b[^>]*class=["'][^"']*\bblora-scope\b/.test(html), `${name} missing blora-scope`);
   assert.strictEqual([...html.matchAll(/\/blora\/(?:blora\.css|tokens\.dark\.css|auto\.js)\?v=([^"']+)/g)].every((m) => m[1] === '2.1.0'), true);
   assert.ok(html.indexOf("data-blora-color-scheme") < html.indexOf('/blora/blora.css'), `${name} theme bootstrap must precede Blora CSS`);
 }
 assert.match(fs.readFileSync(path.join(root, 'public/css/layers.css'), 'utf8'), /^@layer legacy, blora;\s*$/);
-const services = fs.existsSync(path.join(root, 'public/js/blora-services.js')) ? fs.readFileSync(path.join(root, 'public/js/blora-services.js'), 'utf8') : '';
-assert.strictEqual(pageNames.some(name => fs.readFileSync(path.join(root, 'public/pages', name), 'utf8').includes('/js/blora-services.js')), false, 'services bootstrap is opt-in and not required by current pages');
-if (services) {
-  assert.match(services, /import '\/blora\/icons-full\.js\?v=2\.1\.0'/);
-  assert.match(services, /import \{ createFormController, createTableController, message, hydrateIcons \} from '\/blora\/index\.js\?v=2\.1\.0'/);
+const services = fs.readFileSync(path.join(root, 'public/js/blora-services.js'), 'utf8');
+assert.match(services, /import '\/blora\/icons-full\.js\?v=2\.1\.0'/);
+assert.match(services, /import \{ createFormController, createTableController, message, hydrateIcons \} from '\/blora\/index\.js\?v=2\.1\.0'/);
 const publicApi = fs.readFileSync(path.join(root, 'node_modules/@bloret-crew/blora-design/dist/index.js'), 'utf8');
 for (const api of ['createFormController', 'createTableController', 'message']) assert.ok(publicApi.includes(api), `missing official public API ${api}`);
-  assert.match(services, /hydrateIcons\(document\)/);
-  assert.ok(services.indexOf("icons-full.js") < services.indexOf('hydrateIcons(document)'), 'register full icons before hydrating existing markup');
+assert.match(services, /hydrateIcons\(document\)/);
+assert.ok(services.indexOf("icons-full.js") < services.indexOf('hydrateIcons(document)'), 'register full icons before hydrating existing markup');
 // SidebarNav owns aria-current; the consumer selects through its public value.
-  assert.match(services, /document\.createElement\('blora-sidebar-nav'\)/);
-  assert.match(services, /navigation\.value = selectedPage/);
-  assert.doesNotMatch(services, /setAttribute\('aria-current'/);
-  assert.match(services, /window\.bloraMessage = message/);
-  assert.match(services, /controller\.destroy\(\)/);
-  assert.match(services, /observer\.disconnect\(\)/);
-}
+assert.match(services, /document\.createElement\('blora-sidebar-nav'\)/);
+assert.match(services, /navigation\.value = selectedPage/);
+assert.doesNotMatch(services, /setAttribute\('aria-current'/);
+assert.match(services, /window\.bloraMessage = message/);
+assert.match(services, /controller\.destroy\(\)/);
+assert.match(services, /observer\.disconnect\(\)/);
 console.log('Blora foundation static checks passed.');

@@ -33,7 +33,7 @@
 
 .ba-balance {
   margin-left: auto;
-  color: var(--blora-color-text-muted);
+  color: var(--blora-color-text-muted, var(--muted-foreground));
   font-size: 13px;
 }
 
@@ -49,9 +49,9 @@
 .ba-history,
 .ba-main {
   min-height: 0;
-  border: var(--blora-border-subtle);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-default);
+  border: 1px solid var(--blora-color-border, var(--border));
+  border-radius: 12px;
+  background: var(--blora-color-surface, var(--card));
 }
 
 .ba-history {
@@ -84,12 +84,12 @@
 
 .ba-history__item.is-active,
 .ba-history__item:hover {
-  background: color-mix(in srgb, var(--blora-color-action-primary-default) 8%, transparent);
+  background: color-mix(in srgb, var(--blora-color-primary, var(--primary)) 12%, transparent);
 }
 
 .ba-history__item small {
   display: block;
-  color: var(--blora-color-text-muted);
+  color: var(--blora-color-text-muted, var(--muted-foreground));
 }
 
 .ba-main {
@@ -119,52 +119,40 @@
 
 .ba-bubble--user {
   align-self: flex-end;
-  border: 1px solid color-mix(in srgb, var(--blora-color-action-primary-default) 24%, var(--blora-color-border-subtle));
-  background: color-mix(in srgb, var(--blora-color-action-primary-default) 12%, var(--blora-color-surface-default));
-  color: var(--blora-color-text-primary);
+  background: color-mix(in srgb, var(--blora-color-primary, var(--primary)) 16%, transparent);
 }
 
-.ba-bubble--assistant {
+.ba-bubble--assistant,
+.ba-card {
   align-self: flex-start;
-  border: var(--blora-border-subtle);
-  background: var(--blora-color-surface-raised);
-  color: var(--blora-color-text-primary);
+  background: color-mix(in srgb, var(--blora-color-text-muted, var(--muted-foreground)) 10%, transparent);
 }
 
 .ba-bubble pre {
   overflow: auto;
-  padding: var(--blora-space-2);
-  border: var(--blora-border-subtle);
-  border-radius: var(--blora-radius-sm);
-  background: var(--blora-color-surface-default);
-  color: var(--blora-color-text-secondary);
+  padding: 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--blora-color-text, #000) 8%, transparent);
 }
 
 .ba-card {
-  align-self: flex-start;
   width: min(640px, 100%);
-  padding: var(--blora-space-3);
-  border: var(--blora-border-subtle);
-  border-radius: var(--blora-radius-lg);
-  background: var(--blora-color-surface-default);
-  color: var(--blora-color-text-primary);
+  padding: 10px 12px;
+  border-radius: 12px;
 }
 
 .ba-card header {
   display: flex;
   justify-content: space-between;
-  gap: var(--blora-space-2);
-  margin-bottom: var(--blora-space-2);
-  color: var(--blora-color-text-primary);
+  gap: 8px;
   font-weight: 600;
+  margin-bottom: 6px;
 }
 
 .ba-card pre {
   margin: 0;
-  color: var(--blora-color-text-secondary);
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: var(--blora-text-xs);
+  font-size: 12px;
 }
 
 .ba-card__actions {
@@ -191,7 +179,7 @@
 }
 
 .ba-options {
-  border-top: var(--blora-border-subtle);
+  border-top: 1px solid var(--blora-color-border, var(--border));
 }
 
 .ba-option {
@@ -215,7 +203,7 @@
 
 .ba-thinking {
   font-size: 13px;
-  color: var(--blora-color-text-muted);
+  color: var(--blora-color-text-muted, var(--muted-foreground));
   margin-bottom: 6px;
 }
 
@@ -259,12 +247,11 @@
 
 #baModelPicker { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ba-model-library-dialog::part(panel) { max-width: min(60rem, calc(100vw - 2rem)); }
-.ba-model-library { display: flex; flex-direction: column; gap: var(--blora-space-3); }
-.ba-model-library-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--blora-space-3); max-height: 60dvh; overflow-y: auto; }
-.ba-model-card { display: flex; flex-direction: column; align-items: flex-start; gap: var(--blora-space-2); padding: var(--blora-space-4); border: var(--blora-border-subtle); border-radius: var(--blora-radius-lg); background: var(--blora-color-surface-default); box-shadow: var(--blora-shadow-1); text-align: start; color: var(--blora-color-text-primary); cursor: pointer; }
-.ba-model-card:hover { border-color: var(--blora-color-action-primary-default); background: var(--blora-color-surface-raised); }
+.ba-model-library { display: flex; flex-direction: column; gap: 1rem; }
+.ba-model-library-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: .75rem; max-height: 60dvh; overflow-y: auto; }
+.ba-model-card { display: flex; flex-direction: column; align-items: flex-start; gap: .5rem; padding: 1rem; text-align: start; color: var(--blora-color-text-primary); cursor: pointer; }
 .ba-model-card strong, .ba-model-card span { max-width: 100%; overflow-wrap: anywhere; }
-.ba-model-card[aria-pressed="true"] { border-color: var(--blora-color-action-primary-default); background: var(--blora-color-action-primary-tint); box-shadow: inset 0 0 0 1px var(--blora-color-action-primary-default); }
+.ba-model-card[aria-pressed="true"] { border-color: var(--blora-color-action-primary-default); background: var(--blora-color-surface-raised); }
 
 #baChatOptions { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(10rem, 14rem) minmax(7rem, 9rem); align-items: start; gap: 1rem; }
 #baChatOptions .ba-option > span { min-height: 1.25rem; }

@@ -1,0 +1,134 @@
+/* Official Blora Drawer hosts the mobile copy of the business navigation. */
+.mobile-sidebar-drawer .blora-drawer__panel {
+  width: min(16rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  padding: 0;
+  overflow: hidden;
+}
+
+.mobile-sidebar-drawer-content {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--blora-color-surface-default);
+}
+
+.mobile-sidebar-drawer-content .sidebar-header {
+  min-height: 4.5rem;
+  padding: var(--blora-space-4);
+}
+
+.mobile-sidebar-drawer-content .sidebar-nav {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--blora-space-3) var(--blora-space-2);
+}
+
+.mobile-sidebar-drawer-content .nav-item {
+  justify-content: flex-start;
+  padding: var(--blora-space-2) var(--blora-space-3);
+}
+
+.mobile-sidebar-drawer-content .nav-item span,
+.mobile-sidebar-drawer-content .nav-section-title,
+.mobile-sidebar-drawer-content .sidebar-header h2,
+.mobile-sidebar-drawer-content .sidebar-header .brand-edition-badge,
+.mobile-sidebar-drawer-content .sidebar-footer .user-info span {
+  display: block;
+}
+
+.mobile-sidebar-drawer-content .sidebar-footer {
+  min-height: 4.5rem;
+  justify-content: space-between;
+  padding: var(--blora-space-3) var(--blora-space-4);
+}
+
+.mobile-sidebar-drawer-content .user-info {
+  gap: var(--blora-space-2);
+}
+
+.mobile-sidebar-drawer-content .nav-item .sf-icon {
+  margin-inline-end: var(--blora-space-2);
+}
+
+@media (max-width: 640px) {
+  .blora-page .app-container > .sidebar {
+    display: none;
+  }
+
+  .blora-page .app-container > .main-content {
+    margin-inline-start: 0;
+    padding-block-start: calc(4.25rem + var(--blora-space-3));
+  }
+}
+
+.blora-page .business-sidebar-navigation,
+.mobile-sidebar-drawer-content .business-sidebar-navigation {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: var(--blora-space-3) var(--blora-space-2);
+}
+
+.blora-page .business-sidebar-host,
+.mobile-sidebar-drawer-content .business-sidebar-host {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.blora-page .business-sidebar-navigation .blora-sidebar-nav__link,
+.mobile-sidebar-drawer-content .business-sidebar-navigation .blora-sidebar-nav__link {
+  justify-content: flex-start;
+  min-height: 2.5rem;
+  color: var(--blora-color-text-muted);
+}
+
+.blora-page .business-sidebar-navigation .blora-sidebar-nav__link[aria-current="page"],
+.mobile-sidebar-drawer-content .business-sidebar-navigation .blora-sidebar-nav__link[aria-current="page"] {
+  background: color-mix(in srgb, var(--blora-color-action-primary-default) 14%, var(--blora-color-surface-default));
+  color: var(--blora-color-action-primary-default);
+}
+
+.blora-drawer__content:has(> .mobile-sidebar-drawer-content) {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.business-sidebar-navigation .blora-sidebar-nav__link {
+  display: flex;
+  align-items: center;
+  gap: var(--blora-space-3);
+  width: 100%;
+  min-height: 2.5rem;
+  padding: var(--blora-space-2) var(--blora-space-3);
+  border-radius: var(--blora-radius-md);
+  color: var(--blora-color-text-emphasis);
+  font-size: var(--blora-text-sm);
+  text-decoration: none;
+}
+.business-sidebar-navigation .blora-sidebar-nav__link[hidden] { display: none; }
+.business-sidebar-navigation .blora-sidebar-nav__link:hover {
+  background: var(--blora-color-surface-raised);
+  color: var(--blora-color-text-primary);
+  text-decoration: none;
+}
+.business-sidebar-navigation .blora-sidebar-nav__link > .sf-icon,
+.business-sidebar-navigation .blora-sidebar-nav__link > svg { width: 1.125rem; height: 1.125rem; flex: none; }
+.business-sidebar-navigation .blora-sidebar-nav__group-label {
+  padding: var(--blora-space-4) var(--blora-space-3) var(--blora-space-1);
+  color: var(--blora-color-text-muted);
+  font-size: var(--blora-text-xs);
+}
+.business-sidebar-navigation .blora-sidebar-nav__link[aria-current="page"] {
+  background: var(--blora-color-action-primary-soft);
+  color: var(--blora-color-text-primary);
+  font-weight: 600;
+}
