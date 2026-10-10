@@ -1,15 +1,15 @@
 'use strict';
 
+const { addModelsToPersonalTeams } = require('./personal-model-access');
+
 async function addModelsToFrontierTeams(db, modelIds) {
   const ids = Array.isArray(modelIds)
     ? [...new Set(modelIds.filter(Boolean).map(String))]
     : (modelIds ? [String(modelIds)] : []);
   if (ids.length === 0) return 0;
 
+  let added = await addModelsToPersonalTeams(db, ids);
   const frontier = await db.query('SELECT id FROM teams WHERE is_frontier = TRUE');
-  if (frontier.rows.length === 0) return 0;
-
-  let added = 0;
   for (const team of frontier.rows) {
     const result = await db.query(
       `INSERT INTO team_models (team_id, model_id, enabled)

@@ -2782,5 +2782,7 @@
   "原配置备份：": "Original configuration backup: ",
   "写入失败。请检查文件权限及配置格式，或使用下方手动配置。": "Write failed. Check file permissions and configuration format, or use manual configuration below.",
   "DeepSeek Harness 的配置路径与 schema 未核实，仅提供手动配置。": "The DeepSeek Harness configuration path and schema are unverified. Manual configuration only.",
-  "未知客户端工具": "Unknown client tool"
+  "未知客户端工具": "Unknown client tool",
+  "供应商目录暂不可用，可手动填写。": "The provider directory is unavailable. You can enter details manually.",
+  "粘贴供应商接入信息。继续后会用你的 CrewRouter Key 当前模型解析，并添加供应商。": "Paste provider connection details. Your current CrewRouter Key model will parse them to add a provider."
 }

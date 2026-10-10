@@ -239,11 +239,14 @@ class ConsoleApp {
         });
       }
     } catch (_) { /* backend remains authoritative */ }
+    if (this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local') {
+      document.querySelectorAll('[data-page="myUpstream"] [data-i18n="我的上游"]').forEach(el => { el.dataset.i18n = '供应商管理'; el.textContent = t('供应商管理'); });
+    }
     this.bindEvents();
     this._bindHashRouting();
     // 从 URL hash 恢复页面（刷新后保持原位置）
     const restored = this._parseConsoleHash(location.hash);
-    const teamHashPages = new Set(['myUpstream']);
+    const teamHashPages = new Set();
     const safePage = restored.page === 'home'
       ? 'modelLibrary'
       : (teamHashPages.has(restored.page) && this.instance?.capabilities?.teamProjects === false ? 'modelLibrary' : restored.page);
@@ -301,7 +304,7 @@ class ConsoleApp {
 
   checkAdminStatus() {
     const quickAdd = document.getElementById('libraryQuickAddSystemProvider');
-    if (quickAdd) quickAdd.hidden = this.user?.isAdmin !== true;
+    if (quickAdd) quickAdd.hidden = !(this.user?.isAdmin || this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local');
     const adminLink = document.getElementById('adminLink');
     // Personal Edition 将个人管理能力收进控制台，不再把用户带到另一套后台。
     if (adminLink && this.instance?.edition === 'personal') {
@@ -319,7 +322,7 @@ class ConsoleApp {
 
   // 统计上报授权：仅管理员首次进入控制台时，且从未做过决定（stats_report_enabled 未设置）时弹窗
   async _maybeShowStatsConsent() {
-    if (!this.user?.isAdmin) return;
+    if (!(this.user?.isAdmin || this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local')) return;
     try {
       // 演示模式（demo: true）下不询问、不上报
       const cfgRes = await fetch('/api/config', { credentials: 'same-origin' });
@@ -473,7 +476,7 @@ class ConsoleApp {
     document.getElementById(`${targetPage}Page`)?.classList.add('active');
 
     const titles = {
-      'dashboard': t('控制台'), 'home': t('个人工作台'), 'modelLibrary': t('模型库'), 'myUpstream': t('我的上游'),
+      'dashboard': t('控制台'), 'home': t('个人工作台'), 'modelLibrary': t('模型库'), 'myUpstream': (this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local') ? t('供应商管理') : t('我的上游'),
       'myProviders': t('我的上游'), 'myTeamModels': t('我的上游'),
       'apiKeys': t('API Key 与用量'), 'stats': t('统计信息'), 'projectWork': t('项目工作'), 'leaderboard': t('排行榜'), 'docs': t('接口文档'),
       'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志'), 'prompts': t('提示词'), 'sessions': t('会话'),
@@ -8607,6 +8610,19 @@ ${extractorBody}
   }
 
   async loadMyUpstreamPage() {
+    if (this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local') {
+      const page = document.getElementById('myUpstreamPage');
+      page.classList.add('unified-provider-page');
+      let frame = document.getElementById('unifiedProviderManager');
+      if (!frame) {
+        frame = document.createElement('iframe');
+        frame.id = 'unifiedProviderManager';
+        frame.title = t('供应商管理');
+        frame.src = '/admin?providerManager=1#adminProviders';
+        page.appendChild(frame);
+      }
+      return;
+    }
     const tab = this._pendingUpstreamTab || this._myUpstreamTab || 'providers';
     this._pendingUpstreamTab = null;
     this.switchMyUpstreamTab(tab, { skipLoad: true });
@@ -12804,14 +12820,14 @@ ${extractorBody}
   }
 
   async showQuickAddSystemProviderDialog() {
-    if (!this.user?.isAdmin || this._quickAddSystemProviderDialog) return;
+    if (!(this.user?.isAdmin || this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local') || this._quickAddSystemProviderDialog) return;
     const clipboardPromise = navigator.clipboard?.readText
       ? navigator.clipboard.readText().catch(() => '')
       : Promise.resolve('');
     const modal = Dialog.showModal({
       title: t('快速添加供应商到系统'),
       content: `
-        <p style="color:var(--muted-foreground);font-size:13px;line-height:1.5;">${escapeHtml(t('粘贴供应商接入信息。继续后会用你的 CrewRouter Key 当前模型解析，并添加为系统供应商。'))}</p>
+        <p style="color:var(--muted-foreground);font-size:13px;line-height:1.5;">${escapeHtml(t(this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local' ? '粘贴供应商接入信息。继续后会用你的 CrewRouter Key 当前模型解析，并添加供应商。' : '粘贴供应商接入信息。继续后会用你的 CrewRouter Key 当前模型解析，并添加为系统供应商。'))}</p>
         <textarea id="quickAddProviderText" class="blora-input" rows="8" placeholder="${escapeHtml(t('例如名称、Base URL、API Key，或一段配置、curl、环境变量'))}" style="width:100%;box-sizing:border-box;resize:vertical;min-height:160px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:13px;line-height:1.5;"></textarea>
         <p id="quickAddProviderError" role="alert" style="display:none;color:var(--destructive);font-size:13px;"></p>
       `,
@@ -12996,7 +13012,9 @@ ${extractorBody}
       this._providersIndex = await res.json();
       this.renderProviderList(this._providersIndex);
     } catch (error) {
-      setHTML(container, '<div style="text-align:center;padding:20px;color:var(--destructive);">' + t('加载失败，请重试') + '</div>');
+      this._providersIndex = [];
+      this.renderProviderList([]);
+      container.insertAdjacentHTML('afterbegin', '<p class="text-muted">' + t('供应商目录暂不可用，可手动填写。') + '</p>');
     }
   }
 

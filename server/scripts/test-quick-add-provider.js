@@ -93,7 +93,7 @@ const adminJs = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'js',
 const consolePage = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'pages', 'console.html'), 'utf8');
 const consoleJs = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'js', 'app.js'), 'utf8');
 
-assert.match(adminRoute, /router\.post\('\/providers\/quick-add', requireAuth, requireAdmin/);
+assert.match(adminRoute, /router\.post\('\/providers\/quick-add', requireAuth, requireProviderManager/);
 assert.match(adminRoute, /quickAddSystemProvider\(\{/);
 assert.match(quickAdd, /ak\.name ILIKE 'crewrouter'/);
 assert.match(quickAdd, /'X-CrewRouter-Signature-Mode': 'header'/);

@@ -152,6 +152,11 @@ class AdminApp {
         if ((instance.capabilities.multiUser === false && (location.hash.startsWith('#adminUsers') || location.hash.startsWith('#adminTeams') || location.hash === '#adminUserGroups')) || (instance.capabilities.teamAuditLogs === false && location.hash === '#adminAuditLogs')) location.hash = '#adminStats';
       }
     } catch (_) { /* backend remains authoritative */ }
+    if (this._unifiedProviders) {
+      document.documentElement.classList.add('unified-provider-manager');
+      document.querySelectorAll('#providerScopeFilter, #adminProvidersStickyScope').forEach(el => { el.value = ''; el.hidden = true; });
+    }
+    if (this._unifiedProviders && new URLSearchParams(location.search).get('providerManager') === '1') document.documentElement.classList.add('embedded-provider-manager');
     this.initInvitePanel();
     this.bindEvents();
     this._bindHashRouting();
@@ -162,9 +167,9 @@ class AdminApp {
     const restored = this._parseAdminHash(location.hash);
     const teamPages = new Set(['adminTeams', 'adminUserGroups', 'adminAuditLogs']);
     const safePage = teamPages.has(restored.page) && this._instance?.capabilities?.teamAdmin === false
-      ? 'adminStats' : restored.page;
+      ? (this._unifiedProviders ? 'adminProviders' : 'adminStats') : restored.page;
     if (safePage !== restored.page) this._writeAdminHash(safePage, { replaceHash: true });
-    const startPage = safePage || 'adminStats';
+    const startPage = safePage || (this._unifiedProviders ? 'adminProviders' : 'adminStats');
     await this.navigateTo(startPage, {
       skipHash: true,
       teamId: restored.teamId || null
@@ -210,7 +215,7 @@ class AdminApp {
     if (!raw) return { page: null, teamId: null };
     const [pagePart, extra] = raw.split('/');
     let page = pagePart || null;
-    if (page === 'adminDashboard') page = 'adminStats';
+    if (page === 'adminDashboard') page = this._unifiedProviders ? 'adminProviders' : 'adminStats';
     if (page && !this._adminPageIds().has(page)) page = null;
     const teamId = (page === 'adminTeams' && extra && /^\d+$/.test(extra))
       ? parseInt(extra, 10)
@@ -255,7 +260,10 @@ class AdminApp {
           window.location.replace('/set-password');
           return;
         }
-        if (!this.user.isAdmin) {
+        const instance = await window.CrewRouterEditionBadge?.load?.();
+        this._instance = instance;
+        this._unifiedProviders = instance?.edition === 'personal' || instance?.runtime === 'desktop-local';
+        if (!this.user.isAdmin && !this._unifiedProviders) {
           window.location.href = '/console';
           return;
         }
@@ -519,9 +527,11 @@ class AdminApp {
   }
 
   async navigateTo(page, options = {}) {
+    if (this._unifiedProviders && ['adminStats', 'adminUsers', 'adminTeams', 'adminUserGroups', 'adminAuditLogs'].includes(page)) page = 'adminProviders';
+    if (document.documentElement.classList.contains('embedded-provider-manager') && !['adminProviders', 'adminModels'].includes(page)) page = 'adminProviders';
     if (page === 'adminUserGroups') page = 'adminTeams';
     // 兼容旧「仪表盘」入口，统一到统计信息
-    if (page === 'adminDashboard') page = 'adminStats';
+    if (page === 'adminDashboard') page = this._unifiedProviders ? 'adminProviders' : 'adminStats';
 
     // 更新导航状态
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -3068,8 +3078,8 @@ class AdminApp {
     }
 
     // 当前页内按全局/用户分组展示（数据已是本页）
-    const globalProviders = providers.filter(p => !p.created_by);
-    const userProviders = providers.filter(p => p.created_by);
+    const globalProviders = this._unifiedProviders ? providers : providers.filter(p => !p.created_by);
+    const userProviders = this._unifiedProviders ? [] : providers.filter(p => p.created_by);
     const globalPage = {
       items: globalProviders,
       total: globalProviders.length,
@@ -3108,7 +3118,7 @@ class AdminApp {
         ${selectAllBar}
         ${globalProviders.length > 0 ? `
           <div style="margin-bottom:24px;">
-            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${t('全局供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${globalProviders.length})</span></h3>
+            <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${this._unifiedProviders ? t('供应商') : t('全局供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${globalProviders.length})</span></h3>
             ${this._renderProviderTable(globalProviders)}
           </div>
         ` : ''}
@@ -3120,6 +3130,11 @@ class AdminApp {
         ` : ''}
         ${paginationHtml}
       `);
+    }
+    if (this._unifiedProviders && statsContainer) {
+      const cards = statsContainer.querySelectorAll('.admin-stat-card');
+      if (cards[0]) { cards[0].onclick = () => this.clearProviderFilters(); cards[0].querySelector('.admin-stat-card-value').textContent = allTotal; cards[0].querySelector('.admin-stat-card-label').textContent = t('供应商'); }
+      if (cards[1]) cards[1].hidden = true;
     }
     this.updateProviderBatchBar();
     // 额度改为按需查询（更多菜单 / 手动刷新），打开页不自动外呼
@@ -3620,7 +3635,7 @@ class AdminApp {
       ${selectAllBar || ''}
       ${globalPage.total > 0 ? `
         <div style="margin-bottom:24px;">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${t('全局供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${globalPage.total})</span></h3>
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">${this._unifiedProviders ? t('供应商') : t('全局供应商')} <span style="font-weight:400;color:var(--muted-foreground);font-size:13px;">(本页 ${globalPage.total})</span></h3>
           ${renderCardList(globalPage.items)}
         </div>
       ` : ''}
@@ -4043,8 +4058,10 @@ class AdminApp {
           <div class="wizard-empty">
             <p style="color:var(--destructive);margin-bottom:8px;">${escapeHtml(loadError)}</p>
             <button type="button" class="blora-button" id="wizardRetryBtn" data-variant="secondary" data-size="sm">重试</button>
+            <button type="button" class="blora-button" id="wizardManualFallback" data-variant="primary" data-size="sm">${t('手动添加')}</button>
           </div>`);
         document.getElementById('wizardRetryBtn')?.addEventListener('click', () => loadIndex());
+        document.getElementById('wizardManualFallback')?.addEventListener('click', () => { modal.close(); self.showAddProviderModal(); });
         return;
       }
 

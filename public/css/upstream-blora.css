@@ -169,3 +169,6 @@
 #selectedProviderDisplay { overflow-wrap: anywhere; }
 #providerFormat { display: block; width: 100%; }
 #providerFormat::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
+
+.unified-provider-page > .content-section { display: none; }
+#unifiedProviderManager { display: block; width: 100%; height: calc(100dvh - 5rem); min-height: 480px; border: 0; }

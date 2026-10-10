@@ -11,6 +11,7 @@ function createDb({ frontierIds = [], insertCounts = [] } = {}) {
     calls,
     async query(sql, params) {
       calls.push({ sql, params });
+      if (sql.startsWith('SELECT edition FROM instance_settings')) return { rows: [{ edition: 'team' }] };
       if (sql.startsWith('SELECT id FROM teams')) return { rows: frontierIds.map(id => ({ id })) };
       if (sql.startsWith('INSERT INTO team_models')) return { rowCount: insertCounts.shift() || 0 };
       throw new Error(`unexpected query: ${sql}`);
@@ -21,7 +22,7 @@ function createDb({ frontierIds = [], insertCounts = [] } = {}) {
 (async () => {
   const noFrontierDb = createDb();
   assert.strictEqual(await addModelsToFrontierTeams(noFrontierDb, ['m1']), 0);
-  assert.strictEqual(noFrontierDb.calls.length, 1, '没有前沿 Team 时不得写入映射');
+  assert.strictEqual(noFrontierDb.calls.length, 2, 'Team edition 没有前沿 Team 时只读取 edition 和 Team，不写入映射');
 
   const enabledDb = createDb({
     frontierIds: [10, 20],

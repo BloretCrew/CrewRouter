@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const { pool } = require('../models/database');
-const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireAuth, requireAdmin, requireProviderManager } = require('../middleware/auth');
 const config = require('../config-loader');
 const Logger = require('../logger');
 const { markCompactionBoundaries } = require('../utils/cache-hit-anomaly');
@@ -324,7 +324,7 @@ router.get('/users/:id/code-balances', requireAuth, requireAdmin, async (req, re
 });
 
 // 获取所有模型列表
-router.get('/models', requireAuth, requireAdmin, async (req, res) => {
+router.get('/models', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const baseFrom = `
       FROM models m
@@ -490,7 +490,7 @@ router.get('/models', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // 创建/更新模型
-router.post('/models', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_MODEL_CREATE, {
+router.post('/models', requireAuth, requireProviderManager, auditMiddleware(ACTIONS.ADMIN_MODEL_CREATE, {
   resourceType: 'model',
   resourceIdFrom: (req, res) => res._logBody?.id,
   descriptionFrom: (req) => `创建模型「${req.body?.name || req.body?.id || '-'}」`,
@@ -573,7 +573,7 @@ router.post('/models', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_
 });
 
 // 删除模型（清理 Key/Team/Fusion 等关联后再删）
-router.delete('/models/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_MODEL_DELETE, {
+router.delete('/models/:id', requireAuth, requireProviderManager, auditMiddleware(ACTIONS.ADMIN_MODEL_DELETE, {
   resourceType: 'model',
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `删除模型 #${req.params.id}`,
@@ -594,7 +594,7 @@ router.delete('/models/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.
 });
 
 // 批量删除模型
-router.post('/models/batch-delete', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-delete', requireAuth, requireProviderManager, async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: '请选择要删除的模型' });
@@ -611,7 +611,7 @@ router.post('/models/batch-delete', requireAuth, requireAdmin, async (req, res) 
 });
 
 // 批量启用/禁用模型
-router.post('/models/batch-update', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-update', requireAuth, requireProviderManager, async (req, res) => {
   const { ids, enabled } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: '请选择模型' });
@@ -634,7 +634,7 @@ router.post('/models/batch-update', requireAuth, requireAdmin, async (req, res) 
 });
 
 // 批量添加模型（从供应商拉取）
-router.post('/models/batch-add', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-add', requireAuth, requireProviderManager, async (req, res) => {
   const { models: modelIds, provider } = req.body;
   if (!Array.isArray(modelIds) || modelIds.length === 0) {
     return res.status(400).json({ error: '请选择模型' });
@@ -676,7 +676,7 @@ router.post('/models/batch-add', requireAuth, requireAdmin, async (req, res) => 
 });
 
 // 批量设置固定价格
-router.post('/models/batch-update-prices', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-update-prices', requireAuth, requireProviderManager, async (req, res) => {
   const { ids, mode, percentage, input_price, output_price, cached_output_price } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: '请选择模型' });
@@ -711,7 +711,7 @@ router.post('/models/batch-update-prices', requireAuth, requireAdmin, async (req
 });
 
 // JSON 批量定价
-router.post('/models/batch-set-prices', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-set-prices', requireAuth, requireProviderManager, async (req, res) => {
   const { prices } = req.body;
   if (!prices || typeof prices !== 'object' || Array.isArray(prices)) {
     return res.status(400).json({ error: '参数格式错误' });
@@ -747,7 +747,7 @@ router.post('/models/batch-set-prices', requireAuth, requireAdmin, async (req, r
 });
 
 // JSON 批量定参考价
-router.post('/models/batch-set-reference-prices', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-set-reference-prices', requireAuth, requireProviderManager, async (req, res) => {
   const { prices } = req.body;
   if (!prices || typeof prices !== 'object' || Array.isArray(prices)) {
     return res.status(400).json({ error: '参数格式错误' });
@@ -781,7 +781,7 @@ router.post('/models/batch-set-reference-prices', requireAuth, requireAdmin, asy
 });
 
 // 批量更新速率限制
-router.post('/models/batch-update-ratelimit', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-update-ratelimit', requireAuth, requireProviderManager, async (req, res) => {
   const { ids, rate_limit_rpm, rate_limit_tpm } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: '请选择模型' });
@@ -800,7 +800,7 @@ router.post('/models/batch-update-ratelimit', requireAuth, requireAdmin, async (
 });
 
 // 批量更新描述
-router.post('/models/batch-update-description', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-update-description', requireAuth, requireProviderManager, async (req, res) => {
   const { ids, description, mode } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: '请选择模型' });
@@ -831,7 +831,7 @@ router.post('/models/batch-update-description', requireAuth, requireAdmin, async
 });
 
 // 批量更新系列
-router.post('/models/batch-update-series', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-update-series', requireAuth, requireProviderManager, async (req, res) => {
   const { ids, series } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: '请选择模型' });
@@ -850,7 +850,7 @@ router.post('/models/batch-update-series', requireAuth, requireAdmin, async (req
 });
 
 // 获取所有系列图标
-router.get('/series-icons', requireAuth, requireAdmin, async (req, res) => {
+router.get('/series-icons', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM series ORDER BY name');
     res.json(result.rows);
@@ -861,7 +861,7 @@ router.get('/series-icons', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // 设置系列图标
-router.post('/series-icons', requireAuth, requireAdmin, async (req, res) => {
+router.post('/series-icons', requireAuth, requireProviderManager, async (req, res) => {
   const { name, icon_url } = req.body;
   if (!name) return res.status(400).json({ error: '系列名称不能为空' });
   try {
@@ -879,7 +879,7 @@ router.post('/series-icons', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // 删除系列图标
-router.delete('/series-icons/:name', requireAuth, requireAdmin, async (req, res) => {
+router.delete('/series-icons/:name', requireAuth, requireProviderManager, async (req, res) => {
   try {
     await pool.query('DELETE FROM series WHERE name = $1', [req.params.name]);
     Logger.info(`[系列图标] 删除: ${req.params.name}`);
@@ -891,7 +891,7 @@ router.delete('/series-icons/:name', requireAuth, requireAdmin, async (req, res)
 });
 
 // 批量将缓存输出价格设置为输出价格
-router.post('/models/batch-sync-cached-price', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-sync-cached-price', requireAuth, requireProviderManager, async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: '请选择模型' });
@@ -910,7 +910,7 @@ router.post('/models/batch-sync-cached-price', requireAuth, requireAdmin, async 
 });
 
 // JSON 批量设置参考价
-router.post('/models/batch-set-reference-prices', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-set-reference-prices', requireAuth, requireProviderManager, async (req, res) => {
   const { prices } = req.body;
   if (!prices || typeof prices !== 'object' || Array.isArray(prices)) {
     return res.status(400).json({ error: '参数格式错误' });
@@ -946,7 +946,7 @@ router.post('/models/batch-set-reference-prices', requireAuth, requireAdmin, asy
 });
 
 // 按参考价百分比批量设置价格（预览模式）
-router.post('/models/batch-adjust-by-reference-preview', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-adjust-by-reference-preview', requireAuth, requireProviderManager, async (req, res) => {
   const { ids, input_pct, output_pct, cached_output_pct } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: '请选择模型' });
@@ -980,7 +980,7 @@ router.post('/models/batch-adjust-by-reference-preview', requireAuth, requireAdm
 });
 
 // 按参考价百分比批量设置价格（执行）
-router.post('/models/batch-adjust-by-reference', requireAuth, requireAdmin, async (req, res) => {
+router.post('/models/batch-adjust-by-reference', requireAuth, requireProviderManager, async (req, res) => {
   const { ids, input_pct, output_pct, cached_output_pct } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
     return res.status(400).json({ error: '请选择模型' });
@@ -1772,7 +1772,7 @@ router.get('/usage-logs/:id', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // 获取供应商列表（支持可选分页：?page=&limit=&q=&status=&scope=&key_mode=&tag_id=）
-router.get('/providers', requireAuth, requireAdmin, async (req, res) => {
+router.get('/providers', requireAuth, requireProviderManager, async (req, res) => {
   try {
     await ensureKeyModeColumn();
 
@@ -1962,7 +1962,7 @@ router.get('/providers', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // 获取 models.dev 供应商索引（用于向导式添加）
-router.get('/providers/lookup-index', requireAuth, requireAdmin, async (req, res) => {
+router.get('/providers/lookup-index', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const [index, existingResult] = await Promise.all([
       fetchProvidersIndex(),
@@ -2004,7 +2004,7 @@ async function ensureKeyModeColumn() {
 }
 
 // 用当前管理员的 CrewRouter Key 绑定模型解析粘贴内容，并创建系统供应商
-router.post('/providers/quick-add', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_PROVIDER_CREATE, {
+router.post('/providers/quick-add', requireAuth, requireProviderManager, auditMiddleware(ACTIONS.ADMIN_PROVIDER_CREATE, {
   resourceType: 'provider',
   resourceIdFrom: (req) => req.quickAddProviderId || null,
   descriptionFrom: (req) => `快速添加供应商「${req.quickAddProviderName || '-'}」`,
@@ -2038,7 +2038,7 @@ router.post('/providers/quick-add', requireAuth, requireAdmin, auditMiddleware(A
 });
 
 // 未保存的 CPA 连接也可加载账号；凭据只在服务端使用。
-router.post('/providers/cpa/accounts', requireAuth, requireAdmin, async (req, res) => {
+router.post('/providers/cpa/accounts', requireAuth, requireProviderManager, async (req, res) => {
   const { id, cpa_management_url, cpa_management_key } = req.body;
   if (typeof cpa_management_url !== 'string' || !cpa_management_url.trim()
       || (cpa_management_key !== undefined && typeof cpa_management_key !== 'string')) {
@@ -2060,7 +2060,7 @@ router.post('/providers/cpa/accounts', requireAuth, requireAdmin, async (req, re
 });
 
 // 创建/更新供应商
-router.post('/providers', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_PROVIDER_CREATE, {
+router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(ACTIONS.ADMIN_PROVIDER_CREATE, {
   resourceType: 'provider',
   resourceIdFrom: (req, res) => res._logBody?.id,
   descriptionFrom: (req) => `创建供应商「${req.body?.name || '-'}」`,
@@ -2325,7 +2325,7 @@ async function purgeModelsCompletely(db, modelIds) {
 }
 
 // 删除供应商（级联清理该供应商下所有模型及其关联痕迹）
-router.delete('/providers/:id', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_PROVIDER_DELETE, {
+router.delete('/providers/:id', requireAuth, requireProviderManager, auditMiddleware(ACTIONS.ADMIN_PROVIDER_DELETE, {
   resourceType: 'provider',
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `删除供应商 #${req.params.id}`,
@@ -2401,7 +2401,7 @@ async function cleanupOrphanedModels() {
 }
 
 // 手动刷新供应商密钥
-router.post('/providers/:id/refresh-key', requireAuth, requireAdmin, async (req, res) => {
+router.post('/providers/:id/refresh-key', requireAuth, requireProviderManager, async (req, res) => {
   try {
     await ensureKeyModeColumn();
     // 先检查供应商是否存在及模式
@@ -2432,7 +2432,7 @@ router.post('/providers/:id/refresh-key', requireAuth, requireAdmin, async (req,
 });
 
 // 获取所有 script 模式供应商的密钥刷新状态
-router.get('/providers/refresh-status', requireAuth, requireAdmin, async (req, res) => {
+router.get('/providers/refresh-status', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const status = await keyRefresher.getRefreshStatus();
     res.json(status);
@@ -2444,7 +2444,7 @@ router.get('/providers/refresh-status', requireAuth, requireAdmin, async (req, r
 
 // 获取单个供应商详情（含完整 API Keys，仅管理员编辑用）
 // 须放在 /providers/refresh-status 等静态路径之后，避免被 :id 吃掉
-router.get('/providers/:id', requireAuth, requireAdmin, async (req, res) => {
+router.get('/providers/:id', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM providers WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) {
@@ -2481,7 +2481,7 @@ router.get('/providers/:id', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // 切换供应商额度查询开关
-router.post('/providers/:id/toggle-quota', requireAuth, requireAdmin, async (req, res) => {
+router.post('/providers/:id/toggle-quota', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { enabled } = req.body;
     await pool.query('UPDATE providers SET quota_enabled = $1 WHERE id = $2', [!!enabled, req.params.id]);
@@ -2493,7 +2493,7 @@ router.post('/providers/:id/toggle-quota', requireAuth, requireAdmin, async (req
 });
 
 // 切换供应商启用/禁用
-router.post('/providers/:id/toggle-enabled', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_PROVIDER_TOGGLE, {
+router.post('/providers/:id/toggle-enabled', requireAuth, requireProviderManager, auditMiddleware(ACTIONS.ADMIN_PROVIDER_TOGGLE, {
   resourceType: 'provider',
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `切换供应商 #${req.params.id} 启用状态`,
@@ -2510,7 +2510,7 @@ router.post('/providers/:id/toggle-enabled', requireAuth, requireAdmin, auditMid
 });
 
 // 检测供应商连通性
-router.get('/providers/:id/ping', requireAuth, requireAdmin, async (req, res) => {
+router.get('/providers/:id/ping', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const providerResult = await pool.query('SELECT base_url, api_key, api_keys FROM providers WHERE id = $1', [req.params.id]);
     if (providerResult.rows.length === 0) {
@@ -2710,7 +2710,7 @@ async function findStaleModelsForProvider(providerId, upstreamIds) {
 }
 
 // 获取供应商模型列表（支持自定义 models_url 和多路径回退）
-router.get('/providers/:id/fetch-models', requireAuth, requireAdmin, async (req, res) => {
+router.get('/providers/:id/fetch-models', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const providerResult = await pool.query('SELECT * FROM providers WHERE id = $1', [req.params.id]);
     if (providerResult.rows.length === 0) {
@@ -2752,7 +2752,7 @@ router.get('/providers/:id/fetch-models', requireAuth, requireAdmin, async (req,
  * 清理单个供应商的已下架模型（本地有、上游列表无）
  * 必须先成功拉取上游列表，避免网络失败时误删全部模型
  */
-router.post('/providers/:id/cleanup-stale-models', requireAuth, requireAdmin, async (req, res) => {
+router.post('/providers/:id/cleanup-stale-models', requireAuth, requireProviderManager, async (req, res) => {
   const providerId = req.params.id;
   try {
     const providerResult = await pool.query('SELECT * FROM providers WHERE id = $1', [providerId]);
@@ -2817,7 +2817,7 @@ router.post('/providers/:id/cleanup-stale-models', requireAuth, requireAdmin, as
  * 清理所有供应商的已下架模型：逐个拉取上游列表后对比删除
  * 拉取失败的供应商会跳过（不误删）
  */
-router.post('/providers/cleanup-stale-models', requireAuth, requireAdmin, async (req, res) => {
+router.post('/providers/cleanup-stale-models', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const providersResult = await pool.query(
       'SELECT * FROM providers ORDER BY name NULLS LAST, id'
@@ -2880,7 +2880,7 @@ router.post('/providers/cleanup-stale-models', requireAuth, requireAdmin, async 
 });
 
 // 同步供应商模型（一键保存启用/禁用状态）
-router.post('/providers/:id/sync-models', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_PROVIDER_SYNC, {
+router.post('/providers/:id/sync-models', requireAuth, requireProviderManager, auditMiddleware(ACTIONS.ADMIN_PROVIDER_SYNC, {
   resourceType: 'provider',
   resourceIdFrom: (req) => req.params.id,
   descriptionFrom: (req) => `同步供应商 #${req.params.id} 模型`,
@@ -2990,7 +2990,7 @@ router.post('/providers/:id/sync-models', requireAuth, requireAdmin, auditMiddle
 });
 
 // 获取供应商默认额度查询脚本
-router.get('/providers/:id/default-quota-script', requireAuth, requireAdmin, async (req, res) => {
+router.get('/providers/:id/default-quota-script', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const providerResult = await pool.query('SELECT * FROM providers WHERE id = $1', [req.params.id]);
     if (providerResult.rows.length === 0) {
@@ -3006,7 +3006,7 @@ router.get('/providers/:id/default-quota-script', requireAuth, requireAdmin, asy
 });
 
 // 保存供应商额度查询脚本
-router.post('/providers/:id/quota-script', requireAuth, requireAdmin, async (req, res) => {
+router.post('/providers/:id/quota-script', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { script } = req.body;
     if (script !== undefined && typeof script !== 'string') {
@@ -3041,7 +3041,7 @@ router.post('/providers/:id/quota-script', requireAuth, requireAdmin, async (req
 });
 
 // 查询供应商额度（执行脚本）
-router.get('/providers/:id/check-quota', requireAuth, requireAdmin, async (req, res) => {
+router.get('/providers/:id/check-quota', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const providerResult = await pool.query('SELECT * FROM providers WHERE id = $1', [req.params.id]);
     if (providerResult.rows.length === 0) {
@@ -3073,7 +3073,7 @@ router.get('/providers/:id/check-quota', requireAuth, requireAdmin, async (req, 
 // ========== 代理池管理 API ==========
 
 // 更新供应商代理配置
-router.post('/providers/:id/proxy-pool', requireAuth, requireAdmin, async (req, res) => {
+router.post('/providers/:id/proxy-pool', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { proxy_enabled, proxy_pool, proxy_subscription_url, proxy_mode, proxy_url, proxy_use_system } = req.body;
 
@@ -3130,7 +3130,7 @@ router.post('/providers/:id/proxy-pool', requireAuth, requireAdmin, async (req, 
 });
 
 // 添加代理到供应商代理池
-router.post('/providers/:id/proxy-pool/add', requireAuth, requireAdmin, async (req, res) => {
+router.post('/providers/:id/proxy-pool/add', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) {
@@ -3157,7 +3157,7 @@ router.post('/providers/:id/proxy-pool/add', requireAuth, requireAdmin, async (r
 });
 
 // 从供应商代理池删除代理
-router.delete('/providers/:id/proxy-pool/:proxyId', requireAuth, requireAdmin, async (req, res) => {
+router.delete('/providers/:id/proxy-pool/:proxyId', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const providerResult = await pool.query('SELECT proxy_pool FROM providers WHERE id = $1', [req.params.id]);
     if (providerResult.rows.length === 0) {
@@ -3182,7 +3182,7 @@ router.delete('/providers/:id/proxy-pool/:proxyId', requireAuth, requireAdmin, a
 });
 
 // 切换代理启用状态
-router.put('/providers/:id/proxy-pool/:proxyId/toggle', requireAuth, requireAdmin, async (req, res) => {
+router.put('/providers/:id/proxy-pool/:proxyId/toggle', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const providerResult = await pool.query('SELECT proxy_pool FROM providers WHERE id = $1', [req.params.id]);
     if (providerResult.rows.length === 0) {
@@ -3206,7 +3206,7 @@ router.put('/providers/:id/proxy-pool/:proxyId/toggle', requireAuth, requireAdmi
 });
 
 // 从 URL 导入代理列表
-router.post('/fetch-proxies-url', requireAuth, requireAdmin, async (req, res) => {
+router.post('/fetch-proxies-url', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { url } = req.body;
     if (!url) {
@@ -4138,7 +4138,7 @@ async function tryAiRequest(bodyBuilder, { stream = false, excludeProviderId = n
 }
 
 // 流式分析脚本错误
-router.post('/providers/:id/analyze-script-error', requireAuth, requireAdmin, async (req, res) => {
+router.post('/providers/:id/analyze-script-error', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { script, error, modelId } = req.body;
     if (!script || !error) {
@@ -4243,7 +4243,7 @@ ${error}
 });
 
 // AI 修复脚本（流式，实时显示修复过程）
-router.post('/providers/:id/fix-script', requireAuth, requireAdmin, async (req, res) => {
+router.post('/providers/:id/fix-script', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { script, error, analysis, modelId } = req.body;
     if (!script || !error) {
@@ -4599,7 +4599,7 @@ router.get('/fusion-usage/stats', requireAuth, requireAdmin, async (req, res) =>
 });
 
 // 模型调用可用率（平台全局）
-router.get('/models/uptime', requireAuth, requireAdmin, async (req, res) => {
+router.get('/models/uptime', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { getModelUptime, DEFAULT_DAYS } = require('../utils/model-uptime');
     const ids = String(req.query.ids || '')
@@ -4616,7 +4616,7 @@ router.get('/models/uptime', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-router.get('/models/:id/uptime', requireAuth, requireAdmin, async (req, res) => {
+router.get('/models/:id/uptime', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { getModelUptimeDetail, DEFAULT_DAYS } = require('../utils/model-uptime');
     const days = parseInt(req.query.days, 10) || DEFAULT_DAYS;
@@ -4629,7 +4629,7 @@ router.get('/models/:id/uptime', requireAuth, requireAdmin, async (req, res) => 
 });
 
 // 模型测试：测试单个模型
-router.post('/models/:id/test', requireAdmin, async (req, res) => {
+router.post('/models/:id/test', requireProviderManager, async (req, res) => {
   try {
     const { testModel } = require('../utils/model-test');
     const result = await testModel(req.params.id, req.session.user.id);
@@ -4641,7 +4641,7 @@ router.post('/models/:id/test', requireAdmin, async (req, res) => {
 });
 
 // 模型测试：批量测试
-router.post('/models/test-batch', requireAdmin, async (req, res) => {
+router.post('/models/test-batch', requireProviderManager, async (req, res) => {
   try {
     const { testModelsBatch } = require('../utils/model-test');
     const { modelIds } = req.body;
@@ -4659,7 +4659,7 @@ router.post('/models/test-batch', requireAdmin, async (req, res) => {
 // ========== 供应商标签管理 ==========
 
 // 获取所有供应商标签
-router.get('/provider-tags', requireAuth, requireAdmin, async (req, res) => {
+router.get('/provider-tags', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, name, color, sort_order, created_at FROM provider_tags ORDER BY sort_order ASC, id ASC');
     res.json(result.rows);
@@ -4671,7 +4671,7 @@ router.get('/provider-tags', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // 创建供应商标签
-router.post('/provider-tags', requireAuth, requireAdmin, async (req, res) => {
+router.post('/provider-tags', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { name, color } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: '标签名不能为空' });
@@ -4687,7 +4687,7 @@ router.post('/provider-tags', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // 更新供应商标签
-router.put('/provider-tags/:id', requireAuth, requireAdmin, async (req, res) => {
+router.put('/provider-tags/:id', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { name, color } = req.body;
     const result = await pool.query('UPDATE provider_tags SET name = COALESCE($1, name), color = COALESCE($2, color) WHERE id = $3 RETURNING id, name, color, sort_order', [name || null, color || null, req.params.id]);
@@ -4701,7 +4701,7 @@ router.put('/provider-tags/:id', requireAuth, requireAdmin, async (req, res) => 
 });
 
 // 删除供应商标签（级联删除关联）
-router.delete('/provider-tags/:id', requireAuth, requireAdmin, async (req, res) => {
+router.delete('/provider-tags/:id', requireAuth, requireProviderManager, async (req, res) => {
   try {
     await pool.query('DELETE FROM provider_tags WHERE id = $1', [req.params.id]);
     res.json({ success: true });
@@ -4712,7 +4712,7 @@ router.delete('/provider-tags/:id', requireAuth, requireAdmin, async (req, res) 
 });
 
 // 供应商标签排序
-router.put('/provider-tags/reorder', requireAuth, requireAdmin, async (req, res) => {
+router.put('/provider-tags/reorder', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { orderedIds } = req.body;
     if (!Array.isArray(orderedIds)) return res.status(400).json({ error: '参数错误' });
@@ -4733,7 +4733,7 @@ router.put('/provider-tags/reorder', requireAuth, requireAdmin, async (req, res)
 });
 
 // 设置供应商的标签（替换模式：先删后插）
-router.put('/providers/:id/tags', requireAuth, requireAdmin, async (req, res) => {
+router.put('/providers/:id/tags', requireAuth, requireProviderManager, async (req, res) => {
   try {
     const { tagIds } = req.body;
     if (!Array.isArray(tagIds)) return res.status(400).json({ error: '参数错误' });

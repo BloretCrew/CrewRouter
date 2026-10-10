@@ -2416,6 +2416,10 @@
   </blora-dialog>
 
   <style>
+    .embedded-provider-manager .sidebar, .embedded-provider-manager .content-header, .embedded-provider-manager .mobile-topbar { display: none !important; }
+    .embedded-provider-manager .main-content { margin-left: 0 !important; padding: 0 !important; }
+    .embedded-provider-manager #adminProvidersStickyBar { left: 0; }
+    .unified-provider-manager #providerScopeFilter, .unified-provider-manager #adminProvidersStickyScope { display: none !important; }
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
@@ -2450,7 +2454,7 @@
   <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/admin.js?v=paged-prompt-detail-20261008"></script>
+  <script src="/js/admin.js?v=unified-providers-20261010"></script>
   <script src="/js/plugin-runtime.js?v=default-theme-select-20261008"></script>
   <script>
     const initializeSidebarNavigation = () => {

@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
 const { pool } = require('../models/database');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireProviderAccessContext } = require('../middleware/auth');
 const Logger = require('../logger');
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const config = require('../config-loader');
@@ -12,6 +12,8 @@ const { shanghaiDateRange, formatShanghaiDateTime } = require('../utils/timezone
 const { buildUserUsageLogsFilter, MODEL_NAME_SELECT } = require('../utils/usage-logs-filter');
 const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
 const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-edition');
+
+router.use(['/providers', '/my-providers', '/models'], requireProviderAccessContext);
 
 const requireTeamCapability = requireTeamEdition(() => loadPersistedEdition(pool));
 router.use(['/api-keys/:id/members', '/api-keys/:id/members/:userId(\\d+)', '/api-keys/:id/members/me'], requireTeamCapability);
@@ -3613,10 +3615,10 @@ router.get('/providers', requireAuth, async (req, res) => {
     const result = await pool.query(
       `SELECT id, name, format, created_by
          FROM providers
-        WHERE enabled = TRUE
-          AND (created_by IS NULL OR created_by = $1)
+        WHERE ($2::boolean OR enabled = TRUE)
+          AND ($2::boolean OR created_by IS NULL OR created_by = $1)
         ORDER BY name`,
-      [req.session.user.id]
+      [req.session.user.id, req.personalProviderManager]
     );
     res.json(result.rows);
   } catch (error) {
@@ -3631,7 +3633,7 @@ router.get('/providers/lookup-index', requireAuth, async (req, res) => {
     const index = await fetchProvidersIndex();
     const providers = Object.entries(index).map(([id, entry]) => ({
       id: entry.id,
-      name: entry.name,
+      name: entry.name || entry.id || id,
       base_url: entry.api || '',
       doc: entry.doc || ''
     })).sort((a, b) => a.name.localeCompare(b.name));
@@ -3697,7 +3699,7 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
     }
     if (colNames.includes('created_by')) {
       insertCols.push('created_by');
-      insertValues.push(req.session.user.id);
+      insertValues.push(req.personalProviderManager ? null : req.session.user.id);
     }
 
     const placeholders = insertValues.map((_, i) => `$${i + 1}`).join(', ');
@@ -3745,7 +3747,7 @@ router.post('/providers', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_CRE
 
           if (modelColNames.includes('created_by')) {
             modelInsertCols.push('created_by');
-            modelInsertValues.push(req.session.user.id);
+            modelInsertValues.push(req.personalProviderManager ? null : req.session.user.id);
           }
 
           const modelPlaceholders = modelInsertValues.map((_, i) => `$${i + 1}`).join(', ');
@@ -3786,7 +3788,11 @@ router.get('/my-providers', requireAuth, async (req, res) => {
     const hasCreatedBy = colCheck.rows.length > 0;
 
     let result;
-    if (hasCreatedBy) {
+    if (req.personalProviderManager) {
+      result = await pool.query(
+        `SELECT id, name, base_url, format, enabled, created_at FROM providers ORDER BY created_at DESC`
+      );
+    } else if (hasCreatedBy) {
       result = await pool.query(
         `SELECT id, name, base_url, format, enabled, created_at
          FROM providers
@@ -3819,7 +3825,7 @@ router.get('/providers/:id/ping', requireAuth, async (req, res) => {
     // 检查权限：自己的供应商 或 全局已启用的供应商
     const isOwner = provider.created_by === req.session.user.id;
     const isGlobalEnabled = !provider.created_by && provider.enabled;
-    if (!isOwner && !isGlobalEnabled) {
+    if (!req.personalProviderManager && !isOwner && !isGlobalEnabled) {
       return res.status(403).json({ error: '无权检测此供应商' });
     }
 
@@ -3888,10 +3894,12 @@ router.put('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVIDER_
     );
     const hasCreatedBy = colCheck.rows.length > 0;
 
-    if (hasCreatedBy) {
+    if (hasCreatedBy || req.personalProviderManager) {
       const check = await pool.query(
-        'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        [providerId, req.session.user.id]
+        req.personalProviderManager
+          ? 'SELECT id FROM providers WHERE id = $1'
+          : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
+        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权编辑此供应商' });
@@ -3957,10 +3965,12 @@ router.delete('/providers/:id', requireAuth, auditMiddleware(ACTIONS.USER_PROVID
     );
     const hasCreatedBy = colCheck.rows.length > 0;
 
-    if (hasCreatedBy) {
+    if (hasCreatedBy || req.personalProviderManager) {
       const check = await pool.query(
-        'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        [providerId, req.session.user.id]
+        req.personalProviderManager
+          ? 'SELECT id FROM providers WHERE id = $1'
+          : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
+        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权删除此供应商' });
@@ -3998,10 +4008,12 @@ router.post('/providers/:id/refresh-models', requireAuth, async (req, res) => {
     const hasCreatedBy = colCheck.rows.length > 0;
 
     let provider;
-    if (hasCreatedBy) {
+    if (hasCreatedBy || req.personalProviderManager) {
       const result = await pool.query(
-        'SELECT * FROM providers WHERE id = $1 AND created_by = $2',
-        [providerId, req.session.user.id]
+        req.personalProviderManager
+          ? 'SELECT * FROM providers WHERE id = $1'
+          : 'SELECT * FROM providers WHERE id = $1 AND created_by = $2',
+        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
       );
       if (result.rows.length === 0) {
         return res.status(403).json({ error: '您无权操作此供应商' });
@@ -4139,10 +4151,12 @@ router.get('/providers/:id/models', requireAuth, async (req, res) => {
     );
     const hasCreatedBy = colCheck.rows.length > 0;
 
-    if (hasCreatedBy) {
+    if (hasCreatedBy || req.personalProviderManager) {
       const check = await pool.query(
-        'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        [providerId, req.session.user.id]
+        req.personalProviderManager
+          ? 'SELECT id FROM providers WHERE id = $1'
+          : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
+        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权访问此供应商' });
@@ -4179,10 +4193,12 @@ router.delete('/providers/:providerId/models/:modelId', requireAuth, async (req,
     );
     const hasCreatedBy = colCheck.rows.length > 0;
 
-    if (hasCreatedBy) {
+    if (hasCreatedBy || req.personalProviderManager) {
       const check = await pool.query(
-        'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        [providerId, req.session.user.id]
+        req.personalProviderManager
+          ? 'SELECT id FROM providers WHERE id = $1'
+          : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
+        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权操作此供应商' });
@@ -4217,10 +4233,12 @@ router.post('/providers/:providerId/models/batch-delete', requireAuth, async (re
     );
     const hasCreatedBy = colCheck.rows.length > 0;
 
-    if (hasCreatedBy) {
+    if (hasCreatedBy || req.personalProviderManager) {
       const check = await pool.query(
-        'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        [providerId, req.session.user.id]
+        req.personalProviderManager
+          ? 'SELECT id FROM providers WHERE id = $1'
+          : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
+        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权操作此供应商' });
@@ -4263,10 +4281,12 @@ router.post('/providers/:providerId/models/batch-update', requireAuth, async (re
     );
     const hasCreatedBy = colCheck.rows.length > 0;
 
-    if (hasCreatedBy) {
+    if (hasCreatedBy || req.personalProviderManager) {
       const check = await pool.query(
-        'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-        [providerId, req.session.user.id]
+        req.personalProviderManager
+          ? 'SELECT id FROM providers WHERE id = $1'
+          : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
+        req.personalProviderManager ? [providerId] : [providerId, req.session.user.id]
       );
       if (check.rows.length === 0) {
         return res.status(403).json({ error: '您无权操作此供应商' });
@@ -4324,13 +4344,14 @@ async function getUserPersonalTeam(userId) {
 }
 
 // 辅助：检查用户是否拥有某个模型（created_by 匹配且在个人 Team 中）
-async function checkModelOwnership(userId, modelId) {
+async function checkModelOwnership(userId, modelId, personalProviderManager = false) {
   const modelResult = await pool.query(
     'SELECT id, created_by FROM models WHERE id = $1',
     [modelId]
   );
   if (modelResult.rows.length === 0) return { error: '模型不存在', status: 404 };
   const model = modelResult.rows[0];
+  if (personalProviderManager) return { model };
   if (model.created_by !== userId) return { error: '您无权管理此模型', status: 403 };
 
   const personalTeam = await getUserPersonalTeam(userId);
@@ -4354,10 +4375,12 @@ router.post('/models', requireAuth, async (req, res) => {
   }
 
   try {
-    // 个人模型只能绑定当前用户拥有的供应商。
+    // Team 用户只能绑定自己拥有的供应商。
     const providerCheck = await pool.query(
-      'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
-      [provider, req.session.user.id]
+      req.personalProviderManager
+        ? 'SELECT id FROM providers WHERE id = $1'
+        : 'SELECT id FROM providers WHERE id = $1 AND created_by = $2',
+      req.personalProviderManager ? [provider] : [provider, req.session.user.id]
     );
     if (providerCheck.rows.length === 0) {
       return res.status(403).json({ error: '只能使用您自己的供应商创建模型' });
@@ -4365,7 +4388,7 @@ router.post('/models', requireAuth, async (req, res) => {
 
     // 获取用户的个人 Team
     const personalTeam = await getUserPersonalTeam(req.session.user.id);
-    if (!personalTeam) {
+    if (!personalTeam && !req.personalProviderManager) {
       return res.status(404).json({ error: '未找到个人 Team，请联系管理员' });
     }
 
@@ -4397,10 +4420,10 @@ router.post('/models', requireAuth, async (req, res) => {
       model_price || 0, billing_mode || 'ratio',
       model_multiplier || 1.0, completion_multiplier || 1.0,
       upstreamModelId, thinking_model_id || '', non_thinking_model_id || '',
-      req.session.user.id]);
+      req.personalProviderManager ? null : req.session.user.id]);
 
     // 添加到个人 Team
-    await pool.query(
+    if (personalTeam) await pool.query(
       'INSERT INTO team_models (team_id, model_id) VALUES ($1, $2) ON CONFLICT (team_id, model_id) DO NOTHING',
       [personalTeam.id, modelId]
     );
@@ -4423,7 +4446,7 @@ router.put('/models/:id', requireAuth, auditMiddleware(ACTIONS.USER_MODEL_UPDATE
   const { series, description, input_price_per_1k_tokens, output_price_per_1k_tokens, cached_output_price_per_1k_tokens, reference_input_price_per_1k_tokens, reference_output_price_per_1k_tokens, rate_limit_rpm, rate_limit_tpm, icon_url, alias, completion_ratio, image_ratio, audio_ratio, model_price, billing_mode, model_multiplier, completion_multiplier, upstream_model_id, thinking_model_id, non_thinking_model_id, enabled } = req.body;
 
   try {
-    const ownership = await checkModelOwnership(req.session.user.id, modelId);
+    const ownership = await checkModelOwnership(req.session.user.id, modelId, req.personalProviderManager);
     if (ownership.error) {
       return res.status(ownership.status).json({ error: ownership.error });
     }
@@ -4468,7 +4491,7 @@ router.delete('/models/:id', requireAuth, auditMiddleware(ACTIONS.USER_MODEL_DEL
   const modelId = req.params.id;
 
   try {
-    const ownership = await checkModelOwnership(req.session.user.id, modelId);
+    const ownership = await checkModelOwnership(req.session.user.id, modelId, req.personalProviderManager);
     if (ownership.error) {
       return res.status(ownership.status).json({ error: ownership.error });
     }
