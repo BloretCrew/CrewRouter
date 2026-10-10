@@ -6,6 +6,8 @@ const invoke = (channel, ...args) => ipcRenderer.invoke(channel, ...args);
 const openLauncher = () => invoke('desktop:open-launcher');
 
 contextBridge.exposeInMainWorld('crewrouterDesktop', Object.freeze({
+  getClientConfigTarget: (tool) => invoke('desktop:get-client-config-target', tool),
+  writeClientConfig: (request) => invoke('desktop:write-client-config', request),
   getStatus: () => invoke('desktop:get-status'),
   openLauncher,
   openOobe: openLauncher,

@@ -1267,25 +1267,15 @@ router.get('/api-keys/:id/config', requireAuth, async (req, res) => {
 
     const claudeConfig = {
       env: {
-        ANTHROPIC_MODEL: modelName,
-        ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME: modelName,
-        ANTHROPIC_DEFAULT_HAIKU_MODEL: modelName,
         ANTHROPIC_BASE_URL: baseUrl,
-        ANTHROPIC_DEFAULT_SONNET_MODEL: modelName,
-        ANTHROPIC_DEFAULT_SONNET_MODEL_NAME: modelName,
-        ANTHROPIC_DEFAULT_OPUS_MODEL: modelName,
-        ANTHROPIC_DEFAULT_OPUS_MODEL_NAME: modelName,
-        ANTHROPIC_DEFAULT_FABLE_MODEL: modelName,
-        ANTHROPIC_DEFAULT_FABLE_MODEL_NAME: modelName,
         ANTHROPIC_AUTH_TOKEN: key_value,
-        DISABLE_INSTALLATION_CHECKS: '1',
-        CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
-        CLAUDE_CODE_ATTRIBUTION_HEADER: '0'
+        ANTHROPIC_MODEL: modelName,
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: modelName,
+        ANTHROPIC_DEFAULT_SONNET_MODEL: modelName,
+        ANTHROPIC_DEFAULT_OPUS_MODEL: modelName
       },
-      attribution: { commit: '', pr: '' },
-      model: 'opus[1m]',
-      effortLevel: 'xhigh',
-      autoUpdatesChannel: 'latest'
+      model: modelName,
+      effortLevel: 'high'
     };
 
     res.json(claudeConfig);

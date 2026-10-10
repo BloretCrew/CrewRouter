@@ -45,6 +45,10 @@
       "package.json",
       "README.md",
       "node_modules/@bloret-crew/blora-design/**/*",
+      "node_modules/@iarna/toml/**/*",
+      "node_modules/json5/**/*",
+      "node_modules/jsonc-parser/**/*",
+      "node_modules/yaml/**/*",
       "node_modules/embedded-postgres/**/*",
       "node_modules/@embedded-postgres/**/*"
     ],
@@ -100,6 +104,10 @@
   },
   "dependencies": {
     "@bloret-crew/blora-design": "2.1.0",
-    "embedded-postgres": "18.4.0-beta.17"
+    "@iarna/toml": "^2.2.5",
+    "embedded-postgres": "18.4.0-beta.17",
+    "json5": "^2.2.3",
+    "jsonc-parser": "^3.3.1",
+    "yaml": "^2.9.1"
   }
 }

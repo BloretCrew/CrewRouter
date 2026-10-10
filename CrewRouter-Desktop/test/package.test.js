@@ -31,3 +31,13 @@ test('each desktop platform references an existing packaging icon', () => {
     assert.equal(fs.existsSync(path.join(root, icon)), true, `${platform} icon is missing: ${icon}`);
   }
 });
+
+
+test('client configuration parsers are production dependencies included in packaging', () => {
+  for (const name of ['@iarna/toml', 'json5', 'jsonc-parser', 'yaml']) {
+    assert.ok(manifest.dependencies[name]);
+    assert.notEqual(lock.packages[`node_modules/${name}`].dev, true);
+    assert.ok(manifest.build.files.includes(`node_modules/${name}/**/*`));
+    assert.ok(require(name));
+  }
+});

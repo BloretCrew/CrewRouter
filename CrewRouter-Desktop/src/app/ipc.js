@@ -7,6 +7,8 @@ const TRUST = Object.freeze({ LAUNCHER: 'launcher', LOCAL_CONSOLE: 'localConsole
 
 // 每个 channel 允许的调用来源；未登记的 channel 一律拒绝。
 const ALLOW = Object.freeze({
+  'desktop:get-client-config-target': ['localConsole', 'remoteConsole'],
+  'desktop:write-client-config': ['localConsole', 'remoteConsole'],
   'desktop:get-status': ['launcher', 'localConsole', 'remoteConsole'],
   'desktop:open-launcher': ['launcher', 'localConsole', 'remoteConsole'],
   'desktop:start-local': ['launcher'],
@@ -43,7 +45,7 @@ function classifySender(event, { mainWindow, rendererEntry, state }) {
   const contents = mainWindow && !(typeof mainWindow.isDestroyed === 'function' && mainWindow.isDestroyed()) ? mainWindow.webContents : null;
   if (!contents || !event || event.sender !== contents) return null;
   const frame = event.senderFrame;
-  if (!frame || frame.isMainFrame === false) return null;
+  if (!frame || frame.isMainFrame === false || (contents.mainFrame && frame !== contents.mainFrame)) return null;
   let url;
   try { url = new URL(frame.url || ''); } catch { return null; }
   if (url.protocol === 'file:') {
@@ -70,6 +72,11 @@ function registerIpc({ ipcMain, ctx, actions }) {
   const state = ctx.state;
   const snapshot = (trust) => state.snapshot(audienceOf(trust));
 
+  guard('desktop:get-client-config-target', (_meta, tool) => ctx.clientConfig.getClientConfigTarget(tool));
+  guard('desktop:write-client-config', ({ event, trust }, request) => {
+    const originalUrl = event.senderFrame.url;
+    return ctx.clientConfig.writeClientConfig(request, { isTrusted: () => event.senderFrame.url === originalUrl && classifySender(event, ctx) === trust });
+  });
   guard('desktop:get-status', ({ trust }) => snapshot(trust));
   guard('desktop:open-launcher', async ({ trust }) => { await actions.showLauncher(); return snapshot(trust); });
   guard('desktop:start-local', async (_meta, displayName) => actions.startLocal({ displayName: typeof displayName === 'string' ? displayName : undefined }));

@@ -44,10 +44,10 @@ test('connected consoles are classified by origin and runtime', () => {
 
 test('allow matrix exposes Desktop settings to every Desktop-opened console', () => {
   for (const [channel, audiences] of Object.entries(ALLOW)) {
-    assert.ok(audiences.includes('launcher'), `${channel} 必须允许启动页`);
+    assert.equal(audiences.includes('launcher'), !channel.includes('client-config'), `${channel} 来源限制`);
   }
   const remoteOnly = Object.entries(ALLOW).filter(([, audiences]) => audiences.includes('remoteConsole')).map(([channel]) => channel).sort();
-  assert.deepEqual(remoteOnly, ['desktop:delete-profile', 'desktop:get-diagnostics', 'desktop:get-settings', 'desktop:get-status', 'desktop:list-profiles', 'desktop:open-external', 'desktop:open-launcher', 'desktop:open-logs', 'desktop:quit', 'desktop:rename-profile', 'desktop:restart-app', 'desktop:restart-local', 'desktop:save-settings', 'desktop:stop-local', 'desktop:switch-profile']);
+  assert.deepEqual(remoteOnly, ['desktop:delete-profile', 'desktop:get-client-config-target', 'desktop:get-diagnostics', 'desktop:get-settings', 'desktop:get-status', 'desktop:list-profiles', 'desktop:open-external', 'desktop:open-launcher', 'desktop:open-logs', 'desktop:quit', 'desktop:rename-profile', 'desktop:restart-app', 'desktop:restart-local', 'desktop:save-settings', 'desktop:stop-local', 'desktop:switch-profile', 'desktop:write-client-config']);
 });
 
 test('registered handlers reject untrusted senders before touching actions', async () => {
@@ -73,4 +73,28 @@ test('registered handlers reject untrusted senders before touching actions', asy
   assert.deepEqual(calls, ['launcher']);
   await handlers.get('desktop:quit')(remote);
   assert.equal(quitCalls, 1);
+});
+
+test('client configuration IPC permits only the connected main frame and rechecks trust after dialogs', async () => {
+  const { ctx, webContents, state } = makeCtx();
+  const handlers = new Map();
+  const calls = [];
+  ctx.clientConfig = {
+    getClientConfigTarget: (tool) => ({ path: tool, supported: true }),
+    writeClientConfig: async (request, options) => { calls.push(request); state.set({ target: 'https://other.example' }); return options.isTrusted(); },
+  };
+  registerIpc({ ipcMain: { handle: (channel, fn) => handlers.set(channel, fn) }, ctx, actions: {} });
+  const target = handlers.get('desktop:get-client-config-target');
+  const write = handlers.get('desktop:write-client-config');
+  await assert.rejects(target(frame(webContents, launcherUrl), 'claude'), /不可信/);
+  state.set({ target: 'https://team.example', instance: { runtime: 'server' } });
+  for (const event of [frame({}, 'https://team.example'), frame(webContents, 'https://evil.example'), frame(webContents, 'https://team.example', false)]) {
+    await assert.rejects(write(event, {}), /不可信/);
+  }
+  assert.equal(calls.length, 0);
+  const event = frame(webContents, 'https://team.example/console');
+  webContents.mainFrame = event.senderFrame;
+  await assert.rejects(target(frame(webContents, 'https://team.example/console'), 'claude'), /不可信/);
+  assert.deepEqual(await target(event, 'claude'), { path: 'claude', supported: true });
+  assert.equal(await write(event, { tool: 'claude' }), false);
 });

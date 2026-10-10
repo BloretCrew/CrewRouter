@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/css/toggles-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/upstream-blora.css?v=provider-wizard-20261005">
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=card-controls-20261005">
-  <link rel="stylesheet" href="/css/config-dialog-blora.css?v=panel-icons-20261005">
+  <link rel="stylesheet" href="/css/config-dialog-blora.css?v=desktop-write-20261010">
   <link rel="stylesheet" href="/css/stats-blora.css?v=overview-spacing-20261005">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=checkbox-layout-20261008">
   <link rel="stylesheet" href="/css/project-work.css?v=restore-0930-20261003">
@@ -2398,7 +2398,7 @@ data: [DONE]</code></pre>
           <button type="button" class="config-tool-option" onclick="app.generateToolConfig('hermes')">
             <img src="https://img.bloret.net/img/1783300640677/085bcecf994f63347ce29dcdadffdb9f" alt="Hermes" class="config-tool-option-icon">
             <span class="config-tool-option-label">Hermes</span>
-            <span class="config-tool-option-path">OPENAI_BASE_URL</span>
+            <span class="config-tool-option-path">~/.hermes/config.yaml</span>
           </button>
           <button type="button" class="config-tool-option" onclick="app.generateToolConfig('openclaw')">
             <img src="https://img.bloret.net/img/1783300468566/b085d548a9a6683cc47d4dc104e93d7a" alt="OpenClaw" class="config-tool-option-icon">
@@ -2468,11 +2468,23 @@ data: [DONE]</code></pre>
         <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
       </div>
       <div class="modal-body">
-        <p id="configOutputDesc" style="color:var(--muted-foreground);margin-bottom:12px;font-size:13px;"></p>
-        <textarea id="configOutputContent" class="blora-input input" rows="28" readonly style="font-family:monospace;font-size:12px;resize:vertical;width:100%;white-space:pre;"></textarea>
+        <section id="desktopConfigWrite" hidden>
+          <p data-i18n="将配置写入当前电脑，保留其他设置并自动备份已有文件。">将配置写入当前电脑，保留其他设置并自动备份已有文件。</p>
+          <code id="desktopConfigPath" class="desktop-config-path"></code>
+          <p id="desktopConfigNotice" class="desktop-config-notice"></p>
+          <label id="desktopConfigProjectOption" hidden><input id="desktopConfigProject" type="checkbox"> <span data-i18n="选择项目目录写入 OpenCode 配置">选择项目目录写入 OpenCode 配置</span></label>
+        </section>
+        <output id="desktopConfigStatus" class="desktop-config-status" role="status" aria-live="polite"></output>
+        <details id="configManualDetails" open>
+          <summary id="configManualSummary" hidden data-i18n="备用选项：手动配置">备用选项：手动配置</summary>
+          <p id="configOutputDesc" style="color:var(--muted-foreground);margin-bottom:12px;font-size:13px;"></p>
+          <textarea id="configOutputContent" class="blora-input input" rows="18" readonly style="font-family:monospace;font-size:12px;resize:vertical;width:100%;white-space:pre;"></textarea>
+          <button id="configManualCopy" type="button" class="blora-button" onclick="app.copyConfigOutput()" data-variant="outline" hidden><span data-i18n="复制配置">复制配置</span></button>
+        </details>
       </div>
       <div class="modal-footer">
-        <button type="button" class="blora-button" onclick="app.copyConfigOutput()" data-variant="primary"><span data-i18n="复制配置">复制配置</span></button>
+        <button id="desktopConfigWriteButton" type="button" class="blora-button" onclick="app.writeDesktopClientConfig()" data-variant="primary" hidden><span data-i18n="写入配置">写入配置</span></button>
+        <button id="configCopyButton" type="button" class="blora-button" onclick="app.copyConfigOutput()" data-variant="primary"><span data-i18n="复制配置">复制配置</span></button>
       </div>
     </div>
   </blora-dialog>
@@ -2675,7 +2687,8 @@ data: [DONE]</code></pre>
   <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/app.js?v=usage-table-widths-20261008"></script>
+  <script src="/js/client-config.js?v=desktop-write-20261010"></script>
+  <script src="/js/app.js?v=desktop-write-20261010"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

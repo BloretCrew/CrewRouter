@@ -159,3 +159,14 @@
   flex: 0 0 2rem;
   object-fit: contain;
 }
+
+#configOutputModal [hidden] { display: none !important; }
+#desktopConfigWrite { display: grid; gap: var(--blora-space-3); }
+#desktopConfigWrite p { margin: 0; }
+.desktop-config-path { display: block; padding: var(--blora-space-3); border-radius: var(--blora-radius-md); background: var(--blora-color-surface-raised); overflow-wrap: anywhere; }
+.desktop-config-notice { color: var(--blora-color-text-subtle); font-size: var(--blora-text-sm); }
+.desktop-config-status { white-space: pre-wrap; overflow-wrap: anywhere; }
+.desktop-config-status:empty { display: none; }
+#configManualDetails summary { cursor: pointer; color: var(--blora-color-text-primary); padding-block: var(--blora-space-3); }
+#configManualDetails[open] #configOutputDesc { margin-bottom: var(--blora-space-3) !important; }
+#configManualCopy { margin-top: var(--blora-space-3); }

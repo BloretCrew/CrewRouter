@@ -7507,6 +7507,7 @@ class ConsoleApp {
     const keyId = this._configKey?.id;
     if (!keyId) return;
     this.closeModals();
+    const configRequest = this._configRequestId = (this._configRequestId || 0) + 1;
 
     try {
       const res = await fetch(`/api/user/api-keys/${keyId}/config`);
@@ -7516,116 +7517,73 @@ class ConsoleApp {
         return;
       }
       const data = await res.json();
+      if (configRequest !== this._configRequestId) return;
       const baseUrl = data.env.ANTHROPIC_BASE_URL;
       const apiKey = data.env.ANTHROPIC_AUTH_TOKEN;
 
-      let title, desc, content;
-
-      if (tool === 'claude') {
-        title = t('Claude Code 配置');
-        desc = t('将以下 JSON 写入') + ' <code>~/.claude/settings.json</code> ' + t('即可使用 CrewRouter 作为 API 代理');
-        content = JSON.stringify(data, null, 2);
-      } else if (tool === 'codex') {
-        title = t('Codex 配置');
-        desc = t('将以下内容写入') + ' <code>~/.codex/config.toml</code>' + t('，然后重启 Codex CLI');
-        content = `# ~/.codex/config.toml
-model = "claude-fable-5"
-model_provider = "custom"
-
-[model_providers.custom]
-name = "CrewRouter"
-base_url = "${baseUrl}/v1"
-api_key = "${apiKey}"
-wire_api = "responses"
-requires_openai_auth = false`;
-      } else if (tool === 'opencode') {
-        title = t('OpenCode 配置');
-        desc = t('将以下 JSON 写入项目根目录的') + ' <code>opencode.json</code> ' + t('中');
-        const ocConfig = {
-          npm: "@ai-sdk/openai-compatible",
-          options: {
-            baseURL: baseUrl + '/v1',
-            apiKey: apiKey
-          },
-          models: {
-            "claude-fable-5": {
-              name: "Claude Fable 5"
-            }
-          }
-        };
-        content = JSON.stringify(ocConfig, null, 2);
-      } else if (tool === 'grok') {
-        title = t('Grok Build 配置');
-        desc = t('将以下内容写入') + ' <code>~/.grok/config.toml</code>' + t('，然后重启 Grok Build');
-        content = `[cli]
-installer = "internal"
-
-[marketplace]
-official_marketplace_auto_installed = true
-
-[[marketplace.sources]]
-name = "xAI Official"
-git = "https://github.com/xai-org/plugin-marketplace.git"
-
-[ui]
-max_thoughts_width = 120
-fork_secondary_model = "grok-build"
-yolo = false
-compact_mode = false
-permission_mode = "always-approve"
-
-[model.bloret-router]
-model = "claude-fable-5"
-base_url = "${baseUrl}/v1"
-name = "CrewRouter"
-api_key = "${apiKey}"
-context_window = 200000
-description = "CrewRouter"
-
-[models]
-default = "claude-fable-5"
-default_reasoning_effort = "high"`;
-      } else if (tool === 'deepseek') {
-        title = t('DeepSeek Harness 配置');
-        desc = t('将以下内容写入') + ' <code>~/.dsh/settings.yaml</code>' + t('，并设置环境变量') + '<code>DEEPSEEK_API_KEY</code>' + t('，然后重启') + '<code>dsh</code>';
-        content = `# ~/.dsh/settings.yaml
-# DeepSeek Harness (dsh) → CrewRouter
-# 适配器请求 \${baseURL}/chat/completions，因此 baseURL 需指向 /v1
-llm-deepseek:
-  apiKeyEnv: DEEPSEEK_API_KEY
-  baseURL: ${baseUrl.replace(/\/$/, '')}/v1
-
-# 同时导出密钥（或在 dsh 模型设置页写入同一凭证）：
-# export DEEPSEEK_API_KEY="${apiKey}"
-# export DEEPSEEK_BASE_URL="${baseUrl.replace(/\/$/, '')}/v1"
-`;
-      } else if (tool === 'qwen_code') {
-        title = t('Qwen Code 配置');
-        desc = t('将以下 JSON 写入') + ' <code>~/.qwen/settings.json</code>' + t('（或对应 OpenAI 兼容配置），然后重启 Qwen Code');
-        content = JSON.stringify({
-          general: { model: 'claude-fable-5' },
-          providers: { crewrouter: { baseUrl: baseUrl.replace(/\/$/, '') + '/v1', apiKey, model: 'claude-fable-5' } }
-        }, null, 2);
-      } else if (tool === 'hermes') {
-        title = t('Hermes 配置');
-        desc = '设置环境变量 <code>OPENAI_BASE_URL / OPENAI_API_KEY</code>' + t('，或写入') + '<code>~/.hermes/config.json</code> 的 OpenAI 兼容段';
-        content = `${t('# Hermes (OpenAI 兼容) → CrewRouter\\nOPENAI_BASE_URL=')}${baseUrl.replace(/\/$/, '')}/v1\nOPENAI_API_KEY=${apiKey}${t('\\n# model: claude-fable-5\\n# 也可写入 ~/.hermes/config.json:\\n# { \\"providers\\": { \\"crewrouter\\": { \\"baseUrl\\": \\"')}${baseUrl.replace(/\/$/, '')}/v1\", \"apiKey\": \"${apiKey}\" } } }`;
-      } else if (tool === 'openclaw') {
-        title = t('OpenClaw 配置');
-        desc = t('将以下 JSON 合并到') + ' <code>~/.openclaw/openclaw.json</code> ' + t('的 providers 段');
-        content = JSON.stringify({ providers: { crewrouter: { baseUrl: baseUrl.replace(/\/$/, '') + '/v1', apiKey, model: 'claude-fable-5' } } }, null, 2);
+      const generated = window.CrewRouterClientConfig.generate(tool, { baseUrl, apiKey, claudeConfig: data });
+      const bridge = window.crewrouterDesktop;
+      let target = null;
+      if (generated.supported && bridge?.getClientConfigTarget && bridge?.writeClientConfig) {
+        try { target = await bridge.getClientConfigTarget(tool); } catch { /* 旧版或受限 Desktop 保留手动配置。 */ }
       }
-
-      document.getElementById('configOutputTitle').textContent = title;
-      if (!title || !content) {
-        alert(t('未知工具类型: ') + tool);
-        return;
-      }
-      setHTML(document.getElementById('configOutputDesc'), desc);
-      document.getElementById('configOutputContent').value = content;
+      if (configRequest !== this._configRequestId) return;
+      const desktop = !!target?.supported;
+      this._desktopClientConfig = desktop ? { tool, baseUrl, apiKey, model: 'claude-fable-5' } : null;
+      document.getElementById('configOutputTitle').textContent = desktop ? t('写入') + ' ' + generated.title + '？' : generated.title;
+      document.getElementById('configOutputDesc').textContent = t('合并配置到') + ' ' + generated.path + '。' + t('保存后重启客户端。配置内容包含密钥，请妥善保管。');
+      document.getElementById('configOutputContent').value = generated.content;
+      document.getElementById('desktopConfigWrite').hidden = !desktop;
+      document.getElementById('desktopConfigPath').textContent = target?.path || '';
+      document.getElementById('desktopConfigNotice').textContent = desktop
+        ? t('将更新 CrewRouter 连接和默认模型；不会修改工具权限。写入前将在系统对话框中确认。')
+        : '';
+      document.getElementById('desktopConfigProjectOption').hidden = !desktop || tool !== 'opencode';
+      document.getElementById('desktopConfigProject').checked = false;
+      document.getElementById('configManualDetails').open = !desktop;
+      document.getElementById('configManualSummary').hidden = !desktop;
+      document.getElementById('configManualCopy').hidden = !desktop;
+      document.getElementById('configCopyButton').hidden = desktop;
+      document.getElementById('desktopConfigWriteButton').hidden = !desktop;
+      document.getElementById('desktopConfigWriteButton').disabled = false;
+      document.getElementById('desktopConfigStatus').textContent = generated.reason ? t(generated.reason) : '';
       this.showModal('configOutputModal');
+      const modal = document.getElementById('configOutputModal');
+      if (!modal._clientConfigCleanup) {
+        modal._clientConfigCleanup = true;
+        modal.addEventListener('blora-before-close', () => {
+          this._configRequestId = (this._configRequestId || 0) + 1;
+          this._desktopClientConfig = null;
+        });
+        modal.addEventListener('blora-close', () => {
+          if (modal.hasAttribute('open')) return;
+          this._desktopClientConfig = null;
+          document.getElementById('configOutputContent').value = '';
+        });
+      }
     } catch (e) {
-      alert(t('生成配置失败: ') + e.message);
+      if (configRequest === this._configRequestId) alert(t('生成配置失败'));
+    }
+  }
+
+  async writeDesktopClientConfig() {
+    const config = this._desktopClientConfig;
+    const button = document.getElementById('desktopConfigWriteButton');
+    if (!config || this._desktopConfigBusy) return;
+    this._desktopConfigBusy = true;
+    button.disabled = true;
+    const status = document.getElementById('desktopConfigStatus');
+    status.textContent = t('请在系统对话框中确认写入。');
+    try {
+      const result = await window.crewrouterDesktop.writeClientConfig({ ...config, ...(config.tool === 'opencode' ? { project: document.getElementById('desktopConfigProject').checked } : {}) });
+      if (this._desktopClientConfig !== config) return;
+      status.textContent = result.canceled ? t('已取消写入，原配置保持不变。')
+        : t('配置已写入：') + result.path + (result.backupPath ? '\n' + t('原配置备份：') + result.backupPath : '');
+    } catch {
+      if (this._desktopClientConfig === config) status.textContent = t('写入失败。请检查文件权限及配置格式，或使用下方手动配置。');
+    } finally {
+      this._desktopConfigBusy = false;
+      button.disabled = false;
     }
   }
 
@@ -7951,6 +7909,8 @@ ${extractorBody}
   }
 
   closeModals() {
+    this._configRequestId = (this._configRequestId || 0) + 1;
+    this._desktopClientConfig = null;
     document.querySelectorAll('blora-dialog').forEach(modal => {
       if (typeof modal.close === 'function') modal.close('api');
       else modal.removeAttribute('open');

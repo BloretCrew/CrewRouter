@@ -6,6 +6,7 @@ const http = require('node:http');
 const https = require('node:https');
 const { AppState } = require('./state');
 const { registerIpc } = require('./ipc');
+const { createClientConfigService } = require('./client-config');
 const { createMainWindow } = require('./window');
 const { createOfficialLogin } = require('./official-login');
 const { applyMenu } = require('./menu');
@@ -361,6 +362,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
     applyPreferences(ctx.connection.store.getSettings());
     const activeProfile = ctx.connection.activeProfile();
     if (activeProfile?.mode === 'local' && activeProfile.displayName) state.set({ localProfile: activeProfile });
+    ctx.clientConfig = createClientConfigService({ env, dialog: electron.dialog, getWindow: () => ctx.mainWindow });
     registerIpc({ ipcMain: electron.ipcMain, ctx, actions: { showLauncher, startLocal, connectCustom, openOfficialLogin, reopenOfficialLogin, cancelPending, retry, openSafeExternal, switchProfile, deleteProfile, saveSettings, restartLocal, stopLocal, openLogs, diagnostics } });
     try { electron.app.setAsDefaultProtocolClient?.('crewrouter'); } catch (error) { logger.warn(`[desktop] protocol registration failed: ${error.message}`); }
     await createWindow();
