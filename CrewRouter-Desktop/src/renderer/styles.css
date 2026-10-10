@@ -11,9 +11,9 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 .launcher__header { min-height: 2.75rem; }
 .launcher__header-tools { display: inline-flex; align-items: center; gap: var(--blora-space-3); }
 .desktop-brand { display: inline-flex; align-items: center; gap: var(--blora-space-3); text-decoration: none; }
+.desktop-brand__icon { border-radius: var(--blora-radius-sm); }
 .desktop-brand__icon img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.desktop-brand strong { display: block; }
-.desktop-brand small { display: block; margin-top: 2px; }
+.desktop-brand strong { display: block; white-space: nowrap; }
 .launcher [data-icon] { display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .launcher [data-icon] svg { display: block; width: 1em; height: 1em; }
 .button-icon { display: inline-flex; align-items: center; }

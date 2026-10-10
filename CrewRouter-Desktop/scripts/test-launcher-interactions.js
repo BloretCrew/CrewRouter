@@ -69,6 +69,15 @@ if (process.type === 'renderer') {
         win.setSize(width, 700); await pause();
         assert.equal(await execute('document.documentElement.scrollWidth <= document.documentElement.clientWidth'), true, `连接列表溢出：${width}`);
         await checkIcons();
+        assert.equal(await execute(`(() => {
+          const brand = document.querySelector('.desktop-brand');
+          const title = brand.querySelector('strong');
+          const icon = brand.querySelector('.desktop-brand__icon');
+          const radius = parseFloat(getComputedStyle(icon).borderTopLeftRadius);
+          const box = icon.getBoundingClientRect();
+          const line = new Range(); line.selectNodeContents(title);
+          return title.textContent === 'CrewRouter Desktop' && !brand.querySelector('small') && line.getClientRects().length === 1 && radius > 0 && radius < box.width / 2;
+        })()`), true, `品牌区应为圆角矩形图标和单行名称：${width}`);
         await execute("document.querySelector('#profile-list blora-dropdown button').scrollIntoView({block:'center'}); document.querySelector('#profile-list blora-dropdown button').click(); void 0"); await pause();
         assert.equal(await execute(`(() => {
           const menu = document.querySelector('#profile-list .blora-dropdown__menu');
