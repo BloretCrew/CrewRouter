@@ -317,3 +317,27 @@
 .blora-api-keys-page .api-key-title { align-items: flex-start; }
 .blora-api-keys-page .api-key-name-row { align-items: center; }
 .blora-api-keys-page .key-tag-chip-sm { border-radius: var(--blora-radius-full); }
+
+/* Desktop 默认窗口保留双列，把名称、状态和标签分行，避免挤压或跨卡片溢出。 */
+@media (min-width: 641px) and (max-width: 1150px) {
+  .blora-api-keys-page > .content-section { padding: var(--blora-space-4); }
+  .blora-api-keys-page .api-key-title { gap: var(--blora-space-2); flex-wrap: wrap; }
+  .blora-api-keys-page .api-key-title-text { flex-basis: calc(100% - 5rem); }
+  .blora-api-keys-page .api-key-name-row { flex-wrap: wrap; }
+  .blora-api-keys-page .api-key-name { flex: 1 0 100%; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .blora-api-keys-page .api-key-chips { flex-wrap: wrap; flex-shrink: 1; }
+  .blora-api-keys-page .api-key-meta-divider { display: none; }
+  .blora-api-keys-page .api-key-inline-tags { flex-basis: 100%; }
+  .blora-api-keys-page .api-key-subline { flex-wrap: wrap; }
+  .blora-api-keys-page .api-key-footer { flex-wrap: wrap; gap: var(--blora-space-2); }
+  .blora-api-keys-page .api-key-route-pill-wrap { width: 100%; }
+  .blora-api-keys-page .api-key-actions { width: 100%; justify-content: flex-end; }
+  .blora-api-keys-page .api-key-prefix { flex-wrap: wrap; gap: var(--blora-space-2); }
+  .blora-api-keys-page .api-key-value { overflow-wrap: anywhere; min-width: 0; }
+  #apiKeysStickyBar { padding: var(--blora-space-2) var(--blora-space-4); background: var(--blora-color-surface-default); backdrop-filter: none; }
+  #apiKeysStickyBar .page-sticky-hint { display: none; }
+  #apiKeysStickyBar .page-sticky-tag-row { margin-top: var(--blora-space-1); padding-top: var(--blora-space-1); }
+}
+
+.blora-api-keys-page .api-key-name-row { flex-wrap: wrap; }
+.blora-api-keys-page .api-key-chips { flex-wrap: wrap; flex-shrink: 1; }
