@@ -45,7 +45,7 @@
   <link rel="stylesheet" href="/css/audit-logs-blora.css?v=controls-detail-20261005">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/settings-blora.css?v=notifications-20261005">
-  <link rel="stylesheet" href="/css/sessions-blora.css?v=attachments-20261005">
+  <link rel="stylesheet" href="/css/sessions-blora.css?v=summary-dialog-20261010">
   <link rel="stylesheet" href="/css/blora-agent.css?v=options-layout-20261005">
   <link rel="stylesheet" href="/css/prompts-blora.css?v=filter-labels-20261008">
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
@@ -1981,12 +1981,11 @@ data: [DONE]</code></pre>
     <div class="modal-content" style="max-width:640px;">
       <div class="modal-header">
         <div>
-          <h3 id="sessionSummaryTitle"><span data-i18n="会话总结">会话总结</span> <code id="sessionSummaryKey"></code></h3>
+          <h3 id="sessionSummaryTitle"><span data-i18n="会话总结">会话总结</span></h3>
+          <code id="sessionSummaryKey"></code>
           <div class="session-summary-modal-meta"><span id="sessionSummaryTime"></span></div>
         </div>
         <div class="session-summary-modal-actions">
-          <button type="button" class="blora-button" id="sessionSummaryRegenTopBtn" onclick="app.regenerateSessionSummary()" data-variant="secondary" data-size="sm"><span data-i18n="重新生成">重新生成</span></button>
-          <button type="button" class="blora-button" onclick="app.copySessionSummary()" data-variant="secondary" data-size="sm"><span data-i18n="复制">复制</span></button>
           <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
         </div>
       </div>

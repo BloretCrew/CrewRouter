@@ -565,3 +565,16 @@
 .blora-sessions-page .timeline-md-body p { margin: 0 0 .75rem; }
 .blora-sessions-page .timeline-md-body p:last-child { margin-bottom: 0; }
 .blora-sessions-page .session-image-attachment img { display: block; max-width: 100%; max-height: 18rem; object-fit: contain; margin-top: .5rem; }
+
+/* The legacy adapter removes its panel width cap; constrain the public part. */
+#sessionSummaryModal::part(panel) {
+  width: min(40rem, calc(100vw - 2rem));
+  max-width: min(40rem, calc(100vw - 2rem)) !important;
+  max-height: calc(100dvh - 2rem);
+}
+#sessionSummaryModal .modal-header > div:first-child { min-width: 0; }
+#sessionSummaryKey { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+#sessionSummaryKey:empty { display: none; }
+#sessionSummaryModal .summary-modal-body { max-height: none; overflow: visible; overflow-wrap: anywhere; }
+#sessionSummaryModal .modal-body { min-height: 0; overflow-y: auto; }
+#sessionSummaryModal .modal-footer { flex-wrap: wrap; gap: var(--blora-space-2); }
