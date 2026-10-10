@@ -59,6 +59,16 @@ if (process.type === 'renderer') {
         win.setSize(width, 700); await pause();
         assert.equal(await execute('document.documentElement.scrollWidth <= document.documentElement.clientWidth'), true, `连接列表溢出：${width}`);
         await checkIcons();
+        await execute("document.querySelector('#profile-list blora-dropdown button').scrollIntoView({block:'center'}); document.querySelector('#profile-list blora-dropdown button').click(); void 0"); await pause();
+        assert.equal(await execute(`(() => {
+          const menu = document.querySelector('#profile-list .blora-dropdown__menu');
+          const box = menu.getBoundingClientRect();
+          return [0.25, 0.75].every((part) => {
+            const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height * part);
+            return hit && menu.contains(hit);
+          });
+        })()`), true, `菜单应覆盖下方内容并可点击：${width}`);
+        await execute("document.querySelector('#profile-list blora-dropdown button').click(); void 0"); await pause();
         await click('choose-remote');
         await checkIcons();
         await escape();
