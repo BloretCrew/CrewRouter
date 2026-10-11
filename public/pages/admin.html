@@ -320,10 +320,10 @@
                   <img src="https://img.bloret.net/SF/magnifyingglass?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="magnifyingglass">
                   <input type="text" id="teamModelListSearchInput" class="model-search-input" placeholder="搜索模型名称、上游 ID、系列或供应商..." data-i18n-placeholder="搜索模型名称、上游 ID、系列或供应商..." oninput="adminApp.onAdminTeamModelFilterInput('search', this.value, 'main')">
                 </div>
-                <blora-select id="teamModelProviderFilter" class="select" onchange="adminApp.onAdminTeamModelFilterInput('provider', this.value, 'main')">
+                <blora-select id="teamModelProviderFilter" onchange="adminApp.onAdminTeamModelFilterInput('provider', this.value, 'main')">
                   <blora-option value=""><span data-i18n="全部供应商">全部供应商</span></blora-option>
                 </blora-select>
-                <blora-select id="teamModelStatusFilter" class="select" onchange="adminApp.onAdminTeamModelFilterInput('status', this.value, 'main')">
+                <blora-select id="teamModelStatusFilter" onchange="adminApp.onAdminTeamModelFilterInput('status', this.value, 'main')">
                   <blora-option value=""><span data-i18n="全部状态">全部状态</span></blora-option>
                   <blora-option value="enabled"><span data-i18n="本 Team 已启用">本 Team 已启用</span></blora-option>
                   <blora-option value="disabled"><span data-i18n="本 Team 未启用">本 Team 未启用</span></blora-option>

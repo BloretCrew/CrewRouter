@@ -85,6 +85,88 @@
   background: var(--blora-color-surface-default);
 }
 
+/* Team 模型筛选使用 Blora Select 自身样式，避免旧版 .select 全宽样式造成外层套娃。 */
+.blora-admin-teams-page #teamModelFilters > blora-select {
+  display: block;
+  flex: 1 1 12rem;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.blora-admin-teams-page #teamModelFilters > blora-select::part(trigger) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.5rem;
+}
+
+.blora-admin-teams-page #teamModelFilters > .blora-button {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+}
+
+.blora-admin-teams-page #teamModelListCount {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+
+.blora-admin-teams-page .team-detail-section-header {
+  align-items: flex-start;
+}
+
+.blora-admin-teams-page .team-detail-section-title {
+  flex: 0 0 auto;
+  min-height: 2.25rem;
+}
+
+.blora-admin-teams-page .team-detail-section-actions {
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.blora-admin-teams-page .team-detail-section-actions .blora-button {
+  min-height: 2.25rem;
+  padding-inline: var(--blora-space-3);
+}
+
+@media (max-width: 900px) {
+  .blora-admin-teams-page .team-detail-section-header {
+    align-items: stretch;
+  }
+
+  .blora-admin-teams-page .team-detail-section-actions {
+    justify-content: flex-start;
+    flex: 1 1 100%;
+    margin-inline-start: 0;
+  }
+
+  .blora-admin-teams-page .team-detail-section-actions .blora-button {
+    flex: 1 1 auto;
+  }
+
+  .blora-admin-teams-page #teamModelFilters > .model-search-box {
+    flex-basis: 100%;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .blora-admin-teams-page #teamModelFilters > blora-select,
+  .blora-admin-teams-page #teamModelFilters > .blora-button,
+  .blora-admin-teams-page #teamModelFilters > #teamModelListCount {
+    flex: 1 1 100%;
+    width: 100%;
+    margin-inline-start: 0;
+  }
+
+  .blora-admin-teams-page #teamModelFilters > #teamModelListCount {
+    text-align: start;
+  }
+}
+
 .blora-admin-teams-page .team-card-header h3,
 .blora-admin-teams-page .team-detail-section-title,
 .blora-admin-teams-page .team-detail-section h2 {
