@@ -79,7 +79,7 @@ if (process.type === 'renderer') {
   }
 
   function seeded(tool) {
-    if (tool === 'codex' || tool === 'grok') return 'sentinel = "keep-existing"\n[permissions]\npolicy = "ask"\n';
+    if (tool === 'codex' || tool === 'grok') return '# Keep existing comment\nsentinel = "keep-existing" # inline comment\n[permissions]\npolicy = "ask"\n[[hooks.start]]\ncommand = "echo fixture"\n';
     if (tool === 'hermes') return 'sentinel: keep-existing\npermissions:\n  policy: ask\n';
     return JSON.stringify({ sentinel: 'keep-existing', permissions: { policy: 'ask' }, env: { KEEP_EXISTING: 'yes' } }, null, 2) + '\n';
   }
@@ -233,6 +233,7 @@ if (process.type === 'renderer') {
               check(result && !result.canceled && result.path === target, `Real write succeeds: ${tool}; failures=${state.failures.join('; ')}`);
               check(result.backupPath.startsWith(caseHome + path.sep) && fs.readFileSync(result.backupPath, 'utf8') === before, 'Backup preserves exact original bytes');
               const config = readConfig(tool, target);
+              if (tool === 'codex' || tool === 'grok') check(fs.readFileSync(target, 'utf8').includes('# Keep existing comment') && fs.readFileSync(target, 'utf8').includes('# inline comment') && config.hooks.start[0].command === 'echo fixture', 'TOML comments and hook array tables preserved');
               check(config.sentinel === 'keep-existing' && config.permissions.policy === 'ask', 'Existing settings and permissions preserved');
               check(fs.readFileSync(target, 'utf8').includes(key) && fs.readFileSync(target, 'utf8').includes(mode === 'remote' ? 'https://remote.fixture.invalid' : base), 'Real configuration contains local/remote fixture endpoint and key');
               check(await execute(`document.getElementById('desktopConfigStatus').textContent.includes(${JSON.stringify(target)}) && document.getElementById('desktopConfigStatus').textContent.includes(${JSON.stringify(result.backupPath)})`), 'Success displays path and backup');

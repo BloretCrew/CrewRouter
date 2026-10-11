@@ -155,7 +155,7 @@ test('damaged, include, ambiguous structures and unpreservable comments fail wit
   const cases = [
     ['claude', '{broken unit-test-key'], ['claude', '{"env": []}'], ['claude', '{"$include":"other"}'],
     ['claude', '{"env":{},"env":{}}'], ['claude', '{"__proto__":{}}'], ['claude', '{"profiles":{}}'],
-    ['codex', '# preserve\nmodel="old"'], ['grok', 'model = [broken'],
+    ['codex', 'model="""old"""'], ['grok', 'model = [broken'],
     ['hermes', '# preserve\nmodel: {}'], ['hermes', 'a: &a {}\nb: *a'], ['hermes', 'a: 1\na: 2'],
     ['openclaw', '{ /* preserve */ models: {} }'], ['openclaw', '{"$include": "other.json"}'],
     ['qwen_code', '{"modelProviders":{"crewrouter":[{"id":"test-model"},{"id":"test-model"}]}}'],
@@ -328,4 +328,42 @@ test('Codex false authentication flag remains writable on consecutive updates', 
   assert.equal(provider.requires_openai_auth, false);
   assert.equal(provider.experimental_bearer_token, 'updated-test-key');
   assert.equal(provider.base_url, 'https://router.example/v1');
+});
+
+for (const tool of ['codex', 'grok']) {
+  test(`${tool}: preserve TOML comments, quoted keys, hashes and array tables`, async (t) => {
+    const f = fixture(t);
+    const file = f.file(tool);
+    const before = '# keep header\n' + (tool === 'codex' ? 'model = "old" # keep inline\n' : '') +
+      'sentinel = "https://example.test/#fragment"\n' +
+      '[projects."/tmp/project"] # keep table comment\ntrust_level = "trusted"\n' +
+      '[[hooks.start]]\ncommand = "echo first"\n[[hooks.start]]\ncommand = "echo second"\n';
+    put(file, before);
+    const result = await f.service.writeClientConfig(request(tool));
+    const output = fs.readFileSync(file, 'utf8');
+    assert.ok(output.includes('# keep header'));
+    assert.ok(output.includes('[projects."/tmp/project"] # keep table comment\ntrust_level = "trusted"'));
+    if (tool === 'codex') assert.ok(output.includes('model = "test-model" # keep inline'));
+    assert.equal(parse(file, tool).sentinel, 'https://example.test/#fragment');
+    assert.deepEqual(parse(file, tool).hooks, TOML.parse(before).hooks);
+    assert.equal(fs.readFileSync(result.backupPath, 'utf8'), before);
+    check[tool](parse(file, tool));
+    await f.service.writeClientConfig({ ...request(tool), model: 'new-model' });
+    assert.equal(parse(file, tool).model?.crewrouter?.model || parse(file, tool).model, 'new-model');
+  });
+}
+
+test('Codex TOML dotted keys and inline tables remain writable without reformatting unrelated lines', async (t) => {
+  const f = fixture(t);
+  const file = f.file('codex');
+  for (const before of [
+    'model="old"\r\nmodel_providers.crewrouter = { name = "old" } # provider comment\r\n',
+    '# root comment\nmodel_providers.crewrouter.name = "old"',
+    'model = "old"\n[model_providers.crewrouter] # table\nname = "old"\n',
+  ]) {
+    put(file, before);
+    await f.service.writeClientConfig(request('codex'));
+    check.codex(parse(file, 'codex'));
+    assert.ok(fs.readFileSync(file, 'utf8').includes(before.includes('# provider') ? '# provider comment' : before.includes('# root') ? '# root comment' : '# table'));
+  }
 });

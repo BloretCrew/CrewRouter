@@ -121,8 +121,8 @@ function parseConfig(text, format) {
     checkDuplicateKeys(tree);
     result = JSON5.parse(text);
   } else if (format === 'toml') {
-    // 当前 TOML 解析器不能无损保留注释或多行字符串。
-    if (text.includes('#') || text.includes('"""') || text.includes("'''")) fail('无法安全保留复杂 TOML 或注释，请使用手动配置。');
+    // 多行字符串暂不支持局部编辑。
+    if (text.includes('"""') || text.includes("'''")) fail('无法安全保留复杂 TOML 或注释，请使用手动配置。');
     result = TOML.parse(text);
   } else {
     const doc = YAML.parseDocument(text, { uniqueKeys: true });
@@ -173,6 +173,79 @@ function applyConfig(config, { tool, baseUrl, apiKey, model }) {
   }
   return config;
 }
+function editToml(text, before, after) {
+  const lines = text.split(/(?<=\n)/);
+  const sections = [{ keys: [], end: lines.length }];
+  const entries = new Map();
+  const keyId = keys => JSON.stringify(keys);
+  const keyText = keys => keys.map(key => JSON.stringify(key)).join('.');
+  const leafPaths = (value, keys = []) => plain(value)
+    ? Object.entries(value).flatMap(([key, item]) => leafPaths(item, [...keys, key])) : [{ keys, value }];
+  let section = sections[0];
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    let quote = null;
+    let equals = -1;
+    let comment = line.length;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (quote) {
+        if (quote === '"' && char === '\\') { i++; continue; }
+        if (char === quote) quote = null;
+      } else if (char === '"' || char === "'") quote = char;
+      else if (char === '#') { comment = i; break; }
+      else if (char === '=' && equals === -1) equals = i;
+    }
+    const code = line.slice(0, comment).trim();
+    if (!code) continue;
+    if (code.startsWith('[')) {
+      const parsed = TOML.parse(`${code}\ncrewrouter_edit_marker = 0`);
+      const keys = code.startsWith('[[') ? null : leafPaths(parsed)[0].keys.slice(0, -1);
+      section.end = index;
+      section = { keys, end: lines.length };
+      sections.push(section);
+    } else {
+      if (!section.keys) continue;
+      if (equals < 0) fail('无法安全保留多行 TOML，请使用手动配置。');
+      const parsed = TOML.parse(`${line.slice(0, equals)}= 0`);
+      const keys = [...section.keys, ...leafPaths(parsed)[0].keys];
+      entries.set(keyId(keys), { index, equals, comment });
+    }
+  }
+  const additions = new Map();
+  function update(old, value, keys = []) {
+    if (JSON.stringify(old) === JSON.stringify(value)) return;
+    const entry = entries.get(keyId(keys));
+    if (entry) {
+      const line = lines[entry.index];
+      const raw = line.slice(entry.equals + 1, entry.comment);
+      const leading = raw.match(/^\s*/)[0];
+      const trailing = raw.match(/\s*$/)[0];
+      lines[entry.index] = line.slice(0, entry.equals + 1) + leading + TOML.stringify.value(value) + trailing + line.slice(entry.comment);
+    } else if (plain(value)) {
+      for (const [key, item] of Object.entries(value)) update(old?.[key], item, [...keys, key]);
+    } else {
+      const parent = sections.filter(item => item.keys && item.keys.length < keys.length && item.keys.every((key, i) => keys[i] === key))
+        .sort((a, b) => b.keys.length - a.keys.length)[0];
+      const list = additions.get(parent.end) || [];
+      list.push(`${keyText(keys.slice(parent.keys.length))} = ${TOML.stringify.value(value)}\n`);
+      additions.set(parent.end, list);
+    }
+  }
+  update(before, after);
+  for (const [index, additionsAtIndex] of [...additions].sort((a, b) => b[0] - a[0])) {
+    if (index > 0 && !lines[index - 1].endsWith('\n')) lines[index - 1] += '\n';
+    lines.splice(index, 0, ...additionsAtIndex);
+  }
+  const output = lines.join('');
+  // 复核局部编辑的语义，防止表声明、点分键或复杂格式产生歧义。
+  const parsed = parseConfig(output, 'toml');
+  const same = (a, b) => plain(a) && plain(b)
+    ? Object.keys(a).length === Object.keys(b).length && Object.keys(a).every(key => Object.hasOwn(b, key) && same(a[key], b[key]))
+    : JSON.stringify(a) === JSON.stringify(b);
+  if (!same(parsed, after)) fail('无法安全合并 TOML，请使用手动配置。');
+  return output;
+}
 function serialize(text, before, after, format) {
   if (format === 'jsonc' && text) {
     function update(old, value, keys) {
@@ -186,7 +259,7 @@ function serialize(text, before, after, format) {
     update(before, after, []);
     return text;
   }
-  if (format === 'toml') return TOML.stringify(after);
+  if (format === 'toml') return text ? editToml(text, before, after) : TOML.stringify(after);
   if (format === 'yaml') return YAML.stringify(after);
   return `${JSON.stringify(after, null, 2)}\n`;
 }
