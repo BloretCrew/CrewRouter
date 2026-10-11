@@ -57,10 +57,15 @@ jobs:
             command: npm run pack:win
             artifact: crewrouter-desktop-windows
             path: CrewRouter-Desktop/dist/*.exe
-          - os: macos-latest
-            platform: macos
-            command: npm run pack:mac
-            artifact: crewrouter-desktop-macos
+          - os: macos-15
+            platform: macos-arm64
+            command: npm run pack:mac -- --arm64
+            artifact: crewrouter-desktop-macos-arm64
+            path: CrewRouter-Desktop/dist/*.dmg
+          - os: macos-15-intel
+            platform: macos-x64
+            command: npm run pack:mac -- --x64
+            artifact: crewrouter-desktop-macos-x64
             path: CrewRouter-Desktop/dist/*.dmg
     runs-on: ${{ matrix.os }}
     defaults:
