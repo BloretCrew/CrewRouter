@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>简洁登录 · CrewRouter</title>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px; background: #f4f6fa; color: #202534; }
+    .plain-card { width: min(100%, 400px); padding: 32px; border: 1px solid #dce1e9; border-radius: 12px; background: #fff; box-shadow: 0 12px 36px #18233a14; }
+    h1 { margin: 0 0 8px; font-size: 24px; }
+    .subtitle { margin: 0 0 24px; color: #667085; }
+    .field { display: block; margin: 16px 0; font-size: 14px; font-weight: 600; }
+    input { display: block; width: 100%; min-height: 44px; margin-top: 7px; padding: 10px 12px; border: 1px solid #c8ced8; border-radius: 6px; background: transparent; color: inherit; font: inherit; }
+    input:focus { outline: 2px solid #3977dc; outline-offset: 1px; }
+    button, .link-button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; padding: 9px 14px; border: 1px solid #c8ced8; border-radius: 6px; background: transparent; color: inherit; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+    button[type="submit"] { width: 100%; border-color: #245ec7; background: #245ec7; color: #fff; }
+    button:disabled { opacity: .65; cursor: wait; }
+    .actions { display: grid; gap: 10px; margin-top: 20px; }
+    .other-login { display: grid; gap: 10px; margin-top: 18px; }
+    .other-login[hidden], [hidden] { display: none !important; }
+    .error { margin: 0 0 16px; padding: 10px 12px; border: 1px solid #e9a6a6; border-radius: 6px; background: #fff2f2; color: #9f2525; }
+    .footer { margin: 20px 0 0; text-align: center; font-size: 14px; }
+    .footer a { color: #245ec7; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #11151d; color: #eef1f6; }
+      .plain-card { border-color: #343b49; background: #1b202b; box-shadow: 0 12px 36px #0004; }
+      .subtitle { color: #aab3c2; }
+      input, button, .link-button { border-color: #555e70; }
+      button[type="submit"] { border-color: #578bea; background: #3977dc; }
+      .error { border-color: #754343; background: #392626; color: #ffbaba; }
+      .footer a { color: #91b8ff; }
+    }
+  </style>
+</head>
+<body>
+  <main class="plain-card">
+    <h1>CrewRouter</h1>
+    <p class="subtitle">简洁登录页</p>
+    <p id="errorMessage" class="error" role="alert" hidden></p>
+    <form id="loginForm" method="post" action="/auth/login?format=html&amp;returnTo=plain">
+      <label class="field" for="loginInput">用户名或邮箱
+        <input id="loginInput" name="login" type="text" autocomplete="username" required>
+      </label>
+      <label class="field" for="password">密码
+        <input id="password" name="password" type="password" autocomplete="current-password" minlength="6" required>
+      </label>
+      <div class="actions"><button id="submitBtn" type="submit">登录</button></div>
+    </form>
+    <form id="twoFactorForm" hidden>
+      <label class="field" for="tfaCode">请输入验证码
+        <input id="tfaCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+      </label>
+      <div class="actions"><button id="tfaSubmitBtn" type="submit">验证</button><button id="cancel2FA" type="button">取消</button></div>
+    </form>
+    <div id="otherLogin" class="other-login" hidden>
+      <a id="feishuLogin" class="link-button" href="/auth/feishu" hidden>飞书登录</a>
+      <a id="passportLogin" class="link-button" href="/auth/passport" hidden>Bloret PassPort 登录</a>
+    </div>
+    <p class="footer"><a href="/">返回标准登录页</a></p>
+  </main>
+  <script>
+    let pending2FAUserId = null;
+    const errorEl = document.getElementById('errorMessage');
+    function showError(message) { errorEl.textContent = message; errorEl.hidden = false; }
+    function clearError() { errorEl.textContent = ''; errorEl.hidden = true; }
+
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      if (!window.fetch) return;
+      event.preventDefault();
+      const button = document.getElementById('submitBtn');
+      button.disabled = true;
+      clearError();
+      try {
+        const response = await fetch('/auth/login', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ login: document.getElementById('loginInput').value, password: document.getElementById('password').value })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '登录失败');
+        if (data.require2FA) {
+          pending2FAUserId = data.userId;
+          document.getElementById('loginForm').hidden = true;
+          document.getElementById('twoFactorForm').hidden = false;
+          document.getElementById('tfaCode').focus();
+          return;
+        }
+        window.location.assign('/console');
+      } catch (error) {
+        showError(error.message || '网络错误，请稍后重试');
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById('twoFactorForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = document.getElementById('tfaSubmitBtn');
+      button.disabled = true;
+      clearError();
+      try {
+        const response = await fetch('/auth/login/2fa', {
+          method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: pending2FAUserId, code: document.getElementById('tfaCode').value })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || '验证失败');
+        window.location.assign('/console');
+      } catch (error) {
+        showError(error.message || '网络错误，请稍后重试');
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById('cancel2FA').addEventListener('click', () => {
+      pending2FAUserId = null;
+      document.getElementById('twoFactorForm').hidden = true;
+      document.getElementById('loginForm').hidden = false;
+      document.getElementById('tfaCode').value = '';
+      clearError();
+    });
+
+    const query = new URLSearchParams(location.search);
+    if (query.get('error')) {
+      const message = query.get('message');
+      showError(message || '登录失败，请重试');
+      history.replaceState({}, document.title, '/plain-login');
+    }
+
+    (async () => {
+      try {
+        const response = await fetch('/auth/status');
+        if (!response.ok) return;
+        const data = await response.json();
+        const feishu = document.getElementById('feishuLogin');
+        const passport = document.getElementById('passportLogin');
+        if (data.authMode === 'passport') passport.hidden = false;
+        else if (data.feishuEnabled) feishu.hidden = false;
+        document.getElementById('otherLogin').hidden = feishu.hidden && passport.hidden;
+      } catch (_) {}
+    })();
+  </script>
+</body>
+</html>

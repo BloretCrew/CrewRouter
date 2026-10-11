@@ -59,9 +59,11 @@ router.get('/status', async (req, res) => {
 // 登录
 router.post('/login', async (req, res) => {
   const htmlLogin = req.query.format === 'html' && req.accepts('html');
+  const returnToPlain = req.query.returnTo === 'plain';
   const reply = (status, payload) => {
     if (htmlLogin) {
-      const target = status >= 400 ? `/?error=login_failed&message=${encodeURIComponent(payload.error || '登录失败')}` : '/console';
+      const loginPath = returnToPlain ? '/plain-login' : '/';
+      const target = status >= 400 ? `${loginPath}?error=login_failed&message=${encodeURIComponent(payload.error || '登录失败')}` : '/console';
       return res.redirect(target);
     }
     return res.status(status).json(payload);

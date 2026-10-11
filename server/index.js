@@ -2667,6 +2667,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'pages/index.html'));
 });
 
+app.get('/plain-login', (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, 'pages/plain-login.html'));
+});
+
 app.get('/console', (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'pages/console.html'));
 });
