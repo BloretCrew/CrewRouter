@@ -67,7 +67,7 @@ function metadata(edition, options = {}) {
   if (!runtime) throw editionError('实例 runtime 无效');
   const authMode = options.authMode === 'passport' ? 'passport' : 'feishu';
   const auth = runtime === 'desktop-local'
-    ? { required: false, methods: ['local'] }
+    ? { required: true, methods: ['passport'] }
     : normalized === 'personal'
       ? { required: true, methods: ['passport'] }
       : { required: true, methods: ['password', authMode] };

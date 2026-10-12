@@ -10,9 +10,16 @@ const { loadPersistedEdition } = require('../utils/instance-edition');
 
 const router = express.Router();
 const passport = config.passport || {};
+const localPassport = require('../utils/local-passport');
+const isLocal = () => process.env.CR_RUNTIME === 'desktop-local';
+
 const baseUrl = String(passport.baseUrl || 'https://passport.bloret.net').replace(/\/$/, '');
 
 function getRedirectUri(req) {
+  if (isLocal()) {
+    localPassport.validateLocalToken(req);
+    return `${localPassport.localOrigin(req, config.app.port)}/auth/passport/callback`;
+  }
   const requestedOrigin = String(req.query.redirect_origin || '').trim().replace(/\/$/, '');
   if (requestedOrigin) {
     const parsed = new URL(requestedOrigin);
@@ -29,6 +36,7 @@ router.get('/passport/redirect-uri', (req, res) => {
   try {
     res.json({ redirectUri: getRedirectUri(req) });
   } catch (err) {
+    if (isLocal()) return res.status(403).json({ error: err.message });
     res.json({ requiresConfirmation: true, error: err.message });
   }
 });
@@ -81,28 +89,113 @@ async function seedPassportUser(client, user, username, invite = null) {
 
 router.get('/passport', async (req, res) => {
   try {
+    if (isLocal()) localPassport.validateLocalToken(req);
     const { metadata } = require('../utils/instance-edition');
     const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
     if (!metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: await getAuthMode() }).auth.methods.includes('passport')) return res.redirect('/?error=passport_disabled');
-    if (!passport.appId || !passport.appSecret) return res.redirect('/?error=passport_not_configured');
+    if (!passport.appId || !passport.appSecret) {
+      if (isLocal()) return res.status(503).type('html').send('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>PassPort 未配置</title><p>Local PassPort 登录未配置，请配置应用 ID 和密钥后重试。</p></html>');
+      return res.redirect('/?error=passport_not_configured');
+    }
     const redirectUri = getRedirectUri(req);
-    const state = crypto.randomBytes(24).toString('hex');
+    if (isLocal()) {
+      localPassport.cancelSession(req, config.app.sessionSecret);
+      await localPassport.regenerateSession(req);
+    }
+    const state = isLocal()
+      ? localPassport.issueState(req, new URL(redirectUri).origin)
+      : crypto.randomBytes(24).toString('hex');
     const invite = typeof req.query.invite === 'string' && /^[A-Za-z0-9_-]{20,200}$/.test(req.query.invite) ? req.query.invite : '';
     req.session.passportState = state;
     req.session.passportInvite = invite;
     saveSession(req, res, (err) => {
       if (err) return res.status(500).send('登录状态保存失败，请重试。');
+      const callbackUri = new URL(redirectUri);
+      // PassPort 的 /app/oauth 通过 redirect_uri 保留参数，回调只追加 code。
+      if (isLocal()) callbackUri.searchParams.set('state', state);
       const params = new URLSearchParams({
         app_id: passport.appId,
-        redirect_uri: redirectUri,
+        redirect_uri: isLocal() ? callbackUri.toString() : redirectUri,
         state,
       });
       res.redirect(`${baseUrl}/app/oauth?${params.toString()}`);
     });
-  } catch (err) { Logger.error('[PassPort] OAuth 入口失败:', err.message); res.status(500).send(`PassPort 授权入口配置错误：${err.message}`); }
+  } catch (err) { Logger.error('[PassPort] OAuth 入口失败:', err.message); res.status(err.code === 'LOCAL_PASSPORT_DENIED' ? 403 : 500).send(`PassPort 授权入口配置错误：${err.message}`); }
 });
 
+router.get('/passport/cancel', async (req, res) => {
+  if (!isLocal()) return res.sendStatus(404);
+  try {
+    localPassport.validateLocalToken(req);
+    localPassport.cancelSession(req, config.app.sessionSecret);
+    await new Promise((resolve, reject) => req.session.destroy(error => error ? reject(error) : resolve()));
+    return res.sendStatus(204);
+  } catch (error) {
+    return res.status(error.code === 'LOCAL_PASSPORT_DENIED' ? 403 : 500).send('取消 PassPort 授权失败。');
+  }
+});
+
+async function localCallback(req, res) {
+  let pending;
+  try {
+    localPassport.validateLocalToken(req);
+    const origin = localPassport.localOrigin(req, config.app.port);
+    pending = localPassport.consumeState(req, origin);
+    await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
+    if (!passport.appId || !passport.appSecret) throw new Error('PassPort 未配置');
+    const data = await verifyPassport(req.query.code);
+    localPassport.assertActive(pending);
+    const identity = localPassport.passportIdentity(data);
+    const client = await pool.connect();
+    let user;
+    try {
+      localPassport.assertActive(pending);
+      await client.query('BEGIN');
+      user = await localPassport.bindLocalUser(client, identity, async () => {
+        const inserted = await client.query(
+          `INSERT INTO users (username, passport_username, email, avatar, is_admin, email_verified, balance)
+           VALUES ($1, $2, $3, $4, TRUE, TRUE, 10) RETURNING *`,
+          [identity, identity, normalizeEmail(data.email), String(data.avatar || '').slice(0, 500) || null]
+        );
+        const created = inserted.rows[0];
+        await seedPassportUser(client, created, created.username);
+        return created;
+      });
+      const team = await localPassport.ensureDesktopLocalPersonalTeam(client, user);
+      await localPassport.ensureDesktopLocalPersonalModels(client, team);
+      await client.query(
+        "INSERT INTO settings (key, value) VALUES ('setup_complete', $1::jsonb) ON CONFLICT (key) DO NOTHING",
+        [JSON.stringify({ completed_at: new Date().toISOString(), method: 'local-passport-authorized' })]
+      );
+      localPassport.assertActive(pending);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally { client.release(); }
+    localPassport.assertActive(pending);
+    await localPassport.regenerateSession(req);
+    pending.sessionIds.add(req.sessionID);
+    localPassport.assertActive(pending);
+    req.session.user = { ...sessionUser(user), passportUsername: identity, needsPasswordSetup: false };
+    req.session.localPassportAuth = true;
+    await new Promise((resolve, reject) => req.session.save(error => error ? reject(error) : resolve()));
+    localPassport.assertActive(pending);
+    res.redirect('/console');
+  } catch (error) {
+    if (pending && (pending.revoked || pending.expiresAt <= Date.now())) {
+      if (req.session) await new Promise(resolve => req.session.destroy(() => resolve()));
+    }
+    Logger.error('[Local PassPort] 回调失败:', error.message);
+    if (error.code === 'LOCAL_PASSPORT_DENIED') return res.status(403).send(error.message);
+    if (error.code === 'invalid_email') return res.status(400).send('PassPort 返回的邮箱格式无效。');
+    if (isUniqueViolation(error)) return res.status(409).send('邮箱或账号标识已被其他用户使用。');
+    return res.status(502).send('PassPort 登录失败，请稍后重试。');
+  } finally { if (pending) localPassport.finishState(pending); }
+}
+
 router.get('/passport/callback', async (req, res) => {
+  if (isLocal()) return localCallback(req, res);
   const { code, state } = req.query;
   const sessionState = req.session.passportState;
   const setupState = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");

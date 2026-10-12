@@ -6,7 +6,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 class FakeWebContents extends EventEmitter {
-  constructor(win) { super(); this.win = win; this.url = ''; this.sent = []; this.openHandler = null; this.scripts = []; }
+  constructor(win) { super(); this.id = FakeBrowserWindow.instances.length + 1; this.win = win; this.url = ''; this.sent = []; this.openHandler = null; this.scripts = []; }
   send(channel, payload) { this.sent.push({ channel, payload }); }
   getURL() { return this.url; }
   setWindowOpenHandler(fn) { this.openHandler = fn; }
@@ -74,7 +74,7 @@ function createElectronStub({ userData }) {
     async remove(url, name) { this.store.delete(`${url}|${name}`); },
   };
   const webRequest = { headerListeners: [], onBeforeSendHeaders(filter, fn) { this.headerListeners.push({ filter, fn }); } };
-  const session = { defaultSession: { cookies, webRequest } };
+  const session = { defaultSession: { cookies, webRequest, fetchCalls: [], async fetch(url, options) { this.fetchCalls.push({ url, options }); return { ok: true, json: async () => ({ id: 1 }) }; } } };
   const shell = { opened: [], openedPaths: [], async openExternal(url) { this.opened.push(url); }, async openPath(target) { this.openedPaths.push(target); return ''; } };
   const nativeTheme = { themeSource: 'system', shouldUseDarkColors: true };
   const Menu = { template: null, applied: null, setApplicationMenu(menu) { Menu.applied = menu; }, buildFromTemplate(template) { Menu.template = template; return { template }; } };

@@ -22,7 +22,7 @@ function backgroundColorFor(theme, nativeTheme) {
   return dark ? '#17161C' : '#FAFAF9';
 }
 
-function createMainWindow({ electron, state, rendererEntry, preloadPath, env = process.env, logger = console, onLoadFailed, openSafeExternal }) {
+function createMainWindow({ electron, state, rendererEntry, preloadPath, env = process.env, logger = console, onLoadFailed, openSafeExternal, interceptNavigation }) {
   const width = Number(env.CREWROUTER_WINDOW_WIDTH) || 1024;
   const height = Number(env.CREWROUTER_WINDOW_HEIGHT) || 720;
   const win = new electron.BrowserWindow({
@@ -46,11 +46,17 @@ function createMainWindow({ electron, state, rendererEntry, preloadPath, env = p
   });
   contents.on('render-process-gone', (_event, details) => { logger.error(`[renderer] render process gone: ${details.reason}`); });
   contents.on('console-message', (_event, level, message, line, sourceId) => { if (level >= 2) logger.error(`[renderer:${level}] ${message} (${sourceId}:${line})`); });
-  contents.setWindowOpenHandler(({ url }) => { openSafeExternal(url).catch((error) => logger.warn(`[window-open] ${error.message}`)); return { action: 'deny' }; });
+  contents.setWindowOpenHandler(({ url }) => { if (interceptNavigation?.(url)) return { action: 'deny' }; openSafeExternal(url).catch((error) => logger.warn(`[window-open] ${error.message}`)); return { action: 'deny' }; });
   contents.on('will-navigate', (event, url) => {
+    if (interceptNavigation?.(url)) { event.preventDefault(); return; }
     if (allowedNavigation(url, { state, rendererEntry })) return;
     event.preventDefault();
     openSafeExternal(url).catch((error) => logger.warn(`[navigate] ${error.message}`));
+  });
+  let navigationSource = '';
+  contents.on('did-start-navigation', (_event, url, _inPlace, isMainFrame) => { if (isMainFrame !== false) navigationSource = url; });
+  contents.on('will-redirect', (event, url, _inPlace, isMainFrame) => {
+    if (isMainFrame !== false && interceptNavigation?.(url, { redirect: true, source: navigationSource })) event.preventDefault();
   });
   contents.on('will-attach-webview', (event) => event.preventDefault());
 

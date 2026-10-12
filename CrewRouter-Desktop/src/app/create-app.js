@@ -9,6 +9,7 @@ const { registerIpc } = require('./ipc');
 const { createClientConfigService } = require('./client-config');
 const { createMainWindow } = require('./window');
 const { createOfficialLogin } = require('./official-login');
+const { createLocalPassport } = require('./local-passport');
 const { applyMenu } = require('./menu');
 const { LocalServerManager } = require('../server-manager');
 const { ConnectionManager } = require('../connection-manager');
@@ -78,6 +79,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   // 统一的动作包装：忙碌保护、状态迁移、失败落到 error 状态并携带重试信息；被取消的动作静默结束。
   async function runAction(kind, retry, fn) {
     if (state.isBusy()) throw new Error('已有操作正在进行，请稍候。');
+    await ctx.localPassport?.cancel();
     const seq = ++actionSeq;
     const cancelled = () => seq !== actionSeq;
     state.begin(kind, retry ? { retry } : {});
@@ -104,7 +106,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
     const summary = { id: profile.id, name: profile.name, mode: profile.mode, lastConnectedAt: profile.lastConnectedAt };
     state.set({ target, instance: profile, profile: summary, progress: { step: total, total, label: '正在打开页面' } });
     try {
-      await ctx.window.loadTarget(local ? `${target}/console` : target);
+      await ctx.window.loadTarget(local ? `${target}/` : target);
       await ctx.window.win.webContents.executeJavaScript(`(() => { document.getElementById('desktop-settings')?.remove(); const card = document.getElementById('desktopSettingsCard'); if (card) card.hidden = false; })()`, true);
     } catch (error) {
       state.set({ target: null });
@@ -115,11 +117,35 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
     return state.snapshot('launcher');
   }
 
+  function clearLocalToken() {
+    electron.session?.defaultSession?.webRequest?.onBeforeSendHeaders(null);
+  }
+
+  function localSource(baseUrl) {
+    if (state.instance?.runtime !== 'desktop-local' || state.target !== baseUrl) return false;
+    try { return new URL(ctx.window?.currentUrl()).origin === baseUrl; } catch { return false; }
+  }
+
   function attachLocalToken(baseUrl, token) {
     const session = electron.session?.defaultSession;
     if (!session?.webRequest?.onBeforeSendHeaders || !baseUrl || !token) return;
     session.webRequest.onBeforeSendHeaders({ urls: [`${baseUrl}/*`] }, (details, callback) => {
-      callback({ requestHeaders: { ...details.requestHeaders, [LOCAL_TOKEN_HEADER]: token } });
+      const headers = { ...details.requestHeaders };
+      const suppliedToken = Object.entries(headers).find(([key]) => key.toLowerCase() === LOCAL_TOKEN_HEADER)?.[1];
+      for (const key of Object.keys(headers)) if (key.toLowerCase() === LOCAL_TOKEN_HEADER) delete headers[key];
+      let sameOrigin = false;
+      try { sameOrigin = new URL(details.url).origin === baseUrl; } catch {}
+      const ready = sameOrigin && ctx.local?.getStatus().ready && ctx.local.getStatus().baseUrl === baseUrl;
+      const trusted = Number.isInteger(details.webContentsId) && (
+        (details.webContentsId === ctx.mainWindow?.webContents.id && localSource(baseUrl)) ||
+        (localSource(baseUrl) && ctx.localPassport?.isTrustedContents(details.webContentsId))
+      );
+      let serviceRequest = false;
+      try { const url = new URL(details.url); serviceRequest = (details.webContentsId === undefined || details.webContentsId === -1) && url.origin === baseUrl && ['/auth/passport/cancel', '/auth/me'].includes(url.pathname) && suppliedToken === token; } catch {}
+      if (ready && trusted) headers[LOCAL_TOKEN_HEADER] = token;
+      // Session 主进程请求仅保留显式提供的取消/确认 Token，不自动注入。
+      if (ready && localSource(baseUrl) && serviceRequest) headers[LOCAL_TOKEN_HEADER] = suppliedToken;
+      callback({ requestHeaders: headers });
     });
   }
 
@@ -135,7 +161,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
       userData: userData(),
       runtime: 'desktop-local',
       edition: 'personal',
-      auth: { required: false, methods: ['local'] },
+      auth: { required: true, methods: ['passport'] },
       demo: false,
       localIdentityId,
       displayName,
@@ -144,6 +170,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
     manager.on('progress', ({ step, total, label }) => { if (state.isBusy()) state.step(step, total, label); });
     manager.on('exit', ({ code, signal, wasReady, aborted, logPath }) => {
       if (ctx.local !== manager) return;
+      clearLocalToken();
       state.set({ localServer: pickLocal(manager.getStatus()) });
       if (ctx.quitting || aborted || !wasReady) return;
       logger.error(`[desktop] local server exited unexpectedly (code ${code}, signal ${signal || 'none'})`);
@@ -186,6 +213,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
         attachLocalToken(manager.getStatus().baseUrl, manager.localToken);
       }
       const status = ctx.local.getStatus();
+      attachLocalToken(status.baseUrl, ctx.local.localToken);
       state.set({ localServer: pickLocal(status) });
       if (cancelled()) return state.snapshot('launcher');
       const result = await connect(status.baseUrl, { local: true, name: resolvedName, id: profile?.id || crypto.randomUUID(), displayName: resolvedName, localIdentityId, cancelled });
@@ -209,6 +237,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   }
 
   async function openOfficialLogin() {
+    await ctx.localPassport?.cancel();
     if (state.isBusy()) throw new Error('已有操作正在进行，请稍候。');
     actionSeq += 1;
     try { return await ctx.officialLogin.start(); }
@@ -245,6 +274,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   }
 
   async function cancelPending() {
+    await ctx.localPassport?.cancel();
     actionSeq += 1;
     if (ctx.officialLogin?.isPending()) ctx.officialLogin.cancel();
     if (state.mode === 'starting-local' && ctx.local && !ctx.local.getStatus().ready) {
@@ -259,6 +289,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   }
 
   async function showLauncher() {
+    await ctx.localPassport?.cancel();
     if (ctx.officialLogin?.isPending()) ctx.officialLogin.cancel();
     detachTarget();
     await ctx.window?.loadLauncher();
@@ -266,6 +297,8 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   }
 
   async function stopLocal() {
+    await ctx.localPassport?.cancel();
+    clearLocalToken();
     const manager = ctx.local;
     if (!manager) return;
     if (state.target && state.instance?.runtime === 'desktop-local') await showLauncher();
@@ -339,9 +372,9 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
   }
 
   async function createWindow() {
-    ctx.window = createMainWindow({ electron, state, rendererEntry, preloadPath, env, logger, onLoadFailed, openSafeExternal });
+    ctx.window = createMainWindow({ electron, state, rendererEntry, preloadPath, env, logger, onLoadFailed, openSafeExternal, interceptNavigation: (url, options) => ctx.localPassport?.intercept(url, options) });
     ctx.mainWindow = ctx.window.win;
-    ctx.mainWindow.on('closed', () => { ctx.mainWindow = null; ctx.window = null; });
+    ctx.mainWindow.on('closed', () => { ctx.localPassport?.cancel(); ctx.mainWindow = null; ctx.window = null; });
     await ctx.window.loadLauncher();
   }
 
@@ -358,6 +391,7 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
     delete process.env.CREWROUTER_SERVER_ROOT;
     delete process.env.CREWROUTER_PACKAGED_SERVER_ROOT;
     ctx.connection = new ConnectionManager({ store: new ProfileStore(path.join(userData(), 'profiles.json')), fetchImpl });
+    ctx.localPassport = createLocalPassport({ electron, fetchImpl, logger, getToken: () => ctx.local?.getStatus().ready ? ctx.local.localToken : null, getWindow: () => ctx.window, getTarget: () => ctx.local?.getStatus().ready && localSource(ctx.local.getStatus().baseUrl) ? state.target : null });
     ctx.officialLogin = createOfficialLogin({ electron, demoUrl, fetchImpl, state, connect: officialConnect, validateRemoteUrl, logger });
     applyPreferences(ctx.connection.store.getSettings());
     const activeProfile = ctx.connection.activeProfile();
@@ -384,11 +418,12 @@ function createApp({ electron, env = process.env, fetchImpl = requestFetch, logg
     app.on('before-quit', (event) => {
       if (ctx.quitting) return;
       ctx.quitting = true;
+      const cleanup = ctx.localPassport?.cancel();
       if (ctx.officialLogin?.isPending()) ctx.officialLogin.cancel();
       const manager = ctx.local;
       if (!manager) return;
       event.preventDefault();
-      manager.stop().catch((error) => logger.error(`[desktop] stop local failed: ${error.message}`)).finally(() => app.quit());
+      Promise.resolve(cleanup).then(() => { clearLocalToken(); return manager.stop(); }).catch((error) => logger.error(`[desktop] stop local failed: ${error.message}`)).finally(() => app.quit());
     });
     app.whenReady().then(init).catch((error) => { logger.error(`[desktop] bootstrap failed: ${error.stack || error.message}`); app.exit(1); });
     return true;

@@ -26,7 +26,7 @@ assert.strictEqual(getCapabilities('team').teamAdmin, true);
 assert.strictEqual(getCapabilities('team').models, true);
 const local = metadata('personal', { runtime: 'desktop-local', authMode: 'local' });
 assert.strictEqual(local.runtime, 'desktop-local');
-assert.deepStrictEqual(local.auth, { required: false, methods: ['local'] });
+assert.deepStrictEqual(local.auth, { required: true, methods: ['passport'] });
 assert.strictEqual(local.capabilities.modelLibrary, true);
 assert.deepStrictEqual(metadata('personal').edition, 'personal');
 
@@ -65,7 +65,7 @@ assert.deepStrictEqual(metadata('personal').edition, 'personal');
   assert.match(userRoutes, /router\.get\('\/project-stats', requireAuth/);
   assert.match(userRoutes, /router\.get\('\/audit-logs', requireAuth/);
   assert.match(userRoutes, /getUserPersonalTeam/);
-  const serverSource = fs.readFileSync(path.join(__dirname, '../index.js'), 'utf8');
+  const serverSource = fs.readFileSync(path.join(__dirname, '../utils/local-passport.js'), 'utf8');
   assert.match(serverSource, /ensureDesktopLocalPersonalTeam/);
   assert.match(serverSource, /ensureDesktopLocalPersonalModels/);
   assert.match(serverSource, /INSERT INTO team_models/);

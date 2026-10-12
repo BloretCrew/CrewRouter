@@ -41,7 +41,7 @@ async function createRuntimeConfig(userData, overrides = {}) {
     database: { host: '127.0.0.1', port: 5432, name: databaseName, user: 'postgres', password: '' },
     runtime: 'desktop-local',
     edition: 'personal',
-    auth: { required: false, methods: ['local'] },
+    auth: { required: true, methods: ['passport'] },
     loginReport: { enabled: true },
     statsReport: { enabled: true },
     demo: false,
@@ -186,8 +186,8 @@ class LocalServerManager extends EventEmitter {
       CR_LOG_DIR: this.runtime.logsDir,
       CR_RUNTIME: this.runtime.config.runtime || 'desktop-local',
       CR_EDITION: this.runtime.config.edition || 'personal',
-      CR_AUTH_REQUIRED: String(this.runtime.config.auth?.required ?? false),
-      CR_AUTH_METHODS: Array.isArray(this.runtime.config.auth?.methods) ? this.runtime.config.auth.methods.join(',') : 'local',
+      CR_AUTH_REQUIRED: String(this.runtime.config.auth?.required ?? true),
+      CR_AUTH_METHODS: Array.isArray(this.runtime.config.auth?.methods) ? this.runtime.config.auth.methods.join(',') : 'passport',
       CR_LOGIN_REPORT_ENABLED: String(this.runtime.config.loginReport?.enabled ?? true),
       CR_STATS_REPORT_ENABLED: String(this.runtime.config.statsReport?.enabled ?? true),
       CR_DEMO: String(this.runtime.config.demo === true),
@@ -258,7 +258,7 @@ class LocalServerManager extends EventEmitter {
         this.status.auth = metadata.auth || this.runtime.config.auth || null;
         this.status.demo = metadata.demo === undefined ? (this.runtime.config.demo === true ? true : false) : metadata.demo;
         this.status.capabilities = metadata.capabilities || {};
-        if (this.status.runtime !== 'desktop-local' || this.status.edition !== 'personal' || this.status.auth?.required !== false || JSON.stringify(this.status.auth?.methods) !== JSON.stringify(['local']) || this.status.demo !== false) throw new Error(`Local server metadata is not desktop-local personal local-auth non-demo: runtime=${this.status.runtime}, edition=${this.status.edition}, auth=${JSON.stringify(this.status.auth)}, demo=${this.status.demo}`);
+        if (this.status.runtime !== 'desktop-local' || this.status.edition !== 'personal' || this.status.auth?.required !== true || JSON.stringify(this.status.auth?.methods) !== JSON.stringify(['passport']) || this.status.demo !== false) throw new Error(`Local server metadata is not desktop-local personal passport-auth non-demo: runtime=${this.status.runtime}, edition=${this.status.edition}, auth=${JSON.stringify(this.status.auth)}, demo=${this.status.demo}`);
         this.status.ready = true;
         return this.getStatus();
       } catch (error) { lastError = error; await new Promise((resolve) => setTimeout(resolve, this.options.pollIntervalMs)); }

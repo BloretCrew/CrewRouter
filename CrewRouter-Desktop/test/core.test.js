@@ -73,10 +73,10 @@ test('profile store recovers corruption and switches profiles', () => {
 test('/api/instance parses authoritative runtime and auth metadata', () => {
   const local = parseInstanceResponse({ edition: 'personal' }, { allowLocalRuntime: true });
   assert.equal(local.runtime, 'desktop-local');
-  assert.deepEqual(local.auth, { required: false, methods: ['local'] });
-  const explicitLocal = parseInstanceResponse({ runtime: 'desktop-local', edition: 'personal', auth: { required: false, methods: ['local'] } });
+  assert.deepEqual(local.auth, { required: true, methods: ['passport'] });
+  const explicitLocal = parseInstanceResponse({ runtime: 'desktop-local', edition: 'personal', auth: { required: true, methods: ['passport'] } });
   assert.equal(explicitLocal.runtime, 'desktop-local');
-  assert.deepEqual(explicitLocal.auth, { required: false, methods: ['local'] });
+  assert.deepEqual(explicitLocal.auth, { required: true, methods: ['passport'] });
   const personal = parseInstanceResponse({ runtime: 'server', edition: 'personal', auth: { required: true, methods: ['passport'] } });
   assert.deepEqual(personal.auth.methods, ['passport']);
   const team = parseInstanceResponse({ runtime: 'server', edition: 'team', auth: { required: true, methods: ['password', 'feishu'] } });

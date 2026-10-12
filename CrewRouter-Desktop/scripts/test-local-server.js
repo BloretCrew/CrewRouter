@@ -57,14 +57,14 @@ function request(url, headers = {}) {
       request(`${base}/v1/models`, cookie ? { cookie } : {}),
     ]);
     const metadata = instance.json();
-    if (metadata.runtime !== 'desktop-local' || metadata.edition !== 'personal' || metadata.auth?.required !== false || JSON.stringify(metadata.auth?.methods) !== JSON.stringify(['local'])) fail('Local instance metadata is incorrect');
+    if (metadata.runtime !== 'desktop-local' || metadata.edition !== 'personal' || metadata.auth?.required !== true || JSON.stringify(metadata.auth?.methods) !== JSON.stringify(['passport'])) fail('Local instance metadata is incorrect');
     if (setup.json().needsSetup !== false) fail('Local server incorrectly requires setup');
     if (root.status !== 200 || root.headers.location?.includes('/setup')) fail('Local root entered setup flow');
     if (consolePage.status !== 200 || consolePage.body.length < 100) fail('Local console did not load');
     const meData = me.json();
-    if (me.status !== 200 || meData.needsPasswordSetup !== false || meData.local !== true) fail(`Local session was not initialized: status=${me.status} body=${me.body}`);
+    if (me.status !== 401) fail(`Local control panel must require PassPort login even with Desktop token: status=${me.status} body=${me.body}`);
     if (meWithoutToken.status !== 401) fail(`Loopback request without the desktop token must not receive a session (got HTTP ${meWithoutToken.status})`);
-    if (![200, 403].includes(apiKeys.status) || ![200, 401, 403].includes(models.status)) fail(`Local API bootstrap failed: apiKeys=${apiKeys.status} models=${models.status} me=${me.body}`);
+    if (apiKeys.status !== 401 || ![401, 403].includes(models.status)) fail(`Local API bootstrap failed: apiKeys=${apiKeys.status} models=${models.status} me=${me.body}`);
     if (!progress.some((event) => event.step === 1) || !progress.some((event) => event.step === 3)) fail('Local server manager did not report startup progress');
     console.log(JSON.stringify({ ...status, smoke: { root: root.status, console: consolePage.status, authMe: me.status, authMeWithoutToken: meWithoutToken.status, apiKeys: apiKeys.status, models: models.status }, database: status.database, resourceRoot: packaged ? resourceRoot : undefined }));
   } finally {

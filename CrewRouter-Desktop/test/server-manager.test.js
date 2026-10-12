@@ -22,7 +22,7 @@ test('createRuntimeConfig creates isolated config, data and logs paths', async (
   assert.equal(config.app.port, 12345);
   assert.equal(config.runtime, 'desktop-local');
   assert.equal(config.edition, 'personal');
-  assert.deepEqual(config.auth, { required: false, methods: ['local'] });
+  assert.deepEqual(config.auth, { required: true, methods: ['passport'] });
   assert.equal(config.demo, false);
   assert.equal(config.loginReport.enabled, true);
   assert.equal(config.statsReport.enabled, true);
@@ -46,7 +46,7 @@ test('redact removes credentials from log output', () => {
   assert.equal(redact('CR_SESSION_SECRET=abc token:xyz Bearer abc'), 'CR_SESSION_SECRET=[REDACTED] token:[REDACTED] Bearer [REDACTED]');
 });
 
-const READY_CHILD = `const http=require('http'); const s=http.createServer((q,r)=>{if(q.url==='/api/version')r.end(JSON.stringify({version:'test'}));else if(q.url==='/api/setup/status')r.end(JSON.stringify({needsSetup:false}));else if(q.url==='/api/instance')r.end(JSON.stringify({runtime:'desktop-local',edition:'personal',auth:{required:false,methods:['local']},demo:false,secret:'no'}));else if(q.url==='/env')r.end(JSON.stringify({token:process.env.CR_LOCAL_TOKEN,db:process.env.CR_DB_NAME,port:process.env.CR_APP_PORT}));else r.statusCode=404,r.end();}); s.listen(process.env.CR_APP_PORT,process.env.CR_APP_HOST);`;
+const READY_CHILD = `const http=require('http'); const s=http.createServer((q,r)=>{if(q.url==='/api/version')r.end(JSON.stringify({version:'test'}));else if(q.url==='/api/setup/status')r.end(JSON.stringify({needsSetup:false}));else if(q.url==='/api/instance')r.end(JSON.stringify({runtime:'desktop-local',edition:'personal',auth:{required:true,methods:['passport']},demo:false,secret:'no'}));else if(q.url==='/env')r.end(JSON.stringify({token:process.env.CR_LOCAL_TOKEN,db:process.env.CR_DB_NAME,port:process.env.CR_APP_PORT}));else r.statusCode=404,r.end();}); s.listen(process.env.CR_APP_PORT,process.env.CR_APP_HOST);`;
 
 function getJson(url) {
   return new Promise((resolve, reject) => { http.get(url, (res) => { let body = ''; res.setEncoding('utf8'); res.on('data', (c) => { body += c; }); res.on('end', () => resolve(JSON.parse(body))); }).once('error', reject); });

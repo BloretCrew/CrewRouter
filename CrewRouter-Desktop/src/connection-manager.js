@@ -11,13 +11,13 @@ function parseInstanceResponse(body, { allowLocalRuntime = false } = {}) {
   const runtime = String(source.runtime || (allowLocalRuntime ? 'desktop-local' : '')).toLowerCase();
   const auth = source.auth && typeof source.auth === 'object'
     ? source.auth
-    : (allowLocalRuntime ? { required: false, methods: ['local'] } : null);
+    : (allowLocalRuntime ? { required: true, methods: ['passport'] } : null);
   const methods = Array.isArray(auth?.methods) ? auth.methods.filter((method) => typeof method === 'string') : null;
   if (!['personal', 'team'].includes(edition)) throw new Error('实例 edition 缺失或无效');
   if (!['server', 'desktop-local'].includes(runtime)) throw new Error('实例 runtime 缺失或无效');
   if (!auth || typeof auth.required !== 'boolean' || !methods || methods.length === 0) throw new Error('实例 auth capabilities 缺失或无效');
   if (methods.some((method) => !['password', 'passport', 'feishu', 'local'].includes(method))) throw new Error('实例 auth.methods 含无效方式');
-  if (runtime === 'desktop-local' && (auth.required !== false || JSON.stringify(methods) !== JSON.stringify(['local']))) throw new Error('Desktop Local 必须使用本地免交互认证');
+  if (runtime === 'desktop-local' && (auth.required !== true || JSON.stringify(methods) !== JSON.stringify(['passport']))) throw new Error('Desktop Local 必须只启用 Passport');
   if (runtime === 'server' && methods.includes('local')) throw new Error('远程 server 不得声明 local 认证');
   if (runtime === 'server' && edition === 'personal' && (auth.required !== true || JSON.stringify(methods) !== JSON.stringify(['passport']))) throw new Error('Personal Server 必须只启用 Passport');
   return {

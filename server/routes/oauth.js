@@ -502,7 +502,7 @@ router.get('/oauth/authorizations', requireAuth, async (req, res) => {
                 tree.root_id
            FROM oauth_tokens t
            JOIN tree ON t.rotated_from = tree.id
-       )
+       ), g AS (
        SELECT root_id,
               max(client_id)  AS client_id,
               max(scope)      AS scope,

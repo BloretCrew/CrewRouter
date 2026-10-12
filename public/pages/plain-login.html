@@ -142,6 +142,11 @@
         if (data.authMode === 'passport') passport.hidden = false;
         else if (data.feishuEnabled) feishu.hidden = false;
         document.getElementById('otherLogin').hidden = feishu.hidden && passport.hidden;
+        const instanceResponse = await fetch('/api/instance');
+        if (instanceResponse.ok && (await instanceResponse.json()).runtime === 'desktop-local') {
+          document.getElementById('loginForm').hidden = true;
+          document.querySelector('.subtitle').textContent = '本地使用需要登录 Bloret PassPort';
+        }
       } catch (_) {}
     })();
   </script>

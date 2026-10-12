@@ -39,8 +39,10 @@ src/renderer/               启动页（OOBE + 已保存连接 + 设置），仅
 
 - `LocalServerManager` 在 `app.getPath('userData')` 下生成隔离的 `runtime/config.json`、数据与日志目录，清理继承的 `CR_*` / `PG*` / `DATABASE_URL` 环境变量，只监听 `127.0.0.1` 的动态端口，退出时只停止自己持有的子进程。
 - PostgreSQL 由 `src/postgres` 提供：优先 `embedded-postgres`（数据目录 `userData/postgres/data`，随机密码写入 `userData/runtime/postgres.json`）；在 Linux root 且存在 `postgres` 系统用户时退回 `runuser` 方案（仅开发容器）。可用 `CREWROUTER_POSTGRES_PROVIDER=embedded|system` 强制选择。
-- 每次启动生成一次性 `CR_LOCAL_TOKEN`，主进程用 `session.webRequest` 为本地 origin 附加 `x-crewrouter-desktop-token`；服务端 desktop-local 中间件只为携带该 token 的回环请求建立免登录会话，本机其他进程无法冒用。
-- 就绪检查依次验证 `/api/version`、`/api/setup/status`、`/api/instance`，并要求 `runtime=desktop-local`、`edition=personal`、`auth={required:false,methods:['local']}`、`demo=false`。
+- 每次启动生成一次性 `CR_LOCAL_TOKEN`，主进程用 `session.webRequest` 为本地 origin 附加 `x-crewrouter-desktop-token`，用于确认本地授权入口来自 Desktop。控制台通过 Bloret PassPort 建立用户会话，退出后需要重新登录。
+- PassPort 在独立、安全的授权窗口内登录，与本地控制台共享会话；授权窗口不提供 Desktop IPC。首次授权绑定本地账户，已有本地配置、Key 和历史记录保留在本机。绑定完成后使用同一 PassPort 身份登录。
+- 就绪检查依次验证 `/api/version`、`/api/setup/status`、`/api/instance`，并要求 `runtime=desktop-local`、`edition=personal`、`auth={required:true,methods:['passport']}`、`demo=false`。服务就绪后打开登录页，完成授权后进入控制台。
+- Local 不提供免登录回退；首次授权需要连接 PassPort 服务。PassPort 应用配置需要允许本机动态端口的回环回调地址。
 - 本地服务意外退出时回到启动页并提示重启；返回启动页不会停止本地服务，再次选择本地使用会直接复用。
 
 ## 远程模式
@@ -59,6 +61,8 @@ src/renderer/               启动页（OOBE + 已保存连接 + 设置），仅
 npm install
 npm test                      # 行为测试：状态模型、IPC 矩阵、官方站登录、窗口、主进程编排、LocalServerManager
 npm run syntax                # node --check 遍历 src/scripts/test
+node ../server/scripts/test-local-passport.js # Token、state、绑定、取消与会话安全回归
+node scripts/test-local-passport-flow.js      # 隔离数据库 + mock PassPort 的真实 Electron 新库/旧库登录验收
 CREWROUTER_SERVER_ROOT=/path/to/CrewRouter npm run test:local-server   # 真实 Server + PostgreSQL provider，校验 token 门禁与进度事件
 npm run test:electron:local-username   # xvfb 下的 Electron 验收：OOBE → 本地控制台 → 内嵌设置 → 启动页设置面板，截图到 ../.hermes/screenshots
 npm run build                 # stage server + Linux AppImage

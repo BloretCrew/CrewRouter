@@ -11,7 +11,7 @@ const { createApp, rendererEntry } = require('../src/app/create-app');
 const { createElectronStub, ipcEvent, silentLogger } = require('./helpers/electron-stub');
 
 const TEAM = { runtime: 'server', edition: 'team', auth: { required: true, methods: ['password', 'feishu'] }, capabilities: { teamAdmin: true }, protocolVersion: '1' };
-const LOCAL = { runtime: 'desktop-local', edition: 'personal', auth: { required: false, methods: ['local'] }, capabilities: { models: true }, demo: false };
+const LOCAL = { runtime: 'desktop-local', edition: 'personal', auth: { required: true, methods: ['passport'] }, capabilities: { models: true }, demo: false };
 const REMOTE_URL = 'http://203.0.113.10:8080';
 const LOCAL_BASE = 'http://127.0.0.1:4321';
 const launcherUrl = pathToFileURL(rendererEntry).href;
@@ -107,7 +107,7 @@ test('local mode starts the server once, injects the token header and can be reu
   assert.equal(result.mode, 'connected');
   assert.equal(result.runtime, 'desktop-local');
   assert.equal(result.localServer.pid, 777);
-  assert.equal(win.loads.at(-1).url, `${LOCAL_BASE}/console`);
+  assert.equal(win.loads.at(-1).url, `${LOCAL_BASE}/`);
   assert.equal(win.webContents.scripts.length, 1);
   assert.match(win.webContents.scripts[0], /desktop-settings.*remove/);
   assert.match(win.webContents.scripts[0], /desktopSettingsCard.*hidden = false/);
@@ -117,7 +117,7 @@ test('local mode starts the server once, injects the token header and can be reu
   const listener = electron.session.defaultSession.webRequest.headerListeners.at(-1);
   assert.deepEqual(listener.filter, { urls: [`${LOCAL_BASE}/*`] });
   let headers;
-  listener.fn({ requestHeaders: { accept: 'x' } }, (out) => { headers = out.requestHeaders; });
+  listener.fn({ webContentsId: win.webContents.id, url: `${LOCAL_BASE}/`, requestHeaders: { accept: 'x' } }, (out) => { headers = out.requestHeaders; });
   assert.equal(headers['x-crewrouter-desktop-token'], 'local-token');
   assert.equal(app.state.localProfile.displayName, 'Ada');
   const local = ipcEvent(win, `${LOCAL_BASE}/console`);
@@ -204,4 +204,102 @@ test('profiles cannot be deleted while connected and auto connect restores the l
   assert.equal(app.state.mode, 'connected');
   assert.equal(managers[0].options.displayName, 'Ada');
   assert.equal(managers[0].options.localIdentityId, profile.localIdentityId, '本地身份在重启后保持稳定');
+});
+
+test('local Passport closes on profile switch, stop, launcher and main-window close', async () => {
+  const { app, electron, win, launcher, managers } = await boot();
+  await electron.ipcMain.invoke('desktop:start-local', launcher(), 'Ada');
+  assert.deepEqual(managers[0].options.auth, { required: true, methods: ['passport'] });
+  const open = async () => {
+    assert.equal(app.ctx.localPassport.intercept(`${LOCAL_BASE}/auth/passport`), true);
+    await sleep(5);
+    assert.equal(app.ctx.localPassport.isPending(), true);
+    return electron.BrowserWindow.instances.at(-1);
+  };
+  let auth = await open();
+  await app.actions.connectCustom(REMOTE_URL);
+  assert.equal(auth.isDestroyed(), true);
+  await app.actions.showLauncher();
+  await app.actions.startLocal();
+  auth = await open();
+  await app.actions.showLauncher();
+  assert.equal(auth.isDestroyed(), true);
+  await app.actions.startLocal();
+  auth = await open();
+  await app.actions.cancelPending();
+  assert.equal(auth.isDestroyed(), true);
+  assert.equal(win.webContents.getURL(), `${LOCAL_BASE}/`);
+  auth = await open();
+  await app.actions.stopLocal();
+  assert.equal(auth.isDestroyed(), true);
+  await app.actions.startLocal();
+  auth = await open();
+  win.destroy();
+  assert.equal(auth.isDestroyed(), true);
+});
+
+test('local token is scoped to known local contents and explicit internal service requests', async () => {
+  const { app, electron, win } = await boot();
+  await app.actions.startLocal({ displayName: 'Ada' });
+  const listener = electron.session.defaultSession.webRequest.headerListeners.at(-1);
+  const header = 'x-crewrouter-desktop-token';
+  const inspect = (webContentsId, url = `${LOCAL_BASE}/`, requestHeaders = {}) => {
+    let headers;
+    listener.fn({ webContentsId, url, requestHeaders }, (out) => { headers = out.requestHeaders; });
+    return headers;
+  };
+  assert.equal(inspect(win.webContents.id)[header], 'local-token');
+  for (const id of [undefined, null, '1', 99999, -1]) {
+    assert.equal(inspect(id, `${LOCAL_BASE}/`, { [header]: 'local-token', 'X-CrewRouter-Desktop-Token': 'spoof', accept: 'json' })[header], undefined);
+    assert.deepEqual(inspect(id), {});
+  }
+  for (const endpoint of ['/auth/me', '/auth/passport/cancel']) {
+    assert.equal(inspect(-1, `${LOCAL_BASE}${endpoint}`)[header], undefined);
+    assert.equal(inspect(-1, `${LOCAL_BASE}${endpoint}`, { [header]: 'spoof' })[header], undefined);
+    assert.equal(inspect(-1, `${LOCAL_BASE}${endpoint}`, { [header]: 'local-token' })[header], 'local-token');
+    for (const id of [99999, null]) assert.equal(inspect(id, `${LOCAL_BASE}${endpoint}`, { [header]: 'local-token' })[header], undefined);
+    assert.equal(inspect(undefined, `${LOCAL_BASE}${endpoint}`, { [header]: 'local-token' })[header], 'local-token');
+    assert.equal(inspect(-1, `${LOCAL_BASE}${endpoint}`, { 'X-CrewRouter-Desktop-Token': 'local-token' })[header], 'local-token');
+  }
+  for (const endpoint of ['/api/settings', '/auth/me/evil', '/auth/status', '/auth/passport']) {
+    assert.equal(inspect(-1, `${LOCAL_BASE}${endpoint}`, { [header]: 'local-token' })[header], undefined);
+  }
+  assert.equal(inspect(win.webContents.id, `${REMOTE_URL}/auth/me`, { [header]: 'local-token' })[header], undefined);
+  app.ctx.localPassport.intercept(`${LOCAL_BASE}/auth/passport`);
+  await sleep(5);
+  const auth = electron.BrowserWindow.instances.at(-1);
+  assert.equal(inspect(auth.webContents.id, `${LOCAL_BASE}/auth/passport/callback`)[header], 'local-token');
+  await app.ctx.localPassport.cancel();
+  assert.equal(inspect(auth.webContents.id)[header], undefined);
+  await app.actions.showLauncher();
+  assert.equal(inspect(win.webContents.id, `${LOCAL_BASE}/`, { [header]: 'local-token' })[header], undefined);
+  await app.actions.startLocal();
+  await app.actions.connectCustom(REMOTE_URL);
+  assert.equal(inspect(win.webContents.id, `${LOCAL_BASE}/`, { [header]: 'local-token' })[header], undefined);
+  assert.equal(inspect(-1, `${LOCAL_BASE}/auth/me`, { [header]: 'local-token' })[header], undefined);
+  assert.equal(app.ctx.localPassport.intercept(`${LOCAL_BASE}/auth/passport`), false);
+  await app.actions.showLauncher();
+  await app.actions.startLocal();
+  await app.actions.stopLocal();
+  assert.equal(electron.session.defaultSession.webRequest.headerListeners.at(-1).filter, null);
+  assert.equal(inspect(win.webContents.id)[header], undefined);
+  assert.equal(inspect(-1, `${LOCAL_BASE}/auth/me`, { [header]: 'local-token' })[header], undefined);
+});
+
+test('unexpected local exit removes token listener and revokes previously trusted contents', async () => {
+  const { app, electron, win, managers } = await boot();
+  await app.actions.startLocal({ displayName: 'Ada' });
+  app.ctx.localPassport.intercept(`${LOCAL_BASE}/auth/passport`);
+  await sleep(5);
+  const auth = electron.BrowserWindow.instances.at(-1);
+  const listener = electron.session.defaultSession.webRequest.headerListeners.at(-1);
+  managers[0].crash();
+  await sleep(20);
+  assert.equal(auth.isDestroyed(), true);
+  assert.equal(electron.session.defaultSession.webRequest.headerListeners.at(-1).filter, null);
+  for (const webContentsId of [win.webContents.id, auth.webContents.id, -1]) {
+    let headers;
+    listener.fn({ webContentsId, url: `${LOCAL_BASE}/auth/me`, requestHeaders: { 'x-crewrouter-desktop-token': 'local-token' } }, (out) => { headers = out.requestHeaders; });
+    assert.equal(headers['x-crewrouter-desktop-token'], undefined);
+  }
 });

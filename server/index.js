@@ -2400,92 +2400,8 @@ if (isDemo) {
   });
 }
 
-// Desktop Local 使用显式、仅本实例可用的本地 principal；不把缺失 session 当作管理员。
-async function ensureDesktopLocalPersonalTeam(client, user) {
-  const existing = await client.query(
-    `SELECT t.id FROM teams t
-     JOIN user_teams ut ON ut.team_id = t.id
-     WHERE ut.user_id = $1 AND t.is_personal = TRUE
-     LIMIT 1`,
-    [user.id]
-  );
-  if (existing.rows.length) return existing.rows[0];
-  const team = await client.query(
-    'INSERT INTO teams (name, description, is_personal) VALUES ($1, $2, TRUE) RETURNING id',
-    [`${user.username} 的个人账户`, '个人账户，系统自动创建']
-  );
-  await client.query(
-    'INSERT INTO user_teams (user_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-    [user.id, team.rows[0].id]
-  );
-  return team.rows[0];
-}
-
-async function ensureDesktopLocalPersonalModels(client, team) {
-  await client.query(
-    `INSERT INTO team_models (team_id, model_id)
-     SELECT $1, m.id FROM models m
-     JOIN providers p ON p.id = m.provider
-     WHERE m.enabled = TRUE AND p.enabled = TRUE
-     ON CONFLICT (team_id, model_id) DO NOTHING`,
-    [team.id]
-  );
-}
-
-
-async function ensureDesktopLocalPrincipal() {
-  if (!isDesktopLocal) return;
-  const { pool: db } = require('./models/database');
-  const displayName = typeof process.env.CR_LOCAL_DISPLAY_NAME === 'string' && process.env.CR_LOCAL_DISPLAY_NAME.trim()
-    ? process.env.CR_LOCAL_DISPLAY_NAME.trim().slice(0, 255)
-    : 'desktop-local';
-  const client = await db.connect();
-  try {
-    await client.query('BEGIN');
-    await client.query("SELECT pg_advisory_xact_lock(hashtext('crewrouter-desktop-local-principal'))");
-    const result = await client.query(
-    "SELECT * FROM users WHERE username = 'desktop-local' OR username = $1 ORDER BY CASE WHEN username = $1 THEN 0 ELSE 1 END, id ASC LIMIT 1",
-    [displayName]
-  );
-    if (result.rows.length) {
-      const current = result.rows[0];
-      if (current.username !== displayName) {
-        await client.query('UPDATE users SET username = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [displayName, current.id]);
-        current.username = displayName;
-      }
-      const personalTeam = await ensureDesktopLocalPersonalTeam(client, current);
-      await ensureDesktopLocalPersonalModels(client, personalTeam);
-      await client.query('COMMIT');
-      return current;
-    }
-    const inserted = await client.query(
-      `INSERT INTO users (username, email, is_admin, email_verified, balance) VALUES ($1, NULL, TRUE, TRUE, 0) RETURNING *`,
-      [displayName]
-    );
-    const personalTeam = await ensureDesktopLocalPersonalTeam(client, inserted.rows[0]);
-    await ensureDesktopLocalPersonalModels(client, personalTeam);
-    await client.query('COMMIT');
-    return inserted.rows[0];
-  } catch (error) {
-    await client.query('ROLLBACK').catch(() => {});
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
 if (isDesktopLocal) {
-  app.use(async (req, res, next) => {
-    if (!req.session.user && req.ip && (req.ip === '127.0.0.1' || req.ip === '::1' || req.ip === '::ffff:127.0.0.1')) {
-      try {
-        const principal = await ensureDesktopLocalPrincipal();
-        req.session.user = { id: principal.id, username: principal.username, email: principal.email, isAdmin: true, local: true, needsPasswordSetup: false };
-        req.session.save((error) => error ? next(error) : next());
-      } catch (error) { next(error); }
-      return;
-    }
-    next();
-  });
+  app.use(require('./utils/local-passport').localSessionGuard(pool));
 }
 
 // 请求日志中间件
@@ -2592,7 +2508,7 @@ app.get('/api/instance', async (req, res) => {
   try {
     const { metadata } = require('./utils/instance-edition');
     const edition = isDemo ? 'team' : (instanceEdition || await ensureInstanceEdition());
-    const authMode = isDesktopLocal ? 'local' : await require('./utils/auth-mode').getAuthMode();
+    const authMode = isDesktopLocal ? 'passport' : await require('./utils/auth-mode').getAuthMode();
     res.json(metadata(edition, { runtime, authMode }));
   } catch (error) {
     res.status(503).json({ error: error.message, type: error.code === 'EDITION_CONFLICT' ? 'edition_conflict' : 'edition_unavailable' });

@@ -21,8 +21,8 @@ router.get('/setup/status', async (req, res) => {
       needsSetup: false,
       needsEdition: false,
       dbReady: true,
-      authMode: 'local',
-      ...metadata('personal', { runtime: 'desktop-local', authMode: 'local' }),
+      authMode: 'passport',
+      ...metadata('personal', { runtime: 'desktop-local', authMode: 'passport' }),
     });
   }
   try {
@@ -47,6 +47,7 @@ router.get('/setup/status', async (req, res) => {
 
 // 中间件：仅在 OOBE 未完成时允许访问
 async function requireSetupMode(req, res, next) {
+  if (process.env.CR_RUNTIME === 'desktop-local') return res.status(403).json({ error: 'Local 实例仅支持 PassPort 授权' });
   try {
     const result = await pool.query("SELECT value FROM settings WHERE key = 'setup_complete'");
     if (result.rows.length > 0) {
@@ -61,6 +62,7 @@ async function requireSetupMode(req, res, next) {
 
 // Edition 迁移可在旧实例 setup_complete 后执行，但只能显式选择一次。
 async function requireEditionSetup(req, res, next) {
+  if (process.env.CR_RUNTIME === 'desktop-local') return res.status(403).json({ error: 'Local 实例 edition 不可修改' });
   try {
     if (await loadPersistedEdition(pool)) return res.status(403).json({ error: '实例 edition 已初始化，无法修改', type: 'edition_immutable' });
     const setup = await pool.query("SELECT 1 FROM settings WHERE key = 'setup_complete' LIMIT 1");

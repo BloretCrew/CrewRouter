@@ -95,7 +95,8 @@
         <div id="passportLoginSection" class="login-oauth-item" style="display: none;"><a href="/auth/passport" id="passportLoginLink" class="blora-button" data-variant="outline">Bloret PassPort 登录</a></div>
         <div id="feishuLoginSection" class="login-oauth-item" style="display: block;"><a href="/auth/feishu" class="blora-button" data-variant="outline"><span>飞书登录</span></a></div>
       </div>
-      <p class="auth-simple-link"><a href="/plain-login">使用简洁登录页</a></p>
+      <p id="localPassportNotice" class="auth-simple-link" hidden>本地使用需要登录 Bloret PassPort。首次登录会绑定此电脑的本地账户，并保留已有配置与记录。</p>
+      <p class="auth-simple-link" id="simpleLoginLink"><a href="/plain-login">使用简洁登录页</a></p>
 
       <footer class="auth-card__footer">
         <blora-dropdown id="langToggle" class="auth-lang" align="center" placement="top" aria-label="选择语言"><button slot="trigger" type="button" class="blora-button" data-variant="ghost" data-size="sm"><img class="sf-icon" src="https://img.bloret.net/SF/globe?color=white" alt="" width="16" height="16" data-sf-name="globe"><span id="langToggleLabel">中文</span></button><blora-dropdown-item value="zh" href="/?lang=zh">中文</blora-dropdown-item><blora-dropdown-item value="en" href="/?lang=en">EN</blora-dropdown-item></blora-dropdown>
@@ -124,6 +125,14 @@
         if (d.authMode === 'passport') { if (passport) passport.style.display = 'block'; if (feishu) feishu.style.display = 'none'; }
         else if (d.feishuEnabled && feishu) feishu.style.display = 'block';
         const link = document.getElementById('passportLoginLink');
+        const instanceRes = await fetch('/api/instance');
+        const instance = instanceRes.ok ? await instanceRes.json() : null;
+        if (instance?.runtime === 'desktop-local') {
+          document.getElementById('loginForm').style.display = 'none';
+          document.querySelector('.blora-divider').style.display = 'none';
+          document.getElementById('simpleLoginLink').hidden = true;
+          document.getElementById('localPassportNotice').hidden = false;
+        }
         const storedInvite = sessionStorage.getItem('passportInvite');
         if (link && storedInvite) link.href = `/auth/passport?invite=${encodeURIComponent(storedInvite)}`;
       } catch (_) {}

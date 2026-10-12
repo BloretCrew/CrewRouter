@@ -48,11 +48,14 @@ router.get('/status', async (req, res) => {
   try {
     const { metadata } = require('../utils/instance-edition');
     const { getAuthMode } = require('../utils/auth-mode');
-    const mode = await getAuthMode();
+    const mode = process.env.CR_RUNTIME === 'desktop-local' ? 'passport' : await getAuthMode();
     const { isFeishuLoginAvailable } = require('../utils/feishu-config');
     const edition = await loadPersistedEdition(pool) || require('../config-loader').edition || 'personal';
     const instance = metadata(edition, { runtime: process.env.CR_RUNTIME || 'server', authMode: mode });
-    res.json({ auth: instance.auth, authMode: mode, feishuEnabled: instance.auth.methods.includes('feishu') && await isFeishuLoginAvailable() });
+    const localPassport = process.env.CR_RUNTIME === 'desktop-local'
+      ? { passportOrigin: new URL(require('../config-loader').passport?.baseUrl || 'https://passport.bloret.net').origin }
+      : {};
+    res.json({ auth: instance.auth, authMode: mode, ...localPassport, feishuEnabled: instance.auth.methods.includes('feishu') && await isFeishuLoginAvailable() });
   } catch (error) { res.status(503).json({ error: '认证状态暂不可用' }); }
 });
 
@@ -177,6 +180,7 @@ router.post('/login', async (req, res) => {
 
 // 2FA 登录验证
 router.post('/login/2fa', async (req, res) => {
+  if (process.env.CR_RUNTIME === 'desktop-local') return res.status(403).json({ error: 'Local 实例仅支持 PassPort 登录' });
   try {
     const { userId, code } = req.body;
 
@@ -265,6 +269,7 @@ router.post('/login/2fa', async (req, res) => {
 
 // 登出
 router.get('/logout', (req, res) => {
+  if (process.env.CR_RUNTIME === 'desktop-local') require('../utils/local-passport').cancelSession(req, require('../config-loader').app.sessionSecret);
   const user = req.session.user;
   if (user) {
     logAction({
