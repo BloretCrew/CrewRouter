@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const { requestMiddleware: quotaRequestMiddleware } = require('../utils/quota-request-context');
+router.use(quotaRequestMiddleware);
 const { sendGenerationFailure } = require('../utils/generation-failure');
 const { recordEvent } = require('../utils/trace-session');
 
@@ -273,7 +275,7 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
     if (signal && !requestContext) fetchOpts.signal = combineAbortSignals(fetchOpts.signal, signal);
 
     try {
-      response = await fetchWithModelIdentity(fetchOpts.url, { ...fetchOpts, requestContext });
+      response = await fetchWithModelIdentity(fetchOpts.url, { ...fetchOpts, requestContext, quotaProvider: provider, quotaKey: provider.api_key });
       lastError = null;
     } catch (err) {
       lastError = err;
@@ -5660,6 +5662,7 @@ async function handleResponses(req, res) {
         }
         try {
           const upstreamResp = await fetchWithModelIdentity(url, {
+            quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
             method: 'POST', headers, body: JSON.stringify(upstreamBody),
             signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
             agent: currentProxyInfo?.agent,
@@ -5919,6 +5922,7 @@ async function handleResponses(req, res) {
       res.setHeader('X-Accel-Buffering', 'no');
 
       const upstreamResp = await fetchWithModelIdentity(url, {
+        quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
         method: 'POST', headers, body: JSON.stringify(upstreamBody),
         signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
         agent: currentProxyInfo?.agent,
@@ -6081,6 +6085,7 @@ async function handleResponses(req, res) {
 
     // 非流式直接透传
     const upstreamResp = await fetchWithModelIdentity(url, {
+      quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
       method: 'POST', headers, body: JSON.stringify(upstreamBody),
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT),
       agent: currentProxyInfo?.agent,
@@ -6189,6 +6194,7 @@ async function handleResponses(req, res) {
         const nonSystemMessages = messages.filter(m => m.role !== 'system');
         const upstreamBody = protocolBridge.encodeRequest('anthropic', protocolBridge.decodeRequest('openai', chatBody), { quirks: protocolBridge.getDialectCapability('anthropic').quirks });
         const response = await fetchWithModelIdentity(url, {
+          quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
           method: 'POST', headers, body: JSON.stringify(upstreamBody),
           signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
           agent: currentProxyInfo?.agent,
@@ -6220,6 +6226,7 @@ async function handleResponses(req, res) {
         if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
 
         const response = await fetchWithModelIdentity(url, {
+          quotaProvider: providerWithKey, quotaKey: providerWithKey.api_key,
           method: 'POST', headers, body: JSON.stringify(chatBody),
           signal: AbortSignal.timeout(UPSTREAM_STREAM_TIMEOUT),
           agent: currentProxyInfo?.agent,
