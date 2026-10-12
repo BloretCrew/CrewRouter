@@ -11,6 +11,7 @@ const { fetchCommandCodeUsage } = require('./commandcode-usage');
 const { fetchNewApiUsage } = require('./newapi-usage');
 const { fetchCursorUsage } = require('./cursor-usage');
 const { fetchCpaUsage } = require('./cpa-usage');
+const quotaHistory = require('./provider-quota-history');
 
 const QUOTA_SCHEDULE_INTERVALS = Object.freeze([
   { value: 600, label: '每 10 分钟' },
@@ -28,8 +29,18 @@ const SCHEDULER_TICK_MS = 60 * 1000;
 
 let schedulerTimer = null;
 let schedulerRunning = false;
+let lastHistoryCleanup = 0;
 const quotaInFlight = new Map();
 const perKeyQuotaInFlight = new Map();
+
+function captureQuotaBatch(result, provider, options) {
+  try {
+    return quotaHistory.attachQuotaBatch(result, provider, options);
+  } catch {
+    result.history = { recorded: false, error: 'history_identity_failed' };
+    return result;
+  }
+}
 
 function normalizeQuotaScheduleInterval(value) {
   const n = parseInt(value, 10);
@@ -157,7 +168,7 @@ async function queryProviderQuotaInternal(provider) {
       const quota = await fetchArkUsage(provider);
       return { ok: true, status: 200, provider: meta, quota };
     } catch (error) {
-      Logger.warn(`[查询火山方舟额度] ${provider.id} 失败: ${error.message}`);
+      Logger.warn(`[查询火山方舟额度] ${provider.id} 失败: ${quotaHistory.safeText(error.message, provider)}`);
       return { ok: false, status: 502, error: error.message, provider: meta };
     }
   }
@@ -187,7 +198,7 @@ async function queryProviderQuotaInternal(provider) {
         quota: normalizedQuota
       };
     } catch (error) {
-      Logger.warn(`[查询 OAuth 额度] ${provider.id} 失败: ${error.message}`);
+      Logger.warn(`[查询 OAuth 额度] ${provider.id} 失败: ${quotaHistory.safeText(error.message, provider)}`);
       return { ok: false, status: 502, error: error.message, provider: meta };
     }
   }
@@ -202,7 +213,7 @@ async function queryProviderQuotaInternal(provider) {
         quota: { ...quota, providerType: 'commandcode', currentPercent: quota.periods?.[0]?.percent ?? 0 }
       };
     } catch (error) {
-      Logger.warn(`[查询 Command Code 额度] ${provider.id} 失败: ${error.message}`);
+      Logger.warn(`[查询 Command Code 额度] ${provider.id} 失败: ${quotaHistory.safeText(error.message, provider)}`);
       return { ok: false, status: 502, error: error.message, provider: meta };
     }
   }
@@ -217,7 +228,7 @@ async function queryProviderQuotaInternal(provider) {
         quota
       };
     } catch (error) {
-      Logger.warn(`[查询 new-api 额度] ${provider.id} 失败: ${error.message}`);
+      Logger.warn(`[查询 new-api 额度] ${provider.id} 失败: ${quotaHistory.safeText(error.message, provider)}`);
       return { ok: false, status: 502, error: error.message, provider: meta };
     }
   }
@@ -243,7 +254,7 @@ async function queryProviderQuotaInternal(provider) {
         quota: { ...quota, providerType: 'cursor', currentPercent: primaryPercent }
       };
     } catch (error) {
-      Logger.warn(`[查询 Cursor 额度] ${provider.id} 失败: ${error.message}`);
+      Logger.warn(`[查询 Cursor 额度] ${provider.id} 失败: ${quotaHistory.safeText(error.message, provider)}`);
       return { ok: false, status: 502, error: error.message, provider: meta };
     }
   }
@@ -285,7 +296,7 @@ async function queryProviderQuotaInternal(provider) {
     signal: AbortSignal.timeout(15000)
   };
 
-  Logger.info(`[查询供应商额度] ${provider.id}: ${fetchOptions.method} ${reqConfig.url}`);
+  Logger.info(`[查询供应商额度] ${provider.id}: ${fetchOptions.method} [额度请求]`);
 
   const urlCheck = await validateUrl(reqConfig.url);
   if (!urlCheck.ok) {
@@ -332,25 +343,30 @@ async function queryProviderQuotaInternal(provider) {
       quota: {
         planName: result.planName || provider.name,
         unit: result.unit || 'balance',
-        total: result.total ?? 0,
-        used: result.used ?? 0,
-        remaining: result.remaining ?? 0,
+        total: result.total ?? null,
+        used: result.used ?? null,
+        remaining: result.remaining ?? null,
+        currency: result.currency || '',
+        currentPercent: result.currentPercent ?? null,
+        observedAt: result.observedAt || null,
+        source: result.source || 'active',
         periods: Array.isArray(result.periods) ? result.periods : [],
         extra: result.extra || ''
       }
     };
   } catch (execError) {
-    Logger.error(`[查询供应商额度] extractor 执行失败: ${execError.message}`);
+    Logger.error(`[查询供应商额度] extractor 执行失败: ${quotaHistory.safeText(execError.message, provider)}`);
     return { ok: false, status: 500, error: 'extractor 执行失败: ' + execError.message, provider: meta };
   }
 }
 
-async function queryProviderQuota(provider) {
+async function queryProviderQuota(provider, options = {}) {
   const providerId = provider?.id;
   if (!providerId) return queryProviderQuotaInternal(provider);
   const current = quotaInFlight.get(providerId);
   if (current) return current;
-  const promise = queryProviderQuotaInternal(provider);
+  const started = { ...options, checkedAt: options.checkedAt || new Date().toISOString() };
+  const promise = queryProviderQuotaInternal(provider).then(result => captureQuotaBatch(result, provider, { ...started, completedAt: new Date().toISOString() }));
   quotaInFlight.set(providerId, promise);
   try {
     return await promise;
@@ -387,12 +403,13 @@ function maskKeyEntry(entry, index) {
  * - balance 单位的结果做聚合汇总（percent 单位无聚合意义，置空顶层）
  * @returns {{ ok: boolean, status: number, keys: Array, aggregated: object|null, provider: object }}
  */
-async function queryProviderQuotaPerKey(provider) {
+async function queryProviderQuotaPerKey(provider, options = {}) {
   const providerId = provider?.id;
   if (!providerId) return queryProviderQuotaPerKeyInternal(provider);
   const current = perKeyQuotaInFlight.get(providerId);
   if (current) return current;
-  const promise = queryProviderQuotaPerKeyInternal(provider);
+  const started = { ...options, checkedAt: options.checkedAt || new Date().toISOString() };
+  const promise = queryProviderQuotaPerKeyInternal(provider, started).then(result => captureQuotaBatch(result, provider, { ...started, completedAt: new Date().toISOString() }));
   perKeyQuotaInFlight.set(providerId, promise);
   try {
     return await promise;
@@ -401,20 +418,20 @@ async function queryProviderQuotaPerKey(provider) {
   }
 }
 
-async function queryProviderQuotaPerKeyInternal(provider) {
+async function queryProviderQuotaPerKeyInternal(provider, options = {}) {
   // CPA 配置关联一个订阅账号，供应商的代理 Key 共用该账号额度。
-  if (provider.quota_mode === 'cpa') return queryProviderQuota(provider);
+  if (!PER_KEY_QUOTA_MODES.has(provider.quota_mode || 'script')) return queryProviderQuota(provider, options);
   const meta = { id: provider.id, name: provider.name };
   const entries = normalizeProviderKeyEntries(provider).filter((e) => e.enabled !== false);
   if (entries.length <= 1) {
-    const result = await queryProviderQuota(provider);
+    const result = await queryProviderQuota(provider, options);
     const single = result.ok && result.quota ? [{ ...maskKeyEntry(entries[0] || { key: getPrimaryApiKey(provider) }, 0), ok: true, quota: result.quota }] : [];
-    return {
+    return quotaHistory.transferQuotaBatch(result, {
       ...result,
       keys: single,
       keyCount: Math.max(entries.length, 1),
       aggregated: result.ok && result.quota?.unit === 'balance' ? result.quota : null,
-    };
+    });
   }
 
   // 各 Key 用独立克隆并发查询；必须绕过 queryProviderQuota 的 providerId
@@ -467,55 +484,19 @@ async function queryProviderQuotaPerKeyInternal(provider) {
   };
 }
 
-async function saveQuotaSnapshot(providerId, result) {
-  if (!providerId) return;
+async function saveQuotaSnapshot(providerId, result, options = {}) {
+  if (!providerId) return { recorded: false, error: 'missing_provider' };
   try {
-    await pool.query(
-      `UPDATE providers SET
-         quota_last_checked_at = NOW(),
-         quota_last_ok = $2,
-         quota_last_result = $3::jsonb,
-         quota_last_error = $4
-       WHERE id = $1`,
-      [
-        providerId,
-        !!result.ok,
-        result.ok ? JSON.stringify(serializeQuotaResult(result)) : null,
-        result.ok ? null : String(result.error || '查询失败').slice(0, 1000)
-      ]
-    );
+    const provider = await pool.query('SELECT * FROM providers WHERE id=$1', [providerId]);
+    if (!provider.rows.length) return { recorded: false, error: 'missing_provider' };
+    const recording = await quotaHistory.recordQuotaHistory(pool, provider.rows[0], result, options);
+    result.history = recording;
+    return recording;
   } catch (err) {
-    Logger.warn(`[额度快照] 保存失败 ${providerId}: ${err.message}`);
+    result.history = { recorded: false, error: 'history_write_failed' };
+    Logger.warn(`[额度快照] 保存失败 ${providerId}: ${err.code || 'history_write_failed'}`);
+    return result.history;
   }
-}
-
-/** 快照序列化：保留顶层 quota 与逐 Key 明细（keys 仅含脱敏标识与额度/错误） */
-function serializeQuotaResult(result) {
-  const quota = result.quota || {};
-  const payload = {
-    planName: quota.planName || '',
-    unit: quota.unit || 'balance',
-    total: quota.total ?? 0,
-    used: quota.used ?? 0,
-    remaining: quota.remaining ?? 0,
-    periods: Array.isArray(quota.periods) ? quota.periods : [],
-    extra: quota.extra || ''
-  };
-  if (quota.currentPercent !== undefined) payload.currentPercent = quota.currentPercent;
-  if (quota.providerType) payload.providerType = quota.providerType;
-  if (Array.isArray(result.keys)) {
-    payload.keys = result.keys.map((entry) => ({
-      index: entry.index,
-      masked_key: entry.masked_key,
-      label: entry.label || '',
-      enabled: entry.enabled !== false,
-      ok: !!entry.ok,
-      error: entry.ok ? undefined : String(entry.error || '查询失败').slice(0, 500),
-      quota: entry.ok ? entry.quota : undefined
-    }));
-  }
-  if (result.aggregated) payload.aggregated = result.aggregated;
-  return payload;
 }
 
 async function runDueQuotaSchedules() {
@@ -537,20 +518,20 @@ async function runDueQuotaSchedules() {
 
     for (const provider of due.rows) {
       try {
-        const result = await queryProviderQuotaPerKey(provider);
+        const result = await queryProviderQuotaPerKey(provider, { source: 'schedule' });
         await saveQuotaSnapshot(provider.id, result);
         if (!result.ok) {
-          Logger.warn(`[额度定时查询] ${provider.name}(${provider.id}) 失败: ${result.error}`);
+          Logger.warn(`[额度定时查询] ${provider.name}(${provider.id}) 失败: ${quotaHistory.safeText(result.error, provider)}`);
         } else {
           Logger.info(`[额度定时查询] ${provider.name}(${provider.id}) 成功`);
         }
       } catch (err) {
-        Logger.warn(`[额度定时查询] ${provider.id} 异常: ${err.message}`);
+        Logger.warn(`[额度定时查询] ${provider.id} 异常: ${quotaHistory.safeText(err.message, {})}`);
         await saveQuotaSnapshot(provider.id, { ok: false, error: err.message });
       }
     }
   } catch (err) {
-    Logger.warn(`[额度定时查询] 调度失败: ${err.message}`);
+    Logger.warn(`[额度定时查询] 调度失败: ${quotaHistory.safeText(err.message, {})}`);
   } finally {
     schedulerRunning = false;
   }
@@ -559,8 +540,14 @@ async function runDueQuotaSchedules() {
 function startQuotaScheduler() {
   if (schedulerTimer) return;
   const tick = () => {
+    if (Date.now() - lastHistoryCleanup > 86400000) {
+      lastHistoryCleanup = Date.now();
+      pool.query("SELECT value FROM settings WHERE key='retention.provider_quota_days'")
+        .then(setting => quotaHistory.cleanupQuotaHistory(pool, setting.rows.length ? Number(setting.rows[0].value) : 90))
+        .catch(() => Logger.warn('[额度历史] 安全清理失败，保留历史明细'));
+    }
     runDueQuotaSchedules().catch(err => {
-      Logger.warn(`[额度定时查询] tick 失败: ${err.message}`);
+      Logger.warn(`[额度定时查询] tick 失败: ${quotaHistory.safeText(err.message, {})}`);
     });
   };
   schedulerTimer = setInterval(tick, SCHEDULER_TICK_MS);

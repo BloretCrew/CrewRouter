@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=desktop-compact-20261010">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=desktop-write-20261010">
   <link rel="stylesheet" href="/css/stats-blora.css?v=overview-spacing-20261005">
-  <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=checkbox-layout-20261008">
+  <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-dimensions-20261012">
   <link rel="stylesheet" href="/css/project-work.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/project-work-blora.css?v=filter-select-20261005">
   <link rel="stylesheet" href="/css/leaderboard-blora.css?v=filter-badge-20261005">
@@ -61,6 +61,7 @@
   </script>
   <link rel="stylesheet" href="/vendor/blora-2.0.8/blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css?v=restore-0930-20261003">
+  <link rel="stylesheet" href="/css/provider-quota-stats.css?v=quota-analysis-final-20261012">
 </head>
 <body class="blora-page">
   <!-- 移动端顶部导航栏 -->
@@ -834,6 +835,7 @@
           </div>
 
           <div id="statsTabMulti" class="stats-tab-content" style="display:none;">
+            <section data-quota-scope="user" data-quota-context="multi"></section>
             <section id="userMultiDimension" class="multi-dimension-panel" aria-label="自选多维分析">
               <h4>自选维度分析</h4>
               <div class="multi-dimension-choices" role="group" aria-label="分析维度">
@@ -843,13 +845,14 @@
                 <blora-checkbox value="model" label="模型" checked></blora-checkbox>
                 <blora-checkbox value="provider" label="供应商"></blora-checkbox>
               </div>
-              <div class="multi-dimension-actions"><label>统计指标 <blora-select name="metric" value="requests" aria-label="统计指标"><blora-option value="requests">请求数</blora-option><blora-option value="tokens">Token</blora-option><blora-option value="cost">积分</blora-option></blora-select></label><span class="multi-dimension-status" role="status"></span></div>
+              <div class="multi-dimension-actions"><label><span data-i18n="分析数据源">分析数据源</span> <blora-select name="data_source" value="requests" aria-label="分析数据源"><blora-option value="requests"><span data-i18n="请求用量">请求用量</span></blora-option><blora-option value="quota"><span data-i18n="供应商额度">供应商额度</span></blora-option><blora-option value="related"><span data-i18n="关联分析">关联分析</span></blora-option></blora-select></label><label>统计指标 <blora-select name="metric" value="requests" aria-label="统计指标"><blora-option value="requests">请求数</blora-option><blora-option value="tokens">Token</blora-option><blora-option value="cost">积分</blora-option></blora-select></label><span class="multi-dimension-status" role="status"></span></div>
               <div id="userMultiDimensionResult"></div>
             </section>
           </div>
 
           <!-- 概览标签页 -->
           <div id="statsTabOverview" class="stats-tab-content">
+            <section data-quota-scope="user" data-quota-context="overview"></section>
             <div class="stats-overview-insights">
               <div class="stats-insight-card">
                 <div class="stats-insight-header">
@@ -2684,11 +2687,12 @@ data: [DONE]</code></pre>
   <script src="/js/session-tool-groups.js?v=restore-0930-20261003"></script>
   <script src="/js/vendor/marked.min.js?v=restore-0930-20261003"></script>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
-  <script src="/js/multi-dimension-chart.js?v=restore-0930-20261003"></script>
+  <script src="/js/provider-quota-stats.js?v=quota-analysis-final-20261012"></script>
+  <script src="/js/multi-dimension-chart.js?v=quota-analysis-final-20261012"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
-  <script src="/js/app.js?v=unified-providers-20261010"></script>
+  <script src="/js/app.js?v=quota-analysis-final-20261012"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

@@ -22,3 +22,4 @@
   .multi-dimension-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--blora-space-3); }
   .multi-dimension-choices blora-checkbox { min-width: 0; }
 }
+.multi-dimension-panel [hidden] { display: none !important; }

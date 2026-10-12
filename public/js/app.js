@@ -3707,6 +3707,7 @@ class ConsoleApp {
   }
 
   async loadStats() {
+    window.CrewRouterQuotaStats?.refresh('user');
     const rangeSelect = document.getElementById('statsTimeRange');
     const customRange = document.getElementById('statsCustomDateRange');
     const range = rangeSelect.value;
@@ -5094,6 +5095,7 @@ class ConsoleApp {
     const tabContent = document.getElementById('statsTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
     if (tabContent) tabContent.style.display = 'block';
 
+    if (tab === 'multi' || tab === 'overview') window.CrewRouterQuotaStats?.refresh('user');
     if (tab === 'multi') {
       window.CrewRouterMultiDimension?.load('user');
     }
@@ -10640,26 +10642,34 @@ ${extractorBody}
 
     section.style.display = 'block';
     setHTML(grid, providers.map(p => {
-      if (p.error) {
+      const historyLink = `<button type="button" class="blora-button" data-variant="ghost" data-size="sm" data-quota-provider="${escapeHtml(String(p.id ?? p.provider_id ?? ''))}">${t('额度历史')}</button>`;
+      const latest = p.latest_valid_quota || p.last_valid_quota || p.latest_valid?.quota;
+      const lastValidAt = p.last_valid_at || p.latest_valid?.observed_at || p.observed_at;
+      const quota = latest || p.quota;
+      const failed = !!p.error || ['failed', 'error'].includes(p.status);
+      const stateHtml = `<div class="model-quota-updated">${failed ? t('最近查询失败，保留上次有效值') : p.status === 'stale' ? t('已过期') : p.status === 'partial' ? t('部分成功') : ''}${lastValidAt ? ' · ' + t('最后有效观测') + ' ' + escapeHtml(this._formatQuotaCheckedAt(lastValidAt)) : ''}</div>`;
+      if (failed && !quota) {
         return `
           <article class="blora-card model-quota-card error" data-variant="flat">
             <div class="model-quota-header">
               <span class="model-quota-name">${escapeHtml(p.name)}</span>
               <span class="blora-badge" data-variant="danger">${t('查询失败')}</span>
             </div>
+            ${historyLink}
           </article>`;
       }
 
-      const q = p.quota || {};
-      const keyEntries = Array.isArray(p.keys) ? p.keys.filter(k => k && (k.ok || k.error)) : [];
+      const q = quota || {};
+      const keyEntries = Array.isArray(p.keys) ? p.keys.filter(k => k && (k.ok || k.error || k.quota)) : [];
       const agg = p.aggregated || q.aggregated || null;
       const total = parseFloat(q.total) || 0;
       const used = parseFloat(q.used) || 0;
       const periods = Array.isArray(q.periods) ? q.periods : [];
-      const currentPercent = Number(q.currentPercent ?? periods.find(period => period.key === 'current_period')?.percent);
+      const rawPercent = q.currentPercent ?? periods.find(period => period.key === 'current_period')?.percent;
+      const currentPercent = rawPercent == null || rawPercent === '' ? NaN : Number(rawPercent);
       const pct = Number.isFinite(currentPercent)
         ? Math.round(currentPercent)
-        : (total > 0 ? Math.round(used / total * 100) : 0);
+        : (total > 0 && q.used != null ? Math.round(used / total * 100) : null);
 
       const credits = q.credits || {};
       const resetCredits = q.rateLimitResetCredits?.available_count;
@@ -10672,7 +10682,7 @@ ${extractorBody}
       const periodHtml = periods.length ? `
         <div class="model-quota-periods">
           ${periods.map(period => {
-            const periodPct = Math.max(0, Math.min(100, Number(period.percent) || 0));
+            const periodPct = period.percent == null || period.percent === '' ? null : Math.max(0, Math.min(100, Number(period.percent)));
             const periodLabel = period.label || period.key || t('额度');
             const resetTitle = period.resetsAt ? new Date(period.resetsAt).toLocaleString('zh-CN', { hour12: false }) : '';
             const periodRange = period.startsAt || period.resetsAt
@@ -10682,9 +10692,9 @@ ${extractorBody}
               <div class="model-quota-period">
                 <div class="model-quota-period-header">
                   <span>${escapeHtml(periodLabel)}</span>
-                  ${usageBadge(periodPct)}
+                  ${periodPct == null ? t('未知') : usageBadge(periodPct)}
                 </div>
-                ${progressBar(periodPct, periodLabel)}
+                ${periodPct == null ? '' : progressBar(periodPct, periodLabel)}
                 ${periodRange ? `<div class="model-quota-period-reset" title="${escapeHtml(resetTitle)}">${t('周期：')}${escapeHtml(periodRange)}</div>` : ''}
               </div>`;
           }).join('')}
@@ -10692,9 +10702,9 @@ ${extractorBody}
         <div class="model-quota-period">
           <div class="model-quota-period-header">
             <span>${t('额度')}</span>
-            ${usageBadge(Math.min(pct, 100))}
+            ${pct == null ? `<span>${t('未知')}</span>` : usageBadge(Math.min(pct, 100))}
           </div>
-          ${progressBar(pct, t('额度'))}
+          ${pct == null ? '' : progressBar(pct, t('额度'))}
         </div>`;
 
       // 多 Key 供应商：逐 Key 分块展示；balance 单位优先用服务端聚合值
@@ -10704,9 +10714,9 @@ ${extractorBody}
             const kq = key.quota || {};
             const kTotal = parseFloat(kq.total) || 0;
             const kUsed = parseFloat(kq.used) || 0;
-            const kPct = kTotal > 0 ? Math.min(100, Math.round(kUsed / kTotal * 100)) : 0;
+            const kPct = kTotal > 0 && kq.used != null ? Math.min(100, Math.round(kUsed / kTotal * 100)) : null;
             const keyLabel = key.label || key.masked_key || `${t('Key')} ${key.index + 1}`;
-            if (!key.ok) {
+            if (!key.ok && !key.quota) {
               return `
                 <div class="model-quota-key" style="opacity:0.75;">
                   <div class="model-quota-period-header">
@@ -10716,15 +10726,16 @@ ${extractorBody}
                   ${key.error ? `<div style="font-size:11px;color:var(--muted-foreground);margin-top:2px;" title="${escapeHtml(key.error)}">${escapeHtml(key.error.length > 60 ? key.error.slice(0, 60) + '…' : key.error)}</div>` : ''}
                 </div>`;
             }
-            const kCurrent = Number(kq.currentPercent ?? kPct);
+            const kRaw = kq.currentPercent ?? kPct;
+            const kCurrent = kRaw == null || kRaw === '' ? null : Number(kRaw);
             return `
               <div class="model-quota-key">
                 <div class="model-quota-period-header">
                   <span><code style="font-size:11px;">${escapeHtml(keyLabel)}</code></span>
-                  ${usageBadge(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct)))}
+                  ${!key.ok ? `<span>${t('最近查询失败，保留上次有效值')}</span>` : ''}${kCurrent == null ? t('未知') : usageBadge(Math.max(0, Math.min(100, kCurrent)))}
                 </div>
-                ${progressBar(Math.max(0, Math.min(100, Number.isFinite(kCurrent) ? Math.round(kCurrent) : kPct)), keyLabel)}
-                ${kTotal > 0 ? `<div style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(String(kq.remaining ?? 0))} / ${escapeHtml(String(kTotal))}</div>` : ''}
+                ${kCurrent == null ? '' : progressBar(Math.max(0, Math.min(100, kCurrent)), keyLabel)}
+                ${kTotal > 0 ? `<div style="font-size:11px;color:var(--muted-foreground);">${escapeHtml(String(kq.remaining ?? t('未知')))} / ${escapeHtml(String(kTotal))}</div>` : ''}
               </div>`;
           }).join('')}
         </div>` : '';
@@ -10738,15 +10749,23 @@ ${extractorBody}
           </div>
           ${periods.length ? periodHtml : `
           <div class="model-quota-numbers">
-            <span class="model-quota-remaining">${escapeHtml(String((agg || q).remaining ?? 0))}</span>
-            <span class="model-quota-total">/ ${escapeHtml(String((agg || q).total ?? 0))}</span>
+            <span class="model-quota-remaining">${escapeHtml(String((agg || q).remaining ?? t('未知')))}</span>
+            <span class="model-quota-total">/ ${escapeHtml(String((agg || q).total ?? t('未知')))}</span>
           </div>
           ${periodHtml}`}
           ${keysHtml}
           ${creditsHtml}
-          ${p.checked_at ? `${'<div class="model-quota-updated">' + t('更新于')}${escapeHtml(this._formatQuotaCheckedAt(p.checked_at))}</div>` : ''}
+          ${stateHtml}
+          ${p.coverage ? `<div class="quota-note">${t('成功账户覆盖')} ${escapeHtml(String(p.coverage.successful))}/${escapeHtml(String(p.coverage.total))}</div>` : ''}
+          ${p.history?.recorded === false ? `<div class="quota-note">${t('额度历史记录失败，本次查询未保存')}</div>` : ''}
+          ${historyLink}
         </article>`;
     }).join(''));
+    grid.querySelectorAll('[data-quota-provider]').forEach(button => button.addEventListener('click', () => {
+      window.CrewRouterQuotaStats?.open('user', button.dataset.quotaProvider);
+    }));
+    window.CrewRouterQuotaStats?.library(grid);
+    window.CrewRouterQuotaStats?.refresh('user');
   }
 
   _formatQuotaCheckedAt(value) {

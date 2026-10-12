@@ -2976,6 +2976,8 @@ async function runPendingMigrations() {
     ensureProviderNotes,
     ensureProviderTestUserAgent,
     ensureProviderQuotaSchedule,
+    () => require('./utils/provider-quota-history').ensureQuotaHistorySchema(pool),
+    () => require('./utils/provider-usage-history').ensureProviderUsageHistory(pool),
     ensureModelCreatedBy,
     ensureProviderApiKeyLength,
     ensureProviderKeyScript,
@@ -3025,6 +3027,7 @@ async function runPendingMigrations() {
     Logger.warn(`[启动] 孤立模型清理跳过: ${err.message}`);
   }
 
+  await require('./utils/provider-quota-history').importLegacyQuotaHistory(pool);
   Logger.info('[启动] 数据库迁移完成');
 }
 

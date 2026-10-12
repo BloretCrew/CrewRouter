@@ -5668,6 +5668,7 @@ async function(ctx) {
         return;
       }
 
+      if (data.history?.recorded === false) { error.style.display = 'block'; error.textContent = t('额度历史记录失败，本次查询未保存'); }
       const q = data.quota || {};
       const agg = data.aggregated || null;
       const keys = Array.isArray(data.keys) ? data.keys : [];
@@ -5822,6 +5823,7 @@ async function(ctx) {
 
   async checkProviderQuota(providerId) {
     this._quotaProviderId = providerId;
+    window.CrewRouterQuotaStats?.detail(document.getElementById('quotaLatestObservation'), 'admin', providerId);
     this._quotaScriptMode = null;
     const quotaButton = document.getElementById(`quota-btn-${providerId}`);
     const previousQuotaButtonHtml = quotaButton?.innerHTML;
@@ -5928,6 +5930,8 @@ async function(ctx) {
       error.style.display = 'block';
       error.textContent = t('网络错误: ') + err.message;
     } finally {
+      if (String(this._quotaProviderId) === String(providerId)) window.CrewRouterQuotaStats?.detail(document.getElementById('quotaLatestObservation'), 'admin', providerId);
+      window.CrewRouterQuotaStats?.refresh('admin');
       if (quotaButton) {
         quotaButton.disabled = false;
         setHTML(quotaButton, previousQuotaButtonHtml || t('查询额度'));
@@ -6436,7 +6440,7 @@ async function(ctx) {
   }
 
   _multiStatsParams() {
-    const params = new URLSearchParams({ days: document.getElementById('adminStatsDays')?.value || '30' });
+    const params = new URLSearchParams({ days: document.getElementById('adminStatsDays')?.value || '30', data_source: 'association' });
     [['user_id', 'multiStatsUser'], ['team_id', 'multiStatsTeam'], ['model_id', 'multiStatsModel'], ['provider_id', 'multiStatsProvider'], ['request_source', 'multiStatsSource'], ['workspace_path', 'multiStatsProject']].forEach(([key, id]) => {
       const value = document.getElementById(id)?.value || '';
       if (value) params.set(key, value);
@@ -6445,6 +6449,7 @@ async function(ctx) {
   }
 
   async loadMultiStats() {
+    window.CrewRouterQuotaStats?.refresh('admin');
     const seq = (this._multiStatsLoadSeq = (this._multiStatsLoadSeq || 0) + 1);
     try {
       await this.loadMultiStatsFilters();
@@ -6532,6 +6537,7 @@ async function(ctx) {
   }
 
   async loadStats() {
+    window.CrewRouterQuotaStats?.refresh('admin');
     // 防止 3s 轮询与手动切换叠加时的乱序覆盖
     const seq = (this._statsLoadSeq = (this._statsLoadSeq || 0) + 1);
     try {
@@ -8292,7 +8298,7 @@ async function(ctx) {
 
   async saveRetentionConfig(e) {
     e.preventDefault();
-    const fields = ['CompressDays', 'CompressSizeGb', 'PurgeDays', 'PurgeSizeGb'];
+    const fields = ['CompressDays', 'CompressSizeGb', 'PurgeDays', 'PurgeSizeGb', 'ProviderQuotaDays'];
     const values = {};
     for (const field of fields) {
       const value = Number(document.getElementById(`retention${field}`)?.value);
@@ -8318,6 +8324,7 @@ async function(ctx) {
         body: JSON.stringify({
           compress_days: values.CompressDays, compress_size_gb: values.CompressSizeGb,
           purge_days: values.PurgeDays, purge_size_gb: values.PurgeSizeGb,
+          provider_quota_days: values.ProviderQuotaDays,
           agg_enabled: document.getElementById('retentionAggEnabled')?.checked === true,
         }),
       });
@@ -8425,6 +8432,7 @@ async function(ctx) {
         document.getElementById('retentionCompressSizeGb').value = retention.compress_size_gb;
         document.getElementById('retentionPurgeDays').value = retention.purge_days;
         document.getElementById('retentionPurgeSizeGb').value = retention.purge_size_gb;
+        document.getElementById('retentionProviderQuotaDays').value = retention.provider_quota_days ?? 90;
         document.getElementById('retentionAggEnabled').checked = retention.agg_enabled !== false;
       }
 

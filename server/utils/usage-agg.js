@@ -309,6 +309,7 @@ function sleep(ms) {
  * 替换语义保证幂等。返回 { rows, startDate, endDate }（rows 为受影响行数）。
  */
 async function aggregateDateRange(startDate, endDate) {
+  await require('./provider-usage-history').archiveProviderUsage(pool, { start: startDate, end: endDate });
   const result = await pool.query(
     `INSERT INTO ${AGG_TABLE}
        (agg_date, user_id, model_id, api_key_id, request_source,

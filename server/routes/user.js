@@ -1311,12 +1311,38 @@ router.get('/usage', requireAuth, async (req, res) => {
 });
 
 // 获取用户详细统计数据（支持时间段筛选）
-router.get('/stats/multi-dimension', requireAuth, async (req, res) => {
+router.get('/stats/provider-quota', requireAuth, requireProviderAccessContext, async (req, res) => {
+  try {
+    const { queryProviderQuotaOverview } = require('../utils/provider-quota-stats');
+    res.json(await queryProviderQuotaOverview(pool, req.query, 'user', req.session.user.id));
+  } catch (error) {
+    if (error.status === 400) return res.status(400).json({ error: error.message });
+    Logger.error('[供应商额度统计] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+router.get('/stats/provider-quota/history', requireAuth, requireProviderAccessContext, async (req, res) => {
+  try {
+    const { queryProviderQuotaHistory } = require('../utils/provider-quota-stats');
+    res.json(await queryProviderQuotaHistory(pool, req.query, 'user', req.session.user.id));
+  } catch (error) {
+    if (error.status === 400) return res.status(400).json({ error: error.message });
+    Logger.error('[供应商额度统计] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+router.get('/stats/multi-dimension', requireAuth, (req, res, next) => {
+  const source = req.query.data_source || req.query.source || 'usage';
+  if (['quota', 'provider_quota', 'association'].includes(source)) return requireProviderAccessContext(req, res, next);
+  return next();
+}, async (req, res) => {
   try {
     const { queryMultiDimensionStats } = require('../utils/multi-dimension-stats');
     res.json(await queryMultiDimensionStats(pool, req.query, 'user', req.session.user.id));
   } catch (error) {
-    if (error.message.startsWith('请选择') || error.message.startsWith('无效') || error.message.startsWith('时间范围')) {
+    if (error.status === 400 || error.message.startsWith('请选择') || error.message.startsWith('无效') || error.message.startsWith('时间范围')) {
       return res.status(400).json({ error: error.message });
     }
     Logger.error('[用户多维分析] 错误:', error);
@@ -3418,6 +3444,23 @@ function safeParseQuotaSnapshot(text) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
+async function quotaSnapshotResponse(provider, cached, history) {
+  const snapshot = typeof provider.quota_last_result === 'string'
+    ? safeParseQuotaSnapshot(provider.quota_last_result) : provider.quota_last_result;
+  const valid = await pool.query(`SELECT MAX(last_valid_at) AS last_valid_at
+    FROM provider_quota_account_providers WHERE provider_id = $1 AND active = TRUE AND legacy = FALSE`, [provider.id]);
+  return {
+    id: provider.id, name: provider.name, quota: snapshot || null,
+    keys: Array.isArray(snapshot?.keys) ? snapshot.keys : [], aggregated: snapshot?.aggregated || null,
+    cached, checked_at: provider.quota_last_checked_at, last_attempt_at: provider.quota_last_checked_at,
+    last_valid_at: valid.rows[0]?.last_valid_at || snapshot?.last_valid_at || null,
+    status: provider.quota_last_ok ? (snapshot?.status || 'success') : 'failed',
+    coverage: snapshot?.coverage || null,
+    stale: !provider.quota_last_ok, ...(provider.quota_last_ok ? {} : { error: '额度查询失败或尚未刷新' }),
+    ...(history ? { history: { recorded: history.recorded === true, ...(history.recorded ? {} : { error: 'history_write_failed' }) } } : {})
+  };
+}
+
 router.get('/providers/quota', requireAuth, async (req, res) => {
   try {
     const userId = req.session.user.id;
@@ -3437,30 +3480,7 @@ router.get('/providers/quota', requireAuth, async (req, res) => {
     `, [userId]);
 
     const results = [];
-    for (const provider of providersResult.rows) {
-      if (provider.quota_last_ok && provider.quota_last_result) {
-        const snapshot = typeof provider.quota_last_result === 'string'
-          ? safeParseQuotaSnapshot(provider.quota_last_result)
-          : provider.quota_last_result;
-        results.push({
-          id: provider.id,
-          name: provider.name,
-          quota: snapshot,
-          keys: Array.isArray(snapshot?.keys) ? snapshot.keys : [],
-          aggregated: snapshot?.aggregated || null,
-          cached: true,
-          checked_at: provider.quota_last_checked_at
-        });
-      } else {
-        results.push({
-          id: provider.id,
-          name: provider.name,
-          error: provider.quota_last_error || '尚未刷新额度',
-          cached: true,
-          checked_at: provider.quota_last_checked_at
-        });
-      }
-    }
+    for (const provider of providersResult.rows) results.push(await quotaSnapshotResponse(provider, true));
 
     res.json({ providers: results });
   } catch (error) {
@@ -3492,35 +3512,14 @@ router.post('/providers/quota/refresh', requireAuth, async (req, res) => {
     for (const provider of providersResult.rows) {
       try {
         const result = await queryProviderQuotaPerKey(provider);
-        await saveQuotaSnapshot(provider.id, result);
-        if (result.ok) {
-          results.push({
-            id: provider.id,
-            name: provider.name,
-            quota: result.quota,
-            keys: result.keys || [],
-            keyCount: result.keyCount || 1,
-            aggregated: result.aggregated || null,
-            cached: false,
-            checked_at: new Date()
-          });
-        } else {
-          results.push({
-            id: provider.id,
-            name: provider.name,
-            error: result.error || '查询失败',
-            cached: false,
-            checked_at: new Date()
-          });
-        }
-      } catch (e) {
-        Logger.warn(`[用户额度刷新] ${provider.id} 失败: ${e.message}`);
-        results.push({
-          id: provider.id,
-          name: provider.name,
-          error: e.message,
-          cached: false
-        });
+        const history = await saveQuotaSnapshot(provider.id, result);
+        const latest = await pool.query(`SELECT id, name, quota_last_ok, quota_last_result, quota_last_checked_at
+          FROM providers WHERE id = $1`, [provider.id]);
+        results.push(await quotaSnapshotResponse(latest.rows[0] || provider, false, history));
+      } catch (error) {
+        Logger.warn(`[用户额度刷新] ${provider.id} 失败`);
+        const history = await saveQuotaSnapshot(provider.id, { ok: false, error: '额度查询失败' });
+        results.push(await quotaSnapshotResponse({ ...provider, quota_last_ok: false }, false, history));
       }
     }
 

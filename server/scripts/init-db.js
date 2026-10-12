@@ -3,6 +3,7 @@ const config = require('../config-loader');
 const Logger = require('../logger');
 const { encryptSecret } = require('../utils/secret-crypto');
 const { ensureUsageModelIdentityColumns } = require('../utils/usage-model-migration');
+const { ensureQuotaHistorySchema } = require('../utils/provider-quota-history');
 
 async function ensureDatabase() {
   const adminPool = new Pool({
@@ -864,6 +865,8 @@ async function initDatabase() {
     const { ensureAgentSchema } = require('../utils/agent-schema');
     await ensureAgentSchema(client);
 
+    await ensureQuotaHistorySchema(client);
+    await require('../utils/provider-usage-history').ensureProviderUsageHistory(client);
     await client.query('COMMIT');
     Logger.success('[数据库初始化] 完成!');
   } catch (error) {

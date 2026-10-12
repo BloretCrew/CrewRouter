@@ -1,0 +1,136 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { Pool } = require('pg');
+process.env.CRW_MASTER_KEY = 'quota-integration-test-only';
+const history = require('../utils/provider-quota-history');
+const usage = require('../utils/provider-usage-history');
+const stats = require('../utils/provider-quota-stats');
+const multi = require('../utils/multi-dimension-stats');
+
+async function main() {
+  const connectionString = process.env.QUOTA_TEST_DATABASE_URL;
+  assert(connectionString, '需要本地专用 QUOTA_TEST_DATABASE_URL');
+  const url = new URL(connectionString);
+  assert(['127.0.0.1','localhost'].includes(url.hostname));
+  assert(url.pathname.startsWith('/crewrouter_quota_test'));
+  const schema = `quota_integration_${process.pid}`;
+  const admin = new Pool({connectionString});
+  await admin.query(`CREATE SCHEMA ${schema}`);
+  const pool = new Pool({connectionString, options:`-c search_path=${schema} -c timezone=Asia/Shanghai`});
+  try {
+    await pool.query(`CREATE TABLE providers(id TEXT PRIMARY KEY,name TEXT,base_url TEXT,quota_mode TEXT,api_key TEXT,
+      api_keys JSONB,quota_script TEXT,cpa_management_url TEXT,enabled BOOLEAN DEFAULT TRUE,quota_enabled BOOLEAN DEFAULT TRUE,
+      quota_last_checked_at TIMESTAMPTZ,quota_last_ok BOOLEAN,quota_last_result JSONB,quota_last_error TEXT);
+      CREATE TABLE users(id INT PRIMARY KEY,username TEXT,team_id INT);
+      CREATE TABLE teams(id INT PRIMARY KEY,name TEXT,hide_provider_quota BOOLEAN);
+      CREATE TABLE models(id TEXT PRIMARY KEY,name TEXT,provider TEXT,upstream_model_id TEXT,enabled BOOLEAN DEFAULT TRUE);
+      CREATE TABLE team_models(team_id INT,model_id TEXT);
+      CREATE TABLE user_teams(team_id INT,user_id INT);
+      CREATE TABLE api_keys(id INT PRIMARY KEY,user_id INT,name TEXT);
+      CREATE TABLE usage_records(id BIGINT PRIMARY KEY,created_at TIMESTAMP,user_id INT,provider_id TEXT,model_id TEXT,api_key_id INT,request_source TEXT,tokens_used BIGINT,cost NUMERIC);
+      CREATE TABLE usage_message_analysis(usage_id BIGINT,workspace_path TEXT);
+      CREATE TABLE settings(key TEXT PRIMARY KEY,value JSONB);`);
+    await history.ensureQuotaHistorySchema(pool);
+    await usage.ensureProviderUsageHistory(pool);
+    const provider = {id:'p1',name:'供应商一',base_url:'https://example.invalid',quota_mode:'script',quota_script:'',api_key:'sk-private-integration'};
+    await pool.query(`INSERT INTO providers(id,name,base_url,quota_mode,quota_script,api_key) VALUES($1,$2,$3,$4,$5,$6)`,Object.values(provider));
+    await pool.query(`INSERT INTO users VALUES(1,'甲',1),(2,'乙',2);
+      INSERT INTO teams VALUES(1,'可见',FALSE),(2,'隐藏',TRUE);
+      INSERT INTO models VALUES('m1','模型一','p1','upstream',TRUE);
+      INSERT INTO team_models VALUES(1,'m1'),(2,'m1');
+      INSERT INTO user_teams VALUES(1,1),(2,2);
+      INSERT INTO api_keys VALUES(1,1,'平台Key');
+      INSERT INTO usage_records VALUES(1,'2026-10-11 12:00',1,'p1','m1',1,'codex',100,0.25),
+        (2,'2026-10-11 13:00',2,'p1','m1',NULL,'claude_code',200,0.5);
+      INSERT INTO usage_message_analysis VALUES(1,'/project');`);
+    const balance = used => ({unit:'balance',currency:'USD',total:100,used,remaining:100-used});
+    await history.recordQuotaHistory(pool,provider,{ok:true,quota:balance(10)},{checkedAt:'2026-10-11T02:00:00Z'});
+    await history.recordQuotaHistory(pool,provider,{ok:true,quota:balance(20)},{checkedAt:'2026-10-11T03:00:00Z'});
+    await history.recordQuotaHistory(pool,provider,{ok:false,error:provider.api_key},{checkedAt:'2026-10-11T04:00:00Z'});
+    const range = {start:'2026-10-11',end:'2026-10-12'};
+    const plans = [];
+    const explainPool = {async query(sql,params) {
+      if (/^SELECT/.test(sql.trim())) {
+        const plan = await pool.query(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${sql}`,params);
+        plans.push(plan.rows[0]['QUERY PLAN'][0]);
+      }
+      return pool.query(sql,params);
+    }};
+    let data = await stats.queryProviderQuotaOverview(explainPool,range,'user',1);
+    assert(plans.length >= 3 && plans.every(plan=>Number.isFinite(plan['Execution Time'])));
+    console.log(`EXPLAIN ANALYZE: ${plans.length} quota queries, max ${Math.max(...plans.map(plan=>plan['Execution Time'])).toFixed(2)} ms on isolated fixtures`);
+    assert.equal(data.accounts[0].remaining,80);
+    assert.equal(data.accounts[0].status,'failed');
+    assert.equal(data.usage_trend.reduce((n,r)=>n+r.requests,0),1);
+    assert.equal(data.groups.find(r=>r.unit==='USD').observed_consumption,10);
+    assert.equal((await stats.queryProviderQuotaOverview(pool,range,'user',2)).accounts.length,0);
+    assert.equal((await stats.queryProviderQuotaHistory(pool,range,'user',2)).total,0);
+    let paged = await stats.queryProviderQuotaHistory(pool,{...range,page:1,limit:1},'user',1);
+    assert.equal(paged.total,3); assert.equal(paged.rows.length,1);
+    assert(!JSON.stringify(paged).includes(provider.api_key));
+    const dimensions = await multi.queryMultiDimensionStats(pool,{...range,data_source:'quota',dimensions:'provider,account,unit',metric:'remaining'},'user',1);
+    assert.equal(dimensions.rows[0].value,80);
+    const association = await multi.queryMultiDimensionStats(pool,{...range,data_source:'association',dimensions:'model',metric:'requests'},'user',1);
+    assert.equal(association.rows[0].requests,1);
+    assert.equal(association.provider_quota.accounts[0].remaining,80);
+    await usage.archiveProviderUsage(pool,{ids:[1,2]});
+    await pool.query('DELETE FROM usage_records');
+    data = await stats.queryProviderQuotaOverview(pool,range,'user',1);
+    assert.equal(data.usage_trend.reduce((n,r)=>n+r.requests,0),1);
+    await pool.query('UPDATE teams SET hide_provider_quota=TRUE WHERE id=1');
+    assert.equal((await stats.queryProviderQuotaOverview(pool,range,'user',1)).accounts.length,0);
+    await pool.query('UPDATE teams SET hide_provider_quota=FALSE WHERE id=1');
+    const accountId = data.accounts[0].account_id;
+    await pool.query('DELETE FROM team_models WHERE team_id=1');
+    assert.equal((await stats.queryProviderQuotaHistory(pool,{...range,account_id:accountId},'user',1)).total,0);
+    await pool.query("INSERT INTO team_models VALUES(1,'m1')");
+    await pool.query("UPDATE provider_quota_observations SET checked_at=NOW()-INTERVAL '100 days'");
+    await history.cleanupQuotaHistory(pool,90);
+    data = await stats.queryProviderQuotaOverview(pool,range,'user',1);
+    assert.equal(data.accounts[0].remaining,80);
+    assert.equal(data.accounts[0].status,'failed', '清理后保留最近失败状态');
+    assert.equal(data.usage_trend.reduce((n,r)=>n+r.requests,0),1);
+    const retainedMulti = await multi.queryMultiDimensionStats(pool,{...range,data_source:'association',dimensions:'model',metric:'requests'},'user',1);
+    assert.equal(retainedMulti.rows[0].requests,1, '关联多维清理后请求贡献连续');
+    const windowProvider = {...provider,quota_mode:'codex_wham',oauth_account_id:'window-account'};
+    await history.recordQuotaHistory(pool,windowProvider,{ok:true,quota:{unit:'percent',periods:[{key:'weekly',percent:20},{key:'monthly',percent:30}]}},{checkedAt:'2026-10-12T01:00:00Z'});
+    await history.recordQuotaHistory(pool,windowProvider,{ok:true,quota:{unit:'percent',periods:[{key:'weekly',percent:21}]}},{checkedAt:'2026-10-12T02:00:00Z'});
+    data = await stats.queryProviderQuotaOverview(pool,range,'user',1);
+    assert.equal(data.accounts.find(r=>r.window_key==='monthly').used_percent,30, '部分窗口返回保留其他有效窗口');
+    assert.equal(data.trend.find(r=>r.window_key==='weekly').percent_change,1, '窗口变化保留百分点');
+    const windowDaily = (await pool.query("SELECT percent_change FROM provider_quota_daily_agg WHERE window_key='monthly'")).rows[0];
+    assert.equal(windowDaily.percent_change,null,'单个初始窗口样本没有可推导变化');
+    const lastSnapshot = (await pool.query("SELECT quota_last_result FROM providers WHERE id='p1'")).rows[0].quota_last_result;
+    await history.recordQuotaHistory(pool,windowProvider,{ok:true,quota:{isValid:false,unit:'percent',used:0}},{checkedAt:'2026-10-12T03:00:00Z'});
+    const invalidSnapshot = (await pool.query("SELECT quota_last_ok,quota_last_result FROM providers WHERE id='p1'")).rows[0];
+    assert.equal(invalidSnapshot.quota_last_ok,false);
+    assert.deepEqual(invalidSnapshot.quota_last_result,lastSnapshot, '无效成功响应不能覆盖缓存');
+    await pool.query("INSERT INTO providers(id,name,base_url,quota_mode,quota_script,api_key) VALUES('p2','供应商二','https://example.invalid','cpa','{\"auth_index\":\"shared\"}','shared-proxy')");
+    await pool.query("INSERT INTO models VALUES('m2','模型二','p2','upstream2',TRUE); INSERT INTO team_models VALUES(1,'m2')");
+    const cpa = {...provider,quota_mode:'cpa',quota_script:'{\"auth_index\":\"shared\"}',cpa_management_url:'https://cpa.invalid'};
+    const passive = {unit:'percent',source:'passive',observedAt:'2026-10-12T04:00:00Z',periods:[{key:'weekly',percent:45}]};
+    await history.recordQuotaHistory(pool,cpa,{ok:true,quota:passive},{checkedAt:'2026-10-12T05:00:00Z'});
+    await history.recordQuotaHistory(pool,{...cpa,id:'p2',name:'供应商二'},{ok:true,quota:passive},{checkedAt:'2026-10-12T06:00:00Z'});
+    data = await stats.queryProviderQuotaOverview(pool,{...range,provider_id:'p2'},'user',1);
+    assert.equal(data.accounts.find(r=>r.window_key==='weekly').used_percent,45,'共享账户第二供应商可见');
+    assert.equal(data.summary.accounts,1);
+    await history.recordQuotaHistory(pool,{...cpa,id:'p2',name:'供应商二'},{ok:true,quota:{...passive,periods:[{key:'monthly',percent:30}]}},{checkedAt:'2026-10-12T07:00:00Z'});
+    data = await stats.queryProviderQuotaOverview(pool,{...range,provider_id:'p2'},'user',1);
+    assert.equal(data.accounts.find(r=>r.window_key==='monthly').used_percent,30,'相同缓存时间新增窗口正常记录');
+    await history.recordQuotaHistory(pool,{...cpa,id:'p2',name:'供应商二'},{ok:true,quota:{...passive,periods:[{key:'weekly',percent:46}]}},{checkedAt:'2026-10-12T08:00:00Z'});
+    data = await stats.queryProviderQuotaOverview(pool,{...range,provider_id:'p2'},'user',1);
+    assert.equal(data.accounts.find(r=>r.window_key==='weekly').used_percent,46,'同时间缓存修正读取最新值');
+    const sharedId = data.accounts[0].account_id;
+    await pool.query("DELETE FROM team_models WHERE model_id='m1'");
+    data = await stats.queryProviderQuotaOverview(pool,range,'user',1);
+    assert(data.accounts.every(r=>r.provider_id==='p2'));
+    assert.equal(data.accounts[0].account_id,sharedId);
+    assert.equal(data.accounts.find(r=>r.window_key==='weekly').used_percent,46,'撤回首次供应商授权后共享额度仍由第二授权显示');
+    console.log('PASS real PostgreSQL quota integration: recording → overview/history/multi, failure retention, user isolation, hidden/revoked access, usage/quota purge continuity');
+  } finally {
+    await pool.end();
+    await admin.query(`DROP SCHEMA ${schema} CASCADE`);
+    await admin.end();
+  }
+}
+main().catch(error => {console.error(error);process.exitCode=1;});

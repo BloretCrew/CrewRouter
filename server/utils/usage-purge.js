@@ -82,6 +82,7 @@ async function deleteBatch(cutoff, batchSize, sizeTriggered = false) {
       return { deleted: 0, analysisDeleted: 0 };
     }
 
+    await require('./provider-usage-history').archiveProviderUsage(client, { ids });
     const analysis = await client.query(
       `DELETE FROM usage_message_analysis
        WHERE usage_id = ANY($1::int[])`,

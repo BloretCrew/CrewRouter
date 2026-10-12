@@ -24,7 +24,10 @@ const { ACTIONS, logAction, auditMiddleware } = require('../utils/audit-log');
 const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-edition');
 
 const requireTeamAdminEdition = requireTeamEdition(() => loadPersistedEdition(pool));
-router.use(['/users', '/users/:id', '/teams', '/teams/:id', '/teams/:id/rules', '/teams/:id/rules/:ruleId', '/user-groups', '/user-groups/:id', '/user-groups/:id/rules', '/user-group-rules/:id', '/audit-logs', '/stats/multi', '/stats/multi/filters', '/stats', '/message-stats', '/usage-logs', '/usage-logs/export', '/usage-logs/:id'], requireTeamAdminEdition);
+router.use(['/users', '/users/:id', '/teams', '/teams/:id', '/teams/:id/rules', '/teams/:id/rules/:ruleId', '/user-groups', '/user-groups/:id', '/user-groups/:id/rules', '/user-group-rules/:id', '/audit-logs', '/stats/multi', '/stats/multi/filters', '/stats', '/message-stats', '/usage-logs', '/usage-logs/export', '/usage-logs/:id'], (req, res, next) => {
+  if (/^\/api\/admin\/stats\/provider-quota(?:\/history)?\/?$/.test(req.originalUrl.split('?')[0])) return next();
+  return requireTeamAdminEdition(req, res, next);
+});
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
 const {
   normalizeProviderKeyEntries,
@@ -1016,12 +1019,34 @@ router.post('/models/batch-adjust-by-reference', requireAuth, requireProviderMan
   }
 });
 
+router.get('/stats/provider-quota', requireAuth, requireProviderManager, async (req, res) => {
+  try {
+    const { queryProviderQuotaOverview } = require('../utils/provider-quota-stats');
+    res.json(await queryProviderQuotaOverview(pool, req.query, 'admin'));
+  } catch (error) {
+    if (error.status === 400) return res.status(400).json({ error: error.message });
+    Logger.error('[供应商额度统计] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+router.get('/stats/provider-quota/history', requireAuth, requireProviderManager, async (req, res) => {
+  try {
+    const { queryProviderQuotaHistory } = require('../utils/provider-quota-stats');
+    res.json(await queryProviderQuotaHistory(pool, req.query, 'admin'));
+  } catch (error) {
+    if (error.status === 400) return res.status(400).json({ error: error.message });
+    Logger.error('[供应商额度统计] 错误:', error);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 router.get('/stats/multi-dimension', requireAuth, requireAdmin, requireTeamAdminEdition, async (req, res) => {
   try {
     const { queryMultiDimensionStats } = require('../utils/multi-dimension-stats');
     res.json(await queryMultiDimensionStats(pool, req.query, 'admin'));
   } catch (error) {
-    if (error.message.startsWith('请选择') || error.message.startsWith('无效') || error.message.startsWith('时间范围')) {
+    if (error.status === 400 || error.message.startsWith('请选择') || error.message.startsWith('无效') || error.message.startsWith('时间范围')) {
       return res.status(400).json({ error: error.message });
     }
     Logger.error('[管理多维分析] 错误:', error);
@@ -1058,12 +1083,22 @@ router.get('/stats/multi/filters', requireAuth, requireAdmin, async (req, res) =
 // 多维关联统计：统一返回组织、项目、客户端、模型和供应商之间的组合数据
 router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
   try {
+    const { queryProviderQuotaOverview, parseQuotaQuery } = require('../utils/provider-quota-stats');
+    const quotaOptions = parseQuotaQuery(req.query);
+    if ((!req.query.data_source || req.query.data_source === 'usage') && ['account_id', 'kind', 'unit', 'window_key', 'status'].some(key => quotaOptions[key])) return res.status(400).json({ error: '无效的请求统计额度筛选' });
+    if (req.query.data_source && !['usage', 'association', 'quota', 'provider_quota'].includes(req.query.data_source)) {
+      return res.status(400).json({ error: '无效的分析数据源' });
+    }
+    if (['quota', 'provider_quota'].includes(req.query.data_source)) {
+      const { queryQuotaDimensions } = require('../utils/multi-dimension-stats');
+      return res.json(await queryQuotaDimensions(pool, req.query, 'admin'));
+    }
     const params = [];
     const conditions = [];
     let idx = 1;
-    if (req.query.start && req.query.end) {
+    if (req.query.start && req.query.end || req.query.data_source === 'association') {
       conditions.push(`u.created_at >= $${idx++}::date AND u.created_at < ($${idx++}::date + INTERVAL '1 day')`);
-      params.push(req.query.start, req.query.end);
+      params.push(quotaOptions.start, quotaOptions.end);
     } else {
       const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 365);
       conditions.push(`u.created_at >= NOW() - ($${idx++}::int * INTERVAL '1 day')`);
@@ -1083,8 +1118,8 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
     addFilter(req.query.request_source, "COALESCE(NULLIF(u.request_source, ''), 'unknown') = ?");
     addFilter(req.query.workspace_path, "COALESCE(NULLIF(TRIM(uma.workspace_path), ''), '__unknown__') = ?");
 
-    const where = `WHERE ${conditions.join(' AND ')}`;
-    const from = `
+    let where = `WHERE ${conditions.join(' AND ')}`;
+    let from = `
       FROM usage_records u
       LEFT JOIN users usr ON usr.id = u.user_id
       LEFT JOIN teams t ON t.id = usr.team_id
@@ -1098,6 +1133,18 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
         ORDER BY CASE WHEN m0.id = u.model_id THEN 0 ELSE 1 END
         LIMIT 1
       ) mdl ON TRUE`;
+    const association = req.query.data_source === 'association';
+    const pluginExpression = association ? "'__unavailable__'" : `COALESCE((
+      SELECT key FROM jsonb_object_keys(COALESCE(u.plugin_meta, '{}'::jsonb)) AS key LIMIT 1
+    ), '__none__')`;
+    if (association) {
+      const { makeProviderUsageSourceSql } = require('../utils/provider-usage-history');
+      from = from.replace('FROM usage_records u', `FROM ${makeProviderUsageSourceSql()} u`)
+        .replace('LEFT JOIN usage_message_analysis uma ON uma.usage_id = u.id', 'LEFT JOIN LATERAL (SELECT u.workspace_path) uma ON TRUE');
+      where = where.replace(/u\.created_at/g, 'u.agg_date');
+    }
+    const requestCount = association ? 'SUM(u.request_count)' : 'COUNT(*)';
+    const latency = association ? 'NULL::numeric' : 'AVG(u.latency_ms)::numeric';
     const baseSelect = `
       u.user_id,
       COALESCE(usr.username, '未知成员') AS user_name,
@@ -1109,25 +1156,21 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
       COALESCE(NULLIF(mdl.name, ''), '未知模型') AS model_name,
       u.provider_id,
       COALESCE(NULLIF(p.name, ''), '未知供应商') AS provider_name,
-      COALESCE((
-        SELECT key FROM jsonb_object_keys(COALESCE(u.plugin_meta, '{}'::jsonb)) AS key LIMIT 1
-      ), '__none__') AS plugin_dim,
-      COUNT(*)::int AS requests,
+      ${pluginExpression} AS plugin_dim,
+      ${requestCount}::bigint AS requests,
       COALESCE(SUM(u.tokens_used), 0)::bigint AS tokens,
       COALESCE(SUM(u.cost), 0)::numeric AS cost,
-      AVG(u.latency_ms)::numeric AS avg_latency,
-      MAX(u.created_at) AS last_activity`;
+      ${latency} AS avg_latency,
+      MAX(${association ? 'u.agg_date' : 'u.created_at'}) AS last_activity`;
     const combinations = await pool.query(`SELECT ${baseSelect} ${from} ${where}
       GROUP BY u.user_id, usr.username, usr.team_id, t.name,
         COALESCE(NULLIF(TRIM(uma.workspace_path), ''), '__unknown__'),
         COALESCE(NULLIF(u.request_source, ''), 'unknown'), u.model_id,
-        COALESCE(NULLIF(mdl.name, ''), '未知模型'), u.provider_id, COALESCE(NULLIF(p.name, ''), '未知供应商'),
-        COALESCE((
-          SELECT key FROM jsonb_object_keys(COALESCE(u.plugin_meta, '{}'::jsonb)) AS key LIMIT 1
-        ), '__none__')
+        COALESCE(NULLIF(mdl.name, ''), '未知模型'), u.provider_id, COALESCE(NULLIF(p.name, ''), '未知供应商')
+        ${association ? '' : `, ${pluginExpression}`}
       ORDER BY requests DESC LIMIT 500`, params);
-    const summary = await pool.query(`SELECT COUNT(*)::int AS requests, COALESCE(SUM(u.tokens_used), 0)::bigint AS tokens,
-      COALESCE(SUM(u.cost), 0)::numeric AS cost, AVG(u.latency_ms)::numeric AS avg_latency,
+    const summary = await pool.query(`SELECT ${requestCount}::bigint AS requests, COALESCE(SUM(u.tokens_used), 0)::bigint AS tokens,
+      COALESCE(SUM(u.cost), 0)::numeric AS cost, ${latency} AS avg_latency,
       COUNT(DISTINCT u.user_id)::int AS active_users, COUNT(DISTINCT usr.team_id)::int AS active_teams,
       COUNT(DISTINCT NULLIF(TRIM(uma.workspace_path), ''))::int AS active_projects,
       COUNT(DISTINCT COALESCE(mdl.id, u.model_id))::int AS active_models,
@@ -1171,16 +1214,19 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
       });
       return [...map.values()].sort((a, b) => b.requests - a.requests).slice(0, 50);
     };
+    const providerQuota = req.query.data_source === 'association'
+      ? await queryProviderQuotaOverview(pool, req.query, 'admin') : null;
     res.json({
+      ...(providerQuota ? { unavailable_dimensions: ['plugin', 'latency'], provider_quota: providerQuota, quota_context: 'independent_provider_accounts_not_additive' } : {}),
       summary: summary.rows[0] || {},
-      combinations: rows,
+      combinations: rows.map(row => providerQuota ? { ...row, quota_account_ids: [...new Set(providerQuota.accounts.filter(account => account.provider_id === row.provider_id).map(account => account.account_id))] } : row),
       dimensions: {
         users: aggregate('user_id'), teams: aggregate('team_id'),
         projects: aggregate('workspace_path'),
         models: aggregate('model_id').map(row => ({ ...row, name: row.name || '未知模型' })),
         providers: aggregate('provider_id').map(row => ({ ...row, name: row.name || '未知供应商' })),
         sources: aggregate('request_source').map(row => ({ ...row, name: sourceLabel(row.name) || '未知客户端' })),
-        plugins: aggregate('plugin_dim').filter(row => row.id !== '__none__').map(row => ({ ...row, name: row.name || row.id }))
+        plugins: aggregate('plugin_dim').filter(row => !['__none__', '__unavailable__'].includes(row.id)).map(row => ({ ...row, name: row.name || row.id }))
       },
       relationships: {
         user_model: relation('user_id', 'model_id'),
@@ -1193,6 +1239,7 @@ router.get('/stats/multi', requireAuth, requireAdmin, async (req, res) => {
       caveats: ['Team 按成员当前归属统计；项目未完成消息分析的记录归入未识别项目。']
     });
   } catch (error) {
+    if (error.status === 400) return res.status(400).json({ error: error.message });
     Logger.error('[获取多维关联统计] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
@@ -3049,24 +3096,30 @@ router.get('/providers/:id/check-quota', requireAuth, requireProviderManager, as
     }
     const provider = providerResult.rows[0];
     const result = await queryProviderQuotaPerKey(provider);
-    await saveQuotaSnapshot(provider.id, result);
+    const recording = await saveQuotaSnapshot(provider.id, result);
+    const { serializeSafeResult, safeText } = require('../utils/provider-quota-history');
+    const payload = serializeSafeResult(result, provider);
+    const history = { recorded: (result.history || recording)?.recorded === true };
+    if (!history.recorded) history.error = 'history_write_failed';
+    const publicProvider = { id: provider.id, name: safeText(provider.name, provider) };
     if (!result.ok) {
-      return res.status(result.status || 502).json({
-        error: result.error || '查询失败',
-        provider: result.provider || { id: provider.id, name: provider.name }
+      return res.status(Number.isInteger(result.status) && result.status >= 400 && result.status <= 599 ? result.status : 502).json({
+        error: '额度查询失败',
+        provider: publicProvider, history
       });
     }
     res.json({
       success: true,
-      provider: result.provider,
-      quota: result.quota,
-      keys: result.keys || [],
-      keyCount: result.keyCount || 1,
-      aggregated: result.aggregated || null
+      provider: publicProvider,
+      quota: payload,
+      keys: payload.keys || [],
+      keyCount: Array.isArray(result.keys) ? result.keys.length : 1,
+      aggregated: payload.aggregated || null,
+      history
     });
   } catch (error) {
-    Logger.error('[查询供应商额度] 错误:', error);
-    res.status(500).json({ error: '查询额度失败: ' + error.message });
+    Logger.error('[查询供应商额度] 查询失败');
+    res.status(500).json({ error: '查询额度失败' });
   }
 });
 
@@ -3385,6 +3438,7 @@ function normalizeRetentionPayload(body = {}) {
     compressSizeGb: parseRetentionInt(body.compress_size_gb, 'compress_size_gb', RETENTION_LIMITS.compressSizeGb),
     purgeSizeGb: parseRetentionInt(body.purge_size_gb, 'purge_size_gb', RETENTION_LIMITS.purgeSizeGb),
     aggEnabled: body.agg_enabled === true,
+    providerQuotaDays: body.provider_quota_days === undefined ? undefined : parseRetentionInt(body.provider_quota_days, 'provider_quota_days', 3650),
   };
   if (config.compressDays && config.purgeDays && config.compressDays >= config.purgeDays) {
     const error = new Error('compress_days must be less than purge_days when both are non-zero');
@@ -3402,7 +3456,10 @@ function normalizeRetentionPayload(body = {}) {
 router.get('/retention-config', requireAuth, requireAdmin, async (req, res) => {
   try {
     const cfg = await getRetentionConfig({ fresh: true });
+    const quotaSetting = await pool.query("SELECT value FROM settings WHERE key='retention.provider_quota_days'");
+    const quotaDays = quotaSetting.rows.length ? Number(quotaSetting.rows[0].value) : 90;
     res.json({
+      provider_quota_days: Number.isInteger(quotaDays) && quotaDays >= 0 && quotaDays <= 3650 ? quotaDays : 90,
       compress_days: cfg.compressDays,
       purge_days: cfg.purgeDays,
       compress_size_gb: cfg.compressSizeGb,
@@ -3428,6 +3485,7 @@ router.put('/retention-config', requireAuth, requireAdmin, auditMiddleware(ACTIO
       'retention.purge_size_gb': cfg.purgeSizeGb,
       'retention.agg_enabled': cfg.aggEnabled,
     };
+    if (cfg.providerQuotaDays !== undefined) values['retention.provider_quota_days'] = cfg.providerQuotaDays;
     for (const [key, value] of Object.entries(values)) {
       await pool.query('INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [key, JSON.stringify(value)]);
     }

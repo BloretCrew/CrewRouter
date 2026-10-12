@@ -9,6 +9,11 @@ const DIMENSIONS = Object.freeze({
   provider: { label: '供应商', value: 'u.provider_id', name: "COALESCE(NULLIF(p.name, ''), '未知供应商')" },
   key: { label: '密钥', value: 'u.api_key_id', name: "COALESCE(NULLIF(ak.name, ''), '未识别密钥')" }
 });
+const { invalid, parseQuotaQuery, queryProviderQuotaOverview } = require('./provider-quota-stats');
+const { makeProviderUsageSourceSql } = require('./provider-usage-history');
+const QUOTA_DIMENSIONS = Object.freeze(['provider', 'account', 'kind', 'unit', 'window', 'date']);
+const QUOTA_METRICS = Object.freeze(['total', 'used', 'remaining', 'used_percent', 'observed_consumption', 'percent_change']);
+
 const METRICS = Object.freeze({ requests: 'COUNT(*)', tokens: 'COALESCE(SUM(u.tokens_used), 0)', cost: 'COALESCE(SUM(u.cost), 0)' });
 
 function parseSelection(query, scope) {
@@ -36,7 +41,12 @@ function parseSelection(query, scope) {
 }
 
 async function queryMultiDimensionStats(pool, query, scope, userId) {
+  const source = query.data_source || query.source || 'usage';
+  if (!['usage', 'quota', 'provider_quota', 'association'].includes(source)) throw invalid('无效的分析数据源');
+  if (source === 'quota' || source === 'provider_quota') return queryQuotaDimensions(pool, query, scope, userId);
   const { dimensions, metric, days, start, end } = parseSelection(query, scope);
+  const filters = parseQuotaQuery(query);
+  if (['kind', 'unit', 'window_key', 'status', 'account_id'].some(key => filters[key]) && source === 'usage') throw invalid('无效的请求统计额度筛选');
   const selected = dimensions.map((key, index) => {
     const { value, name } = DIMENSIONS[key];
     return { value, name, index };
@@ -45,15 +55,19 @@ async function queryMultiDimensionStats(pool, query, scope, userId) {
     `${value} AS value_${index}`, `${name} AS name_${index}`
   ]);
   const groups = [...new Set(selected.flatMap(({ value, name }) => [value, name]))];
-  const conditions = start
+  const conditions = source === 'association' || start
     ? ["u.created_at >= $1::date AND u.created_at < ($2::date + INTERVAL '1 day')"]
     : ["u.created_at >= NOW() - ($1::int * INTERVAL '1 day')"];
-  const params = start ? [start, end] : [days];
+  const params = source === 'association' ? [filters.start, filters.end] : start ? [start, end] : [days];
   if (scope === 'user') {
     params.push(userId);
     conditions.push(`u.user_id = $${params.length}`);
   }
-  const result = await pool.query(`
+  if (scope === 'user' && (filters.user_id || filters.team_id)) throw invalid('无效的用户关联筛选');
+  for (const [key, column] of Object.entries({ provider_id: 'u.provider_id', model_id: 'u.model_id', user_id: 'u.user_id', team_id: 'usr.team_id', api_key_id: 'u.api_key_id', request_source: "COALESCE(NULLIF(u.request_source, ''), 'unknown')", workspace_path: "COALESCE(NULLIF(TRIM(uma.workspace_path), ''), '__unknown__')" })) {
+    if (filters[key]) { params.push(filters[key]); conditions.push(`${column} = $${params.length}`); }
+  }
+  let usageSql = `
     SELECT ${columns.join(', ')}, COUNT(*)::int AS requests,
       COALESCE(SUM(u.tokens_used), 0)::bigint AS tokens,
       COALESCE(SUM(u.cost), 0)::numeric AS cost
@@ -73,8 +87,17 @@ async function queryMultiDimensionStats(pool, query, scope, userId) {
     WHERE ${conditions.join(' AND ')}
     GROUP BY ${groups.join(', ')}
     ORDER BY ${METRICS[metric]} DESC LIMIT 30
-  `, params);
+  `;
+  if (source === 'association') {
+    usageSql = usageSql.replace(/COUNT\(\*\)/g, 'SUM(u.request_count)')
+      .replace(/u\.created_at/g, 'u.agg_date')
+      .replace('FROM usage_records u', `FROM ${makeProviderUsageSourceSql()} u`)
+      .replace('LEFT JOIN usage_message_analysis uma ON uma.usage_id = u.id', 'LEFT JOIN LATERAL (SELECT u.workspace_path) uma ON TRUE');
+  }
+  const result = await pool.query(usageSql, params);
+  const quota = source === 'association' ? await queryProviderQuotaOverview(pool, query, scope, userId) : null;
   return {
+    ...(quota ? { data_source: source, provider_quota: quota, quota_context: 'independent_provider_accounts_not_additive' } : {}),
     dimensions, metric,
     rows: result.rows.map(row => ({
       labels: selected.map(({ index }) => row[`name_${index}`]),
@@ -84,4 +107,50 @@ async function queryMultiDimensionStats(pool, query, scope, userId) {
   };
 }
 
-module.exports = { DIMENSIONS, METRICS, parseSelection, queryMultiDimensionStats };
+async function queryQuotaDimensions(pool, query, scope, userId) {
+  const dimensions = (query.dimensions === undefined ? 'provider' : String(query.dimensions)).split(',').map(s => s.trim());
+  const metric = query.metric || 'remaining';
+  if (!dimensions.length || new Set(dimensions).size !== dimensions.length || dimensions.some(d => !QUOTA_DIMENSIONS.includes(d))) throw invalid('请选择有效且不同的额度维度');
+  if (!QUOTA_METRICS.includes(metric)) throw invalid('无效的额度指标');
+  if (['used_percent', 'percent_change'].includes(metric) && !dimensions.includes('account')) throw invalid('无效的使用率组合：必须选择额度账户');
+  if (query.status && dimensions.includes('date')) throw invalid('无效的趋势状态筛选：每日聚合包含全部查询状态');
+  const quota = await queryProviderQuotaOverview(pool, query, scope, userId);
+  const items = dimensions.includes('date') || ['observed_consumption', 'percent_change'].includes(metric) ? quota.trend : quota.accounts;
+  const fields = { provider: 'provider_id', account: 'account_id', kind: 'kind', unit: 'unit', window: 'window_key', date: 'date' };
+  const groups = new Map();
+  const seen = new Set();
+  for (const item of items) {
+    const identity = JSON.stringify([item.account_id, item.kind, item.unit, item.window_key, item.date]);
+    // A shared account exposed through multiple providers must count once per selected provider group.
+    const selectedValues = dimensions.map(d => item[fields[d]]);
+    const contributionIdentity = JSON.stringify([identity, selectedValues]);
+    if (seen.has(contributionIdentity)) continue;
+    seen.add(contributionIdentity);
+    const additive = !['used_percent', 'percent_change'].includes(metric) && item.kind === 'balance' && !!item.unit && item.unit !== 'unknown';
+    const key = JSON.stringify([selectedValues, item.kind, item.unit, item.window_key, additive ? null : item.account_id]);
+    if (!groups.has(key)) groups.set(key, {
+      labels: dimensions.map(d => d === 'provider' ? (item.provider_name || item.provider_id) : d === 'account' ? (item.label || item.account_id) : item[fields[d]]),
+      values: selectedValues, value: null, kind: item.kind, unit: item.unit, window_key: item.window_key,
+      account_id: dimensions.includes('account') || !additive ? item.account_id : null,
+      account_ids: [], invalid_percent_change: false, aggregatable: additive, observed_at: item.observed_at, status: item.status,
+      quality: item.quality, coverage: { start: quota.coverage.start, end: quota.coverage.end }
+    });
+    const group = groups.get(key);
+    if (metric === 'percent_change' && (Number(item.anomaly_count || 0) > 0 || ['reset', 'gap', 'backfill', 'adjustment'].includes(item.quality?.last_event || item.quality?.event))) group.invalid_percent_change = true;
+    if (!group.account_ids.includes(item.account_id)) group.account_ids.push(item.account_id);
+    if (item[metric] != null) {
+      if (additive) group.value = (group.value ?? 0) + Number(item[metric]);
+      else if (!dimensions.includes('date') && metric === 'percent_change') group.value = (group.value ?? 0) + Number(item[metric]);
+      else if (group.value === null || Date.parse(item.observed_at) >= Date.parse(group.observed_at)) group.value = Number(item[metric]);
+    }
+    if (Date.parse(item.observed_at) > Date.parse(group.observed_at)) group.observed_at = item.observed_at;
+  }
+  const rows = [...groups.values()].map(group => {
+    if (group.invalid_percent_change) { group.value = null; group.quality = { ...group.quality, percent_change_unavailable: true }; }
+    delete group.invalid_percent_change;
+    return group;
+  }).sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity));
+  return { dimensions, metric, data_source: 'quota', rows, provider_quota: quota, coverage: quota.coverage };
+}
+
+module.exports = { DIMENSIONS, METRICS, QUOTA_DIMENSIONS, QUOTA_METRICS, parseSelection, queryQuotaDimensions, queryMultiDimensionStats };
