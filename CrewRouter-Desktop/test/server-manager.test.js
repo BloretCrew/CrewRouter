@@ -133,8 +133,7 @@ test('waitUntilReady reports non-2xx and timeout clearly', async () => {
   await new Promise((resolve) => server.close(resolve));
 });
 
-test('postgres provider resolution prefers embedded binaries and explains what is missing', () => {
-  let provider;
-  try { provider = resolvePostgresProvider(); } catch (error) { assert.match(error.message, /embedded-postgres/); return; }
+test('postgres provider resolution prefers embedded binaries and explains what is missing', async () => {
+  const provider = await resolvePostgresProvider();
   assert.ok(['embedded', 'system-runuser'].includes(provider.name));
 });

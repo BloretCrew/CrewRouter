@@ -9,18 +9,23 @@ const path = require('node:path');
 const DEFAULT_USER = 'crewrouter';
 const DEFAULT_DATABASE = 'crewrouter_desktop';
 
-function loadEmbeddedPostgres() {
-  try {
-    const mod = require('embedded-postgres');
-    return mod?.default || mod?.EmbeddedPostgres || mod;
-  } catch {
-    return null;
-  }
+async function loadEmbeddedPostgres(importModule = (specifier) => import(specifier)) {
+  const platform = process.platform === 'win32' ? 'windows' : process.platform;
+  // 先等待平台包，避免依赖内部未等待的二进制 import 产生未处理拒绝。
+  await importModule(`@embedded-postgres/${platform}-${process.arch}`);
+  const mod = await importModule('embedded-postgres');
+  const Embedded = mod?.default || mod?.EmbeddedPostgres || mod;
+  if (typeof Embedded !== 'function') throw new TypeError('embedded-postgres 未导出数据库构造函数');
+  return Embedded;
 }
 
-function isEmbeddedPostgresAvailable() {
-  const Embedded = loadEmbeddedPostgres();
-  return typeof Embedded === 'function';
+async function isEmbeddedPostgresAvailable() {
+  try {
+    await loadEmbeddedPostgres();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function isRoot() {
@@ -82,8 +87,7 @@ function createEmbeddedPostgresProvider({ user = DEFAULT_USER, databaseName = DE
     name: 'embedded',
     async start({ userData, host = '127.0.0.1', findFreePort, logger = console, onProgress = () => {} }) {
       if (!userData) throw new TypeError('userData directory is required');
-      const Embedded = loadEmbeddedPostgres();
-      if (typeof Embedded !== 'function') throw new Error('未安装 embedded-postgres');
+      const Embedded = await loadEmbeddedPostgres();
       const dataRoot = resolveDataRoot(userData);
       const databaseDir = path.join(dataRoot, 'data');
       const logsDir = path.join(userData, 'logs');

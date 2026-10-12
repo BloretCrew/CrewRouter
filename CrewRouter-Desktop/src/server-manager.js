@@ -146,7 +146,7 @@ class LocalServerManager extends EventEmitter {
     let database = opts.database || null;
     if (!database && opts.createDatabase !== false) {
       this.progress('database');
-      const provider = opts.postgres || resolvePostgresProvider();
+      const provider = opts.postgres || await resolvePostgresProvider();
       this.database = await provider.start({
         userData,
         host: opts.host,
