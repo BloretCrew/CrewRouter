@@ -4,6 +4,7 @@
   "description": "CrewRouter - AI API 网关平台",
   "main": "server/index.js",
   "scripts": {
+    "test:upstream-generation": "node server/scripts/test-upstream-generation-routes.js && node --test server/scripts/test-upstream-transport.js && node server/scripts/test-upstream-stream-safety.js",
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",
     "init-db": "node server/scripts/init-db.js",

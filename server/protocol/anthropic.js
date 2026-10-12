@@ -8,9 +8,9 @@ const EVENT_KEYS = new Set(['type', 'index', 'content_block', 'delta', 'message'
 
 function decodeBlock(block) {
   if (typeof block === 'string') return { type: 'text', text: block };
-  const passthrough = { anthropic: omitKnown(block, new Set(['type', 'text', 'thinking', 'signature', 'source', 'id', 'name', 'input', 'tool_use_id', 'content', 'is_error', 'cache_control'])) };
+  const passthrough = { anthropic: omitKnown(block, new Set(['type', 'text', 'thinking', 'data', 'signature', 'source', 'id', 'name', 'input', 'tool_use_id', 'content', 'is_error', 'cache_control'])) };
   if (block.type === 'text') return { type: 'text', text: block.text || '', cacheControl: block.cache_control, passthrough };
-  if (block.type === 'thinking' || block.type === 'redacted_thinking') return { type: 'thinking', thinking: block.thinking || '', signature: block.signature, redacted: block.type === 'redacted_thinking', passthrough };
+  if (block.type === 'thinking' || block.type === 'redacted_thinking') return { type: 'thinking', thinking: block.thinking || '', data: block.data, signature: block.signature, redacted: block.type === 'redacted_thinking', passthrough };
   if (block.type === 'image') return { type: 'image', source: block.source, cacheControl: block.cache_control, passthrough };
   if (block.type === 'tool_use') return { type: 'tool_call', id: block.id, name: block.name, input: block.input || {}, cacheControl: block.cache_control, passthrough };
   if (block.type === 'tool_result') return { type: 'tool_result', toolCallId: block.tool_use_id, content: decodeContent(block.content), isError: block.is_error, cacheControl: block.cache_control, passthrough };
@@ -25,7 +25,7 @@ function decodeContent(content) {
 function encodeBlock(block) {
   let value;
   if (block.type === 'text') value = { type: 'text', text: block.text || '' };
-  else if (block.type === 'thinking') value = block.redacted ? { type: 'redacted_thinking', data: block.thinking || '' } : { type: 'thinking', thinking: block.thinking || '', ...(block.signature ? { signature: block.signature } : {}) };
+  else if (block.type === 'thinking') value = block.redacted ? { type: 'redacted_thinking', data: block.data ?? '' } : { type: 'thinking', thinking: block.thinking || '', ...(block.signature !== undefined ? { signature: block.signature } : {}) };
   else if (block.type === 'image') value = { type: 'image', source: block.source };
   else if (block.type === 'tool_call') value = { type: 'tool_use', id: block.id, name: block.name, input: block.input || {} };
   else if (block.type === 'tool_result') value = { type: 'tool_result', tool_use_id: block.toolCallId, content: encodeContent(block.content || []), ...(block.isError !== undefined ? { is_error: block.isError } : {}) };

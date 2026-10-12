@@ -124,11 +124,11 @@ function buildKeyAttemptOrder(provider) {
   if (entries.length === 1) return [entries[0].key];
 
   if (getApiKeySelectMode(provider) !== 'weight') {
-    return entries.map((e) => e.key);
+    return [...new Set(entries.map((e) => e.key))];
   }
 
   const first = pickWeightedEntry(entries);
-  if (!first) return entries.map((e) => e.key);
+  if (!first) return [...new Set(entries.map((e) => e.key))];
   const rest = entries
     .filter((e) => e.key !== first.key)
     .sort((a, b) => (b.weight || 1) - (a.weight || 1) || 0);

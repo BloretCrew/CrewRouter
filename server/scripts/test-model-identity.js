@@ -14,7 +14,8 @@ const source = fs.readFileSync(path.join(__dirname, '../routes/api.js'), 'utf8')
 function routeFunctions(overrides = {}) {
   const context = {
     createModelIdentity, observeModelResponse, JSON, AbortSignal,
-    combineAbortSignals: () => null,
+    ...require('../utils/request-lifecycle'),
+    ...require('../utils/upstream-retry-policy'),
     MAX_UPSTREAM_ATTEMPTS: 12,
     Logger: { warn() {} },
     pluginHooks: { hasSubscribers: () => false },
@@ -160,7 +161,7 @@ test('actual retry helper discards failed attempt and records final encoded body
     pluginHooks: { hasSubscribers: () => true, apply: async () => ({ bodyText: '{"model":"plugin-route"}' }) },
     validateBeforeUpstreamRewrite: async (original, out) => ({ override: out }),
     proxyPool: {
-      proxyFetch: async () => { if (calls++ === 0) throw new Error('connection failure'); return new Response('{"model":"final-upstream"}'); },
+      proxyFetch: async () => { if (calls++ === 0) throw Object.assign(new Error('connection refused'), { code: 'ECONNREFUSED' }); return new Response('{"model":"final-upstream"}'); },
       getProxyAgent: async () => null,
     },
   });
@@ -314,18 +315,17 @@ for (const [name, dialect] of [['streamOpenAIAsResponses', 'openai'], ['streamAn
   });
 }
 
-test('429 proxy retry does not carry the rejected response model into success', async () => {
+test('429 response is returned without proxy regeneration', async () => {
   const requestContext = { requestedModel: 'client', upstreamAttempts: 0 };
   let calls = 0;
   const context = routeFunctions({ proxyPool: {
-    proxyFetch: async () => calls++ === 0
-      ? new Response('{"model":"rejected"}', { status: 429 })
-      : new Response('{"choices":[]}'),
+    proxyFetch: async () => { calls++; return new Response('{"model":"rejected"}', { status: 429 }); },
     getProxyAgent: async () => ({ proxyId: 'next' }), markProxy429() {},
   } });
   const { response } = await context.fetchWithProxyRetry(() => ({ url: 'http://mock', body: '{"model":"route"}' }), {}, { proxyId: 'first' }, 2, 'test', { requestContext });
+  assert.equal(response.status, 429);
   await response.json();
-  assert.equal(calls, 2);
+  assert.equal(calls, 1);
   assert.equal(requestContext.modelIdentity.snapshot().response_model, null);
 });
 
@@ -406,7 +406,7 @@ test('real transport and retry helper count each network attempt once', async ()
   const begin = transportSource.indexOf('async function proxyFetch(');
   const end = transportSource.indexOf('\n/**', begin);
   let networkCalls = 0;
-  const transport = { axios: async () => { networkCalls++; throw new Error('mock network failure'); } };
+  const transport = { ...require('../utils/request-lifecycle'), Logger: { info() {} }, axios: async () => { networkCalls++; throw Object.assign(new Error('mock refused'), { code: 'ECONNREFUSED' }); } };
   vm.createContext(transport);
   vm.runInContext(transportSource.slice(begin, end), transport);
   const context = routeFunctions({ proxyPool: { proxyFetch: transport.proxyFetch, getProxyAgent: async () => null } });
@@ -423,7 +423,7 @@ test('trace snapshots remain available when finish precedes usage insertion', ()
   identity.observe({ model: 'served' });
   const req = { body: { model: 'client' }, path: '/chat/completions', _requestedModel: 'client', _upstreamAttemptContext: { modelIdentity: identity }, apiUser: { keyId: 1 } };
   const middleware = { router: { use(fn) { fn(req, { statusCode: 200, once(event, fn) { if (event === 'finish' && !onFinish) onFinish = fn; } }, () => {}); } },
-    recordEvent: async (_req, payload) => { captured = payload; }, clientMetaFromReq: () => ({}), createRequestLifecycle: () => ({ signal: null, dispose() {} }), Date,
+    recordEvent: async (_req, payload) => { captured = payload; }, clientMetaFromReq: () => ({}), createRequestLifecycle: () => ({ signal: null, dispose() {} }), Date, crypto: require('crypto'),
     require: () => ({ normalizeModel }) };
   vm.createContext(middleware);
   vm.runInContext(source.slice(source.indexOf('router.use('), source.indexOf("const { pool }")), middleware);

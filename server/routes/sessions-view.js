@@ -868,6 +868,7 @@ async function callInternalLLM(promptText, userId, apiKeyId = null, modelId = nu
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${accessToken}`,
       'X-CrewRouter-Signature-Mode': 'header',
+      'X-CrewRouter-Call-Purpose': 'session_summary',
     },
     body: JSON.stringify({
       model: modelId,
@@ -909,6 +910,7 @@ async function* streamInternalLLM(promptText, userId, apiKeyId = null, modelId =
       'Accept': 'text/event-stream',
       // 网关在空正文时会把 API 签名追加为正文；总结只接受真实内容，改为仅头模式
       'X-CrewRouter-Signature-Mode': 'header',
+      'X-CrewRouter-Call-Purpose': 'session_summary',
     },
     body: JSON.stringify({
       model: modelId,

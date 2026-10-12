@@ -108,3 +108,157 @@ test('provider quirks describe covered degradation decisions', () => {
   assert.equal(protocol.ProviderQuirks.anthropic.stream_usage, protocol.Capability.DEGRADE);
   assert.equal(protocol.ProviderQuirks.anthropic.reasoning_effort, protocol.Capability.DEGRADE);
 });
+
+
+test('redacted data and signed thinking round-trip through requests, responses and stream starts', () => {
+  const blocks = [
+    { type: 'redacted_thinking', data: 'opaque+/==\u0000payload', vendor: 'keep' },
+    { type: 'thinking', thinking: 'private', signature: 'signed+/==' },
+    { type: 'text', text: 'answer' }
+  ];
+  const request = { model: 'm', messages: [{ role: 'assistant', content: blocks }] };
+  const anthropic = protocol.codecs.anthropic;
+  assert.deepEqual(anthropic.encodeRequest(anthropic.decodeRequest(request)).messages[0].content, blocks);
+  const openaiRequest = protocol.convertRequest('anthropic', 'openai', request);
+  assert.deepEqual(openaiRequest.messages[0].content, blocks);
+  assert.equal(openaiRequest.messages[0].reasoning_content, undefined);
+  assert.deepEqual(protocol.convertRequest('openai', 'anthropic', openaiRequest).messages[0].content, blocks);
+  const response = { model: 'm', content: blocks, stop_reason: 'end_turn' };
+  assert.deepEqual(anthropic.encodeResponse(anthropic.decodeResponse(response)).content, blocks);
+  const openaiResponse = protocol.convertResponse('anthropic', 'openai', response);
+  assert.deepEqual(protocol.convertResponse('openai', 'anthropic', openaiResponse).content, blocks);
+  for (const block of blocks.slice(0, 2)) {
+    const event = { type: 'content_block_start', index: 0, content_block: block };
+    assert.deepEqual(anthropic.encodeStreamEvent(anthropic.decodeStreamEvent(event)), event);
+    const chunk = protocol.convertStreamEvent('anthropic', 'openai', event);
+    assert.deepEqual(chunk.choices[0].delta.content, [block]);
+  }
+});
+
+test('cache TTL survives OpenAI and Anthropic content, nested results, system and tools', () => {
+  const cache = { type: 'ephemeral', ttl: '1h' };
+  const source = {
+    model: 'm', prompt_cache_key: 'sticky-key',
+    messages: [
+      { role: 'system', content: [{ type: 'text', text: 'cached', cache_control: cache }] },
+      { role: 'user', content: [{ type: 'text', text: 'question', cache_control: cache }] },
+      { role: 'tool', tool_call_id: 'call_1', content: [{ type: 'text', text: 'result', cache_control: cache }] }
+    ],
+    tools: [{ type: 'function', cache_control: cache, function: { name: 'fn', parameters: { type: 'object' } } }]
+  };
+  assert.deepEqual(plain(protocol.codecs.openai.encodeRequest(protocol.codecs.openai.decodeRequest(source))), source);
+  const converted = protocol.convertRequest('openai', 'anthropic', source);
+  assert.deepEqual(converted.system[0].cache_control, cache);
+  assert.deepEqual(converted.messages[0].content[0].cache_control, cache);
+  assert.deepEqual(converted.messages[1].content[0].content[0].cache_control, cache);
+  assert.deepEqual(converted.tools[0].cache_control, cache);
+  const roundTrip = protocol.convertRequest('anthropic', 'openai', converted);
+  assert.deepEqual(roundTrip.messages[0].content[0].cache_control, cache);
+  assert.deepEqual(roundTrip.tools[0].cache_control, cache);
+  const imageRequest = { model: 'm', messages: [{ role: 'user', content: [{ type: 'image_url', image_url: { url: 'https://example.invalid/image' }, cache_control: cache }] }] };
+  assert.deepEqual(protocol.convertRequest('openai', 'anthropic', imageRequest).messages[0].content[0].cache_control, cache);
+  const nestedToolCache = { model: 'm', messages: [], tools: [{ type: 'function', function: { name: 'fn', parameters: {}, cache_control: cache } }] };
+  assert.deepEqual(protocol.convertRequest('openai', 'anthropic', nestedToolCache).tools[0].cache_control, cache);
+});
+
+const fs = require('node:fs');
+const vm = require('node:vm');
+const routeSource = fs.readFileSync(require.resolve('../../routes/api'), 'utf8');
+
+function cacheRouteContext() {
+  const context = vm.createContext({
+    config: { gateway: {} }, Logger: { debug() {}, info() {}, warn() {} },
+    cleanBaseUrl: value => value, upstreamUrl: (base, endpoint) => base + endpoint,
+    buildUpstreamHeaders: () => ({}), affinityKeyForRequest: () => 'test',
+    proxyPool: { getProxyAgent: async () => null, getProxies: async () => [] },
+    MAX_UPSTREAM_ATTEMPTS: 1, UPSTREAM_TIMEOUT: 1000, UPSTREAM_STREAM_TIMEOUT: 1000,
+    AbortSignal,
+  });
+  for (const name of ['addFourthCacheBreakpoint', 'convertOpenAIContentToAnthropic', 'normalizeMessageRole']) {
+    const start = routeSource.indexOf(`function ${name}(`);
+    const rest = routeSource.slice(start + 1);
+    const next = /^(?:(?:async )?function |router\.)/m.exec(rest);
+    vm.runInContext(routeSource.slice(start, start + 1 + next.index), context);
+  }
+  return context;
+}
+
+function plain(value) { return JSON.parse(JSON.stringify(value)); }
+
+test('fourth breakpoint counts tools and never overwrites TTL or annotates thinking', () => {
+  const context = cacheRouteContext();
+  const makeBody = () => ({
+    tools: [{ name: 'fn', cache_control: { type: 'ephemeral', ttl: '1h' } }],
+    messages: Array.from({ length: 6 }, (_, i) => ({ role: i === 5 ? 'user' : 'assistant', content: [{ type: 'text', text: 'hi' }] }))
+  });
+  const body = makeBody();
+  assert.equal(context.addFourthCacheBreakpoint(body, undefined, true), true);
+  assert.deepEqual(body.messages[5].content[0].cache_control.type, 'ephemeral');
+  assert.equal(context.addFourthCacheBreakpoint(makeBody(), undefined, false), false);
+  for (const tail of [
+    { type: 'text', text: 'cached', cache_control: { type: 'ephemeral', ttl: '1h' } },
+    { type: 'thinking', thinking: 'private' },
+    { type: 'redacted_thinking', data: 'opaque' },
+    { type: 'unknown', text: 'unsupported' },
+  ]) {
+    const protectedBody = makeBody();
+    protectedBody.messages[5].content = [tail];
+    const before = plain(protectedBody);
+    assert.equal(context.addFourthCacheBreakpoint(protectedBody, undefined, true), false);
+    assert.deepEqual(plain(protectedBody), before);
+  }
+  const full = makeBody();
+  full.tools = Array.from({ length: 4 }, () => full.tools[0]);
+  assert.equal(context.addFourthCacheBreakpoint(full, undefined, true), false);
+  const mixed = makeBody();
+  mixed.system = [{ type: 'text', text: 'system', cache_control: { type: 'ephemeral' } }];
+  mixed.messages[0].content[0].cache_control = { type: 'ephemeral' };
+  mixed.messages[1].content[0].cache_control = { type: 'ephemeral' };
+  assert.equal(context.addFourthCacheBreakpoint(mixed, undefined, true), false);
+});
+
+test('route conversion keeps cached single text and image metadata', () => {
+  const context = cacheRouteContext();
+  const cache = { type: 'ephemeral', ttl: '1h' };
+  const text = [{ type: 'text', text: 'cached', cache_control: cache }];
+  assert.deepEqual(plain(context.convertOpenAIContentToAnthropic(text)), text);
+  assert.equal(context.convertOpenAIContentToAnthropic([{ type: 'text', text: 'plain' }]), 'plain');
+  for (const url of ['data:image/png;base64,AA==', 'https://example.invalid/image']) {
+    const image = context.convertOpenAIContentToAnthropic([{ type: 'image_url', image_url: { url }, cache_control: cache }]);
+    assert.deepEqual(plain(image[0].cache_control), cache);
+  }
+});
+
+test('actual proxy request builders preserve system/tools caches and opaque assistant blocks', async () => {
+  for (const name of ['proxyAnthropic', 'proxyAnthropicForResponses', 'proxyOpenAI']) {
+    const context = cacheRouteContext();
+    const start = routeSource.indexOf(`async function ${name}(`);
+    const end = routeSource.indexOf('  const { response, currentProxyInfo: finalProxyInfo } = await fetchWithProxyRetry(', start);
+    assert.ok(end > start);
+    vm.runInContext(routeSource.slice(start, end) + '\nreturn upstreamBody;\n' + (name === 'proxyOpenAI' || name === 'proxyAnthropic' ? '}\n}' : '}'), context);
+    const cache = { type: 'ephemeral', ttl: '1h' };
+    const thinking = { type: 'redacted_thinking', data: 'opaque+/==' };
+    const body = {
+      prompt_cache_key: 'sticky-key',
+      messages: [
+        { role: 'developer', content: [{ type: 'text', text: 'system', cache_control: cache }] },
+        { role: 'assistant', content: [thinking], tool_calls: [] },
+        { role: 'user', content: [{ type: 'text', text: 'question', cache_control: cache }] }
+      ],
+      tools: [{ type: 'function', cache_control: cache, function: { name: 'fn', parameters: {} } }]
+    };
+    const before = plain(body);
+    const req = { apiUser: {}, body, headers: {} };
+    const result = name === 'proxyAnthropicForResponses'
+      ? await context[name]({ base_url: 'https://example.invalid' }, 'm', body, {}, req, 'r', {})
+      : await context[name]({ base_url: 'https://example.invalid' }, 'm', body, true, {}, req);
+    if (name === 'proxyOpenAI') assert.equal(result.prompt_cache_key, 'sticky-key');
+    else {
+      assert.deepEqual(plain(result.system[0].cache_control), cache);
+      assert.deepEqual(plain(result.tools[0].cache_control), cache);
+      assert.deepEqual(plain(result.messages[0].content), [thinking]);
+      assert.deepEqual(plain(result.messages[1].content[0].cache_control), cache);
+    }
+    assert.deepEqual(plain(body), before);
+  }
+});

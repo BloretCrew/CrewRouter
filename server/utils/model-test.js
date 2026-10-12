@@ -7,6 +7,7 @@ const Logger = require('../logger');
 const { buildKeyAttemptOrder, getPrimaryApiKey } = require('./provider-keys');
 const { cleanBaseUrl, upstreamUrl, validateUrl } = require('./url-validator');
 const proxyPool = require('../proxy-pool');
+const { canRetryUpstreamError } = require('./upstream-retry-policy');
 
 /** 模型测试用 UA：去换行、截断，避免请求头注入 */
 function normalizeTestUserAgent(value) {
@@ -243,9 +244,8 @@ async function testModel(modelId, userId) {
   } catch (e) {
     Logger.warn(`[模型测试] 获取代理失败，改为直连: ${e.message}`);
   }
-  const doFetch = (reqUrl, opts) => (proxyInfo?.agent
-    ? proxyPool.proxyFetch(reqUrl, { ...opts, agent: proxyInfo.agent })
-    : fetch(reqUrl, opts));
+  const requestContext = { upstreamAttempts: 0, requestId: crypto.randomUUID(), purpose: 'model_test' };
+  const doFetch = (reqUrl, opts) => proxyPool.proxyFetch(reqUrl, { ...opts, agent: proxyInfo?.agent, requestContext });
 
   const start = Date.now();
   const keyAttempts = buildKeyAttemptOrder(model);
@@ -275,17 +275,13 @@ async function testModel(modelId, userId) {
     } catch (e) {
       lastFetchError = e;
       response = null;
-      if (ki < keys.length - 1) {
+      if (ki < keys.length - 1 && canRetryUpstreamError(e, requestContext)) {
         Logger.warn(`[模型测试] Key ${ki + 1}/${keys.length} 连接失败，切换: ${e.message}`);
         continue;
       }
       break;
     }
     if (response.ok) break;
-    if (ki < keys.length - 1 && (response.status === 429 || response.status >= 500 || response.status === 401 || response.status === 403)) {
-      Logger.warn(`[模型测试] Key ${ki + 1}/${keys.length} HTTP ${response.status}，切换下一 Key`);
-      continue;
-    }
     break;
   }
 

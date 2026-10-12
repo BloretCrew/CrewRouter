@@ -17,6 +17,7 @@ const { pool } = require('../models/database');
 const { upstreamUrl } = require('../utils/url-validator');
 const { combineAbortSignals } = require('../utils/request-lifecycle');
 const proxyPool = require('../proxy-pool');
+const { canRetryUpstreamError } = require('../utils/upstream-retry-policy');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
 const {
   buildChatCompletionChunk,
@@ -159,7 +160,7 @@ async function callModel(modelId, messages, options = {}) {
       }
       return await callOpenAIModel(baseUrl, providerWithKey, requestBody, options.requestContext, signal);
     } catch (err) {
-      if (err.code === 'fusion_upstream_limit') throw err;
+      if (!canRetryUpstreamError(err, options.requestContext)) throw err;
       lastErr = err;
       if (ki < keys.length - 1) {
         Logger.warn(`[Fusion] Key ${ki + 1}/${keys.length} 失败，切换下一 Key: ${err.message}`);
@@ -374,6 +375,7 @@ async function processFusion(body, req, options = {}) {
   const { messages, temperature, max_tokens, fusion_preset, tools, tool_choice, response_format } = body;
   const { res, format = 'openai' } = options;
   const requestContext = options.requestContext || { upstreamAttempts: 0 };
+  requestContext.purpose = 'fusion';
   const signal = options.signal || requestContext.signal;
   const throwIfAborted = () => {
     if (signal?.aborted) {

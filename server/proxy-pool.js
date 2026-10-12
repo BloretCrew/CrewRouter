@@ -16,6 +16,7 @@ const { Readable } = require('stream');
 const Logger = require('./logger');
 const pool = require('./models/database').pool;
 const { validateUrl } = require('./utils/url-validator');
+const { combineAbortSignals, releaseCombinedAbortSignal } = require('./utils/request-lifecycle');
 
 // 代理状态缓存：providerId -> proxyId -> 运行时状态
 const runtimeState = new Map();
@@ -382,61 +383,112 @@ function createProxyAgent(proxyUrl) {
  * @returns {object} 兼容 Response 的对象 { ok, status, statusText, headers, url, text, json, body }
  */
 async function proxyFetch(url, options = {}) {
-  const isHttps = url.startsWith('https://');
-  if (options.requestContext) {
-    options.requestContext.upstreamAttempts = (options.requestContext.upstreamAttempts || 0) + 1;
-    if (options.requestContext.upstreamAttempts > 12) {
-      const error = new Error('Upstream request attempt limit exceeded (12)');
-      error.code = 'upstream_attempt_limit';
-      throw error;
+  const context = options.requestContext;
+  const signal = options.signal || context?.signal
+    ? combineAbortSignals(options.signal, context?.signal)
+    : undefined;
+  const normalizeError = (err) => {
+    const canceled = signal?.aborted || axios.isCancel?.(err)
+      || ['CanceledError', 'AbortError', 'TimeoutError'].includes(err.name)
+      || ['ERR_CANCELED', 'ECONNABORTED', 'ETIMEDOUT'].includes(err.code);
+    if (!canceled) return err;
+    const timedOut = err.name === 'TimeoutError' || err.code === 'ETIMEDOUT'
+      || err.code === 'ECONNABORTED' || signal?.reason?.name === 'TimeoutError';
+    const error = new Error(timedOut ? 'Upstream request timed out' : 'The operation was aborted');
+    error.name = timedOut ? 'TimeoutError' : 'AbortError';
+    error.code = timedOut ? 'ETIMEDOUT' : 'ERR_CANCELED';
+    error.cause = err;
+    return error;
+  };
+  const cleanupSignal = () => {
+    if (signal && signal !== options.signal && signal !== context?.signal) {
+      releaseCombinedAbortSignal(signal);
     }
+  };
+  if (signal?.aborted) {
+    cleanupSignal();
+    throw normalizeError(new Error('The operation was aborted'));
   }
+  if ((context?.upstreamAttempts || 0) >= 12) {
+    cleanupSignal();
+    const error = new Error('Upstream request attempt limit exceeded (12)');
+    error.code = 'upstream_attempt_limit';
+    throw error;
+  }
+  const isHttps = url.startsWith('https://');
   const method = (options.method || 'GET').toLowerCase();
-
   const axiosConfig = {
     method,
     url,
     headers: { ...(options.headers || {}) },
     data: options.body,
     responseType: 'stream',
+    maxRedirects: 0,
     validateStatus: () => true,
-    signal: options.signal,
+    signal,
     httpAgent: !isHttps ? options.agent : undefined,
     httpsAgent: isHttps ? options.agent : undefined,
-    // 禁用 axios 默认的转换，保持与 fetch 一致
     transformRequest: [(data) => data],
     transformResponse: [(data) => data]
   };
-
+  const attempt = {
+    number: (context?.upstreamAttempts || 0) + 1,
+    responseStarted: false,
+    status: null,
+    phase: 'sending'
+  };
+  const logAttempt = () => {
+    if (typeof Logger !== 'undefined') {
+      const requestId = /^[a-zA-Z0-9-]{1,64}$/.test(context?.requestId || '') ? context.requestId : 'untracked';
+      const purpose = ['user_request', 'session_summary', 'provider_parse', 'model_test', 'fusion'].includes(context?.purpose) ? context.purpose : 'unspecified';
+      Logger.info(`[UpstreamAttempt] request=${requestId} purpose=${purpose} number=${attempt.number} phase=${attempt.phase} status=${attempt.status ?? 'none'} responseStarted=${attempt.responseStarted}`);
+    }
+  };
   let axiosResponse;
   try {
+    // 在实际发送前同步占用预算，避免并发超额。
+    if (signal?.aborted) throw normalizeError(new Error('The operation was aborted'));
+    if (context) {
+      context.upstreamAttempts = attempt.number;
+      context.lastAttempt = attempt;
+    }
+    logAttempt();
     axiosResponse = await axios(axiosConfig);
   } catch (err) {
-    const isCanceled = axios.isCancel?.(err)
-      || err.name === 'CanceledError'
-      || err.name === 'AbortError'
-      || err.name === 'TimeoutError'
-      || err.code === 'ERR_CANCELED'
-      || err.code === 'ECONNABORTED'
-      || err.code === 'ETIMEDOUT'
-      || (options.signal && options.signal.aborted);
-
-    if (isCanceled) {
-      // AbortSignal.timeout() 触发时 reason.name === 'TimeoutError'
-      const reason = options.signal?.reason;
-      const timedOut = err.name === 'TimeoutError'
-        || err.code === 'ETIMEDOUT'
-        || reason?.name === 'TimeoutError'
-        || /timeout/i.test(String(err.message || ''))
-        || /timeout/i.test(String(reason?.message || reason || ''));
-      const abortErr = new Error(timedOut ? 'Upstream request timed out' : 'The operation was aborted');
-      abortErr.name = timedOut ? 'TimeoutError' : 'AbortError';
-      abortErr.code = timedOut ? 'ETIMEDOUT' : 'ERR_CANCELED';
-      abortErr.cause = err;
-      throw abortErr;
-    }
-    throw err;
+    attempt.phase = 'failed';
+    logAttempt();
+    cleanupSignal();
+    const failure = normalizeError(err);
+    failure.upstreamAttempt = attempt;
+    throw failure;
   }
+  attempt.status = axiosResponse.status;
+  attempt.responseStarted = true;
+  attempt.phase = 'headers';
+  logAttempt();
+  const stream = axiosResponse.data;
+  const onEnd = () => {
+    attempt.phase = 'completed';
+    logAttempt();
+    cleanupSignal();
+  };
+  const onError = () => {
+    attempt.phase = 'failed';
+    logAttempt();
+    cleanupSignal();
+  };
+  const onClose = () => {
+    stream.removeListener('end', onEnd);
+    stream.removeListener('error', onError);
+    if (attempt.phase === 'headers') {
+      attempt.phase = stream.readableEnded ? 'completed' : 'failed';
+      logAttempt();
+    }
+    cleanupSignal();
+  };
+  stream.once('end', onEnd);
+  stream.once('error', onError);
+  stream.once('close', onClose);
 
   let bodyBuffer = null;
   let consumed = false;

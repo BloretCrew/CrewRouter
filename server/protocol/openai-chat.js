@@ -11,8 +11,8 @@ function decodeContent(content) {
   if (typeof content === 'string') return [{ type: 'text', text: content }];
   if (!Array.isArray(content)) return content == null ? [] : [{ type: 'raw', value: content }];
   return content.map(part => {
-    if (part?.type === 'text') return { type: 'text', text: part.text || '', passthrough: { openai: omitKnown(part, new Set(['type', 'text'])) } };
-    if (part?.type === 'image_url') return { type: 'image', source: part.image_url, passthrough: { openai: omitKnown(part, new Set(['type', 'image_url'])) } };
+    if (part?.type === 'text') return { type: 'text', text: part.text || '', cacheControl: part.cache_control, passthrough: { openai: omitKnown(part, new Set(['type', 'text', 'cache_control'])) } };
+    if (part?.type === 'image_url') return { type: 'image', source: part.image_url, cacheControl: part.cache_control, passthrough: { openai: omitKnown(part, new Set(['type', 'image_url', 'cache_control'])) } };
     return { type: 'raw', value: part };
   });
 }
@@ -20,8 +20,8 @@ function decodeContent(content) {
 function encodeContent(blocks, dialect) {
   const content = [];
   for (const block of blocks || []) {
-    if (block.type === 'text') content.push(withPassthrough({ type: 'text', text: block.text || '' }, block.passthrough?.[dialect]));
-    else if (block.type === 'image') content.push(withPassthrough({ type: 'image_url', image_url: block.source }, block.passthrough?.[dialect]));
+    if (block.type === 'text') content.push(withPassthrough({ type: 'text', text: block.text || '', ...(block.cacheControl !== undefined ? { cache_control: block.cacheControl } : {}) }, block.passthrough?.[dialect]));
+    else if (block.type === 'image') content.push(withPassthrough({ type: 'image_url', image_url: block.source, ...(block.cacheControl !== undefined ? { cache_control: block.cacheControl } : {}) }, block.passthrough?.[dialect]));
     else if (block.type === 'raw' && block.value !== undefined) content.push(block.value);
   }
   if (content.length === 0) return null;
@@ -64,6 +64,11 @@ function encodeMessage(message) {
   for (const block of message.blocks || []) {
     if (block.type === 'tool_call') {
       toolCalls.push(withPassthrough({ id: block.id, type: 'function', function: { name: block.name, arguments: block.argumentsText || JSON.stringify(block.input || {}) } }, block.passthrough?.openai));
+    } else if (block.type === 'thinking' && (block.redacted || block.signature !== undefined)) {
+      const value = block.redacted
+        ? { type: 'redacted_thinking', data: block.data ?? '' }
+        : { type: 'thinking', thinking: block.thinking || '', signature: block.signature };
+      contentBlocks.push({ type: 'raw', value: withPassthrough(value, block.passthrough?.anthropic) });
     } else if (block.type === 'thinking') reasoning = (reasoning || '') + (block.thinking || '');
     else contentBlocks.push(block);
   }
@@ -78,12 +83,13 @@ function decodeTool(tool) {
     name: tool.function?.name || tool.name,
     description: tool.function?.description || tool.description,
     inputSchema: tool.function?.parameters || tool.parameters || {},
-    passthrough: { openai: omitKnown(tool, new Set(['type', 'function', 'name', 'description', 'parameters'])) }
+    cacheControl: tool.cache_control ?? tool.function?.cache_control,
+    passthrough: { openai: omitKnown(tool, new Set(['type', 'function', 'name', 'description', 'parameters', 'cache_control'])) }
   };
 }
 
 function encodeTool(tool) {
-  return withPassthrough({ type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.inputSchema || {} } }, tool.passthrough?.openai);
+  return withPassthrough({ type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.inputSchema || {} }, ...(tool.cacheControl !== undefined ? { cache_control: tool.cacheControl } : {}) }, tool.passthrough?.openai);
 }
 
 function decodeRequest(body) {

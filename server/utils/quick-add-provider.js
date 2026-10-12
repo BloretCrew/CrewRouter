@@ -261,6 +261,7 @@ async function completeWithCrewRouterKey(userId, promptText) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
         'X-CrewRouter-Signature-Mode': 'header',
+      'X-CrewRouter-Call-Purpose': 'provider_parse',
       },
       body: JSON.stringify({
         model: target.modelId,

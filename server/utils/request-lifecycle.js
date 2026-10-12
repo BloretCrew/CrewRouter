@@ -1,16 +1,72 @@
 'use strict';
 
+const combinedSignalCleanup = new WeakMap();
+
 function combineAbortSignals(...signals) {
-  const valid = signals.filter(Boolean);
+  const valid = [...new Set(signals.filter(Boolean))];
   if (valid.length < 2) return valid[0];
   if (typeof AbortSignal.any === 'function') return AbortSignal.any(valid);
   const controller = new AbortController();
-  const abort = () => controller.abort();
-  valid.forEach(signal => {
-    if (signal.aborted) abort();
-    else signal.addEventListener('abort', abort, { once: true });
-  });
+  const listeners = [];
+  const cleanup = () => {
+    for (const [signal, listener] of listeners) signal.removeEventListener('abort', listener);
+    listeners.length = 0;
+    combinedSignalCleanup.delete(controller.signal);
+  };
+  for (const signal of valid) {
+    const abort = () => {
+      controller.abort(signal.reason);
+      cleanup();
+    };
+    if (signal.aborted) {
+      abort();
+      break;
+    }
+    signal.addEventListener('abort', abort, { once: true });
+    listeners.push([signal, abort]);
+  }
+  if (!controller.signal.aborted) combinedSignalCleanup.set(controller.signal, cleanup);
   return controller.signal;
+}
+
+function releaseCombinedAbortSignal(signal) {
+  combinedSignalCleanup.get(signal)?.();
+}
+
+function waitForResponseDrain(res, signal) {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      res.removeListener('drain', onDrain);
+      res.removeListener('close', onClose);
+      res.removeListener('error', onError);
+      signal?.removeEventListener('abort', onAbort);
+    };
+    const finish = (error) => {
+      cleanup();
+      if (error) reject(error);
+      else resolve();
+    };
+    const onDrain = () => finish();
+    const onClose = () => {
+      const error = new Error('Response closed before drain');
+      error.code = 'ERR_STREAM_PREMATURE_CLOSE';
+      finish(error);
+    };
+    const onError = error => finish(error);
+    const onAbort = () => {
+      const error = new Error('The operation was aborted');
+      error.name = signal.reason?.name === 'TimeoutError' ? 'TimeoutError' : 'AbortError';
+      error.code = error.name === 'TimeoutError' ? 'ETIMEDOUT' : 'ERR_CANCELED';
+      finish(error);
+    };
+    res.once('drain', onDrain);
+    res.once('close', onClose);
+    res.once('error', onError);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    if (signal?.aborted) onAbort();
+    else if (res.destroyed || res.writableEnded || res.writableFinished) onClose();
+    else if (res.writableNeedDrain === false) onDrain();
+  });
 }
 
 function createRequestLifecycle(req, res) {
@@ -47,4 +103,4 @@ function createRequestLifecycle(req, res) {
   };
 }
 
-module.exports = { createRequestLifecycle, combineAbortSignals };
+module.exports = { createRequestLifecycle, combineAbortSignals, releaseCombinedAbortSignal, waitForResponseDrain };

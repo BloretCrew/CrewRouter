@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { sendGenerationFailure } = require('../utils/generation-failure');
 const { recordEvent } = require('../utils/trace-session');
 
 // 在响应结束时统一捕获当前 API Key 的完整请求，覆盖成功、失败和零 token 请求。
@@ -24,8 +25,12 @@ router.use((req, res, next) => {
   req._clientMetaSnapshot = clientMetaFromReq(req);
   req._requestLifecycle = createRequestLifecycle(req, res);
   req._requestedModel = req.body?.model;
-  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle.signal, requestedModel: req._requestedModel };
-  res.once('finish', () => req._requestLifecycle.dispose());
+  const purpose = ['session_summary', 'provider_parse'].includes(req.headers?.['x-crewrouter-call-purpose'])
+    ? req.headers?.['x-crewrouter-call-purpose'] : 'user_request';
+  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle.signal, requestedModel: req._requestedModel, requestId: crypto.randomUUID(), purpose };
+  const disposeLifecycle = () => req._requestLifecycle.dispose();
+  res.once('finish', disposeLifecycle);
+  res.once('close', disposeLifecycle);
   next();
 });
 const { pool } = require('../models/database');
@@ -93,7 +98,8 @@ const crypto = require('crypto');
 const { decryptSecret } = require('../utils/secret-crypto');
 const { validateBeforeUpstreamRewrite } = require('../utils/before-upstream-policy');
 const { selectHealthyWeighted } = require('../utils/provider-selector');
-const { createRequestLifecycle, combineAbortSignals } = require('../utils/request-lifecycle');
+const { createRequestLifecycle, combineAbortSignals, waitForResponseDrain } = require('../utils/request-lifecycle');
+const { canRetryUpstreamError } = require('../utils/upstream-retry-policy');
 const protocolBridge = require('../protocol/bridge');
 const { createModelIdentity, observeModelResponse } = require('../utils/model-identity');
 
@@ -120,6 +126,8 @@ async function fetchWithModelIdentity(url, options) {
   const identity = createModelIdentity(context?.requestedModel, sentBody?.model);
   if (context) context.modelIdentity = identity;
   const response = await proxyPool.proxyFetch(url, options);
+  if (context) context.retryAfter = response.status === 429
+    ? (response.headers?.get?.('retry-after') ?? response.headers?.['retry-after']) : null;
   return observeModelResponse(response, identity);
 }
 
@@ -140,8 +148,7 @@ function isUpstreamTimeoutError(err) {
   if (err.name === 'TimeoutError') return true;
   const msg = String(err.message || '');
   if (/timed?\s*out|timeout/i.test(msg)) return true;
-  // AbortSignal.timeout 在部分路径会变成 “aborted”
-  if (err.name === 'AbortError' && /abort/i.test(msg)) return true;
+
   return false;
 }
 
@@ -173,7 +180,7 @@ function buildUpstreamExceptionError(error, format = 'openai') {
           message
         }
       },
-      retryable: status >= 500
+      retryable: canRetryUpstreamError(error)
     };
   }
   return {
@@ -185,7 +192,7 @@ function buildUpstreamExceptionError(error, format = 'openai') {
         code
       }
     },
-    retryable: status >= 500
+    retryable: canRetryUpstreamError(error)
   };
 }
 
@@ -201,7 +208,7 @@ function buildUpstreamExceptionError(error, format = 'openai') {
  * @returns {Promise<{response: object, currentProxyInfo: object|null}>}
  */
 async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, maxRetries, logPrefix, hookCtx = null) {
-  const signal = combineAbortSignals(hookCtx?.signal, hookCtx?.requestContext?.signal, provider?._requestLifecycle?.signal);
+  const signal = hookCtx?.signal || hookCtx?.requestContext?.signal || provider?._requestContext?.signal || provider?._requestLifecycle?.signal;
   const throwIfAborted = () => {
     if (signal?.aborted) {
       const err = new Error('Client disconnected');
@@ -263,7 +270,7 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
   for (let retry = 0; retry < attempts; retry++) {
     throwIfAborted();
     const fetchOpts = applyUpstreamOverride(makeFetchOpts(proxyInfo));
-    if (signal) fetchOpts.signal = combineAbortSignals(fetchOpts.signal, signal);
+    if (signal && !requestContext) fetchOpts.signal = combineAbortSignals(fetchOpts.signal, signal);
 
     try {
       response = await fetchWithModelIdentity(fetchOpts.url, { ...fetchOpts, requestContext });
@@ -271,37 +278,15 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
     } catch (err) {
       lastError = err;
       response = null;
-      Logger.warn(`[${logPrefix}] 代理请求失败，切换代理重试 ${retry + 1}/${attempts}: proxy=${proxyInfo?.proxyUrl || 'none'}, error=${err.message}`);
-      if (proxyInfo?.proxyId) {
-        proxyPool.markProxy429(provider.id, proxyInfo.proxyId);
-      }
-      // 有代理（供应商级或全局强制）时尝试切换；无代理则继续按 attempts 直连重试
-      const nextProxy = await proxyPool.getProxyAgent(provider, affinityKey);
-      if (nextProxy || proxyInfo) {
-        proxyInfo = nextProxy;
-        if (!proxyInfo && retry >= attempts - 1) break;
-        if (!proxyInfo) {
-          // 代理耗尽，最后一次可回退到直连再试
-          continue;
-        }
-      }
+      const retryAllowed = retry < attempts - 1 && canRetryUpstreamError(err, requestContext);
+      Logger.warn(`[${logPrefix}] 上游尝试失败 ${retry + 1}/${attempts}: retry=${retryAllowed}, code=${err.code || err.name || 'unknown'}`);
+      if (!retryAllowed) throw err;
+      if (proxyInfo?.proxyId) proxyPool.markProxy429(provider.id, proxyInfo.proxyId);
+      proxyInfo = await proxyPool.getProxyAgent(provider, affinityKey);
       continue;
     }
 
-    if (response.status === 429 && retry < attempts - 1) {
-      const nextProxy = await proxyPool.getProxyAgent(provider, affinityKey);
-      if (!nextProxy && !proxyInfo) break;
-      const errText = await response.text().catch(() => '');
-      lastError = new Error(`HTTP 429${errText ? ': ' + String(errText).slice(0, 200) : ''}`);
-      Logger.warn(`[${logPrefix}] 收到 429 限速，切换代理重试 ${retry + 1}/${attempts}: proxy=${proxyInfo?.proxyUrl || 'none'}`);
-      if (proxyInfo?.proxyId) {
-        proxyPool.markProxy429(provider.id, proxyInfo.proxyId);
-      }
-      proxyInfo = nextProxy || await proxyPool.getProxyAgent(provider, affinityKey);
-      if (!proxyInfo) break;
-      response = null;
-      continue;
-    }
+    // 账号限速不能通过切换网络代理恢复；交由客户端按 Retry-After 决定下一次请求。
 
     break;
   }
@@ -324,13 +309,9 @@ async function fetchWithProxyRetry(makeFetchOpts, provider, currentProxyInfo, ma
 
 /**
  * 是否可对 Key 模型队列做失败回退（换下一个模型重试）
- * - 网络/5xx/429 → 可回退；4xx 通常表示客户端请求或鉴权错误，不切换模型/Key
+ * HTTP 响应不能证明生成尚未开始；只允许明确的发送前异常进行回退。
  */
 function isRetryableUpstreamStatus(status) {
-  if (status == null) return true;
-  const code = Number(status);
-  if (!Number.isFinite(code)) return true;
-  if (code >= 500) return true;
   return false;
 }
 
@@ -338,11 +319,34 @@ function isProxyErrorResult(result) {
   return !!(result && result.__proxyError === true);
 }
 
+async function readUpstreamErrorBody(response) {
+  let text = '';
+  try { text = await response.text(); } catch { /* Preserve HTTP status when the error body is unreadable. */ }
+  try {
+    const body = JSON.parse(text);
+    if (body && typeof body === 'object') return body;
+  } catch { /* Non-JSON errors use the same error envelope. */ }
+  return { error: { message: text || 'Upstream request failed', type: 'server_error', code: 'upstream_error' } };
+}
+
+function forwardUpstreamRetryAfter(res, status, response) {
+  if (status < 400 || res.headersSent) return;
+  const value = response
+    ? (response.headers?.get?.('retry-after') ?? response.headers?.['retry-after'])
+    : res.req?._upstreamAttemptContext?.retryAfter;
+  if (typeof value !== 'string' || value.length > 128 || /[\r\n]/.test(value)) return;
+  const httpDate = /^(?:[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} GMT|[A-Za-z]+, \d{2}-[A-Za-z]{3}-\d{2} \d{2}:\d{2}:\d{2} GMT|[A-Za-z]{3} [A-Za-z]{3} [ \d]\d \d{2}:\d{2}:\d{2} \d{4})$/;
+  if (/^\d+$/.test(value) || (httpDate.test(value) && Number.isFinite(Date.parse(value)))) {
+    res.setHeader('Retry-After', value);
+  }
+}
+
 /**
  * 代理失败时：要么写响应，要么返回可回退的错误对象
  * @returns {null|{ __proxyError: true, status: number, body: any, retryable: boolean }}
  */
 function respondProxyError(res, status, body, options = {}) {
+  forwardUpstreamRetryAfter(res, status);
   const retryable = options.retryable != null
     ? !!options.retryable
     : isRetryableUpstreamStatus(status);
@@ -556,7 +560,7 @@ async function runWithProviderKeyFallback(provider, res, outerSuppress, runOnce)
     } catch (err) {
       lastError = err;
       lastResult = null;
-      if (hasMoreKeys && !res.headersSent) {
+      if (hasMoreKeys && !res.headersSent && canRetryUpstreamError(err, providerWithKey._requestContext)) {
         Logger.warn(
           `[KeyFallback] provider=${provider.id} key ${i + 1}/${keys.length} 异常，切换下一 Key: ${err.message}`
         );
@@ -773,13 +777,15 @@ function addFourthCacheBreakpoint(upstreamBody, sourceSystem = upstreamBody.syst
     const content = Array.isArray(message.content) ? message.content : [];
     return count + content.filter(block => block && typeof block === 'object' && block.cache_control).length;
   }, 0);
-  if (cacheCount > 3 || cacheCount === 0) return false;
+  const totalCacheCount = cacheCount + (upstreamBody.tools || []).filter(tool => tool?.cache_control).length + (upstreamBody.cache_control ? 1 : 0);
+  if (totalCacheCount > 3 || totalCacheCount === 0) return false;
   const lastUser = upstreamBody.messages[upstreamBody.messages.length - 1];
   if (!lastUser || lastUser.role !== 'user') return false;
   const content = Array.isArray(lastUser.content) ? lastUser.content : [{ type: 'text', text: String(lastUser.content || '') }];
-  if (content.some(block => block?.type === 'thinking')) return false;
+  if (content.some(block => block?.type === 'thinking' || block?.type === 'redacted_thinking')) return false;
   const lastBlock = content[content.length - 1];
-  if (!lastBlock || typeof lastBlock !== 'object') return false;
+  if (!lastBlock || typeof lastBlock !== 'object' || lastBlock.cache_control !== undefined
+    || !['text', 'image', 'document', 'tool_use', 'tool_result'].includes(lastBlock.type)) return false;
   lastBlock.cache_control = { type: 'ephemeral' };
   lastUser.content = content;
   Logger.debug('[proxyAnthropic] 已补充第四个缓存断点');
@@ -1106,7 +1112,7 @@ function convertOpenAIContentToAnthropic(content) {
   for (const part of content) {
     if (!part || typeof part !== 'object') continue;
     if (part.type === 'text') {
-      converted.push({ type: 'text', text: part.text || '' });
+      converted.push({ type: 'text', text: part.text || '', ...(part.cache_control !== undefined ? { cache_control: part.cache_control } : {}) });
     } else if (part.type === 'image_url') {
       const url = typeof part.image_url === 'string'
         ? part.image_url
@@ -1116,7 +1122,8 @@ function convertOpenAIContentToAnthropic(content) {
         if (match) {
           converted.push({
             type: 'image',
-            source: { type: 'base64', media_type: match[1] || 'image/jpeg', data: match[2] }
+            source: { type: 'base64', media_type: match[1] || 'image/jpeg', data: match[2] },
+            ...(part.cache_control !== undefined ? { cache_control: part.cache_control } : {})
           });
         } else {
           Logger.warn('[convertOpenAIContentToAnthropic] 无法解析 data URL 图片');
@@ -1124,19 +1131,20 @@ function convertOpenAIContentToAnthropic(content) {
       } else if (url) {
         converted.push({
           type: 'image',
-          source: { type: 'url', url }
+          source: { type: 'url', url },
+          ...(part.cache_control !== undefined ? { cache_control: part.cache_control } : {})
         });
       }
     } else if (part.type === 'image' || part.type === 'tool_use' || part.type === 'tool_result'
       || part.type === 'thinking' || part.type === 'redacted_thinking' || part.type === 'document') {
       converted.push(part);
     } else if (part.text != null && !part.type) {
-      converted.push({ type: 'text', text: part.text });
+      converted.push({ type: 'text', text: part.text, ...(part.cache_control !== undefined ? { cache_control: part.cache_control } : {}) });
     }
   }
 
   if (converted.length === 0) return '';
-  if (converted.length === 1 && converted[0].type === 'text') return converted[0].text;
+  if (converted.length === 1 && converted[0].type === 'text' && converted[0].cache_control === undefined) return converted[0].text;
   return converted;
 }
 
@@ -1478,6 +1486,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
   if (body.seed !== undefined) upstreamBody.seed = body.seed;
   if (body.logit_bias !== undefined) upstreamBody.logit_bias = body.logit_bias;
   if (body.user !== undefined) upstreamBody.user = body.user;
+  if (body.prompt_cache_key !== undefined) upstreamBody.prompt_cache_key = body.prompt_cache_key;
   // reasoning_effort：仅当模型开启 forward_reasoning_effort 时由上层写入 body
   if (body.reasoning_effort !== undefined) upstreamBody.reasoning_effort = body.reasoning_effort;
 
@@ -1516,10 +1525,11 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       Logger.error(`[proxyOpenAI] 上游无响应(流式): provider=${provider.id}(${provider.name}), url=${url}`);
       return respondProxyError(res, 502, {
         error: { message: 'Upstream request failed: no response', type: 'server_error', code: 'upstream_error' }
-      }, { suppressErrorResponse, retryable: true });
+      }, { suppressErrorResponse, retryable: false });
     }
 
     if (!response.ok) {
+      forwardUpstreamRetryAfter(res, response.status, response);
       const err = await response.text();
       Logger.error(`[proxyOpenAI] 上游响应错误: provider=${provider.id}(${provider.name}), url=${url}, status=${response.status}, body=${err.substring(0, 500)}`);
       let errBody;
@@ -1567,14 +1577,14 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
     const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
 
     // 检测客户端断开连接
-    req.on('close', () => {
+    res.once('close', () => {
       clientDisconnected = true;
       Logger.stream(`[proxyOpenAI] 客户端断开连接: provider=${provider.id}, model=${model}, 已接收 ${chunkCount} 个chunk, ${sseLineCount} 行SSE`);
     });
 
     // 背压处理：等待 drain 事件后再继续，支持客户端断开中断
     const writeWithDrain = (data) => {
-      if (clientDisconnected) return false;
+      if (clientDisconnected || res.destroyed || res.writableEnded) return false;
       const ok = res.write(data);
       if (!ok) {
         backpressureCount++;
@@ -1585,16 +1595,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       return ok;
     };
 
-    const waitForDrain = () => {
-      return new Promise((resolve) => {
-        if (clientDisconnected) { resolve(); return; }
-        const onDrain = () => { cleanup(); resolve(); };
-        const onClose = () => { cleanup(); resolve(); };
-        const cleanup = () => { res.removeListener('drain', onDrain); req.removeListener('close', onClose); };
-        res.once('drain', onDrain);
-        req.once('close', onClose);
-      });
-    };
+    const waitForDrain = () => waitForResponseDrain(res, req._requestLifecycle?.signal);
 
     // 归一化并写出流式 chunk（补全 id/object/created/model，兼容严格 SDK）
     const writeNormalizedChunk = async (dataStr) => {
@@ -1607,6 +1608,11 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
           frame = out;
         }
         const parsed = JSON.parse(frame);
+        if (parsed.error) {
+          const failure = new Error('Upstream stream reported an error');
+          failure.code = 'upstream_stream_error';
+          throw failure;
+        }
         const originalContent = parsed.choices?.[0]?.delta?.content || '';
         const content = streamScrubber.feed(originalContent);
         if (parsed.choices?.[0]?.delta && originalContent !== content) {
@@ -1624,7 +1630,8 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
         const ok = writeWithDrain(`data: ${JSON.stringify(normalizedChunk)}\n\n`);
         if (!ok) await waitForDrain();
       } catch (e) {
-        jsonParseErrors++;
+        if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++;
         Logger.warn(`[proxyOpenAI] JSON解析失败: data=${dataStr.substring(0, 200)}, error=${e.message}`);
         const ok = writeWithDrain(`data: ${dataStr}\n\n`);
         if (!ok) await waitForDrain();
@@ -1680,6 +1687,11 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
           }
         }
       }
+      if (!gotDone && !clientDisconnected) {
+        const failure = new Error('Upstream stream ended without a completion event');
+        failure.code = 'upstream_stream_incomplete';
+        throw failure;
+      }
     } catch (err) {
       if (err.name === 'AbortError' || err.name === 'TimeoutError') {
         Logger.error(`[proxyOpenAI] 流式超时 (${UPSTREAM_STREAM_TIMEOUT}ms): url=${url}, model=${model}, 已接收 ${chunkCount} chunks`);
@@ -1688,6 +1700,15 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       } else {
         Logger.error(`[proxyOpenAI] 流式读取错误: url=${url}, model=${model}, error=${err.message}, chunkCount=${chunkCount}`);
       }
+      if (!res.destroyed && !res.writableEnded) {
+        const failure = { type: 'error', error: { type: 'api_error', message: 'Upstream stream interrupted', code: 'upstream_stream_interrupted' } };
+        res.write(`event: error\ndata: ${JSON.stringify(failure)}\n\n`);
+        res.end();
+      }
+      throw err;
+    } finally {
+      await reader.cancel?.().catch(() => {});
+      reader.releaseLock?.();
     }
 
     const residualScrubbed = streamScrubber.flush();
@@ -1761,7 +1782,14 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       Logger.error(`[proxyOpenAI] 上游无响应: provider=${provider.id}(${provider.name}), url=${url}, latency=${latency}ms`);
       return respondProxyError(res, 502, {
         error: { message: 'Upstream request failed: no response', type: 'server_error', code: 'upstream_error' }
-      }, { suppressErrorResponse, retryable: true });
+      }, { suppressErrorResponse, retryable: false });
+    }
+
+    if (!response.ok) {
+      forwardUpstreamRetryAfter(res, response.status, response);
+      const data = await readUpstreamErrorBody(response);
+      Logger.error(`[proxyOpenAI] 上游响应错误: provider=${provider.id}(${provider.name}), url=${url}, status=${response.status}, latency=${latency}ms, body=${JSON.stringify(data).substring(0, 500)}`);
+      return respondProxyError(res, response.status, data, { suppressErrorResponse });
     }
 
     let data;
@@ -1771,12 +1799,7 @@ async function proxyOpenAI(provider, model, body, stream, res, req, options = {}
       Logger.error(`[proxyOpenAI] 上游响应解析失败: provider=${provider.id}(${provider.name}), url=${url}, status=${response.status}, latency=${latency}ms, error=${parseErr.message}`);
       return respondProxyError(res, 502, {
         error: { message: 'Upstream returned invalid JSON', type: 'server_error', code: 'upstream_error' }
-      }, { suppressErrorResponse, retryable: true });
-    }
-
-    if (!response.ok) {
-      Logger.error(`[proxyOpenAI] 上游响应错误: provider=${provider.id}(${provider.name}), url=${url}, status=${response.status}, latency=${latency}ms, body=${JSON.stringify(data).substring(0, 500)}`);
-      return respondProxyError(res, response.status, data, { suppressErrorResponse });
+      }, { suppressErrorResponse, retryable: false });
     }
 
     // 插件 gateway:upstreamResponse 钩子：改写上游返回的响应体
@@ -1881,10 +1904,11 @@ async function proxyChatToResponses(provider, model, body, stream, res, req, opt
     Logger.error(`[proxyChatToResponses] 上游无响应: provider=${provider.id}(${provider.name}), url=${url}`);
     return respondProxyError(res, 502, {
       error: { message: 'Upstream request failed: no response', type: 'server_error', code: 'upstream_error' }
-    }, { suppressErrorResponse, retryable: true });
+    }, { suppressErrorResponse, retryable: false });
   }
 
   if (!response.ok) {
+    forwardUpstreamRetryAfter(res, response.status, response);
     const errText = await response.text();
     Logger.error(`[proxyChatToResponses] 上游响应错误: provider=${provider.id}(${provider.name}), url=${url}, status=${response.status}, body=${errText.substring(0, 500)}`);
     let errBody = null;
@@ -1988,9 +2012,9 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   for (const m of (body.messages || [])) {
     const role = normalizeMessageRole(m.role);
     if (role === 'system') {
-      if (typeof m.content === 'string') systemParts.push(m.content);
+      if (typeof m.content === 'string') systemParts.push({ type: 'text', text: m.content });
       else if (Array.isArray(m.content)) {
-        systemParts.push(m.content.filter(b => b.type === 'text').map(b => b.text || '').join('\n'));
+        systemParts.push(...m.content.filter(b => b.type === 'text').map(b => ({ ...b })));
       }
     } else {
       nonSystemMessages.push({ ...m, role });
@@ -2007,11 +2031,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   for (const m of nonSystemMessages) {
     if (m.role === 'tool') {
       // OpenAI tool 消息 → Anthropic tool_result content 块
-      const toolContent = typeof m.content === 'string'
-        ? m.content
-        : Array.isArray(m.content)
-          ? m.content.map(c => (typeof c === 'string' ? c : (c.text || ''))).join('\n')
-          : (m.content || '');
+      const toolContent = convertOpenAIContentToAnthropic(m.content) || '';
       upstreamBody.messages.push({
         role: 'user',
         content: [{
@@ -2028,7 +2048,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
         if (typeof textContent === 'string' && textContent) {
           content.push({ type: 'text', text: textContent });
         } else if (Array.isArray(textContent)) {
-          content.push(...textContent.filter(b => b.type === 'text'));
+          content.push(...textContent);
         }
       }
       for (const tc of (m.tool_calls || [])) {
@@ -2057,9 +2077,8 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
   }
 
   if (systemParts.length > 0) {
-    upstreamBody.system = systemParts.join('\n');
+    upstreamBody.system = systemParts.length === 1 && systemParts[0].cache_control === undefined ? systemParts[0].text : systemParts;
   }
-  addFourthCacheBreakpoint(upstreamBody, systemParts);
 
   if (body.temperature !== undefined) upstreamBody.temperature = body.temperature;
   if (body.top_p !== undefined) upstreamBody.top_p = body.top_p;
@@ -2069,9 +2088,11 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     upstreamBody.tools = body.tools.map(t => ({
       name: t.function?.name || t.name,
       description: t.function?.description || t.description,
-      input_schema: t.function?.parameters || t.input_schema || { type: 'object', properties: {} }
+      input_schema: t.function?.parameters || t.input_schema || { type: 'object', properties: {} },
+      ...((t.cache_control ?? t.function?.cache_control) !== undefined ? { cache_control: t.cache_control ?? t.function?.cache_control } : {})
     }));
   }
+  addFourthCacheBreakpoint(upstreamBody);
   if (body.tool_choice) {
     if (body.tool_choice === 'auto') upstreamBody.tool_choice = { type: 'auto' };
     else if (body.tool_choice === 'required') upstreamBody.tool_choice = { type: 'any' };
@@ -2104,6 +2125,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     currentProxyInfo = finalProxyInfo;
 
     if (!response.ok) {
+      forwardUpstreamRetryAfter(res, response.status, response);
       const errText = await response.text();
       const latency = Date.now() - startTime;
       Logger.error(`[proxyAnthropic] 上游响应错误: provider=${provider.id}(${provider.name}), url=${url}, status=${response.status}, latency=${latency}ms, body=${errText.substring(0, 500)}`);
@@ -2151,14 +2173,14 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
 
     // 检测客户端断开连接
-    req.on('close', () => {
+    res.once('close', () => {
       clientDisconnected = true;
       Logger.stream(`[proxyAnthropic] 客户端断开连接: provider=${provider.id}, model=${model}, 已接收 ${chunkCount} 个chunk, ${sseLineCount} 行SSE`);
     });
 
     // 背压处理
     const writeWithDrain = (data) => {
-      if (clientDisconnected) return false;
+      if (clientDisconnected || res.destroyed || res.writableEnded) return false;
       const ok = res.write(data);
       if (!ok) {
         backpressureCount++;
@@ -2169,16 +2191,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       return ok;
     };
 
-    const waitForDrain = () => {
-      return new Promise((resolve) => {
-        if (clientDisconnected) { resolve(); return; }
-        const onDrain = () => { cleanup(); resolve(); };
-        const onClose = () => { cleanup(); resolve(); };
-        const cleanup = () => { res.removeListener('drain', onDrain); req.removeListener('close', onClose); };
-        res.once('drain', onDrain);
-        req.once('close', onClose);
-      });
-    };
+    const waitForDrain = () => waitForResponseDrain(res, req._requestLifecycle?.signal);
 
     // 标准 OpenAI 流式：首包携带 role: assistant
     const ensureRoleEmitted = async () => {
@@ -2243,6 +2256,17 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
             const data = line.slice(6).trim();
             try {
               const parsed = JSON.parse(data);
+              const block = parsed.content_block;
+              if (block?.type === 'redacted_thinking' || (block?.type === 'thinking' && block.signature !== undefined) || parsed.delta?.type === 'signature_delta') {
+                const error = new Error('Signed or redacted thinking requires the native Anthropic streaming endpoint');
+                error.code = 'unsupported_stream_thinking';
+                throw error;
+              }
+              if (parsed.error || parsed.type === 'error') {
+                const failure = new Error('Upstream stream reported an error');
+                failure.code = 'upstream_stream_error';
+                throw failure;
+              }
               if (parsed.type === 'content_block_start') {
                 currentBlockType = parsed.content_block?.type || null;
                 Logger.stream(`[proxyAnthropic] content_block_start: type=${currentBlockType}, index=${parsed.index}`);
@@ -2310,7 +2334,8 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
               }
               // Ignore ping, signature_delta, and other event types
             } catch (e) {
-              jsonParseErrors++;
+              if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++;
               Logger.warn(`[proxyAnthropic] JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
             }
           }
@@ -2327,6 +2352,17 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
             const data = line.slice(6).trim();
             try {
               const parsed = JSON.parse(data);
+              const block = parsed.content_block;
+              if (block?.type === 'redacted_thinking' || (block?.type === 'thinking' && block.signature !== undefined) || parsed.delta?.type === 'signature_delta') {
+                const error = new Error('Signed or redacted thinking requires the native Anthropic streaming endpoint');
+                error.code = 'unsupported_stream_thinking';
+                throw error;
+              }
+              if (parsed.error || parsed.type === 'error') {
+                const failure = new Error('Upstream stream reported an error');
+                failure.code = 'upstream_stream_error';
+                throw failure;
+              }
               if (parsed.type === 'message_delta') {
                 if (parsed.usage) completionTokens = parsed.usage.output_tokens || 0;
                 const sr = parsed.delta?.stop_reason;
@@ -2337,11 +2373,17 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
                 gotDone = true;
               }
             } catch (e) {
-              jsonParseErrors++;
+              if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++;
               Logger.warn(`[proxyAnthropic] 残余缓冲区JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
             }
           }
         }
+      }
+      if (!gotDone && !clientDisconnected) {
+        const failure = new Error('Upstream stream ended without a completion event');
+        failure.code = 'upstream_stream_incomplete';
+        throw failure;
       }
     } catch (err) {
       if (err.name === 'AbortError' || err.name === 'TimeoutError') {
@@ -2351,6 +2393,15 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       } else {
         Logger.error(`[proxyAnthropic] 流式读取错误: url=${url}, model=${model}, error=${err.message}, chunkCount=${chunkCount}`);
       }
+      if (!res.destroyed && !res.writableEnded) {
+        const failure = { type: 'error', error: { type: 'api_error', message: 'Upstream stream interrupted', code: 'upstream_stream_interrupted' } };
+        res.write(`event: error\ndata: ${JSON.stringify(failure)}\n\n`);
+        res.end();
+      }
+      throw err;
+    } finally {
+      await reader.cancel?.().catch(() => {});
+      reader.releaseLock?.();
     }
 
     const residualScrubbed = streamScrubber.flush();
@@ -2444,14 +2495,17 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     );
     currentProxyInfo = finalProxyInfo;
 
-    const data = await response.json();
     const latency = Date.now() - startTime;
 
     if (!response.ok) {
+      forwardUpstreamRetryAfter(res, response.status, response);
+      const data = await readUpstreamErrorBody(response);
       Logger.error(`[proxyAnthropic] 上游响应错误: provider=${provider.id}(${provider.name}), url=${url}, status=${response.status}, latency=${latency}ms, body=${JSON.stringify(data).substring(0, 500)}`);
       const { toOpenAIError } = require('../utils/error-mapper');
       return respondProxyError(res, response.status, toOpenAIError(data, response.status), { suppressErrorResponse });
     }
+
+    const data = await response.json();
 
     // 插件 gateway:upstreamResponse 钩子：改写上游返回的响应体（Anthropic 原始格式）
     let hookData = data;
@@ -2565,7 +2619,7 @@ router.post('/chat/completions', oauthBearer, handleChatCompletion);
 
 async function handleChatCompletion(req, res) {
   if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
-  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
+  req._upstreamAttemptContext = { ...req._upstreamAttemptContext, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -2826,13 +2880,13 @@ async function handleChatCompletion(req, res) {
       recordModelCall(uptimeModelId, false);
       recordLiveCallTest(uptimeModelId, { ok: false, latency_ms: Date.now() - liveCallStart, error: error.message });
       lastError = buildUpstreamExceptionError(error, 'openai');
-      const willRetry = hasMore && !res.headersSent;
+      const willRetry = hasMore && !res.headersSent && canRetryUpstreamError(error, req._upstreamAttemptContext);
       captureCallError(req, {
         modelId: uptimeModelId, providerId: provider?.id, requestType: 'chat',
         status: lastError.status, error, latencyMs: Date.now() - liveCallStart, isFinal: !willRetry
       });
       if (res.headersSent) return;
-      if (hasMore) {
+      if (willRetry) {
         Logger.warn(`[Chat] 队列回退 attempt=${i + 1}/${modelQueue.length} model=${queueModelId} reason=exception`);
         continue;
       }
@@ -3219,7 +3273,7 @@ router.post('/messages', oauthBearer, handleAnthropicMessage);
 
 async function handleAnthropicMessage(req, res) {
   if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
-  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
+  req._upstreamAttemptContext = { ...req._upstreamAttemptContext, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -3467,13 +3521,13 @@ async function handleAnthropicMessage(req, res) {
       recordModelCall(modelConfig.id || model, false);
       recordLiveCallTest(modelConfig.id || model, { ok: false, latency_ms: Date.now() - liveCallStart, error: error.message });
       lastError = buildUpstreamExceptionError(error, 'anthropic');
-      const willRetry = hasMore && !res.headersSent;
+      const willRetry = hasMore && !res.headersSent && canRetryUpstreamError(error, req._upstreamAttemptContext);
       captureCallError(req, {
         modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'anthropic',
         status: lastError.status, error, latencyMs: Date.now() - liveCallStart, isFinal: !willRetry
       });
       if (res.headersSent) return;
-      if (hasMore) {
+      if (willRetry) {
         Logger.warn(`[Anthropic] 队列回退 attempt=${i + 1}/${modelQueue.length} model=${queueModelId} reason=exception`);
         continue;
       }
@@ -3696,6 +3750,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
     currentProxyInfo = finalProxyInfo;
 
     if (!response.ok) {
+      forwardUpstreamRetryAfter(res, response.status, response);
       const errText = await response.text();
       const latency = Date.now() - startTime;
       Logger.error(`[proxyAnthropicToAnthropic] 上游错误: provider=${provider.id}(${provider.name}), status=${response.status}, latency=${latency}ms, body=${errText.substring(0, 500)}`);
@@ -3734,14 +3789,14 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
     const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
 
     // 检测客户端断开连接
-    req.on('close', () => {
+    res.once('close', () => {
       clientDisconnected = true;
       Logger.stream(`[proxyAnthropicToAnthropic] 客户端断开连接: provider=${provider.id}, model=${model}, 已接收 ${chunkCount} 个chunk, ${sseLineCount} 行SSE`);
     });
 
     // 背压处理
     const writeWithDrain = (data) => {
-      if (clientDisconnected) return false;
+      if (clientDisconnected || res.destroyed || res.writableEnded) return false;
       const ok = res.write(data);
       if (!ok) {
         backpressureCount++;
@@ -3752,16 +3807,7 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       return ok;
     };
 
-    const waitForDrain = () => {
-      return new Promise((resolve) => {
-        if (clientDisconnected) { resolve(); return; }
-        const onDrain = () => { cleanup(); resolve(); };
-        const onClose = () => { cleanup(); resolve(); };
-        const cleanup = () => { res.removeListener('drain', onDrain); req.removeListener('close', onClose); };
-        res.once('drain', onDrain);
-        req.once('close', onClose);
-      });
-    };
+    const waitForDrain = () => waitForResponseDrain(res, req._requestLifecycle?.signal);
 
     try {
       while (true) {
@@ -3799,6 +3845,11 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
             const data = line.slice(6).trim();
             try {
               const parsed = JSON.parse(data);
+              if (parsed.error || parsed.type === 'error') {
+                const failure = new Error('Upstream stream reported an error');
+                failure.code = 'upstream_stream_error';
+                throw failure;
+              }
               if (parsed.type === 'message_start') {
                 responseId = parsed.message?.id || '';
                 promptTokens = parsed.message?.usage?.input_tokens || 0;
@@ -3834,7 +3885,8 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
               const ok = writeWithDrain(`data: ${frameOut}\n\n`);
               if (!ok) await waitForDrain();
             } catch (e) {
-              jsonParseErrors++;
+              if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++;
               Logger.warn(`[proxyAnthropicToAnthropic] JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
             }
           }
@@ -3858,6 +3910,11 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
             const data = line.slice(6).trim();
             try {
               const parsed = JSON.parse(data);
+              if (parsed.error || parsed.type === 'error') {
+                const failure = new Error('Upstream stream reported an error');
+                failure.code = 'upstream_stream_error';
+                throw failure;
+              }
               if (parsed.type === 'message_delta') {
                 completionTokens = parsed.usage?.output_tokens || 0;
                 stopReason = parsed.delta?.stop_reason;
@@ -3874,7 +3931,8 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
               }
               res.write(`data: ${frameOut2}\n\n`);
             } catch (e) {
-              jsonParseErrors++;
+              if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++;
               Logger.warn(`[proxyAnthropicToAnthropic] 残余缓冲区JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
             }
           }
@@ -3887,6 +3945,11 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
         if (!ok) await waitForDrain();
         totalContent += residualScrubbed;
       }
+      if (!gotDone && !clientDisconnected) {
+        const failure = new Error('Upstream stream ended without a completion event');
+        failure.code = 'upstream_stream_incomplete';
+        throw failure;
+      }
     } catch (err) {
       if (err.name === 'AbortError' || err.name === 'TimeoutError') {
         Logger.error(`[proxyAnthropicToAnthropic] 流式超时 (${UPSTREAM_STREAM_TIMEOUT}ms): url=${url}, model=${model}, 已接收 ${chunkCount} chunks`);
@@ -3895,6 +3958,15 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
       } else {
         Logger.error(`[proxyAnthropicToAnthropic] 流式读取错误: ${err.message}, chunkCount=${chunkCount}`);
       }
+      if (!res.destroyed && !res.writableEnded) {
+        const failure = { type: 'error', error: { type: 'api_error', message: 'Upstream stream interrupted', code: 'upstream_stream_interrupted' } };
+        res.write(`event: error\ndata: ${JSON.stringify(failure)}\n\n`);
+        res.end();
+      }
+      throw err;
+    } finally {
+      await reader.cancel?.().catch(() => {});
+      reader.releaseLock?.();
     }
 
     const latency = Date.now() - startTime;
@@ -3968,14 +4040,17 @@ async function proxyAnthropicToAnthropic(provider, model, body, stream, res, req
     );
     currentProxyInfo = finalProxyInfo;
 
-    const data = await response.json();
     const latency = Date.now() - startTime;
+
     if (!response.ok) {
+      forwardUpstreamRetryAfter(res, response.status, response);
+      const data = await readUpstreamErrorBody(response);
       Logger.error(`[proxyAnthropicToAnthropic] 上游错误: provider=${provider.id}(${provider.name}), status=${response.status}, latency=${latency}ms, body=${JSON.stringify(data).substring(0, 500)}`);
       const { toAnthropicError } = require('../utils/error-mapper');
       return respondProxyError(res, response.status, toAnthropicError(data, response.status), { suppressErrorResponse });
     }
 
+    const data = await response.json();
     // 插件 gateway:upstreamResponse 钩子：改写上游返回的响应体
     let hookData = data;
     if (pluginHooks.hasSubscribers('gateway:upstreamResponse')) {
@@ -4080,6 +4155,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   currentProxyInfo = finalProxyInfo;
 
   if (!response.ok) {
+    forwardUpstreamRetryAfter(res, response.status, response);
     const err = await response.text();
     const latency = Date.now() - startTime;
     Logger.error(`[proxyOpenAIToAnthropic] 上游错误: provider=${provider.id}(${provider.name}), status=${response.status}, latency=${latency}ms, body=${err.substring(0, 500)}`);
@@ -4101,14 +4177,14 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   let backpressureCount = 0;
 
   // 检测客户端断开连接
-  req.on('close', () => {
+  res.once('close', () => {
     clientDisconnected = true;
     Logger.stream(`[proxyOpenAIToAnthropic] 客户端断开连接: provider=${provider.id}, model=${model}`);
   });
 
   // 背压处理
   const writeWithDrain = (data) => {
-    if (clientDisconnected) return false;
+    if (clientDisconnected || res.destroyed || res.writableEnded) return false;
     const ok = res.write(data);
     if (!ok) {
       backpressureCount++;
@@ -4119,16 +4195,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     return ok;
   };
 
-  const waitForDrain = () => {
-    return new Promise((resolve) => {
-      if (clientDisconnected) { resolve(); return; }
-      const onDrain = () => { cleanup(); resolve(); };
-      const onClose = () => { cleanup(); resolve(); };
-      const cleanup = () => { res.removeListener('drain', onDrain); req.removeListener('close', onClose); };
-      res.once('drain', onDrain);
-      req.once('close', onClose);
-    });
-  };
+  const waitForDrain = () => waitForResponseDrain(res, req._requestLifecycle?.signal);
 
   const responseId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const anthropicModel = openaiBody.model || model;
@@ -4156,6 +4223,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   let lastUsage = null;
   let textBlockStarted = false;
   let textBlockIndex = null;
+  let gotDone = false;
   let stopReason = 'end_turn';
   let chunkCount = 0;
   let sseLineCount = 0;
@@ -4215,16 +4283,27 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
         sseLineCount++;
         const data = line.slice(6).trim();
         if (data === '[DONE]') {
+          gotDone = true;
           Logger.stream(`[proxyOpenAIToAnthropic] 收到上游 [DONE] 事件`);
           break;
         }
 
         try {
           const parsed = JSON.parse(data);
+              if (parsed.error || parsed.type === 'error') {
+                const failure = new Error('Upstream stream reported an error');
+                failure.code = 'upstream_stream_error';
+                throw failure;
+              }
           if (parsed.usage) {
             lastUsage = parsed.usage;
           }
           const delta = parsed.choices?.[0]?.delta;
+          if (Array.isArray(delta?.content) && delta.content.some(block => ['thinking', 'redacted_thinking'].includes(block?.type))) {
+            const error = new Error('Opaque thinking requires the native Anthropic streaming endpoint');
+            error.code = 'unsupported_stream_thinking';
+            throw error;
+          }
           const finishReason = parsed.choices?.[0]?.finish_reason;
 
           // Text content
@@ -4300,6 +4379,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
             else if (finishReason === 'tool_calls') stopReason = 'tool_use';
           }
         } catch (e) {
+          if (e?.name !== 'SyntaxError') throw e;
           jsonParseErrors++;
           Logger.warn(`[proxyOpenAIToAnthropic] JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
         }
@@ -4314,9 +4394,14 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
         if (!line.startsWith('data: ')) continue;
         sseLineCount++;
         const data = line.slice(6).trim();
-        if (data === '[DONE]') continue;
+        if (data === '[DONE]') { gotDone = true; continue; }
         try {
           const parsed = JSON.parse(data);
+              if (parsed.error || parsed.type === 'error') {
+                const failure = new Error('Upstream stream reported an error');
+                failure.code = 'upstream_stream_error';
+                throw failure;
+              }
           if (parsed.usage) lastUsage = parsed.usage;
           const finishReason = parsed.choices?.[0]?.finish_reason;
           if (finishReason) {
@@ -4325,10 +4410,16 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
             else if (finishReason === 'tool_calls') stopReason = 'tool_use';
           }
         } catch (e) {
+          if (e?.name !== 'SyntaxError') throw e;
           jsonParseErrors++;
           Logger.warn(`[proxyOpenAIToAnthropic] 残余缓冲区JSON解析失败: data=${data.substring(0, 200)}, error=${e.message}`);
         }
       }
+    }
+  if (!gotDone && !clientDisconnected) {
+      const failure = new Error('Upstream stream ended without a completion event');
+      failure.code = 'upstream_stream_incomplete';
+      throw failure;
     }
   } catch (err) {
     if (err.name === 'AbortError' || err.name === 'TimeoutError') {
@@ -4338,6 +4429,15 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     } else {
       Logger.error(`[proxyOpenAIToAnthropic] 流式读取错误: ${err.message}, chunkCount=${chunkCount}`);
     }
+      if (!res.destroyed && !res.writableEnded) {
+        const failure = { type: 'error', error: { type: 'api_error', message: 'Upstream stream interrupted', code: 'upstream_stream_interrupted' } };
+        res.write(`event: error\ndata: ${JSON.stringify(failure)}\n\n`);
+        res.end();
+      }
+      throw err;
+  } finally {
+    await reader.cancel?.().catch(() => {});
+    reader.releaseLock?.();
   }
 
   // Use real usage from upstream if available, otherwise 0
@@ -4461,8 +4561,16 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
   );
   currentProxyInfo = finalProxyInfo;
 
-  let data;
   const latency = Date.now() - startTime;
+  if (!response.ok) {
+    forwardUpstreamRetryAfter(res, response.status, response);
+    const data = await readUpstreamErrorBody(response);
+    Logger.error(`[proxyOpenAIToAnthropic] 上游错误: provider=${provider.id}(${provider.name}), status=${response.status}, latency=${latency}ms, body=${JSON.stringify(data).substring(0, 500)}`);
+    const { toAnthropicError } = require('../utils/error-mapper');
+    return respondProxyError(res, response.status, toAnthropicError(data, response.status), { suppressErrorResponse });
+  }
+
+  let data;
   try {
     const text = await response.text();
     data = JSON.parse(text);
@@ -4470,13 +4578,7 @@ async function proxyOpenAINonStreamToAnthropic(provider, model, openaiBody, res,
     Logger.error(`[proxyOpenAIToAnthropic] 上游响应解析失败: provider=${provider.id}(${provider.name}), status=${response.status}, latency=${latency}ms, error=${parseErr.message}`);
     return respondProxyError(res, 502, {
       type: 'error', error: { type: 'api_error', message: 'Upstream returned invalid JSON' }
-    }, { suppressErrorResponse, retryable: true });
-  }
-
-  if (!response.ok) {
-    Logger.error(`[proxyOpenAIToAnthropic] 上游错误: provider=${provider.id}(${provider.name}), status=${response.status}, latency=${latency}ms, body=${JSON.stringify(data).substring(0, 500)}`);
-    const { toAnthropicError } = require('../utils/error-mapper');
-    return respondProxyError(res, response.status, toAnthropicError(data, response.status), { suppressErrorResponse });
+    }, { suppressErrorResponse, retryable: false });
   }
   if (currentProxyInfo?.proxyId) {
     proxyPool.markProxySuccess(provider.id, currentProxyInfo.proxyId, latency);
@@ -4746,7 +4848,7 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
   const toolCalls = {}; // index → { id, name, arguments }
   const emittedToolCalls = new Set();
 
-  req.on('close', () => { clientDisconnected = true; });
+  res.once?.('close', () => { clientDisconnected = true; });
 
   // 发送初始事件
   const baseResponse = {
@@ -4782,6 +4884,11 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
         if (data === '[DONE]') { gotDone = true; continue; }
         try {
           const parsed = JSON.parse(data);
+              if (parsed.error || parsed.type === 'error') {
+                const failure = new Error('Upstream stream reported an error');
+                failure.code = 'upstream_stream_error';
+                throw failure;
+              }
           const delta = parsed.choices?.[0]?.delta;
           if (!delta) {
             if (parsed.usage) lastUsage = parsed.usage;
@@ -4829,6 +4936,7 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
 
           if (parsed.usage) lastUsage = parsed.usage;
         } catch (e) {
+          if (e?.name !== 'SyntaxError') throw e;
           jsonParseErrors++;
         }
       }
@@ -4843,6 +4951,11 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
         if (data === '[DONE]') { gotDone = true; continue; }
         try {
           const parsed = JSON.parse(data);
+              if (parsed.error || parsed.type === 'error') {
+                const failure = new Error('Upstream stream reported an error');
+                failure.code = 'upstream_stream_error';
+                throw failure;
+              }
           if (parsed.usage) lastUsage = parsed.usage;
           const delta = parsed.choices?.[0]?.delta;
           if (delta?.content && !textDone) { totalContent += delta.content; }
@@ -4855,13 +4968,23 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
               if (tc.function?.arguments) toolCalls[idx].arguments += tc.function.arguments;
             }
           }
-        } catch (e) { jsonParseErrors++; }
+        } catch (e) { if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++; }
       }
+    }
+  if (!gotDone && !clientDisconnected) {
+      const failure = new Error('Upstream stream ended without a completion event');
+      failure.code = 'upstream_stream_incomplete';
+      throw failure;
     }
   } catch (err) {
     if (err.name !== 'AbortError' && err.name !== 'TimeoutError' && !clientDisconnected) {
       Logger.error(`[Responses/OpenAI] 流式读取错误: model=${model}, error=${err.message}`);
     }
+    throw err;
+  } finally {
+    await reader.cancel?.().catch(() => {});
+    reader.releaseLock?.();
   }
 
   // 关闭未完成的文本输出
@@ -4927,7 +5050,7 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
   let textStarted = false;
   let textDone = false;
 
-  req.on('close', () => { clientDisconnected = true; });
+  res.once?.('close', () => { clientDisconnected = true; });
 
   const baseResponse = {
     id: respId, object: 'response', created_at: Math.floor(Date.now() / 1000),
@@ -4961,6 +5084,17 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
         const data = line.slice(6).trim();
         try {
           const parsed = JSON.parse(data);
+              const block = parsed.content_block;
+              if (block?.type === 'redacted_thinking' || (block?.type === 'thinking' && block.signature !== undefined) || parsed.delta?.type === 'signature_delta') {
+                const error = new Error('Signed or redacted thinking requires the native Anthropic streaming endpoint');
+                error.code = 'unsupported_stream_thinking';
+                throw error;
+              }
+              if (parsed.error || parsed.type === 'error') {
+                const failure = new Error('Upstream stream reported an error');
+                failure.code = 'upstream_stream_error';
+                throw failure;
+              }
 
           if (parsed.type === 'content_block_start') {
             currentBlockType = parsed.content_block?.type || null;
@@ -5015,7 +5149,8 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
           } else if (parsed.type === 'message_stop') {
             gotDone = true;
           }
-        } catch (e) { jsonParseErrors++; }
+        } catch (e) { if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++; }
       }
     }
 
@@ -5027,15 +5162,36 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
         const data = line.slice(6).trim();
         try {
           const parsed = JSON.parse(data);
+              const block = parsed.content_block;
+              if (block?.type === 'redacted_thinking' || (block?.type === 'thinking' && block.signature !== undefined) || parsed.delta?.type === 'signature_delta') {
+                const error = new Error('Signed or redacted thinking requires the native Anthropic streaming endpoint');
+                error.code = 'unsupported_stream_thinking';
+                throw error;
+              }
+              if (parsed.error || parsed.type === 'error') {
+                const failure = new Error('Upstream stream reported an error');
+                failure.code = 'upstream_stream_error';
+                throw failure;
+              }
           if (parsed.type === 'message_delta' && parsed.usage) completionTokens = parsed.usage.output_tokens || 0;
           if (parsed.type === 'message_stop') gotDone = true;
-        } catch (e) { jsonParseErrors++; }
+        } catch (e) { if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++; }
       }
+    }
+  if (!gotDone && !clientDisconnected) {
+      const failure = new Error('Upstream stream ended without a completion event');
+      failure.code = 'upstream_stream_incomplete';
+      throw failure;
     }
   } catch (err) {
     if (err.name !== 'AbortError' && err.name !== 'TimeoutError' && !clientDisconnected) {
       Logger.error(`[Responses/Anthropic] 流式读取错误: model=${model}, error=${err.message}`);
     }
+    throw err;
+  } finally {
+    await reader.cancel?.().catch(() => {});
+    reader.releaseLock?.();
   }
 
   // 关闭未完成的文本输出
@@ -5121,13 +5277,16 @@ async function proxyOpenAIForResponses(provider, model, chatBody, res, req, resp
   );
   currentProxyInfo = finalProxyInfo;
 
-  const data = await response.json();
   const latency = Date.now() - startTime;
 
   if (!response.ok) {
+    forwardUpstreamRetryAfter(res, response.status, response);
+    const data = await readUpstreamErrorBody(response);
     Logger.error(`[Responses/OpenAI] 上游错误: provider=${provider.id}, status=${response.status}, latency=${latency}ms`);
     return respondProxyError(res, response.status, data, { suppressErrorResponse });
   }
+
+  const data = await response.json();
   if (currentProxyInfo?.proxyId) {
     proxyPool.markProxySuccess(provider.id, currentProxyInfo.proxyId, latency);
   }
@@ -5174,9 +5333,9 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   for (const m of (chatBody.messages || [])) {
     const role = normalizeMessageRole(m.role);
     if (role === 'system') {
-      if (typeof m.content === 'string') systemParts.push(m.content);
+      if (typeof m.content === 'string') systemParts.push({ type: 'text', text: m.content });
       else if (Array.isArray(m.content)) {
-        systemParts.push(m.content.filter(b => b.type === 'text').map(b => b.text || '').join('\n'));
+        systemParts.push(...m.content.filter(b => b.type === 'text').map(b => ({ ...b })));
       }
       continue;
     }
@@ -5191,7 +5350,11 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
       });
     } else if (role === 'assistant' && m.tool_calls) {
       const content = [];
-      if (m.content) content.push({ type: 'text', text: typeof m.content === 'string' ? m.content : '' });
+      if (m.content) {
+        const blocks = convertOpenAIContentToAnthropic(m.content);
+        if (typeof blocks === 'string' && blocks) content.push({ type: 'text', text: blocks });
+        else if (Array.isArray(blocks)) content.push(...blocks);
+      }
       for (const tc of m.tool_calls) {
         content.push({
           type: 'tool_use',
@@ -5213,7 +5376,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
     messages: convertedMessages,
     stream: false
   };
-  if (systemParts.length > 0) upstreamBody.system = systemParts.join('\n');
+  if (systemParts.length > 0) upstreamBody.system = systemParts.length === 1 && systemParts[0].cache_control === undefined ? systemParts[0].text : systemParts;
   if (chatBody.temperature !== undefined) upstreamBody.temperature = chatBody.temperature;
   if (chatBody.top_p !== undefined) upstreamBody.top_p = chatBody.top_p;
   if (chatBody.stop) upstreamBody.stop_sequences = Array.isArray(chatBody.stop) ? chatBody.stop : [chatBody.stop];
@@ -5221,7 +5384,8 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
     upstreamBody.tools = chatBody.tools.map(t => ({
       name: t.function?.name || t.name,
       description: t.function?.description || t.description,
-      input_schema: t.function?.parameters || t.input_schema || { type: 'object', properties: {} }
+      input_schema: t.function?.parameters || t.input_schema || { type: 'object', properties: {} },
+      ...((t.cache_control ?? t.function?.cache_control) !== undefined ? { cache_control: t.cache_control ?? t.function?.cache_control } : {})
     }));
   }
 
@@ -5250,10 +5414,11 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   );
   currentProxyInfo = finalProxyInfo;
 
-  const data = await response.json();
   const latency = Date.now() - startTime;
 
   if (!response.ok) {
+    forwardUpstreamRetryAfter(res, response.status, response);
+    const data = await readUpstreamErrorBody(response);
     Logger.error(`[Responses/Anthropic] 上游错误: provider=${provider.id}, status=${response.status}, latency=${latency}ms`);
     // Responses API 使用 OpenAI 风格错误（本端点对外是 /v1/responses）
     return respondProxyError(res, response.status, {
@@ -5264,6 +5429,8 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
       }
     }, { suppressErrorResponse });
   }
+
+  const data = await response.json();
   if (currentProxyInfo?.proxyId) {
     proxyPool.markProxySuccess(provider.id, currentProxyInfo.proxyId, latency);
   }
@@ -5323,7 +5490,7 @@ router.post('/responses', oauthBearer, handleResponses);
 
 async function handleResponses(req, res) {
   if (!Object.prototype.hasOwnProperty.call(req, '_requestedModel')) req._requestedModel = req.body?.model;
-  req._upstreamAttemptContext = { upstreamAttempts: 0, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
+  req._upstreamAttemptContext = { ...req._upstreamAttemptContext, signal: req._requestLifecycle?.signal, requestedModel: req._requestedModel };
   const { tryHandleCrewRouterCommand } = require('../utils/crewrouter-command');
   if (await tryHandleCrewRouterCommand(req, res)) return;
 
@@ -5458,6 +5625,7 @@ async function handleResponses(req, res) {
       model: upstreamModel, messages, temperature, max_tokens: max_output_tokens, top_p,
       tools: chatTools, tool_choice, response_format: responseFormat, stream: !!stream
     };
+    if (body.prompt_cache_key !== undefined) chatBody.prompt_cache_key = body.prompt_cache_key;
     if (stream) chatBody.stream_options = { include_usage: true };
     if (modelConfig.forward_reasoning_effort) {
       if (body.reasoning_effort !== undefined) {
@@ -5497,8 +5665,9 @@ async function handleResponses(req, res) {
             agent: currentProxyInfo?.agent,
             requestContext: req._upstreamAttemptContext
           });
-          const responseData = await upstreamResp.json();
           if (!upstreamResp.ok) {
+            forwardUpstreamRetryAfter(res, upstreamResp.status, upstreamResp);
+            const responseData = await readUpstreamErrorBody(upstreamResp);
             recordModelCall(modelConfig.id || model, false);
             recordLiveCallTest(modelConfig.id || model, { ok: false, error: `HTTP ${upstreamResp.status}` });
             lastError = { status: upstreamResp.status, body: responseData, retryable: isRetryableUpstreamStatus(upstreamResp.status) };
@@ -5513,6 +5682,7 @@ async function handleResponses(req, res) {
             }
             return res.status(upstreamResp.status).json(responseData);
           }
+          const responseData = await upstreamResp.json();
           recordModelCall(modelConfig.id || model, true);
           const _pt = responseData.usage?.input_tokens || 0;
           const _ct = responseData.usage?.output_tokens || 0;
@@ -5569,11 +5739,12 @@ async function handleResponses(req, res) {
           return res.json(responseData);
         } catch (error) {
           lastError = buildUpstreamExceptionError(error, 'openai');
+          const willRetry = hasMore && canRetryUpstreamError(error, req._upstreamAttemptContext);
           captureCallError(req, {
             modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
-            status: lastError.status, error, isFinal: !hasMore
+            status: lastError.status, error, isFinal: !willRetry
           });
-          if (hasMore) {
+          if (willRetry) {
             Logger.warn(`[Responses] 队列回退 attempt=${i + 1}/${modelQueue.length} model=${queueModelId} reason=exception`);
             continue;
           }
@@ -5688,13 +5859,13 @@ async function handleResponses(req, res) {
         recordModelCall(modelConfig.id || model, false);
         recordLiveCallTest(modelConfig.id || model, { ok: false, latency_ms: Date.now() - liveCallStart, error: error.message });
         lastError = buildUpstreamExceptionError(error, 'openai');
-        const willRetry = hasMore && !res.headersSent;
+        const willRetry = hasMore && !res.headersSent && canRetryUpstreamError(error, req._upstreamAttemptContext);
         captureCallError(req, {
           modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
           status: lastError.status, error, latencyMs: Date.now() - liveCallStart, isFinal: !willRetry
         });
         if (res.headersSent) return;
-        if (hasMore && lastError.retryable) continue;
+        if (willRetry) continue;
         return res.status(lastError.status).json(lastError.body);
       }
     }
@@ -5746,7 +5917,6 @@ async function handleResponses(req, res) {
       res.setHeader('Cache-Control', 'no-cache, no-store');
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('X-Accel-Buffering', 'no');
-      res.flushHeaders();
 
       const upstreamResp = await fetchWithModelIdentity(url, {
         method: 'POST', headers, body: JSON.stringify(upstreamBody),
@@ -5762,13 +5932,16 @@ async function handleResponses(req, res) {
           modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
           status: upstreamResp.status, body: err, isFinal: true
         });
-        res.write(`event: response.completed\ndata: ${JSON.stringify({ type: 'response.completed', response: { id: respId, object: 'response', status: 'failed', error: { code: 'upstream_error', message: err, type: 'error' } } })}\n\n`);
-        res.end();
+        forwardUpstreamRetryAfter(res, upstreamResp.status, upstreamResp);
+        sendGenerationFailure(res, respId, upstreamResp.status, err);
         return;
       }
+      res.flushHeaders();
       const reader = upstreamResp.body.getReader();
       const decoder = new TextDecoder();
       let totalContent = '';
+      let streamCompleted = false;
+      let frameBuffer = '';
       let streamUsage = null; // { input_tokens, output_tokens, cached_tokens }
       const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
       try {
@@ -5777,12 +5950,17 @@ async function handleResponses(req, res) {
           if (done) break;
           const text = decoder.decode(value, { stream: true });
           if (!req.apiUser?.injectPrompt) {
-            res.write(text);
+            if (!res.write(text)) await waitForResponseDrain(res, req._requestLifecycle?.signal);
           }
-          for (const line of text.split('\n')) {
+          frameBuffer += text;
+          const lines = frameBuffer.split('\n');
+          frameBuffer = lines.pop() || '';
+          for (const line of lines) {
             if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
             try {
               const parsed = JSON.parse(line.slice(6));
+              if (parsed.error || ['error', 'response.failed'].includes(parsed.type)) throw new Error('Upstream stream reported an error');
+              if (['response.completed', 'response.incomplete'].includes(parsed.type)) streamCompleted = true;
               if (parsed.type === 'response.output_text.delta') {
                 const delta = streamScrubber.feed(parsed.delta || '');
                 parsed.delta = delta;
@@ -5790,23 +5968,38 @@ async function handleResponses(req, res) {
               }
               if (req.apiUser?.injectPrompt) {
                 const eventText = `data: ${JSON.stringify(parsed)}\n\n`;
-                res.write(eventText);
+                if (!res.write(eventText)) await waitForResponseDrain(res, req._requestLifecycle?.signal);
               }
               // 优先取上游 usage（response.completed 或带 usage 的事件）
               const u = parsed.response?.usage || parsed.usage || null;
               if (u && (u.input_tokens != null || u.output_tokens != null || u.prompt_tokens != null)) {
                 streamUsage = u;
               }
-            } catch { /* ignore parse errors in passthrough */ }
+            } catch (error) { if (error.name !== 'SyntaxError') throw error; }
           }
         }
+        frameBuffer += decoder.decode();
+        if (frameBuffer.startsWith('data: ')) {
+          try {
+            const parsed = JSON.parse(frameBuffer.slice(6));
+            if (parsed.error || ['error', 'response.failed'].includes(parsed.type)) throw new Error('Upstream stream reported an error');
+            if (['response.completed', 'response.incomplete'].includes(parsed.type)) streamCompleted = true;
+            streamUsage = parsed.response?.usage || parsed.usage || streamUsage;
+          } catch (error) { if (error.name !== 'SyntaxError') throw error; }
+        }
+        if (!streamCompleted) throw new Error('Upstream stream ended without a completion event');
         const residual = streamScrubber.flush();
         if (residual && !res.writableEnded) {
           totalContent += residual;
           res.write(`event: response.output_text.delta\ndata: ${JSON.stringify({ type: 'response.output_text.delta', delta: residual })}\n\n`);
         }
+      } catch (error) {
+        sendGenerationFailure(res, respId, 502, { error: { message: error.message, code: 'upstream_error' } });
+        return;
       } finally {
-        if (!res.writableEnded) res.end();
+        await reader.cancel?.().catch(() => {});
+        reader.releaseLock?.();
+        if (!res.destroyed && !res.writableEnded) res.end();
       }
 
       // 计费 + 写入调用记录（此前只扣积分不落库，导致列表/配额不准）
@@ -5893,8 +6086,9 @@ async function handleResponses(req, res) {
       agent: currentProxyInfo?.agent,
       requestContext: req._upstreamAttemptContext
     });
-    const responseData = await upstreamResp.json();
     if (!upstreamResp.ok) {
+      forwardUpstreamRetryAfter(res, upstreamResp.status, upstreamResp);
+      const responseData = await readUpstreamErrorBody(upstreamResp);
       recordModelCall(modelConfig.id || model, false);
       recordLiveCallTest(modelConfig.id || model, { ok: false, error: `HTTP ${upstreamResp.status}` });
       captureCallError(req, {
@@ -5903,6 +6097,7 @@ async function handleResponses(req, res) {
       });
       return res.status(upstreamResp.status).json(responseData);
     }
+    const responseData = await upstreamResp.json();
     recordModelCall(modelConfig.id || model, true);
     const _pt = responseData.usage?.input_tokens || 0;
     const _ct = responseData.usage?.output_tokens || 0;
@@ -5972,17 +6167,13 @@ async function handleResponses(req, res) {
       res.setHeader('Cache-Control', 'no-cache, no-store');
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('X-Accel-Buffering', 'no');
-      res.flushHeaders();
 
       const writeWithDrain = (data) => {
         if (res.writableEnded) return false;
         const ok = res.write(data);
         return ok;
       };
-      const waitForDrain = () => new Promise(resolve => {
-        res.once('drain', resolve);
-        req.once('close', resolve);
-      });
+      const waitForDrain = () => waitForResponseDrain(res, req._requestLifecycle?.signal);
 
       if (provider.format === 'anthropic') {
         // Anthropic 流式
@@ -6004,17 +6195,18 @@ async function handleResponses(req, res) {
           requestContext: req._upstreamAttemptContext
         });
         if (!response.ok) {
+          forwardUpstreamRetryAfter(res, response.status, response);
           const err = await response.text();
           Logger.error(`[Responses/Anthropic] 上游错误: status=${response.status}`);
           captureCallError(req, {
             modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
             status: response.status, body: err, isFinal: true
           });
-          res.write(`event: response.completed\ndata: ${JSON.stringify({ type: 'response.completed', response: { id: respId, object: 'response', status: 'failed', error: { code: 'upstream_error', message: err, type: 'error' } } })}\n\n`);
-          res.end();
+          sendGenerationFailure(res, respId, response.status, err);
           return;
         }
 
+        res.flushHeaders();
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         result = await streamAnthropicAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain);
@@ -6034,17 +6226,18 @@ async function handleResponses(req, res) {
           requestContext: req._upstreamAttemptContext
         });
         if (!response.ok) {
+          forwardUpstreamRetryAfter(res, response.status, response);
           const err = await response.text();
           Logger.error(`[Responses/OpenAI] 上游错误: status=${response.status}`);
           captureCallError(req, {
             modelId: modelConfig.id || model, providerId: provider?.id, requestType: 'responses',
             status: response.status, body: err, isFinal: true
           });
-          res.write(`event: response.completed\ndata: ${JSON.stringify({ type: 'response.completed', response: { id: respId, object: 'response', status: 'failed', error: { code: 'upstream_error', message: err, type: 'error' } } })}\n\n`);
-          res.end();
+          sendGenerationFailure(res, respId, response.status, err);
           return;
         }
 
+        res.flushHeaders();
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         result = await streamOpenAIAsResponses(reader, decoder, res, req, respId, upstreamModel, body, writeWithDrain, waitForDrain);
@@ -6145,9 +6338,7 @@ async function handleResponses(req, res) {
       latencyMs: typeof liveCallStart === 'number' ? Date.now() - liveCallStart : undefined,
       isFinal: true
     });
-    if (!res.headersSent) {
-      res.status(mapped.status).json(mapped.body);
-    }
+    sendGenerationFailure(res, respId, mapped.status, mapped.body);
   }
 }
 
