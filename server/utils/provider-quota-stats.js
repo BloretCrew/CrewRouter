@@ -155,7 +155,7 @@ async function queryProviderQuotaOverview(pool, query, scope = 'admin', userId) 
     FROM ${ACCOUNT_RELATION} a LEFT JOIN providers p ON p.id = a.provider_id
     LEFT JOIN LATERAL (SELECT o0.* FROM provider_quota_observations o0 WHERE o0.account_id = a.id AND o0.provider_id = a.provider_id
       AND o0.checked_at < (($2::date + INTERVAL '1 day') AT TIME ZONE 'Asia/Shanghai') ORDER BY o0.checked_at DESC, o0.id DESC LIMIT 1) attempt ON TRUE
-    LEFT JOIN LATERAL (SELECT o1.* FROM provider_quota_observations o1 WHERE o1.account_id = a.id 
+    LEFT JOIN LATERAL (SELECT o1.* FROM provider_quota_observations o1 WHERE o1.account_id = a.id
       AND o1.status IN ('success', 'partial') AND EXISTS (SELECT 1 FROM provider_quota_observation_items vi WHERE vi.observation_id = o1.id) AND o1.observed_at < (($2::date + INTERVAL '1 day') AT TIME ZONE 'Asia/Shanghai')
       ORDER BY o1.observed_at DESC, o1.id DESC LIMIT 1) o ON TRUE
     LEFT JOIN LATERAL (SELECT d0.provider_name, d0.last_observed_at FROM provider_quota_daily_agg d0
@@ -170,7 +170,7 @@ async function queryProviderQuotaOverview(pool, query, scope = 'admin', userId) 
         UNION ALL
         SELECT fd.kind, fd.unit, fd.window_key, fd.last_total, fd.last_used, fd.last_remaining, fd.last_used_percent,
           (fd.quality->>'last_resets_at')::timestamptz, fd.last_observed_at, fd.quality, NULL::timestamptz AS sample_checked_at, 0::bigint AS sample_order
-        FROM provider_quota_daily_agg fd WHERE fd.account_id = a.id 
+        FROM provider_quota_daily_agg fd WHERE fd.account_id = a.id
           AND fd.date <= $2::date AND fd.kind != 'status' AND fd.last_observed_at IS NOT NULL
       ) candidate ORDER BY candidate.kind, candidate.unit, candidate.window_key, candidate.observed_at DESC NULLS LAST, candidate.sample_checked_at DESC NULLS LAST, candidate.sample_order DESC
     ) i ON TRUE
