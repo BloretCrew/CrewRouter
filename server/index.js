@@ -2988,6 +2988,16 @@ async function startServer() {
         if (attempt < maxAttempts && isRetryableStartupDbError(err)) {
           const waitMs = attempt * 2000;
           Logger.warn(`[启动] 数据库初始化遇到锁等待（${err.message}），${waitMs}ms 后重试…`);
+          // 清理主机重启/进程被杀遗留的持锁僵尸会话，否则后续重试必然继续超时
+          try {
+            const { recoverStartupLockBlockers } = require('./utils/startup-lock-recovery');
+            const { terminated } = await recoverStartupLockBlockers();
+            if (terminated > 0) {
+              Logger.warn(`[启动] 已清理 ${terminated} 个持锁僵尸会话，继续重试`);
+            }
+          } catch (recoverErr) {
+            Logger.warn(`[启动] 锁阻塞自愈跳过: ${recoverErr.message}`);
+          }
           await new Promise((r) => setTimeout(r, waitMs));
           continue;
         }
