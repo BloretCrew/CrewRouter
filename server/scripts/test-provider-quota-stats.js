@@ -184,3 +184,17 @@ test('趋势质量白名单、样本与百分点字段完整且敏感字段不�
   assert.equal(item.quality.event, 'gap');
   assert.equal(item.quality.token, undefined);
 });
+
+test('附加额度保持请求SQL、维度和指标不变', async () => {
+  const row={value_0:'codex',name_0:'Codex',value_1:'m1',name_1:'模型',requests:2,tokens:123,cost:'1'};
+  const original=mockPool([[row]]);
+  const base=await queryMultiDimensionStats(original,{...range,dimensions:'source,model',metric:'tokens'},'user',7);
+  const enriched=mockPool([[row],[sample],[],[],[]]);
+  const data=await queryMultiDimensionStats(enriched,{...range,dimensions:'source,model',metric:'tokens',include_quota:'true'},'user',7);
+  assert.equal(enriched.calls[0].sql,original.calls[0].sql);
+  assert.deepEqual(enriched.calls[0].params,original.calls[0].params);
+  assert.deepEqual(data.rows,base.rows);
+  assert.equal(data.metric,'tokens');
+  assert.deepEqual(data.dimensions,['source','model']);
+  assert.ok(data.provider_quota);
+});

@@ -164,18 +164,17 @@ async function main(){
       assert.ok(await cdp.evaluate(`layoutCalls.some(s=>{const u=new URL(s,location.origin);return u.pathname.endsWith('/multi-dimension')&&u.searchParams.get('dimensions')==='source,model'&&u.searchParams.get('metric')==='tokens'})`),'客户端和模型只发送有效请求维度');
       assert.ok(await cdp.evaluate(`!document.querySelector('${multi} .multi-dimension-status').textContent.includes('有效且不同')`),'截图组合正常生成');
       await chooseSource(cdp,multi,'quota');await sleep(250);
-      await choose(cdp,multi+' [name="quota_metric"]','used_percent');await sleep(250);
+      assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="metric"]').value==='tokens'&&!document.querySelector('${multi} [data-dimension-group="usage"]').hidden&&document.querySelector('${multi} [data-dimension-group="quota"]').hidden`),'勾额度保持请求维度和指标');
+      assert.ok(await cdp.evaluate(`layoutCalls.some(s=>{const u=new URL(s,location.origin);return u.pathname.endsWith('/multi-dimension')&&u.searchParams.get('dimensions')==='source,model'&&u.searchParams.get('metric')==='tokens'&&u.searchParams.get('include_quota')==='true'&&u.searchParams.get('data_source')==='usage'})`),'额度仅附加信息');
       await chooseSource(cdp,multi,'requests');await sleep(250);
-      assert.ok(await cdp.evaluate(`!document.querySelector('${multi} .multi-dimension-status').textContent.includes('有效且不同')`),'反复切换不混入隐藏维度');
+      assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="metric"]').value==='tokens'&&document.querySelector('${panel}').hidden`),'取消只移除额度');
       if(process.env.QUOTA_ENTRY_ONLY==='1') {
-        assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="data_source"]').closest('label').hidden`),'数据源入口收起');
-        assert.ok(await cdp.evaluate(`document.querySelector('${multi} [data-quota-dimension]').parentElement===document.querySelector('${multi} [data-dimension-group="usage"]').parentElement`),'额度位于同一维度行');
         assert.ok(await cdp.evaluate(`document.documentElement.scrollWidth<=innerWidth+1`),'维度行无横向溢出');
         assert.equal(cdp.events.filter(e=>e.method==='Runtime.exceptionThrown').length,0);
-        console.log(`PASS quota dimension entry ${scope} ${width}: checkbox entry, quota API, metric switching, request selection restore, responsive`);
+        console.log(`PASS additive quota ${scope} ${width}: dimensions and metric unchanged, quota context added/removed, responsive`);
         continue;
       }
-      await chooseSource(cdp,multi,'related');await sleep(300);
+      await chooseSource(cdp,multi,'quota');await sleep(250);
       assert.ok(await cdp.evaluate(`!document.querySelector('${panel}').hidden&&document.querySelector('${panel} .quota-accounts').textContent.includes('Command Code GOAT')`),'关联只展示紧凑供应商上下文');
       assert.equal(await cdp.evaluate(`document.querySelectorAll('${panel} table,${panel} canvas,${panel} .quota-summary').length`),0,'多维页不重复大表概览趋势');
       assert.ok(await cdp.click(panel+' [data-quota-action="history"][data-provider="p1"]'),'相关供应商历史入口');await sleep(300);

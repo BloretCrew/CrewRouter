@@ -11,22 +11,9 @@
   const sourceKey = value => ({ usage: 'requests', association: 'related', provider_quota: 'quota' })[value] || value || 'requests';
   const checked = el => typeof el.checked === 'boolean' ? el.checked : el.hasAttribute('checked');
   const chosenDimensions = group => [...new Set([...group.querySelectorAll('blora-checkbox')].filter(checked).map(el => el.getAttribute('value')))];
-  function activeSelection(root, source) {
+  function activeSelection(root) {
     const state = selections.get(root);
-    if (state.source !== source) {
-      state.values[state.source] = { dimensions: chosenDimensions(state.groups[state.source]), metric: state.metrics[state.source].value };
-      const saved = state.values[source];
-      state.groups[source].querySelectorAll('blora-checkbox').forEach(el => el.toggleAttribute('checked', saved.dimensions.includes(el.getAttribute('value'))));
-      state.metrics[source].value = saved.metric;
-      state.source = source;
-    }
-    const quota = source === 'quota';
-    state.quotaToggle.toggleAttribute('checked', quota);
-    state.groups.requests.hidden = quota;
-    state.groups.quota.hidden = !quota;
-    state.metrics.requests.closest('label').hidden = quota;
-    state.metrics.quota.closest('label').hidden = !quota;
-    return chosenDimensions(state.groups[source]);
+    return chosenDimensions(state.groups.requests);
   }
   function displayLabel(key, value) {
     if (value === '__unknown__') return tr('未识别项目');
@@ -69,10 +56,11 @@
     if (!root) return;
     init();
     const status = root.querySelector('.multi-dimension-status');
-    const source = sourceKey(root.querySelector('[name="data_source"]')?.value);
+    const includeQuota = checked(selections.get(root).quotaToggle);
+    const source = 'requests';
     const quotaRoot = document.querySelector(`[data-quota-scope="${scope}"][data-quota-context="multi"]`);
-    if (source === 'related') window.CrewRouterQuotaStats?.refresh(scope);
-    if (quotaRoot) quotaRoot.hidden = source === 'requests';
+    if (includeQuota) window.CrewRouterQuotaStats?.refresh(scope);
+    if (quotaRoot) quotaRoot.hidden = !includeQuota;
     const isQuota = source === 'quota';
     const chosen = activeSelection(root, source);
     const targetId = `${prefix}MultiDimensionResult`;
@@ -87,7 +75,7 @@
     status.textContent = '正在加载...';
     try {
       const params = new URLSearchParams({
-        dimensions: chosen.join(','), metric: root.querySelector(isQuota ? '[name="quota_metric"]' : '[name="metric"]').value, data_source: isQuota ? 'quota' : source === 'related' ? 'association' : 'usage',
+        dimensions: chosen.join(','), metric: root.querySelector(isQuota ? '[name="quota_metric"]' : '[name="metric"]').value, data_source: 'usage', include_quota: String(includeQuota),
         days: scope === 'admin' ? (document.getElementById('adminStatsDays')?.value || '30') : (document.getElementById('statsTimeRange')?.value || '30')
       });
       if (scope === 'user' && params.get('days') === 'custom') {
@@ -164,9 +152,6 @@
         }
       });
       root.addEventListener('change', event => {
-        if (event.target.closest('[data-quota-dimension]')) {
-          actions.querySelector('[name="data_source"]').value = checked(quotaToggle) ? 'quota' : 'requests';
-        }
         if (event.target.closest('blora-checkbox, blora-select[name="metric"], blora-select[name="data_source"], blora-select[name="quota_metric"]')) load(scope);
       });
     }

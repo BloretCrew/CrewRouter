@@ -1335,7 +1335,7 @@ router.get('/stats/provider-quota/history', requireAuth, requireProviderAccessCo
 
 router.get('/stats/multi-dimension', requireAuth, (req, res, next) => {
   const source = req.query.data_source || req.query.source || 'usage';
-  if (['quota', 'provider_quota', 'association'].includes(source)) return requireProviderAccessContext(req, res, next);
+  if (req.query.include_quota === 'true' || ['quota', 'provider_quota', 'association'].includes(source)) return requireProviderAccessContext(req, res, next);
   return next();
 }, async (req, res) => {
   try {

@@ -95,7 +95,7 @@ async function queryMultiDimensionStats(pool, query, scope, userId) {
       .replace('LEFT JOIN usage_message_analysis uma ON uma.usage_id = u.id', 'LEFT JOIN LATERAL (SELECT u.workspace_path) uma ON TRUE');
   }
   const result = await pool.query(usageSql, params);
-  const quota = source === 'association' ? await queryProviderQuotaOverview(pool, query, scope, userId) : null;
+  const quota = source === 'association' || query.include_quota === 'true' ? await queryProviderQuotaOverview(pool, query, scope, userId) : null;
   return {
     ...(quota ? { data_source: source, provider_quota: quota, quota_context: 'independent_provider_accounts_not_additive' } : {}),
     dimensions, metric,
