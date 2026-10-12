@@ -1,5 +1,7 @@
 'use strict';
 
+const { quotaSignal } = require('./quota-http');
+
 const { decryptSecret } = require('./secret-crypto');
 
 function parseCpaQuotaConfig(text) {
@@ -143,7 +145,7 @@ function cpaRequest(provider) {
     url.search = path.includes('?') ? path.slice(path.indexOf('?')) : '';
     // 管理员指定可信地址；禁止重定向泄露管理密钥。
     const response = await fetch(url, { method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${key}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-      ...(body ? { body: JSON.stringify(body) } : {}), redirect: 'error', signal: AbortSignal.timeout(15000) });
+      ...(body ? { body: JSON.stringify(body) } : {}), redirect: 'error', signal: quotaSignal(AbortSignal.timeout(15000)) });
     if (!response.ok) throw new Error(`CPA 管理接口请求失败（HTTP ${response.status}）`);
     try { return await response.json(); } catch { throw new Error('CPA 额度响应不是有效 JSON'); }
   };

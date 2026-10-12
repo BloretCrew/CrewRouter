@@ -1,0 +1,54 @@
+#quotaCycleDialog::part(panel) { width: min(1060px, calc(100vw - 24px)); max-width: min(1060px, calc(100vw - 24px)); }
+#quotaCycleDialog .modal-content { width: 100%; min-width: 0; max-width: 1060px; }
+#quotaCycleDialog .modal-body { max-height: 80vh; overflow-y: auto; }
+.quota-cycle { min-width: 0; color: var(--foreground); }
+.cycle-filters, .cycle-pagination, .cycle-report-heading { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.cycle-filters { align-items: end; }
+.cycle-filters label { display: grid; gap: 6px; min-width: 160px; font-size: 12px; }
+.cycle-filters label:focus-within { position: relative; z-index: 20; }
+.cycle-status { color: var(--muted-foreground); font-size: 12px; min-height: 18px; }
+.cycle-report { scroll-margin-top: 12px; }
+.cycle-report:not(:empty) { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+.cycle-report h4, .cycle-report h5 { font-size: 14px; margin: 0; }
+.cycle-report section { margin: 20px 0; }
+.cycle-report-heading button { margin-left: auto; }
+.cycle-badge { font-size: 12px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px; }
+.cycle-badge[data-state="complete"] { color: var(--success, #16845b); }
+.cycle-badge[data-state="partial"], .cycle-badge[data-state="pending_reconciliation"] { color: var(--warning, #a76b0a); }
+.cycle-disclaimer { padding: 10px 12px; border-left: 3px solid var(--border); color: var(--muted-foreground); font-size: 12px; line-height: 1.7; }
+.cycle-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.cycle-metrics dt { font-size: 12px; color: var(--muted-foreground); }
+.cycle-metrics dd { margin: 4px 0 0; font-size: 18px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cycle-table-wrap { overflow: auto; min-width: 0; }
+.cycle-table-wrap table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.cycle-table-wrap th, .cycle-table-wrap td { padding: 12px 8px; text-align: left; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; vertical-align: top; }
+.cycle-table-wrap th { font-weight: 500; color: var(--muted-foreground); }
+.cycle-table-wrap small { display: block; margin-top: 4px; color: var(--muted-foreground); }
+.cycle-timeline { list-style: none; padding: 0 0 0 14px; border-left: 2px solid var(--border); }
+.cycle-timeline li { display: grid; gap: 5px; position: relative; padding: 8px 0 14px; font-size: 12px; }
+.cycle-timeline li::before { content: ''; position: absolute; left: -19px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--muted-foreground); }
+.cycle-timeline time, .cycle-timeline span { color: var(--muted-foreground); overflow-wrap: anywhere; }
+.cycle-pagination { margin: 12px 0; justify-content: end; font-size: 12px; }
+.cycle-samples summary { cursor: pointer; font-size: 13px; padding: 8px 0; }
+.quota-cycle button:focus-visible, .cycle-samples summary:focus-visible { outline: 2px solid var(--brand-blue, #6366f1); outline-offset: 3px; }
+@media (max-width: 640px) {
+  .cycle-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cycle-filters label { min-width: 0; }
+  .cycle-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cycle-pagination { justify-content: start; }
+  .cycle-table-wrap table, .cycle-table-wrap tbody, .cycle-table-wrap tr, .cycle-table-wrap td { display: block; width: auto; }
+  .cycle-table-wrap thead { display: none; }
+  .cycle-table-wrap tr { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .cycle-table-wrap td { display: grid; grid-template-columns: 95px minmax(0, 1fr); gap: 6px; padding: 6px 0; border: 0; }
+  .cycle-table-wrap td::before { content: attr(data-label); color: var(--muted-foreground); grid-column: 1; grid-row: 1 / span 3; }
+  .cycle-table-wrap td > * { grid-column: 2; }
+}
+
+.cycle-contribution-controls { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+.cycle-contribution-controls label { display: grid; gap: 6px; font-size: 12px; min-width: 130px; }
+.cycle-contribution-controls label:focus-within { position: relative; z-index: 20; }
+.cycle-export-status { display: flex; gap: 10px; align-items: center; margin: 8px 0; font-size: 12px; overflow-wrap: anywhere; }
+.cycle-attempt-samples:not(:empty) { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+.cycle-report-statistics summary { cursor: pointer; padding: 8px 0; font-size: 13px; }
+.cycle-report-statistics summary:focus-visible { outline: 2px solid var(--brand-blue, #6366f1); outline-offset: 3px; }

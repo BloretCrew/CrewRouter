@@ -8,6 +8,8 @@
  */
 
 const Logger = require('../logger');
+const { quotaFetch } = require('../utils/quota-request-context');
+const { combineAbortSignals } = require('../utils/request-lifecycle');
 const { buildAuthHeaders } = require('../utils/request-policy');
 const { upstreamUrl } = require('../utils/url-validator');
 const {
@@ -180,6 +182,7 @@ async function synthesizeStream(fusionConfig, originalMessages, judgeResult, pan
       throw new Error(`模型 ${outerModelId} 的供应商未配置`);
     }
 
+    provider._quotaModel = modelConfig;
     const upstreamModelId = modelConfig.upstream_model_id || modelConfig.id;
 
     // 构建合成请求
@@ -257,11 +260,14 @@ async function streamOpenAISynthesis(baseUrl, provider, model, messages, res, op
   if (options.response_format) body.response_format = options.response_format;
 
   const startTime = Date.now();
-  const response = await fetch(url, {
+  const response = await quotaFetch(url, {
+    quotaProvider: provider,
+    quotaModel: provider._quotaModel,
+    quotaKey: provider.api_key,
     method: 'POST',
     headers,
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(300000)
+    signal: combineAbortSignals(options.signal, res.req?._requestLifecycle?.signal, AbortSignal.timeout(300000))
   });
 
   if (!response.ok) {
@@ -373,11 +379,14 @@ async function streamOpenAIToAnthropicSynthesis(baseUrl, provider, model, messag
   Logger.info(`[Synthesizer] OpenAI->Anthropic 流式合成: url=${url}, model=${model}, blockIndex=${blockIndex}`);
 
   const startTime = Date.now();
-  const response = await fetch(url, {
+  const response = await quotaFetch(url, {
+    quotaProvider: provider,
+    quotaModel: provider._quotaModel,
+    quotaKey: provider.api_key,
     method: 'POST',
     headers,
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(300000)
+    signal: combineAbortSignals(options.signal, res.req?._requestLifecycle?.signal, AbortSignal.timeout(300000))
   });
 
   if (!response.ok) {
@@ -534,11 +543,14 @@ async function streamAnthropicSynthesis(baseUrl, provider, model, messages, res,
   const startTime = Date.now();
   Logger.info(`[Synthesizer] 调用上游 Anthropic: url=${url}, model=${model}`);
 
-  const response = await fetch(url, {
+  const response = await quotaFetch(url, {
+    quotaProvider: provider,
+    quotaModel: provider._quotaModel,
+    quotaKey: provider.api_key,
     method: 'POST',
     headers,
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(300000)
+    signal: combineAbortSignals(options.signal, res.req?._requestLifecycle?.signal, AbortSignal.timeout(300000))
   });
 
   if (!response.ok) {
@@ -751,11 +763,14 @@ async function streamAnthropicToOpenAISynthesis(baseUrl, provider, model, messag
   Logger.info(`[Synthesizer] Anthropic->OpenAI 流式合成: url=${url}, model=${model}`);
 
   const startTime = Date.now();
-  const response = await fetch(url, {
+  const response = await quotaFetch(url, {
+    quotaProvider: provider,
+    quotaModel: provider._quotaModel,
+    quotaKey: provider.api_key,
     method: 'POST',
     headers,
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(300000)
+    signal: combineAbortSignals(options.signal, res.req?._requestLifecycle?.signal, AbortSignal.timeout(300000))
   });
 
   if (!response.ok) {

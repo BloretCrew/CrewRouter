@@ -278,7 +278,8 @@ async function recordQuotaHistory(pool, provider, result, options = {}) {
       ? await client.query('SELECT quota_last_result,quota_last_checked_at FROM providers WHERE id=$1 FOR UPDATE', [provider.id]) : { rows: [] };
     const currentConfiguration = ctx.source !== 'legacy' && (!snapshotBefore.rows[0]?.quota_last_checked_at
       || new Date(ctx.checkedAt) >= new Date(snapshotBefore.rows[0].quota_last_checked_at));
-    if (currentConfiguration) await client.query('UPDATE provider_quota_account_providers SET active=FALSE WHERE provider_id=$1 AND (last_attempt_at IS NULL OR last_attempt_at<=$2::timestamptz)', [provider.id,ctx.checkedAt]);
+    if (currentConfiguration && !options.partialAccounts) await client.query('UPDATE provider_quota_account_providers SET active=FALSE WHERE provider_id=$1 AND (last_attempt_at IS NULL OR last_attempt_at<=$2::timestamptz)', [provider.id,ctx.checkedAt]);
+    const cycleSchema = await client.query("SELECT to_regclass('quota_cycle_samples') AS table_name");
     const seen = new Set();
     for (const row of [...ctx.rows].sort((a, b) => a.identity.identity.localeCompare(b.identity.identity))) {
       if (seen.has(row.identity.identity)) continue;
@@ -352,6 +353,10 @@ async function recordQuotaHistory(pool, provider, result, options = {}) {
           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb)`,
         [observationId,accountId,provider.id,observedAt,item.kind,item.unit,item.window_key,item.total,item.used,item.remaining,item.used_percent,item.resets_at,JSON.stringify(item.quality)]);
         await aggregateRow(client, observation, item, change);
+      }
+      if (cycleSchema.rows[0]?.table_name && items.length) {
+        await require('./quota-cycle-analysis').processObservation(client, { id: observationId, account_id: accountId,
+          provider_id: provider.id, observed_at: observedAt, status: rowStatus, quality: { cached } }, items);
       }
       if (!items.length) await aggregateRow(client, { ...observation, observedAt: ctx.checkedAt }, null, null);
       if (items.length) await client.query(`UPDATE provider_quota_accounts SET last_sample_at=GREATEST(last_sample_at,$2::timestamptz) WHERE id=$1`, [accountId, observedAt]);

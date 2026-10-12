@@ -153,7 +153,7 @@ async function callModel(modelId, messages, options = {}) {
 
   let lastErr = null;
   for (let ki = 0; ki < keys.length; ki++) {
-    const providerWithKey = { ...provider, api_key: keys[ki] };
+    const providerWithKey = { ...provider, api_key: keys[ki], _quotaModel: modelConfig };
     try {
       if (provider.format === 'anthropic') {
         return await callAnthropicModel(baseUrl, providerWithKey, requestBody, options.requestContext, signal);
@@ -189,7 +189,10 @@ async function callOpenAIModel(baseUrl, provider, body, requestContext = null, s
     body: JSON.stringify(body),
     signal: combineAbortSignals(signal, AbortSignal.timeout(120000)), // 2 分钟超时
     agent: proxyInfo?.agent,
-    requestContext
+    requestContext,
+    quotaProvider: provider,
+    quotaModel: provider._quotaModel,
+    quotaKey: provider.api_key
   });
 
   const data = await response.json();
@@ -269,7 +272,10 @@ async function callAnthropicModel(baseUrl, provider, body, requestContext = null
     body: JSON.stringify(anthropicBody),
     signal: combineAbortSignals(signal, AbortSignal.timeout(120000)),
     agent: proxyInfo?.agent,
-    requestContext
+    requestContext,
+    quotaProvider: provider,
+    quotaModel: provider._quotaModel,
+    quotaKey: provider.api_key
   });
 
   const data = await response.json();

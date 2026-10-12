@@ -58,7 +58,8 @@
   </script>
   <link rel="stylesheet" href="/vendor/blora-2.0.8/blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/provider-quota-stats.css?v=quota-additive-20261012">
+  <link rel="stylesheet" href="/css/provider-quota-stats.css?v=request-cycles-20261012">
+  <link rel="stylesheet" href="/css/quota-cycle-report.css?v=request-cycles-20261012">
 </head>
 <body class="blora-page blora-admin-page">
   <!-- 移动端顶部导航栏 -->
@@ -1299,6 +1300,21 @@
           </form>
         </div>
 
+        <div class="content-section admin-settings-section admin-settings-category-retention">
+          <h2 data-i18n="请求额度采集">请求额度采集</h2>
+          <p data-i18n="每次上游尝试保存采集任务，精细模式增加查询延迟；请求与周期追溯事实长期保留。">每次上游尝试保存采集任务，精细模式增加查询延迟；请求与周期追溯事实长期保留。</p>
+          <form id="requestQuotaConfigForm" class="settings-form">
+            <div class="form-group"><blora-checkbox name="enabled" label="启用逐请求额度采集" checked></blora-checkbox></div>
+            <div class="form-group"><label data-i18n="采集模式">采集模式</label><blora-select name="mode" value="async"><blora-option value="async">异步持久采集</blora-option><blora-option value="strict">请求前后精细采集</blora-option></blora-select></div>
+            <div class="form-group"><label for="quotaConfig_reconciliation_seconds" data-i18n="对账等待秒数">对账等待秒数</label><input class="input" type="number" id="quotaConfig_reconciliation_seconds" name="reconciliation_seconds" min="0" max="86400" step="1" value="60" required></div>
+            <div class="form-group"><label for="quotaConfig_max_tries" data-i18n="最大采集尝试次数">最大采集尝试次数</label><input class="input" type="number" id="quotaConfig_max_tries" name="max_tries" min="1" max="20" step="1" value="5" required></div>
+            <div class="form-group"><label for="quotaConfig_worker_interval_ms" data-i18n="队列处理间隔（毫秒）">队列处理间隔（毫秒）</label><input class="input" type="number" id="quotaConfig_worker_interval_ms" name="worker_interval_ms" min="500" max="60000" step="1" value="2000" required></div>
+            <div class="form-group"><label for="quotaConfig_batch_size" data-i18n="每批任务数">每批任务数</label><input class="input" type="number" id="quotaConfig_batch_size" name="batch_size" min="1" max="100" step="1" value="10" required></div>
+            <div class="form-group"><label for="quotaConfig_lease_seconds" data-i18n="任务租约秒数">任务租约秒数</label><input class="input" type="number" id="quotaConfig_lease_seconds" name="lease_seconds" min="30" max="3600" step="1" value="120" required></div>
+            <p role="status" aria-live="polite"></p><button type="submit" class="blora-button" data-variant="primary" disabled data-i18n="保存采集配置">保存采集配置</button>
+          </form>
+        </div>
+
         <div class="content-section admin-settings-section admin-settings-category-general">
           <h2><span data-i18n="系统设置">系统设置</span></h2>
           <form id="adminSettingsForm" class="settings-form">
@@ -2462,7 +2478,9 @@
   <script src="/js/theme.js?v=restore-0930-20261003"></script>
   <script src="/js/dom.js?v=restore-0930-20261003"></script>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
-  <script src="/js/provider-quota-stats.js?v=quota-additive-20261012"></script>
+  <script src="/js/request-quota-config.js?v=request-cycles-20261012"></script>
+  <script src="/js/quota-cycle-report.js?v=request-cycles-20261012"></script>
+  <script src="/js/provider-quota-stats.js?v=request-cycles-20261012"></script>
   <script src="/js/multi-dimension-chart.js?v=quota-additive-20261012"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>

@@ -13,7 +13,8 @@ async function recordAgentUsage({
   promptTokens = 0,
   completionTokens = 0,
   req,
-  identity = {}
+  identity = {},
+  attempts
 }) {
   const billing = calculateCost(modelConfig || {}, {
     promptTokens,
@@ -32,9 +33,9 @@ async function recordAgentUsage({
     pointsCost: billing.pointsCost
   });
   const clientMeta = clientMetaFromReq(req || {});
-  await pool.query(
+  const inserted = await pool.query(
     `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens, cost, request_type, provider_id, request_source, user_agent, requested_model, resolved_model, response_model)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
     [
       userId,
       modelConfig.id,
@@ -56,6 +57,8 @@ async function recordAgentUsage({
     const { deductPoints } = require('./balance');
     await deductPoints(userId, pointsToDeduct);
   }
+  const { linkUsage } = require('./quota-request-context');
+  await linkUsage({ req, attempts, modelConfig, id: inserted.rows[0]?.id, points: pointsToDeduct, weightedTokens: billing.weightedTokens });
   return pointsToDeduct;
 }
 

@@ -25,7 +25,7 @@ const { requireTeamEdition, loadPersistedEdition } = require('../utils/instance-
 
 const requireTeamAdminEdition = requireTeamEdition(() => loadPersistedEdition(pool));
 router.use(['/users', '/users/:id', '/teams', '/teams/:id', '/teams/:id/rules', '/teams/:id/rules/:ruleId', '/user-groups', '/user-groups/:id', '/user-groups/:id/rules', '/user-group-rules/:id', '/audit-logs', '/stats/multi', '/stats/multi/filters', '/stats', '/message-stats', '/usage-logs', '/usage-logs/export', '/usage-logs/:id'], (req, res, next) => {
-  if (/^\/api\/admin\/stats\/provider-quota(?:\/history)?\/?$/.test(req.originalUrl.split('?')[0])) return next();
+  if (/^\/api\/admin\/stats\/provider-quota(?:\/history|\/cycles(?:\/[^/]+(?:\/(?:intervals|requests|export))?)?)?\/?$/.test(req.originalUrl.split('?')[0])) return next();
   return requireTeamAdminEdition(req, res, next);
 });
 const { normalizeEmail, isUniqueViolation } = require('../utils/user-identity');
@@ -1018,6 +1018,8 @@ router.post('/models/batch-adjust-by-reference', requireAuth, requireProviderMan
     res.status(500).json({ error: '服务器错误' });
   }
 });
+
+require('../utils/quota-cycle-analysis').registerQuotaCycleRoutes(router, pool, [requireAuth, requireProviderManager], 'admin');
 
 router.get('/stats/provider-quota', requireAuth, requireProviderManager, async (req, res) => {
   try {
@@ -3413,6 +3415,25 @@ router.put('/settings', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN
     Logger.error('[更新系统设置] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
+});
+
+// 请求采集配置独立保存，避免更改原有明细保留设置。
+router.get('/request-quota-config', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query("SELECT value FROM settings WHERE key='quota.request_capture_config'");
+    const { normalizeRequestQuotaConfig } = require('../utils/request-quota-config');
+    res.json(normalizeRequestQuotaConfig(result.rows[0]?.value || {}));
+  } catch (_) { res.status(500).json({ error: '请求额度配置加载失败' }); }
+});
+router.put('/request-quota-config', requireAuth, requireAdmin, async (req, res) => {
+  let config;
+  try { config = require('../utils/request-quota-config').normalizeRequestQuotaConfig(req.body); }
+  catch (error) { return res.status(400).json({ error: error.message }); }
+  try {
+    await pool.query("INSERT INTO settings(key,value) VALUES('quota.request_capture_config',$1::jsonb) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value", [JSON.stringify(config)]);
+    require('../utils/request-quota-capture').invalidateCaptureConfig?.();
+    res.json({ success: true, config });
+  } catch (_) { res.status(500).json({ error: '请求额度配置保存失败' }); }
 });
 
 // ========== 数据保留配置与任务 ==========

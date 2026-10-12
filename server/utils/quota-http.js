@@ -1,6 +1,14 @@
 'use strict';
 
 const proxyPool = require('../proxy-pool');
+const { AsyncLocalStorage } = require('node:async_hooks');
+const quotaSignals = new AsyncLocalStorage();
+
+function withQuotaSignal(signal, fn) { return quotaSignals.run(signal, fn); }
+function quotaSignal(signal) {
+  const parent = quotaSignals.getStore();
+  return parent && signal ? AbortSignal.any([parent, signal]) : parent || signal;
+}
 
 function hostnameOf(url) {
   try {
@@ -73,6 +81,8 @@ async function sendOnce(url, init, agent) {
  * 若已配置供应商/系统代理则先走代理，避免空等超时。
  */
 async function quotaRequest(url, init, provider = {}) {
+  init = { ...init, signal: quotaSignal(init.signal) };
+  init.signal?.throwIfAborted();
   const requestContext = init.requestContext || null;
   const proxies = await listQuotaProxies(provider);
   const preferProxy = isLikelyBlockedOfficialHost(url) && proxies.length > 0;
@@ -82,6 +92,7 @@ async function quotaRequest(url, init, provider = {}) {
 
   let lastError;
   for (const agent of attempts) {
+    init.signal?.throwIfAborted();
     try {
       return await sendOnce(url, { ...init, requestContext }, agent);
     } catch (err) {
@@ -96,6 +107,7 @@ async function quotaRequest(url, init, provider = {}) {
 }
 
 module.exports = {
+  withQuotaSignal, quotaSignal,
   quotaRequest,
   isNetworkError,
   describeNetworkError,

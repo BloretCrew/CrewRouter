@@ -2893,6 +2893,8 @@ async function runPendingMigrations() {
     ensureProviderTestUserAgent,
     ensureProviderQuotaSchedule,
     () => require('./utils/provider-quota-history').ensureQuotaHistorySchema(pool),
+    () => require('./utils/request-quota-capture').ensureRequestQuotaSchema(pool),
+    () => require('./utils/quota-cycle-analysis').ensureQuotaCycleSchema(pool),
     () => require('./utils/provider-usage-history').ensureProviderUsageHistory(pool),
     ensureModelCreatedBy,
     ensureProviderApiKeyLength,
@@ -3018,6 +3020,7 @@ async function startServer() {
     try {
       const { startQuotaScheduler } = require('./utils/provider-quota');
       startQuotaScheduler();
+      require('./utils/request-quota-capture').startWorker();
     } catch (err) {
       Logger.warn(`[额度定时查询] 调度器启动失败: ${err.message}`);
     }

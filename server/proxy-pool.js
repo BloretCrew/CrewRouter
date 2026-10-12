@@ -383,6 +383,14 @@ function createProxyAgent(proxyUrl) {
  * @returns {object} 兼容 Response 的对象 { ok, status, statusText, headers, url, text, json, body }
  */
 async function proxyFetch(url, options = {}) {
+  if ((options.requestContext?.upstreamAttempts || 0) >= 12 || options.signal?.aborted || options.requestContext?.signal?.aborted) {
+    return proxyFetchTransport(url, options);
+  }
+  const { quotaFetch } = require('./utils/quota-request-context');
+  return quotaFetch(url, options, proxyFetchTransport);
+}
+
+async function proxyFetchTransport(url, options = {}) {
   const context = options.requestContext;
   const signal = options.signal || context?.signal
     ? combineAbortSignals(options.signal, context?.signal)
@@ -472,16 +480,18 @@ async function proxyFetch(url, options = {}) {
     logAttempt();
     cleanupSignal();
   };
-  const onError = () => {
+  const onError = (error) => {
     attempt.phase = 'failed';
     logAttempt();
     cleanupSignal();
+    options.quotaOnTerminal?.(signal?.aborted ? (signal.reason?.name === 'TimeoutError' ? 'timeout' : 'cancelled') : 'failed', error);
   };
   const onClose = () => {
     stream.removeListener('end', onEnd);
     stream.removeListener('error', onError);
     if (attempt.phase === 'headers') {
       attempt.phase = stream.readableEnded ? 'completed' : 'failed';
+      if (!stream.readableEnded) options.quotaOnTerminal?.(signal?.aborted ? (signal.reason?.name === 'TimeoutError' ? 'timeout' : 'cancelled') : 'failed');
       logAttempt();
     }
     cleanupSignal();

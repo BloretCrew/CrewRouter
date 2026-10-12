@@ -65,3 +65,6 @@
   .quota-table-wrap td::before { content: attr(data-label); color: var(--muted-foreground); grid-column: 1; grid-row: 1 / span 2; }
   .quota-table-wrap td > * { grid-column: 2; }
 }
+
+.quota-card-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: end; }
+.quota-cycle-summary { margin-bottom: 12px; border-bottom: 1px solid var(--border); }

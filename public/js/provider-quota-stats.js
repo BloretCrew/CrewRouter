@@ -35,7 +35,7 @@
     root.innerHTML = `<div class="quota-heading"><h4>${esc(tr(context === 'multi' ? '相关供应商额度' : context === 'dialog' ? '额度查询记录' : '供应商额度'))}</h4>${context === 'dialog' ? '' : button('history', '额度历史')}</div>
       ${context === 'dialog' ? controls : context === 'multi' ? `<details class="quota-filter-details"><summary>${esc(tr('额度筛选'))}</summary>${controls}</details>` : `<div hidden>${controls}</div>`}
       <p class="quota-status" role="status" aria-live="polite"></p>
-      ${context === 'overview' ? '<div class="quota-summary"></div>' : ''}
+      ${context === 'overview' ? '<div class="quota-summary"></div><details class="quota-cycle-summary"><summary></summary><div></div></details>' : ''}
       ${context !== 'dialog' ? '<div class="quota-accounts quota-provider-grid"></div><div class="quota-more"></div>' : `<div class="quota-history"><p class="quota-note">${esc(tr('仅按额度筛选，不受请求维度影响。时间为上海时区。'))}</p><div class="quota-table-wrap quota-history-rows"></div>${pagination}</div>`}
       ${context === 'overview' ? `<details class="quota-trend-details"><summary>${esc(tr('查看额度趋势'))}</summary><p class="quota-note quota-coverage"></p><div class="quota-trend-controls">${select('trend_metric', '趋势指标', [['remaining', '剩余额度'], ['used_percent', '窗口已用率'], ['observed_consumption', '观测消耗'], ['percent_change', '已用率变化（百分点）']])}</div><div class="quota-trend"></div><div class="quota-events quota-note"></div></details>` : ''}`;
     const click = event => {
@@ -43,6 +43,7 @@
       if (!el || !root.contains(el)) return;
       const action = el.dataset.quotaAction;
       if (action === 'history') open(state.scope, el.dataset.provider || '', el.dataset.account || '');
+      else if (action === 'cycles') openCycles(root, el.dataset.provider || '', el.dataset.account || '');
       else if (action === 'more') { state.expanded = !state.expanded; renderCards(root); }
       else if (action === 'apply' || action === 'reset') {
         if (action === 'reset') ['provider_id', 'account_id', 'unit', 'window_key', 'status'].forEach(name => { root.querySelector(`[name="${name}"]`).value = name === 'provider_id' ? state.providerId : ''; });
@@ -133,7 +134,7 @@
       // Account rows repeat provider-wide contribution; never sum those rows.
       const related = multi ? `<p class="quota-contribution">${esc(tr('相关请求'))} <strong>${esc(number(total('requests')))}</strong> · Token ${esc(number(total('tokens')))} · ${esc(tr('积分'))} ${esc(number(total('cost'), 2))}</p>` : '';
       const item = row => `<div class="quota-account-item"><div class="quota-account-heading"><span>${esc(friendly(row.label) === '—' ? tr('额度账户') : friendly(row.label))}</span><span class="quota-state" data-state="${esc(row.status || 'unknown')}">${esc(status(row))}</span></div><div class="quota-metric">${metric(row, true)}</div></div>`;
-      return `<article class="quota-provider-card" data-quota-provider-id="${esc(id)}"><header><h5>${esc(accounts[0].provider_name || tr('供应商名称未提供'))}</h5>${button('history', '历史', `data-provider="${esc(id)}"`)}</header>${accounts.slice(0, 3).map(item).join('')}${accounts.length > 3 ? `<details class="quota-account-more"><summary>${esc(tr('更多账户 / 窗口'))} (${accounts.length - 3})</summary>${accounts.slice(3).map(item).join('')}</details>` : ''}${related}</article>`;
+      return `<article class="quota-provider-card" data-quota-provider-id="${esc(id)}"><header><h5>${esc(accounts[0].provider_name || tr('供应商名称未提供'))}</h5><div class="quota-card-actions">${button('history', '历史', `data-provider="${esc(id)}"`)}${button('cycles', '查看周期', `data-provider="${esc(id)}"`)}</div></header>${accounts.slice(0, 3).map(item).join('')}${accounts.length > 3 ? `<details class="quota-account-more"><summary>${esc(tr('更多账户 / 窗口'))} (${accounts.length - 3})</summary>${accounts.slice(3).map(item).join('')}</details>` : ''}${related}</article>`;
     }).join('');
   }
   function renderCards(root) {
@@ -190,7 +191,7 @@
     state.data = null;
     state.accounts = [];
     state.page = 1;
-    ['.quota-summary', '.quota-accounts', '.quota-more', '.quota-trend', '.quota-events', '.quota-coverage', '.quota-history-rows', '.quota-page'].forEach(selector => root.querySelector(selector)?.replaceChildren());
+    ['.quota-summary', '.quota-cycle-summary > div', '.quota-cycle-summary > summary', '.quota-accounts', '.quota-more', '.quota-trend', '.quota-events', '.quota-coverage', '.quota-history-rows', '.quota-page'].forEach(selector => root.querySelector(selector)?.replaceChildren());
     ['provider_id', 'account_id', 'unit', 'window_key', 'status'].forEach(name => {
       const control = root.querySelector(`[name="${name}"]`);
       control.value = '';
@@ -223,6 +224,7 @@
       }
       renderCards(root);
       renderTrend(root, data);
+      if (state.context === 'overview') cycleSummary(root, seq);
     } catch (error) {
       if (seq !== state.seq) return;
       clear(root);
@@ -258,6 +260,34 @@
       clear(root);
       target.textContent = error.message;
       root.querySelector('.quota-status').textContent = error.message;
+    }
+  }
+  function openCycles(root, providerId = '', accountId = '') {
+    const state = states.get(root);
+    try {
+      const query = params(root);
+      if (providerId) query.set('provider_id', providerId);
+      if (accountId) query.set('account_id', accountId);
+      window.CrewRouterQuotaCycleReport?.open(state.scope, query, state.accounts);
+    } catch (error) { root.querySelector('.quota-status').textContent = error.message; }
+  }
+  async function cycleSummary(root, seq) {
+    const state = states.get(root), target = root.querySelector('.quota-cycle-summary');
+    target.querySelector('summary').textContent = tr('周期状态');
+    target.querySelector('div').replaceChildren();
+    try {
+      const query = params(root);
+      ['user_id', 'team_id', 'model_id', 'request_source', 'workspace_path', 'api_key_id', 'data_source', 'status'].forEach(key => query.delete(key));
+      query.set('page', '1'); query.set('limit', '20');
+      const data = await request(state.scope, '/cycles', query);
+      if (seq !== state.seq) return;
+      const labels = { complete: '完整周期', partial: '部分周期', pending_reconciliation: '待对账', pending: '待对账', open: '进行中', active: '进行中', exhausted_pending_reconciliation: '待对账', reset_before_exhaustion: '重置前未耗尽', adjusted: '额度调整', invalidated: '报告失效' };
+      target.querySelector('summary').textContent = tr('周期状态') + ' · ' + number(data.total);
+      target.querySelector('div').innerHTML = array(data.rows).map(row => `<p class="quota-note">${esc(row.provider_name || state.accounts.find(r => String(r.account_id) === String(row.account_id))?.provider_name || tr('供应商'))} / ${esc(row.account_label || row.label || state.accounts.find(r => String(r.account_id) === String(row.account_id))?.label || tr('额度账户'))} · ${esc(tr(labels[row.state || row.status] || '状态未提供'))}</p>`).join('') + button('cycles', '查看周期');
+    } catch (error) {
+      if (seq !== state.seq) return;
+      target.querySelector('div').textContent = error.message;
+      if (error.message === tr('无权查看额度')) { clear(root); root.querySelector('.quota-status').textContent = error.message; }
     }
   }
   function refresh(scope) {
@@ -308,6 +338,7 @@
       const rows = array(data.accounts);
       root.innerHTML = `<h5>${esc(tr('最后有效观测'))}</h5><p class="quota-note">${esc(tr('最近查询失败时保留有效观测；这不是实时余额。'))}</p><div class="quota-provider-grid">${rows.length ? providerCards(rows, scope) : esc(tr('暂无有效额度观测'))}</div>`;
       root.querySelectorAll('[data-quota-action="history"]').forEach(el => el.addEventListener('click', () => open(scope, el.dataset.provider)));
+      root.querySelectorAll('[data-quota-action="cycles"]').forEach(el => el.addEventListener('click', () => window.CrewRouterQuotaCycleReport?.open(scope, new URLSearchParams({ days: '30', provider_id: el.dataset.provider }), rows)));
     } catch (error) { if (Number(root.dataset.quotaSeq) === seq) root.textContent = error.message; }
   }
   async function library(root) {

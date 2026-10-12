@@ -1,6 +1,8 @@
 const express = require('express');
 const { createModelIdentity, createModelIdentityStream } = require('../utils/model-identity');
 const router = express.Router();
+const { requestMiddleware: quotaRequestMiddleware, quotaFetch, linkUsage } = require('../utils/quota-request-context');
+router.use(quotaRequestMiddleware);
 const { pool } = require('../models/database');
 const { requireAuth } = require('../middleware/auth');
 const Logger = require('../logger');
@@ -252,7 +254,9 @@ router.post('/chat', requireAuth, async (req, res) => {
             'Authorization': `Bearer ${apiKey}`
           };
       try {
-        response = await fetch(url, {
+        response = await quotaFetch(url, {
+          quotaProvider: provider,
+          quotaKey: apiKey,
           method: 'POST',
           headers,
           body: JSON.stringify(upstreamBody),
@@ -647,10 +651,10 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
       providerId = pr.rows[0]?.provider || null;
     } catch (_) { /* ignore */ }
 
-    await pool.query(
+    const usageResult = await pool.query(
       `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens,
        provider_id, request_type, messages, response, cost, reasoning_content, request_params, finish_reason, request_source, user_agent, plugin_meta, requested_model, resolved_model, response_model)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id`,
       [userId, modelId, totalTokens, weightedTokens, promptTokens, completionTokens,
        providerId, 'playground', messagesJson, responseText, pointsToDeduct, reasoningText, paramsJson, finish,
        clientMeta.requestSource, clientMeta.userAgent, pluginMeta, identity.requested_model ?? null, identity.resolved_model ?? null, identity.response_model ?? null]
@@ -660,6 +664,7 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
       const { deductPoints } = require('../utils/balance');
       await deductPoints(userId, pointsToDeduct);
     }
+    await linkUsage({ req, id: usageResult.rows[0]?.id, points: pointsToDeduct, weightedTokens });
     recordQuotaData(userId, modelId, totalTokens, weightedTokens, pointsToDeduct);
   } catch (err) {
     Logger.error(`[Playground计费] 完整INSERT失败: ${err.message}, 尝试简化INSERT`);
@@ -676,10 +681,10 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
         userId, teamId, weightedTokens, pointsCost
       });
       const clientMeta = clientMetaFromReq(req || {});
-      await pool.query(
+      const usageResult = await pool.query(
         `INSERT INTO usage_records (user_id, model_id, tokens_used, weighted_tokens, prompt_tokens, completion_tokens, cost, request_type, provider_id, request_source, user_agent, requested_model, resolved_model, response_model)
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'playground',
-           (SELECT provider FROM models WHERE id = $2 LIMIT 1), $8, $9, $10, $11, $12)`,
+           (SELECT provider FROM models WHERE id = $2 LIMIT 1), $8, $9, $10, $11, $12) RETURNING id`,
         [userId, modelId, totalTokens, weightedTokens, promptTokens, completionTokens, pointsToDeduct,
          clientMeta.requestSource, clientMeta.userAgent, identity.requested_model ?? null, identity.resolved_model ?? null, identity.response_model ?? null]
       );
@@ -688,6 +693,7 @@ async function recordUsage(userId, modelId, totalTokens, weightedTokens, pointsC
         const { deductPoints } = require('../utils/balance');
         await deductPoints(userId, pointsToDeduct);
       }
+      await linkUsage({ req, id: usageResult.rows[0]?.id, points: pointsToDeduct, weightedTokens });
       recordQuotaData(userId, modelId, totalTokens, weightedTokens, pointsToDeduct);
     } catch (err2) {
       Logger.error(`[Playground计费] 简化INSERT也失败: ${err2.message}`);

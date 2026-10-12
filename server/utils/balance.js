@@ -503,6 +503,7 @@ async function getUserPoints(userId) {
 
 async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValues, userId, pointsToDeduct = 0, teamId = null, weightedTokens = 0, pointsCost = null }) {
   const client = await dbPool.connect();
+  let billingResult;
   try {
     await client.query('BEGIN');
     const inserted = await client.query(usageQuery, usageValues);
@@ -519,7 +520,7 @@ async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValu
       await client.query('UPDATE usage_records SET cost = $1 WHERE id = $2', [actualDeduct, inserted.rows[0].id]);
     }
     await client.query('COMMIT');
-    return { ok: true, id: inserted.rows[0]?.id || null, pointsToDeduct: actualDeduct };
+    billingResult = { ok: true, id: inserted.rows[0]?.id || null, pointsToDeduct: actualDeduct };
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch (e) { /* ignore */ }
     Logger.error(`[recordUsageAndDeduct] 错误: userId=${userId}, error=${error.message}`);
@@ -528,6 +529,25 @@ async function recordUsageAndDeduct({ pool: dbPool = pool, usageQuery, usageValu
   } finally {
     client.release();
   }
+  // Capture may acquire another pool connection; billing has already committed.
+  try {
+    const { linkUsage, storage } = require('./quota-request-context');
+    const state = storage.getStore();
+    const fusion = usageValues.includes('fusion');
+    let timer;
+    try {
+      await Promise.race([Promise.resolve().then(() => linkUsage({ id: billingResult.id, points: billingResult.pointsToDeduct, weightedTokens,
+        attempts: fusion ? state?.attempts.filter(attempt => attempt.ended && attempt.metadata.status === 'success') : undefined })), new Promise(resolve => {
+        timer = setTimeout(() => {
+          Logger.warn('[QuotaRequestDegraded] operation=link_usage reason=deadline_exceeded');
+          resolve();
+        }, 1000);
+      })]);
+    } finally { clearTimeout(timer); }
+  } catch (_) {
+    Logger.warn('[QuotaRequestDegraded] operation=link_usage reason=capture_unavailable');
+  }
+  return billingResult;
 }
 
 module.exports = { deductBalance, checkBalance, preConsumeBalance, settleBalance, refundBalance, deductPoints, getUserPoints, recordUsageAndDeduct };

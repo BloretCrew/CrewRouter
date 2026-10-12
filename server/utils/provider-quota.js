@@ -157,7 +157,7 @@ async function persistOauthTokens(providerId, { accessToken, refreshToken, expir
 /**
  * @returns {{ ok: boolean, status: number, error?: string, quota?: object, provider?: object }}
  */
-async function queryProviderQuotaInternal(provider) {
+async function queryProviderQuotaInternal(provider, options = {}) {
   const meta = { id: provider.id, name: provider.name };
 
   if (provider.quota_mode === 'ark_inference' || provider.quota_mode === 'ark_afp') {
@@ -293,7 +293,7 @@ async function queryProviderQuotaInternal(provider) {
   const fetchOptions = {
     method: reqConfig.method || 'GET',
     headers: reqConfig.headers || {},
-    signal: AbortSignal.timeout(15000)
+    signal: options.signal ? AbortSignal.any([options.signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000)
   };
 
   Logger.info(`[查询供应商额度] ${provider.id}: ${fetchOptions.method} [额度请求]`);
@@ -358,6 +358,12 @@ async function queryProviderQuotaInternal(provider) {
     Logger.error(`[查询供应商额度] extractor 执行失败: ${quotaHistory.safeText(execError.message, provider)}`);
     return { ok: false, status: 500, error: 'extractor 执行失败: ' + execError.message, provider: meta };
   }
+}
+
+async function queryProviderQuotaForRequest(provider, options = {}) {
+  const started = { ...options, checkedAt: options.checkedAt || new Date().toISOString() };
+  const result = await require('./quota-http').withQuotaSignal(options.signal, () => queryProviderQuotaInternal(provider, options));
+  return captureQuotaBatch(result, provider, { ...started, completedAt: new Date().toISOString() });
 }
 
 async function queryProviderQuota(provider, options = {}) {
@@ -561,6 +567,7 @@ module.exports = {
   normalizeQuotaScheduleInterval,
   generateDefaultQuotaScript,
   queryProviderQuota,
+  queryProviderQuotaForRequest,
   queryProviderQuotaPerKey,
   saveQuotaSnapshot,
   runDueQuotaSchedules,

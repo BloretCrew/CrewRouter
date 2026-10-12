@@ -40,6 +40,8 @@ const { createModelIdentity, normalizeModel } = require('../utils/model-identity
 const { recordAgentUsage, assertHasBalance, logAgentError } = require('../utils/agent-billing');
 
 const router = express.Router();
+const { requestMiddleware: quotaRequestMiddleware, quotaFetch } = require('../utils/quota-request-context');
+router.use(quotaRequestMiddleware);
 
 function keyAttempts(provider) {
   const order = buildKeyAttemptOrder(provider);
@@ -168,7 +170,9 @@ async function callManageModel(model, messages) {
     const headers = format === 'anthropic'
       ? { 'Content-Type': 'application/json', 'x-api-key': attempts[i], 'anthropic-version': '2023-06-01' }
       : { 'Content-Type': 'application/json', Authorization: `Bearer ${attempts[i]}` };
-    const response = await fetch(url, {
+    const response = await quotaFetch(url, {
+      quotaProvider: provider,
+      quotaKey: attempts[i],
       method: 'POST',
       headers,
       body: JSON.stringify(body),
@@ -180,7 +184,7 @@ async function callManageModel(model, messages) {
       const identity = createModelIdentity(null, body.model);
       identity.observe(json);
       identity.finish();
-      return { ...parseModelResponse(format, json), usage: extractUsage(json), identity: identity.snapshot() };
+      return { ...parseModelResponse(format, json), usage: extractUsage(json), quotaAttempt: response.quotaAttempt, identity: identity.snapshot() };
     }
     lastStatus = response.status;
     lastText = await response.text().catch(() => '');
@@ -201,7 +205,7 @@ async function continueManage(req, res, { thread, messages, model }) {
       messages,
       modelCaller: async (current) => {
         const reply = await callManageModel(model, current);
-        usages.push(reply.usage || {});
+        usages.push({ ...(reply.usage || {}), quotaAttempt: reply.quotaAttempt });
         identities.push(reply.identity || null);
         return reply;
       },
@@ -238,6 +242,7 @@ async function continueManage(req, res, { thread, messages, model }) {
           userId: req.session.user.id,
           modelConfig: model,
           requestType: 'agent_manage',
+          attempts: usages.map(usage => usage.quotaAttempt).filter(Boolean),
           promptTokens,
           completionTokens,
           req,
@@ -287,7 +292,9 @@ router.post('/images', requireAuth, async (req, res) => {
       let lastText = '上游请求失败';
       let payload = null;
       for (let i = 0; i < attempts.length; i += 1) {
-        const response = await fetch(url, {
+        const response = await quotaFetch(url, {
+          quotaProvider: provider,
+          quotaKey: attempts[i],
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${attempts[i]}` },
           body: JSON.stringify({

@@ -1,5 +1,7 @@
 'use strict';
 
+const { quotaSignal } = require('./quota-http');
+
 const crypto = require('crypto');
 
 const HOST = 'open.volcengineapi.com';
@@ -131,7 +133,7 @@ async function fetchArkUsage(provider) {
     service: provider.ark_service || SERVICE,
   });
   const response = await fetch(`https://${HOST}/?${signed.query}`, {
-    method: 'POST', headers: signed.headers, body: signed.body, signal: AbortSignal.timeout(15000),
+    method: 'POST', headers: signed.headers, body: signed.body, signal: quotaSignal(AbortSignal.timeout(15000)),
   });
   const text = await response.text();
   let data; try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { raw: text.slice(0, 500) }; }

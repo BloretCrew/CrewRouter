@@ -1311,6 +1311,8 @@ router.get('/usage', requireAuth, async (req, res) => {
 });
 
 // 获取用户详细统计数据（支持时间段筛选）
+require('../utils/quota-cycle-analysis').registerQuotaCycleRoutes(router, pool, [requireAuth, requireProviderAccessContext], 'user');
+
 router.get('/stats/provider-quota', requireAuth, requireProviderAccessContext, async (req, res) => {
   try {
     const { queryProviderQuotaOverview } = require('../utils/provider-quota-stats');
