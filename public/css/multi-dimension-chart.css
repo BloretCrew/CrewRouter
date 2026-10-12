@@ -33,3 +33,7 @@
   .multi-dimension-actions blora-select { min-width: 0; width: 100%; }
   .multi-dimension-status { grid-column: 1 / -1; padding: 0; }
 }
+.multi-dimension-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 12px; }
+.multi-dimension-row .multi-dimension-choices { margin: 0; padding: 0; border: 0; }
+.multi-dimension-row > [data-quota-dimension] { flex: 0 0 auto; }
+@media (max-width: 640px) { .multi-dimension-row .multi-dimension-choices { flex: 1 1 100%; } }

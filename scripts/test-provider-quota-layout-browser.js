@@ -116,6 +116,18 @@ async function waitFor(cdp, expression, description) {
   for(let i=0;i<80;i++){if(await cdp.evaluate(expression))return;await sleep(100);}
   assert.fail(description);
 }
+async function chooseSource(cdp, multi, source) {
+  const selector = multi+' [data-quota-dimension]';
+  if(source==='related') { await cdp.evaluate(`document.querySelector('${multi} [name="data_source"]').value='related';document.querySelector('${multi} [name="data_source"]').dispatchEvent(new Event('change',{bubbles:true}))`);return; }
+  const wanted=source==='quota';
+  await cdp.evaluate(`document.querySelector('${selector}').scrollIntoView({block:'center',behavior:'instant'})`);await sleep(200);
+  if(await cdp.evaluate(`document.querySelector('${selector}').checked`)!==wanted){
+    const point=await cdp.evaluate(`(()=>{const r=document.querySelector('${selector} input[type="checkbox"]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+    await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});
+    await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});await sleep(200);
+  }
+  assert.equal(await cdp.evaluate(`document.querySelector('${selector}').checked`),wanted,'供应商额度维度勾选状态');
+}
 async function main(){
   for(const scope of ['user','admin']) for(const width of [1440,390]){
     const target=await fetch(`${debug}/json/new?about:blank`,{method:'PUT'}).then(r=>r.json());const cdp=new CDP(target.webSocketDebuggerUrl);
@@ -151,11 +163,19 @@ async function main(){
       await choose(cdp,multi+' [name="metric"]','tokens');await sleep(250);
       assert.ok(await cdp.evaluate(`layoutCalls.some(s=>{const u=new URL(s,location.origin);return u.pathname.endsWith('/multi-dimension')&&u.searchParams.get('dimensions')==='source,model'&&u.searchParams.get('metric')==='tokens'})`),'客户端和模型只发送有效请求维度');
       assert.ok(await cdp.evaluate(`!document.querySelector('${multi} .multi-dimension-status').textContent.includes('有效且不同')`),'截图组合正常生成');
-      await choose(cdp,multi+' [name="data_source"]','quota');await sleep(250);
+      await chooseSource(cdp,multi,'quota');await sleep(250);
       await choose(cdp,multi+' [name="quota_metric"]','used_percent');await sleep(250);
-      await choose(cdp,multi+' [name="data_source"]','requests');await sleep(250);
+      await chooseSource(cdp,multi,'requests');await sleep(250);
       assert.ok(await cdp.evaluate(`!document.querySelector('${multi} .multi-dimension-status').textContent.includes('有效且不同')`),'反复切换不混入隐藏维度');
-      await choose(cdp,multi+' [name="data_source"]','related');await sleep(300);
+      if(process.env.QUOTA_ENTRY_ONLY==='1') {
+        assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="data_source"]').closest('label').hidden`),'数据源入口收起');
+        assert.ok(await cdp.evaluate(`document.querySelector('${multi} [data-quota-dimension]').parentElement===document.querySelector('${multi} [data-dimension-group="usage"]').parentElement`),'额度位于同一维度行');
+        assert.ok(await cdp.evaluate(`document.documentElement.scrollWidth<=innerWidth+1`),'维度行无横向溢出');
+        assert.equal(cdp.events.filter(e=>e.method==='Runtime.exceptionThrown').length,0);
+        console.log(`PASS quota dimension entry ${scope} ${width}: checkbox entry, quota API, metric switching, request selection restore, responsive`);
+        continue;
+      }
+      await chooseSource(cdp,multi,'related');await sleep(300);
       assert.ok(await cdp.evaluate(`!document.querySelector('${panel}').hidden&&document.querySelector('${panel} .quota-accounts').textContent.includes('Command Code GOAT')`),'关联只展示紧凑供应商上下文');
       assert.equal(await cdp.evaluate(`document.querySelectorAll('${panel} table,${panel} canvas,${panel} .quota-summary').length`),0,'多维页不重复大表概览趋势');
       assert.ok(await cdp.click(panel+' [data-quota-action="history"][data-provider="p1"]'),'相关供应商历史入口');await sleep(300);
@@ -166,7 +186,8 @@ async function main(){
       assert.ok(await cdp.click(dialog+' [data-quota-action="next"]'),'历史下一页');await sleep(200);
       assert.ok(await cdp.evaluate(`layoutCalls.some(s=>s.includes('/history?')&&s.includes('page=2')&&s.includes('provider_id=p1'))`),'历史真实分页请求');
       assert.ok(await cdp.click(dialog+' .modal-close'),'关闭历史');
-      await cdp.evaluate(`CrewRouterQuotaStats.open('${scope}','p2')`);await sleep(250);
+      await cdp.evaluate(`CrewRouterQuotaStats.open('${scope}','p2')`);
+      await waitFor(cdp,`document.querySelector('#quotaHistoryDialog .quota-history-rows')?.textContent.includes('99,997,501.22')`,'余额历史加载完成');
       assert.ok(await cdp.evaluate(`document.querySelector('#quotaHistoryDialog .quota-history-rows').textContent.includes('99,997,501.22')&&document.querySelector('#quotaHistoryDialog .quota-history-rows').textContent.includes('余额')`),'余额历史显示适用金额');
       assert.ok(await cdp.click('#quotaHistoryDialog .quota-row-detail > summary'),'展开单条记录详情');
       assert.ok(await cdp.evaluate(`document.querySelector('#quotaHistoryDialog .quota-row-detail').open`),'有效观测时间按需查看');

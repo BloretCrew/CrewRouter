@@ -21,6 +21,7 @@
       state.source = source;
     }
     const quota = source === 'quota';
+    state.quotaToggle.toggleAttribute('checked', quota);
     state.groups.requests.hidden = quota;
     state.groups.quota.hidden = !quota;
     state.metrics.requests.closest('label').hidden = quota;
@@ -134,17 +135,25 @@
       choices.setAttribute('aria-label', tr('额度维度'));
       choices.innerHTML = ['provider','account','kind','unit','window','date'].map(key => `<blora-checkbox value="${key}" label="${escape(tr(dimensions[key]))}" aria-label="${escape(tr(dimensions[key]))}" ${['provider','account'].includes(key)?'checked':''}></blora-checkbox>`).join('');
       usageChoices.after(choices);
+      const dimensionRow = document.createElement('div'); dimensionRow.className = 'multi-dimension-row';
+      usageChoices.before(dimensionRow); dimensionRow.append(usageChoices);
+      const quotaToggle = document.createElement('blora-checkbox');
+      quotaToggle.setAttribute('value', 'provider_quota'); quotaToggle.setAttribute('label', tr('供应商额度'));
+      quotaToggle.setAttribute('aria-label', tr('供应商额度')); quotaToggle.setAttribute('data-quota-dimension', '');
+      dimensionRow.append(quotaToggle);
       const label = document.createElement('label');label.hidden=true;
       label.innerHTML = `${escape(tr('额度指标'))} <blora-select name="quota_metric" value="remaining" aria-label="${escape(tr('额度指标'))}">${['remaining','used','total','used_percent','observed_consumption','percent_change'].map(key=>`<blora-option value="${key}">${escape(tr(metrics[key]))}</blora-option>`).join('')}</blora-select>`;
       const actions = root.querySelector('.multi-dimension-actions');
       actions.querySelector('[name="metric"]').closest('label').after(label);
-      usageChoices.before(actions);
+      dimensionRow.before(actions);
+      actions.querySelector('[name="data_source"]').closest('label').hidden = true;
       const heading = document.createElement('p'); heading.textContent = tr('分析维度');
       actions.after(heading);
       usageChoices.querySelectorAll('blora-checkbox').forEach(el => el.setAttribute('aria-label', el.getAttribute('label') || tr(dimensions[el.getAttribute('value')])));
       const usageMetric = actions.querySelector('[name="metric"]');
       const quotaMetric = actions.querySelector('[name="quota_metric"]');
       selections.set(root, {
+        quotaToggle,
         source: sourceKey(actions.querySelector('[name="data_source"]').value),
         groups: { requests: usageChoices, related: usageChoices, quota: choices },
         metrics: { requests: usageMetric, related: usageMetric, quota: quotaMetric },
@@ -155,6 +164,9 @@
         }
       });
       root.addEventListener('change', event => {
+        if (event.target.closest('[data-quota-dimension]')) {
+          actions.querySelector('[name="data_source"]').value = checked(quotaToggle) ? 'quota' : 'requests';
+        }
         if (event.target.closest('blora-checkbox, blora-select[name="metric"], blora-select[name="data_source"], blora-select[name="quota_metric"]')) load(scope);
       });
     }
