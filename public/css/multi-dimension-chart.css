@@ -23,3 +23,13 @@
   .multi-dimension-choices blora-checkbox { min-width: 0; }
 }
 .multi-dimension-panel [hidden] { display: none !important; }
+.multi-dimension-actions { align-items: flex-end; margin-bottom: 16px; }
+.multi-dimension-actions label { display: grid; gap: 6px; font-size: 13px; }
+.multi-dimension-status { flex: 1 1 220px; padding-bottom: 8px; }
+.multi-dimension-choices[role="group"] { padding: 12px 0; border-top: 1px solid var(--border); }
+.multi-dimension-table-wrap th:last-child, .multi-dimension-table-wrap td:last-child { color: var(--muted-foreground); font-size: 12px; }
+@media (max-width: 640px) {
+  .multi-dimension-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .multi-dimension-actions blora-select { min-width: 0; width: 100%; }
+  .multi-dimension-status { grid-column: 1 / -1; padding: 0; }
+}

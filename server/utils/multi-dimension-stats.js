@@ -108,7 +108,8 @@ async function queryMultiDimensionStats(pool, query, scope, userId) {
 }
 
 async function queryQuotaDimensions(pool, query, scope, userId) {
-  const dimensions = (query.dimensions === undefined ? 'provider' : String(query.dimensions)).split(',').map(s => s.trim());
+  const raw = query.dimensions === undefined ? 'provider' : query.dimensions;
+  const dimensions = typeof raw === 'string' ? raw.split(',').map(s => s.trim()) : [];
   const metric = query.metric || 'remaining';
   if (!dimensions.length || new Set(dimensions).size !== dimensions.length || dimensions.some(d => !QUOTA_DIMENSIONS.includes(d))) throw invalid('请选择有效且不同的额度维度');
   if (!QUOTA_METRICS.includes(metric)) throw invalid('无效的额度指标');

@@ -7,6 +7,34 @@
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
   const destroy = id => { (instances.get(id) || []).forEach(chart => chart.destroy()); instances.delete(id); };
   const instances = new Map();
+  const selections = new WeakMap();
+  const sourceKey = value => ({ usage: 'requests', association: 'related', provider_quota: 'quota' })[value] || value || 'requests';
+  const checked = el => typeof el.checked === 'boolean' ? el.checked : el.hasAttribute('checked');
+  const chosenDimensions = group => [...new Set([...group.querySelectorAll('blora-checkbox')].filter(checked).map(el => el.getAttribute('value')))];
+  function activeSelection(root, source) {
+    const state = selections.get(root);
+    if (state.source !== source) {
+      state.values[state.source] = { dimensions: chosenDimensions(state.groups[state.source]), metric: state.metrics[state.source].value };
+      const saved = state.values[source];
+      state.groups[source].querySelectorAll('blora-checkbox').forEach(el => el.toggleAttribute('checked', saved.dimensions.includes(el.getAttribute('value'))));
+      state.metrics[source].value = saved.metric;
+      state.source = source;
+    }
+    const quota = source === 'quota';
+    state.groups.requests.hidden = quota;
+    state.groups.quota.hidden = !quota;
+    state.metrics.requests.closest('label').hidden = quota;
+    state.metrics.quota.closest('label').hidden = !quota;
+    return chosenDimensions(state.groups[source]);
+  }
+  function displayLabel(key, value) {
+    if (value === '__unknown__') return tr('未识别项目');
+    if (key === 'source') return tr(({ grok: 'Grok', codex: 'Codex', claude_code: 'Claude Code', opencode: 'OpenCode', qwen_code: 'Qwen Code', hermes: 'Hermes', openclaw: 'OpenClaw', deepseek_harness: 'DeepSeek Harness', unknown: '未知/其他' })[value] || value || '未知/其他');
+    if (key === 'kind') return tr(({ balance: '余额', window: '使用率窗口', status: '查询状态' })[value] || value || '未知');
+    if (key === 'window') return tr(({ primary: '主窗口', secondary: '次窗口', daily: '每日', weekly: '每周', monthly: '每月', five_hour: '5 小时', seven_day: '7 天', 'account-primary': '账户主要额度', 'account-secondary': '账户次要额度', '5h': '5 小时', '7d': '7 天' })[value] || value || '无窗口');
+    if (key === 'unit' && value === 'percent') return '%';
+    return value || tr('未知');
+  }
 
   function render(targetId, result) {
     const container = document.getElementById(targetId);
@@ -18,9 +46,9 @@
       return;
     }
     const quota = result.data_source === 'quota';
-    const format = row => { const value = quota ? row.value : row[result.metric]; return value == null ? tr('未知') : Number(value).toLocaleString(undefined, {maximumFractionDigits: 4}) + (quota ? ' ' + (['used_percent','percent_change'].includes(result.metric) ? (result.metric === 'percent_change' ? tr('百分点') : '%') : row.unit || tr('未知单位')) : ''); };
-    const names = rows.map(row => (row.labels || []).map(label => label === '__unknown__' ? tr('未识别项目') : label || tr('未知')).join(' / '));
-    container.innerHTML = `<div class="multi-dimension-table-wrap"><table><thead><tr><th>${escape(result.dimensions.map(key => tr(dimensions[key] || key)).join(' / '))}</th><th>${escape(tr(metrics[result.metric]))}</th><th>${escape(tr('数据质量'))}</th></tr></thead><tbody>${rows.map((row,i) => `<tr><td>${escape(names[i])}</td><td>${escape(format(row))}</td><td>${escape(row.quality?.last_event || row.quality?.event || row.status || '')}</td></tr>`).join('')}</tbody></table></div>`;
+    const format = row => { const value = quota ? row.value : row[result.metric]; return value == null ? tr('未知') : Number(value).toLocaleString(undefined, {maximumFractionDigits: quota ? (['used_percent', 'percent_change'].includes(result.metric) ? 0 : 2) : (result.metric === 'cost' ? 4 : 0)}) + (quota ? ' ' + (['used_percent','percent_change'].includes(result.metric) ? (result.metric === 'percent_change' ? tr('百分点') : '%') : row.unit || tr('未知单位')) : ''); };
+    const names = rows.map(row => (row.labels || []).map((label, index) => displayLabel(result.dimensions[index], label)).join(' / '));
+    container.innerHTML = `<div class="multi-dimension-table-wrap"><table><thead><tr><th>${escape(result.dimensions.map(key => tr(dimensions[key] || key)).join(' / '))}</th><th>${escape(tr(metrics[result.metric]))}</th><th>${escape(tr('数据质量'))}</th></tr></thead><tbody>${rows.map((row,i) => `<tr><td>${escape(names[i])}</td><td>${escape(format(row))}</td><td>${escape(tr(({reset:'周期重置',gap:'采样缺口',backfill:'历史回补',adjustment:'额度调整',initial:'首次观测',window_change:'窗口变化',observed_consumption:'观测消耗',success:'正常',partial:'部分成功',failed:'查询失败'})[row.quality?.last_event || row.quality?.event || row.status] || '—'))}</td></tr>`).join('')}</tbody></table></div>`;
     if (!window.Chart) return;
     const units = [...new Set(rows.map(row => quota ? row.unit || tr('未知单位') : tr(metrics[result.metric])))];
     const charts = [];
@@ -38,23 +66,20 @@
     const prefix = scope === 'admin' ? 'admin' : 'user';
     const root = document.getElementById(`${prefix}MultiDimension`);
     if (!root) return;
+    init();
     const status = root.querySelector('.multi-dimension-status');
-    const source = root.querySelector('[name="data_source"]')?.value || 'requests';
+    const source = sourceKey(root.querySelector('[name="data_source"]')?.value);
     const quotaRoot = document.querySelector(`[data-quota-scope="${scope}"][data-quota-context="multi"]`);
     if (source === 'related') window.CrewRouterQuotaStats?.refresh(scope);
-    if (quotaRoot) quotaRoot.hidden = false;
+    if (quotaRoot) quotaRoot.hidden = source === 'requests';
     const isQuota = source === 'quota';
-    root.querySelector('.multi-dimension-choices').hidden = isQuota;
-    root.querySelector('.quota-dimension-choices').hidden = !isQuota;
-    root.querySelector('[name="metric"]').closest('label').hidden = isQuota;
-    root.querySelector('[name="quota_metric"]').closest('label').hidden = !isQuota;
+    const chosen = activeSelection(root, source);
     const targetId = `${prefix}MultiDimensionResult`;
-    const chosen = [...root.querySelectorAll(`${isQuota ? '.quota-dimension-choices' : '.multi-dimension-choices'} blora-checkbox[checked]`)].map(el => el.getAttribute('value'));
     const seq = Number(root.dataset.requestSeq || 0) + 1;
     root.dataset.requestSeq = seq;
+    destroy(targetId);
+    document.getElementById(targetId).replaceChildren();
     if (!chosen.length) {
-      destroy(targetId);
-      document.getElementById(targetId).replaceChildren();
       status.textContent = '请至少选择一个维度';
       return;
     }
@@ -68,8 +93,6 @@
         const start = document.getElementById('statsStartDate')?.value;
         const end = document.getElementById('statsEndDate')?.value;
         if (!start || !end) {
-          destroy(targetId);
-          document.getElementById(targetId).replaceChildren();
           status.textContent = '请选择自定义时间范围';
           return;
         }
@@ -103,12 +126,34 @@
       const root = document.getElementById(`${scope}MultiDimension`);
       if (!root || root.dataset.autoLoadBound) continue;
       root.dataset.autoLoadBound = 'true';
+      const usageChoices = root.querySelector('.multi-dimension-choices:not(.quota-dimension-choices)');
+      usageChoices.dataset.dimensionGroup = 'usage';
       const choices = document.createElement('div'); choices.className = 'quota-dimension-choices multi-dimension-choices'; choices.hidden = true;
-      choices.innerHTML = ['provider','account','kind','unit','window','date'].map(key => `<blora-checkbox value="${key}" label="${escape(tr(dimensions[key]))}" ${['provider','account'].includes(key)?'checked':''}></blora-checkbox>`).join('');
-      root.querySelector('.multi-dimension-choices').after(choices);
+      choices.dataset.dimensionGroup = 'quota';
+      choices.setAttribute('role', 'group');
+      choices.setAttribute('aria-label', tr('额度维度'));
+      choices.innerHTML = ['provider','account','kind','unit','window','date'].map(key => `<blora-checkbox value="${key}" label="${escape(tr(dimensions[key]))}" aria-label="${escape(tr(dimensions[key]))}" ${['provider','account'].includes(key)?'checked':''}></blora-checkbox>`).join('');
+      usageChoices.after(choices);
       const label = document.createElement('label');label.hidden=true;
-      label.innerHTML = `${escape(tr('额度指标'))} <blora-select name="quota_metric" value="remaining">${['remaining','used','total','used_percent','observed_consumption','percent_change'].map(key=>`<blora-option value="${key}">${escape(tr(metrics[key]))}</blora-option>`).join('')}</blora-select>`;
-      root.querySelector('.multi-dimension-actions').prepend(label);
+      label.innerHTML = `${escape(tr('额度指标'))} <blora-select name="quota_metric" value="remaining" aria-label="${escape(tr('额度指标'))}">${['remaining','used','total','used_percent','observed_consumption','percent_change'].map(key=>`<blora-option value="${key}">${escape(tr(metrics[key]))}</blora-option>`).join('')}</blora-select>`;
+      const actions = root.querySelector('.multi-dimension-actions');
+      actions.querySelector('[name="metric"]').closest('label').after(label);
+      usageChoices.before(actions);
+      const heading = document.createElement('p'); heading.textContent = tr('分析维度');
+      actions.after(heading);
+      usageChoices.querySelectorAll('blora-checkbox').forEach(el => el.setAttribute('aria-label', el.getAttribute('label') || tr(dimensions[el.getAttribute('value')])));
+      const usageMetric = actions.querySelector('[name="metric"]');
+      const quotaMetric = actions.querySelector('[name="quota_metric"]');
+      selections.set(root, {
+        source: sourceKey(actions.querySelector('[name="data_source"]').value),
+        groups: { requests: usageChoices, related: usageChoices, quota: choices },
+        metrics: { requests: usageMetric, related: usageMetric, quota: quotaMetric },
+        values: {
+          requests: { dimensions: chosenDimensions(usageChoices), metric: usageMetric.value },
+          related: { dimensions: chosenDimensions(usageChoices), metric: usageMetric.value },
+          quota: { dimensions: chosenDimensions(choices), metric: quotaMetric.value }
+        }
+      });
       root.addEventListener('change', event => {
         if (event.target.closest('blora-checkbox, blora-select[name="metric"], blora-select[name="data_source"], blora-select[name="quota_metric"]')) load(scope);
       });

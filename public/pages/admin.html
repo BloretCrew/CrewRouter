@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="/css/edition-badge.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sidebar-blora.css?v=retained-sidebar-20261010">
   <link rel="stylesheet" href="/css/admin-stats-blora.css?v=stats-message-fixes-20261008">
-  <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-dimensions-20261012">
+  <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-page-logic-20261012">
   <link rel="stylesheet" href="/css/badges-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/sliders-blora.css?v=restore-0930-20261003">
@@ -58,7 +58,7 @@
   </script>
   <link rel="stylesheet" href="/vendor/blora-2.0.8/blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css?v=restore-0930-20261003">
-  <link rel="stylesheet" href="/css/provider-quota-stats.css?v=quota-analysis-final-20261012">
+  <link rel="stylesheet" href="/css/provider-quota-stats.css?v=quota-page-logic-20261012">
 </head>
 <body class="blora-page blora-admin-page">
   <!-- 移动端顶部导航栏 -->
@@ -689,7 +689,6 @@
 
           <!-- Tab 1: 总览 -->
           <div id="statsTabOverview" class="stats-tab-content">
-            <section data-quota-scope="admin" data-quota-context="overview"></section>
             <!-- 统计概要卡片 -->
             <div class="stats-overview-grid" style="margin-bottom:24px;">
               <div class="stats-overview-card" style="background:linear-gradient(135deg,var(--info),#2563eb);">
@@ -743,6 +742,8 @@
                 </div>
               </div>
             </div>
+
+            <section data-quota-scope="admin" data-quota-context="overview"></section>
 
             <!-- 今日 vs 昨日对比 -->
             <div class="today-yesterday-grid">
@@ -834,7 +835,6 @@
               <label><span data-i18n="项目">项目</span><blora-select id="multiStatsProject" placeholder="全部项目" data-i18n-placeholder="全部项目"><blora-option value=""><span data-i18n="全部项目">全部项目</span></blora-option></blora-select></label>
               <div class="multi-stats-filter-actions"><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.loadMultiStats()"><span data-i18n="查询">查询</span></button><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="adminApp.resetMultiStatsFilters()"><span data-i18n="重置">重置</span></button></div>
             </div>
-            <section data-quota-scope="admin" data-quota-context="multi"></section>
             <section id="adminMultiDimension" class="multi-dimension-panel" aria-label="自选多维分析">
               <h4>自选维度分析</h4>
               <div class="multi-dimension-choices" role="group" aria-label="分析维度">
@@ -848,6 +848,7 @@
               <div class="multi-dimension-actions"><label><span data-i18n="分析数据源">分析数据源</span> <blora-select name="data_source" value="requests" aria-label="分析数据源"><blora-option value="requests"><span data-i18n="请求用量">请求用量</span></blora-option><blora-option value="quota"><span data-i18n="供应商额度">供应商额度</span></blora-option><blora-option value="related"><span data-i18n="关联分析">关联分析</span></blora-option></blora-select></label><label>统计指标 <blora-select name="metric" value="requests" aria-label="统计指标"><blora-option value="requests">请求数</blora-option><blora-option value="tokens">Token</blora-option><blora-option value="cost">积分</blora-option></blora-select></label><span class="multi-dimension-status" role="status"></span></div>
               <div id="adminMultiDimensionResult"></div>
             </section>
+            <section data-quota-scope="admin" data-quota-context="multi" hidden></section>
             <div id="adminStatsMultiSummary" class="stats-overview-grid multi-stats-summary"></div>
             <div class="responsive-grid-2 multi-stats-chart-row">
               <div class="chart-card multi-stats-main-chart"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow"><span data-i18n="模型分布">模型分布</span></span><h4><span data-i18n="模型请求排行">模型请求排行</span></h4></div><span class="multi-stats-caption"><span data-i18n="Top 20 模型">Top 20 模型</span></span></div><div class="chart-container"><canvas id="multiDimensionChart"></canvas></div></div>
@@ -2461,11 +2462,11 @@
   <script src="/js/theme.js?v=restore-0930-20261003"></script>
   <script src="/js/dom.js?v=restore-0930-20261003"></script>
   <script src="/js/edition-badge.js?v=restore-0930-20261003"></script>
-  <script src="/js/provider-quota-stats.js?v=quota-analysis-final-20261012"></script>
-  <script src="/js/multi-dimension-chart.js?v=quota-analysis-final-20261012"></script>
+  <script src="/js/provider-quota-stats.js?v=quota-page-logic-20261012"></script>
+  <script src="/js/multi-dimension-chart.js?v=quota-page-logic-20261012"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/admin.js?v=quota-analysis-final-20261012"></script>
+  <script src="/js/admin.js?v=quota-page-logic-20261012"></script>
   <script src="/js/plugin-runtime.js?v=default-theme-select-20261008"></script>
   <script>
     const initializeSidebarNavigation = () => {

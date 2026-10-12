@@ -10764,7 +10764,6 @@ ${extractorBody}
     grid.querySelectorAll('[data-quota-provider]').forEach(button => button.addEventListener('click', () => {
       window.CrewRouterQuotaStats?.open('user', button.dataset.quotaProvider);
     }));
-    window.CrewRouterQuotaStats?.library(grid);
     window.CrewRouterQuotaStats?.refresh('user');
   }
 
