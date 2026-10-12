@@ -40,31 +40,60 @@ jobs:
       - name: Check syntax
         run: npm run syntax
 
+  kernel:
+    name: Build latest CrewRouter kernel
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current revision
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install kernel build dependencies
+        run: npm ci
+      - name: Build CrewRouter kernel from current revision
+        run: npm run build
+      - name: Upload CrewRouter kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: crewrouter-desktop-kernel-${{ github.sha }}
+          path: |
+            dist/server.js
+            dist/package.json
+            dist/public/
+            dist/lang/
+          if-no-files-found: error
+          retention-days: 14
+
   package:
     name: Build desktop packages (${{ matrix.platform }})
-    needs: test
+    needs: [test, kernel]
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             platform: linux
-            command: npm run pack:linux
+            command: npm exec -- electron-builder --linux AppImage --publish never
             artifact: crewrouter-desktop-linux
             path: CrewRouter-Desktop/dist/*.AppImage
           - os: windows-latest
             platform: windows
-            command: npm run pack:win
+            command: npm exec -- electron-builder --win nsis --publish never
             artifact: crewrouter-desktop-windows
             path: CrewRouter-Desktop/dist/*.exe
           - os: macos-15
             platform: macos-arm64
-            command: npm run pack:mac -- --arm64
+            command: npm exec -- electron-builder --mac dmg --arm64 --publish never
             artifact: crewrouter-desktop-macos-arm64
             path: CrewRouter-Desktop/dist/*.dmg
           - os: macos-15-intel
             platform: macos-x64
-            command: npm run pack:mac -- --x64
+            command: npm exec -- electron-builder --mac dmg --x64 --publish never
             artifact: crewrouter-desktop-macos-x64
             path: CrewRouter-Desktop/dist/*.dmg
     runs-on: ${{ matrix.os }}
@@ -82,9 +111,15 @@ jobs:
           cache-dependency-path: CrewRouter-Desktop/package-lock.json
       - name: Install desktop dependencies
         run: npm ci
-      - name: Build server release
-        working-directory: .
-        run: npm ci && npm run build
+      - name: Download current CrewRouter kernel
+        uses: actions/download-artifact@v4
+        with:
+          name: crewrouter-desktop-kernel-${{ github.sha }}
+          path: dist
+      - name: Upgrade embedded CrewRouter kernel
+        run: npm run stage:server
+      - name: Validate upgraded kernel and platform database
+        run: npm run validate:server-bundle
       - name: Build package
         run: ${{ matrix.command }}
       - name: Upload ${{ matrix.platform }} artifact
