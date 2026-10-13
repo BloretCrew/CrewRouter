@@ -166,8 +166,9 @@ async function main(){
       await chooseSource(cdp,multi,'quota');await sleep(250);
       assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="metric"]').value==='tokens'&&!document.querySelector('${multi} [data-dimension-group="usage"]').hidden&&document.querySelector('${multi} [data-dimension-group="quota"]').hidden`),'勾额度保持请求维度和指标');
       assert.ok(await cdp.evaluate(`layoutCalls.some(s=>{const u=new URL(s,location.origin);return u.pathname.endsWith('/multi-dimension')&&u.searchParams.get('dimensions')==='source,model'&&u.searchParams.get('metric')==='tokens'&&u.searchParams.get('include_quota')==='true'&&u.searchParams.get('data_source')==='usage'})`),'额度仅附加信息');
-      assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-quota-chart canvas')`),'同一图表结果区包含额度图表');
-      assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-quota-chart canvas')?.getAttribute('aria-label').includes('Command Code GOAT')`),'额度图表标注供应商账户');
+      assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult canvas')`),'请求与额度在同一结果图表绘制');
+      assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult canvas')?.getAttribute('aria-label').includes('Command Code GOAT')`),'同一图表标注供应商账户');
+      assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult').textContent.includes('Token')&&document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult canvas')?.getAttribute('aria-label').includes('Command Code GOAT')`),'同一多维结果保留用量排行并显示额度账户');
       await chooseSource(cdp,multi,'requests');await sleep(250);
       assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="metric"]').value==='tokens'&&document.querySelector('${panel}').hidden`),'取消只移除额度');
       if(process.env.QUOTA_ENTRY_ONLY==='1') {
@@ -177,11 +178,11 @@ async function main(){
         continue;
       }
       await chooseSource(cdp,multi,'quota');await sleep(250);
-      assert.ok(await cdp.evaluate(`!document.querySelector('${panel}').getClientRects().length&&document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-quota-chart')`),'额度数据融合进同一图表结果区');
-      assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-quota-chart').textContent.includes('额度关联上下文')`),'图表明确额度关联语义');
-      assert.equal(await cdp.evaluate(`document.querySelectorAll('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-quota-chart canvas').length`),2,'百分比额度与金额按单位分组绘图');
-      await cdp.evaluate(`CrewRouterQuotaStats.open('${scope}','p1')`);
-      assert.ok(await cdp.evaluate(`document.querySelector('#quotaHistoryDialog')?.hasAttribute('open')||document.querySelector('#quotaHistoryDialog')?.open`),'相关供应商历史入口');await sleep(300);
+      assert.ok(await cdp.evaluate(`!document.querySelector('${panel}').getClientRects().length&&document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas')`),'额度数据融合进请求图表结果区');
+      assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas').getAttribute('aria-label').includes('额度关联上下文')`),'图表明确额度关联语义');
+      assert.equal(await cdp.evaluate(`document.querySelectorAll('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas').length`),1,'请求量和供应商额度使用同一张图表');
+      assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas').getAttribute('aria-label').includes('额度关联上下文')`),'同一分析结果说明额度归属上下文');
+      assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-chart-container')?.clientHeight>0`),'统一图表在页面内实际渲染');
       const dialog='#quotaHistoryDialog';
       await waitFor(cdp,`document.querySelector('${dialog} .quota-history-rows tbody tr')`,'历史加载');
       assert.ok(await cdp.evaluate(`document.querySelectorAll('${dialog} .quota-history-rows th').length<=6`),'历史只保留必要列');

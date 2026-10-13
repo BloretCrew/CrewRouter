@@ -101,7 +101,7 @@ for (const scope of ['user', 'admin']) test(`${scope}: actual page + VM isolate 
   assert.equal(app.requests.at(-1).get('data_source'), 'usage');
   assert.equal(app.requests.at(-1).get('include_quota'), 'true');
   assert.equal(usage.hidden, false); assert.equal(quota.hidden, true);
-  assert.equal(app.panel.hidden, false);
+  assert.equal(app.panel.hidden, true);
   select(usage, ['project']); metric.value = 'cost'; await app.load();
   assert.equal(app.requests.at(-1).get('dimensions'), 'project');
   toggle.checked = false; root.listeners.change({target: toggle}); await app.load();
