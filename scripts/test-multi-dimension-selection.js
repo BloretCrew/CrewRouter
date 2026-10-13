@@ -100,10 +100,20 @@ for (const scope of ['user', 'admin']) test(`${scope}: actual page + VM isolate 
   assert.equal(app.requests.at(-1).get('metric'), 'tokens');
   assert.equal(app.requests.at(-1).get('data_source'), 'usage');
   assert.equal(app.requests.at(-1).get('include_quota'), 'true');
+  assert.equal(app.requests.at(-1).has('quota_mode'), false, '默认不请求成员额度估算');
   assert.equal(usage.hidden, false); assert.equal(quota.hidden, true);
   assert.equal(app.panel.hidden, true);
+  if (scope === 'admin') {
+    select(usage, ['user']);
+    toggle.checked = true;
+    root.querySelector('[name="quota_mode"]').value = 'member_estimate';
+    root.listeners.change({target: toggle});
+    await app.load();
+    assert.equal(app.requests.at(-1).get('quota_mode'), 'member_estimate', '成员维度可显式开启估算');
+  }
   select(usage, ['project']); metric.value = 'cost'; await app.load();
   assert.equal(app.requests.at(-1).get('dimensions'), 'project');
+  assert.equal(app.requests.at(-1).has('quota_mode'), false, '估算仅适用于成员维度');
   toggle.checked = false; root.listeners.change({target: toggle}); await app.load();
   assert.equal(app.requests.at(-1).get('dimensions'), 'project');
   assert.equal(metric.value, 'cost'); assert.equal(app.panel.hidden, true);

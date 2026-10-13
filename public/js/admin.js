@@ -1147,7 +1147,9 @@ class AdminApp {
         const modelId = actionBtn.getAttribute('data-model-id') || '';
         const providerKey = actionBtn.getAttribute('data-provider-key') || '';
         const page = parseInt(actionBtn.getAttribute('data-page'), 10);
-        if (action === 'test' && modelId) this.testModel(modelId, actionBtn);
+        if (action === 'trace' && modelId) window.ModelTrace?.open(modelId);
+        else if (action === 'trace-provider' && providerKey) window.ModelTrace?.open(null, { providerId: providerKey });
+        else if (action === 'test' && modelId) this.testModel(modelId, actionBtn);
         else if (action === 'edit' && modelId) this.editModelById(modelId);
         else if (action === 'delete' && modelId) this.deleteModel(modelId);
         else if (action === 'test-provider' && providerKey) this.testAdminProviderModels(providerKey);
@@ -1688,9 +1690,11 @@ class AdminApp {
                 <span class="model-price-value">${rpm > 0 ? rpm + 'RPM' : ''}${rpm > 0 && tpm > 0 ? '/' : ''}${tpm > 0 ? tpm.toLocaleString() + 'TPM' : ''}</span>
               </span>` : ''}
           </div>
+          <div class="trace-latest" data-trace-latest="${idAttr}"></div>
           ${this._renderModelUptimeSlot(modelId, displayName)}
         </div>
         <div class="model-library-item-actions" style="margin-left:0;margin-top:10px;justify-content:flex-end;">
+          <button type="button" class="blora-button" data-admin-model-action="trace" data-model-id="${idAttr}" data-variant="outline" data-size="sm">${t('模型归因')}</button>
           <button type="button" class="blora-button model-test-btn" title="${t('测试')}"
             data-admin-model-action="test" data-model-id="${idAttr}" data-variant="outline" data-size="sm">测试</button>
           <button type="button" class="blora-button"
@@ -1977,6 +1981,7 @@ class AdminApp {
                     <button type="button" class="blora-button model-test-btn" style="padding:4px 8px;font-size:11px;"
                       title="${t('测试此供应商下当前筛选模型')}"
                       data-admin-model-action="test-provider" data-provider-key="${keyAttr}" data-variant="secondary" data-size="sm">测试</button>
+                    <button type="button" class="blora-button" data-admin-model-action="trace-provider" data-provider-key="${keyAttr}" data-variant="secondary" data-size="sm">${t('模型归因')}</button>
                     <span class="provider-model-count">${totalCount} 个模型${enabledCount != null && enabledCount !== totalCount ? ` · ${enabledCount}${t('启用')}` : ''}</span>
                   </div>
                 </div>
@@ -2387,6 +2392,7 @@ class AdminApp {
             ` : ''}
           </div>
           <div class="admin-card-footer">
+            <button type="button" class="blora-button admin-model-action" data-variant="outline" data-size="sm" data-admin-model-action="trace" data-model-id="${escapeHtml(model.id)}">${t('模型归因')}</button>
             <button type="button" class="blora-button admin-model-action" data-variant="outline" data-size="sm" data-admin-model-action="test" data-model-id="${escapeHtml(model.id)}">测试</button>
             <button type="button" class="blora-button admin-model-action" data-variant="outline" data-size="sm" data-admin-model-action="edit" data-model-id="${escapeHtml(model.id)}">编辑</button>
             <button type="button" class="blora-button admin-model-action" data-variant="danger" data-size="sm" data-admin-model-action="delete" data-model-id="${escapeHtml(model.id)}">删除</button>
@@ -3173,6 +3179,7 @@ class AdminApp {
         <div class="provider-row-more-wrap">
           <button type="button" class="blora-button" data-row-menu-btn="${pid}" title="${t('更多操作')}" onclick="adminApp.toggleProviderRowMenu('${pid}', event)" data-variant="secondary" data-size="sm">更多 ▾</button>
           <div class="provider-row-dropdown" id="provider-row-menu-${pid}" style="display:none;" role="menu">
+            <button type="button" class="provider-more-item" data-trace-provider="${pid}" role="menuitem">${t('模型归因')}</button>
             <button type="button" class="provider-more-item" id="${pingBtnId}" onclick="adminApp.pingProvider('${pid}');adminApp.toggleProviderRowMenu('${pid}', event);" role="menuitem">检测连通性</button>
             ${isScriptKey ? `<button type="button" class="provider-more-item" style="color:var(--warning);" onclick="adminApp.refreshProviderKey('${pid}');adminApp.toggleProviderRowMenu('${pid}\', event);" role="menuitem">${t('刷新密钥')}</button>` : ''}
             <div class="provider-more-item provider-more-item-toggle" role="menuitem">

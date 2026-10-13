@@ -63,6 +63,7 @@ jobs:
           name: crewrouter-desktop-kernel-${{ github.sha }}
           path: |
             dist/server.js
+            dist/model-trace-worker.js
             dist/package.json
             dist/public/
             dist/lang/

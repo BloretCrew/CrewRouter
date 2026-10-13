@@ -869,6 +869,7 @@ async function initDatabase() {
     await require('../utils/request-quota-capture').ensureRequestQuotaSchema(client);
     await require('../utils/quota-cycle-analysis').ensureQuotaCycleSchema(client);
     await require('../utils/provider-usage-history').ensureProviderUsageHistory(client);
+    await require('../utils/model-trace-migration').ensureModelTraceTables(client);
     await client.query('COMMIT');
     Logger.success('[数据库初始化] 完成!');
   } catch (error) {

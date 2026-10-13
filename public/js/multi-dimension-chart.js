@@ -71,7 +71,12 @@
       }
     }
     const categories = names.length ? names : [tr('暂无请求用量')];
-    if (quotaGroups.size) {
+    if (result.quota_mode === 'member_estimate') {
+      const note = document.createElement('p');
+      note.className = 'stats-insight-empty';
+      note.textContent = tr('成员额度按同一供应商下的请求贡献比例估算，不代表个人实际账单。');
+      container.prepend(note);
+    } else if (quotaGroups.size) {
       const note = document.createElement('p');
       note.className = 'stats-insight-empty';
       note.textContent = tr('同一图表类目上的额度是供应商级参照，不分摊到个人');
@@ -91,7 +96,14 @@
     container.append(box);
     const datasets = [
       { label: tr(metrics[result.metric]), data: rows.map(row => Number(row[quota ? 'value' : result.metric])), backgroundColor: '#14b8a6', borderRadius: 5, xAxisID: 'xUsage' },
-      ...[...quotaGroups.values()].map((group, groupIndex) => {
+      ...(result.quota_mode === 'member_estimate' ? (result.quota_estimates || []).map((estimate, index) => ({
+        type: 'bar',
+        label: `${estimate.user_name} · ${estimate.provider_name || tr('供应商')} · ${tr(estimate.kind === 'window' ? '估算窗口使用率' : '估算余额已用')} ${Number(estimate.estimated_value).toLocaleString()} ${displayLabel('unit', estimate.unit)}（${tr('估算')}）`,
+        data: rows.map(row => String(row.values?.[result.dimensions.indexOf('user')]) === String(estimate.user_id) && String(row.values?.[result.dimensions.indexOf('provider')]) === String(estimate.provider_id) ? Number(estimate.estimated_percent) : null),
+        backgroundColor: ['#a855f7', '#f97316', '#3b82f6', '#eab308'][index % 4],
+        borderRadius: 5, xAxisID: 'xQuota0'
+      })) : []),
+      ...[...(result.quota_mode === 'member_estimate' ? [] : quotaGroups.values())].map((group, groupIndex) => {
         const color = group.kind === 'window' ? '#f97316' : '#a855f7';
         return {
           type: 'line',
@@ -105,6 +117,13 @@
       })
     ];
     const scales = { xUsage: { type: 'linear', position: 'bottom', beginAtZero: true, title: { display: true, text: tr(metrics[result.metric]) } }, y: { ticks: { autoSkip: false } } };
+    if (result.quota_mode === 'member_estimate') {
+      scales.xQuota0 = { type: 'linear', position: 'top', beginAtZero: true, max: 100, title: { display: true, text: tr('成员估算额度使用比例（%）') } };
+      const caveat = document.createElement('p');
+      caveat.className = 'stats-insight-empty';
+      caveat.textContent = tr('成员额度按同一供应商下的请求贡献比例估算，不代表个人实际账单；悬停查看估算额度。');
+      container.prepend(caveat);
+    }
     if (!rows.length) scales.y.display = false;
     const quotaKindAxes = new Map([['window', 0], ['balance', 0]]);
     [...quotaGroups.values()].forEach(group => {
@@ -116,7 +135,8 @@
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         animation: false,
-        plugins: { legend: { display: quotaGroups.size > 0, position: 'bottom', labels: { boxWidth: 24, boxHeight: 8, padding: 12, usePointStyle: false } }, tooltip: { callbacks: { label: context => {
+        plugins: { legend: { display: quotaGroups.size > 0 || result.quota_mode === 'member_estimate', position: 'bottom', labels: { boxWidth: 24, boxHeight: 8, padding: 12, usePointStyle: false } }, tooltip: { callbacks: { label: context => {
+          if (result.quota_mode === 'member_estimate' && context.dataset.xAxisID === 'xQuota0') return `${context.dataset.label}: ${Number(context.raw).toLocaleString()}%`;
           const quotaGroup = context.dataset.xAxisID.startsWith('xQuota') ? [...quotaGroups.values()].find(group => group.axisIndex === Number(context.dataset.xAxisID.slice(6))) : null;
           if (!quotaGroup) return `${context.dataset.label}: ${Number(context.raw).toLocaleString()}`;
           const actual = quotaGroup.actualValue == null ? '' : ` · ${tr('实际额度')} ${Number(quotaGroup.actualValue).toLocaleString()} ${displayLabel('unit', quotaGroup.unit)}`;
@@ -136,6 +156,11 @@
     init();
     const status = root.querySelector('.multi-dimension-status');
     const includeQuota = checked(selections.get(root).quotaToggle);
+    const quotaModeControl = selections.get(root).quotaMode;
+    const memberMode = root.querySelector('.quota-member-mode');
+    const hasMemberDimension = checked(selections.get(root).groups.requests.querySelector('[value="user"]') || { checked: false });
+    if (memberMode) memberMode.hidden = !(includeQuota && hasMemberDimension);
+    if (quotaModeControl?.value === 'member_estimate' && (!includeQuota || !hasMemberDimension)) quotaModeControl.value = 'reference';
     const source = 'requests';
     const quotaRoot = document.querySelector(`[data-quota-scope="${scope}"][data-quota-context="multi"]`);
     if (quotaRoot) quotaRoot.hidden = true;
@@ -170,6 +195,7 @@
       }
       const filters = scope === 'admin' ? {user_id:'multiStatsUser',team_id:'multiStatsTeam',model_id:'multiStatsModel',provider_id:'multiStatsProvider',request_source:'multiStatsSource',workspace_path:'multiStatsProject'} : {model_id:'statsModelFilter',provider_id:'statsProviderFilter',request_source:'statsSourceFilter'};
       Object.entries(filters).forEach(([key,id]) => {const value=document.getElementById(id)?.value;if(value)params.set(key,value);});
+      if (includeQuota && hasMemberDimension && quotaModeControl?.value === 'member_estimate') params.set('quota_mode', 'member_estimate');
       if (isQuota) {
         const panel = document.querySelector(`[data-quota-scope="${scope}"][data-quota-context="multi"]`);
         ['provider_id','account_id','unit','window_key','status'].forEach(key=>{const value=panel?.querySelector(`[name="${key}"]`)?.value;if(value)params.set(key,value);});
@@ -221,8 +247,10 @@
       usageChoices.querySelectorAll('blora-checkbox').forEach(el => el.setAttribute('aria-label', el.getAttribute('label') || tr(dimensions[el.getAttribute('value')])));
       const usageMetric = actions.querySelector('[name="metric"]');
       const quotaMetric = actions.querySelector('[name="quota_metric"]');
+      const quotaMode = actions.querySelector('[name="quota_mode"]');
       selections.set(root, {
         quotaToggle,
+        quotaMode,
         source: sourceKey(actions.querySelector('[name="data_source"]').value),
         groups: { requests: usageChoices, related: usageChoices, quota: choices },
         metrics: { requests: usageMetric, related: usageMetric, quota: quotaMetric },
@@ -233,7 +261,7 @@
         }
       });
       root.addEventListener('change', event => {
-        if (event.target.closest('blora-checkbox, blora-select[name="metric"], blora-select[name="data_source"], blora-select[name="quota_metric"]')) load(scope);
+        if (event.target.closest('blora-checkbox, blora-select[name="metric"], blora-select[name="data_source"], blora-select[name="quota_metric"], blora-select[name="quota_mode"]')) load(scope);
       });
     }
   }

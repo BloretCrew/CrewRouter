@@ -2681,6 +2681,7 @@ if (isDemo) {
   app.use('/api/admin', require('./routes/admin-custom-instructions'));
   app.use('/api/admin/update', require('./routes/update'));
   app.use('/api/admin', require('./routes/teams'));
+  app.use('/api/user/model-trace', require('./routes/model-trace').getRouter());
   app.use('/api/user', require('./routes/user'));
   app.use('/api/user', require('./routes/balance-alert'));
   app.use('/api/user', require('./routes/notifications'));
@@ -2945,6 +2946,7 @@ async function runPendingMigrations() {
     Logger.warn(`[启动] 孤立模型清理跳过: ${err.message}`);
   }
 
+  await require('./utils/model-trace-migration').ensureModelTraceTables(pool);
   await require('./utils/provider-quota-history').importLegacyQuotaHistory(pool);
   Logger.info('[启动] 数据库迁移完成');
 }
@@ -3011,6 +3013,11 @@ async function startServer() {
       Logger.error('[启动] 拒绝启动 HTTP 服务，请检查数据库配置后重试');
       process.exit(1);
     }
+
+    await require('./routes/model-trace').getRouter().initialize();
+    const stopModelTrace = () => require('./routes/model-trace').getRouter().shutdown().catch(() => {});
+    process.once('SIGTERM', stopModelTrace);
+    process.once('SIGINT', stopModelTrace);
 
     // schema 就绪后再启动依赖表结构的后台任务
     try {

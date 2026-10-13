@@ -136,7 +136,7 @@ class ConsoleApp {
   /** 控制台可路由页面 id */
   _consolePageIds() {
     return new Set([
-      'home', 'modelLibrary', 'myUpstream', 'apiKeys', 'stats', 'projectWork',
+      'home', 'modelLibrary', 'modelTrace', 'myUpstream', 'apiKeys', 'stats', 'projectWork',
       'leaderboard', 'docs', 'balance', 'settings', 'auditLogs', 'prompts', 'sessions', 'bloraAgent'
     ]);
   }
@@ -446,6 +446,7 @@ class ConsoleApp {
   }
 
   async navigateTo(page, options = {}) {
+    if (this.currentPage === 'modelTrace' && page !== 'modelTrace' && window.ModelTrace && !await ModelTrace.canLeave()) return;
     // 旧入口重定向到合并页
     let targetPage = page === 'home' ? 'modelLibrary' : page;
     const capability = targetPage === 'projectWork' ? 'projects' : (targetPage === 'auditLogs' ? 'auditLogs' : null);
@@ -476,7 +477,7 @@ class ConsoleApp {
     document.getElementById(`${targetPage}Page`)?.classList.add('active');
 
     const titles = {
-      'dashboard': t('控制台'), 'home': t('个人工作台'), 'modelLibrary': t('模型库'), 'myUpstream': (this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local') ? t('供应商管理') : t('我的上游'),
+      'modelTrace': t('模型归因'), 'dashboard': t('控制台'), 'home': t('个人工作台'), 'modelLibrary': t('模型库'), 'myUpstream': (this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local') ? t('供应商管理') : t('我的上游'),
       'myProviders': t('我的上游'), 'myTeamModels': t('我的上游'),
       'apiKeys': t('API Key 与用量'), 'stats': t('统计信息'), 'projectWork': t('项目工作'), 'leaderboard': t('排行榜'), 'docs': t('接口文档'),
       'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志'), 'prompts': t('提示词'), 'sessions': t('会话'),
@@ -539,7 +540,8 @@ class ConsoleApp {
     switch (page) {
       case 'home':
       case 'dashboard':
-      case 'modelLibrary': await this.loadModelLibrary(); break;
+      case 'modelLibrary': await this.loadModelLibrary(); window.ModelTrace?.sync(); break;
+      case 'modelTrace': await window.ModelTrace?.page(); break;
       case 'myUpstream':
       case 'myProviders':
       case 'myTeamModels':
@@ -3926,6 +3928,10 @@ class ConsoleApp {
     if (modal?.close) modal.close('api');
   }
 
+  openModelTrace(modelId) {
+    window.ModelTrace?.open(modelId);
+  }
+
   async testModel(modelId, buttonEl) {
     if (!modelId) { alert(t('模型 ID 为空，请刷新重试')); return; }
 
@@ -6816,9 +6822,16 @@ class ConsoleApp {
 
   /** 模型库顶部任务条：后台总结任务的进行中/完成状态 */
   _updateTaskBar(state, payload = {}) {
-    const bar = document.getElementById('modelLibraryTaskBar');
-    if (!bar) return;
-    if (state === 'hidden') { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+    const parent = document.getElementById('modelLibraryTaskBar');
+    const bar = document.getElementById('sessionSummaryTaskBar');
+    if (!bar || !parent) return;
+    if (state === 'hidden') {
+      bar.style.display = 'none';
+      setHTML(bar, '');
+      parent.style.display = document.getElementById('modelTraceTaskBar')?.childElementCount ? '' : 'none';
+      return;
+    }
+    parent.style.display = '';
     if (state === 'loading') {
       bar.style.display = '';
       if (payload.sessionKey) this._summaryTaskSessionKey = payload.sessionKey;
@@ -10952,6 +10965,7 @@ ${extractorBody}
     }
 
     const modelMoreItems = isKeyPicker ? [] : [
+      { label: t('模型归因'), icon: 'test', onClick: `app.openModelTrace('${this._jsString(modelId)}')` },
       {
         label: t('测试'),
         icon: 'test',
@@ -11008,6 +11022,7 @@ ${extractorBody}
             <span class="model-price-value">×${modelMult.toFixed(2)}</span>
           </span>
         </div>
+        ${isKeyPicker ? '' : `<div class="trace-latest" data-trace-latest="${escapeHtml(modelId)}"></div>`}
         ${this._renderModelUptimeSlot(modelId, model.name)}
       </div>
       <div class="model-library-item-actions">

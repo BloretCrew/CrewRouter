@@ -7,7 +7,7 @@ const path = require('node:path');
 
 const source = path.resolve(process.env.CREWROUTER_RELEASE_ROOT || process.argv[2] || path.resolve(__dirname, '../../dist'));
 const destination = path.resolve(process.env.CREWROUTER_STAGE_ROOT || path.join(__dirname, '..', 'staging', 'server'));
-const files = ['server.js', 'package.json'];
+const files = ['server.js', 'model-trace-worker.js', 'package.json'];
 const directories = ['public', 'lang'];
 const forbidden = /(^|\/)(?:\.env(?:\..*)?|.*\.(?:db|sqlite|sqlite3)|credentials?|secrets?)(?:$|\/)/i;
 

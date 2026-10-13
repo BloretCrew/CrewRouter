@@ -23,6 +23,7 @@
   <script src="/js/blora-dialog.js?v=restore-0930-20261003"></script>
   <link rel="stylesheet" href="/css/themes.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
+  <link rel="stylesheet" href="/css/model-trace.css?v=modeltrace-20261013">
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
@@ -846,7 +847,7 @@
                 <blora-checkbox value="model" label="模型" checked></blora-checkbox>
                 <blora-checkbox value="provider" label="供应商"></blora-checkbox>
               </div>
-              <div class="multi-dimension-actions"><label><span data-i18n="分析数据源">分析数据源</span> <blora-select name="data_source" value="requests" aria-label="分析数据源"><blora-option value="requests"><span data-i18n="请求用量">请求用量</span></blora-option><blora-option value="quota"><span data-i18n="供应商额度">供应商额度</span></blora-option><blora-option value="related"><span data-i18n="关联分析">关联分析</span></blora-option></blora-select></label><label>统计指标 <blora-select name="metric" value="requests" aria-label="统计指标"><blora-option value="requests">请求数</blora-option><blora-option value="tokens">Token</blora-option><blora-option value="cost">积分</blora-option></blora-select></label><span class="multi-dimension-status" role="status"></span></div>
+              <div class="multi-dimension-actions"><label><span data-i18n="分析数据源">分析数据源</span> <blora-select name="data_source" value="requests" aria-label="分析数据源"><blora-option value="requests"><span data-i18n="请求用量">请求用量</span></blora-option><blora-option value="quota"><span data-i18n="供应商额度">供应商额度</span></blora-option><blora-option value="related"><span data-i18n="关联分析">关联分析</span></blora-option></blora-select></label><label>统计指标 <blora-select name="metric" value="requests" aria-label="统计指标"><blora-option value="requests">请求数</blora-option><blora-option value="tokens">Token</blora-option><blora-option value="cost">积分</blora-option></blora-select></label><label class="quota-member-mode" hidden>额度显示 <blora-select name="quota_mode" value="reference" aria-label="额度显示"><blora-option value="reference">账户额度参照</blora-option><blora-option value="member_estimate">按成员估算</blora-option></blora-select></label><span class="multi-dimension-status" role="status"></span></div>
               <div id="adminMultiDimensionResult"></div>
             </section>
             <section data-quota-scope="admin" data-quota-context="multi" hidden></section>
@@ -2484,7 +2485,8 @@
   <script src="/js/multi-dimension-chart.js?v=quota-additive-20261012"></script>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
-  <script src="/js/admin.js?v=quota-additive-20261012"></script>
+  <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
+  <script src="/js/admin.js?v=modeltrace-20261013"></script>
   <script src="/js/plugin-runtime.js?v=default-theme-select-20261008"></script>
   <script>
     const initializeSidebarNavigation = () => {

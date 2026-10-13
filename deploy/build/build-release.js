@@ -85,6 +85,12 @@ async function build() {
   const publicSrc = path.join(ROOT, 'public');
   const publicDest = path.join(DIST, 'public');
   copyDir(publicSrc, publicDest);
+  require('./validate-model-trace').validateModelTrace(publicDest);
+  await require('esbuild').build({
+    entryPoints: [path.join(ROOT, 'server/utils/model-trace-worker.js')],
+    bundle: true, platform: 'node', target: 'node20', format: 'cjs',
+    outfile: path.join(DIST, 'model-trace-worker.js'),
+  });
   console.log(`[build] 已复制 public/ → dist/public/`);
 
   // Step 3.5: 复制 i18n 语言目录（服务端磁盘回退用）

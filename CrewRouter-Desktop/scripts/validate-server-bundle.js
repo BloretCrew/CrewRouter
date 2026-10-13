@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(process.env.CREWROUTER_STAGE_ROOT || process.argv[2] || path.join(__dirname, '..', 'staging', 'server'));
-const required = ['server.js', 'package.json', 'public', 'lang'];
+const required = ['server.js', 'model-trace-worker.js', 'package.json', 'public', 'lang'];
 const forbidden = /(^|\/)(?:\.env(?:\..*)?|.*\.(?:db|sqlite|sqlite3)|credentials?|secrets?)(?:$|\/)/i;
 
 if (!fs.existsSync(root)) throw new Error(`Server staging directory not found: ${root}`);
@@ -21,6 +21,7 @@ function walk(dir) {
 }
 walk(root);
 if (unsafe.length) throw new Error(`Unsafe files found in server bundle: ${unsafe.join(', ')}`);
+require('../../deploy/build/validate-model-trace').validateModelTrace(path.join(root, 'public'));
 
 // 内置 PostgreSQL：当前平台的 @embedded-postgres 二进制必须存在且可执行，否则打包后的本地模式无法使用。
 const platformPackage = `@embedded-postgres/${process.platform === 'win32' ? 'windows' : process.platform}-${process.arch}`;

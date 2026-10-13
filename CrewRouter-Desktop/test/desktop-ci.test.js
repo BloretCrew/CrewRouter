@@ -16,7 +16,7 @@ test('Desktop CI rebuilds the kernel from the current revision and shares it acr
   assert.ok(kernel.steps.some((step) => step.run === 'npm run build'));
   const upload = kernel.steps.find((step) => step.uses === 'actions/upload-artifact@v4');
   assert.equal(upload.with.name, 'crewrouter-desktop-kernel-${{ github.sha }}');
-  assert.deepEqual(upload.with.path.trim().split('\n'), ['dist/server.js', 'dist/package.json', 'dist/public/', 'dist/lang/']);
+  assert.deepEqual(upload.with.path.trim().split('\n'), ['dist/server.js', 'dist/model-trace-worker.js', 'dist/package.json', 'dist/public/', 'dist/lang/']);
   assert.equal(upload.with['if-no-files-found'], 'error');
 
   const packaging = workflow.jobs.package;

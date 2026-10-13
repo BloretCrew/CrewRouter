@@ -23,6 +23,7 @@
   <script src="/js/blora-dialog.js?v=restore-0930-20261003"></script>
   <link rel="stylesheet" href="/css/themes.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
+  <link rel="stylesheet" href="/css/model-trace.css?v=modeltrace-20261013">
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
   <link rel="stylesheet" href="/css/model-library-blora.css?v=team-picker-20261005">
@@ -108,6 +109,7 @@
             <img src="https://img.bloret.net/SF/books.vertical?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="books.vertical">
             <span><span data-i18n="模型库">模型库</span></span>
           </div>
+          <div class="nav-item" data-page="modelTrace"><img src="https://img.bloret.net/SF/magnifyingglass?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="magnifyingglass"><span data-i18n="模型归因">模型归因</span></div>
           <div class="nav-item" data-page="myUpstream" data-capability="personalProviders">
             <img src="https://img.bloret.net/SF/antenna.radiowaves.left.and.right?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="antenna.radiowaves.left.and.right">
             <span><span data-i18n="我的上游">我的上游</span></span>
@@ -201,10 +203,11 @@
         </div>
       </div>
 
+      <div id="modelTracePage" class="page"><h2 data-i18n="模型归因">模型归因</h2><div id="modelTraceContent"></div></div>
       <!-- 模型库页面 (CrewRouter) - 首页 -->
       <div id="modelLibraryPage" class="page blora-model-library">
         <!-- 后台任务通知条：会话总结等长任务的进行中提示 -->
-        <div id="modelLibraryTaskBar" style="display:none;margin-bottom:12px;"></div>
+        <div id="modelLibraryTaskBar" style="display:none;margin-bottom:12px;"><div id="sessionSummaryTaskBar"></div><div id="modelTraceTaskBar" hidden></div></div>
         <!-- 滚动后悬浮顶栏：筛选 + 搜索 + Key 切换（默认隐藏，由 JS 控制） -->
         <div id="modelLibraryStickyBar" class="model-library-sticky-bar" aria-hidden="true">
           <div class="model-library-sticky-inner">
@@ -845,7 +848,7 @@
                 <blora-checkbox value="model" label="模型" checked></blora-checkbox>
                 <blora-checkbox value="provider" label="供应商"></blora-checkbox>
               </div>
-              <div class="multi-dimension-actions"><label><span data-i18n="分析数据源">分析数据源</span> <blora-select name="data_source" value="requests" aria-label="分析数据源"><blora-option value="requests"><span data-i18n="请求用量">请求用量</span></blora-option><blora-option value="quota"><span data-i18n="供应商额度">供应商额度</span></blora-option><blora-option value="related"><span data-i18n="关联分析">关联分析</span></blora-option></blora-select></label><label>统计指标 <blora-select name="metric" value="requests" aria-label="统计指标"><blora-option value="requests">请求数</blora-option><blora-option value="tokens">Token</blora-option><blora-option value="cost">积分</blora-option></blora-select></label><span class="multi-dimension-status" role="status"></span></div>
+              <div class="multi-dimension-actions"><label><span data-i18n="分析数据源">分析数据源</span> <blora-select name="data_source" value="requests" aria-label="分析数据源"><blora-option value="requests"><span data-i18n="请求用量">请求用量</span></blora-option><blora-option value="quota"><span data-i18n="供应商额度">供应商额度</span></blora-option><blora-option value="related"><span data-i18n="关联分析">关联分析</span></blora-option></blora-select></label><label>统计指标 <blora-select name="metric" value="requests" aria-label="统计指标"><blora-option value="requests">请求数</blora-option><blora-option value="tokens">Token</blora-option><blora-option value="cost">积分</blora-option></blora-select></label><label class="quota-member-mode" hidden>额度显示 <blora-select name="quota_mode" value="reference" aria-label="额度显示"><blora-option value="reference">账户额度参照</blora-option><blora-option value="member_estimate">按成员估算</blora-option></blora-select></label><span class="multi-dimension-status" role="status"></span></div>
               <div id="userMultiDimensionResult"></div>
             </section>
             <section data-quota-scope="user" data-quota-context="multi" hidden></section>
@@ -2694,7 +2697,8 @@ data: [DONE]</code></pre>
   <script src="/js/model-identity.js?v=1"></script>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
-  <script src="/js/app.js?v=quota-additive-20261012"></script>
+  <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
+  <script src="/js/app.js?v=modeltrace-20261013"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

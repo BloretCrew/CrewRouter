@@ -448,7 +448,7 @@ async function proxyFetchTransport(url, options = {}) {
   const logAttempt = () => {
     if (typeof Logger !== 'undefined') {
       const requestId = /^[a-zA-Z0-9-]{1,64}$/.test(context?.requestId || '') ? context.requestId : 'untracked';
-      const purpose = ['user_request', 'session_summary', 'provider_parse', 'model_test', 'fusion'].includes(context?.purpose) ? context.purpose : 'unspecified';
+      const purpose = ['user_request', 'session_summary', 'provider_parse', 'model_test', 'model_trace', 'fusion'].includes(context?.purpose) ? context.purpose : 'unspecified';
       Logger.info(`[UpstreamAttempt] request=${requestId} purpose=${purpose} number=${attempt.number} phase=${attempt.phase} status=${attempt.status ?? 'none'} responseStarted=${attempt.responseStarted}`);
     }
   };

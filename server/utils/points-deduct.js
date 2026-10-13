@@ -29,17 +29,30 @@ async function checkQuotaRules(userId, teamId, client = null) {
     const hours = Number(duration_hours) || 0;
     const since = new Date(Date.now() - hours * 3600 * 1000);
     let used = 0;
-    if (rule_type === 'requests') {
-      const result = await db.query(
-        'SELECT COUNT(*) AS total FROM usage_records WHERE user_id = $1 AND created_at >= $2',
-        [userId, since]
-      );
-      used = parseInt(result.rows[0].total, 10) || 0;
-    } else if (rule_type === 'tokens') {
-      const result = await db.query(
-        'SELECT COALESCE(SUM(weighted_tokens), 0) AS total FROM usage_records WHERE user_id = $1 AND created_at >= $2',
-        [userId, since]
-      );
+    if (rule_type === 'requests' || rule_type === 'tokens') {
+      const usageAggregate = rule_type === 'requests' ? 'COUNT(*)' : 'COALESCE(SUM(weighted_tokens), 0)';
+      const heldAggregate = rule_type === 'requests' ? 'COUNT(*)' : 'COALESCE(SUM(p.reserved_weight), 0)';
+      const usageSql = `SELECT ${usageAggregate} AS total FROM usage_records WHERE user_id = $1 AND created_at >= $2`;
+      let result;
+      // 同一语句快照避免结算将预留转为 usage 时重复计数或漏计。
+      if (client) await db.query('SAVEPOINT model_trace_quota');
+      try {
+        result = await db.query(`SELECT COALESCE(SUM(total), 0) AS total FROM (
+          ${usageSql}
+          UNION ALL
+          SELECT ${heldAggregate} AS total
+          FROM model_trace_probes p JOIN model_trace_jobs j ON j.id = p.job_id
+          WHERE j.user_id = $1 AND p.created_at >= $2
+            AND p.status = 'reserved' AND p.quota_covered = TRUE
+        ) quota_usage`, [userId, since]);
+      } catch (error) {
+        // 迁移前缺表会中止 PostgreSQL 事务，回退前需恢复外部事务。
+        if (client) await db.query('ROLLBACK TO SAVEPOINT model_trace_quota');
+        if (error.code !== '42P01') throw error;
+        result = await db.query(usageSql, [userId, since]);
+      } finally {
+        if (client) await db.query('RELEASE SAVEPOINT model_trace_quota');
+      }
       used = parseInt(result.rows[0].total, 10) || 0;
     }
     for (const entry of getUserQuotaBuffer(userId)) {
