@@ -115,6 +115,8 @@
       const root = document.getElementById(`${scope}MultiDimension`);
       if (!root || root.dataset.autoLoadBound) continue;
       root.dataset.autoLoadBound = 'true';
+      const quotaRoot = document.querySelector(`[data-quota-scope="${scope}"][data-quota-context="multi"]`);
+      if (quotaRoot && quotaRoot.parentElement !== root) root.append(quotaRoot);
       const usageChoices = root.querySelector('.multi-dimension-choices:not(.quota-dimension-choices)');
       usageChoices.dataset.dimensionGroup = 'usage';
       const choices = document.createElement('div'); choices.className = 'quota-dimension-choices multi-dimension-choices'; choices.hidden = true;

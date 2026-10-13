@@ -154,7 +154,7 @@ async function main(){
       const multi=scope==='user'?'#userMultiDimension':'#adminMultiDimension';
       const panel=`[data-quota-scope="${scope}"][data-quota-context="multi"]`;
       assert.ok(await cdp.evaluate(`document.querySelector('${panel}').hidden`),'请求分析隐藏额度上下文');
-      assert.ok(await cdp.evaluate(`document.querySelector('${multi}').compareDocumentPosition(document.querySelector('${panel}'))&Node.DOCUMENT_POSITION_FOLLOWING`),'维度分析先于上下文');
+      assert.ok(await cdp.evaluate(`document.querySelector('${multi}').contains(document.querySelector('${panel}'))`),'额度上下文位于维度分析面板内');
       const sourceSelector = multi+' .multi-dimension-choices:not(.quota-dimension-choices) blora-checkbox[value="source"]';
       await cdp.evaluate(`document.querySelector(${JSON.stringify(sourceSelector)}).scrollIntoView({block:'center',behavior:'instant'})`);await sleep(200);
       const sourcePoint = await cdp.evaluate(`(() => {const e=document.querySelector(${JSON.stringify(sourceSelector)});const control=e.querySelector('input[type="checkbox"]');const r=control.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
