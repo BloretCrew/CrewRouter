@@ -41,46 +41,79 @@
     if (!window.Chart) return;
     const quotaRows = (result.provider_quota?.accounts || []).filter(row => row.kind !== 'status').map(row => {
       const unit = row.unit || tr('未知单位');
-      const value = row.kind === 'window' || unit === 'percent' ? row.used_percent : row.remaining;
-      return { row, unit, value: value == null || !Number.isFinite(Number(value)) ? null : Number(value) };
-    }).filter(item => item.value !== null);
-    const units = [...new Set(quotaRows.map(item => item.unit))];
-    if (!rows.length && units.length) {
+      const windowQuota = row.kind === 'window' || unit === 'percent';
+      const value = windowQuota ? row.used_percent : row.remaining;
+      const normalized = windowQuota ? value : Number(row.total) > 0 && value != null ? Number(value) / Number(row.total) * 100 : null;
+      return { row, unit, value: value == null || !Number.isFinite(Number(value)) ? null : Number(value), normalized: normalized == null || !Number.isFinite(Number(normalized)) ? null : Number(normalized) };
+    }).filter(item => item.value !== null && item.normalized !== null);
+    const quotaGroups = new Map();
+    for (const { row, unit, value, normalized } of quotaRows) {
+      const groupKey = JSON.stringify([row.kind, unit, row.window_key || '']);
+      if (!quotaGroups.has(groupKey)) quotaGroups.set(groupKey, { unit, kind: row.kind, window: row.window_key, value: null, actualValue: null, items: [], seenAccounts: new Set() });
+      const group = quotaGroups.get(groupKey);
+      if (group.seenAccounts.has(String(row.account_id))) continue;
+      group.seenAccounts.add(String(row.account_id));
+      group.items.push({ row, value, normalized });
+      if (group.kind === 'balance' && group.unit !== 'unknown') {
+        group.total = (group.total || 0) + Number(row.total || 0);
+        group.actualValue = (group.actualValue || 0) + Number(value);
+        group.value = group.total > 0 ? group.actualValue / group.total * 100 : null;
+      } else {
+        group.value = group.value === null ? normalized : Math.max(group.value, normalized);
+        group.actualValue = group.actualValue == null ? value : Math.max(group.actualValue, value);
+      }
+    }
+    const categories = names.length ? names : [tr('暂无请求用量')];
+    if (quotaGroups.size) {
+      const note = document.createElement('p');
+      note.className = 'stats-insight-empty';
+      note.textContent = tr('同一图表类目上的额度是供应商级参照，不分摊到个人');
+      container.prepend(note);
+    }
+    if (!rows.length && quotaGroups.size) {
       const empty = document.createElement('p');
       empty.className = 'stats-insight-empty';
-      empty.textContent = tr('当前条件下暂无请求用量；下方仅显示供应商额度参照');
+      empty.textContent = tr('当前条件下暂无请求用量；图中显示供应商级额度参照');
       container.prepend(empty);
     }
-    const requestPoints = rows.map((row, index) => ({ label: names[index], value: Number(row[quota ? 'value' : result.metric]), source: 'usage' }));
-    const quotaPoints = quotaRows.map(({ row, unit, value }) => ({
-      label: `${row.provider_name || tr('供应商')} / ${row.label || tr('额度账户')}${row.window_key ? ` / ${displayLabel('window', row.window_key)}` : ''}`,
-      value, unit, source: 'quota'
-    }));
-    const points = [...requestPoints, ...quotaPoints];
     const charts = [];
     const box = document.createElement('div'); box.className = 'multi-dimension-chart-container';
     const canvas = document.createElement('canvas');
-    if (quotaPoints.length) canvas.setAttribute('aria-label', `${tr('请求用量与供应商额度参照')}：${tr('额度关联上下文')}；${points.map(point => point.label).join('、')}`);
+    if (quotaGroups.size) canvas.setAttribute('aria-label', `${tr('请求用量与供应商额度参照')}：${tr('额度关联上下文')}；${categories.join('、')}`);
     box.append(canvas);
     container.append(box);
     const datasets = [
-      { label: tr(metrics[result.metric]), data: points.map(point => point.source === 'usage' ? point.value : null), backgroundColor: '#14b8a6', borderRadius: 5, xAxisID: 'xUsage' },
-      ...units.map((unit, index) => ({
-        label: `${tr(unit === 'percent' ? '供应商窗口使用率' : '供应商剩余额度')} · ${displayLabel('unit', unit)}`,
-        data: points.map(point => point.source === 'quota' && point.unit === unit ? point.value : null),
-        backgroundColor: ['#a855f7', '#f97316', '#3b82f6', '#eab308'][index % 4], borderRadius: 5, xAxisID: `xQuota${index}`
-      }))
+      { label: tr(metrics[result.metric]), data: rows.map(row => Number(row[quota ? 'value' : result.metric])), backgroundColor: '#14b8a6', borderRadius: 5, xAxisID: 'xUsage' },
+      ...[...quotaGroups.values()].map((group, groupIndex) => {
+        const color = ['#a855f7', '#f97316', '#3b82f6', '#eab308'][groupIndex % 4];
+        return {
+          type: 'line',
+          label: `${tr(group.kind === 'window' || group.unit === 'percent' ? '供应商窗口使用率' : '供应商剩余占总额比例')} · ${group.items.map(({ row }) => `${row.provider_name || tr('供应商')} / ${row.label || tr('额度账户')}`).join('、')}（${tr('供应商级参照，不分摊到个人')}）`,
+          data: categories.map(() => group.value),
+          backgroundColor: color, borderColor: color, borderWidth: 2, borderDash: [6, 4], pointRadius: 0, spanGaps: true, tension: 0,
+          xAxisID: `xQuota${group.axisIndex}`
+        };
+      })
     ];
     const scales = { xUsage: { type: 'linear', position: 'bottom', beginAtZero: true, title: { display: true, text: tr(metrics[result.metric]) } }, y: { ticks: { autoSkip: false } } };
     if (!rows.length) scales.y.display = false;
-    units.forEach((unit, index) => {
-      scales[`xQuota${index}`] = { type: 'linear', position: 'top', beginAtZero: true, display: index === 0, title: { display: index === 0, text: `${tr('供应商额度')} · ${units.map(value => displayLabel('unit', value)).join(' / ')}` } };
+    const quotaKinds = [...new Set([...quotaGroups.values()].map(group => group.kind === 'window' || group.unit === 'percent' ? 'window' : 'balance'))];
+    const quotaKindAxes = new Map(quotaKinds.map((kind, index) => [kind, index]));
+    [...quotaGroups.values()].forEach(group => {
+      const index = quotaKindAxes.get(group.kind === 'window' || group.unit === 'percent' ? 'window' : 'balance');
+      group.axisIndex = index;
+      scales[`xQuota${index}`] = { type: 'linear', position: 'top', beginAtZero: true, max: 100, display: index === 0, title: { display: index === 0, text: tr('供应商额度参照比例（百分比）') } };
     });
     charts.push(new Chart(canvas, {
-      type: 'bar', data: { labels: points.map(point => point.label), datasets },
+      type: 'bar', data: { labels: categories, datasets },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: units.length > 0 }, tooltip: { callbacks: { label: context => `${context.dataset.label}: ${Number(context.raw).toLocaleString()}${context.dataset.xAxisID.startsWith('xQuota') ? ` ${displayLabel('unit', points[context.dataIndex]?.unit)}` : ''}` } } },
+        plugins: { legend: { display: quotaGroups.size > 0 }, tooltip: { callbacks: { label: context => {
+          const quotaGroup = context.dataset.xAxisID.startsWith('xQuota') ? [...quotaGroups.values()].find(group => group.axisIndex === Number(context.dataset.xAxisID.slice(6))) : null;
+          if (!quotaGroup) return `${context.dataset.label}: ${Number(context.raw).toLocaleString()}`;
+          const actual = quotaGroup.actualValue == null ? '' : ` · ${tr('实际额度')} ${Number(quotaGroup.actualValue).toLocaleString()} ${displayLabel('unit', quotaGroup.unit)}`;
+          return `${context.dataset.label}: ${Number(context.raw).toLocaleString()}%${actual}`;
+        } } } },
         scales
       }
     }));

@@ -81,9 +81,13 @@ async function choose(cdp, selector, value) {
 function fixture() {
   const original = window.fetch;
   window.layoutCalls = [];
+  window.chartInstances = [];
+  const OriginalChart = window.Chart;
+  window.Chart = class extends OriginalChart { constructor(canvas, config) { super(canvas, config); window.chartInstances.push(config); } };
   window.layoutMode = 'normal';
   const records = [
     { provider_id:'p1',provider_name:'Command Code GOAT',account_id:'a1',label:'订阅账户',kind:'window',unit:'percent',window_key:'monthly',total:null,used:null,remaining:null,used_percent:89.2059,status:'success',observed_at:'2026-10-12T10:36:04Z',checked_at:'2026-10-12T10:36:04Z',resets_at:'2026-10-17T00:31:57Z',requests:4804,tokens:595815929,cost:4 },
+    { provider_id:'p1',provider_name:'Command Code GOAT',account_id:'a1',label:'订阅账户',kind:'balance',unit:'USD',window_key:'',total:200,used:50,remaining:150,status:'success',observed_at:'2026-10-12T10:36:04Z',requests:4804,tokens:595815929,cost:4 },
     { provider_id:'p1',provider_name:'Command Code GOAT',account_id:'a1',label:'订阅账户',kind:'window',unit:'percent',window_key:'weekly',used_percent:9.3395,status:'success',observed_at:'2026-10-12T10:36:04Z',requests:4804,tokens:595815929,cost:4 },
     { provider_id:'p2',provider_name:'AnyRouter',account_id:'a2',label:'Key 1',kind:'balance',unit:'USD',window_key:'',total:100000000,used:2498.7845,remaining:99997501.2155,status:'failed',last_attempt_status:'failed',stale:true,observed_at:'2026-10-12T10:07:40Z',checked_at:'2026-10-12T10:37:40Z',requests:30716,tokens:524589539,cost:1 },
     { provider_id:'p3',provider_name:'Claude Pro',account_id:'a3',label:'订阅账户',kind:'window',unit:'percent',window_key:'five_hour',used_percent:44,observed_at:'2026-10-12T10:06:46Z',status:'partial',resets_at:'2026-10-12T10:59:59Z' },
@@ -99,7 +103,7 @@ function fixture() {
       const quota=url.searchParams.get('data_source')==='quota';
       const valid=quota?['provider','account','kind','unit','window','date']:['user','team','project','source','model','provider','key'];
       if(new Set(dims).size!==dims.length||dims.some(d=>!valid.includes(d)))return Response.json({error:'请选择有效且不同的维度'},{status:400});
-      return Response.json({data_source:quota?'quota':url.searchParams.get('data_source'),dimensions:dims,metric:url.searchParams.get('metric'),rows:quota?[{labels:dims.map(d=>d==='provider'?'Command Code GOAT':d==='window'?'monthly':d==='kind'?'window':'订阅账户'),value:89.2059,unit:'percent',kind:'window',account_id:'a1'}]:[{labels:dims.map(d=>d==='source'?'codex':'测试模型'),requests:4804,tokens:595815929,cost:4}],...(url.searchParams.get('include_quota')==='true'?{provider_quota:{accounts:records.filter(r=>r.requests>0)}}:{})});
+      return Response.json({data_source:quota?'quota':url.searchParams.get('data_source'),dimensions:dims,metric:url.searchParams.get('metric'),rows:quota?[{labels:dims.map(d=>d==='provider'?'Command Code GOAT':d==='window'?'monthly':d==='kind'?'window':'订阅账户'),value:89.2059,unit:'percent',kind:'window',account_id:'a1'}]:[{labels:dims.map(d=>d==='user'?'Alice':d==='source'?'codex':'测试模型'),requests:4804,tokens:595815929,cost:4},{labels:dims.map(d=>d==='user'?'Bob':d==='source'?'claude_code':'模型二'),requests:2400,tokens:200000000,cost:2}],...(url.searchParams.get('include_quota')==='true'?{provider_quota:{accounts:records.filter(r=>r.requests>0)}}:{})});
     }
     if(url.pathname.includes('/stats/provider-quota')) {
       window.layoutCalls.push(url.pathname+url.search);
@@ -167,8 +171,8 @@ async function main(){
       assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="metric"]').value==='tokens'&&!document.querySelector('${multi} [data-dimension-group="usage"]').hidden&&document.querySelector('${multi} [data-dimension-group="quota"]').hidden`),'勾额度保持请求维度和指标');
       assert.ok(await cdp.evaluate(`layoutCalls.some(s=>{const u=new URL(s,location.origin);return u.pathname.endsWith('/multi-dimension')&&u.searchParams.get('dimensions')==='source,model'&&u.searchParams.get('metric')==='tokens'&&u.searchParams.get('include_quota')==='true'&&u.searchParams.get('data_source')==='usage'})`),'额度仅附加信息');
       assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult canvas')`),'请求与额度在同一结果图表绘制');
-      assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult canvas')?.getAttribute('aria-label').includes('Command Code GOAT')`),'同一图表标注供应商账户');
-      assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult').textContent.includes('Token')&&document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult canvas')?.getAttribute('aria-label').includes('Command Code GOAT')`),'同一多维结果保留用量排行并显示额度账户');
+      assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult canvas')?.getAttribute('aria-label').includes('Codex / 测试模型')`),'同一图表标注请求维度类别');
+      assert.ok(await cdp.evaluate(`(()=>{const c=chartInstances.at(-1);return c?.data.datasets[1].label.includes('Command Code GOAT')&&c?.data.datasets[2].label.includes('Command Code GOAT');})()`),'同一多维图例标注供应商额度账户');
       await chooseSource(cdp,multi,'requests');await sleep(250);
       assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="metric"]').value==='tokens'&&document.querySelector('${panel}').hidden`),'取消只移除额度');
       if(process.env.QUOTA_ENTRY_ONLY==='1') {
@@ -179,10 +183,12 @@ async function main(){
       }
       await chooseSource(cdp,multi,'quota');await sleep(250);
       assert.ok(await cdp.evaluate(`!document.querySelector('${panel}').getClientRects().length&&document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas')`),'额度数据融合进请求图表结果区');
-      assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas').getAttribute('aria-label').includes('额度关联上下文')`),'图表明确额度关联语义');
+      assert.ok(await cdp.evaluate(`(()=>{const d=chartInstances.at(-1)?.data;return d?.labels.length===2&&d.datasets[0].data.length===2&&d.datasets[0].data[0]>0&&d.datasets[0].data[1]>0;})()`),'请求用量保持当前多维类别');
       assert.equal(await cdp.evaluate(`document.querySelectorAll('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas').length`),1,'请求量和供应商额度使用同一张图表');
-      assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas').getAttribute('aria-label').includes('额度关联上下文')`),'同一分析结果说明额度归属上下文');
+      assert.ok(await cdp.evaluate(`(()=>{const c=chartInstances.at(-1),d=c?.data;return d?.datasets.length===4&&d.labels.length===2&&d.datasets[1].data[0]===d.datasets[1].data[1]&&d.datasets[2].data[0]===d.datasets[2].data[1]&&d.datasets[3].data[0]===d.datasets[3].data[1]&&c.options.scales.xQuota0.max===100&&c.options.scales.xQuota1.max===100;})()`),'额度参考线复用请求维度类别并按比例归一，不新增账户类别');
+      assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult').textContent.includes('同一图表类目上的额度是供应商级参照，不分摊到个人')`),'用户级数据不伪装成供应商额度消耗');
       assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-chart-container')?.clientHeight>0`),'统一图表在页面内实际渲染');
+      if(process.env.CHART_ONLY==='1') continue;
       const dialog='#quotaHistoryDialog';
       await waitFor(cdp,`document.querySelector('${dialog} .quota-history-rows tbody tr')`,'历史加载');
       assert.ok(await cdp.evaluate(`document.querySelectorAll('${dialog} .quota-history-rows th').length<=6`),'历史只保留必要列');
