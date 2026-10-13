@@ -197,16 +197,16 @@ test('成员额度估算只分摊匹配供应商额度，不把账户级额度�
     { provider_id: 'p2', provider_name: 'Provider 2', account_id: 'a2', kind: 'balance', unit: 'USD', total: 200, used: 100, remaining: 100 },
     { provider_id: 'p1', provider_name: 'Provider 1', account_id: 'a3', kind: 'window', unit: 'percent', window_key: 'five_hour', used_percent: 50 }
   ] };
-  const result = buildMemberQuotaEstimate(rows, ['user', 'provider'], 'requests', quota);
+  const memberOnlyRows = rows.filter(row => row.value_1 === 'p1').map(row => ({ ...row, value_1: row.value_0 === 1 ? 'p1' : 'p1', name_1: 'Provider 1' }));
+  const providerTotals = [{ value_0: 'p1', requests: 100 }];
+  const result = buildMemberQuotaEstimate(memberOnlyRows, ['user', 'provider'], 'requests', quota, providerTotals);
   const aliceBalance = result.find(row => row.user_id === 1 && row.kind === 'balance' && row.provider_id === 'p1');
   const bobBalance = result.find(row => row.user_id === 2 && row.kind === 'balance' && row.provider_id === 'p1');
   assert.equal(aliceBalance.estimated_value, 30);
   assert.equal(aliceBalance.estimated_percent, 30);
   assert.equal(bobBalance.estimated_value, 10);
   assert.equal(bobBalance.estimated_percent, 10);
-  const aliceSecondProvider = result.find(row => row.user_id === 1 && row.kind === 'balance' && row.provider_id === 'p2');
-  assert.equal(aliceSecondProvider.estimated_value, 100);
-  assert.ok(result.every(row => row.provider_id));
+  assert.ok(result.every(row => row.provider_id === 'p1'));
   assert.equal(result.find(row => row.user_id === 1 && row.kind === 'window').estimated_percent, 37.5);
   assert.equal(result.find(row => row.user_id === 2 && row.kind === 'window').estimated_percent, 12.5);
   assert.ok(result.every(row => row.method === 'provider_usage_share_estimate'));

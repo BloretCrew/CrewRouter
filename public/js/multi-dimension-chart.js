@@ -98,8 +98,8 @@
       { label: tr(metrics[result.metric]), data: rows.map(row => Number(row[quota ? 'value' : result.metric])), backgroundColor: '#14b8a6', borderRadius: 5, xAxisID: 'xUsage' },
       ...(result.quota_mode === 'member_estimate' ? (result.quota_estimates || []).map((estimate, index) => ({
         type: 'bar',
-        label: `${estimate.user_name} · ${estimate.provider_name || tr('供应商')} · ${tr(estimate.kind === 'window' ? '估算窗口使用率' : '估算余额已用')} ${Number(estimate.estimated_value).toLocaleString()} ${displayLabel('unit', estimate.unit)}（${tr('估算')}）`,
-        data: rows.map(row => String(row.values?.[result.dimensions.indexOf('user')]) === String(estimate.user_id) && String(row.values?.[result.dimensions.indexOf('provider')]) === String(estimate.provider_id) ? Number(estimate.estimated_percent) : null),
+        label: `${estimate.category_labels?.join(' / ') || estimate.user_name} · ${estimate.provider_name || tr('供应商')} · ${tr(estimate.kind === 'window' ? '估算窗口使用率' : '估算余额已用')} ${Number(estimate.estimated_value).toLocaleString()} ${displayLabel('unit', estimate.unit)}（${tr('估算')}）`,
+        data: rows.map(row => estimate.category_dimensions?.every((dimension, index) => String(row.values?.[result.dimensions.indexOf(dimension)]) === String(estimate.category_values?.[index])) ? Number(estimate.estimated_percent) : null),
         backgroundColor: ['#a855f7', '#f97316', '#3b82f6', '#eab308'][index % 4],
         borderRadius: 5, xAxisID: 'xQuota0'
       })) : []),

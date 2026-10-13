@@ -40,15 +40,19 @@ function parseSelection(query, scope) {
   return { dimensions, metric, days };
 }
 
-function buildMemberQuotaEstimate(rows, dimensions, metric, quota) {
+function buildMemberQuotaEstimate(rows, dimensions, metric, quota, providerTotals = []) {
   const userIndex = dimensions.indexOf('user');
   const providerIndex = dimensions.indexOf('provider');
   if (userIndex < 0 || providerIndex < 0) return null;
+  const estimateDimensions = dimensions.filter(key => key !== 'provider');
+  const estimateIndexes = estimateDimensions.map(key => dimensions.indexOf(key));
   const providerNames = new Map(quota.accounts.map(account => [String(account.provider_id), account.provider_name || account.provider_id]));
   const requestByProvider = new Map();
   const totalsByProvider = new Map();
-  for (const row of rows) {
-    const providerId = row[`value_${providerIndex}`];
+  const effectiveProviderTotals = providerTotals.length ? providerTotals : rows;
+  const providerTotalDimensionIndex = providerTotals.length ? 0 : providerIndex;
+  for (const row of effectiveProviderTotals) {
+    const providerId = row[`value_${providerTotalDimensionIndex}`];
     const amount = Number(row[metric] || 0);
     requestByProvider.set(String(providerId), (requestByProvider.get(String(providerId)) || 0) + amount);
   }
@@ -83,8 +87,19 @@ function buildMemberQuotaEstimate(rows, dimensions, metric, quota) {
     for (const group of totalsByProvider.values()) {
       if (group.provider_id !== providerId) continue;
       const share = Number(row[metric] || 0) / providerTotal;
-      const key = JSON.stringify([userId, providerId, group.kind, group.unit, group.window_key]);
-      if (!estimates.has(key)) estimates.set(key, { user_id: row[`value_${userIndex}`], user_name: row[`name_${userIndex}`] || '未知成员', kind: group.kind, unit: group.unit, window_key: group.window_key, estimated_percent: 0, estimated_value: 0, actual_provider_value: group.actual_value, actual_provider_total: group.total, provider_id: providerId, provider_name: group.provider_name, providers: new Set(), share_basis: metric, share_label: metricLabel });
+      const categoryValues = estimateIndexes.map(index => row[`value_${index}`]);
+      const key = JSON.stringify([categoryValues, providerId, group.kind, group.unit, group.window_key]);
+      if (!estimates.has(key)) estimates.set(key, {
+        user_id: row[`value_${userIndex}`], user_name: row[`name_${userIndex}`] || '未知成员',
+        category_dimensions: estimateDimensions,
+        category_values: categoryValues,
+        category_labels: estimateIndexes.map(index => row[`name_${index}`] || '未分类'),
+        kind: group.kind, unit: group.unit, window_key: group.window_key,
+        estimated_percent: 0, estimated_value: 0,
+        actual_provider_value: group.actual_value, actual_provider_total: group.total,
+        provider_id: providerId, provider_name: group.provider_name, providers: new Set(),
+        share_basis: metric, share_label: metricLabel
+      });
       const estimate = estimates.get(key);
       estimate.estimated_percent += group.normalized * share;
       estimate.estimated_value += group.actual_value * share;
@@ -157,7 +172,12 @@ async function queryMultiDimensionStats(pool, query, scope, userId) {
     const estimateRows = estimateQuery.rows.map(row => Object.fromEntries(estimateDimensions.flatMap((key, index) => [
       [`value_${index}`, row.values[index]], [`name_${index}`, row.labels[index]]
     ]).concat([[metric, row[metric]]])));
-    quotaMode = buildMemberQuotaEstimate(estimateRows, estimateDimensions, metric, quota);
+    let providerTotals = estimateRows;
+    if (!dimensions.includes('provider')) {
+      const providerQuery = await queryMultiDimensionStats(pool, { ...query, dimensions: 'provider', include_quota: undefined, quota_mode: undefined }, scope, userId);
+      providerTotals = providerQuery.rows.map(row => ({ value_0: row.values[0], requests: row[metric] }));
+    }
+    quotaMode = buildMemberQuotaEstimate(estimateRows, estimateDimensions, metric, quota, providerTotals);
   }
   return {
     ...(quota ? { data_source: source, provider_quota: quota, quota_context: 'independent_provider_accounts_not_additive' } : {}),
