@@ -635,8 +635,16 @@ class AdminApp {
     }
     if (this.currentPage !== 'adminStats') return;
     const ms = this._getStatsRefreshIntervalMs();
+    const timerPage = this.currentPage;
     this._statsRefreshTimer = setInterval(() => {
-      this.loadStats();
+      if (this.currentPage !== timerPage) {
+        clearInterval(this._statsRefreshTimer);
+        this._statsRefreshTimer = null;
+        return;
+      }
+      if (this._statsRefreshInFlight) return;
+      this._statsRefreshInFlight = true;
+      Promise.resolve(this.loadStats()).finally(() => { this._statsRefreshInFlight = false; });
     }, ms);
   }
 
@@ -6551,7 +6559,11 @@ async function(ctx) {
         throw new Error(err.error || t('加载失败'));
       }
       if (seq !== this._statsLoadSeq) return; // 过期响应丢弃
-      this.stats = await response.json();
+      const data = await response.json();
+      const signature = JSON.stringify(data);
+      if (signature === this._statsDataSignature) return;
+      this._statsDataSignature = signature;
+      this.stats = data;
 
       this.renderStatsOverview();
       this.renderCharts();
@@ -6865,7 +6877,7 @@ async function(ctx) {
           if (ds.borderRadius != null) cur.borderRadius = ds.borderRadius;
         });
         // 默认从旧值过渡到新值（非从 0 入场）
-        existing.update();
+        existing.update('none');
         return existing;
       } catch (e) {
         console.warn(t('[Chart] update 失败，回退重建:'), e);

@@ -7,6 +7,7 @@
   const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
   const destroy = id => { (instances.get(id) || []).forEach(chart => chart.destroy()); instances.delete(id); };
   const instances = new Map();
+  const renderedResultSignatures = new Map();
   const selections = new WeakMap();
   const sourceKey = value => ({ usage: 'requests', association: 'related', provider_quota: 'quota' })[value] || value || 'requests';
   const checked = el => typeof el.checked === 'boolean' ? el.checked : el.hasAttribute('checked');
@@ -27,7 +28,10 @@
   function render(targetId, result) {
     const container = document.getElementById(targetId);
     if (!container) return;
+    const signature = JSON.stringify(result);
+    if (renderedResultSignatures.get(targetId) === signature) return;
     destroy(targetId);
+    renderedResultSignatures.set(targetId, signature);
     const rows = result.rows || [];
     container.innerHTML = '';
     const quota = result.data_source === 'quota';
@@ -48,13 +52,16 @@
     }).filter(item => item.value !== null && item.normalized !== null);
     const quotaGroups = new Map();
     for (const { row, unit, value, normalized } of quotaRows) {
-      const groupKey = JSON.stringify([row.kind, unit, row.window_key || '']);
-      if (!quotaGroups.has(groupKey)) quotaGroups.set(groupKey, { unit, kind: row.kind, window: row.window_key, value: null, actualValue: null, items: [], seenAccounts: new Set() });
+      const windowQuota = row.kind === 'window' || unit === 'percent';
+      const groupKey = windowQuota ? 'windows' : JSON.stringify(['balance', unit]);
+      if (!quotaGroups.has(groupKey)) quotaGroups.set(groupKey, { unit: windowQuota ? 'percent' : unit, kind: windowQuota ? 'window' : 'balance', windows: new Set(), value: null, actualValue: null, items: [], seenAccounts: new Set() });
       const group = quotaGroups.get(groupKey);
-      if (group.seenAccounts.has(String(row.account_id))) continue;
-      group.seenAccounts.add(String(row.account_id));
+      const uniqueId = row.account_id == null ? `${row.provider_id}:${row.label || ''}` : String(row.account_id);
+      if (group.seenAccounts.has(uniqueId)) continue;
+      group.seenAccounts.add(uniqueId);
+      if (row.window_key) group.windows.add(row.window_key);
       group.items.push({ row, value, normalized });
-      if (group.kind === 'balance' && group.unit !== 'unknown') {
+      if (group.kind === 'balance') {
         group.total = (group.total || 0) + Number(row.total || 0);
         group.actualValue = (group.actualValue || 0) + Number(value);
         group.value = group.total > 0 ? group.actualValue / group.total * 100 : null;
@@ -85,10 +92,12 @@
     const datasets = [
       { label: tr(metrics[result.metric]), data: rows.map(row => Number(row[quota ? 'value' : result.metric])), backgroundColor: '#14b8a6', borderRadius: 5, xAxisID: 'xUsage' },
       ...[...quotaGroups.values()].map((group, groupIndex) => {
-        const color = ['#a855f7', '#f97316', '#3b82f6', '#eab308'][groupIndex % 4];
+        const color = group.kind === 'window' ? '#f97316' : '#a855f7';
         return {
           type: 'line',
-          label: `${tr(group.kind === 'window' || group.unit === 'percent' ? '供应商窗口使用率' : '供应商剩余占总额比例')} · ${group.items.map(({ row }) => `${row.provider_name || tr('供应商')} / ${row.label || tr('额度账户')}`).join('、')}（${tr('供应商级参照，不分摊到个人')}）`,
+          label: group.kind === 'window'
+            ? `${[...new Set(group.items.map(({ row }) => row.provider_name || tr('供应商')))].join('、')} · ${tr('窗口额度使用率')}（${[...group.windows].map(windowKey => displayLabel('window', windowKey)).join(' / ')}）`
+            : `${[...new Set(group.items.map(({ row }) => row.provider_name || tr('供应商')))].join('、')} · ${tr('余额剩余比例')}（${displayLabel('unit', group.unit)}）`,
           data: categories.map(() => group.value),
           backgroundColor: color, borderColor: color, borderWidth: 2, borderDash: [6, 4], pointRadius: 0, spanGaps: true, tension: 0,
           xAxisID: `xQuota${group.axisIndex}`
@@ -97,22 +106,22 @@
     ];
     const scales = { xUsage: { type: 'linear', position: 'bottom', beginAtZero: true, title: { display: true, text: tr(metrics[result.metric]) } }, y: { ticks: { autoSkip: false } } };
     if (!rows.length) scales.y.display = false;
-    const quotaKinds = [...new Set([...quotaGroups.values()].map(group => group.kind === 'window' || group.unit === 'percent' ? 'window' : 'balance'))];
-    const quotaKindAxes = new Map(quotaKinds.map((kind, index) => [kind, index]));
+    const quotaKindAxes = new Map([['window', 0], ['balance', 0]]);
     [...quotaGroups.values()].forEach(group => {
-      const index = quotaKindAxes.get(group.kind === 'window' || group.unit === 'percent' ? 'window' : 'balance');
-      group.axisIndex = index;
-      scales[`xQuota${index}`] = { type: 'linear', position: 'top', beginAtZero: true, max: 100, display: index === 0, title: { display: index === 0, text: tr('供应商额度参照比例（百分比）') } };
+      group.axisIndex = quotaKindAxes.get(group.kind);
+      if (!scales[`xQuota${group.axisIndex}`]) scales[`xQuota${group.axisIndex}`] = { type: 'linear', position: 'top', beginAtZero: true, max: 100, display: group.axisIndex === 0, title: { display: group.axisIndex === 0, text: tr('额度参照比例（百分比）') } };
     });
     charts.push(new Chart(canvas, {
       type: 'bar', data: { labels: categories, datasets },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: quotaGroups.size > 0 }, tooltip: { callbacks: { label: context => {
+        animation: false,
+        plugins: { legend: { display: quotaGroups.size > 0, position: 'bottom', labels: { boxWidth: 24, boxHeight: 8, padding: 12, usePointStyle: false } }, tooltip: { callbacks: { label: context => {
           const quotaGroup = context.dataset.xAxisID.startsWith('xQuota') ? [...quotaGroups.values()].find(group => group.axisIndex === Number(context.dataset.xAxisID.slice(6))) : null;
           if (!quotaGroup) return `${context.dataset.label}: ${Number(context.raw).toLocaleString()}`;
           const actual = quotaGroup.actualValue == null ? '' : ` · ${tr('实际额度')} ${Number(quotaGroup.actualValue).toLocaleString()} ${displayLabel('unit', quotaGroup.unit)}`;
-          return `${context.dataset.label}: ${Number(context.raw).toLocaleString()}%${actual}`;
+          const windowDetail = quotaGroup.kind === 'window' ? ` · ${tr('额度窗口')} ${[...quotaGroup.windows].map(windowKey => displayLabel('window', windowKey)).join(' / ')}` : '';
+          return `${context.dataset.label}: ${Number(context.raw).toLocaleString()}%${actual}${windowDetail}`;
         } } } },
         scales
       }
@@ -135,9 +144,10 @@
     const targetId = `${prefix}MultiDimensionResult`;
     const seq = Number(root.dataset.requestSeq || 0) + 1;
     root.dataset.requestSeq = seq;
-    destroy(targetId);
-    document.getElementById(targetId).replaceChildren();
     if (!chosen.length) {
+      destroy(targetId);
+      renderedResultSignatures.delete(targetId);
+      document.getElementById(targetId).replaceChildren();
       status.textContent = '请至少选择一个维度';
       return;
     }
