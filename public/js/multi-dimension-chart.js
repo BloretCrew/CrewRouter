@@ -29,10 +29,8 @@
     if (!container) return;
     destroy(targetId);
     const rows = result.rows || [];
-    if (!rows.length) {
-      container.innerHTML = '<p class="stats-insight-empty">当前条件下暂无数据</p>';
-      return;
-    }
+    container.innerHTML = '';
+    if (!rows.length) container.innerHTML = '<p class="stats-insight-empty">当前条件下暂无数据</p>';
     const quota = result.data_source === 'quota';
     const format = row => { const value = quota ? row.value : row[result.metric]; return value == null ? tr('未知') : Number(value).toLocaleString(undefined, {maximumFractionDigits: quota ? (['used_percent', 'percent_change'].includes(result.metric) ? 0 : 2) : (result.metric === 'cost' ? 4 : 0)}) + (quota ? ' ' + (['used_percent','percent_change'].includes(result.metric) ? (result.metric === 'percent_change' ? tr('百分点') : '%') : row.unit || tr('未知单位')) : ''); };
     const names = rows.map(row => (row.labels || []).map((label, index) => displayLabel(result.dimensions[index], label)).join(' / '));
@@ -47,6 +45,45 @@
       const canvas = document.createElement('canvas');box.append(canvas);
       charts.push(new Chart(canvas,{type:'bar',data:{labels:selected.map(({i})=>names[i]),datasets:[{label:tr(metrics[result.metric]) + ' / ' + unit,data:selected.map(({row})=>{const value=quota?row.value:row[result.metric];return value==null?null:Number(value);}),backgroundColor:'#14b8a6',borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true},y:{ticks:{autoSkip:false}}}}}));
     });
+    if (!rows.length) container.innerHTML = '<p class="stats-insight-empty">当前条件下暂无数据</p>';
+    if (result.provider_quota) {
+      const accounts = result.provider_quota.accounts || [];
+      const quotaRows = accounts.filter(row => row.kind !== 'status');
+      if (quotaRows.length) {
+        const section = document.createElement('section');
+        section.className = 'multi-dimension-quota-chart';
+        const heading = document.createElement('h5');
+        heading.textContent = tr('供应商额度关联上下文');
+        section.append(heading);
+        const grouped = new Map();
+        quotaRows.forEach(row => {
+          const unit = row.unit || tr('未知单位');
+          if (!grouped.has(unit)) grouped.set(unit, []);
+          const value = row.kind === 'window' || unit === 'percent' ? row.used_percent : row.remaining;
+          if (value != null && Number.isFinite(Number(value))) grouped.get(unit).push({ row, value: Number(value) });
+        });
+        grouped.forEach((items, unit) => {
+          if (!items.length) return;
+          const title = document.createElement('p');
+          title.textContent = `${tr(unit === 'percent' ? '窗口使用率' : '剩余额度')} · ${displayLabel('unit', unit)}`;
+          const box = document.createElement('div');
+          box.className = 'multi-dimension-chart-container';
+          const canvas = document.createElement('canvas');
+          canvas.setAttribute('aria-label', items.map(({ row }) => `${row.provider_name || tr('供应商')} / ${row.label || tr('额度账户')}${row.window_key ? ` / ${displayLabel('window', row.window_key)}` : ''}`).join('、'));
+          box.append(canvas);
+          section.append(title, box);
+          if (window.Chart) charts.push(new Chart(canvas, {
+            type: 'bar',
+            data: {
+              labels: items.map(({ row }) => `${row.provider_name || tr('供应商')} / ${row.label || tr('额度账户')}${row.window_key ? ` / ${displayLabel('window', row.window_key)}` : ''}`),
+              datasets: [{ label: `${title.textContent} (${unit})`, data: items.map(item => item.value), backgroundColor: '#a855f7', borderRadius: 5 }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true }, y: { ticks: { autoSkip: false } } } }
+          }));
+        });
+        container.append(section);
+      }
+    }
     instances.set(targetId, charts);
   }
 
@@ -59,8 +96,7 @@
     const includeQuota = checked(selections.get(root).quotaToggle);
     const source = 'requests';
     const quotaRoot = document.querySelector(`[data-quota-scope="${scope}"][data-quota-context="multi"]`);
-    if (includeQuota) window.CrewRouterQuotaStats?.refresh(scope);
-    if (quotaRoot) quotaRoot.hidden = !includeQuota;
+    if (quotaRoot) quotaRoot.hidden = true;
     const isQuota = source === 'quota';
     const chosen = activeSelection(root, source);
     const targetId = `${prefix}MultiDimensionResult`;
@@ -98,6 +134,27 @@
       const response = await fetch(`/api/${scope}/stats/multi-dimension?${params}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '加载失败');
+      if (includeQuota && data.provider_quota) {
+        const quotaParams = new URLSearchParams(params);
+        ['user_id', 'team_id', 'model_id', 'request_source', 'workspace_path'].forEach(key => quotaParams.delete(key));
+        if (scope === 'admin') {
+          for (const [key, id] of Object.entries({ user_id: 'multiStatsUser', team_id: 'multiStatsTeam', model_id: 'multiStatsModel', request_source: 'multiStatsSource', workspace_path: 'multiStatsProject' })) {
+            const value = document.getElementById(id)?.value;
+            if (value) quotaParams.set(key, value);
+          }
+        } else {
+          for (const [key, id] of Object.entries({ model_id: 'statsModelFilter', request_source: 'statsSourceFilter' })) {
+            const value = document.getElementById(id)?.value;
+            if (value) quotaParams.set(key, value);
+          }
+          const teamId = document.getElementById('statsTeamFilter')?.value;
+          if (teamId) quotaParams.set('team_id', teamId);
+        }
+        const quotaResponse = await fetch(`/api/${scope}/stats/provider-quota?${quotaParams}`);
+        const quotaData = await quotaResponse.json();
+        if (!quotaResponse.ok) throw new Error(quotaData.error || '额度数据加载失败');
+        data.provider_quota = quotaData;
+      }
       if (Number(root.dataset.requestSeq) !== seq) return;
       status.textContent = isQuota ? `展示 ${data.rows.length} 个额度组合` : `展示 ${data.rows.length} 个组合（最多 30 个）`;
       render(targetId, data);

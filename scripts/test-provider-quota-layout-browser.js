@@ -99,7 +99,7 @@ function fixture() {
       const quota=url.searchParams.get('data_source')==='quota';
       const valid=quota?['provider','account','kind','unit','window','date']:['user','team','project','source','model','provider','key'];
       if(new Set(dims).size!==dims.length||dims.some(d=>!valid.includes(d)))return Response.json({error:'请选择有效且不同的维度'},{status:400});
-      return Response.json({data_source:quota?'quota':url.searchParams.get('data_source'),dimensions:dims,metric:url.searchParams.get('metric'),rows:quota?[{labels:dims.map(d=>d==='provider'?'Command Code GOAT':d==='window'?'monthly':d==='kind'?'window':'订阅账户'),value:89.2059,unit:'percent',kind:'window',account_id:'a1'}]:[{labels:dims.map(d=>d==='source'?'codex':'测试模型'),requests:4804,tokens:595815929,cost:4}]});
+      return Response.json({data_source:quota?'quota':url.searchParams.get('data_source'),dimensions:dims,metric:url.searchParams.get('metric'),rows:quota?[{labels:dims.map(d=>d==='provider'?'Command Code GOAT':d==='window'?'monthly':d==='kind'?'window':'订阅账户'),value:89.2059,unit:'percent',kind:'window',account_id:'a1'}]:[{labels:dims.map(d=>d==='source'?'codex':'测试模型'),requests:4804,tokens:595815929,cost:4}],...(url.searchParams.get('include_quota')==='true'?{provider_quota:{accounts:records.filter(r=>r.requests>0)}}:{})});
     }
     if(url.pathname.includes('/stats/provider-quota')) {
       window.layoutCalls.push(url.pathname+url.search);
@@ -166,6 +166,8 @@ async function main(){
       await chooseSource(cdp,multi,'quota');await sleep(250);
       assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="metric"]').value==='tokens'&&!document.querySelector('${multi} [data-dimension-group="usage"]').hidden&&document.querySelector('${multi} [data-dimension-group="quota"]').hidden`),'勾额度保持请求维度和指标');
       assert.ok(await cdp.evaluate(`layoutCalls.some(s=>{const u=new URL(s,location.origin);return u.pathname.endsWith('/multi-dimension')&&u.searchParams.get('dimensions')==='source,model'&&u.searchParams.get('metric')==='tokens'&&u.searchParams.get('include_quota')==='true'&&u.searchParams.get('data_source')==='usage'})`),'额度仅附加信息');
+      assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-quota-chart canvas')`),'同一图表结果区包含额度图表');
+      assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-quota-chart canvas')?.getAttribute('aria-label').includes('Command Code GOAT')`),'额度图表标注供应商账户');
       await chooseSource(cdp,multi,'requests');await sleep(250);
       assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="metric"]').value==='tokens'&&document.querySelector('${panel}').hidden`),'取消只移除额度');
       if(process.env.QUOTA_ENTRY_ONLY==='1') {
@@ -175,9 +177,11 @@ async function main(){
         continue;
       }
       await chooseSource(cdp,multi,'quota');await sleep(250);
-      assert.ok(await cdp.evaluate(`!document.querySelector('${panel}').hidden&&document.querySelector('${panel} .quota-accounts').textContent.includes('Command Code GOAT')`),'关联只展示紧凑供应商上下文');
-      assert.equal(await cdp.evaluate(`document.querySelectorAll('${panel} table,${panel} canvas,${panel} .quota-summary').length`),0,'多维页不重复大表概览趋势');
-      assert.ok(await cdp.click(panel+' [data-quota-action="history"][data-provider="p1"]'),'相关供应商历史入口');await sleep(300);
+      assert.ok(await cdp.evaluate(`!document.querySelector('${panel}').getClientRects().length&&document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-quota-chart')`),'额度数据融合进同一图表结果区');
+      assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-quota-chart').textContent.includes('额度关联上下文')`),'图表明确额度关联语义');
+      assert.equal(await cdp.evaluate(`document.querySelectorAll('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-quota-chart canvas').length`),2,'百分比额度与金额按单位分组绘图');
+      await cdp.evaluate(`CrewRouterQuotaStats.open('${scope}','p1')`);
+      assert.ok(await cdp.evaluate(`document.querySelector('#quotaHistoryDialog')?.hasAttribute('open')||document.querySelector('#quotaHistoryDialog')?.open`),'相关供应商历史入口');await sleep(300);
       const dialog='#quotaHistoryDialog';
       await waitFor(cdp,`document.querySelector('${dialog} .quota-history-rows tbody tr')`,'历史加载');
       assert.ok(await cdp.evaluate(`document.querySelectorAll('${dialog} .quota-history-rows th').length<=6`),'历史只保留必要列');
@@ -203,7 +207,7 @@ async function main(){
       }
       await cdp.evaluate(`${app}.navigateTo('${scope==='user'?'stats':'adminStats'}');${app}.switchStatsTab('multi')`);await sleep(250);
       await cdp.evaluate(`layoutMode='denied';CrewRouterQuotaStats.refresh('${scope}');CrewRouterMultiDimension.load('${scope}')`);await sleep(300);
-      assert.ok(await cdp.evaluate(`document.querySelector('${panel} .quota-accounts').textContent===''`),'撤权清空关联数据');
+      assert.ok(await cdp.evaluate(`document.querySelector('${multi} .multi-dimension-status').textContent.includes('额度数据加载失败')`),'额度请求撤权后图表报告错误');
       await cdp.evaluate(`layoutMode='normal';${app}.switchStatsTab('overview');CrewRouterQuotaStats.refresh('${scope}')`);await sleep(250);
       assert.ok(await cdp.evaluate(`document.documentElement.scrollWidth<=innerWidth+1`),'无页面横向溢出');
       for(const tab of ['daily',scope==='user'?'apikey':'provider','logs']){await cdp.evaluate(`${app}.switchStatsTab('${tab}')`);assert.ok(await cdp.evaluate(`!document.querySelector('${root}').getClientRects().length`),'其他统计标签保持本页职责');}
