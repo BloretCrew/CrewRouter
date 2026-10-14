@@ -168,24 +168,29 @@ async function queryMultiDimensionStats(pool, query, scope, userId) {
       .replace('FROM usage_records u', `FROM ${makeProviderUsageSourceSql()} u`)
       .replace('LEFT JOIN usage_message_analysis uma ON uma.usage_id = u.id', 'LEFT JOIN LATERAL (SELECT u.workspace_path) uma ON TRUE');
   }
-  const result = await pool.query(usageSql, params);
-  const quota = source === 'association' || query.include_quota === 'true' ? await queryProviderQuotaOverview(pool, query, scope, userId) : null;
+  const wantsMemberEstimate = query.quota_mode === 'member_estimate' && dimensions.includes('user');
+  const estimateDimensions = wantsMemberEstimate ? [...new Set([...dimensions, 'provider'])] : null;
+  const estimationPromise = wantsMemberEstimate
+    ? queryMultiDimensionStats(pool, { ...query, dimensions: estimateDimensions.join(','), include_quota: undefined, quota_mode: undefined, quota_estimate_internal: 'true' }, scope, userId)
+    : null;
+  const [result, quota] = await Promise.all([
+    pool.query(usageSql, params),
+    source === 'association' || query.include_quota === 'true' ? queryProviderQuotaOverview(pool, query, scope, userId) : Promise.resolve(null)
+  ]);
   let quotaMode = null;
-  if (query.quota_mode === 'member_estimate' && quota && dimensions.includes('user')) {
-    const estimateDimensions = [...new Set([...dimensions, 'provider'])];
-    const estimateQuery = await queryMultiDimensionStats(pool, { ...query, dimensions: estimateDimensions.join(','), include_quota: undefined, quota_mode: undefined, quota_estimate_internal: 'true' }, scope, userId);
+  if (wantsMemberEstimate && quota) {
+    const estimateQuery = await estimationPromise;
     const estimateRows = estimateQuery.rows.map(row => Object.fromEntries(estimateDimensions.flatMap((key, index) => [
       [`value_${index}`, row.values[index]], [`name_${index}`, row.labels[index]]
     ]).concat([[metric, row[metric]]])));
     let providerTotals = estimateRows;
-    let estimateTruncated = estimateQuery.rows.length >= 10000;
+    const estimateTruncated = estimateQuery.rows.length >= 10000;
     if (!dimensions.includes('provider')) {
       const providerQuery = await queryMultiDimensionStats(pool, { ...query, dimensions: 'provider', include_quota: undefined, quota_mode: undefined, quota_estimate_internal: 'true' }, scope, userId);
       providerTotals = providerQuery.rows.map(row => ({ value_0: row.values[0], requests: row[metric] }));
-      estimateTruncated = estimateTruncated || providerQuery.rows.length >= 10000;
     }
     quotaMode = buildMemberQuotaEstimate(estimateRows, estimateDimensions, metric, quota, providerTotals);
-    if (estimateTruncated) {
+    if (estimateTruncated && quotaMode.length) {
       quotaMode.truncated = true;
       quotaMode.caveat = '估算组合达到 10000 条安全上限，结果可能不完整；请按 Team、供应商或项目缩小筛选范围。';
     }

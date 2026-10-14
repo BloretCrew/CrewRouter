@@ -31,6 +31,9 @@
   .multi-dimension-choices blora-checkbox { min-width: 0; }
 }
 .multi-dimension-panel [hidden] { display: none !important; }
+.quota-member-estimate-loading { min-height: 74px; display: flex; align-items: center; justify-content: center; border: 1px dashed var(--border); border-radius: 10px; background: var(--muted, rgba(148,163,184,.06)); }
+#adminMultiDimensionResult.is-estimate-loading > :not(.quota-member-estimate-loading) { opacity: .46; transition: opacity .16s ease; }
+.quota-member-estimate-error { color: var(--destructive); }
 .multi-dimension-actions { align-items: flex-end; margin-bottom: 16px; }
 .multi-dimension-actions label { display: grid; gap: 6px; font-size: 13px; }
 .multi-dimension-status { flex: 1 1 220px; padding-bottom: 8px; }

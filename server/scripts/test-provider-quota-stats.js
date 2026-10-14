@@ -220,6 +220,8 @@ test('多维估算内部查询有更高Top条数，不复用图表展示的Top30
   assert.match(query, /estimateMode && dimensions\.includes\('user'\) \? 10000 : 30/);
   assert.match(query, /ORDER BY 1/);
   assert.match(query, /estimateDimensions\.join\(','\)/);
+  assert.match(query, /Promise\.all\(/);
+  assert.match(query, /const wantsMemberEstimate/);
   const rows = Array.from({ length: 40 }, (_, index) => ({
     value_0: index + 1, name_0: `成员${index + 1}`, value_1: 'p1', name_1: '供应商', requests: 1
   }));
