@@ -213,6 +213,20 @@ test('成员额度估算只分摊匹配供应商额度，不把账户级额度�
   assert.match(result[0].caveat, /不是实际个人额度账单/);
 });
 
+test('多维估算内部查询有更高Top条数，不复用图表展示的Top30限制', () => {
+  const { buildMemberQuotaEstimate } = require('../utils/multi-dimension-stats');
+  const query = fs.readFileSync(path.join(__dirname, '../utils/multi-dimension-stats.js'), 'utf8');
+  assert.match(query, /const estimateMode = query\.quota_mode === 'member_estimate' \|\| query\.quota_estimate_internal === 'true'/);
+  assert.match(query, /estimateMode && dimensions\.includes\('user'\) \? 10000 : 30/);
+  assert.match(query, /ORDER BY 1/);
+  assert.match(query, /estimateDimensions\.join\(','\)/);
+  const rows = Array.from({ length: 40 }, (_, index) => ({
+    value_0: index + 1, name_0: `成员${index + 1}`, value_1: 'p1', name_1: '供应商', requests: 1
+  }));
+  const estimates = buildMemberQuotaEstimate(rows, ['user', 'provider'], 'requests', { accounts: [sample] }, [{ value_0: 'p1', requests: 40 }]);
+  assert.equal(estimates.length, 40);
+});
+
 test('附加额度保持请求SQL、维度和指标不变', async () => {
   const row={value_0:'codex',name_0:'Codex',value_1:'m1',name_1:'模型',requests:2,tokens:123,cost:'1'};
   const original=mockPool([[row]]);
