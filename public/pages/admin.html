@@ -821,9 +821,11 @@
                 <h3><span data-i18n="多维分析">多维分析</span></h3>
                 <p><span data-i18n="按成员、组织、项目、客户端、模型和供应商查看调用结构。页面只展示可读名称，不展示内部编号。">按成员、组织、项目、客户端、模型和供应商查看调用结构。页面只展示可读名称，不展示内部编号。</span></p>
               </div>
-              <div class="multi-stats-legend"><span class="multi-stats-dot"></span><span data-i18n="当前统计周期">当前统计周期</span></div>
+              <div class="multi-stats-legend"><span class="multi-stats-dot"></span><span id="multiStatsPeriodLabel" data-i18n="当前统计周期">最近 30 天</span></div>
             </div>
-            <div class="admin-filter-bar multi-stats-filters" id="adminStatsMultiFilters">
+            <details class="multi-stats-filter-disclosure" id="multiStatsFilterDisclosure" open>
+              <summary><span class="multi-stats-filter-title" data-i18n="分析范围">分析范围</span><span id="multiStatsFilterSummary">最近 30 天 · 全部成员、Team、模型、供应商、客户端、项目</span></summary>
+              <div class="admin-filter-bar multi-stats-filters" id="adminStatsMultiFilters">
               <label><span data-i18n="成员">成员</span><blora-select id="multiStatsUser" placeholder="全部成员" data-i18n-placeholder="全部成员"><blora-option value=""><span data-i18n="全部成员">全部成员</span></blora-option></blora-select></label>
               <label>Team<blora-select id="multiStatsTeam" placeholder="全部 Team" data-i18n-placeholder="全部 Team"><blora-option value=""><span data-i18n="全部 Team">全部 Team</span></blora-option></blora-select></label>
 
@@ -832,9 +834,10 @@
               <label><span data-i18n="客户端">客户端</span><blora-select id="multiStatsSource" placeholder="全部客户端" data-i18n-placeholder="全部客户端"><blora-option value=""><span data-i18n="全部客户端">全部客户端</span></blora-option></blora-select></label>
               <label><span data-i18n="项目">项目</span><blora-select id="multiStatsProject" placeholder="全部项目" data-i18n-placeholder="全部项目"><blora-option value=""><span data-i18n="全部项目">全部项目</span></blora-option></blora-select></label>
               <div class="multi-stats-filter-actions"><button type="button" class="blora-button" data-variant="primary" data-size="sm" onclick="adminApp.loadMultiStats()"><span data-i18n="查询">查询</span></button><button type="button" class="blora-button" data-variant="ghost" data-size="sm" onclick="adminApp.resetMultiStatsFilters()"><span data-i18n="重置">重置</span></button></div>
-            </div>
+              </div>
+            </details>
             <section id="adminMultiDimension" class="multi-dimension-panel" aria-label="自选多维分析">
-              <h4>自选维度分析</h4>
+              <div class="multi-dimension-panel-heading"><div><span class="multi-stats-eyebrow" data-i18n="主分析">主分析</span><h4 data-i18n="自选维度分析">自选维度分析</h4><p data-i18n="选择一个或多个维度，按请求量、Token 或积分比较调用情况。">选择一个或多个维度，按请求量、Token 或积分比较调用情况。</p></div><span id="multiDimensionResultSummary" class="multi-dimension-result-summary" role="status" aria-live="polite"></span></div>
               <div class="multi-dimension-choices" role="group" aria-label="分析维度">
                 <blora-checkbox value="user" label="成员"></blora-checkbox>
                 <blora-checkbox value="team" label="Team"></blora-checkbox>
@@ -848,17 +851,26 @@
             </section>
             <section data-quota-scope="admin" data-quota-context="multi" hidden></section>
             <div id="adminStatsMultiSummary" class="stats-overview-grid multi-stats-summary"></div>
-            <div class="responsive-grid-2 multi-stats-chart-row">
-              <div class="chart-card multi-stats-main-chart"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow"><span data-i18n="模型分布">模型分布</span></span><h4><span data-i18n="模型请求排行">模型请求排行</span></h4></div><span class="multi-stats-caption"><span data-i18n="Top 20 模型">Top 20 模型</span></span></div><div class="chart-container"><canvas id="multiDimensionChart"></canvas></div></div>
-              <div class="chart-card multi-stats-main-chart"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow"><span data-i18n="Top 组合">Top 组合</span></span><h4><span data-i18n="主要调用链路">主要调用链路</span></h4></div><span class="multi-stats-caption"><span data-i18n="按请求量排序">按请求量排序</span></span></div><div id="adminStatsRelationOverview" class="stats-relation-list"></div></div>
-            </div>
-            <div class="responsive-grid-2 multi-stats-relation-grid">
-              <div class="chart-card"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow"><span data-i18n="组织与模型">组织与模型</span></span><h4><span data-i18n="成员 × 模型">成员 × 模型</span></h4></div></div><div id="adminStatsUserModel"></div></div>
-              <div class="chart-card"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow"><span data-i18n="组织与模型">组织与模型</span></span><h4><span data-i18n="Team × 模型">Team × 模型</span></h4></div></div><div id="adminStatsOrgMember"></div></div>
-              <div class="chart-card"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow"><span data-i18n="项目与入口">项目与入口</span></span><h4><span data-i18n="项目 × 客户端">项目 × 客户端</span></h4></div></div><div id="adminStatsProjectSource"></div></div>
-              <div class="chart-card"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow"><span data-i18n="模型路由">模型路由</span></span><h4><span data-i18n="模型 × 供应商">模型 × 供应商</span></h4></div></div><div id="adminStatsModelProvider"></div></div>
-            </div>
-            <div class="chart-card multi-stats-table-card"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow"><span data-i18n="可读明细">可读明细</span></span><h4><span data-i18n="多维组合明细">多维组合明细</span></h4></div><span class="multi-stats-caption"><span data-i18n="最多展示 500 条">最多展示 500 条</span></span></div><div id="adminStatsCombinationTable"></div></div>
+            <p id="multiStatsLoadStatus" class="multi-stats-load-status" role="status" aria-live="polite" hidden></p>
+            <section class="multi-stats-primary-insights" aria-labelledby="multiStatsPrimaryTitle">
+              <div class="multi-stats-section-heading"><div><span class="multi-stats-eyebrow" data-i18n="核心分布">核心分布</span><h4 id="multiStatsPrimaryTitle" data-i18n="模型请求排行">模型请求排行</h4></div><span class="multi-stats-caption" id="multiStatsPrimaryInsightCount">Top 20 模型</span></div>
+              <div class="multi-stats-primary-grid">
+                <article class="chart-card multi-stats-main-chart" aria-label="模型请求排行"><div class="chart-container"><canvas id="multiDimensionChart"></canvas></div></article>
+                <article class="chart-card multi-stats-main-chart multi-stats-top-combinations"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow" data-i18n="调用路径">调用路径</span><h4 data-i18n="主要调用链路">主要调用链路</h4></div><span class="multi-stats-caption" data-i18n="按请求量排序">按请求量排序</span></div><div id="adminStatsRelationOverview" class="stats-relation-list"></div></article>
+              </div>
+            </section>
+            <details class="multi-stats-secondary" id="multiStatsSecondaryInsights">
+              <summary><span><strong data-i18n="关联洞察">关联洞察</strong><small data-i18n="查看成员、Team、项目、客户端和供应商之间的调用关系">查看成员、Team、项目、客户端和供应商之间的调用关系</small></span><span class="multi-stats-secondary-count" id="multiStatsSecondaryCount"></span></summary>
+              <div class="responsive-grid-2 multi-stats-relation-grid">
+                <article class="chart-card"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow" data-i18n="组织与模型">组织与模型</span><h4 data-i18n="成员 × 模型">成员 × 模型</h4></div></div><div id="adminStatsUserModel"></div></article>
+                <article class="chart-card"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow" data-i18n="组织与模型">组织与模型</span><h4 data-i18n="Team × 模型">Team × 模型</h4></div></div><div id="adminStatsOrgMember"></div></article>
+                <article class="chart-card"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow" data-i18n="项目与入口">项目与入口</span><h4 data-i18n="项目 × 客户端">项目 × 客户端</h4></div></div><div id="adminStatsProjectSource"></div></article>
+                <article class="chart-card"><div class="multi-stats-card-heading"><div><span class="multi-stats-eyebrow" data-i18n="模型路由">模型路由</span><h4 data-i18n="模型 × 供应商">模型 × 供应商</h4></div></div><div id="adminStatsModelProvider"></div></article>
+              </div>
+            </details>
+            <details class="chart-card multi-stats-table-card multi-stats-details" id="multiStatsCombinationDetails">
+              <summary><span><strong data-i18n="多维组合明细">多维组合明细</strong><small data-i18n="展开查看筛选后的详细组合">展开查看筛选后的详细组合</small></span><span class="multi-stats-caption" id="multiStatsCombinationCount" data-i18n="最多展示 500 条">最多展示 500 条</span></summary><div id="adminStatsCombinationTable"></div>
+            </details>
             <p id="adminStatsMultiCaveats" class="multi-stats-caveats"></p>
           </div>
 

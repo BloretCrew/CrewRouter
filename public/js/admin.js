@@ -6434,8 +6434,14 @@ async function(ctx) {
 
   _multiStatsFiltersLoaded = false;
   _multiStatsData = null;
+  _multiStatsDisclosureInitialized = false;
 
   async loadMultiStatsFilters() {
+    const disclosure = document.getElementById('multiStatsFilterDisclosure');
+    if (disclosure && !this._multiStatsDisclosureInitialized) {
+      disclosure.open = window.innerWidth > 640;
+      this._multiStatsDisclosureInitialized = true;
+    }
     if (this._multiStatsFiltersLoaded) return;
     const res = await fetch('/api/admin/stats/multi/filters');
     if (!res.ok) throw new Error(t('多维统计筛选项加载失败'));
@@ -6465,6 +6471,13 @@ async function(ctx) {
 
   async loadMultiStats() {
     window.CrewRouterQuotaStats?.refresh('admin');
+    const disclosure = document.getElementById('multiStatsFilterDisclosure');
+    if (disclosure && !this._multiStatsDisclosureInitialized) {
+      disclosure.open = window.innerWidth > 640;
+      this._multiStatsDisclosureInitialized = true;
+    }
+    const loadStatus = document.getElementById('multiStatsLoadStatus');
+    if (loadStatus) { loadStatus.hidden = false; loadStatus.textContent = t('正在刷新多维统计…'); }
     const seq = (this._multiStatsLoadSeq = (this._multiStatsLoadSeq || 0) + 1);
     try {
       await this.loadMultiStatsFilters();
@@ -6472,10 +6485,38 @@ async function(ctx) {
       if (!res.ok) throw new Error(t('多维统计加载失败'));
       const data = await res.json();
       if (seq !== this._multiStatsLoadSeq) return;
+      this._multiStatsDisclosureInitialized = true;
       this._multiStatsData = data;
+      const period = document.getElementById('multiStatsPeriodLabel');
+      const periodText = document.getElementById('adminStatsDays')?.selectedOptions?.[0]?.textContent?.trim();
+      if (period && periodText) period.textContent = periodText;
+      const filters = [['成员', 'multiStatsUser'], ['Team', 'multiStatsTeam'], ['模型', 'multiStatsModel'], ['供应商', 'multiStatsProvider'], ['客户端', 'multiStatsSource'], ['项目', 'multiStatsProject']];
+      const active = filters.filter(([, id]) => document.getElementById(id)?.value).map(([label, id]) => `${label}: ${document.getElementById(id).selectedOptions?.[0]?.textContent?.trim() || document.getElementById(id).value}`);
+      const summary = document.getElementById('multiStatsFilterSummary');
+      if (summary) {
+        const rangeLabel = periodText || '当前周期';
+        if (period) period.textContent = rangeLabel;
+        const defaultLabel = '全部成员、Team、模型、供应商、客户端、项目';
+        const summaries = active.length ? active : [defaultLabel];
+        const compact = summaries.join(' · ');
+        summary.textContent = compact;
+        summary.title = `${rangeLabel} · ${compact}`;
+      }
+      const primaryInsightCount = document.getElementById('multiStatsPrimaryInsightCount');
+      if (primaryInsightCount) primaryInsightCount.textContent = `${data.dimensions?.models?.length || 0} 个模型 · ${data.relationships?.user_project?.length || 0} 条主要链路`;
+    const secondaryCount = document.getElementById('multiStatsSecondaryCount');
+      const relationCount = ['user_model', 'team_model', 'project_source', 'model_provider'].reduce((sum, key) => sum + (data.relationships?.[key]?.length || 0), 0);
+      if (secondaryCount) { secondaryCount.textContent = `${relationCount} 组关系`; secondaryCount.hidden = !relationCount; }
+      const secondary = document.getElementById('multiStatsSecondaryInsights');
+      if (secondary && !this._multiStatsSecondaryInitialized) { secondary.open = false; this._multiStatsSecondaryInitialized = true; }
+      const combinationDetails = document.getElementById('multiStatsCombinationDetails');
+      if (combinationDetails && !this._multiStatsDetailsInitialized) { combinationDetails.open = false; this._multiStatsDetailsInitialized = true; }
+      if (loadStatus) { loadStatus.hidden = true; loadStatus.textContent = ''; }
       this.renderMultiStats();
     } catch (error) {
       if (seq !== this._multiStatsLoadSeq) return;
+      const errorStatus = document.getElementById('multiStatsLoadStatus');
+      if (errorStatus) { errorStatus.hidden = false; errorStatus.textContent = `${t('多维统计加载失败')}：${error.message || t('请稍后重试')}`; }
       const message = `<p class="stats-insight-empty multi-stats-state-error">${escapeHtml(t('多维统计加载失败'))}：${escapeHtml(error.message || t('请稍后重试'))}</p>`;
       const summary = document.getElementById('adminStatsMultiSummary');
       if (summary) setHTML(summary, message);
@@ -6483,6 +6524,8 @@ async function(ctx) {
         const element = document.getElementById(id);
         if (element) setHTML(element, message);
       });
+      const loadStatus = document.getElementById('multiStatsLoadStatus');
+      if (loadStatus) { loadStatus.hidden = false; loadStatus.textContent = `${t('多维统计加载失败')}：${error.message || t('请稍后重试')}`; }
       const chartContainer = document.querySelector('#statsTabMulti .multi-stats-main-chart .chart-container');
       if (chartContainer) {
         try { this._multiDimensionChart?.destroy(); } catch (_) {}
@@ -6514,8 +6557,7 @@ async function(ctx) {
       [t('客户端'), s.active_sources || 0], [t('平均延迟'), s.avg_latency == null ? '-' : `${Math.round(Number(s.avg_latency))}ms`]
     ];
     const summaryEl = document.getElementById('adminStatsMultiSummary');
-    if (summaryEl) setHTML(summaryEl, cards.map(([label, value]) => `<div class="stats-overview-card" style="background:linear-gradient(135deg,var(--chart-6),var(--chart-6));"><div class="stats-overview-content"><span class="stats-overview-label">${label}</span><span class="stats-overview-value">${value}</span></div></div>`).join(''));
-    this.renderMultiStatsChart(data.dimensions || {});
+    if (summaryEl) setHTML(summaryEl, cards.map(([label, value]) => `<div class="stats-overview-card multi-stats-metric-card"><div class="stats-overview-content"><span class="stats-overview-label">${label}</span><span class="stats-overview-value">${value}</span></div></div>`).join(''));
     const relation = data.relationships || {};
     const relationLabel = (item) => `${escapeHtml(item.left || t('未知'))} → ${escapeHtml(item.right || t('未知'))} <strong>${Number(item.requests || 0).toLocaleString()}</strong>`;
     const list = (items, empty = t('暂无关联数据')) => items?.length ? `<div class="stats-relation-items">${items.slice(0, 8).map(item => `<div class="stats-relation-item"><span>${relationLabel(item)}</span><b>${this._formatBigNumber(Number(item.tokens || 0))} Token</b></div>`).join('')}</div>` : `<p class="stats-insight-empty">${empty}</p>`;
@@ -6540,9 +6582,13 @@ async function(ctx) {
     renderRelation('adminStatsOrgMember', relation.team_model);
     renderRelation('adminStatsProjectSource', relation.project_source);
     renderRelation('adminStatsModelProvider', relation.model_provider);
-    if (document.getElementById('statsTabMulti')?.style.display === 'block') this.renderMultiStatsChart(data.dimensions || {});
+    if (document.getElementById('statsTabMulti')?.style.display === 'block') {
+      this.renderMultiStatsChart(data.dimensions || {});
+    }
     const caveats = document.getElementById('adminStatsMultiCaveats');
     if (caveats) caveats.textContent = (data.caveats || []).join(' ');
+    const combinationCount = document.getElementById('multiStatsCombinationCount');
+    if (combinationCount) combinationCount.textContent = `${data.combinations?.length || 0} / 500 条`;
     this.renderMultiStatsTable(data.combinations || []);
   }
 
@@ -6569,7 +6615,9 @@ async function(ctx) {
     canvas = document.getElementById('multiDimensionChart');
     chartCard?.classList.remove('has-empty-chart-state');
     if (typeof Chart === 'undefined') {
-      if (container && !container.querySelector('.stats-insight-empty')) container.innerHTML = `<p class="stats-insight-empty">${t('图表组件未能加载，请刷新页面后重试')}</p>`;
+      if (container && !container.querySelector('.stats-insight-empty')) {
+        container.innerHTML = `<p class="stats-insight-empty">${t('图表组件未能加载，请刷新页面后重试')}</p>`;
+      }
       return;
     }
     const labels = rows.map(row => row.name || t('未知模型'));
@@ -6616,8 +6664,8 @@ async function(ctx) {
         const err = await response.json().catch(() => ({}));
         throw new Error(err.error || t('加载失败'));
       }
-      if (seq !== this._statsLoadSeq) return; // 过期响应丢弃
       const data = await response.json();
+      if (seq !== this._statsLoadSeq) return; // 过期响应丢弃
       const signature = JSON.stringify(data);
       if (signature === this._statsDataSignature) return;
       this._statsDataSignature = signature;
@@ -6635,8 +6683,10 @@ async function(ctx) {
       const container = document.getElementById('detailedStats');
       if (!container) return;
       if (!this.stats.daily || this.stats.daily.length === 0) {
-        setHTML(container, '<p style="text-align: center; color: var(--muted-foreground); padding: 20px;">' + t('暂无使用数据') + '</p>');
-        this._statsDailyTableSig = '';
+        if (this._statsDailyTableSig !== 'empty') {
+          setHTML(container, '<p style="text-align: center; color: var(--muted-foreground); padding: 20px;">' + t('暂无使用数据') + '</p>');
+          this._statsDailyTableSig = 'empty';
+        }
         this.renderModelStatsTable();
         this.renderProviderStatsTable();
         this.renderSourceStatsTable();
@@ -7512,9 +7562,16 @@ async function(ctx) {
       const container = document.getElementById(containerId);
       if (!container) return;
       if (!rows || rows.length === 0) {
-        setHTML(container, `<p style="text-align:center;padding:20px;">${emptyText}</p>`);
+        const signature = 'empty:' + emptyText;
+        if (container.dataset.statsSignature !== signature) {
+          container.dataset.statsSignature = signature;
+          setHTML(container, `<p style="text-align:center;padding:20px;">${emptyText}</p>`);
+        }
         return;
       }
+      const signature = JSON.stringify(rows.map(row => [row[labelKey], row.requests, row.tokens, row.cost, row.avg_latency]));
+      if (container.dataset.statsSignature === signature) return;
+      container.dataset.statsSignature = signature;
       const totalRequests = rows.reduce((sum, row) => sum + Number(row.requests || 0), 0);
       const totalCost = rows.reduce((sum, row) => sum + Number(row.cost || 0), 0);
       setHTML(container, `<div class="blora-table-wrap"><table class="blora-table"><thead><tr><th>${labelKey === 'user_name' ? t('成员') : labelKey === 'team_name' ? 'Team' : t('模型')}</th><th>请求数</th><th>占比</th><th>Token</th><th>积分</th><th>平均延迟</th></tr></thead><tbody>${rows.map(row => {
@@ -7535,7 +7592,10 @@ async function(ctx) {
       return `<div class="cr-admin-overview-card blora-card"  data-size="sm"><div class="blora-stat"><span class="blora-stat__label">${label}${t('数量')}</span><span class="blora-stat__value">${rows.length}</span><span class="blora-text-muted">${requests.toLocaleString()}${t('次 ·')}${this._formatBigNumber(tokens)} Token · ${cost.toFixed(2)}${t('积分')}</span></div></div>`;
     }).join('');
     const summaryEl = document.getElementById('memberStatsSummary');
-    if (summaryEl) setHTML(summaryEl, summary);
+    if (summaryEl && summaryEl.dataset.statsSignature !== summary) {
+      summaryEl.dataset.statsSignature = summary;
+      setHTML(summaryEl, summary);
+    }
     render('memberStatsTable', this.stats.byUser, 'user_name', t('暂无成员用量数据'));
     render('teamStatsTable', this.stats.byTeam, 'team_name', t('暂无 Team 用量数据'));
 
@@ -7546,9 +7606,15 @@ async function(ctx) {
     if (!container || !this.stats) return;
     const rows = this.stats.bySource || [];
     if (rows.length === 0) {
-      setHTML(container, '<p style="color:var(--muted-foreground);font-size:13px;">' + t('暂无来源数据（历史记录在功能上线前均为「未知/其他」）') + '</p>');
+      if (container.dataset.statsSignature !== 'empty') {
+        container.dataset.statsSignature = 'empty';
+        setHTML(container, '<p style="color:var(--muted-foreground);font-size:13px;">' + t('暂无来源数据（历史记录在功能上线前均为「未知/其他」）') + '</p>');
+      }
       return;
     }
+    const signature = JSON.stringify(rows);
+    if (container.dataset.statsSignature === signature) return;
+    container.dataset.statsSignature = signature;
     setHTML(container, `
       <div style="overflow-x:auto;">
         <table>
@@ -7596,9 +7662,15 @@ async function(ctx) {
     if (!container || !this.stats) return;
     const rows = this.stats.bySourceModel || [];
     if (rows.length === 0) {
-      setHTML(container, '<p style="color:var(--muted-foreground);font-size:13px;">' + t('暂无交叉数据') + '</p>');
+      if (container.dataset.statsSignature !== 'empty') {
+        container.dataset.statsSignature = 'empty';
+        setHTML(container, '<p style="color:var(--muted-foreground);font-size:13px;">' + t('暂无交叉数据') + '</p>');
+      }
       return;
     }
+    const signature = JSON.stringify(rows);
+    if (container.dataset.statsSignature === signature) return;
+    container.dataset.statsSignature = signature;
     setHTML(container, `
       <div style="overflow-x:auto;">
         <table>
