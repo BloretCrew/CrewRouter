@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+router.use(require('./admin-model-library'));
+const { clearDisabledModelBindings, invalidateModelKeyCaches } = require('../utils/model-access-cleanup');
 const crypto = require('crypto');
 const { pool } = require('../models/database');
 const { requireAuth, requireAdmin, requireProviderManager } = require('../middleware/auth');
@@ -504,6 +506,7 @@ router.post('/models', requireAuth, requireProviderManager, auditMiddleware(ACTI
   if (!provider) {
     return res.status(400).json({ error: '提供商不能为空' });
   }
+  if (enabled !== undefined && typeof enabled !== 'boolean') return res.status(400).json({ error: 'enabled 必须是布尔值' });
   // 有 id → 更新已有模型；无 id → 生成 UUID 创建新模型
   const modelId = id || crypto.randomUUID();
   const upstreamModelId = req.body.upstream_model_id || modelId;
@@ -513,13 +516,13 @@ router.post('/models', requireAuth, requireProviderManager, auditMiddleware(ACTI
       INSERT INTO models (id, name, provider, series, description, enabled, input_price_per_1k_tokens, output_price_per_1k_tokens, cached_output_price_per_1k_tokens, reference_input_price_per_1k_tokens, reference_output_price_per_1k_tokens, reference_cached_output_price_per_1k_tokens, rate_limit_rpm, rate_limit_tpm, icon_url, alias,
         completion_ratio, image_ratio, audio_ratio, model_price, billing_mode, thinking_model_id, non_thinking_model_id,
         model_multiplier, completion_multiplier, upstream_model_id, forward_reasoning_effort)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+      VALUES ($1, $2, $3, $4, $5, COALESCE($6::boolean, TRUE), $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
         provider = EXCLUDED.provider,
         series = EXCLUDED.series,
         description = EXCLUDED.description,
-        enabled = EXCLUDED.enabled,
+        enabled = COALESCE($6::boolean, models.enabled),
         input_price_per_1k_tokens = EXCLUDED.input_price_per_1k_tokens,
         output_price_per_1k_tokens = EXCLUDED.output_price_per_1k_tokens,
         cached_output_price_per_1k_tokens = EXCLUDED.cached_output_price_per_1k_tokens,
@@ -541,9 +544,14 @@ router.post('/models', requireAuth, requireProviderManager, auditMiddleware(ACTI
         completion_multiplier = EXCLUDED.completion_multiplier,
         upstream_model_id = EXCLUDED.upstream_model_id,
         forward_reasoning_effort = EXCLUDED.forward_reasoning_effort
-    `, [modelId, name, provider, series || '', description, enabled, input_price_per_1k_tokens || 0, output_price_per_1k_tokens || 0, cached_output_price_per_1k_tokens || 0, reference_input_price_per_1k_tokens || 0, reference_output_price_per_1k_tokens || 0, reference_cached_output_price_per_1k_tokens || 0, rate_limit_rpm || 0, rate_limit_tpm || 0, icon_url || '', alias || '',
+    `, [modelId, name, provider, series || '', description, enabled === undefined ? null : enabled, input_price_per_1k_tokens || 0, output_price_per_1k_tokens || 0, cached_output_price_per_1k_tokens || 0, reference_input_price_per_1k_tokens || 0, reference_output_price_per_1k_tokens || 0, reference_cached_output_price_per_1k_tokens || 0, rate_limit_rpm || 0, rate_limit_tpm || 0, icon_url || '', alias || '',
       completion_ratio || 1.0, image_ratio || 0.0, audio_ratio || 0.0, model_price || 0, billing_mode || 'ratio', thinking_model_id || '', non_thinking_model_id || '',
       model_multiplier || 1.0, completion_multiplier || 1.0, upstreamModelId, forward_reasoning_effort === true]);
+
+    if (enabled === false) {
+      const keyIds = await clearDisabledModelBindings(pool, [modelId], invalidateModelKeyCaches);
+      invalidateModelKeyCaches(keyIds);
+    }
 
     // 新模型（或重新保存且系统启用）自动挂载到前沿 Team
     if (enabled !== false) {
@@ -615,12 +623,30 @@ router.post('/models/batch-delete', requireAuth, requireProviderManager, async (
 
 // 批量启用/禁用模型
 router.post('/models/batch-update', requireAuth, requireProviderManager, async (req, res) => {
-  const { ids, enabled } = req.body;
-  if (!Array.isArray(ids) || ids.length === 0) {
+  const { ids, enabled } = req.body || {};
+  if (typeof enabled !== 'boolean') return res.status(400).json({ error: '请提供 enabled 布尔值' });
+  if (!Array.isArray(ids) || !ids.length || ids.some(id => typeof id !== 'string' || !id.trim())) {
     return res.status(400).json({ error: '请选择模型' });
   }
+  const uniqueIds = [...new Set(ids)];
+  let client;
+  let keyIds = [];
   try {
-    await pool.query('UPDATE models SET enabled = $1 WHERE id = ANY($2)', [enabled, ids]);
+    client = await pool.connect();
+    await client.query('BEGIN');
+    // 兼容 Team 插入外键的 KEY SHARE，避免与其 API Key 锁形成环路。
+    const targets = await client.query(`SELECT m.id, p.created_by FROM models m
+      JOIN providers p ON p.id = m.provider WHERE m.id = ANY($1::text[]) ORDER BY m.id FOR NO KEY UPDATE OF m`, [uniqueIds]);
+    if (targets.rows.length !== uniqueIds.length) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: '模型不存在' });
+    }
+    await client.query('UPDATE models SET enabled = $1 WHERE id = ANY($2)', [enabled, uniqueIds]);
+    if (!enabled) keyIds = await clearDisabledModelBindings(client, uniqueIds);
+    await client.query('COMMIT');
+    client.release();
+    client = null;
+    invalidateModelKeyCaches(keyIds);
     if (enabled === true) {
       try {
         await addModelsToFrontierTeams(ids);
@@ -628,11 +654,14 @@ router.post('/models/batch-update', requireAuth, requireProviderManager, async (
         Logger.warn('[批量启用模型] 自动添加到前沿Team失败:', e.message);
       }
     }
-    Logger.info(`[模型] 批量${enabled ? '启用' : '禁用'}了 ${ids.length} 个模型`);
-    res.json({ success: true, updated: ids.length });
+    res.json({ success: true, updated: uniqueIds.length, cleared_keys: keyIds.length });
   } catch (error) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    invalidateModelKeyCaches(keyIds);
     Logger.error('[批量更新模型] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
+  } finally {
+    if (client) client.release();
   }
 });
 
@@ -2279,6 +2308,9 @@ router.post('/providers', requireAuth, requireProviderManager, auditMiddleware(A
  */
 async function purgeModelsCompletely(db, modelIds) {
   if (!modelIds || modelIds.length === 0) return 0;
+
+  const keyIds = await clearDisabledModelBindings(db, modelIds, invalidateModelKeyCaches);
+  invalidateModelKeyCaches(keyIds);
 
   // 1) Team 关联
   await db.query('DELETE FROM team_models WHERE model_id = ANY($1)', [modelIds]);

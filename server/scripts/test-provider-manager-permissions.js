@@ -80,7 +80,8 @@ function testRouteScope() {
   for (const match of source.matchAll(/router\.(get|post|put|delete)\('([^']+)',([^\n]*)/g)) {
     const [, , route, registration] = match;
     const providerRoute = /^\/(providers|models|provider-tags)(\/|$)/.test(route)
-      || /^\/(series-icons|fetch-proxies-url)(\/|$)/.test(route);
+      || /^\/(series-icons|fetch-proxies-url)(\/|$)/.test(route)
+      || /^\/stats\/provider-quota(\/|$)/.test(route);
     if (providerRoute) {
       assert(registration.includes('requireProviderManager'), route);
       assert(!registration.includes('requireAdmin'), route);

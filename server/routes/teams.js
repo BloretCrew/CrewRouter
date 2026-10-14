@@ -7,7 +7,8 @@ const requireTeamAdminEdition = requireTeamEdition(() => require('../utils/insta
 const Logger = require('../logger');
 const { invalidateApiKeyCacheByKeyId } = require('./api');
 const { ACTIONS, auditMiddleware } = require('../utils/audit-log');
-
+const { createTeamModelTransaction, clearApiKeysForUnavailableTeamModel } = require('../utils/team-model-access');
+const teamModelTransaction = createTeamModelTransaction({ pool, invalidateApiKeyCacheByKeyId });
 
 // Team surfaces are unavailable in Personal Edition. Existing auth and admin checks remain intact.
 router.use(requireTeamAdminEdition);
@@ -320,7 +321,7 @@ router.get('/teams/:id/models', requireAuth, requireAdmin, async (req, res) => {
       LEFT JOIN team_models tm ON tm.model_id = m.id AND tm.team_id = $1
       LEFT JOIN providers p ON m.provider = p.id
       LEFT JOIN model_test_results mtr ON mtr.model_id = m.id
-      WHERE m.enabled = TRUE
+      WHERE m.enabled = TRUE AND p.created_by IS NULL
       ORDER BY COALESCE(p.name, m.provider), COALESCE(NULLIF(m.upstream_model_id, ''), m.name, m.id)
     `, [req.params.id]);
     res.json(result.rows);
@@ -331,69 +332,96 @@ router.get('/teams/:id/models', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // 为 Team 启用模型
-router.post('/teams/:id/models', requireAuth, requireAdmin, async (req, res) => {
-  const { modelIds } = req.body;
-  if (!Array.isArray(modelIds) || modelIds.length === 0) {
+router.post('/teams/:id/models', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_TEAM_MODEL, {
+  resourceType: 'team',
+  resourceIdFrom: (req) => req.params.id,
+  descriptionFrom: (req) => `更新 Team #${req.params.id} 模型授权`,
+  detailsFrom: (req) => ({ enabled: req.body?.enabled, model_id: req.params.modelId, model_ids: req.body?.modelIds, provider: req.body?.provider }),
+}), async (req, res) => {
+  const { modelIds } = req.body || {};
+  if (!Array.isArray(modelIds) || modelIds.length === 0 || modelIds.some(id => typeof id !== 'string' || !id.trim())) {
     return res.status(400).json({ error: '请提供模型 ID 列表' });
   }
   try {
-    // 验证 Team 存在
-    const teamCheck = await pool.query('SELECT id FROM teams WHERE id = $1', [req.params.id]);
-    if (teamCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Team 不存在' });
-    }
-    // 批量插入（忽略冲突）
-    let added = 0;
-    for (const modelId of modelIds) {
-      const result = await pool.query(
-        'INSERT INTO team_models (team_id, model_id) VALUES ($1, $2) ON CONFLICT (team_id, model_id) DO NOTHING',
-        [req.params.id, modelId]
-      );
-      added += result.rowCount;
-    }
-    res.json({ success: true, added });
+    const payload = await teamModelTransaction(req.params.id, async (client) => {
+      // 验证 Team 存在
+      const teamCheck = await client.query('SELECT id FROM teams WHERE id = $1', [req.params.id]);
+      if (teamCheck.rows.length === 0) {
+        throw Object.assign(new Error('Team 不存在'), { status: 404 });
+      }
+      const allowed = await client.query(`SELECT m.id FROM models m JOIN providers p ON p.id = m.provider
+        WHERE m.id = ANY($1::text[]) AND m.enabled = TRUE AND p.created_by IS NULL`, [modelIds]);
+      if (allowed.rows.length !== new Set(modelIds).size) {
+        throw Object.assign(new Error('模型不存在、未启用或属于用户私有供应商'), { status: 403 });
+      }
+      // 批量插入（忽略冲突）
+      let added = 0;
+      for (const modelId of modelIds) {
+        const result = await client.query(
+          'INSERT INTO team_models (team_id, model_id) VALUES ($1, $2) ON CONFLICT (team_id, model_id) DO NOTHING',
+          [req.params.id, modelId]
+        );
+        added += result.rowCount;
+      }
+
+      return { success: true, added };
+    });
+    res.json(payload);
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
     Logger.error('[添加Team模型] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
 // 切换 Team 模型启用状态（无映射时自动创建）
-router.put('/teams/:id/models/:modelId', requireAuth, requireAdmin, async (req, res) => {
-  const { enabled } = req.body;
+router.put('/teams/:id/models/:modelId', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_TEAM_MODEL, {
+  resourceType: 'team',
+  resourceIdFrom: (req) => req.params.id,
+  descriptionFrom: (req) => `更新 Team #${req.params.id} 模型授权`,
+  detailsFrom: (req) => ({ enabled: req.body?.enabled, model_id: req.params.modelId, model_ids: req.body?.modelIds, provider: req.body?.provider }),
+}), async (req, res) => {
+  const { enabled } = req.body || {};
+  if (typeof enabled !== 'boolean') return res.status(400).json({ error: '请提供 enabled 布尔值' });
   try {
-    const teamId = req.params.id;
-    const modelId = req.params.modelId;
-    const nextEnabled = enabled !== false;
+    const payload = await teamModelTransaction(req.params.id, async (client) => {
+      const teamId = req.params.id;
+      const modelId = req.params.modelId;
+      const nextEnabled = enabled;
 
-    const teamCheck = await pool.query('SELECT id FROM teams WHERE id = $1', [teamId]);
-    if (teamCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Team 不存在' });
-    }
-    const modelCheck = await pool.query(
-      'SELECT id FROM models WHERE id = $1 AND enabled = TRUE',
-      [modelId]
-    );
-    if (modelCheck.rows.length === 0) {
-      return res.status(404).json({ error: '模型不存在或未在模型管理中启用' });
-    }
+      const teamCheck = await client.query('SELECT id FROM teams WHERE id = $1', [teamId]);
+      if (teamCheck.rows.length === 0) {
+        throw Object.assign(new Error('Team 不存在'), { status: 404 });
+      }
+      const modelCheck = await client.query(
+        `SELECT m.id FROM models m JOIN providers p ON p.id = m.provider
+         WHERE m.id = $1 AND p.created_by IS NULL AND ($2::boolean = FALSE OR m.enabled = TRUE)`,
+        [modelId, nextEnabled]
+      );
+      if (modelCheck.rows.length === 0) {
+        throw Object.assign(new Error('模型不存在或未在模型管理中启用'), { status: 404 });
+      }
 
-    const result = await pool.query(
-      `INSERT INTO team_models (team_id, model_id, enabled)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (team_id, model_id) DO UPDATE SET enabled = EXCLUDED.enabled
-       RETURNING *`,
-      [teamId, modelId, nextEnabled]
-    );
+      const result = await client.query(
+        `INSERT INTO team_models (team_id, model_id, enabled)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (team_id, model_id) DO UPDATE SET enabled = EXCLUDED.enabled
+         RETURNING *`,
+        [teamId, modelId, nextEnabled]
+      );
 
-    // 禁用时：清空仍绑定该模型且已无其它 Team 可用的 Key
-    let cleared = 0;
-    if (!nextEnabled) {
-      const clearRes = await clearApiKeysForUnavailableTeamModel(teamId, modelId);
-      cleared = clearRes.cleared || 0;
-    }
-    res.json({ ...result.rows[0], cleared_keys: cleared });
+
+      // 禁用时：清空仍绑定该模型且已无其它 Team 可用的 Key
+      let cleared = 0;
+      if (!nextEnabled) {
+        const clearRes = await clearApiKeysForUnavailableTeamModel(client, teamId, modelId);
+        cleared = clearRes.cleared || 0;
+      }
+      return { ...result.rows[0], cleared_keys: cleared };
+    });
+    res.json(payload);
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
     Logger.error('[更新Team模型状态] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
@@ -408,10 +436,18 @@ router.put('/teams/:id/models/:modelId', requireAuth, requireAdmin, async (req, 
  *   namePattern?: string         按名称模糊匹配（upstream_model_id / name / alias / series）
  * 至少提供 modelIds / provider / namePattern 之一；可组合（交集）。
  */
-router.post('/teams/:id/models/batch', requireAuth, requireAdmin, async (req, res) => {
+router.post('/teams/:id/models/batch', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_TEAM_MODEL, {
+  resourceType: 'team',
+  resourceIdFrom: (req) => req.params.id,
+  descriptionFrom: (req) => `更新 Team #${req.params.id} 模型授权`,
+  detailsFrom: (req) => ({ enabled: req.body?.enabled, model_id: req.params.modelId, model_ids: req.body?.modelIds, provider: req.body?.provider }),
+}), async (req, res) => {
   const { enabled, modelIds, provider, namePattern } = req.body || {};
   if (typeof enabled !== 'boolean') {
     return res.status(400).json({ error: '请提供 enabled 布尔值' });
+  }
+  if (modelIds !== undefined && (!Array.isArray(modelIds) || modelIds.some(id => typeof id !== 'string' || !id.trim()))) {
+    return res.status(400).json({ error: 'modelIds 必须是模型 ID 列表' });
   }
   const hasModelIds = Array.isArray(modelIds) && modelIds.length > 0;
   const providerKey = (provider != null && String(provider).trim()) ? String(provider).trim() : '';
@@ -421,208 +457,106 @@ router.post('/teams/:id/models/batch', requireAuth, requireAdmin, async (req, re
   }
 
   try {
-    const teamId = req.params.id;
-    const teamCheck = await pool.query('SELECT id FROM teams WHERE id = $1', [teamId]);
-    if (teamCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Team 不存在' });
-    }
-
-    const params = [];
-    const where = ['m.enabled = TRUE'];
-    if (hasModelIds) {
-      params.push(modelIds.map(String));
-      where.push(`m.id = ANY($${params.length}::text[])`);
-    }
-    if (providerKey) {
-      params.push(providerKey);
-      // 匹配 provider UUID 或供应商名称
-      where.push(`(m.provider = $${params.length} OR p.id::text = $${params.length} OR p.name = $${params.length})`);
-    }
-    if (nameQ) {
-      params.push(`%${nameQ}%`);
-      where.push(`(
-        m.upstream_model_id ILIKE $${params.length}
-        OR m.name ILIKE $${params.length}
-        OR m.alias ILIKE $${params.length}
-        OR m.series ILIKE $${params.length}
-      )`);
-    }
-
-    const modelsRes = await pool.query(
-      `SELECT m.id
-       FROM models m
-       LEFT JOIN providers p ON m.provider = p.id
-       WHERE ${where.join(' AND ')}`,
-      params
-    );
-    const targetIds = modelsRes.rows.map(r => r.id);
-    if (targetIds.length === 0) {
-      return res.json({ success: true, updated: 0, cleared_keys: 0, modelIds: [] });
-    }
-
-    // 批量 upsert
-    await pool.query(
-      `INSERT INTO team_models (team_id, model_id, enabled)
-       SELECT $1, x.model_id, $2
-       FROM unnest($3::text[]) AS x(model_id)
-       ON CONFLICT (team_id, model_id) DO UPDATE SET enabled = EXCLUDED.enabled`,
-      [teamId, enabled, targetIds]
-    );
-
-    let cleared = 0;
-    if (!enabled) {
-      for (const mid of targetIds) {
-        const clearRes = await clearApiKeysForUnavailableTeamModel(teamId, mid);
-        cleared += clearRes.cleared || 0;
+    const payload = await teamModelTransaction(req.params.id, async (client) => {
+      const teamId = req.params.id;
+      const teamCheck = await client.query('SELECT id FROM teams WHERE id = $1', [teamId]);
+      if (teamCheck.rows.length === 0) {
+        throw Object.assign(new Error('Team 不存在'), { status: 404 });
       }
-    }
 
-    Logger.info(`[Team模型批量] team=${teamId} enabled=${enabled} count=${targetIds.length} cleared_keys=${cleared}`);
-    res.json({ success: true, updated: targetIds.length, cleared_keys: cleared, modelIds: targetIds });
+      const params = [];
+      const where = ['p.created_by IS NULL'];
+      if (enabled) where.push('m.enabled = TRUE');
+      if (hasModelIds) {
+        params.push(modelIds.map(String));
+        where.push(`m.id = ANY($${params.length}::text[])`);
+      }
+      if (providerKey) {
+        params.push(providerKey);
+        // 匹配 provider UUID 或供应商名称
+        where.push(`(m.provider = $${params.length} OR p.id::text = $${params.length} OR p.name = $${params.length})`);
+      }
+      if (nameQ) {
+        params.push(`%${nameQ}%`);
+        where.push(`(
+          m.upstream_model_id ILIKE $${params.length}
+          OR m.name ILIKE $${params.length}
+          OR m.alias ILIKE $${params.length}
+          OR m.series ILIKE $${params.length}
+        )`);
+      }
+
+      const modelsRes = await client.query(
+        `SELECT m.id
+         FROM models m
+         LEFT JOIN providers p ON m.provider = p.id
+         WHERE ${where.join(' AND ')}`,
+        params
+      );
+      const targetIds = modelsRes.rows.map(r => r.id);
+      if (targetIds.length === 0) {
+        return { success: true, updated: 0, cleared_keys: 0, modelIds: [] };
+      }
+
+      // 批量 upsert
+      await client.query(
+        `INSERT INTO team_models (team_id, model_id, enabled)
+         SELECT $1, x.model_id, $2
+         FROM unnest($3::text[]) AS x(model_id)
+         ON CONFLICT (team_id, model_id) DO UPDATE SET enabled = EXCLUDED.enabled`,
+        [teamId, enabled, targetIds]
+      );
+
+      let cleared = 0;
+      if (!enabled) {
+        for (const mid of targetIds) {
+          const clearRes = await clearApiKeysForUnavailableTeamModel(client, teamId, mid);
+          cleared += clearRes.cleared || 0;
+        }
+      }
+
+      Logger.info(`[Team模型批量] team=${teamId} enabled=${enabled} count=${targetIds.length} cleared_keys=${cleared}`);
+      return { success: true, updated: targetIds.length, cleared_keys: cleared, modelIds: targetIds };
+    });
+    res.json(payload);
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
     Logger.error('[批量更新Team模型] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
 // 移除 Team 模型
-router.delete('/teams/:id/models/:modelId', requireAuth, requireAdmin, async (req, res) => {
+router.delete('/teams/:id/models/:modelId', requireAuth, requireAdmin, auditMiddleware(ACTIONS.ADMIN_TEAM_MODEL, {
+  resourceType: 'team',
+  resourceIdFrom: (req) => req.params.id,
+  descriptionFrom: (req) => `更新 Team #${req.params.id} 模型授权`,
+  detailsFrom: (req) => ({ enabled: req.body?.enabled, model_id: req.params.modelId, model_ids: req.body?.modelIds, provider: req.body?.provider }),
+}), async (req, res) => {
   try {
-    const teamId = req.params.id;
-    const modelId = req.params.modelId;
-    const delRes = await pool.query(
-      'DELETE FROM team_models WHERE team_id = $1 AND model_id = $2 RETURNING *',
-      [teamId, modelId]
-    );
-    // 移除后：清空已无法通过其它 Team 使用该模型的 Key 绑定
-    let cleared = 0;
-    if (delRes.rowCount > 0) {
-      const clearRes = await clearApiKeysForUnavailableTeamModel(teamId, modelId);
-      cleared = clearRes.cleared || 0;
-    }
-    res.json({ success: true, cleared_keys: cleared });
+    const payload = await teamModelTransaction(req.params.id, async (client) => {
+      const teamId = req.params.id;
+      const modelId = req.params.modelId;
+      const delRes = await client.query(
+        'DELETE FROM team_models WHERE team_id = $1 AND model_id = $2 RETURNING *',
+        [teamId, modelId]
+      );
+
+      // 移除后：清空已无法通过其它 Team 使用该模型的 Key 绑定
+      let cleared = 0;
+      if (delRes.rowCount > 0) {
+        const clearRes = await clearApiKeysForUnavailableTeamModel(client, teamId, modelId);
+        cleared = clearRes.cleared || 0;
+      }
+      return { success: true, cleared_keys: cleared };
+    });
+    res.json(payload);
   } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
     Logger.error('[移除Team模型] 错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
 });
 
-
-/**
- * Team 模型被禁用/移除后：
- * 若该模型对该 Key 所属用户已不再通过任何 Team 可用，
- * 则清空 Key 的 current_model_id / api_key_models / fusion 绑定，
- * 与供应商管理页禁用模型时的 Key 清理效果一致。
- */
-async function clearApiKeysForUnavailableTeamModel(teamId, modelId) {
-  if (!teamId || !modelId) return { cleared: 0 };
-
-  // 找出：属于该 Team、且当前绑定了该模型的 Key
-  const keyIdsRes = await pool.query(
-    `SELECT DISTINCT ak.id, ak.user_id
-     FROM api_keys ak
-     JOIN user_teams ut ON ut.user_id = ak.user_id
-     WHERE ut.team_id = $1
-       AND (
-         ak.current_model_id = $2
-         OR EXISTS (
-           SELECT 1 FROM api_key_models akm
-           WHERE akm.api_key_id = ak.id AND akm.model_id = $2
-         )
-         OR ak.fusion_judge_model_id = $2
-         OR ak.fusion_outer_model_id = $2
-         OR (
-           ak.fusion_panel_models IS NOT NULL
-           AND ak.fusion_panel_models <> '[]'::jsonb
-           AND EXISTS (
-             SELECT 1 FROM jsonb_array_elements_text(ak.fusion_panel_models) e
-             WHERE e = $2
-           )
-         )
-       )`,
-    [teamId, modelId]
-  );
-
-  if (!keyIdsRes.rows.length) return { cleared: 0 };
-
-  const candidateUserIds = [...new Set(keyIdsRes.rows.map(r => r.user_id))];
-
-  // 若用户还在任意 Team 中拥有该模型（且启用），则保留绑定
-  // 注意：调用方已先禁用/删除本 Team 映射，因此这里查到的是「其它仍可用」的路径
-  const stillAvailable = await pool.query(
-    `SELECT DISTINCT ut.user_id
-     FROM user_teams ut
-     JOIN team_models tm ON tm.team_id = ut.team_id
-     WHERE ut.user_id = ANY($1::int[])
-       AND tm.model_id = $2
-       AND tm.enabled = TRUE`,
-    [candidateUserIds, modelId]
-  );
-  const keepUserIds = new Set(stillAvailable.rows.map(r => r.user_id));
-
-  const uniqueKeyIds = [...new Set(
-    keyIdsRes.rows
-      .filter(r => !keepUserIds.has(r.user_id))
-      .map(r => r.id)
-  )];
-  if (!uniqueKeyIds.length) return { cleared: 0 };
-
-  await pool.query(
-    'DELETE FROM api_key_models WHERE api_key_id = ANY($1) AND model_id = $2',
-    [uniqueKeyIds, modelId]
-  );
-  await pool.query(
-    'DELETE FROM api_key_harness_models WHERE api_key_id = ANY($1) AND model_id = $2',
-    [uniqueKeyIds, modelId]
-  ).catch(() => {});
-  // 若删掉的是首选，提升队列中下一个；队列空则置 NULL
-  await pool.query(
-    `UPDATE api_keys ak
-     SET current_model_id = (
-       SELECT akm.model_id FROM api_key_models akm
-       WHERE akm.api_key_id = ak.id
-       ORDER BY akm.sort_order ASC, akm.id ASC
-       LIMIT 1
-     )
-     WHERE ak.id = ANY($1) AND (ak.current_model_id = $2 OR ak.current_model_id IS NULL
-       OR NOT EXISTS (
-         SELECT 1 FROM api_key_models x WHERE x.api_key_id = ak.id AND x.model_id = ak.current_model_id
-       ))`,
-    [uniqueKeyIds, modelId]
-  );
-  await pool.query(
-    `UPDATE api_keys SET fusion_judge_model_id = NULL
-     WHERE id = ANY($1) AND fusion_judge_model_id = $2`,
-    [uniqueKeyIds, modelId]
-  );
-  await pool.query(
-    `UPDATE api_keys SET fusion_outer_model_id = NULL
-     WHERE id = ANY($1) AND fusion_outer_model_id = $2`,
-    [uniqueKeyIds, modelId]
-  );
-  await pool.query(
-    `UPDATE api_keys
-     SET fusion_panel_models = COALESCE((
-       SELECT jsonb_agg(elem)
-       FROM jsonb_array_elements_text(COALESCE(fusion_panel_models, '[]'::jsonb)) AS elem
-       WHERE elem <> $2
-     ), '[]'::jsonb)
-     WHERE id = ANY($1)
-       AND fusion_panel_models IS NOT NULL
-       AND fusion_panel_models <> '[]'::jsonb
-       AND EXISTS (
-         SELECT 1 FROM jsonb_array_elements_text(fusion_panel_models) e
-         WHERE e = $2
-       )`,
-    [uniqueKeyIds, modelId]
-  );
-
-  for (const keyId of uniqueKeyIds) {
-    try { invalidateApiKeyCacheByKeyId(keyId); } catch (_) { /* ignore */ }
-  }
-
-  Logger.info(`[Team模型] team=${teamId} model=${modelId} 已清理 ${uniqueKeyIds.length} 个 Key 绑定`);
-  return { cleared: uniqueKeyIds.length };
-}
 
 module.exports = router;

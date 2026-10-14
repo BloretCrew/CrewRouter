@@ -15,6 +15,8 @@ async function addModelsToFrontierTeams(db, modelIds) {
       `INSERT INTO team_models (team_id, model_id, enabled)
        SELECT $1, x.model_id, TRUE
        FROM unnest($2::text[]) AS x(model_id)
+       JOIN models m ON m.id = x.model_id AND m.enabled = TRUE
+       JOIN providers p ON p.id = m.provider AND p.created_by IS NULL
        ON CONFLICT (team_id, model_id) DO NOTHING`,
       [team.id, ids]
     );

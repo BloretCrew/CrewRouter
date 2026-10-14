@@ -1,0 +1,23 @@
+/* Expanded filters stay in document flow so every control remains reachable. */
+.admin-model-library .aml-more-filters[open] { flex-basis: 100%; }
+.admin-model-library .aml-more-filters[open] > summary { width: fit-content; }
+.admin-model-library .aml-more-filters .aml-filter-panel { position: static; width: 100%; box-sizing: border-box; margin-top: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); box-shadow: none; }
+.admin-library-manager[hidden] { display: none; }
+.admin-library-manager { position: fixed; inset: 0; z-index: 850; background: rgb(0 0 0 / .35); display: flex; justify-content: flex-end; }
+.admin-library-manager-panel { width: min(1120px, 96vw); height: 100%; background: var(--background); box-shadow: -12px 0 40px rgb(0 0 0 / .12); display: flex; flex-direction: column; }
+.admin-library-manager-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.admin-library-manager-header h2 { font-size: 20px; margin: 0; }
+.admin-library-manager-body { padding: 24px; overflow: auto; flex: 1; min-height: 0; }
+.admin-library-manager-body > .page.active { display: block; }
+.admin-library-manager-body .model-library-sticky-bar { display: none !important; }
+.admin-library-manager-open { overflow: hidden; }
+#adminLibraryTeamRules form { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+#adminLibraryTeamRules label { display: grid; gap: 6px; flex: 1 1 140px; }
+#adminLibraryTeamRules input, #adminLibraryTeamRules select { max-width: 100%; width: 100%; }
+@media (max-width: 640px) {
+  .admin-library-manager-panel { width: 100%; }
+  .admin-library-manager-header, .admin-library-manager-body { padding: 14px; }
+  .admin-library-manager-header { flex-wrap: wrap; }
+  .admin-library-manager-body .section-header { flex-wrap: wrap; }
+  .admin-library-manager-body .section-actions { flex-wrap: wrap; }
+}

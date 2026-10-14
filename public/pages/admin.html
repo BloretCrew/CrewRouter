@@ -23,6 +23,9 @@
   <script src="/js/blora-dialog.js?v=restore-0930-20261003"></script>
   <link rel="stylesheet" href="/css/themes.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/model-identity.css?v=1">
+  <link rel="stylesheet" href="/css/model-library-blora.css?v=admin-library-20261014">
+  <link rel="stylesheet" href="/css/admin-model-library.css?v=admin-library-20261014">
+  <link rel="stylesheet" href="/css/admin-library-manager.css?v=admin-library-20261014">
   <link rel="stylesheet" href="/css/model-trace.css?v=modeltrace-20261013">
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
@@ -107,18 +110,9 @@
             <img src="https://img.bloret.net/SF/person.2?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.2" style="display:inline-block;vertical-align:middle;">
             <span><span data-i18n="用户管理">用户管理</span></span>
           </div>
-          <div class="nav-item" data-page="adminTeams" data-capability="teamAdmin">
-            <img src="https://img.bloret.net/SF/person.3?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="person.3" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="Team 管理">Team 管理</span></span>
-          </div>
-
-          <div class="nav-item" data-page="adminModels">
-            <img src="https://img.bloret.net/SF/cpu?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="cpu" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="模型管理">模型管理</span></span>
-          </div>
-          <div class="nav-item" data-page="adminProviders">
-            <img src="https://img.bloret.net/SF/antenna.radiowaves.left.and.right?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="antenna.radiowaves.left.and.right" style="display:inline-block;vertical-align:middle;">
-            <span><span data-i18n="供应商管理">供应商管理</span></span>
+          <div class="nav-item" data-page="adminModelLibrary">
+            <img src="https://img.bloret.net/SF/cpu?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="cpu">
+            <span data-i18n="模型库">模型库</span>
           </div>
           <div class="nav-item active" data-page="adminStats" data-capability="adminStats">
             <img src="https://img.bloret.net/SF/chart.bar?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="chart.bar" style="display:inline-block;vertical-align:middle;">
@@ -197,6 +191,8 @@
           </button>
         </div>
       </div>
+
+      <div id="adminModelLibraryPage" class="page blora-model-library"></div>
 
       <!-- 用户管理页面 -->
       <div id="adminUsersPage" class="page blora-admin-users-page">
@@ -2487,6 +2483,10 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
   <script src="/js/admin.js?v=modeltrace-20261013"></script>
+  <script src="/js/admin-library-i18n.js?v=admin-library-20261014"></script>
+  <script src="/js/admin-model-library.js?v=admin-library-20261014"></script>
+  <script src="/js/admin-library-team-rules.js?v=admin-library-20261014"></script>
+  <script src="/js/admin-library-integration.js?v=admin-library-20261014"></script>
   <script src="/js/plugin-runtime.js?v=default-theme-select-20261008"></script>
   <script>
     const initializeSidebarNavigation = () => {
@@ -2604,6 +2604,16 @@
     });
   </script>
 
+  <div id="adminLibraryManager" class="admin-library-manager" role="dialog" aria-modal="true" aria-labelledby="adminLibraryManagerTitle" hidden>
+    <div class="admin-library-manager-panel">
+      <header class="admin-library-manager-header">
+        <h2 id="adminLibraryManagerTitle">管理配置</h2>
+        <button type="button" id="adminLibraryManagerClose" class="blora-button" data-variant="secondary" aria-label="关闭管理面板" data-i18n-aria-label="关闭管理面板" data-i18n="完成并返回模型库">完成并返回模型库</button>
+      </header>
+      <div id="adminLibraryManagerBody" class="admin-library-manager-body"></div>
+    </div>
+  </div>
+
   <!-- 模型测试结果弹窗 -->
   <blora-dialog id="adminTestResultModal" role="dialog" aria-modal="true">
     <div class="modal-overlay" onclick="adminApp.closeTestResultModal()"></div>
@@ -2651,8 +2661,9 @@
     document.addEventListener('i18n:ready', apply);
     var el = document.getElementById('langToggle');
     if (el && window.I18N) {
-      el.value = I18N.current();
-      el.addEventListener('change', function () { I18N.load(el.value); });
+      // Set the attribute before upgrade so an own value property cannot shadow the Select accessor.
+      el.setAttribute('value', I18N.current());
+      el.addEventListener('change', function () { I18N.load(el.getAttribute('value')); });
     }
   })();
 </script>
