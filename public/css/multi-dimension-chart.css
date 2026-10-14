@@ -13,11 +13,14 @@
 .multi-dimension-status { color: var(--muted-foreground); font-size: 13px; }
 .multi-dimension-chart-container { height: clamp(260px, 45vh, 500px); margin: 18px 0; }
 .multi-dimension-table-wrap { max-height: 350px; overflow: auto; }
-.quota-member-estimate-wrap { margin-top: 14px; }
+.quota-member-estimate-wrap { margin-top: 14px; max-height: min(48vh, 520px); border: 1px solid var(--border); border-radius: 10px; }
+.quota-member-estimate-heading { position: sticky; top: 0; z-index: 3; display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; color: var(--foreground); background: var(--card, var(--background)); border-bottom: 1px solid var(--border); }
+.quota-member-estimate-heading span { color: var(--muted-foreground); font-size: 12px; }
 .quota-member-estimate-wrap table { min-width: 720px; }
-.quota-member-estimate-wrap th { position: sticky; top: 0; z-index: 1; background: var(--card, var(--background)); }
+.quota-member-estimate-wrap th { position: sticky; top: 43px; z-index: 2; background: var(--card, var(--background)); }
+.quota-member-estimate-wrap td small { display: block; margin-top: 3px; color: var(--muted-foreground); font-size: 11px; }
 .multi-dimension-panel:has(.quota-member-estimate-wrap) .multi-dimension-chart-container { min-height: 340px; height: clamp(340px, 48vh, 560px); }
-@media (max-width: 640px) { .multi-dimension-panel:has(.quota-member-estimate-wrap) .multi-dimension-chart-container { height: 420px; } }
+@media (max-width: 640px) { .multi-dimension-panel:has(.quota-member-estimate-wrap) .multi-dimension-chart-container { height: 420px; } .quota-member-estimate-heading { align-items: flex-start; flex-direction: column; gap: 4px; } }
 .multi-dimension-table-wrap table { width: 100%; border-collapse: collapse; }
 .multi-dimension-table-wrap th, .multi-dimension-table-wrap td { padding: 9px; border-bottom: 1px solid var(--border); text-align: left; }
 @media (max-width: 640px) { .multi-dimension-panel { padding: 14px; } .multi-dimension-actions > * { max-width: 100%; } }

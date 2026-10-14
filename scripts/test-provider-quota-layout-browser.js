@@ -198,12 +198,12 @@ async function main(){
       }
       assert.ok(await cdp.evaluate(`!document.querySelector('${panel}').getClientRects().length&&document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas')`),'额度数据融合进请求图表结果区');
       if (scope !== 'admin') assert.ok(await cdp.evaluate(`(()=>{const d=chartInstances.filter(x=>x.target==='${scope==='user'?'user':'admin'}MultiDimensionResult').at(-1)?.config.data;return d?.labels.length===2&&d.datasets[0].data.length===2&&d.datasets[0].data[0]>0&&d.datasets[0].data[1]>0;})()`),'请求用量保持当前多维类别');
-      if (scope === 'admin') assert.ok(await cdp.evaluate(`document.querySelector('#adminMultiDimensionResult .quota-member-estimate-wrap table')&&!document.querySelector('#adminMultiDimensionResult .quota-member-estimate-wrap canvas')`),'成员估算以可读明细表显示，避免图例挤压图表');
+      if (scope === 'admin') assert.ok(await cdp.evaluate(`document.querySelector('#quotaMemberEstimateDetails table')&&!document.querySelector('#quotaMemberEstimateDetails canvas')`),'成员估算以可读明细表显示，避免图例挤压图表');
       assert.equal(await cdp.evaluate(`document.querySelectorAll('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas').length`),1,'请求量和供应商额度使用同一张图表');
       if (scope !== 'admin') assert.ok(await cdp.evaluate(`(()=>{const c=chartInstances.filter(x=>x.target==='${scope==='user'?'user':'admin'}MultiDimensionResult').at(-1)?.config,d=c?.data;return d?.datasets.length===3&&d.labels.length===2&&d.datasets[1].data[0]===d.datasets[1].data[1]&&d.datasets[2].data[0]===d.datasets[2].data[1]&&d.datasets[1].label.includes('窗口额度使用率')&&d.datasets[2].label.includes('余额剩余比例')&&c.options.scales.xQuota0.max===100;})()`),'窗口与余额额度合并成两条清晰参考线');
       if (scope === 'admin') {
-        assert.ok(await cdp.evaluate(`document.querySelector('${multi} #adminMultiDimensionResult').textContent.includes('估算额度使用')`),'成员额度估算明细表显示每人额度');
-        assert.ok(await cdp.evaluate(`document.querySelectorAll('#adminMultiDimensionResult .quota-member-estimate-wrap tbody tr').length>=2`),'估算明细有多成员行');
+        assert.ok(await cdp.evaluate(`document.querySelector('#quotaMemberEstimateDetails').textContent.includes('估算额度使用')`),'成员额度估算明细表显示每人额度');
+        assert.ok(await cdp.evaluate(`document.querySelectorAll('#quotaMemberEstimateDetails tbody tr').length>=2`),'估算明细有多成员行');
         assert.ok(await cdp.evaluate(`document.querySelector('#adminMultiDimensionResult .multi-dimension-chart-container').getBoundingClientRect().height>=340`),'图表高度足以区分成员刻度');
       }
       assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-chart-container')?.clientHeight>0`),'统一图表在页面内实际渲染');
