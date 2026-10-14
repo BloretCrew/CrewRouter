@@ -183,12 +183,14 @@ async function queryMultiDimensionStats(pool, query, scope, userId) {
     const estimateRows = estimateQuery.rows.map(row => Object.fromEntries(estimateDimensions.flatMap((key, index) => [
       [`value_${index}`, row.values[index]], [`name_${index}`, row.labels[index]]
     ]).concat([[metric, row[metric]]])));
-    let providerTotals = estimateRows;
+    const providerIndex = estimateDimensions.indexOf('provider');
+    const providerTotalsMap = new Map();
+    estimateRows.forEach(row => {
+      const providerId = String(row[`value_${providerIndex}`]);
+      providerTotalsMap.set(providerId, (providerTotalsMap.get(providerId) || 0) + Number(row[metric] || 0));
+    });
+    const providerTotals = [...providerTotalsMap].map(([providerId, amount]) => ({ value_0: providerId, [metric]: amount }));
     const estimateTruncated = estimateQuery.rows.length >= 10000;
-    if (!dimensions.includes('provider')) {
-      const providerQuery = await queryMultiDimensionStats(pool, { ...query, dimensions: 'provider', include_quota: undefined, quota_mode: undefined, quota_estimate_internal: 'true' }, scope, userId);
-      providerTotals = providerQuery.rows.map(row => ({ value_0: row.values[0], requests: row[metric] }));
-    }
     quotaMode = buildMemberQuotaEstimate(estimateRows, estimateDimensions, metric, quota, providerTotals);
     if (estimateTruncated && quotaMode.length) {
       quotaMode.truncated = true;

@@ -183,7 +183,8 @@
     const resultContainer = document.getElementById(targetId);
     const estimatingMembers = scope === 'admin' && includeQuota && hasMemberDimension && quotaModeControl?.value === 'member_estimate';
     status.textContent = estimatingMembers ? '正在按供应商分摊成员额度，请稍候…' : '正在加载...';
-    if (estimatingMembers && resultContainer?.prepend && !resultContainer.querySelector('.quota-member-estimate-loading')) {
+    if (estimatingMembers && resultContainer?.prepend) {
+      resultContainer.querySelector('.quota-member-estimate-loading')?.remove();
       const loader = document.createElement('p');
       loader.className = 'stats-insight-empty quota-member-estimate-loading';
       loader.setAttribute('role', 'status');
