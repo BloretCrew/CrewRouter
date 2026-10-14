@@ -136,23 +136,22 @@ class ConsoleApp {
   /** 控制台可路由页面 id */
   _consolePageIds() {
     return new Set([
-      'home', 'modelLibrary', 'modelTrace', 'myUpstream', 'apiKeys', 'stats', 'projectWork',
-      'leaderboard', 'docs', 'balance', 'settings', 'auditLogs', 'prompts', 'sessions', 'bloraAgent'
+      'home', 'modelLibrary', 'myUpstream', 'apiKeys', 'stats', 'projectWork',
+      'leaderboard', 'balance', 'settings', 'auditLogs', 'prompts', 'sessions', 'bloraAgent'
     ]);
   }
 
   /**
-   * 解析 hash：#modelLibrary、#myUpstream/models、#docs/chat
+   * 解析 hash：#modelLibrary、#myUpstream/models
    * 兼容旧写法 #dashboard / #myProviders / #myTeamModels
    */
   _parseConsoleHash(hash) {
     const raw = String(hash || '').replace(/^#/, '').trim();
-    if (!raw) return { page: null, upstreamTab: null, docPage: null, agentMode: null };
+    if (!raw) return { page: null, upstreamTab: null, agentMode: null };
 
     const [pagePart, extra] = raw.split('/');
     let page = pagePart || null;
     let upstreamTab = null;
-    let docPage = null;
     let agentMode = null;
 
     // 旧入口兼容
@@ -170,26 +169,17 @@ class ConsoleApp {
     if (page === 'myUpstream' && extra) {
       if (extra === 'models' || extra === 'providers') upstreamTab = extra;
     }
-    if (page === 'docs' && extra) {
-      const validDocs = new Set([
-        'overview', 'chat', 'models', 'anthropic', 'user-api', 'conversations', 'errors'
-      ]);
-      if (validDocs.has(extra)) docPage = extra;
-    }
     if (page === 'bloraAgent') {
       agentMode = extra === 'imagine' || extra === 'manage' || extra === 'chat' ? extra : 'chat';
     }
 
-    return { page, upstreamTab, docPage, agentMode };
+    return { page, upstreamTab, agentMode };
   }
 
   _buildConsoleHash(page, options = {}) {
     if (page === 'myUpstream') {
       const tab = options.upstreamTab === 'models' ? 'models' : 'providers';
       return `#myUpstream/${tab}`;
-    }
-    if (page === 'docs' && options.docPage && options.docPage !== 'overview') {
-      return `#docs/${options.docPage}`;
     }
     if (page === 'bloraAgent') {
       const mode = options.agentMode === 'imagine' || options.agentMode === 'manage' || options.agentMode === 'chat'
@@ -214,10 +204,10 @@ class ConsoleApp {
       if (this._ignoreHashChange) return;
       const restored = this._parseConsoleHash(location.hash);
       const page = restored.page || 'modelLibrary';
+      if (!restored.page) this._writeConsoleHash(page);
       this.navigateTo(page, {
         skipHash: true,
         upstreamTab: restored.upstreamTab,
-        docPage: restored.docPage,
         agentMode: restored.agentMode
       });
     });
@@ -256,14 +246,12 @@ class ConsoleApp {
     await this.navigateTo(startPage, {
       skipHash: true,
       upstreamTab: restored.upstreamTab,
-      docPage: restored.docPage,
       agentMode: restored.agentMode
     });
     // 若无 hash，写入默认 hash，便于复制链接
     if (!restored.page) {
       this._writeConsoleHash(startPage, {
-        upstreamTab: startPage === 'myUpstream' ? (restored.upstreamTab || 'providers') : null,
-        docPage: restored.docPage || null
+        upstreamTab: startPage === 'myUpstream' ? (restored.upstreamTab || 'providers') : null
       });
     }
     this.checkAdminStatus();
@@ -446,9 +434,8 @@ class ConsoleApp {
   }
 
   async navigateTo(page, options = {}) {
-    if (this.currentPage === 'modelTrace' && page !== 'modelTrace' && window.ModelTrace && !await ModelTrace.canLeave()) return;
     // 旧入口重定向到合并页
-    let targetPage = page === 'home' ? 'modelLibrary' : page;
+    let targetPage = ['home', 'modelTrace', 'docs'].includes(page) ? 'modelLibrary' : page;
     const capability = targetPage === 'projectWork' ? 'projects' : (targetPage === 'auditLogs' ? 'auditLogs' : null);
     const capabilityEnabled = capability ? this.instance?.capabilities?.[capability] !== false : true;
     if (capability && !capabilityEnabled) {
@@ -456,7 +443,6 @@ class ConsoleApp {
       if (!options.skipHash) this._writeConsoleHash(targetPage);
     }
     let upstreamTab = options.upstreamTab || null;
-    const docPage = options.docPage || null;
     const legacyUpstreamEntry = page === 'myProviders' || page === 'myTeamModels';
     if (page === 'myProviders') {
       targetPage = 'myUpstream';
@@ -477,9 +463,9 @@ class ConsoleApp {
     document.getElementById(`${targetPage}Page`)?.classList.add('active');
 
     const titles = {
-      'modelTrace': t('模型归因'), 'dashboard': t('控制台'), 'home': t('个人工作台'), 'modelLibrary': t('模型库'), 'myUpstream': (this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local') ? t('供应商管理') : t('我的上游'),
+      'dashboard': t('控制台'), 'home': t('个人工作台'), 'modelLibrary': t('模型库'), 'myUpstream': (this.instance?.edition === 'personal' || this.instance?.runtime === 'desktop-local') ? t('供应商管理') : t('我的上游'),
       'myProviders': t('我的上游'), 'myTeamModels': t('我的上游'),
-      'apiKeys': t('API Key 与用量'), 'stats': t('统计信息'), 'projectWork': t('项目工作'), 'leaderboard': t('排行榜'), 'docs': t('接口文档'),
+      'apiKeys': t('API Key 与用量'), 'stats': t('统计信息'), 'projectWork': t('项目工作'), 'leaderboard': t('排行榜'),
       'balance': t('积分'), 'settings': t('用户设置'), 'auditLogs': t('操作日志'), 'prompts': t('提示词'), 'sessions': t('会话'),
       'bloraAgent': 'Blora Agent'
     };
@@ -501,7 +487,7 @@ class ConsoleApp {
       this._syncApiKeysStickyVisibility(false);
     }
 
-    // 写入 hash，刷新后可恢复；我的上游附带页签，文档附带子页
+    // 写入 hash，刷新后可恢复；我的上游附带页签
     if (targetPage === 'bloraAgent') {
       const requestedMode = options.agentMode === 'imagine' || options.agentMode === 'manage' || options.agentMode === 'chat'
         ? options.agentMode
@@ -514,20 +500,12 @@ class ConsoleApp {
         upstreamTab: targetPage === 'myUpstream'
           ? (upstreamTab || this._myUpstreamTab || 'providers')
           : null,
-        docPage: targetPage === 'docs'
-          ? (docPage || (typeof currentDocPage !== 'undefined' ? currentDocPage : 'overview'))
-          : null,
         agentMode: targetPage === 'bloraAgent' ? this._agentMode : null
       });
       queueMicrotask(() => { this._ignoreHashChange = false; });
     }
 
     await this.loadPage(targetPage);
-
-    // 恢复文档子页（showDocPage 定义在 console.html）
-    if (targetPage === 'docs' && docPage && typeof showDocPage === 'function') {
-      showDocPage(docPage, { skipHash: true });
-    }
   }
 
   async loadPage(page) {
@@ -541,7 +519,6 @@ class ConsoleApp {
       case 'home':
       case 'dashboard':
       case 'modelLibrary': await this.loadModelLibrary(); window.ModelTrace?.sync(); break;
-      case 'modelTrace': await window.ModelTrace?.page(); break;
       case 'myUpstream':
       case 'myProviders':
       case 'myTeamModels':
@@ -568,7 +545,6 @@ class ConsoleApp {
         }, 30000);
         break;
       case 'leaderboard': await this.loadLeaderboard(); break;
-      case 'docs': await this.loadDocsModels(); break;
       case 'balance': await this.loadBalance(); break;
       case 'settings': this.loadSettings(); break;
       case 'auditLogs': await this.loadAuditLogs(1); break;
@@ -649,7 +625,7 @@ class ConsoleApp {
       const steps = [
         { done: providerCount > 0, label: t('接入一个供应商'), action: "app.navigateTo('myUpstream')" },
         { done: keyCount > 0, label: t('创建一个 API Key'), action: "app.navigateTo('apiKeys')" },
-        { done: totalRequests > 0, label: t('完成第一次调用'), action: "app.navigateTo('docs')" }
+        { done: totalRequests > 0, label: t('完成第一次调用'), action: "app.navigateTo('apiKeys')" }
       ];
       if (checklist) setHTML(checklist, steps.map((step, index) => `
         <button type="button" class="personal-checklist-item ${step.done ? 'is-done' : ''}" onclick="${step.action}">
@@ -3506,40 +3482,6 @@ class ConsoleApp {
     } catch (error) {
       console.error(t('保存定时配置失败:'), error);
       alert(t('保存失败'));
-    }
-  }
-
-  async loadDocsModels() {
-    const container = document.getElementById('docsModelsList');
-    if (!container) return;
-    try {
-      const res = await fetch('/api/user/models');
-      if (!res.ok) {
-        setHTML(container, '<p class="docs-models-error">' + t('模型列表暂时不可用') + '</p>');
-        return;
-      }
-      const models = await res.json();
-      if (!Array.isArray(models)) {
-        setHTML(container, '<p class="docs-models-error">' + t('模型列表暂时不可用') + '</p>');
-        return;
-      }
-      setHTML(container, `
-        <table class="docs-table">
-          <thead><tr><th>模型名称</th><th>服务商</th><th>输入价/百万Token</th><th>输出价/百万Token</th></tr></thead>
-          <tbody>
-            ${models.map(m => `
-              <tr>
-                <td><code>${escapeHtml(m.alias || m.upstream_model_id || m.name || m.id)}</code></td>
-                <td>${renderProviderNameTag(m.provider_name || m.provider) || '<span class="model-provider-missing">-</span>'}</td>
-                <td>¥${Number(m.input_price_per_1k_tokens || 0).toFixed(4)}</td>
-                <td>¥${Number(m.output_price_per_1k_tokens || 0).toFixed(4)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `);
-    } catch (error) {
-      console.error(t('加载文档模型列表失败:'), error);
     }
   }
 

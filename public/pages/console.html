@@ -41,7 +41,6 @@
   <link rel="stylesheet" href="/css/project-work.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/project-work-blora.css?v=filter-select-20261005">
   <link rel="stylesheet" href="/css/leaderboard-blora.css?v=filter-badge-20261005">
-  <link rel="stylesheet" href="/css/docs-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/balance-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/audit-logs-blora.css?v=controls-detail-20261005">
   <link rel="stylesheet" href="/css/settings.css?v=restore-0930-20261003">
@@ -109,7 +108,6 @@
             <img src="https://img.bloret.net/SF/books.vertical?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="books.vertical">
             <span><span data-i18n="模型库">模型库</span></span>
           </div>
-          <div class="nav-item" data-page="modelTrace"><img src="https://img.bloret.net/SF/magnifyingglass?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="magnifyingglass"><span data-i18n="模型归因">模型归因</span></div>
           <div class="nav-item" data-page="myUpstream" data-capability="personalProviders">
             <img src="https://img.bloret.net/SF/antenna.radiowaves.left.and.right?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="antenna.radiowaves.left.and.right">
             <span><span data-i18n="我的上游">我的上游</span></span>
@@ -129,10 +127,6 @@
           <div class="nav-item" data-page="leaderboard">
             <img src="https://img.bloret.net/SF/trophy?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="trophy">
             <span><span data-i18n="排行榜">排行榜</span></span>
-          </div>
-          <div class="nav-item" data-page="docs">
-            <img src="https://img.bloret.net/SF/document?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="document">
-            <span><span data-i18n="接口文档">接口文档</span></span>
           </div>
           <div class="nav-item" data-page="balance">
             <img src="https://img.bloret.net/SF/dollarsign.circle?color=white" alt="" width="16" height="16" class="sf-icon" data-sf-name="dollarsign.circle">
@@ -203,7 +197,6 @@
         </div>
       </div>
 
-      <div id="modelTracePage" class="page"><h2 data-i18n="模型归因">模型归因</h2><div id="modelTraceContent"></div></div>
       <!-- 模型库页面 (CrewRouter) - 首页 -->
       <div id="modelLibraryPage" class="page blora-model-library">
         <!-- 后台任务通知条：会话总结等长任务的进行中提示 -->
@@ -1375,244 +1368,6 @@
     </div>
       </div>
 
-      <!-- 接口文档页面 -->
-      <div id="docsPage" class="page blora-docs-page">
-        <div class="docs-container" style="display:flex;gap:20px;">
-          <!-- 文档侧边栏 -->
-          <div class="docs-sidebar" style="width:180px;flex-shrink:0;background:var(--muted);border-radius:12px;padding:12px;border:1px solid var(--border);height:fit-content;position:sticky;top:20px;flex-direction:column;">
-            <div class="docs-nav-item active" data-doc-page="overview" onclick="showDocPage('overview')"><span data-i18n="概览与认证">概览与认证</span></div>
-            <div class="docs-nav-item" data-doc-page="chat" onclick="showDocPage('chat')"><span data-i18n="聊天补全">聊天补全</span></div>
-            <div class="docs-nav-item" data-doc-page="models" onclick="showDocPage('models')"><span data-i18n="模型列表">模型列表</span></div>
-            <div class="docs-nav-item" data-doc-page="anthropic" onclick="showDocPage('anthropic')"><span data-i18n="Anthropic 兼容">Anthropic 兼容</span></div>
-            <div class="docs-nav-item" data-doc-page="user-api" onclick="showDocPage('user-api')"><span data-i18n="用户接口">用户接口</span></div>
-            <div class="docs-nav-item" data-doc-page="conversations" onclick="showDocPage('conversations')"><span data-i18n="对话管理">对话管理</span></div>
-            <div class="docs-nav-item" data-doc-page="errors" onclick="showDocPage('errors')"><span data-i18n="错误码">错误码</span></div>
-            <div id="docsEditBtn" class="docs-nav-item" style="display:none;color:var(--brand-blue);" onclick="openDocsEditor()"><span data-i18n="✎ 编辑文档">✎ 编辑文档</span></div>
-          </div>
-
-          <!-- 文档内容 -->
-          <div class="docs-content" style="flex:1;min-width:0;">
-            <!-- 概览与认证 -->
-            <div id="doc-overview" class="doc-page active" data-doc-key="overview">
-              <h2><span data-i18n="概览与认证">概览与认证</span></h2>
-              <div class="doc-section">
-                <h3>Base URL</h3>
-                <pre><code id="docsBaseUrl">https://studio.crantai.com/v1</code></pre>
-              </div>
-              <div class="doc-section">
-                <h3><span data-i18n="认证方式">认证方式</span></h3>
-                <p><span data-i18n="在请求 Header 中携带 API Key：">在请求 Header 中携带 API Key：</span></p>
-                <pre><code>Authorization: Bearer YOUR_API_KEY</code></pre>
-                <p style="margin-top:12px;"><span data-i18n="或使用自定义 Header：">或使用自定义 Header：</span></p>
-                <pre><code>X-API-Key: YOUR_API_KEY</code></pre>
-              </div>
-              <div class="doc-section">
-                <h3><span data-i18n="快速示例">快速示例</span></h3>
-                <p><span data-i18n="使用 OpenAI SDK 直接接入：">使用 OpenAI SDK 直接接入：</span></p>
-                <pre><code>import OpenAI from 'openai';
-
-const client = new OpenAI({
-  apiKey: 'sk-xxx',
-  baseURL: 'https://studio.crantai.com/v1'
-});
-
-const res = await client.chat.completions.create({
-  model: 'gpt-4o',
-  messages: [{ role: 'user', content: 'Hello!' }]
-});</code></pre>
-              </div>
-            </div>
-
-            <!-- 聊天补全 -->
-            <div id="doc-chat" class="doc-page" data-doc-key="chat">
-              <h2><span data-i18n="聊天补全 (Chat Completions)">聊天补全 (Chat Completions)</span></h2>
-              <div class="doc-section">
-                <div style="display:inline-flex;align-items:center;gap:8px;background:var(--muted);padding:6px 12px;border-radius:8px;font-family:monospace;font-size:14px;margin-bottom:12px;">
-                  <span style="background:var(--success);color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">POST</span>
-                  <span>/v1/chat/completions</span>
-                </div>
-                <p><span data-i18n="完全兼容 OpenAI SDK 和 API 格式。">完全兼容 OpenAI SDK 和 API 格式。</span></p>
-              </div>
-              <div class="doc-section">
-                <h3><span data-i18n="请求参数">请求参数</span></h3>
-                <table class="docs-table">
-                  <thead><tr><th><span data-i18n="参数">参数</span></th><th><span data-i18n="类型">类型</span></th><th><span data-i18n="必填">必填</span></th><th><span data-i18n="说明">说明</span></th></tr></thead>
-                  <tbody>
-                    <tr><td><code>model</code></td><td>string</td><td><span data-i18n="是">是</span></td><td><span data-i18n="模型 ID">模型 ID</span></td></tr>
-                    <tr><td><code>messages</code></td><td>array</td><td><span data-i18n="是">是</span></td><td><span data-i18n="消息数组">消息数组</span></td></tr>
-                    <tr><td><code>stream</code></td><td>boolean</td><td><span data-i18n="否">否</span></td><td><span data-i18n="是否流式输出（默认 false）">是否流式输出（默认 false）</span></td></tr>
-                    <tr><td><code>temperature</code></td><td>number</td><td><span data-i18n="否">否</span></td><td><span data-i18n="温度参数（0-2）">温度参数（0-2）</span></td></tr>
-                    <tr><td><code>max_tokens</code></td><td>integer</td><td><span data-i18n="否">否</span></td><td><span data-i18n="最大生成 token 数">最大生成 token 数</span></td></tr>
-                    <tr><td><code>thinking</code></td><td>boolean</td><td><span data-i18n="否">否</span></td><td><span data-i18n="DeepSeek 思考模型是否启用思考（默认 true）">DeepSeek 思考模型是否启用思考（默认 true）</span></td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="doc-section">
-                <h3><span data-i18n="非流式请求示例">非流式请求示例</span></h3>
-                <pre><code>curl -X POST https://studio.crantai.com/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk-xxx" \
-  -d '{
-    "model": "gpt-4o",
-    "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "Hello!"}
-    ],
-    "temperature": 0.7,
-    "max_tokens": 1000
-  }'</code></pre>
-              </div>
-              <div class="doc-section">
-                <h3><span data-i18n="流式输出 (SSE)">流式输出 (SSE)</span></h3>
-                <p><span data-i18n="设置">设置 </span><code>"stream": true</code><span data-i18n="，服务端返回 Server-Sent Events：">，服务端返回 Server-Sent Events：</span></p>
-                <pre><code>data: {"choices":[{"delta":{"content":"Hi"},"index":0}]}
-data: {"choices":[{"delta":{"content":" there"},"index":0}]}
-data: {"choices":[{"delta":{"content":"!"},"index":0}]}
-data: [DONE]</code></pre>
-              </div>
-            </div>
-
-            <!-- 模型列表 -->
-            <div id="doc-models" class="doc-page" data-doc-key="models">
-              <h2><span data-i18n="模型列表">模型列表</span></h2>
-              <div class="doc-section">
-                <div style="display:inline-flex;align-items:center;gap:8px;background:var(--muted);padding:6px 12px;border-radius:8px;font-family:monospace;font-size:14px;margin-bottom:12px;">
-                  <span style="background:var(--success);color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">GET</span>
-                  <span>/v1/models</span>
-                </div>
-                <p><span data-i18n="返回所有已启用模型的列表，兼容 OpenAI 格式。">返回所有已启用模型的列表，兼容 OpenAI 格式。</span></p>
-                <pre><code>curl https://studio.crantai.com/v1/models \
-  -H "Authorization: Bearer sk-xxx"</code></pre>
-              </div>
-              <div class="doc-section">
-                <h3><span data-i18n="支持的模型">支持的模型</span></h3>
-                <div id="docsModelsList" class="docs-models-table"></div>
-    </div>
-            </div>
-
-            <!-- Anthropic 兼容 -->
-            <div id="doc-anthropic" class="doc-page" data-doc-key="anthropic">
-              <h2><span data-i18n="Anthropic 兼容接口">Anthropic 兼容接口</span></h2>
-              <div class="doc-section">
-                <div style="display:inline-flex;align-items:center;gap:8px;background:var(--muted);padding:6px 12px;border-radius:8px;font-family:monospace;font-size:14px;margin-bottom:12px;">
-                  <span style="background:var(--success);color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">POST</span>
-                  <span>/v1/messages</span>
-                </div>
-                <p><span data-i18n="兼容 Anthropic Claude API 格式，底层自动转换。">兼容 Anthropic Claude API 格式，底层自动转换。</span></p>
-              </div>
-              <div class="doc-section">
-                <h3><span data-i18n="请求参数">请求参数</span></h3>
-                <table class="docs-table">
-                  <thead><tr><th><span data-i18n="参数">参数</span></th><th><span data-i18n="类型">类型</span></th><th><span data-i18n="必填">必填</span></th><th><span data-i18n="说明">说明</span></th></tr></thead>
-                  <tbody>
-                    <tr><td><code>model</code></td><td>string</td><td><span data-i18n="是">是</span></td><td><span data-i18n="模型 ID">模型 ID</span></td></tr>
-                    <tr><td><code>max_tokens</code></td><td>integer</td><td><span data-i18n="是">是</span></td><td><span data-i18n="最大生成 token 数">最大生成 token 数</span></td></tr>
-                    <tr><td><code>messages</code></td><td>array</td><td><span data-i18n="是">是</span></td><td><span data-i18n="消息数组">消息数组</span></td></tr>
-                    <tr><td><code>system</code></td><td>string</td><td><span data-i18n="否">否</span></td><td><span data-i18n="系统提示词">系统提示词</span></td></tr>
-                    <tr><td><code>stream</code></td><td>boolean</td><td><span data-i18n="否">否</span></td><td><span data-i18n="是否流式输出">是否流式输出</span></td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="doc-section">
-                <h3><span data-i18n="请求示例">请求示例</span></h3>
-                <pre><code>curl -X POST https://studio.crantai.com/v1/messages \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: sk-xxx" \
-  -H "anthropic-version: 2023-06-01" \
-  -d '{
-    "model": "claude-sonnet-4-20250514",
-    "max_tokens": 1024,
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'</code></pre>
-              </div>
-            </div>
-
-            <!-- 用户接口 -->
-            <div id="doc-user-api" class="doc-page" data-doc-key="user-api">
-              <h2><span data-i18n="用户接口">用户接口</span></h2>
-              <p><span data-i18n="需要登录认证的用户相关接口。">需要登录认证的用户相关接口。</span></p>
-              <div class="doc-section">
-                <h3><span data-i18n="API Key 管理">API Key 管理</span></h3>
-                <table class="docs-table">
-                  <thead><tr><th><span data-i18n="方法">方法</span></th><th><span data-i18n="路径">路径</span></th><th><span data-i18n="说明">说明</span></th></tr></thead>
-                  <tbody>
-                    <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/user/api-keys</code></td><td><span data-i18n="获取 API Key 列表">获取 API Key 列表</span></td></tr>
-                    <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/user/api-keys</code></td><td><span data-i18n="创建 API Key">创建 API Key</span></td></tr>
-                    <tr><td><span style="color:var(--danger);">DELETE</span></td><td><code>/api/user/api-keys/:id</code></td><td><span data-i18n="删除 API Key">删除 API Key</span></td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div class="doc-section">
-                <h3><span data-i18n="用户信息">用户信息</span></h3>
-                <table class="docs-table">
-                  <thead><tr><th><span data-i18n="方法">方法</span></th><th><span data-i18n="路径">路径</span></th><th><span data-i18n="说明">说明</span></th></tr></thead>
-                  <tbody>
-                    <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/user/balance</code></td><td><span data-i18n="获取积分信息">获取积分信息</span></td></tr>
-                    <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/user/usage</code></td><td><span data-i18n="获取使用统计">获取使用统计</span></td></tr>
-                    <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/user/redeem</code></td><td><span data-i18n="兑换充值码">兑换充值码</span></td></tr>
-                    <tr><td><span style="color:var(--info);">PUT</span></td><td><code>/api/user/settings</code></td><td><span data-i18n="更新用户设置">更新用户设置</span></td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- 对话管理 -->
-            <div id="doc-conversations" class="doc-page" data-doc-key="conversations">
-              <h2><span data-i18n="对话管理">对话管理</span></h2>
-              <p><span data-i18n="管理对话历史记录的接口。">管理对话历史记录的接口。</span></p>
-              <div class="doc-section">
-                <table class="docs-table">
-                  <thead><tr><th><span data-i18n="方法">方法</span></th><th><span data-i18n="路径">路径</span></th><th><span data-i18n="说明">说明</span></th></tr></thead>
-                  <tbody>
-                    <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/conversations</code></td><td><span data-i18n="获取对话列表">获取对话列表</span></td></tr>
-                    <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/conversations</code></td><td><span data-i18n="创建新对话">创建新对话</span></td></tr>
-                    <tr><td><span style="color:var(--success);">GET</span></td><td><code>/api/conversations/:id</code></td><td><span data-i18n="获取对话详情">获取对话详情</span></td></tr>
-                    <tr><td><span style="color:var(--info);">PUT</span></td><td><code>/api/conversations/:id</code></td><td><span data-i18n="更新对话">更新对话</span></td></tr>
-                    <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/conversations/:id/messages</code></td><td><span data-i18n="追加消息">追加消息</span></td></tr>
-                    <tr><td><span style="color:var(--warning);">POST</span></td><td><code>/api/conversations/:id/fork</code></td><td><span data-i18n="复制对话">复制对话</span></td></tr>
-                    <tr><td><span style="color:var(--danger);">DELETE</span></td><td><code>/api/conversations/:id</code></td><td><span data-i18n="删除对话">删除对话</span></td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- 错误码 -->
-            <div id="doc-errors" class="doc-page" data-doc-key="errors">
-              <h2><span data-i18n="错误码">错误码</span></h2>
-              <div class="doc-section">
-                <table class="docs-table">
-                  <thead><tr><th><span data-i18n="状态码">状态码</span></th><th><span data-i18n="说明">说明</span></th></tr></thead>
-                  <tbody>
-                    <tr><td>401</td><td><span data-i18n="API Key 无效或已过期">API Key 无效或已过期</span></td></tr>
-                    <tr><td>402</td><td><span data-i18n="积分不足">积分不足</span></td></tr>
-                    <tr><td>404</td><td><span data-i18n="模型不存在">模型不存在</span></td></tr>
-                    <tr><td>429</td><td><span data-i18n="请求频率超限">请求频率超限</span></td></tr>
-                    <tr><td>500</td><td><span data-i18n="上游服务商错误">上游服务商错误</span></td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-    </div>
-      </div>
-
-      <!-- 文档编辑弹窗 -->
-      <blora-dialog id="docsEditorModal" role="dialog" aria-modal="true">
-        <div class="modal-content" style="max-width:800px;">
-          <div class="modal-header">
-            <h3><span data-i18n="编辑文档">编辑文档</span></h3>
-            <button type="button" class="blora-button modal-close" aria-label="关闭">&times;</button>
-          </div>
-          <div class="modal-body">
-            <p style="margin-bottom:12px;color:var(--muted-foreground);font-size:13px;"><span data-i18n="使用 HTML 格式编辑当前页面内容。">使用 HTML 格式编辑当前页面内容。</span></p>
-            <textarea id="docsEditorContent" class="blora-textarea textarea textarea-mono" style="min-height:400px;"></textarea>
-          </div>
-          <div class="modal-footer">
-        <button type="button" class="blora-button" onclick="saveDocsContent()" data-variant="primary"><span data-i18n="保存">保存</span></button>
-          </div>
-    </div>
-      </blora-dialog>
-
       <!-- 积分页面 -->
       <div id="balancePage" class="page blora-balance-page">
         <div class="content-section">
@@ -2698,99 +2453,10 @@ data: [DONE]</code></pre>
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=modeltrace-20261013"></script>
+  <script src="/js/app.js?v=console-pages-20261014"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>
-    // 文档分页导航
-    let currentDocPage = 'overview';
-    let docsContent = {};
-    let isAdminUser = false;
-
-    function showDocPage(pageId, options = {}) {
-      currentDocPage = pageId;
-      document.querySelectorAll('.doc-page').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.docs-nav-item[data-doc-page]').forEach(n => n.classList.remove('active'));
-
-      const page = document.getElementById('doc-' + pageId);
-      if (page) page.classList.add('active');
-
-      const navItem = document.querySelector(`.docs-nav-item[data-doc-page="${pageId}"]`);
-      if (navItem) navItem.classList.add('active');
-
-      // 同步文档子页到 URL hash（与控制台主路由一致）
-      if (!options.skipHash && window.app && app.currentPage === 'docs' && typeof app._writeConsoleHash === 'function') {
-        app._ignoreHashChange = true;
-        app._writeConsoleHash('docs', { docPage: pageId });
-        queueMicrotask(() => { app._ignoreHashChange = false; });
-      }
-    }
-
-    // 加载文档内容
-    async function loadDocsContent() {
-      try {
-        const res = await fetch('/api/user/docs-content');
-        if (res.ok) {
-          docsContent = await res.json();
-          Object.keys(docsContent).forEach(key => {
-            const page = document.getElementById('doc-' + key);
-            if (page && docsContent[key]) {
-              page.innerHTML = docsContent[key];
-            }
-          });
-        }
-      } catch (e) {}
-    }
-
-    // 检查管理员并显示编辑按钮
-    function checkDocsAdmin() {
-      fetch('/auth/me').then(r => r.json()).then(user => {
-        isAdminUser = user.isAdmin;
-        if (isAdminUser) {
-          document.getElementById('docsEditBtn').style.display = 'block';
-        }
-      }).catch(() => {});
-    }
-
-    // 打开文档编辑器
-    function openDocsEditor() {
-      const page = document.getElementById('doc-' + currentDocPage);
-      if (page) {
-        document.getElementById('docsEditorContent').value = page.innerHTML;
-      }
-      document.getElementById('docsEditorModal').style.display = 'flex';
-    }
-
-    // 保存文档内容
-    async function saveDocsContent() {
-      const content = document.getElementById('docsEditorContent').value;
-      docsContent[currentDocPage] = content;
-
-      try {
-        const res = await fetch('/api/admin/settings', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ docs_content: docsContent })
-        });
-
-        if (res.ok) {
-          const page = document.getElementById('doc-' + currentDocPage);
-          if (page) page.innerHTML = content;
-          document.getElementById('docsEditorModal').style.display = 'none';
-        } else {
-          alert('保存失败');
-        }
-      } catch (e) {
-        alert('保存失败: ' + e.message);
-      }
-    }
-
-    // 初始化文档
-    document.addEventListener('DOMContentLoaded', () => {
-      loadDocsContent();
-      checkDocsAdmin();
-    });
-
     const initializeSidebarNavigation = () => {
       const drawer = document.getElementById('mobileSidebarDrawer');
       const drawerContent = drawer?.querySelector('.mobile-sidebar-drawer-content');
@@ -2897,76 +2563,6 @@ data: [DONE]</code></pre>
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initializeSidebarNavigation, { once: true });
     else initializeSidebarNavigation();
   </script>
-  <style>
-    .docs-nav-item {
-      display: block;
-      padding: 8px 12px;
-      border-radius: 8px;
-      color: var(--muted-foreground);
-      text-decoration: none;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-bottom: 2px;
-    }
-    .docs-nav-item:hover {
-      background: var(--background);
-      color: var(--foreground);
-    }
-    .docs-nav-item.active {
-      background: var(--brand-blue);
-      color: white;
-    }
-    .doc-page {
-      display: none;
-    }
-    .doc-page.active {
-      display: block;
-    }
-    .doc-section {
-      margin-bottom: 24px;
-    }
-    .doc-section h3 {
-      font-size: 16px;
-      margin-bottom: 12px;
-      color: var(--foreground);
-    }
-    .doc-section p {
-      color: var(--muted-foreground);
-      margin-bottom: 8px;
-    }
-    .doc-section pre {
-      background: var(--background);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      overflow-x: auto;
-      margin: 8px 0;
-    }
-    .doc-section code {
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 13px;
-    }
-    .docs-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    .docs-table th, .docs-table td {
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      text-align: left;
-    }
-    .docs-table th {
-      background: var(--background);
-      font-weight: 600;
-    }
-    .docs-table td code {
-      background: var(--muted);
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-  </style>
   <style>
     /* 实时活动看板 */
     .live-activity-section { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card, rgba(255,255,255,.03)); }
