@@ -6476,8 +6476,19 @@ async function(ctx) {
       this.renderMultiStats();
     } catch (error) {
       if (seq !== this._multiStatsLoadSeq) return;
-      const el = document.getElementById('adminStatsMultiSummary');
-      if (el) setHTML(el, `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
+      const message = `<p class="stats-insight-empty multi-stats-state-error">${escapeHtml(t('多维统计加载失败'))}：${escapeHtml(error.message || t('请稍后重试'))}</p>`;
+      const summary = document.getElementById('adminStatsMultiSummary');
+      if (summary) setHTML(summary, message);
+      ['adminStatsRelationOverview', 'adminStatsUserModel', 'adminStatsOrgMember', 'adminStatsProjectSource', 'adminStatsModelProvider', 'adminStatsCombinationTable'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) setHTML(element, message);
+      });
+      const chartContainer = document.querySelector('#statsTabMulti .multi-stats-main-chart .chart-container');
+      if (chartContainer) {
+        try { this._multiDimensionChart?.destroy(); } catch (_) {}
+        this._multiDimensionChart = null;
+        chartContainer.innerHTML = message;
+      }
     }
   }
 
@@ -6508,19 +6519,59 @@ async function(ctx) {
     const relation = data.relationships || {};
     const relationLabel = (item) => `${escapeHtml(item.left || t('未知'))} → ${escapeHtml(item.right || t('未知'))} <strong>${Number(item.requests || 0).toLocaleString()}</strong>`;
     const list = (items, empty = t('暂无关联数据')) => items?.length ? `<div class="stats-relation-items">${items.slice(0, 8).map(item => `<div class="stats-relation-item"><span>${relationLabel(item)}</span><b>${this._formatBigNumber(Number(item.tokens || 0))} Token</b></div>`).join('')}</div>` : `<p class="stats-insight-empty">${empty}</p>`;
-    setHTML(document.getElementById('adminStatsRelationOverview'), list(relation.user_project, {}));
-    setHTML(document.getElementById('adminStatsUserModel'), list(relation.user_model));
-    setHTML(document.getElementById('adminStatsOrgMember'), list(relation.team_model));
-    setHTML(document.getElementById('adminStatsProjectSource'), list(relation.project_source));
-    setHTML(document.getElementById('adminStatsModelProvider'), list(relation.model_provider));
+    const renderRelation = (id, items, emptyText = t('暂无关联数据')) => {
+      const element = document.getElementById(id);
+      if (!element) return;
+      const values = Array.isArray(items) ? items : [];
+      const valuesSignature = JSON.stringify(values);
+      if (!values.length) {
+        const currentEmpty = element.querySelector('[data-multi-stats-empty]');
+        if (currentEmpty?.textContent === emptyText) return;
+        element.dataset.statsSignature = `empty:${emptyText}`;
+        setHTML(element, `<p class="stats-insight-empty" data-multi-stats-empty="true">${emptyText}</p>`);
+        return;
+      }
+      if (element.dataset.statsSignature === valuesSignature) return;
+      element.dataset.statsSignature = valuesSignature;
+      setHTML(element, list(values, emptyText));
+    };
+    renderRelation('adminStatsRelationOverview', relation.user_project);
+    renderRelation('adminStatsUserModel', relation.user_model);
+    renderRelation('adminStatsOrgMember', relation.team_model);
+    renderRelation('adminStatsProjectSource', relation.project_source);
+    renderRelation('adminStatsModelProvider', relation.model_provider);
+    if (document.getElementById('statsTabMulti')?.style.display === 'block') this.renderMultiStatsChart(data.dimensions || {});
     const caveats = document.getElementById('adminStatsMultiCaveats');
     if (caveats) caveats.textContent = (data.caveats || []).join(' ');
     this.renderMultiStatsTable(data.combinations || []);
   }
 
   renderMultiStatsChart(dimensions) {
-    if (typeof Chart === 'undefined') return;
+    let canvas = document.getElementById('multiDimensionChart');
+    const chartCard = document.querySelector('#statsTabMulti .multi-stats-main-chart');
+    const container = canvas?.closest('.chart-container') || chartCard?.querySelector('.chart-container');
     const rows = (dimensions.models || []).slice(0, 20);
+    if (!rows.length) {
+      if (container?.querySelector('canvas')) {
+        try { this._multiDimensionChart?.destroy(); } catch (_) {}
+        this._multiDimensionChart = null;
+      }
+      const emptyText = t('当前筛选范围内暂无模型请求数据');
+      if (container && container.querySelector('.stats-insight-empty')?.textContent !== emptyText) {
+        container.dataset.statsSignature = 'empty:models';
+        container.innerHTML = `<p class="stats-insight-empty">${emptyText}</p>`;
+      }
+      chartCard?.classList.add('has-empty-chart-state');
+      return;
+    }
+    if (container?.querySelector('.stats-insight-empty')) container.innerHTML = '<canvas id="multiDimensionChart"></canvas>';
+    if (container) container.dataset.statsSignature = JSON.stringify(rows);
+    canvas = document.getElementById('multiDimensionChart');
+    chartCard?.classList.remove('has-empty-chart-state');
+    if (typeof Chart === 'undefined') {
+      if (container && !container.querySelector('.stats-insight-empty')) container.innerHTML = `<p class="stats-insight-empty">${t('图表组件未能加载，请刷新页面后重试')}</p>`;
+      return;
+    }
     const labels = rows.map(row => row.name || t('未知模型'));
     const values = rows.map(row => Number(row.requests || 0));
     const style = getComputedStyle(document.documentElement);
