@@ -36,7 +36,7 @@
       ${context === 'dialog' ? controls : context === 'multi' ? `<details class="quota-filter-details"><summary>${esc(tr('额度筛选'))}</summary>${controls}</details>` : `<div hidden>${controls}</div>`}
       <p class="quota-status" role="status" aria-live="polite"></p>
       ${context === 'overview' ? '<div class="quota-summary"></div><details class="quota-cycle-summary"><summary></summary><div></div></details>' : ''}
-      ${context !== 'dialog' ? '<div class="quota-accounts quota-provider-grid"></div><div class="quota-more"></div>' : `<div class="quota-history"><p class="quota-note">${esc(tr('仅按额度筛选，不受请求维度影响。时间为上海时区。'))}</p><div class="quota-table-wrap quota-history-rows"></div>${pagination}</div>`}
+      ${context !== 'dialog' ? '<div class="quota-accounts quota-provider-grid"></div><div class="quota-more"></div>' : `<div class="quota-history"><p class="quota-note">${esc(tr('仅按额度筛选，不受请求维度影响。时间为上海时区。'))}</p><div class="quota-history-visual"></div><details class="quota-history-table-details"><summary>${esc(tr('查看原始观测记录'))}</summary><div class="quota-table-wrap quota-history-rows"></div>${pagination}</details></div>`}
       ${context === 'overview' ? `<details class="quota-trend-details"><summary>${esc(tr('查看额度趋势'))}</summary><p class="quota-note quota-coverage"></p><div class="quota-trend-controls">${select('trend_metric', '趋势指标', [['remaining', '剩余额度'], ['used_percent', '窗口已用率'], ['observed_consumption', '观测消耗'], ['percent_change', '已用率变化（百分点）']])}</div><div class="quota-trend"></div><div class="quota-events quota-note"></div></details>` : ''}`;
     const click = event => {
       const el = event.target.closest('[data-quota-action]');
@@ -155,6 +155,92 @@
       return `<tr><td data-label="${esc(tr(headings[0]))}"><strong>${esc(row.provider_name || tr('供应商名称未提供'))}</strong><span class="quota-cell-sub">${esc(friendly(row.label) === '—' ? tr('额度账户') : friendly(row.label))}</span></td><td data-label="${esc(tr(headings[1]))}"><div class="quota-metric">${metric(row)}</div></td><td data-label="${esc(tr(headings[2]))}">${esc(date(row.resets_at))}</td><td data-label="${esc(tr(headings[3]))}">${esc(date(row.checked_at))}</td><td data-label="${esc(tr(headings[4]))}"><span class="quota-state" data-state="${esc(row.status || 'unknown')}">${esc(status(row))}</span></td><td data-label="${esc(tr(headings[5]))}"><details class="quota-row-detail"><summary>${esc(tr('展开'))}</summary><dl>${detail.map(([label, value]) => `<dt>${esc(tr(label))}</dt><dd>${esc(value)}</dd>`).join('')}</dl></details></td></tr>`;
     }).join('')}</tbody></table>`;
   }
+  function renderHistoryVisual(root, rows, total) {
+    const target = root.querySelector('.quota-history-visual');
+    if (!target) return;
+    target.replaceChildren();
+    const snapshots = array(rows).filter(row => {
+      const key = String(row.status || '').toLowerCase();
+      return ['success', 'partial', 'ok', 'completed'].includes(key);
+    });
+    if (!snapshots.length) {
+      target.innerHTML = `<p class="quota-history-empty">${esc(tr('当前筛选没有可绘制的成功观测；可展开原始记录查看查询状态。'))}</p>`;
+      return;
+    }
+    const groups = new Map();
+    snapshots.forEach(row => {
+      const window = isWindow(row);
+      const metricKey = window ? 'used_percent' : 'remaining';
+      if (!finite(row[metricKey])) return;
+      const key = JSON.stringify([row.provider_id, row.account_id, row.kind, row.unit, row.window_key || '']);
+      if (!groups.has(key)) groups.set(key, { label: `${row.provider_name || tr('供应商')} / ${row.label || tr('额度账户')}${row.window_key ? ` / ${friendly(row.window_key)}` : ''}`, kind: window ? 'window' : 'balance', unit: window ? '%' : row.unit || 'unknown', rows: [] });
+      groups.get(key).rows.push({ date: row.checked_at || row.observed_at, value: Number(row[metricKey]), row });
+    });
+    const series = [...groups.values()].filter(group => group.rows.length);
+    if (!series.length || !window.Chart) {
+      target.innerHTML = `<p class="quota-history-empty">${esc(series.length ? tr('图表组件暂不可用，请展开原始记录查看。') : tr('当前页记录没有可绘制的额度数值。'))}</p>`;
+      return;
+    }
+    series.forEach(group => group.rows.sort((a, b) => Date.parse(a.date) - Date.parse(b.date)));
+    const timeKey = value => {
+      const time = Date.parse(value || '');
+      return Number.isFinite(time) ? new Date(time).toISOString() : '';
+    };
+    const labels = [...new Set(series.flatMap(group => group.rows.map(item => timeKey(item.date)).filter(Boolean)))].sort((a, b) => Date.parse(a) - Date.parse(b));
+    const unitText = [...new Set(series.map(group => group.unit))].join(' / ');
+    const section = document.createElement('section');
+    section.className = 'quota-history-chart-card';
+    const heading = document.createElement('div');
+    heading.className = 'quota-history-chart-heading';
+    heading.innerHTML = `<strong>${esc(tr('额度变化趋势'))}</strong><span>${esc(tr('当前页 {count} 条观测 · 共 {total} 条记录', { count: rows.length, total }))}</span>`;
+    const hint = document.createElement('p');
+    hint.className = 'quota-note';
+    hint.textContent = tr('余额曲线显示剩余额度；窗口曲线显示已用百分比。成功观测按时间连接，查询失败不补值。');
+    const chartBox = document.createElement('div');
+    chartBox.className = 'quota-history-chart-box';
+    const canvas = document.createElement('canvas');
+    canvas.setAttribute('aria-label', tr('供应商额度历史趋势图'));
+    chartBox.append(canvas);
+    const legend = document.createElement('div');
+    legend.className = 'quota-history-series-list';
+    legend.innerHTML = series.map(group => `<span><i class="${group.kind === 'window' ? 'is-window' : 'is-balance'}"></i>${esc(group.label)} · ${esc(group.kind === 'window' ? tr('窗口已用') : tr('余额剩余'))}</span>`).join('');
+    section.append(heading, hint, chartBox, legend);
+    target.append(section);
+    const colors = ['#0f766e', '#6366f1', '#d97706', '#dc2626', '#0891b2', '#7c3aed', '#16a34a', '#be123c'];
+    const datasets = series.map((group, index) => ({
+      label: `${group.label} · ${group.kind === 'window' ? tr('窗口已用') : tr('余额剩余')} (${group.unit})`,
+      data: labels.map(label => {
+        const point = group.rows.find(item => timeKey(item.date) === label);
+        return point ? point.value : null;
+      }),
+      borderColor: colors[index % colors.length],
+      backgroundColor: colors[index % colors.length],
+      borderWidth: 2,
+      pointRadius: 2,
+      pointHoverRadius: 5,
+      tension: 0.18,
+      spanGaps: false,
+      yAxisID: group.kind === 'window' ? 'yPercent' : 'yAmount'
+    }));
+    const state = states.get(root);
+    state.charts.push(new window.Chart(canvas, {
+      type: 'line',
+      data: { labels: labels.map(value => date(value)), datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: context => `${context.dataset.label}: ${Number(context.raw).toLocaleString('zh-CN', { maximumFractionDigits: 2 })}` } }
+        },
+        scales: {
+          x: { ticks: { maxTicksLimit: 7, maxRotation: 0, minRotation: 0 } },
+          yAmount: { type: 'linear', position: 'left', beginAtZero: true, display: series.some(group => group.kind === 'balance'), title: { display: series.some(group => group.kind === 'balance'), text: unitText }, ticks: { callback: value => Number(value).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) } },
+          yPercent: { type: 'linear', position: 'right', beginAtZero: true, max: 100, display: series.some(group => group.kind === 'window'), title: { display: series.some(group => group.kind === 'window'), text: tr('窗口已用（%）') }, grid: { drawOnChartArea: false }, ticks: { callback: value => `${value}%` } }
+        }
+      }
+    }));
+  }
+
   function renderTrend(root, data) {
     const state = states.get(root);
     const disclosure = root.querySelector('.quota-trend-details');
@@ -237,6 +323,7 @@
     const seq = ++state.historySeq;
     const querySeq = state.seq;
     const target = root.querySelector('.quota-history-rows');
+    root.querySelector('.quota-history-visual')?.replaceChildren();
     target.textContent = tr('正在加载...');
     root.querySelector('.quota-page').textContent = '';
     root.querySelectorAll('[data-quota-action="prev"], [data-quota-action="next"]').forEach(el => { el.disabled = true; });
@@ -247,7 +334,10 @@
       const data = await request(state.scope, '/history', query);
       if (seq !== state.historySeq || querySeq !== state.seq) return;
       const rows = array(data.rows);
+      renderHistoryVisual(root, rows, Number(data.total) || 0);
       target.innerHTML = rows.length ? historyTable(rows) : `<p class="quota-note">${esc(tr('暂无额度历史，实际查询后开始记录'))}</p>`;
+      const tableDetails = root.querySelector('.quota-history-table-details');
+      if (tableDetails) tableDetails.open = rows.length > 0;
       const page = Number(data.page) || state.page;
       const limit = Number(data.limit) || 20;
       const total = Number(data.total) || 0;

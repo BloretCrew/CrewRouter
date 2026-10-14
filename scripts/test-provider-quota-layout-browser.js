@@ -110,7 +110,10 @@ function fixture() {
       if(window.layoutMode==='denied')return new Response('{}',{status:403});
       if(window.layoutMode==='error')return new Response('{}',{status:500});
       const rows=window.layoutMode==='empty'?[]:records.filter(r=>(!url.searchParams.get('provider_id')||r.provider_id===url.searchParams.get('provider_id'))&&(!url.searchParams.get('account_id')||r.account_id===url.searchParams.get('account_id')));
-      if(url.pathname.endsWith('/history')) return Response.json({rows:rows.slice(0,3),total:43,page:Number(url.searchParams.get('page')||1),limit:20});
+      if (url.pathname.endsWith('/history')) {
+        const historyRows = [{ ...records[0], provider_name: 'Command Code GOAT', checked_at: '2026-10-10T10:00:00Z', used_percent: 22 }, { ...records[0], provider_name: 'Command Code GOAT', checked_at: '2026-10-11T10:00:00Z', used_percent: 47 }, { ...records[1], provider_name: 'Command Code GOAT', checked_at: '2026-10-12T10:00:00Z', remaining: 150, total: 200, status: 'success' }];
+        return Response.json({ rows: historyRows, total: historyRows.length, page: 1, limit: 20 });
+      }
       return Response.json({summary:{providers:9,accounts:9,success:7,low:1,failed:1,stale:1},accounts:rows,groups:[],trend:rows.map(r=>({...r,date:'2026-10-12',sample_count:2,observed_consumption:r.kind==='balance'?5:null,quality:{last_event:'initial'}})),usage_trend:[{provider_id:'p1',date:'2026-10-12',requests:4804,tokens:595815929,cost:4}],coverage:{started_at:'2026-10-12T10:06:46Z',last_observed_at:'2026-10-12T10:36:04Z',samples:20,usage_complete:false}});
     }
     return original.call(this,input,options);
@@ -210,6 +213,9 @@ async function main(){
       if(process.env.CHART_ONLY==='1') continue;
       const dialog='#quotaHistoryDialog';
       await waitFor(cdp,`document.querySelector('${dialog} .quota-history-rows tbody tr')`,'历史加载');
+      assert.ok(await cdp.evaluate(`document.querySelector('${dialog} .quota-history-visual .quota-history-chart-card')`),'额度历史展示趋势图表');
+      assert.ok(await cdp.evaluate(`document.querySelector('${dialog} .quota-history-table-details')&&!document.querySelector('${dialog} .quota-history-table-details').open`),'原始记录默认收起避免淹没图表');
+      assert.ok(await cdp.evaluate(`document.querySelectorAll('${dialog} .quota-history-chart-card .quota-history-series-list span').length>0`),'图例标明供应商和额度系列');
       assert.ok(await cdp.evaluate(`document.querySelectorAll('${dialog} .quota-history-rows th').length<=6`),'历史只保留必要列');
       assert.ok(await cdp.evaluate(`!document.querySelector('${dialog} .quota-history-rows').textContent.includes('Token')&&!document.querySelector('${dialog} .quota-history-rows').textContent.includes('未知')`),'历史无请求字段及不适用未知列');
       assert.ok(await cdp.click(dialog+' [data-quota-action="next"]'),'历史下一页');await sleep(200);
@@ -217,7 +223,8 @@ async function main(){
       assert.ok(await cdp.click(dialog+' .modal-close'),'关闭历史');
       await cdp.evaluate(`CrewRouterQuotaStats.open('${scope}','p2')`);
       await waitFor(cdp,`document.querySelector('#quotaHistoryDialog .quota-history-rows')?.textContent.includes('99,997,501.22')`,'余额历史加载完成');
-      assert.ok(await cdp.evaluate(`document.querySelector('#quotaHistoryDialog .quota-history-rows').textContent.includes('99,997,501.22')&&document.querySelector('#quotaHistoryDialog .quota-history-rows').textContent.includes('余额')`),'余额历史显示适用金额');
+      assert.ok(await cdp.evaluate(`document.querySelector('#quotaHistoryDialog .quota-history-visual').textContent.includes('当前筛选没有可绘制')`),'没有成功观测时图表给出适用空态');
+      await cdp.evaluate(`document.querySelector('#quotaHistoryDialog .quota-history-table-details').open=true`);
       assert.ok(await cdp.click('#quotaHistoryDialog .quota-row-detail > summary'),'展开单条记录详情');
       assert.ok(await cdp.evaluate(`document.querySelector('#quotaHistoryDialog .quota-row-detail').open`),'有效观测时间按需查看');
       assert.ok(await cdp.click('#quotaHistoryDialog .modal-close'));
