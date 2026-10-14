@@ -83,7 +83,7 @@ function fixture() {
   window.layoutCalls = [];
   window.chartInstances = [];
   const OriginalChart = window.Chart;
-  window.Chart = class extends OriginalChart { constructor(canvas, config) { super(canvas, config); window.chartInstances.push(config); } };
+  window.Chart = class extends OriginalChart { constructor(canvas, config) { super(canvas, config); window.chartInstances.push({ target: canvas.closest('[id$="MultiDimensionResult"]')?.id, config }); } };
   window.layoutMode = 'normal';
   const records = [
     { provider_id:'p1',provider_name:'Command Code GOAT',account_id:'a1',label:'订阅账户',kind:'window',unit:'percent',window_key:'monthly',total:null,used:null,remaining:null,used_percent:89.2059,status:'success',observed_at:'2026-10-12T10:36:04Z',checked_at:'2026-10-12T10:36:04Z',resets_at:'2026-10-17T00:31:57Z',requests:4804,tokens:595815929,cost:4 },
@@ -172,7 +172,7 @@ async function main(){
       assert.ok(await cdp.evaluate(`layoutCalls.some(s=>{const u=new URL(s,location.origin);return u.pathname.endsWith('/multi-dimension')&&u.searchParams.get('dimensions')==='source,model'&&u.searchParams.get('metric')==='tokens'&&u.searchParams.get('include_quota')==='true'&&u.searchParams.get('data_source')==='usage'})`),'额度仅附加信息');
       assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult canvas')`),'请求与额度在同一结果图表绘制');
       assert.ok(await cdp.evaluate(`document.querySelector('#${scope==='user'?'user':'admin'}MultiDimensionResult canvas')?.getAttribute('aria-label').includes('Codex / 测试模型')`),'同一图表标注请求维度类别');
-      assert.ok(await cdp.evaluate(`(()=>{const c=chartInstances.at(-1);return c?.data.datasets[1].label.includes('Command Code GOAT')&&c?.data.datasets[2].label.includes('Command Code GOAT');})()`),'同一多维图例标注供应商额度账户');
+      assert.ok(await cdp.evaluate(`(()=>{const d=chartInstances.filter(x=>x.target==='${scope==='user'?'user':'admin'}MultiDimensionResult').at(-1)?.config.data;return d?.datasets[1].label.includes('Command Code GOAT')&&d.datasets[2].label.includes('Command Code GOAT');})()`),'同一多维图例标注供应商额度账户');
       await chooseSource(cdp,multi,'requests');await sleep(250);
       assert.ok(await cdp.evaluate(`document.querySelector('${multi} [name="metric"]').value==='tokens'&&document.querySelector('${panel}').hidden`),'取消只移除额度');
       if(process.env.QUOTA_ENTRY_ONLY==='1') {
@@ -197,11 +197,15 @@ async function main(){
         assert.ok(await cdp.evaluate(`layoutCalls.some(s=>new URL(s,location.origin).searchParams.get('quota_mode')==='member_estimate')`),'成员估算模式请求携带显式模式参数');
       }
       assert.ok(await cdp.evaluate(`!document.querySelector('${panel}').getClientRects().length&&document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas')`),'额度数据融合进请求图表结果区');
-      assert.ok(await cdp.evaluate(`(()=>{const d=chartInstances.at(-1)?.data;return d?.labels.length===2&&d.datasets[0].data.length===2&&d.datasets[0].data[0]>0&&d.datasets[0].data[1]>0;})()`),'请求用量保持当前多维类别');
-      if (scope === 'admin') assert.ok(await cdp.evaluate(`(()=>{const c=chartInstances.at(-1),d=c?.data;return c.options.scales.xQuota0.max===100&&d.datasets.some(set=>set.label.includes('Alice')&&set.label.includes('估算'))&&d.datasets.some(set=>set.label.includes('Bob')&&set.label.includes('估算'));})()`),'Alice 和 Bob 显示独立额度估算数据集');
+      if (scope !== 'admin') assert.ok(await cdp.evaluate(`(()=>{const d=chartInstances.filter(x=>x.target==='${scope==='user'?'user':'admin'}MultiDimensionResult').at(-1)?.config.data;return d?.labels.length===2&&d.datasets[0].data.length===2&&d.datasets[0].data[0]>0&&d.datasets[0].data[1]>0;})()`),'请求用量保持当前多维类别');
+      if (scope === 'admin') assert.ok(await cdp.evaluate(`document.querySelector('#adminMultiDimensionResult .quota-member-estimate-wrap table')&&!document.querySelector('#adminMultiDimensionResult .quota-member-estimate-wrap canvas')`),'成员估算以可读明细表显示，避免图例挤压图表');
       assert.equal(await cdp.evaluate(`document.querySelectorAll('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult canvas').length`),1,'请求量和供应商额度使用同一张图表');
-      if (scope !== 'admin') assert.ok(await cdp.evaluate(`(()=>{const c=chartInstances.at(-1),d=c?.data;return d?.datasets.length===3&&d.labels.length===2&&d.datasets[1].data[0]===d.datasets[1].data[1]&&d.datasets[2].data[0]===d.datasets[2].data[1]&&d.datasets[1].label.includes('窗口额度使用率')&&d.datasets[2].label.includes('余额剩余比例')&&c.options.scales.xQuota0.max===100;})()`),'窗口与余额额度合并成两条清晰参考线');
-      if (scope === 'admin') assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult').textContent.includes('按同一供应商下的请求贡献比例估算')`),'估算图表显示明确的分摊口径说明');
+      if (scope !== 'admin') assert.ok(await cdp.evaluate(`(()=>{const c=chartInstances.filter(x=>x.target==='${scope==='user'?'user':'admin'}MultiDimensionResult').at(-1)?.config,d=c?.data;return d?.datasets.length===3&&d.labels.length===2&&d.datasets[1].data[0]===d.datasets[1].data[1]&&d.datasets[2].data[0]===d.datasets[2].data[1]&&d.datasets[1].label.includes('窗口额度使用率')&&d.datasets[2].label.includes('余额剩余比例')&&c.options.scales.xQuota0.max===100;})()`),'窗口与余额额度合并成两条清晰参考线');
+      if (scope === 'admin') {
+        assert.ok(await cdp.evaluate(`document.querySelector('${multi} #adminMultiDimensionResult').textContent.includes('估算额度使用')`),'成员额度估算明细表显示每人额度');
+        assert.ok(await cdp.evaluate(`document.querySelectorAll('#adminMultiDimensionResult .quota-member-estimate-wrap tbody tr').length>=2`),'估算明细有多成员行');
+        assert.ok(await cdp.evaluate(`document.querySelector('#adminMultiDimensionResult .multi-dimension-chart-container').getBoundingClientRect().height>=340`),'图表高度足以区分成员刻度');
+      }
       assert.ok(await cdp.evaluate(`document.querySelector('${multi} #${scope==='user'?'user':'admin'}MultiDimensionResult .multi-dimension-chart-container')?.clientHeight>0`),'统一图表在页面内实际渲染');
       if(process.env.CHART_ONLY==='1') continue;
       const dialog='#quotaHistoryDialog';

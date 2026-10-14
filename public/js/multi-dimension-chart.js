@@ -41,7 +41,8 @@
     }
     const format = row => { const value = quota ? row.value : row[result.metric]; return value == null ? tr('未知') : Number(value).toLocaleString(undefined, {maximumFractionDigits: quota ? (['used_percent', 'percent_change'].includes(result.metric) ? 0 : 2) : (result.metric === 'cost' ? 4 : 0)}) + (quota ? ' ' + (['used_percent','percent_change'].includes(result.metric) ? (result.metric === 'percent_change' ? tr('百分点') : '%') : row.unit || tr('未知单位')) : ''); };
     const names = rows.map(row => (row.labels || []).map((label, index) => displayLabel(result.dimensions[index], label)).join(' / '));
-    container.innerHTML = `<div class="multi-dimension-table-wrap"><table><thead><tr><th>${escape(result.dimensions.map(key => tr(dimensions[key] || key)).join(' / '))}</th><th>${escape(tr(metrics[result.metric]))}</th><th>${escape(tr('数据质量'))}</th></tr></thead><tbody>${rows.map((row,i) => `<tr><td>${escape(names[i])}</td><td>${escape(format(row))}</td><td>${escape(tr(({reset:'周期重置',gap:'采样缺口',backfill:'历史回补',adjustment:'额度调整',initial:'首次观测',window_change:'窗口变化',observed_consumption:'观测消耗',success:'正常',partial:'部分成功',failed:'查询失败'})[row.quality?.last_event || row.quality?.event || row.status] || '—'))}</td></tr>`).join('')}</tbody></table></div>`;
+    const requestTable = `<div class="multi-dimension-table-wrap"><table><thead><tr><th>${escape(result.dimensions.map(key => tr(dimensions[key] || key)).join(' / '))}</th><th>${escape(tr(metrics[result.metric]))}</th><th>${escape(tr('数据质量'))}</th></tr></thead><tbody>${rows.map((row,i) => `<tr><td>${escape(names[i])}</td><td>${escape(format(row))}</td><td>${escape(tr(({reset:'周期重置',gap:'采样缺口',backfill:'历史回补',adjustment:'额度调整',initial:'首次观测',window_change:'窗口变化',observed_consumption:'观测消耗',success:'正常',partial:'部分成功',failed:'查询失败'})[row.quality?.last_event || row.quality?.event || row.status] || '—'))}</td></tr>`).join('')}</tbody></table></div>`;
+    container.innerHTML = requestTable;
     if (!window.Chart) return;
     const quotaRows = (result.provider_quota?.accounts || []).filter(row => row.kind !== 'status').map(row => {
       const unit = row.unit || tr('未知单位');
@@ -96,13 +97,6 @@
     container.append(box);
     const datasets = [
       { label: tr(metrics[result.metric]), data: rows.map(row => Number(row[quota ? 'value' : result.metric])), backgroundColor: '#14b8a6', borderRadius: 5, xAxisID: 'xUsage' },
-      ...(result.quota_mode === 'member_estimate' ? (result.quota_estimates || []).map((estimate, index) => ({
-        type: 'bar',
-        label: `${estimate.category_labels?.join(' / ') || estimate.user_name} · ${estimate.provider_name || tr('供应商')} · ${tr(estimate.kind === 'window' ? '估算窗口使用率' : '估算余额已用')} ${Number(estimate.estimated_value).toLocaleString()} ${displayLabel('unit', estimate.unit)}（${tr('估算')}）`,
-        data: rows.map(row => estimate.category_dimensions?.every((dimension, index) => String(row.values?.[result.dimensions.indexOf(dimension)]) === String(estimate.category_values?.[index])) ? Number(estimate.estimated_percent) : null),
-        backgroundColor: ['#a855f7', '#f97316', '#3b82f6', '#eab308'][index % 4],
-        borderRadius: 5, xAxisID: 'xQuota0'
-      })) : []),
       ...[...(result.quota_mode === 'member_estimate' ? [] : quotaGroups.values())].map((group, groupIndex) => {
         const color = group.kind === 'window' ? '#f97316' : '#a855f7';
         return {
@@ -118,11 +112,18 @@
     ];
     const scales = { xUsage: { type: 'linear', position: 'bottom', beginAtZero: true, title: { display: true, text: tr(metrics[result.metric]) } }, y: { ticks: { autoSkip: false } } };
     if (result.quota_mode === 'member_estimate') {
-      scales.xQuota0 = { type: 'linear', position: 'top', beginAtZero: true, max: 100, title: { display: true, text: tr('成员估算额度使用比例（%）') } };
+      const estimates = result.quota_estimates || [];
+      const memberNames = [...new Set(estimates.map(estimate => estimate.category_labels?.join(' / ') || estimate.user_name))];
+      const memberTable = document.createElement('div');
+      memberTable.className = 'multi-dimension-table-wrap quota-member-estimate-wrap';
+      memberTable.innerHTML = `<table><thead><tr><th>${escape(tr(result.dimensions.map(key => tr(dimensions[key] || key)).join(' / ')))}</th><th>${escape(tr('供应商'))}</th><th>${escape(tr('额度类型 / 窗口'))}</th><th>${escape(tr('估算额度使用'))}</th><th>${escape(tr('计算依据'))}</th></tr></thead><tbody>${estimates.map(estimate => `<tr><td>${escape(estimate.category_labels?.join(' / ') || estimate.user_name)}</td><td>${escape(estimate.provider_name || estimate.provider_id)}</td><td>${escape(tr(estimate.kind === 'window' ? '窗口' : '余额'))}${estimate.window_key ? ` / ${escape(displayLabel('window', estimate.window_key))}` : ''}</td><td>${escape(Number(estimate.estimated_value).toLocaleString())} ${escape(displayLabel('unit', estimate.unit))} · ${escape(Number(estimate.estimated_percent).toFixed(1))}%</td><td>${escape(tr(estimate.share_label || estimate.share_basis))} 占比估算</td></tr>`).join('')}</tbody></table></div>`;
+      container.append(memberTable);
       const caveat = document.createElement('p');
       caveat.className = 'stats-insight-empty';
-      caveat.textContent = tr('成员额度按同一供应商下的请求贡献比例估算，不代表个人实际账单；悬停查看估算额度。');
+      caveat.textContent = `${tr('估算额度按同一供应商下成员的所选用量占比分摊，不代表个人实际账单。')} ${tr('成员')}: ${memberNames.join('、')}`;
       container.prepend(caveat);
+      scales.xUsage.beginAtZero = true;
+      scales.xUsage.title.text = tr(metrics[result.metric]);
     }
     if (!rows.length) scales.y.display = false;
     const quotaKindAxes = new Map([['window', 0], ['balance', 0]]);

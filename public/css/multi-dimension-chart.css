@@ -13,6 +13,11 @@
 .multi-dimension-status { color: var(--muted-foreground); font-size: 13px; }
 .multi-dimension-chart-container { height: clamp(260px, 45vh, 500px); margin: 18px 0; }
 .multi-dimension-table-wrap { max-height: 350px; overflow: auto; }
+.quota-member-estimate-wrap { margin-top: 14px; }
+.quota-member-estimate-wrap table { min-width: 720px; }
+.quota-member-estimate-wrap th { position: sticky; top: 0; z-index: 1; background: var(--card, var(--background)); }
+.multi-dimension-panel:has(.quota-member-estimate-wrap) .multi-dimension-chart-container { min-height: 340px; height: clamp(340px, 48vh, 560px); }
+@media (max-width: 640px) { .multi-dimension-panel:has(.quota-member-estimate-wrap) .multi-dimension-chart-container { height: 420px; } }
 .multi-dimension-table-wrap table { width: 100%; border-collapse: collapse; }
 .multi-dimension-table-wrap th, .multi-dimension-table-wrap td { padding: 9px; border-bottom: 1px solid var(--border); text-align: left; }
 @media (max-width: 640px) { .multi-dimension-panel { padding: 14px; } .multi-dimension-actions > * { max-width: 100%; } }
