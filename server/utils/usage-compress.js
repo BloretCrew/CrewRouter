@@ -180,6 +180,11 @@ async function findCompressibleSessions(limitDays = 14, batchSize = 20) {
       FROM usage_records u
       WHERE COALESCE(plugin_meta->'attribution'->>'sessionId', '') <> ''
         AND COALESCE(plugin_meta->'attribution'->>'archived', 'false') <> 'true'
+        AND NOT EXISTS (
+          SELECT 1 FROM usage_records archived
+          WHERE archived.plugin_meta->'attribution'->>'sessionId' = u.plugin_meta->'attribution'->>'sessionId'
+            AND archived.plugin_meta->'attribution'->>'archived' = 'true'
+        )
       GROUP BY 1
       ${having}
     ) s
@@ -283,32 +288,35 @@ async function compressSession(sessionId, { dryRun = false } = {}) {
 
 /**
  * 批量压缩：循环 findCompressibleSessions → compressSession，累计统计。
- * 批间 sleep 2000ms；每批前 isHealthy() 检查，连续两次失败中止。
+ * 批间 sleep 2000ms；每批前 isHealthy() 检查，短暂失败后重试再中止。
  * dryRun 只统计不写库。sizeGb>0 时每批后检查表大小，回落到阈值 90% 以下即停。
  * @returns {Promise<{sessions, records, savedBytes, batches, aborted, dryRun}>}
  */
-async function compressBatch(limitDays = 14, { maxSessions = 20, dryRun = false, sizeGb = 0, maxTotalSessions = 0 } = {}) {
+async function compressBatch(limitDays = 14, { maxSessions = 20, dryRun = false, sizeGb = 0, maxTotalSessions = 0, healthCheckRetries = 2 } = {}) {
   await ensureUsageCompressColumns();
   let totalSessions = 0;
   let totalRecords = 0;
   let totalSaved = 0;
   let batches = 0;
   let aborted = false;
-  let consecutiveFailures = 0;
+  const maxHealthCheckRetries = Math.max(0, Number(healthCheckRetries) || 0);
 
   while (true) {
-    if (!(await isHealthy())) {
-      consecutiveFailures++;
-      if (consecutiveFailures >= 2) {
-        aborted = true;
-        logRetention('[压缩] 中止：连续两次健康检查失败');
-        break;
-      }
-    } else {
-      consecutiveFailures = 0;
+    const sessions = await findCompressibleSessions(limitDays, maxSessions);
+    if (!sessions.length) break;
+
+    let healthy = await isHealthy();
+    for (let attempt = 0; !healthy && attempt < maxHealthCheckRetries; attempt++) {
+      logRetention(`[压缩] 健康检查失败，等待重试 ${attempt + 1}/${maxHealthCheckRetries}`);
+      await sleep(1000);
+      healthy = await isHealthy();
+    }
+    if (!healthy) {
+      aborted = true;
+      logRetention('[压缩] 中止：健康检查重试后仍失败');
+      break;
     }
 
-    const sessions = await findCompressibleSessions(limitDays, maxSessions);
     if (!sessions.length) break;
 
     let batchRecords = 0;
