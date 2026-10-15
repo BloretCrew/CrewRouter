@@ -17,6 +17,24 @@
 .cycle-badge[data-state="partial"], .cycle-badge[data-state="pending_reconciliation"] { color: var(--warning, #a76b0a); }
 .cycle-disclaimer { padding: 10px 12px; border-left: 3px solid var(--border); color: var(--muted-foreground); font-size: 12px; line-height: 1.7; }
 .cycle-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.cycle-quota-visual { display: grid; grid-template-columns: minmax(190px, .8fr) minmax(0, 1.6fr); gap: 18px; margin: 16px 0; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--card, #fff) 92%, var(--brand-blue, #6366f1)); }
+.cycle-quota-current { display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+.cycle-quota-current > div:first-child { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 4px 12px; }
+.cycle-quota-current span, .cycle-quota-current small, .cycle-chart-heading span, .cycle-chart-axis, .cycle-chart-dates { color: var(--muted-foreground); font-size: 12px; }
+.cycle-quota-current strong { font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cycle-quota-current small { grid-column: 1 / -1; }
+.cycle-quota-track { height: 10px; overflow: hidden; border-radius: 999px; background: var(--muted, #e8e8ef); }
+.cycle-quota-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #60a5fa, #6366f1); transition: width .25s ease; }
+.cycle-quota-trend { min-width: 0; }
+.cycle-chart-heading, .cycle-chart-dates { display: flex; justify-content: space-between; gap: 12px; }
+.cycle-chart-heading { align-items: baseline; margin-bottom: 8px; font-size: 13px; }
+.cycle-quota-trend svg { display: block; width: 100%; height: 116px; overflow: visible; }
+.cycle-quota-trend svg line { stroke: var(--border); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.cycle-quota-trend svg polyline { fill: none; stroke: var(--brand-blue, #6366f1); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.cycle-quota-trend svg circle { fill: var(--brand-blue, #6366f1); stroke: var(--card, #fff); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.cycle-chart-axis { display: flex; justify-content: space-between; margin-top: -108px; height: 92px; flex-direction: column; pointer-events: none; }
+.cycle-chart-dates { margin: 10px 0 0 36px; font-size: 11px; }
+.cycle-chart-empty { display: grid; place-items: center; min-height: 116px; margin: 0; color: var(--muted-foreground); font-size: 12px; }
 .cycle-metrics dt { font-size: 12px; color: var(--muted-foreground); }
 .cycle-metrics dd { margin: 4px 0 0; font-size: 18px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .cycle-table-wrap { overflow: auto; min-width: 0; }
@@ -35,6 +53,11 @@
   .cycle-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cycle-filters label { min-width: 0; }
   .cycle-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cycle-quota-visual { grid-template-columns: 1fr; gap: 18px; padding: 14px; }
+  .cycle-quota-current { gap: 10px; }
+  .cycle-quota-current strong { font-size: 26px; }
+  .cycle-quota-trend svg { height: 104px; }
+  .cycle-chart-axis { height: 80px; margin-top: -96px; }
   .cycle-pagination { justify-content: start; }
   .cycle-table-wrap table, .cycle-table-wrap tbody, .cycle-table-wrap tr, .cycle-table-wrap td { display: block; width: auto; }
   .cycle-table-wrap thead { display: none; }
