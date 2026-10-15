@@ -18,6 +18,7 @@
  * 全程 retention.log。
  */
 
+const crypto = require('crypto');
 const { pool } = require('../models/database');
 const Logger = require('../logger');
 const { logRetention } = require('./retention-log');
@@ -72,7 +73,7 @@ async function tableSizeBytes() {
 /** 会话全部记录（created_at,id 排序），压缩与展开共用 */
 async function loadSessionRecords(sessionId) {
   const r = await pool.query(`
-    SELECT id, created_at, messages, storage_mode, delta_seq, plugin_meta
+    SELECT id, created_at, storage_mode, delta_seq, plugin_meta
     FROM usage_records
     WHERE plugin_meta->'attribution'->>'sessionId' = $1
     ORDER BY created_at ASC, id ASC
@@ -80,12 +81,24 @@ async function loadSessionRecords(sessionId) {
   return r.rows;
 }
 
+async function loadSessionRecordMessages(sessionId, after = null) {
+  const r = await pool.query(`
+    SELECT id, created_at, messages, storage_mode, delta_seq, plugin_meta
+    FROM usage_records
+    WHERE plugin_meta->'attribution'->>'sessionId' = $1
+      AND ($2::timestamp IS NULL OR (created_at, id) > ($2::timestamp, $3::int))
+    ORDER BY created_at ASC, id ASC
+    LIMIT 1
+  `, [sessionId, after?.created_at ?? null, after?.id ?? null]);
+  return r.rows[0] || null;
+}
+
 // ---------- 公共前缀（数组元素级，JSON 序列化 hash 比对） ----------
 
 /** 每条消息取一次 JSON 序列化 hash，前缀比对复用，避免重复 stringify 大对象 */
 function elementHashes(messages) {
   const arr = Array.isArray(messages) ? messages : [];
-  return arr.map((m) => JSON.stringify(m));
+  return arr.map((message) => crypto.createHash('sha256').update(JSON.stringify(message)).digest('hex'));
 }
 
 /** 两个 hash 数组的最长公共前缀长度（元素级相同则前缀继续，直到不同） */
@@ -191,55 +204,78 @@ async function findCompressibleSessions(limitDays = 14, batchSize = 20) {
  */
 async function compressSession(sessionId, { dryRun = false } = {}) {
   await ensureUsageCompressColumns();
-  const rows = await loadSessionRecords(sessionId);
-  const recordCount = rows.length;
+  const metadata = await loadSessionRecords(sessionId);
+  const recordCount = metadata.length;
   if (!recordCount) {
     logRetention(`[压缩] 会话 ${sessionId} 无记录，跳过`);
     return { sessionId, recordCount: 0, compressedCount: 0, originalBytes: 0, deltaBytes: 0, savedBytes: 0, skipped: 'no-records' };
   }
-  if (rows.some((r) => isArchived(r.plugin_meta))) {
+  if (metadata.some((r) => isArchived(r.plugin_meta))) {
     logRetention(`[压缩] 会话 ${sessionId} 已压缩（archived=true），跳过避免二次压缩`);
     return { sessionId, recordCount, compressedCount: 0, originalBytes: 0, deltaBytes: 0, savedBytes: 0, skipped: 'already-archived' };
   }
 
-  const plan = buildCompressionPlan(rows);
-  const compressedCount = plan.filter((p) => p.storage_mode === 'delta').length;
-  const originalBytes = rows.reduce((sum, r) => sum + jsonBytes(r.messages), 0);
-  const deltaBytes = plan.reduce((sum, p) => sum + jsonBytes(p.messages), 0);
-  const savedBytes = originalBytes - deltaBytes;
-
-  if (dryRun) {
-    return { sessionId, recordCount, compressedCount, originalBytes, deltaBytes, savedBytes, records: plan };
-  }
-
-  const client = await pool.connect();
+  let previous = null;
+  let seq = 0;
+  let compressedCount = 0;
+  let originalBytes = 0;
+  let deltaBytes = 0;
+  const client = dryRun ? null : await pool.connect();
+  const transactionStarted = Boolean(client);
   try {
-    await client.query('BEGIN');
-    for (const p of plan) {
-      await client.query(`
-        UPDATE usage_records
-        SET messages = $2::jsonb,
-            storage_mode = $3,
-            delta_seq = $4,
-            delta_base = $5,
-            orig_ctx_msgs = $6,
-            orig_ctx_bytes = $7,
-            plugin_meta = jsonb_set(
-              jsonb_set(COALESCE(plugin_meta, '{}'::jsonb), '{attribution,compressedAt}', $8::jsonb),
-              '{attribution,archived}', 'true'::jsonb)
-        WHERE id = $1
-      `, [p.id, JSON.stringify(p.messages), p.storage_mode, p.delta_seq, p.delta_base, p.orig_ctx_msgs, p.orig_ctx_bytes, JSON.stringify(new Date().toISOString())]);
+    if (client) await client.query('BEGIN');
+    for (const meta of metadata) {
+      const rec = await loadSessionRecordMessages(sessionId, { created_at: previous?.created_at ?? null, id: previous?.id ?? null });
+      if (!rec || String(rec.id) !== String(meta.id)) throw new Error(`会话记录读取不一致: ${meta.id}`);
+      const msgs = Array.isArray(rec.messages) ? rec.messages : [];
+      const curHashes = elementHashes(msgs);
+      const originalSize = jsonBytes(msgs);
+      let storedMessages = msgs;
+      let mode = 'full';
+      let base = null;
+      seq++;
+      if (previous === null) {
+        // 首条记录作为锚点，保存完整内容。
+      } else {
+        const prefix = commonPrefixLen(previous.hashes, curHashes);
+        if (prefix >= Math.max(1, Math.ceil(msgs.length / 2))) {
+          storedMessages = msgs.slice(prefix);
+          mode = 'delta';
+          base = prefix;
+          compressedCount++;
+        }
+      }
+      const storedSize = jsonBytes(storedMessages);
+      originalBytes += originalSize;
+      deltaBytes += storedSize;
+      if (client) {
+        await client.query(`
+          UPDATE usage_records
+          SET messages = $2::jsonb,
+              storage_mode = $3,
+              delta_seq = $4,
+              delta_base = $5,
+              orig_ctx_msgs = $6,
+              orig_ctx_bytes = $7,
+              plugin_meta = jsonb_set(
+                jsonb_set(COALESCE(plugin_meta, '{}'::jsonb), '{attribution,compressedAt}', $8::jsonb),
+                '{attribution,archived}', 'true'::jsonb)
+          WHERE id = $1
+        `, [rec.id, JSON.stringify(storedMessages), mode, seq, base, msgs.length, originalSize, JSON.stringify(new Date().toISOString())]);
+      }
+      previous = { hashes: curHashes, created_at: rec.created_at, id: rec.id };
     }
-    await client.query('COMMIT');
+    if (client) await client.query('COMMIT');
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (client && transactionStarted) await client.query('ROLLBACK').catch(() => {});
     Logger.error(`[压缩] 会话 ${sessionId} 事务回滚: ${err.message}`);
     throw err;
   } finally {
-    client.release();
+    client?.release();
   }
 
-  logRetention(`[压缩] 会话 ${sessionId}：${recordCount} 条记录，压缩 ${compressedCount} 行，节省 ${formatBytes(savedBytes)}`);
+  const savedBytes = originalBytes - deltaBytes;
+  logRetention(`[压缩]${dryRun ? '[dry-run]' : ''} 会话 ${sessionId}：${recordCount} 条记录，压缩 ${compressedCount} 行，节省 ${formatBytes(savedBytes)}`);
   return { sessionId, recordCount, compressedCount, originalBytes, deltaBytes, savedBytes };
 }
 
