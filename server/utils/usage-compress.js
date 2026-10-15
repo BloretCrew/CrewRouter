@@ -83,7 +83,7 @@ async function loadSessionRecords(sessionId) {
 
 async function loadSessionRecordMessages(sessionId, after = null) {
   const r = await pool.query(`
-    SELECT id, created_at, messages, storage_mode, delta_seq, plugin_meta
+    SELECT id, created_at::text AS created_at, messages, storage_mode, delta_seq, plugin_meta
     FROM usage_records
     WHERE plugin_meta->'attribution'->>'sessionId' = $1
       AND ($2::timestamp IS NULL OR (created_at, id) > ($2::timestamp, $3::int))

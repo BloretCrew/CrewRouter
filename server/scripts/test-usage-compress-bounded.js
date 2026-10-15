@@ -21,7 +21,7 @@ const client = {
 const pool = {
   async query(sql, args) {
     if (sql.includes('ALTER TABLE')) return { rows: [] };
-    if (sql.includes('SELECT id, created_at, messages, storage_mode, delta_seq, plugin_meta')) {
+    if (sql.includes('SELECT id, created_at::text AS created_at, messages')) {
       const [sessionId, afterTs, afterId] = args;
       assert.equal(sessionId, 'session-1');
       const row = records.find((item) => !afterTs ? true : item.created_at > afterTs || (item.created_at === afterTs && item.id > afterId));
