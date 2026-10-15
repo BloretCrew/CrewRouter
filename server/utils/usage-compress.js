@@ -179,7 +179,7 @@ async function findCompressibleSessions(limitDays = 14, batchSize = 20) {
         COUNT(*)::int AS record_count
       FROM usage_records u
       WHERE COALESCE(plugin_meta->'attribution'->>'sessionId', '') <> ''
-        AND (plugin_meta->'attribution'->>'archived') IS DISTINCT FROM 'true'
+        AND COALESCE(plugin_meta->'attribution'->>'archived', 'false') <> 'true'
       GROUP BY 1
       ${having}
     ) s
