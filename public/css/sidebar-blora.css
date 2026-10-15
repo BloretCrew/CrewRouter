@@ -6,6 +6,16 @@
   overflow: hidden;
 }
 
+.mobile-sidebar-drawer .blora-drawer__header {
+  display: none;
+}
+
+.mobile-sidebar-drawer .blora-drawer__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .mobile-sidebar-drawer-content {
   display: flex;
   width: 100%;
