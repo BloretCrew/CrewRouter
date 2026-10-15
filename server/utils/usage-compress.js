@@ -226,10 +226,12 @@ async function compressSession(sessionId, { dryRun = false } = {}) {
   let originalBytes = 0;
   let deltaBytes = 0;
   const client = dryRun ? null : await pool.connect();
+  if (client) client.on('error', (err) => Logger.error(`[压缩] 会话 ${sessionId} 数据库连接错误: ${err.message}`));
   const transactionStarted = Boolean(client);
   try {
     if (client) await client.query('BEGIN');
     for (const meta of metadata) {
+      if (client && client._connected === false) throw new Error('数据库连接已关闭，取消当前会话压缩');
       const rec = await loadSessionRecordMessages(sessionId, { created_at: previous?.created_at ?? null, id: previous?.id ?? null });
       if (!rec || String(rec.id) !== String(meta.id)) throw new Error(`会话记录读取不一致: ${meta.id}`);
       const msgs = Array.isArray(rec.messages) ? rec.messages : [];
@@ -270,7 +272,10 @@ async function compressSession(sessionId, { dryRun = false } = {}) {
       }
       previous = { hashes: curHashes, created_at: rec.created_at, id: rec.id };
     }
-    if (client) await client.query('COMMIT');
+    if (client) {
+      if (client._connected === false) throw new Error('数据库连接已关闭，取消提交');
+      await client.query('COMMIT');
+    }
   } catch (err) {
     if (client && transactionStarted) await client.query('ROLLBACK').catch(() => {});
     Logger.error(`[压缩] 会话 ${sessionId} 事务回滚: ${err.message}`);

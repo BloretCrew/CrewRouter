@@ -16,6 +16,7 @@ const client = {
     if (sql.includes('UPDATE usage_records') && sql.includes('SET messages')) updates.push(args);
     return { rows: [], rowCount: 1 };
   },
+  on() {},
   release() {},
 };
 const pool = {
