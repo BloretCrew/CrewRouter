@@ -292,7 +292,7 @@ async function compressSession(sessionId, { dryRun = false } = {}) {
  * dryRun 只统计不写库。sizeGb>0 时每批后检查表大小，回落到阈值 90% 以下即停。
  * @returns {Promise<{sessions, records, savedBytes, batches, aborted, dryRun}>}
  */
-async function compressBatch(limitDays = 14, { maxSessions = 20, dryRun = false, sizeGb = 0, maxTotalSessions = 0, healthCheckRetries = 2 } = {}) {
+async function compressBatch(limitDays = 14, { maxSessions = 20, dryRun = false, sizeGb = 0, maxTotalSessions = 0, healthCheckRetries = 2, checkHealth = true } = {}) {
   await ensureUsageCompressColumns();
   let totalSessions = 0;
   let totalRecords = 0;
@@ -305,16 +305,18 @@ async function compressBatch(limitDays = 14, { maxSessions = 20, dryRun = false,
     const sessions = await findCompressibleSessions(limitDays, maxSessions);
     if (!sessions.length) break;
 
-    let healthy = await isHealthy();
-    for (let attempt = 0; !healthy && attempt < maxHealthCheckRetries; attempt++) {
-      logRetention(`[压缩] 健康检查失败，等待重试 ${attempt + 1}/${maxHealthCheckRetries}`);
-      await sleep(1000);
-      healthy = await isHealthy();
-    }
-    if (!healthy) {
-      aborted = true;
-      logRetention('[压缩] 中止：健康检查重试后仍失败');
-      break;
+    if (checkHealth) {
+      let healthy = await isHealthy();
+      for (let attempt = 0; !healthy && attempt < maxHealthCheckRetries; attempt++) {
+        logRetention(`[压缩] 健康检查失败，等待重试 ${attempt + 1}/${maxHealthCheckRetries}`);
+        await sleep(1000);
+        healthy = await isHealthy();
+      }
+      if (!healthy) {
+        aborted = true;
+        logRetention('[压缩] 中止：健康检查重试后仍失败');
+        break;
+      }
     }
 
     if (!sessions.length) break;
@@ -395,6 +397,7 @@ async function runCompressOnce(opts = {}) {
   const maxSessions = opts.maxSessions || 20;
   const dryRun = Boolean(opts.dryRun);
   const maxTotalSessions = opts.maxTotalSessions !== undefined ? opts.maxTotalSessions : DEFAULT_MAX_TOTAL_SESSIONS;
+  const checkHealth = opts.checkHealth !== false;
 
   if (sizeGb > 0) {
     const sizeBytes = await tableSizeBytes();
@@ -403,10 +406,10 @@ async function runCompressOnce(opts = {}) {
       return { skipped: 'size-under-threshold', sizeBytes, sessions: 0, records: 0, savedBytes: 0 };
     }
     logRetention(`[压缩] 大小触发：表大小 ${formatBytes(sizeBytes)} > ${sizeGb} GB，按最老会话压缩至阈值 90% 以下`);
-    return compressBatch(limitDays, { maxSessions, dryRun, sizeGb, maxTotalSessions });
+    return compressBatch(limitDays, { maxSessions, dryRun, sizeGb, maxTotalSessions, checkHealth });
   }
   logRetention(`[压缩] 年龄触发：compressDays=${limitDays} 天`);
-  return compressBatch(limitDays, { maxSessions, dryRun, maxTotalSessions });
+  return compressBatch(limitDays, { maxSessions, dryRun, maxTotalSessions, checkHealth });
 }
 
 module.exports = {
