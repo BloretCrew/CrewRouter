@@ -1,0 +1,11 @@
+{
+  "id": "opencode-free",
+  "name": "OpenCode Free 请求适配",
+  "version": "1.0.0",
+  "author": "CrewRouter",
+  "description": "仅为指定 OpenCode 供应商整理免费模型请求格式。",
+  "permissions": ["gateway:modify"],
+  "hooks": {
+    "gateway:beforeUpstream": "仅当 provider.id 与插件配置的 providerId 完全一致时改写请求"
+  }
+}
