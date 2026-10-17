@@ -11,9 +11,11 @@ const { ConnectionManager, parseInstanceResponse } = require('../src/connection-
 
 const tempStore = () => new ProfileStore(path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cr-desktop-')), 'profiles.json'));
 
-test('URL policy blocks private targets and redacts secrets', async () => {
-  assert.equal((await validateRemoteUrl('http://127.0.0.1:1234')).ok, false);
-  assert.equal((await validateRemoteUrl('http://localhost:1234')).ok, false);
+test('URL policy allows private targets and redacts secrets', async () => {
+  assert.equal((await validateRemoteUrl('http://127.0.0.1:1234')).ok, true);
+  assert.equal((await validateRemoteUrl('http://localhost:1234')).ok, true);
+  assert.equal((await validateRemoteUrl('http://10.0.0.8')).ok, true);
+  assert.equal((await validateRemoteUrl('http://[::1]:8080')).ok, true);
   assert.equal((await validateRemoteUrl('https://example.com/#access_token=secret')).ok, false);
   assert.equal(redactUrl('https://example.com/#access_token=secret'), 'https://example.com/#[REDACTED]');
   assert.equal((await validateRemoteUrl('http://127.0.0.1:1234', { allowLocalhost: true })).ok, true);
@@ -21,8 +23,6 @@ test('URL policy blocks private targets and redacts secrets', async () => {
   assert.equal((await validateRemoteUrl('http://user:pass@example.com')).ok, false);
   assert.equal((await validateRemoteUrl('https://example.com/?access_token=secret')).ok, false);
   assert.equal((await validateRemoteUrl('file:///tmp/x')).ok, false);
-  assert.equal((await validateRemoteUrl('http://10.0.0.8')).ok, false);
-  assert.equal((await validateRemoteUrl('http://[::1]:8080')).ok, false);
   assert.equal((await validateRemoteUrl('http://203.0.113.10:8080')).ok, true, '公网 IP 字面量不需要 DNS');
   assert.match(redactUrl('https://example.com/cb?access_token=abc&state=xyz'), /access_token=%5BREDACTED%5D/);
   assert.doesNotMatch(redactUrl('https://example.com/cb?access_token=abc&state=xyz'), /abc|xyz/);

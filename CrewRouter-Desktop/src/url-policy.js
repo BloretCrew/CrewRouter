@@ -40,14 +40,9 @@ async function validateRemoteUrl(input, options = {}) {
   if (!['http:', 'https:'].includes(url.protocol)) return { ok: false, error: '仅允许 http/https' };
   if (url.username || url.password || url.hash || [...url.searchParams.keys()].some((key) => /token|secret|key|code|auth|ticket|session|state/i.test(key))) return { ok: false, error: 'URL 不得包含凭据、fragment 或敏感参数' };
   const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  const local = isPrivateHost(host);
-  const explicitLocal = allowLocalhost && (isLocalHost(host) || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0');
-  if (local && !explicitLocal) return { ok: false, error: '远程 URL 禁止 localhost 或内网地址' };
   if (requirePort && !url.port) return { ok: false, error: '必须指定端口' };
-  if (resolveDns && !explicitLocal && !net.isIP(host)) {
-    let records;
-    try { records = await dns.lookup(host, { all: true, verbatim: true }); } catch { return { ok: false, error: '域名 DNS 解析失败' }; }
-    if (!records.length || records.some(({ address }) => isPrivateHost(address))) return { ok: false, error: '域名解析到内网地址' };
+  if (resolveDns && !net.isIP(host)) {
+    try { await dns.lookup(host, { all: true, verbatim: true }); } catch { return { ok: false, error: '域名 DNS 解析失败' }; }
   }
   return { ok: true, url, redacted: redactUrl(url.toString()) };
 }
