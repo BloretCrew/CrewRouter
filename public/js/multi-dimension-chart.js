@@ -219,11 +219,15 @@
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '加载失败');
       if (Number(root.dataset.requestSeq) !== seq) return;
-      status.textContent = data.quota_estimate_status === 'truncated'
-        ? `${data.quota_estimate_caveat || '额度估算已触及安全上限，结果可能不完整。'} · 展示 ${data.rows.length} 个组合`
-        : data.quota_mode === 'member_estimate'
-          ? `成员额度估算完成 · ${data.quota_estimates?.length || 0} 条估算 · 请求图表最多 30 个组合`
-          : isQuota ? `展示 ${data.rows.length} 个额度组合` : `展示 ${data.rows.length} 个组合（最多 30 个）${includeQuota ? '，额度按供应商账户作为参照，不分摊到个人' : ''}`;
+      const summary = document.getElementById(scope === 'admin' ? 'multiDimensionResultSummary' : 'userMultiDimensionResultSummary');
+      if (data.quota_estimate_status === 'truncated') {
+        status.textContent = data.quota_estimate_caveat || '额度估算已触及安全上限，结果可能不完整。';
+      } else if (data.quota_mode === 'member_estimate') {
+        status.textContent = `成员额度估算完成 · ${data.quota_estimates?.length || 0} 条估算`;
+      } else {
+        status.textContent = isQuota ? `展示 ${data.rows.length} 个额度组合` : `展示 ${data.rows.length} 个组合（最多 30 个）${includeQuota ? ' · 供应商额度为账户参照，不分摊到个人' : ''}`;
+      }
+      if (summary) summary.textContent = status.textContent;
       render(targetId, data);
       resultContainer?.classList?.remove('is-estimate-loading');
     } catch (error) {

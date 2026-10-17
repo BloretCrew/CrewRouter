@@ -6488,7 +6488,8 @@ async function(ctx) {
       this._multiStatsDisclosureInitialized = true;
       this._multiStatsData = data;
       const period = document.getElementById('multiStatsPeriodLabel');
-      const periodText = document.getElementById('adminStatsDays')?.selectedOptions?.[0]?.textContent?.trim();
+      const rangeControl = document.getElementById('adminStatsDays');
+      const periodText = rangeControl?.selectedOptions?.[0]?.textContent?.trim() || rangeControl?.value;
       if (period && periodText) period.textContent = periodText;
       const filters = [['成员', 'multiStatsUser'], ['Team', 'multiStatsTeam'], ['模型', 'multiStatsModel'], ['供应商', 'multiStatsProvider'], ['客户端', 'multiStatsSource'], ['项目', 'multiStatsProject']];
       const active = filters.filter(([, id]) => document.getElementById(id)?.value).map(([label, id]) => `${label}: ${document.getElementById(id).selectedOptions?.[0]?.textContent?.trim() || document.getElementById(id).value}`);
@@ -6504,7 +6505,7 @@ async function(ctx) {
       }
       const primaryInsightCount = document.getElementById('multiStatsPrimaryInsightCount');
       if (primaryInsightCount) primaryInsightCount.textContent = `${data.dimensions?.models?.length || 0} 个模型 · ${data.relationships?.user_project?.length || 0} 条主要链路`;
-    const secondaryCount = document.getElementById('multiStatsSecondaryCount');
+      const secondaryCount = document.getElementById('multiStatsSecondaryCount');
       const relationCount = ['user_model', 'team_model', 'project_source', 'model_provider'].reduce((sum, key) => sum + (data.relationships?.[key]?.length || 0), 0);
       if (secondaryCount) { secondaryCount.textContent = `${relationCount} 组关系`; secondaryCount.hidden = !relationCount; }
       const secondary = document.getElementById('multiStatsSecondaryInsights');

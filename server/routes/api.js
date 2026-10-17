@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { requestMiddleware: quotaRequestMiddleware } = require('../utils/quota-request-context');
 router.use(quotaRequestMiddleware);
+const { filterResponsesLiteHeader, sendResponsesFailure } = require('../utils/responses-compat');
 const { sendGenerationFailure } = require('../utils/generation-failure');
 const { recordEvent } = require('../utils/trace-session');
 
@@ -1342,7 +1343,7 @@ async function validateApiKey(req, res, next) {
  * @param {object} baseHeaders - 必须的基础头（auth、anthropic-version 等）
  * @returns {object} 最终的请求头
  */
-function buildUpstreamHeaders(provider, req, baseHeaders) {
+function buildUpstreamHeaders(provider, req, baseHeaders, targetProtocol = provider.format) {
   const headers = { ...baseHeaders };
 
   // Content-Type 策略
@@ -1376,7 +1377,7 @@ function buildUpstreamHeaders(provider, req, baseHeaders) {
     headers['user-agent'] = String(provider.request_user_agent).trim();
   }
 
-  return headers;
+  return filterResponsesLiteHeader(headers, targetProtocol);
 }
 
 // 清理 base_url 与拼接上游端点：统一走 url-validator（保留 /v1、/api/v1 版本前缀）
@@ -5649,7 +5650,7 @@ async function handleResponses(req, res) {
       if (provider.format === 'responses') {
         const baseUrl = cleanBaseUrl(provider.base_url);
         const url = upstreamUrl(baseUrl, '/responses');
-        const headers = buildUpstreamHeaders(providerWithKey, req, { 'Content-Type': 'application/json' });
+        const headers = buildUpstreamHeaders(providerWithKey, req, { 'Content-Type': 'application/json' }, 'responses');
         if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
         // 原样透传客户端请求，仅覆盖 model；不强制注入 max_output_tokens，交由上游/客户端决定。
         const upstreamBody = protocolBridge.encodeRequest('responses', protocolBridge.decodeRequest('responses', { ...body, model: upstreamModel }), { quirks: protocolBridge.getDialectCapability('responses').quirks });
@@ -5657,6 +5658,7 @@ async function handleResponses(req, res) {
           delete upstreamBody.reasoning;
           delete upstreamBody.reasoning_effort;
         }
+        filterResponsesLiteHeader(headers, 'responses', upstreamBody);
         if (!upstreamBody.input) {
           return res.status(400).json({ error: { message: 'input is required', type: 'invalid_request_error' } });
         }
@@ -5901,7 +5903,7 @@ async function handleResponses(req, res) {
     const url = upstreamUrl(baseUrl, '/responses');
     const headers = buildUpstreamHeaders(providerWithKey, req, {
       'Content-Type': 'application/json'
-    });
+    }, 'responses');
     if (providerWithKey.api_key) headers['Authorization'] = `Bearer ${providerWithKey.api_key}`;
 
     const upstreamBody = protocolBridge.encodeRequest('responses', protocolBridge.decodeRequest('responses', { ...body, model: upstreamModel }), { quirks: protocolBridge.getDialectCapability('responses').quirks });
@@ -5910,6 +5912,7 @@ async function handleResponses(req, res) {
       delete upstreamBody.reasoning;
       delete upstreamBody.reasoning_effort;
     }
+    filterResponsesLiteHeader(headers, 'responses', upstreamBody);
     // 过滤 undefined 字段
     if (!upstreamBody.input) return res.status(400).json({ error: { message: 'input is required', type: 'invalid_request_error' } });
 

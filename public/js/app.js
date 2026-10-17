@@ -4648,7 +4648,7 @@ class ConsoleApp {
             cur[k] = ds[k];
           });
         });
-        existing.update();
+        existing.update('none');
         return existing;
       } catch (e) {
         console.warn(t('[Chart] update 失败，回退重建:'), e);

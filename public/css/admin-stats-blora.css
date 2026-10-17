@@ -294,6 +294,9 @@
   #multiStatsFilterSummary { width: 100%; text-align: left; white-space: normal; }
   .multi-dimension-panel-heading { flex-direction: column; gap: var(--blora-space-2); }
   .multi-dimension-result-summary { align-self: flex-start; }
+  .blora-admin-page .stats-overview-grid.multi-stats-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--blora-space-2); }
+  .blora-admin-page .stats-overview-grid.multi-stats-summary > .stats-overview-card { min-height: 5.25rem; padding: var(--blora-space-3); }
+  .blora-admin-page .multi-stats-metric-card .stats-overview-value { font-size: 1.2rem; }
   .multi-stats-primary-grid { grid-template-columns: minmax(0, 1fr); }
   .multi-stats-primary-grid .multi-stats-main-chart { min-height: 290px; }
   .multi-stats-top-combinations { min-height: 240px; }
