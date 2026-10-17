@@ -4726,17 +4726,22 @@ function convertResponsesInputToMessages(body) {
 
 // 将 Responses API tools 转换为 Chat Completions tools
 function convertToolsToChatCompletions(tools) {
-  if (!tools || !Array.isArray(tools)) return undefined;
-  return tools
-    .filter(t => t.type === 'function')
-    .map(t => ({
+  if (!Array.isArray(tools)) return undefined;
+  return tools.flatMap(tool => {
+    if (!tool || typeof tool !== 'object' || tool.type !== 'function') return [];
+    const fn = tool.function && typeof tool.function === 'object' ? tool.function : tool;
+    const name = typeof fn.name === 'string' ? fn.name.trim() : '';
+    if (!name) return [];
+    return [{
       type: 'function',
       function: {
-        name: t.name,
-        description: t.description,
-        parameters: t.parameters
+        name,
+        ...(fn.description !== undefined ? { description: fn.description } : {}),
+        parameters: fn.parameters || fn.input_schema || { type: 'object', properties: {} },
+        ...(fn.strict !== undefined ? { strict: fn.strict } : {})
       }
-    }));
+    }];
+  });
 }
 
 // 将 Responses API text.format 转换为 Chat Completions response_format

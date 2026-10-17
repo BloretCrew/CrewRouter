@@ -83,6 +83,24 @@ assert.equal(streamFailure.writableEnded, true);
 sendResponsesFailure(streamFailure, 'resp_test', 502, 'duplicate');
 assert.equal(streamFailure.chunks.length, 1);
 
+const toolsStart = source.indexOf('function convertToolsToChatCompletions(');
+const toolsEnd = source.indexOf('\n// 将 Responses API text.format', toolsStart);
+assert.ok(toolsStart >= 0 && toolsEnd > toolsStart);
+vm.runInContext(source.slice(toolsStart, toolsEnd), context);
+const convertedTools = JSON.parse(JSON.stringify(context.convertToolsToChatCompletions([
+  { type: 'function', name: 'flat', description: 'flat tool', parameters: { type: 'object', properties: {} }, strict: true },
+  { type: 'function', function: { name: 'nested', description: 'nested tool', parameters: { type: 'object', properties: { path: { type: 'string' } } }, strict: false } },
+  { type: 'function', function: { name: 'input-schema', input_schema: { type: 'object' } } },
+  { type: 'function', name: '   ', parameters: {} },
+  { type: 'web_search' },
+])));
+assert.deepEqual(convertedTools, [
+  { type: 'function', function: { name: 'flat', description: 'flat tool', parameters: { type: 'object', properties: {} }, strict: true } },
+  { type: 'function', function: { name: 'nested', description: 'nested tool', parameters: { type: 'object', properties: { path: { type: 'string' } } }, strict: false } },
+  { type: 'function', function: { name: 'input-schema', parameters: { type: 'object' } } },
+]);
+assert.equal(context.convertToolsToChatCompletions({ type: 'function', name: 'invalid' }), undefined);
+
 const streamsStart = source.indexOf('async function streamOpenAIAsResponses(');
 const streamsEnd = source.indexOf('\nasync function proxyOpenAIForResponses', streamsStart);
 assert.ok(streamsEnd > streamsStart);
