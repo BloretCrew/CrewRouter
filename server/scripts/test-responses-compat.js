@@ -37,6 +37,7 @@ const context = vm.createContext({
   Logger: { error() {}, info() {} },
   pluginHooks: { hasSubscribers: () => false },
   normalizeUsageTokens: () => ({ promptTokens: 0, completionTokens: 0, cachedTokens: 0 }),
+  wireShapes: require('../protocol/wire-shapes'),
 });
 const headersStart = source.indexOf('function buildUpstreamHeaders(');
 const headersEnd = source.indexOf('\n// 清理 base_url', headersStart);

@@ -211,6 +211,7 @@ function loadProxyMatrix(wire) {
     createStreamScrubber: require('../utils/inject-prompt-stream').createStreamScrubber,
     normalizeUsageTokens: require('../utils/token-normalize').normalizeUsageTokens,
     ResponsesUpstream: require('../utils/responses-upstream'), protocolBridge: bridge,
+    wireShapes: require('../protocol/wire-shapes'),
     normalizeMessageRole: role => role,
     convertOpenAIContentToAnthropic: value => value,
     pluginHooks: { hasSubscribers: () => false, applyFinalResponseHeaders: async () => {} },

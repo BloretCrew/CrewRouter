@@ -10,6 +10,7 @@
  */
 
 const Logger = require('../logger');
+const wireShapes = require('../protocol/wire-shapes');
 
 /**
  * 将 Chat Completions 的 messages 数组转换为 Responses API 的 input。
@@ -42,14 +43,10 @@ function isReasoningPlaceholder(str) {
  * @returns {object|null}
  */
 function reasoningToResponsesItem(reasoningContent) {
-  if (!reasoningContent) return null;
-  const item = {
-    type: 'reasoning',
-    id: `rs_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
-  };
-  // 兼容两种来源：encrypted_content 密文，或 summary 明文文本
-  item.encrypted_content = String(reasoningContent);
-  return item;
+  if (!reasoningContent || isReasoningPlaceholder(reasoningContent)) return null;
+  const id = `rs_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  // 明文摘要回 summary_text；只有长密文才放 encrypted_content。
+  return wireShapes.reasoningInputItem(id, reasoningContent);
 }
 
 function messagesToResponsesInput(messages) {
@@ -273,44 +270,28 @@ function responsesToChatCompletion(data, opts = {}) {
       }
     }));
 
-  // 保留 reasoning：stateless 模式为 encrypted_content，否则取 summary 文本；
-  // 放入 assistant 消息的 reasoning_content，供客户端多轮时原样回传。
-  // 注意：部分上游的 encrypted_content 是 "uuid-index" 占位符（非真实内容），需跳过。
-  let reasoningContent = null;
-  if (Array.isArray(data?.output)) {
-    for (const item of data.output) {
-      if (item?.type === 'reasoning') {
-        if (item.encrypted_content && !isReasoningPlaceholder(item.encrypted_content)) {
-          reasoningContent = item.encrypted_content;
-        } else if (Array.isArray(item.summary) && item.summary.length > 0) {
-          reasoningContent = item.summary.map((s) => s?.text || s?.summary_text || '').join('\n');
-        } else if (item.content && Array.isArray(item.content) && item.content.length) {
-          reasoningContent = item.content.map((c) => c?.text || c?.thinking || '').join('');
-        }
-        if (reasoningContent) break;
-      }
-    }
-  }
+  // Chat 客户端把 reasoning_content 当思考正文。只回 summary / reasoning text，不回密文。
+  const reasoningContent = wireShapes.responsesReasoningText(data?.output);
 
   const message = { role: 'assistant', content: toolCalls.length ? null : (text || null) };
   if (toolCalls.length) message.tool_calls = toolCalls;
   if (reasoningContent) message.reasoning_content = reasoningContent;
 
+  const incompleteReason = data?.incomplete_details?.reason || null;
   const completion = {
     id: opts.id || `chatcmpl-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
     object: 'chat.completion',
     created: opts.created != null ? opts.created : Math.floor(Date.now() / 1000),
     model: opts.model || data.model || 'unknown',
-    choices: [{ index: 0, message, finish_reason: toolCalls.length ? 'tool_calls' : (data.status === 'completed' ? 'stop' : data.status) }]
+    choices: [{
+      index: 0,
+      message,
+      finish_reason: wireShapes.chatFinishReason(data?.status, null, toolCalls.length > 0, incompleteReason)
+    }]
   };
 
   if (usage && (usage.input_tokens != null || usage.output_tokens != null || usage.total_tokens != null)) {
-    completion.usage = {
-      prompt_tokens: usage.input_tokens || 0,
-      completion_tokens: usage.output_tokens || 0,
-      total_tokens: usage.total_tokens != null ? usage.total_tokens : ((usage.input_tokens || 0) + (usage.output_tokens || 0)),
-      prompt_tokens_details: { cached_tokens: usage.cached_tokens || 0 }
-    };
+    completion.usage = wireShapes.chatUsage(usage);
   }
   return completion;
 }
@@ -334,16 +315,17 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
   let buffer = '';
   let content = '';
   let reasoning = '';
-  // 正在组装的 function_call（流式按 name + arguments.delta 增量）
-  let currentToolCallId = null;
-  let currentToolName = null;
-  let currentToolArguments = '';
-  let openedTools = new Map(); // id -> { index }
+  let nextToolIndex = 0;
+  let activeCallId = null;
+  const callIndex = new Map();
+  const toolBuffer = wireShapes.createIndexedToolBuffer();
   let streamUsage = null;
+  let terminalStatus = 'completed';
+  let incompleteReason = null;
+  const acceptedArgs = new Map();
   let sawContentDelta = false;
   let sawReasoningDelta = false;
   let sawToolCall = false;
-  let activeItemId = null;
 
   const sendChunk = (delta, extra = {}) => {
     const chunk = {
@@ -359,6 +341,67 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
     };
     if (Object.keys(extra).length) Object.assign(chunk, extra);
     res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+  };
+
+  const indexForCall = (callId) => {
+    if (!callIndex.has(callId)) callIndex.set(callId, nextToolIndex++);
+    return callIndex.get(callId);
+  };
+
+  const emitToolRow = (row) => {
+    if (!row) return;
+    if (row.opened) {
+      sawToolCall = true;
+      sendChunk({
+        tool_calls: [{
+          index: row.item.index,
+          id: row.item.id,
+          type: 'function',
+          function: { name: row.item.name, arguments: '' }
+        }]
+      });
+    }
+    for (const part of row.args) {
+      sendChunk({
+        tool_calls: [{
+          index: row.item.index,
+          function: { arguments: part }
+        }]
+      });
+    }
+  };
+
+  const functionCallArguments = (item) => {
+    if (!item || item.arguments == null || item.arguments === '') return '';
+    return typeof item.arguments === 'string' ? item.arguments : JSON.stringify(item.arguments);
+  };
+
+  const bindCallId = (item) => {
+    const realId = item?.call_id || item?.id || '';
+    let callId = realId || activeCallId || `call_${nextToolIndex}`;
+    if (activeCallId && realId && activeCallId !== realId && callIndex.has(activeCallId) && !callIndex.has(realId)) {
+      callIndex.set(realId, callIndex.get(activeCallId));
+      callIndex.delete(activeCallId);
+      callId = realId;
+    }
+    activeCallId = callId;
+    return callId;
+  };
+
+  const rememberArguments = (index, extra) => {
+    if (!extra) return '';
+    acceptedArgs.set(index, (acceptedArgs.get(index) || '') + extra);
+    return extra;
+  };
+
+  // added/done 上的 arguments 是快照；已经通过 delta 发出的前缀不再重复。
+  const snapshotSuffix = (index, argsStr) => {
+    const already = acceptedArgs.get(index) || '';
+    if (!argsStr) return '';
+    if (!already) return rememberArguments(index, argsStr);
+    if (argsStr === already || already.startsWith(argsStr)) return '';
+    if (argsStr.startsWith(already)) return rememberArguments(index, argsStr.slice(already.length));
+    return '';
   };
 
   // 处理单个解析后的 SSE data 对象
@@ -380,92 +423,59 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
         break;
       }
       case 'response.function_call_arguments.delta': {
-        const d = obj.delta || '';
-        currentToolArguments += d;
-        const callId = currentToolCallId || obj.call_id || `call_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-        if (!currentToolCallId) {
-          currentToolCallId = callId;
-          if (!openedTools.has(callId)) {
-            const index = openedTools.size;
-            openedTools.set(callId, index);
-            sendChunk({
-              tool_calls: [{
-                index,
-                id: obj.call_id || callId,
-                type: 'function',
-                function: { name: currentToolName || '', arguments: '' }
-              }]
-            });
-          }
-        }
-        if (openedTools.has(callId)) {
-          sendChunk({
-            tool_calls: [{
-              index: openedTools.get(callId),
-              function: { arguments: d }
-            }]
-          });
-        }
+        const callId = obj.call_id || obj.item_id || activeCallId || `call_${nextToolIndex}`;
+        activeCallId = callId;
+        const index = indexForCall(callId);
+        const row = toolBuffer.push(index, {
+          id: callId,
+          arguments: rememberArguments(index, obj.delta || ''),
+          argumentsPresent: true
+        });
+        emitToolRow(row);
         break;
       }
       case 'response.output_item.added': {
         const item = obj.item;
         if (!item) break;
         if (item.type === 'function_call') {
-          // 立即发出初始 tool_calls chunk，避免无参调用（不发 arguments delta）时漏发
-          sawToolCall = true;
-          currentToolName = item.name || currentToolName;
-          activeItemId = item.id || null;
-          const callId = item.call_id || item.id || currentToolCallId || `call_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-          currentToolCallId = callId;
-          if (!openedTools.has(callId)) {
-            const index = openedTools.size;
-            openedTools.set(callId, index);
-            sendChunk({
-              tool_calls: [{
-                index,
-                id: item.call_id || item.id || callId,
-                type: 'function',
-                function: { name: item.name || currentToolName || '', arguments: '' }
-              }]
-            });
-          }
-          if (item.arguments) {
-            const argsStr = typeof item.arguments === 'string' ? item.arguments : JSON.stringify(item.arguments ?? '');
-            currentToolArguments = argsStr;
-            sendChunk({
-              tool_calls: [{
-                index: openedTools.get(callId),
-                function: { arguments: argsStr }
-              }]
-            });
-          }
+          const callId = bindCallId(item);
+          const index = indexForCall(callId);
+          const row = toolBuffer.push(index, {
+            id: callId,
+            name: item.name || '',
+            arguments: snapshotSuffix(index, functionCallArguments(item)),
+            argumentsPresent: Object.prototype.hasOwnProperty.call(item, 'arguments')
+          });
+          emitToolRow(row);
         } else if (item.type === 'reasoning') {
-          // reasoning 项出现：真正的思考文本由 response.reasoning_text.delta 事件流式发出，
-          // 此处不发送 encrypted_content（部分上游为 uuid 占位符，非真实内容）。
+          // 思考正文只来自 summary/text delta，不把 encrypted_content 写进 reasoning_content。
           sawReasoningDelta = true;
         }
         break;
       }
       case 'response.output_item.done': {
-        // function_call 结束或 message 结束
-        if (obj.item?.type === 'function_call') {
-          const fc = obj.item;
-          const callId = fc.call_id || currentToolCallId || `call_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-          currentToolCallId = null;
-          currentToolName = null;
-          currentToolArguments = '';
-          activeItemId = null;
-        } else if (obj.item?.type === 'message') {
-          activeItemId = null;
-        }
+        const item = obj.item;
+        if (!item || item.type !== 'function_call') break;
+        const callId = bindCallId(item);
+        const index = indexForCall(callId);
+        const row = toolBuffer.push(index, {
+          id: callId,
+          name: item.name || '',
+          arguments: snapshotSuffix(index, functionCallArguments(item)),
+          argumentsPresent: true
+        });
+        emitToolRow(row);
         break;
       }
+      case 'response.incomplete':
       case 'response.completed':
         if (obj.response?.error) {
           Logger.warn(`[${logPrefix}] 上游响应含 error: ${JSON.stringify(obj.response.error)}`);
         }
-        streamUsage = obj.response?.usage || obj.response?.usage || null;
+        streamUsage = obj.response?.usage || streamUsage;
+        if (obj.type === 'response.incomplete' || obj.response?.status === 'incomplete') terminalStatus = 'incomplete';
+        if (obj.response?.status) terminalStatus = obj.response.status;
+        if (obj.response?.incomplete_details?.reason) incompleteReason = obj.response.incomplete_details.reason;
         break;
       default:
         break;
@@ -505,21 +515,22 @@ async function streamResponsesAsChatCompletion(upstreamStream, res, opts = {}) {
     sendChunk({ content: residual });
   }
 
+  for (const row of toolBuffer.forceRemaining()) emitToolRow(row);
+
   // 流结束：发送带 finish_reason 的收尾 chunk + usage（须在 res.end() 之前）
   const finishChunk = {
     id,
     object: 'chat.completion.chunk',
     created,
     model,
-    choices: [{ index: 0, delta: {}, finish_reason: sawToolCall ? 'tool_calls' : 'stop' }]
+    choices: [{
+      index: 0,
+      delta: {},
+      finish_reason: wireShapes.chatFinishReason(terminalStatus, null, sawToolCall, incompleteReason)
+    }]
   };
-  if (streamUsage && (streamUsage.input_tokens != null || streamUsage.output_tokens != null || streamUsage.total_tokens != null)) {
-    finishChunk.usage = {
-      prompt_tokens: streamUsage.input_tokens || 0,
-      completion_tokens: streamUsage.output_tokens || 0,
-      total_tokens: streamUsage.total_tokens != null ? streamUsage.total_tokens : ((streamUsage.input_tokens || 0) + (streamUsage.output_tokens || 0)),
-      prompt_tokens_details: { cached_tokens: streamUsage.cached_tokens || 0 }
-    };
+  if (streamUsage && (streamUsage.input_tokens != null || streamUsage.output_tokens != null || streamUsage.total_tokens != null || streamUsage.prompt_tokens != null)) {
+    finishChunk.usage = wireShapes.chatUsage(streamUsage);
   }
   if (!res.writableEnded) {
     res.write(`data: ${JSON.stringify(finishChunk)}\n\n`);

@@ -104,6 +104,7 @@ const { selectHealthyWeighted } = require('../utils/provider-selector');
 const { createRequestLifecycle, combineAbortSignals, waitForResponseDrain } = require('../utils/request-lifecycle');
 const { canRetryUpstreamError } = require('../utils/upstream-retry-policy');
 const protocolBridge = require('../protocol/bridge');
+const wireShapes = require('../protocol/wire-shapes');
 const { createModelIdentity, observeModelResponse } = require('../utils/model-identity');
 
 function modelIdentityValues(req, fusion = false) {
@@ -2172,6 +2173,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     let gotDone = false;
     let roleEmitted = false;
     let streamFinishReason = 'stop'; // OpenAI finish_reason
+    let rawStopReason = null;
     let hasToolCalls = false;
     const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
 
@@ -2273,7 +2275,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
               if (parsed.type === 'content_block_start') {
                 currentBlockType = parsed.content_block?.type || null;
                 Logger.stream(`[proxyAnthropic] content_block_start: type=${currentBlockType}, index=${parsed.index}`);
-                if (currentBlockType === 'tool_use') {
+                if (currentBlockType === 'tool_use' && parsed.content_block?.name) {
                   currentToolIndex = toolUseBlocks.length;
                   hasToolCalls = true;
                   toolUseBlocks.push({
@@ -2281,7 +2283,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
                     name: parsed.content_block.name,
                     arguments: ''
                   });
-                  // OpenAI 风格：先发 id/name/type，arguments 为空，后续增量
+                  // OpenAI 风格：先发 id/name/type，arguments 为空，后续增量。name 为空时不发，避免客户端拒收。
                   await emitOpenAIChunk({
                     tool_calls: [{
                       index: currentToolIndex,
@@ -2290,6 +2292,8 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
                       function: { name: parsed.content_block.name, arguments: '' }
                     }]
                   });
+                } else if (currentBlockType === 'tool_use') {
+                  currentToolIndex = -1;
                 }
               } else if (parsed.type === 'content_block_delta') {
                 if (currentBlockType === 'thinking' && parsed.delta?.thinking) {
@@ -2325,12 +2329,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
                 if (parsed.usage) {
                   completionTokens = parsed.usage.output_tokens || 0;
                 }
-                // 映射 Anthropic stop_reason → OpenAI finish_reason
-                const sr = parsed.delta?.stop_reason;
-                if (sr === 'end_turn') streamFinishReason = 'stop';
-                else if (sr === 'max_tokens') streamFinishReason = 'length';
-                else if (sr === 'tool_use') streamFinishReason = 'tool_calls';
-                else if (sr === 'stop_sequence') streamFinishReason = 'stop';
+                if (parsed.delta?.stop_reason) rawStopReason = parsed.delta.stop_reason;
               } else if (parsed.type === 'message_stop') {
                 Logger.stream(`[proxyAnthropic] 收到上游 message_stop 事件`);
                 gotDone = true;
@@ -2368,10 +2367,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
               }
               if (parsed.type === 'message_delta') {
                 if (parsed.usage) completionTokens = parsed.usage.output_tokens || 0;
-                const sr = parsed.delta?.stop_reason;
-                if (sr === 'end_turn') streamFinishReason = 'stop';
-                else if (sr === 'max_tokens') streamFinishReason = 'length';
-                else if (sr === 'tool_use') streamFinishReason = 'tool_calls';
+                if (parsed.delta?.stop_reason) rawStopReason = parsed.delta.stop_reason;
               } else if (parsed.type === 'message_stop') {
                 gotDone = true;
               }
@@ -2423,6 +2419,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     };
     const normalized = normalizeUsageTokens(syntheticUsage, 'anthropic');
 
+    streamFinishReason = wireShapes.chatFinishReason(null, rawStopReason, hasToolCalls);
     // 流式签名：仅在有正文且非纯 tool 时追加 content
     if (gotDone && !clientDisconnected) {
       try {
@@ -2448,11 +2445,6 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
         Logger.warn(`[proxyAnthropic] 签名生成失败: ${e.message}`);
       }
 
-      // 若有工具调用且上游未给出 tool_use stop_reason，兜底为 tool_calls
-      if (hasToolCalls && streamFinishReason === 'stop') {
-        streamFinishReason = 'tool_calls';
-      }
-
       // 标准 OpenAI 流式：结束 chunk 带 finish_reason，并附带 usage（若有）
       const finishPayload = {
         id: streamChunkId,
@@ -2460,14 +2452,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
         created: streamCreated,
         model: model,
         choices: [{ index: 0, delta: {}, finish_reason: streamFinishReason }],
-        usage: {
-          prompt_tokens: normalized.promptTokens || 0,
-          completion_tokens: normalized.completionTokens || 0,
-          total_tokens: (normalized.promptTokens || 0) + (normalized.completionTokens || 0),
-          ...(normalized.cachedTokens ? {
-            prompt_tokens_details: { cached_tokens: normalized.cachedTokens }
-          } : {})
-        }
+        usage: wireShapes.chatUsage(syntheticUsage)
       };
       const ok = writeWithDrain(`data: ${JSON.stringify(finishPayload)}\n\n`);
       if (!ok) await waitForDrain();
@@ -2536,27 +2521,26 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
     for (const block of contentBlocks) {
       if (block.type === 'text') {
         textContent += block.text || '';
-      } else if (block.type === 'tool_use') {
+      } else if (block.type === 'tool_use' && block.name) {
+        const truncated = hookData.stop_reason === 'max_tokens';
+        const args = typeof block.input === 'string'
+          ? wireShapes.terminalToolArguments(block.input, truncated)
+          : JSON.stringify(block.input || {});
         toolCalls.push({
           id: block.id,
           type: 'function',
           function: {
             name: block.name,
-            arguments: JSON.stringify(block.input || {})
+            arguments: args
           }
         });
-      } else if (block.type === 'thinking') {
-        reasoningContent += block.thinking || '';
+      } else if (block.type === 'thinking' && block.thinking) {
+        reasoningContent += block.thinking;
       }
       // redacted_thinking 无可用明文，跳过
     }
 
-    // stop_reason 映射
-    let finishReason = 'stop';
-    if (hookData.stop_reason === 'max_tokens') finishReason = 'length';
-    else if (hookData.stop_reason === 'tool_use') finishReason = 'tool_calls';
-    else if (hookData.stop_reason === 'end_turn') finishReason = 'stop';
-    else if (hookData.stop_reason === 'stop_sequence') finishReason = 'stop';
+    const finishReason = wireShapes.chatFinishReason(null, hookData.stop_reason, toolCalls.length > 0);
 
     const message = { role: 'assistant' };
     if (toolCalls.length > 0) {
@@ -2577,14 +2561,7 @@ async function proxyAnthropic(provider, model, body, stream, res, req, options =
       created: Math.floor(Date.now() / 1000),
       model: model,
       choices: [{ index: 0, message, finish_reason: finishReason }],
-      usage: {
-        prompt_tokens: normalizedUsage.promptTokens || 0,
-        completion_tokens: normalizedUsage.completionTokens || 0,
-        total_tokens: (normalizedUsage.promptTokens || 0) + (normalizedUsage.completionTokens || 0),
-        ...(normalizedUsage.cachedTokens ? {
-          prompt_tokens_details: { cached_tokens: normalizedUsage.cachedTokens }
-        } : {})
-      }
+      usage: wireShapes.chatUsage(hookData.usage)
     };
 
     const normalized = normalizedUsage;
@@ -3405,7 +3382,7 @@ async function handleAnthropicMessage(req, res) {
             model: model,
             stop_reason: null,
             stop_sequence: null,
-            usage: { input_tokens: 0, output_tokens: 0 }
+            usage: wireShapes.anthropicUsage(null)
           }
         });
 
@@ -3425,7 +3402,7 @@ async function handleAnthropicMessage(req, res) {
             writeAnthropicEvent({
               type: 'message_delta',
               delta: { stop_reason: 'end_turn', stop_sequence: null },
-              usage: { output_tokens: 0 }
+              usage: wireShapes.anthropicUsage(null)
             });
             writeAnthropicEvent({ type: 'message_stop' });
             res.end();
@@ -3454,7 +3431,7 @@ async function handleAnthropicMessage(req, res) {
           model: model,
           stop_reason: 'end_turn',
           stop_sequence: null,
-          usage: { input_tokens: 0, output_tokens: 0 }
+          usage: wireShapes.anthropicUsage(null)
         });
       }
       return;
@@ -3643,11 +3620,15 @@ function convertOpenAIToAnthropicResponse(openaiResp, model) {
   const message = choice?.message;
 
   const content = [];
+  if (message?.reasoning_content) {
+    content.push(wireShapes.thinkingBlock(message.reasoning_content));
+  }
   if (message?.content) {
     content.push({ type: 'text', text: message.content });
   }
   if (message?.tool_calls) {
     for (const tc of message.tool_calls) {
+      if (!tc?.function?.name) continue;
       content.push({
         type: 'tool_use',
         id: tc.id,
@@ -3656,15 +3637,6 @@ function convertOpenAIToAnthropicResponse(openaiResp, model) {
       });
     }
   }
-  // 映射 reasoning_content → thinking block（无 signature，仅尽力兼容）
-  if (message?.reasoning_content) {
-    content.unshift({ type: 'thinking', thinking: message.reasoning_content });
-  }
-
-  let stopReason = 'end_turn';
-  if (choice?.finish_reason === 'stop') stopReason = 'end_turn';
-  else if (choice?.finish_reason === 'length') stopReason = 'max_tokens';
-  else if (choice?.finish_reason === 'tool_calls') stopReason = 'tool_use';
 
   return {
     id: openaiResp.id || `msg_${Date.now()}`,
@@ -3672,12 +3644,9 @@ function convertOpenAIToAnthropicResponse(openaiResp, model) {
     role: 'assistant',
     content,
     model,
-    stop_reason: stopReason,
+    stop_reason: wireShapes.anthropicStopReason(choice?.finish_reason),
     stop_sequence: null,
-    usage: {
-      input_tokens: openaiResp.usage?.prompt_tokens || 0,
-      output_tokens: openaiResp.usage?.completion_tokens || 0
-    }
+    usage: wireShapes.anthropicUsage(openaiResp.usage)
   };
 }
 
@@ -4213,7 +4182,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
       model: anthropicModel,
       stop_reason: null,
       stop_sequence: null,
-      usage: { input_tokens: 0, output_tokens: 0 }
+      usage: wireShapes.anthropicUsage(null)
     }
   };
   const ok0 = writeWithDrain(`event: message_start\ndata: ${JSON.stringify(messageStart)}\n\n`);
@@ -4227,17 +4196,16 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   let textBlockStarted = false;
   let textBlockIndex = null;
   let gotDone = false;
-  let stopReason = 'end_turn';
+  let rawFinish = null;
   let chunkCount = 0;
   let sseLineCount = 0;
   let jsonParseErrors = 0;
   let firstChunkTime = null;
 
-  // Track tool calls: index → { id, name, arguments }
-  const toolCallMap = new Map();
-  // Thinking block tracking
-  let thinkingBlockIndex = null;
+  // 工具名拆成多块时先攒齐再发 content_block_start，避免客户端拿到空 name。
   let nextBlockIndex = 0;
+  const toolAssembler = wireShapes.createAnthropicToolAssembler(() => nextBlockIndex++);
+  let thinkingBlockIndex = null;
 
   const emitSSE = async (obj) => {
     // 插件 gateway:responseChunk 钩子：改写输出事件文本（仅文本类 delta）
@@ -4259,6 +4227,54 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
       textBlockIndex = nextBlockIndex++;
       await emitSSE({ type: 'content_block_start', index: textBlockIndex, content_block: { type: 'text', text: '' } });
       textBlockStarted = true;
+    }
+  };
+
+  const handleOpenAIChunk = async (parsed) => {
+    if (parsed.error || parsed.type === 'error') {
+      const failure = new Error('Upstream stream reported an error');
+      failure.code = 'upstream_stream_error';
+      throw failure;
+    }
+    if (parsed.usage) lastUsage = parsed.usage;
+    const choice = parsed.choices?.[0];
+    if (choice?.finish_reason) rawFinish = choice.finish_reason;
+    const delta = choice?.delta;
+    if (!delta) return;
+    if (Array.isArray(delta.content) && delta.content.some(block => ['thinking', 'redacted_thinking'].includes(block?.type))) {
+      const error = new Error('Opaque thinking requires the native Anthropic streaming endpoint');
+      error.code = 'unsupported_stream_thinking';
+      throw error;
+    }
+    if (typeof delta.content === 'string' && delta.content) {
+      await ensureTextBlockStarted();
+      totalContent += delta.content;
+      await emitSSE({
+        type: 'content_block_delta',
+        index: textBlockIndex,
+        delta: { type: 'text_delta', text: delta.content }
+      });
+    }
+    if (Array.isArray(delta.tool_calls)) {
+      for (const tc of delta.tool_calls) {
+        for (const event of toolAssembler.push(tc)) await emitSSE(event);
+      }
+    }
+    if (typeof delta.reasoning_content === 'string' && delta.reasoning_content) {
+      if (thinkingBlockIndex === null) {
+        thinkingBlockIndex = nextBlockIndex++;
+        await emitSSE({
+          type: 'content_block_start',
+          index: thinkingBlockIndex,
+          content_block: wireShapes.thinkingBlock('')
+        });
+      }
+      totalContent += delta.reasoning_content;
+      await emitSSE({
+        type: 'content_block_delta',
+        index: thinkingBlockIndex,
+        delta: { type: 'thinking_delta', thinking: delta.reasoning_content }
+      });
     }
   };
 
@@ -4292,95 +4308,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
         }
 
         try {
-          const parsed = JSON.parse(data);
-              if (parsed.error || parsed.type === 'error') {
-                const failure = new Error('Upstream stream reported an error');
-                failure.code = 'upstream_stream_error';
-                throw failure;
-              }
-          if (parsed.usage) {
-            lastUsage = parsed.usage;
-          }
-          const delta = parsed.choices?.[0]?.delta;
-          if (Array.isArray(delta?.content) && delta.content.some(block => ['thinking', 'redacted_thinking'].includes(block?.type))) {
-            const error = new Error('Opaque thinking requires the native Anthropic streaming endpoint');
-            error.code = 'unsupported_stream_thinking';
-            throw error;
-          }
-          const finishReason = parsed.choices?.[0]?.finish_reason;
-
-          // Text content
-          if (delta?.content) {
-            await ensureTextBlockStarted();
-            totalContent += delta.content;
-            await emitSSE({
-              type: 'content_block_delta',
-              index: textBlockIndex,
-              delta: { type: 'text_delta', text: delta.content }
-            });
-          }
-
-          // Tool calls (incremental) — 不强制先开空 text block
-          if (delta?.tool_calls) {
-            for (const tc of delta.tool_calls) {
-              const tcIndex = tc.index ?? 0;
-              const entry = toolCallMap.get(tcIndex);
-              if (!entry) {
-                // 分配动态索引（在 thinking/text 之后递增）
-                const toolBlockIndex = nextBlockIndex++;
-                toolCallMap.set(tcIndex, { id: tc.id || '', name: tc.function?.name || '', arguments: tc.function?.arguments || '', blockIndex: toolBlockIndex });
-                const newEntry = toolCallMap.get(tcIndex);
-                await emitSSE({
-                  type: 'content_block_start',
-                  index: toolBlockIndex,
-                  content_block: { type: 'tool_use', id: newEntry.id, name: newEntry.name, input: {} }
-                });
-                // 首块也可能包含参数（非标准 OpenAI 实现），也需要发送 input_json_delta
-                if (tc.function?.arguments) {
-                  await emitSSE({
-                    type: 'content_block_delta',
-                    index: toolBlockIndex,
-                    delta: { type: 'input_json_delta', partial_json: tc.function.arguments }
-                  });
-                }
-              } else {
-                if (tc.id) entry.id = tc.id;
-                if (tc.function?.name) entry.name = tc.function.name;
-                if (tc.function?.arguments) entry.arguments += tc.function.arguments;
-                // Emit input_json_delta
-                await emitSSE({
-                  type: 'content_block_delta',
-                  index: entry.blockIndex,
-                  delta: { type: 'input_json_delta', partial_json: tc.function?.arguments || '' }
-                });
-              }
-            }
-          }
-
-          // Reasoning content (from models like DeepSeek/Claude that use reasoning_content in OpenAI format)
-          // Map to Anthropic thinking_delta for proper content block handling
-          if (delta?.reasoning_content) {
-            if (thinkingBlockIndex === null) {
-              thinkingBlockIndex = nextBlockIndex++;
-              await emitSSE({
-                type: 'content_block_start',
-                index: thinkingBlockIndex,
-                content_block: { type: 'thinking', thinking: '' }
-              });
-            }
-            totalContent += delta.reasoning_content;
-            await emitSSE({
-              type: 'content_block_delta',
-              index: thinkingBlockIndex,
-              delta: { type: 'thinking_delta', thinking: delta.reasoning_content }
-            });
-          }
-
-          if (finishReason) {
-            if (finishReason === 'stop') stopReason = 'end_turn';
-            else if (finishReason === 'length') stopReason = 'max_tokens';
-            else if (finishReason === 'tool_calls') stopReason = 'tool_use';
-          }
+          await handleOpenAIChunk(JSON.parse(data));
         } catch (e) {
           if (e?.name !== 'SyntaxError') throw e;
           jsonParseErrors++;
@@ -4399,19 +4327,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
         const data = line.slice(6).trim();
         if (data === '[DONE]') { gotDone = true; continue; }
         try {
-          const parsed = JSON.parse(data);
-              if (parsed.error || parsed.type === 'error') {
-                const failure = new Error('Upstream stream reported an error');
-                failure.code = 'upstream_stream_error';
-                throw failure;
-              }
-          if (parsed.usage) lastUsage = parsed.usage;
-          const finishReason = parsed.choices?.[0]?.finish_reason;
-          if (finishReason) {
-            if (finishReason === 'stop') stopReason = 'end_turn';
-            else if (finishReason === 'length') stopReason = 'max_tokens';
-            else if (finishReason === 'tool_calls') stopReason = 'tool_use';
-          }
+          await handleOpenAIChunk(JSON.parse(data));
         } catch (e) {
           if (e?.name !== 'SyntaxError') throw e;
           jsonParseErrors++;
@@ -4443,7 +4359,8 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     reader.releaseLock?.();
   }
 
-  // Use real usage from upstream if available, otherwise 0
+  for (const event of toolAssembler.finish()) await emitSSE(event);
+  const stopReason = wireShapes.anthropicStopReason(rawFinish);
   const promptTokens = lastUsage?.prompt_tokens || 0;
   const completionTokens = lastUsage?.completion_tokens || 0;
   const normalizedForSig = normalizeUsageTokens(lastUsage, 'openai');
@@ -4463,7 +4380,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
         mode,
         requestBody: openaiBody,
         hasTextContent: totalContent.length > 0 || textBlockStarted,
-        hasToolCalls: toolCallMap.size > 0,
+        hasToolCalls: toolAssembler.entries.size > 0,
         stopReason,
         format: 'anthropic'
       });
@@ -4491,16 +4408,15 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
     await emitSSE({ type: 'content_block_stop', index: textBlockIndex });
   }
 
-  // Close all tool use content blocks (in reverse index order)
-  const sortedTools = [...toolCallMap.entries()].sort((a, b) => (b[1].blockIndex || 0) - (a[1].blockIndex || 0));
-  for (const [tcIndex, entry] of sortedTools) {
+  const sortedTools = [...toolAssembler.entries.values()].filter(entry => entry.opened).sort((a, b) => (b.blockIndex || 0) - (a.blockIndex || 0));
+  for (const entry of sortedTools) {
     await emitSSE({ type: 'content_block_stop', index: entry.blockIndex });
   }
 
   const messageDelta = {
     type: 'message_delta',
     delta: { stop_reason: stopReason, stop_sequence: null },
-    usage: { output_tokens: completionTokens }
+    usage: wireShapes.anthropicUsage(lastUsage)
   };
   await emitSSE(messageDelta);
 
@@ -4513,7 +4429,7 @@ async function proxyOpenAIStreamToAnthropic(provider, model, openaiBody, res, re
   if (currentProxyInfo?.proxyId) {
     proxyPool.markProxySuccess(provider.id, currentProxyInfo.proxyId, latency);
   }
-  Logger.stream(`[proxyOpenAIToAnthropic] 流式传输统计: chunkCount=${chunkCount}, sseLineCount=${sseLineCount}, jsonParseErrors=${jsonParseErrors}, contentLength=${totalContent.length}, 首chunk耗时=${firstChunkTime ? firstChunkTime - startTime : '-'}ms, 客户端断开=${clientDisconnected}, toolCalls=${toolCallMap.size}, 背压次数=${backpressureCount}`);
+  Logger.stream(`[proxyOpenAIToAnthropic] 流式传输统计: chunkCount=${chunkCount}, sseLineCount=${sseLineCount}, jsonParseErrors=${jsonParseErrors}, contentLength=${totalContent.length}, 首chunk耗时=${firstChunkTime ? firstChunkTime - startTime : '-'}ms, 客户端断开=${clientDisconnected}, toolCalls=${toolAssembler.entries.size}, 背压次数=${backpressureCount}`);
   const cacheHitRate = promptTokens > 0 ? ((normalized.cachedTokens || 0) / promptTokens * 100).toFixed(1) : 0;
   Logger.info(`[proxyOpenAIToAnthropic] 流式完成: provider=${provider.id}(${provider.name}), model=${model}, latency=${latency}ms, prompt_tokens=${promptTokens || 0}, completion_tokens=${completionTokens}, cached_tokens=${normalized.cachedTokens || 0}, cache_hit_rate=${cacheHitRate}%`);
   return { ...normalized, promptTokens, completionTokens, content: totalContent };
@@ -4763,8 +4679,13 @@ function convertChatCompletionToResponse(data, respId, body) {
   const choice = data.choices?.[0];
   const message = choice?.message;
   const output = [];
+  const terminal = wireShapes.responsesStatus(choice?.finish_reason);
+  const truncated = terminal.status === 'incomplete';
 
-  // Responses API 允许同一 response 中同时存在 message 文本与 function_call
+  if (message?.reasoning_content) {
+    const reasoning = wireShapes.reasoningInputItem(`rs_${respId}`, message.reasoning_content);
+    if (reasoning) output.push(reasoning);
+  }
   const text = message?.content || '';
   if (text) {
     output.push({
@@ -4775,27 +4696,20 @@ function convertChatCompletionToResponse(data, respId, body) {
       content: [{ type: 'output_text', text, annotations: [] }]
     });
   }
-  if (message?.reasoning_content) {
-    output.push({
-      id: `rs_${respId}`,
-      type: 'reasoning',
-      summary: [{ type: 'summary_text', text: message.reasoning_content }]
-    });
-  }
   if (message?.tool_calls?.length > 0) {
     for (const tc of message.tool_calls) {
+      if (!tc?.function?.name) continue;
       const fcId = tc.id || `fc_${Date.now()}`;
       output.push({
         type: 'function_call',
         id: fcId,
         call_id: tc.id || fcId,
-        name: tc.function?.name || '',
-        arguments: tc.function?.arguments || '{}',
+        name: tc.function.name,
+        arguments: wireShapes.terminalToolArguments(tc.function?.arguments, truncated),
         status: 'completed'
       });
     }
   }
-  // 无文本也无工具时仍输出空 message，保持结构完整
   if (output.length === 0) {
     output.push({
       id: `msg_${respId}`,
@@ -4810,9 +4724,9 @@ function convertChatCompletionToResponse(data, respId, body) {
     id: respId,
     object: 'response',
     created_at: Math.floor(Date.now() / 1000),
-    status: 'completed',
+    status: terminal.status,
     error: null,
-    incomplete_details: null,
+    incomplete_details: terminal.incomplete_details,
     instructions: body.instructions || null,
     max_output_tokens: body.max_output_tokens || null,
     model: data.model || body.model,
@@ -4827,12 +4741,7 @@ function convertChatCompletionToResponse(data, respId, body) {
     tools: body.tools || [],
     top_p: body.top_p ?? 1.0,
     truncation: body.truncation || 'disabled',
-    usage: data.usage ? {
-      input_tokens: data.usage.prompt_tokens || 0,
-      output_tokens: data.usage.completion_tokens || 0,
-      output_tokens_details: { reasoning_tokens: 0 },
-      total_tokens: data.usage.total_tokens || 0
-    } : null,
+    usage: wireShapes.responsesUsage(data.usage),
     user: body.user || null,
     metadata: body.metadata || {},
     output_text: output.filter(o => o.type === 'message').map(o => o.content?.map(c => c.text || '').join('') || '').join('')
@@ -4853,12 +4762,22 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
   const startTime = Date.now();
   let textStarted = false;
   let textDone = false;
-  const toolCalls = {}; // index → { id, name, arguments }
-  const emittedToolCalls = new Set();
+  let textOutputIndex = 0;
+  let nextOutputIndex = 0;
+  let sawReasoning = false;
+  let reasoningDone = false;
+  let reasoningIndex = null;
+  let reasoningText = '';
+  let rawFinish = null;
+  const toolCalls = {};
+  const outputItems = [];
 
   res.once?.('close', () => { clientDisconnected = true; });
 
-  // 发送初始事件
+  const emit = async (payload) => {
+    await writeWithDrain(`event: ${payload.type}\ndata: ${JSON.stringify(payload)}\n\n`);
+  };
+
   const baseResponse = {
     id: respId, object: 'response', created_at: Math.floor(Date.now() / 1000),
     status: 'in_progress', error: null, incomplete_details: null,
@@ -4872,8 +4791,84 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
     top_p: body.top_p ?? 1.0, truncation: body.truncation || 'disabled',
     usage: null, user: body.user || null, metadata: body.metadata || {}
   };
-  await writeWithDrain(`event: response.created\ndata: ${JSON.stringify({ type: 'response.created', response: baseResponse })}\n\n`);
-  await writeWithDrain(`event: response.in_progress\ndata: ${JSON.stringify({ type: 'response.in_progress', response: baseResponse })}\n\n`);
+  await emit({ type: 'response.created', response: baseResponse });
+  await emit({ type: 'response.in_progress', response: baseResponse });
+
+  const closeReasoning = async () => {
+    if (!sawReasoning || reasoningDone) return;
+    reasoningDone = true;
+    for (const event of wireShapes.reasoningDoneEvents(`rs_${respId}`, reasoningIndex, reasoningText)) await emit(event);
+    outputItems.push({ index: reasoningIndex, item: wireShapes.reasoningItem(`rs_${respId}`, reasoningText) });
+  };
+
+  const closeText = async () => {
+    if (!textStarted || textDone) return;
+    textDone = true;
+    const item = { id: `msg_${respId}`, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: totalContent, annotations: [] }] };
+    outputItems.push({ index: textOutputIndex, item });
+    await emit({ type: 'response.output_text.done', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, text: totalContent });
+    await emit({ type: 'response.content_part.done', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, part: { type: 'output_text', text: totalContent, annotations: [] } });
+    await emit({ type: 'response.output_item.done', output_index: textOutputIndex, item });
+  };
+
+  const handleParsed = async (parsed) => {
+    if (parsed.error || parsed.type === 'error') {
+      const failure = new Error('Upstream stream reported an error');
+      failure.code = 'upstream_stream_error';
+      throw failure;
+    }
+    const choice = parsed.choices?.[0];
+    if (choice?.finish_reason) rawFinish = choice.finish_reason;
+    if (parsed.usage) lastUsage = parsed.usage;
+    const delta = choice?.delta;
+    if (!delta) return;
+
+    if (delta.reasoning_content) {
+      if (!sawReasoning) {
+        sawReasoning = true;
+        reasoningIndex = nextOutputIndex++;
+        await emit(wireShapes.reasoningAddedEvent(`rs_${respId}`, reasoningIndex));
+      }
+      if (!reasoningDone) {
+        reasoningText += delta.reasoning_content;
+        await emit(wireShapes.reasoningDeltaEvent(`rs_${respId}`, reasoningIndex, delta.reasoning_content));
+      }
+    }
+
+    if (delta.content && !textDone) {
+      if (!textStarted) {
+        await closeReasoning();
+        textStarted = true;
+        textOutputIndex = sawReasoning ? nextOutputIndex++ : 0;
+        if (!sawReasoning) nextOutputIndex = Math.max(nextOutputIndex, textOutputIndex + 1);
+        await emit({ type: 'response.output_item.added', output_index: textOutputIndex, item: { id: `msg_${respId}`, type: 'message', status: 'in_progress', role: 'assistant', content: [] } });
+        await emit({ type: 'response.content_part.added', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, part: { type: 'output_text', text: '', annotations: [] } });
+      }
+      totalContent += delta.content;
+      let deltaText = delta.content;
+      if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
+        const out = await pluginHooks.maybeRewriteChunk(deltaText, { model, requestType: 'Responses/OpenAI', affinityKey: affinityKeyForRequest(req, req.body) });
+        if (out === null) return;
+        if (typeof out === 'string') {
+          totalContent = totalContent.slice(0, totalContent.length - deltaText.length) + out;
+          deltaText = out;
+        }
+      }
+      await emit({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, delta: deltaText });
+    }
+
+    if (delta.tool_calls) {
+      await closeReasoning();
+      await closeText();
+      for (const tc of delta.tool_calls) {
+        const idx = tc.index ?? 0;
+        if (!toolCalls[idx]) toolCalls[idx] = { id: '', name: '', arguments: '' };
+        if (tc.id) toolCalls[idx].id = tc.id;
+        if (tc.function?.name) toolCalls[idx].name = wireShapes.mergeToolName(toolCalls[idx].name, tc.function.name);
+        if (tc.function?.arguments) toolCalls[idx].arguments += tc.function.arguments;
+      }
+    }
+  };
 
   try {
     while (true) {
@@ -4891,58 +4886,7 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
         const data = line.slice(6).trim();
         if (data === '[DONE]') { gotDone = true; continue; }
         try {
-          const parsed = JSON.parse(data);
-              if (parsed.error || parsed.type === 'error') {
-                const failure = new Error('Upstream stream reported an error');
-                failure.code = 'upstream_stream_error';
-                throw failure;
-              }
-          const delta = parsed.choices?.[0]?.delta;
-          if (!delta) {
-            if (parsed.usage) lastUsage = parsed.usage;
-            continue;
-          }
-
-          // 文本内容
-          if (delta.content && !textDone) {
-            if (!textStarted) {
-              textStarted = true;
-              await writeWithDrain(`event: response.output_item.added\ndata: ${JSON.stringify({ type: 'response.output_item.added', output_index: 0, item: { id: `msg_${respId}`, type: 'message', status: 'in_progress', role: 'assistant', content: [] } })}\n\n`);
-              await writeWithDrain(`event: response.content_part.added\ndata: ${JSON.stringify({ type: 'response.content_part.added', item_id: `msg_${respId}`, output_index: 0, content_index: 0, part: { type: 'output_text', text: '', annotations: [] } })}\n\n`);
-            }
-            totalContent += delta.content;
-            let deltaText = delta.content;
-            if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
-              const out = await pluginHooks.maybeRewriteChunk(deltaText, { model, requestType: 'Responses/OpenAI', affinityKey: affinityKeyForRequest(req, req.body) });
-              if (out === null) continue;
-              if (typeof out === 'string') {
-                totalContent = totalContent.slice(0, totalContent.length - deltaText.length) + out;
-                deltaText = out;
-              }
-            }
-            await writeWithDrain(`event: response.output_text.delta\ndata: ${JSON.stringify({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: 0, content_index: 0, delta: deltaText })}\n\n`);
-          }
-
-          // 工具调用
-          if (delta.tool_calls) {
-            // 关闭文本输出（如果有）
-            if (textStarted && !textDone) {
-              textDone = true;
-              await writeWithDrain(`event: response.output_text.done\ndata: ${JSON.stringify({ type: 'response.output_text.done', item_id: `msg_${respId}`, output_index: 0, content_index: 0, text: totalContent })}\n\n`);
-              await writeWithDrain(`event: response.content_part.done\ndata: ${JSON.stringify({ type: 'response.content_part.done', item_id: `msg_${respId}`, output_index: 0, content_index: 0, part: { type: 'output_text', text: totalContent, annotations: [] } })}\n\n`);
-              await writeWithDrain(`event: response.output_item.done\ndata: ${JSON.stringify({ type: 'response.output_item.done', output_index: 0, item: { id: `msg_${respId}`, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: totalContent, annotations: [] }] } })}\n\n`);
-            }
-
-            for (const tc of delta.tool_calls) {
-              const idx = tc.index ?? 0;
-              if (!toolCalls[idx]) toolCalls[idx] = { id: '', name: '', arguments: '' };
-              if (tc.id) toolCalls[idx].id = tc.id;
-              if (tc.function?.name) toolCalls[idx].name += tc.function.name;
-              if (tc.function?.arguments) toolCalls[idx].arguments += tc.function.arguments;
-            }
-          }
-
-          if (parsed.usage) lastUsage = parsed.usage;
+          await handleParsed(JSON.parse(data));
         } catch (e) {
           if (e?.name !== 'SyntaxError') throw e;
           jsonParseErrors++;
@@ -4950,7 +4894,6 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
       }
     }
 
-    // 处理残余缓冲区
     if (buffer.trim() && !clientDisconnected) {
       const lines = buffer.split('\n');
       for (const line of lines) {
@@ -4958,29 +4901,14 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
         const data = line.slice(6).trim();
         if (data === '[DONE]') { gotDone = true; continue; }
         try {
-          const parsed = JSON.parse(data);
-              if (parsed.error || parsed.type === 'error') {
-                const failure = new Error('Upstream stream reported an error');
-                failure.code = 'upstream_stream_error';
-                throw failure;
-              }
-          if (parsed.usage) lastUsage = parsed.usage;
-          const delta = parsed.choices?.[0]?.delta;
-          if (delta?.content && !textDone) { totalContent += delta.content; }
-          if (delta?.tool_calls) {
-            for (const tc of delta.tool_calls) {
-              const idx = tc.index ?? 0;
-              if (!toolCalls[idx]) toolCalls[idx] = { id: '', name: '', arguments: '' };
-              if (tc.id) toolCalls[idx].id = tc.id;
-              if (tc.function?.name) toolCalls[idx].name += tc.function.name;
-              if (tc.function?.arguments) toolCalls[idx].arguments += tc.function.arguments;
-            }
-          }
-        } catch (e) { if (e?.name !== 'SyntaxError') throw e;
-          jsonParseErrors++; }
+          await handleParsed(JSON.parse(data));
+        } catch (e) {
+          if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++;
+        }
       }
     }
-  if (!gotDone && !clientDisconnected) {
+    if (!gotDone && !clientDisconnected) {
       const failure = new Error('Upstream stream ended without a completion event');
       failure.code = 'upstream_stream_incomplete';
       throw failure;
@@ -4995,47 +4923,41 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
     reader.releaseLock?.();
   }
 
-  // 关闭未完成的文本输出
-  if (textStarted && !textDone) {
-    await writeWithDrain(`event: response.output_text.done\ndata: ${JSON.stringify({ type: 'response.output_text.done', item_id: `msg_${respId}`, output_index: 0, content_index: 0, text: totalContent })}\n\n`);
-    await writeWithDrain(`event: response.content_part.done\ndata: ${JSON.stringify({ type: 'response.content_part.done', item_id: `msg_${respId}`, output_index: 0, content_index: 0, part: { type: 'output_text', text: totalContent, annotations: [] } })}\n\n`);
-    await writeWithDrain(`event: response.output_item.done\ndata: ${JSON.stringify({ type: 'response.output_item.done', output_index: 0, item: { id: `msg_${respId}`, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: totalContent, annotations: [] }] } })}\n\n`);
-  }
+  await closeReasoning();
+  await closeText();
 
-  // 发送工具调用事件
+  const terminal = wireShapes.responsesStatus(rawFinish);
+  const truncated = terminal.status === 'incomplete';
   const toolCallIndices = Object.keys(toolCalls).map(Number).sort((a, b) => a - b);
-  const toolOutput = [];
+  let emittedTools = 0;
   for (const idx of toolCallIndices) {
     const tc = toolCalls[idx];
+    if (!tc.name) continue;
+    emittedTools++;
     const tcId = tc.id || `fc_${respId}_${idx}`;
-    const outputIdx = textStarted ? idx + 1 : idx;
-    await writeWithDrain(`event: response.output_item.added\ndata: ${JSON.stringify({ type: 'response.output_item.added', output_index: outputIdx, item: { type: 'function_call', id: tcId, call_id: tc.id || tcId, name: tc.name, arguments: tc.arguments, status: 'completed' } })}\n\n`);
-    await writeWithDrain(`event: response.function_call_arguments.done\ndata: ${JSON.stringify({ type: 'response.function_call_arguments.done', item_id: tcId, output_index: outputIdx, arguments: tc.arguments })}\n\n`);
-    await writeWithDrain(`event: response.output_item.done\ndata: ${JSON.stringify({ type: 'response.output_item.done', output_index: outputIdx, item: { type: 'function_call', id: tcId, call_id: tc.id || tcId, name: tc.name, arguments: tc.arguments, status: 'completed' } })}\n\n`);
-    toolOutput.push({ type: 'function_call', id: tcId, call_id: tc.id || tcId, name: tc.name, arguments: tc.arguments, status: 'completed' });
+    const args = wireShapes.terminalToolArguments(tc.arguments, truncated);
+    const outputIdx = sawReasoning ? nextOutputIndex++ : (textStarted ? idx + 1 : idx);
+    const item = { type: 'function_call', id: tcId, call_id: tc.id || tcId, name: tc.name, arguments: args, status: 'completed' };
+    await emit({ type: 'response.output_item.added', output_index: outputIdx, item: { ...item, arguments: '' } });
+    await emit({ type: 'response.function_call_arguments.done', item_id: tcId, output_index: outputIdx, arguments: args });
+    await emit({ type: 'response.output_item.done', output_index: outputIdx, item });
+    outputItems.push({ index: outputIdx, item });
   }
 
-  // 构建最终输出数组
-  const finalOutput = [];
-  if (textStarted) {
-    finalOutput.push({ id: `msg_${respId}`, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: totalContent, annotations: [] }] });
-  }
-  finalOutput.push(...toolOutput);
-
-  // 发送 response.completed
+  const finalOutput = outputItems.sort((a, b) => a.index - b.index).map(entry => entry.item);
   const normalized = normalizeUsageTokens(lastUsage, 'openai');
   const completedResponse = {
-    ...baseResponse, status: 'completed', output: finalOutput,
-    usage: lastUsage ? {
-      input_tokens: normalized.promptTokens || 0, output_tokens: normalized.completionTokens || 0,
-      output_tokens_details: { reasoning_tokens: 0 }, total_tokens: (normalized.promptTokens || 0) + (normalized.completionTokens || 0)
-    } : null,
+    ...baseResponse,
+    status: terminal.status,
+    incomplete_details: terminal.incomplete_details,
+    output: finalOutput,
+    usage: wireShapes.responsesUsage(lastUsage, normalized),
     output_text: totalContent
   };
-  await writeWithDrain(`event: response.completed\ndata: ${JSON.stringify({ type: 'response.completed', response: completedResponse })}\n\n`);
+  await emit({ type: 'response.completed', response: completedResponse });
 
   const latency = Date.now() - startTime;
-  Logger.info(`[Responses/OpenAI] 流式完成: model=${model}, latency=${latency}ms, content=${totalContent.length}, chunks=${chunkCount}, tools=${toolCallIndices.length}`);
+  Logger.info(`[Responses/OpenAI] 流式完成: model=${model}, latency=${latency}ms, content=${totalContent.length}, chunks=${chunkCount}, tools=${emittedTools}`);
   return { ...normalized, content: totalContent };
 }
 
@@ -5057,8 +4979,19 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
   const startTime = Date.now();
   let textStarted = false;
   let textDone = false;
+  let textOutputIndex = null;
+  let nextOutputIndex = 0;
+  let reasoningIndex = null;
+  let reasoningText = '';
+  let reasoningOpen = false;
+  let stopReason = null;
+  const outputItems = [];
 
   res.once?.('close', () => { clientDisconnected = true; });
+
+  const emit = async (payload) => {
+    await writeWithDrain(`event: ${payload.type}\ndata: ${JSON.stringify(payload)}\n\n`);
+  };
 
   const baseResponse = {
     id: respId, object: 'response', created_at: Math.floor(Date.now() / 1000),
@@ -5073,8 +5006,94 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
     top_p: body.top_p ?? 1.0, truncation: body.truncation || 'disabled',
     usage: null, user: body.user || null, metadata: body.metadata || {}
   };
-  await writeWithDrain(`event: response.created\ndata: ${JSON.stringify({ type: 'response.created', response: baseResponse })}\n\n`);
-  await writeWithDrain(`event: response.in_progress\ndata: ${JSON.stringify({ type: 'response.in_progress', response: baseResponse })}\n\n`);
+  await emit({ type: 'response.created', response: baseResponse });
+  await emit({ type: 'response.in_progress', response: baseResponse });
+
+  const closeText = async () => {
+    if (!textStarted || textDone) return;
+    textDone = true;
+    const item = { id: `msg_${respId}`, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: totalContent, annotations: [] }] };
+    outputItems.push({ index: textOutputIndex, item });
+    await emit({ type: 'response.output_text.done', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, text: totalContent });
+    await emit({ type: 'response.content_part.done', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, part: { type: 'output_text', text: totalContent, annotations: [] } });
+    await emit({ type: 'response.output_item.done', output_index: textOutputIndex, item });
+  };
+
+  const handleParsed = async (parsed) => {
+    const block = parsed.content_block;
+    if (block?.type === 'redacted_thinking' || parsed.delta?.type === 'signature_delta' || (block?.type === 'thinking' && String(block.signature || '').trim())) {
+      const error = new Error('Signed or redacted thinking requires the native Anthropic streaming endpoint');
+      error.code = 'unsupported_stream_thinking';
+      throw error;
+    }
+    if (parsed.error || parsed.type === 'error') {
+      const failure = new Error('Upstream stream reported an error');
+      failure.code = 'upstream_stream_error';
+      throw failure;
+    }
+
+    if (parsed.type === 'content_block_start') {
+      currentBlockType = parsed.content_block?.type || null;
+      if (currentBlockType === 'tool_use') {
+        currentToolIndex = toolUseBlocks.length;
+        toolUseBlocks.push({ id: parsed.content_block.id, name: parsed.content_block.name, arguments: '' });
+      }
+    } else if (parsed.type === 'content_block_delta') {
+      if (currentBlockType === 'text' && parsed.delta?.text) {
+        if (!textStarted) {
+          textStarted = true;
+          textOutputIndex = nextOutputIndex++;
+          await emit({ type: 'response.output_item.added', output_index: textOutputIndex, item: { id: `msg_${respId}`, type: 'message', status: 'in_progress', role: 'assistant', content: [] } });
+          await emit({ type: 'response.content_part.added', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, part: { type: 'output_text', text: '', annotations: [] } });
+        }
+        totalContent += parsed.delta.text;
+        let deltaTextA = parsed.delta.text;
+        if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
+          const out = await pluginHooks.maybeRewriteChunk(deltaTextA, { model, requestType: 'Responses/Anthropic', affinityKey: affinityKeyForRequest(req, req.body) });
+          if (out === null) return;
+          if (typeof out === 'string') {
+            totalContent = totalContent.slice(0, totalContent.length - deltaTextA.length) + out;
+            deltaTextA = out;
+          }
+        }
+        await emit({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: textOutputIndex, content_index: 0, delta: deltaTextA });
+      } else if (currentBlockType === 'thinking' && parsed.delta?.thinking) {
+        if (reasoningIndex === null) {
+          reasoningIndex = nextOutputIndex++;
+          reasoningOpen = true;
+          await emit(wireShapes.reasoningAddedEvent(`rs_${respId}`, reasoningIndex));
+        }
+        reasoningText += parsed.delta.thinking;
+        await emit(wireShapes.reasoningDeltaEvent(`rs_${respId}`, reasoningIndex, parsed.delta.thinking));
+      } else if (currentBlockType === 'tool_use' && parsed.delta?.type === 'input_json_delta') {
+        if (currentToolIndex >= 0 && toolUseBlocks[currentToolIndex]) {
+          toolUseBlocks[currentToolIndex].arguments += parsed.delta.partial_json || '';
+        }
+      }
+    } else if (parsed.type === 'content_block_stop') {
+      if (currentBlockType === 'thinking' && reasoningOpen) {
+        reasoningOpen = false;
+        for (const event of wireShapes.reasoningDoneEvents(`rs_${respId}`, reasoningIndex, reasoningText)) await emit(event);
+        outputItems.push({ index: reasoningIndex, item: wireShapes.reasoningItem(`rs_${respId}`, reasoningText) });
+      }
+      if (currentBlockType === 'tool_use' && currentToolIndex >= 0) await closeText();
+      currentBlockType = null;
+    } else if (parsed.type === 'message_start' && parsed.message?.usage) {
+      anthropicUsage = parsed.message.usage;
+    } else if (parsed.type === 'message_delta') {
+      if (parsed.usage) {
+        if (parsed.usage.output_tokens != null) completionTokens = parsed.usage.output_tokens || 0;
+        anthropicUsage = {
+          ...anthropicUsage,
+          ...parsed.usage,
+          input_tokens: parsed.usage.input_tokens > 0 ? parsed.usage.input_tokens : anthropicUsage.input_tokens
+        };
+      }
+      if (parsed.delta?.stop_reason) stopReason = parsed.delta.stop_reason;
+    } else if (parsed.type === 'message_stop') {
+      gotDone = true;
+    }
+  };
 
   try {
     while (true) {
@@ -5091,103 +5110,28 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
         sseLineCount++;
         const data = line.slice(6).trim();
         try {
-          const parsed = JSON.parse(data);
-              const block = parsed.content_block;
-              if (block?.type === 'redacted_thinking' || (block?.type === 'thinking' && block.signature !== undefined) || parsed.delta?.type === 'signature_delta') {
-                const error = new Error('Signed or redacted thinking requires the native Anthropic streaming endpoint');
-                error.code = 'unsupported_stream_thinking';
-                throw error;
-              }
-              if (parsed.error || parsed.type === 'error') {
-                const failure = new Error('Upstream stream reported an error');
-                failure.code = 'upstream_stream_error';
-                throw failure;
-              }
-
-          if (parsed.type === 'content_block_start') {
-            currentBlockType = parsed.content_block?.type || null;
-            if (currentBlockType === 'tool_use') {
-              currentToolIndex = toolUseBlocks.length;
-              toolUseBlocks.push({ id: parsed.content_block.id, name: parsed.content_block.name, arguments: '' });
-            }
-          } else if (parsed.type === 'content_block_delta') {
-            if (currentBlockType === 'text' && parsed.delta?.text) {
-              if (!textStarted) {
-                textStarted = true;
-                await writeWithDrain(`event: response.output_item.added\ndata: ${JSON.stringify({ type: 'response.output_item.added', output_index: 0, item: { id: `msg_${respId}`, type: 'message', status: 'in_progress', role: 'assistant', content: [] } })}\n\n`);
-                await writeWithDrain(`event: response.content_part.added\ndata: ${JSON.stringify({ type: 'response.content_part.added', item_id: `msg_${respId}`, output_index: 0, content_index: 0, part: { type: 'output_text', text: '', annotations: [] } })}\n\n`);
-              }
-              totalContent += parsed.delta.text;
-              let deltaTextA = parsed.delta.text;
-              if (pluginHooks.hasSubscribers('gateway:responseChunk')) {
-                const out = await pluginHooks.maybeRewriteChunk(deltaTextA, { model, requestType: 'Responses/Anthropic', affinityKey: affinityKeyForRequest(req, req.body) });
-                if (out === null) continue;
-                if (typeof out === 'string') {
-                  totalContent = totalContent.slice(0, totalContent.length - deltaTextA.length) + out;
-                  deltaTextA = out;
-                }
-              }
-              await writeWithDrain(`event: response.output_text.delta\ndata: ${JSON.stringify({ type: 'response.output_text.delta', item_id: `msg_${respId}`, output_index: 0, content_index: 0, delta: deltaTextA })}\n\n`);
-            } else if (currentBlockType === 'tool_use' && parsed.delta?.type === 'input_json_delta') {
-              if (currentToolIndex >= 0 && toolUseBlocks[currentToolIndex]) {
-                toolUseBlocks[currentToolIndex].arguments += parsed.delta.partial_json || '';
-              }
-            }
-          } else if (parsed.type === 'content_block_stop') {
-            if (currentBlockType === 'tool_use' && currentToolIndex >= 0) {
-              // 关闭文本输出（如果有）
-              if (textStarted && !textDone) {
-                textDone = true;
-                await writeWithDrain(`event: response.output_text.done\ndata: ${JSON.stringify({ type: 'response.output_text.done', item_id: `msg_${respId}`, output_index: 0, content_index: 0, text: totalContent })}\n\n`);
-                await writeWithDrain(`event: response.content_part.done\ndata: ${JSON.stringify({ type: 'response.content_part.done', item_id: `msg_${respId}`, output_index: 0, content_index: 0, part: { type: 'output_text', text: totalContent, annotations: [] } })}\n\n`);
-                await writeWithDrain(`event: response.output_item.done\ndata: ${JSON.stringify({ type: 'response.output_item.done', output_index: 0, item: { id: `msg_${respId}`, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: totalContent, annotations: [] }] } })}\n\n`);
-              }
-
-              const tool = toolUseBlocks[currentToolIndex];
-              const outputIdx = textStarted ? currentToolIndex + 1 : currentToolIndex;
-              await writeWithDrain(`event: response.output_item.added\ndata: ${JSON.stringify({ type: 'response.output_item.added', output_index: outputIdx, item: { type: 'function_call', id: tool.id, call_id: tool.id, name: tool.name, arguments: tool.arguments, status: 'completed' } })}\n\n`);
-              await writeWithDrain(`event: response.function_call_arguments.done\ndata: ${JSON.stringify({ type: 'response.function_call_arguments.done', item_id: tool.id, output_index: outputIdx, arguments: tool.arguments })}\n\n`);
-              await writeWithDrain(`event: response.output_item.done\ndata: ${JSON.stringify({ type: 'response.output_item.done', output_index: outputIdx, item: { type: 'function_call', id: tool.id, call_id: tool.id, name: tool.name, arguments: tool.arguments, status: 'completed' } })}\n\n`);
-            }
-            currentBlockType = null;
-          } else if (parsed.type === 'message_start' && parsed.message?.usage) {
-            anthropicUsage = parsed.message.usage;
-          } else if (parsed.type === 'message_delta' && parsed.usage) {
-            completionTokens = parsed.usage.output_tokens || 0;
-          } else if (parsed.type === 'message_stop') {
-            gotDone = true;
-          }
-        } catch (e) { if (e?.name !== 'SyntaxError') throw e;
-          jsonParseErrors++; }
+          await handleParsed(JSON.parse(data));
+        } catch (e) {
+          if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++;
+        }
       }
     }
 
-    // 处理残余缓冲区
     if (buffer.trim() && !clientDisconnected) {
       const lines = buffer.split('\n');
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const data = line.slice(6).trim();
         try {
-          const parsed = JSON.parse(data);
-              const block = parsed.content_block;
-              if (block?.type === 'redacted_thinking' || (block?.type === 'thinking' && block.signature !== undefined) || parsed.delta?.type === 'signature_delta') {
-                const error = new Error('Signed or redacted thinking requires the native Anthropic streaming endpoint');
-                error.code = 'unsupported_stream_thinking';
-                throw error;
-              }
-              if (parsed.error || parsed.type === 'error') {
-                const failure = new Error('Upstream stream reported an error');
-                failure.code = 'upstream_stream_error';
-                throw failure;
-              }
-          if (parsed.type === 'message_delta' && parsed.usage) completionTokens = parsed.usage.output_tokens || 0;
-          if (parsed.type === 'message_stop') gotDone = true;
-        } catch (e) { if (e?.name !== 'SyntaxError') throw e;
-          jsonParseErrors++; }
+          await handleParsed(JSON.parse(data));
+        } catch (e) {
+          if (e?.name !== 'SyntaxError') throw e;
+          jsonParseErrors++;
+        }
       }
     }
-  if (!gotDone && !clientDisconnected) {
+    if (!gotDone && !clientDisconnected) {
       const failure = new Error('Upstream stream ended without a completion event');
       failure.code = 'upstream_stream_incomplete';
       throw failure;
@@ -5202,45 +5146,50 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
     reader.releaseLock?.();
   }
 
-  // 关闭未完成的文本输出
-  if (textStarted && !textDone) {
-    await writeWithDrain(`event: response.output_text.done\ndata: ${JSON.stringify({ type: 'response.output_text.done', item_id: `msg_${respId}`, output_index: 0, content_index: 0, text: totalContent })}\n\n`);
-    await writeWithDrain(`event: response.content_part.done\ndata: ${JSON.stringify({ type: 'response.content_part.done', item_id: `msg_${respId}`, output_index: 0, content_index: 0, part: { type: 'output_text', text: totalContent, annotations: [] } })}\n\n`);
-    await writeWithDrain(`event: response.output_item.done\ndata: ${JSON.stringify({ type: 'response.output_item.done', output_index: 0, item: { id: `msg_${respId}`, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: totalContent, annotations: [] }] } })}\n\n`);
+  if (reasoningOpen) {
+    reasoningOpen = false;
+    for (const event of wireShapes.reasoningDoneEvents(`rs_${respId}`, reasoningIndex, reasoningText)) await emit(event);
+    outputItems.push({ index: reasoningIndex, item: wireShapes.reasoningItem(`rs_${respId}`, reasoningText) });
   }
+  await closeText();
 
-  // 构建最终输出
-  const finalOutput = [];
-  if (textStarted) {
-    finalOutput.push({ id: `msg_${respId}`, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text: totalContent, annotations: [] }] });
-  }
+  const terminal = wireShapes.responsesStatus(stopReason);
+  const truncated = terminal.status === 'incomplete';
+  let emittedTools = 0;
   for (const tool of toolUseBlocks) {
-    finalOutput.push({ type: 'function_call', id: tool.id, call_id: tool.id, name: tool.name, arguments: tool.arguments, status: 'completed' });
+    if (!tool.name) continue;
+    emittedTools++;
+    const args = wireShapes.terminalToolArguments(tool.arguments, truncated);
+    const outputIdx = nextOutputIndex++;
+    const item = { type: 'function_call', id: tool.id, call_id: tool.id, name: tool.name, arguments: args, status: 'completed' };
+    await emit({ type: 'response.output_item.added', output_index: outputIdx, item });
+    await emit({ type: 'response.function_call_arguments.done', item_id: tool.id, output_index: outputIdx, arguments: args });
+    await emit({ type: 'response.output_item.done', output_index: outputIdx, item });
+    outputItems.push({ index: outputIdx, item });
   }
 
+  const finalOutput = outputItems.sort((a, b) => a.index - b.index).map(entry => entry.item);
   const syntheticUsage = {
     input_tokens: anthropicUsage.input_tokens || 0, output_tokens: completionTokens,
     cache_read_input_tokens: anthropicUsage.cache_read_input_tokens || 0,
     cache_creation_input_tokens: anthropicUsage.cache_creation_input_tokens || 0
   };
   const normalized = normalizeUsageTokens(syntheticUsage, 'anthropic');
-
   const completedResponse = {
-    ...baseResponse, status: 'completed', output: finalOutput,
-    usage: {
-      input_tokens: normalized.promptTokens || 0, output_tokens: normalized.completionTokens || 0,
-      output_tokens_details: { reasoning_tokens: 0 }, total_tokens: (normalized.promptTokens || 0) + (normalized.completionTokens || 0)
-    },
+    ...baseResponse,
+    status: terminal.status,
+    incomplete_details: terminal.incomplete_details,
+    output: finalOutput,
+    usage: wireShapes.responsesUsage(syntheticUsage, normalized),
     output_text: totalContent
   };
-  await writeWithDrain(`event: response.completed\ndata: ${JSON.stringify({ type: 'response.completed', response: completedResponse })}\n\n`);
+  await emit({ type: 'response.completed', response: completedResponse });
 
   const latency = Date.now() - startTime;
-  Logger.info(`[Responses/Anthropic] 流式完成: model=${model}, latency=${latency}ms, content=${totalContent.length}, chunks=${chunkCount}, tools=${toolUseBlocks.length}`);
+  Logger.info(`[Responses/Anthropic] 流式完成: model=${model}, latency=${latency}ms, content=${totalContent.length}, chunks=${chunkCount}, tools=${emittedTools}`);
   return { ...normalized, content: totalContent };
 }
 
-// 非流式代理 OpenAI 上游，返回 Responses API 格式
 async function proxyOpenAIForResponses(provider, model, chatBody, res, req, respId, body, options = {}) {
   const suppressErrorResponse = !!options.suppressErrorResponse;
   const baseUrl = cleanBaseUrl(provider.base_url);
@@ -5444,31 +5393,34 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   }
 
   const output = [];
+  const terminal = wireShapes.responsesStatus(data.stop_reason);
+  const truncated = terminal.status === 'incomplete';
   if (data.content) {
     const textParts = data.content.filter(b => b.type === 'text');
     const toolParts = data.content.filter(b => b.type === 'tool_use');
     const thinkingParts = data.content.filter(b => b.type === 'thinking');
-    // 文本与 function_call 可并存
+    const thinkingText = thinkingParts.map(t => t.thinking || '').join('');
+    if (thinkingText) {
+      const reasoning = wireShapes.reasoningInputItem(`rs_${respId}`, thinkingText);
+      if (reasoning) output.push(reasoning);
+    }
     if (textParts.length > 0) {
       const text = textParts.map(b => b.text).join('');
       output.push({ id: `msg_${respId}`, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text, annotations: [] }] });
     }
-    if (thinkingParts.length > 0) {
-      output.push({
-        id: `rs_${respId}`,
-        type: 'reasoning',
-        summary: [{ type: 'summary_text', text: thinkingParts.map(t => t.thinking || '').join('') }]
-      });
-    }
     for (const tp of toolParts) {
-      output.push({ type: 'function_call', id: tp.id, call_id: tp.id, name: tp.name, arguments: JSON.stringify(tp.input || {}), status: 'completed' });
+      if (!tp?.name) continue;
+      const args = typeof tp.input === 'string'
+        ? wireShapes.terminalToolArguments(tp.input, truncated)
+        : JSON.stringify(tp.input ?? {});
+      output.push({ type: 'function_call', id: tp.id, call_id: tp.id, name: tp.name, arguments: args, status: 'completed' });
     }
   }
 
   const normalized = normalizeUsageTokens(data.usage, 'anthropic');
   const result = {
     id: respId, object: 'response', created_at: Math.floor(Date.now() / 1000),
-    status: 'completed', error: null, incomplete_details: null,
+    status: terminal.status, error: null, incomplete_details: terminal.incomplete_details,
     instructions: body.instructions || null, max_output_tokens: body.max_output_tokens || null,
     model: data.model || model, output,
     parallel_tool_calls: body.parallel_tool_calls !== false,
@@ -5478,8 +5430,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
     text: body.text || { format: { type: 'text' } },
     tool_choice: body.tool_choice || 'auto', tools: body.tools || [],
     top_p: body.top_p ?? 1.0, truncation: body.truncation || 'disabled',
-    usage: { input_tokens: normalized.promptTokens || 0, output_tokens: normalized.completionTokens || 0,
-      output_tokens_details: { reasoning_tokens: 0 }, total_tokens: (normalized.promptTokens || 0) + (normalized.completionTokens || 0) },
+    usage: wireShapes.responsesUsage(data.usage, normalized),
     user: body.user || null, metadata: body.metadata || {},
     output_text: output.filter(o => o.type === 'message').map(o => o.content?.map(c => c.text || '').join('') || '').join('')
   };
