@@ -40,3 +40,4 @@ data/
 # ModelTrace 随发布分发的公开统计指纹库
 !public/vendor/modeltrace/data/
 !public/vendor/modeltrace/data/unified_bank.json
+!public/vendor/modeltrace/data/shared_detector.bin

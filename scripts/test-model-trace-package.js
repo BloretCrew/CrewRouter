@@ -26,7 +26,7 @@ async function main() {
     assert.ok(Number(result.trim()) > 0, 'bundled core loads all offline resources independently of cwd');
     await esbuild.build({ entryPoints: [path.join(root, 'server/utils/model-trace-worker.js')], bundle: true, platform: 'node', target: 'node20', format: 'cjs', outfile: path.join(temp, 'model-trace-worker.js'), logLevel: 'silent' });
     await esbuild.build({ entryPoints: [path.join(root, 'server/utils/model-trace-runner.js')], bundle: true, platform: 'node', target: 'node20', format: 'cjs', packages: 'external', outfile: path.join(temp, 'runner.js'), logLevel: 'silent' });
-    const workerResult = execFileSync(process.execPath, ['-e', `require(${JSON.stringify(path.join(temp, 'runner.js'))}).analyze([{text:Array(300).fill('123').join(' '),expected_count:300}]).then(r=>{if(!r.prediction)throw Error('missing worker result');console.log('worker-ok');}).catch(e=>{console.error(e);process.exitCode=1;});`], { cwd: os.tmpdir(), encoding: 'utf8' });
+    const workerResult = execFileSync(process.execPath, ['-e', `require(${JSON.stringify(path.join(temp, 'runner.js'))}).analyze([{text:Array(300).fill('123').join(' '),expected_count:300}]).then(r=>{if(r.decision!=='not_model')throw Error('missing worker result');console.log('worker-ok');}).catch(e=>{console.error(e);process.exitCode=1;});`], { cwd: os.tmpdir(), encoding: 'utf8' });
     assert.match(workerResult, /worker-ok/, 'bundled scoring worker loads offline assets');
     const build = await fs.readFile(path.join(root, 'deploy/build/build-release.js'), 'utf8');
     const stage = await fs.readFile(path.join(root, 'CrewRouter-Desktop/scripts/stage-server.js'), 'utf8');

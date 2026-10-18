@@ -4,6 +4,7 @@
   "description": "CrewRouter - AI API 网关平台",
   "main": "server/index.js",
   "scripts": {
+    "test:model-trace": "node server/scripts/test-lm-detector.js && node server/scripts/test-model-trace-ui-contract.js && node server/scripts/test-model-trace-transport.js && node server/scripts/test-model-trace-quota.js && node server/scripts/test-model-trace-runner-recovery.js && node scripts/test-model-trace-package.js",
     "test:upstream-generation": "node server/scripts/test-upstream-generation-routes.js && node --test server/scripts/test-upstream-transport.js && node server/scripts/test-upstream-stream-safety.js",
     "test:responses-compat": "node server/scripts/test-responses-compat.js",
     "start": "node server/index.js",

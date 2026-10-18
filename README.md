@@ -212,4 +212,7 @@ npm start          # 开发可用 npm run dev
 ## 相关链接
 
 [CrewRouter - Github](https://github.com/BloretCrew/CrewRouter) [CrewRouter](https://crewrouter.bloret.net/) [QQ Discuss](https://qm.qq.com/q/kEt8fb41wc) [LinuxDo](https://linux.do/)
+# 模型归因引擎
+
+模型归因已接入 [Ikaleio/lm-detector](https://github.com/Ikaleio/lm-detector)，在本地执行数字指纹检测，支持 60 个候选模型。接入方式、结果限制及资源更新见 [模型归因说明](docs/lm-detector.md)。
 

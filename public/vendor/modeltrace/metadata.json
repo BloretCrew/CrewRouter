@@ -1,54 +1,36 @@
 {
   "schema": "crewrouter-modeltrace-metadata-v1",
-  "source_repository": "https://github.com/xqy2006/ModelTrace",
-  "source_commit": "6cd4a8ff0f3f4e49d6d6969dd2fbadfa1569fde2",
-  "source_files": {
-    "fingerprint-core.mjs": "static/fingerprint-core.js",
-    "challenge-browser.mjs": "static/challenge-browser.js",
-    "data/unified_bank.json": "data/unified_bank.json",
-    "LICENSE": "LICENSE"
-  },
-  "bank_hash": "f267d0513aa06981d024ec5394746fceddf44e4e8a75fa6bf8304255f4b32d6d",
-  "algorithm_version": "modeltrace-1.0.0-crewrouter.1",
+  "source_repository": "https://github.com/Ikaleio/lm-detector",
+  "source_commit": "654c8334bb53951aaf04cbd61252d163649e1369",
+  "algorithm_version": "lm-detector-shared-v2-crewrouter.1",
+  "bank_hash": "19dfbf83960bebe70490a3f8126c0dc049fd6104599d9ceec1303ad29d36713b",
+  "detector_hash": "9117330f225a525d39d75db2616e90657e6b5d9ea1af46770389530de0a418fe",
   "license": "MIT",
   "files": {
     "fingerprint-core.mjs": {
-      "sha256": "9f97424eaeec36cd1733fc0cec7e790b6f30261596a7573b51c1fc101caed57f",
-      "bytes": 14854
+      "sha256": "50101b7bca26fdeaeaddac320ec5dca1b74e9ccdaa9352581a19cc4b0f0fc999",
+      "bytes": 20415
     },
     "challenge-browser.mjs": {
-      "sha256": "1bd24b39696dfbe03b5986afe8034e1eb33bfa959b385dde85624e8f72e25911",
-      "bytes": 2818
+      "sha256": "48066c1737b909635e92f891877481c5a0001dbb5dd63287206c9376d64e6ec6",
+      "bytes": 18804
     },
     "data/unified_bank.json": {
-      "sha256": "f267d0513aa06981d024ec5394746fceddf44e4e8a75fa6bf8304255f4b32d6d",
-      "bytes": 931426
+      "sha256": "19dfbf83960bebe70490a3f8126c0dc049fd6104599d9ceec1303ad29d36713b",
+      "bytes": 9967
+    },
+    "data/shared_detector.bin": {
+      "sha256": "9117330f225a525d39d75db2616e90657e6b5d9ea1af46770389530de0a418fe",
+      "bytes": 4385348
     },
     "LICENSE": {
       "sha256": "238afb57e498990742f84b9ce6167b4e256ac06104a9938ce953bc41c14bea51",
       "bytes": 1064
     }
   },
-  "collection_declaration": {
-    "attribution": "Upstream README at source_commit; labels and collection claims are not independently verified.",
-    "gpt": "Official subscription Codex (upstream claim).",
-    "claude": "OAIPro https://api.oaipro.com/ (upstream claim).",
-    "scope": "18 candidate labels, two families; closed-set attribution with uniform prior.",
-    "limitations": "Unknown models still map to a known candidate. System prompts affect results; upstream reports significant Claude Code bias. No model authenticity or real-world accuracy claim.",
-    "local_collection": "No model requests or new reference samples collected. Only statistical bank is distributed; reference.jsonl and prompts are excluded."
-  },
   "adaptations": [
-    "Shared browser/Node ESM; bounded inputs and strict statistical schema validation.",
-    "Projection uses original vector for every basis dot product, matching Python simultaneous projection.",
-    "Unicode decimal digits follow Python regex/int behavior.",
-    "Challenge count restricted to 1–3; random IDs use Web Crypto getRandomValues.",
-    "Conditional probability is zero when family probability underflows to zero."
-  ],
-  "projection_validation": {
-    "hellinger_orthogonality_error": 6.661338147750939e-16,
-    "ordered_blocks_orthogonality_error": 8.881784197001252e-16,
-    "tolerance": 1e-10,
-    "upstream_sequential_vs_simultaneous_max_delta": 8.881784197001252e-16
-  },
-  "fixture": "server/scripts/fixtures/model-trace-python.json"
+    "Browser/Node shared offline bundle; bounded inputs; public candidate metadata only.",
+    "Upstream shared detector and bound calibration; no tokenizer probes or external proxy.",
+    "Three valid answers required for confidence; partial ranking is explicitly uncalibrated."
+  ]
 }

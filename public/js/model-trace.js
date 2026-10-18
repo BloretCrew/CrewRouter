@@ -61,11 +61,12 @@ function resultHTML(result, valid) {
   const families = result.family_ranking || result.families || result.family_probabilities || [];
   const familyRows = Array.isArray(families) ? families : Object.entries(families).map(([name, probability]) => ({ name, probability }));
   const row = (entry) => {
-    const p = Number(entry.probability ?? entry.prob ?? entry.score);
+    const probability = entry.probability ?? entry.prob;
+    const p = probability == null ? NaN : Number(probability);
     const similarity = entry.profile_similarity ?? entry.similarity ?? entry.distribution_similarity;
     return `<li><strong>${esc(entry.display_name || entry.model || entry.model_name || entry.family || entry.name || entry.label)}</strong><span>${Number.isFinite(p) ? `${(p * 100).toFixed(2)}%` : '—'}${similarity == null ? '' : ` · ${esc(tr('分布相似度'))} ${Number.isFinite(Number(similarity)) ? `${(Number(similarity) * 100).toFixed(2)}%` : '—'}`}</span></li>`;
   };
-  return `<div class="trace-result"><p>${esc(tr('候选库内概率'))} · ${esc(tr('有效挑战'))} ${Number(valid) || 0}/3${Number(valid) < 3 ? ` · ${esc(tr('有效回答不足三份，仅供参考'))}` : ''}</p>${familyRows.length ? `<h4>${esc(tr('家族归因'))}</h4><ol>${familyRows.map(row).join('')}</ol>` : ''}<h4>${esc(tr('候选模型排行'))}</h4><ol>${models.map(row).join('') || `<li>${esc(tr('暂无候选数据'))}</li>`}</ol><p>${esc(tr('指纹库版本'))}：${esc(version || '—')}</p></div>`;
+  return `<div class="trace-result">${result.evidence?.reason ? `<p class="trace-notice">${esc(tr(result.evidence.reason))}</p>` : ''}<p>${esc(tr('候选库内概率'))} · ${esc(tr('有效挑战'))} ${Number(valid) || 0}/3${Number(valid) < 3 ? ` · ${esc(tr('有效回答不足三份，仅提供未校准排名'))}` : ''}</p>${familyRows.length ? `<h4>${esc(tr('家族归因'))}</h4><ol>${familyRows.map(row).join('')}</ol>` : ''}<h4>${esc(tr('候选模型排行'))}</h4><ol>${models.map(row).join('') || `<li>${esc(tr('暂无候选数据'))}</li>`}</ol><p>${esc(tr('指纹库版本'))}：${esc(version || '—')}</p></div>`;
 }
 function taskHTML(job) {
   const result = job.result;
@@ -243,13 +244,19 @@ async function history(page = pageNumber) {
   } catch (error) { if (seq === historyEpoch) put(root, `<p class="trace-error">${esc(error.message)}</p>${button('history', '重新查询')}`); }
 }
 async function core() {
-  const [fingerprint, generator, response, metadataResponse] = await Promise.all([import('/vendor/modeltrace/fingerprint-core.mjs'), import('/vendor/modeltrace/challenge-browser.mjs'), fetch('/vendor/modeltrace/data/unified_bank.json', { credentials: 'same-origin' }), fetch('/vendor/modeltrace/metadata.json', { credentials: 'same-origin' })]);
-  if (!response.ok || !metadataResponse.ok) throw new Error(tr('指纹库加载失败'));
-  const bank = fingerprint.parseBankJson(await response.text());
+  const [fingerprint, generator, response, metadataResponse, detectorResponse] = await Promise.all([import('/vendor/modeltrace/fingerprint-core.mjs'), import('/vendor/modeltrace/challenge-browser.mjs'), fetch('/vendor/modeltrace/data/unified_bank.json', { credentials: 'same-origin' }), fetch('/vendor/modeltrace/metadata.json', { credentials: 'same-origin' }), fetch('/vendor/modeltrace/data/shared_detector.bin', { credentials: 'same-origin' })]);
+  if (!response.ok || !metadataResponse.ok || !detectorResponse.ok) throw new Error(tr('指纹库加载失败'));
+  const bankText = await response.text();
+  const bank = fingerprint.parseBankJson(bankText);
   const metadataText = await metadataResponse.text();
   if (metadataText.length > 16384) throw new Error(tr('无效指纹库版本信息'));
   const metadata = JSON.parse(metadataText);
   if (metadata.schema !== 'crewrouter-modeltrace-metadata-v1' || typeof metadata.algorithm_version !== 'string' || !metadata.algorithm_version || metadata.algorithm_version.length > 256 || !/^[a-f0-9]{40}$/.test(metadata.source_commit || '') || !/^[a-f0-9]{64}$/.test(metadata.bank_hash || '')) throw new Error(tr('无效指纹库版本信息'));
+  const detectorBytes = new Uint8Array(await detectorResponse.arrayBuffer());
+  const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', detectorBytes)), byte => byte.toString(16).padStart(2, '0')).join('');
+  const bankDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(bankText))), byte => byte.toString(16).padStart(2, '0')).join('');
+  if (digest !== metadata.detector_hash || bankDigest !== metadata.bank_hash) throw new Error(tr('指纹库校验失败'));
+  fingerprint.attachDetector(bank, detectorBytes);
   return { ...fingerprint, ...generator, bank, metadata };
 }
 let corePromise;

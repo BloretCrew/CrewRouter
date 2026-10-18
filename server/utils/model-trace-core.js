@@ -5,9 +5,9 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { createHash, webcrypto } = require('node:crypto');
 
-const SOURCE_COMMIT = '6cd4a8ff0f3f4e49d6d6969dd2fbadfa1569fde2';
-const ALGORITHM_VERSION = 'modeltrace-1.0.0-crewrouter.1';
-const FILES = ['fingerprint-core.mjs', 'challenge-browser.mjs', 'data/unified_bank.json', 'LICENSE'];
+const SOURCE_COMMIT = '654c8334bb53951aaf04cbd61252d163649e1369';
+const ALGORITHM_VERSION = 'lm-detector-shared-v2-crewrouter.1';
+const FILES = ['fingerprint-core.mjs', 'challenge-browser.mjs', 'data/unified_bank.json', 'data/shared_detector.bin', 'LICENSE'];
 let assetsPromise;
 let corePromise;
 let bankPromise;
@@ -62,11 +62,12 @@ async function loadAssets() {
     for (const file of FILES) {
       const info = metadata.files[file];
       if (!info || !/^[a-f0-9]{64}$/.test(info.sha256 || '') || !Number.isSafeInteger(info.bytes) || info.bytes < 1) throw new Error('无效 ModelTrace 资源校验信息');
-      const bytes = await readBounded(path.join(root, file), file.endsWith('.json') ? 2097152 : 131072);
+      const bytes = await readBounded(path.join(root, file), file.endsWith('.bin') ? 8388608 : file.endsWith('.json') ? 262144 : 131072);
       if (bytes.length !== info.bytes || createHash('sha256').update(bytes).digest('hex') !== info.sha256) throw new Error(`ModelTrace 资源校验失败: ${file}`);
       contents[file] = bytes;
     }
     if (metadata.bank_hash !== metadata.files['data/unified_bank.json'].sha256) throw new Error('ModelTrace 库版本校验失败');
+    if (metadata.detector_hash !== metadata.files['data/shared_detector.bin'].sha256) throw new Error('LM Detector 检测器版本校验失败');
     return { root, metadata: freezeTree(metadata), contents };
   })().catch(error => { assetsPromise = undefined; throw error; });
   return assetsPromise;
@@ -90,8 +91,8 @@ async function loadCore() {
 async function loadBank() {
   if (!bankPromise) bankPromise = (async () => {
     const { root, metadata, contents } = await loadAssets();
-    const { parseBankJson } = await import(pathToFileURL(path.join(root, 'fingerprint-core.mjs')).href);
-    const bank = freezeTree(parseBankJson(contents['data/unified_bank.json'].toString('utf8')));
+    const { parseBankJson, attachDetector } = await import(pathToFileURL(path.join(root, 'fingerprint-core.mjs')).href);
+    const bank = freezeTree(attachDetector(parseBankJson(contents['data/unified_bank.json'].toString('utf8')), contents['data/shared_detector.bin']));
     return Object.freeze({ bank, metadata });
   })().catch(error => { bankPromise = undefined; throw error; });
   return bankPromise;
