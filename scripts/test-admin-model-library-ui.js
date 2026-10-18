@@ -17,6 +17,7 @@ function fixture(teamAdmin = true) {
   const document = { addEventListener: (name, listener) => listeners.set(name, listener), removeEventListener: name => listeners.delete(name) };
   const context = { document, window: { location: { hash: '#adminModelLibrary/team/12' }, confirm: async message => { calls.push({ confirm: message }); return true; } }, URLSearchParams, AbortController, setTimeout, clearTimeout, CustomEvent: class {}, fetch: async (url, options) => { calls.push({ url, options }); return { ok: true, json: async () => url === '/api/admin/teams' ? [{ id: 12, name: '研发', member_count: 3, is_default: true, is_frontier: true }] : { items: [], total: 0, stats: {} } }; } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/js/admin-library-console-view.js'), 'utf8'), context);
+  context.window.AdminLibraryConsoleView.shell = markup => markup;
   vm.runInNewContext(source, context);
   const lib = new context.window.AdminModelLibrary(app);
   const click = (action, data = {}) => lib.onClick({ target: { closest: () => ({ dataset: { action, ...data }, disabled: false }) } });
@@ -69,12 +70,27 @@ test('cards escape content, lock system-disabled TEAM switches and expose shortc
   assert.match(html, /data-system-locked="false"/);
   assert.match(lib.card({ model_id: 'm', system_enabled: false, team_enabled: false }), /disabled data-system-locked="true"/);
   assert.match(html, /data-action="system-enable"/);
-  assert.match(html, /data-action="trace-model"/);
-  assert.match(html, /data-action="uptime-model"/);
+  assert.match(html, /trace-model/);
+  assert.match(html, /uptime-model/);
   assert.match(html, /测试成功/);
   assert.match(lib.card({ model_id: 'm', system_enabled: true, team_enabled: false }), /TEAM 未授权/);
   for (const className of ['blora-card model-library-item', 'model-library-item-info', 'model-library-item-name', 'model-item-badges', 'model-library-item-price', 'model-library-item-actions']) assert.ok(html.includes(className));
   assert.doesNotMatch(html, /app\.selectModel|toggleLibraryStar|hideLibraryModel/);
+});
+
+test('Blora filters and menu values dispatch without evaluating scripts', async () => {
+  const { lib } = fixture();
+  let loads = 0;
+  lib.load = async () => { loads++; };
+  lib.onSelect({ target: { matches: selector => selector === 'blora-select[data-filter]', dataset: { filter: 'test' }, value: 'pass' } });
+  assert.equal(lib.filters.test, 'pass');
+  assert.equal(loads, 1);
+  let action;
+  lib.onClick = event => { action = event.target.closest().dataset; };
+  const target = { matches: selector => selector === 'blora-dropdown' };
+  lib.onSelect({ target, detail: { value: 'admin-library:' + encodeURIComponent(JSON.stringify(['test-model', 'model<&'])) } });
+  assert.equal(action.action, 'test-model');
+  assert.equal(action.id, 'model<&');
 });
 
 test('single PUT, batch POST, cleared_keys, cancellation and one notification refresh', async () => {
@@ -182,7 +198,8 @@ test('header, provider statistics and price sorting preserve existing selectors'
   assert.match(html, /model-library-list/);
   assert.match(html, /model-library-provider-actions/);
   assert.match(html, /2 已授权/);
-  for (const action of ['toggle-provider', 'quota-provider', 'trace-provider', 'enable-provider', 'disable-provider']) assert.match(html, new RegExp(`data-action="${action}"`));
+  assert.match(html, /data-action="toggle-provider"/);
+  for (const action of ['quota-provider', 'trace-provider', 'enable-provider', 'disable-provider']) assert.ok(html.includes(encodeURIComponent(action)));
   await new Promise(resolve => setImmediate(resolve));
   assert.match(f.nodes.get('.aml-team-tabs').innerHTML, /3 成员.*默认.*前沿/);
   f.lib.destroy();

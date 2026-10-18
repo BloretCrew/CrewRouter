@@ -12,8 +12,11 @@ async function main() {
   const root = path.resolve(__dirname, '../public');
   serverApp.use(express.static(root));
   serverApp.get('/', (req, res) => res.send(`<!doctype html><meta charset="utf-8">
-    <link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/model-library-blora.css"><link rel="stylesheet" href="/css/admin-model-library.css">
-    <div id="library"></div><pre id="result">pending</pre>
+    <meta name="viewport" content="width=device-width, initial-scale=1"><script type="module" src="/vendor/blora-2.0.8/auto.js"></script>
+    <style>@layer legacy-reset, blora.tokens, blora.reset, blora.base, blora.components, blora.utilities;</style>
+    <link rel="stylesheet" href="/vendor/blora-2.0.8/blora.css"><link rel="stylesheet" href="/vendor/blora-2.0.8/tokens.dark.css">
+    <link rel="stylesheet" href="/css/themes.css"><link rel="stylesheet" href="/css/main.css"><link rel="stylesheet" href="/css/model-library-blora.css"><link rel="stylesheet" href="/css/admin-model-library.css">
+    <style>body{padding:24px;background:var(--blora-color-surface-page)}#library{max-width:1120px;margin:auto}</style><div id="library"></div><pre id="result">pending</pre>
     <script src="/js/admin-library-console-view.js"></script><script src="/js/admin-model-library.js"></script><script>
     (async () => {
       try {
@@ -35,6 +38,14 @@ async function main() {
         await library.onClick({ target: expand });
         check(document.querySelector('.model-library-item-info .model-library-item-name'), 'console model structure missing');
         check(document.querySelector('.model-library-provider-header'), 'console provider structure missing');
+        await customElements.whenDefined('blora-select');
+        check(document.querySelector('blora-search[data-filter="q"]'), 'console search missing');
+        check(document.querySelector('blora-select[data-filter="provider"]'), 'console select missing');
+        check(getComputedStyle(document.documentElement).getPropertyValue('--blora-space-4').trim(), 'Blora design tokens missing');
+        check(parseFloat(getComputedStyle(document.querySelector('[data-action="add-provider"]')).paddingLeft) > 8, 'legacy reset erased button padding');
+        check(document.querySelectorAll('.aml-header > .model-library-header-actions > button').length === 2, 'header must keep only two main actions');
+        check(document.querySelectorAll('.aml-card-actions > button').length === 1, 'card actions must be condensed');
+        check(!document.querySelector('select[data-filter]'), 'native admin select leaked');
         const checkbox = document.querySelector('[data-select]');
         checkbox.click();
         check(writes === 0 && library.selected.has('m1'), 'selection must not change authorization');
@@ -44,6 +55,18 @@ async function main() {
         document.dispatchEvent(new Event('i18n:ready'));
         check(document.querySelector('.model-library-item.selected'), 'selected model lost on language change');
         check(!document.querySelector('[onclick*="selectModel"]'), 'user binding leaked');
+        library.filters.provider = 'p1';
+        library.updateOptions({ provider_options: [{ provider_id: 'p1', provider_name: 'Fixture provider' }], series: ['GPT'] });
+        check(document.querySelector('[data-filter="provider"]').value === 'p1', 'custom select lost filter');
+        const dropdown = document.querySelector('.aml-card-actions blora-dropdown');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        check(dropdown.querySelectorAll('[data-value^="admin-library:"]').length === 4, 'model actions missing');
+        const item = dropdown.querySelector('[data-value*="test-model"]');
+        let tested = '';
+        app.testModel = async id => { tested = id; };
+        library.onSelect({ target: dropdown, detail: { value: item.dataset.value } });
+        await new Promise(resolve => setTimeout(resolve, 50));
+        check(tested === 'm1', 'dropdown action dispatch failed');
         check(document.documentElement.scrollWidth <= innerWidth + 1, 'horizontal overflow');
         document.getElementById('result').textContent = 'BROWSER_PASS';
       } catch (error) { document.getElementById('result').textContent = 'BROWSER_FAIL: ' + error.stack; }
@@ -54,7 +77,8 @@ async function main() {
     for (const width of [1440, 390]) {
       const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-console-view-'));
       try {
-        const browser = spawn(process.env.CHROME_BIN || '/usr/bin/google-chrome', ['--headless', '--no-sandbox', '--disable-gpu', '--no-first-run', `--user-data-dir=${directory}`, `--window-size=${width},900`, '--dump-dom', '--virtual-time-budget=3000', `http://127.0.0.1:${server.address().port}`]);
+        const capture = process.env.ADMIN_LIBRARY_SCREENSHOTS ? [`--screenshot=${path.join(process.env.ADMIN_LIBRARY_SCREENSHOTS, 'admin-model-library-' + width + '.png')}`] : [];
+        const browser = spawn(process.env.CHROME_BIN || '/usr/bin/google-chrome', ['--headless', '--no-sandbox', '--disable-gpu', '--no-first-run', `--user-data-dir=${directory}`, `--window-size=${width},900`, ...capture, '--dump-dom', '--virtual-time-budget=5000', `http://127.0.0.1:${server.address().port}`]);
         let output = '';
         browser.stdout.on('data', chunk => { output += chunk; });
         browser.stderr.resume();
