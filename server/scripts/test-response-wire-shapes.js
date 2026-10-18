@@ -123,6 +123,100 @@ const responsesUsage = wireShapes.responsesUsage({
 assert.equal(responsesUsage.input_tokens, 10);
 assert.equal(responsesUsage.input_tokens_details.cached_tokens, 3);
 assert.equal(responsesUsage.output_tokens_details.reasoning_tokens, 2);
+assert.equal(responsesUsage.input_tokens_details.cache_write_tokens, 0);
+const floatedUsage = wireShapes.responsesUsage({
+  input_tokens: 10.9,
+  output_tokens: 4.2,
+  total_tokens: 15.8,
+  input_tokens_details: { cached_tokens: 3.7 },
+  output_tokens_details: { reasoning_tokens: 2.9 },
+  cache_creation_input_tokens: 1.2
+});
+assert.equal(floatedUsage.input_tokens, 10);
+assert.equal(floatedUsage.output_tokens, 4);
+assert.equal(floatedUsage.total_tokens, 15);
+assert.equal(floatedUsage.input_tokens_details.cached_tokens, 3);
+assert.equal(floatedUsage.output_tokens_details.reasoning_tokens, 2);
+assert.equal(floatedUsage.input_tokens_details.cache_write_tokens, 1);
+for (const value of [
+  floatedUsage.input_tokens,
+  floatedUsage.output_tokens,
+  floatedUsage.total_tokens,
+  floatedUsage.input_tokens_details.cached_tokens,
+  floatedUsage.input_tokens_details.cache_write_tokens,
+  floatedUsage.output_tokens_details.reasoning_tokens
+]) assert.equal(Number.isInteger(value), true);
+const cachedFallback = wireShapes.responsesUsage({
+  input_tokens: 10,
+  input_tokens_details: { cached_tokens: 4, cache_write_tokens: 6 },
+  output_tokens_details: { reasoning_tokens: 2 }
+}, { promptTokens: 10.4, completionTokens: 1, totalTokens: 11, cachedTokens: 0, cacheCreationTokens: 0 });
+assert.equal(cachedFallback.input_tokens, 10);
+assert.equal(cachedFallback.input_tokens_details.cached_tokens, 4);
+assert.equal(cachedFallback.input_tokens_details.cache_write_tokens, 6);
+assert.equal(cachedFallback.output_tokens_details.reasoning_tokens, 2);
+assert.deepEqual(wireShapes.responsesTerminal('length', false), { event: 'response.incomplete', status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' } });
+assert.deepEqual(wireShapes.responsesTerminal('max_tokens', false), { event: 'response.incomplete', status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' } });
+assert.deepEqual(wireShapes.responsesTerminal('model_context_window_exceeded', false), { event: 'response.incomplete', status: 'incomplete', incomplete_details: { reason: 'max_prompt_tokens' } });
+assert.deepEqual(wireShapes.responsesTerminal('content_filter', false), { event: 'response.incomplete', status: 'incomplete', incomplete_details: { reason: 'content_filter' } });
+assert.deepEqual(wireShapes.responsesTerminal('refusal', false), { event: 'response.incomplete', status: 'incomplete', incomplete_details: { reason: 'content_filter' } });
+assert.equal(wireShapes.responsesTerminal('length', true).event, 'response.completed');
+assert.equal(wireShapes.responsesTerminal('length', true).status, 'incomplete');
+assert.equal(wireShapes.responsesTerminal('stop', false).event, 'response.completed');
+assert.equal(wireShapes.responsesTerminal('stop', false).end_turn, undefined);
+assert.equal(wireShapes.terminalToolArguments({ q: 1 }, false), '{"q":1}');
+assert.equal(wireShapes.terminalToolArguments({ q: 1 }, false).includes('[object Object]'), false);
+assert.equal(wireShapes.terminalToolArguments('{"q":', true), '{"q":');
+assert.equal(wireShapes.terminalToolArguments('', false), '{}');
+assert.equal(wireShapes.terminalToolArguments('', true), '');
+const toolCatalog = wireShapes.createResponsesToolCatalog([
+  { type: 'function', name: 'lookup', description: 'Look up', parameters: { type: 'object', properties: {} }, strict: true },
+  { type: 'namespace', name: 'functions', tools: [{ type: 'function', name: 'lookup', parameters: { type: 'object' } }] },
+  { type: 'namespace', name: 'editor', tools: [
+    { type: 'function', name: 'edit', description: 'Edit a file', parameters: { type: 'object', properties: { path: { type: 'string' } } } },
+    { type: 'custom', name: 'apply_patch', description: 'Apply a patch' }
+  ] },
+  { type: 'namespace', name: 'other', tools: [{ type: 'function', name: 'shared', parameters: {} }] },
+  { type: 'namespace', name: 'mcp', tools: [{ type: 'function', name: 'shared', parameters: {} }] }
+]);
+const namespaced = wireShapes.responsesToolWire({ name: 'edit', arguments: { path: 'a' }, callId: 'call_edit', respId: 'resp_ns', index: 0, catalog: toolCatalog, outputIndex: 2 });
+assert.equal(namespaced.item.type, 'function_call');
+assert.equal(namespaced.item.namespace, 'editor');
+assert.equal(namespaced.item.call_id, 'call_edit');
+assert.equal(namespaced.item.name, 'edit');
+assert.equal(namespaced.item.arguments, '{"path":"a"}');
+assert.equal(namespaced.events[0].item.arguments, '');
+assert.equal(namespaced.events[1].type, 'response.function_call_arguments.delta');
+assert.equal(namespaced.events[1].output_index, 2);
+assert.equal(namespaced.events[1].delta, '{"path":"a"}');
+assert.equal(namespaced.events[3].type, 'response.output_item.done');
+assert.equal(namespaced.events[3].item.arguments, '{"path":"a"}');
+const defaultNamespace = wireShapes.responsesToolWire({ name: 'lookup', arguments: '{}', callId: '', respId: 'resp_x', index: 3, catalog: toolCatalog });
+assert.equal(defaultNamespace.item.type, 'function_call');
+assert.equal(defaultNamespace.item.namespace, undefined);
+assert.equal(defaultNamespace.item.call_id, 'fc_resp_x_3');
+const customCall = wireShapes.responsesToolWire({ name: 'apply_patch', arguments: '{"input":"*** Begin"}', callId: 'call_p', respId: 'resp', index: 0, catalog: toolCatalog, outputIndex: 1 });
+assert.equal(customCall.item.type, 'custom_tool_call');
+assert.equal(customCall.item.namespace, 'editor');
+assert.equal(customCall.item.input, '*** Begin');
+assert.equal(customCall.events[0].item.input, '');
+assert.equal(customCall.events[1].type, 'response.custom_tool_call_input.delta');
+assert.equal(customCall.events[1].item_id, 'call_p');
+assert.equal(customCall.events[1].call_id, 'call_p');
+assert.equal(customCall.events[1].delta, '*** Begin');
+assert.equal(customCall.events[2].item.input, '*** Begin');
+assert.equal(wireShapes.responsesToolWire({ name: 'apply_patch', arguments: 'not-json', callId: 'c', respId: 'resp', index: 0, catalog: toolCatalog }).item.input, 'not-json');
+assert.equal(wireShapes.responsesToolWire({ name: 'shared', arguments: '{"a":1}', callId: 's', respId: 'resp', index: 0, catalog: toolCatalog }).item.namespace, undefined);
+assert.deepEqual(wireShapes.responsesChatTools([
+  { type: 'function', name: 'flat', description: 'flat tool', parameters: { type: 'object', properties: {} }, strict: true },
+  { type: 'namespace', name: 'editor', tools: [{ type: 'function', name: 'edit', description: 'Edit', parameters: { type: 'object', properties: { path: { type: 'string' } } } }] },
+  { type: 'custom', name: 'apply_patch', description: 'Apply a patch' },
+  { type: 'web_search' }
+]), [
+  { type: 'function', function: { name: 'flat', description: 'flat tool', parameters: { type: 'object', properties: {} }, strict: true } },
+  { type: 'function', function: { name: 'edit', description: 'Edit', parameters: { type: 'object', properties: { path: { type: 'string' } } } } },
+  { type: 'function', function: { name: 'apply_patch', description: 'Apply a patch', parameters: { type: 'object', properties: { input: { type: 'string' } }, required: ['input'], additionalProperties: false } } }
+]);
 assert.deepEqual(wireShapes.thinkingBlock('hmm'), { type: 'thinking', thinking: 'hmm', signature: '' });
 assert.equal(typeof wireShapes.thinkingBlock('').signature, 'string');
 
@@ -265,13 +359,16 @@ assert.equal(tooled.choices[0].finish_reason, 'tool_calls');
   const textDelta = openAIFrames.find(frame => frame.data.type === 'response.output_text.delta');
   assert.equal(textDelta.data.output_index, 1);
   const completed = openAIFrames.filter(frame => frame.data.type === 'response.completed');
-  assert.equal(completed.length, 1);
-  assert.equal(completed[0].data.response.status, 'incomplete');
-  assert.equal(completed[0].data.response.incomplete_details.reason, 'max_output_tokens');
-  assert.equal(completed[0].data.response.usage.input_tokens, 10);
-  assert.equal(completed[0].data.response.usage.input_tokens_details.cached_tokens, 3);
-  assert.equal(completed[0].data.response.usage.output_tokens_details.reasoning_tokens, 2);
-  assert.equal(openAIFrames.some(frame => frame.data.type === 'response.incomplete'), false);
+  const incomplete = openAIFrames.filter(frame => frame.data.type === 'response.incomplete');
+  assert.equal(completed.length, 0);
+  assert.equal(incomplete.length, 1);
+  assert.equal(incomplete[0].data.response.status, 'incomplete');
+  assert.equal(incomplete[0].data.response.incomplete_details.reason, 'max_output_tokens');
+  assert.equal(incomplete[0].data.response.end_turn, undefined);
+  assert.equal(incomplete[0].data.response.usage.input_tokens, 10);
+  assert.equal(incomplete[0].data.response.usage.input_tokens_details.cached_tokens, 3);
+  assert.equal(incomplete[0].data.response.usage.output_tokens_details.reasoning_tokens, 2);
+  assert.equal(Number.isInteger(incomplete[0].data.response.usage.input_tokens_details.cache_write_tokens), true);
 
   const toolResponse = responsesResponse();
   const toolWire = [
@@ -287,12 +384,21 @@ assert.equal(tooled.choices[0].finish_reason, 'tool_calls');
   const openaiToolFrames = parseFrames(toolResponse.chunks.join(''));
   const added = openaiToolFrames.find(frame => frame.data.type === 'response.output_item.added' && frame.data.item?.type === 'function_call');
   const done = openaiToolFrames.find(frame => frame.data.type === 'response.output_item.done' && frame.data.item?.type === 'function_call');
+  const argDelta = openaiToolFrames.find(frame => frame.data.type === 'response.function_call_arguments.delta');
   assert.equal(added.data.item.name, 'lookup');
+  assert.equal(added.data.item.call_id, 'call_test');
   assert.equal(added.data.item.arguments, '');
+  assert.equal(done.data.item.call_id, 'call_test');
+  assert.equal(done.data.item.name, 'lookup');
   assert.equal(done.data.item.arguments, '{"q":1}');
-  assert.ok(openaiToolFrames.indexOf(added) < openaiToolFrames.indexOf(done));
+  assert.equal(argDelta.data.output_index, added.data.output_index);
+  assert.equal(argDelta.data.output_index, done.data.output_index);
+  assert.equal(argDelta.data.delta, '{"q":1}');
+  assert.ok(openaiToolFrames.indexOf(added) < openaiToolFrames.indexOf(argDelta));
+  assert.ok(openaiToolFrames.indexOf(argDelta) < openaiToolFrames.indexOf(done));
   assert.equal(openaiToolFrames.some(frame => frame.data.item?.type === 'function_call' && !frame.data.item.name), false);
   assert.equal(openaiToolFrames.filter(frame => frame.data.type === 'response.completed')[0].data.response.status, 'completed');
+  assert.equal(openaiToolFrames.some(frame => frame.data.type === 'response.incomplete'), false);
 
   const anthropicResponse = responsesResponse();
   const anthropicWire = [
@@ -315,10 +421,14 @@ assert.equal(tooled.choices[0].finish_reason, 'tool_calls');
   assert.equal(anthropicReasoning.data.output_index, 0);
   assert.equal(anthropicFrames.find(frame => frame.data.type === 'response.output_text.delta').data.output_index, 1);
   const anthropicCompleted = anthropicFrames.filter(frame => frame.data.type === 'response.completed');
-  assert.equal(anthropicCompleted.length, 1);
-  assert.equal(anthropicCompleted[0].data.response.status, 'incomplete');
-  assert.equal(anthropicCompleted[0].data.response.usage.input_tokens_details.cached_tokens, 0);
-  assert.ok(anthropicCompleted[0].data.response.usage.output_tokens_details);
+  const anthropicIncomplete = anthropicFrames.filter(frame => frame.data.type === 'response.incomplete');
+  assert.equal(anthropicCompleted.length, 0);
+  assert.equal(anthropicIncomplete.length, 1);
+  assert.equal(anthropicIncomplete[0].data.response.status, 'incomplete');
+  assert.equal(anthropicIncomplete[0].data.response.incomplete_details.reason, 'max_output_tokens');
+  assert.equal(anthropicIncomplete[0].data.response.usage.input_tokens_details.cached_tokens, 0);
+  assert.equal(Number.isInteger(anthropicIncomplete[0].data.response.usage.output_tokens_details.reasoning_tokens), true);
+  assert.equal(Number.isInteger(anthropicIncomplete[0].data.response.usage.input_tokens_details.cache_write_tokens), true);
 
   const signed = responsesResponse();
   const signedWire = 'data: {"type":"content_block_start","content_block":{"type":"thinking","thinking":"","signature":"signed"}}\n\ndata: {"type":"message_stop"}\n\n';
@@ -341,9 +451,96 @@ assert.equal(tooled.choices[0].finish_reason, 'tool_calls');
     async chunk => truncatedTool.write(chunk), async () => {}
   );
   const truncatedFrames = parseFrames(truncatedTool.chunks.join(''));
-  const truncatedDone = truncatedFrames.find(frame => frame.data.type === 'response.output_item.done');
+  const truncatedDone = truncatedFrames.find(frame => frame.data.type === 'response.output_item.done' && frame.data.item?.type === 'function_call');
+  const truncatedAdded = truncatedFrames.find(frame => frame.data.type === 'response.output_item.added' && frame.data.item?.type === 'function_call');
+  const truncatedDelta = truncatedFrames.find(frame => frame.data.type === 'response.function_call_arguments.delta');
+  assert.equal(truncatedDone.data.item.call_id, 'call_cut');
+  assert.equal(truncatedDone.data.item.name, 'lookup');
   assert.equal(truncatedDone.data.item.arguments, '{"q":');
+  assert.equal(truncatedAdded.data.output_index, truncatedDone.data.output_index);
+  assert.equal(truncatedDelta.data.output_index, truncatedDone.data.output_index);
+  assert.ok(truncatedFrames.indexOf(truncatedAdded) < truncatedFrames.indexOf(truncatedDelta));
+  assert.ok(truncatedFrames.indexOf(truncatedDelta) < truncatedFrames.indexOf(truncatedDone));
+  assert.equal(truncatedFrames.filter(frame => frame.data.type === 'response.completed').length, 1);
   assert.equal(truncatedFrames.filter(frame => frame.data.type === 'response.completed')[0].data.response.status, 'incomplete');
+  assert.equal(truncatedFrames.some(frame => frame.data.type === 'response.incomplete'), false);
+
+  const missingId = responsesResponse();
+  const missingWire = 'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"lookup","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}\n\ndata: [DONE]\n\n';
+  await context.streamOpenAIAsResponses(
+    readerFrom([missingWire]), new TextDecoder(), missingId, new EventEmitter(), 'resp_missing', 'wire-model', {},
+    async chunk => missingId.write(chunk), async () => {}
+  );
+  const missingDone = parseFrames(missingId.chunks.join('')).find(frame => frame.data.type === 'response.output_item.done');
+  assert.equal(missingDone.data.item.call_id, 'fc_resp_missing_0');
+  assert.equal(typeof missingDone.data.item.call_id, 'string');
+  assert.equal(missingDone.data.item.arguments, '{}');
+
+  const objectArgs = context.convertChatCompletionToResponse({
+    choices: [{ finish_reason: 'tool_calls', message: { tool_calls: [{ function: { name: 'lookup', arguments: { q: 1 } } }] } }]
+  }, 'resp_obj', {});
+  const objectCall = objectArgs.output.find(item => item.type === 'function_call');
+  assert.equal(objectCall.arguments, '{"q":1}');
+  assert.equal(objectCall.arguments.includes('[object Object]'), false);
+  assert.equal(objectCall.call_id, 'fc_resp_obj_0');
+
+  const namespaceResponse = responsesResponse();
+  const namespaceWire = [
+    'data: {"choices":[{"delta":{"content":"hi"}}]}\n\n',
+    'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_edit","function":{"name":"edit","arguments":"{\\"path\\":\\"a\\"}"}},{"index":1,"id":"call_other","function":{"name":"lookup","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}\n\n',
+    'data: [DONE]\n\n'
+  ].join('');
+  await context.streamOpenAIAsResponses(
+    readerFrom([namespaceWire]), new TextDecoder(), namespaceResponse, new EventEmitter(), 'resp_ns', 'wire-model', {
+      tools: [
+        { type: 'namespace', name: 'editor', tools: [{ type: 'function', name: 'edit', parameters: { type: 'object' } }] },
+        { type: 'namespace', name: 'functions', tools: [{ type: 'function', name: 'lookup', parameters: { type: 'object' } }] }
+      ]
+    },
+    async chunk => namespaceResponse.write(chunk), async () => {}
+  );
+  const namespaceFrames = parseFrames(namespaceResponse.chunks.join(''));
+  const textItem = namespaceFrames.find(frame => frame.data.type === 'response.output_item.added' && frame.data.item?.type === 'message');
+  const editDone = namespaceFrames.find(frame => frame.data.type === 'response.output_item.done' && frame.data.item?.name === 'edit');
+  const lookupDone = namespaceFrames.find(frame => frame.data.type === 'response.output_item.done' && frame.data.item?.name === 'lookup');
+  assert.equal(editDone.data.item.type, 'function_call');
+  assert.equal(editDone.data.item.namespace, 'editor');
+  assert.equal(editDone.data.item.call_id, 'call_edit');
+  assert.equal(editDone.data.item.arguments, '{"path":"a"}');
+  assert.equal(lookupDone.data.item.namespace, undefined);
+  assert.notEqual(textItem.data.output_index, editDone.data.output_index);
+  assert.notEqual(editDone.data.output_index, lookupDone.data.output_index);
+
+  const customResponse = responsesResponse();
+  const customWire = 'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_patch","function":{"name":"apply_patch","arguments":"{\\"input\\":\\"*** Begin\\"}"}}]},"finish_reason":"length"}]}\n\ndata: [DONE]\n\n';
+  await context.streamOpenAIAsResponses(
+    readerFrom([customWire]), new TextDecoder(), customResponse, new EventEmitter(), 'resp_custom', 'wire-model', {
+      tools: [{ type: 'custom', name: 'apply_patch', description: 'Apply a patch' }]
+    },
+    async chunk => customResponse.write(chunk), async () => {}
+  );
+  const customFrames = parseFrames(customResponse.chunks.join(''));
+  const customDelta = customFrames.find(frame => frame.data.type === 'response.custom_tool_call_input.delta');
+  const customDone = customFrames.find(frame => frame.data.type === 'response.output_item.done');
+  assert.equal(customDone.data.item.type, 'custom_tool_call');
+  assert.equal(customDone.data.item.call_id, 'call_patch');
+  assert.equal(customDone.data.item.name, 'apply_patch');
+  assert.equal(customDone.data.item.input, '*** Begin');
+  assert.equal(customDone.data.item.namespace, undefined);
+  assert.equal(customDelta.data.item_id, 'call_patch');
+  assert.equal(customDelta.data.call_id, 'call_patch');
+  assert.equal(customDelta.data.delta, '*** Begin');
+  assert.equal(customFrames.filter(frame => frame.data.type === 'response.completed').length, 1);
+  assert.equal(customFrames.some(frame => frame.data.type === 'response.incomplete'), false);
+  assert.equal(customFrames.filter(frame => frame.data.type === 'response.completed')[0].data.response.output[0].input, '*** Begin');
+
+  const { sendGenerationFailure } = require('../utils/generation-failure');
+  const failed = responsesResponse();
+  sendGenerationFailure(failed, 'resp_fail', 502, { error: { message: 'boom', type: 'server_error' } });
+  const failedFrames = parseFrames(failed.chunks.join(''));
+  assert.equal(failedFrames.length, 1);
+  assert.equal(failedFrames[0].data.type, 'response.failed');
+  assert.equal(failedFrames.some(frame => frame.data.type === 'response.completed' || frame.data.type === 'response.incomplete'), false);
 
   console.log('response wire shape tests passed');
 })().catch(error => {

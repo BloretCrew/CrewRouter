@@ -111,28 +111,78 @@ function chatUsage(usage) {
   };
 }
 
-function responsesUsage(usage, normalized) {
-  if (normalized) {
-    const input = num(normalized.promptTokens);
-    const output = num(normalized.completionTokens);
-    return {
-      input_tokens: input,
-      output_tokens: output,
-      total_tokens: num(normalized.totalTokens) || input + output,
-      input_tokens_details: { cached_tokens: num(normalized.cachedTokens) },
-      output_tokens_details: {
-        reasoning_tokens: num(usage?.output_tokens_details?.reasoning_tokens ?? usage?.completion_tokens_details?.reasoning_tokens)
-      }
-    };
-  }
-  const chat = chatUsage(usage);
+function intToken(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.trunc(n);
+}
+
+function rawResponsesDetails(usage) {
   return {
-    input_tokens: chat.prompt_tokens,
-    output_tokens: chat.completion_tokens,
-    total_tokens: chat.total_tokens,
-    input_tokens_details: { cached_tokens: chat.prompt_tokens_details.cached_tokens },
-    output_tokens_details: { reasoning_tokens: chat.completion_tokens_details.reasoning_tokens }
+    cached: intToken(usage?.input_tokens_details?.cached_tokens ?? usage?.prompt_tokens_details?.cached_tokens ?? usage?.cached_tokens),
+    reasoning: intToken(usage?.output_tokens_details?.reasoning_tokens ?? usage?.completion_tokens_details?.reasoning_tokens),
+    cacheWrite: intToken(
+      usage?.cache_creation_input_tokens
+      ?? usage?.prompt_tokens_details?.cache_creation_tokens
+      ?? usage?.input_tokens_details?.cache_write_tokens
+      ?? usage?.cache_write_tokens
+    )
   };
+}
+
+function responsesUsage(usage, normalized) {
+  const raw = rawResponsesDetails(usage);
+  let input;
+  let output;
+  let total;
+  let cached;
+  let reasoning;
+  let cacheWrite;
+  if (normalized) {
+    input = intToken(normalized.promptTokens);
+    output = intToken(normalized.completionTokens);
+    total = intToken(normalized.totalTokens) || input + output;
+    cached = intToken(normalized.cachedTokens);
+    if (cached === 0) cached = raw.cached;
+    reasoning = raw.reasoning;
+    cacheWrite = intToken(normalized.cacheCreationTokens);
+    if (cacheWrite === 0) cacheWrite = raw.cacheWrite;
+  } else {
+    const chat = chatUsage(usage);
+    input = intToken(chat.prompt_tokens);
+    output = intToken(chat.completion_tokens);
+    total = intToken(chat.total_tokens) || input + output;
+    cached = intToken(chat.prompt_tokens_details.cached_tokens);
+    if (cached === 0) cached = raw.cached;
+    reasoning = intToken(chat.completion_tokens_details.reasoning_tokens);
+    if (reasoning === 0) reasoning = raw.reasoning;
+    cacheWrite = raw.cacheWrite;
+  }
+  return {
+    input_tokens: input,
+    output_tokens: output,
+    total_tokens: total,
+    input_tokens_details: { cached_tokens: cached, cache_write_tokens: cacheWrite },
+    output_tokens_details: { reasoning_tokens: reasoning }
+  };
+}
+
+// Codex 只看事件名。已入队工具后再发 incomplete 会把整轮变成错误，所以有工具时仍用 completed。
+function responsesTerminal(stopReason, hasTools) {
+  let status = 'completed';
+  let incomplete_details = null;
+  if (stopReason === 'length' || stopReason === 'max_tokens') {
+    status = 'incomplete';
+    incomplete_details = { reason: 'max_output_tokens' };
+  } else if (stopReason === 'model_context_window_exceeded') {
+    status = 'incomplete';
+    incomplete_details = { reason: 'max_prompt_tokens' };
+  } else if (stopReason === 'content_filter' || stopReason === 'refusal') {
+    status = 'incomplete';
+    incomplete_details = { reason: 'content_filter' };
+  }
+  const event = hasTools || status === 'completed' ? 'response.completed' : 'response.incomplete';
+  return { event, status, incomplete_details };
 }
 
 function thinkingBlock(text) {
@@ -147,10 +197,182 @@ function mergeToolName(current, part) {
   return current + part;
 }
 
+function argumentsText(text) {
+  if (text == null) return '';
+  if (typeof text === 'string') return text;
+  if (typeof text === 'object') {
+    try { return JSON.stringify(text); } catch { return ''; }
+  }
+  return String(text);
+}
+
 function terminalToolArguments(text, truncated) {
-  const value = text == null ? '' : String(text);
+  const value = argumentsText(text);
   if (!truncated && value.trim() === '') return '{}';
   return value;
+}
+
+function canonicalToolNamespace(namespace) {
+  if (namespace == null || namespace === '' || namespace === 'functions') return null;
+  return String(namespace);
+}
+
+function responseToolName(tool) {
+  const fn = tool?.function && typeof tool.function === 'object' ? tool.function : tool;
+  return typeof fn?.name === 'string' ? fn.name.trim() : '';
+}
+
+function rememberCatalogTool(byName, name, kind, namespace) {
+  const ns = canonicalToolNamespace(namespace);
+  const prev = byName.get(name);
+  if (!prev) {
+    byName.set(name, { kind, namespace: ns, ambiguous: false });
+    return;
+  }
+  if (prev.ambiguous) return;
+  if (prev.namespace !== ns) {
+    prev.ambiguous = true;
+    prev.namespace = null;
+  }
+}
+
+function visitCatalogTool(tool, namespace, byName) {
+  if (!tool || typeof tool !== 'object') return;
+  if (tool.type === 'namespace') {
+    const ns = typeof tool.name === 'string' ? tool.name : '';
+    if (Array.isArray(tool.tools)) {
+      for (const child of tool.tools) visitCatalogTool(child, ns, byName);
+    }
+    return;
+  }
+  if (tool.type !== 'function' && tool.type !== 'custom') return;
+  const name = responseToolName(tool);
+  if (!name) return;
+  rememberCatalogTool(byName, name, tool.type === 'custom' ? 'custom' : 'function', namespace);
+}
+
+function createResponsesToolCatalog(tools) {
+  const byName = new Map();
+  if (Array.isArray(tools)) {
+    for (const tool of tools) visitCatalogTool(tool, null, byName);
+  }
+  return {
+    lookup(name) {
+      return byName.get(name) || null;
+    }
+  };
+}
+
+function chatFunctionFromResponses(tool) {
+  const fn = tool.function && typeof tool.function === 'object' ? tool.function : tool;
+  const name = typeof fn.name === 'string' ? fn.name.trim() : '';
+  if (!name) return null;
+  return {
+    type: 'function',
+    function: {
+      name,
+      ...(fn.description !== undefined ? { description: fn.description } : {}),
+      parameters: fn.parameters || fn.input_schema || { type: 'object', properties: {} },
+      ...(fn.strict !== undefined ? { strict: fn.strict } : {})
+    }
+  };
+}
+
+function chatCustomFromResponses(tool) {
+  const fn = tool.function && typeof tool.function === 'object' ? tool.function : tool;
+  const name = typeof fn.name === 'string' ? fn.name.trim() : '';
+  if (!name) return null;
+  const description = fn.description !== undefined ? fn.description : tool.description;
+  return {
+    type: 'function',
+    function: {
+      name,
+      ...(description !== undefined ? { description } : {}),
+      parameters: {
+        type: 'object',
+        properties: { input: { type: 'string' } },
+        required: ['input'],
+        additionalProperties: false
+      }
+    }
+  };
+}
+
+function responsesChatTools(tools) {
+  if (!Array.isArray(tools)) return [];
+  const seen = new Set();
+  const out = [];
+  const push = (chatTool) => {
+    if (!chatTool || seen.has(chatTool.function.name)) return;
+    seen.add(chatTool.function.name);
+    out.push(chatTool);
+  };
+  const walk = (tool) => {
+    if (!tool || typeof tool !== 'object') return;
+    if (tool.type === 'namespace' && Array.isArray(tool.tools)) {
+      for (const child of tool.tools) walk(child);
+      return;
+    }
+    if (tool.type === 'custom') push(chatCustomFromResponses(tool));
+    else if (tool.type === 'function') push(chatFunctionFromResponses(tool));
+  };
+  for (const tool of tools) walk(tool);
+  return out;
+}
+
+function responsesCallId(rawId, respId, index) {
+  const id = rawId == null ? '' : String(rawId).trim();
+  if (id) return id;
+  return `fc_${respId}_${index}`;
+}
+
+function customToolInput(text, truncated) {
+  const value = argumentsText(text);
+  if (!truncated && value.trim() === '') return '';
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const keys = Object.keys(parsed);
+      if (keys.length === 1 && keys[0] === 'input' && typeof parsed.input === 'string') return parsed.input;
+    }
+  } catch { /* 半截 JSON 或非对象实参保持原文 */ }
+  return value;
+}
+
+function responsesToolWire(options) {
+  const name = options?.name == null ? '' : String(options.name);
+  const catalog = options?.catalog;
+  const spec = catalog && typeof catalog.lookup === 'function' ? catalog.lookup(name) : null;
+  const kind = spec?.kind === 'custom' ? 'custom' : 'function';
+  const namespace = spec && !spec.ambiguous ? spec.namespace : null;
+  const id = responsesCallId(options?.callId, options?.respId, options?.index ?? 0);
+  const base = {
+    id,
+    call_id: id,
+    name,
+    status: 'completed',
+    ...(namespace ? { namespace } : {})
+  };
+  const outputIndex = options?.outputIndex;
+  if (kind === 'custom') {
+    const input = customToolInput(options?.arguments, !!options?.truncated);
+    const item = { ...base, type: 'custom_tool_call', input };
+    const events = outputIndex == null ? null : [
+      { type: 'response.output_item.added', output_index: outputIndex, item: { ...base, type: 'custom_tool_call', input: '' } },
+      { type: 'response.custom_tool_call_input.delta', item_id: id, call_id: id, output_index: outputIndex, delta: input },
+      { type: 'response.output_item.done', output_index: outputIndex, item }
+    ];
+    return { item, events };
+  }
+  const args = terminalToolArguments(options?.arguments, !!options?.truncated);
+  const item = { ...base, type: 'function_call', arguments: args };
+  const events = outputIndex == null ? null : [
+    { type: 'response.output_item.added', output_index: outputIndex, item: { ...base, type: 'function_call', arguments: '' } },
+    { type: 'response.function_call_arguments.delta', item_id: id, output_index: outputIndex, delta: args },
+    { type: 'response.function_call_arguments.done', item_id: id, output_index: outputIndex, arguments: args },
+    { type: 'response.output_item.done', output_index: outputIndex, item }
+  ];
+  return { item, events };
 }
 
 function isOpaqueReasoningCiphertext(value) {
@@ -348,6 +570,10 @@ module.exports = {
   anthropicUsage,
   chatUsage,
   responsesUsage,
+  responsesTerminal,
+  responsesChatTools,
+  createResponsesToolCatalog,
+  responsesToolWire,
   thinkingBlock,
   mergeToolName,
   terminalToolArguments,

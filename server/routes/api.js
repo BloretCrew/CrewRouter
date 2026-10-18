@@ -4643,21 +4643,7 @@ function convertResponsesInputToMessages(body) {
 // 将 Responses API tools 转换为 Chat Completions tools
 function convertToolsToChatCompletions(tools) {
   if (!Array.isArray(tools)) return undefined;
-  return tools.flatMap(tool => {
-    if (!tool || typeof tool !== 'object' || tool.type !== 'function') return [];
-    const fn = tool.function && typeof tool.function === 'object' ? tool.function : tool;
-    const name = typeof fn.name === 'string' ? fn.name.trim() : '';
-    if (!name) return [];
-    return [{
-      type: 'function',
-      function: {
-        name,
-        ...(fn.description !== undefined ? { description: fn.description } : {}),
-        parameters: fn.parameters || fn.input_schema || { type: 'object', properties: {} },
-        ...(fn.strict !== undefined ? { strict: fn.strict } : {})
-      }
-    }];
-  });
+  return wireShapes.responsesChatTools(tools);
 }
 
 // 将 Responses API text.format 转换为 Chat Completions response_format
@@ -4679,8 +4665,9 @@ function convertChatCompletionToResponse(data, respId, body) {
   const choice = data.choices?.[0];
   const message = choice?.message;
   const output = [];
-  const terminal = wireShapes.responsesStatus(choice?.finish_reason);
+  const terminal = wireShapes.responsesTerminal(choice?.finish_reason, false);
   const truncated = terminal.status === 'incomplete';
+  const toolCatalog = wireShapes.createResponsesToolCatalog(body?.tools);
 
   if (message?.reasoning_content) {
     const reasoning = wireShapes.reasoningInputItem(`rs_${respId}`, message.reasoning_content);
@@ -4697,17 +4684,19 @@ function convertChatCompletionToResponse(data, respId, body) {
     });
   }
   if (message?.tool_calls?.length > 0) {
+    let toolIndex = 0;
     for (const tc of message.tool_calls) {
       if (!tc?.function?.name) continue;
-      const fcId = tc.id || `fc_${Date.now()}`;
-      output.push({
-        type: 'function_call',
-        id: fcId,
-        call_id: tc.id || fcId,
+      output.push(wireShapes.responsesToolWire({
         name: tc.function.name,
-        arguments: wireShapes.terminalToolArguments(tc.function?.arguments, truncated),
-        status: 'completed'
-      });
+        arguments: tc.function.arguments,
+        callId: tc.id,
+        respId,
+        index: toolIndex,
+        truncated,
+        catalog: toolCatalog
+      }).item);
+      toolIndex++;
     }
   }
   if (output.length === 0) {
@@ -4926,23 +4915,32 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
   await closeReasoning();
   await closeText();
 
-  const terminal = wireShapes.responsesStatus(rawFinish);
-  const truncated = terminal.status === 'incomplete';
+  const toolCatalog = wireShapes.createResponsesToolCatalog(body?.tools);
   const toolCallIndices = Object.keys(toolCalls).map(Number).sort((a, b) => a - b);
-  let emittedTools = 0;
+  const pendingTools = [];
   for (const idx of toolCallIndices) {
     const tc = toolCalls[idx];
     if (!tc.name) continue;
-    emittedTools++;
-    const tcId = tc.id || `fc_${respId}_${idx}`;
-    const args = wireShapes.terminalToolArguments(tc.arguments, truncated);
-    const outputIdx = sawReasoning ? nextOutputIndex++ : (textStarted ? idx + 1 : idx);
-    const item = { type: 'function_call', id: tcId, call_id: tc.id || tcId, name: tc.name, arguments: args, status: 'completed' };
-    await emit({ type: 'response.output_item.added', output_index: outputIdx, item: { ...item, arguments: '' } });
-    await emit({ type: 'response.function_call_arguments.done', item_id: tcId, output_index: outputIdx, arguments: args });
-    await emit({ type: 'response.output_item.done', output_index: outputIdx, item });
-    outputItems.push({ index: outputIdx, item });
+    pendingTools.push({ tc, idx });
   }
+  const terminal = wireShapes.responsesTerminal(rawFinish, pendingTools.length > 0);
+  const truncated = terminal.status === 'incomplete';
+  for (const { tc, idx } of pendingTools) {
+    const outputIdx = nextOutputIndex++;
+    const built = wireShapes.responsesToolWire({
+      name: tc.name,
+      arguments: tc.arguments,
+      callId: tc.id,
+      respId,
+      index: idx,
+      truncated,
+      catalog: toolCatalog,
+      outputIndex: outputIdx
+    });
+    for (const event of built.events) await emit(event);
+    outputItems.push({ index: outputIdx, item: built.item });
+  }
+  const emittedTools = pendingTools.length;
 
   const finalOutput = outputItems.sort((a, b) => a.index - b.index).map(entry => entry.item);
   const normalized = normalizeUsageTokens(lastUsage, 'openai');
@@ -4954,7 +4952,7 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
     usage: wireShapes.responsesUsage(lastUsage, normalized),
     output_text: totalContent
   };
-  await emit({ type: 'response.completed', response: completedResponse });
+  await emit({ type: terminal.event, response: completedResponse });
 
   const latency = Date.now() - startTime;
   Logger.info(`[Responses/OpenAI] 流式完成: model=${model}, latency=${latency}ms, content=${totalContent.length}, chunks=${chunkCount}, tools=${emittedTools}`);
@@ -5153,20 +5151,27 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
   }
   await closeText();
 
-  const terminal = wireShapes.responsesStatus(stopReason);
+  const toolCatalog = wireShapes.createResponsesToolCatalog(body?.tools);
+  const pendingTools = toolUseBlocks.filter(tool => tool.name);
+  const terminal = wireShapes.responsesTerminal(stopReason, pendingTools.length > 0);
   const truncated = terminal.status === 'incomplete';
-  let emittedTools = 0;
-  for (const tool of toolUseBlocks) {
-    if (!tool.name) continue;
-    emittedTools++;
-    const args = wireShapes.terminalToolArguments(tool.arguments, truncated);
+  for (let index = 0; index < pendingTools.length; index++) {
+    const tool = pendingTools[index];
     const outputIdx = nextOutputIndex++;
-    const item = { type: 'function_call', id: tool.id, call_id: tool.id, name: tool.name, arguments: args, status: 'completed' };
-    await emit({ type: 'response.output_item.added', output_index: outputIdx, item });
-    await emit({ type: 'response.function_call_arguments.done', item_id: tool.id, output_index: outputIdx, arguments: args });
-    await emit({ type: 'response.output_item.done', output_index: outputIdx, item });
-    outputItems.push({ index: outputIdx, item });
+    const built = wireShapes.responsesToolWire({
+      name: tool.name,
+      arguments: tool.arguments,
+      callId: tool.id,
+      respId,
+      index,
+      truncated,
+      catalog: toolCatalog,
+      outputIndex: outputIdx
+    });
+    for (const event of built.events) await emit(event);
+    outputItems.push({ index: outputIdx, item: built.item });
   }
+  const emittedTools = pendingTools.length;
 
   const finalOutput = outputItems.sort((a, b) => a.index - b.index).map(entry => entry.item);
   const syntheticUsage = {
@@ -5183,7 +5188,7 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
     usage: wireShapes.responsesUsage(syntheticUsage, normalized),
     output_text: totalContent
   };
-  await emit({ type: 'response.completed', response: completedResponse });
+  await emit({ type: terminal.event, response: completedResponse });
 
   const latency = Date.now() - startTime;
   Logger.info(`[Responses/Anthropic] 流式完成: model=${model}, latency=${latency}ms, content=${totalContent.length}, chunks=${chunkCount}, tools=${emittedTools}`);
@@ -5393,8 +5398,9 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   }
 
   const output = [];
-  const terminal = wireShapes.responsesStatus(data.stop_reason);
+  const terminal = wireShapes.responsesTerminal(data.stop_reason, false);
   const truncated = terminal.status === 'incomplete';
+  const toolCatalog = wireShapes.createResponsesToolCatalog(body?.tools);
   if (data.content) {
     const textParts = data.content.filter(b => b.type === 'text');
     const toolParts = data.content.filter(b => b.type === 'tool_use');
@@ -5408,12 +5414,19 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
       const text = textParts.map(b => b.text).join('');
       output.push({ id: `msg_${respId}`, type: 'message', status: 'completed', role: 'assistant', content: [{ type: 'output_text', text, annotations: [] }] });
     }
+    let toolIndex = 0;
     for (const tp of toolParts) {
       if (!tp?.name) continue;
-      const args = typeof tp.input === 'string'
-        ? wireShapes.terminalToolArguments(tp.input, truncated)
-        : JSON.stringify(tp.input ?? {});
-      output.push({ type: 'function_call', id: tp.id, call_id: tp.id, name: tp.name, arguments: args, status: 'completed' });
+      output.push(wireShapes.responsesToolWire({
+        name: tp.name,
+        arguments: tp.input,
+        callId: tp.id,
+        respId,
+        index: toolIndex,
+        truncated,
+        catalog: toolCatalog
+      }).item);
+      toolIndex++;
     }
   }
 
@@ -5906,13 +5919,44 @@ async function handleResponses(req, res) {
       let streamCompleted = false;
       let frameBuffer = '';
       let streamUsage = null; // { input_tokens, output_tokens, cached_tokens }
+      const scrubEnabled = !!req.apiUser?.injectPrompt;
       const streamScrubber = createStreamScrubber(req.apiUser?.injectPrompt);
+      let residualFlushed = false;
+      const writePassthroughEvent = async (parsed) => {
+        if (!scrubEnabled || res.writableEnded) return;
+        const eventText = `data: ${JSON.stringify(parsed)}\n\n`;
+        if (!res.write(eventText)) await waitForResponseDrain(res, req._requestLifecycle?.signal);
+      };
+      const flushScrubResidual = async () => {
+        if (!scrubEnabled || residualFlushed) return;
+        residualFlushed = true;
+        const residual = streamScrubber.flush();
+        if (!residual || res.writableEnded) return;
+        totalContent += residual;
+        await writePassthroughEvent({ type: 'response.output_text.delta', delta: residual });
+      };
+      const consumePassthrough = async (parsed) => {
+        if (parsed.error || ['error', 'response.failed'].includes(parsed.type)) throw new Error('Upstream stream reported an error');
+        const terminal = parsed.type === 'response.completed' || parsed.type === 'response.incomplete';
+        if (terminal) streamCompleted = true;
+        if (parsed.type === 'response.output_text.delta') {
+          const delta = streamScrubber.feed(parsed.delta || '');
+          parsed.delta = delta;
+          totalContent += delta;
+        }
+        if (terminal) await flushScrubResidual();
+        await writePassthroughEvent(parsed);
+        const u = parsed.response?.usage || parsed.usage || null;
+        if (u && (u.input_tokens != null || u.output_tokens != null || u.prompt_tokens != null)) {
+          streamUsage = u;
+        }
+      };
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           const text = decoder.decode(value, { stream: true });
-          if (!req.apiUser?.injectPrompt) {
+          if (!scrubEnabled) {
             if (!res.write(text)) await waitForResponseDrain(res, req._requestLifecycle?.signal);
           }
           frameBuffer += text;
@@ -5921,41 +5965,17 @@ async function handleResponses(req, res) {
           for (const line of lines) {
             if (!line.startsWith('data: ') || line.includes('[DONE]')) continue;
             try {
-              const parsed = JSON.parse(line.slice(6));
-              if (parsed.error || ['error', 'response.failed'].includes(parsed.type)) throw new Error('Upstream stream reported an error');
-              if (['response.completed', 'response.incomplete'].includes(parsed.type)) streamCompleted = true;
-              if (parsed.type === 'response.output_text.delta') {
-                const delta = streamScrubber.feed(parsed.delta || '');
-                parsed.delta = delta;
-                totalContent += delta;
-              }
-              if (req.apiUser?.injectPrompt) {
-                const eventText = `data: ${JSON.stringify(parsed)}\n\n`;
-                if (!res.write(eventText)) await waitForResponseDrain(res, req._requestLifecycle?.signal);
-              }
-              // 优先取上游 usage（response.completed 或带 usage 的事件）
-              const u = parsed.response?.usage || parsed.usage || null;
-              if (u && (u.input_tokens != null || u.output_tokens != null || u.prompt_tokens != null)) {
-                streamUsage = u;
-              }
+              await consumePassthrough(JSON.parse(line.slice(6)));
             } catch (error) { if (error.name !== 'SyntaxError') throw error; }
           }
         }
         frameBuffer += decoder.decode();
         if (frameBuffer.startsWith('data: ')) {
           try {
-            const parsed = JSON.parse(frameBuffer.slice(6));
-            if (parsed.error || ['error', 'response.failed'].includes(parsed.type)) throw new Error('Upstream stream reported an error');
-            if (['response.completed', 'response.incomplete'].includes(parsed.type)) streamCompleted = true;
-            streamUsage = parsed.response?.usage || parsed.usage || streamUsage;
+            await consumePassthrough(JSON.parse(frameBuffer.slice(6)));
           } catch (error) { if (error.name !== 'SyntaxError') throw error; }
         }
         if (!streamCompleted) throw new Error('Upstream stream ended without a completion event');
-        const residual = streamScrubber.flush();
-        if (residual && !res.writableEnded) {
-          totalContent += residual;
-          res.write(`event: response.output_text.delta\ndata: ${JSON.stringify({ type: 'response.output_text.delta', delta: residual })}\n\n`);
-        }
       } catch (error) {
         sendGenerationFailure(res, respId, 502, { error: { message: error.message, code: 'upstream_error' } });
         return;
