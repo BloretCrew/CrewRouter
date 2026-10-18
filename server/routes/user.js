@@ -2583,6 +2583,16 @@ router.get('/model-library/search', requireAuth, async (req, res) => {
       whereClauses.push(`p.name = $${queryParams.length}`);
     }
 
+    if (req.query.team_id) {
+      queryParams.push(String(req.query.team_id));
+      whereClauses.push(`t.id = $${queryParams.length}`);
+    }
+
+    if (req.query.provider_id) {
+      queryParams.push(String(req.query.provider_id));
+      whereClauses.push(`p.id = $${queryParams.length}`);
+    }
+
     if (series && series !== 'all') {
       queryParams.push(series);
       whereClauses.push(`m.series = $${queryParams.length}`);
