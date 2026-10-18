@@ -298,6 +298,19 @@ function chatCustomFromResponses(tool) {
   };
 }
 
+// Codex Responses Lite 把工具放在 input 的 additional_tools，而不是顶层 tools。
+function collectResponsesTools(body) {
+  const tools = [];
+  if (Array.isArray(body?.tools)) tools.push(...body.tools);
+  const input = Array.isArray(body?.input) ? body.input : [];
+  for (const item of input) {
+    if (item && item.type === 'additional_tools' && Array.isArray(item.tools)) {
+      tools.push(...item.tools);
+    }
+  }
+  return tools;
+}
+
 function responsesChatTools(tools) {
   if (!Array.isArray(tools)) return [];
   const seen = new Set();
@@ -571,6 +584,7 @@ module.exports = {
   chatUsage,
   responsesUsage,
   responsesTerminal,
+  collectResponsesTools,
   responsesChatTools,
   createResponsesToolCatalog,
   responsesToolWire,

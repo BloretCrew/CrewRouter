@@ -101,6 +101,14 @@ assert.deepEqual(convertedTools, [
   { type: 'function', function: { name: 'input-schema', parameters: { type: 'object' } } },
 ]);
 assert.equal(context.convertToolsToChatCompletions({ type: 'function', name: 'invalid' }), undefined);
+assert.equal(context.convertToolsToChatCompletions([]), undefined);
+const liteConverted = context.convertToolsToChatCompletions(context.wireShapes.collectResponsesTools({
+  input: [{ type: 'additional_tools', role: 'developer', tools: [
+    { type: 'namespace', name: 'functions', tools: [{ type: 'custom', name: 'exec', description: 'Run code' }] }
+  ] }]
+}));
+assert.equal(liteConverted[0].function.name, 'exec');
+assert.deepEqual(liteConverted[0].function.parameters.required, ['input']);
 
 const streamsStart = source.indexOf('async function streamOpenAIAsResponses(');
 const streamsEnd = source.indexOf('\nasync function proxyOpenAIForResponses', streamsStart);

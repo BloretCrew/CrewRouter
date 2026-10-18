@@ -4589,13 +4589,21 @@ function convertResponsesInputToMessages(body) {
     } else if (item.type === 'function_call') {
       // Responses API assistant 历史工具调用
       pendingToolCalls.push(item);
-    } else if (item.type === 'function_call_output') {
+    } else if (item.type === 'function_call_output' || item.type === 'custom_tool_call_output') {
       flushPendingToolCalls();
       messages.push({
         role: 'tool',
         tool_call_id: item.call_id,
         content: typeof item.output === 'string' ? item.output : JSON.stringify(item.output ?? '')
       });
+    } else if (item.type === 'custom_tool_call') {
+      pendingToolCalls.push({
+        call_id: item.call_id || item.id,
+        name: item.name || '',
+        arguments: JSON.stringify({ input: typeof item.input === 'string' ? item.input : String(item.input ?? '') })
+      });
+    } else if (item.type === 'additional_tools') {
+      // 工具定义由 collectResponsesTools 提升为 Chat tools，不能变成空的 developer 消息。
     } else if (item.type === 'message' || item.role) {
       flushPendingToolCalls();
       const role = (item.role === 'developer') ? 'system' : (item.role || 'user');
@@ -4642,8 +4650,9 @@ function convertResponsesInputToMessages(body) {
 
 // 将 Responses API tools 转换为 Chat Completions tools
 function convertToolsToChatCompletions(tools) {
-  if (!Array.isArray(tools)) return undefined;
-  return wireShapes.responsesChatTools(tools);
+  if (!Array.isArray(tools) || tools.length === 0) return undefined;
+  const converted = wireShapes.responsesChatTools(tools);
+  return converted.length ? converted : undefined;
 }
 
 // 将 Responses API text.format 转换为 Chat Completions response_format
@@ -4667,7 +4676,7 @@ function convertChatCompletionToResponse(data, respId, body) {
   const output = [];
   const terminal = wireShapes.responsesTerminal(choice?.finish_reason, false);
   const truncated = terminal.status === 'incomplete';
-  const toolCatalog = wireShapes.createResponsesToolCatalog(body?.tools);
+  const toolCatalog = wireShapes.createResponsesToolCatalog(wireShapes.collectResponsesTools(body));
 
   if (message?.reasoning_content) {
     const reasoning = wireShapes.reasoningInputItem(`rs_${respId}`, message.reasoning_content);
@@ -4915,7 +4924,7 @@ async function streamOpenAIAsResponses(reader, decoder, res, req, respId, model,
   await closeReasoning();
   await closeText();
 
-  const toolCatalog = wireShapes.createResponsesToolCatalog(body?.tools);
+  const toolCatalog = wireShapes.createResponsesToolCatalog(wireShapes.collectResponsesTools(body));
   const toolCallIndices = Object.keys(toolCalls).map(Number).sort((a, b) => a - b);
   const pendingTools = [];
   for (const idx of toolCallIndices) {
@@ -5151,7 +5160,7 @@ async function streamAnthropicAsResponses(reader, decoder, res, req, respId, mod
   }
   await closeText();
 
-  const toolCatalog = wireShapes.createResponsesToolCatalog(body?.tools);
+  const toolCatalog = wireShapes.createResponsesToolCatalog(wireShapes.collectResponsesTools(body));
   const pendingTools = toolUseBlocks.filter(tool => tool.name);
   const terminal = wireShapes.responsesTerminal(stopReason, pendingTools.length > 0);
   const truncated = terminal.status === 'incomplete';
@@ -5400,7 +5409,7 @@ async function proxyAnthropicForResponses(provider, model, chatBody, res, req, r
   const output = [];
   const terminal = wireShapes.responsesTerminal(data.stop_reason, false);
   const truncated = terminal.status === 'incomplete';
-  const toolCatalog = wireShapes.createResponsesToolCatalog(body?.tools);
+  const toolCatalog = wireShapes.createResponsesToolCatalog(wireShapes.collectResponsesTools(body));
   if (data.content) {
     const textParts = data.content.filter(b => b.type === 'text');
     const toolParts = data.content.filter(b => b.type === 'tool_use');
@@ -5525,7 +5534,7 @@ async function handleResponses(req, res) {
 
   // 参数转换（与具体模型无关）
   const messages = convertResponsesInputToMessages(body);
-  const chatTools = convertToolsToChatCompletions(tools);
+  const chatTools = convertToolsToChatCompletions(wireShapes.collectResponsesTools(body));
   const responseFormat = convertTextFormatToResponseFormat(text);
   const respId = 'resp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 

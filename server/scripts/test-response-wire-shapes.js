@@ -77,6 +77,7 @@ const context = vm.createContext({
 });
 for (const name of [
   'safeParseJson',
+  'convertResponsesInputToMessages',
   'convertOpenAIToAnthropicResponse',
   'convertChatCompletionToResponse',
   'streamOpenAIAsResponses',
@@ -207,6 +208,40 @@ assert.equal(customCall.events[1].delta, '*** Begin');
 assert.equal(customCall.events[2].item.input, '*** Begin');
 assert.equal(wireShapes.responsesToolWire({ name: 'apply_patch', arguments: 'not-json', callId: 'c', respId: 'resp', index: 0, catalog: toolCatalog }).item.input, 'not-json');
 assert.equal(wireShapes.responsesToolWire({ name: 'shared', arguments: '{"a":1}', callId: 's', respId: 'resp', index: 0, catalog: toolCatalog }).item.namespace, undefined);
+const liteTools = {
+  input: [{
+    type: 'additional_tools',
+    role: 'developer',
+    tools: [
+      { type: 'namespace', name: 'functions', description: '', tools: [
+        { type: 'custom', name: 'exec', description: 'Run code', format: { type: 'grammar', syntax: 'lark', definition: 'start: SOURCE' } },
+        { type: 'function', name: 'wait', description: 'Wait', parameters: { type: 'object', properties: {} } }
+      ] },
+      { type: 'namespace', name: 'collaboration', description: 'Agents', tools: [
+        { type: 'function', name: 'spawn_agent', description: 'Spawn', parameters: { type: 'object', properties: {} } }
+      ] }
+    ]
+  }, { type: 'message', role: 'user', content: [{ type: 'input_text', text: '改仓库' }] }]
+};
+assert.equal(wireShapes.collectResponsesTools(liteTools).length, 2);
+assert.equal(wireShapes.collectResponsesTools({ tools: [{ type: 'web_search' }], ...liteTools }).length, 3);
+const liteMessages = context.convertResponsesInputToMessages(liteTools);
+assert.equal(liteMessages.some(message => message.role === 'system' && message.content === ''), false);
+assert.equal(liteMessages[0].role, 'user');
+assert.equal(liteMessages[0].content, '改仓库');
+const liteHistory = context.convertResponsesInputToMessages({
+  input: [
+    { type: 'custom_tool_call', call_id: 'call_exec', name: 'exec', input: 'await tools.exec_command({cmd:"ls"})' },
+    { type: 'custom_tool_call_output', call_id: 'call_exec', output: 'ok' },
+    { type: 'message', role: 'user', content: '继续' }
+  ]
+});
+assert.equal(liteHistory[0].role, 'assistant');
+assert.equal(liteHistory[0].tool_calls[0].function.name, 'exec');
+assert.equal(liteHistory[0].tool_calls[0].function.arguments, '{"input":"await tools.exec_command({cmd:\\"ls\\"})"}');
+assert.equal(liteHistory[1].role, 'tool');
+assert.equal(liteHistory[1].tool_call_id, 'call_exec');
+assert.equal(liteHistory[1].content, 'ok');
 assert.deepEqual(wireShapes.responsesChatTools([
   { type: 'function', name: 'flat', description: 'flat tool', parameters: { type: 'object', properties: {} }, strict: true },
   { type: 'namespace', name: 'editor', tools: [{ type: 'function', name: 'edit', description: 'Edit', parameters: { type: 'object', properties: { path: { type: 'string' } } } }] },
@@ -510,6 +545,22 @@ assert.equal(tooled.choices[0].finish_reason, 'tool_calls');
   assert.equal(lookupDone.data.item.namespace, undefined);
   assert.notEqual(textItem.data.output_index, editDone.data.output_index);
   assert.notEqual(editDone.data.output_index, lookupDone.data.output_index);
+
+  const liteResponse = responsesResponse();
+  const liteWire = 'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_exec","function":{"name":"exec","arguments":"{\\"input\\":\\"await tools.exec_command({})\\"}"}},{"index":1,"id":"call_spawn","function":{"name":"spawn_agent","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}\n\ndata: [DONE]\n\n';
+  await context.streamOpenAIAsResponses(
+    readerFrom([liteWire]), new TextDecoder(), liteResponse, new EventEmitter(), 'resp_lite', 'wire-model', liteTools,
+    async chunk => liteResponse.write(chunk), async () => {}
+  );
+  const liteFrames = parseFrames(liteResponse.chunks.join(''));
+  const execDone = liteFrames.find(frame => frame.data.type === 'response.output_item.done' && frame.data.item?.name === 'exec');
+  const spawnDone = liteFrames.find(frame => frame.data.type === 'response.output_item.done' && frame.data.item?.name === 'spawn_agent');
+  assert.equal(execDone.data.item.type, 'custom_tool_call');
+  assert.equal(execDone.data.item.namespace, undefined);
+  assert.equal(execDone.data.item.input, 'await tools.exec_command({})');
+  assert.equal(spawnDone.data.item.type, 'function_call');
+  assert.equal(spawnDone.data.item.namespace, 'collaboration');
+  assert.equal(spawnDone.data.item.arguments, '{}');
 
   const customResponse = responsesResponse();
   const customWire = 'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_patch","function":{"name":"apply_patch","arguments":"{\\"input\\":\\"*** Begin\\"}"}}]},"finish_reason":"length"}]}\n\ndata: [DONE]\n\n';

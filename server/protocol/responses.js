@@ -28,6 +28,7 @@ function encodeContent(blocks, mode = 'input') {
 
 function decodeItem(item) {
   if (!item) return null;
+  if (item.type === 'additional_tools') return { role: item.role || 'user', blocks: [{ type: 'raw', value: item }] };
   if (item.type === 'message' || item.role || item.content !== undefined) return { role: item.role || 'assistant', blocks: decodeContent(item.content), passthrough: { responses: omitKnown(item, new Set(['type', 'role', 'content', 'id', 'status'])) } };
   if (item.type === 'function_call') return { role: 'assistant', blocks: [{ type: 'tool_call', id: item.call_id || item.id, name: item.name || '', input: safeParseJson(item.arguments, {}), argumentsText: item.arguments || '', passthrough: { responses: omitKnown(item, new Set(['type', 'call_id', 'id', 'name', 'arguments', 'status'])) } }] };
   if (item.type === 'function_call_output') return { role: 'tool', blocks: [{ type: 'tool_result', toolCallId: item.call_id, content: decodeContent(item.output) }], passthrough: { responses: omitKnown(item, new Set(['type', 'call_id', 'output'])) } };
@@ -35,6 +36,8 @@ function decodeItem(item) {
 }
 
 function encodeMessage(message) {
+  const only = message.blocks?.length === 1 ? message.blocks[0] : null;
+  if (only?.type === 'raw' && only.value?.type === 'additional_tools') return only.value;
   if (message.role === 'tool' || message.blocks?.some(b => b.type === 'tool_result')) {
     const result = message.blocks.find(b => b.type === 'tool_result');
     return withPassthrough({ type: 'function_call_output', call_id: result?.toolCallId, output: encodeContent(result?.content || [], 'input') }, message.passthrough?.responses);

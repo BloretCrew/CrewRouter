@@ -8,6 +8,23 @@ const transforms = require('../../providers/transforms');
 const openaiToAnthropic = transforms.getTransform('openai', 'anthropic');
 const anthropicToOpenai = transforms.getTransform('anthropic', 'openai');
 
+test('responses lite additional_tools round-trip in the input', () => {
+  const responses = protocol.codecs.responses;
+  const request = {
+    model: 'gpt-6-luna',
+    input: [
+      { type: 'additional_tools', role: 'developer', tools: [{ type: 'namespace', name: 'functions', tools: [{ type: 'custom', name: 'exec', description: 'Run code' }] }] },
+      { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'hi' }] }
+    ]
+  };
+  const encoded = responses.encodeRequest(responses.decodeRequest(request));
+  assert.equal(encoded.input[0].type, 'additional_tools');
+  assert.equal(encoded.input[0].tools[0].tools[0].name, 'exec');
+  assert.equal(encoded.input[1].type, 'message');
+  assert.equal(encoded.input[1].content[0].text, 'hi');
+  assert.equal(encoded.tools, undefined);
+});
+
 test('simple request crosses the canonical IR', () => {
   const result = openaiToAnthropic.request({ model: 'm', messages: [{ role: 'user', content: 'hello' }], max_completion_tokens: 128, temperature: 0.2 });
   assert.equal(result.messages[0].content[0].text, 'hello');
