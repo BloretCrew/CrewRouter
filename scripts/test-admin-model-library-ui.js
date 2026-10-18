@@ -16,6 +16,7 @@ function fixture(teamAdmin = true) {
   const listeners = new Map();
   const document = { addEventListener: (name, listener) => listeners.set(name, listener), removeEventListener: name => listeners.delete(name) };
   const context = { document, window: { location: { hash: '#adminModelLibrary/team/12' }, confirm: async message => { calls.push({ confirm: message }); return true; } }, URLSearchParams, AbortController, setTimeout, clearTimeout, CustomEvent: class {}, fetch: async (url, options) => { calls.push({ url, options }); return { ok: true, json: async () => url === '/api/admin/teams' ? [{ id: 12, name: '研发', member_count: 3, is_default: true, is_frontier: true }] : { items: [], total: 0, stats: {} } }; } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/js/admin-library-console-view.js'), 'utf8'), context);
   vm.runInNewContext(source, context);
   const lib = new context.window.AdminModelLibrary(app);
   const click = (action, data = {}) => lib.onClick({ target: { closest: () => ({ dataset: { action, ...data }, disabled: false }) } });
@@ -72,6 +73,8 @@ test('cards escape content, lock system-disabled TEAM switches and expose shortc
   assert.match(html, /data-action="uptime-model"/);
   assert.match(html, /测试成功/);
   assert.match(lib.card({ model_id: 'm', system_enabled: true, team_enabled: false }), /TEAM 未授权/);
+  for (const className of ['blora-card model-library-item', 'model-library-item-info', 'model-library-item-name', 'model-item-badges', 'model-library-item-price', 'model-library-item-actions']) assert.ok(html.includes(className));
+  assert.doesNotMatch(html, /app\.selectModel|toggleLibraryStar|hideLibraryModel/);
 });
 
 test('single PUT, batch POST, cleared_keys, cancellation and one notification refresh', async () => {
@@ -174,6 +177,10 @@ test('header, provider statistics and price sorting preserve existing selectors'
   f.lib.total = 1;
   f.lib.renderDirectory();
   const html = f.nodes.get('.aml-directory').innerHTML;
+  assert.match(html, /blora-card model-library-provider/);
+  assert.match(html, /model-library-provider-header/);
+  assert.match(html, /model-library-list/);
+  assert.match(html, /model-library-provider-actions/);
   assert.match(html, /2 已授权/);
   for (const action of ['toggle-provider', 'quota-provider', 'trace-provider', 'enable-provider', 'disable-provider']) assert.match(html, new RegExp(`data-action="${action}"`));
   await new Promise(resolve => setImmediate(resolve));

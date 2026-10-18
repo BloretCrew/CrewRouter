@@ -130,3 +130,98 @@
   .admin-model-library .aml-quota-heading { align-items: flex-start; }
   .admin-model-library .aml-quota-heading > span { flex: 1; line-height: 1.6; }
 }
+
+.admin-model-library.blora-model-library .model-library-header,
+.admin-model-library.blora-model-library .model-library-binding-bar,
+.admin-model-library.blora-model-library .model-quota-section,
+.admin-model-library.blora-model-library .model-filter-bar {
+  padding: var(--blora-space-4) var(--blora-space-5);
+  margin-bottom: var(--library-gap);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-1);
+}
+.admin-model-library.blora-model-library .model-library-header h2 {
+  color: var(--blora-color-text-primary);
+  font-size: var(--blora-text-xl);
+  font-weight: 700;
+}
+.admin-model-library.blora-model-library .aml-directory {
+  display: block;
+}
+.admin-model-library.blora-model-library .model-library-provider {
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+}
+.admin-model-library.blora-model-library .aml-provider-header {
+  padding: var(--blora-space-4) var(--blora-space-5);
+}
+.admin-model-library.blora-model-library .aml-provider-content {
+  display: block;
+  padding: var(--blora-space-3);
+}
+.admin-model-library.blora-model-library .aml-model-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+.admin-model-library.blora-model-library .model-library-item {
+  min-height: 12rem;
+  padding: var(--blora-space-4);
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  cursor: default;
+}
+.admin-model-library.blora-model-library .model-library-item.selected {
+  border-color: var(--blora-color-action-primary-default);
+  box-shadow: var(--blora-shadow-2);
+}
+.admin-model-library.blora-model-library .aml-statuses {
+  flex-basis: 100%;
+  margin-top: 0;
+}
+.admin-model-library.blora-model-library .aml-card-meta {
+  margin-bottom: 0;
+}
+.admin-model-library.blora-model-library .aml-card-actions {
+  margin-top: var(--blora-space-4);
+}
+.admin-model-library.blora-model-library .aml-card-actions .aml-button {
+  flex: 0 1 auto;
+}
+.admin-model-library .aml-provider-menu {
+  position: relative;
+  flex: none;
+}
+.admin-model-library .aml-provider-menu > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.admin-model-library .aml-provider-menu-panel {
+  position: absolute;
+  z-index: 15;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(300px, calc(100vw - 64px));
+  padding: 12px;
+  border: var(--blora-border-subtle);
+  border-radius: var(--blora-radius-lg);
+  background: var(--blora-color-surface-default);
+  box-shadow: var(--blora-shadow-2);
+}
+@media (max-width: 760px) {
+  .admin-model-library.blora-model-library .model-library-header,
+  .admin-model-library.blora-model-library .model-library-binding-bar,
+  .admin-model-library.blora-model-library .model-quota-section,
+  .admin-model-library.blora-model-library .model-filter-bar {
+    padding: var(--blora-space-4);
+  }
+  .admin-model-library.blora-model-library .aml-model-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-model-library.blora-model-library .model-library-item {
+    min-height: 0;
+  }
+}

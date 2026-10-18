@@ -4,6 +4,8 @@
 
 ## 操作范围
 
+管理后台以用户控制台模型库为视觉基准，复制其页面区块、供应商折叠分组和模型条目结构，复用 `model-library-blora.css` 与 Blora 控件。后台视图模板集中在 `public/js/admin-library-console-view.js`；用户控制台本身不变。用户侧 Key 绑定、星标与隐藏操作替换为后台的系统启停、TEAM 授权、批量选择及完整管理入口，数据和写入仍使用管理员接口。
+
 - 「全部模型」中的开关控制系统模型启用状态，影响全部用户。
 - 选择 TEAM 后，开关控制该 TEAM 的模型授权。供应商及系统模型状态另行展示。
 - 关闭模型授权可能清理失去访问权限的 API Key 绑定；恢复授权后需要重新配置已清理的绑定。
@@ -33,6 +35,7 @@ Personal 和 Desktop Local 使用供应商及系统模型管理能力；TEAM 选
 node server/scripts/test-admin-model-library.js
 node --test scripts/test-admin-library-team-rules.js scripts/test-admin-model-library-ui.js scripts/test-admin-library-integration.js
 node scripts/test-admin-model-library-browser.js
+node scripts/test-admin-library-console-view-browser.js
 node server/scripts/test-provider-manager-permissions.js
 node server/scripts/test-personal-model-access.js
 node server/scripts/test-frontier-auto-add.js

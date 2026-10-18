@@ -66,6 +66,8 @@ class CDP {
   async click(selector, frame = false) {
     const find = `(() => {
       const el = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && !e.disabled);
+      const hidden = document.querySelector(${JSON.stringify(selector)});
+      if (!el && hidden?.closest('.aml-provider-menu')) { hidden.closest('.aml-provider-menu').open = true; return false; }
       if (!el) return false;
       el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
       return true;
@@ -277,12 +279,14 @@ async function main() {
       state.reset();
       await check(`${p} 页面、零模型供应商与布局`, async () => {
         await navigate(width); await expect("document.querySelectorAll('.aml-provider').length === 2", '应显示包括零模型在内的两个供应商');
+        await expect("!!document.querySelector('.model-library-header') && !!document.querySelector('.model-filter-bar') && !!document.querySelector('.model-library-provider-header')", '后台应使用控制台模型库区块与供应商结构');
         await expand('fixture-empty'); await expect("document.querySelector('[data-provider=" + JSON.stringify('fixture-empty') + "] .aml-model-grid').textContent.includes('暂无')", '零模型供应商不应被渲染为模型');
         await expect('document.documentElement.scrollWidth <= innerWidth + 1', '页面横向溢出');
       });
       await check(`${p} TEAM A/B 单开关、选择与授权隔离`, async () => {
         await navigate(width); await cdp.click('[data-action="team"][data-team="1"]'); await loaded(); await expand();
         await expect(`!!document.querySelector('${switchModel}')`, '模型展开未返回真实 model_id（检查 view/mode 契约）');
+        await expect("!!document.querySelector('.model-library-item .model-library-item-info .model-library-item-name') && !!document.querySelector('.model-library-item-price') && !document.querySelector('[data-action=bind-model]')", '控制台模型条目应适配为后台操作，不提供 Key 绑定');
         await expect(`document.querySelector('${switchModel}').getAttribute('aria-checked') === 'false'`, 'A 未授权应关闭');
         const before = state.writes.length; await cdp.click('[data-select="fixture-model"]'); assert.equal(state.writes.length, before, '勾选不能授权');
         await cdp.click(switchModel); await cdp.wait("document.querySelector('.aml-notice')?.textContent.includes('已启用')"); assert.equal(state.grants[1], true); assert.equal(state.grants[2], true);
