@@ -1,9 +1,10 @@
 /* Official Blora Drawer hosts the mobile copy of the business navigation. */
 .mobile-sidebar-drawer .blora-drawer__panel {
-  width: min(16rem, calc(100vw - 2rem));
-  max-width: calc(100vw - 2rem);
+  width: min(18rem, 80vw);
+  max-width: 80vw;
   padding: 0;
   overflow: hidden;
+  border-radius: 0;
 }
 
 .mobile-sidebar-drawer .blora-drawer__header {
@@ -13,7 +14,9 @@
 .mobile-sidebar-drawer .blora-drawer__body {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mobile-sidebar-drawer-content {
@@ -23,6 +26,8 @@
   min-height: 0;
   flex-direction: column;
   background: var(--blora-color-surface-default);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .mobile-sidebar-drawer-content .sidebar-header {
@@ -33,7 +38,7 @@
 .mobile-sidebar-drawer-content .sidebar-nav {
   min-height: 0;
   flex: 1 1 auto;
-  overflow-y: auto;
+  overflow-y: visible;
   padding: var(--blora-space-3) var(--blora-space-2);
 }
 
@@ -72,6 +77,11 @@
   .blora-page .app-container > .main-content {
     margin-inline-start: 0;
     padding-block-start: calc(4.25rem + var(--blora-space-3));
+  }
+
+  .mobile-sidebar-drawer .blora-drawer__panel {
+    width: min(18rem, 80vw);
+    max-width: 80vw;
   }
 }
 
