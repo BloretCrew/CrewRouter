@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="/css/provider-model-picker.css?v=restore-0930-unified-20261003">
   <link rel="stylesheet" href="/css/main.css?v=model-test-dialog-20261003">
   <link rel="stylesheet" href="/css/model-library-blora.css?v=team-picker-20261005">
-  <link rel="stylesheet" href="/css/sidebar-blora.css?v=mobile-drawer-layout-20261018">
+  <link rel="stylesheet" href="/css/sidebar-blora.css?v=mobile-sidebar-avatar-20261018">
   <link rel="stylesheet" href="/css/console-blora.css?v=usage-table-widths-20261008">
   <link rel="stylesheet" href="/css/badges-blora.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/progress-blora.css?v=restore-0930-20261003">
@@ -2514,12 +2514,33 @@
       if (mobileHeader) drawerContent?.prepend(mobileHeader);
       if (sourceFooter && drawerContent) {
         const footer = sourceFooter.cloneNode(true);
+        const sourceAvatar = sourceFooter.querySelector('#userAvatar');
+        const sourceUsername = sourceFooter.querySelector('#username');
+        const mobileAvatar = footer.querySelector('#userAvatar');
+        const mobileUsername = footer.querySelector('#username');
+        if (mobileAvatar) { mobileAvatar.removeAttribute('id'); mobileAvatar.dataset.mobileUserAvatar = ''; }
+        if (mobileUsername) { mobileUsername.removeAttribute('id'); mobileUsername.dataset.mobileUsername = ''; }
         footer.querySelectorAll('[id]').forEach(element => {
           const source = sourceFooter.querySelector(`[id="${element.id}"]`);
           element.removeAttribute('id');
           if (source?.matches('button')) element.addEventListener('click', () => source.click());
         });
         drawerContent.append(footer);
+        const syncUserInfo = () => {
+          if (sourceAvatar && mobileAvatar) {
+            const avatarSrc = sourceAvatar.getAttribute('src') || '';
+            if (avatarSrc) mobileAvatar.setAttribute('src', avatarSrc);
+            else mobileAvatar.removeAttribute('src');
+            mobileAvatar.alt = sourceAvatar.alt;
+            mobileAvatar.classList.toggle('avatar-fallback', sourceAvatar.classList.contains('avatar-fallback'));
+          }
+          if (sourceUsername && mobileUsername) mobileUsername.textContent = sourceUsername.textContent;
+        };
+        window.syncMobileSidebarUserInfo = syncUserInfo;
+        syncUserInfo();
+        sourceAvatar?.addEventListener('load', syncUserInfo);
+        sourceAvatar?.addEventListener('error', syncUserInfo);
+        if (sourceUsername) new MutationObserver(syncUserInfo).observe(sourceUsername, { childList: true, characterData: true, subtree: true });
       }
       if (sourceNavigation) sourceNavigation.hidden = true;
       const getSelectedPage = () => sourceNavigation?.querySelector('.nav-item.active')?.dataset.page || '';

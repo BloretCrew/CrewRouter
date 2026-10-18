@@ -1,7 +1,7 @@
 /* Official Blora Drawer hosts the mobile copy of the business navigation. */
-.mobile-sidebar-drawer .blora-drawer__panel {
-  width: min(18rem, 80vw);
-  max-width: 80vw;
+#mobileSidebarDrawer .blora-drawer[data-position="left"] .blora-drawer__panel {
+  width: min(300px, 88vw);
+  max-width: 88vw;
   padding: 0;
   overflow: hidden;
   border-radius: 0;
@@ -14,7 +14,8 @@
 .mobile-sidebar-drawer .blora-drawer__body {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
+  padding: 0;
+  overflow: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
@@ -28,6 +29,7 @@
   background: var(--blora-color-surface-default);
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: border-box;
 }
 
 .mobile-sidebar-drawer-content .sidebar-header {
@@ -38,7 +40,9 @@
 .mobile-sidebar-drawer-content .sidebar-nav {
   min-height: 0;
   flex: 1 1 auto;
-  overflow-y: visible;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: var(--blora-space-3) var(--blora-space-2);
 }
 
@@ -56,6 +60,7 @@
 }
 
 .mobile-sidebar-drawer-content .sidebar-footer {
+  flex: 0 0 auto;
   min-height: 4.5rem;
   justify-content: space-between;
   padding: var(--blora-space-3) var(--blora-space-4);
@@ -79,9 +84,9 @@
     padding-block-start: calc(4.25rem + var(--blora-space-3));
   }
 
-  .mobile-sidebar-drawer .blora-drawer__panel {
-    width: min(18rem, 80vw);
-    max-width: 80vw;
+  #mobileSidebarDrawer .blora-drawer[data-position="left"] .blora-drawer__panel {
+    width: min(300px, 88vw);
+    max-width: 88vw;
   }
 }
 
@@ -92,6 +97,8 @@
   flex: 1 1 auto;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: var(--blora-space-3) var(--blora-space-2);
 }
 
@@ -112,7 +119,7 @@
 
 .blora-page .business-sidebar-navigation .blora-sidebar-nav__link[aria-current="page"],
 .mobile-sidebar-drawer-content .business-sidebar-navigation .blora-sidebar-nav__link[aria-current="page"] {
-  background: color-mix(in srgb, var(--blora-color-action-primary-default) 14%, var(--blora-color-surface-default));
+  background: var(--blora-color-action-primary-soft);
   color: var(--blora-color-action-primary-default);
 }
 
