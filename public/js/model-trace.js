@@ -8,7 +8,14 @@ const notice = '指纹归因（实验性）：候选库外模型也会归入已�
 const button = (action, label, attrs = '') => `<button type="button" class="blora-button" data-variant="secondary" data-size="sm" data-trace-action="${action}" ${attrs}>${esc(tr(label))}</button>`;
 let jobs = new Map();
 let dismissed = new Set();
-try { dismissed = new Set(JSON.parse(sessionStorage.getItem('modelTraceDismissed') || '[]')); } catch (_) { /* Storage may be unavailable. */ }
+try {
+  dismissed = new Set(JSON.parse(localStorage.getItem('modelTraceDismissed') || '[]'));
+  // Migrate dismissals made before they were persisted across browser sessions.
+  const legacy = JSON.parse(sessionStorage.getItem('modelTraceDismissed') || '[]');
+  legacy.forEach(id => dismissed.add(String(id)));
+  localStorage.setItem('modelTraceDismissed', JSON.stringify([...dismissed]));
+  sessionStorage.removeItem('modelTraceDismissed');
+} catch (_) { /* Storage may be unavailable. */ }
 let timer, syncPromise, syncError = '', dialog, dialogState, epoch = 0, targets = [], bankSummary;
 let pageNumber = 1, historyEpoch = 0, challenges = [], manualDirty = false, pageInitialized = false;
 
@@ -229,8 +236,9 @@ async function history(page = pageNumber) {
   try {
     const data = await request(`/jobs?page=${pageNumber}&limit=10&page_size=10`);
     if (seq !== historyEpoch) return;
-    const rows = listOf(data); rows.forEach(storeJob); updateBar();
-    const more = data.has_more ?? data.hasMore ?? (data.total != null ? pageNumber * 10 < Number(data.total) : rows.length === 10);
+    const allRows = listOf(data);
+    const rows = allRows.filter(job => !dismissed.has(String(job.id))); rows.forEach(storeJob); updateBar();
+    const more = data.has_more ?? data.hasMore ?? (data.total != null ? pageNumber * 10 < Number(data.total) : allRows.length === 10);
     put(root, `${rows.map(taskHTML).join('') || `<p>${esc(tr('暂无检测历史。打开目标不会自动创建任务。'))}</p>`}<div class="trace-actions">${button('previous', '上一页', pageNumber === 1 ? 'disabled' : '')}<span>${pageNumber}</span>${button('next', '下一页', more ? '' : 'disabled')}${button('history', '刷新历史')}</div>`);
   } catch (error) { if (seq === historyEpoch) put(root, `<p class="trace-error">${esc(error.message)}</p>${button('history', '重新查询')}`); }
 }
@@ -311,7 +319,7 @@ async function dispatch(event) {
       storeJob(job); updateBar();
       if (dialogState === state) renderJob(jobs.get(String(job.id)));
     } else if (action === 'retest') { const job = jobs.get(String(id)); if (job) await open(jobTarget(job).model_id, { parentJobId: id }); }
-    else if (action === 'dismiss') { dismissed.add(String(id)); try { sessionStorage.setItem('modelTraceDismissed', JSON.stringify([...dismissed])); } catch (_) { /* Storage may be unavailable. */ } updateBar(); }
+    else if (action === 'dismiss') { dismissed.add(String(id)); try { localStorage.setItem('modelTraceDismissed', JSON.stringify([...dismissed])); } catch (_) { /* Storage may be unavailable. */ } updateBar(); }
     else if (action === 'sync') { syncError = ''; await sync(); }
     else if (action === 'history') await history();
     else if (action === 'previous') await history(pageNumber - 1);
