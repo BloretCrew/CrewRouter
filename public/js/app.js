@@ -8344,28 +8344,6 @@ ${extractorBody}
   // ==================== CrewRouter 模型库 ====================
 
   async loadModelLibrary() {
-    if (!this.consoleModelLibrary) {
-      const page = document.getElementById('modelLibraryPage');
-      const binding = document.getElementById('modelLibraryBindingBar');
-      for (const child of [...page.children]) {
-        if (child.id !== 'modelLibraryTaskBar' && child.id !== 'traceReportsBanner' && child !== binding) {
-          child.hidden = true;
-          child.style.display = 'none';
-        }
-      }
-      binding.hidden = false;
-      page.append(binding);
-      const host = document.createElement('div');
-      page.append(host);
-      this.consoleModelLibrary = new window.ConsoleModelLibrary(this);
-      this.consoleModelLibrary.mount(host);
-    }
-    await this._loadLibraryKeys();
-    await this.consoleModelLibrary.load();
-    this.loadTraceReports().catch(() => {});
-  }
-
-  async _loadLegacyModelLibrary() {
     setBloraState('modelLibraryContent', 'loading');
     try {
       const libraryRes = await fetch('/api/user/model-library');
@@ -9611,7 +9589,6 @@ ${extractorBody}
   }
 
   filterAndRenderModelLibrary() {
-    if (this.consoleModelLibrary) return this.consoleModelLibrary.load();
     if (!this._libraryData) return;
     if (this.libraryReorderMode && !this._canUseLibraryReorderMode()) {
       this.libraryReorderMode = false;
@@ -9734,10 +9711,6 @@ ${extractorBody}
 
   // 刷新当前已展开供应商的模型列表 DOM（筛选/排序变更后）
   _refreshExpandedProviderLists() {
-    if (this.consoleModelLibrary) {
-      for (const id of this.consoleModelLibrary.groups.keys()) this.consoleModelLibrary.renderProvider(id);
-      return;
-    }
     const expanded = document.querySelectorAll('.model-library-provider:not(.collapsed)');
     for (const providerEl of expanded) {
       const teamId = providerEl.getAttribute('data-team-id');
@@ -12729,12 +12702,6 @@ ${extractorBody}
   }
 
   async _resolveLibraryModelInfo(modelId) {
-    const libraryModel = this.consoleModelLibrary?.findModel(modelId);
-    if (libraryModel) return {
-      ...libraryModel,
-      id: libraryModel.model_id,
-      provider_name: libraryModel.provider_name || ''
-    };
     let selectedModel = null;
     let providerName = '';
     if (this._libraryGlobalSearchResults?.models) {

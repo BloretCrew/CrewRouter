@@ -21,8 +21,6 @@ Personal 和 Desktop Local 使用供应商及系统模型管理能力；TEAM 选
 
 ## 兼容与安全
 
-用户控制台模型库直接复用后台的供应商分组、模型卡片、筛选、分页与样式，通过 `ConsoleModelLibrary` 适配用户接口。TEAM 范围仅展示用户所属 TEAM，卡片操作改为绑定当前 API Key（保留 Harness 单独绑定入口），不提供系统开关、授权写入或后台管理操作。供应商明细通过用户搜索接口按供应商 ID 与 TEAM 筛选，服务端始终保留成员及模型授权校验。
-
 - TEAM 授权写入、成员 Key 绑定清理使用同一事务，提交成功后失效权限缓存。
 - 关闭授权覆盖普通模型队列、Harness 单独绑定及融合模型配置；其他有效 TEAM 授权仍可保留绑定。
 - 系统批量开关提交后释放事务连接，再执行前沿 TEAM 自动授权。模型更新采用兼容外键校验的行锁，避免与 TEAM 首次授权形成锁等待环。
@@ -34,7 +32,6 @@ Personal 和 Desktop Local 使用供应商及系统模型管理能力；TEAM 选
 ```sh
 node server/scripts/test-admin-model-library.js
 node --test scripts/test-admin-library-team-rules.js scripts/test-admin-model-library-ui.js scripts/test-admin-library-integration.js
-node --test scripts/test-console-model-library.js
 node scripts/test-admin-model-library-browser.js
 node server/scripts/test-provider-manager-permissions.js
 node server/scripts/test-personal-model-access.js
