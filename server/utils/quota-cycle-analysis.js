@@ -5,6 +5,7 @@ const { isDeepStrictEqual } = require('node:util');
 const stats = require('./provider-quota-stats');
 const { addMoney } = require('./money');
 const { DEFAULTS } = require('./request-quota-config');
+const Logger = require('../logger');
 
 const DIMENSIONS = ['user', 'team', 'model', 'project', 'client', 'key', 'session'];
 const dimensionColumns = { user: 'user_id', team: 'team_id', model: 'model', project: 'project_id', client: 'source', key: 'api_key_id', session: 'session_id' };
@@ -252,6 +253,21 @@ async function publish(db, cycle, reason) {
     }
   }
   await db.query(`INSERT INTO quota_cycle_reports(cycle_id,version,reason,report) VALUES($1,$2,$3,$4::jsonb) ON CONFLICT DO NOTHING`, [cycle.id, cycle.version, reason, JSON.stringify(payload)]);
+  await trimCycleReportVersions(db, cycle.id);
+}
+
+// 每个周期只保留最近 MAX_REPORT_VERSIONS 个报告版本，防止 reconciliation 反复触发时
+// 全量 audit 快照无限堆积（曾因无上限把表空间写满）。
+const MAX_REPORT_VERSIONS = 10;
+async function trimCycleReportVersions(db, cycleId) {
+  try {
+    await db.query(`DELETE FROM quota_cycle_reports
+      WHERE cycle_id=$1 AND version <= (
+        SELECT COALESCE(MAX(version),0) - $2 FROM quota_cycle_reports WHERE cycle_id=$1
+      )`, [cycleId, MAX_REPORT_VERSIONS]);
+  } catch (err) {
+    Logger.warn(`[额度周期报告] 清理旧版本失败 ${cycleId}: ${err.message}`);
+  }
 }
 
 async function rebuild(db, accountId, kind, unit, windowKey, reason, options = {}) {
