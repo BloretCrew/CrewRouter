@@ -43,6 +43,9 @@ async function main(){
     const id=list.rows[0].id;
     const report=await cycle.queryQuotaCycle(db,id,range);
     assert.equal(report.summary.attempts,2);assert.equal(report.summary.total_tokens,120);
+    const savedReport=(await db.query('SELECT report FROM quota_cycle_reports WHERE cycle_id=$1 ORDER BY version DESC LIMIT 1',[id])).rows[0].report;
+    assert.equal(savedReport.audit,undefined,'报告版本不得重复存储全量区间和请求快照');
+    assert.ok(Buffer.byteLength(JSON.stringify(savedReport))<100_000,'汇总报告应保持有界体积');
     assert.equal(report.summary.input_tokens,80);assert.equal(Number(report.summary.points),0.1);
     assert.equal(report.dimensions.user.length,2);
     assert.equal((await cycle.queryQuotaCycle(db,id,range,'user',1)).summary.total_tokens,100);

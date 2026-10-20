@@ -235,9 +235,6 @@ async function report(db, cycle, userId, options = {}) {
 }
 async function publish(db, cycle, reason) {
   const payload = await report(db, cycle);
-  const intervals = await db.query('SELECT * FROM quota_change_intervals WHERE cycle_id=$1 ORDER BY sequence', [cycle.id]);
-  const links = await db.query('SELECT interval_id,attempt_id,relation,snapshot FROM quota_interval_requests WHERE cycle_id=$1 ORDER BY interval_id,attempt_id', [cycle.id]);
-  payload.audit = { intervals: intervals.rows, requests: links.rows };
   const previous = await db.query('SELECT report FROM quota_cycle_reports WHERE cycle_id=$1 ORDER BY version DESC LIMIT 1', [cycle.id]);
   if (previous.rows.length) {
     const old = previous.rows[0].report;
