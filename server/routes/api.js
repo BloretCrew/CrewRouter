@@ -347,6 +347,7 @@ async function readUpstreamErrorBody(response) {
 
 function forwardUpstreamRetryAfter(res, status, response) {
   if (status < 400 || res.headersSent) return;
+  forwardUpstreamHeaders(res, response?.headers);
   const value = response
     ? (response.headers?.get?.('retry-after') ?? response.headers?.['retry-after'])
     : res.req?._upstreamAttemptContext?.retryAfter;
