@@ -6970,6 +6970,9 @@ async function(ctx) {
       this.renderSourceCharts();
       this.renderMemberStatsCharts();
       this.renderMemberStatsTables();
+      if (document.getElementById('statsTabLatency')?.style.display === 'block') {
+        this.loadLatencyStats();
+      }
 
       const container = document.getElementById('detailedStats');
       if (!container) return;
@@ -7177,6 +7180,9 @@ async function(ctx) {
     if (tab === 'messages') {
       this.loadMessageStats();
     }
+    if (tab === 'latency') {
+      this.loadLatencyStats();
+    }
     if (tab === 'logs' && !this._usageLogsLoaded) {
       this.loadUsageLogs(1);
       this._usageLogsLoaded = true;
@@ -7240,6 +7246,180 @@ async function(ctx) {
     } catch (error) {
       console.error(error);
       setHTML(document.getElementById('messageStatsSummary'), `<p style="color:var(--destructive);">${escapeHtml(error.message)}</p>`);
+    }
+  }
+
+  _latencyMs(value) {
+    if (value == null || !Number.isFinite(Number(value))) return '-';
+    return `${Math.round(Number(value)).toLocaleString('zh-CN')}ms`;
+  }
+
+  _latencyTps(value) {
+    if (value == null || !Number.isFinite(Number(value))) return '-';
+    return Number(value).toFixed(1);
+  }
+
+  _latencyPercent(value) {
+    if (value == null || !Number.isFinite(Number(value))) return '-';
+    return `${(Number(value) * 100).toFixed(1)}%`;
+  }
+
+  _latencyRateLimitParts(rateLimit) {
+    const headers = rateLimit?.headers || {};
+    const entries = Object.entries(headers);
+    const read = (fragments, exclude = []) => entries.find(([key, value]) => {
+      const k = key.toLowerCase();
+      return fragments.every(fragment => k.includes(fragment))
+        && !exclude.some(fragment => k.includes(fragment))
+        && value != null;
+    })?.[1] || null;
+    const requestRemaining = read(['requests', 'remaining']);
+    const requestLimit = read(['requests', 'limit']);
+    const requestReset = read(['requests', 'reset']);
+    const tokenRemaining = read(['token', 'remaining'], ['input', 'output']);
+    const tokenLimit = read(['token', 'limit'], ['input', 'output']);
+    const tokenReset = read(['token', 'reset'], ['input', 'output']);
+    const pair = (remaining, limit, reset) => {
+      if (remaining == null && limit == null) return '-';
+      const head = `${remaining != null ? remaining : '-'} / ${limit != null ? limit : '-'}`;
+      return reset ? `${head}（${reset}）` : head;
+    };
+    return {
+      requests: pair(requestRemaining, requestLimit, requestReset),
+      tokens: pair(tokenRemaining, tokenLimit, tokenReset),
+      reset: requestReset || tokenReset || '-',
+    };
+  }
+
+  _formatRateLimitSummary(rateLimit) {
+    if (!rateLimit) return '-';
+    if (typeof rateLimit === 'string') {
+      try { rateLimit = JSON.parse(rateLimit); } catch { return '-'; }
+    }
+    const parts = this._latencyRateLimitParts(rateLimit);
+    const out = [];
+    if (parts.requests !== '-') out.push(`${t('请求')} ${parts.requests}`);
+    if (parts.tokens !== '-') out.push(`Token ${parts.tokens}`);
+    if (rateLimit.retry_after) out.push(`Retry-After ${rateLimit.retry_after}`);
+    if (!out.length) out.push(t('已采集响应头（无标准限流字段）'));
+    return out.join(' · ');
+  }
+
+  async loadLatencyStats() {
+    const summaryEl = document.getElementById('adminLatencySummaryCards');
+    const modelBody = document.getElementById('adminLatencyModelTableBody');
+    const providerBody = document.getElementById('adminLatencyProviderTableBody');
+    const rateLimitBody = document.getElementById('adminLatencyRateLimitTableBody');
+    const notice = document.getElementById('adminLatencyNotice');
+    if (!summaryEl) return;
+    const seq = (this._latencyLoadSeq = (this._latencyLoadSeq || 0) + 1);
+    try {
+      const days = document.getElementById('adminStatsDays')?.value || '30';
+      const response = await fetch(`/api/admin/stats/latency?days=${encodeURIComponent(days)}`);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || t('延迟统计加载失败'));
+      }
+      const data = await response.json();
+      if (seq !== this._latencyLoadSeq) return;
+      this._renderLatencyStats(data);
+
+      if (notice) {
+        const coverage = data.coverage || {};
+        const windowInfo = data.window || {};
+        const parts = [
+          t('已采集 {measured} / {total} 次请求（{rate}）', {
+            measured: Number(coverage.measuredRequests || 0).toLocaleString('zh-CN'),
+            total: Number(coverage.totalRequests || 0).toLocaleString('zh-CN'),
+            rate: `${((Number(coverage.rate) || 0) * 100).toFixed(1)}%`
+          })
+        ];
+        if (windowInfo.clipped) parts.push(t('查询范围已裁剪为最近 {days} 天', { days: windowInfo.maxDays || 90 }));
+        if (!Number(coverage.measuredRequests || 0)) {
+          parts.push(t('所选范围的记录尚未包含延迟指标；新请求产生后会显示 TTFT、TPOT、输出速度等数据。'));
+        }
+        notice.textContent = parts.join(' ');
+      }
+    } catch (error) {
+      console.error(t('延迟统计加载失败:'), error);
+      if (notice) notice.textContent = error.message || t('延迟统计加载失败');
+      if (modelBody) setHTML(modelBody, `<tr><td colspan="11" style="text-align:center;padding:18px;color:var(--destructive);">${escapeHtml(error.message || t('加载失败'))}</td></tr>`);
+      if (providerBody) setHTML(providerBody, '');
+      if (rateLimitBody) setHTML(rateLimitBody, '');
+    }
+  }
+
+  _renderLatencyStats(data) {
+    const summary = data.summary || {};
+    const card = (label, value) => `<div class="stats-overview-card" style="background:var(--muted);color:var(--foreground);"><div class="stats-overview-content"><span class="stats-overview-label">${escapeHtml(label)}</span><span class="stats-overview-value">${escapeHtml(String(value))}</span></div></div>`;
+    const thresholds = summary.tpsThresholds || {};
+    const thresholdText = thresholds.ge50 == null
+      ? '-'
+      : [50, 80, 90, 100].map(v => `≥${v}: ${this._latencyPercent(thresholds[`ge${v}`])}`).join(' · ');
+    setHTML(document.getElementById('adminLatencySummaryCards'), [
+      card(t('TTFT P50'), this._latencyMs(summary.ttft?.p50)),
+      card(t('TTFT P95'), this._latencyMs(summary.ttft?.p95)),
+      card(t('输出速度 P50'), `${this._latencyTps(summary.outputTps?.p50)} t/s`),
+      card(t('TPOT P50'), `${summary.tpot?.p50 == null ? '-' : Number(summary.tpot.p50).toFixed(1)}ms`),
+      card(t('E2E P95'), this._latencyMs(summary.e2e?.p95)),
+      card(t('缓存命中率'), this._latencyPercent(summary.cacheHitRate)),
+      card(t('上游处理时间均值'), this._latencyMs(summary.upstreamProcessingAvg)),
+      card(t('吞吐达标率'), thresholdText)
+    ].join(''));
+
+    const modelRows = (data.byModel || []).map(row => `<tr>
+      <td>${escapeHtml(row.name || row.id || '-')}</td>
+      <td style="text-align:right;">${Number(row.requests || 0).toLocaleString('zh-CN')}</td>
+      <td style="text-align:right;">${Number(row.measuredRequests || 0).toLocaleString('zh-CN')}</td>
+      <td style="text-align:right;">${this._latencyMs(row.ttft?.p50)}</td>
+      <td style="text-align:right;">${this._latencyMs(row.ttft?.p75)}</td>
+      <td style="text-align:right;">${this._latencyMs(row.ttft?.p95)}</td>
+      <td style="text-align:right;">${this._latencyMs(row.ttft?.p99)}</td>
+      <td style="text-align:right;">${row.tpot?.p50 == null ? '-' : `${Number(row.tpot.p50).toFixed(1)}ms`}</td>
+      <td style="text-align:right;">${this._latencyTps(row.outputTps?.p50)}</td>
+      <td style="text-align:right;">${this._latencyMs(row.e2e?.p95)}</td>
+      <td style="text-align:right;">${this._latencyPercent(row.cacheHitRate)}</td>
+    </tr>`).join('');
+    setHTML(document.getElementById('adminLatencyModelTableBody'), modelRows || `<tr><td colspan="11" style="text-align:center;padding:18px;color:var(--muted-foreground);">${t('暂无数据')}</td></tr>`);
+
+    const providerRows = (data.byProvider || []).map(row => `<tr>
+      <td>${renderProviderNameTag(row.name || row.id) || escapeHtml(row.name || row.id || '-')}</td>
+      <td style="text-align:right;">${Number(row.requests || 0).toLocaleString('zh-CN')}</td>
+      <td style="text-align:right;">${Number(row.measuredRequests || 0).toLocaleString('zh-CN')}</td>
+      <td style="text-align:right;">${this._latencyMs(row.ttft?.p50)}</td>
+      <td style="text-align:right;">${this._latencyMs(row.ttft?.p95)}</td>
+      <td style="text-align:right;">${this._latencyTps(row.outputTps?.p50)}</td>
+      <td style="text-align:right;">${this._latencyMs(row.e2e?.p95)}</td>
+      <td style="text-align:right;">${this._latencyPercent(row.cacheHitRate)}</td>
+    </tr>`).join('');
+    setHTML(document.getElementById('adminLatencyProviderTableBody'), providerRows || `<tr><td colspan="8" style="text-align:center;padding:18px;color:var(--muted-foreground);">${t('暂无数据')}</td></tr>`);
+
+    const rateRows = (data.rateLimits || []).map(row => {
+      const parts = this._latencyRateLimitParts(row.rateLimit);
+      return `<tr>
+        <td>${renderProviderNameTag(row.providerName || row.providerId) || escapeHtml(row.providerName || row.providerId || '-')}</td>
+        <td>${row.observedAt ? escapeHtml(new Date(row.observedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })) : '-'}</td>
+        <td>${escapeHtml(parts.requests)}</td>
+        <td>${escapeHtml(parts.tokens)}</td>
+        <td>${escapeHtml(parts.reset)}</td>
+        <td>${escapeHtml(row.serviceTier || '-')}</td>
+      </tr>`;
+    }).join('');
+    setHTML(document.getElementById('adminLatencyRateLimitTableBody'), rateRows || `<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--muted-foreground);">${t('暂无数据')}</td></tr>`);
+
+    if (typeof Chart !== 'undefined') {
+      const daily = data.daily || [];
+      this._upsertChart('_adminLatencyTtftChart', document.getElementById('adminLatencyTtftChart'), 'line', {
+        labels: daily.map(row => row.date),
+        datasets: [
+          { label: 'TTFT P50', data: daily.map(row => row.ttft?.p50), borderColor: 'var(--info)', backgroundColor: 'rgba(59,130,246,.12)', fill: true, tension: .25 },
+          { label: 'TTFT P95', data: daily.map(row => row.ttft?.p95), borderColor: 'var(--warning)', backgroundColor: 'transparent', fill: false, tension: .25 }
+        ]
+      }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } });
+      this._upsertChart('_adminLatencyTpsChart', document.getElementById('adminLatencyTpsChart'), 'line', {
+        labels: daily.map(row => row.date),
+        datasets: [{ label: t('输出 TPS P50'), data: daily.map(row => row.outputTps?.p50), borderColor: 'var(--success)', backgroundColor: 'rgba(34,197,94,.12)', fill: true, tension: .25 }]
+      }, { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } });
     }
   }
 
@@ -8608,7 +8788,17 @@ async function(ctx) {
       [t('输出 Token'), this._formatBigNumber(parseInt(log.completion_tokens || 0, 10))],
       [t('缓存命中 Token'), cacheDisplay],
       [t('积分'), costDisplay],
-      [t('延迟'), log.latency_ms != null ? `${log.latency_ms}ms` : '-'],
+      [t('记录延迟（服务端）'), log.latency_ms != null ? `${log.latency_ms}ms` : '-'],
+      [t('请求模式'), log.is_stream == null ? '-' : (log.is_stream ? t('流式') : t('非流式'))],
+      [t('首字延迟（TTFT）'), this._latencyMs(log.ttft_ms)],
+      [t('上游首字节'), this._latencyMs(log.upstream_first_byte_ms)],
+      [t('生成耗时'), this._latencyMs(log.generation_ms)],
+      [t('TPOT'), log.tpot_ms == null ? '-' : `${Number(log.tpot_ms).toFixed(1)}ms`],
+      [t('输出速度'), log.output_tps == null ? '-' : `${Number(log.output_tps).toFixed(1)} t/s`],
+      [t('端到端延迟'), this._latencyMs(log.e2e_ms)],
+      [t('上游处理时间'), this._latencyMs(log.upstream_processing_ms)],
+      [t('服务层级'), escapeHtml(log.service_tier || '-')],
+      [t('限流状态'), escapeHtml(this._formatRateLimitSummary(log.rate_limit))],
       [t('IP 地址'), escapeHtml(log.ip_address || '-')],
     ];
 

@@ -130,6 +130,11 @@ router.get('/usage', (req, res) => {
 router.get('/project-stats', (req, res) => res.json(data.projectStats()));
 router.get('/message-stats', (req, res) => res.json(data.messageStats()));
 
+// 延迟与吞吐统计
+router.get('/stats/latency', (req, res) => {
+  res.json(data.latencyStats(req.query));
+});
+
 // 详细统计（区分管理后台和用户控制台）
 router.get('/stats', (req, res) => {
   if (req.baseUrl === '/api/admin') {

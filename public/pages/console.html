@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="/css/upstream-blora.css?v=unified-providers-20261010">
   <link rel="stylesheet" href="/css/api-keys-blora.css?v=desktop-compact-20261010">
   <link rel="stylesheet" href="/css/config-dialog-blora.css?v=desktop-write-20261010">
-  <link rel="stylesheet" href="/css/stats-blora.css?v=overview-spacing-20261005">
+  <link rel="stylesheet" href="/css/stats-blora.css?v=latency-20261021">
   <link rel="stylesheet" href="/css/multi-dimension-chart.css?v=quota-additive-20261012">
   <link rel="stylesheet" href="/css/project-work.css?v=restore-0930-20261003">
   <link rel="stylesheet" href="/css/project-work-blora.css?v=filter-select-20261005">
@@ -800,6 +800,10 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span data-i18n="概览">
               概览
             </span></button>
+            <button type="button" onclick="app.switchStatsTab('latency')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg><span data-i18n="延迟与吞吐">
+              延迟与吞吐
+            </span></button>
             <button type="button" onclick="app.switchStatsTab('multi')"><span>多维分析</span></button>
             <button type="button" onclick="app.switchStatsTab('daily')">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span data-i18n="每日趋势">
@@ -906,6 +910,65 @@
               </div>
     </div>
             <section data-quota-scope="user" data-quota-context="overview"></section>
+          </div>
+
+          <!-- 延迟与吞吐 -->
+          <div id="statsTabLatency" class="stats-tab-content" style="display:none;">
+            <p id="latencyStatsNotice" class="latency-stats-notice" data-i18n="延迟指标来自网关实际计时；历史记录未包含这些字段时不计入统计。">
+              延迟指标来自网关实际计时；历史记录未包含这些字段时不计入统计。
+            </p>
+            <div id="latencySummaryCards" class="stats-overview-grid" style="margin-bottom:24px;"></div>
+            <div class="responsive-grid-2" style="margin-bottom:20px;">
+              <div class="chart-card">
+                <h4><span data-i18n="每日首字延迟（P50 / P95）">每日首字延迟（P50 / P95）</span></h4>
+                <div class="chart-container"><canvas id="userLatencyTtftChart"></canvas></div>
+              </div>
+              <div class="chart-card">
+                <h4><span data-i18n="每日输出速度（P50）">每日输出速度（P50）</span></h4>
+                <div class="chart-container"><canvas id="userLatencyTpsChart"></canvas></div>
+              </div>
+            </div>
+            <div class="chart-card" style="margin-bottom:20px;">
+              <h4><span data-i18n="模型延迟与吞吐">模型延迟与吞吐</span></h4>
+              <div style="overflow-x:auto;">
+                <table class="stats-table">
+                  <thead>
+                    <tr>
+                      <th style="text-align:left;"><span data-i18n="模型">模型</span></th>
+                      <th style="text-align:right;"><span data-i18n="请求数">请求数</span></th>
+                      <th style="text-align:right;"><span data-i18n="已采集">已采集</span></th>
+                      <th style="text-align:right;">TTFT P50</th>
+                      <th style="text-align:right;">TTFT P75</th>
+                      <th style="text-align:right;">TTFT P95</th>
+                      <th style="text-align:right;">TTFT P99</th>
+                      <th style="text-align:right;">TPOT P50</th>
+                      <th style="text-align:right;"><span data-i18n="输出 TPS P50">输出 TPS P50</span></th>
+                      <th style="text-align:right;">E2E P95</th>
+                      <th style="text-align:right;"><span data-i18n="缓存命中">缓存命中</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="latencyModelTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="chart-card">
+              <h4><span data-i18n="最近一次上游限流状态">最近一次上游限流状态</span></h4>
+              <div style="overflow-x:auto;">
+                <table class="stats-table">
+                  <thead>
+                    <tr>
+                      <th style="text-align:left;"><span data-i18n="供应商">供应商</span></th>
+                      <th style="text-align:left;"><span data-i18n="采集时间">采集时间</span></th>
+                      <th style="text-align:left;"><span data-i18n="请求余量">请求余量</span></th>
+                      <th style="text-align:left;"><span data-i18n="Token 余量">Token 余量</span></th>
+                      <th style="text-align:left;"><span data-i18n="重置">重置</span></th>
+                      <th style="text-align:left;"><span data-i18n="服务层级">服务层级</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="latencyRateLimitTableBody"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
           <!-- 每日趋势 -->
@@ -2453,7 +2516,7 @@
   <script src="/js/provider-model-picker.js?v=restore-0930-unified-20261003"></script>
   <script src="/js/client-config.js?v=desktop-write-20261010"></script>
   <script type="module" src="/js/model-trace.js?v=modeltrace-20261013"></script>
-  <script src="/js/app.js?v=console-pages-20261014"></script>
+  <script src="/js/app.js?v=latency-20261021"></script>
   <script src="/js/blora-agent.js?v=model-library-picker-20261005"></script>
   <script src="/js/plugin-runtime.js?v=restore-0930-20261003"></script>
   <script>

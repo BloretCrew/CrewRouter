@@ -498,6 +498,82 @@ module.exports = {
     return DEMO_CODE_BALANCES.map((item, index) => ({ ...item, id: index + 1, value: item.amount, used: item.status === 'used', expires_at: null }));
   },
 
+  latencyStats(params = {}) {
+    const requestedDays = parseInt(params.days, 10) || 30;
+    const days = Math.max(1, Math.min(requestedDays, 90));
+    const clipped = requestedDays > 90;
+    const now = Date.now();
+    const daily = Array.from({ length: Math.min(days, 30) }, (_, i) => {
+      const base = 420 + Math.floor(seededRand(i * 97) * 260);
+      const tps = 62 + seededRand(i * 101) * 34;
+      return {
+        date: new Date(now - (Math.min(days, 30) - 1 - i) * 86400000).toISOString().slice(0, 10),
+        requests: 60 + Math.floor(seededRand(i * 103) * 90),
+        measuredRequests: 54 + Math.floor(seededRand(i * 107) * 80),
+        ttft: { p50: base, p75: base + 120, p95: base + 380, p99: base + 620 },
+        e2e: { p50: base + 1800, p75: base + 2600, p95: base + 5200, p99: base + 7600 },
+        outputTps: { p50: tps, p75: tps + 12, p95: tps + 26, p99: tps + 38 }
+      };
+    });
+    const providerRows = [
+      { id: 'openai', name: 'OpenAI', requests: 1860, measuredRequests: 1780, ttft: { p50: 430, p75: 560, p95: 820, p99: 1080 }, e2e: { p50: 2400, p75: 3200, p95: 5600, p99: 7800 }, outputTps: { p50: 78.4, p75: 92.1, p95: 118.6, p99: 136.2 }, cacheHitRate: 0.64 },
+      { id: 'anthropic', name: 'Anthropic', requests: 1240, measuredRequests: 1204, ttft: { p50: 520, p75: 680, p95: 960, p99: 1240 }, e2e: { p50: 3100, p75: 4200, p95: 6900, p99: 9200 }, outputTps: { p50: 61.2, p75: 74.8, p95: 96.4, p99: 112.8 }, cacheHitRate: 0.72 },
+      { id: 'deepseek', name: 'DeepSeek', requests: 890, measuredRequests: 845, ttft: { p50: 680, p75: 860, p95: 1320, p99: 1680 }, e2e: { p50: 3800, p75: 5100, p95: 8200, p99: 10400 }, outputTps: { p50: 48.6, p75: 60.2, p95: 78.4, p99: 92.1 }, cacheHitRate: 0.58 }
+    ];
+    const modelRows = DEMO_MODELS.slice(0, 6).map((model, index) => {
+      const provider = providerRows.find(row => row.id === model.provider) || providerRows[index % providerRows.length];
+      return {
+        id: model.id,
+        name: model.name,
+        requests: 520 - index * 48,
+        measuredRequests: 498 - index * 46,
+        ttft: provider.ttft,
+        e2e: provider.e2e,
+        outputTps: provider.outputTps,
+        cacheHitRate: provider.cacheHitRate
+      };
+    });
+    const totalRequests = 3990;
+    const measuredRequests = 3829;
+    return {
+      window: { start: daily[0]?.date, end: daily[daily.length - 1]?.date, days, requestedDays, clipped, maxDays: 90, timezone: 'Asia/Shanghai' },
+      coverage: { totalRequests, measuredRequests, rate: measuredRequests / totalRequests },
+      summary: {
+        requests: totalRequests,
+        measuredRequests,
+        coverage: measuredRequests / totalRequests,
+        ttft: { p50: 470, p75: 610, p95: 920, p99: 1180 },
+        e2e: { p50: 2700, p75: 3600, p95: 6100, p99: 8400 },
+        tpot: { p50: 18.4, p75: 22.6, p95: 31.2, p99: 38.8 },
+        outputTps: { p50: 72.6, p75: 86.4, p95: 112.8, p99: 132.1 },
+        upstreamProcessing: { p50: 210, p75: 280, p95: 460, p99: 620 },
+        upstreamProcessingAvg: 246,
+        cacheHitRate: 0.66,
+        tpsThresholds: { ge50: 0.82, ge80: 0.46, ge90: 0.31, ge100: 0.18 }
+      },
+      byModel: modelRows,
+      byProvider: providerRows,
+      daily,
+      rateLimits: providerRows.map((row, index) => ({
+        providerId: row.id,
+        providerName: row.name,
+        serviceTier: index === 0 ? 'priority' : 'default',
+        observedAt: new Date(now - index * 3600000).toISOString(),
+        rateLimit: {
+          vendor: row.id === 'anthropic' ? 'anthropic' : 'openai',
+          headers: row.id === 'anthropic'
+            ? { 'anthropic-ratelimit-requests-remaining': '982', 'anthropic-ratelimit-requests-limit': '1000', 'anthropic-ratelimit-requests-reset': '6m0s', 'anthropic-ratelimit-tokens-remaining': '1884000', 'anthropic-ratelimit-tokens-limit': '2000000', 'anthropic-ratelimit-tokens-reset': '6m0s' }
+            : { 'x-ratelimit-remaining-requests': '9942', 'x-ratelimit-limit-requests': '10000', 'x-ratelimit-reset-requests': '6m0s', 'x-ratelimit-remaining-tokens': '29640000', 'x-ratelimit-limit-tokens': '30000000', 'x-ratelimit-reset-tokens': '6m0s' },
+          retry_after: null,
+          processing_ms: 210,
+          request_id: `req_demo_limit_${index}`
+        }
+      })),
+      rateLimitNote: null,
+      generatedAt: new Date().toISOString()
+    };
+  },
+
   usageLogs(page, limit) {
     // 生成 50 条模拟调用记录
     const allLogs = [];
@@ -529,6 +605,13 @@ module.exports = {
       const cached = Math.floor(prompt * seededRand(i * 61));
       const tokens = prompt + completion;
       const ts = new Date(now - i * 3600000 * (1 + seededRand(i * 67) * 3));
+      const latency = 150 + Math.floor(seededRand(i * 71) * 400);
+      const isStream = i % 7 !== 0;
+      const ttft = isStream ? 120 + Math.floor(seededRand(i * 73) * 900) : null;
+      const generation = isStream ? 900 + Math.floor(seededRand(i * 79) * 6400) : null;
+      const tpot = generation != null && completion > 1 ? generation / (completion - 1) : null;
+      const outputTps = generation != null && generation > 0 ? completion / (generation / 1000) : null;
+      const e2e = latency + (generation || 0);
 
       allLogs.push({
         id: i + 1,
@@ -542,6 +625,37 @@ module.exports = {
         provider_id: m.provider,
         request_type: 'chat_completions',
         latency_ms: 150 + Math.floor(seededRand(i * 71) * 400),
+        is_stream: isStream,
+        ttft_ms: ttft,
+        upstream_first_byte_ms: ttft == null ? null : Math.max(40, Math.round(ttft * 0.72)),
+        generation_ms: generation,
+        tpot_ms: tpot == null ? null : Math.round(tpot * 1000) / 1000,
+        output_tps: outputTps == null ? null : Math.round(outputTps * 1000) / 1000,
+        e2e_ms: e2e,
+        upstream_processing_ms: 90 + Math.floor(seededRand(i * 83) * 300),
+        service_tier: i % 5 === 0 ? 'priority' : 'default',
+        rate_limit: {
+          vendor: m.provider === 'anthropic' ? 'anthropic' : 'openai',
+          headers: m.provider === 'anthropic'
+            ? {
+              'anthropic-ratelimit-requests-limit': '1000',
+              'anthropic-ratelimit-requests-remaining': String(1000 - (i % 40)),
+              'anthropic-ratelimit-requests-reset': '2026-10-21T12:00:00Z',
+              'anthropic-ratelimit-tokens-limit': '2000000',
+              'anthropic-ratelimit-tokens-remaining': String(2000000 - (i % 500) * 1000),
+              'anthropic-ratelimit-tokens-reset': '2026-10-21T12:00:00Z'
+            }
+            : {
+              'x-ratelimit-limit-requests': '10000',
+              'x-ratelimit-remaining-requests': String(10000 - (i % 80)),
+              'x-ratelimit-reset-requests': '6m0s',
+              'x-ratelimit-limit-tokens': '30000000',
+              'x-ratelimit-remaining-tokens': String(30000000 - (i % 600) * 10000),
+              'x-ratelimit-reset-tokens': '6m0s'
+            },
+          processing_ms: 90 + Math.floor(seededRand(i * 83) * 300),
+          request_id: `req_demo_${i + 1}`
+        },
         ip_address: '192.168.1.' + (10 + (i % 50)),
         cost: parseFloat((tokens * 0.0000035).toFixed(6)),
         created_at: ts.toISOString(),

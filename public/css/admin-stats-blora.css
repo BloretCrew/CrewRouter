@@ -476,3 +476,14 @@
 #messageStatsFilters blora-select::part(trigger) { box-sizing: border-box; width: 100%; min-height: 2.5rem; }
 #adminStatsMultiFilters blora-select { display: block; width: 100%; min-width: 0; }
 #adminStatsMultiFilters blora-select::part(trigger) { box-sizing: border-box; min-height: 2.5rem; }
+
+/* 延迟与吞吐 */
+.latency-stats-notice {
+  margin: 0 0 var(--blora-space-4);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--blora-color-text-subtle);
+}
+.blora-admin-stats-page .stats-overview-card .stats-overview-value {
+  word-break: break-word;
+}
